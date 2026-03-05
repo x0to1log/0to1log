@@ -6,7 +6,6 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   site: 'https://0to1log.com',
-  output: 'hybrid',
   adapter: vercel(),
 
   integrations: [
