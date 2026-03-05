@@ -5,19 +5,26 @@ import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import { ViewTransitions } from 'astro:transitions';
 
+interface ArticleData {
+  datePublished: string;
+  dateModified?: string;
+  image?: string;
+}
+
 interface Props {
   title: string;
   description?: string;
   locale?: 'en' | 'ko';
   slug?: string;
+  article?: ArticleData;
 }
 
-const { title, description, locale = 'en', slug } = Astro.props;
+const { title, description, locale = 'en', slug, article } = Astro.props;
 ---
 
 <!doctype html>
 <html lang={locale} data-theme="dark">
-  <Head title={title} description={description} locale={locale} slug={slug} />
+  <Head title={title} description={description} locale={locale} slug={slug} article={article} />
 
   <!-- FOUC Prevention: must run before paint -->
   <script is:inline>

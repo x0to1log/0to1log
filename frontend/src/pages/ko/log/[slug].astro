@@ -2,18 +2,51 @@
 export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
+import { supabase } from '../../../lib/supabase';
 
 const { slug } = Astro.params;
+
+let post = null;
+if (supabase && slug) {
+  const { data } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .eq('locale', 'ko')
+    .single();
+  post = data;
+}
+
+if (!post) {
+  return Astro.redirect('/ko/log/');
+}
+
+const articleData = post.published_at
+  ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
+  : undefined;
 ---
 
-<MainLayout title={slug || 'Post'} locale="ko" slug={`log/${slug}/`}>
+<MainLayout title={post.title} locale="ko" slug={`log/${slug}/`} article={articleData}>
   <a href="/ko/log/" style={`color: var(--color-accent); text-decoration: none;`}>
     &larr; {t.ko['post.back']}
   </a>
   <article style="margin-top: 2rem;">
-    <h1 class="text-heading">{slug}</h1>
-    <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-      Post content will be loaded from Supabase (P1-FE-02).
-    </p>
+    <h1 class="text-heading">{post.title}</h1>
+    <div style={`display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.875rem; color: var(--color-text-secondary);`}>
+      {post.published_at && <time>{new Date(post.published_at).toLocaleDateString('ko-KR')}</time>}
+      {post.reading_time_min && <span>{post.reading_time_min}분 읽기</span>}
+      <span style={`color: var(--color-accent);`}>{post.category}</span>
+    </div>
+    {post.tags && post.tags.length > 0 && (
+      <div style={`display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;`}>
+        {post.tags.map((tag: string) => (
+          <span style={`font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 9999px; background: var(--color-surface); color: var(--color-text-secondary);`}>{tag}</span>
+        ))}
+      </div>
+    )}
+    <div style="margin-top: 2rem; line-height: 1.8;">
+      <Fragment set:html={post.content_original || post.content_beginner || ''} />
+    </div>
   </article>
 </MainLayout>

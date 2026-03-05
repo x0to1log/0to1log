@@ -2,11 +2,49 @@
 export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
+import { supabase } from '../../../lib/supabase';
+
+const posts = supabase
+  ? (await supabase
+      .from('posts')
+      .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .order('published_at', { ascending: false })
+    ).data ?? []
+  : [];
 ---
 
 <MainLayout title={t.en['log.title']} locale="en" slug="log/">
   <h1 class="text-heading">{t.en['log.title']}</h1>
-  <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-    {t.en['log.empty']}
-  </p>
+
+  {posts.length === 0 ? (
+    <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
+      {t.en['log.empty']}
+    </p>
+  ) : (
+    <ul style="list-style: none; padding: 0; margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
+      {posts.map((post) => (
+        <li>
+          <a href={`/en/log/${post.slug}/`} style="text-decoration: none; color: inherit;">
+            <article style={`padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--color-border); transition: border-color 0.2s;`}>
+              <h2 style={`font-size: 1.25rem; font-weight: 600; color: var(--color-text-primary);`}>{post.title}</h2>
+              <div style={`display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.875rem; color: var(--color-text-secondary);`}>
+                {post.published_at && <time>{new Date(post.published_at).toLocaleDateString('en-US')}</time>}
+                {post.reading_time_min && <span>{post.reading_time_min} min read</span>}
+                <span style={`color: var(--color-accent);`}>{post.category}</span>
+              </div>
+              {post.tags && post.tags.length > 0 && (
+                <div style={`display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;`}>
+                  {post.tags.map((tag: string) => (
+                    <span style={`font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 9999px; background: var(--color-surface); color: var(--color-text-secondary);`}>{tag}</span>
+                  ))}
+                </div>
+              )}
+            </article>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
 </MainLayout>
