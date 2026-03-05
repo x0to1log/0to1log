@@ -1,16 +1,39 @@
 ---
+interface ArticleData {
+  datePublished: string;
+  dateModified?: string;
+  image?: string;
+}
+
 interface Props {
   title: string;
   description?: string;
   locale?: 'en' | 'ko';
   slug?: string;
+  article?: ArticleData;
 }
 
-const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '' } = Astro.props;
+const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '', article } = Astro.props;
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
 const canonicalUrl = `${siteUrl}/${locale}/${slug}`.replace(/\/+$/, '/');
 const altLocale = locale === 'en' ? 'ko' : 'en';
 const altUrl = `${siteUrl}/${altLocale}/${slug}`.replace(/\/+$/, '/');
+
+const jsonLd = article ? JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": title,
+  "datePublished": article.datePublished,
+  "dateModified": article.dateModified || article.datePublished,
+  "author": { "@type": "Person", "name": "Amy" },
+  "publisher": {
+    "@type": "Organization",
+    "name": "0to1log",
+    "url": siteUrl,
+  },
+  "mainEntityOfPage": canonicalUrl,
+  ...(article.image ? { "image": article.image } : {}),
+}) : null;
 ---
 
 <head>
@@ -31,6 +54,9 @@ const altUrl = `${siteUrl}/${altLocale}/${slug}`.replace(/\/+$/, '/');
   <meta property="og:url" content={canonicalUrl} />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
+
+  <!-- JSON-LD (article pages only) -->
+  {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
 
   <!-- Styles -->
   <link rel="stylesheet" href="/src/styles/global.css" />
