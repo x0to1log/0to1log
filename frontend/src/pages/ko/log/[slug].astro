@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+
+const { slug } = Astro.params;
+---
+
+<MainLayout title={slug || 'Post'} locale="ko" slug={`log/${slug}/`}>
+  <a href="/ko/log/" style={`color: var(--color-accent); text-decoration: none;`}>
+    &larr; {t.ko['post.back']}
+  </a>
+  <article style="margin-top: 2rem;">
+    <h1 class="text-heading">{slug}</h1>
+    <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
+      Post content will be loaded from Supabase (P1-FE-02).
+    </p>
+  </article>
+</MainLayout>

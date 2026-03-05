@@ -1,0 +1,16 @@
+---
+export const prerender = false;
+import MainLayout from '../../layouts/MainLayout.astro';
+import { t } from '../../i18n/index';
+---
+
+<MainLayout title={t.en['home.title']} locale="en">
+  <section style="text-align: center; padding: 4rem 0;">
+    <h1 class="text-display-xl" style={`font-family: var(--font-display); color: var(--color-accent);`}>
+      0to1log
+    </h1>
+    <p class="text-subheading" style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
+      {t.en['home.subtitle']}
+    </p>
+  </section>
+</MainLayout>

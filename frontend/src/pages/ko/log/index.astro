@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+---
+
+<MainLayout title={t.ko['log.title']} locale="ko" slug="log/">
+  <h1 class="text-heading">{t.ko['log.title']}</h1>
+  <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
+    {t.ko['log.empty']}
+  </p>
+</MainLayout>
