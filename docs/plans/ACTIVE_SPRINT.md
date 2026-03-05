@@ -24,7 +24,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| P1-DB-01 | doing | 2026-03-06 | Amy |
+| - | - | - | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -73,31 +73,31 @@
 - **참조:** 04 §디자인 시스템, 04 §페이지 구조
 
 ### 4. 기본 DB 스키마 + RLS + 인증 `[P1-DB-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** posts/admin_users 테이블 + RLS 정책
 - **완료 기준:** Admin만 쓰기, public은 published만 읽기
 - **검증:** SQL 시나리오 테스트 (anon SELECT draft → 0 rows, non-admin INSERT → RLS violation)
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** 커밋 `0ae69bd` — `supabase/migrations/00001_initial_schema.sql` (Supabase SQL Editor에서 실행 필요)
 - **참조:** 03 §2 인증, 03 §3 DB 스키마
 
 ### 5. Supabase 읽기 연동 `[P1-FE-02]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** Log 페이지 list/detail 렌더링
 - **완료 기준:** published 포스트 목록 + 상세 페이지 노출
 - **검증:** 브라우저 수동 확인
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** 커밋 `be37cea` — EN/KO 로그 페이지 Supabase 쿼리 연동 (locale 필터 적용)
 - **참조:** 04 §11 Supabase 연동
 - **의존성:** P1-FE-01, P1-DB-01
 
 ### 6. SEO/메타/사이트맵 `[P1-SEO-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** JSON-LD (NewsArticle) + robots.txt + sitemap.xml + hreflang
 - **완료 기준:** `/sitemap.xml` 200 응답 + 구조화 데이터 존재
 - **검증:** URL 접근 + Rich Results Test
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** 커밋 `7ac506c` — JSON-LD 조건부 출력 + robots.txt + sitemap-index.xml 빌드 확인
 - **참조:** 04 §SEO, 06 §4.1
 
 ### 7. Revalidate 보안 계약 `[P1-SEO-02]`
