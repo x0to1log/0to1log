@@ -1,0 +1,41 @@
+# Frontend Rules
+
+Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md`
+
+## Astro 규칙
+
+- `output` 설정 없음 (Astro v5 기본 static + per-page SSR opt-in)
+- 동적 라우트 (`[slug].astro`): 반드시 `export const prerender = false`
+- `.astro` 파일에서 `client:load` 금지 → 바닐라 `<script>` 사용
+- FOUC 방지: `MainLayout.astro`의 `<script is:inline>`으로 테마 즉시 적용
+- 내장 `i18n` 설정 사용 금지 → 물리 폴더 `/en/`, `/ko/` 방식
+
+## Tailwind v4
+
+- `@tailwindcss/vite` 플러그인 사용 (`@astrojs/tailwind` 금지)
+- 디자인 토큰: `src/styles/global.css`의 `@theme` + `[data-theme]` CSS 변수
+- 테마 3개: dark (기본), light, midnight
+
+## i18n
+
+- EN canonical. `hreflang x-default` = `/en/`
+- `/portfolio/`, `/admin/` → locale 독립 (en/ko 접두사 없음)
+- 번역 맵: `src/i18n/index.ts`
+
+## 보안
+
+- `/api/revalidate` → server-side only. `REVALIDATE_SECRET` Bearer 검증 필수
+- client에서 revalidate 직접 호출 금지
+- Supabase Service Role Key를 frontend에서 절대 사용 금지 (anon key만)
+- `vercel.json` CSP: `script-src 'self' 'unsafe-inline'` 필수 (FOUC 방지)
+
+## SEO
+
+- `Head.astro`: canonical/hreflang은 반드시 절대 URL (`PUBLIC_SITE_URL` 기반)
+- `astro.config.mjs`의 `site`와 `PUBLIC_SITE_URL` 동일값 유지
+
+## Build
+
+```bash
+cd frontend && npm run build   # 0 errors 필수
+```
