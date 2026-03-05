@@ -24,7 +24,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| - | - | - | Amy |
+| P1-DB-01 | doing | 2026-03-06 | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -46,30 +46,30 @@
 ## 태스크 (실행 순서)
 
 ### 1. Repo + Vercel 초기화 `[P1-BOOT-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** GitHub repo + Vercel 프로젝트 연결
 - **완료 기준:** main push → 자동 배포
 - **검증:** Vercel 배포 로그 확인
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** [Production Domain](https://0to1log.com), [Vercel Default Domain](https://0to1log.vercel.app)
 - **참조:** 01 §Site Map, 05 §Vercel
 
 ### 2. Supabase 프로젝트 생성 `[P1-BOOT-02]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** Supabase 프로젝트 + URL/anon key
 - **완료 기준:** Dashboard에서 프로젝트 접근 가능
 - **검증:** Supabase Dashboard 확인
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** [Supabase Dashboard](https://supabase.com/dashboard), [Supabase API Settings](https://supabase.com/dashboard/project/luwipptjfyjsleqouasj/settings/api)
 - **참조:** 03 §DB 스키마, 05 §Supabase
 
 ### 3. Astro/Tailwind/Motion One 골격 `[P1-FE-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** 레이아웃 + Home/Log/Portfolio/Admin 페이지 골격
 - **완료 기준:** `astro build` 성공 + 4개 페이지 라우팅
 - **검증:** `astro build` + 브라우저 확인
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** 커밋 `a8fcb88`~`ed13082`, `npm run build` 성공 (0 errors)
 - **참조:** 04 §디자인 시스템, 04 §페이지 구조
 
 ### 4. 기본 DB 스키마 + RLS + 인증 `[P1-DB-01]`
@@ -101,12 +101,12 @@
 - **참조:** 04 §SEO, 06 §4.1
 
 ### 7. Revalidate 보안 계약 `[P1-SEO-02]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** `/api/revalidate` 엔드포인트 + REVALIDATE_SECRET 검증
 - **완료 기준:** secret 불일치 → 401, 정상 → 200 + 캐시 무효화
 - **검증:** curl 수동 호출 (잘못된 secret → 401, 올바른 secret → 200)
-- **증거:** PR/로그/스크린샷 링크 최소 1개 (완료 시 필수)
+- **증거:** 커밋 `8972ad4` — `/api/revalidate` stub + Bearer secret 검증 구현
 - **참조:** 04 §Policy Addendum, 05 §Revalidate 보안
 - **의존성:** P1-FE-01
 
