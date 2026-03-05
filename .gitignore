@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+.astro/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (Phase 2)
+__pycache__/
+*.py[cod]
+.venv/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Temp
+.tmp_publish_*/
