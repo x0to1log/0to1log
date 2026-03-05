@@ -14,7 +14,7 @@ FastAPI + Railway (Nixpacks). 스펙 상세 → `docs/03_Backend_AI_Spec.md`, `d
 
 - 버전: 3.11+ (`.python-version` 참조)
 - 의존성: `requirements.txt` (Nixpacks 자동 감지)
-- Linter: `ruff check backend/`
+- Linter: `ruff check .` (backend/ 내에서 실행)
 - Test: `pytest tests/ -v --tb=short`
 
 ## 보안
@@ -22,7 +22,7 @@ FastAPI + Railway (Nixpacks). 스펙 상세 → `docs/03_Backend_AI_Spec.md`, `d
 - Admin 엔드포인트: `Depends(require_admin)` 필수
 - Cron 엔드포인트: `x-cron-secret` 헤더 검증 필수
 - Supabase는 Service Role Key 사용 (backend 전용)
-- CORS: `https://0to1log.com`, `http://localhost:4321`만 허용
+- CORS: 허용 도메인은 환경변수로 관리 (하드코딩 금지)
 
 ## 배포 (Railway)
 

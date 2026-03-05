@@ -31,7 +31,7 @@ AI 뉴스 큐레이션 플랫폼. Solo 프로젝트 (Amy).
 ## 금지 사항 (전역)
 
 - Framer Motion 사용 금지 → `motion` (v11+) 사용
-- `docs/` 스펙 파일을 임의로 수정하지 않는다
+- `docs/` 스펙 파일은 사용자의 명시적인 요청 없이 임의로 수정하지 않는다
 - 스프린트 게이트 미충족 시 다음 Phase로 넘어가지 않는다
 - `.env` 파일 커밋 금지 (`.env.example`만 커밋)
 - `package-lock.json`은 반드시 커밋 (CI 재현성)
@@ -47,5 +47,5 @@ AI 뉴스 큐레이션 플랫폼. Solo 프로젝트 (Amy).
 frontend/  → Vercel (Astro v5). CLAUDE.md 참조.
 backend/   → Railway (FastAPI). CLAUDE.md 참조.
 supabase/  → DB 마이그레이션 (Phase 2)
-docs/      → 스펙 문서 (수정 금지)
+docs/      → 스펙 문서 (사용자 요청 시만 수정)
 ```

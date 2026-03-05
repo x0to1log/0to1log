@@ -5,7 +5,7 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 ## Astro 규칙
 
 - `output` 설정 없음 (Astro v5 기본 static + per-page SSR opt-in)
-- 동적 라우트 (`[slug].astro`): 반드시 `export const prerender = false`
+- 동적 라우트 (`[slug].astro`): 초기(DB 연동 전)에는 `export const prerender = false` 적용
 - `.astro` 파일에서 `client:load` 금지 → 바닐라 `<script>` 사용
 - FOUC 방지: `MainLayout.astro`의 `<script is:inline>`으로 테마 즉시 적용
 - 내장 `i18n` 설정 사용 금지 → 물리 폴더 `/en/`, `/ko/` 방식
@@ -27,7 +27,7 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 - `/api/revalidate` → server-side only. `REVALIDATE_SECRET` Bearer 검증 필수
 - client에서 revalidate 직접 호출 금지
 - Supabase Service Role Key를 frontend에서 절대 사용 금지 (anon key만)
-- `vercel.json` CSP: `script-src 'self' 'unsafe-inline'` 필수 (FOUC 방지)
+- `vercel.json` CSP: `script-src 'self' 'unsafe-inline'` 허용 (초기 FOUC 방지용, 추후 nonce 방식으로 개선 가능)
 
 ## SEO
 
