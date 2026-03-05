@@ -237,5 +237,5 @@
 | 03 | `Backend_AI_Spec.md` | AI 파이프라인, API 설계, DB 스키마, 인증, 크론 자동화 | ✅ v3.3 |
 | 04 | `Frontend_Spec.md` | 디자인 시스템, 컴포넌트 명세, 페이지별 UI/UX, 애니메이션 | ✅ v2.3 |
 | 05 | `Infrastructure.md` | 배포 구조, CI/CD, 환경 변수, 모니터링, 보안 | ✅ v2.3 |
-| 06 | `Business_Strategy.md` | 수익화, 데이터 분석, SEO/GEO, 그로스 전략, 앱 로드맵 | ✅ v1.3 |
+| 06 | `Business_Strategy.md` | 수익화, 데이터 분석, SEO/GEO, 그로스 전략, 앱 로드맵 (Stage B 임계치 + 유닛 이코노믹스 + GEO 정량 기준 반영) | ✅ v1.4 |
 | 07 | `Global_Local_Intelligence.md` | 영문 원천 데이터 기반 Global-to-Local 인텔리전스 전략, 품질 게이트, i18n 원칙 | ✅ v1.6 |
