@@ -1,0 +1,37 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  locale?: 'en' | 'ko';
+  slug?: string;
+}
+
+const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '' } = Astro.props;
+const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
+const canonicalUrl = `${siteUrl}/${locale}/${slug}`.replace(/\/+$/, '/');
+const altLocale = locale === 'en' ? 'ko' : 'en';
+const altUrl = `${siteUrl}/${altLocale}/${slug}`.replace(/\/+$/, '/');
+---
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} | 0to1log</title>
+  <meta name="description" content={description} />
+
+  <!-- Canonical & Hreflang -->
+  <link rel="canonical" href={canonicalUrl} />
+  <link rel="alternate" hreflang={locale} href={canonicalUrl} />
+  <link rel="alternate" hreflang={altLocale} href={altUrl} />
+  <link rel="alternate" hreflang="x-default" href={`${siteUrl}/en/`} />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content={`${title} | 0to1log`} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/src/styles/global.css" />
+</head>

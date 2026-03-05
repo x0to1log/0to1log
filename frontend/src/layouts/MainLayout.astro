@@ -1,0 +1,51 @@
+---
+import Head from '../components/Head.astro';
+import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import { ViewTransitions } from 'astro:transitions';
+
+interface Props {
+  title: string;
+  description?: string;
+  locale?: 'en' | 'ko';
+  slug?: string;
+}
+
+const { title, description, locale = 'en', slug } = Astro.props;
+---
+
+<!doctype html>
+<html lang={locale} data-theme="dark">
+  <Head title={title} description={description} locale={locale} slug={slug} />
+
+  <!-- FOUC Prevention: must run before paint -->
+  <script is:inline>
+    (function() {
+      var stored = localStorage.getItem('theme');
+      if (stored) {
+        document.documentElement.setAttribute('data-theme', stored);
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
+  <ViewTransitions />
+
+  <body style={`min-height: 100vh; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}>
+    <!-- Skip Navigation -->
+    <a href="#main-content" class="sr-only" style={`position: absolute; top: -100%; left: 0; background: var(--color-accent); color: white; padding: 0.5rem 1rem; z-index: 9999;`}>
+      Skip to content
+    </a>
+
+    <Navigation locale={locale} />
+
+    <main id="main-content" style={`flex: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 1rem; width: 100%;`}>
+      <slot />
+    </main>
+
+    <Footer />
+    <ThemeToggle />
+  </body>
+</html>
