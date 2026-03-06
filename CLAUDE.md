@@ -49,3 +49,8 @@ backend/   → Railway (FastAPI). CLAUDE.md 참조.
 supabase/  → DB 마이그레이션 (Phase 2)
 docs/      → 스펙 문서 (사용자 요청 시만 수정)
 ```
+
+## Python venv policy
+
+- Use `backend/.venv` only for backend Python commands.
+- Do not create or use `backend/venv`.

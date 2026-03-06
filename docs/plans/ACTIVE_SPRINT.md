@@ -1,21 +1,23 @@
-# ACTIVE SPRINT — Phase 2B-OPS (Backend Feature Freeze)
+# ACTIVE SPRINT — Phase 2C-EXP (Frontend Experience)
 
 > **스프린트 시작:** 2026-03-07
-> **목표:** AI Agent 3종 구현 + Admin CRUD 실구현 + OpenAPI 스키마 고정
-> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/02~03`
-> **이전 스프린트:** Phase 2A — 2026-03-07 게이트 전체 통과
+> **목표:** Newsprint 테마 완성 + 리스트/상세 고도화 + 반응형/접근성/성능 QA
+> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/04~06`
+> **이전 스프린트:** Phase 2B-OPS — 2026-03-07 게이트 전체 통과
 
 ---
 
 ## 스프린트 완료 게이트
 
-- [x] OpenAPI 문서 고정 (목록/상세/에러 응답 스키마 포함) — 12 schemas, 6 endpoints
-- [x] `cd backend && pytest tests/ -v` 전체 통과 — 49 passed
-- [x] 외부 네트워크 호출 차단 환경에서 테스트 통과 (httpx block_network autouse fixture)
-- [x] 401/403 분리 동작 확인 — test_admin.py TestAuthSplit 4 tests
-- [x] 태스크 전체 `상태=done` + `체크=[x]` 일치
-- [x] `Current Doing` 슬롯이 비어 있음(`-`)
-- [x] 완료 태스크마다 `증거` 링크 최소 1개 존재
+- [ ] 반응형: mobile/tablet/desktop 레이아웃 정상
+- [ ] 접근성: `prefers-reduced-motion`, 키보드 포커스, 대비 기준 통과
+- [ ] Lighthouse: Perf/Best/SEO/Acc 각각 `>= 85`
+- [ ] Core Web Vitals 목표: `LCP < 2.8s`, `CLS < 0.1`, `INP < 250ms`
+- [ ] `cd frontend && npm run build` — 0 error
+- [ ] Admin Editor mock 플로우(목록 → 상세 → 편집/미리보기 → 발행 CTA) 정상
+- [ ] 태스크 전체 `상태=done` + `체크=[x]` 일치
+- [ ] `Current Doing` 슬롯이 비어 있음(`-`)
+- [ ] 완료 태스크마다 `증거` 링크 최소 1개 존재
 
 ---
 
@@ -44,59 +46,89 @@
 
 ## 태스크 (실행 순서)
 
-### 1. OpenAPI 스키마 확정 `[P2B-CONTRACT-00]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** 프론트(2C) 작업을 위한 API 응답 스키마 선고정
-- **산출물:** `backend/openapi.json` + `models/posts.py` 응답 모델 8종 + 라우터 response_model 적용
-- **완료 기준:** 목록/상세/에러 응답 스키마가 문서에 존재하고 프론트 Mock과 계약 일치
-- **검증:** `python -c "from main import app; import json; print(json.dumps(app.openapi(), indent=2))"` 실행 → 응답 스키마 확인
-- **증거:** openapi.json 생성 완료 (12 schemas, 6 endpoints, 20 tests passed)
-- **참조:** 03 §4, IMPLEMENTATION_PLAN §3 2B Gate
+### 1. Newsprint 토큰/테마/공통 컴포넌트 정리 `[P2C-UI-11]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 기존 newsprint 컴포넌트(Shell, ListCard, SideRail, CategoryFilter, ArticleLayout) 정리 + 테마 토큰 통합 (dark/light/pink)
+- **산출물:** `frontend/src/components/newsprint/` 정리 + `frontend/src/styles/global.css` 토큰 체계화
+- **완료 기준:** `npm run build` 0 error + 3 테마 preview 페이지 정상 렌더링
+- **검증:** `cd frontend && npm run build` + preview 페이지 수동 확인
+- **증거:** -
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
 - **의존성:** 없음
 
-### 2. AI Agent 로직 + Prompt 튜닝 `[P2B-API-01]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** Ranking(gpt-4o-mini) / Research Engineer(gpt-4o) / Business Analyst(gpt-4o) 에이전트 구현
-- **산출물:** `backend/services/agents/` (ranking.py, research.py, business.py, prompts.py, client.py)
-- **완료 기준:** 네트워크 차단 Mock 환경에서 단위테스트 전체 통과
-- **검증:** `pytest tests/test_agents.py -v` — 10 passed (네트워크 차단 autouse 픽스처 적용)
-- **증거:** 30 tests passed (기존 20 + agent 10), httpx block_network fixture
-- **참조:** 02 §2-4, 03 §5
-- **의존성:** P2B-CONTRACT-00
+### 2. /en|ko/log 리스트/상세 + 다국어 스위처 + 화면 상태 `[P2C-UI-12]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 리스트/상세 페이지에 newsprint 스타일 본격 적용 + 다국어 스위처 + empty/error/loading 상태 처리
+- **산출물:** `frontend/src/pages/en|ko/log/` 페이지 업데이트
+- **완료 기준:** EN/KO 리스트/상세 정상 렌더링 + 언어 전환 동작 + 빈 상태 표시
+- **검증:** `npm run build` + 수동 preview 테스트
+- **증거:** -
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
+- **의존성:** P2C-UI-11
 
-### 3. Admin CRUD 엔드포인트 `[P2B-API-02]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** 501 스텁을 실구현으로 교체 (list/get/publish/update)
-- **산출물:** `backend/routers/admin.py` 실구현 + `backend/tests/test_admin.py`
-- **완료 기준:** Admin 200/201/204 정상 + 비인가 401/403 분리 테스트 통과
-- **검증:** `pytest tests/test_admin.py -v` — 13 passed (auth 4 + CRUD 9)
-- **증거:** 401/403 분리 확인, dependency_overrides mock, Supabase mock
-- **참조:** 03 §4
-- **의존성:** P2B-CONTRACT-00
+### 3. 썸네일 이미지 newsprint 필터 `[P2C-UI-13]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** `.img-newsprint` grayscale+sepia 기본 적용, hover 시 원본 컬러 복원 transition
+- **산출물:** `global.css`에 `.img-newsprint` 스타일 + 적용 대상 컴포넌트 업데이트
+- **완료 기준:** 이미지 기본 흑백+세피아 + hover 시 컬러 복원 transition 동작
+- **검증:** preview 페이지에서 시각 확인
+- **증거:** -
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
+- **의존성:** P2C-UI-12
 
-### 4. Cron endpoint skeleton `[P2B-CRON-00]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** Vercel Cron이 찌를 진입점 뼈대 (Secret 검증 + 202 반환만)
-- **산출물:** `backend/routers/cron.py` (response_model 적용) + `backend/tests/test_cron.py`
-- **완료 기준:** valid secret → 202, invalid secret → 401 테스트 통과
-- **검증:** `pytest tests/test_cron.py -v` — 6 passed
-- **증거:** 401 (missing/invalid/empty secret) + 202 (valid) + 응답 스키마 검증
-- **참조:** 04 §5, 05 §4
-- **의존성:** 없음 (에이전트 호출 연동은 Phase 2D)
+### 4. Admin Editor 화면(마크다운 작성/미리보기) `[P2C-UI-14]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** `/admin`에서 드래프트 편집 화면(마크다운 작성 + 미리보기 + Save/Publish 액션)을 newsprint 톤으로 구현
+- **산출물:** Admin Editor UI 컴포넌트/페이지 업데이트
+- **완료 기준:** 편집 입력, 미리보기 전환, Save/Publish CTA 노출 및 기본 동작(mock) 확인
+- **검증:** `cd frontend && npm run build` + `/admin` 수동 확인
+- **증거:** -
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP, 04_Frontend_Spec §3-5
+- **의존성:** P2C-UI-13
+
+### 5. Admin Editor 상태/권한/에러 처리(mock) `[P2C-UI-15]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** Admin Editor의 loading/empty/404/401/403 상태와 저장/발행 피드백을 OpenAPI 고정 스키마 기반 mock으로 구현
+- **산출물:** 상태별 UI, 오류 메시지, 액션 피드백 처리
+- **완료 기준:** 권한/에러 상태별 화면과 메시지가 일관되게 노출되고, 편집 플로우가 중단 없이 복구 가능
+- **검증:** `cd frontend && npm run build` + 상태별 수동 시나리오 점검
+- **증거:** -
+- **참조:** IMPLEMENTATION_PLAN §1 Hard Gate, §3 2C-EXP
+- **의존성:** P2C-UI-14
+
+### 6. 반응형/접근성/성능 QA `[P2C-QA-11]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** Lighthouse 측정 + Core Web Vitals + 접근성 점검
+- **산출물:** Lighthouse 리포트 (Perf/Best/SEO/Acc >= 85) + 접근성 점검 결과
+- **완료 기준:** Lighthouse 4개 항목 모두 >= 85, CWV 목표 충족, 접근성 기본 통과
+- **검증:** Lighthouse CLI 또는 DevTools 측정 결과 캡처
+- **증거:** -
+- **참조:** IMPLEMENTATION_PLAN §3 2C Gate
+- **의존성:** P2C-UI-15
 
 ---
 
 ## 의존성 흐름
 
 ```
-P2B-CONTRACT-00 → P2B-API-01
-P2B-CONTRACT-00 → P2B-API-02
-P2B-CRON-00 (독립 — 에이전트 연동은 2D)
+P2C-UI-11 → P2C-UI-12 → P2C-UI-13 → P2C-UI-14 → P2C-UI-15 → P2C-QA-11
 ```
+
+---
+
+## 이전 스프린트 요약 (Phase 2B-OPS)
+
+> Phase 2B-OPS (2026-03-07) — 게이트 전체 통과, 4개 태스크 완료, 49 tests passed.
+> - OpenAPI 스키마 고정 (12 schemas, 6 endpoints)
+> - AI Agent 3종 구현 (Ranking gpt-4o-mini, Research/Business gpt-4o)
+> - Admin CRUD 실구현 (list/get/publish/update + 401/403 분리)
+> - Cron skeleton (secret 검증 + 202 반환)
 
 ---
 
@@ -113,7 +145,7 @@ P2B-CRON-00 (독립 — 에이전트 연동은 2D)
 
 ## 다음 스프린트 예고
 
-Phase 2B 게이트 통과 시 → **Phase 2C-EXP** (프론트 경험 고도화: Newsprint 테마, 다국어, 반응형/접근성 QA)
+Phase 2C 게이트 통과 시 → **Phase 2D-INT** (통합/E2E: Mock 제거 + 실API 연동 + E2E 테스트)
 
 ---
 

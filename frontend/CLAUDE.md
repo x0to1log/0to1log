@@ -15,7 +15,7 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 - `@tailwindcss/vite` 플러그인 사용 (`@astrojs/tailwind` 금지)
 - 디자인 토큰: `src/styles/global.css`의 `@theme` + `[data-theme]` CSS 변수
 - 테마 3개: dark (기본), light, pink
-- 폰트: Playfair Display (heading) + Lora (body) via Google Fonts, Pretendard (Korean fallback)
+- 폰트: Playfair Display (heading) + Lora (body) + Gowun Batang (Korean) via Google Fonts
 
 ## i18n
 

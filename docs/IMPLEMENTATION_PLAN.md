@@ -1,139 +1,111 @@
-# 🚀 0to1log — Implementation Plan (MASTER)
+﻿# 0to1log Implementation Plan (Core Edition)
 
-> **문서 버전:** v2.0
-> **최종 수정:** 2026-03-05
-> **작성자:** Amy (Solo)
-> **상태:** Active Planning
-> **목적:** Phase 방향 + 게이트 조건 + 워크플로우 정본. 상세 태스크는 → `docs/plans/ACTIVE_SPRINT.md`
-
----
-
-## 1) 실행 원칙
-
-- 한 번에 하나의 업무 단위만 `doing`으로 전환한다.
-- 모든 업무는 아래 필드를 반드시 가진다: 산출물, 완료 기준, 검증 방법, 참조 문서.
-- 코드 구현 세션과 리뷰 세션을 분리한다.
-- 기능 단위 종료 시 컨텍스트를 리셋하고 다음 단위로 이동한다.
-
-### 상태값
-
-- `todo`: 시작 전
-- `doing`: 진행 중
-- `review`: 검토 중
-- `done`: 완료
-- `blocked`: 외부 의존성으로 중단
+> **문서 버전:** v2.3  
+> **최종 수정:** 2026-03-07  
+> **작성자:** Amy (Solo)  
+> **상태:** Active Planning  
+> **목적:** 바이브 코딩 속도는 유지하고, 재작업을 유발하는 핵심 리스크만 강제한다.
 
 ---
 
-## 2) 전체 업무 흐름 (Phase 1~5)
+## 1) 운영 원칙 (핵심만 유지)
+
+### Hard Gate (필수)
+- OpenAPI/응답 스키마를 **2B 시작 시점에 고정**한다.
+- 2C는 2B에서 고정된 스키마 기반 **Mock만 사용**한다.
+- Cron은 **2B에서 endpoint skeleton만**, **2D에서 실운영 연동/E2E**를 수행한다.
+- 각 태스크 완료 판정은 반드시 `검증 명령 + 통과 조건`으로 기록한다.
+- ACTIVE_SPRINT 태스크 ID는 기존 Addendum과 충돌하지 않도록 신규 번호대로 발급한다.
+
+### DoD 최소 규칙
+- `상태=done`이면 반드시 `체크=[x]` + 증거 링크(PR/로그/스크린샷 중 1개 이상).
+- 문서/코드 변경 후 `Current Doing` 동기화.
+- 실패 시 `review` 또는 `blocked`로 전환하고 원인 1줄 기록.
+
+### Nice-to-have (선택)
+- 태스크별 성능 예산(예: INP/LCP)을 더 세분화.
+- UI 회귀 스냅샷 자동화.
+- 디자인 토큰 lint 자동 검사.
+
+---
+
+## 2) Phase 흐름 (Phase 2 분리 운영)
 
 ```mermaid
 flowchart TD
   P1A[Phase 1a Foundation] --> P1B[Phase 1b Analytics]
-  P1B --> P2[Phase 2 AI Core]
-  P2 --> G1{Stage A KPI 충족?}
-  G1 -- No --> P3A[Phase 3 준비/최적화 반복]
-  G1 -- Yes --> P3B[Railway Stage B 검토]
-  P3A --> P3[Phase 3 Intelligence]
-  P3B --> P3
-  P3 --> P4[Phase 4 Community/Monetization]
-  P4 --> G2{PWA KPI 충족?}
-  G2 -- No --> P4R[Phase 4 운영 고도화]
-  G2 -- Yes --> P5[Phase 5 Native App]
+  P1B --> P2A[Phase 2A Data Base]
+  P2A --> P2B[Phase 2B OPS]
+  P2B --> P2C[Phase 2C EXP]
+  P2C --> P2D[Phase 2D INT]
+  P2D --> P3[Phase 3 Intelligence]
 ```
 
 ---
 
-## 3) Phase별 요약 & 게이트 조건
+## 3) Phase 2 실행 계획 (결정 완료)
 
-| Phase | 목표 | 핵심 산출물 | → 다음 Phase 게이트 | 소스 |
-|---|---|---|---|---|
-| **1a Foundation** | 실행 기반 확보 | Astro 골격 + Supabase + SEO | `astro build` 0 error + Vercel 배포 + RLS 테스트 + sitemap 200 | P1-QA-01 |
-| **1b Analytics** | 데이터 수집 시작 | GA4 + Clarity 연동 | GA4 realtime 이벤트 수신 + Clarity 세션 리플레이 확인 | P1-ANL-01/02 |
-| **2 AI Core** | AI 파이프라인 가동 | FastAPI + 뉴스 파이프라인 + Admin | E2E QA 통과 + 핵심 계약 6개 충족 | P2-QA-01 |
-| **3 Intelligence** | 검색/커뮤니티/분석 | 시맨틱 검색 + AARRR 대시보드 | Stage B KPI 충족 (검색량+재방문율 목표) | 06 §2.1.1 |
-| **4 Community** | 수익화 + PWA | 포인트 시스템 + 프리미엄 검토 + PWA | PWA 설치율 4%+ (4주) + 유지율 25%+ | 06 §6.2 |
-| **5 Native App** | Expo 앱 출시 | iOS/Android 앱 | 앱 스토어 심사 통과 | 06 §6.2 |
+### 2B-OPS (백엔드 기능 고정)
+- `P2B-API-01`: AI Agent 로직 + Prompt 튜닝 (외부 API 테스트는 Mock 필수)
+- `P2B-API-02`: Admin CRUD 엔드포인트 + 인증/권한 테스트
+- `P2B-CRON-00`: Cron endpoint skeleton + 인증 헤더 검증 (실운영 연동 제외)
 
----
+**2B Gate**
+- OpenAPI 문서 고정(목록/상세/에러 응답 포함)
+- `pytest` 통과
+- 401/403 분리 동작 확인
 
-## 4) Critical Path (Phase 1~2 + 보안/동기화 게이트)
+### 2C-EXP (프론트 경험 고도화)
+- `P2C-UI-11`: Newsprint 토큰/테마/공통 컴포넌트 정리
+- `P2C-UI-12`: `/en|ko/log` 리스트/상세 + 다국어 스위처 + 화면 상태(empty/error/loading)
+- `P2C-UI-13`: 썸네일 이미지 newsprint 필터 (`.img-newsprint` grayscale+sepia 기본 적용, hover 시 원본 컬러 복원 transition)
+- `P2C-UI-14`: Admin Editor 화면(마크다운 작성/미리보기 + Save/Publish 액션) 구현, OpenAPI 고정 스키마 기반 mock 사용
+- `P2C-UI-15`: Admin Editor 상태/권한 처리(loading/empty/404/401/403 + 저장/발행 피드백) 구현, mock-first
+- `P2C-QA-11`: 반응형/접근성/성능 QA
 
-```mermaid
-flowchart LR
-  A1[Repo/Vercel/Supabase 부트스트랩] --> A2[Frontend 기본 뼈대]
-  A1 --> A3[DB 스키마/RLS/Auth]
-  A2 --> A4[Frontend-Supabase 연동]
-  A3 --> A4
-  A4 --> A5[SEO + Revalidate 보안]
-  A5 --> A6[Phase 1 QA]
+**2C Gate (균형형 기준)**
+- 반응형: mobile/tablet/desktop 레이아웃 정상
+- 접근성: `prefers-reduced-motion`, 키보드 포커스, 대비 기준 통과
+- Lighthouse: Perf/Best/SEO/Acc 각각 `>= 85`
+- Core Web Vitals 목표: `LCP < 2.8s`, `CLS < 0.1`, `INP < 250ms`
+- `npm run build` 0 error
+- Admin Editor mock 워크플로우(목록 → 상세 → 편집/미리보기 → 발행 CTA) 정상
 
-  A6 --> B1[Railway/FastAPI 기본]
-  B1 --> B2[AI 파이프라인 핵심]
-  B2 --> B3[DB 확장 + 동기화 필드]
-  B3 --> B4[Cron fire-and-forget]
-  B4 --> B5[Admin v1 + is_major_update]
-  B5 --> B6[Phase 2 E2E QA]
+### 2D-INT (통합/E2E)
+- `P2D-SYNC-01`: 프론트 Mock 제거 후 실제 API fetch 연동(로그 + Admin Editor 포함)
+- `P2D-CRON-01`: Vercel Cron -> Backend 파이프라인 실운영 연동
+- `P2D-QA-01`: E2E 통합 테스트(API 호출 -> 화면 렌더링 -> 에러 폴백)
 
-  S1[Gate: REVALIDATE_SECRET] --> A5
-  S2[Gate: EN-KO version lock] --> B3
-  S3[Gate: point_transactions] --> B3
-  S4[Gate: query embedding cache] --> B2
-```
-
----
-
-## 5) 바이브 코딩 세션 워크플로우
-
-> AI 에이전트(Claude Code)가 매 세션에서 따르는 실행 흐름.
-
-```mermaid
-flowchart TD
-  S1["ACTIVE_SPRINT.md 읽기"] --> S2{"다음 todo 태스크?"}
-  S2 -- Yes --> S3["태스크 → doing 전환"]
-  S3 --> S4["스펙 문서 참조하여 구현"]
-  S4 --> S5{"완료 기준 통과?"}
-  S5 -- Pass --> S6["태스크 → done 체크"]
-  S5 -- Fail --> S7["원인 파악 → 수정"]
-  S7 --> S4
-  S6 --> S2
-  S2 -- "모든 태스크 done" --> S8{"스프린트 게이트 통과?"}
-  S8 -- Yes --> S9["MASTER에서 다음 Phase 확인\n→ 새 ACTIVE 스프린트 작성"]
-  S8 -- No --> S10["누락 작업 식별\n→ ACTIVE에 태스크 추가"]
-  S10 --> S2
-```
+**2D Gate**
+- 실데이터 기준 리스트/상세 렌더링 정상
+- Cron 수동 트리거 시 파이프라인 실행 로그 확인
+- E2E 시나리오 통과
 
 ---
 
-## 6) 리스크 반영 체크
+## 4) ACTIVE_SPRINT 연동 규칙
 
-| 항목 | 반영 상태 | 기준 문서 | 완료 조건 |
-|---|---|---|---|
-| EN-KO 버전 락 | todo | 03, 07 | KO 생성/발행 시 EN revision lock + version 검증 |
-| Revalidate 인증 | todo | 04, 05 | `POST /api/revalidate` secret 불일치 401 |
-| point_transactions 원장 | todo | 03 | 중복 방지 제약 + 트랜잭션 원칙 명시 |
-| 검색 임베딩 캐시 | todo | 03 | `trim(lower(query))` + TTL 5분 + 키워드 폴백 |
-| Persona 우선순위 | todo | 04 | `DB > 쿠키 > beginner` + 로그인 1회 동기화 |
-| reduced-motion 검증 | todo | 04 | 접근성 성공 기준에 reduce 모드 검증 포함 |
+- 2C 신규 태스크는 기존 `2C-EXP Addendum` 이후 번호 사용 (`P2C-UI-11`부터).
+- 태스크 템플릿 필수 필드:
+  - 체크, 상태, 목적, 산출물, 완료 기준, 검증 명령, 통과 조건, 증거, 참조, 의존성
+- 같은 Phase 내 기본 참조는 ACTIVE_SPRINT 우선.
+- Phase 전환 또는 게이트 판정 시에만 IMPLEMENTATION_PLAN 재조회.
 
 ---
 
-## 7) 문서 정합성 테스트 시나리오
+## 5) 검증 체크리스트 (문서 운영)
 
-1. 03/04/05/07 문서에서 같은 정책 용어가 충돌하지 않는다.
-2. `REVALIDATE_SECRET`이 04/05에 모두 존재하고 제거 문구가 없다.
-3. 03/07에서 EN revision lock + `source_post_version` 검증 규칙이 일치한다.
-4. 03에 `point_transactions` + 중복 방지 제약이 명시된다.
-5. 04에 Persona 우선순위, 1회 동기화, 누락 폴백이 모두 존재한다.
-6. 본 문서에 Mermaid 3개 + Phase 게이트 테이블 + 리스크 체크 표가 존재한다.
-7. `ACTIVE_SPRINT.md`의 태스크 ID가 MASTER의 Phase 정의와 일치한다.
-8. ACTIVE 스프린트 게이트 조건이 MASTER 게이트 테이블과 정합한다.
+1. Hard Gate 5개가 ACTIVE_SPRINT 태스크/게이트에 반영되어 있다.
+2. 2B에는 Cron skeleton만 있고, 실연동/E2E는 2D에만 있다.
+3. 2C QA 항목에 Lighthouse/반응형/접근성/CWV 수치 기준이 있다.
+4. 모든 done 태스크가 `[x] + 증거 링크`를 갖는다.
+5. OpenAPI 고정 이후 2C mock 필드(로그/상세/Admin Editor)가 계약과 일치한다.
 
 ---
 
-## 8) 운영 메모
+## 6) 기본 가정
 
-- 이 문서(MASTER)는 Phase 방향과 게이트 조건의 정본이다.
-- 상세 태스크는 `docs/plans/ACTIVE_SPRINT.md`에서 관리한다.
-- 스프린트 전환 시 ACTIVE 파일을 새 Phase 태스크로 갱신한다.
-- Phase 3+ 상세 작업은 해당 Phase 게이트 충족 시 ACTIVE에 작성한다.
+- 이번 문서는 구현 코드가 아니라 실행 계약 문서다.
+- 2A는 완료 상태로 간주하고, 다음 실행 기준은 2B부터다.
+- 목표는 "최소 규칙으로 최대 실행 속도"이며, 과도한 세부 규칙은 Nice-to-have로 분리한다.
+- Backend Python virtualenv는 `backend/.venv`만 사용한다 (`backend/venv` 금지).
