@@ -1,18 +1,16 @@
-# ACTIVE SPRINT — Phase 1b Analytics
+# ACTIVE SPRINT — Phase 2A AI Core (Data Collection Base)
 
 > **스프린트 시작:** 2026-03-06
-> **목표:** GA4 + Microsoft Clarity 연동으로 데이터 수집 시작
-> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/05~06`
-> **이전 스프린트:** Phase 1a Foundation — 2026-03-06 게이트 전체 통과
+> **목표:** 데이터 수집/랭킹 뼈대 완성 + 외부 API Mock 테스트
+> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/02~03`
+> **이전 스프린트:** Phase 1b Analytics — 2026-03-06 게이트 전체 통과
 
 ---
 
 ## 스프린트 완료 게이트
 
-- [ ] GA4 Realtime 탭에서 이벤트 수신 확인
-- [ ] Clarity Dashboard에서 세션 리플레이 녹화 확인
-- [ ] `astro build` — 0 error
-- [ ] CSP 위반 없음 (브라우저 Console 확인)
+- [ ] `cd backend && pytest tests/ -v` 전체 통과
+- [ ] `cd frontend && npm run build` — 0 error
 - [ ] 태스크 전체 `상태=done` + `체크=[x]` 일치
 - [ ] `Current Doing` 슬롯이 비어 있음(`-`)
 - [ ] 완료 태스크마다 `증거` 링크 최소 1개 존재
@@ -23,7 +21,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| - | - | - | Amy |
+| P2-DB-01 | doing | 2026-03-06 | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -44,36 +42,70 @@
 
 ## 태스크 (실행 순서)
 
-### 1. GA4 연동 `[P1-ANL-01]`
+### 1. Pipeline 테이블 마이그레이션 `[P2-DB-01]`
 - **체크:** [ ]
-- **상태:** review
-- **산출물:** GA4 gtag.js 스크립트 + CSP 허용 + 환경변수
-- **완료 기준:** GA4 Realtime 탭에서 페이지뷰 이벤트 수신
-- **검증:** Google Analytics > Realtime > 이벤트 확인
+- **상태:** doing
+- **산출물:** `supabase/migrations/00002_pipeline_tables.sql` (5개 테이블 + RLS)
+- **완료 기준:** Supabase Dashboard에서 테이블 확인 + SQL 커밋
+- **검증:** 마이그레이션 SQL 문법 정상 + posts ALTER 없음
 - **증거:** (완료 시 필수)
-- **참조:** 05 §1, §6-5, §12 | 06 §3.1
+- **참조:** 03 §3
 
-### 2. Microsoft Clarity 연동 `[P1-ANL-02]`
+### 2. Pydantic 스키마 + 의존성 `[P2-SCHEMA-01]`
 - **체크:** [ ]
-- **상태:** review
-- **산출물:** Clarity 스크립트 + CSP 허용 + 환경변수
-- **완료 기준:** Clarity Dashboard에서 세션 리플레이 녹화 확인
-- **검증:** Clarity Dashboard > Recordings 탭 확인
+- **상태:** todo
+- **산출물:** requirements.txt 업데이트 + models/ 스키마 (common, ranking, research, business)
+- **완료 기준:** `python -c "from models.ranking import *"` 등 import 성공
+- **검증:** 각 모델 import 테스트
 - **증거:** (완료 시 필수)
-- **참조:** 05 §6-5 | 06 §3.1
+- **참조:** 02 §4
+
+### 3. Security + Admin Auth + Rate Limiting `[P2-AUTH-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **산출물:** security.py 실구현 + main.py slowapi 등록
+- **완료 기준:** 401/403 분리 동작 확인
+- **검증:** require_admin 함수 + verify_cron_secret + slowapi 미들웨어
+- **증거:** (완료 시 필수)
+- **참조:** 03 §2
+
+### 4. News Collection Service `[P2-COLLECT-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **산출물:** `services/news_collection.py` + `tests/test_news_collection.py`
+- **완료 기준:** Mock 기반 단위테스트 전체 통과
+- **검증:** `pytest tests/test_news_collection.py -v`
+- **증거:** (완료 시 필수)
+- **참조:** 02 §2
+
+### 5. Pipeline Lock + Stale Recovery `[P2-PIPE-BASE]`
+- **체크:** [ ]
+- **상태:** todo
+- **산출물:** `services/pipeline.py` + `tests/test_pipeline_lock.py`
+- **완료 기준:** Lock 획득/스킵/stale recovery/failed 재시도 테스트 전체 통과
+- **검증:** `pytest tests/test_pipeline_lock.py -v`
+- **증거:** (완료 시 필수)
+- **참조:** 02 §6
+
+### 6. Vercel Cron Trigger `[P2-CRON-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **산출물:** `frontend/src/pages/api/trigger-pipeline.ts` + vercel.json cron 추가
+- **완료 기준:** `npm run build` 0 errors + GET 핸들러 구현
+- **검증:** 빌드 통과
+- **증거:** (완료 시 필수)
+- **참조:** 04 §5, 05 §4
 
 ---
 
 ## 의존성 흐름
 
 ```
-P1-ANL-01 ──┐
-             ├── 게이트 검증 (수동)
-P1-ANL-02 ──┘
+P2-DB-01 → P2-SCHEMA-01 → P2-AUTH-01 → P2-COLLECT-01 → P2-PIPE-BASE → P2-CRON-01
 ```
 
 ---
 
 ## 다음 스프린트 예고
 
-Phase 1b 게이트 통과 시 → **Phase 2 AI Core** (Railway/FastAPI + AI 파이프라인)
+Phase 2A 게이트 통과 시 → **Phase 2B AI Core** (Agent 본체 + Admin CRUD + E2E + 배포)
