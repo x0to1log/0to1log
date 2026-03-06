@@ -1,0 +1,61 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import NewsprintShell from '../../components/newsprint/NewsprintShell.astro';
+import NewsprintListCard from '../../components/newsprint/NewsprintListCard.astro';
+import NewsprintSideRail from '../../components/newsprint/NewsprintSideRail.astro';
+
+const mockPosts = [
+  {
+    title: 'AI copilots move from novelty to workflow default',
+    slug: 'preview-copilot-default',
+    category: 'ai-news',
+    published_at: new Date().toISOString(),
+    reading_time_min: 5,
+    tags: ['productivity', 'copilot', 'teams'],
+  },
+  {
+    title: 'Prompt hygiene as an engineering discipline',
+    slug: 'preview-prompt-hygiene',
+    category: 'tech',
+    published_at: new Date().toISOString(),
+    reading_time_min: 3,
+    tags: ['prompting', 'quality'],
+  },
+  {
+    title: 'What hiring signals changed for AI-native builders',
+    slug: 'preview-hiring-signals',
+    category: 'career',
+    published_at: new Date().toISOString(),
+    reading_time_min: 4,
+    tags: ['career', 'market'],
+  },
+];
+---
+
+<MainLayout title="Newsprint Preview (Pink)" locale="en" slug="preview/newsprint-pink/">
+  <div data-theme="pink">
+    <NewsprintShell locale="en" masthead="AI Dispatch Journal" editionLabel="Design Preview / Pink">
+      <section class="newsprint-grid-cards">
+        {mockPosts.map((post) => (
+          <NewsprintListCard
+            href="#"
+            title={post.title}
+            category={post.category}
+            publishedAt={post.published_at}
+            readingTimeMin={post.reading_time_min}
+            tags={post.tags}
+            locale="en"
+          />
+        ))}
+      </section>
+
+      <Fragment slot="rail">
+        <NewsprintSideRail
+          locale="en"
+          posts={mockPosts}
+          categories={['ai-news', 'tech', 'career']}
+        />
+      </Fragment>
+    </NewsprintShell>
+  </div>
+</MainLayout>
