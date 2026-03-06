@@ -3,6 +3,9 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
+import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
+import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 
 const { slug } = Astro.params;
 
@@ -22,31 +25,51 @@ if (!post) {
   return Astro.redirect('/ko/log/');
 }
 
+const recentPosts = supabase
+  ? (await supabase
+      .from('posts')
+      .select('title, slug, category')
+      .eq('status', 'published')
+      .eq('locale', 'ko')
+      .neq('slug', slug)
+      .order('published_at', { ascending: false })
+      .limit(4)
+    ).data ?? []
+  : [];
+
+const railCategories = Array.from(new Set([post.category, ...(post.tags ?? [])].filter(Boolean))).slice(0, 6);
+
+const editionMap: Record<string, string> = {
+  'ai-news': '데일리 디스패치',
+  'tech': '서재 노트',
+  'career': '커리어 노트',
+  'project': '빌드 로그',
+};
+const masthead = '가치를 담는 기록';
+const editionLabel = editionMap[post.category] || '딥 다이브';
+
 const articleData = post.published_at
   ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
   : undefined;
 ---
 
 <MainLayout title={post.title} locale="ko" slug={`log/${slug}/`} article={articleData}>
-  <a href="/ko/log/" style={`color: var(--color-accent); text-decoration: none;`}>
-    &larr; {t.ko['post.back']}
-  </a>
-  <article style="margin-top: 2rem;">
-    <h1 class="text-heading">{post.title}</h1>
-    <div style={`display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.875rem; color: var(--color-text-secondary);`}>
-      {post.published_at && <time>{new Date(post.published_at).toLocaleDateString('ko-KR')}</time>}
-      {post.reading_time_min && <span>{post.reading_time_min}분 읽기</span>}
-      <span style={`color: var(--color-accent);`}>{post.category}</span>
-    </div>
-    {post.tags && post.tags.length > 0 && (
-      <div style={`display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;`}>
-        {post.tags.map((tag: string) => (
-          <span style={`font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 9999px; background: var(--color-surface); color: var(--color-text-secondary);`}>{tag}</span>
-        ))}
-      </div>
-    )}
-    <div style="margin-top: 2rem; line-height: 1.8;">
-      <Fragment set:html={post.content_original || post.content_beginner || ''} />
-    </div>
-  </article>
+  <NewsprintShell locale="ko" masthead={masthead} editionLabel={editionLabel}
+    subkicker={['AI · 논문 · 프로젝트', '데일리 큐레이션', '무료']}>
+    <NewsprintArticleLayout
+      locale="ko"
+      slug={slug}
+      title={post.title}
+      category={post.category}
+      publishedAt={post.published_at}
+      readingTimeMin={post.reading_time_min}
+      tags={post.tags}
+      htmlContent={post.content_original || post.content_beginner || ''}
+      backLabel={t.ko['post.back']}
+    />
+
+    <Fragment slot="rail">
+      <NewsprintSideRail locale="ko" posts={recentPosts} categories={railCategories} />
+    </Fragment>
+  </NewsprintShell>
 </MainLayout>

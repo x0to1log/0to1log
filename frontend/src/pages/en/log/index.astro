@@ -6,11 +6,12 @@ import { supabase } from '../../../lib/supabase';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 
 const posts = supabase
   ? (await supabase
       .from('posts')
-      .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url')
+      .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
       .eq('status', 'published')
       .eq('locale', 'en')
       .order('published_at', { ascending: false })
@@ -24,44 +25,42 @@ const categories = Array.from(new Set(posts.map((post) => post.category).filter(
 ---
 
 <MainLayout title={t.en['log.title']} locale="en" slug="log/">
-  <NewsprintShell locale="en" masthead="AI News Ledger" editionLabel="Global Builder Edition">
+  <NewsprintShell locale="en" masthead="From Void to Value" editionLabel="Builder's Daily"
+    subkicker={['AI · Papers · Projects', 'Daily Curation', 'Free']}>
+
+    <NewsprintCategoryFilter locale="en" />
+
     {featured ? (
       <>
-        <article>
+        <a href={`/en/log/${featured.slug}/`} class="newsprint-featured newsprint-card" data-category={featured.category}>
+          <span class="newsprint-category">{featured.category}</span>
           <h2 class="newsprint-lead-title">{featured.title}</h2>
-          <div class="newsprint-meta">
-            {featured.published_at && <time>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>}
-            {featured.reading_time_min && <span>{featured.reading_time_min} min read</span>}
-            <span class="newsprint-category">{featured.category}</span>
-          </div>
+          {featured.excerpt && <p class="newsprint-excerpt">{featured.excerpt}</p>}
           <div class="newsprint-tags">
             {(featured.tags ?? []).slice(0, 5).map((tag: string) => <span class="newsprint-tag">{tag}</span>)}
           </div>
-          <div class="newsprint-divider"></div>
-        </article>
+          <div class="newsprint-meta">
+            {featured.published_at && <time>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>}
+            {featured.reading_time_min && <span>{featured.reading_time_min} min read</span>}
+          </div>
+        </a>
 
-        <section class="newsprint-grid-cards">
-          <NewsprintListCard
-            href={`/en/log/${featured.slug}/`}
-            title={featured.title}
-            category={featured.category}
-            publishedAt={featured.published_at}
-            readingTimeMin={featured.reading_time_min}
-            tags={featured.tags}
-            locale="en"
-          />
-          {rest.map((post) => (
-            <NewsprintListCard
-              href={`/en/log/${post.slug}/`}
-              title={post.title}
-              category={post.category}
-              publishedAt={post.published_at}
-              readingTimeMin={post.reading_time_min}
-              tags={post.tags}
-              locale="en"
-            />
-          ))}
-        </section>
+        {rest.length > 0 && (
+          <section class="newsprint-grid-cards">
+            {rest.map((post) => (
+              <NewsprintListCard
+                href={`/en/log/${post.slug}/`}
+                title={post.title}
+                excerpt={post.excerpt}
+                category={post.category}
+                publishedAt={post.published_at}
+                readingTimeMin={post.reading_time_min}
+                tags={post.tags}
+                locale="en"
+              />
+            ))}
+          </section>
+        )}
       </>
     ) : (
       <p class="newsprint-empty">{t.en['log.empty']}</p>

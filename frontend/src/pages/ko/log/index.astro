@@ -6,11 +6,12 @@ import { supabase } from '../../../lib/supabase';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 
 const posts = supabase
   ? (await supabase
       .from('posts')
-      .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url')
+      .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
       .eq('status', 'published')
       .eq('locale', 'ko')
       .order('published_at', { ascending: false })
@@ -24,44 +25,42 @@ const categories = Array.from(new Set(posts.map((post) => post.category).filter(
 ---
 
 <MainLayout title={t.ko['log.title']} locale="ko" slug="log/">
-  <NewsprintShell locale="ko" masthead="AI 뉴스 레저" editionLabel="코어 브리핑 에디션">
+  <NewsprintShell locale="ko" masthead="가치를 담는 기록" editionLabel="빌더스 데일리"
+    subkicker={['AI · 논문 · 프로젝트', '데일리 큐레이션', '무료']}>
+
+    <NewsprintCategoryFilter locale="ko" />
+
     {featured ? (
       <>
-        <article>
+        <a href={`/ko/log/${featured.slug}/`} class="newsprint-featured newsprint-card" data-category={featured.category}>
+          <span class="newsprint-category">{featured.category}</span>
           <h2 class="newsprint-lead-title">{featured.title}</h2>
-          <div class="newsprint-meta">
-            {featured.published_at && <time>{new Date(featured.published_at).toLocaleDateString('ko-KR')}</time>}
-            {featured.reading_time_min && <span>{featured.reading_time_min}분 읽기</span>}
-            <span class="newsprint-category">{featured.category}</span>
-          </div>
+          {featured.excerpt && <p class="newsprint-excerpt">{featured.excerpt}</p>}
           <div class="newsprint-tags">
             {(featured.tags ?? []).slice(0, 5).map((tag: string) => <span class="newsprint-tag">{tag}</span>)}
           </div>
-          <div class="newsprint-divider"></div>
-        </article>
+          <div class="newsprint-meta">
+            {featured.published_at && <time>{new Date(featured.published_at).toLocaleDateString('ko-KR')}</time>}
+            {featured.reading_time_min && <span>{featured.reading_time_min}분 읽기</span>}
+          </div>
+        </a>
 
-        <section class="newsprint-grid-cards">
-          <NewsprintListCard
-            href={`/ko/log/${featured.slug}/`}
-            title="리드 스토리 열기"
-            category={featured.category}
-            publishedAt={featured.published_at}
-            readingTimeMin={featured.reading_time_min}
-            tags={featured.tags}
-            locale="ko"
-          />
-          {rest.map((post) => (
-            <NewsprintListCard
-              href={`/ko/log/${post.slug}/`}
-              title={post.title}
-              category={post.category}
-              publishedAt={post.published_at}
-              readingTimeMin={post.reading_time_min}
-              tags={post.tags}
-              locale="ko"
-            />
-          ))}
-        </section>
+        {rest.length > 0 && (
+          <section class="newsprint-grid-cards">
+            {rest.map((post) => (
+              <NewsprintListCard
+                href={`/ko/log/${post.slug}/`}
+                title={post.title}
+                category={post.category}
+                publishedAt={post.published_at}
+                readingTimeMin={post.reading_time_min}
+                excerpt={post.excerpt}
+                tags={post.tags}
+                locale="ko"
+              />
+            ))}
+          </section>
+        )}
       </>
     ) : (
       <p class="newsprint-empty">{t.ko['log.empty']}</p>
