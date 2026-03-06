@@ -1,0 +1,120 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+  categories?: string[];
+}
+
+const { locale, categories = ['ai-news', 'tech', 'career', 'project'] } = Astro.props;
+const isKo = locale === 'ko';
+
+const labelMap: Record<string, Record<string, string>> = {
+  'all': { en: 'All', ko: '전체' },
+  'ai-news': { en: 'AI News', ko: 'AI 뉴스' },
+  'tech': { en: 'Study', ko: '서재' },
+  'career': { en: 'Career', ko: '커리어' },
+  'project': { en: 'Project', ko: '프로젝트' },
+};
+
+const colorMap: Record<string, string> = {
+  'all': 'var(--color-accent)',
+  'ai-news': 'var(--color-cat-ainews)',
+  'tech': 'var(--color-cat-tech)',
+  'career': 'var(--color-cat-career)',
+  'project': 'var(--color-cat-project)',
+};
+
+const tabs = ['all', ...categories];
+---
+
+<nav class="newsprint-filter-tabs" role="tablist" aria-label={isKo ? '카테고리 필터' : 'Category filter'}>
+  {tabs.map((cat, i) => (
+    <button
+      class="newsprint-filter-tab"
+      role="tab"
+      data-filter={cat}
+      aria-selected={cat === 'all' ? 'true' : 'false'}
+      tabindex={cat === 'all' ? '0' : '-1'}
+      style={`--tab-cat-color: ${colorMap[cat] || 'var(--color-accent)'};`}
+    >
+      {labelMap[cat]?.[locale] || cat}
+    </button>
+  ))}
+</nav>
+
+<script>
+  function initCategoryFilter(): void {
+    const nav = document.querySelector<HTMLElement>('.newsprint-filter-tabs');
+    if (!nav) return;
+
+    const tabs = Array.from(nav.querySelectorAll<HTMLButtonElement>('.newsprint-filter-tab'));
+    if (tabs.length === 0) return;
+
+    // Read initial category from URL
+    const params = new URLSearchParams(window.location.search);
+    const initialCat = params.get('category') || 'all';
+
+    function activate(category: string, focusTab = false): void {
+      tabs.forEach((tab) => {
+        const isActive = tab.dataset.filter === category;
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        tab.setAttribute('tabindex', isActive ? '0' : '-1');
+        if (isActive && focusTab) tab.focus();
+      });
+
+      // Filter cards
+      document.querySelectorAll<HTMLElement>('.newsprint-card[data-category]').forEach((card) => {
+        const visible = category === 'all' || card.dataset.category === category;
+        card.setAttribute('data-filtered', visible ? 'true' : 'false');
+      });
+
+      // Filter featured sections
+      document.querySelectorAll<HTMLElement>('.newsprint-featured').forEach((section) => {
+        const visible = category === 'all' || section.dataset.category === category;
+        section.setAttribute('data-filtered', visible ? 'true' : 'false');
+      });
+
+      // Update URL without reload
+      const url = new URL(window.location.href);
+      if (category === 'all') {
+        url.searchParams.delete('category');
+      } else {
+        url.searchParams.set('category', category);
+      }
+      history.replaceState(null, '', url.toString());
+    }
+
+    // Click handler
+    nav.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.newsprint-filter-tab');
+      if (btn) activate(btn.dataset.filter || 'all');
+    });
+
+    // Arrow key navigation (WAI-ARIA Tabs pattern)
+    nav.addEventListener('keydown', (e) => {
+      const current = document.activeElement as HTMLButtonElement;
+      const idx = tabs.indexOf(current);
+      if (idx === -1) return;
+
+      let next = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        next = (idx + 1) % tabs.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        next = (idx - 1 + tabs.length) % tabs.length;
+      } else if (e.key === 'Home') {
+        next = 0;
+      } else if (e.key === 'End') {
+        next = tabs.length - 1;
+      }
+
+      if (next !== -1) {
+        e.preventDefault();
+        activate(tabs[next].dataset.filter || 'all', true);
+      }
+    });
+
+    // Activate initial category
+    activate(initialCat);
+  }
+
+  document.addEventListener('astro:page-load', initCategoryFilter);
+</script>

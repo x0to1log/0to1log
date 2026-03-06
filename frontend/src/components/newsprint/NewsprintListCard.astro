@@ -1,0 +1,47 @@
+---
+interface Props {
+  href: string;
+  title: string;
+  excerpt?: string | null;
+  category?: string | null;
+  publishedAt?: string | null;
+  readingTimeMin?: number | null;
+  tags?: string[] | null;
+  locale: 'en' | 'ko';
+}
+
+const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale } = Astro.props;
+const dateLabel = publishedAt
+  ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
+  : null;
+const readingLabel = readingTimeMin
+  ? locale === 'ko'
+    ? `${readingTimeMin}분 읽기`
+    : `${readingTimeMin} min read`
+  : null;
+
+const catColorMap: Record<string, string> = {
+  'ai-news': 'var(--color-cat-ainews)',
+  'tech': 'var(--color-cat-tech)',
+  'career': 'var(--color-cat-career)',
+  'project': 'var(--color-cat-project)',
+};
+const catColor = category ? catColorMap[category] || 'var(--color-border)' : 'var(--color-border)';
+---
+
+<a href={href} class="newsprint-card" data-category={category || 'uncategorized'}>
+  {category && <span class="newsprint-category" style={`color: ${catColor};`}>{category}</span>}
+  <h2 class="newsprint-card-title">{title}</h2>
+  {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
+  {tags && tags.length > 0 && (
+    <div class="newsprint-tags">
+      {tags.slice(0, 4).map((tag) => (
+        <span class="newsprint-tag">{tag}</span>
+      ))}
+    </div>
+  )}
+  <div class="newsprint-meta" style="margin-top: 0.5rem;">
+    {dateLabel && <time>{dateLabel}</time>}
+    {readingLabel && <span>{readingLabel}</span>}
+  </div>
+</a>

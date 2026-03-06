@@ -3,11 +3,7 @@
 /* ===========================
    FONT FACES
    =========================== */
-@font-face {
-  font-family: 'Pretendard';
-  src: local('Pretendard');
-  font-display: swap;
-}
+/* Gowun Batang loaded via Google Fonts in Head.astro */
 
 @font-face {
   font-family: 'JetBrains Mono';
@@ -19,8 +15,9 @@
    TAILWIND v4 THEME
    =========================== */
 @theme {
-  --font-display: 'Playfair Display', 'Pretendard', serif;
-  --font-body: 'Lora', 'Pretendard', serif;
+  --font-sans: 'Lora', 'Gowun Batang', serif;
+  --font-display: 'Playfair Display', 'Gowun Batang', serif;
+  --font-body: 'Lora', 'Gowun Batang', serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
 
   --breakpoint-mobile: 640px;
@@ -48,7 +45,13 @@
   --color-warning: #D4A843;
   --color-error: #A8524B;
   --color-shadow: rgba(0, 0, 0, 0.35);
-  --noise-opacity: 0.03;
+  --noise-opacity: 0.025;
+
+  /* Category Colors */
+  --color-cat-ainews: #6B9BD2;
+  --color-cat-tech: #7EAE6B;
+  --color-cat-career: #D4A843;
+  --color-cat-project: #B8A0D4;
 
   /* Shiki — Warm Sepia */
   --shiki-token-keyword: #D4A87C;
@@ -80,7 +83,13 @@
   --color-warning: #B8860B;
   --color-error: #8B3A3A;
   --color-shadow: rgba(43, 36, 26, 0.12);
-  --noise-opacity: 0.05;
+  --noise-opacity: 0.04;
+
+  /* Category Colors */
+  --color-cat-ainews: #2B5C8A;
+  --color-cat-tech: #3D6B2E;
+  --color-cat-career: #8B6914;
+  --color-cat-project: #6B4F8A;
 
   /* Shiki — Newspaper */
   --shiki-token-keyword: #8B3A3A;
@@ -100,28 +109,33 @@
   --color-bg-primary: #F8C8DC;
   --color-bg-secondary: #EEBCCF;
   --color-bg-tertiary: #E4B0C3;
-  --color-text-primary: #3B2E31;
-  --color-text-secondary: #6B585D;
-  --color-text-muted: #9A8A8E;
-  --color-border: #DDAEBD;
-  --color-accent: #A85B7D;
-  --color-accent-hover: #BF6E92;
-  --color-accent-glow: rgba(168, 91, 125, 0.18);
-  --color-accent-subtle: rgba(168, 91, 125, 0.10);
-  --color-success: #5A8E5D;
-  --color-warning: #C4883A;
-  --color-error: #A8524B;
-  --color-shadow: rgba(60, 30, 40, 0.15);
-  --noise-opacity: 0.05;
+  --color-text-primary: #2D1F22;
+  --color-text-secondary: #4D3B40;
+  --color-text-muted: #6E5459;
+  --color-border: #9A6580;
+  --color-accent: #8A3D5E;
+  --color-accent-hover: #A04D70;
+  --color-accent-glow: rgba(138, 61, 94, 0.18);
+  --color-accent-subtle: rgba(138, 61, 94, 0.10);
+  --color-success: #3D7A40;
+  --color-warning: #A06E28;
+  --color-error: #8B3A3A;
+  --color-shadow: rgba(60, 30, 40, 0.20);
+
+  /* Category Colors */
+  --color-cat-ainews: #3A6090;
+  --color-cat-tech: #3A6A3A;
+  --color-cat-career: #7A5A10;
+  --color-cat-project: #5A4080;
 
   /* Shiki — Rose */
-  --shiki-token-keyword: #8A4A6B;
-  --shiki-token-string: #4A7A5C;
-  --shiki-token-function: #5B6B9A;
-  --shiki-token-comment: #9A8A8E;
-  --shiki-token-constant: #A85B7D;
-  --shiki-token-punctuation: #3B2E31;
-  --shiki-color-text: #3B2E31;
+  --shiki-token-keyword: #7A3A5B;
+  --shiki-token-string: #3A6A4C;
+  --shiki-token-function: #4B5B8A;
+  --shiki-token-comment: #6E5459;
+  --shiki-token-constant: #8A3D5E;
+  --shiki-token-punctuation: #2D1F22;
+  --shiki-color-text: #2D1F22;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
@@ -129,27 +143,21 @@
    NEWSPRINT COMPONENT STYLES
    =========================== */
 .newsprint-page {
-  position: relative;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
-  border: 1px solid var(--color-border);
+  padding: 1rem 0.75rem;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
-  box-shadow: 0 16px 40px var(--color-shadow);
 }
 
-.newsprint-page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.03), transparent 35%);
+@media (min-width: 768px) {
+  .newsprint-page {
+    padding: 1.5rem;
+  }
 }
 
 .newsprint-header {
-  border-bottom: 2px solid var(--color-border);
-  padding-bottom: 1rem;
+  padding-bottom: 0;
   margin-bottom: 1.5rem;
 }
 
@@ -162,16 +170,19 @@
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .newsprint-masthead {
   margin-top: 0.75rem;
   margin-bottom: 0.75rem;
   font-family: var(--font-display);
-  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-weight: 900;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
   line-height: 1.08;
   letter-spacing: -0.02em;
   text-transform: uppercase;
+  text-align: center;
 }
 
 .newsprint-grid {
@@ -192,7 +203,7 @@
 @media (min-width: 1024px) {
   .newsprint-grid {
     grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-    gap: 2rem;
+    gap: 0;
   }
 
   .newsprint-main {
@@ -203,8 +214,12 @@
   .newsprint-rail {
     border-top: none;
     padding-top: 0;
-    padding-left: 0.25rem;
+    padding-left: 1.5rem;
   }
+}
+
+.newsprint-rail .newsprint-card {
+  border-bottom-style: dashed;
 }
 
 .newsprint-divider {
@@ -213,8 +228,32 @@
   margin: 1rem 0;
 }
 
+.newsprint-divider-thick {
+  height: 3px;
+  background: var(--color-border);
+  margin: 1rem 0 1rem;
+}
+
+.newsprint-subkicker {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.35rem 0.15rem;
+  margin-top: 0.25rem;
+  text-align: center;
+}
+
 .newsprint-section-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 1.25rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -225,6 +264,7 @@
 
 .newsprint-lead-title {
   font-family: var(--font-display);
+  font-weight: 800;
   font-size: clamp(1.6rem, 2.8vw, 2.4rem);
   line-height: 1.16;
   margin-bottom: 0.45rem;
@@ -248,29 +288,34 @@
 .newsprint-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 0;
 }
 
 .newsprint-card {
   display: block;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 1.25rem 0;
   text-decoration: none;
   color: inherit;
-  transition: transform 120ms ease, border-color 120ms ease;
+  transition: background-color 150ms ease;
 }
 
 .newsprint-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--color-accent);
+  background-color: var(--color-accent-subtle);
+}
+
+.newsprint-card:hover .newsprint-card-title {
+  color: var(--color-accent);
 }
 
 .newsprint-card-title {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 1.15rem;
   line-height: 1.25;
+  transition: color 150ms ease;
 }
+.newsprint-excerpt {  font-size: 0.95rem;  line-height: 1.6;  color: var(--color-text-secondary);  margin-top: 0.4rem;}
 
 .newsprint-tags {
   display: flex;
@@ -280,7 +325,7 @@
 }
 
 .newsprint-tag {
-  border: 1px solid var(--color-border);
+  border: 1px dashed var(--color-border);
   border-radius: 999px;
   padding: 0.12rem 0.5rem;
   font-size: 0.72rem;
@@ -289,15 +334,12 @@
 
 .newsprint-empty {
   border: 1px dashed var(--color-border);
-  background: var(--color-bg-secondary);
   padding: 1rem;
   color: var(--color-text-secondary);
 }
 
 .newsprint-article {
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-  padding: 1.2rem;
+  padding: 1.25rem 0;
 }
 
 .newsprint-prose {
@@ -305,8 +347,23 @@
   line-height: 1.8;
 }
 
+.newsprint-prose p:first-of-type::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 3.5rem;
+  line-height: 0.8;
+  margin-right: 0.15rem;
+  margin-top: 0.1rem;
+  color: var(--color-accent);
+}
+
 .newsprint-prose p + p {
   margin-top: 0.95rem;
+}
+
+.newsprint-prose p {
+  break-inside: avoid;
 }
 
 .newsprint-back {
@@ -314,10 +371,54 @@
   color: var(--color-accent);
   text-decoration: none;
   margin-bottom: 0.85rem;
+  transition: color 150ms ease;
 }
 
 .newsprint-back:hover {
   text-decoration: underline;
+}
+
+/* ===========================
+   CATEGORY FILTER TABS
+   =========================== */
+.newsprint-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.newsprint-filter-tab {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+  font-family: var(--font-sans);
+}
+
+.newsprint-filter-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.newsprint-filter-tab[aria-selected="true"] {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--tab-cat-color, var(--color-accent));
+}
+
+.newsprint-card[data-filtered="false"] {
+  display: none;
+}
+
+.newsprint-featured[data-filtered="false"] {
+  display: none;
 }
 
 /* ===========================
@@ -330,7 +431,7 @@
 @media (min-width: 1024px) {
   .col-newspaper-2 {
     column-count: 2;
-    column-gap: 2rem;
+    column-gap: 3rem;
     column-rule: 1px solid var(--color-border);
   }
 }
@@ -338,13 +439,7 @@
 .newsprint-grid-cards {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.95rem;
-}
-
-@media (min-width: 1024px) {
-  .newsprint-grid-cards {
-    grid-template-columns: 1fr 1fr;
-  }
+  gap: 0;
 }
 
 /* ===========================
@@ -352,6 +447,11 @@
    =========================== */
 .img-newsprint {
   filter: grayscale(80%) sepia(20%) contrast(1.1);
+  transition: filter 400ms ease;
+}
+
+.img-newsprint:hover {
+  filter: none;
 }
 
 /* ===========================
@@ -398,16 +498,64 @@ html {
   font-family: var(--font-body);
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
+  background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.03"/%3E%3C/svg%3E');
 }
 
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: var(--noise-opacity, 0.03);
-  background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+/* SideRail link styling (replaces inline styles) */
+.newsprint-rail-link {
+  display: block;
+  line-height: 1.4;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.newsprint-rail-category {
+  display: inline-block;
+  margin-top: 0.45rem;
+}
+
+/* Navigation link hover */
+.newsprint-nav-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.newsprint-nav-link:hover {
+  color: var(--color-accent);
+}
+
+/* Footer category nav */
+.newsprint-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+}
+
+.newsprint-footer-nav a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.newsprint-footer-nav a:hover {
+  color: var(--color-accent);
+}
+
+.newsprint-footer-dot {
+  color: var(--color-border);
+}
+
+@media (max-width: 767px) {
+  .newsprint-footer-dot {
+    display: none;
+  }
 }
 
 code, pre {

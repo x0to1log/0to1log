@@ -1,0 +1,42 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+  masthead: string;
+  editionLabel?: string;
+  volumeLabel?: string;
+  subkicker?: string[];
+}
+
+const { locale, masthead, editionLabel, volumeLabel, subkicker } = Astro.props;
+const isKo = locale === 'ko';
+const now = new Date();
+const dateLabel = isKo
+  ? now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+  : now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<section class="newsprint-page">
+  <header class="newsprint-header">
+    <div class="newsprint-kicker">
+      <span>{volumeLabel ?? (isKo ? '제1권 · 제1호' : 'Vol. I · No. 1')}</span>
+      <span>{editionLabel ?? (isKo ? 'AI 뉴스 데일리' : 'AI Daily Dispatch')}</span>
+      <span>{dateLabel}</span>
+    </div>
+    <h1 class="newsprint-masthead">{masthead}</h1>
+    {subkicker && subkicker.length > 0 && (
+      <div class="newsprint-subkicker">
+        {subkicker.map((item) => <span>{item}</span>)}
+      </div>
+    )}
+    <div class="newsprint-divider-thick"></div>
+  </header>
+
+  <div class="newsprint-grid">
+    <main class="newsprint-main">
+      <slot />
+    </main>
+    <aside class="newsprint-rail">
+      <slot name="rail" />
+    </aside>
+  </div>
+</section>

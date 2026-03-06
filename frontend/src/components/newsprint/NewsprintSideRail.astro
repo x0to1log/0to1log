@@ -1,0 +1,49 @@
+---
+interface RailPost {
+  title: string;
+  slug: string;
+  category?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  posts: RailPost[];
+  categories: string[];
+}
+
+const { locale, posts, categories } = Astro.props;
+const isKo = locale === 'ko';
+---
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '에디터 픽' : "Editor's Picks"}</h3>
+  {posts.length === 0 ? (
+    <p class="newsprint-empty">{isKo ? '아직 표시할 글이 없습니다.' : 'No items yet.'}</p>
+  ) : (
+    <div class="newsprint-stack">
+      {posts.map((post) => (
+        <a class="newsprint-card" href={`/${locale}/log/${post.slug}/`}>
+          <strong class="newsprint-rail-link">{post.title}</strong>
+          {post.category && (
+            <span class="newsprint-category newsprint-rail-category">
+              {post.category}
+            </span>
+          )}
+        </a>
+      ))}
+    </div>
+  )}
+</section>
+
+<div class="newsprint-divider"></div>
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '섹션' : 'Sections'}</h3>
+  <div class="newsprint-tags">
+    {categories.length === 0 ? (
+      <span class="newsprint-tag">{isKo ? '대기 중' : 'Pending'}</span>
+    ) : (
+      categories.map((cat) => <span class="newsprint-tag">{cat}</span>)
+    )}
+  </div>
+</section>
