@@ -20,6 +20,9 @@ interface Props {
 }
 
 const { title, description, locale = 'en', slug, article } = Astro.props;
+
+const gaId = import.meta.env.PUBLIC_GA4_ID || '';
+const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 ---
 
 <!doctype html>
@@ -41,6 +44,28 @@ const { title, description, locale = 'en', slug, article } = Astro.props;
   <ViewTransitions />
 
   <body style={`min-height: 100vh; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}>
+    {gaId && (
+      <>
+        <script is:inline src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} async></script>
+        <script is:inline define:vars={{ gaId }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', gaId);
+        </script>
+      </>
+    )}
+
+    {clarityId && (
+      <script is:inline define:vars={{ clarityId }}>
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window,document,"clarity","script",clarityId);
+      </script>
+    )}
+
     <!-- Skip Navigation -->
     <a href="#main-content" class="sr-only" style={`position: absolute; top: -100%; left: 0; background: var(--color-accent); color: white; padding: 0.5rem 1rem; z-index: 9999;`}>
       Skip to content
