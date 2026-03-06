@@ -34,6 +34,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
   <script is:inline>
     (function() {
       var stored = localStorage.getItem('theme');
+      if (stored === 'midnight') { stored = 'pink'; localStorage.setItem('theme', stored); }
       if (stored) {
         document.documentElement.setAttribute('data-theme', stored);
       } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {

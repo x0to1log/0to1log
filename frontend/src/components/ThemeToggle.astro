@@ -7,8 +7,8 @@
 </button>
 
 <script>
-  const themes = ['dark', 'light', 'midnight'] as const;
-  const icons: Record<string, string> = { dark: '🌙', light: '☀️', midnight: '🌊' };
+  const themes = ['dark', 'light', 'pink'] as const;
+  const icons: Record<string, string> = { dark: '🌙', light: '☀️', pink: '🌸' };
 
   function getTheme(): string {
     return localStorage.getItem('theme') || 'dark';
