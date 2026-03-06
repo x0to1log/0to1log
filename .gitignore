@@ -23,5 +23,8 @@ __pycache__/
 .vscode/settings.json
 .idea/
 
+# Vercel
+.vercel/
+
 # Temp
 .tmp_publish_*/
