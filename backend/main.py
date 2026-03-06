@@ -7,6 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from routers import cron, admin
+from models.posts import HealthResponse
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -26,6 +27,9 @@ app.include_router(cron.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health():
-    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+    return HealthResponse(
+        status="ok",
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )

@@ -1,16 +1,18 @@
-# ACTIVE SPRINT — Phase 2A AI Core (Data Collection Base)
+# ACTIVE SPRINT — Phase 2B-OPS (Backend Feature Freeze)
 
-> **스프린트 시작:** 2026-03-06
-> **목표:** 데이터 수집/랭킹 뼈대 완성 + 외부 API Mock 테스트
+> **스프린트 시작:** 2026-03-07
+> **목표:** AI Agent 3종 구현 + Admin CRUD 실구현 + OpenAPI 스키마 고정
 > **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/02~03`
-> **이전 스프린트:** Phase 1b Analytics — 2026-03-06 게이트 전체 통과
+> **이전 스프린트:** Phase 2A — 2026-03-07 게이트 전체 통과
 
 ---
 
 ## 스프린트 완료 게이트
 
-- [x] `cd backend && pytest tests/ -v` 전체 통과 (20 passed)
-- [x] `cd frontend && npm run build` — 0 error
+- [x] OpenAPI 문서 고정 (목록/상세/에러 응답 스키마 포함) — 12 schemas, 6 endpoints
+- [x] `cd backend && pytest tests/ -v` 전체 통과 — 49 passed
+- [x] 외부 네트워크 호출 차단 환경에서 테스트 통과 (httpx block_network autouse fixture)
+- [x] 401/403 분리 동작 확인 — test_admin.py TestAuthSplit 4 tests
 - [x] 태스크 전체 `상태=done` + `체크=[x]` 일치
 - [x] `Current Doing` 슬롯이 비어 있음(`-`)
 - [x] 완료 태스크마다 `증거` 링크 최소 1개 존재
@@ -42,70 +44,84 @@
 
 ## 태스크 (실행 순서)
 
-### 1. Pipeline 테이블 마이그레이션 `[P2-DB-01]`
+### 1. OpenAPI 스키마 확정 `[P2B-CONTRACT-00]`
 - **체크:** [x]
 - **상태:** done
-- **산출물:** `supabase/migrations/00002_pipeline_tables.sql` (5개 테이블 + RLS)
-- **완료 기준:** Supabase Dashboard에서 테이블 확인 + SQL 커밋
-- **검증:** 마이그레이션 SQL 문법 정상 + posts ALTER 없음
-- **증거:** commit d218890
-- **참조:** 03 §3
+- **목적:** 프론트(2C) 작업을 위한 API 응답 스키마 선고정
+- **산출물:** `backend/openapi.json` + `models/posts.py` 응답 모델 8종 + 라우터 response_model 적용
+- **완료 기준:** 목록/상세/에러 응답 스키마가 문서에 존재하고 프론트 Mock과 계약 일치
+- **검증:** `python -c "from main import app; import json; print(json.dumps(app.openapi(), indent=2))"` 실행 → 응답 스키마 확인
+- **증거:** openapi.json 생성 완료 (12 schemas, 6 endpoints, 20 tests passed)
+- **참조:** 03 §4, IMPLEMENTATION_PLAN §3 2B Gate
+- **의존성:** 없음
 
-### 2. Pydantic 스키마 + 의존성 `[P2-SCHEMA-01]`
+### 2. AI Agent 로직 + Prompt 튜닝 `[P2B-API-01]`
 - **체크:** [x]
 - **상태:** done
-- **산출물:** requirements.txt 업데이트 + models/ 스키마 (common, ranking, research, business)
-- **완료 기준:** `python -c "from models.ranking import *"` 등 import 성공
-- **검증:** 각 모델 import 테스트
-- **증거:** commit 6596029
-- **참조:** 02 §4
+- **목적:** Ranking(gpt-4o-mini) / Research Engineer(gpt-4o) / Business Analyst(gpt-4o) 에이전트 구현
+- **산출물:** `backend/services/agents/` (ranking.py, research.py, business.py, prompts.py, client.py)
+- **완료 기준:** 네트워크 차단 Mock 환경에서 단위테스트 전체 통과
+- **검증:** `pytest tests/test_agents.py -v` — 10 passed (네트워크 차단 autouse 픽스처 적용)
+- **증거:** 30 tests passed (기존 20 + agent 10), httpx block_network fixture
+- **참조:** 02 §2-4, 03 §5
+- **의존성:** P2B-CONTRACT-00
 
-### 3. Security + Admin Auth + Rate Limiting `[P2-AUTH-01]`
+### 3. Admin CRUD 엔드포인트 `[P2B-API-02]`
 - **체크:** [x]
 - **상태:** done
-- **산출물:** security.py 실구현 + main.py slowapi 등록
-- **완료 기준:** 401/403 분리 동작 확인
-- **검증:** require_admin 함수 + verify_cron_secret + slowapi 미들웨어
-- **증거:** commit 7ec56fb
-- **참조:** 03 §2
+- **목적:** 501 스텁을 실구현으로 교체 (list/get/publish/update)
+- **산출물:** `backend/routers/admin.py` 실구현 + `backend/tests/test_admin.py`
+- **완료 기준:** Admin 200/201/204 정상 + 비인가 401/403 분리 테스트 통과
+- **검증:** `pytest tests/test_admin.py -v` — 13 passed (auth 4 + CRUD 9)
+- **증거:** 401/403 분리 확인, dependency_overrides mock, Supabase mock
+- **참조:** 03 §4
+- **의존성:** P2B-CONTRACT-00
 
-### 4. News Collection Service `[P2-COLLECT-01]`
+### 4. Cron endpoint skeleton `[P2B-CRON-00]`
 - **체크:** [x]
 - **상태:** done
-- **산출물:** `services/news_collection.py` + `tests/test_news_collection.py`
-- **완료 기준:** Mock 기반 단위테스트 전체 통과
-- **검증:** `pytest tests/test_news_collection.py -v`
-- **증거:** commit 65d8284
-- **참조:** 02 §2
-
-### 5. Pipeline Lock + Stale Recovery `[P2-PIPE-BASE]`
-- **체크:** [x]
-- **상태:** done
-- **산출물:** `services/pipeline.py` + `tests/test_pipeline_lock.py`
-- **완료 기준:** Lock 획득/스킵/stale recovery/failed 재시도 테스트 전체 통과
-- **검증:** `pytest tests/test_pipeline_lock.py -v` — 8 passed
-- **증거:** commit 40a6428
-- **참조:** 02 §6
-
-### 6. Vercel Cron Trigger `[P2-CRON-01]`
-- **체크:** [x]
-- **상태:** done
-- **산출물:** `frontend/src/pages/api/trigger-pipeline.ts` + vercel.json cron 추가
-- **완료 기준:** `npm run build` 0 errors + GET 핸들러 구현
-- **검증:** 빌드 통과 — 0 errors
-- **증거:** (이 커밋)
+- **목적:** Vercel Cron이 찌를 진입점 뼈대 (Secret 검증 + 202 반환만)
+- **산출물:** `backend/routers/cron.py` (response_model 적용) + `backend/tests/test_cron.py`
+- **완료 기준:** valid secret → 202, invalid secret → 401 테스트 통과
+- **검증:** `pytest tests/test_cron.py -v` — 6 passed
+- **증거:** 401 (missing/invalid/empty secret) + 202 (valid) + 응답 스키마 검증
 - **참조:** 04 §5, 05 §4
+- **의존성:** 없음 (에이전트 호출 연동은 Phase 2D)
 
 ---
 
 ## 의존성 흐름
 
 ```
-P2-DB-01 → P2-SCHEMA-01 → P2-AUTH-01 → P2-COLLECT-01 → P2-PIPE-BASE → P2-CRON-01
+P2B-CONTRACT-00 → P2B-API-01
+P2B-CONTRACT-00 → P2B-API-02
+P2B-CRON-00 (독립 — 에이전트 연동은 2D)
 ```
+
+---
+
+## 이전 스프린트 요약 (Phase 2A)
+
+> Phase 2A (2026-03-06 ~ 03-07) — 게이트 전체 통과, 6개 태스크 완료.
+> - DB 마이그레이션 (`supabase/migrations/00002_pipeline_tables.sql`, 5개 테이블 + RLS)
+> - Pydantic 스키마 정의 (ranking, research, business, common)
+> - 뉴스 수집 서비스 Mock 테스트 완료 (Tavily/HN/GitHub + dedup)
+> - 파이프라인 Lock/Stale Recovery 구현 및 테스트 (8 passed)
+> - Security 미들웨어 + Vercel Cron Trigger skeleton 완료
 
 ---
 
 ## 다음 스프린트 예고
 
-Phase 2A 게이트 통과 시 → **Phase 2B AI Core** (Agent 본체 + Admin CRUD + E2E + 배포)
+Phase 2B 게이트 통과 시 → **Phase 2C-EXP** (프론트 경험 고도화: Newsprint 테마, 다국어, 반응형/접근성 QA)
+
+---
+
+## 2C-EXP Addendum (Stitch Compatibility)
+
+- [x] `2C-UI-01` Prototype compatibility cleanup completed
+  Evidence: `frontend/example_dark.html`, `frontend/example_light.html`, `frontend/example_list.html`
+- [x] `2C-UI-02` `/en|ko/log` list/detail style migration completed
+  Evidence: `frontend/src/pages/en/log/index.astro`, `frontend/src/pages/ko/log/index.astro`, `frontend/src/pages/en/log/[slug].astro`, `frontend/src/pages/ko/log/[slug].astro`
+- [x] `2C-QA-01` Preview routes added for visual validation
+  Evidence: `frontend/src/pages/preview/newsprint-dark.astro`, `frontend/src/pages/preview/newsprint-light.astro`
