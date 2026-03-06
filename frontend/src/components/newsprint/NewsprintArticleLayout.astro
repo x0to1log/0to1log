@@ -1,0 +1,60 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+  slug: string;
+  title: string;
+  category?: string | null;
+  publishedAt?: string | null;
+  readingTimeMin?: number | null;
+  tags?: string[] | null;
+  htmlContent: string;
+  backLabel: string;
+}
+
+const {
+  locale,
+  slug,
+  title,
+  category,
+  publishedAt,
+  readingTimeMin,
+  tags,
+  htmlContent,
+  backLabel,
+} = Astro.props;
+
+const dateLabel = publishedAt
+  ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
+  : null;
+const readingLabel = readingTimeMin
+  ? locale === 'ko'
+    ? `${readingTimeMin}분 읽기`
+    : `${readingTimeMin} min read`
+  : null;
+---
+
+<a class="newsprint-back" href={`/${locale}/log/`}>
+  &larr; {backLabel}
+</a>
+
+<article class="newsprint-article">
+  <h1 class="newsprint-lead-title">{title}</h1>
+  <div class="newsprint-meta">
+    {dateLabel && <time>{dateLabel}</time>}
+    {readingLabel && <span>{readingLabel}</span>}
+    {category && <span class="newsprint-category">{category}</span>}
+    <span class="newsprint-tag">{slug}</span>
+  </div>
+
+  {tags && tags.length > 0 && (
+    <div class="newsprint-tags">
+      {tags.slice(0, 6).map((tag) => (
+        <span class="newsprint-tag">{tag}</span>
+      ))}
+    </div>
+  )}
+
+  <div class="newsprint-prose col-newspaper-2">
+    <Fragment set:html={htmlContent} />
+  </div>
+</article>
