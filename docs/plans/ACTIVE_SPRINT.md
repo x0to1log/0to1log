@@ -21,7 +21,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| P2-COLLECT-01 | doing | 2026-03-06 | Amy |
+| P2-PIPE-BASE | doing | 2026-03-06 | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -70,17 +70,17 @@
 - **참조:** 03 §2
 
 ### 4. News Collection Service `[P2-COLLECT-01]`
-- **체크:** [ ]
-- **상태:** doing
+- **체크:** [x]
+- **상태:** done
 - **산출물:** `services/news_collection.py` + `tests/test_news_collection.py`
 - **완료 기준:** Mock 기반 단위테스트 전체 통과
 - **검증:** `pytest tests/test_news_collection.py -v`
-- **증거:** (완료 시 필수)
+- **증거:** commit 65d8284
 - **참조:** 02 §2
 
 ### 5. Pipeline Lock + Stale Recovery `[P2-PIPE-BASE]`
 - **체크:** [ ]
-- **상태:** todo
+- **상태:** doing
 - **산출물:** `services/pipeline.py` + `tests/test_pipeline_lock.py`
 - **완료 기준:** Lock 획득/스킵/stale recovery/failed 재시도 테스트 전체 통과
 - **검증:** `pytest tests/test_pipeline_lock.py -v`
