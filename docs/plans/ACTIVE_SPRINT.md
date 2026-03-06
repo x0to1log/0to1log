@@ -21,7 +21,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| P2-DB-01 | doing | 2026-03-06 | Amy |
+| P2-SCHEMA-01 | doing | 2026-03-06 | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -43,17 +43,17 @@
 ## 태스크 (실행 순서)
 
 ### 1. Pipeline 테이블 마이그레이션 `[P2-DB-01]`
-- **체크:** [ ]
-- **상태:** doing
+- **체크:** [x]
+- **상태:** done
 - **산출물:** `supabase/migrations/00002_pipeline_tables.sql` (5개 테이블 + RLS)
 - **완료 기준:** Supabase Dashboard에서 테이블 확인 + SQL 커밋
 - **검증:** 마이그레이션 SQL 문법 정상 + posts ALTER 없음
-- **증거:** (완료 시 필수)
+- **증거:** commit d218890
 - **참조:** 03 §3
 
 ### 2. Pydantic 스키마 + 의존성 `[P2-SCHEMA-01]`
 - **체크:** [ ]
-- **상태:** todo
+- **상태:** doing
 - **산출물:** requirements.txt 업데이트 + models/ 스키마 (common, ranking, research, business)
 - **완료 기준:** `python -c "from models.ranking import *"` 등 import 성공
 - **검증:** 각 모델 import 테스트
