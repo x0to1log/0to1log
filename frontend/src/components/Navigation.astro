@@ -1,4 +1,6 @@
 ---
+import ThemeToggle from './ThemeToggle.astro';
+
 interface Props {
   locale?: 'en' | 'ko';
 }
@@ -16,12 +18,12 @@ const altPath = currentPath.replace(`/${locale}/`, `/${altLocale}/`);
     </a>
 
     <div style="display: flex; align-items: center; gap: 1.5rem;">
-      <a href={`/${locale}/log/`} style={`color: var(--color-text-secondary); text-decoration: none;`}>Log</a>
-      <a href="/portfolio/" style={`color: var(--color-text-secondary); text-decoration: none;`}>Portfolio</a>
-      <a href={altPath} style={`color: var(--color-text-muted); text-decoration: none; font-size: 0.875rem;`}>
+      <a href={`/${locale}/log/`} class="newsprint-nav-link">Log</a>
+      <a href="/portfolio/" class="newsprint-nav-link">Portfolio</a>
+      <a href={altPath} class="newsprint-nav-link" style="font-size: 0.875rem;">
         {locale === 'en' ? '\uD55C\uAD6D\uC5B4' : 'EN'}
       </a>
-      <div id="theme-toggle-slot"></div>
+      <ThemeToggle />
     </div>
   </nav>
 </header>
