@@ -4,6 +4,7 @@ import NewsprintShell from '../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../components/newsprint/NewsprintListCard.astro';
 import NewsprintSideRail from '../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintCategoryFilter from '../../components/newsprint/NewsprintCategoryFilter.astro';
+import NewsprintArticleLayout from '../../components/newsprint/NewsprintArticleLayout.astro';
 
 const mockPosts = [
   {
@@ -14,6 +15,7 @@ const mockPosts = [
     reading_time_min: 6,
     tags: ['gpt-5', 'enterprise', 'adoption'],
     excerpt: 'Early benchmarks suggest a 40% improvement in complex reasoning tasks, reshaping how enterprises approach AI integration at scale.',
+    content: '<p>OpenAI launched GPT-5 this week, and the enterprise landscape is already shifting. Early benchmarks suggest a 40% improvement in complex reasoning tasks.</p><p>For builders shipping AI-native products, the question is no longer "if" but "how fast" to integrate.</p>',
   },
   {
     title: 'Building a RAG Pipeline with LangChain and Pinecone',
@@ -23,6 +25,7 @@ const mockPosts = [
     reading_time_min: 8,
     tags: ['rag', 'langchain', 'pinecone', 'tutorial'],
     excerpt: 'A step-by-step guide to building a production-ready retrieval-augmented generation pipeline using LangChain and Pinecone vector database.',
+    content: '',
   },
   {
     title: 'From Bootcamp to Senior Engineer: A 3-Year Retrospective',
@@ -32,6 +35,7 @@ const mockPosts = [
     reading_time_min: 5,
     tags: ['growth', 'retrospective', 'career-path'],
     excerpt: 'Three years ago I could barely write a for loop. Here is what I learned about growth, mentorship, and the moments that actually mattered.',
+    content: '',
   },
   {
     title: 'Architecting 0to1log: From Monolith to Microservices',
@@ -41,6 +45,7 @@ const mockPosts = [
     reading_time_min: 10,
     tags: ['architecture', 'fastapi', 'supabase'],
     excerpt: 'How we broke apart a monolithic FastAPI backend into event-driven microservices with Supabase, and what we would do differently next time.',
+    content: '',
   },
   {
     title: 'Anthropic Raises $5B as AI Safety Market Heats Up',
@@ -50,16 +55,34 @@ const mockPosts = [
     reading_time_min: 4,
     tags: ['funding', 'anthropic', 'safety'],
     excerpt: 'The latest funding round signals growing investor confidence in AI safety as a market category, not just a research concern.',
+    content: '',
   },
 ];
+
+const featured = mockPosts[0];
+const rest = mockPosts.slice(1);
 ---
 
-<MainLayout title="Newsprint Preview (Pink)" locale="en" slug="preview/newsprint-pink/">
-  <script is:inline>document.documentElement.setAttribute('data-theme','pink');localStorage.setItem('theme','pink');</script>
-  <NewsprintShell locale="en" masthead="From Void to Value" editionLabel="Preview / Pink"
+<MainLayout title="Newsprint Preview (Dark)" locale="en" slug="preview/newsprint-dark/">
+  <script is:inline>document.documentElement.setAttribute('data-theme','dark');localStorage.setItem('theme','dark');</script>
+  <NewsprintShell locale="en" masthead="From Void to Value" editionLabel="Preview / Dark"
       subkicker={['AI · Papers · Projects', 'Preview Edition', 'Free']}>
 
       <NewsprintCategoryFilter locale="en" />
+
+      <article class="newsprint-featured" data-category={featured.category}>
+        <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{featured.category}</span>
+        <h2 class="newsprint-lead-title">{featured.title}</h2>
+        <p class="newsprint-excerpt">{featured.excerpt}</p>
+        <div class="newsprint-tags">
+          {featured.tags.map((tag) => <span class="newsprint-tag">{tag}</span>)}
+        </div>
+        <div class="newsprint-meta">
+          <time>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
+          <span>{featured.reading_time_min} min read</span>
+        </div>
+        <div class="newsprint-divider"></div>
+      </article>
 
       <section class="newsprint-grid-cards">
         {mockPosts.map((post) => (
@@ -75,6 +98,20 @@ const mockPosts = [
           />
         ))}
       </section>
+
+      <div class="newsprint-divider" style="margin-top: 1.25rem;"></div>
+
+      <NewsprintArticleLayout
+        locale="en"
+        slug={featured.slug}
+        title={featured.title}
+        category={featured.category}
+        publishedAt={featured.published_at}
+        readingTimeMin={featured.reading_time_min}
+        tags={featured.tags}
+        htmlContent={featured.content}
+        backLabel="Back to Log"
+      />
 
       <Fragment slot="rail">
         <NewsprintSideRail
