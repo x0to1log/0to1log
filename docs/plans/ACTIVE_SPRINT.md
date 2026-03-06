@@ -21,7 +21,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| P2-SCHEMA-01 | doing | 2026-03-06 | Amy |
+| P2-AUTH-01 | doing | 2026-03-06 | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -52,17 +52,17 @@
 - **참조:** 03 §3
 
 ### 2. Pydantic 스키마 + 의존성 `[P2-SCHEMA-01]`
-- **체크:** [ ]
-- **상태:** doing
+- **체크:** [x]
+- **상태:** done
 - **산출물:** requirements.txt 업데이트 + models/ 스키마 (common, ranking, research, business)
 - **완료 기준:** `python -c "from models.ranking import *"` 등 import 성공
 - **검증:** 각 모델 import 테스트
-- **증거:** (완료 시 필수)
+- **증거:** commit 6596029
 - **참조:** 02 §4
 
 ### 3. Security + Admin Auth + Rate Limiting `[P2-AUTH-01]`
 - **체크:** [ ]
-- **상태:** todo
+- **상태:** doing
 - **산출물:** security.py 실구현 + main.py slowapi 등록
 - **완료 기준:** 401/403 분리 동작 확인
 - **검증:** require_admin 함수 + verify_cron_secret + slowapi 미들웨어
