@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/trigger-pipeline",
+      "schedule": "0 21 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

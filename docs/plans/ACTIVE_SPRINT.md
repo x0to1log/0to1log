@@ -9,11 +9,11 @@
 
 ## 스프린트 완료 게이트
 
-- [ ] `cd backend && pytest tests/ -v` 전체 통과
-- [ ] `cd frontend && npm run build` — 0 error
-- [ ] 태스크 전체 `상태=done` + `체크=[x]` 일치
-- [ ] `Current Doing` 슬롯이 비어 있음(`-`)
-- [ ] 완료 태스크마다 `증거` 링크 최소 1개 존재
+- [x] `cd backend && pytest tests/ -v` 전체 통과 (20 passed)
+- [x] `cd frontend && npm run build` — 0 error
+- [x] 태스크 전체 `상태=done` + `체크=[x]` 일치
+- [x] `Current Doing` 슬롯이 비어 있음(`-`)
+- [x] 완료 태스크마다 `증거` 링크 최소 1개 존재
 
 ---
 
@@ -21,7 +21,7 @@
 
 | Task ID | 상태 | 시작 시각 | Owner |
 |---|---|---|---|
-| P2-PIPE-BASE | doing | 2026-03-06 | Amy |
+| - | - | - | - |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에는 반드시 1개만 기입한다.
@@ -79,21 +79,21 @@
 - **참조:** 02 §2
 
 ### 5. Pipeline Lock + Stale Recovery `[P2-PIPE-BASE]`
-- **체크:** [ ]
-- **상태:** doing
+- **체크:** [x]
+- **상태:** done
 - **산출물:** `services/pipeline.py` + `tests/test_pipeline_lock.py`
 - **완료 기준:** Lock 획득/스킵/stale recovery/failed 재시도 테스트 전체 통과
-- **검증:** `pytest tests/test_pipeline_lock.py -v`
-- **증거:** (완료 시 필수)
+- **검증:** `pytest tests/test_pipeline_lock.py -v` — 8 passed
+- **증거:** commit 40a6428
 - **참조:** 02 §6
 
 ### 6. Vercel Cron Trigger `[P2-CRON-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **산출물:** `frontend/src/pages/api/trigger-pipeline.ts` + vercel.json cron 추가
 - **완료 기준:** `npm run build` 0 errors + GET 핸들러 구현
-- **검증:** 빌드 통과
-- **증거:** (완료 시 필수)
+- **검증:** 빌드 통과 — 0 errors
+- **증거:** (이 커밋)
 - **참조:** 04 §5, 05 §4
 
 ---
