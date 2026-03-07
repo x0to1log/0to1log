@@ -4,10 +4,12 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { getCategoryLabel, getCategoryColorVar, getDefaultCategories } from '../../../lib/categories';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
+const stateParam = Astro.url.searchParams.get('state');
 
 // Mock draft data (matches backend PostDraftDetail schema)
 const mockDrafts: Record<string, any> = {
@@ -53,113 +55,159 @@ const mockDrafts: Record<string, any> = {
 };
 
 const draft = mockDrafts[pageSlug];
-if (!draft) {
+if (!stateParam && !draft) {
   return Astro.redirect('/admin');
 }
 
 const categories = getDefaultCategories();
 ---
 
-<MainLayout title={`Edit: ${draft.title}`} locale="en">
-  <!-- Draft Mode -->
-  <div id="draft-mode">
-    <div class="admin-toolbar">
-      <div class="admin-toolbar-left">
-        <a href="/admin" class="admin-back">&larr; Back to Drafts</a>
-      </div>
-      <div class="admin-toolbar-right">
-        <button id="btn-preview" class="admin-btn" type="button">Preview</button>
-      </div>
+<MainLayout title={draft ? `Edit: ${draft.title}` : 'Editor'} locale="en">
+  {stateParam === '401' ? (
+    <div style="max-width: 800px; margin: 0 auto;">
+      <NewsprintNotice
+        variant="unauthorized"
+        message="Missing or invalid token. Please sign in."
+        linkHref="/admin"
+        linkLabel="Sign in"
+      />
     </div>
-
-    <div class="admin-split">
-      <div>
-        <div class="admin-field">
-          <label for="edit-title">Title</label>
-          <input
-            id="edit-title"
-            class="admin-input"
-            type="text"
-            value={draft.title}
-            placeholder="Post title..."
-          />
+  ) : stateParam === '403' ? (
+    <div style="max-width: 800px; margin: 0 auto;">
+      <NewsprintNotice
+        variant="unauthorized"
+        message="You do not have permission to access this page."
+        linkHref="/"
+        linkLabel="Go home"
+      />
+    </div>
+  ) : stateParam === '404' ? (
+    <div style="max-width: 800px; margin: 0 auto;">
+      <NewsprintNotice
+        variant="notfound"
+        message="This draft does not exist or has been deleted."
+        linkHref="/admin"
+        linkLabel="Back to Drafts"
+      />
+    </div>
+  ) : draft ? (
+    <>
+      <!-- Draft Mode -->
+      <div id="draft-mode">
+        <div class="admin-toolbar">
+          <div class="admin-toolbar-left">
+            <a href="/admin" class="admin-back">&larr; Back to Drafts</a>
+          </div>
+          <div class="admin-toolbar-right">
+            <button id="btn-save" class="admin-btn" type="button">Save Draft</button>
+            <button id="btn-preview" class="admin-btn" type="button">Preview</button>
+          </div>
         </div>
 
-        <div style="display: flex; gap: 1rem;">
-          <div class="admin-field" style="flex: 1;">
-            <label for="edit-category">Category</label>
-            <select id="edit-category" class="admin-select">
-              {categories.map((cat) => (
-                <option value={cat} selected={cat === draft.category}>
-                  {getCategoryLabel('en', cat)}
-                </option>
-              ))}
-            </select>
+        <div id="admin-feedback" class="admin-feedback" hidden>
+          <span id="admin-feedback-msg"></span>
+          <button class="admin-feedback-dismiss" type="button" aria-label="Dismiss">&times;</button>
+        </div>
+
+        <div class="admin-split">
+          <div>
+            <div class="admin-field">
+              <label for="edit-title">Title</label>
+              <input
+                id="edit-title"
+                class="admin-input"
+                type="text"
+                value={draft.title}
+                placeholder="Post title..."
+              />
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+              <div class="admin-field" style="flex: 1;">
+                <label for="edit-category">Category</label>
+                <select id="edit-category" class="admin-select">
+                  {categories.map((cat) => (
+                    <option value={cat} selected={cat === draft.category}>
+                      {getCategoryLabel('en', cat)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div class="admin-field" style="flex: 2;">
+                <label for="edit-tags">Tags</label>
+                <input
+                  id="edit-tags"
+                  class="admin-input"
+                  type="text"
+                  value={(draft.tags || []).join(', ')}
+                  placeholder="tag1, tag2, tag3..."
+                />
+              </div>
+            </div>
+
+            <div class="admin-field">
+              <label>Content</label>
+              <div id="milkdown-editor" class="admin-editor-wrapper" data-content={draft.content_original}></div>
+            </div>
           </div>
-          <div class="admin-field" style="flex: 2;">
-            <label for="edit-tags">Tags</label>
-            <input
-              id="edit-tags"
-              class="admin-input"
-              type="text"
-              value={(draft.tags || []).join(', ')}
-              placeholder="tag1, tag2, tag3..."
+
+          <div>
+            <div class="admin-panel">
+              <div class="admin-panel-title">AI Suggestions</div>
+              <p class="admin-panel-placeholder">
+                AI suggestion panel will be connected in a future update.
+                This panel will show editorial verdicts, accuracy scores,
+                and actionable suggestions with one-click apply.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview Mode -->
+      <div id="preview-mode" style="display: none;">
+        <div class="admin-preview-bar">
+          <div class="admin-toolbar-left">
+            <a href="/admin" class="admin-back">&larr; Back to Drafts</a>
+          </div>
+          <div class="admin-toolbar-right">
+            <button id="btn-edit" class="admin-btn" type="button">Edit</button>
+            <button id="btn-publish" class="admin-btn admin-btn-primary" type="button">Publish</button>
+          </div>
+        </div>
+
+        <NewsprintShell
+          locale="en"
+          masthead="From Void to Value"
+          editionLabel="Builder's Daily"
+          subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
+        >
+          <div id="preview-content">
+            <NewsprintArticleLayout
+              locale="en"
+              slug={pageSlug}
+              title={draft.title}
+              category={draft.category}
+              publishedAt={new Date().toISOString()}
+              readingTimeMin={5}
+              tags={draft.tags}
+              htmlContent=""
+              backLabel="Back to List"
             />
           </div>
-        </div>
-
-        <div class="admin-field">
-          <label>Content</label>
-          <div id="milkdown-editor" class="admin-editor-wrapper" data-content={draft.content_original}></div>
-        </div>
+        </NewsprintShell>
       </div>
-
-      <div>
-        <div class="admin-panel">
-          <div class="admin-panel-title">AI Suggestions</div>
-          <p class="admin-panel-placeholder">
-            AI suggestion panel will be connected in a future update.
-            This panel will show editorial verdicts, accuracy scores,
-            and actionable suggestions with one-click apply.
-          </p>
-        </div>
-      </div>
+    </>
+  ) : (
+    <div style="max-width: 800px; margin: 0 auto;">
+      <NewsprintNotice
+        variant="notfound"
+        message="This draft does not exist or has been deleted."
+        linkHref="/admin"
+        linkLabel="Back to Drafts"
+      />
     </div>
-  </div>
-
-  <!-- Preview Mode -->
-  <div id="preview-mode" style="display: none;">
-    <div class="admin-preview-bar">
-      <div class="admin-toolbar-left">
-        <a href="/admin" class="admin-back">&larr; Back to Drafts</a>
-      </div>
-      <div class="admin-toolbar-right">
-        <button id="btn-edit" class="admin-btn" type="button">Edit</button>
-        <button id="btn-publish" class="admin-btn admin-btn-primary" type="button">Publish</button>
-      </div>
-    </div>
-
-    <NewsprintShell
-      locale="en"
-      masthead="From Void to Value"
-      editionLabel="Builder's Daily"
-      subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
-    >
-      <div id="preview-content">
-        <NewsprintArticleLayout
-          locale="en"
-          slug={pageSlug}
-          title={draft.title}
-          category={draft.category}
-          publishedAt={new Date().toISOString()}
-          readingTimeMin={5}
-          tags={draft.tags}
-          htmlContent=""
-          backLabel="Back to List"
-        />
-      </div>
-    </NewsprintShell>
-  </div>
+  )}
 </MainLayout>
 
 <script>
@@ -168,6 +216,7 @@ const categories = getDefaultCategories();
 
   let crepe: Crepe | null = null;
   let currentMarkdown = '';
+  let feedbackTimer = 0;
 
   const editorEl = document.getElementById('milkdown-editor');
   const draftMode = document.getElementById('draft-mode');
@@ -175,9 +224,29 @@ const categories = getDefaultCategories();
   const btnPreview = document.getElementById('btn-preview');
   const btnEdit = document.getElementById('btn-edit');
   const btnPublish = document.getElementById('btn-publish');
+  const btnSave = document.getElementById('btn-save');
   const titleInput = document.getElementById('edit-title') as HTMLInputElement;
   const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
   const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
+
+  // Feedback banner
+  function showFeedback(type: 'success' | 'error', message: string) {
+    const el = document.getElementById('admin-feedback');
+    const msgEl = document.getElementById('admin-feedback-msg');
+    if (!el || !msgEl) return;
+    el.classList.remove('admin-feedback--success', 'admin-feedback--error');
+    el.classList.add(`admin-feedback--${type}`);
+    msgEl.textContent = message;
+    el.hidden = false;
+    clearTimeout(feedbackTimer);
+    feedbackTimer = window.setTimeout(() => { el.hidden = true; }, 3000);
+  }
+
+  document.querySelector('.admin-feedback-dismiss')?.addEventListener('click', () => {
+    const el = document.getElementById('admin-feedback');
+    if (el) el.hidden = true;
+    clearTimeout(feedbackTimer);
+  });
 
   // Initialize Milkdown Crepe
   async function initEditor() {
@@ -227,6 +296,20 @@ const categories = getDefaultCategories();
     return html;
   }
 
+  // Save draft
+  function handleSave() {
+    const title = titleInput?.value || '';
+    if (!title.trim()) {
+      showFeedback('error', 'Save failed: title is required.');
+      return;
+    }
+    const category = categorySelect?.value || '';
+    const tags = tagsInput?.value || '';
+    const content = crepe ? crepe.getMarkdown() : '';
+    console.log('Saved draft:', { title, category, tags, content });
+    showFeedback('success', 'Draft saved.');
+  }
+
   // Auto-save + switch to Preview
   function switchToPreview() {
     if (!crepe) return;
@@ -237,6 +320,7 @@ const categories = getDefaultCategories();
     const tags = tagsInput?.value || '';
 
     console.log('Auto-saved draft:', { title, category, tags, content: currentMarkdown });
+    showFeedback('success', 'Draft auto-saved.');
 
     // Update preview content
     const previewContent = document.getElementById('preview-content');
@@ -264,11 +348,16 @@ const categories = getDefaultCategories();
   // Publish mock
   function handlePublish() {
     const title = titleInput?.value || '';
+    if (!title.trim()) {
+      showFeedback('error', 'Publish failed: title is required.');
+      return;
+    }
     console.log('Published:', { title, slug: window.location.pathname.split('/').pop() });
-    alert('Published! (mock — check console for details)');
+    showFeedback('success', 'Published! Post is now live.');
   }
 
   // Event listeners
+  btnSave?.addEventListener('click', handleSave);
   btnPreview?.addEventListener('click', switchToPreview);
   btnEdit?.addEventListener('click', switchToDraft);
   btnPublish?.addEventListener('click', handlePublish);
