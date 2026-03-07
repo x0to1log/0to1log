@@ -58,10 +58,10 @@
   --noise-opacity: 0.025;
 
   /* Category Colors */
-  --color-cat-ainews: #6B9BD2;
-  --color-cat-tech: #7EAE6B;
-  --color-cat-career: #D4A843;
-  --color-cat-project: #B8A0D4;
+  --color-cat-ainews: #C45B4A;
+  --color-cat-study: #7A8B78;
+  --color-cat-career: #A09080;
+  --color-cat-project: #8888A0;
 
   /* Shiki — Warm Sepia */
   --shiki-token-keyword: #D4A87C;
@@ -96,10 +96,10 @@
   --noise-opacity: 0.04;
 
   /* Category Colors */
-  --color-cat-ainews: #2B5C8A;
-  --color-cat-tech: #3D6B2E;
-  --color-cat-career: #8B6914;
-  --color-cat-project: #6B4F8A;
+  --color-cat-ainews: #993D30;
+  --color-cat-study: #4D5E4B;
+  --color-cat-career: #6B5B4B;
+  --color-cat-project: #585870;
 
   /* Shiki — Newspaper */
   --shiki-token-keyword: #8B3A3A;
@@ -116,34 +116,34 @@
    PINK THEME
    =========================== */
 [data-theme="pink"] {
-  --color-bg-primary: #F8C8DC;
-  --color-bg-secondary: #EEBCCF;
-  --color-bg-tertiary: #E4B0C3;
+  --color-bg-primary: #FFF0F3;
+  --color-bg-secondary: #FFCCD5;
+  --color-bg-tertiary: #FFB3C1;
   --color-text-primary: #2D1F22;
   --color-text-secondary: #4D3B40;
   --color-text-muted: #6E5459;
-  --color-border: #9A6580;
-  --color-accent: #8A3D5E;
-  --color-accent-hover: #A04D70;
-  --color-accent-glow: rgba(138, 61, 94, 0.18);
-  --color-accent-subtle: rgba(138, 61, 94, 0.10);
+  --color-border: #FF8FA3;
+  --color-accent: #FF758F;
+  --color-accent-hover: #FF5C7A;
+  --color-accent-glow: rgba(255, 117, 143, 0.18);
+  --color-accent-subtle: rgba(255, 117, 143, 0.10);
   --color-success: #3D7A40;
   --color-warning: #A06E28;
-  --color-error: #8B3A3A;
-  --color-shadow: rgba(60, 30, 40, 0.20);
+  --color-error: #C9384A;
+  --color-shadow: rgba(60, 30, 40, 0.15);
 
   /* Category Colors */
-  --color-cat-ainews: #3A6090;
-  --color-cat-tech: #3A6A3A;
-  --color-cat-career: #7A5A10;
-  --color-cat-project: #5A4080;
+  --color-cat-ainews: #A34535;
+  --color-cat-study: #556653;
+  --color-cat-career: #756350;
+  --color-cat-project: #606075;
 
   /* Shiki — Rose */
-  --shiki-token-keyword: #7A3A5B;
+  --shiki-token-keyword: #C9384A;
   --shiki-token-string: #3A6A4C;
   --shiki-token-function: #4B5B8A;
   --shiki-token-comment: #6E5459;
-  --shiki-token-constant: #8A3D5E;
+  --shiki-token-constant: #FF758F;
   --shiki-token-punctuation: #2D1F22;
   --shiki-color-text: #2D1F22;
   --shiki-color-background: var(--color-bg-tertiary);
@@ -447,6 +447,24 @@
 }
 
 @media (max-width: 767px) {
+  .newsprint-kicker {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    gap: 0.25rem;
+  }
+
+  .newsprint-subkicker {
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    gap: 0.25rem;
+  }
+
+  .newsprint-filter-tab {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.65rem;
+    letter-spacing: 0.06em;
+  }
+
   .newsprint-featured--has-img {
     grid-template-columns: 1fr;
   }
@@ -543,6 +561,26 @@ html {
 .newsprint-rail-category {
   display: inline-block;
   margin-top: 0.45rem;
+}
+
+/* Header scroll reveal */
+.site-header {
+  z-index: 100;
+}
+
+.site-header--fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  transition: transform 300ms ease;
+}
+
+.site-header--no-transition {
+  transition: none;
+}
+.site-header--hidden {
+  transform: translateY(-100%);
 }
 
 /* Navigation link hover */
