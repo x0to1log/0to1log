@@ -28,6 +28,7 @@
   --font-masthead: Georgia, 'Times New Roman', serif;
   --font-heading: Georgia, 'Times New Roman', serif;
   --font-article-heading: Georgia, 'Times New Roman', serif;
+  --font-article-deck: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-ui: Georgia, 'Times New Roman', serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
 
@@ -226,6 +227,11 @@
     border-top: none;
     padding-top: 0;
     padding-left: 1.5rem;
+    position: sticky;
+    top: 4.5rem;
+    align-self: start;
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
   }
 }
 
@@ -307,6 +313,16 @@
   font-size: clamp(1.6rem, 2.8vw, 2.4rem);
   line-height: 1.16;
   margin-bottom: 0.45rem;
+}
+
+.newsprint-deck {
+  font-family: var(--font-article-deck);
+  font-style: italic;
+  font-size: clamp(1.1rem, 1.7vw, 1.35rem);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.85rem;
+  max-width: 42rem;
 }
 
 .newsprint-meta {
