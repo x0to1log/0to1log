@@ -1,0 +1,84 @@
+---
+export const prerender = false;
+import MainLayout from '../../layouts/MainLayout.astro';
+
+// If already authenticated, redirect to admin
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (accessToken) {
+  return Astro.redirect('/admin');
+}
+---
+
+<MainLayout title="Admin Login" locale="en">
+  <div style="max-width: 400px; margin: 4rem auto; padding: 0 1rem;">
+    <h1 class="newsprint-masthead" style="font-size: 1.75rem; text-align: center; margin-bottom: 2rem;">
+      Admin Sign In
+    </h1>
+    <form id="login-form">
+      <div style="margin-bottom: 1rem;">
+        <label for="email" style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem;">Email</label>
+        <input id="email" class="admin-input" type="email" required placeholder="admin@0to1log.com" style="width: 100%;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label for="password" style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem;">Password</label>
+        <input id="password" class="admin-input" type="password" required style="width: 100%;" />
+      </div>
+      <div id="login-error" class="admin-feedback admin-feedback--error" style="margin-bottom: 1rem;" hidden>
+        <span id="login-error-msg"></span>
+      </div>
+      <button type="submit" class="admin-btn admin-btn-primary" style="width: 100%;">
+        Sign In
+      </button>
+    </form>
+  </div>
+</MainLayout>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const form = document.getElementById('login-form') as HTMLFormElement;
+  const errorEl = document.getElementById('login-error') as HTMLElement;
+  const errorMsg = document.getElementById('login-error-msg') as HTMLElement;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.hidden = true;
+
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      errorMsg.textContent = 'Supabase not configured';
+      errorEl.hidden = false;
+      return;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error || !data.session) {
+      errorMsg.textContent = error?.message || 'Login failed';
+      errorEl.hidden = false;
+      return;
+    }
+
+    // Send tokens to server to set httpOnly cookies
+    const res = await fetch('/api/auth/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      }),
+    });
+
+    if (res.ok) {
+      window.location.href = '/admin';
+    } else {
+      errorMsg.textContent = 'Session setup failed';
+      errorEl.hidden = false;
+    }
+  });
+</script>
