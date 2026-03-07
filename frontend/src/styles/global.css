@@ -27,6 +27,7 @@
   --font-body: Georgia, 'Times New Roman', serif;
   --font-masthead: Georgia, 'Times New Roman', serif;
   --font-heading: Georgia, 'Times New Roman', serif;
+  --font-article-heading: Georgia, 'Times New Roman', serif;
   --font-ui: Georgia, 'Times New Roman', serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
 
@@ -40,13 +41,13 @@
    DARK THEME (Default)
    =========================== */
 [data-theme="dark"] {
-  --color-bg-primary: #241F1C;
-  --color-bg-secondary: #1F1B18;
-  --color-bg-tertiary: #2A2520;
+  --color-bg-primary: #1F1A17;
+  --color-bg-secondary: #191512;
+  --color-bg-tertiary: #25201C;
   --color-text-primary: #E0D8C3;
   --color-text-secondary: #A39D8E;
   --color-text-muted: #7A7468;
-  --color-border: #4A4238;
+  --color-border: #433B32;
   --color-accent: #C3A370;
   --color-accent-hover: #D4B882;
   --color-accent-glow: rgba(195, 163, 112, 0.15);
@@ -355,6 +356,27 @@
 }
 .newsprint-excerpt {  font-size: 0.95rem;  line-height: 1.6;  color: var(--color-text-secondary);  margin-top: 0.4rem;}
 
+.newsprint-card-bottom {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.newsprint-tags-inline {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
+.newsprint-meta-inline {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
 .newsprint-tags {
   display: flex;
   flex-wrap: wrap;
@@ -417,6 +439,36 @@
   line-height: 1.8;
 }
 
+.newsprint-prose h1,
+.newsprint-prose h2,
+.newsprint-prose h3,
+.newsprint-prose h4 {
+  font-family: var(--font-article-heading);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.6rem;
+  margin-bottom: 0.6rem;
+  break-inside: avoid;
+}
+
+.newsprint-prose h1 {
+  font-size: clamp(1.8rem, 2.2vw, 2.2rem);
+}
+
+.newsprint-prose h2 {
+  font-size: clamp(1.45rem, 1.8vw, 1.75rem);
+}
+
+.newsprint-prose h3 {
+  font-size: clamp(1.2rem, 1.45vw, 1.4rem);
+}
+
+.newsprint-prose h4 {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .newsprint-prose p:first-of-type::first-letter {
   float: left;
   font-family: var(--font-display);
@@ -456,7 +508,7 @@
   flex-wrap: wrap;
   gap: 0;
   margin-bottom: 1.25rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 3px double var(--color-border);
 }
 
 .newsprint-filter-tab {
@@ -586,6 +638,25 @@
 .text-body       { font-size: 1rem; line-height: 1.75; }
 .text-small      { font-size: 0.875rem; line-height: 1.5; }
 .text-code       { font-size: 0.875rem; line-height: 1.6; }
+
+/* ===========================
+   SKIP LINK (Accessibility)
+   =========================== */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  background: var(--color-accent);
+  color: var(--color-bg-primary);
+  padding: 0.5rem 1rem;
+  z-index: 9999;
+  font-family: var(--font-ui);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.skip-link:focus {
+  top: 0;
+}
 
 /* ===========================
    FOCUS STYLES (Accessibility)

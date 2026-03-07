@@ -71,20 +71,23 @@ const categories = Array.from(
                 src={featured.og_image_url}
                 alt={featured.title}
                 class="newsprint-featured-img img-newsprint"
-                loading="lazy"
+                width="600"
+                height="400"
+                loading="eager"
+                fetchpriority="high"
               />
             </div>
           )}
           <div>
-            <span class="newsprint-category">{getCategoryLabel('ko', featured.category)}</span>
             <h2 class="newsprint-lead-title">{featured.title}</h2>
             {featured.excerpt && <p class="newsprint-excerpt">{featured.excerpt}</p>}
-            <div class="newsprint-meta">
-              {featured.published_at && <time>{new Date(featured.published_at).toLocaleDateString('ko-KR')}</time>}
-              {featured.reading_time_min && <span>{featured.reading_time_min}분 읽기</span>}
-            </div>
-            <div class="newsprint-tags">
+            <div class="newsprint-card-bottom" style="font-size: 0.85rem;">
+              <span class="newsprint-category">{getCategoryLabel('ko', featured.category)}</span>
               {(featured.tags ?? []).slice(0, 5).map((tag: string) => <span class="newsprint-tag">{tag}</span>)}
+              <span class="newsprint-meta-inline">
+                {featured.published_at && <time datetime={featured.published_at}>{new Date(featured.published_at).toLocaleDateString('ko-KR')}</time>}
+                {featured.reading_time_min && <span>{featured.reading_time_min}분 읽기</span>}
+              </span>
             </div>
           </div>
         </a>

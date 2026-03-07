@@ -27,18 +27,20 @@ const catColor = getCategoryColorVar(category);
 ---
 
 <a href={href} class="newsprint-card" data-category={normalizedCategory || 'uncategorized'}>
-  {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
   <h2 class="newsprint-card-title">{title}</h2>
   {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
-  <div class="newsprint-meta" style="margin-top: 0.5rem;">
-    {dateLabel && <time>{dateLabel}</time>}
-    {readingLabel && <span>{readingLabel}</span>}
+  <div class="newsprint-card-bottom">
+    {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
+    {tags && tags.length > 0 && (
+      <span class="newsprint-tags-inline">
+        {tags.slice(0, 4).map((tag) => (
+          <span class="newsprint-tag">{tag}</span>
+        ))}
+      </span>
+    )}
+    <span class="newsprint-meta-inline">
+      {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
+      {readingLabel && <span>{readingLabel}</span>}
+    </span>
   </div>
-  {tags && tags.length > 0 && (
-    <div class="newsprint-tags">
-      {tags.slice(0, 4).map((tag) => (
-        <span class="newsprint-tag">{tag}</span>
-      ))}
-    </div>
-  )}
 </a>

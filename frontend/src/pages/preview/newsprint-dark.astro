@@ -75,19 +75,19 @@ const railPosts = mockPosts.slice(1, 5);
       <article class={`newsprint-featured${featured.og_image_url ? ' newsprint-featured--has-img' : ''}`} data-category={featured.category}>
         {featured.og_image_url && (
           <div class="newsprint-featured-img-frame">
-            <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" loading="lazy" />
+            <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" width="600" height="400" loading="eager" fetchpriority="high" />
           </div>
         )}
         <div>
-          <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{getCategoryLabel('en', featured.category)}</span>
           <h2 class="newsprint-lead-title">{featured.title}</h2>
           <p class="newsprint-excerpt">{featured.excerpt}</p>
-          <div class="newsprint-tags">
+          <div class="newsprint-card-bottom" style="font-size: 0.85rem;">
+            <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{getCategoryLabel('en', featured.category)}</span>
             {featured.tags.map((tag) => <span class="newsprint-tag">{tag}</span>)}
-          </div>
-          <div class="newsprint-meta">
-            <time>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
-            <span>{featured.reading_time_min} min read</span>
+            <span class="newsprint-meta-inline">
+              <time datetime={featured.published_at}>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
+              <span>{featured.reading_time_min} min read</span>
+            </span>
           </div>
           <div class="newsprint-divider"></div>
         </div>

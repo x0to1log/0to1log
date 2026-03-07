@@ -56,7 +56,7 @@ const categoryLabel = getCategoryLabel(locale, category);
     </div>
     <div class="newsprint-article-header-right">
       {readingLabel && <span>{readingLabel}</span>}
-      {dateLabel && <time>{dateLabel}</time>}
+      {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
     </div>
   </div>
 
