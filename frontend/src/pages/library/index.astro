@@ -1,0 +1,229 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../layouts/MainLayout.astro';
+import { createClient } from '@supabase/supabase-js';
+
+// Redirect if not logged in
+if (!Astro.locals.user || !Astro.locals.accessToken) {
+  return Astro.redirect(`/login?redirectTo=${encodeURIComponent('/library/')}`);
+}
+
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+const authSb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+// Fetch all user data in parallel
+const [historyRes, bookmarksRes, progressRes] = await Promise.all([
+  authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
+  authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+  authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
+]);
+
+const historyItems = historyRes.data ?? [];
+const bookmarkItems = bookmarksRes.data ?? [];
+const progressItems = progressRes.data ?? [];
+
+// Collect IDs to batch-fetch metadata
+const postIds = new Set<string>();
+const termIds = new Set<string>();
+[...historyItems, ...bookmarkItems].forEach((item) => {
+  if (item.item_type === 'post') postIds.add(item.item_id);
+  if (item.item_type === 'term') termIds.add(item.item_id);
+});
+progressItems.forEach((p) => termIds.add(p.term_id));
+
+// Fetch post and term metadata
+const { supabase } = await import('../../lib/supabase');
+const postMap = new Map<string, any>();
+const termMap = new Map<string, any>();
+
+if (supabase && postIds.size > 0) {
+  const { data } = await supabase.from('posts').select('id, title, slug, category, locale').in('id', [...postIds]);
+  (data ?? []).forEach((p: any) => postMap.set(p.id, p));
+}
+if (supabase && termIds.size > 0) {
+  const { data } = await supabase.from('handbook_terms').select('id, term, slug, korean_name, category, difficulty').in('id', [...termIds]);
+  (data ?? []).forEach((t: any) => termMap.set(t.id, t));
+}
+
+// Aggregate learning progress by category
+const categoryProgress = new Map<string, { total: number; read: number; learned: number }>();
+progressItems.forEach((p) => {
+  const t = termMap.get(p.term_id);
+  const cat = t?.category || 'uncategorized';
+  if (!categoryProgress.has(cat)) categoryProgress.set(cat, { total: 0, read: 0, learned: 0 });
+  const c = categoryProgress.get(cat)!;
+  c.total++;
+  if (p.status === 'read') c.read++;
+  if (p.status === 'learned') c.learned++;
+});
+const totalLearned = progressItems.filter((p) => p.status === 'learned').length;
+const totalRead = progressItems.length;
+---
+
+<MainLayout title="My Library — 0to1log" headerAlwaysVisible={true}>
+  <div class="newsprint-page" style="max-width: 800px;">
+    <h1 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">
+      My Library
+    </h1>
+
+    <div class="library-tabs">
+      <button class="library-tab library-tab--active" data-tab="read">Read</button>
+      <button class="library-tab" data-tab="saved">Saved</button>
+      <button class="library-tab" data-tab="progress">Progress</button>
+    </div>
+
+    <!-- Read Tab -->
+    <div data-tab-content="read">
+      {historyItems.length === 0 ? (
+        <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
+          No reading history yet. Start exploring articles and terms!
+        </p>
+      ) : (
+        <div>
+          {historyItems.map((item) => {
+            const post = item.item_type === 'post' ? postMap.get(item.item_id) : null;
+            const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
+            const title = post?.title || term?.term || 'Unknown';
+            const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : term ? `/en/handbook/${term.slug}/` : '#';
+            return (
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="library-type-badge">{item.item_type === 'post' ? 'Article' : 'Term'}</span>
+                    <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      {title}
+                    </a>
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                    {new Date(item.read_at).toLocaleDateString('en-US')}
+                  </div>
+                </div>
+                <button class="library-delete-btn" data-delete-type="history" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.85rem; padding: 0.25rem;">
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+
+    <!-- Saved Tab -->
+    <div data-tab-content="saved" style="display: none;">
+      {bookmarkItems.length === 0 ? (
+        <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
+          No bookmarks yet. Save articles and terms to find them here!
+        </p>
+      ) : (
+        <div>
+          {bookmarkItems.map((item) => {
+            const post = item.item_type === 'post' ? postMap.get(item.item_id) : null;
+            const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
+            const title = post?.title || term?.term || 'Unknown';
+            const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : term ? `/en/handbook/${term.slug}/` : '#';
+            return (
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="library-type-badge">{item.item_type === 'post' ? 'Article' : 'Term'}</span>
+                    <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      {title}
+                    </a>
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                    Saved {new Date(item.created_at).toLocaleDateString('en-US')}
+                  </div>
+                </div>
+                <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.85rem; padding: 0.25rem;">
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+
+    <!-- Progress Tab -->
+    <div data-tab-content="progress" style="display: none;">
+      <div style="margin-bottom: 2rem; padding: 1.25rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary);">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+          <span style="font-weight: 700;">Overall Progress</span>
+          <span style="font-size: 0.85rem; color: var(--color-text-muted);">
+            {totalLearned} learned / {totalRead} visited
+          </span>
+        </div>
+        <div class="learning-progress-bar">
+          <div class="learning-progress-fill" style={`width: ${totalRead > 0 ? Math.round((totalLearned / totalRead) * 100) : 0}%;`}></div>
+        </div>
+      </div>
+
+      {categoryProgress.size === 0 ? (
+        <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
+          Visit handbook terms to start tracking your learning progress!
+        </p>
+      ) : (
+        <div>
+          {[...categoryProgress.entries()].map(([cat, stats]) => (
+            <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+                <span style="font-weight: 600; text-transform: capitalize;">{cat}</span>
+                <span style="font-size: 0.78rem; color: var(--color-text-muted);">
+                  {stats.learned}/{stats.total} learned
+                </span>
+              </div>
+              <div class="learning-progress-bar">
+                <div class="learning-progress-fill" style={`width: ${stats.total > 0 ? Math.round((stats.learned / stats.total) * 100) : 0}%;`}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  function initLibrary(): void {
+    // Tab switching
+    const tabs = document.querySelectorAll<HTMLButtonElement>('.library-tab');
+    const contents = document.querySelectorAll<HTMLElement>('[data-tab-content]');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+        tabs.forEach((t) => t.classList.remove('library-tab--active'));
+        tab.classList.add('library-tab--active');
+        contents.forEach((c) => {
+          c.style.display = c.dataset.tabContent === target ? 'block' : 'none';
+        });
+      });
+    });
+
+    // Delete buttons
+    document.querySelectorAll<HTMLButtonElement>('.library-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const type = btn.dataset.deleteType;
+        const id = btn.dataset.deleteId;
+        if (!type || !id) return;
+
+        const endpoint = type === 'history' ? '/api/user/reading-history' : '/api/user/bookmarks';
+        try {
+          const res = await fetch(`${endpoint}?id=${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            const row = btn.closest('[style]') as HTMLElement;
+            if (row) row.remove();
+          }
+        } catch { /* ignore */ }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initLibrary);
+</script>
