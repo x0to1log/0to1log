@@ -70,13 +70,14 @@
 - **의존성:** P2C-UI-11
 
 ### 3. 썸네일 이미지 newsprint 필터 `[P2C-UI-13]`
-- **체크:** [ ]
-- **상태:** todo
-- **목적:** `.img-newsprint` grayscale+sepia 기본 적용, hover 시 원본 컬러 복원 transition
-- **산출물:** `global.css`에 `.img-newsprint` 스타일 + 적용 대상 컴포넌트 업데이트
+- **체크:** [x]
+- **상태:** done
+- **목적:** Featured 카드에 og_image_url 기반 썸네일 렌더링 + 기존 .img-newsprint 필터 연결
+- **산출물:** `global.css` grid 레이아웃 + EN/KO 리스트 featured 카드 이미지 + preview 3페이지 mock 이미지
 - **완료 기준:** 이미지 기본 흑백+세피아 + hover 시 컬러 복원 transition 동작
-- **검증:** preview 페이지에서 시각 확인
-- **증거:** -
+- **검증:** `npm run build` 0 error ✅ + preview 페이지 시각 확인
+- **증거:** commits 2f1316c..920102b (CSS grid + EN/KO featured thumbnail + preview mock images)
+- **비고:** 나머지 카드는 텍스트 전용 유지. 상세 페이지 hero 이미지는 별도 태스크로 분리.
 - **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
 - **의존성:** P2C-UI-12
 
