@@ -1,45 +1,45 @@
-﻿# Backend Rules
+# Backend Rules
 
-FastAPI + Railway (Nixpacks). ?ㅽ럺 ?곸꽭 ??`docs/03_Backend_AI_Spec.md`, `docs/05_Infrastructure.md`
+FastAPI + Railway (Nixpacks). 상세 스펙 참조 `docs/03_Backend_AI_Spec.md`, `docs/05_Infrastructure.md`
 
-## 援ъ“
+## 구조
 
-- `main.py` ??FastAPI app + ?쇱슦???깅줉 + CORS
-- `core/` ??config, database, security (?섏〈??二쇱엯)
-- `routers/` ???붾뱶?ъ씤??洹몃９ (cron, admin, search, community)
-- `services/` ??鍮꾩쫰?덉뒪 濡쒖쭅 (?먯씠?꾪듃, ?뚯씠?꾨씪??
-- `models/` ??Pydantic ?ㅽ궎留?
+- `main.py` — FastAPI app + 라우터 등록 + CORS
+- `core/` — config, database, security (의존성 주입)
+- `routers/` — 엔드포인트 그룹 (cron, admin, search, community)
+- `services/` — 비즈니스 로직 (에이전트, 파이프라인)
+- `models/` — Pydantic 스키마
 
 ## Python
 
 - Virtualenv policy: use `backend/.venv` only (`backend/venv` is not allowed).
-- 踰꾩쟾: 3.11+ (`.python-version` 李몄“)
-- ?섏〈?? `requirements.txt` (Nixpacks ?먮룞 媛먯?)
-- Linter: `ruff check .` (backend/ ?댁뿉???ㅽ뻾)
+- 버전: 3.11+ (`.python-version` 참조)
+- 의존성: `requirements.txt` (Nixpacks 자동 감지)
+- Linter: `ruff check .` (backend/ 내에서 실행)
 - Test: `pytest tests/ -v --tb=short`
 
-## 蹂댁븞
+## 보안
 
-- Admin ?붾뱶?ъ씤?? `Depends(require_admin)` ?꾩닔
-- Cron ?붾뱶?ъ씤?? `x-cron-secret` ?ㅻ뜑 寃利??꾩닔
-- Supabase??Service Role Key ?ъ슜 (backend ?꾩슜)
-- CORS: ?덉슜 ?꾨찓?몄? ?섍꼍蹂?섎줈 愿由?(?섎뱶肄붾뵫 湲덉?)
+- Admin 엔드포인트: `Depends(require_admin)` 필수
+- Cron 엔드포인트: `x-cron-secret` 헤더 검증 필수
+- Supabase는 Service Role Key 사용 (backend 전용)
+- CORS: 허용 도메인을 환경별로 관리 (하드코딩 금지)
 
-## 諛고룷 (Railway)
+## 배포 (Railway)
 
 - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- Health: `GET /health` ??`{"status": "ok"}`
-- ?먮룞 諛고룷: main push
+- Health: `GET /health` → `{"status": "ok"}`
+- 자동 배포: main push
 - Auto-restart on crash
 
-## ?⑦꽩
+## 패턴
 
-- Fire-and-forget: Cron ??202 利됱떆 ?묐떟 + `BackgroundTasks` 鍮꾨룞湲??ㅽ뻾
-- Rate limiting: `slowapi` ?곗퐫?덉씠??
-- EN-KO 踰꾩쟾 ?? KO 諛쒗뻾 ??EN revision lock + version 寃利?
+- Fire-and-forget: Cron은 202 즉시 응답 + `BackgroundTasks` 비동기 실행
+- Rate limiting: `slowapi` 데코레이터
+- EN-KO 번역 쌍: KO 발행 시 EN revision lock + version 검증
 
-## 湲덉?
+## 금지
 
-- `print()` ?붾쾭源?湲덉? ??`logging` 紐⑤뱢 ?ъ슜
-- ?섍꼍蹂???섎뱶肄붾뵫 湲덉? ??`core/config.py` Settings ?ъ슜
-- Service Role Key瑜??꾨줎?몄뿏?쒖뿉 ?몄텧?섎뒗 API ?묐떟 湲덉?
+- `print()` 디버깅 금지 → `logging` 모듈 사용
+- 환경별 값 하드코딩 금지 → `core/config.py` Settings 사용
+- Service Role Key를 프론트엔드에 노출하는 API 응답 금지
