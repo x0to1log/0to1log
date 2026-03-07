@@ -6,20 +6,19 @@ interface Props {
 const { locale = 'en' } = Astro.props;
 const year = new Date().getFullYear();
 
-const categories = [
-  { en: 'AI News', ko: 'AI 뉴스', slug: '?category=ai-news' },
-  { en: 'Study', ko: '서재', slug: '?category=study' },
-  { en: 'Career', ko: '커리어', slug: '?category=career' },
-  { en: 'Project', ko: '프로젝트', slug: '?category=project' },
+const links = [
+  { en: 'About', ko: 'About', href: '/about/' },
+  { en: 'Portfolio', ko: 'Portfolio', href: '/portfolio/' },
+  { en: 'RSS', ko: 'RSS', href: '/rss.xml' },
 ];
 ---
 
 <footer style={`background-color: var(--color-bg-secondary); border-top: 1px solid var(--color-border); padding: 2rem; text-align: center;`}>
   <div class="newsprint-footer-nav">
-    {categories.map((cat, i) => (
+    {links.map((link, i) => (
       <>
-        <a href={`/${locale}/log/${cat.slug}`}>{locale === 'ko' ? cat.ko : cat.en}</a>
-        {i < categories.length - 1 && <span class="newsprint-footer-dot">&middot;</span>}
+        <a href={link.href}>{locale === 'ko' ? link.ko : link.en}</a>
+        {i < links.length - 1 && <span class="newsprint-footer-dot">&middot;</span>}
       </>
     ))}
   </div>
