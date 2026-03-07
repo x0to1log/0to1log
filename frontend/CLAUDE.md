@@ -1,22 +1,22 @@
-# Frontend Rules
+﻿# Frontend Rules
 
-Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md`
+Astro v5 + Tailwind CSS v4 + Vercel. ?ㅽ럺 ?곸꽭 ??`docs/04_Frontend_Spec.md`
 
-## Astro 규칙
+## Astro 洹쒖튃
 
-- `output` 설정 없음 (Astro v5 기본 static + per-page SSR opt-in)
-- 동적 라우트 (`[slug].astro`): 초기(DB 연동 전)에는 `export const prerender = false` 적용
-- `.astro` 파일에서 `client:load` 금지 → 바닐라 `<script>` 사용
-- FOUC 방지: `MainLayout.astro`의 `<script is:inline>`으로 테마 즉시 적용
-- 내장 `i18n` 설정 사용 금지 → 물리 폴더 `/en/`, `/ko/` 방식
+- `output` ?ㅼ젙 ?놁쓬 (Astro v5 湲곕낯 static + per-page SSR opt-in)
+- ?숈쟻 ?쇱슦??(`[slug].astro`): 珥덇린(DB ?곕룞 ???먮뒗 `export const prerender = false` ?곸슜
+- `.astro` ?뚯씪?먯꽌 `client:load` 湲덉? ??諛붾땺??`<script>` ?ъ슜
+- FOUC 諛⑹?: `MainLayout.astro`??`<script is:inline>`?쇰줈 ?뚮쭏 利됱떆 ?곸슜
+- ?댁옣 `i18n` ?ㅼ젙 ?ъ슜 湲덉? ??臾쇰━ ?대뜑 `/en/`, `/ko/` 諛⑹떇
 
 ## Tailwind v4
 
-- `@tailwindcss/vite` 플러그인 사용 (`@astrojs/tailwind` 금지)
-- 디자인 토큰: `src/styles/global.css`의 `@theme` + `[data-theme]` CSS 변수
-- 테마 3개: dark (기본), light, pink
-- 폰트 역할 분리:
-- 현재 실험값: `Georgia`, `"Times New Roman"`, `serif`를 masthead/heading/body/ui 공통으로 사용
+- `@tailwindcss/vite` ?뚮윭洹몄씤 ?ъ슜 (`@astrojs/tailwind` 湲덉?)
+- ?붿옄???좏겙: `src/styles/global.css`??`@theme` + `[data-theme]` CSS 蹂??
+- ?뚮쭏 3媛? dark (湲곕낯), light, pink
+- ?고듃 ??븷 遺꾨━:
+- ?꾩옱 ?ㅽ뿕媛? `Georgia`, `"Times New Roman"`, `serif`瑜?masthead/heading/body/ui 怨듯넻?쇰줈 ?ъ슜
 - `--font-masthead`: Georgia + Times New Roman + serif
 - `--font-heading`: Georgia + Times New Roman + serif
 - `--font-body`: Georgia + Times New Roman + serif
@@ -26,21 +26,30 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 ## i18n
 
 - EN canonical. `hreflang x-default` = `/en/`
-- `/portfolio/`, `/admin/` → locale 독립 (en/ko 접두사 없음)
-- 번역 맵: `src/i18n/index.ts`
+- `/portfolio/`, `/admin/` ??locale ?낅┰ (en/ko ?묐몢???놁쓬)
+- 踰덉뿭 留? `src/i18n/index.ts`
 
-## 보안
+## 蹂댁븞
 
-- `/api/revalidate` → server-side only. `REVALIDATE_SECRET` Bearer 검증 필수
-- client에서 revalidate 직접 호출 금지
-- Supabase Service Role Key를 frontend에서 절대 사용 금지 (anon key만)
-- `vercel.json` CSP: `script-src 'self' 'unsafe-inline'` 허용 (초기 FOUC 방지용, 추후 nonce 방식으로 개선 가능)
+- `/api/revalidate` ??server-side only. `REVALIDATE_SECRET` Bearer 寃利??꾩닔
+- client?먯꽌 revalidate 吏곸젒 ?몄텧 湲덉?
+- Supabase Service Role Key瑜?frontend?먯꽌 ?덈? ?ъ슜 湲덉? (anon key留?
+- `vercel.json` CSP: `script-src 'self' 'unsafe-inline'` ?덉슜 (珥덇린 FOUC 諛⑹??? 異뷀썑 nonce 諛⑹떇?쇰줈 媛쒖꽑 媛??
 
 ## SEO
 
-- `Head.astro`: canonical/hreflang은 반드시 절대 URL (`PUBLIC_SITE_URL` 기반)
-- `astro.config.mjs`의 `site`와 `PUBLIC_SITE_URL` 동일값 유지
+- `Head.astro`: canonical/hreflang? 諛섎뱶???덈? URL (`PUBLIC_SITE_URL` 湲곕컲)
+- `astro.config.mjs`??`site`? `PUBLIC_SITE_URL` ?숈씪媛??좎?
 
+## Right Rail
+
+- 리스트 페이지 우측 컬럼은 NewsprintListRail.astro를 사용
+- 리스트 rail 라벨 고정:
+  - 오늘의 편집 노트 / Editor's Note
+  - 지금 많이 읽는 글 / Most Read
+  - 처음 읽는 분께 / Start Here
+- Most Read는 analytics 기반 인기 데이터가 생기기 전까지 latest-published fallback 사용
+- 상세 페이지 우측 컬럼은 별도 정보 구조를 유지하며, 리스트 rail 라벨을 재사용하지 않음
 ## Admin Editor
 
 - WYSIWYG editor: Milkdown Crepe preset (`@milkdown/crepe`)
@@ -48,10 +57,13 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 - Draft/Preview mode: Draft = editor + AI panel, Preview = full newsprint published view
 - Auto-save on Preview transition
 - CSS classes: `.admin-*` in `global.css`
-- Mock data until P2C-UI-15 API wiring
+- Mock data until Phase 2D API wiring
+- State simulation: `?state=401|403|404|empty` query param on `/admin` and `/admin/edit/[slug]`
+- Inline feedback banner: `.admin-feedback` with success/error variants, auto-dismiss 3s
 
 ## Build
 
 ```bash
-cd frontend && npm run build   # 0 errors 필수
+cd frontend && npm run build   # 0 errors ?꾩닔
 ```
+
