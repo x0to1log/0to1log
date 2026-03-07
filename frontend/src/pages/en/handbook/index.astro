@@ -1,0 +1,214 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
+import { localField, difficultyLabel, difficultyColor } from '../../../lib/handbookUtils';
+import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+
+const locale = 'en';
+let terms: any[] = [];
+let fetchError: string | null = null;
+
+if (supabase) {
+  const { data, error } = await supabase
+    .from('handbook_terms')
+    .select('id, term, slug, korean_name, definition_ko, definition_en, plain_explanation_ko, plain_explanation_en, difficulty, category, is_favourite')
+    .eq('status', 'published')
+    .order('term', { ascending: true });
+
+  if (error) {
+    console.error('[handbook-list-en] Supabase error:', error.message);
+    fetchError = error.message;
+  } else {
+    terms = data ?? [];
+  }
+}
+
+// User reading history & bookmarks
+const readTermIds = new Set<string>();
+const bookmarkedTermIds = new Set<string>();
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (user && accessToken) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const [histRes, bmRes] = await Promise.all([
+    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'term'),
+    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'term'),
+  ]);
+  (histRes.data ?? []).forEach((r: any) => readTermIds.add(r.item_id));
+  (bmRes.data ?? []).forEach((r: any) => bookmarkedTermIds.add(r.item_id));
+}
+
+const categories = Array.from(
+  new Set(terms.map((t) => t.category).filter(Boolean))
+);
+---
+
+<MainLayout title={t[locale]['handbook.title']} locale={locale} slug="handbook/">
+  <NewsprintShell
+    locale={locale}
+    masthead="Tech Handbook"
+    editionLabel="CS · AI · Infra"
+    subkicker={['Glossary', 'Reference', 'Learn']}
+  >
+    <div id="handbook-controls" style="margin-bottom: 1.5rem;">
+      <input
+        type="text"
+        id="handbook-search"
+        placeholder={t[locale]['handbook.search']}
+        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 0.9rem;"
+      />
+      <div id="handbook-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+        <button class="handbook-filter-btn active" data-filter="all" style="padding: 0.25rem 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); color: var(--color-text); cursor: pointer; font-size: 0.8rem;">
+          {t[locale]['handbook.allCategories']}
+        </button>
+        {categories.map((cat) => (
+          <button class="handbook-filter-btn" data-filter={cat} style="padding: 0.25rem 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-size: 0.8rem;">
+            {getHandbookCategoryLabel(locale, cat)}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {fetchError ? (
+      <NewsprintNotice
+        variant="error"
+        message={t[locale]['handbook.error']}
+        linkHref={`/${locale}/handbook/`}
+        linkLabel={t[locale]['handbook.back']}
+      />
+    ) : terms.length === 0 ? (
+      <NewsprintNotice variant="empty" message={t[locale]['handbook.empty']} />
+    ) : (
+      <div id="handbook-list">
+        {terms.map((term) => {
+          const def = localField(term, 'definition', locale);
+          const isRead = readTermIds.has(term.id);
+          const isBm = bookmarkedTermIds.has(term.id);
+          return (
+            <a
+              href={`/${locale}/handbook/${term.slug}/`}
+              class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
+              data-category={term.category || ''}
+              data-term={term.term}
+              data-korean={term.korean_name || ''}
+              data-def={def}
+              style="display: block; padding: 1rem; border-bottom: 1px solid var(--color-border); text-decoration: none; color: inherit;"
+            >
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                {term.difficulty && (
+                  <span style={`font-size: 0.7rem; padding: 0.1rem 0.4rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
+                    {difficultyLabel(locale, term.difficulty)}
+                  </span>
+                )}
+                {term.category && (
+                  <span style="font-size: 0.7rem; color: var(--color-text-muted);">
+                    {getHandbookCategoryLabel(locale, term.category)}
+                  </span>
+                )}
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                <div style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; flex: 1;">
+                  {term.term}
+                </div>
+                <button
+                  class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
+                  data-item-id={term.id}
+                  data-item-type="term"
+                  data-bookmarked={isBm ? 'true' : 'false'}
+                  aria-label={isBm ? 'Remove bookmark' : 'Add bookmark'}
+                >
+                  <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                </button>
+              </div>
+              {term.korean_name && (
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.1rem;">
+                  {term.korean_name}
+                </div>
+              )}
+              {def && (
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.35rem; line-height: 1.4;">
+                  {def.length > 120 ? def.slice(0, 120) + '...' : def}
+                </div>
+              )}
+            </a>
+          );
+        })}
+      </div>
+    )}
+
+    <div id="handbook-no-results" style="display: none;">
+      <NewsprintNotice variant="empty" message={t[locale]['handbook.searchNoResults']} />
+    </div>
+  </NewsprintShell>
+</MainLayout>
+
+<script>
+  import '../../../scripts/bookmark';
+</script>
+
+<script>
+  function initHandbookFilters(): void {
+    const search = document.getElementById('handbook-search') as HTMLInputElement | null;
+    const list = document.getElementById('handbook-list');
+    const noResults = document.getElementById('handbook-no-results');
+    const filterBtns = document.querySelectorAll('.handbook-filter-btn');
+    if (!search || !list) return;
+
+    let activeCategory = 'all';
+
+    function filter(): void {
+      const query = search!.value.toLowerCase().trim();
+      const cards = list!.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const cat = card.dataset.category || '';
+        const term = (card.dataset.term || '').toLowerCase();
+        const korean = (card.dataset.korean || '').toLowerCase();
+        const def = (card.dataset.def || '').toLowerCase();
+
+        const matchesCategory = activeCategory === 'all' || cat === activeCategory;
+        const matchesSearch = !query || term.includes(query) || korean.includes(query) || def.includes(query);
+
+        card.style.display = matchesCategory && matchesSearch ? 'block' : 'none';
+        if (matchesCategory && matchesSearch) visible++;
+      });
+
+      if (noResults) {
+        noResults.style.display = visible === 0 && (query || activeCategory !== 'all') ? 'block' : 'none';
+      }
+    }
+
+    search.addEventListener('input', filter);
+
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach((b) => {
+          (b as HTMLElement).classList.remove('active');
+          (b as HTMLElement).style.background = 'var(--color-bg)';
+          (b as HTMLElement).style.color = 'var(--color-text-muted)';
+        });
+        (btn as HTMLElement).classList.add('active');
+        (btn as HTMLElement).style.background = 'var(--color-bg-secondary)';
+        (btn as HTMLElement).style.color = 'var(--color-text)';
+        activeCategory = (btn as HTMLElement).dataset.filter || 'all';
+        filter();
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initHandbookFilters);
+  initHandbookFilters();
+</script>
