@@ -13,6 +13,11 @@ const currentPath = Astro.url.pathname;
 const altPath = altSlug
   ? `/${altLocale}/log/${altSlug}/`
   : currentPath.replace(`/${locale}/`, `/${altLocale}/`);
+
+const user = Astro.locals.user;
+const avatarUrl = user?.user_metadata?.avatar_url;
+const displayName = user?.user_metadata?.full_name || user?.email || '';
+const initials = displayName ? displayName.charAt(0).toUpperCase() : '?';
 ---
 
 <header class="site-header" data-always-visible={alwaysVisible ? "true" : undefined} style={`background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);`}>
@@ -28,10 +33,56 @@ const altPath = altSlug
         {locale === 'en' ? '한국어' : 'EN'}
       </a>
       <ThemeToggle />
+
+      {user ? (
+        <div style="position: relative;">
+          <button class="user-avatar-btn" data-user-menu-toggle aria-label="User menu">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={displayName} />
+            ) : (
+              initials
+            )}
+          </button>
+          <div class="user-dropdown" data-user-dropdown>
+            <a href="/library/" class="user-dropdown-item">
+              {locale === 'ko' ? '내 서재' : 'My Library'}
+            </a>
+            <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent(currentPath)}`} style="margin: 0;">
+              <button type="submit" class="user-dropdown-item" style="border-top: 1px solid var(--color-border);">
+                {locale === 'ko' ? '로그아웃' : 'Sign Out'}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <a href={`/login?redirectTo=${encodeURIComponent(currentPath)}`} class="newsprint-nav-link" style="font-size: 0.875rem;">
+          {locale === 'ko' ? '로그인' : 'Sign In'}
+        </a>
+      )}
     </div>
   </nav>
 </header>
 <div class="site-header-spacer" aria-hidden="true"></div>
+
+<script>
+  function initUserDropdown(): void {
+    const toggle = document.querySelector('[data-user-menu-toggle]');
+    const dropdown = document.querySelector('[data-user-dropdown]');
+    if (!toggle || !dropdown) return;
+
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dropdown.getAttribute('data-open') === 'true';
+      dropdown.setAttribute('data-open', isOpen ? 'false' : 'true');
+    });
+
+    document.addEventListener('click', () => {
+      dropdown.setAttribute('data-open', 'false');
+    });
+  }
+
+  document.addEventListener('astro:page-load', initUserDropdown);
+</script>
 
 <script>
   function initHeaderReveal(): void {
