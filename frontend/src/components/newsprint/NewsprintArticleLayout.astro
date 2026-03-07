@@ -72,11 +72,13 @@ const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost
   <nav class="newsprint-article-nav" aria-label={locale === 'ko' ? '글 탐색' : 'Article navigation'}>
     <div class="newsprint-article-nav-row">
       <a class="newsprint-nav-back" href={`/${locale}/log/`}>
-        &larr; {backLabel}
+        <span class="newsprint-nav-back-arrow">&larr;</span>
+        <span>{backLabel}</span>
       </a>
       {nextPost && (
         <a class="newsprint-nav-next" href={`/${locale}/log/${nextPost.slug}/`}>
-          <div class="newsprint-nav-next-title">{nextPost.title} &rarr;</div>
+          <span class="newsprint-nav-next-arrow">&rarr;</span>
+          <div class="newsprint-nav-next-title">{nextPost.title}</div>
           {nextCategoryLabel && (
             <div class="newsprint-nav-next-meta">{nextCategoryLabel}</div>
           )}
