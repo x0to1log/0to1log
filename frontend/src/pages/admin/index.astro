@@ -1,11 +1,60 @@
 ---
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
+
+// Mock draft data (matches backend PostDraftListItem schema)
+const mockDrafts = [
+  {
+    id: 'uuid-001',
+    title: 'AI Reasoning Models: Chain-of-Thought Breakthroughs in 2026',
+    slug: '2026-03-07-ai-reasoning-models',
+    category: 'ai-news',
+    status: 'draft',
+    created_at: '2026-03-07T09:00:00Z',
+    updated_at: '2026-03-07T14:30:00Z',
+  },
+  {
+    id: 'uuid-002',
+    title: 'Understanding Transformer Attention Patterns',
+    slug: '2026-03-06-transformer-attention',
+    category: 'study',
+    status: 'draft',
+    created_at: '2026-03-06T10:00:00Z',
+    updated_at: '2026-03-06T16:00:00Z',
+  },
+  {
+    id: 'uuid-003',
+    title: 'Building a CLI Tool with Claude Agent SDK',
+    slug: '2026-03-05-cli-tool-agent-sdk',
+    category: 'project',
+    status: 'draft',
+    created_at: '2026-03-05T08:00:00Z',
+    updated_at: '2026-03-05T12:00:00Z',
+  },
+];
 ---
 
-<MainLayout title="Admin" locale="en">
-  <h1 class="text-heading">Admin Dashboard</h1>
-  <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-    Authentication required. (Phase 1a P1-DB-01)
-  </p>
+<MainLayout title="Admin Dashboard" locale="en">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h1 class="newsprint-masthead" style="font-size: 2rem; text-align: left; margin-bottom: 0.5rem;">
+      Admin Dashboard
+    </h1>
+    <p class="admin-draft-meta" style="margin-bottom: 1.5rem;">
+      {mockDrafts.length} draft{mockDrafts.length !== 1 ? 's' : ''} pending
+    </p>
+
+    <ul class="admin-draft-list">
+      {mockDrafts.map((draft) => (
+        <li class="admin-draft-item">
+          <div class="admin-draft-info">
+            <div class="admin-draft-title">{draft.title}</div>
+            <div class="admin-draft-meta">
+              {draft.category} &middot; {new Date(draft.updated_at).toLocaleDateString('en-US')}
+            </div>
+          </div>
+          <a href={`/admin/edit/${draft.slug}`} class="admin-btn">Edit</a>
+        </li>
+      ))}
+    </ul>
+  </div>
 </MainLayout>
