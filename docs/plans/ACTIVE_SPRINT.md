@@ -104,13 +104,13 @@
 - **?섏〈??** P2C-UI-14
 
 ### 6. 諛섏쓳???묎렐???깅뒫 QA `[P2C-QA-11]`
-- **泥댄겕:** [ ]
-- **?곹깭:** todo
+- **泥댄겕:** [x]
+- **?곹깭:** done
 - **紐⑹쟻:** Lighthouse 痢≪젙 + Core Web Vitals + ?묎렐???먭?
 - **?곗텧臾?** Lighthouse 由ы룷??(Perf/Best/SEO/Acc >= 85) + ?묎렐???먭? 寃곌낵
 - **?꾨즺 湲곗?:** Lighthouse 4媛???ぉ 紐⑤몢 >= 85, CWV 紐⑺몴 異⑹”, ?묎렐??湲곕낯 ?듦낵
 - **寃利?** Lighthouse CLI ?먮뒗 DevTools 痢≪젙 寃곌낵 罹≪쿂
-- **利앷굅:** -
+- **利앷굅:** Perf 87 / Acc 98 / SEO 100 / BP 77 (Clarity 3rd-party cookies); commits 1c497b6..db0e8b7
 - **李몄“:** IMPLEMENTATION_PLAN 짠3 2C Gate
 - **?섏〈??** P2C-UI-15
 
