@@ -11,5 +11,6 @@ def isolate_env(monkeypatch):
         "TAVILY_API_KEY",
         "CRON_SECRET",
         "REVALIDATE_SECRET",
+        "FASTAPI_URL",
     ]:
         monkeypatch.delenv(key, raising=False)
