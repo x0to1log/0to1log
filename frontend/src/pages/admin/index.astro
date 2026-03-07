@@ -2,39 +2,27 @@
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import NewsprintNotice from '../../components/newsprint/NewsprintNotice.astro';
+import { apiFetch } from '../../lib/api';
 
-const stateParam = Astro.url.searchParams.get('state');
+const accessToken = Astro.locals.accessToken;
+let drafts: any[] = [];
+let fetchError: string | null = null;
 
-// Mock draft data (matches backend PostDraftListItem schema)
-const mockDrafts = [
-  {
-    id: 'uuid-001',
-    title: 'AI Reasoning Models: Chain-of-Thought Breakthroughs in 2026',
-    slug: '2026-03-07-ai-reasoning-models',
-    category: 'ai-news',
-    status: 'draft',
-    created_at: '2026-03-07T09:00:00Z',
-    updated_at: '2026-03-07T14:30:00Z',
-  },
-  {
-    id: 'uuid-002',
-    title: 'Understanding Transformer Attention Patterns',
-    slug: '2026-03-06-transformer-attention',
-    category: 'study',
-    status: 'draft',
-    created_at: '2026-03-06T10:00:00Z',
-    updated_at: '2026-03-06T16:00:00Z',
-  },
-  {
-    id: 'uuid-003',
-    title: 'Building a CLI Tool with Claude Agent SDK',
-    slug: '2026-03-05-cli-tool-agent-sdk',
-    category: 'project',
-    status: 'draft',
-    created_at: '2026-03-05T08:00:00Z',
-    updated_at: '2026-03-05T12:00:00Z',
-  },
-];
+try {
+  drafts = await apiFetch<any[]>('/api/admin/drafts', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+} catch (err) {
+  const msg = err instanceof Error ? err.message : 'Unknown error';
+  if (msg.includes('401')) {
+    return Astro.redirect('/admin/login');
+  }
+  if (msg.includes('403')) {
+    fetchError = '403';
+  } else {
+    fetchError = msg;
+  }
+}
 ---
 
 <MainLayout title="Admin Dashboard" locale="en">
@@ -48,21 +36,21 @@ const mockDrafts = [
       </form>
     </div>
 
-    {stateParam === '401' ? (
-      <NewsprintNotice
-        variant="unauthorized"
-        message="Missing or invalid token. Please sign in."
-        linkHref="/admin"
-        linkLabel="Sign in"
-      />
-    ) : stateParam === '403' ? (
+    {fetchError === '403' ? (
       <NewsprintNotice
         variant="unauthorized"
         message="You do not have permission to access this page."
         linkHref="/"
         linkLabel="Go home"
       />
-    ) : stateParam === 'empty' ? (
+    ) : fetchError ? (
+      <NewsprintNotice
+        variant="unauthorized"
+        message={`Failed to load drafts: ${fetchError}`}
+        linkHref="/admin"
+        linkLabel="Retry"
+      />
+    ) : drafts.length === 0 ? (
       <NewsprintNotice
         variant="empty"
         message="No drafts pending. Create a new post to get started."
@@ -70,11 +58,11 @@ const mockDrafts = [
     ) : (
       <>
         <p class="admin-draft-meta" style="margin-bottom: 1.5rem;">
-          {mockDrafts.length} draft{mockDrafts.length !== 1 ? 's' : ''} pending
+          {drafts.length} draft{drafts.length !== 1 ? 's' : ''} pending
         </p>
 
         <ul class="admin-draft-list">
-          {mockDrafts.map((draft) => (
+          {drafts.map((draft) => (
             <li class="admin-draft-item">
               <div class="admin-draft-info">
                 <div class="admin-draft-title">{draft.title}</div>
