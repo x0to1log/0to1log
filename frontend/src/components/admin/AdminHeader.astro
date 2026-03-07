@@ -1,0 +1,32 @@
+---
+interface Props {
+  activeTab: 'log' | 'handbook';
+}
+
+const { activeTab } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<div class="admin-header">
+  <div class="admin-toolbar">
+    <div class="admin-toolbar-left">
+      <h1 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; margin: 0;">
+        Admin Dashboard
+      </h1>
+    </div>
+    <div class="admin-toolbar-right">
+      <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent(currentPath)}`} style="display: inline;">
+        <button type="submit" class="admin-btn" style="font-size: 0.85rem;">Logout</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="admin-tabs">
+    <a href="/admin/" class={`admin-tab ${activeTab === 'log' ? 'admin-tab--active' : ''}`}>
+      Log
+    </a>
+    <a href="/admin/handbook/" class={`admin-tab ${activeTab === 'handbook' ? 'admin-tab--active' : ''}`}>
+      Handbook
+    </a>
+  </div>
+</div>

@@ -1,0 +1,337 @@
+---
+export const prerender = false;
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import AdminHeader from '../../../../components/admin/AdminHeader.astro';
+import { createClient } from '@supabase/supabase-js';
+import { getHandbookCategories } from '../../../../lib/handbookCategories';
+
+const { slug } = Astro.params;
+const isNew = slug === 'new';
+const accessToken = Astro.locals.accessToken;
+
+let term: Record<string, any> | null = null;
+let loadError: string | null = null;
+
+if (!isNew) {
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const { data, error } = await supabase
+    .from('handbook_terms')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !data) {
+    loadError = error?.message || 'Term not found';
+  } else {
+    term = data;
+  }
+}
+
+const categories = getHandbookCategories();
+const difficulties = ['beginner', 'intermediate', 'advanced'];
+
+const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
+---
+
+<MainLayout title={`Admin — ${pageTitle}`} locale="en">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <AdminHeader activeTab="handbook" />
+
+    {loadError ? (
+      <div class="admin-feedback admin-feedback--error" style="margin-bottom: 1rem;">
+        {loadError}
+      </div>
+    ) : (
+      <>
+        {/* Toolbar */}
+        <div class="admin-toolbar" style="margin-bottom: 1.5rem;">
+          <div class="admin-toolbar-left">
+            <a href="/admin/handbook/" class="admin-btn" style="font-size: 0.85rem;">&larr; Back</a>
+            {term && (
+              <span class={`admin-status-badge admin-status-badge--${term.status}`} style="margin-left: 0.75rem;">
+                {term.status}
+              </span>
+            )}
+          </div>
+          <div class="admin-toolbar-right">
+            <button id="btn-save" class="admin-btn" style="font-size: 0.85rem;">Save Draft</button>
+            <button id="btn-publish" class="admin-btn" style="font-size: 0.85rem;">Publish</button>
+            {term && (
+              <button id="btn-delete" class="admin-btn-danger" style="font-size: 0.85rem;">Delete</button>
+            )}
+          </div>
+        </div>
+
+        {/* Feedback */}
+        <div id="feedback" class="admin-feedback" hidden></div>
+
+        {/* Form */}
+        <form id="term-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <input type="hidden" name="id" value={term?.id || ''} />
+
+          {/* Term */}
+          <div>
+            <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Term (English) *</label>
+            <input type="text" name="term" class="admin-input" value={term?.term || ''} required />
+          </div>
+
+          {/* Slug */}
+          <div>
+            <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Slug</label>
+            <input type="text" name="slug" class="admin-input" value={term?.slug || ''} placeholder="auto-generated from term" />
+          </div>
+
+          {/* Korean Name */}
+          <div>
+            <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Korean Name</label>
+            <input type="text" name="korean_name" class="admin-input" value={term?.korean_name || ''} />
+          </div>
+
+          {/* Category + Difficulty row */}
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Category</label>
+              <select name="category" class="admin-input">
+                <option value="">— select —</option>
+                {categories.map((cat) => (
+                  <option value={cat} selected={term?.category === cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Difficulty</label>
+              <select name="difficulty" class="admin-input">
+                <option value="">— select —</option>
+                {difficulties.map((d) => (
+                  <option value={d} selected={term?.difficulty === d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Related Terms */}
+          <div>
+            <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Related Term Slugs (comma-separated)</label>
+            <input type="text" name="related_term_slugs" class="admin-input" value={(term?.related_term_slugs || []).join(', ')} />
+          </div>
+
+          {/* Favourite */}
+          <div>
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-ui); font-size: 0.9rem;">
+              <input type="checkbox" name="is_favourite" checked={term?.is_favourite} />
+              Favourite (pinned in list)
+            </label>
+          </div>
+
+          {/* Language tabs */}
+          <div class="admin-lang-tabs">
+            <button type="button" class="admin-lang-tab admin-lang-tab--active" data-lang="ko">KO</button>
+            <button type="button" class="admin-lang-tab" data-lang="en">EN</button>
+          </div>
+
+          {/* KO content */}
+          <div id="lang-ko">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Definition (KO)</label>
+                <textarea name="definition_ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Plain Explanation (KO)</label>
+                <textarea name="plain_explanation_ko" class="admin-textarea" rows="3">{term?.plain_explanation_ko || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Technical Description (KO)</label>
+                <textarea name="technical_description_ko" class="admin-textarea" rows="3">{term?.technical_description_ko || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Example / Analogy (KO)</label>
+                <textarea name="example_analogy_ko" class="admin-textarea" rows="3">{term?.example_analogy_ko || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Body Markdown (KO)</label>
+                <textarea name="body_markdown_ko" class="admin-textarea" rows="8">{term?.body_markdown_ko || ''}</textarea>
+              </div>
+            </div>
+          </div>
+
+          {/* EN content */}
+          <div id="lang-en" style="display: none;">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Definition (EN)</label>
+                <textarea name="definition_en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Plain Explanation (EN)</label>
+                <textarea name="plain_explanation_en" class="admin-textarea" rows="3">{term?.plain_explanation_en || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Technical Description (EN)</label>
+                <textarea name="technical_description_en" class="admin-textarea" rows="3">{term?.technical_description_en || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Example / Analogy (EN)</label>
+                <textarea name="example_analogy_en" class="admin-textarea" rows="3">{term?.example_analogy_en || ''}</textarea>
+              </div>
+              <div>
+                <label class="admin-draft-meta" style="display: block; margin-bottom: 0.25rem;">Body Markdown (EN)</label>
+                <textarea name="body_markdown_en" class="admin-textarea" rows="8">{term?.body_markdown_en || ''}</textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+      </>
+    )}
+  </div>
+</MainLayout>
+
+<script>
+  // Language tab switching
+  document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang!;
+      document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
+        b.classList.remove('admin-lang-tab--active')
+      );
+      btn.classList.add('admin-lang-tab--active');
+
+      document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
+      document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
+    });
+  });
+
+  function showFeedback(message: string, isError = false) {
+    const el = document.getElementById('feedback')!;
+    el.textContent = message;
+    el.className = `admin-feedback admin-feedback--${isError ? 'error' : 'success'}`;
+    el.hidden = false;
+    setTimeout(() => { el.hidden = true; }, 3000);
+  }
+
+  function getFormData(): Record<string, any> {
+    const form = document.getElementById('term-form') as HTMLFormElement;
+    const fd = new FormData(form);
+    const data: Record<string, any> = {};
+
+    for (const [key, value] of fd.entries()) {
+      data[key] = value;
+    }
+
+    // Handle checkbox
+    data.is_favourite = (form.querySelector('[name="is_favourite"]') as HTMLInputElement).checked;
+
+    // Handle related_term_slugs → array
+    const related = (data.related_term_slugs as string || '').trim();
+    data.related_term_slugs = related ? related.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+
+    // Remove empty id
+    if (!data.id) delete data.id;
+
+    return data;
+  }
+
+  // Save Draft
+  document.getElementById('btn-save')?.addEventListener('click', async () => {
+    const data = getFormData();
+    if (!data.term) {
+      showFeedback('Term is required.', true);
+      return;
+    }
+
+    const res = await fetch('/api/admin/handbook/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (res.ok) {
+      const saved = await res.json();
+      // Update hidden id field for subsequent saves
+      const idInput = document.querySelector('[name="id"]') as HTMLInputElement;
+      if (saved.id) idInput.value = saved.id;
+      // Update slug field
+      const slugInput = document.querySelector('[name="slug"]') as HTMLInputElement;
+      if (saved.slug) slugInput.value = saved.slug;
+
+      showFeedback('Saved successfully.');
+
+      // If this was a new term, update URL without reload
+      if (!data.id && saved.slug) {
+        window.history.replaceState(null, '', `/admin/handbook/edit/${saved.slug}`);
+      }
+    } else {
+      const err = await res.json();
+      showFeedback(`Save failed: ${err.error}`, true);
+    }
+  });
+
+  // Publish
+  document.getElementById('btn-publish')?.addEventListener('click', async () => {
+    const data = getFormData();
+    if (!data.term) {
+      showFeedback('Term is required.', true);
+      return;
+    }
+
+    // Save first
+    const saveRes = await fetch('/api/admin/handbook/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!saveRes.ok) {
+      const err = await saveRes.json();
+      showFeedback(`Save failed: ${err.error}`, true);
+      return;
+    }
+
+    const saved = await saveRes.json();
+    const idInput = document.querySelector('[name="id"]') as HTMLInputElement;
+    if (saved.id) idInput.value = saved.id;
+
+    // Then publish
+    const pubRes = await fetch('/api/admin/handbook/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: saved.id, action: 'publish' }),
+    });
+
+    if (pubRes.ok) {
+      showFeedback('Published successfully.');
+      // Update status badge
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      const err = await pubRes.json();
+      showFeedback(`Publish failed: ${err.error}`, true);
+    }
+  });
+
+  // Delete
+  document.getElementById('btn-delete')?.addEventListener('click', async () => {
+    const idInput = document.querySelector('[name="id"]') as HTMLInputElement;
+    const id = idInput.value;
+    if (!id) return;
+
+    const termInput = document.querySelector('[name="term"]') as HTMLInputElement;
+    if (!confirm(`Delete "${termInput.value}"? This cannot be undone.`)) return;
+
+    const res = await fetch('/api/admin/handbook/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+
+    if (res.ok) {
+      window.location.href = '/admin/handbook/';
+    } else {
+      const err = await res.json();
+      showFeedback(`Delete failed: ${err.error}`, true);
+    }
+  });
+</script>

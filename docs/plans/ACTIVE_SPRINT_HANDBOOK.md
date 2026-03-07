@@ -45,8 +45,8 @@
 ## 태스크
 
 ### 1. handbook_terms 테이블 생성 `[H1-DB-01]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: handbook 전용 Supabase 테이블과 RLS를 만든다.
 - 산출물: `supabase/migrations/00006_handbook_terms.sql`
 - 완료 기준: 테이블/인덱스/RLS 정책 생성 확인
@@ -58,7 +58,7 @@
 
 ### 2. Notion → Supabase 마이그레이션 `[H1-DB-02]`
 - 체크: [ ]
-- 상태: todo
+- 상태: blocked
 - 목적: 기존 Notion Words DB를 handbook_terms로 1회 이관한다.
 - 산출물: `scripts/migrate-handbook-from-notion.ts`
 - 완료 기준: Notion 용어 수와 DB row 수 일치
@@ -69,8 +69,8 @@
 - 의존성: H1-DB-01
 
 ### 3. i18n 문자열 추가 `[H1-FE-01]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: handbook용 UI 문구를 EN/KO에 추가한다.
 - 산출물: `frontend/src/i18n/index.ts`
 - 완료 기준: handbook 관련 키 추가 완료
@@ -81,8 +81,8 @@
 - 의존성: 없음
 
 ### 4. Handbook 목록 페이지 `[H1-FE-02]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: `/en/handbook/`, `/ko/handbook/` 목록 페이지를 만든다.
 - 산출물: `frontend/src/pages/en/handbook/index.astro`, `frontend/src/pages/ko/handbook/index.astro`
 - 완료 기준: published handbook terms 목록 렌더링
@@ -93,8 +93,8 @@
 - 의존성: H1-DB-01, H1-FE-01
 
 ### 5. Handbook 상세 페이지 `[H1-FE-03]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: `/en/handbook/[slug]/`, `/ko/handbook/[slug]/` 상세 페이지를 만든다.
 - 산출물: `frontend/src/pages/en/handbook/[slug].astro`, `frontend/src/pages/ko/handbook/[slug].astro`
 - 완료 기준: handbook 본문과 related terms 정상 렌더링
@@ -105,8 +105,8 @@
 - 의존성: H1-DB-01, H1-FE-01
 
 ### 6. Navigation 링크 추가 `[H1-FE-04]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: handbook를 메인 탐색에 노출한다.
 - 산출물: `frontend/src/components/Navigation.astro`
 - 완료 기준: locale별 handbook 링크 동작
@@ -117,8 +117,8 @@
 - 의존성: H1-FE-02
 
 ### 7. Handbook 검색 `[H1-FE-05]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: handbook 목록에서 영어/한국어 키워드 검색을 지원한다.
 - 산출물: handbook index page updates
 - 완료 기준: term/korean_name 검색과 no-result 상태 동작
@@ -129,8 +129,8 @@
 - 의존성: H1-FE-02
 
 ### 8. QA `[H1-QA-01]`
-- 체크: [ ]
-- 상태: todo
+- 체크: [x]
+- 상태: done
 - 목적: handbook read-only 기능의 반응형/접근성/빌드를 확인한다.
 - 산출물: QA 결과 기록
 - 완료 기준: handbook routes, 검색, navigation, build 검증 완료
