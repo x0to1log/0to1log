@@ -10,17 +10,30 @@ interface RailPost {
 interface Props {
   locale: 'en' | 'ko';
   posts: RailPost[];
-  categories: string[];
+  focusItems: string[];
 }
 
-const { locale, posts, categories } = Astro.props;
+const { locale, posts, focusItems } = Astro.props;
 const isKo = locale === 'ko';
 ---
 
 <section>
-  <h3 class="newsprint-section-title">{isKo ? '에디터 픽' : "Editor's Picks"}</h3>
+  <h3 class="newsprint-section-title">{isKo ? '이 글의 초점' : 'Focus of This Article'}</h3>
+  {focusItems.length === 0 ? (
+    <p class="newsprint-empty">{isKo ? '핵심 포인트를 준비 중입니다.' : 'Key points are on the way.'}</p>
+  ) : (
+    <ul class="newsprint-rail-list">
+      {focusItems.map((item) => <li>{item}</li>)}
+    </ul>
+  )}
+</section>
+
+<div style="margin-top: 1.5rem;"></div>
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '같은 호에서 더 읽기' : 'More in This Issue'}</h3>
   {posts.length === 0 ? (
-    <p class="newsprint-empty">{isKo ? '아직 표시할 글이 없습니다.' : 'No items yet.'}</p>
+    <p class="newsprint-empty">{isKo ? '아직 연결된 글이 없습니다.' : 'No related items yet.'}</p>
   ) : (
     <div class="newsprint-stack">
       {posts.map((post) => (
@@ -35,17 +48,4 @@ const isKo = locale === 'ko';
       ))}
     </div>
   )}
-</section>
-
-<div class="newsprint-divider"></div>
-
-<section>
-  <h3 class="newsprint-section-title">{isKo ? '섹션' : 'Sections'}</h3>
-  <div class="newsprint-tags">
-    {categories.length === 0 ? (
-      <span class="newsprint-tag">{isKo ? '대기 중' : 'Pending'}</span>
-    ) : (
-      categories.map((cat) => <span class="newsprint-tag">{getCategoryLabel(locale, cat) || cat}</span>)
-    )}
-  </div>
 </section>

@@ -1,0 +1,76 @@
+---
+import { getCategoryLabel } from '../../lib/categories';
+
+interface RailPost {
+  title: string;
+  slug: string;
+  category?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  posts: RailPost[];
+}
+
+const { locale, posts } = Astro.props;
+const isKo = locale === 'ko';
+
+const editorialNote = isKo
+  ? '오늘의 변화와 작업 기록을 AI 뉴스, 서재, 커리어, 프로젝트의 흐름으로 엮어 둡니다.'
+  : 'A daily record of shifts, working notes, and build logs across AI, study, career, and projects.';
+
+const starterSections = isKo
+  ? [
+      { slug: 'ai-news', label: 'AI 뉴스', description: '오늘 바뀐 것부터 빠르게 봅니다.' },
+      { slug: 'study', label: '서재', description: '개념과 메모를 차분히 따라갑니다.' },
+      { slug: 'career', label: '커리어', description: '일과 성장의 판단 기록을 봅니다.' },
+      { slug: 'project', label: '프로젝트', description: '만드는 과정과 회고를 읽습니다.' },
+    ]
+  : [
+      { slug: 'ai-news', label: 'AI News', description: 'Start with what changed today.' },
+      { slug: 'study', label: 'Study', description: 'Follow concepts, notes, and references.' },
+      { slug: 'career', label: 'Career', description: 'Read decisions about work and growth.' },
+      { slug: 'project', label: 'Project', description: 'See build logs and shipping notes.' },
+    ];
+---
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '오늘의 편집 노트' : "Editor's Note"}</h3>
+  <p class="newsprint-rail-note">{editorialNote}</p>
+</section>
+
+<div style="margin-top: 1.5rem;"></div>
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '지금 많이 읽는 글' : 'Most Read'}</h3>
+  {posts.length === 0 ? (
+    <p class="newsprint-empty">{isKo ? '아직 표시할 글이 없습니다.' : 'No items yet.'}</p>
+  ) : (
+    <div class="newsprint-stack">
+      {posts.map((post) => (
+        <a class="newsprint-card" href={`/${locale}/log/${post.slug}/`}>
+          <strong class="newsprint-rail-link">{post.title}</strong>
+          {getCategoryLabel(locale, post.category) && (
+            <span class="newsprint-category newsprint-rail-category">
+              {getCategoryLabel(locale, post.category)}
+            </span>
+          )}
+        </a>
+      ))}
+    </div>
+  )}
+</section>
+
+<div style="margin-top: 1.5rem;"></div>
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '처음 읽는 분께' : 'Start Here'}</h3>
+  <div class="newsprint-stack">
+    {starterSections.map((section) => (
+      <a class="newsprint-card" href={`/${locale}/log/?category=${section.slug}`}>
+        <strong class="newsprint-rail-link">{section.label}</strong>
+        <p class="newsprint-rail-copy">{section.description}</p>
+      </a>
+    ))}
+  </div>
+</section>
