@@ -14,6 +14,9 @@ interface Props {
   htmlContent: string;
   backLabel: string;
   nextPost?: { title: string; slug: string; category?: string | null } | null;
+  isBookmarked?: boolean;
+  itemId?: string;
+  itemType?: 'post' | 'term';
 }
 
 const {
@@ -29,6 +32,9 @@ const {
   htmlContent,
   backLabel,
   nextPost = null,
+  isBookmarked = false,
+  itemId,
+  itemType,
 } = Astro.props;
 
 const dateLabel = publishedAt
@@ -61,7 +67,23 @@ const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost
     </div>
   </div>
 
-  <h1 class="newsprint-lead-title">{title}</h1>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+    <h1 class="newsprint-lead-title" style="flex: 1;">{title}</h1>
+    {itemId && (
+      <button
+        class={`newsprint-bookmark-icon newsprint-bookmark-icon--detail ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+        data-item-id={itemId}
+        data-item-type={itemType}
+        data-bookmarked={isBookmarked ? 'true' : 'false'}
+        aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+        style="margin-top: 0.5rem;"
+      >
+        <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+        </svg>
+      </button>
+    )}
+  </div>
   {excerpt && <p class="newsprint-deck">{excerpt}</p>}
   <div class="newsprint-divider"></div>
 

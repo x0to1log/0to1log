@@ -4,6 +4,7 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { normalizeCategorySlug } from '../../../lib/categories';
 import { getArticleFocusItems } from '../../../lib/articleRail';
 import { renderMarkdown } from '../../../lib/markdown';
@@ -116,6 +117,26 @@ if (post) {
     : undefined;
 }
 
+// User bookmark state
+let isBookmarked = false;
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (user && accessToken && post) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const { data: bm } = await authSb
+    .from('user_bookmarks')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('item_type', 'post')
+    .eq('item_id', post.id)
+    .maybeSingle();
+  isBookmarked = !!bm;
+}
+
 const pageTitle = post ? post.title : '찾을 수 없음';
 const rawContent = post ? (post.content_original || post.content_beginner || '') : '';
 const htmlContent = rawContent ? await renderMarkdown(rawContent) : '';
@@ -156,6 +177,9 @@ const htmlContent = rawContent ? await renderMarkdown(rawContent) : '';
         htmlContent={htmlContent}
         backLabel={t.ko['post.back']}
         nextPost={nextPost}
+        isBookmarked={isBookmarked}
+        itemId={post.id}
+        itemType="post"
       />
     )}
 
@@ -164,3 +188,19 @@ const htmlContent = rawContent ? await renderMarkdown(rawContent) : '';
     </Fragment>
   </NewsprintShell>
 </MainLayout>
+
+<script>
+  import '../../../scripts/bookmark';
+
+  function recordReadingHistory(): void {
+    const postId = document.querySelector('[data-item-id][data-item-type="post"]')?.getAttribute('data-item-id');
+    if (!postId) return;
+    fetch('/api/user/reading-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_type: 'post', item_id: postId }),
+    }).catch(() => {});
+  }
+
+  document.addEventListener('astro:page-load', recordReadingHistory);
+</script>
