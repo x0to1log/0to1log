@@ -158,6 +158,21 @@ Phase 2C 寃뚯씠???듦낵 ????**Phase 2D-INT** (?듯빀/E2E: Mock ?쒓굅 + ?�
 - Detail rail copy set approved: 이 글의 초점 / Focus of This Article, 같은 호에서 더 읽기 / More in This Issue
 - Focus of This Article currently uses a category-based template fallback until admin-authored focus data exists.
 - Article detail rail should not reuse the list-rail headings.
+
+## Auth Scope Note
+
+- Phase 2C auth work is limited to mock UI/state: admin login screen, unauthorized/401/403 messaging, and session-expired presentation.
+- Real auth wiring moves to Phase 2D: Supabase login/logout, session restore, protected `/admin` route guard, and basic user sign-in entry.
+- Do not treat current 2C admin flows as production auth; they are presentation-first and mock-backed.
+
+## Security Carry-Over Note
+
+- Security hardening is deferred out of Phase 2C and scheduled for Phase 2D / 3A to avoid mixing UI polish with production-hardening work.
+- `P2D-SEC-01`: protect `/api/trigger-pipeline` from public proxy use, remove or sanitize raw HTML markdown rendering, and replace public `/admin` mock exposure with a real session guard.
+- `P2D-SEC-02`: apply backend rate limiting on real routes, fix env loading and test isolation so security tests run from standard `pytest`, and re-check CORS/secret boundaries.
+- `3A-SEC`: migrate away from CSP `unsafe-inline` toward nonce-based script loading and rerun the production security checklist.
+- Phase 2C may keep mock/admin presentation work, but it must not be treated as production auth or production security.
+
 ## 2C-EXP Addendum (Stitch Compatibility)
 
 - [x] `2C-UI-01` Prototype compatibility cleanup completed
@@ -166,5 +181,3 @@ Phase 2C 寃뚯씠???듦낵 ????**Phase 2D-INT** (?듯빀/E2E: Mock ?쒓굅 + ?�
   Evidence: `frontend/src/pages/en/log/index.astro`, `frontend/src/pages/ko/log/index.astro`, `frontend/src/pages/en/log/[slug].astro`, `frontend/src/pages/ko/log/[slug].astro`
 - [x] `2C-QA-01` Preview routes added for visual validation
   Evidence: `frontend/src/pages/preview/newsprint-dark.astro`, `frontend/src/pages/preview/newsprint-light.astro`
-
-
