@@ -4,7 +4,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
   const cronSecret = import.meta.env.CRON_SECRET;
-  const backendUrl = import.meta.env.BACKEND_URL;
+  const backendUrl = import.meta.env.FASTAPI_URL;
 
   if (!cronSecret || !backendUrl) {
     return new Response(JSON.stringify({ error: 'Missing configuration' }), {
@@ -13,10 +13,10 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
-  // Block public access: require Authorization header or Vercel cron header
+  // Require Authorization: Bearer <CRON_SECRET>
+  // Vercel cron auto-sends this when CRON_SECRET env var is configured
   const authHeader = request.headers.get('authorization');
-  const isVercelCron = request.headers.get('x-vercel-cron') === '1';
-  if (!isVercelCron && authHeader !== `Bearer ${cronSecret}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
