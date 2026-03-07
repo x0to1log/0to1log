@@ -15,6 +15,7 @@ const altPath = altSlug
   : currentPath.replace(`/${locale}/`, `/${altLocale}/`);
 
 const user = Astro.locals.user;
+const isAdmin = Astro.locals.isAdmin;
 const avatarUrl = user?.user_metadata?.avatar_url;
 const displayName = user?.user_metadata?.full_name || user?.email || '';
 const initials = displayName ? displayName.charAt(0).toUpperCase() : '?';
@@ -47,6 +48,11 @@ const initials = displayName ? displayName.charAt(0).toUpperCase() : '?';
             <a href="/library/" class="user-dropdown-item">
               {locale === 'ko' ? '내 서재' : 'My Library'}
             </a>
+            {isAdmin && (
+              <a href="/admin/" class="user-dropdown-item">
+                Dashboard
+              </a>
+            )}
             <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent(currentPath)}`} style="margin: 0;">
               <button type="submit" class="user-dropdown-item" style="border-top: 1px solid var(--color-border);">
                 {locale === 'ko' ? '로그아웃' : 'Sign Out'}

@@ -4,5 +4,6 @@ declare namespace App {
   interface Locals {
     user?: import('@supabase/supabase-js').User;
     accessToken?: string;
+    isAdmin?: boolean;
   }
 }

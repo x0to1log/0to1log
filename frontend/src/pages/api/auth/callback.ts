@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
+const isSecure = import.meta.env.PROD;
 
 // OAuth code exchange (Supabase PKCE flow redirect)
 export const GET: APIRoute = async ({ url, cookies }) => {
@@ -37,14 +38,14 @@ export const GET: APIRoute = async ({ url, cookies }) => {
   cookies.set('sb-access-token', data.session.access_token, {
     path: '/',
     httpOnly: true,
-    secure: true,
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 3600,
   });
   cookies.set('sb-refresh-token', data.session.refresh_token, {
     path: '/',
     httpOnly: true,
-    secure: true,
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 604800,
   });
@@ -70,7 +71,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.set('sb-access-token', access_token, {
       path: '/',
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 3600, // 1 hour
     });
@@ -78,7 +79,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.set('sb-refresh-token', refresh_token, {
       path: '/',
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 604800, // 7 days
     });

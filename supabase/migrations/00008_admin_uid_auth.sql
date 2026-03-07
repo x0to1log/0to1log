@@ -61,27 +61,40 @@ CREATE POLICY "posts_delete" ON posts FOR DELETE
     );
 
 -- ============================================================
--- 4. Update pipeline tables RLS: email → uid
+-- 4. Update pipeline tables RLS: email → uid (skip if tables don't exist)
 -- ============================================================
-DROP POLICY "admin_full_news_candidates" ON news_candidates;
-CREATE POLICY "admin_full_news_candidates" ON news_candidates FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'news_candidates') THEN
+        DROP POLICY IF EXISTS "admin_full_news_candidates" ON news_candidates;
+        CREATE POLICY "admin_full_news_candidates" ON news_candidates FOR ALL
+            USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    END IF;
 
-DROP POLICY "admin_full_pipeline_runs" ON pipeline_runs;
-CREATE POLICY "admin_full_pipeline_runs" ON pipeline_runs FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'pipeline_runs') THEN
+        DROP POLICY IF EXISTS "admin_full_pipeline_runs" ON pipeline_runs;
+        CREATE POLICY "admin_full_pipeline_runs" ON pipeline_runs FOR ALL
+            USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    END IF;
 
-DROP POLICY "admin_full_pipeline_logs" ON pipeline_logs;
-CREATE POLICY "admin_full_pipeline_logs" ON pipeline_logs FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'pipeline_logs') THEN
+        DROP POLICY IF EXISTS "admin_full_pipeline_logs" ON pipeline_logs;
+        CREATE POLICY "admin_full_pipeline_logs" ON pipeline_logs FOR ALL
+            USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    END IF;
 
-DROP POLICY "admin_full_admin_notifications" ON admin_notifications;
-CREATE POLICY "admin_full_admin_notifications" ON admin_notifications FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'admin_notifications') THEN
+        DROP POLICY IF EXISTS "admin_full_admin_notifications" ON admin_notifications;
+        CREATE POLICY "admin_full_admin_notifications" ON admin_notifications FOR ALL
+            USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    END IF;
 
-DROP POLICY "admin_full_point_transactions" ON point_transactions;
-CREATE POLICY "admin_full_point_transactions" ON point_transactions FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'point_transactions') THEN
+        DROP POLICY IF EXISTS "admin_full_point_transactions" ON point_transactions;
+        CREATE POLICY "admin_full_point_transactions" ON point_transactions FOR ALL
+            USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
+    END IF;
+END $$;
 
 -- ============================================================
 -- 5. Update handbook_terms RLS: email → uid

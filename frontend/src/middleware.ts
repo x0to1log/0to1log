@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createClient } from '@supabase/supabase-js';
 
+const isSecure = import.meta.env.PROD;
 async function validateToken(
   cookies: any,
   supabaseUrl: string,
@@ -24,10 +25,10 @@ async function validateToken(
       await supabase.auth.refreshSession({ refresh_token: refreshToken });
     if (!refreshError && refreshData.session) {
       cookies.set('sb-access-token', refreshData.session.access_token, {
-        path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 3600,
+        path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: 3600,
       });
       cookies.set('sb-refresh-token', refreshData.session.refresh_token, {
-        path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 604800,
+        path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: 604800,
       });
       return {
         user: refreshData.session.user,
@@ -56,10 +57,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
 
-  // --- Zone 1: Admin-protected (/admin/* except /admin/login) ---
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+  // --- Zone 1: Admin-protected (/admin/*, /api/admin/* except /admin/login) ---
+  const isAdminRoute = (pathname.startsWith('/admin') && pathname !== '/admin/login') || pathname.startsWith('/api/admin/');
+  if (isAdminRoute) {
+    const isApiRoute = pathname.startsWith('/api/');
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
     if (!result) {
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return context.redirect('/admin/login');
     }
 
@@ -69,16 +78,23 @@ export const onRequest = defineMiddleware(async (context, next) => {
     });
     const { data: adminRow } = await adminSb
       .from('admin_users')
-      .select('email')
+      .select('user_id')
       .eq('user_id', result.user.id)
       .maybeSingle();
 
     if (!adminRow) {
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return context.redirect('/admin/login');
     }
 
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
+    context.locals.isAdmin = true;
     return next();
   }
 
@@ -110,6 +126,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (result) {
       context.locals.user = result.user;
       context.locals.accessToken = result.accessToken;
+
+      // Check admin status for nav link visibility
+      const adminSb = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${result.accessToken}` } },
+      });
+      const { data: adminRow } = await adminSb
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', result.user.id)
+        .maybeSingle();
+      if (adminRow) {
+        context.locals.isAdmin = true;
+      }
     }
   }
 
