@@ -6,12 +6,14 @@ interface Props {
   slug: string;
   showSlug?: boolean;
   title: string;
+  excerpt?: string | null;
   category?: string | null;
   publishedAt?: string | null;
   readingTimeMin?: number | null;
   tags?: string[] | null;
   htmlContent: string;
   backLabel: string;
+  nextPost?: { title: string; slug: string; category?: string | null } | null;
 }
 
 const {
@@ -19,12 +21,14 @@ const {
   slug,
   showSlug = false,
   title,
+  excerpt,
   category,
   publishedAt,
   readingTimeMin,
   tags,
   htmlContent,
   backLabel,
+  nextPost = null,
 } = Astro.props;
 
 const dateLabel = publishedAt
@@ -32,15 +36,12 @@ const dateLabel = publishedAt
   : null;
 const readingLabel = readingTimeMin
   ? locale === 'ko'
-    ? `${readingTimeMin}분 읽기`
+    ? `약 ${readingTimeMin}분`
     : `${readingTimeMin} min read`
   : null;
 const categoryLabel = getCategoryLabel(locale, category);
+const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost.category) : null;
 ---
-
-<a class="newsprint-back" href={`/${locale}/log/`}>
-  &larr; {backLabel}
-</a>
 
 <article class="newsprint-article">
   <div class="newsprint-article-header">
@@ -61,9 +62,26 @@ const categoryLabel = getCategoryLabel(locale, category);
   </div>
 
   <h1 class="newsprint-lead-title">{title}</h1>
+  {excerpt && <p class="newsprint-deck">{excerpt}</p>}
   <div class="newsprint-divider"></div>
 
   <div class="newsprint-prose">
     <Fragment set:html={htmlContent} />
   </div>
+
+  <nav class="newsprint-article-nav" aria-label={locale === 'ko' ? '글 탐색' : 'Article navigation'}>
+    <div class="newsprint-article-nav-row">
+      <a class="newsprint-nav-back" href={`/${locale}/log/`}>
+        &larr; {backLabel}
+      </a>
+      {nextPost && (
+        <a class="newsprint-nav-next" href={`/${locale}/log/${nextPost.slug}/`}>
+          <div class="newsprint-nav-next-title">{nextPost.title} &rarr;</div>
+          {nextCategoryLabel && (
+            <div class="newsprint-nav-next-meta">{nextCategoryLabel}</div>
+          )}
+        </a>
+      )}
+    </div>
+  </nav>
 </article>
