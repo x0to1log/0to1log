@@ -4,6 +4,7 @@ import { getCategoryLabel } from '../../lib/categories';
 interface Props {
   locale: 'en' | 'ko';
   slug: string;
+  showSlug?: boolean;
   title: string;
   category?: string | null;
   publishedAt?: string | null;
@@ -16,6 +17,7 @@ interface Props {
 const {
   locale,
   slug,
+  showSlug = false,
   title,
   category,
   publishedAt,
@@ -41,21 +43,25 @@ const categoryLabel = getCategoryLabel(locale, category);
 </a>
 
 <article class="newsprint-article">
-  <h1 class="newsprint-lead-title">{title}</h1>
-  <div class="newsprint-meta">
-    {dateLabel && <time>{dateLabel}</time>}
-    {readingLabel && <span>{readingLabel}</span>}
-    {categoryLabel && <span class="newsprint-category">{categoryLabel}</span>}
-    <span class="newsprint-tag">{slug}</span>
+  <div class="newsprint-article-header">
+    <div class="newsprint-article-header-left">
+      {categoryLabel && <span class="newsprint-category">{categoryLabel}</span>}
+      {tags && tags.length > 0 && (
+        <>
+          {tags.slice(0, 6).map((tag) => (
+            <span class="newsprint-tag">{tag}</span>
+          ))}
+        </>
+      )}
+    </div>
+    <div class="newsprint-article-header-right">
+      {readingLabel && <span>{readingLabel}</span>}
+      {dateLabel && <time>{dateLabel}</time>}
+    </div>
   </div>
 
-  {tags && tags.length > 0 && (
-    <div class="newsprint-tags">
-      {tags.slice(0, 6).map((tag) => (
-        <span class="newsprint-tag">{tag}</span>
-      ))}
-    </div>
-  )}
+  <h1 class="newsprint-lead-title">{title}</h1>
+  <div class="newsprint-divider"></div>
 
   <div class="newsprint-prose">
     <Fragment set:html={htmlContent} />

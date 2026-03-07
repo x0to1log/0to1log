@@ -387,6 +387,30 @@
   padding: 1.25rem 0;
 }
 
+.newsprint-article-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.newsprint-article-header-left {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.newsprint-article-header-right {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
 .newsprint-prose {
   margin-top: 1.1rem;
   line-height: 1.8;
