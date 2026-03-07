@@ -1,31 +1,58 @@
 <button
   id="theme-toggle"
-  aria-label="Toggle theme"
-  style="background: none; border: 1px solid var(--color-border); border-radius: 8px; padding: 0.5rem; cursor: pointer; color: var(--color-text-secondary); font-size: 0.875rem;"
+  type="button"
+  aria-label="Theme: dark"
+  title="Theme: dark"
+  style="background: none; border: 1px solid var(--color-border); border-radius: 8px; padding: 0.5rem; cursor: pointer; color: var(--color-text-secondary); display: inline-flex; align-items: center; justify-content: center; line-height: 0;"
 >
-  <span id="theme-icon">🌙</span>
+  <span id="theme-icon" aria-hidden="true" style="display: inline-flex; width: 1rem; height: 1rem;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path>
+    </svg>
+  </span>
 </button>
 
 <script>
   const themes = ['dark', 'light', 'pink'] as const;
-  const icons: Record<string, string> = { dark: '🌙', light: '☀️', pink: '🌸' };
+  const icons: Record<string, string> = {
+    dark: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path></svg>',
+    light: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>',
+    pink: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="2.5"></circle><circle cx="7.5" cy="12" r="2.5"></circle><circle cx="16.5" cy="12" r="2.5"></circle><circle cx="9.2" cy="16.2" r="2.5"></circle><circle cx="14.8" cy="16.2" r="2.5"></circle><circle cx="12" cy="12" r="1.6"></circle></svg>',
+  };
+  const labels: Record<string, string> = {
+    dark: 'Theme: dark',
+    light: 'Theme: light',
+    pink: 'Theme: pink',
+  };
 
   function getTheme(): string {
-    return localStorage.getItem('theme') || 'dark';
+    const stored = localStorage.getItem('theme') || 'dark';
+    return themes.includes(stored as typeof themes[number]) ? stored : 'dark';
+  }
+
+  function renderToggle(theme: string, root: ParentNode = document): void {
+    const iconEl = root.querySelector<HTMLElement>('#theme-icon');
+    const buttonEl = root.querySelector<HTMLButtonElement>('#theme-toggle');
+    if (iconEl) iconEl.innerHTML = icons[theme] || icons.dark;
+    if (buttonEl) {
+      const label = labels[theme] || labels.dark;
+      buttonEl.setAttribute('aria-label', label);
+      buttonEl.setAttribute('title', label);
+      buttonEl.dataset.theme = theme;
+    }
   }
 
   function setTheme(theme: string): void {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
-    const iconEl = document.getElementById('theme-icon');
-    if (iconEl) iconEl.textContent = icons[theme] || '🌙';
+    renderToggle(theme);
   }
 
   function initToggle(): void {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
 
-    const fresh = btn.cloneNode(true) as HTMLElement;
+    const fresh = btn.cloneNode(true) as HTMLButtonElement;
     btn.replaceWith(fresh);
 
     fresh.addEventListener('click', () => {
@@ -35,9 +62,9 @@
       setTheme(next);
     });
 
-    const iconEl = fresh.querySelector('#theme-icon');
-    if (iconEl) iconEl.textContent = icons[getTheme()] || '🌙';
+    renderToggle(getTheme(), fresh.parentNode || document);
   }
 
+  initToggle();
   document.addEventListener('astro:page-load', initToggle);
 </script>

@@ -28,18 +28,24 @@ const altPath = currentPath.replace(`/${locale}/`, `/${altLocale}/`);
     </div>
   </nav>
 </header>
+<div class="site-header-spacer" aria-hidden="true"></div>
 
 <script>
   function initHeaderReveal(): void {
     const header = document.querySelector('.site-header') as HTMLElement | null;
-    if (!header) return;
+    const spacer = document.querySelector('.site-header-spacer') as HTMLElement | null;
+    if (!header || !spacer) return;
 
     if (header.dataset.alwaysVisible === 'true') {
       header.classList.remove('site-header--fixed', 'site-header--hidden');
+      spacer.style.display = 'none';
       return;
     }
 
     const headerH = header.offsetHeight;
+    spacer.style.height = headerH + 'px';
+    spacer.style.display = 'none';
+
     let lastY = window.scrollY;
     let ticking = false;
     let fixed = false;
@@ -51,19 +57,19 @@ const altPath = currentPath.replace(`/${locale}/`, `/${altLocale}/`);
         const currentY = window.scrollY;
 
         if (currentY <= headerH) {
-          // Header is still in (or returning to) its natural position
           if (fixed) {
             header!.classList.add('site-header--no-transition');
             header!.classList.remove('site-header--fixed', 'site-header--hidden');
+            spacer!.style.display = 'none';
             requestAnimationFrame(() => {
               header!.classList.remove('site-header--no-transition');
             });
             fixed = false;
           }
         } else {
-          // Header has scrolled out — switch to fixed mode
           if (!fixed) {
             header!.classList.add('site-header--fixed', 'site-header--hidden', 'site-header--no-transition');
+            spacer!.style.display = 'block';
             requestAnimationFrame(() => {
               header!.classList.remove('site-header--no-transition');
             });

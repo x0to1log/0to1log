@@ -34,7 +34,11 @@ const featured = posts[0] ?? null;
 const rest = featured ? posts.slice(1) : [];
 const railPosts = posts.slice(0, 4);
 const categories = Array.from(
-  new Set(posts.map((post) => normalizeCategorySlug(post.category)).filter(Boolean)),
+  new Set(
+    posts
+      .map((post) => normalizeCategorySlug(post.category))
+      .filter((category): category is string => Boolean(category)),
+  ),
 ).slice(0, 6);
 ---
 
