@@ -9,56 +9,34 @@ import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro
 import { getCategoryLabel, getCategoryColorVar, getDefaultCategories, normalizeCategorySlug } from '../../../lib/categories';
 import { getArticleFocusItems } from '../../../lib/articleRail';
 import { renderMarkdown } from '../../../lib/markdown';
+import { apiFetch } from '../../../lib/api';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
-const stateParam = Astro.url.searchParams.get('state');
 
-// Mock draft data (matches backend PostDraftDetail schema)
-const mockDrafts: Record<string, any> = {
-  '2026-03-07-ai-reasoning-models': {
-    id: 'uuid-001',
-    title: 'AI Reasoning Models: Chain-of-Thought Breakthroughs in 2026',
-    slug: '2026-03-07-ai-reasoning-models',
-    category: 'ai-news',
-    post_type: 'business',
-    status: 'draft',
-    locale: 'en',
-    content_original: '## The Rise of Reasoning\n\nRecent breakthroughs in chain-of-thought reasoning have transformed how AI models approach complex problems.\n\n### Key Developments\n\n- **Extended thinking**: Models now show their reasoning process step by step\n- **Self-correction**: Built-in verification loops catch logical errors\n- **Multi-step planning**: Complex tasks broken into manageable sub-goals\n\n> "The ability to reason through problems, rather than pattern-match answers, represents a fundamental shift in AI capability." — Research Lead\n\n### What This Means for Builders\n\n1. Prompting strategies need to evolve\n2. Evaluation frameworks must test reasoning quality\n3. Applications can tackle previously impossible tasks\n\nThe implications extend beyond benchmarks into real-world problem solving.',
-    tags: ['reasoning', 'chain-of-thought', 'llm', 'ai-research'],
-    created_at: '2026-03-07T09:00:00Z',
-    updated_at: '2026-03-07T14:30:00Z',
-  },
-  '2026-03-06-transformer-attention': {
-    id: 'uuid-002',
-    title: 'Understanding Transformer Attention Patterns',
-    slug: '2026-03-06-transformer-attention',
-    category: 'study',
-    post_type: 'research',
-    status: 'draft',
-    locale: 'en',
-    content_original: '## Attention Mechanisms Decoded\n\nTransformer attention is the backbone of modern LLMs. Understanding how attention patterns form helps us build better models.\n\n### Self-Attention Basics\n\nEach token attends to every other token, creating a weighted representation.\n\n```python\nimport torch\nimport torch.nn.functional as F\n\ndef scaled_dot_product(Q, K, V):\n    d_k = Q.size(-1)\n    scores = torch.matmul(Q, K.transpose(-2, -1)) / d_k**0.5\n    weights = F.softmax(scores, dim=-1)\n    return torch.matmul(weights, V)\n```\n\n### Multi-Head Attention\n\nMultiple attention heads allow the model to focus on different aspects simultaneously.\n\n- **Head 1**: Syntactic relationships\n- **Head 2**: Semantic similarity\n- **Head 3**: Positional patterns',
-    tags: ['transformer', 'attention', 'deep-learning'],
-    created_at: '2026-03-06T10:00:00Z',
-    updated_at: '2026-03-06T16:00:00Z',
-  },
-  '2026-03-05-cli-tool-agent-sdk': {
-    id: 'uuid-003',
-    title: 'Building a CLI Tool with Claude Agent SDK',
-    slug: '2026-03-05-cli-tool-agent-sdk',
-    category: 'project',
-    post_type: 'business',
-    status: 'draft',
-    locale: 'en',
-    content_original: '## Project Overview\n\nA command-line tool that leverages the Claude Agent SDK to automate code review workflows.\n\n### Architecture\n\n- **CLI Entry**: `argparse` for command parsing\n- **Agent Core**: Claude Agent SDK with custom tools\n- **Output**: Formatted markdown reports\n\n### Getting Started\n\n```bash\npip install claude-agent-sdk\npython cli.py review --repo ./my-project\n```\n\n### Key Learnings\n\n1. Agent loops need clear exit conditions\n2. Tool definitions should be minimal and focused\n3. Context management is critical for large codebases',
-    tags: ['claude', 'agent-sdk', 'cli', 'automation'],
-    created_at: '2026-03-05T08:00:00Z',
-    updated_at: '2026-03-05T12:00:00Z',
-  },
-};
+const accessToken = Astro.locals.accessToken;
+let draft: any = null;
+let fetchError: string | null = null;
 
-const draft = mockDrafts[pageSlug];
-if (!stateParam && !draft) {
+try {
+  draft = await apiFetch<any>(`/api/admin/drafts/${pageSlug}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+} catch (err) {
+  const msg = err instanceof Error ? err.message : 'Unknown error';
+  if (msg.includes('401')) {
+    return Astro.redirect('/admin/login');
+  }
+  if (msg.includes('404')) {
+    fetchError = '404';
+  } else if (msg.includes('403')) {
+    fetchError = '403';
+  } else {
+    fetchError = msg;
+  }
+}
+
+if (!fetchError && !draft) {
   return Astro.redirect('/admin');
 }
 
@@ -82,16 +60,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 ---
 
 <MainLayout title={draft ? `Edit: ${draft.title}` : 'Editor'} locale="en">
-  {stateParam === '401' ? (
-    <div style="max-width: 800px; margin: 0 auto;">
-      <NewsprintNotice
-        variant="unauthorized"
-        message="Missing or invalid token. Please sign in."
-        linkHref="/admin"
-        linkLabel="Sign in"
-      />
-    </div>
-  ) : stateParam === '403' ? (
+  <div id="fastapi-url-holder" hidden data-url={import.meta.env.FASTAPI_URL || ''}></div>
+  {fetchError === '403' ? (
     <div style="max-width: 800px; margin: 0 auto;">
       <NewsprintNotice
         variant="unauthorized"
@@ -100,11 +70,20 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         linkLabel="Go home"
       />
     </div>
-  ) : stateParam === '404' ? (
+  ) : fetchError === '404' ? (
     <div style="max-width: 800px; margin: 0 auto;">
       <NewsprintNotice
         variant="notfound"
         message="This draft does not exist or has been deleted."
+        linkHref="/admin"
+        linkLabel="Back to Drafts"
+      />
+    </div>
+  ) : fetchError ? (
+    <div style="max-width: 800px; margin: 0 auto;">
+      <NewsprintNotice
+        variant="notfound"
+        message={`Error loading draft: ${fetchError}`}
         linkHref="/admin"
         linkLabel="Back to Drafts"
       />
@@ -238,6 +217,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       />
     </div>
   )}
+  <div id="admin-data" hidden data-access-token={accessToken} data-post-id={draft?.id} data-slug={pageSlug}></div>
 </MainLayout>
 
 <script>
@@ -322,18 +302,38 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     await crepe.create();
   }
 
+  // Admin data from server
+  const adminData = document.getElementById('admin-data');
+  const accessToken = adminData?.dataset.accessToken || '';
+  const postId = adminData?.dataset.postId || '';
+
   // Save draft
-  function handleSave() {
+  async function handleSave() {
     const title = titleInput?.value || '';
     if (!title.trim()) {
       showFeedback('error', 'Save failed: title is required.');
       return;
     }
     const category = categorySelect?.value || '';
-    const tags = tagsInput?.value || '';
+    const tagsRaw = tagsInput?.value || '';
+    const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
     const content = crepe ? crepe.getMarkdown() : '';
-    console.log('Saved draft:', { title, category, tags, content });
-    showFeedback('success', 'Draft saved.');
+
+    try {
+      const FASTAPI_URL = document.getElementById('fastapi-url-holder')?.dataset.url || '';
+      const res = await fetch(`${FASTAPI_URL}/api/admin/posts/${postId}/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ title, category, tags, content_original: content }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      showFeedback('success', 'Draft saved.');
+    } catch (err) {
+      showFeedback('error', `Save failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+    }
   }
 
   // Auto-save + switch to Preview
@@ -433,15 +433,29 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     if (previewMode) previewMode.style.display = 'none';
   }
 
-  // Publish mock
-  function handlePublish() {
+  // Publish
+  async function handlePublish() {
     const title = titleInput?.value || '';
     if (!title.trim()) {
       showFeedback('error', 'Publish failed: title is required.');
       return;
     }
-    console.log('Published:', { title, slug: window.location.pathname.split('/').pop() });
-    showFeedback('success', 'Published! Post is now live.');
+    try {
+      const FASTAPI_URL = document.getElementById('fastapi-url-holder')?.dataset.url || '';
+      const res = await fetch(`${FASTAPI_URL}/api/admin/posts/${postId}/publish`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      showFeedback('success', 'Published! Redirecting...');
+      setTimeout(() => { window.location.href = `/en/log/${data.slug}/`; }, 1500);
+    } catch (err) {
+      showFeedback('error', `Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+    }
   }
 
   // Event listeners
