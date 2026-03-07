@@ -1,6 +1,6 @@
 ---
 interface Props {
-  variant: 'empty' | 'error' | 'notfound';
+  variant: 'empty' | 'error' | 'notfound' | 'unauthorized';
   message: string;
   linkHref?: string;
   linkLabel?: string;
@@ -12,16 +12,18 @@ const iconMap: Record<string, string> = {
   empty: '—',
   error: '§',
   notfound: '?',
+  unauthorized: '!',
 };
 
 const headingMap: Record<string, string> = {
   empty: 'Nothing Here Yet',
   error: 'Press Difficulty',
   notfound: 'Not Found',
+  unauthorized: 'Access Denied',
 };
 ---
 
-<div class={`newsprint-notice${variant === 'error' ? ' newsprint-notice--error' : ''}`}>
+<div class={`newsprint-notice${variant === 'error' || variant === 'unauthorized' ? ' newsprint-notice--error' : ''}`}>
   <div class="newsprint-notice-icon">{iconMap[variant]}</div>
   <div class="newsprint-notice-heading">{headingMap[variant]}</div>
   <p class="newsprint-notice-body">{message}</p>
