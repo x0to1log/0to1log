@@ -9,10 +9,7 @@ if (Astro.locals.user) {
   return Astro.redirect(redirectTo);
 }
 
-const redirectTo = Astro.url.searchParams.get('redirectTo') || '/';
 const errorParam = Astro.url.searchParams.get('error');
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 ---
 
 <MainLayout title="Sign In — 0to1log" headerAlwaysVisible={true}>
@@ -50,26 +47,23 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
       By signing in, you agree to our terms of service.
     </p>
   </div>
-  <div id="login-config" data-url={supabaseUrl} data-key={supabaseKey} data-redirect={redirectTo} style="display:none;"></div>
 </MainLayout>
 
 <script>
   import { createClient } from '@supabase/supabase-js';
 
-  function initLogin(): void {
-    const config = document.getElementById('login-config');
-    if (!config) return;
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-    const supabaseUrl = config.dataset.url || '';
-    const supabaseKey = config.dataset.key || '';
-    const redirectTo = config.dataset.redirect || '/';
-    if (!supabaseUrl || !supabaseKey) return;
-
+  if (supabaseUrl && supabaseKey) {
     const buttons = document.querySelectorAll<HTMLButtonElement>('[data-provider]');
     buttons.forEach((btn) => {
       btn.addEventListener('click', async () => {
         const provider = btn.getAttribute('data-provider') as 'github' | 'google';
         if (!provider) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const redirectTo = params.get('redirectTo') || '/';
 
         const supabase = createClient(supabaseUrl, supabaseKey);
         const callbackUrl = `${window.location.origin}/api/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`;
@@ -81,7 +75,4 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
       });
     });
   }
-
-  document.addEventListener('astro:page-load', initLogin);
-  initLogin();
 </script>
