@@ -504,18 +504,6 @@
   break-inside: avoid;
 }
 
-.newsprint-back {
-  display: inline-block;
-  color: var(--color-accent);
-  text-decoration: none;
-  margin-bottom: 0.85rem;
-  transition: color 150ms ease;
-}
-
-.newsprint-back:hover {
-  text-decoration: underline;
-}
-
 .newsprint-article-nav {
   display: flex;
   flex-direction: column;
