@@ -62,6 +62,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (!result) {
       return context.redirect('/admin/login');
     }
+
+    // Verify user is an admin (check admin_users table via RLS)
+    const adminSb = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${result.accessToken}` } },
+    });
+    const { data: adminRow } = await adminSb
+      .from('admin_users')
+      .select('id')
+      .eq('email', result.user.email)
+      .maybeSingle();
+
+    if (!adminRow) {
+      return context.redirect('/admin/login');
+    }
+
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
     return next();
