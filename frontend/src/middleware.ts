@@ -1,55 +1,101 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createClient } from '@supabase/supabase-js';
 
-export const onRequest = defineMiddleware(async (context, next) => {
-  const { pathname } = context.url;
+async function validateToken(
+  cookies: any,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+): Promise<{ user: any; accessToken: string } | null> {
+  const accessToken = cookies.get('sb-access-token')?.value;
+  const refreshToken = cookies.get('sb-refresh-token')?.value;
 
-  // Only guard /admin/* routes (except login page)
-  if (!pathname.startsWith('/admin') || pathname === '/admin/login') {
-    return next();
-  }
-
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return context.redirect('/admin/login');
-  }
-
-  const accessToken = context.cookies.get('sb-access-token')?.value;
-  const refreshToken = context.cookies.get('sb-refresh-token')?.value;
-
-  if (!accessToken) {
-    return context.redirect('/admin/login');
-  }
+  if (!accessToken) return null;
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
 
-  if (error || !user) {
-    // Try refresh
-    if (refreshToken) {
-      const { data: refreshData, error: refreshError } =
-        await supabase.auth.refreshSession({ refresh_token: refreshToken });
-      if (refreshError || !refreshData.session) {
-        context.cookies.delete('sb-access-token', { path: '/' });
-        context.cookies.delete('sb-refresh-token', { path: '/' });
-        return context.redirect('/admin/login');
-      }
-      // Update cookies with new tokens
-      context.cookies.set('sb-access-token', refreshData.session.access_token, {
+  if (!error && user) {
+    return { user, accessToken };
+  }
+
+  // Try refresh
+  if (refreshToken) {
+    const { data: refreshData, error: refreshError } =
+      await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (!refreshError && refreshData.session) {
+      cookies.set('sb-access-token', refreshData.session.access_token, {
         path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 3600,
       });
-      context.cookies.set('sb-refresh-token', refreshData.session.refresh_token, {
+      cookies.set('sb-refresh-token', refreshData.session.refresh_token, {
         path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 604800,
       });
-      context.locals.user = refreshData.session.user;
-      context.locals.accessToken = refreshData.session.access_token;
-    } else {
+      return {
+        user: refreshData.session.user,
+        accessToken: refreshData.session.access_token,
+      };
+    }
+  }
+
+  // Token invalid, clear cookies
+  cookies.delete('sb-access-token', { path: '/' });
+  cookies.delete('sb-refresh-token', { path: '/' });
+  return null;
+}
+
+export const onRequest = defineMiddleware(async (context, next) => {
+  const { pathname } = context.url;
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  // Skip auth entirely if Supabase not configured
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // Admin routes still need to redirect
+    if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
       return context.redirect('/admin/login');
     }
-  } else {
-    context.locals.user = user;
-    context.locals.accessToken = accessToken;
+    return next();
+  }
+
+  // --- Zone 1: Admin-protected (/admin/* except /admin/login) ---
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+    const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
+    if (!result) {
+      return context.redirect('/admin/login');
+    }
+    context.locals.user = result.user;
+    context.locals.accessToken = result.accessToken;
+    return next();
+  }
+
+  // --- Zone 2: User-protected (/api/user/*, /library) ---
+  if (pathname.startsWith('/api/user/') || pathname.startsWith('/library')) {
+    const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
+    if (!result) {
+      // API routes → 401 JSON
+      if (pathname.startsWith('/api/')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      // Page routes → redirect to login
+      const redirectTo = encodeURIComponent(pathname);
+      return context.redirect(`/login?redirectTo=${redirectTo}`);
+    }
+    context.locals.user = result.user;
+    context.locals.accessToken = result.accessToken;
+    return next();
+  }
+
+  // --- Zone 3: Public (all other routes) ---
+  // Silently try to extract user for optional features (read history, bookmark state)
+  const accessToken = context.cookies.get('sb-access-token')?.value;
+  if (accessToken) {
+    const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
+    if (result) {
+      context.locals.user = result.user;
+      context.locals.accessToken = result.accessToken;
+    }
   }
 
   return next();
