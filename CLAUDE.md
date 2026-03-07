@@ -16,9 +16,11 @@ AI 뉴스 큐레이션 플랫폼. Solo 프로젝트 (Amy).
 
 ## Docs 참조 규칙
 
-- `docs/01~07` = 원본 스펙 (계약서). 구현 전 반드시 해당 스펙 확인.
+- `docs/01~08` = 원본 스펙 (계약서). 구현 전 반드시 해당 스펙 확인.
 - `docs/IMPLEMENTATION_PLAN.md` = Phase 방향 + 게이트 조건 정본.
 - `docs/plans/ACTIVE_SPRINT.md` = 현재 스프린트 태스크 상태.
+- `docs/plans/2026-03-07-handbook-feature.md` = Handbook(용어 사전) 기능 계획. 메인 Phase와 병렬 트랙.
+- `docs/plans/2026-03-08-user-features-design.md` = 일반 사용자 기능 설계 (소셜 로그인, 북마크, 읽기 기록, 내 서재).
 - CLAUDE.md는 실행 규칙만. 스펙 내용을 여기에 복제하지 않는다.
 
 ## Workflow
@@ -54,3 +56,16 @@ docs/      → 스펙 문서 (사용자 요청 시만 수정)
 
 - Use `backend/.venv` only for backend Python commands.
 - Do not create or use `backend/venv`.
+
+## Git Branch Policy
+
+- Use a lightweight workflow: `main` + `dev` + `feature/*`.
+- `main` is the stable integration branch, not the default work branch.
+- Direct work on `main` should be avoided.
+- Pushing to `main` is allowed only for synchronized, review-ready changes that are already integrated or intentionally promoted from `dev`.
+- Day-to-day implementation should happen on `feature/*` branches created from `dev`.
+- Merge completed feature branches into `dev` first, then promote `dev` to `main` when the checkpoint is stable.
+- Recommended branch names:
+  - `feature/ai-news-*`
+  - `feature/handbook-h1-*`
+  - `docs/*`

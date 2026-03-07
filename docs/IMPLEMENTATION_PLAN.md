@@ -38,7 +38,8 @@ flowchart TD
   P2A --> P2B[Phase 2B OPS]
   P2B --> P2C[Phase 2C EXP]
   P2C --> P2D[Phase 2D INT]
-  P2D --> P3[Phase 3 Intelligence]
+  P2D --> P3U[Phase 3-USER]
+  P3U --> P3[Phase 3 Intelligence]
 
   H1[Handbook H1: Read-Only] -.-> H2[Handbook H2: AI Pipeline]
   H2 -.-> P2B
@@ -54,7 +55,7 @@ flowchart TD
 - Mainline 구현 상태: **Phase 2D-INT 완료** (main 브랜치 반영 완료)
 - **완료된 단계:** 2B-OPS, 2C-EXP, 2D-INT
 - **병렬 진행:** Handbook H1은 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md` 기준으로 별도 운영한다.
-- **다음 메인라인 스프린트:** Phase 3 Intelligence 또는 3A-SEC 중 선택 대기
+- **다음 메인라인 스프린트:** Phase 3-USER (일반 사용자 기능) → `docs/plans/2026-03-08-user-features-design.md`
 
 ---
 
@@ -111,6 +112,16 @@ flowchart TD
 - 상세 페이지 언어 전환 시 동일 콘텐츠의 EN/KO pair로 이동
 - Cron 수동 트리거 시 파이프라인 실행 로그 확인
 - E2E 시나리오 통과
+
+### 3-USER (일반 사용자 기능, 설계 완료)
+- 소셜 로그인: GitHub + Google OAuth via Supabase Auth (`/login`)
+- DB: `profiles`, `reading_history`, `bookmarks` 3개 테이블 + RLS
+- 헤더: Sign In / 아바타 드롭다운 (내 서재, 설정, 로그아웃)
+- 읽기 기록: 상세 페이지 방문 시 자동 기록, 리스트에서 읽은 글 `opacity: 0.55`
+- 북마크: 리스트 카드 + 상세 페이지에 북마크 아이콘
+- 내 서재: `/library` — 읽은 글 탭 + 저장한 글 탭
+- 추후 확장: 댓글/리액션, 구독/알림 (C단계)
+- 상세 설계 → `docs/plans/2026-03-08-user-features-design.md`
 
 ### 3A-SEC (후속 보안 하드닝)
 - CSP nonce 기반 전환으로 `unsafe-inline` 제거
