@@ -34,7 +34,7 @@ if (!post && !postError) {
   Astro.response.status = 404;
 }
 
-const masthead = 'From Void to Value';
+const masthead = 'All About AI';
 const editionMap: Record<string, string> = {
   'ai-news': 'Daily Dispatch',
   'tech': 'Study Notes',
@@ -72,7 +72,7 @@ const pageTitle = post ? post.title : 'Not Found';
 
 <MainLayout title={pageTitle} locale="en" slug={`log/${slug}/`} article={articleData}>
   <NewsprintShell locale="en" masthead={masthead} editionLabel={editionLabel}
-    subkicker={['AI · Papers · Projects', 'Daily Curation', 'Free']}>
+    subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}>
 
     {postError ? (
       <NewsprintNotice

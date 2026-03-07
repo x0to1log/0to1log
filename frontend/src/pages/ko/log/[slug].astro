@@ -34,7 +34,7 @@ if (!post && !postError) {
   Astro.response.status = 404;
 }
 
-const masthead = '가치를 담는 기록';
+const masthead = 'AI의 모든 것';
 const editionMap: Record<string, string> = {
   'ai-news': '데일리 디스패치',
   'tech': '서재 노트',
@@ -72,7 +72,7 @@ const pageTitle = post ? post.title : '찾을 수 없음';
 
 <MainLayout title={pageTitle} locale="ko" slug={`log/${slug}/`} article={articleData}>
   <NewsprintShell locale="ko" masthead={masthead} editionLabel={editionLabel}
-    subkicker={['AI · 논문 · 프로젝트', '데일리 큐레이션', '무료']}>
+    subkicker={['AI · 논문 · 프로젝트', '데일리 큐레이션', '공개 열람']}>
 
     {postError ? (
       <NewsprintNotice

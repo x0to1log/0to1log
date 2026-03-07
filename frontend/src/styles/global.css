@@ -3,7 +3,7 @@
 /* ===========================
    FONT FACES
    =========================== */
-/* Gowun Batang loaded via Google Fonts in Head.astro */
+/* Prototype font stack matches `examples/layout/example_light.html` */
 
 @font-face {
   font-family: 'JetBrains Mono';
@@ -14,10 +14,20 @@
 /* ===========================
    TAILWIND v4 THEME
    =========================== */
+/* Typography roles
+   - masthead: brand masthead and hero headlines
+   - heading: section titles, card titles, article headings
+   - body: longform reading and excerpts
+   - ui: nav, filters, tags, buttons, admin controls
+   - code: code and technical meta
+*/
 @theme {
-  --font-sans: 'Lora', 'Gowun Batang', serif;
-  --font-display: 'Playfair Display', 'Gowun Batang', serif;
-  --font-body: 'Lora', 'Gowun Batang', serif;
+  --font-sans: Georgia, 'Times New Roman', serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: Georgia, 'Times New Roman', serif;
+  --font-masthead: Georgia, 'Times New Roman', serif;
+  --font-heading: Georgia, 'Times New Roman', serif;
+  --font-ui: Georgia, 'Times New Roman', serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
 
   --breakpoint-mobile: 640px;

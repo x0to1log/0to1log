@@ -15,7 +15,13 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 - `@tailwindcss/vite` 플러그인 사용 (`@astrojs/tailwind` 금지)
 - 디자인 토큰: `src/styles/global.css`의 `@theme` + `[data-theme]` CSS 변수
 - 테마 3개: dark (기본), light, pink
-- 폰트: Playfair Display (heading) + Lora (body) + Gowun Batang (Korean) via Google Fonts
+- 폰트 역할 분리:
+- 현재 실험값: `Georgia`, `"Times New Roman"`, `serif`를 masthead/heading/body/ui 공통으로 사용
+- `--font-masthead`: Georgia + Times New Roman + serif
+- `--font-heading`: Georgia + Times New Roman + serif
+- `--font-body`: Georgia + Times New Roman + serif
+- `--font-ui`: Georgia + Times New Roman + serif
+- `--font-code`: JetBrains Mono
 
 ## i18n
 

@@ -29,3 +29,6 @@ venv/
 
 # Temp
 .tmp_publish_*/
+
+# Claude
+.claude/
