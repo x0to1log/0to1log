@@ -4,6 +4,7 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { getCategoryLabel, normalizeCategorySlug } from '../../../lib/categories';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
@@ -28,6 +29,25 @@ if (supabase) {
   } else {
     posts = data ?? [];
   }
+}
+
+// User reading history & bookmarks
+const readPostIds = new Set<string>();
+const bookmarkedPostIds = new Set<string>();
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (user && accessToken) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const [histRes, bmRes] = await Promise.all([
+    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'post'),
+    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'post'),
+  ]);
+  (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
+  (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
 }
 
 const featured = posts[0] ?? null;
@@ -104,6 +124,10 @@ const categories = Array.from(
                 readingTimeMin={post.reading_time_min}
                 tags={post.tags}
                 locale="en"
+                isRead={readPostIds.has(post.id)}
+                isBookmarked={bookmarkedPostIds.has(post.id)}
+                itemId={post.id}
+                itemType="post"
               />
             ))}
           </section>
@@ -118,3 +142,7 @@ const categories = Array.from(
     </Fragment>
   </NewsprintShell>
 </MainLayout>
+
+<script>
+  import '../../../scripts/bookmark';
+</script>
