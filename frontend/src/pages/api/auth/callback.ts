@@ -1,7 +1,61 @@
 import type { APIRoute } from 'astro';
+import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
+// OAuth code exchange (Supabase PKCE flow redirect)
+export const GET: APIRoute = async ({ url, cookies }) => {
+  const code = url.searchParams.get('code');
+  const redirectTo = url.searchParams.get('redirectTo') || '/';
+
+  if (!code) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: '/login?error=no_code' },
+    });
+  }
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: '/login?error=config' },
+    });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error || !data.session) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: '/login?error=exchange_failed' },
+    });
+  }
+
+  cookies.set('sb-access-token', data.session.access_token, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 3600,
+  });
+  cookies.set('sb-refresh-token', data.session.refresh_token, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 604800,
+  });
+
+  return new Response(null, {
+    status: 302,
+    headers: { Location: redirectTo },
+  });
+};
+
+// Email/password login (existing admin flow)
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const { access_token, refresh_token } = await request.json();
