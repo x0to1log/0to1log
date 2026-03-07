@@ -55,17 +55,32 @@ let nextPost: { title: string; slug: string; category: string | null } | null = 
 let pairedSlug: string | null = null;
 
 if (post) {
-  recentPosts = supabase
-    ? (await supabase
-        .from('posts')
-        .select('title, slug, category')
-        .eq('status', 'published')
-        .eq('locale', 'en')
-        .neq('slug', pageSlug)
-        .order('published_at', { ascending: false })
-        .limit(4)
-      ).data ?? []
-    : [];
+  // "More in This Issue" — prefer same batch, fallback to recent
+  if (supabase && post.pipeline_batch_id) {
+    const { data: batchPosts } = await supabase
+      .from('posts')
+      .select('title, slug, category')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .eq('pipeline_batch_id', post.pipeline_batch_id)
+      .neq('slug', pageSlug)
+      .order('published_at', { ascending: false })
+      .limit(4);
+    if (batchPosts && batchPosts.length > 0) {
+      recentPosts = batchPosts;
+    }
+  }
+  if (recentPosts.length === 0 && supabase) {
+    recentPosts = (await supabase
+      .from('posts')
+      .select('title, slug, category')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .neq('slug', pageSlug)
+      .order('published_at', { ascending: false })
+      .limit(4)
+    ).data ?? [];
+  }
 
   if (supabase && post.published_at) {
     const { data: nextData } = await supabase
@@ -80,7 +95,10 @@ if (post) {
     nextPost = nextData;
   }
 
-  focusItems = getArticleFocusItems('en', post.category);
+  // Focus items: use post-level data if available, fallback to category template
+  focusItems = (post.focus_items && post.focus_items.length > 0)
+    ? post.focus_items
+    : getArticleFocusItems('en', post.category);
 
   if (supabase && post.translation_group_id) {
     const { data: paired } = await supabase
