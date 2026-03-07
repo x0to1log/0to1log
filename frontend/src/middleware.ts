@@ -69,8 +69,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     });
     const { data: adminRow } = await adminSb
       .from('admin_users')
-      .select('id')
-      .eq('email', result.user.email)
+      .select('email')
+      .eq('user_id', result.user.id)
       .maybeSingle();
 
     if (!adminRow) {
