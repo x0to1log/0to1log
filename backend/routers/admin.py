@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from core.database import get_supabase
+from core.rate_limit import limiter
 from core.security import require_admin
 from models.posts import (
     PostDraftListItem,
@@ -28,7 +29,8 @@ ERROR_RESPONSES = {
     response_model=list[PostDraftListItem],
     responses=ERROR_RESPONSES,
 )
-async def list_drafts(_user=Depends(require_admin)):
+@limiter.limit("30/minute")
+async def list_drafts(request: Request, _user=Depends(require_admin)):
     """List all posts with status='draft'."""
     client = get_supabase()
     if not client:
@@ -55,7 +57,8 @@ async def list_drafts(_user=Depends(require_admin)):
         404: {"model": ErrorResponse, "description": "Draft not found"},
     },
 )
-async def get_draft(slug: str, _user=Depends(require_admin)):
+@limiter.limit("30/minute")
+async def get_draft(request: Request, slug: str, _user=Depends(require_admin)):
     """Get a single draft by slug with full detail."""
     client = get_supabase()
     if not client:
@@ -84,7 +87,8 @@ async def get_draft(slug: str, _user=Depends(require_admin)):
         404: {"model": ErrorResponse, "description": "Post not found"},
     },
 )
-async def publish_post(post_id: str, _user=Depends(require_admin)):
+@limiter.limit("10/minute")
+async def publish_post(request: Request, post_id: str, _user=Depends(require_admin)):
     """Change post status from draft to published."""
     client = get_supabase()
     if not client:
@@ -120,7 +124,8 @@ async def publish_post(post_id: str, _user=Depends(require_admin)):
         404: {"model": ErrorResponse, "description": "Post not found"},
     },
 )
-async def update_post(post_id: str, body: PostUpdateRequest, _user=Depends(require_admin)):
+@limiter.limit("10/minute")
+async def update_post(request: Request, post_id: str, body: PostUpdateRequest, _user=Depends(require_admin)):
     """Update draft content fields."""
     client = get_supabase()
     if not client:

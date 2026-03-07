@@ -1,5 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
+from core.rate_limit import limiter
 from core.security import verify_cron_secret
 from models.posts import PipelineAcceptedResponse, ErrorResponse
 
@@ -14,6 +15,7 @@ router = APIRouter(tags=["cron"])
         401: {"model": ErrorResponse, "description": "Invalid cron secret"},
     },
 )
+@limiter.limit("5/minute")
 async def run_news_pipeline(
     request: Request,
     background_tasks: BackgroundTasks,
