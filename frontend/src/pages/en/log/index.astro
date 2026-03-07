@@ -7,16 +7,26 @@ import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 
-const posts = supabase
-  ? (await supabase
-      .from('posts')
-      .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
-      .eq('status', 'published')
-      .eq('locale', 'en')
-      .order('published_at', { ascending: false })
-    ).data ?? []
-  : [];
+let posts: any[] = [];
+let fetchError: string | null = null;
+
+if (supabase) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
+    .eq('status', 'published')
+    .eq('locale', 'en')
+    .order('published_at', { ascending: false });
+
+  if (error) {
+    console.error('[log-list-en] Supabase error:', error.message);
+    fetchError = error.message;
+  } else {
+    posts = data ?? [];
+  }
+}
 
 const featured = posts[0] ?? null;
 const rest = featured ? posts.slice(1) : [];
@@ -30,7 +40,14 @@ const categories = Array.from(new Set(posts.map((post) => post.category).filter(
 
     <NewsprintCategoryFilter locale="en" />
 
-    {featured ? (
+    {fetchError ? (
+      <NewsprintNotice
+        variant="error"
+        message={t.en['log.error']}
+        linkHref="/en/log/"
+        linkLabel={t.en['error.retry']}
+      />
+    ) : featured ? (
       <>
         <a href={`/en/log/${featured.slug}/`} class="newsprint-featured newsprint-card" data-category={featured.category}>
           <span class="newsprint-category">{featured.category}</span>
@@ -63,7 +80,7 @@ const categories = Array.from(new Set(posts.map((post) => post.category).filter(
         )}
       </>
     ) : (
-      <p class="newsprint-empty">{t.en['log.empty']}</p>
+      <NewsprintNotice variant="empty" message={t.en['log.empty']} />
     )}
 
     <Fragment slot="rail">

@@ -47,24 +47,25 @@
 ## 태스크 (실행 순서)
 
 ### 1. Newsprint 토큰/테마/공통 컴포넌트 정리 `[P2C-UI-11]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** 기존 newsprint 컴포넌트(Shell, ListCard, SideRail, CategoryFilter, ArticleLayout) 정리 + 테마 토큰 통합 (dark/light/pink)
 - **산출물:** `frontend/src/components/newsprint/` 정리 + `frontend/src/styles/global.css` 토큰 체계화
 - **완료 기준:** `npm run build` 0 error + 3 테마 preview 페이지 정상 렌더링
 - **검증:** `cd frontend && npm run build` + preview 페이지 수동 확인
-- **증거:** -
+- **증거:** commits f3c39c5..dc3ced5 (6 commits: 컴포넌트 5개 + CSS 토큰 3테마 + preview 3페이지 + 브랜딩 교체)
 - **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
 - **의존성:** 없음
 
 ### 2. /en|ko/log 리스트/상세 + 다국어 스위처 + 화면 상태 `[P2C-UI-12]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** 리스트/상세 페이지에 newsprint 스타일 본격 적용 + 다국어 스위처 + empty/error/loading 상태 처리
-- **산출물:** `frontend/src/pages/en|ko/log/` 페이지 업데이트
+- **산출물:** `frontend/src/pages/en|ko/log/` 페이지 업데이트 + `NewsprintNotice` 컴포넌트
 - **완료 기준:** EN/KO 리스트/상세 정상 렌더링 + 언어 전환 동작 + 빈 상태 표시
-- **검증:** `npm run build` + 수동 preview 테스트
-- **증거:** -
+- **검증:** `npm run build` 0 error ✅
+- **증거:** 이번 커밋 (i18n 키 3개 + NewsprintNotice 컴포넌트 + 리스트/상세 에러 처리 + 404 UI)
+- **비고:** Loading state는 SSR 구조상 해당 없음 (서버가 완성된 HTML 전송). 미연결/env 미설정 → empty, 쿼리 실패 → error로 구분.
 - **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
 - **의존성:** P2C-UI-11
 

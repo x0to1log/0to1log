@@ -1,0 +1,31 @@
+---
+interface Props {
+  variant: 'empty' | 'error' | 'notfound';
+  message: string;
+  linkHref?: string;
+  linkLabel?: string;
+}
+
+const { variant, message, linkHref, linkLabel } = Astro.props;
+
+const iconMap: Record<string, string> = {
+  empty: '—',
+  error: '§',
+  notfound: '?',
+};
+
+const headingMap: Record<string, string> = {
+  empty: 'Nothing Here Yet',
+  error: 'Press Difficulty',
+  notfound: 'Not Found',
+};
+---
+
+<div class={`newsprint-notice${variant === 'error' ? ' newsprint-notice--error' : ''}`}>
+  <div class="newsprint-notice-icon">{iconMap[variant]}</div>
+  <div class="newsprint-notice-heading">{headingMap[variant]}</div>
+  <p class="newsprint-notice-body">{message}</p>
+  {linkHref && linkLabel && (
+    <a href={linkHref} class="newsprint-notice-link">&larr; {linkLabel}</a>
+  )}
+</div>

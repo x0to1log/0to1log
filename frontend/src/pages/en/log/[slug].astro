@@ -6,67 +6,101 @@ import { supabase } from '../../../lib/supabase';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 
 const { slug } = Astro.params;
 
 let post = null;
+let postError: string | null = null;
+
 if (supabase && slug) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('posts')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
     .eq('locale', 'en')
     .single();
-  post = data;
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('[log-detail-en] Supabase error:', error.message);
+    postError = error.message;
+  } else {
+    post = data;
+  }
 }
 
-if (!post) {
-  return Astro.redirect('/en/log/');
+if (!post && !postError) {
+  Astro.response.status = 404;
 }
 
-const recentPosts = supabase
-  ? (await supabase
-      .from('posts')
-      .select('title, slug, category')
-      .eq('status', 'published')
-      .eq('locale', 'en')
-      .neq('slug', slug)
-      .order('published_at', { ascending: false })
-      .limit(4)
-    ).data ?? []
-  : [];
-
-const railCategories = Array.from(new Set([post.category, ...(post.tags ?? [])].filter(Boolean))).slice(0, 6);
-
+const masthead = 'From Void to Value';
 const editionMap: Record<string, string> = {
   'ai-news': 'Daily Dispatch',
   'tech': 'Study Notes',
   'career': 'Career Notes',
   'project': 'Build Log',
 };
-const masthead = 'From Void to Value';
-const editionLabel = editionMap[post.category] || 'Deep Dive';
+const editionLabel = post ? (editionMap[post.category] || 'Deep Dive') : 'Deep Dive';
 
-const articleData = post.published_at
-  ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
-  : undefined;
+let recentPosts: any[] = [];
+let railCategories: string[] = [];
+let articleData: any = undefined;
+
+if (post) {
+  recentPosts = supabase
+    ? (await supabase
+        .from('posts')
+        .select('title, slug, category')
+        .eq('status', 'published')
+        .eq('locale', 'en')
+        .neq('slug', slug)
+        .order('published_at', { ascending: false })
+        .limit(4)
+      ).data ?? []
+    : [];
+
+  railCategories = Array.from(new Set([post.category, ...(post.tags ?? [])].filter(Boolean))).slice(0, 6);
+
+  articleData = post.published_at
+    ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
+    : undefined;
+}
+
+const pageTitle = post ? post.title : 'Not Found';
 ---
 
-<MainLayout title={post.title} locale="en" slug={`log/${slug}/`} article={articleData}>
+<MainLayout title={pageTitle} locale="en" slug={`log/${slug}/`} article={articleData}>
   <NewsprintShell locale="en" masthead={masthead} editionLabel={editionLabel}
     subkicker={['AI · Papers · Projects', 'Daily Curation', 'Free']}>
-    <NewsprintArticleLayout
-      locale="en"
-      slug={slug}
-      title={post.title}
-      category={post.category}
-      publishedAt={post.published_at}
-      readingTimeMin={post.reading_time_min}
-      tags={post.tags}
-      htmlContent={post.content_original || post.content_beginner || ''}
-      backLabel={t.en['post.back']}
-    />
+
+    {postError ? (
+      <NewsprintNotice
+        variant="error"
+        message={t.en['log.error']}
+        linkHref="/en/log/"
+        linkLabel={t.en['post.back']}
+      />
+    ) : !post ? (
+      <NewsprintNotice
+        variant="notfound"
+        message={t.en['post.notfound']}
+        linkHref="/en/log/"
+        linkLabel={t.en['post.back']}
+      />
+    ) : (
+      <NewsprintArticleLayout
+        locale="en"
+        slug={slug}
+        title={post.title}
+        category={post.category}
+        publishedAt={post.published_at}
+        readingTimeMin={post.reading_time_min}
+        tags={post.tags}
+        htmlContent={post.content_original || post.content_beginner || ''}
+        backLabel={t.en['post.back']}
+      />
+    )}
 
     <Fragment slot="rail">
       <NewsprintSideRail locale="en" posts={recentPosts} categories={railCategories} />
