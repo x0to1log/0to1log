@@ -1,6 +1,9 @@
 ---
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
+import NewsprintNotice from '../../components/newsprint/NewsprintNotice.astro';
+
+const stateParam = Astro.url.searchParams.get('state');
 
 // Mock draft data (matches backend PostDraftListItem schema)
 const mockDrafts = [
@@ -39,22 +42,46 @@ const mockDrafts = [
     <h1 class="newsprint-masthead" style="font-size: 2rem; text-align: left; margin-bottom: 0.5rem;">
       Admin Dashboard
     </h1>
-    <p class="admin-draft-meta" style="margin-bottom: 1.5rem;">
-      {mockDrafts.length} draft{mockDrafts.length !== 1 ? 's' : ''} pending
-    </p>
 
-    <ul class="admin-draft-list">
-      {mockDrafts.map((draft) => (
-        <li class="admin-draft-item">
-          <div class="admin-draft-info">
-            <div class="admin-draft-title">{draft.title}</div>
-            <div class="admin-draft-meta">
-              {draft.category} &middot; {new Date(draft.updated_at).toLocaleDateString('en-US')}
-            </div>
-          </div>
-          <a href={`/admin/edit/${draft.slug}`} class="admin-btn">Edit</a>
-        </li>
-      ))}
-    </ul>
+    {stateParam === '401' ? (
+      <NewsprintNotice
+        variant="unauthorized"
+        message="Missing or invalid token. Please sign in."
+        linkHref="/admin"
+        linkLabel="Sign in"
+      />
+    ) : stateParam === '403' ? (
+      <NewsprintNotice
+        variant="unauthorized"
+        message="You do not have permission to access this page."
+        linkHref="/"
+        linkLabel="Go home"
+      />
+    ) : stateParam === 'empty' ? (
+      <NewsprintNotice
+        variant="empty"
+        message="No drafts pending. Create a new post to get started."
+      />
+    ) : (
+      <>
+        <p class="admin-draft-meta" style="margin-bottom: 1.5rem;">
+          {mockDrafts.length} draft{mockDrafts.length !== 1 ? 's' : ''} pending
+        </p>
+
+        <ul class="admin-draft-list">
+          {mockDrafts.map((draft) => (
+            <li class="admin-draft-item">
+              <div class="admin-draft-info">
+                <div class="admin-draft-title">{draft.title}</div>
+                <div class="admin-draft-meta">
+                  {draft.category} &middot; {new Date(draft.updated_at).toLocaleDateString('en-US')}
+                </div>
+              </div>
+              <a href={`/admin/edit/${draft.slug}`} class="admin-btn">Edit</a>
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
   </div>
 </MainLayout>
