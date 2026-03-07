@@ -6,6 +6,7 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { normalizeCategorySlug } from '../../../lib/categories';
 import { getArticleFocusItems } from '../../../lib/articleRail';
+import { renderMarkdown } from '../../../lib/markdown';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
@@ -50,6 +51,7 @@ const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || 
 let recentPosts: any[] = [];
 let focusItems: string[] = [];
 let articleData: any = undefined;
+let nextPost: { title: string; slug: string; category: string | null } | null = null;
 
 if (post) {
   recentPosts = supabase
@@ -64,6 +66,19 @@ if (post) {
       ).data ?? []
     : [];
 
+  if (supabase && post.published_at) {
+    const { data: nextData } = await supabase
+      .from('posts')
+      .select('title, slug, category')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .lt('published_at', post.published_at)
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .single();
+    nextPost = nextData;
+  }
+
   focusItems = getArticleFocusItems('en', post.category);
 
   articleData = post.published_at
@@ -72,6 +87,8 @@ if (post) {
 }
 
 const pageTitle = post ? post.title : 'Not Found';
+const rawContent = post ? (post.content_original || post.content_beginner || '') : '';
+const htmlContent = rawContent ? await renderMarkdown(rawContent) : '';
 ---
 
 <MainLayout title={pageTitle} locale="en" slug={`log/${slug}/`} article={articleData}>
@@ -101,12 +118,14 @@ const pageTitle = post ? post.title : 'Not Found';
         slug={pageSlug}
         showSlug={false}
         title={post.title}
+        excerpt={post.excerpt}
         category={post.category}
         publishedAt={post.published_at}
         readingTimeMin={post.reading_time_min}
         tags={post.tags}
-        htmlContent={post.content_original || post.content_beginner || ''}
+        htmlContent={htmlContent}
         backLabel={t.en['post.back']}
+        nextPost={nextPost}
       />
     )}
 
