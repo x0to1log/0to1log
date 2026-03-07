@@ -10,9 +10,13 @@ interface Props {
   readingTimeMin?: number | null;
   tags?: string[] | null;
   locale: 'en' | 'ko';
+  isRead?: boolean;
+  isBookmarked?: boolean;
+  itemId?: string;
+  itemType?: 'post' | 'term';
 }
 
-const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale } = Astro.props;
+const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale, isRead = false, isBookmarked = false, itemId, itemType } = Astro.props;
 const dateLabel = publishedAt
   ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
   : null;
@@ -24,10 +28,27 @@ const readingLabel = readingTimeMin
 const normalizedCategory = normalizeCategorySlug(category);
 const categoryLabel = getCategoryLabel(locale, category);
 const catColor = getCategoryColorVar(category);
+
+const cardClasses = ['newsprint-card', isRead && 'newsprint-card--read'].filter(Boolean).join(' ');
 ---
 
-<a href={href} class="newsprint-card" data-category={normalizedCategory || 'uncategorized'}>
-  <h2 class="newsprint-card-title">{title}</h2>
+<a href={href} class={cardClasses} data-category={normalizedCategory || 'uncategorized'}>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+    <h2 class="newsprint-card-title" style="flex: 1;">{title}</h2>
+    {itemId && (
+      <button
+        class={`newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+        data-item-id={itemId}
+        data-item-type={itemType}
+        data-bookmarked={isBookmarked ? 'true' : 'false'}
+        aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+      >
+        <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+        </svg>
+      </button>
+    )}
+  </div>
   {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
   <div class="newsprint-card-bottom">
     {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
