@@ -85,8 +85,8 @@ const railPosts = mockPosts.slice(1, 5);
             <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{getCategoryLabel('en', featured.category)}</span>
             {featured.tags.map((tag) => <span class="newsprint-tag">{tag}</span>)}
             <span class="newsprint-meta-inline">
-              <time datetime={featured.published_at}>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
               <span>{featured.reading_time_min} min read</span>
+              <time datetime={featured.published_at}>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
             </span>
           </div>
           <div class="newsprint-divider"></div>
