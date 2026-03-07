@@ -4,8 +4,11 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
+import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
-import { getCategoryLabel, getCategoryColorVar, getDefaultCategories } from '../../../lib/categories';
+import { getCategoryLabel, getCategoryColorVar, getDefaultCategories, normalizeCategorySlug } from '../../../lib/categories';
+import { getArticleFocusItems } from '../../../lib/articleRail';
+import { renderMarkdown } from '../../../lib/markdown';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
@@ -60,6 +63,22 @@ if (!stateParam && !draft) {
 }
 
 const categories = getDefaultCategories();
+
+// Edition label map (same as published page)
+const editionMap: Record<string, string> = {
+  'ai-news': 'Daily Dispatch',
+  study: 'Study Notes',
+  career: 'Career Notes',
+  project: 'Build Log',
+};
+
+// Pre-render initial content and compute derived data for preview
+const initialCategory = draft ? (normalizeCategorySlug(draft.category) || '') : '';
+const initialEditionLabel = editionMap[initialCategory] || 'Deep Dive';
+const initialFocusItems = draft ? getArticleFocusItems('en', draft.category) : [];
+const initialHtmlContent = draft ? await renderMarkdown(draft.content_original || '') : '';
+const initialWordCount = draft ? (draft.content_original || '').split(/\s+/).length : 0;
+const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 ---
 
 <MainLayout title={draft ? `Edit: ${draft.title}` : 'Editor'} locale="en">
@@ -164,7 +183,7 @@ const categories = getDefaultCategories();
         </div>
       </div>
 
-      <!-- Preview Mode -->
+      <!-- Preview Mode (matches published page layout exactly) -->
       <div id="preview-mode" style="display: none;">
         <div class="admin-preview-bar">
           <div class="admin-toolbar-left">
@@ -178,24 +197,28 @@ const categories = getDefaultCategories();
 
         <NewsprintShell
           locale="en"
-          masthead="From Void to Value"
-          editionLabel="Builder's Daily"
+          masthead="All About AI"
+          editionLabel={initialEditionLabel}
           subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
         >
           <div id="preview-content">
             <NewsprintArticleLayout
               locale="en"
               slug={pageSlug}
-              showSlug={true}
+              showSlug={false}
               title={draft.title}
               category={draft.category}
               publishedAt={new Date().toISOString()}
-              readingTimeMin={5}
+              readingTimeMin={initialReadingTime}
               tags={draft.tags}
-              htmlContent=""
+              htmlContent={initialHtmlContent}
               backLabel="Back to List"
             />
           </div>
+
+          <Fragment slot="rail">
+            <NewsprintSideRail locale="en" posts={[]} focusItems={initialFocusItems} />
+          </Fragment>
         </NewsprintShell>
       </div>
     </>
@@ -214,9 +237,9 @@ const categories = getDefaultCategories();
 <script>
   import { Crepe } from '@milkdown/crepe';
   import '@milkdown/crepe/theme/common/style.css';
+  import { marked } from 'marked';
 
   let crepe: Crepe | null = null;
-  let currentMarkdown = '';
   let feedbackTimer = 0;
 
   const editorEl = document.getElementById('milkdown-editor');
@@ -229,6 +252,30 @@ const categories = getDefaultCategories();
   const titleInput = document.getElementById('edit-title') as HTMLInputElement;
   const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
   const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
+
+  // Maps (must match server-side values)
+  const CATEGORY_LABELS: Record<string, string> = {
+    'ai-news': 'AI News',
+    study: 'Study',
+    career: 'Career',
+    project: 'Project',
+  };
+
+  const EDITION_MAP: Record<string, string> = {
+    'ai-news': 'Daily Dispatch',
+    study: 'Study Notes',
+    career: 'Career Notes',
+    project: 'Build Log',
+  };
+
+  const FOCUS_MAP: Record<string, string[]> = {
+    'ai-news': ['What changed today', 'Why it matters right now', 'What to watch next'],
+    study: ['What concept to understand', 'What to remember from this note', 'What to try after reading'],
+    career: ['What decision matters here', 'What signal is worth noticing', 'What to apply in actual work'],
+    project: ['What was built in this step', 'What tradeoff appeared', 'What to improve next'],
+  };
+
+  const DEFAULT_FOCUS = ['Key shift', 'Practical impact', 'Next point to watch'];
 
   // Feedback banner
   function showFeedback(type: 'success' | 'error', message: string) {
@@ -269,34 +316,6 @@ const categories = getDefaultCategories();
     await crepe.create();
   }
 
-  // Simple markdown to HTML (for preview)
-  function markdownToHtml(md: string): string {
-    let html = md;
-    // Headers
-    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-    // Bold and italic
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    // Code blocks
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
-    // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    // Blockquotes
-    html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-    // Unordered lists
-    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-    // Ordered lists
-    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-    // Paragraphs (lines not already wrapped)
-    html = html.replace(/^(?!<[hublop]|<li|<blockquote|<pre)(.+)$/gm, '<p>$1</p>');
-    // Clean up empty paragraphs
-    html = html.replace(/<p>\s*<\/p>/g, '');
-    return html;
-  }
-
   // Save draft
   function handleSave() {
     const title = titleInput?.value || '';
@@ -315,25 +334,87 @@ const categories = getDefaultCategories();
   function switchToPreview() {
     if (!crepe) return;
 
-    currentMarkdown = crepe.getMarkdown();
+    const markdown = crepe.getMarkdown();
     const title = titleInput?.value || '';
     const category = categorySelect?.value || '';
-    const tags = tagsInput?.value || '';
+    const tagsRaw = tagsInput?.value || '';
+    const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
 
-    console.log('Auto-saved draft:', { title, category, tags, content: currentMarkdown });
+    console.log('Auto-saved draft:', { title, category, tags, content: markdown });
     showFeedback('success', 'Draft auto-saved.');
 
-    // Update preview content
+    // Estimate reading time
+    const wordCount = markdown.split(/\s+/).length;
+    const readingTime = Math.max(1, Math.round(wordCount / 200));
+
     const previewContent = document.getElementById('preview-content');
     if (previewContent) {
+      // Update title
       const previewTitle = previewContent.querySelector('.newsprint-lead-title');
       if (previewTitle) previewTitle.textContent = title;
 
+      // Update category label (not raw slug)
       const previewCategory = previewContent.querySelector('.newsprint-category');
-      if (previewCategory) previewCategory.textContent = category;
+      if (previewCategory) previewCategory.textContent = CATEGORY_LABELS[category] || category;
 
+      // Update tags
+      const headerLeft = previewContent.querySelector('.newsprint-article-header-left');
+      if (headerLeft) {
+        // Remove existing tags
+        headerLeft.querySelectorAll('.newsprint-tag').forEach(el => el.remove());
+        // Add new tags
+        tags.slice(0, 6).forEach(tag => {
+          const span = document.createElement('span');
+          span.className = 'newsprint-tag';
+          span.textContent = tag;
+          headerLeft.appendChild(span);
+        });
+      }
+
+      // Update reading time and date
+      const headerRight = previewContent.querySelector('.newsprint-article-header-right');
+      if (headerRight) {
+        headerRight.innerHTML = '';
+        const readSpan = document.createElement('span');
+        readSpan.textContent = `${readingTime} min read`;
+        headerRight.appendChild(readSpan);
+        const timeEl = document.createElement('time');
+        timeEl.dateTime = new Date().toISOString();
+        timeEl.textContent = new Date().toLocaleDateString('en-US');
+        headerRight.appendChild(timeEl);
+      }
+
+      // Update prose content with proper markdown rendering
       const previewProse = previewContent.querySelector('.newsprint-prose');
-      if (previewProse) previewProse.innerHTML = markdownToHtml(currentMarkdown);
+      if (previewProse) {
+        previewProse.innerHTML = marked.parse(markdown) as string;
+      }
+    }
+
+    // Update edition label in shell header
+    const editionEl = previewMode?.querySelector('.newsprint-kicker span:nth-child(2)');
+    if (editionEl) {
+      editionEl.textContent = EDITION_MAP[category] || 'Deep Dive';
+    }
+
+    // Update focus items in side rail
+    const focusSection = previewMode?.querySelector('.newsprint-rail section:first-child');
+    if (focusSection) {
+      const focusTitle = focusSection.querySelector('.newsprint-section-title');
+      const focusItems = FOCUS_MAP[category] || DEFAULT_FOCUS;
+      // Replace content after the title
+      const existingList = focusSection.querySelector('.newsprint-rail-list');
+      const existingEmpty = focusSection.querySelector('.newsprint-empty');
+      if (existingList) existingList.remove();
+      if (existingEmpty) existingEmpty.remove();
+      const ul = document.createElement('ul');
+      ul.className = 'newsprint-rail-list';
+      focusItems.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+      focusSection.appendChild(ul);
     }
 
     if (draftMode) draftMode.style.display = 'none';
