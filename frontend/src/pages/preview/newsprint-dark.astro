@@ -15,6 +15,7 @@ const mockPosts = [
     reading_time_min: 6,
     tags: ['gpt-5', 'enterprise', 'adoption'],
     excerpt: 'Early benchmarks suggest a 40% improvement in complex reasoning tasks, reshaping how enterprises approach AI integration at scale.',
+    og_image_url: 'https://picsum.photos/seed/newsprint/600/400',
     content: '<p>OpenAI launched GPT-5 this week, and the enterprise landscape is already shifting. Early benchmarks suggest a 40% improvement in complex reasoning tasks.</p><p>For builders shipping AI-native products, the question is no longer "if" but "how fast" to integrate.</p>',
   },
   {
@@ -70,18 +71,23 @@ const rest = mockPosts.slice(1);
 
       <NewsprintCategoryFilter locale="en" />
 
-      <article class="newsprint-featured" data-category={featured.category}>
-        <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{featured.category}</span>
-        <h2 class="newsprint-lead-title">{featured.title}</h2>
-        <p class="newsprint-excerpt">{featured.excerpt}</p>
-        <div class="newsprint-tags">
-          {featured.tags.map((tag) => <span class="newsprint-tag">{tag}</span>)}
+      <article class={`newsprint-featured${featured.og_image_url ? ' newsprint-featured--has-img' : ''}`} data-category={featured.category}>
+        {featured.og_image_url && (
+          <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" loading="lazy" />
+        )}
+        <div>
+          <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{featured.category}</span>
+          <h2 class="newsprint-lead-title">{featured.title}</h2>
+          <p class="newsprint-excerpt">{featured.excerpt}</p>
+          <div class="newsprint-tags">
+            {featured.tags.map((tag) => <span class="newsprint-tag">{tag}</span>)}
+          </div>
+          <div class="newsprint-meta">
+            <time>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
+            <span>{featured.reading_time_min} min read</span>
+          </div>
+          <div class="newsprint-divider"></div>
         </div>
-        <div class="newsprint-meta">
-          <time>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>
-          <span>{featured.reading_time_min} min read</span>
-        </div>
-        <div class="newsprint-divider"></div>
       </article>
 
       <section class="newsprint-grid-cards">
