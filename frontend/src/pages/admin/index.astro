@@ -39,9 +39,14 @@ const mockDrafts = [
 
 <MainLayout title="Admin Dashboard" locale="en">
   <div style="max-width: 800px; margin: 0 auto;">
-    <h1 class="newsprint-masthead" style="font-size: 2rem; text-align: left; margin-bottom: 0.5rem;">
-      Admin Dashboard
-    </h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 class="newsprint-masthead" style="font-size: 2rem; text-align: left; margin-bottom: 0;">
+        Admin Dashboard
+      </h1>
+      <form method="POST" action="/api/auth/logout" style="display: inline;">
+        <button type="submit" class="admin-btn" style="font-size: 0.85rem;">Logout</button>
+      </form>
+    </div>
 
     {stateParam === '401' ? (
       <NewsprintNotice

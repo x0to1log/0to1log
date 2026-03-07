@@ -120,6 +120,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           <div class="admin-toolbar-right">
             <button id="btn-save" class="admin-btn" type="button">Save Draft</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
+            <form method="POST" action="/api/auth/logout" style="display: inline;">
+              <button type="submit" class="admin-btn" style="font-size: 0.85rem;">Logout</button>
+            </form>
           </div>
         </div>
 
@@ -192,6 +195,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           <div class="admin-toolbar-right">
             <button id="btn-edit" class="admin-btn" type="button">Edit</button>
             <button id="btn-publish" class="admin-btn admin-btn-primary" type="button">Publish</button>
+            <form method="POST" action="/api/auth/logout" style="display: inline;">
+              <button type="submit" class="admin-btn" style="font-size: 0.85rem;">Logout</button>
+            </form>
           </div>
         </div>
 
