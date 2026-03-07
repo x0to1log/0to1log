@@ -16,11 +16,12 @@ interface Props {
   description?: string;
   locale?: 'en' | 'ko';
   slug?: string;
+  altSlug?: string;
   article?: ArticleData;
   headerAlwaysVisible?: boolean;
 }
 
-const { title, description, locale = 'en', slug, article, headerAlwaysVisible = false } = Astro.props;
+const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false } = Astro.props;
 
 const gaId = import.meta.env.PUBLIC_GA4_ID || '';
 const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
@@ -86,7 +87,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
       Skip to content
     </a>
 
-    <Navigation locale={locale} alwaysVisible={headerAlwaysVisible} />
+    <Navigation locale={locale} alwaysVisible={headerAlwaysVisible} altSlug={altSlug} />
 
     <main id="main-content" style={`flex: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 1rem; width: 100%;`}>
       <slot />

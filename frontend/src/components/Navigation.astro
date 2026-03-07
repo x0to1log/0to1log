@@ -4,12 +4,15 @@ import ThemeToggle from './ThemeToggle.astro';
 interface Props {
   locale?: 'en' | 'ko';
   alwaysVisible?: boolean;
+  altSlug?: string;
 }
 
-const { locale = 'en', alwaysVisible = false } = Astro.props;
+const { locale = 'en', alwaysVisible = false, altSlug } = Astro.props;
 const altLocale = locale === 'en' ? 'ko' : 'en';
 const currentPath = Astro.url.pathname;
-const altPath = currentPath.replace(`/${locale}/`, `/${altLocale}/`);
+const altPath = altSlug
+  ? `/${altLocale}/log/${altSlug}/`
+  : currentPath.replace(`/${locale}/`, `/${altLocale}/`);
 ---
 
 <header class="site-header" data-always-visible={alwaysVisible ? "true" : undefined} style={`background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);`}>
