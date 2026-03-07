@@ -1,8 +1,11 @@
+from datetime import date
+
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
 from models.posts import PipelineAcceptedResponse, ErrorResponse
+from services.pipeline import run_daily_pipeline
 
 router = APIRouter(tags=["cron"])
 
@@ -22,8 +25,9 @@ async def run_news_pipeline(
     _: None = Depends(verify_cron_secret),
 ):
     """Trigger daily news pipeline. Returns 202 immediately; runs async."""
-    # TODO: wire up background_tasks.add_task in Phase 2B-CRON-00
+    batch_id = date.today().isoformat()
+    background_tasks.add_task(run_daily_pipeline, batch_id)
     return PipelineAcceptedResponse(
         accepted=True,
-        message="Pipeline queued (Phase 2A stub)",
+        message=f"Pipeline queued for batch {batch_id}",
     )

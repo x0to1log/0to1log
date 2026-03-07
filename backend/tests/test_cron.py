@@ -41,15 +41,18 @@ class TestCronAuth:
 
 
 class TestCronPipeline:
-    def test_valid_secret_returns_202(self):
+    @patch("routers.cron.run_daily_pipeline")
+    def test_valid_secret_returns_202(self, mock_pipeline):
         """Valid secret -> 202 Accepted."""
         response = client.post(
             "/api/cron/news-pipeline",
             headers={"x-cron-secret": VALID_SECRET},
         )
         assert response.status_code == 202
+        mock_pipeline.assert_called_once()
 
-    def test_response_body_format(self):
+    @patch("routers.cron.run_daily_pipeline")
+    def test_response_body_format(self, mock_pipeline):
         """202 response has accepted=true and message."""
         response = client.post(
             "/api/cron/news-pipeline",
@@ -59,7 +62,8 @@ class TestCronPipeline:
         assert data["accepted"] is True
         assert "message" in data
 
-    def test_response_model_matches_schema(self):
+    @patch("routers.cron.run_daily_pipeline")
+    def test_response_model_matches_schema(self, mock_pipeline):
         """Response matches PipelineAcceptedResponse schema."""
         response = client.post(
             "/api/cron/news-pipeline",

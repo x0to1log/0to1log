@@ -3,6 +3,9 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from core.database import get_supabase
+from services.news_collection import collect_all_news
+from services.agents import rank_candidates, generate_research_post, generate_business_post
+from models.ranking import NewsCandidate
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,14 @@ def _parse_dt(dt_str: str) -> datetime:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def _build_context(candidates: list[NewsCandidate]) -> str:
+    """Build a context string from collected candidates for writing agents."""
+    lines: list[str] = []
+    for i, c in enumerate(candidates, 1):
+        lines.append(f"{i}. [{c.source}] {c.title}\n   URL: {c.url}\n   {c.snippet}")
+    return "\n\n".join(lines)
 
 
 async def acquire_pipeline_lock(batch_id: str) -> Optional[str]:
@@ -120,16 +131,40 @@ async def release_pipeline_lock(
 
 
 async def run_daily_pipeline(batch_id: str) -> None:
-    """Main pipeline orchestrator. Phase 2A: lock management only.
-    Phase 2B will add: collect → rank → generate → save → editorial.
-    """
+    """Main pipeline orchestrator: collect → rank → generate research & business posts."""
     run_id = await acquire_pipeline_lock(batch_id)
     if not run_id:
         return
 
     try:
-        # Phase 2B: actual pipeline steps here
-        logger.info("Pipeline %s started (run_id=%s) — stub", batch_id, run_id)
+        logger.info("Pipeline %s started (run_id=%s)", batch_id, run_id)
+
+        # Step 1: Collect news from all sources
+        candidates = await collect_all_news(batch_id)
+        if not candidates:
+            logger.warning("No candidates for batch %s, finishing early", batch_id)
+            await release_pipeline_lock(run_id, "success")
+            return
+
+        # Step 2: Rank candidates
+        ranking = await rank_candidates(candidates)
+
+        # Build context string from candidates for the writing agents
+        context = _build_context(candidates)
+
+        # Step 3-A: Generate research post
+        research_post = await generate_research_post(
+            ranking.research_pick, context, batch_id
+        )
+        logger.info("Research post generated: %s", research_post.title)
+
+        # Step 3-B: Generate business post
+        business_post = await generate_business_post(
+            ranking.business_main_pick, ranking.related_picks, context, batch_id
+        )
+        logger.info("Business post generated: %s", business_post.title)
+
+        logger.info("Pipeline %s completed", batch_id)
         await release_pipeline_lock(run_id, "success")
     except Exception as e:
         logger.error("Pipeline %s failed: %s", batch_id, e)
