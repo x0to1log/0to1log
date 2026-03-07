@@ -7,7 +7,7 @@ import { supabase } from '../../../lib/supabase';
 import { getCategoryLabel, normalizeCategorySlug } from '../../../lib/categories';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
-import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 
@@ -32,7 +32,7 @@ if (supabase) {
 
 const featured = posts[0] ?? null;
 const rest = featured ? posts.slice(1) : [];
-const railPosts = posts.slice(0, 4);
+const railPosts = featured ? posts.slice(1, 5) : posts.slice(0, 4);
 const categories = Array.from(
   new Set(
     posts
@@ -66,12 +66,14 @@ const categories = Array.from(
           data-category={normalizeCategorySlug(featured.category)}
         >
           {featured.og_image_url && (
-            <img
-              src={featured.og_image_url}
-              alt={featured.title}
-              class="newsprint-featured-img img-newsprint"
-              loading="lazy"
-            />
+            <div class="newsprint-featured-img-frame">
+              <img
+                src={featured.og_image_url}
+                alt={featured.title}
+                class="newsprint-featured-img img-newsprint"
+                loading="lazy"
+              />
+            </div>
           )}
           <div>
             <span class="newsprint-category">{getCategoryLabel('ko', featured.category)}</span>
@@ -109,7 +111,7 @@ const categories = Array.from(
     )}
 
     <Fragment slot="rail">
-      <NewsprintSideRail locale="ko" posts={railPosts} categories={categories} />
+      <NewsprintListRail locale="ko" posts={railPosts} />
     </Fragment>
   </NewsprintShell>
 </MainLayout>

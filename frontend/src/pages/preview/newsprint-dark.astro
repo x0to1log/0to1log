@@ -2,7 +2,7 @@
 import MainLayout from '../../layouts/MainLayout.astro';
 import NewsprintShell from '../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../components/newsprint/NewsprintListCard.astro';
-import NewsprintSideRail from '../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintListRail from '../../components/newsprint/NewsprintListRail.astro';
 import NewsprintCategoryFilter from '../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintArticleLayout from '../../components/newsprint/NewsprintArticleLayout.astro';
 import { getCategoryLabel } from '../../lib/categories';
@@ -62,7 +62,7 @@ const mockPosts = [
 ];
 
 const featured = mockPosts[0];
-const rest = mockPosts.slice(1);
+const railPosts = mockPosts.slice(1, 5);
 ---
 
 <MainLayout title="Newsprint Preview (Dark)" locale="en" slug="preview/newsprint-dark/">
@@ -74,7 +74,9 @@ const rest = mockPosts.slice(1);
 
       <article class={`newsprint-featured${featured.og_image_url ? ' newsprint-featured--has-img' : ''}`} data-category={featured.category}>
         {featured.og_image_url && (
-          <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" loading="lazy" />
+          <div class="newsprint-featured-img-frame">
+            <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" loading="lazy" />
+          </div>
         )}
         <div>
           <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{getCategoryLabel('en', featured.category)}</span>
@@ -121,11 +123,7 @@ const rest = mockPosts.slice(1);
       />
 
       <Fragment slot="rail">
-        <NewsprintSideRail
-          locale="en"
-          posts={mockPosts}
-          categories={['ai-news', 'study', 'career', 'project']}
-        />
+        <NewsprintListRail locale="en" posts={railPosts} />
       </Fragment>
     </NewsprintShell>
 </MainLayout>
