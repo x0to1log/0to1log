@@ -30,5 +30,11 @@ venv/
 # Temp
 .tmp_publish_*/
 
+# examples
+examples/
+
+# Playwright MCP
+.playwright-mcp/
+
 # Claude
 .claude/
