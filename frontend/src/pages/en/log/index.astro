@@ -1,8 +1,10 @@
 ---
 export const prerender = false;
+
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
+import { getCategoryLabel, normalizeCategorySlug } from '../../../lib/categories';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
@@ -31,14 +33,19 @@ if (supabase) {
 const featured = posts[0] ?? null;
 const rest = featured ? posts.slice(1) : [];
 const railPosts = posts.slice(0, 4);
-const categories = Array.from(new Set(posts.map((post) => post.category).filter(Boolean))).slice(0, 6);
+const categories = Array.from(
+  new Set(posts.map((post) => normalizeCategorySlug(post.category)).filter(Boolean)),
+).slice(0, 6);
 ---
 
 <MainLayout title={t.en['log.title']} locale="en" slug="log/">
-  <NewsprintShell locale="en" masthead="All About AI" editionLabel="Builder's Daily"
-    subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}>
-
-    <NewsprintCategoryFilter locale="en" />
+  <NewsprintShell
+    locale="en"
+    masthead="All About AI"
+    editionLabel="Builder's Daily"
+    subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
+  >
+    <NewsprintCategoryFilter locale="en" categories={categories} />
 
     {fetchError ? (
       <NewsprintNotice
@@ -49,12 +56,21 @@ const categories = Array.from(new Set(posts.map((post) => post.category).filter(
       />
     ) : featured ? (
       <>
-        <a href={`/en/log/${featured.slug}/`} class={`newsprint-featured newsprint-card${featured.og_image_url ? ' newsprint-featured--has-img' : ''}`} data-category={featured.category}>
+        <a
+          href={`/en/log/${featured.slug}/`}
+          class={`newsprint-featured newsprint-card${featured.og_image_url ? ' newsprint-featured--has-img' : ''}`}
+          data-category={normalizeCategorySlug(featured.category)}
+        >
           {featured.og_image_url && (
-            <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" loading="lazy" />
+            <img
+              src={featured.og_image_url}
+              alt={featured.title}
+              class="newsprint-featured-img img-newsprint"
+              loading="lazy"
+            />
           )}
           <div>
-            <span class="newsprint-category">{featured.category}</span>
+            <span class="newsprint-category">{getCategoryLabel('en', featured.category)}</span>
             <h2 class="newsprint-lead-title">{featured.title}</h2>
             {featured.excerpt && <p class="newsprint-excerpt">{featured.excerpt}</p>}
             <div class="newsprint-tags">

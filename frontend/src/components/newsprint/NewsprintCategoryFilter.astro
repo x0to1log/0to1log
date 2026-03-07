@@ -1,42 +1,32 @@
 ---
+import { getCategoryColorVar, getCategoryLabel, getDefaultCategories, normalizeCategorySlug } from '../../lib/categories';
+
 interface Props {
   locale: 'en' | 'ko';
   categories?: string[];
 }
 
-const { locale, categories = ['ai-news', 'tech', 'career', 'project'] } = Astro.props;
+const { locale, categories = getDefaultCategories() } = Astro.props;
 const isKo = locale === 'ko';
-
-const labelMap: Record<string, Record<string, string>> = {
-  'all': { en: 'All', ko: '전체' },
-  'ai-news': { en: 'AI News', ko: 'AI 뉴스' },
-  'tech': { en: 'Study', ko: '서재' },
-  'career': { en: 'Career', ko: '커리어' },
-  'project': { en: 'Project', ko: '프로젝트' },
-};
-
-const colorMap: Record<string, string> = {
-  'all': 'var(--color-accent)',
-  'ai-news': 'var(--color-cat-ainews)',
-  'tech': 'var(--color-cat-tech)',
-  'career': 'var(--color-cat-career)',
-  'project': 'var(--color-cat-project)',
-};
-
-const tabs = ['all', ...categories];
+const tabs = [
+  'all',
+  ...Array.from(
+    new Set(categories.map((category) => normalizeCategorySlug(category)).filter(Boolean) as string[]),
+  ),
+];
 ---
 
 <nav class="newsprint-filter-tabs" role="tablist" aria-label={isKo ? '카테고리 필터' : 'Category filter'}>
-  {tabs.map((cat, i) => (
+  {tabs.map((cat) => (
     <button
       class="newsprint-filter-tab"
       role="tab"
       data-filter={cat}
       aria-selected={cat === 'all' ? 'true' : 'false'}
       tabindex={cat === 'all' ? '0' : '-1'}
-      style={`--tab-cat-color: ${colorMap[cat] || 'var(--color-accent)'};`}
+      style={`--tab-cat-color: ${cat === 'all' ? 'var(--color-accent)' : getCategoryColorVar(cat)};`}
     >
-      {labelMap[cat]?.[locale] || cat}
+      {cat === 'all' ? (locale === 'ko' ? '전체' : 'All') : getCategoryLabel(locale, cat)}
     </button>
   ))}
 </nav>
@@ -49,9 +39,9 @@ const tabs = ['all', ...categories];
     const tabs = Array.from(nav.querySelectorAll<HTMLButtonElement>('.newsprint-filter-tab'));
     if (tabs.length === 0) return;
 
-    // Read initial category from URL
     const params = new URLSearchParams(window.location.search);
-    const initialCat = params.get('category') || 'all';
+    const rawCategory = params.get('category');
+    const initialCat = rawCategory === 'tech' ? 'study' : (rawCategory || 'all');
 
     function activate(category: string, focusTab = false): void {
       tabs.forEach((tab) => {
@@ -61,19 +51,16 @@ const tabs = ['all', ...categories];
         if (isActive && focusTab) tab.focus();
       });
 
-      // Filter cards
       document.querySelectorAll<HTMLElement>('.newsprint-card[data-category]').forEach((card) => {
         const visible = category === 'all' || card.dataset.category === category;
         card.setAttribute('data-filtered', visible ? 'true' : 'false');
       });
 
-      // Filter featured sections
       document.querySelectorAll<HTMLElement>('.newsprint-featured').forEach((section) => {
         const visible = category === 'all' || section.dataset.category === category;
         section.setAttribute('data-filtered', visible ? 'true' : 'false');
       });
 
-      // Update URL without reload
       const url = new URL(window.location.href);
       if (category === 'all') {
         url.searchParams.delete('category');
@@ -83,13 +70,11 @@ const tabs = ['all', ...categories];
       history.replaceState(null, '', url.toString());
     }
 
-    // Click handler
     nav.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.newsprint-filter-tab');
       if (btn) activate(btn.dataset.filter || 'all');
     });
 
-    // Arrow key navigation (WAI-ARIA Tabs pattern)
     nav.addEventListener('keydown', (e) => {
       const current = document.activeElement as HTMLButtonElement;
       const idx = tabs.indexOf(current);
@@ -112,7 +97,6 @@ const tabs = ['all', ...categories];
       }
     });
 
-    // Activate initial category
     activate(initialCat);
   }
 

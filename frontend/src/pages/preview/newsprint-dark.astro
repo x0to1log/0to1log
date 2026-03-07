@@ -5,6 +5,7 @@ import NewsprintListCard from '../../components/newsprint/NewsprintListCard.astr
 import NewsprintSideRail from '../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintCategoryFilter from '../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintArticleLayout from '../../components/newsprint/NewsprintArticleLayout.astro';
+import { getCategoryLabel } from '../../lib/categories';
 
 const mockPosts = [
   {
@@ -21,7 +22,7 @@ const mockPosts = [
   {
     title: 'Building a RAG Pipeline with LangChain and Pinecone',
     slug: 'preview-rag-pipeline',
-    category: 'tech',
+    category: 'study',
     published_at: new Date().toISOString(),
     reading_time_min: 8,
     tags: ['rag', 'langchain', 'pinecone', 'tutorial'],
@@ -76,7 +77,7 @@ const rest = mockPosts.slice(1);
           <img src={featured.og_image_url} alt={featured.title} class="newsprint-featured-img img-newsprint" loading="lazy" />
         )}
         <div>
-          <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{featured.category}</span>
+          <span class="newsprint-category" style={`color: var(--color-cat-ainews);`}>{getCategoryLabel('en', featured.category)}</span>
           <h2 class="newsprint-lead-title">{featured.title}</h2>
           <p class="newsprint-excerpt">{featured.excerpt}</p>
           <div class="newsprint-tags">
@@ -123,7 +124,7 @@ const rest = mockPosts.slice(1);
         <NewsprintSideRail
           locale="en"
           posts={mockPosts}
-          categories={['ai-news', 'tech', 'career', 'project']}
+          categories={['ai-news', 'study', 'career', 'project']}
         />
       </Fragment>
     </NewsprintShell>

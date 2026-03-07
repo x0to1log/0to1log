@@ -1,4 +1,6 @@
 ---
+import { getCategoryColorVar, getCategoryLabel, normalizeCategorySlug } from '../../lib/categories';
+
 interface Props {
   href: string;
   title: string;
@@ -19,18 +21,13 @@ const readingLabel = readingTimeMin
     ? `${readingTimeMin}분 읽기`
     : `${readingTimeMin} min read`
   : null;
-
-const catColorMap: Record<string, string> = {
-  'ai-news': 'var(--color-cat-ainews)',
-  'tech': 'var(--color-cat-tech)',
-  'career': 'var(--color-cat-career)',
-  'project': 'var(--color-cat-project)',
-};
-const catColor = category ? catColorMap[category] || 'var(--color-border)' : 'var(--color-border)';
+const normalizedCategory = normalizeCategorySlug(category);
+const categoryLabel = getCategoryLabel(locale, category);
+const catColor = getCategoryColorVar(category);
 ---
 
-<a href={href} class="newsprint-card" data-category={category || 'uncategorized'}>
-  {category && <span class="newsprint-category" style={`color: ${catColor};`}>{category}</span>}
+<a href={href} class="newsprint-card" data-category={normalizedCategory || 'uncategorized'}>
+  {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
   <h2 class="newsprint-card-title">{title}</h2>
   {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
   {tags && tags.length > 0 && (

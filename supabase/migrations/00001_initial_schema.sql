@@ -23,7 +23,7 @@ CREATE TABLE posts (
     title           TEXT NOT NULL,
     slug            TEXT UNIQUE NOT NULL,
     locale          TEXT NOT NULL DEFAULT 'en' CHECK (locale IN ('en', 'ko')),
-    category        TEXT NOT NULL CHECK (category IN ('ai-news', 'tech', 'career', 'project')),
+    category        TEXT NOT NULL CHECK (category IN ('ai-news', 'study', 'career', 'project')),
     post_type       TEXT CHECK (post_type IN ('research', 'business')),
     status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
 
@@ -73,7 +73,7 @@ CREATE TABLE posts (
     CONSTRAINT chk_post_type_by_category CHECK (
         (category = 'ai-news' AND post_type IN ('research', 'business'))
         OR
-        (category IN ('tech', 'career', 'project') AND post_type IS NULL)
+        (category IN ('study', 'career', 'project') AND post_type IS NULL)
     )
 );
 

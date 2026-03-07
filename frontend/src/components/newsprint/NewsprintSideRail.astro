@@ -1,4 +1,6 @@
 ---
+import { getCategoryLabel } from '../../lib/categories';
+
 interface RailPost {
   title: string;
   slug: string;
@@ -24,9 +26,9 @@ const isKo = locale === 'ko';
       {posts.map((post) => (
         <a class="newsprint-card" href={`/${locale}/log/${post.slug}/`}>
           <strong class="newsprint-rail-link">{post.title}</strong>
-          {post.category && (
+          {getCategoryLabel(locale, post.category) && (
             <span class="newsprint-category newsprint-rail-category">
-              {post.category}
+              {getCategoryLabel(locale, post.category)}
             </span>
           )}
         </a>
@@ -43,7 +45,7 @@ const isKo = locale === 'ko';
     {categories.length === 0 ? (
       <span class="newsprint-tag">{isKo ? '대기 중' : 'Pending'}</span>
     ) : (
-      categories.map((cat) => <span class="newsprint-tag">{cat}</span>)
+      categories.map((cat) => <span class="newsprint-tag">{getCategoryLabel(locale, cat) || cat}</span>)
     )}
   </div>
 </section>

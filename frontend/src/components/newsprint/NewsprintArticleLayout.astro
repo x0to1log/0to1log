@@ -1,4 +1,6 @@
 ---
+import { getCategoryLabel } from '../../lib/categories';
+
 interface Props {
   locale: 'en' | 'ko';
   slug: string;
@@ -31,6 +33,7 @@ const readingLabel = readingTimeMin
     ? `${readingTimeMin}분 읽기`
     : `${readingTimeMin} min read`
   : null;
+const categoryLabel = getCategoryLabel(locale, category);
 ---
 
 <a class="newsprint-back" href={`/${locale}/log/`}>
@@ -42,7 +45,7 @@ const readingLabel = readingTimeMin
   <div class="newsprint-meta">
     {dateLabel && <time>{dateLabel}</time>}
     {readingLabel && <span>{readingLabel}</span>}
-    {category && <span class="newsprint-category">{category}</span>}
+    {categoryLabel && <span class="newsprint-category">{categoryLabel}</span>}
     <span class="newsprint-tag">{slug}</span>
   </div>
 
