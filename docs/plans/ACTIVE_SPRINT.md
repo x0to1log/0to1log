@@ -155,7 +155,9 @@ Phase 2C 寃뚯씠???듦낵 ????**Phase 2D-INT** (?듯빀/E2E: Mock ?쒓굅 + ?�
 
 - List rail copy set approved: 오늘의 편집 노트 / Editor's Note, 지금 많이 읽는 글 / Most Read, 처음 읽는 분께 / Start Here
 - Most Read is currently fed by a latest-published fallback until analytics-based popularity data exists.
-- Article detail rail remains a separate follow-up and should not reuse the list-rail headings.
+- Detail rail copy set approved: 이 글의 초점 / Focus of This Article, 같은 호에서 더 읽기 / More in This Issue
+- Focus of This Article currently uses a category-based template fallback until admin-authored focus data exists.
+- Article detail rail should not reuse the list-rail headings.
 ## 2C-EXP Addendum (Stitch Compatibility)
 
 - [x] `2C-UI-01` Prototype compatibility cleanup completed
@@ -164,4 +166,5 @@ Phase 2C 寃뚯씠???듦낵 ????**Phase 2D-INT** (?듯빀/E2E: Mock ?쒓굅 + ?�
   Evidence: `frontend/src/pages/en/log/index.astro`, `frontend/src/pages/ko/log/index.astro`, `frontend/src/pages/en/log/[slug].astro`, `frontend/src/pages/ko/log/[slug].astro`
 - [x] `2C-QA-01` Preview routes added for visual validation
   Evidence: `frontend/src/pages/preview/newsprint-dark.astro`, `frontend/src/pages/preview/newsprint-light.astro`
+
 

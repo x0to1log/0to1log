@@ -62,6 +62,7 @@ flowchart TD
 - `P2C-UI-14`: Admin Editor 화면(마크다운 작성/미리보기 + Save/Publish 액션) 구현, OpenAPI 고정 스키마 기반 mock 사용
 - `P2C-UI-15`: Admin Editor 상태/권한 처리(loading/empty/404/401/403 + 저장/발행 피드백) 구현, mock-first
 - `P2C-QA-11`: 반응형/접근성/성능 QA
+- 우측 컬럼은 2C에서 fallback 기준으로 먼저 고정한다: `Editor's Note`=정적 카피, `Most Read`=latest fallback, `Focus of This Article`=category template, `More in This Issue`=latest related fallback
 
 **2C Gate (균형형 기준)**
 - 반응형: mobile/tablet/desktop 레이아웃 정상
@@ -75,6 +76,7 @@ flowchart TD
 - `P2D-SYNC-01`: 프론트 Mock 제거 후 실제 API fetch 연동(로그 + Admin Editor 포함)
 - `P2D-CRON-01`: Vercel Cron -> Backend 파이프라인 실운영 연동
 - `P2D-QA-01`: E2E 통합 테스트(API 호출 -> 화면 렌더링 -> 에러 폴백)
+- 우측 컬럼 실데이터 치환: `Editor's Note`=admin 입력, `Most Read`=GA4/DB 집계, `Focus of This Article`=글별 admin 입력, `More in This Issue`=관련도 로직
 
 **2D Gate**
 - 실데이터 기준 리스트/상세 렌더링 정상

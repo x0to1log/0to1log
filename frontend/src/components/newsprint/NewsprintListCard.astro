@@ -30,6 +30,10 @@ const catColor = getCategoryColorVar(category);
   {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
   <h2 class="newsprint-card-title">{title}</h2>
   {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
+  <div class="newsprint-meta" style="margin-top: 0.5rem;">
+    {dateLabel && <time>{dateLabel}</time>}
+    {readingLabel && <span>{readingLabel}</span>}
+  </div>
   {tags && tags.length > 0 && (
     <div class="newsprint-tags">
       {tags.slice(0, 4).map((tag) => (
@@ -37,8 +41,4 @@ const catColor = getCategoryColorVar(category);
       ))}
     </div>
   )}
-  <div class="newsprint-meta" style="margin-top: 0.5rem;">
-    {dateLabel && <time>{dateLabel}</time>}
-    {readingLabel && <span>{readingLabel}</span>}
-  </div>
 </a>

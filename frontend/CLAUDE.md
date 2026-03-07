@@ -49,7 +49,13 @@ Astro v5 + Tailwind CSS v4 + Vercel. ?ㅽ럺 ?곸꽭 ??`docs/04_Frontend_Spec.md
   - 지금 많이 읽는 글 / Most Read
   - 처음 읽는 분께 / Start Here
 - Most Read는 analytics 기반 인기 데이터가 생기기 전까지 latest-published fallback 사용
-- 상세 페이지 우측 컬럼은 별도 정보 구조를 유지하며, 리스트 rail 라벨을 재사용하지 않음
+- 상세 페이지 우측 컬럼은 NewsprintSideRail.astro를 사용
+- 상세 rail 라벨 고정:
+  - 이 글의 초점 / Focus of This Article
+  - 같은 호에서 더 읽기 / More in This Issue
+- Focus of This Article는 admin 작성 데이터가 생기기 전까지 category-based template fallback 사용
+- 상세 페이지 우측 컬럼은 리스트 rail 라벨을 재사용하지 않음
+
 ## Admin Editor
 
 - WYSIWYG editor: Milkdown Crepe preset (`@milkdown/crepe`)
@@ -66,4 +72,5 @@ Astro v5 + Tailwind CSS v4 + Vercel. ?ㅽ럺 ?곸꽭 ??`docs/04_Frontend_Spec.md
 ```bash
 cd frontend && npm run build   # 0 errors ?꾩닔
 ```
+
 
