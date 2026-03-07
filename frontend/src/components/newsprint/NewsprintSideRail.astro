@@ -18,7 +18,7 @@ const isKo = locale === 'ko';
 ---
 
 <section>
-  <h3 class="newsprint-section-title">{isKo ? '이 글의 초점' : 'Focus of This Article'}</h3>
+  <h3 class="newsprint-section-title">{isKo ? '이 글의 중점' : 'Focus of This Article'}</h3>
   {focusItems.length === 0 ? (
     <p class="newsprint-empty">{isKo ? '핵심 포인트를 준비 중입니다.' : 'Key points are on the way.'}</p>
   ) : (

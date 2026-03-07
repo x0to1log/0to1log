@@ -18,7 +18,7 @@ const dateLabel = publishedAt
   : null;
 const readingLabel = readingTimeMin
   ? locale === 'ko'
-    ? `${readingTimeMin}분 읽기`
+    ? `약 ${readingTimeMin}분`
     : `${readingTimeMin} min read`
   : null;
 const normalizedCategory = normalizeCategorySlug(category);
@@ -39,8 +39,8 @@ const catColor = getCategoryColorVar(category);
       </span>
     )}
     <span class="newsprint-meta-inline">
-      {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
       {readingLabel && <span>{readingLabel}</span>}
+      {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
     </span>
   </div>
 </a>
