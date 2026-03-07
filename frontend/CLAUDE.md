@@ -41,6 +41,15 @@ Astro v5 + Tailwind CSS v4 + Vercel. 스펙 상세 → `docs/04_Frontend_Spec.md
 - `Head.astro`: canonical/hreflang은 반드시 절대 URL (`PUBLIC_SITE_URL` 기반)
 - `astro.config.mjs`의 `site`와 `PUBLIC_SITE_URL` 동일값 유지
 
+## Admin Editor
+
+- WYSIWYG editor: Milkdown Crepe preset (`@milkdown/crepe`)
+- Initialized via vanilla `<script>` (no `client:load`)
+- Draft/Preview mode: Draft = editor + AI panel, Preview = full newsprint published view
+- Auto-save on Preview transition
+- CSS classes: `.admin-*` in `global.css`
+- Mock data until P2C-UI-15 API wiring
+
 ## Build
 
 ```bash

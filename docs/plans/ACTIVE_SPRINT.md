@@ -82,13 +82,13 @@
 - **의존성:** P2C-UI-12
 
 ### 4. Admin Editor 화면(마크다운 작성/미리보기) `[P2C-UI-14]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** `/admin`에서 드래프트 편집 화면(마크다운 작성 + 미리보기 + Save/Publish 액션)을 newsprint 톤으로 구현
 - **산출물:** Admin Editor UI 컴포넌트/페이지 업데이트
 - **완료 기준:** 편집 입력, 미리보기 전환, Save/Publish CTA 노출 및 기본 동작(mock) 확인
-- **검증:** `cd frontend && npm run build` + `/admin` 수동 확인
-- **증거:** -
+- **검증:** `cd frontend && npm run build` 0 error ✅
+- **증거:** commits d2015c8..529886c (milkdown install + admin CSS + dashboard + editor page)
 - **참조:** IMPLEMENTATION_PLAN §3 2C-EXP, 04_Frontend_Spec §3-5
 - **의존성:** P2C-UI-13
 
