@@ -46,7 +46,7 @@
   --color-bg-tertiary: #25201C;
   --color-text-primary: #E0D8C3;
   --color-text-secondary: #A39D8E;
-  --color-text-muted: #7A7468;
+  --color-text-muted: #948C7E;
   --color-border: #433B32;
   --color-accent: #C3A370;
   --color-accent-hover: #D4B882;
@@ -59,7 +59,7 @@
   --noise-opacity: 0.025;
 
   /* Category Colors */
-  --color-cat-ainews: #C45B4A;
+  --color-cat-ainews: #D46A58;
   --color-cat-study: #7A8B78;
   --color-cat-career: #A09080;
   --color-cat-project: #8888A0;
@@ -68,7 +68,7 @@
   --shiki-token-keyword: #D4A87C;
   --shiki-token-string: #8FAE7E;
   --shiki-token-function: #B8A9D4;
-  --shiki-token-comment: #7A7468;
+  --shiki-token-comment: #948C7E;
   --shiki-token-constant: #C3A370;
   --shiki-token-punctuation: #E0D8C3;
   --shiki-color-text: #E0D8C3;
@@ -84,7 +84,7 @@
   --color-bg-tertiary: #DDD8CC;
   --color-text-primary: #333333;
   --color-text-secondary: #555555;
-  --color-text-muted: #888888;
+  --color-text-muted: #736B63;
   --color-border: #333333;
   --color-accent: #8B5F3C;
   --color-accent-hover: #A0724D;
@@ -1045,4 +1045,289 @@ code, pre {
 
 .admin-feedback[hidden] {
   display: none;
+}
+
+/* ===========================
+   PORTFOLIO PAGE
+   =========================== */
+
+.pf-page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1rem 0 3rem;
+}
+
+@keyframes pf-reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pf-hero,
+.pf-section,
+.pf-footer-ornament {
+  animation: pf-reveal 0.6s ease-out both;
+  animation-delay: calc(var(--reveal, 0) * 0.15s + 0.1s);
+}
+
+.pf-hero {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.pf-overline {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.pf-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.pf-tagline {
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1.25rem;
+}
+
+.pf-ornament,
+.pf-footer-ornament {
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  color: var(--color-text-muted);
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.pf-footer-ornament {
+  margin-top: 3rem;
+  margin-bottom: 0;
+}
+
+.pf-bio {
+  max-width: 540px;
+  margin: 0 auto 1.5rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-text-secondary);
+}
+
+.pf-links {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.pf-links a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: opacity 150ms;
+}
+
+.pf-links a:hover {
+  text-decoration: underline;
+}
+
+.pf-link-sep {
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.pf-section {
+  margin-bottom: 3rem;
+}
+
+.pf-section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 3px double var(--color-border);
+  padding-bottom: 0.45rem;
+  margin-bottom: 1.5rem;
+}
+
+.pf-project-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.pf-project-card {
+  display: block;
+  border: 1px solid var(--color-border);
+  padding: 1.25rem 1.25rem 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 200ms, box-shadow 200ms;
+  animation: pf-reveal 0.5s ease-out both;
+  animation-delay: calc(1 * 0.15s + var(--card-i, 0) * 0.08s + 0.25s);
+}
+
+.pf-project-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.pf-project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.pf-project-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.pf-project-year {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  margin-left: 0.75rem;
+}
+
+.pf-project-desc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.pf-project-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.pf-skills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem 1.25rem;
+}
+
+.pf-skill-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  margin-bottom: 0.5rem;
+}
+
+.pf-skill-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Back link */
+.pf-back {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  transition: opacity 150ms;
+}
+
+.pf-back:hover {
+  text-decoration: underline;
+}
+
+/* Landing cards */
+.pf-landing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  max-width: 640px;
+  margin: 0 auto;
+  animation: pf-reveal 0.6s ease-out both;
+  animation-delay: calc(var(--reveal, 0) * 0.15s + 0.1s);
+}
+
+.pf-landing-card {
+  display: block;
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  transition: border-color 200ms, box-shadow 200ms;
+  animation: pf-reveal 0.5s ease-out both;
+  animation-delay: calc(1 * 0.15s + var(--card-i, 0) * 0.1s + 0.2s);
+}
+
+.pf-landing-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.pf-landing-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.pf-landing-card-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.pf-landing-card-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.pf-landing-card-desc {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.pf-landing-card-arrow {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.25rem;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  transition: color 200ms, transform 200ms;
+}
+
+.pf-landing-card:hover .pf-landing-card-arrow {
+  color: var(--color-accent);
+  transform: translateX(3px);
+}
+
+@media (max-width: 767px) {
+  .pf-project-grid { grid-template-columns: 1fr; }
+  .pf-skills-grid { grid-template-columns: repeat(2, 1fr); }
+  .pf-landing-grid { grid-template-columns: 1fr; }
+  .pf-name { font-size: 2rem; }
+}
+
+@media (max-width: 479px) {
+  .pf-skills-grid { grid-template-columns: 1fr; }
 }
