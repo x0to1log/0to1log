@@ -1,153 +1,153 @@
-﻿# ACTIVE SPRINT ??Phase 2C-EXP (Frontend Experience)
+# ACTIVE SPRINT — Phase 2C-EXP (Frontend Experience)
 
-> **?ㅽ봽由고듃 ?쒖옉:** 2026-03-07
-> **紐⑺몴:** Newsprint ?뚮쭏 ?꾩꽦 + 由ъ뒪???곸꽭 怨좊룄??+ 諛섏쓳???묎렐???깅뒫 QA
-> **李몄“:** MASTER ??`docs/IMPLEMENTATION_PLAN.md` | ?ㅽ럺 ??`docs/04~06`
-> **?댁쟾 ?ㅽ봽由고듃:** Phase 2B-OPS ??2026-03-07 寃뚯씠???꾩껜 ?듦낵
-
----
-
-## ?ㅽ봽由고듃 ?꾨즺 寃뚯씠??
-
-- [ ] 諛섏쓳?? mobile/tablet/desktop ?덉씠?꾩썐 ?뺤긽
-- [ ] ?묎렐?? `prefers-reduced-motion`, ?ㅻ낫???ъ빱?? ?鍮?湲곗? ?듦낵
-- [ ] Lighthouse: Perf/Best/SEO/Acc 媛곴컖 `>= 85`
-- [ ] Core Web Vitals 紐⑺몴: `LCP < 2.8s`, `CLS < 0.1`, `INP < 250ms`
-- [ ] `cd frontend && npm run build` ??0 error
-- [ ] Admin Editor mock ?뚮줈??紐⑸줉 ???곸꽭 ???몄쭛/誘몃━蹂닿린 ??諛쒗뻾 CTA) ?뺤긽
-- [ ] ?쒖뒪???꾩껜 `?곹깭=done` + `泥댄겕=[x]` ?쇱튂
-- [ ] `Current Doing` ?щ’??鍮꾩뼱 ?덉쓬(`-`)
-- [ ] ?꾨즺 ?쒖뒪?щ쭏??`利앷굅` 留곹겕 理쒖냼 1媛?議댁옱
+> **스프린트 시작:** 2026-03-07
+> **목표:** Newsprint 테마 완성 + 리스트/상세 고도화 + 반응형/접근성/성능 QA
+> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/04~06`
+> **이전 스프린트:** Phase 2B-OPS — 2026-03-07 게이트 전체 통과
 
 ---
 
-## Current Doing (1媛?怨좎젙)
+## 스프린트 완료 게이트
 
-| Task ID | ?곹깭 | ?쒖옉 ?쒓컖 | Owner |
+- [ ] 반응형: mobile/tablet/desktop 레이아웃 정상
+- [ ] 접근성: `prefers-reduced-motion`, 키보드 포커스, 대비 기준 통과
+- [ ] Lighthouse: Perf/Best/SEO/Acc 각각 `>= 85`
+- [ ] Core Web Vitals 목표: `LCP < 2.8s`, `CLS < 0.1`, `INP < 250ms`
+- [ ] `cd frontend && npm run build` → 0 error
+- [ ] Admin Editor mock 워크플로우(목록 → 상세 → 편집/미리보기 → 발행 CTA) 정상
+- [ ] 태스크 전체 `상태=done` + `체크=[x]` 일치
+- [ ] `Current Doing` 표가 비어 있음(`-`)
+- [ ] 완료 태스크마다 `증거` 마크 최소 1개 존재
+
+---
+
+## Current Doing (1개 고정)
+
+| Task ID | 상태 | 시작 시점 | Owner |
 |---|---|---|---|
 | - | - | - | - |
 
-洹쒖튃:
-- 臾몄꽌 ??`?곹깭: doing` ?쒖뒪?ш? ?덉쑝硫????쒖뿉??諛섎뱶??1媛쒕쭔 湲곗엯?쒕떎.
-- 臾몄꽌 ??`?곹깭: doing` ?쒖뒪?ш? 0媛쒕㈃ ?쒕뒗 `-`瑜??좎??쒕떎.
-- ?쒖뒪???곹깭 蹂寃??????쒕? 媛숈? 而ㅻ컠?먯꽌 ?④퍡 媛깆떊?쒕떎.
+규칙:
+- 문서 내 `상태: doing` 태스크가 있으면 이 표에도 반드시 1개만 기입한다.
+- 문서 내 `상태: doing` 태스크가 0개면 셀은 `-`를 유지한다.
+- 태스크 상태 변경할 때마다 같은 커밋에서 즉시 갱신한다.
 
 ---
 
-## ?곹깭 ?낅뜲?댄듃 洹쒖튃
+## 상태 업데이트 규칙
 
-- ?쇳빀??怨좎젙: `?곹깭(todo/doing/review/done/blocked)` + `泥댄겕([ ]/[x])`瑜??④퍡 ?ъ슜?쒕떎.
-- `todo/review/doing/blocked`??`泥댄겕: [ ]`濡??좎??쒕떎.
-- `done`? 諛섎뱶??`泥댄겕: [x]`濡?蹂寃쏀븳??
-- `?곹깭`? `泥댄겕`媛 遺덉씪移섑븯硫?臾댄슚濡?媛꾩＜?쒕떎. ?? `?곹깭: done` + `泥댄겕: [ ]` 湲덉?.
-- `利앷굅`???쒖뒪???꾨즺(`?곹깭: done`) ???꾩닔?대ŉ, PR/濡쒓렇/?ㅽ겕由곗꺑 以?理쒖냼 1媛?留곹겕瑜??④릿??
-
----
-
-## ?쒖뒪??(?ㅽ뻾 ?쒖꽌)
-
-### 1. Newsprint ?좏겙/?뚮쭏/怨듯넻 而댄룷?뚰듃 ?뺣━ `[P2C-UI-11]`
-- **泥댄겕:** [x]
-- **?곹깭:** done
-- **紐⑹쟻:** 湲곗〈 newsprint 而댄룷?뚰듃(Shell, ListCard, SideRail, CategoryFilter, ArticleLayout) ?뺣━ + ?뚮쭏 ?좏겙 ?듯빀 (dark/light/pink)
-- **?곗텧臾?** `frontend/src/components/newsprint/` ?뺣━ + `frontend/src/styles/global.css` ?좏겙 泥닿퀎??
-- **?꾨즺 湲곗?:** `npm run build` 0 error + 3 ?뚮쭏 preview ?섏씠吏 ?뺤긽 ?뚮뜑留?
-- **寃利?** `cd frontend && npm run build` + preview ?섏씠吏 ?섎룞 ?뺤씤
-- **利앷굅:** commits f3c39c5..dc3ced5 (6 commits: 而댄룷?뚰듃 5媛?+ CSS ?좏겙 3?뚮쭏 + preview 3?섏씠吏 + 釉뚮옖??援먯껜)
-- **李몄“:** IMPLEMENTATION_PLAN 짠3 2C-EXP
-- **?섏〈??** ?놁쓬
-
-### 2. /en|ko/log 由ъ뒪???곸꽭 + ?ㅺ뎅???ㅼ쐞泥?+ ?붾㈃ ?곹깭 `[P2C-UI-12]`
-- **泥댄겕:** [x]
-- **?곹깭:** done
-- **紐⑹쟻:** 由ъ뒪???곸꽭 ?섏씠吏??newsprint ?ㅽ???蹂멸꺽 ?곸슜 + ?ㅺ뎅???ㅼ쐞泥?+ empty/error/loading ?곹깭 泥섎━
-- **?곗텧臾?** `frontend/src/pages/en|ko/log/` ?섏씠吏 ?낅뜲?댄듃 + `NewsprintNotice` 而댄룷?뚰듃
-- **?꾨즺 湲곗?:** EN/KO 由ъ뒪???곸꽭 ?뺤긽 ?뚮뜑留?+ ?몄뼱 ?꾪솚 ?숈옉 + 鍮??곹깭 ?쒖떆
-- **寃利?** `npm run build` 0 error ??
-- **利앷굅:** ?대쾲 而ㅻ컠 (i18n ??3媛?+ NewsprintNotice 而댄룷?뚰듃 + 由ъ뒪???곸꽭 ?먮윭 泥섎━ + 404 UI)
-- **鍮꾧퀬:** Loading state??SSR 援ъ“???대떦 ?놁쓬 (?쒕쾭媛 ?꾩꽦??HTML ?꾩넚). 誘몄뿰寃?env 誘몄꽕????empty, 荑쇰━ ?ㅽ뙣 ??error濡?援щ텇.
-- **李몄“:** IMPLEMENTATION_PLAN 짠3 2C-EXP
-- **?섏〈??** P2C-UI-11
-
-### 3. ?몃꽕???대?吏 newsprint ?꾪꽣 `[P2C-UI-13]`
-- **泥댄겕:** [x]
-- **?곹깭:** done
-- **紐⑹쟻:** Featured 移대뱶??og_image_url 湲곕컲 ?몃꽕???뚮뜑留?+ 湲곗〈 .img-newsprint ?꾪꽣 ?곌껐
-- **?곗텧臾?** `global.css` grid ?덉씠?꾩썐 + EN/KO 由ъ뒪??featured 移대뱶 ?대?吏 + preview 3?섏씠吏 mock ?대?吏
-- **?꾨즺 湲곗?:** ?대?吏 湲곕낯 ?묐갚+?명뵾??+ hover ??而щ윭 蹂듭썝 transition ?숈옉
-- **寃利?** `npm run build` 0 error ??+ preview ?섏씠吏 ?쒓컖 ?뺤씤
-- **利앷굅:** commits 2f1316c..920102b (CSS grid + EN/KO featured thumbnail + preview mock images)
-- **鍮꾧퀬:** ?섎㉧吏 移대뱶???띿뒪???꾩슜 ?좎?. ?곸꽭 ?섏씠吏 hero ?대?吏??蹂꾨룄 ?쒖뒪?щ줈 遺꾨━.
-- **李몄“:** IMPLEMENTATION_PLAN 짠3 2C-EXP
-- **?섏〈??** P2C-UI-12
-
-### 4. Admin Editor ?붾㈃(留덊겕?ㅼ슫 ?묒꽦/誘몃━蹂닿린) `[P2C-UI-14]`
-- **泥댄겕:** [x]
-- **?곹깭:** done
-- **紐⑹쟻:** `/admin`?먯꽌 ?쒕옒?꾪듃 ?몄쭛 ?붾㈃(留덊겕?ㅼ슫 ?묒꽦 + 誘몃━蹂닿린 + Save/Publish ?≪뀡)??newsprint ?ㅼ쑝濡?援ы쁽
-- **?곗텧臾?** Admin Editor UI 而댄룷?뚰듃/?섏씠吏 ?낅뜲?댄듃
-- **?꾨즺 湲곗?:** ?몄쭛 ?낅젰, 誘몃━蹂닿린 ?꾪솚, Save/Publish CTA ?몄텧 諛?湲곕낯 ?숈옉(mock) ?뺤씤
-- **寃利?** `cd frontend && npm run build` 0 error ??
-- **利앷굅:** commits d2015c8..529886c (milkdown install + admin CSS + dashboard + editor page)
-- **李몄“:** IMPLEMENTATION_PLAN 짠3 2C-EXP, 04_Frontend_Spec 짠3-5
-- **?섏〈??** P2C-UI-13
-
-### 5. Admin Editor ?곹깭/沅뚰븳/?먮윭 泥섎━(mock) `[P2C-UI-15]`
-- **泥댄겕:** [x]
-- **?곹깭:** done
-- **紐⑹쟻:** Admin Editor??loading/empty/404/401/403 ?곹깭? ???諛쒗뻾 ?쇰뱶諛깆쓣 OpenAPI 怨좎젙 ?ㅽ궎留?湲곕컲 mock?쇰줈 援ы쁽
-- **?곗텧臾?** ?곹깭蹂?UI, ?ㅻ쪟 硫붿떆吏, ?≪뀡 ?쇰뱶諛?泥섎━
-- **?꾨즺 湲곗?:** 沅뚰븳/?먮윭 ?곹깭蹂??붾㈃怨?硫붿떆吏媛 ?쇨??섍쾶 ?몄텧?섍퀬, ?몄쭛 ?뚮줈?곌? 以묐떒 ?놁씠 蹂듦뎄 媛??
-- **寃利?** `cd frontend && npm run build` + ?곹깭蹂??섎룞 ?쒕굹由ъ삤 ?먭?
-- **利앷굅:** commits 9e39904..ab58654 (unauthorized variant + feedback CSS + list state branching + editor state/feedback/save)
-- **李몄“:** IMPLEMENTATION_PLAN 짠1 Hard Gate, 짠3 2C-EXP
-- **?섏〈??** P2C-UI-14
-
-### 6. 諛섏쓳???묎렐???깅뒫 QA `[P2C-QA-11]`
-- **泥댄겕:** [x]
-- **?곹깭:** done
-- **紐⑹쟻:** Lighthouse 痢≪젙 + Core Web Vitals + ?묎렐???먭?
-- **?곗텧臾?** Lighthouse 由ы룷??(Perf/Best/SEO/Acc >= 85) + ?묎렐???먭? 寃곌낵
-- **?꾨즺 湲곗?:** Lighthouse 4媛???ぉ 紐⑤몢 >= 85, CWV 紐⑺몴 異⑹”, ?묎렐??湲곕낯 ?듦낵
-- **寃利?** Lighthouse CLI ?먮뒗 DevTools 痢≪젙 寃곌낵 罹≪쿂
-- **利앷굅:** Perf 87 / Acc 98 / SEO 100 / BP 77 (Clarity 3rd-party cookies); commits 1c497b6..db0e8b7
-- **李몄“:** IMPLEMENTATION_PLAN 짠3 2C Gate
-- **?섏〈??** P2C-UI-15
+- 통합적 고정: `상태(todo/doing/review/done/blocked)` + `체크([ ]/[x])`를 즉시 사용한다.
+- `todo/review/doing/blocked`은 `체크: [ ]`로 유지한다.
+- `done`은 반드시 `체크: [x]`로 변경한다.
+- `상태`와 `체크`가 불일치하면 무효로 간주한다. 예: `상태: done` + `체크: [ ]` 금지.
+- `증거`는 태스크 완료(`상태: done`) 시 필수이며, PR/로그/스크린샷 중 최소 1개 마크를 기록한다.
 
 ---
 
-## ?섏〈???먮쫫
+## 태스크 (실행 순서)
+
+### 1. Newsprint 토큰/테마/공통 컴포넌트 정리 `[P2C-UI-11]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 기존 newsprint 컴포넌트(Shell, ListCard, SideRail, CategoryFilter, ArticleLayout) 정리 + 테마 토큰 통합 (dark/light/pink)
+- **산출물:** `frontend/src/components/newsprint/` 정리 + `frontend/src/styles/global.css` 토큰 체계화
+- **완료 기준:** `npm run build` 0 error + 3 테마 preview 페이지 정상 렌더링
+- **검증:** `cd frontend && npm run build` + preview 페이지 수동 확인
+- **증거:** commits f3c39c5..dc3ced5 (6 commits: 컴포넌트 5개 + CSS 토큰 3테마 + preview 3페이지 + 브랜드 교체)
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
+- **의존성:** 없음
+
+### 2. /en|ko/log 리스트/상세 + 다국어 스위처 + 화면 상태 `[P2C-UI-12]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 리스트/상세 페이지에 newsprint 스타일 변환 적용 + 다국어 스위처 + empty/error/loading 상태 처리
+- **산출물:** `frontend/src/pages/en|ko/log/` 페이지 업데이트 + `NewsprintNotice` 컴포넌트
+- **완료 기준:** EN/KO 리스트/상세 정상 렌더링 + 언어 전환 동작 + 빈 상태 표시
+- **검증:** `npm run build` 0 error 확인
+- **증거:** 이번 커밋 (i18n 맵 3개 + NewsprintNotice 컴포넌트 + 리스트/상세 에러 처리 + 404 UI)
+- **비고:** Loading state는 SSR 구조상 해당 없음 (서버가 완성된 HTML 전송). 미연결 env 미설정 시 empty, 쿼리 실패 시 error로 구분.
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
+- **의존성:** P2C-UI-11
+
+### 3. 썸네일 이미지 newsprint 필터 `[P2C-UI-13]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** Featured 카드의 og_image_url 기반 썸네일 렌더링 + 기존 .img-newsprint 필터 적용
+- **산출물:** `global.css` grid 레이아웃 + EN/KO 리스트 featured 카드 이미지 + preview 3페이지 mock 이미지
+- **완료 기준:** 이미지 기본 흑백+세피아 + hover 시 컬러 복원 transition 동작
+- **검증:** `npm run build` 0 error 확인 + preview 페이지 시각 확인
+- **증거:** commits 2f1316c..920102b (CSS grid + EN/KO featured thumbnail + preview mock images)
+- **비고:** 나머지 카드는 텍스트 전용 유지. 상세 페이지 hero 이미지는 별도 태스크로 분리.
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
+- **의존성:** P2C-UI-12
+
+### 4. Admin Editor 화면(마크다운 작성/미리보기) `[P2C-UI-14]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** `/admin`에서 드래프트 편집 화면(마크다운 작성 + 미리보기 + Save/Publish 액션)을 newsprint 스타일로 구현
+- **산출물:** Admin Editor UI 컴포넌트/페이지 업데이트
+- **완료 기준:** 편집 입력, 미리보기 전환, Save/Publish CTA 인터페이스 및 기본 동작(mock) 확인
+- **검증:** `cd frontend && npm run build` 0 error 확인
+- **증거:** commits d2015c8..529886c (milkdown install + admin CSS + dashboard + editor page)
+- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP, 04_Frontend_Spec §3-5
+- **의존성:** P2C-UI-13
+
+### 5. Admin Editor 상태/권한/에러 처리(mock) `[P2C-UI-15]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** Admin Editor의 loading/empty/404/401/403 상태와 저장/발행 피드백을 OpenAPI 고정 스키마 기반 mock으로 구현
+- **산출물:** 상태별 UI, 에러 메시지, 액션 피드백 처리
+- **완료 기준:** 권한/에러 상태별 화면과 메시지가 올바르게 인터페이스되고, 편집 프로세스가 중단 없이 분명 가능
+- **검증:** `cd frontend && npm run build` + 상태별 수동 시나리오 확인
+- **증거:** commits 9e39904..ab58654 (unauthorized variant + feedback CSS + list state branching + editor state/feedback/save)
+- **참조:** IMPLEMENTATION_PLAN §1 Hard Gate, §3 2C-EXP
+- **의존성:** P2C-UI-14
+
+### 6. 반응형/접근성/성능 QA `[P2C-QA-11]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** Lighthouse 측정 + Core Web Vitals + 접근성 확인
+- **산출물:** Lighthouse 리포트(Perf/Best/SEO/Acc >= 85) + 접근성 확인 결과
+- **완료 기준:** Lighthouse 4개 영역 모두 >= 85, CWV 목표 충족, 접근성 기본 통과
+- **검증:** Lighthouse CLI 또는 DevTools 측정 결과 캡처
+- **증거:** Perf 87 / Acc 98 / SEO 100 / BP 77 (Clarity 3rd-party cookies); commits 1c497b6..db0e8b7
+- **참조:** IMPLEMENTATION_PLAN §3 2C Gate
+- **의존성:** P2C-UI-15
+
+---
+
+## 의존성 순서
 
 ```
-P2C-UI-11 ??P2C-UI-12 ??P2C-UI-13 ??P2C-UI-14 ??P2C-UI-15 ??P2C-QA-11
+P2C-UI-11 → P2C-UI-12 → P2C-UI-13 → P2C-UI-14 → P2C-UI-15 → P2C-QA-11
 ```
 
 ---
 
-## ?댁쟾 ?ㅽ봽由고듃 ?붿빟 (Phase 2B-OPS)
+## 이전 스프린트 요약 (Phase 2B-OPS)
 
-> Phase 2B-OPS (2026-03-07) ??寃뚯씠???꾩껜 ?듦낵, 4媛??쒖뒪???꾨즺, 49 tests passed.
-> - OpenAPI ?ㅽ궎留?怨좎젙 (12 schemas, 6 endpoints)
-> - AI Agent 3醫?援ы쁽 (Ranking gpt-4o-mini, Research/Business gpt-4o)
-> - Admin CRUD ?ㅺ뎄??(list/get/publish/update + 401/403 遺꾨━)
-> - Cron skeleton (secret 寃利?+ 202 諛섑솚)
-
----
-
-## ?댁쟾 ?ㅽ봽由고듃 ?붿빟 (Phase 2A)
-
-> Phase 2A (2026-03-06 ~ 03-07) ??寃뚯씠???꾩껜 ?듦낵, 6媛??쒖뒪???꾨즺.
-> - DB 留덉씠洹몃젅?댁뀡 (`supabase/migrations/00002_pipeline_tables.sql`, 5媛??뚯씠釉?+ RLS)
-> - Pydantic ?ㅽ궎留??뺤쓽 (ranking, research, business, common)
-> - ?댁뒪 ?섏쭛 ?쒕퉬??Mock ?뚯뒪???꾨즺 (Tavily/HN/GitHub + dedup)
-> - ?뚯씠?꾨씪??Lock/Stale Recovery 援ы쁽 諛??뚯뒪??(8 passed)
-> - Security 誘몃뱾?⑥뼱 + Vercel Cron Trigger skeleton ?꾨즺
+> Phase 2B-OPS (2026-03-07) — 게이트 전체 통과, 4개 태스크 완료, 49 tests passed.
+> - OpenAPI 스키마 고정 (12 schemas, 6 endpoints)
+> - AI Agent 3종 구현 (Ranking gpt-4o-mini, Research/Business gpt-4o)
+> - Admin CRUD 엔드포인트 (list/get/publish/update + 401/403 분리)
+> - Cron skeleton (secret 검증 + 202 반환)
 
 ---
 
-## ?ㅼ쓬 ?ㅽ봽由고듃 ?덇퀬
+## 이전 스프린트 요약 (Phase 2A)
 
-Phase 2C 寃뚯씠???듦낵 ????**Phase 2D-INT** (?듯빀/E2E: Mock ?쒓굅 + ?짞PI ?곕룞 + E2E ?뚯뒪??
+> Phase 2A (2026-03-06 ~ 03-07) — 게이트 전체 통과, 6개 태스크 완료.
+> - DB 마이그레이션 (`supabase/migrations/00002_pipeline_tables.sql`, 5개 테이블 + RLS)
+> - Pydantic 스키마 정의 (ranking, research, business, common)
+> - 뉴스 수집 서비스 Mock 테스트 완료 (Tavily/HN/GitHub + dedup)
+> - 파이프라인 Lock/Stale Recovery 구현 및 테스트 (8 passed)
+> - Security 미들웨어 + Vercel Cron Trigger skeleton 완료
+
+---
+
+## 다음 스프린트 예고
+
+Phase 2C 게이트 통과 후 → **Phase 2D-INT** (통합/E2E: Mock 제거 + 실API 연동 + E2E 테스트)
 
 ---
 
