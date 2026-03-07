@@ -1,7 +1,7 @@
 ﻿# 0to1log Implementation Plan (Core Edition)
 
-> **문서 버전:** v2.3  
-> **최종 수정:** 2026-03-07  
+> **문서 버전:** v2.5  
+> **최종 수정:** 2026-03-08  
 > **작성자:** Amy (Solo)  
 > **상태:** Active Planning  
 > **목적:** 바이브 코딩 속도는 유지하고, 재작업을 유발하는 핵심 리스크만 강제한다.
@@ -39,13 +39,28 @@ flowchart TD
   P2B --> P2C[Phase 2C EXP]
   P2C --> P2D[Phase 2D INT]
   P2D --> P3[Phase 3 Intelligence]
+
+  H1[Handbook H1: Read-Only] -.-> H2[Handbook H2: AI Pipeline]
+  H2 -.-> P2B
 ```
+
+> **Handbook 별도 트랙:** Tech Handbook(용어 사전) 기능은 메인 Phase와 병렬 진행.
+> H1(읽기 전용)은 즉시 착수 가능, H2(AI 수집 파이프라인)는 Phase 2B 이후.
+> 제품 우선순위는 `/log`의 AI News 영역 + `/handbook`을 메인으로 두고, `/portfolio`는 비핵심 showcase surface로 취급한다.
+> Handbook 병렬 작업은 별도 sprint 문서 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md`로 운영하고, 메인 ACTIVE_SPRINT와 섞지 않는다.
+> 상세 스펙 → `docs/08_Handbook.md`
+
+### Current Status Snapshot
+- Mainline 구현 상태: **Phase 2D-INT 완료** (main 브랜치 반영 완료)
+- **완료된 단계:** 2B-OPS, 2C-EXP, 2D-INT
+- **병렬 진행:** Handbook H1은 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md` 기준으로 별도 운영한다.
+- **다음 메인라인 스프린트:** Phase 3 Intelligence 또는 3A-SEC 중 선택 대기
 
 ---
 
 ## 3) Phase 2 실행 계획 (결정 완료)
 
-### 2B-OPS (백엔드 기능 고정)
+### 2B-OPS (백엔드 기능 고정, 완료)
 - `P2B-API-01`: AI Agent 로직 + Prompt 튜닝 (외부 API 테스트는 Mock 필수)
 - `P2B-API-02`: Admin CRUD 엔드포인트 + 인증/권한 테스트
 - `P2B-CRON-00`: Cron endpoint skeleton + 인증 헤더 검증 (실운영 연동 제외)
@@ -55,7 +70,7 @@ flowchart TD
 - `pytest` 통과
 - 401/403 분리 동작 확인
 
-### 2C-EXP (프론트 경험 고도화)
+### 2C-EXP (프론트 경험 고도화, 완료)
 - `P2C-UI-11`: Newsprint 토큰/테마/공통 컴포넌트 정리
 - `P2C-UI-12`: `/en|ko/log` 리스트/상세 + 다국어 스위처 + 화면 상태(empty/error/loading)
 - `P2C-UI-13`: 썸네일 이미지 newsprint 필터 (`.img-newsprint` grayscale+sepia 기본 적용, hover 시 원본 컬러 복원 transition)
@@ -73,7 +88,7 @@ flowchart TD
 - `npm run build` 0 error
 - Admin Editor mock 워크플로우(목록 → 상세 → 편집/미리보기 → 발행 CTA) 정상
 
-### 2D-INT (통합/E2E)
+### 2D-INT (통합/E2E, 완료)
 - `P2D-SEC-01`: Frontend/SSR 보안 하드닝 (`/api/trigger-pipeline` 공개 호출 차단, markdown raw HTML 허용 제거 또는 sanitize, 공개 `/admin` mock을 실제 session guard로 전환)
 - `P2D-SEC-02`: Backend/API 보안 하드닝 (slowapi 실제 적용, env loading/test isolation 정리, CORS/secret 경계 재검증)
 - `P2D-AUTH-01`: Supabase Auth 실연동(admin 로그인/로그아웃/세션 복원/보호 라우트 가드 + 기본 user sign-in entry) 구현
@@ -83,6 +98,7 @@ flowchart TD
 - 우측 컬럼 실데이터 치환: `Editor's Note`=admin 입력, `Most Read`=GA4/DB 집계, `Focus of This Article`=글별 admin 입력, `More in This Issue`=관련도 로직
 - 언어 전환 실데이터 치환: DB에 EN/KO pair 연결 데이터(`translation_group_id`, `source_post_id`)가 존재해야 하며, 상세 페이지는 반대 언어 포스트 `slug`를 조회하고, switcher는 단순 경로 치환이 아니라 paired `slug`로 이동해야 한다. pair가 없으면 locale index로 fallback한다.
 - 일반 사용자 로그인은 2D에서 **기본 진입/세션 유지 수준만** 구현하고, 댓글/구독/커뮤니티 등 로그인 활용 기능 확장은 이후 Phase 3~4에서 다룬다.
+- 2026-03-08 기준 security hardening fixes까지 반영되었으며, 핵심 보안 정정은 `P2D-SEC-01/02` 범위 내에서 닫는다 (`config.py` extra ignore, test env isolation, `FASTAPI_URL` 통일, `x-vercel-cron` 우회 제거).
 
 **2D Gate**
 - 실데이터 기준 리스트/상세 렌더링 정상
