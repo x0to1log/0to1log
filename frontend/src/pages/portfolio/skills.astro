@@ -1,0 +1,36 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+
+const skills = [
+  { label: 'AI / LLM', items: ['LangGraph', 'LangChain', 'RAG', 'OpenAI API', 'Prompt Engineering'] },
+  { label: 'ML / CV', items: ['PyTorch', 'YOLOv8', 'Scikit-learn'] },
+  { label: 'Data', items: ['Pandas', 'NumPy', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'] },
+  { label: 'Backend', items: ['Python', 'FastAPI', 'PostgreSQL', 'Supabase'] },
+  { label: 'Frontend', items: ['Astro', 'Tailwind CSS', 'Streamlit'] },
+  { label: 'Tools', items: ['Git', 'GitHub', 'Docker', 'Notion'] },
+];
+---
+
+<MainLayout title="Skills — Portfolio" locale="en" headerAlwaysVisible={true}>
+  <div class="pf-page">
+
+    <a class="pf-back" href="/portfolio/">&larr; Portfolio</a>
+
+    <section class="pf-section" style="--reveal: 0;">
+      <h1 class="pf-section-title">Skills &amp; Tools</h1>
+      <div class="pf-skills-grid">
+        {skills.map((cat) => (
+          <div class="pf-skill-group">
+            <h2 class="pf-skill-label">{cat.label}</h2>
+            <div class="pf-skill-items">
+              {cat.items.map((item) => (
+                <span class="newsprint-tag">{item}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+  </div>
+</MainLayout>

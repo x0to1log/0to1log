@@ -1,0 +1,68 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+
+const projects = [
+  {
+    title: '0to1log',
+    description: 'AI news curation platform with a newsprint-inspired editorial design. Full-stack solo project covering content pipeline, admin editor, and multilingual publishing.',
+    stack: ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS'],
+    href: '/en/log/',
+    year: '2026',
+  },
+  {
+    title: 'MarryRoute',
+    description: 'AI wedding planner agent powered by LangGraph. Conversational AI assistant "Marie" provides personalized venue recommendations, budget tracking, and schedule management.',
+    stack: ['LangGraph', 'GPT-4', 'Streamlit', 'PostgreSQL', 'Tavily'],
+    href: 'https://github.com/ming2tofu33/pjt-wedding_planner_AI_agent',
+    year: '2025',
+  },
+  {
+    title: 'Healthcare Pill Detection',
+    description: 'Medical pill object detection pipeline achieving 0.995 mAP score. Five-stage reproducible pipeline with automatic experiment tracking across 108+ training runs.',
+    stack: ['PyTorch', 'YOLOv8', 'OpenCV', 'Albumentations'],
+    href: 'https://github.com/ming2tofu33/pjt-sprint_ai07_healthcare',
+    year: '2025',
+  },
+  {
+    title: 'Korean Movie Analysis',
+    description: 'Comprehensive data analysis of 927 Korean films (2005-2019). Explored box office trends, critic-audience correlation, and director-actor collaboration networks.',
+    stack: ['Pandas', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'],
+    href: 'https://github.com/ming2tofu33/pjt-movie_analysis',
+    year: '2025',
+  },
+];
+---
+
+<MainLayout title="Projects — Portfolio" locale="en" headerAlwaysVisible={true}>
+  <div class="pf-page">
+
+    <a class="pf-back" href="/portfolio/">&larr; Portfolio</a>
+
+    <section class="pf-section" style="--reveal: 0;">
+      <h1 class="pf-section-title">Selected Projects</h1>
+      <div class="pf-project-grid">
+        {projects.map((project, i) => (
+          <a
+            class="pf-project-card"
+            href={project.href}
+            target={project.href.startsWith('http') ? '_blank' : undefined}
+            rel={project.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+            style={`--card-i: ${i};`}
+          >
+            <div class="pf-project-header">
+              <h2 class="pf-project-title">{project.title}</h2>
+              <span class="pf-project-year">{project.year}</span>
+            </div>
+            <p class="pf-project-desc">{project.description}</p>
+            <div class="pf-project-stack">
+              {project.stack.map((tech) => (
+                <span class="newsprint-tag">{tech}</span>
+              ))}
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+  </div>
+</MainLayout>

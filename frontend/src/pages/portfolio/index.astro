@@ -1,10 +1,72 @@
 ---
 import MainLayout from '../../layouts/MainLayout.astro';
+
+const sections = [
+  {
+    title: 'Selected Projects',
+    description: 'AI agents, computer vision pipelines, data analysis, and full-stack platforms.',
+    href: '/portfolio/projects/',
+    count: '4 projects',
+  },
+  {
+    title: 'Skills & Tools',
+    description: 'LLM applications, deep learning, data engineering, and web development.',
+    href: '/portfolio/skills/',
+    count: '6 categories',
+  },
+];
+
+const links = [
+  { label: 'GitHub', href: 'https://github.com/ming2tofu33' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/ming2tofu33/' },
+  { label: 'Email', href: 'mailto:ming2tofu33@gmail.com' },
+];
 ---
 
 <MainLayout title="Portfolio" locale="en" headerAlwaysVisible={true}>
-  <h1 class="text-heading">Portfolio</h1>
-  <p style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-    Projects coming soon.
-  </p>
+  <div class="pf-page">
+
+    <!-- Hero -->
+    <section class="pf-hero" style="--reveal: 0;">
+      <p class="pf-overline">Portfolio</p>
+      <h1 class="pf-name">Amy Domin Kim</h1>
+      <p class="pf-tagline">AI를 만들고, 기록하는 사람</p>
+      <div class="pf-ornament" aria-hidden="true">&mdash;&thinsp;&diams;&thinsp;&mdash;</div>
+      <p class="pf-bio">
+        AI Engineer building at the intersection of LLM applications, data analysis, and web development.
+        From designing multi-agent systems to analyzing 900+ films, I turn curiosity into working software
+        and share what I learn along the way.
+      </p>
+      <nav class="pf-links" aria-label="Social links">
+        {links.map((link, i) => (
+          <>
+            {i > 0 && <span class="pf-link-sep" aria-hidden="true">&middot;</span>}
+            <a href={link.href} target={link.href.startsWith('http') ? '_blank' : undefined} rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}>
+              {link.label}
+            </a>
+          </>
+        ))}
+      </nav>
+    </section>
+
+    <!-- Section Links -->
+    <div class="pf-landing-grid" style="--reveal: 1;">
+      {sections.map((section, i) => (
+        <a class="pf-landing-card" href={section.href} style={`--card-i: ${i};`}>
+          <div class="pf-landing-card-header">
+            <h2 class="pf-landing-card-title">{section.title}</h2>
+            <span class="pf-landing-card-count">{section.count}</span>
+          </div>
+          <p class="pf-landing-card-desc">{section.description}</p>
+          <span class="pf-landing-card-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      ))}
+    </div>
+
+    <!-- Footer ornament -->
+    <div class="pf-footer-ornament" aria-hidden="true" style="--reveal: 2;">
+      &mdash;&thinsp;&diams;&thinsp;&mdash;
+    </div>
+
+  </div>
 </MainLayout>
