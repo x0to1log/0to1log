@@ -244,7 +244,7 @@ CREATE TABLE posts (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title           TEXT NOT NULL,
     slug            TEXT UNIQUE NOT NULL,
-    category        TEXT NOT NULL CHECK (category IN ('ai-news', 'tech', 'career', 'project')),
+    category        TEXT NOT NULL CHECK (category IN ('ai-news', 'study', 'career', 'project')),
     post_type       TEXT CHECK (post_type IN ('research', 'business')),
     status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
     
@@ -293,7 +293,7 @@ CREATE TABLE posts (
     CONSTRAINT chk_post_type_by_category CHECK (
         (category = 'ai-news' AND post_type IN ('research', 'business'))
         OR
-        (category IN ('tech', 'career', 'project') AND post_type IS NULL)
+        (category IN ('study', 'career', 'project') AND post_type IS NULL)
     )
 );
 
@@ -1207,8 +1207,8 @@ class TestResearchPostSchema:
     def test_valid_post_no_news(self):
         """뉴스가 없을 때 '없음' 공지 검증"""
         post = ResearchPost(
-            title="2026-03-04 AI Tech Daily",
-            slug="2026-03-04-tech-daily",
+            title="2026-03-04 AI Study Daily",
+            slug="2026-03-04-study-daily",
             category="ai-news",
             post_type="research",
             has_news=False,

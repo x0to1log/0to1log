@@ -123,7 +123,7 @@
 |---|---|---|
 | **AI NEWS (Research)** | 단일 버전 (자동 발행) | 기술 심화 분석 — 모델, 논문, 오픈소스 중심. 뉴스 없는 날은 "없음" 공지 + 최근 동향 보충 |
 | **AI NEWS (Business)** | 3페르소나 (수동 검수) | 시장 분석 — 3페르소나 버전 + Related News 3카테고리 (Big Tech / Industry / New Tools) |
-| **학습 (Tech)** | Type A (Multi-Targeting) | PyTorch, SQL 등 원리 설명, 코드 공유 |
+| **서재 (Study)** | Type A (Multi-Targeting) | PyTorch, SQL 등 원리 설명, 코드 공유 |
 | **커리어 (Career)** | Type B (Authentic Voice) | 성장 서사, 동기부여 — 작성자 목소리 유지 |
 | **프로젝트 (Project)** | Type B (Authentic Voice) | 아키텍처 설계, 트러블슈팅 — 작성자 목소리 유지 |
 

@@ -381,7 +381,7 @@ Astro 설정: `shikiConfig: { theme: 'css-variables' }` — 인라인 스타일 
 │                                                  │
 │  ── Recent Posts ─────────────────────────────── │
 │                                                  │
-│  [카테고리 필터: All | AI NEWS | Tech | Career]  │
+│  [카테고리 필터: All | AI NEWS | Study | Career]  │
 │                                                  │
 │  ┌─────────────────────────────────────────────┐ │
 │  │ Post Card                          2h ago   │ │
@@ -418,7 +418,7 @@ Astro 설정: `shikiConfig: { theme: 'css-variables' }` — 인라인 스타일 
 │                                                  │
 │  All Posts                          총 N개의 글  │
 │                                                  │
-│  [All] [AI NEWS] [Tech] [Career] [Project]       │
+│  [All] [AI NEWS] [Study] [Career] [Project]       │
 │                                                  │
 │  ┌─────────────────────────────────────────────┐ │
 │  │ 🔬 [Research] GPT-5 아키텍처 분석    3h ago │ │
