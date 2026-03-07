@@ -1430,3 +1430,243 @@ code, pre {
 @media (max-width: 479px) {
   .pf-skills-grid { grid-template-columns: 1fr; }
 }
+
+/* ===========================
+   USER FEATURE STYLES
+   =========================== */
+
+/* Read state: dimmed card for already-read items */
+.newsprint-card--read {
+  opacity: 0.55;
+  transition: opacity 200ms ease;
+}
+
+.newsprint-card--read:hover {
+  opacity: 0.85;
+}
+
+/* Bookmark icon */
+.newsprint-bookmark-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: color 150ms ease;
+  flex-shrink: 0;
+}
+
+.newsprint-bookmark-icon:hover {
+  color: var(--color-accent);
+}
+
+.newsprint-bookmark-icon--active {
+  color: var(--color-accent);
+}
+
+.newsprint-bookmark-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Bookmark icon on detail pages (larger) */
+.newsprint-bookmark-icon--detail {
+  width: 2rem;
+  height: 2rem;
+}
+
+.newsprint-bookmark-icon--detail svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* User avatar button & dropdown */
+.user-avatar-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  transition: border-color 150ms ease;
+}
+
+.user-avatar-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.user-avatar-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 160px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  z-index: 200;
+  display: none;
+}
+
+.user-dropdown[data-open="true"] {
+  display: block;
+}
+
+.user-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-family: var(--font-ui);
+  color: var(--color-text-primary);
+  background: none;
+  border: none;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.user-dropdown-item:hover {
+  background: var(--color-accent-subtle);
+}
+
+/* OAuth login button */
+.login-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.login-oauth-btn:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+}
+
+.login-oauth-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Library tabs */
+.library-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 3px double var(--color-border);
+  margin-bottom: 1.5rem;
+}
+
+.library-tab {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.library-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.library-tab--active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-accent);
+}
+
+/* Learning progress bar */
+.learning-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.learning-progress-fill {
+  height: 100%;
+  background: var(--color-success);
+  transition: width 300ms ease;
+}
+
+/* Learning check button */
+.learning-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: none;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.learning-check:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.learning-check--done {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+/* Type badge (post vs term) */
+.library-type-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 767px) {
+  .library-tab {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.65rem;
+    letter-spacing: 0.06em;
+  }
+}
