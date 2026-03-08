@@ -107,12 +107,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 ---
 
 <MainLayout
-  title={`${pageTitle} — Handbook`}
+  title={`${pageTitle} — AI Glossary`}
   description={pageDescription}
   locale={locale}
   slug={`handbook/${pageSlug}/`}
 >
-  <NewsprintShell locale={locale} masthead="Handbook" editionLabel="CS · AI · Infra" subkicker={['Glossary', 'Reference', 'Learn']}>
+  <NewsprintShell locale={locale} masthead="AI Glossary" editionLabel="CS · AI · Infra" subkicker={['Glossary', 'Reference', 'Learn']}>
     {termError ? (
       <NewsprintNotice
         variant="error"
