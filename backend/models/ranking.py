@@ -16,7 +16,7 @@ class RankedCandidate(BaseModel):
     source: str
     assigned_type: str  # research | business_main | big_tech | industry_biz | new_tools
     relevance_score: float  # 0.0 - 1.0
-    ranking_reason: str
+    ranking_reason: Optional[str] = None
 
 
 class RelatedPicks(BaseModel):
