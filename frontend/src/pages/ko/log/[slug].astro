@@ -43,9 +43,9 @@ if (!post && !postError) {
 const masthead = 'AI의 모든 것';
 const editionMap: Record<string, string> = {
   'ai-news': '데일리 디스패치',
-  study: '서재 노트',
-  career: '커리어 노트',
-  project: '빌드 로그',
+  study: '학습 노트',
+  career: '커리어 일기',
+  project: '개발 기록',
 };
 const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || ''] || '딥 다이브') : '딥 다이브';
 
