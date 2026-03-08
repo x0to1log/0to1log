@@ -1,5 +1,5 @@
 -- 00002_pipeline_tables.sql
--- Phase 2A: Pipeline infrastructure tables
+-- Pipeline infrastructure tables
 -- Reference: docs/03_Backend_AI_Spec.md §3, docs/02_AI_Pipeline.md
 
 -- ============================================================
@@ -70,7 +70,7 @@ CREATE TABLE admin_notifications (
 );
 
 -- ============================================================
--- 5. point_transactions (Phase 4 스텁 — event_key 방식)
+-- 5. point_transactions (Phase 4 스텁)
 -- ============================================================
 CREATE TABLE point_transactions (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -83,7 +83,7 @@ CREATE TABLE point_transactions (
 );
 
 -- ============================================================
--- RLS Policies
+-- RLS (uid-based)
 -- ============================================================
 ALTER TABLE news_candidates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pipeline_runs ENABLE ROW LEVEL SECURITY;
@@ -93,20 +93,20 @@ ALTER TABLE point_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Admin: full access to pipeline tables
 CREATE POLICY "admin_full_news_candidates" ON news_candidates FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
 
 CREATE POLICY "admin_full_pipeline_runs" ON pipeline_runs FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
 
 CREATE POLICY "admin_full_pipeline_logs" ON pipeline_logs FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
 
 CREATE POLICY "admin_full_admin_notifications" ON admin_notifications FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
 
 -- point_transactions: admin full + own SELECT
 CREATE POLICY "admin_full_point_transactions" ON point_transactions FOR ALL
-    USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+    USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
 
 CREATE POLICY "own_point_transactions_read" ON point_transactions FOR SELECT
     USING (auth.uid() = user_id);

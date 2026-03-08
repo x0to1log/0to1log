@@ -1,5 +1,5 @@
--- 00006_handbook_terms.sql
--- Handbook: Tech glossary terms (bilingual EN/KO)
+-- 00003_handbook_terms.sql
+-- Handbook: Tech glossary terms (bilingual EN/KO, multi-category)
 -- Reference: docs/08_Handbook.md Section 4
 
 -- ============================================================
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS handbook_terms (
     slug                    TEXT UNIQUE NOT NULL,
     korean_name             TEXT,
     difficulty              TEXT CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
-    category                TEXT,
+    categories              TEXT[],
     related_term_slugs      TEXT[],
     is_favourite            BOOLEAN DEFAULT FALSE,
 
@@ -47,12 +47,12 @@ CREATE TABLE IF NOT EXISTS handbook_terms (
 -- ============================================================
 -- 2. Indexes
 -- ============================================================
-CREATE INDEX idx_handbook_category   ON handbook_terms(category);
+CREATE INDEX idx_handbook_categories ON handbook_terms USING GIN (categories);
 CREATE INDEX idx_handbook_difficulty ON handbook_terms(difficulty);
 CREATE INDEX idx_handbook_status     ON handbook_terms(status);
 
 -- ============================================================
--- 3. RLS (same pattern as posts in 00001)
+-- 3. RLS (uid-based)
 -- ============================================================
 ALTER TABLE handbook_terms ENABLE ROW LEVEL SECURITY;
 
@@ -62,7 +62,7 @@ CREATE POLICY "handbook_read" ON handbook_terms FOR SELECT
         status = 'published'
         OR EXISTS (
             SELECT 1 FROM admin_users au
-            WHERE au.email = auth.email()
+            WHERE au.user_id = auth.uid()
         )
     );
 
@@ -71,7 +71,7 @@ CREATE POLICY "handbook_write" ON handbook_terms FOR INSERT
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM admin_users au
-            WHERE au.email = auth.email()
+            WHERE au.user_id = auth.uid()
         )
     );
 
@@ -80,7 +80,7 @@ CREATE POLICY "handbook_update" ON handbook_terms FOR UPDATE
     USING (
         EXISTS (
             SELECT 1 FROM admin_users au
-            WHERE au.email = auth.email()
+            WHERE au.user_id = auth.uid()
         )
     );
 
@@ -89,6 +89,6 @@ CREATE POLICY "handbook_delete" ON handbook_terms FOR DELETE
     USING (
         EXISTS (
             SELECT 1 FROM admin_users au
-            WHERE au.email = auth.email()
+            WHERE au.user_id = auth.uid()
         )
     );

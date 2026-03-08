@@ -1,20 +1,42 @@
--- 00007_user_tables.sql
--- Phase 3-USER: profiles, user_bookmarks, reading_history, learning_progress
+-- 00004_user_tables.sql
+-- User feature tables: profiles, bookmarks, reading_history, learning_progress
 -- Design doc: docs/plans/2026-03-08-user-features-design.md
 
 -- 1. profiles
+-- Design doc: docs/plans/2026-03-09-profiles-redesign.md
 CREATE TABLE profiles (
-  id           UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  display_name TEXT,
-  avatar_url   TEXT,
-  persona      TEXT CHECK (persona IN ('beginner', 'learner', 'expert')),
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ DEFAULT NOW()
+  id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  -- Identity
+  display_name          TEXT,
+  username              TEXT UNIQUE,
+  avatar_url            TEXT,
+  bio                   TEXT,
+
+  -- Preferences
+  persona               TEXT CHECK (persona IN ('beginner', 'learner', 'expert')),
+  preferred_locale      TEXT DEFAULT 'ko' CHECK (preferred_locale IN ('en', 'ko')),
+
+  -- Visibility
+  is_public             BOOLEAN DEFAULT FALSE,
+
+  -- Onboarding
+  onboarding_completed  BOOLEAN DEFAULT FALSE,
+
+  -- Timestamps
+  created_at            TIMESTAMPTZ DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- username: 3~20자, 영소문자 + 숫자 + 하이픈
+ALTER TABLE profiles ADD CONSTRAINT chk_username_format
+  CHECK (username ~ '^[a-z0-9][a-z0-9-]{1,18}[a-z0-9]$');
+
+CREATE INDEX idx_profiles_username ON profiles(username);
+
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users read own profile"
-  ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users read own or public profile"
+  ON profiles FOR SELECT USING (auth.uid() = id OR is_public = true);
 CREATE POLICY "Users update own profile"
   ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users insert own profile"
@@ -63,8 +85,6 @@ CREATE POLICY "Users delete own history"
   ON reading_history FOR DELETE USING (auth.uid() = user_id);
 
 -- 4. learning_progress (Handbook 학습 진도)
--- NOTE: handbook_terms FK will be added after Handbook H1 merge.
--- For now, term_id is UUID without FK constraint (same pattern as user_bookmarks.item_id).
 CREATE TABLE learning_progress (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
