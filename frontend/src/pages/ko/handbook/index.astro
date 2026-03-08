@@ -72,35 +72,37 @@ const categories = Array.from(
     editionLabel="CS · AI · Infra"
     subkicker={['용어 사전', '레퍼런스', '학습']}
   >
-    <div id="handbook-controls" style="margin-bottom: 1.5rem;">
+    <div id="handbook-controls" class="handbook-controls">
       <input
         type="text"
         id="handbook-search"
+        aria-label={t[locale]['handbook.search']}
         placeholder={t[locale]['handbook.search']}
-        style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 0.9rem;"
+        class="handbook-search-input"
       />
-      <div id="handbook-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
-        <button class="handbook-filter-btn active" data-filter="all" style="padding: 0.25rem 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); color: var(--color-text); cursor: pointer; font-size: 0.8rem;">
+      <div id="handbook-filters" class="handbook-filter-row">
+        <button type="button" class="handbook-filter-btn active" data-filter="all" aria-pressed="true">
           {t[locale]['handbook.allCategories']}
         </button>
         {categories.map((cat) => (
-          <button class="handbook-filter-btn" data-filter={cat} style="padding: 0.25rem 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-size: 0.8rem;">
+          <button type="button" class="handbook-filter-btn" data-filter={cat} aria-pressed="false">
             {getHandbookCategoryLabel(locale, cat)}
           </button>
         ))}
       </div>
-      <div id="handbook-difficulty-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
-        <button class="handbook-difficulty-btn active" data-difficulty="all" style="padding: 0.25rem 0.75rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); color: var(--color-text); cursor: pointer; font-size: 0.8rem;">
+      <div id="handbook-difficulty-filters" class="handbook-filter-row">
+        <button type="button" class="handbook-difficulty-btn active" data-difficulty="all" aria-pressed="true">
           {t[locale]['handbook.allDifficulties']}
         </button>
         {['beginner', 'intermediate', 'advanced'].map((d) => (
-          <button class="handbook-difficulty-btn" data-difficulty={d}
-            style={`padding: 0.25rem 0.75rem; border: 1px solid ${difficultyColor(d)}; background: var(--color-bg); color: ${difficultyColor(d)}; cursor: pointer; font-size: 0.8rem;`}>
+          <button type="button" class="handbook-difficulty-btn" data-difficulty={d} aria-pressed="false"
+            style={`border-color: ${difficultyColor(d)}; color: ${difficultyColor(d)};`}>
             {difficultyLabel(locale, d)}
           </button>
         ))}
       </div>
     </div>
+    <div id="handbook-result-count" class="handbook-result-count" aria-live="polite" style="display: none;"></div>
 
     {fetchError ? (
       <NewsprintNotice
@@ -126,9 +128,8 @@ const categories = Array.from(
               data-korean={term.korean_name || ''}
               data-def={def}
               data-difficulty={term.difficulty || ''}
-              style="display: block; padding: 1rem; border-bottom: 1px solid var(--color-border); text-decoration: none; color: inherit;"
             >
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+              <div class="handbook-card-meta">
                 {term.difficulty && (
                   <span style={`font-size: 0.7rem; padding: 0.1rem 0.4rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
                     {difficultyLabel(locale, term.difficulty)}
@@ -140,8 +141,8 @@ const categories = Array.from(
                   </span>
                 ))}
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                <div style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; flex: 1;">
+              <div class="handbook-card-title-row">
+                <div class="handbook-card-title">
                   {term.term}
                 </div>
                 <button
@@ -157,13 +158,11 @@ const categories = Array.from(
                 </button>
               </div>
               {term.korean_name && (
-                <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.1rem;">
-                  {term.korean_name}
-                </div>
+                <div class="handbook-card-korean">{term.korean_name}</div>
               )}
               {def && (
-                <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.35rem; line-height: 1.4;">
-                  {def.length > 120 ? def.slice(0, 120) + '...' : def}
+                <div class="handbook-card-def">
+                  {def.length > 120 ? def.slice(0, 120) + '\u2026' : def}
                 </div>
               )}
             </a>
@@ -191,7 +190,9 @@ const categories = Array.from(
     const search = document.getElementById('handbook-search') as HTMLInputElement | null;
     const list = document.getElementById('handbook-list');
     const noResults = document.getElementById('handbook-no-results');
+    const countEl = document.getElementById('handbook-result-count');
     const filterBtns = document.querySelectorAll('.handbook-filter-btn');
+    const diffBtns = document.querySelectorAll('.handbook-difficulty-btn');
     if (!search || !list) return;
 
     let activeCategory = 'all';
@@ -209,14 +210,23 @@ const categories = Array.from(
         const def = (card.dataset.def || '').toLowerCase();
 
         const matchesCategory = activeCategory === 'all' || cats.includes(activeCategory);
+        const cardDifficulty = card.dataset.difficulty || '';
+        const matchesDifficulty = activeDifficulty === 'all' || cardDifficulty === activeDifficulty;
         const matchesSearch = !query || term.includes(query) || korean.includes(query) || def.includes(query);
 
-        card.style.display = matchesCategory && matchesSearch ? 'block' : 'none';
-        if (matchesCategory && matchesSearch) visible++;
+        const show = matchesCategory && matchesDifficulty && matchesSearch;
+        card.style.display = show ? 'block' : 'none';
+        if (show) visible++;
       });
 
       if (noResults) {
         noResults.style.display = visible === 0 && (query || activeCategory !== 'all' || activeDifficulty !== 'all') ? 'block' : 'none';
+      }
+      if (countEl) {
+        const total = cards.length;
+        const isFiltered = query || activeCategory !== 'all' || activeDifficulty !== 'all';
+        countEl.textContent = isFiltered ? `${visible} / ${total}` : '';
+        countEl.style.display = isFiltered ? 'block' : 'none';
       }
     }
 
@@ -226,30 +236,40 @@ const categories = Array.from(
       btn.addEventListener('click', () => {
         filterBtns.forEach((b) => {
           (b as HTMLElement).classList.remove('active');
-          (b as HTMLElement).style.background = 'var(--color-bg)';
-          (b as HTMLElement).style.color = 'var(--color-text-muted)';
+          (b as HTMLElement).setAttribute('aria-pressed', 'false');
         });
         (btn as HTMLElement).classList.add('active');
-        (btn as HTMLElement).style.background = 'var(--color-bg-secondary)';
-        (btn as HTMLElement).style.color = 'var(--color-text)';
+        (btn as HTMLElement).setAttribute('aria-pressed', 'true');
         activeCategory = (btn as HTMLElement).dataset.filter || 'all';
         filter();
       });
     });
 
-    const diffBtns = document.querySelectorAll('.handbook-difficulty-btn');
     diffBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
         diffBtns.forEach((b) => {
           (b as HTMLElement).classList.remove('active');
-          (b as HTMLElement).style.background = 'var(--color-bg)';
+          (b as HTMLElement).setAttribute('aria-pressed', 'false');
         });
         (btn as HTMLElement).classList.add('active');
-        (btn as HTMLElement).style.background = 'var(--color-bg-secondary)';
+        (btn as HTMLElement).setAttribute('aria-pressed', 'true');
         activeDifficulty = (btn as HTMLElement).dataset.difficulty || 'all';
         filter();
       });
     });
+
+    // Read ?category= query param and auto-activate filter
+    const urlCategory = new URLSearchParams(window.location.search).get('category');
+    if (urlCategory) {
+      activeCategory = urlCategory;
+      filterBtns.forEach((b) => {
+        const el = b as HTMLElement;
+        const isMatch = el.dataset.filter === urlCategory;
+        el.classList.toggle('active', isMatch);
+        el.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+      });
+      filter();
+    }
   }
 
   document.addEventListener('astro:page-load', initHandbookFilters);

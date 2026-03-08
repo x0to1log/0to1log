@@ -670,6 +670,60 @@
   display: block;
 }
 
+/* Headline (front-page style) */
+.newsprint-headline {
+  border-top: 3px double var(--color-border);
+  border-bottom: 3px double var(--color-border);
+  padding: 1.25rem 0;
+  margin-bottom: 1.5rem;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: background 150ms ease;
+}
+.newsprint-headline:hover {
+  background: var(--color-accent-subtle);
+}
+.newsprint-headline[data-filtered="false"] {
+  display: none;
+}
+.newsprint-headline-kicker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+.newsprint-headline-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 0.5rem;
+  transition: color 150ms ease;
+}
+.newsprint-headline:hover .newsprint-headline-title {
+  color: var(--color-accent);
+}
+.newsprint-headline-deck {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+.newsprint-headline-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 @media (max-width: 767px) {
   .newsprint-kicker {
     font-size: 0.6rem;
@@ -1898,7 +1952,8 @@ code, pre {
   justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
-  padding: 0;
+  padding: 0.625rem;
+  margin: -0.625rem;
   background: none;
   border: none;
   cursor: pointer;
@@ -2208,6 +2263,121 @@ code, pre {
 
 .handbook-nav-link:hover {
   color: var(--color-text);
+}
+
+
+/* Handbook list */
+.handbook-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+.handbook-search-input:focus-visible {
+  outline: 2px solid var(--color-accent, #4a90d9);
+  outline-offset: -1px;
+}
+
+.handbook-controls {
+  margin-bottom: 1.5rem;
+}
+
+.handbook-filter-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.handbook-filter-row + .handbook-filter-row {
+  margin-top: 0.5rem;
+}
+
+.handbook-filter-btn,
+.handbook-difficulty-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: var(--font-ui);
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.handbook-filter-btn:hover,
+.handbook-difficulty-btn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+.handbook-filter-btn:focus-visible,
+.handbook-difficulty-btn:focus-visible {
+  outline: 2px solid var(--color-accent, #4a90d9);
+  outline-offset: 1px;
+}
+.handbook-filter-btn.active,
+.handbook-difficulty-btn.active {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+
+.handbook-card {
+  display: block;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s;
+}
+.handbook-card:hover {
+  background: var(--color-bg-secondary);
+}
+.handbook-card:focus-visible {
+  outline: 2px solid var(--color-accent, #4a90d9);
+  outline-offset: -2px;
+}
+
+.handbook-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.handbook-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.handbook-card-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.handbook-card-korean {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.1rem;
+}
+
+.handbook-card-def {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.35rem;
+  line-height: 1.5;
+}
+
+.handbook-result-count {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+  font-style: italic;
 }
 
 /* Type badge (post vs term) */

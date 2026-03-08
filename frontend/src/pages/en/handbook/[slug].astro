@@ -179,7 +179,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         {plainExplanation && (
           <div class="handbook-section">
-            <span class="handbook-section-label">Plain Explanation</span>
+            <span class="handbook-section-label">{t[locale]['handbook.plainExplanation']}</span>
             <p class="handbook-section-body">{plainExplanation}</p>
           </div>
         )}
@@ -193,7 +193,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         {exampleAnalogy && (
           <div class="handbook-section">
-            <span class="handbook-section-label">Example / Analogy</span>
+            <span class="handbook-section-label">{t[locale]['handbook.exampleAnalogy']}</span>
             <p class="handbook-section-body">{exampleAnalogy}</p>
           </div>
         )}
@@ -263,7 +263,11 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     checkBtn.addEventListener('click', async () => {
       const lpId = checkBtn.dataset.learningId;
       const currentStatus = checkBtn.dataset.status;
-      if (!lpId) return;
+      if (!lpId || checkBtn.disabled) return;
+
+      checkBtn.disabled = true;
+      const prevText = checkBtn.textContent;
+      checkBtn.textContent = '\u2026';
 
       const newStatus = currentStatus === 'learned' ? 'read' : 'learned';
       try {
@@ -272,12 +276,20 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          checkBtn.textContent = prevText;
+          checkBtn.disabled = false;
+          return;
+        }
 
         checkBtn.dataset.status = newStatus;
         checkBtn.classList.toggle('learning-check--done', newStatus === 'learned');
         checkBtn.textContent = newStatus === 'learned' ? '✓ Learned' : '○ Mark as Learned';
-      } catch { /* ignore */ }
+      } catch {
+        checkBtn.textContent = prevText;
+      } finally {
+        checkBtn.disabled = false;
+      }
     });
   }
 

@@ -35,6 +35,8 @@ export const t: Record<Locale, Record<string, string>> = {
     'handbook.relatedArticles': 'Related Articles',
     'handbook.relatedTerms': 'Related Terms',
     'handbook.technicalDescription': 'Technical Description',
+    'handbook.plainExplanation': 'Plain Explanation',
+    'handbook.exampleAnalogy': 'Example / Analogy',
     'handbook.translationPending': 'Translation in progress',
   },
   ko: {
@@ -63,6 +65,8 @@ export const t: Record<Locale, Record<string, string>> = {
     'handbook.relatedArticles': '관련 기사',
     'handbook.relatedTerms': '관련 개념',
     'handbook.technicalDescription': '기술적 설명',
+    'handbook.plainExplanation': '쉬운 설명',
+    'handbook.exampleAnalogy': '예시 / 비유',
     'handbook.translationPending': '번역 준비 중',
   },
 };
