@@ -15,7 +15,7 @@ const supabase = createClient(
 
 const { data: terms, error } = await supabase
   .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, category, difficulty, updated_at')
+  .select('id, term, slug, korean_name, status, categories, difficulty, definition_ko, definition_en, updated_at')
   .order('updated_at', { ascending: false });
 
 const fetchError = error ? error.message : null;
@@ -70,12 +70,14 @@ const publishedCount = allTerms.filter((t) => t.status === 'published').length;
                     <span class={`admin-status-badge admin-status-badge--${t.status}`}>
                       {t.status}
                     </span>
-                    {t.category && (
-                      <span>{getHandbookCategoryLabel('en', t.category)}</span>
+                    {(t.categories || []).length > 0 && (
+                      <span>{(t.categories || []).map((c: string) => getHandbookCategoryLabel('en', c)).join(' · ')}</span>
                     )}
                     {t.difficulty && (
                       <span>{t.difficulty}</span>
                     )}
+                    <span style="font-size: 0.75rem;">KO {t.definition_ko ? '✅' : '❌'}</span>
+                    <span style="font-size: 0.75rem;">EN {t.definition_en ? '✅' : '❌'}</span>
                     <span>{new Date(t.updated_at).toLocaleDateString('en-US')}</span>
                   </div>
                 </div>
