@@ -1,9 +1,9 @@
-# ACTIVE SPRINT — Phase 2C-EXP (Frontend Experience)
+# ACTIVE SPRINT — Phase 3-USER (일반 사용자 기능)
 
-> **스프린트 시작:** 2026-03-07
-> **목표:** Newsprint 테마 완성 + 리스트/상세 고도화 + 반응형/접근성/성능 QA
-> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 스펙 → `docs/04~06`
-> **이전 스프린트:** Phase 2B-OPS — 2026-03-07 게이트 전체 통과
+> **스프린트 시작:** 2026-03-08
+> **목표:** 소셜 로그인 + 북마크 + 읽기 기록 + 학습 진도 + 내 서재
+> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 설계 → `docs/plans/2026-03-08-user-features-design.md`
+> **이전 스프린트:** Phase 2C-EXP — 2026-03-07 게이트 전체 통과
 
 ---
 
@@ -11,12 +11,16 @@
 
 ## 스프린트 완료 게이트
 
-- [ ] 반응형: mobile/tablet/desktop 레이아웃 정상
-- [ ] 접근성: `prefers-reduced-motion`, 키보드 포커스, 대비 기준 통과
-- [ ] Lighthouse: Perf/Best/SEO/Acc 각각 `>= 85`
-- [ ] Core Web Vitals 목표: `LCP < 2.8s`, `CLS < 0.1`, `INP < 250ms`
-- [ ] `cd frontend && npm run build` → 0 error
-- [ ] Admin Editor mock 워크플로우(목록 → 상세 → 편집/미리보기 → 발행 CTA) 정상
+- [x] DB: `profiles`, `user_bookmarks`, `reading_history`, `learning_progress` 4개 테이블 생성 + RLS
+- [x] 소셜 로그인: GitHub/Google OAuth 버튼 → Supabase Auth redirect 동작
+- [ ] 소셜 로그인: OAuth provider 외부 설정 완료 (GitHub App + Google Cloud + Supabase Dashboard)
+- [ ] 소셜 로그인: 실제 로그인 → 세션 유지 → 로그아웃 E2E 정상
+- [x] 헤더: 비로그인 Sign In / 로그인 아바타 드롭다운 정상
+- [x] 읽기 기록: 상세 페이지 방문 시 자동 기록 + 리스트에서 읽은 글 opacity 감소
+- [x] 북마크: 리스트 카드 + 상세 페이지 북마크 토글 동작
+- [x] 학습 진도: Handbook 상세 학습 완료 체크 + 카테고리별 진도 바
+- [x] 내 서재: `/library` — 읽은 글 / 저장한 글 / 학습 현황 3탭 정상
+- [x] `cd frontend && npm run build` → 0 error
 - [ ] 태스크 전체 `상태=done` + `체크=[x]` 일치
 - [ ] `Current Doing` 표가 비어 있음(`-`)
 - [ ] 완료 태스크마다 `증거` 마크 최소 1개 존재
@@ -27,7 +31,7 @@
 
 | Task ID | 상태 | 시작 시점 | Owner |
 |---|---|---|---|
-| - | - | - | - |
+| P3U-AUTH-02 | doing | 2026-03-08 | Amy |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에도 반드시 1개만 기입한다.
@@ -48,138 +52,160 @@
 
 ## 태스크 (실행 순서)
 
-### 1. Newsprint 토큰/테마/공통 컴포넌트 정리 `[P2C-UI-11]`
+### 1. DB 마이그레이션 — 사용자 테이블 4개 `[P3U-DB-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** 기존 newsprint 컴포넌트(Shell, ListCard, SideRail, CategoryFilter, ArticleLayout) 정리 + 테마 토큰 통합 (dark/light/pink)
-- **산출물:** `frontend/src/components/newsprint/` 정리 + `frontend/src/styles/global.css` 토큰 체계화
-- **완료 기준:** `npm run build` 0 error + 3 테마 preview 페이지 정상 렌더링
-- **검증:** `cd frontend && npm run build` + preview 페이지 수동 확인
-- **증거:** commits f3c39c5..dc3ced5 (6 commits: 컴포넌트 5개 + CSS 토큰 3테마 + preview 3페이지 + 브랜드 교체)
-- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
+- **목적:** `profiles`, `user_bookmarks`, `reading_history`, `learning_progress` 테이블 생성 + RLS 정책
+- **산출물:** `supabase/migrations/00007_user_tables.sql`
+- **완료 기준:** 테이블 4개 + RLS 정책 + 인덱스 생성 확인
+- **검증:** SQL 파일 존재 + 스키마 구조 확인
+- **증거:** `supabase/migrations/00007_user_tables.sql` 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §4
 - **의존성:** 없음
 
-### 2. /en|ko/log 리스트/상세 + 다국어 스위처 + 화면 상태 `[P2C-UI-12]`
+### 2. OAuth 로그인 구현 — 코드 `[P3U-AUTH-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** 리스트/상세 페이지에 newsprint 스타일 변환 적용 + 다국어 스위처 + empty/error/loading 상태 처리
-- **산출물:** `frontend/src/pages/en|ko/log/` 페이지 업데이트 + `NewsprintNotice` 컴포넌트
-- **완료 기준:** EN/KO 리스트/상세 정상 렌더링 + 언어 전환 동작 + 빈 상태 표시
-- **검증:** `npm run build` 0 error 확인
-- **증거:** 이번 커밋 (i18n 맵 3개 + NewsprintNotice 컴포넌트 + 리스트/상세 에러 처리 + 404 UI)
-- **비고:** Loading state는 SSR 구조상 해당 없음 (서버가 완성된 HTML 전송). 미연결 env 미설정 시 empty, 쿼리 실패 시 error로 구분.
-- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
-- **의존성:** P2C-UI-11
+- **목적:** `/login` 페이지 + OAuth 버튼 (GitHub/Google/Kakao) + callback 코드 교환 + httpOnly cookie 설정
+- **산출물:** `frontend/src/pages/login.astro`, `frontend/src/pages/api/auth/callback.ts` 수정
+- **완료 기준:** OAuth 버튼 클릭 → Supabase redirect 동작 확인, Kakao는 "준비 중" 표시
+- **검증:** `npm run build` 0 error + 로컬에서 OAuth redirect 동작
+- **증거:** commits dc4b11b, ff1aff1, 025e35a, 076302d (define:vars fix → import.meta.env fix → initLogin fix → Kakao button)
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §3, §6.2
+- **의존성:** P3U-DB-01
 
-### 3. 썸네일 이미지 newsprint 필터 `[P2C-UI-13]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** Featured 카드의 og_image_url 기반 썸네일 렌더링 + 기존 .img-newsprint 필터 적용
-- **산출물:** `global.css` grid 레이아웃 + EN/KO 리스트 featured 카드 이미지 + preview 3페이지 mock 이미지
-- **완료 기준:** 이미지 기본 흑백+세피아 + hover 시 컬러 복원 transition 동작
-- **검증:** `npm run build` 0 error 확인 + preview 페이지 시각 확인
-- **증거:** commits 2f1316c..920102b (CSS grid + EN/KO featured thumbnail + preview mock images)
-- **비고:** 나머지 카드는 텍스트 전용 유지. 상세 페이지 hero 이미지는 별도 태스크로 분리.
-- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP
-- **의존성:** P2C-UI-12
+### 3. OAuth 로그인 — 외부 서비스 설정 `[P3U-AUTH-02]`
+- **체크:** [ ]
+- **상태:** doing
+- **목적:** GitHub OAuth App, Google Cloud OAuth, Supabase Dashboard Provider 설정 → 실제 로그인 동작
+- **산출물:** 외부 서비스 설정 완료 (코드 변경 없음)
+- **완료 기준:** GitHub/Google 버튼 클릭 → provider 로그인 → 0to1log.com 으로 redirect → 세션 유지
+- **검증:** 프로덕션에서 GitHub/Google 로그인 E2E 수동 테스트
+- **설정 체크리스트:**
+  - [ ] GitHub OAuth App: callback URL = `https://luwipptjfyjsleqouasj.supabase.co/auth/v1/callback`
+  - [ ] Google Cloud Console: OAuth 2.0 Client + redirect URI = 위와 동일
+  - [ ] Google OAuth Consent Screen: 테스트 사용자 등록
+  - [ ] Supabase Dashboard: GitHub provider 활성화 + Client ID/Secret 입력
+  - [ ] Supabase Dashboard: Google provider 활성화 + Client ID/Secret 입력
+  - [ ] Supabase Dashboard: Redirect URLs에 `https://0to1log.com/api/auth/callback` 추가
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §3
+- **의존성:** P3U-AUTH-01
 
-### 4. Admin Editor 화면(마크다운 작성/미리보기) `[P2C-UI-14]`
+### 4. Middleware 확장 — 사용자 경로 보호 `[P3U-MW-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** `/admin`에서 드래프트 편집 화면(마크다운 작성 + 미리보기 + Save/Publish 액션)을 newsprint 스타일로 구현
-- **산출물:** Admin Editor UI 컴포넌트/페이지 업데이트
-- **완료 기준:** 편집 입력, 미리보기 전환, Save/Publish CTA 인터페이스 및 기본 동작(mock) 확인
-- **검증:** `cd frontend && npm run build` 0 error 확인
-- **증거:** commits d2015c8..529886c (milkdown install + admin CSS + dashboard + editor page)
-- **참조:** IMPLEMENTATION_PLAN §3 2C-EXP, 04_Frontend_Spec §3-5
-- **의존성:** P2C-UI-13
+- **목적:** middleware.ts에 3-zone 인증 추가 (public / user-protected / admin-protected)
+- **산출물:** `frontend/src/middleware.ts` 수정
+- **완료 기준:** `/api/user/*`, `/library` 경로는 로그인 필수, 비로그인 시 redirect/401
+- **검증:** `npm run build` 0 error
+- **증거:** middleware.ts 3-zone 구현 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §3.3
+- **의존성:** P3U-AUTH-01
 
-### 5. Admin Editor 상태/권한/에러 처리(mock) `[P2C-UI-15]`
+### 5. User API 엔드포인트 4종 `[P3U-API-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** Admin Editor의 loading/empty/404/401/403 상태와 저장/발행 피드백을 OpenAPI 고정 스키마 기반 mock으로 구현
-- **산출물:** 상태별 UI, 에러 메시지, 액션 피드백 처리
-- **완료 기준:** 권한/에러 상태별 화면과 메시지가 올바르게 인터페이스되고, 편집 프로세스가 중단 없이 분명 가능
-- **검증:** `cd frontend && npm run build` + 상태별 수동 시나리오 확인
-- **증거:** commits 9e39904..ab58654 (unauthorized variant + feedback CSS + list state branching + editor state/feedback/save)
-- **참조:** IMPLEMENTATION_PLAN §1 Hard Gate, §3 2C-EXP
-- **의존성:** P2C-UI-14
+- **목적:** profile, bookmarks, reading-history, learning-progress CRUD API
+- **산출물:** `frontend/src/pages/api/user/profile.ts`, `bookmarks.ts`, `reading-history.ts`, `learning-progress.ts`
+- **완료 기준:** 인증된 사용자만 접근 가능, RLS 기반 데이터 격리
+- **검증:** `npm run build` 0 error
+- **증거:** 4개 API 파일 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §5
+- **의존성:** P3U-MW-01
 
-### 6. 반응형/접근성/성능 QA `[P2C-QA-11]`
+### 6. Navigation — Sign In / 아바타 드롭다운 `[P3U-NAV-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** Lighthouse 측정 + Core Web Vitals + 접근성 확인
-- **산출물:** Lighthouse 리포트(Perf/Best/SEO/Acc >= 85) + 접근성 확인 결과
-- **완료 기준:** Lighthouse 4개 영역 모두 >= 85, CWV 목표 충족, 접근성 기본 통과
-- **검증:** Lighthouse CLI 또는 DevTools 측정 결과 캡처
-- **증거:** Perf 87 / Acc 98 / SEO 100 / BP 77 (Clarity 3rd-party cookies); commits 1c497b6..db0e8b7
-- **참조:** IMPLEMENTATION_PLAN §3 2C Gate
-- **의존성:** P2C-UI-15
+- **목적:** 비로그인 시 Sign In 링크, 로그인 시 아바타 + 드롭다운 (Library, Admin, Sign Out)
+- **산출물:** `frontend/src/components/Navigation.astro` 수정
+- **완료 기준:** 로그인 상태에 따른 UI 분기 정상
+- **검증:** `npm run build` 0 error
+- **증거:** Navigation.astro 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.1
+- **의존성:** P3U-AUTH-01
+
+### 7. 읽기 기록 + 북마크 — Log/Handbook 페이지 통합 `[P3U-UI-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 상세 페이지 자동 읽기 기록 + 북마크 토글 + 리스트에서 읽은 글 opacity 감소
+- **산출물:** EN/KO log/handbook 리스트 및 상세 페이지 수정, `frontend/src/scripts/bookmark.ts`
+- **완료 기준:** 로그인 사용자의 읽기 기록 자동 기록 + 북마크 동작 + 비로그인 시 redirect
+- **검증:** `npm run build` 0 error
+- **증거:** log/handbook 페이지 + bookmark.ts 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.3~6.5
+- **의존성:** P3U-API-01
+
+### 8. Handbook 학습 진도 `[P3U-UI-02]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** Handbook 상세에 "학습 완료" 체크 버튼 + learning_progress API 연동
+- **산출물:** EN/KO handbook 상세 페이지 수정
+- **완료 기준:** read → learned 전환 + 비로그인 시 버튼 숨김
+- **검증:** `npm run build` 0 error
+- **증거:** handbook 상세 페이지 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.6
+- **의존성:** P3U-UI-01
+
+### 9. 내 서재 페이지 `[P3U-LIB-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** `/library` — 읽은 글 / 저장한 글 / 학습 현황 3탭 페이지
+- **산출물:** `frontend/src/pages/library/index.astro`
+- **완료 기준:** 3탭 동작 + 카테고리별 학습 진도 바 + 비로그인 시 redirect
+- **검증:** `npm run build` 0 error
+- **증거:** library/index.astro 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.7
+- **의존성:** P3U-UI-02
+
+### 10. User feature CSS `[P3U-CSS-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 로그인/북마크/읽기기록/서재 관련 CSS 스타일 추가
+- **산출물:** `frontend/src/styles/global.css` 수정
+- **완료 기준:** login-oauth-btn, user-avatar, user-dropdown, bookmark, library-tabs 등 스타일 정상
+- **검증:** `npm run build` 0 error
+- **증거:** global.css 커밋 완료
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6
+- **의존성:** 없음
+
+### 11. OAuth E2E 검증 `[P3U-QA-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 프로덕션에서 소셜 로그인 → 북마크 → 읽기 기록 → 학습 진도 → 서재 전체 흐름 검증
+- **산출물:** 수동 E2E 테스트 결과
+- **완료 기준:** 설계 문서 §12의 검증 항목 16개 전체 통과
+- **검증:** 프로덕션에서 수동 테스트
+- **참조:** `docs/plans/2026-03-08-user-features-design.md` §12
+- **의존성:** P3U-AUTH-02
 
 ---
 
 ## 의존성 순서
 
 ```
-P2C-UI-11 → P2C-UI-12 → P2C-UI-13 → P2C-UI-14 → P2C-UI-15 → P2C-QA-11
+P3U-DB-01 → P3U-AUTH-01 → P3U-AUTH-02 → P3U-QA-01
+                ↓
+            P3U-MW-01 → P3U-API-01 → P3U-UI-01 → P3U-UI-02 → P3U-LIB-01
+                ↓
+            P3U-NAV-01
+
+P3U-CSS-01 (독립)
 ```
 
 ---
 
-## 이전 스프린트 요약 (Phase 2B-OPS)
+## 이전 스프린트 요약 (Phase 2C-EXP)
 
-> Phase 2B-OPS (2026-03-07) — 게이트 전체 통과, 4개 태스크 완료, 49 tests passed.
-> - OpenAPI 스키마 고정 (12 schemas, 6 endpoints)
-> - AI Agent 3종 구현 (Ranking gpt-4o-mini, Research/Business gpt-4o)
-> - Admin CRUD 엔드포인트 (list/get/publish/update + 401/403 분리)
-> - Cron skeleton (secret 검증 + 202 반환)
-
----
-
-## 이전 스프린트 요약 (Phase 2A)
-
-> Phase 2A (2026-03-06 ~ 03-07) — 게이트 전체 통과, 6개 태스크 완료.
-> - DB 마이그레이션 (`supabase/migrations/00002_pipeline_tables.sql`, 5개 테이블 + RLS)
-> - Pydantic 스키마 정의 (ranking, research, business, common)
-> - 뉴스 수집 서비스 Mock 테스트 완료 (Tavily/HN/GitHub + dedup)
-> - 파이프라인 Lock/Stale Recovery 구현 및 테스트 (8 passed)
-> - Security 미들웨어 + Vercel Cron Trigger skeleton 완료
+> Phase 2C-EXP (2026-03-07) — 게이트 전체 통과, 6개 태스크 완료.
+> - Newsprint 토큰/테마/공통 컴포넌트 정리
+> - /en|ko/log 리스트/상세 + 다국어 스위처
+> - 썸네일 이미지 newsprint 필터
+> - Admin Editor 화면(마크다운 작성/미리보기)
+> - Admin Editor 상태/권한/에러 처리(mock)
+> - 반응형/접근성/성능 QA (Perf 87 / Acc 98 / SEO 100 / BP 77)
 
 ---
 
 ## 다음 스프린트 예고
 
-Phase 2C 게이트 통과 후 → **Phase 2D-INT** (통합/E2E: Mock 제거 + 실API 연동 + E2E 테스트)
-
----
-
-## Rail Copy Note
-
-- List rail copy set approved: 오늘의 편집 노트 / Editor's Note, 지금 많이 읽는 글 / Most Read, 처음 읽는 분께 / Start Here
-- Most Read is currently fed by a latest-published fallback until analytics-based popularity data exists.
-- Detail rail copy set approved: 이 글의 초점 / Focus of This Article, 같은 호에서 더 읽기 / More in This Issue
-- Focus of This Article currently uses a category-based template fallback until admin-authored focus data exists.
-- Article detail rail should not reuse the list-rail headings.
-
-## Auth Scope Note
-
-- Phase 2C auth work is limited to mock UI/state: admin login screen, unauthorized/401/403 messaging, and session-expired presentation.
-- Real auth wiring moves to Phase 2D: Supabase login/logout, session restore, protected `/admin` route guard, and basic user sign-in entry.
-- Do not treat current 2C admin flows as production auth; they are presentation-first and mock-backed.
-
-## Security Carry-Over Note
-
-- Security hardening is deferred out of Phase 2C and scheduled for Phase 2D / 3A to avoid mixing UI polish with production-hardening work.
-- `P2D-SEC-01`: protect `/api/trigger-pipeline` from public proxy use, remove or sanitize raw HTML markdown rendering, and replace public `/admin` mock exposure with a real session guard.
-- `P2D-SEC-02`: apply backend rate limiting on real routes, fix env loading and test isolation so security tests run from standard `pytest`, and re-check CORS/secret boundaries.
-- `3A-SEC`: migrate away from CSP `unsafe-inline` toward nonce-based script loading and rerun the production security checklist.
-- Phase 2C may keep mock/admin presentation work, but it must not be treated as production auth or production security.
-
-## 2C-EXP Addendum (Stitch Compatibility)
-
-- [x] `2C-UI-01` Prototype compatibility cleanup completed
-  Evidence: `frontend/example_dark.html`, `frontend/example_light.html`, `frontend/example_list.html`
-- [x] `2C-UI-02` `/en|ko/log` list/detail style migration completed
-  Evidence: `frontend/src/pages/en/log/index.astro`, `frontend/src/pages/ko/log/index.astro`, `frontend/src/pages/en/log/[slug].astro`, `frontend/src/pages/ko/log/[slug].astro`
-- [x] `2C-QA-01` Preview routes added for visual validation
-  Evidence: `frontend/src/pages/preview/newsprint-dark.astro`, `frontend/src/pages/preview/newsprint-light.astro`
+Phase 3-USER 게이트 통과 후 → **Phase 3-Intelligence** (AI 추천 + 학습 고도화)
