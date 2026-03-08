@@ -43,7 +43,7 @@ const jsonLd = article ? JSON.stringify({
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Serif+KR:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap"
     rel="stylesheet"
   />
 
@@ -62,11 +62,13 @@ const jsonLd = article ? JSON.stringify({
   <meta property="og:url" content={canonicalUrl} />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
+  {article?.image && <meta property="og:image" content={article.image} />}
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content={article?.image ? 'summary_large_image' : 'summary'} />
   <meta name="twitter:title" content={`${title} | 0to1log`} />
   <meta name="twitter:description" content={description} />
+  {article?.image && <meta name="twitter:image" content={article.image} />}
 
   <!-- Theme Color -->
   <meta name="theme-color" content="#241F1C" />

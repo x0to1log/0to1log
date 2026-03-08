@@ -38,6 +38,9 @@ export const t: Record<Locale, Record<string, string>> = {
     'handbook.plainExplanation': 'Plain Explanation',
     'handbook.exampleAnalogy': 'Example / Analogy',
     'handbook.translationPending': 'Translation in progress',
+    'share.label': 'Share',
+    'share.copied': 'Copied',
+    'share.copyUrl': 'Copy URL',
   },
   ko: {
     'nav.log': 'AI 뉴스',
@@ -52,7 +55,7 @@ export const t: Record<Locale, Record<string, string>> = {
     'post.back': 'AI 뉴스로 돌아가기',
     'post.notfound': '해당 기사를 보관소에서 찾을 수 없습니다.',
     'error.retry': '첫 페이지로 돌아가기',
-    'handbook.title': '기술 핸드북',
+    'handbook.title': 'AI 백서',
     'handbook.subtitle': 'CS · AI · Infra',
     'handbook.empty': '아직 용어가 없습니다.',
     'handbook.error': '용어를 불러오는 데 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.',
@@ -68,5 +71,8 @@ export const t: Record<Locale, Record<string, string>> = {
     'handbook.plainExplanation': '쉬운 설명',
     'handbook.exampleAnalogy': '예시 / 비유',
     'handbook.translationPending': '번역 준비 중',
+    'share.label': '공유',
+    'share.copied': '복사됨',
+    'share.copyUrl': 'URL 복사',
   },
 };
