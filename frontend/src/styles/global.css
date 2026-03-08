@@ -987,6 +987,25 @@ html {
 
 .site-utility-wrap {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.site-lang-toggle {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.4rem 0.5rem;
+  transition: color 150ms ease;
+  line-height: 1;
+}
+
+.site-lang-toggle:hover {
+  color: var(--color-accent);
 }
 
 .site-utility-btn {
