@@ -1,8 +1,10 @@
 import json
 import logging
 
+from pydantic import ValidationError
+
 from models.ranking import NewsCandidate, NewsRankingResult
-from services.agents.client import get_openai_client
+from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import RANKING_SYSTEM_PROMPT
 from core.config import settings
 
@@ -18,11 +20,7 @@ def _build_ranking_user_prompt(candidates: list[NewsCandidate]) -> str:
 
 
 async def rank_candidates(candidates: list[NewsCandidate]) -> NewsRankingResult:
-    """Step 2: Classify and rank news candidates using gpt-4o-mini.
-
-    Returns a NewsRankingResult with research_pick, business_main_pick,
-    and related_picks (big_tech, industry_biz, new_tools).
-    """
+    """Step 2: Classify and rank news candidates using gpt-4o-mini."""
     client = get_openai_client()
     user_prompt = _build_ranking_user_prompt(candidates)
 
@@ -37,8 +35,11 @@ async def rank_candidates(candidates: list[NewsCandidate]) -> NewsRankingResult:
     )
 
     raw = response.choices[0].message.content
-    logger.info("Ranking agent raw response length: %d", len(raw))
+    data = parse_ai_json(raw, "Ranking")
 
-    data = json.loads(raw)
-    result = NewsRankingResult.model_validate(data)
-    return result
+    try:
+        return NewsRankingResult.model_validate(data)
+    except ValidationError as e:
+        logger.error("Ranking validation failed: %s\nData: %s",
+                      e, json.dumps(data, ensure_ascii=False)[:1000])
+        raise

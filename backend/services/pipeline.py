@@ -227,8 +227,8 @@ def _save_business_post(post: BusinessPost, batch_id: str) -> str:
         "content_beginner": post.content_beginner,
         "content_learner": post.content_learner,
         "content_expert": post.content_expert,
-        "guide_items": post.guide_items.model_dump(),
-        "related_news": post.related_news.model_dump(),
+        "guide_items": post.guide_items.model_dump() if post.guide_items else None,
+        "related_news": post.related_news.model_dump() if post.related_news else None,
         "source_urls": post.source_urls,
         "news_temperature": post.news_temperature,
         "tags": post.tags,
@@ -262,7 +262,10 @@ async def run_daily_pipeline(batch_id: str) -> None:
         ranking = await rank_candidates(candidates)
 
         # Step 2b: Save candidates + ranking to DB
-        _save_candidates(candidates, ranking, batch_id)
+        try:
+            _save_candidates(candidates, ranking, batch_id)
+        except Exception as e:
+            logger.error("Failed to save candidates (non-fatal): %s", e)
 
         # Build context string from candidates for the writing agents
         context = _build_context(candidates)
@@ -274,12 +277,15 @@ async def run_daily_pipeline(batch_id: str) -> None:
         logger.info("Research post generated: %s", research_post.title)
         _save_research_post(research_post, batch_id)
 
-        # Step 3-B: Generate business post
-        business_post = await generate_business_post(
-            ranking.business_main_pick, ranking.related_picks, context, batch_id
-        )
-        logger.info("Business post generated: %s", business_post.title)
-        _save_business_post(business_post, batch_id)
+        # Step 3-B: Generate business post (skip if no business pick)
+        if ranking.business_main_pick:
+            business_post = await generate_business_post(
+                ranking.business_main_pick, ranking.related_picks, context, batch_id
+            )
+            logger.info("Business post generated: %s", business_post.title)
+            _save_business_post(business_post, batch_id)
+        else:
+            logger.warning("No business_main_pick for batch %s, skipping business post", batch_id)
 
         logger.info("Pipeline %s completed — posts saved to DB", batch_id)
         await release_pipeline_lock(run_id, "success")

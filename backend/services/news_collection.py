@@ -134,34 +134,38 @@ async def collect_from_hackernews() -> list[NewsCandidate]:
 
 async def collect_from_github_trending() -> list[NewsCandidate]:
     """Scrape GitHub trending repos created recently with AI topics."""
-    candidates: list[NewsCandidate] = []
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    try:
+        candidates: list[NewsCandidate] = []
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(
-            "https://api.github.com/search/repositories",
-            params={
-                "q": f"topic:ai OR topic:llm OR topic:machine-learning created:>{yesterday}",
-                "sort": "stars",
-                "order": "desc",
-                "per_page": 3,
-            },
-            headers={"Accept": "application/vnd.github.v3+json"},
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-    for repo in data.get("items", []):
-        candidates.append(
-            NewsCandidate(
-                title=repo.get("full_name", ""),
-                url=repo.get("html_url", ""),
-                snippet=repo.get("description", "") or "",
-                source="github",
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                "https://api.github.com/search/repositories",
+                params={
+                    "q": f"topic:ai OR topic:llm OR topic:machine-learning created:>{yesterday}",
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": 3,
+                },
+                headers={"Accept": "application/vnd.github.v3+json"},
             )
-        )
+            resp.raise_for_status()
+            data = resp.json()
 
-    return candidates
+        for repo in data.get("items", []):
+            candidates.append(
+                NewsCandidate(
+                    title=repo.get("full_name", ""),
+                    url=repo.get("html_url", ""),
+                    snippet=repo.get("description", "") or "",
+                    source="github",
+                )
+            )
+
+        return candidates
+    except Exception as e:
+        logger.info("GitHub trending skipped: %s", e)
+        return []
 
 
 async def collect_all_news(batch_id: str) -> list[NewsCandidate]:

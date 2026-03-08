@@ -10,12 +10,12 @@ class NewsCandidate(BaseModel):
 
 
 class RankedCandidate(BaseModel):
-    title: str
-    url: str
-    snippet: str
-    source: str
-    assigned_type: str  # research | business_main | big_tech | industry_biz | new_tools
-    relevance_score: float  # 0.0 - 1.0
+    title: str = ""
+    url: str = ""
+    snippet: str = ""
+    source: str = "unknown"
+    assigned_type: str = "unknown"  # research | business_main | big_tech | industry_biz | new_tools
+    relevance_score: float = 0.0  # 0.0 - 1.0
     ranking_reason: Optional[str] = None
 
 
@@ -26,6 +26,6 @@ class RelatedPicks(BaseModel):
 
 
 class NewsRankingResult(BaseModel):
-    research_pick: RankedCandidate
-    business_main_pick: RankedCandidate
-    related_picks: RelatedPicks
+    research_pick: Optional[RankedCandidate] = None
+    business_main_pick: Optional[RankedCandidate] = None
+    related_picks: Optional[RelatedPicks] = None

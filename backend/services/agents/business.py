@@ -1,9 +1,11 @@
 import json
 import logging
 
+from pydantic import ValidationError
+
 from models.ranking import RankedCandidate, RelatedPicks
 from models.business import BusinessPost
-from services.agents.client import get_openai_client
+from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import BUSINESS_SYSTEM_PROMPT
 from core.config import settings
 
@@ -12,18 +14,19 @@ logger = logging.getLogger(__name__)
 
 def _build_business_user_prompt(
     candidate: RankedCandidate,
-    related: RelatedPicks,
+    related: RelatedPicks | None,
     context: str,
     batch_id: str,
 ) -> str:
     """Build the user prompt for the business analyst agent."""
     related_section = "## Related News 후보\n"
-    if related.big_tech:
-        related_section += f"- Big Tech: {related.big_tech.title} ({related.big_tech.url})\n"
-    if related.industry_biz:
-        related_section += f"- Industry & Biz: {related.industry_biz.title} ({related.industry_biz.url})\n"
-    if related.new_tools:
-        related_section += f"- New Tools: {related.new_tools.title} ({related.new_tools.url})\n"
+    if related:
+        if related.big_tech:
+            related_section += f"- Big Tech: {related.big_tech.title} ({related.big_tech.url})\n"
+        if related.industry_biz:
+            related_section += f"- Industry & Biz: {related.industry_biz.title} ({related.industry_biz.url})\n"
+        if related.new_tools:
+            related_section += f"- New Tools: {related.new_tools.title} ({related.new_tools.url})\n"
 
     return (
         f"아래 메인 뉴스와 관련 뉴스를 바탕으로 3페르소나 포스트를 작성하세요.\n\n"
@@ -40,7 +43,7 @@ def _build_business_user_prompt(
 
 async def generate_business_post(
     candidate: RankedCandidate,
-    related: RelatedPicks,
+    related: RelatedPicks | None,
     context: str,
     batch_id: str,
 ) -> BusinessPost:
@@ -63,8 +66,11 @@ async def generate_business_post(
     )
 
     raw = response.choices[0].message.content
-    logger.info("Business agent raw response length: %d", len(raw))
+    data = parse_ai_json(raw, "Business")
 
-    data = json.loads(raw)
-    result = BusinessPost.model_validate(data)
-    return result
+    try:
+        return BusinessPost.model_validate(data)
+    except ValidationError as e:
+        logger.error("Business validation failed: %s\nData: %s",
+                      e, json.dumps(data, ensure_ascii=False)[:1000])
+        raise

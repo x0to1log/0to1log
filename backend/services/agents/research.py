@@ -1,9 +1,11 @@
 import json
 import logging
 
+from pydantic import ValidationError
+
 from models.ranking import RankedCandidate
 from models.research import ResearchPost
-from services.agents.client import get_openai_client
+from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import RESEARCH_SYSTEM_PROMPT
 from core.config import settings
 
@@ -39,10 +41,7 @@ async def generate_research_post(
     context: str,
     batch_id: str,
 ) -> ResearchPost:
-    """Step 3-A: Generate a research post using gpt-4o.
-
-    If candidate is None, generates a 'no news' post with fallback content.
-    """
+    """Step 3-A: Generate a research post using gpt-4o."""
     client = get_openai_client()
     user_prompt = _build_research_user_prompt(candidate, context, batch_id)
 
@@ -57,8 +56,11 @@ async def generate_research_post(
     )
 
     raw = response.choices[0].message.content
-    logger.info("Research agent raw response length: %d", len(raw))
+    data = parse_ai_json(raw, "Research")
 
-    data = json.loads(raw)
-    result = ResearchPost.model_validate(data)
-    return result
+    try:
+        return ResearchPost.model_validate(data)
+    except ValidationError as e:
+        logger.error("Research validation failed: %s\nData: %s",
+                      e, json.dumps(data, ensure_ascii=False)[:1000])
+        raise
