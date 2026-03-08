@@ -73,6 +73,10 @@ const errorParam = Astro.url.searchParams.get('error');
           return;
         }
 
+        // Disable all buttons to prevent double-click
+        buttons.forEach((b) => { b.disabled = true; });
+        btn.textContent = 'Signing in\u2026';
+
         const params = new URLSearchParams(window.location.search);
         const redirectTo = params.get('redirectTo') || '/';
 

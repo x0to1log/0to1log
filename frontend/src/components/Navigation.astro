@@ -17,8 +17,9 @@ const altPath = altSlug
 
 const user = Astro.locals.user;
 const isAdmin = Astro.locals.isAdmin;
-const avatarUrl = user?.user_metadata?.avatar_url;
-const displayName = user?.user_metadata?.full_name || user?.email || '';
+const profile = Astro.locals.profile;
+const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+const displayName = profile?.display_name || user?.user_metadata?.full_name || user?.email || '';
 const initials = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
 const copy = locale === 'ko'
@@ -38,6 +39,7 @@ const copy = locale === 'ko'
       themePink: '핑크',
       signIn: '로그인',
       signOut: '로그아웃',
+      settings: '설정',
       admin: '관리자',
       menuLabel: user ? '프로필 메뉴' : '설정 메뉴',
       utilityLabel: '설정',
@@ -58,6 +60,7 @@ const copy = locale === 'ko'
       themePink: 'Pink',
       signIn: 'Sign In',
       signOut: 'Sign Out',
+      settings: 'Settings',
       admin: 'Admin',
       menuLabel: user ? 'Profile menu' : 'Settings menu',
       utilityLabel: 'Settings',
@@ -151,6 +154,15 @@ const navItems = [
                 <span>{copy.library}</span>
                 <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                </svg>
+              </a>
+            )}
+            {user && (
+              <a href="/settings/" class="user-dropdown-item user-dropdown-item--has-icon">
+                <span>{copy.settings}</span>
+                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
               </a>
             )}

@@ -60,6 +60,39 @@ async function validateToken(
   return null;
 }
 
+/** Fetch admin status + profile in parallel with one Supabase client */
+async function fetchUserExtras(
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  user: any,
+  accessToken: string,
+): Promise<{ isAdmin: boolean; profile: App.Locals['profile'] }> {
+  const sb = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+
+  const [adminResult, profileResult] = await Promise.all([
+    sb.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle(),
+    sb.from('profiles')
+      .select('display_name, username, username_changed_at, avatar_url, persona, preferred_locale, is_public, onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ]);
+
+  const profile = profileResult.data || {
+    display_name: user.user_metadata?.full_name || null,
+    username: null,
+    username_changed_at: null,
+    avatar_url: user.user_metadata?.avatar_url || null,
+    persona: null,
+    preferred_locale: 'ko',
+    is_public: false,
+    onboarding_completed: false,
+  };
+
+  return { isAdmin: !!adminResult.data, profile };
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -93,17 +126,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect('/admin/login');
     }
 
-    // Verify user is an admin (check admin_users table via RLS)
-    const adminSb = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${result.accessToken}` } },
-    });
-    const { data: adminRow } = await adminSb
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', result.user.id)
-      .maybeSingle();
-
-    if (!adminRow) {
+    const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
+    if (!extras.isAdmin) {
       if (isApiRoute) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
           status: 403,
@@ -116,40 +140,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
     context.locals.isAdmin = true;
+    context.locals.profile = extras.profile;
     return nextWithCsp(next, nonce);
   }
 
-  // --- Zone 2: User-protected (/api/user/*, /library) ---
-  if (pathname.startsWith('/api/user/') || pathname.startsWith('/library')) {
+  // --- Zone 2: User-protected (/api/user/*, /library, /settings) ---
+  if (pathname.startsWith('/api/user/') || pathname.startsWith('/library') || pathname.startsWith('/settings')) {
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
     if (!result) {
-      // API routes → 401 JSON
       if (pathname.startsWith('/api/')) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' },
         });
       }
-      // Page routes → redirect to login
       const redirectTo = encodeURIComponent(pathname);
       return context.redirect(`/login?redirectTo=${redirectTo}`);
     }
+
+    const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
-
-    // Check admin status for nav link visibility
-    const adminSb2 = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${result.accessToken}` } },
-    });
-    const { data: adminRow2 } = await adminSb2
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', result.user.id)
-      .maybeSingle();
-    if (adminRow2) {
-      context.locals.isAdmin = true;
-    }
-
+    context.locals.isAdmin = extras.isAdmin || undefined;
+    context.locals.profile = extras.profile;
     return nextWithCsp(next, nonce);
   }
 
@@ -159,21 +172,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (accessToken) {
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
     if (result) {
+      const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
       context.locals.user = result.user;
       context.locals.accessToken = result.accessToken;
-
-      // Check admin status for nav link visibility
-      const adminSb = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: `Bearer ${result.accessToken}` } },
-      });
-      const { data: adminRow } = await adminSb
-        .from('admin_users')
-        .select('user_id')
-        .eq('user_id', result.user.id)
-        .maybeSingle();
-      if (adminRow) {
-        context.locals.isAdmin = true;
-      }
+      context.locals.isAdmin = extras.isAdmin || undefined;
+      context.locals.profile = extras.profile;
     }
   }
 

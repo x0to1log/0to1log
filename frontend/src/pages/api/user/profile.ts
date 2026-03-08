@@ -3,20 +3,32 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user || !locals.accessToken) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+const USERNAME_RE = /^[a-z0-9][a-z0-9-]{1,18}[a-z0-9]$/;
+const VALID_PERSONAS = ['beginner', 'learner', 'expert'];
+const VALID_LOCALES = ['en', 'ko'];
+const USERNAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-  const supabase = createClient(
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function makeAuthClient(accessToken: string) {
+  return createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${locals.accessToken}` } } },
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
+}
 
+export const GET: APIRoute = async ({ locals, request }) => {
+  if (!locals.user || !locals.accessToken) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
+  const supabase = makeAuthClient(locals.accessToken);
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -24,72 +36,113 @@ export const GET: APIRoute = async ({ locals }) => {
     .maybeSingle();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error.message }, 500);
   }
 
   // No profile yet — return fallback from user metadata
   if (!data) {
-    return new Response(JSON.stringify({
+    const acceptLang = request.headers.get('accept-language') || '';
+    const defaultLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
+    return jsonResponse({
       id: locals.user.id,
       display_name: locals.user.user_metadata?.full_name || locals.user.email || '',
+      username: null,
       avatar_url: locals.user.user_metadata?.avatar_url || null,
+      bio: null,
       persona: null,
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      preferred_locale: defaultLocale,
+      is_public: false,
+      onboarding_completed: false,
+    });
   }
 
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return jsonResponse(data);
 };
 
 export const PUT: APIRoute = async ({ request, locals }) => {
   if (!locals.user || !locals.accessToken) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
   const body = await request.json();
-  const { display_name, persona } = body;
+  const { display_name, username, bio, persona, preferred_locale, is_public, onboarding_completed } = body;
 
-  if (persona && !['beginner', 'learner', 'expert'].includes(persona)) {
-    return new Response(JSON.stringify({ error: 'Invalid persona' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  // Validate persona
+  if (persona && !VALID_PERSONAS.includes(persona)) {
+    return jsonResponse({ error: 'Invalid persona' }, 400);
   }
 
-  const supabase = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${locals.accessToken}` } } },
-  );
+  // Validate preferred_locale
+  if (preferred_locale && !VALID_LOCALES.includes(preferred_locale)) {
+    return jsonResponse({ error: 'Invalid locale' }, 400);
+  }
+
+  // Validate username format (if provided)
+  if (username !== undefined && username !== null && username !== '') {
+    if (!USERNAME_RE.test(username)) {
+      return jsonResponse({
+        error: 'Username must be 3-20 characters, lowercase letters, numbers, and hyphens only',
+      }, 400);
+    }
+  }
+
+  const supabase = makeAuthClient(locals.accessToken);
+
+  // If username is changing, enforce 30-day cooldown and track change timestamp
+  const newUsername = username || null;
+  let usernameActuallyChanged = false;
+  if (username !== undefined) {
+    const { data: current } = await supabase
+      .from('profiles')
+      .select('username, username_changed_at')
+      .eq('id', locals.user.id)
+      .maybeSingle();
+
+    if (current && newUsername !== current.username) {
+      if (current.username_changed_at) {
+        const elapsed = Date.now() - new Date(current.username_changed_at).getTime();
+        if (elapsed < USERNAME_COOLDOWN_MS) {
+          return jsonResponse({ error: 'User ID can only be changed once every 30 days' }, 429);
+        }
+      }
+      usernameActuallyChanged = true;
+    } else if (!current && newUsername) {
+      usernameActuallyChanged = true; // first time setting
+    }
+  }
+
+  const upsertData: Record<string, unknown> = {
+    id: locals.user.id,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Only include fields that were sent in the request
+  if (display_name !== undefined) upsertData.display_name = display_name || null;
+  if (username !== undefined) {
+    upsertData.username = newUsername;
+    if (usernameActuallyChanged) {
+      upsertData.username_changed_at = new Date().toISOString();
+    }
+  }
+  if (bio !== undefined) upsertData.bio = bio || null;
+  if (persona !== undefined) upsertData.persona = persona || null;
+  if (preferred_locale !== undefined) upsertData.preferred_locale = preferred_locale;
+  if (is_public !== undefined) upsertData.is_public = !!is_public;
+  if (onboarding_completed !== undefined) upsertData.onboarding_completed = !!onboarding_completed;
 
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({
-      id: locals.user.id,
-      display_name: display_name ?? null,
-      persona: persona ?? null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' })
+    .upsert(upsertData, { onConflict: 'id' })
     .select()
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Handle unique constraint violation for username
+    if (error.code === '23505' && error.message.includes('username')) {
+      return jsonResponse({ error: 'Username already taken' }, 409);
+    }
+    return jsonResponse({ error: error.message }, 500);
   }
 
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return jsonResponse(data);
 };

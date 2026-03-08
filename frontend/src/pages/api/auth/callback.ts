@@ -4,10 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 export const prerender = false;
 const isSecure = import.meta.env.PROD;
 
+/** Prevent open redirect: only allow relative paths starting with / (not //) */
+function sanitizeRedirect(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
+  return raw;
+}
+
 // OAuth code exchange (Supabase PKCE flow redirect)
 export const GET: APIRoute = async ({ url, cookies }) => {
   const code = url.searchParams.get('code');
-  const redirectTo = url.searchParams.get('redirectTo') || '/';
+  const redirectTo = sanitizeRedirect(url.searchParams.get('redirectTo'));
 
   if (!code) {
     return new Response(null, {
@@ -56,6 +62,12 @@ export const GET: APIRoute = async ({ url, cookies }) => {
   });
 };
 
+/** Detect default locale from Accept-Language header */
+function detectLocale(request: Request): 'ko' | 'en' {
+  const acceptLang = request.headers.get('accept-language') || '';
+  return acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
+}
+
 // Email/password login (existing admin flow)
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -83,6 +95,38 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       sameSite: 'lax',
       maxAge: 604800, // 7 days
     });
+
+    // Auto-create profile on first login (best-effort, never blocks login)
+    try {
+      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const sb = createClient(supabaseUrl, supabaseKey, {
+          global: { headers: { Authorization: `Bearer ${access_token}` } },
+        });
+        const { data: { user } } = await sb.auth.getUser(access_token);
+        if (user) {
+          const { data: existing } = await sb
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (!existing) {
+            const meta = user.user_metadata || {};
+            await sb.from('profiles').insert({
+              id: user.id,
+              display_name: meta.full_name || meta.name || user.email || null,
+              avatar_url: meta.avatar_url || null,
+              preferred_locale: detectLocale(request),
+              onboarding_completed: false,
+            });
+          }
+        }
+      }
+    } catch {
+      // Profile creation failure must not block login
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,

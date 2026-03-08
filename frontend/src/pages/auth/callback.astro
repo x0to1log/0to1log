@@ -84,6 +84,20 @@ const nonce = Astro.locals.cspNonce || '';
             });
 
             if (res.ok) {
+              // Check onboarding status — redirect to settings if not completed
+              try {
+                const profileRes = await fetch('/api/user/profile');
+                if (profileRes.ok) {
+                  const profile = await profileRes.json();
+                  if (!profile.onboarding_completed && !localStorage.getItem('onboarding_seen')) {
+                    localStorage.setItem('onboarding_seen', 'true');
+                    window.location.href = '/settings/?onboarding=true';
+                    return;
+                  }
+                }
+              } catch {
+                // Profile check failure should not block login
+              }
               window.location.href = redirectTo;
             } else {
               window.location.href = '/login?error=exchange_failed';
