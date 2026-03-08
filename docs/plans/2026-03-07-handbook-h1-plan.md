@@ -1,8 +1,8 @@
-# Tech Handbook H1 Implementation Plan
+# AI Glossary H1 Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Notion Tech Handbook 데이터를 Supabase로 마이그레이션하고, `/handbook/` 이중 언어 페이지 + 어드민 검수 워크플로우를 구현한다.
+**Goal:** Notion AI Glossary 데이터를 Supabase로 마이그레이션하고, `/handbook/` 이중 언어 페이지 + 어드민 검수 워크플로우를 구현한다.
 
 **Architecture:** Supabase `handbook_terms` 테이블에 이중 언어(`_ko`/`_en` 접미사) 데이터 저장. 프론트엔드는 기존 Astro SSR + newsprint 패턴을 따른다. 어드민은 Supabase Auth JWT로 직접 CRUD (백엔드 불필요).
 
@@ -26,7 +26,7 @@
 
 ```sql
 -- 00006_handbook_terms.sql
--- Handbook: Tech glossary terms (bilingual EN/KO)
+-- Handbook: AI glossary terms (bilingual EN/KO)
 -- Reference: docs/08_Handbook.md
 
 CREATE TABLE IF NOT EXISTS handbook_terms (
@@ -274,7 +274,7 @@ Add to `en` object (after existing keys):
 
 ```typescript
 'nav.handbook': 'Handbook',
-'handbook.title': 'Tech Handbook',
+'handbook.title': 'AI Glossary',
 'handbook.subtitle': 'CS · AI · Infra',
 'handbook.empty': 'No terms yet.',
 'handbook.error': 'Failed to load terms. Please try again shortly.',
@@ -373,7 +373,7 @@ const categories = Array.from(
 <MainLayout title={t[locale]['handbook.title']} locale={locale} slug="handbook/">
   <NewsprintShell
     locale={locale}
-    masthead="Tech Handbook"
+    masthead="AI Glossary"
     editionLabel="CS · AI · Infra"
     subkicker={['Glossary', 'Reference', 'Learn']}
   >
@@ -634,12 +634,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 ---
 
 <MainLayout
-  title={`${pageTitle} — Tech Handbook`}
+  title={`${pageTitle} — AI Glossary`}
   description={pageDescription}
   locale={locale}
   slug={`handbook/${pageSlug}/`}
 >
-  <NewsprintShell locale={locale} masthead="Tech Handbook" editionLabel={term?.category ? getHandbookCategoryLabel(locale, term.category) || '' : ''}>
+  <NewsprintShell locale={locale} masthead="AI Glossary" editionLabel={term?.category ? getHandbookCategoryLabel(locale, term.category) || '' : ''}>
     {termError ? (
       <NewsprintNotice
         variant="error"

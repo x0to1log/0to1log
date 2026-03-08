@@ -1,4 +1,4 @@
-# 08 — Tech Handbook Spec
+# 08 — AI Glossary Spec
 
 > **문서 버전:** v1.0
 > **최종 수정:** 2026-03-08
@@ -18,7 +18,7 @@
 - Route compatibility remains unchanged: AI News articles continue to live under `/{locale}/log/`.
 - Any legacy `Log` wording in older implementation notes should be read as the public AI News surface unless the context is explicitly internal/admin.
 
-**Tech Handbook**은 Notion에서 관리해온 CS/AI/Infra 용어 사전을 웹사이트에 `/handbook/` 경로로 공개하는 기능이다.
+**AI Glossary**은 Notion에서 관리해온 CS/AI/Infra 용어 사전을 웹사이트에 `/handbook/` 경로로 공개하는 기능이다.
 
 **목표:**
 - Notion 데이터(KO)를 Supabase에 마이그레이션하고 EN 콘텐츠를 추가하는 이중 언어 사전 구축
@@ -276,7 +276,7 @@ Newsprint 디자인 시스템 위에 사전(Dictionary) 톤을 입힌 접근.
 ### 목록 페이지 (`/en/handbook/`, `/ko/handbook/`)
 
 - **렌더링:** SSR (`prerender = false`)
-- **레이아웃:** NewsprintShell (masthead: "Tech Handbook", editionLabel: "CS · AI · Infra")
+- **레이아웃:** NewsprintShell (masthead: "AI Glossary", editionLabel: "CS · AI · Infra")
 - **필터:** 카테고리 + 난이도 조합 (AND 관계)
 - **검색:** 클라이언트사이드 필터링 (용어 수가 적으므로). 100개 이상 시 서버사이드로 전환 검토.
 - **빈 상태 / 에러:** NewsprintNotice 재사용
@@ -319,7 +319,7 @@ Newsprint 디자인 시스템 위에 사전(Dictionary) 톤을 입힌 접근.
 
 ### SEO
 
-- `<title>`: KO → `{term} ({korean_name}) — Tech Handbook | 0to1log`, EN → `{term} — Tech Handbook | 0to1log`
+- `<title>`: KO → `{term} ({korean_name}) — AI Glossary | 0to1log`, EN → `{term} — AI Glossary | 0to1log`
 - `<meta description>`: `definition_{locale}` (150자 이내, fallback: `definition_ko`)
 - Open Graph: term + definition + representative categories
 - Structured Data: `DefinedTerm` schema.org (선택, QA에서 검토)
