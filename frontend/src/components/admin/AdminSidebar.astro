@@ -114,6 +114,10 @@ const currentPath = Astro.url.pathname;
     const mobileBtn = document.getElementById('mobile-menu-btn');
     if (!sidebar) return;
 
+    // Prevent duplicate listeners on re-init (ViewTransitions navigation)
+    if (sidebar.dataset.sidebarInit === '1') return;
+    sidebar.dataset.sidebarInit = '1';
+
     // Clear stale localStorage value from previous implementation
     localStorage.removeItem('admin-sidebar-collapsed');
 
