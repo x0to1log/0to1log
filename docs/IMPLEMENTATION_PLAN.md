@@ -134,6 +134,14 @@ flowchart TD
 - 추후 확장: 댓글/리액션, 구독/알림 (C단계)
 - 상세 설계 → `docs/plans/2026-03-08-user-features-design.md`
 
+### 3B-SHARE (소셜 공유 버튼)
+- 상세 페이지(Log + Handbook)에 간단한 공유 버튼 추가
+- 대상 플랫폼: X(Twitter), LinkedIn, URL 복사
+- Web Share API 지원 시 네이티브 공유 시트 우선 사용, 미지원 시 플랫폼별 버튼 폴백
+- OG meta 태그 정비 (title, description, image) — 공유 시 카드 미리보기 최적화
+- Phase 3 "Highlight to Share"(문장 드래그 → SNS 카드 생성)와는 별개의 기본 공유 기능
+- 의존성: 없음 (로그인 불필요, 프론트엔드만)
+
 ### 3A-SEC (후속 보안 하드닝)
 - CSP nonce 기반 전환으로 `unsafe-inline` 제거
 - analytics/script 로딩을 nonce 또는 외부 script 로더 기준으로 재정비
