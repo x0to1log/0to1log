@@ -1,26 +1,24 @@
-# ACTIVE SPRINT — Phase 3-USER (일반 사용자 기능)
+# ACTIVE SPRINT — Phase 3A-SEC (보안 하드닝)
 
 > **스프린트 시작:** 2026-03-08
-> **목표:** 소셜 로그인 + 북마크 + 읽기 기록 + 학습 진도 + 내 서재
-> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md` | 설계 → `docs/plans/2026-03-08-user-features-design.md`
-> **이전 스프린트:** Phase 2C-EXP — 2026-03-07 게이트 전체 통과
+> **스프린트 완료:** 2026-03-09
+> **목표:** CSP nonce 기반 전환으로 `unsafe-inline` 제거 + 보안 점검
+> **참조:** MASTER → `docs/IMPLEMENTATION_PLAN.md`
+> **이전 스프린트:** Phase 3-USER — 2026-03-08 게이트 전체 통과
 
 ---
 
 > UI naming boundary: public labels use `AI News`, `Handbook`, `Library`; internal/admin labels use `Posts`; compatibility route remains `/{locale}/log/`.
 
+> Status note: `3B-SHARE` is complete and reflected in `docs/IMPLEMENTATION_PLAN.md`.
+
 ## 스프린트 완료 게이트
 
-- [x] DB: `profiles`, `user_bookmarks`, `reading_history`, `learning_progress` 4개 테이블 생성 + RLS
-- [x] 소셜 로그인: GitHub/Google OAuth 버튼 → Supabase Auth redirect 동작
-- [x] 소셜 로그인: OAuth provider 외부 설정 완료 (GitHub App + Google Cloud + Supabase Dashboard)
-- [x] 소셜 로그인: 실제 로그인 → 세션 유지 → 로그아웃 E2E 정상
-- [x] 헤더: 비로그인 Sign In / 로그인 아바타 드롭다운 정상
-- [x] 읽기 기록: 상세 페이지 방문 시 자동 기록 + 리스트에서 읽은 글 opacity 감소
-- [x] 북마크: 리스트 카드 + 상세 페이지 북마크 토글 동작
-- [x] 학습 진도: Handbook 상세 학습 완료 체크 + 카테고리별 진도 바
-- [x] 내 서재: `/library` — 읽은 글 / 저장한 글 / 학습 현황 3탭 정상
+- [x] CSP `script-src`에서 `unsafe-inline` 제거, nonce 기반으로 전환
+- [x] 모든 인라인 스크립트(FOUC, GA4, Clarity, 날짜)에 nonce 속성 부여
+- [x] vercel.json 정적 CSP 제거, middleware 동적 CSP 설정
 - [x] `cd frontend && npm run build` → 0 error
+- [x] 로컬 dev에서 CSP 위반 에러 없음
 - [x] 태스크 전체 `상태=done` + `체크=[x]` 일치
 - [x] `Current Doing` 표가 비어 있음(`-`)
 - [x] 완료 태스크마다 `증거` 마크 최소 1개 존재
@@ -52,162 +50,169 @@
 
 ## 태스크 (실행 순서)
 
-### 1. DB 마이그레이션 — 사용자 테이블 4개 `[P3U-DB-01]`
+### 1. env.d.ts — Locals 타입 업데이트 `[P3A-TYPE-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** `profiles`, `user_bookmarks`, `reading_history`, `learning_progress` 테이블 생성 + RLS 정책
-- **산출물:** `supabase/migrations/00007_user_tables.sql`
-- **완료 기준:** 테이블 4개 + RLS 정책 + 인덱스 생성 확인
-- **검증:** SQL 파일 존재 + 스키마 구조 확인
-- **증거:** `supabase/migrations/00007_user_tables.sql` 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §4
+- **목적:** `App.Locals`에 `cspNonce` 타입 추가
+- **산출물:** `frontend/src/env.d.ts` 수정
+- **완료 기준:** TypeScript 컴파일 에러 없이 `Astro.locals.cspNonce` 접근 가능
+- **검증:** `npm run build` 0 error
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
 - **의존성:** 없음
+- **증거:** `env.d.ts`에 `cspNonce?: string` 추가 완료
 
-### 2. OAuth 로그인 구현 — 코드 `[P3U-AUTH-01]`
+### 2. Middleware — nonce 생성 + 동적 CSP 헤더 `[P3A-MW-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** `/login` 페이지 + OAuth 버튼 (GitHub/Google/Kakao) + callback 코드 교환 + httpOnly cookie 설정
-- **산출물:** `frontend/src/pages/login.astro`, `frontend/src/pages/api/auth/callback.ts` 수정
-- **완료 기준:** OAuth 버튼 클릭 → Supabase redirect 동작 확인, Kakao는 "준비 중" 표시
-- **검증:** `npm run build` 0 error + 로컬에서 OAuth redirect 동작
-- **증거:** commits dc4b11b, ff1aff1, 025e35a, 076302d (define:vars fix → import.meta.env fix → initLogin fix → Kakao button)
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §3, §6.2
-- **의존성:** P3U-DB-01
-
-### 3. OAuth 로그인 — 외부 서비스 설정 `[P3U-AUTH-02]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** GitHub OAuth App, Google Cloud OAuth, Supabase Dashboard Provider 설정 → 실제 로그인 동작
-- **산출물:** 외부 서비스 설정 완료 (코드 변경 없음)
-- **완료 기준:** GitHub/Google 버튼 클릭 → provider 로그인 → 0to1log.com 으로 redirect → 세션 유지
-- **검증:** 프로덕션에서 GitHub/Google 로그인 E2E 수동 테스트
-- **증거:** GitHub OAuth App + Google Cloud Console + Supabase Dashboard 설정 완료, 프로덕션 로그인 확인
-- **설정 체크리스트:**
-  - [x] GitHub OAuth App: callback URL = `https://luwipptjfyjsleqouasj.supabase.co/auth/v1/callback`
-  - [x] Google Cloud Console: OAuth 2.0 Client + redirect URI = 위와 동일
-  - [x] Google OAuth Consent Screen: 테스트 사용자 등록
-  - [x] Supabase Dashboard: GitHub provider 활성화 + Client ID/Secret 입력
-  - [x] Supabase Dashboard: Google provider 활성화 + Client ID/Secret 입력
-  - [x] Supabase Dashboard: Redirect URLs에 `https://0to1log.com/api/auth/callback` 추가
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §3
-- **의존성:** P3U-AUTH-01
-
-### 4. Middleware 확장 — 사용자 경로 보호 `[P3U-MW-01]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** middleware.ts에 3-zone 인증 추가 (public / user-protected / admin-protected)
+- **목적:** 매 요청마다 nonce 생성 → `context.locals.cspNonce` 저장 → response에 CSP 헤더 동적 설정
 - **산출물:** `frontend/src/middleware.ts` 수정
-- **완료 기준:** `/api/user/*`, `/library` 경로는 로그인 필수, 비로그인 시 redirect/401
+- **완료 기준:** response 헤더에 `Content-Security-Policy`가 `nonce-*` 포함, `unsafe-inline` 없음 (script-src)
 - **검증:** `npm run build` 0 error
-- **증거:** middleware.ts 3-zone 구현 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §3.3
-- **의존성:** P3U-AUTH-01
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
+- **의존성:** P3A-TYPE-01
+- **증거:** `buildCspHeader()`, `nextWithCsp()` 함수 추가, 모든 return 경로에 CSP 적용
 
-### 5. User API 엔드포인트 4종 `[P3U-API-01]`
+### 3. MainLayout — 인라인 스크립트 nonce 추가 `[P3A-LAYOUT-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** profile, bookmarks, reading-history, learning-progress CRUD API
-- **산출물:** `frontend/src/pages/api/user/profile.ts`, `bookmarks.ts`, `reading-history.ts`, `learning-progress.ts`
-- **완료 기준:** 인증된 사용자만 접근 가능, RLS 기반 데이터 격리
+- **목적:** FOUC 방지(2개), GA4(2개), Clarity(1개) 인라인 스크립트에 `nonce={nonce}` 추가
+- **산출물:** `frontend/src/layouts/MainLayout.astro` 수정
+- **완료 기준:** 5개 `<script is:inline>` 태그 모두 nonce 속성 포함
 - **검증:** `npm run build` 0 error
-- **증거:** 4개 API 파일 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §5
-- **의존성:** P3U-MW-01
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
+- **의존성:** P3A-MW-01
+- **증거:** 5개 `<script is:inline nonce={nonce}>` 태그 확인
 
-### 6. Navigation — Sign In / 아바타 드롭다운 `[P3U-NAV-01]`
+### 4. NewsprintShell — 날짜 스크립트 nonce 추가 `[P3A-SHELL-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** 비로그인 시 Sign In 링크, 로그인 시 아바타 + 드롭다운 (Library, Admin, Sign Out)
-- **산출물:** `frontend/src/components/Navigation.astro` 수정
-- **완료 기준:** 로그인 상태에 따른 UI 분기 정상
+- **목적:** 날짜 로컬라이즈 인라인 스크립트에 nonce 추가
+- **산출물:** `frontend/src/components/newsprint/NewsprintShell.astro` 수정
+- **완료 기준:** `<script is:inline>` 태그에 nonce 속성 포함
 - **검증:** `npm run build` 0 error
-- **증거:** Navigation.astro 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.1
-- **의존성:** P3U-AUTH-01
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
+- **의존성:** P3A-MW-01
+- **증거:** `<script is:inline nonce={nonce}>` 적용 완료
 
-### 7. 읽기 기록 + 북마크 — Log/Handbook 페이지 통합 `[P3U-UI-01]`
+### 5. vercel.json — 정적 CSP 제거 `[P3A-VERCEL-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** 상세 페이지 자동 읽기 기록 + 북마크 토글 + 리스트에서 읽은 글 opacity 감소
-- **산출물:** EN/KO log/handbook 리스트 및 상세 페이지 수정, `frontend/src/scripts/bookmark.ts`
-- **완료 기준:** 로그인 사용자의 읽기 기록 자동 기록 + 북마크 동작 + 비로그인 시 redirect
-- **검증:** `npm run build` 0 error
-- **증거:** log/handbook 페이지 + bookmark.ts 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.3~6.5
-- **의존성:** P3U-API-01
+- **목적:** middleware에서 동적 CSP를 설정하므로 vercel.json의 정적 CSP 항목 제거
+- **산출물:** `frontend/vercel.json` 수정
+- **완료 기준:** CSP 헤더 항목만 제거, 나머지 보안 헤더 유지
+- **검증:** vercel.json 구조 확인
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
+- **의존성:** P3A-MW-01
+- **증거:** CSP 항목 제거, X-Content-Type-Options/X-Frame-Options/X-XSS-Protection/Referrer-Policy 유지
 
-### 8. Handbook 학습 진도 `[P3U-UI-02]`
+### 6. auth/callback.astro — FOUC 스크립트 nonce 추가 `[P3A-AUTH-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** Handbook 상세에 "학습 완료" 체크 버튼 + learning_progress API 연동
-- **산출물:** EN/KO handbook 상세 페이지 수정
-- **완료 기준:** read → learned 전환 + 비로그인 시 버튼 숨김
+- **목적:** auth callback 페이지의 별도 FOUC 방지 스크립트에 nonce 추가
+- **산출물:** `frontend/src/pages/auth/callback.astro` 수정
+- **완료 기준:** `<script is:inline>` 태그에 nonce 속성 포함
 - **검증:** `npm run build` 0 error
-- **증거:** handbook 상세 페이지 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.6
-- **의존성:** P3U-UI-01
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
+- **의존성:** P3A-MW-01
+- **증거:** `<script is:inline nonce={nonce}>` 적용 + `lang="en"` 추가
 
-### 9. 내 서재 페이지 `[P3U-LIB-01]`
+### 7. 빌드 검증 + CLAUDE.md 업데이트 `[P3A-QA-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** `/library` — 읽은 글 / 저장한 글 / 학습 현황 3탭 페이지
-- **산출물:** `frontend/src/pages/library/index.astro`
-- **완료 기준:** 3탭 동작 + 카테고리별 학습 진도 바 + 비로그인 시 redirect
-- **검증:** `npm run build` 0 error
-- **증거:** library/index.astro 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6.7
-- **의존성:** P3U-UI-02
+- **목적:** 전체 빌드 통과 + frontend CLAUDE.md 보안 섹션 업데이트
+- **산출물:** `npm run build` 로그 + `frontend/CLAUDE.md` 수정
+- **완료 기준:** 빌드 0 error
+- **검증:** `cd frontend && npm run build`
+- **참조:** `docs/IMPLEMENTATION_PLAN.md` §3A-SEC
+- **의존성:** P3A-LAYOUT-01, P3A-SHELL-01, P3A-VERCEL-01, P3A-AUTH-01
+- **증거:** 빌드 성공 (0 error) + CLAUDE.md 보안 섹션 nonce 기반 CSP 문서화
 
-### 10. User feature CSS `[P3U-CSS-01]`
+### 8. 보안 리뷰 — Open Redirect 수정 `[P3A-SEC-01]` (HIGH)
 - **체크:** [x]
 - **상태:** done
-- **목적:** 로그인/북마크/읽기기록/서재 관련 CSS 스타일 추가
-- **산출물:** `frontend/src/styles/global.css` 수정
-- **완료 기준:** login-oauth-btn, user-avatar, user-dropdown, bookmark, library-tabs 등 스타일 정상
+- **목적:** `api/auth/callback.ts`의 `redirectTo` 파라미터 검증 없이 `Location` 헤더에 사용 → 외부 URL 유도 가능 취약점 수정
+- **산출물:** `frontend/src/pages/api/auth/callback.ts` 수정
+- **완료 기준:** `sanitizeRedirect()` 함수로 `/`로 시작하되 `//`는 거부하는 검증 적용
 - **검증:** `npm run build` 0 error
-- **증거:** global.css 커밋 완료
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §6
+- **참조:** Web Interface Guidelines 리뷰
+- **의존성:** P3A-QA-01
+- **증거:** `sanitizeRedirect()` 함수 추가, GET handler에 적용
+
+### 9. 보안 리뷰 — strict-dynamic 추가 `[P3A-SEC-02]` (MED)
+- **체크:** [x]
+- **상태:** done
+- **목적:** Clarity 스크립트의 동적 `<script>` 삽입이 nonce CSP에서 차단될 수 있어 `strict-dynamic` 추가
+- **산출물:** `frontend/src/middleware.ts` 수정
+- **완료 기준:** CSP `script-src`에 `'strict-dynamic'` 포함
+- **검증:** `npm run build` 0 error
+- **참조:** Web Interface Guidelines 리뷰
+- **의존성:** P3A-MW-01
+- **증거:** `buildCspHeader()`에 `'strict-dynamic'` 추가 완료
+
+### 10. 보안 리뷰 — callback.astro lang 속성 `[P3A-SEC-03]` (LOW)
+- **체크:** [x]
+- **상태:** done
+- **목적:** `auth/callback.astro`의 `<html>` 태그에 `lang` 속성 누락 수정
+- **산출물:** `frontend/src/pages/auth/callback.astro` 수정
+- **완료 기준:** `<html lang="en" data-theme="light">`
+- **검증:** 소스 확인
+- **참조:** Web Interface Guidelines 리뷰
+- **의존성:** P3A-AUTH-01
+- **증거:** `lang="en"` 추가 완료 (P3A-AUTH-01과 동시 적용)
+
+### 11. 보안 리뷰 — color-scheme 속성 `[P3A-SEC-04]` (LOW)
+- **체크:** [x]
+- **상태:** done
+- **목적:** FOUC 방지 스크립트에서 다크 테마 설정 시 `color-scheme`도 설정 → 네이티브 input/scrollbar 테마 매칭
+- **산출물:** `frontend/src/layouts/MainLayout.astro` 수정
+- **완료 기준:** FOUC 스크립트에 `document.documentElement.style.colorScheme` 설정 로직 포함
+- **검증:** 소스 확인
+- **참조:** Web Interface Guidelines 리뷰
+- **의존성:** P3A-LAYOUT-01
+- **증거:** `var cs = { dark: 'dark', light: 'light', pink: 'light' };` + `colorScheme` 설정 추가
+
+### 12. 보안 리뷰 — OAuth 버튼 이중 클릭 방지 `[P3A-SEC-05]` (LOW)
+- **체크:** [x]
+- **상태:** done
+- **목적:** 로그인 페이지 OAuth 버튼 클릭 시 모든 버튼 비활성화 + "Signing in…" 텍스트 변경
+- **산출물:** `frontend/src/pages/login.astro` 수정
+- **완료 기준:** 클릭 후 버튼 disabled + 텍스트 변경
+- **검증:** 소스 확인
+- **참조:** Web Interface Guidelines 리뷰
 - **의존성:** 없음
-
-### 11. OAuth E2E 검증 `[P3U-QA-01]`
-- **체크:** [x]
-- **상태:** done
-- **목적:** 프로덕션에서 소셜 로그인 → 북마크 → 읽기 기록 → 학습 진도 → 서재 전체 흐름 검증
-- **산출물:** 수동 E2E 테스트 결과
-- **완료 기준:** 설계 문서 §12의 검증 항목 16개 전체 통과
-- **검증:** 프로덕션에서 수동 테스트
-- **증거:** 프로덕션 E2E 수동 테스트 통과
-- **참조:** `docs/plans/2026-03-08-user-features-design.md` §12
-- **의존성:** P3U-AUTH-02
+- **증거:** `btn.disabled = true; btn.textContent = 'Signing in…'` 로직 추가
 
 ---
 
 ## 의존성 순서
 
 ```
-P3U-DB-01 → P3U-AUTH-01 → P3U-AUTH-02 → P3U-QA-01
-                ↓
-            P3U-MW-01 → P3U-API-01 → P3U-UI-01 → P3U-UI-02 → P3U-LIB-01
-                ↓
-            P3U-NAV-01
-
-P3U-CSS-01 (독립)
+P3A-TYPE-01 → P3A-MW-01 → P3A-LAYOUT-01 → P3A-QA-01 → P3A-SEC-01
+                  ↓                                       ↓
+              P3A-SHELL-01 → P3A-QA-01              P3A-SEC-02
+                  ↓
+              P3A-VERCEL-01 → P3A-QA-01
+                  ↓
+              P3A-AUTH-01 → P3A-QA-01 → P3A-SEC-03
 ```
 
 ---
 
-## 이전 스프린트 요약 (Phase 2C-EXP)
+## 이전 스프린트 요약 (Phase 3-USER)
 
-> Phase 2C-EXP (2026-03-07) — 게이트 전체 통과, 6개 태스크 완료.
-> - Newsprint 토큰/테마/공통 컴포넌트 정리
-> - /en|ko/log 리스트/상세 + 다국어 스위처
-> - 썸네일 이미지 newsprint 필터
-> - Admin Editor 화면(마크다운 작성/미리보기)
-> - Admin Editor 상태/권한/에러 처리(mock)
-> - 반응형/접근성/성능 QA (Perf 87 / Acc 98 / SEO 100 / BP 77)
+> Phase 3-USER (2026-03-08) — 게이트 전체 통과, 11개 태스크 완료.
+> - DB 마이그레이션 (profiles, bookmarks, reading_history, learning_progress)
+> - OAuth 로그인 (GitHub/Google) 코드 + 외부 설정
+> - Middleware 3-zone 인증
+> - User API 4종 (profile, bookmarks, reading-history, learning-progress)
+> - Navigation Sign In / 아바타 드롭다운
+> - 읽기 기록 + 북마크 통합
+> - Handbook 학습 진도
+> - 내 서재 페이지 (/library)
+> - OAuth E2E 검증
 
 ---
 
 ## 다음 스프린트 예고
 
-Phase 3-USER 게이트 통과 후 → **Phase 3-Intelligence** (AI 추천 + 학습 고도화)
+Phase 3A-SEC 게이트 통과 → **Phase 3-Intelligence** (AI 추천 + 학습 고도화)

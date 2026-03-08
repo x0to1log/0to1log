@@ -63,10 +63,10 @@ flowchart TD
 - Language and theme controls live in the utility drawer, not inline in the public header
 
 ### Current Status Snapshot
-- Mainline 구현 상태: **Phase 2D-INT 완료** (main 브랜치 반영 완료)
-- **완료된 단계:** 2B-OPS, 2C-EXP, 2D-INT
+- Mainline 구현 상태: **Phase 3A-SEC 완료** (main 브랜치 반영 완료)
+- **완료된 단계:** 2B-OPS, 2C-EXP, 2D-INT, 3-USER, 3A-SEC
 - **병렬 진행:** Handbook H1은 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md` 기준으로 별도 운영한다.
-- **다음 메인라인 스프린트:** Phase 3-USER (일반 사용자 기능) → `docs/plans/2026-03-08-user-features-design.md`
+- **다음 메인라인 스프린트:** Phase 3-Intelligence (AI 추천 + 학습 고도화)
 
 ---
 
@@ -126,26 +126,28 @@ flowchart TD
 
 ### 3-USER (일반 사용자 기능, 설계 완료)
 - 소셜 로그인: GitHub + Google OAuth via Supabase Auth (`/login`)
-- DB: `profiles`, `reading_history`, `bookmarks` 3개 테이블 + RLS
+- DB: `profiles`, `user_bookmarks`, `reading_history`, `learning_progress` 4개 테이블 + RLS
+- profiles 확장: username, bio, preferred_locale, is_public, onboarding_completed (`docs/plans/2026-03-09-profiles-redesign.md`)
 - 헤더: Sign In / 아바타 드롭다운 (내 서재, 설정, 로그아웃)
 - 읽기 기록: 상세 페이지 방문 시 자동 기록, 리스트에서 읽은 글 `opacity: 0.55`
-- 북마크: 리스트 카드 + 상세 페이지에 북마크 아이콘
-- 내 서재: `/library` — 읽은 글 탭 + 저장한 글 탭
-- 추후 확장: 댓글/리액션, 구독/알림 (C단계)
+- 북마크: 리스트 카드 + 상세 페이지에 북마크 아이콘 (기사 + 용어 통합)
+- 학습 진도: Handbook 카테고리별 용어 학습 현황
+- 내 서재: `/library` — 읽은 글 탭 + 저장한 글 탭 + 학습 현황 탭
+- 추후 확장: 댓글/리액션, 사이트 내부 알림 (C단계)
 - 상세 설계 → `docs/plans/2026-03-08-user-features-design.md`
 
-### 3B-SHARE (소셜 공유 버튼)
-- 상세 페이지(Log + Handbook)에 간단한 공유 버튼 추가
-- 대상 플랫폼: X(Twitter), LinkedIn, URL 복사
-- Web Share API 지원 시 네이티브 공유 시트 우선 사용, 미지원 시 플랫폼별 버튼 폴백
-- OG meta 태그 정비 (title, description, image) — 공유 시 카드 미리보기 최적화
-- Phase 3 "Highlight to Share"(문장 드래그 → SNS 카드 생성)와는 별개의 기본 공유 기능
+### 3B-SHARE (소셜 공유 버튼, 완료)
+- 상세 페이지(Log + Handbook)에 기본 공유 버튼 추가 — 완료
+- 대상 플랫폼: X(Twitter), LinkedIn, URL 복사 — 완료
+- Web Share API 지원 시 네이티브 공유 시트 우선 사용, 미지원 시 플랫폼별 버튼 폴백 — 완료
+- OG meta 태그 정비 (title, description, image) — 공유 시 카드 미리보기 최적화 완료
+- Phase 3 "Highlight to Share"(문장 드래그 → SNS 카드 생성)와는 별개의 기본 공유 기능으로 구현 완료
 - 의존성: 없음 (로그인 불필요, 프론트엔드만)
 
-### 3A-SEC (후속 보안 하드닝)
-- CSP nonce 기반 전환으로 `unsafe-inline` 제거
-- analytics/script 로딩을 nonce 또는 외부 script 로더 기준으로 재정비
-- production 배포 전 보안 점검 체크리스트 재실행
+### 3A-SEC (후속 보안 하드닝, 완료)
+- CSP nonce 기반 전환으로 `unsafe-inline` 제거 — 완료
+- analytics/script 로딩을 nonce 기준으로 재정비 (`strict-dynamic` 포함) — 완료
+- Web Interface Guidelines 기반 보안 리뷰 5건 수정 (Open Redirect, lang, color-scheme, 버튼 로딩) — 완료
 
 ---
 

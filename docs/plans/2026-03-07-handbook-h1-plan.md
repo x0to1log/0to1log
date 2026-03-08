@@ -10,6 +10,9 @@
 
 **Design Doc:** `docs/08_Handbook.md` — 비즈니스 전략, 스키마 근거, UX 와이어프레임 참조
 
+**Schema Note:** Current handbook runtime uses `categories TEXT[]` after `00007_handbook_multi_category.sql`. Any older single-`category` examples below are legacy H1 notes unless explicitly updated.
+
+
 ---
 
 ## Task 1: Create handbook_terms migration
@@ -34,7 +37,7 @@ CREATE TABLE IF NOT EXISTS handbook_terms (
     slug                    TEXT UNIQUE NOT NULL,
     korean_name             TEXT,
     difficulty              TEXT CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
-    category                TEXT,
+    categories              TEXT[],
     related_term_slugs      TEXT[],
     is_favourite            BOOLEAN DEFAULT FALSE,
 
@@ -67,7 +70,7 @@ CREATE TABLE IF NOT EXISTS handbook_terms (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_handbook_slug ON handbook_terms(slug);
-CREATE INDEX IF NOT EXISTS idx_handbook_category ON handbook_terms(category);
+CREATE INDEX IF NOT EXISTS idx_handbook_categories ON handbook_terms USING GIN (categories);
 CREATE INDEX IF NOT EXISTS idx_handbook_difficulty ON handbook_terms(difficulty);
 CREATE INDEX IF NOT EXISTS idx_handbook_status ON handbook_terms(status);
 

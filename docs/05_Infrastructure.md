@@ -572,10 +572,10 @@ Supabase CLI로 스키마 변경 버전 관리: `supabase migration new <name>` 
 supabase/
 ├── config.toml                 # Supabase 프로젝트 설정
 ├── migrations/
-│   ├── 20260304_001_initial_schema.sql       # Phase 1a: posts, comments, likes
-│   ├── 20260304_002_rls_policies.sql         # Phase 1a: RLS 정책
-│   ├── 20260304_003_pipeline_tables.sql      # Phase 2: pipeline_logs, admin_notifications, news_candidates
-│   └── 20260xxx_004_embeddings.sql           # Phase 3: embeddings, pgvector
+│   ├── 00001_initial_schema.sql       # posts + admin_users (uid-based RLS)
+│   ├── 00002_pipeline_tables.sql      # pipeline infra (uid-based RLS)
+│   ├── 00003_handbook_terms.sql       # handbook (multi-category + uid-based RLS)
+│   └── 00004_user_tables.sql          # profiles, bookmarks, reading_history, learning_progress
 └── seed.sql                    # 개발용 더미 데이터
 ```
 
