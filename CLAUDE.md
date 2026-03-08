@@ -59,13 +59,8 @@ docs/      → 스펙 문서 (사용자 요청 시만 수정)
 
 ## Git Branch Policy
 
-- Use a lightweight workflow: `main` + `dev` + `feature/*`.
-- `main` is the stable integration branch, not the default work branch.
-- Direct work on `main` should be avoided.
-- Pushing to `main` is allowed only for synchronized, review-ready changes that are already integrated or intentionally promoted from `dev`.
-- Day-to-day implementation should happen on `feature/*` branches created from `dev`.
-- Merge completed feature branches into `dev` first, then promote `dev` to `main` when the checkpoint is stable.
-- Recommended branch names:
-  - `feature/ai-news-*`
-  - `feature/handbook-h1-*`
-  - `docs/*`
+- Use a main-only workflow.
+- Day-to-day implementation happens directly on `main`.
+- Commit small, coherent groups of changes so the history stays readable.
+- Push to `main` after local verification and when the checkpoint is stable.
+- Feature branches are optional, not the default operating mode.

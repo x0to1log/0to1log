@@ -33,11 +33,11 @@
 
 - handbook sprint는 메인 sprint와 별도 관리한다.
 - handbook sprint의 `doing`은 항상 1개만 유지한다.
-- 권장 브랜치 운영: `main`은 직접 작업하지 않고, `dev`에서 `feature/handbook-h1-*` 브랜치를 따서 handbook 작업을 진행한다.
-- `main` push는 금지하지 않지만, handbook 구현 중간본을 바로 올리는 용도로 쓰지 않는다. handbook 변경은 `feature/handbook-h1-* -> dev -> main` 순서를 기본으로 한다.
+- handbook 작업도 기본적으로 `main` 브랜치에서 직접 진행한다.
+- handbook는 별도 sprint 문서로만 분리 관리하고, git 브랜치로 분리 관리하지 않는다.
 - 공유 파일 변경은 최소화한다: `Navigation.astro`, `src/i18n/index.ts`, 검색/탐색 문서.
 - 공유 파일 변경이 필요하면 handbook 전용 커밋으로 분리한다.
-- 메인 sprint와 충돌하면 메인 sprint merge 이후 handbook 브랜치를 rebase 한다.
+- 메인 sprint와 충돌하면 handbook 변경을 작은 커밋으로 나눠 순차 적용한다.
 - `/portfolio` 작업은 handbook보다 우선순위가 낮다.
 
 ---
