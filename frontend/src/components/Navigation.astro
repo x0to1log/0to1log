@@ -1,6 +1,4 @@
 ---
-import ThemeToggle from './ThemeToggle.astro';
-
 interface Props {
   locale?: 'en' | 'ko';
   alwaysVisible?: boolean;
@@ -10,101 +8,295 @@ interface Props {
 const { locale = 'en', alwaysVisible = false, altSlug } = Astro.props;
 const altLocale = locale === 'en' ? 'ko' : 'en';
 const currentPath = Astro.url.pathname;
+const hasLocaleSegment = currentPath.startsWith('/en/') || currentPath.startsWith('/ko/');
 const altPath = altSlug
   ? `/${altLocale}/log/${altSlug}/`
-  : currentPath.replace(`/${locale}/`, `/${altLocale}/`);
+  : hasLocaleSegment
+    ? currentPath.replace(`/${locale}/`, `/${altLocale}/`)
+    : `/${altLocale}/`;
 
 const user = Astro.locals.user;
 const isAdmin = Astro.locals.isAdmin;
 const avatarUrl = user?.user_metadata?.avatar_url;
 const displayName = user?.user_metadata?.full_name || user?.email || '';
 const initials = displayName ? displayName.charAt(0).toUpperCase() : '?';
+
+const copy = locale === 'ko'
+  ? {
+      aiNews: 'AI 뉴스',
+      handbook: '핸드북',
+      library: '서재',
+      pageHome: '홈',
+      pageArticle: '기사',
+      pageTerm: '용어',
+      pageAdmin: 'Admin',
+      pageLibrary: '서재',
+      languageItem: '언어 · English',
+      themeLabel: '테마',
+      themeDark: '다크',
+      themeLight: '라이트',
+      themePink: '핑크',
+      signIn: '로그인',
+      signOut: '로그아웃',
+      admin: 'Admin',
+      menuLabel: user ? '프로필 메뉴' : '설정 메뉴',
+      utilityLabel: '설정',
+    }
+  : {
+      aiNews: 'AI News',
+      handbook: 'Handbook',
+      library: 'Library',
+      pageHome: 'Home',
+      pageArticle: 'Article',
+      pageTerm: 'Term',
+      pageAdmin: 'Admin',
+      pageLibrary: 'Library',
+      languageItem: 'Language · 한국어',
+      themeLabel: 'Theme',
+      themeDark: 'Dark',
+      themeLight: 'Light',
+      themePink: 'Pink',
+      signIn: 'Sign In',
+      signOut: 'Sign Out',
+      admin: 'Admin',
+      menuLabel: user ? 'Profile menu' : 'Settings menu',
+      utilityLabel: 'Settings',
+    };
+
+function getCurrentPageLabel(pathname: string): string {
+  if (pathname.startsWith('/admin')) return copy.pageAdmin;
+  if (pathname.startsWith('/library')) return copy.pageLibrary;
+
+  const handbookRoot = `/${locale}/handbook/`;
+  const logRoot = `/${locale}/log/`;
+
+  if (pathname === handbookRoot || pathname === handbookRoot.slice(0, -1)) return copy.handbook;
+  if (pathname.startsWith(handbookRoot)) return copy.pageTerm;
+  if (pathname === logRoot || pathname === logRoot.slice(0, -1)) return copy.aiNews;
+  if (pathname.startsWith(logRoot)) return copy.pageArticle;
+
+  return copy.pageHome;
+}
+
+const currentPageLabel = getCurrentPageLabel(currentPath);
+
+const navItems = [
+  {
+    href: `/${locale}/log/`,
+    label: copy.aiNews,
+    active: currentPath === `/${locale}/log/` || currentPath.startsWith(`/${locale}/log/`),
+  },
+  {
+    href: `/${locale}/handbook/`,
+    label: copy.handbook,
+    active: currentPath === `/${locale}/handbook/` || currentPath.startsWith(`/${locale}/handbook/`),
+  },
+  {
+    href: '/library/',
+    label: copy.library,
+    active: currentPath.startsWith('/library'),
+  },
+];
 ---
 
-<header class="site-header" data-always-visible={alwaysVisible ? "true" : undefined} style={`background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);`}>
-  <nav aria-label="Main navigation" style={`max-width: 1280px; margin: 0 auto; padding: 1rem; display: flex; align-items: center; justify-content: space-between;`}>
-    <a href={`/${locale}/`} style={`font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; color: var(--color-accent); text-decoration: none;`}>
-      0to1log
-    </a>
+<header class="site-header" data-always-visible={alwaysVisible ? 'true' : undefined} style={`background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);`}>
+  <nav aria-label="Main navigation" class="site-header-shell">
+    <div class="site-header-topline">
+      <div class="site-header-brand-block">
+        <a href={`/${locale}/`} class="site-brand-link">
+          0to1log
+        </a>
+        <span class="site-page-label">{currentPageLabel}</span>
+      </div>
 
-    <div style="display: flex; align-items: center; gap: 1.5rem;">
-      <a href={`/${locale}/log/`} class="newsprint-nav-link">Log</a>
-      <a href={`/${locale}/handbook/`} class="newsprint-nav-link">Handbook</a>
-      <a href={altPath} class="newsprint-nav-link" style="font-size: 0.875rem;">
-        {locale === 'en' ? '한국어' : 'EN'}
-      </a>
-      <ThemeToggle />
+      <div class="site-primary-nav site-primary-nav--desktop" aria-label="Primary navigation">
+        {navItems.map((item) => (
+          <a
+            href={item.href}
+            class={`site-nav-pill${item.active ? ' site-nav-pill--active' : ''}`}
+            aria-current={item.active ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))}
+      </div>
 
-      {user ? (
+      <div class="site-utility-wrap">
         <div style="position: relative;">
-          <button class="user-avatar-btn" data-user-menu-toggle aria-label="User menu">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={displayName} />
+          <button
+            class="user-avatar-btn site-utility-btn"
+            data-user-menu-toggle
+            aria-label={copy.menuLabel}
+            title={copy.utilityLabel}
+          >
+            {user ? (
+              avatarUrl ? (
+                <img src={avatarUrl} alt={displayName} />
+              ) : (
+                initials
+              )
             ) : (
-              initials
+              <span class="site-utility-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21a8 8 0 0 0-16 0"></path>
+                  <circle cx="12" cy="8" r="4"></circle>
+                </svg>
+              </span>
             )}
           </button>
-          <div class="user-dropdown" data-user-dropdown>
-            <a href="/library/" class="user-dropdown-item">
-              {locale === 'ko' ? '내 서재' : 'My Library'}
-            </a>
-            {isAdmin && (
-              <a href="/admin/" class="user-dropdown-item">
-                Dashboard
+
+          <div class="user-dropdown user-dropdown--utility" data-user-dropdown>
+            {user && (
+              <a href="/library/" class="user-dropdown-item">
+                {copy.library}
               </a>
             )}
-            <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent(currentPath)}`} style="margin: 0;">
-              <button type="submit" class="user-dropdown-item" style="border-top: 1px solid var(--color-border);">
-                {locale === 'ko' ? '로그아웃' : 'Sign Out'}
-              </button>
-            </form>
+
+            <a href={altPath} class="user-dropdown-item">
+              {copy.languageItem}
+            </a>
+
+            <button
+              type="button"
+              class="user-dropdown-item user-dropdown-item--button"
+              data-theme-cycle
+              data-label-prefix={copy.themeLabel}
+              data-dark-label={copy.themeDark}
+              data-light-label={copy.themeLight}
+              data-pink-label={copy.themePink}
+            >
+              <span>{copy.themeLabel}</span>
+              <span data-theme-cycle-value></span>
+            </button>
+
+            {isAdmin && (
+              <a href="/admin/" class="user-dropdown-item">
+                {copy.admin}
+              </a>
+            )}
+
+            {user ? (
+              <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent(currentPath)}`} style="margin: 0;">
+                <button type="submit" class="user-dropdown-item user-dropdown-item--button user-dropdown-item--danger" style="border-top: 1px solid var(--color-border);">
+                  <span>{copy.signOut}</span>
+                </button>
+              </form>
+            ) : (
+              <a href={`/login?redirectTo=${encodeURIComponent(currentPath)}`} class="user-dropdown-item" style="border-top: 1px solid var(--color-border);">
+                {copy.signIn}
+              </a>
+            )}
           </div>
         </div>
-      ) : (
-        <a href={`/login?redirectTo=${encodeURIComponent(currentPath)}`} class="newsprint-nav-link" style="font-size: 0.875rem;">
-          {locale === 'ko' ? '로그인' : 'Sign In'}
+      </div>
+    </div>
+
+    <div class="site-primary-nav site-primary-nav--mobile" aria-label="Primary navigation">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class={`site-nav-pill${item.active ? ' site-nav-pill--active' : ''}`}
+          aria-current={item.active ? 'page' : undefined}
+        >
+          {item.label}
         </a>
-      )}
+      ))}
     </div>
   </nav>
 </header>
 <div class="site-header-spacer" aria-hidden="true"></div>
 
 <script>
-  function initUserDropdown(): void {
-    const toggle = document.querySelector('[data-user-menu-toggle]');
-    const dropdown = document.querySelector('[data-user-dropdown]');
+  const themes = ['dark', 'light', 'pink'] as const;
+  type Theme = typeof themes[number];
+  const themeColors = { dark: '#1F1A17', light: '#F4F1EA', pink: '#FFF0F3' };
+
+  function getTheme(): Theme {
+    const stored = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
+    return themes.includes(stored as Theme) ? (stored as Theme) : 'dark';
+  }
+
+  function renderThemeCycle(button: HTMLElement | null) {
+    if (!button) return;
+    const theme = getTheme();
+    const valueEl = button.querySelector('[data-theme-cycle-value]');
+    const prefix = button.dataset.labelPrefix || 'Theme';
+    const themeLabel = button.dataset[`${theme}Label`] || theme;
+    if (valueEl) valueEl.textContent = themeLabel;
+    button.setAttribute('aria-label', `${prefix}: ${themeLabel}`);
+    button.setAttribute('title', `${prefix}: ${themeLabel}`);
+  }
+
+  function setTheme(theme: Theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (meta) meta.setAttribute('content', themeColors[theme] || themeColors.dark);
+    renderThemeCycle(document.querySelector('[data-theme-cycle]') as HTMLElement | null);
+  }
+
+  function closeUserDropdown() {
+    const dropdown = document.querySelector('[data-user-dropdown]') as HTMLElement | null;
+    if (dropdown) dropdown.setAttribute('data-open', 'false');
+  }
+
+  function initUtilityControls() {
+    const toggle = document.querySelector('[data-user-menu-toggle]') as HTMLButtonElement | null;
+    const dropdown = document.querySelector('[data-user-dropdown]') as HTMLElement | null;
+    const themeButton = document.querySelector('[data-theme-cycle]') as HTMLButtonElement | null;
     if (!toggle || !dropdown) return;
 
-    toggle.addEventListener('click', (e) => {
-      e.stopPropagation();
+    const freshToggle = toggle.cloneNode(true) as HTMLButtonElement;
+    toggle.replaceWith(freshToggle);
+
+    if (themeButton) {
+      const replacement = themeButton.cloneNode(true) as HTMLButtonElement;
+      themeButton.replaceWith(replacement);
+      renderThemeCycle(replacement);
+      replacement.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const current = getTheme();
+        const idx = themes.indexOf(current);
+        const next = themes[(idx + 1) % themes.length];
+        setTheme(next);
+      });
+    }
+
+    freshToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
       const isOpen = dropdown.getAttribute('data-open') === 'true';
       dropdown.setAttribute('data-open', isOpen ? 'false' : 'true');
     });
 
-    document.addEventListener('click', () => {
-      dropdown.setAttribute('data-open', 'false');
+    dropdown.addEventListener('click', (event) => {
+      event.stopPropagation();
     });
+
+    document.removeEventListener('click', closeUserDropdown);
+    document.addEventListener('click', closeUserDropdown);
   }
 
-  document.addEventListener('astro:page-load', initUserDropdown);
+  document.addEventListener('astro:page-load', initUtilityControls);
 </script>
 
 <script>
-  function initHeaderReveal(): void {
+  function initHeaderReveal() {
     const header = document.querySelector('.site-header') as HTMLElement | null;
     const spacer = document.querySelector('.site-header-spacer') as HTMLElement | null;
     if (!header || !spacer) return;
+    const headerEl = header;
+    const spacerEl = spacer;
 
-    if (header.dataset.alwaysVisible === 'true') {
-      header.classList.remove('site-header--fixed', 'site-header--hidden');
-      spacer.style.display = 'none';
+    if (headerEl.dataset.alwaysVisible === 'true') {
+      headerEl.classList.remove('site-header--fixed', 'site-header--hidden');
+      spacerEl.style.display = 'none';
       return;
     }
 
-    const headerH = header.offsetHeight;
-    spacer.style.height = headerH + 'px';
-    spacer.style.display = 'none';
+    const headerH = headerEl.offsetHeight;
+    spacerEl.style.height = `${headerH}px`;
+    spacerEl.style.display = 'none';
 
     let lastY = window.scrollY;
     let ticking = false;
@@ -118,28 +310,28 @@ const initials = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
         if (currentY <= headerH) {
           if (fixed) {
-            header!.classList.add('site-header--no-transition');
-            header!.classList.remove('site-header--fixed', 'site-header--hidden');
-            spacer!.style.display = 'none';
+            headerEl.classList.add('site-header--no-transition');
+            headerEl.classList.remove('site-header--fixed', 'site-header--hidden');
+            spacerEl.style.display = 'none';
             requestAnimationFrame(() => {
-              header!.classList.remove('site-header--no-transition');
+              headerEl.classList.remove('site-header--no-transition');
             });
             fixed = false;
           }
         } else {
           if (!fixed) {
-            header!.classList.add('site-header--fixed', 'site-header--hidden', 'site-header--no-transition');
-            spacer!.style.display = 'block';
+            headerEl.classList.add('site-header--fixed', 'site-header--hidden', 'site-header--no-transition');
+            spacerEl.style.display = 'block';
             requestAnimationFrame(() => {
-              header!.classList.remove('site-header--no-transition');
+              headerEl.classList.remove('site-header--no-transition');
             });
             fixed = true;
           }
 
           if (currentY < lastY - 5) {
-            header!.classList.remove('site-header--hidden');
+            headerEl.classList.remove('site-header--hidden');
           } else if (currentY > lastY + 5) {
-            header!.classList.add('site-header--hidden');
+            headerEl.classList.add('site-header--hidden');
           }
         }
 

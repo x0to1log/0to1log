@@ -7,6 +7,8 @@
 
 ---
 
+> UI naming boundary: public labels use `AI News`, `Handbook`, `Library`; internal/admin labels use `Posts`; compatibility route remains `/{locale}/log/`.
+
 ## 스프린트 완료 게이트
 
 - [ ] 반응형: mobile/tablet/desktop 레이아웃 정상

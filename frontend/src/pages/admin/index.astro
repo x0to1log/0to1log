@@ -27,7 +27,7 @@ try {
   }
 } catch {}
 
-// --- Log stats (Supabase direct) ---
+// --- Post stats (Supabase direct) ---
 let logDraft = 0;
 let logPublished = 0;
 let logTotal = 0;
@@ -53,7 +53,7 @@ try {
 
 <MainLayout title="Admin Dashboard" locale="en">
   <div style="max-width: 800px; margin: 0 auto;">
-    <AdminHeader activeTab="log" />
+    <AdminHeader activeTab="posts" />
 
     {/* --- Summary Cards --- */}
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
@@ -71,7 +71,7 @@ try {
       </a>
       <div style="border: 1px solid var(--color-border); padding: 1.25rem;">
         <div style="font-family: var(--font-ui); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: 0.5rem;">
-          Log
+          Posts
         </div>
         <div style="font-family: var(--font-heading); font-size: 1.75rem; font-weight: 700;">
           {fetchError ? '—' : logTotal}
@@ -87,9 +87,9 @@ try {
       </div>
     </div>
 
-    {/* --- Log Drafts List --- */}
+    {/* --- Post Drafts List --- */}
     <h2 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border);">
-      Log Drafts
+      Post Drafts
     </h2>
 
     {fetchError ? (

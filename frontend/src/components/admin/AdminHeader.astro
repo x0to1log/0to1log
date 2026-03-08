@@ -1,6 +1,6 @@
 ---
 interface Props {
-  activeTab: 'log' | 'handbook';
+  activeTab: 'posts' | 'handbook';
 }
 
 const { activeTab } = Astro.props;
@@ -22,8 +22,8 @@ const currentPath = Astro.url.pathname;
   </div>
 
   <div class="admin-tabs">
-    <a href="/admin/" class={`admin-tab ${activeTab === 'log' ? 'admin-tab--active' : ''}`}>
-      Log
+    <a href="/admin/" class={`admin-tab ${activeTab === 'posts' ? 'admin-tab--active' : ''}`}>
+      Posts
     </a>
     <a href="/admin/handbook/" class={`admin-tab ${activeTab === 'handbook' ? 'admin-tab--active' : ''}`}>
       Handbook

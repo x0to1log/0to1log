@@ -30,6 +30,15 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 - `/portfolio/`, `/admin/` → locale 무관 (en/ko 구분 없음)
 - 번역 맵 `src/i18n/index.ts`
 
+## Naming & Navigation
+
+- Public product labels: `AI News`, `Handbook`, `Library`
+- Internal/admin labels: `Posts`, `Handbook`
+- Compatibility route: public AI News continues to live under `/{locale}/log/`
+- Web shell: `[Brand] [Primary Nav] [Utilities]`
+- Mobile/app shell: `[Brand/Page] [Profile or Settings]` + separate primary nav
+- Language/theme controls belong in the utility drawer, not inline in the public header
+
 ## 보안
 
 - `/api/revalidate` → server-side only. `REVALIDATE_SECRET` Bearer 검증 필수
@@ -67,6 +76,10 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 - Mock data until Phase 2D API wiring
 - State simulation: `?state=401|403|404|empty` query param on `/admin` and `/admin/edit/[slug]`
 - Inline feedback banner: `.admin-feedback` with success/error variants, auto-dismiss 3s
+- Handbook editor: same Draft/Preview + AI panel pattern as Log editor
+- Handbook Preview uses `NewsprintShell` + published handbook term layout
+- Handbook AI Advisor panel: placeholder (same as Log AI Suggestions)
+- Client-side markdown rendering via `marked` for both Log and Handbook preview
 
 ## Build
 

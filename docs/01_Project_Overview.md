@@ -155,7 +155,7 @@
 블로그 기본 골격 + 인증 + DB 연동 + 그로스 기반 설계
 
 - Astro + Tailwind + Motion One 기반 디자인 시스템
-- 4개 페이지 구조 (Home / Log / Portfolio / Admin)
+- 핵심 앱 구조 (Home / AI News(`/log`) / Handbook / Library / Admin, with Portfolio as secondary showcase)
 - Supabase 스키마 설계 및 CRUD
 - Supabase Auth (Admin 이메일 + 사용자 소셜 로그인)
 - 기본 마크다운 에디터

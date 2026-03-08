@@ -20,6 +20,9 @@
 
 ## 1. 기술 스택
 
+> Naming boundary: public-facing `Log` copy is now `AI News`, internal/admin `Log` copy is now `Posts`, and route compatibility remains `/{locale}/log/`.
+> Navigation shell contract: Web = `[Brand] [Primary Nav] [Utilities]`; Mobile/App = `[Brand/Page] [Profile or Settings]` + primary nav exposed separately.
+
 | 기술 | 버전 | 역할 |
 |---|---|---|
 | **Astro** | v5.0+ | 콘텐츠 중심 프레임워크 (SSG/SSR), Islands Architecture |

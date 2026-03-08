@@ -1,4 +1,4 @@
-# User Features Design — 일반 사용자 기능 (Log + Handbook 통합)
+# User Features Design ? ?? ??? ?? (AI News + Handbook + Library ??)
 
 > **작성일:** 2026-03-08
 > **작성자:** Amy (Solo)
@@ -8,6 +8,8 @@
 > **관련 스펙:** `docs/08_Handbook.md`, `docs/04_Frontend_Spec.md` §15-1
 
 ---
+
+> Naming note: public product language uses `AI News`, `Handbook`, and `Library`; internal/admin language uses `Posts`; route compatibility remains `/{locale}/log/`.
 
 ## 1. 목적
 

@@ -11,6 +11,13 @@
 
 ## 1. 개요
 
+### Naming Boundary
+
+- Public product language uses `AI News`, `Handbook`, and `Library`.
+- Internal/admin language uses `Posts` and `Handbook`.
+- Route compatibility remains unchanged: AI News articles continue to live under `/{locale}/log/`.
+- Any legacy `Log` wording in older implementation notes should be read as the public AI News surface unless the context is explicitly internal/admin.
+
 **Tech Handbook**은 Notion에서 관리해온 CS/AI/Infra 용어 사전을 웹사이트에 `/handbook/` 경로로 공개하는 기능이다.
 
 **목표:**

@@ -47,9 +47,20 @@ flowchart TD
 
 > **Handbook 별도 트랙:** Tech Handbook(용어 사전) 기능은 메인 Phase와 병렬 진행.
 > H1(읽기 전용)은 즉시 착수 가능, H2(AI 수집 파이프라인)는 Phase 2B 이후.
-> 제품 우선순위는 `/log`의 AI News 영역 + `/handbook`을 메인으로 두고, `/portfolio`는 비핵심 showcase surface로 취급한다.
+> 제품 우선순위는 `/log`의 AI News 영역 + `/handbook` + `/library`를 메인 app surface로 두고, `/portfolio`는 비핵심 showcase surface로 취급한다.
 > Handbook 병렬 작업은 별도 sprint 문서 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md`로 운영하고, 메인 ACTIVE_SPRINT와 섞지 않는다.
 > 상세 스펙 → `docs/08_Handbook.md`
+
+### Product Language Boundary
+- Public product language: `AI News`, `Handbook`, `Library`
+- Internal/admin language: `Posts`, `Handbook`
+- Compatibility path: public AI News continues to live under `/{locale}/log/`
+
+### Navigation Shell Contract
+- Web shell: `[Brand] [Primary Nav] [Utilities]`
+- Mobile/app shell: `[Brand/Page] [Profile or Settings]` + primary nav exposed separately
+- Public primary nav is fixed to `AI News | Handbook | Library`
+- Language and theme controls live in the utility drawer, not inline in the public header
 
 ### Current Status Snapshot
 - Mainline 구현 상태: **Phase 2D-INT 완료** (main 브랜치 반영 완료)
