@@ -76,8 +76,11 @@ const errorParam = Astro.url.searchParams.get('error');
         const params = new URLSearchParams(window.location.search);
         const redirectTo = params.get('redirectTo') || '/';
 
+        // Store redirectTo in sessionStorage (not in callback URL to avoid whitelist mismatch)
+        sessionStorage.setItem('oauth_redirect', redirectTo);
+
         const supabase = createClient(supabaseUrl, supabaseKey);
-        const callbackUrl = `${window.location.origin}/api/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`;
+        const callbackUrl = `${window.location.origin}/auth/callback`;
 
         await supabase.auth.signInWithOAuth({
           provider,

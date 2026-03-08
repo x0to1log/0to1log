@@ -115,6 +115,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
+
+    // Check admin status for nav link visibility
+    const adminSb2 = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${result.accessToken}` } },
+    });
+    const { data: adminRow2 } = await adminSb2
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', result.user.id)
+      .maybeSingle();
+    if (adminRow2) {
+      context.locals.isAdmin = true;
+    }
+
     return next();
   }
 
