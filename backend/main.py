@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
@@ -8,6 +10,8 @@ from slowapi.errors import RateLimitExceeded
 from core.rate_limit import limiter
 from routers import cron, admin
 from models.posts import HealthResponse
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="0to1log API", version="0.1.0")
 app.state.limiter = limiter
