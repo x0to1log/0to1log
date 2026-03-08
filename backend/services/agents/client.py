@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_openai_client() -> AsyncOpenAI:
-    """Return a configured AsyncOpenAI client."""
-    return AsyncOpenAI(api_key=settings.openai_api_key)
+    """Return a configured AsyncOpenAI client with 120s timeout."""
+    return AsyncOpenAI(api_key=settings.openai_api_key, timeout=120.0)
 
 
 def parse_ai_json(raw: str, agent_name: str) -> dict:

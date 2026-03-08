@@ -271,6 +271,7 @@ async def run_daily_pipeline(batch_id: str) -> None:
         context = _build_context(candidates)
 
         # Step 3-A: Generate research post
+        logger.info("Calling research AI agent for batch %s...", batch_id)
         research_post = await generate_research_post(
             ranking.research_pick, context, batch_id
         )
@@ -278,6 +279,7 @@ async def run_daily_pipeline(batch_id: str) -> None:
         _save_research_post(research_post, batch_id)
 
         # Step 3-B: Generate business post (skip if no business pick)
+        logger.info("Starting business post generation for batch %s...", batch_id)
         if ranking.business_main_pick:
             business_post = await generate_business_post(
                 ranking.business_main_pick, ranking.related_picks, context, batch_id
