@@ -129,13 +129,22 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       />
     ) : (
       <article>
-        <a href={`/${locale}/handbook/`} style="font-size: 0.85rem; color: var(--color-text-muted); text-decoration: none; display: inline-block; margin-bottom: 1rem;">
-          ← {t[locale]['handbook.back']}
-        </a>
-
         <header style="margin-bottom: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
-            <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700; margin: 0; flex: 1;">
+          <div class="handbook-detail-meta">
+            {term.difficulty && (
+              <span style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
+                {difficultyLabel(locale, term.difficulty)}
+              </span>
+            )}
+            {(term.categories || []).map((cat: string) => (
+              <span style="font-size: 0.8rem; color: var(--color-text-muted);">
+                {getHandbookCategoryLabel(locale, cat)}
+              </span>
+            ))}
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-top: 0.75rem;">
+            <h1 class="handbook-detail-title">
               {term.term}
             </h1>
             <button
@@ -152,61 +161,36 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
             </button>
           </div>
           {term.korean_name && (
-            <p style="font-size: 1rem; color: var(--color-text-muted); margin: 0.25rem 0 0;">
-              {term.korean_name}
-            </p>
+            <p class="handbook-detail-subtitle">{term.korean_name}</p>
           )}
-          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center;">
-            {term.difficulty && (
-              <span style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
-                {difficultyLabel(locale, term.difficulty)}
-              </span>
-            )}
-            {(term.categories || []).map((cat: string) => (
-              <span style="font-size: 0.75rem; color: var(--color-text-muted);">
-                {getHandbookCategoryLabel(locale, cat)}
-              </span>
-            ))}
-            {user && (
-              <button
-                class={`learning-check ${learningStatus === 'learned' ? 'learning-check--done' : ''}`}
-                data-learning-id={learningProgressId}
-                data-term-id={term.id}
-                data-status={learningStatus || 'none'}
-                style="margin-left: auto;"
-              >
-                {learningStatus === 'learned' ? '✓ 학습 완료' : '○ 학습 완료 표시'}
-              </button>
-            )}
-          </div>
         </header>
 
-        <div style="padding: 1.25rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); margin-bottom: 2rem;">
-          {definition && (
-            <div style="margin-bottom: 0.75rem;">
-              <strong style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">정의</strong>
-              <p style="margin: 0.25rem 0 0; line-height: 1.5;">{definition}</p>
-            </div>
-          )}
-          {plainExplanation && (
-            <div style="margin-bottom: 0.75rem;">
-              <strong style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">쉬운 설명</strong>
-              <p style="margin: 0.25rem 0 0; line-height: 1.5;">{plainExplanation}</p>
-            </div>
-          )}
-          {technicalDescription && (
-            <div style="margin-bottom: 0.75rem;">
-              <strong style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">{t[locale]['handbook.technicalDescription']}</strong>
-              <p style="margin: 0.25rem 0 0; line-height: 1.5;">{technicalDescription}</p>
-            </div>
-          )}
-          {exampleAnalogy && (
-            <div>
-              <strong style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">예시 / 비유</strong>
-              <p style="margin: 0.25rem 0 0; line-height: 1.5;">{exampleAnalogy}</p>
-            </div>
-          )}
-        </div>
+        {definition && (
+          <p class="handbook-definition">{definition}</p>
+        )}
+
+        <div class="newsprint-divider"></div>
+
+        {plainExplanation && (
+          <div class="handbook-section">
+            <span class="handbook-section-label">쉬운 설명</span>
+            <p class="handbook-section-body">{plainExplanation}</p>
+          </div>
+        )}
+
+        {technicalDescription && (
+          <div class="handbook-section">
+            <span class="handbook-section-label">{t[locale]['handbook.technicalDescription']}</span>
+            <p class="handbook-section-body">{technicalDescription}</p>
+          </div>
+        )}
+
+        {exampleAnalogy && (
+          <div class="handbook-section">
+            <span class="handbook-section-label">예시 / 비유</span>
+            <p class="handbook-section-body">{exampleAnalogy}</p>
+          </div>
+        )}
 
         {htmlContent && (
           <div class="newsprint-prose">
@@ -214,6 +198,24 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           </div>
         )}
 
+        {user && (
+          <div class="handbook-action-bar">
+            <button
+              class={`learning-check ${learningStatus === 'learned' ? 'learning-check--done' : ''}`}
+              data-learning-id={learningProgressId}
+              data-term-id={term.id}
+              data-status={learningStatus || 'none'}
+            >
+              {learningStatus === 'learned' ? '✓ 학습 완료' : '○ 학습 완료 표시'}
+            </button>
+          </div>
+        )}
+
+        <nav class="handbook-bottom-nav" aria-label="핸드북 내비게이션">
+          <a href={`/${locale}/handbook/`} class="handbook-nav-link">
+            ← {t[locale]['handbook.back']}
+          </a>
+        </nav>
       </article>
     )}
 
