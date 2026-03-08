@@ -179,6 +179,35 @@ def _save_candidates(
     logger.info("Saved %d candidates to news_candidates", len(rows))
 
 
+def _save_post(client, row: dict, batch_id: str, post_type: str) -> str:
+    """Insert or update a post. Returns the post id.
+
+    Uses select-then-insert/update because the unique index
+    (uq_posts_daily_ai_type) is a partial index with a WHERE clause,
+    which supabase-py's upsert(on_conflict=...) cannot handle.
+    """
+    existing = (
+        client.table("posts")
+        .select("id")
+        .eq("pipeline_batch_id", batch_id)
+        .eq("post_type", post_type)
+        .eq("category", "ai-news")
+        .maybe_single()
+        .execute()
+    )
+
+    if existing and existing.data:
+        post_id = existing.data["id"]
+        client.table("posts").update(row).eq("id", post_id).execute()
+        logger.info("%s post updated: id=%s slug=%s", post_type, post_id, row["slug"])
+    else:
+        result = client.table("posts").insert(row).execute()
+        post_id = result.data[0]["id"]
+        logger.info("%s post inserted: id=%s slug=%s", post_type, post_id, row["slug"])
+
+    return post_id
+
+
 def _save_research_post(post: ResearchPost, batch_id: str) -> str:
     """Save research post to posts table. Returns the post id."""
     client = get_supabase()
@@ -204,12 +233,7 @@ def _save_research_post(post: ResearchPost, batch_id: str) -> str:
         "translation_group_id": translation_group_id,
     }
 
-    result = client.table("posts").upsert(
-        row, on_conflict="pipeline_batch_id,post_type"
-    ).execute()
-    post_id = result.data[0]["id"]
-    logger.info("Research post saved: id=%s slug=%s", post_id, post.slug)
-    return post_id
+    return _save_post(client, row, batch_id, "research")
 
 
 def _save_business_post(post: BusinessPost, batch_id: str) -> str:
@@ -238,12 +262,7 @@ def _save_business_post(post: BusinessPost, batch_id: str) -> str:
         "translation_group_id": translation_group_id,
     }
 
-    result = client.table("posts").upsert(
-        row, on_conflict="pipeline_batch_id,post_type"
-    ).execute()
-    post_id = result.data[0]["id"]
-    logger.info("Business post saved: id=%s slug=%s", post_id, post.slug)
-    return post_id
+    return _save_post(client, row, batch_id, "business")
 
 
 async def run_daily_pipeline(batch_id: str) -> None:
