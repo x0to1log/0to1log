@@ -13,17 +13,17 @@
 
 - [x] DB: `profiles`, `user_bookmarks`, `reading_history`, `learning_progress` 4개 테이블 생성 + RLS
 - [x] 소셜 로그인: GitHub/Google OAuth 버튼 → Supabase Auth redirect 동작
-- [ ] 소셜 로그인: OAuth provider 외부 설정 완료 (GitHub App + Google Cloud + Supabase Dashboard)
-- [ ] 소셜 로그인: 실제 로그인 → 세션 유지 → 로그아웃 E2E 정상
+- [x] 소셜 로그인: OAuth provider 외부 설정 완료 (GitHub App + Google Cloud + Supabase Dashboard)
+- [x] 소셜 로그인: 실제 로그인 → 세션 유지 → 로그아웃 E2E 정상
 - [x] 헤더: 비로그인 Sign In / 로그인 아바타 드롭다운 정상
 - [x] 읽기 기록: 상세 페이지 방문 시 자동 기록 + 리스트에서 읽은 글 opacity 감소
 - [x] 북마크: 리스트 카드 + 상세 페이지 북마크 토글 동작
 - [x] 학습 진도: Handbook 상세 학습 완료 체크 + 카테고리별 진도 바
 - [x] 내 서재: `/library` — 읽은 글 / 저장한 글 / 학습 현황 3탭 정상
 - [x] `cd frontend && npm run build` → 0 error
-- [ ] 태스크 전체 `상태=done` + `체크=[x]` 일치
-- [ ] `Current Doing` 표가 비어 있음(`-`)
-- [ ] 완료 태스크마다 `증거` 마크 최소 1개 존재
+- [x] 태스크 전체 `상태=done` + `체크=[x]` 일치
+- [x] `Current Doing` 표가 비어 있음(`-`)
+- [x] 완료 태스크마다 `증거` 마크 최소 1개 존재
 
 ---
 
@@ -31,7 +31,7 @@
 
 | Task ID | 상태 | 시작 시점 | Owner |
 |---|---|---|---|
-| P3U-AUTH-02 | doing | 2026-03-08 | Amy |
+| - | - | - | - |
 
 규칙:
 - 문서 내 `상태: doing` 태스크가 있으면 이 표에도 반드시 1개만 기입한다.
@@ -75,19 +75,20 @@
 - **의존성:** P3U-DB-01
 
 ### 3. OAuth 로그인 — 외부 서비스 설정 `[P3U-AUTH-02]`
-- **체크:** [ ]
-- **상태:** doing
+- **체크:** [x]
+- **상태:** done
 - **목적:** GitHub OAuth App, Google Cloud OAuth, Supabase Dashboard Provider 설정 → 실제 로그인 동작
 - **산출물:** 외부 서비스 설정 완료 (코드 변경 없음)
 - **완료 기준:** GitHub/Google 버튼 클릭 → provider 로그인 → 0to1log.com 으로 redirect → 세션 유지
 - **검증:** 프로덕션에서 GitHub/Google 로그인 E2E 수동 테스트
+- **증거:** GitHub OAuth App + Google Cloud Console + Supabase Dashboard 설정 완료, 프로덕션 로그인 확인
 - **설정 체크리스트:**
-  - [ ] GitHub OAuth App: callback URL = `https://luwipptjfyjsleqouasj.supabase.co/auth/v1/callback`
-  - [ ] Google Cloud Console: OAuth 2.0 Client + redirect URI = 위와 동일
-  - [ ] Google OAuth Consent Screen: 테스트 사용자 등록
-  - [ ] Supabase Dashboard: GitHub provider 활성화 + Client ID/Secret 입력
-  - [ ] Supabase Dashboard: Google provider 활성화 + Client ID/Secret 입력
-  - [ ] Supabase Dashboard: Redirect URLs에 `https://0to1log.com/api/auth/callback` 추가
+  - [x] GitHub OAuth App: callback URL = `https://luwipptjfyjsleqouasj.supabase.co/auth/v1/callback`
+  - [x] Google Cloud Console: OAuth 2.0 Client + redirect URI = 위와 동일
+  - [x] Google OAuth Consent Screen: 테스트 사용자 등록
+  - [x] Supabase Dashboard: GitHub provider 활성화 + Client ID/Secret 입력
+  - [x] Supabase Dashboard: Google provider 활성화 + Client ID/Secret 입력
+  - [x] Supabase Dashboard: Redirect URLs에 `https://0to1log.com/api/auth/callback` 추가
 - **참조:** `docs/plans/2026-03-08-user-features-design.md` §3
 - **의존성:** P3U-AUTH-01
 
@@ -169,12 +170,13 @@
 - **의존성:** 없음
 
 ### 11. OAuth E2E 검증 `[P3U-QA-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** 프로덕션에서 소셜 로그인 → 북마크 → 읽기 기록 → 학습 진도 → 서재 전체 흐름 검증
 - **산출물:** 수동 E2E 테스트 결과
 - **완료 기준:** 설계 문서 §12의 검증 항목 16개 전체 통과
 - **검증:** 프로덕션에서 수동 테스트
+- **증거:** 프로덕션 E2E 수동 테스트 통과
 - **참조:** `docs/plans/2026-03-08-user-features-design.md` §12
 - **의존성:** P3U-AUTH-02
 
