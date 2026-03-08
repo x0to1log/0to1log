@@ -3,7 +3,10 @@ export const prerender = false;
 import MainLayout from '../../../../layouts/MainLayout.astro';
 import AdminHeader from '../../../../components/admin/AdminHeader.astro';
 import { createClient } from '@supabase/supabase-js';
-import { getHandbookCategories } from '../../../../lib/handbookCategories';
+import { getHandbookCategories, getHandbookCategoryLabel } from '../../../../lib/handbookCategories';
+import { difficultyLabel, difficultyColor } from '../../../../lib/handbookUtils';
+import { renderMarkdown } from '../../../../lib/markdown';
+import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astro';
 
 const { slug } = Astro.params;
 const isNew = slug === 'new';
@@ -35,10 +38,14 @@ const categories = getHandbookCategories();
 const difficulties = ['beginner', 'intermediate', 'advanced'];
 
 const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
+
+// Preview: server-side initial HTML for body_markdown
+const initialBodyKo = term?.body_markdown_ko || '';
+const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : '';
 ---
 
 <MainLayout title={`Admin — ${pageTitle}`} locale="en">
-  <div style="max-width: 800px; margin: 0 auto; padding: 0 1rem;">
+  <div style="max-width: 1100px; margin: 0 auto; padding: 0 1rem;">
     <AdminHeader activeTab="handbook" />
 
     {loadError ? (
@@ -47,6 +54,8 @@ const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
       </div>
     ) : (
       <>
+        {/* ===== DRAFT MODE ===== */}
+        <div id="draft-mode">
         {/* Toolbar */}
         <div class="admin-toolbar" style="margin-bottom: 1.5rem;">
           <div class="admin-toolbar-left">
@@ -59,6 +68,7 @@ const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
           </div>
           <div class="admin-toolbar-right">
             <button id="btn-save" class="admin-btn" style="font-size: 0.85rem;">Save Draft</button>
+            <button id="btn-preview" class="admin-btn" style="font-size: 0.85rem;">Preview</button>
             <button id="btn-publish" class="admin-btn" style="font-size: 0.85rem;">Publish</button>
             {term && (
               <button id="btn-delete" class="admin-btn-danger" style="font-size: 0.85rem;">Delete</button>
@@ -66,7 +76,9 @@ const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
           </div>
         </div>
 
-        {/* Form */}
+        {/* Split: Form + AI Panel */}
+        <div class="admin-split">
+        <div>
         <form id="term-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <input type="hidden" name="id" value={term?.id || ''} />
 
@@ -181,6 +193,70 @@ const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
             </div>
           </div>
         </form>
+        </div>
+
+        {/* AI Advisor Panel */}
+        <div>
+          <div class="admin-panel">
+            <div class="admin-panel-title">AI Advisor</div>
+            <p class="admin-panel-placeholder">
+              AI advisor panel will be connected in a future update.
+              This panel will suggest definitions, plain explanations,
+              and related terms based on the term name and category.
+            </p>
+          </div>
+        </div>
+        </div>{/* /admin-split */}
+        </div>{/* /draft-mode */}
+
+        {/* ===== PREVIEW MODE ===== */}
+        <div id="preview-mode" style="display: none;">
+          <div class="admin-preview-bar">
+            <div class="admin-toolbar-left">
+              <a href="/admin/handbook/" class="admin-btn" style="font-size: 0.85rem;">&larr; Back</a>
+            </div>
+            <div class="admin-toolbar-right">
+              <button id="btn-edit-back" class="admin-btn" style="font-size: 0.85rem;">Edit</button>
+              <button id="btn-publish-preview" class="admin-btn" style="font-size: 0.85rem;">Publish</button>
+            </div>
+          </div>
+
+          <NewsprintShell
+            locale="en"
+            masthead="Tech Handbook"
+            editionLabel={term?.category ? getHandbookCategoryLabel('en', term.category) || '' : ''}
+          >
+            <article id="preview-article">
+              <header style="margin-bottom: 1.5rem;">
+                <h1 id="preview-term" style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700; margin: 0;">
+                  {term?.term || ''}
+                </h1>
+                <p id="preview-korean" style="font-size: 1rem; color: var(--color-text-muted); margin: 0.25rem 0 0;">
+                  {term?.korean_name || ''}
+                </p>
+                <div id="preview-badges" style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                  {term?.difficulty && (
+                    <span id="preview-difficulty" style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
+                      {difficultyLabel('en', term.difficulty)}
+                    </span>
+                  )}
+                  {term?.category && (
+                    <span id="preview-category" style="font-size: 0.75rem; color: var(--color-text-muted);">
+                      {getHandbookCategoryLabel('en', term.category)}
+                    </span>
+                  )}
+                </div>
+              </header>
+
+              <div id="preview-summary-box" style="padding: 1.25rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); margin-bottom: 2rem;">
+              </div>
+
+              <div id="preview-body" class="newsprint-prose">
+                <Fragment set:html={initialBodyHtml} />
+              </div>
+            </article>
+          </NewsprintShell>
+        </div>
       </>
     )}
 
@@ -190,6 +266,8 @@ const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
 </MainLayout>
 
 <script>
+  import { marked } from 'marked';
+
   // Auto-open details on desktop
   if (window.innerWidth >= 768) {
     document.querySelector('.admin-details')?.setAttribute('open', '');
@@ -236,6 +314,75 @@ const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
     return data;
   }
 
+  // ===== Draft <-> Preview toggle =====
+  const draftMode = document.getElementById('draft-mode');
+  const previewMode = document.getElementById('preview-mode');
+
+  document.getElementById('btn-preview')?.addEventListener('click', () => {
+    const form = document.getElementById('term-form') as HTMLFormElement;
+    const activeLang = document.querySelector('.admin-lang-tab--active')?.getAttribute('data-lang') || 'ko';
+
+    const termName = (form.querySelector('[name="term"]') as HTMLInputElement).value;
+    const koreanName = (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '';
+    const defField = form.querySelector('[name="definition_' + activeLang + '"]') as HTMLTextAreaElement | null;
+    const plainField = form.querySelector('[name="plain_explanation_' + activeLang + '"]') as HTMLTextAreaElement | null;
+    const exampleField = form.querySelector('[name="example_analogy_' + activeLang + '"]') as HTMLTextAreaElement | null;
+    const bodyField = form.querySelector('[name="body_markdown_' + activeLang + '"]') as HTMLTextAreaElement | null;
+
+    const definition = defField?.value || '';
+    const plainExplanation = plainField?.value || '';
+    const exampleAnalogy = exampleField?.value || '';
+    const bodyMarkdown = bodyField?.value || '';
+
+    const previewTerm = document.getElementById('preview-term');
+    if (previewTerm) previewTerm.textContent = termName;
+
+    const previewKorean = document.getElementById('preview-korean');
+    if (previewKorean) previewKorean.textContent = koreanName;
+
+    const summaryBox = document.getElementById('preview-summary-box');
+    if (summaryBox) {
+      summaryBox.innerHTML = '';
+      const sections = [
+        { label: 'Definition', text: definition },
+        { label: 'Plain Explanation', text: plainExplanation },
+        { label: 'Example / Analogy', text: exampleAnalogy },
+      ];
+      sections.forEach(({ label, text }) => {
+        if (!text) return;
+        const div = document.createElement('div');
+        div.style.marginBottom = '0.75rem';
+        const strong = document.createElement('strong');
+        strong.style.cssText = 'font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;';
+        strong.textContent = label;
+        const p = document.createElement('p');
+        p.style.cssText = 'margin: 0.25rem 0 0; line-height: 1.5;';
+        p.textContent = text;
+        div.appendChild(strong);
+        div.appendChild(p);
+        summaryBox.appendChild(div);
+      });
+    }
+
+    const previewBody = document.getElementById('preview-body');
+    if (previewBody) {
+      previewBody.innerHTML = marked.parse(bodyMarkdown) as string;
+    }
+
+    if (draftMode) draftMode.style.display = 'none';
+    if (previewMode) previewMode.style.display = 'block';
+  });
+
+  document.getElementById('btn-edit-back')?.addEventListener('click', () => {
+    if (draftMode) draftMode.style.display = 'block';
+    if (previewMode) previewMode.style.display = 'none';
+  });
+
+  document.getElementById('btn-publish-preview')?.addEventListener('click', () => {
+    document.getElementById('btn-publish')?.click();
+  });
+
+  // ===== Save Draft =====
   document.getElementById('btn-save')?.addEventListener('click', async () => {
     const data = getFormData();
     if (!data.term) { showFeedback('Term is required.', true); return; }
