@@ -82,7 +82,14 @@ try {
   <div class="admin-dashboard">
     <div class="admin-main">
       <div class="admin-main-header">
-        <h1 class="admin-main-title">Posts</h1>
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <h1 class="admin-main-title">Posts</h1>
+        </div>
         <div class="admin-header-controls">
           <div class="admin-filter-tabs">
             <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">
@@ -96,6 +103,26 @@ try {
             </button>
           </div>
           <a href="/admin/edit/new" class="admin-btn admin-btn-primary">+ New Post</a>
+        </div>
+      </div>
+
+      <!-- Overview Dashboard -->
+      <div class="admin-overview">
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-label">Posts</div>
+          <div class="admin-stat-card-value">{fetchError ? '—' : logTotal}</div>
+          <div class="admin-stat-card-detail">
+            {logDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{logDraft} draft</span>}
+            {logPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{logPublished} published</span>}
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-label">Handbook</div>
+          <div class="admin-stat-card-value">{handbookTotal}</div>
+          <div class="admin-stat-card-detail">
+            {handbookDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{handbookDraft} draft</span>}
+            {handbookPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{handbookPublished} published</span>}
+          </div>
         </div>
       </div>
 
@@ -139,29 +166,6 @@ try {
       )}
     </div>
 
-    <div class="admin-right-panel">
-      <div class="admin-right-panel-section">
-        <div class="admin-right-panel-title">Overview</div>
-        <div class="admin-stat-cards">
-          <div class="admin-stat-card">
-            <div class="admin-stat-card-label">Posts</div>
-            <div class="admin-stat-card-value">{fetchError ? '—' : logTotal}</div>
-            <div class="admin-stat-card-detail">
-              {logDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{logDraft} draft</span>}
-              {logPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{logPublished} published</span>}
-            </div>
-          </div>
-          <div class="admin-stat-card">
-            <div class="admin-stat-card-label">Handbook</div>
-            <div class="admin-stat-card-value">{handbookTotal}</div>
-            <div class="admin-stat-card-detail">
-              {handbookDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{handbookDraft} draft</span>}
-              {handbookPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{handbookPublished} published</span>}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </MainLayout>
 

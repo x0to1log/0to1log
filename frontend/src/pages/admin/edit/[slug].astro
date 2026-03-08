@@ -112,6 +112,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       <div class="admin-editor-layout" id="draft-mode">
         <div class="admin-editor-topbar">
           <div class="admin-editor-topbar-left">
+            <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 5h14M3 10h14M3 15h14" />
+              </svg>
+            </button>
             <a href="/admin" class="admin-editor-back">&larr; Back</a>
             <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
           </div>
@@ -498,7 +503,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     // Switch back to Draft
     function switchToDraft() {
-      if (draftMode) draftMode.style.display = 'block';
+      if (draftMode) draftMode.style.display = '';
       if (previewMode) previewMode.style.display = 'none';
     }
 

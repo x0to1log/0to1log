@@ -11,7 +11,7 @@ const currentPath = Astro.url.pathname;
 
 <aside class="admin-sidebar" id="admin-sidebar">
   <div class="admin-sidebar-brand">
-    <span class="admin-sidebar-logo">0to1log</span>
+    <a href="/admin/" class="admin-sidebar-logo">0to1log</a>
     <span class="admin-sidebar-label">Admin</span>
     <button class="admin-sidebar-collapse-btn" id="sidebar-toggle" type="button" title="Toggle sidebar">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -72,6 +72,22 @@ const currentPath = Astro.url.pathname;
   )}
 
   <div class="admin-sidebar-footer">
+    <button type="button" class="admin-sidebar-link admin-sidebar-link--button" id="sidebar-theme-toggle">
+      <svg id="sidebar-theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+      <svg id="sidebar-theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:none;">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+      <svg id="sidebar-theme-icon-pink" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:none;">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+      </svg>
+      <span id="sidebar-theme-label">Theme</span>
+    </button>
     <a href="/en/" class="admin-sidebar-link" target="_blank">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M6 3H3v10h10v-3M9 2h5v5M14 2L7 9" />
@@ -88,28 +104,95 @@ const currentPath = Astro.url.pathname;
     </form>
   </div>
 </aside>
+<div class="admin-sidebar-overlay" id="sidebar-overlay"></div>
 
 <script>
   function initSidebar() {
     const sidebar = document.getElementById('admin-sidebar');
     const toggle = document.getElementById('sidebar-toggle');
-    if (!sidebar || !toggle) return;
+    const overlay = document.getElementById('sidebar-overlay');
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    if (!sidebar) return;
 
-    // Restore saved state
-    if (localStorage.getItem('admin-sidebar-collapsed') === '1') {
+    // Desktop: restore collapsed state
+    if (toggle && localStorage.getItem('admin-sidebar-collapsed') === '1') {
       sidebar.classList.add('admin-sidebar--collapsed');
-      document.querySelectorAll('.admin-dashboard, .admin-editor-layout').forEach((el) => {
+      document.querySelectorAll('.admin-dashboard, .admin-editor-layout, #preview-mode').forEach((el) => {
         el.classList.add('admin-sidebar-collapsed');
       });
     }
 
-    toggle.addEventListener('click', () => {
+    // Desktop: collapse toggle
+    toggle?.addEventListener('click', () => {
       const collapsed = sidebar.classList.toggle('admin-sidebar--collapsed');
       localStorage.setItem('admin-sidebar-collapsed', collapsed ? '1' : '0');
-      document.querySelectorAll('.admin-dashboard, .admin-editor-layout').forEach((el) => {
+      document.querySelectorAll('.admin-dashboard, .admin-editor-layout, #preview-mode').forEach((el) => {
         el.classList.toggle('admin-sidebar-collapsed', collapsed);
       });
     });
+
+    // Mobile: open sidebar
+    function openMobileSidebar() {
+      sidebar.classList.add('admin-sidebar--mobile-open');
+      overlay?.classList.add('admin-sidebar-overlay--visible');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Mobile: close sidebar
+    function closeMobileSidebar() {
+      sidebar.classList.remove('admin-sidebar--mobile-open');
+      overlay?.classList.remove('admin-sidebar-overlay--visible');
+      document.body.style.overflow = '';
+    }
+
+    mobileBtn?.addEventListener('click', openMobileSidebar);
+    overlay?.addEventListener('click', closeMobileSidebar);
+
+    // Close mobile sidebar on nav link click
+    sidebar.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth < 768) closeMobileSidebar();
+      });
+    });
+
+    // Clean up mobile state on resize to desktop
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 768) closeMobileSidebar();
+    });
+
+    // Theme toggle (mirrors Navigation.astro logic)
+    const themeList = ['dark', 'light', 'pink'] as const;
+    type Theme = typeof themeList[number];
+    const themeColors: Record<string, string> = { dark: '#1F1A17', light: '#F4F1EA', pink: '#FFF0F3' };
+
+    function getSidebarTheme(): Theme {
+      const stored = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
+      return themeList.includes(stored as Theme) ? (stored as Theme) : 'dark';
+    }
+
+    function updateSidebarThemeUI() {
+      const current = getSidebarTheme();
+      const labelEl = document.getElementById('sidebar-theme-label');
+      if (labelEl) labelEl.textContent = current.charAt(0).toUpperCase() + current.slice(1);
+      themeList.forEach((t) => {
+        const icon = document.getElementById(`sidebar-theme-icon-${t}`);
+        if (icon) icon.style.display = t === current ? '' : 'none';
+      });
+    }
+
+    const sidebarThemeBtn = document.getElementById('sidebar-theme-toggle');
+    sidebarThemeBtn?.addEventListener('click', () => {
+      const current = getSidebarTheme();
+      const idx = themeList.indexOf(current);
+      const next = themeList[(idx + 1) % themeList.length];
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+      if (meta) meta.setAttribute('content', themeColors[next] || themeColors.dark);
+      updateSidebarThemeUI();
+    });
+
+    updateSidebarThemeUI();
   }
 
   document.addEventListener('astro:page-load', initSidebar);

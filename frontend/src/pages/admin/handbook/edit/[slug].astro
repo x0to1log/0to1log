@@ -7,6 +7,7 @@ import { getHandbookCategories, getHandbookCategoryLabel } from '../../../../lib
 import { difficultyLabel, difficultyColor } from '../../../../lib/handbookUtils';
 import { renderMarkdown } from '../../../../lib/markdown';
 import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astro';
+import HandbookSideRail from '../../../../components/newsprint/HandbookSideRail.astro';
 
 const { slug } = Astro.params;
 const isNew = slug === 'new';
@@ -59,6 +60,11 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         {/* Top Bar */}
         <div class="admin-editor-topbar">
           <div class="admin-editor-topbar-left">
+            <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 5h14M3 10h14M3 15h14" />
+              </svg>
+            </button>
             <a href="/admin/handbook/" class="admin-editor-back">&larr; Back</a>
             {term && (
               <span class={`admin-status-badge admin-status-badge--${term.status}`}>
@@ -163,7 +169,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
               </div>
               <div class="admin-field">
                 <label>Body Markdown (KO)</label>
-                <textarea name="body_markdown_ko" class="admin-textarea" rows="8">{term?.body_markdown_ko || ''}</textarea>
+                <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
+                     id="body-editor-ko"
+                     data-content={term?.body_markdown_ko || ''}></div>
               </div>
             </div>
           </div>
@@ -189,7 +197,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
               </div>
               <div class="admin-field">
                 <label>Body Markdown (EN)</label>
-                <textarea name="body_markdown_en" class="admin-textarea" rows="8">{term?.body_markdown_en || ''}</textarea>
+                <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
+                     id="body-editor-en"
+                     data-content={term?.body_markdown_en || ''}></div>
               </div>
             </div>
           </div>
@@ -224,38 +234,48 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
           <NewsprintShell
             locale="en"
-            masthead="Tech Handbook"
-            editionLabel={term?.categories?.length ? term.categories.map((c: string) => getHandbookCategoryLabel('en', c)).join(' · ') : ''}
+            masthead="Handbook"
+            editionLabel="CS · AI · Infra"
+            subkicker={['Glossary', 'Reference', 'Learn']}
           >
             <article id="preview-article">
               <header style="margin-bottom: 1.5rem;">
-                <h1 id="preview-term" style="font-family: var(--font-heading); font-size: 2rem; font-weight: 700; margin: 0;">
-                  {term?.term || ''}
-                </h1>
-                <p id="preview-korean" style="font-size: 1rem; color: var(--color-text-muted); margin: 0.25rem 0 0;">
-                  {term?.korean_name || ''}
-                </p>
-                <div id="preview-badges" style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <div class="handbook-detail-meta">
                   {term?.difficulty && (
-                    <span id="preview-difficulty" style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
+                    <span style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
                       {difficultyLabel('en', term.difficulty)}
                     </span>
                   )}
                   {(term?.categories || []).map((c: string) => (
-                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">
+                    <span style="font-size: 0.8rem; color: var(--color-text-muted);">
                       {getHandbookCategoryLabel('en', c)}
                     </span>
                   ))}
                 </div>
+                <h1 id="preview-term" class="handbook-detail-title" style="margin-top: 0.75rem;">
+                  {term?.term || ''}
+                </h1>
+                <p id="preview-korean" class="handbook-detail-subtitle">
+                  {term?.korean_name || ''}
+                </p>
               </header>
 
-              <div id="preview-summary-box" style="padding: 1.25rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary); margin-bottom: 2rem;">
-              </div>
-
-              <div id="preview-body" class="newsprint-prose">
+              <p id="preview-definition" class="handbook-definition"></p>
+              <div class="newsprint-divider"></div>
+              <div id="preview-sections"></div>
+              <div id="preview-body" class="newsprint-prose newsprint-prose--no-dropcap">
                 <Fragment set:html={initialBodyHtml} />
               </div>
             </article>
+
+          <Fragment slot="rail">
+            <HandbookSideRail
+              locale="en"
+              relatedTerms={[]}
+              sameCategoryTerms={[]}
+              relatedArticles={[]}
+            />
+          </Fragment>
           </NewsprintShell>
         </div>
       </>
@@ -267,8 +287,16 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
 <script>
   import { marked } from 'marked';
+  import { Crepe } from '@milkdown/crepe';
+  import '@milkdown/crepe/theme/common/style.css';
+
+  let crepeKo: Crepe | null = null;
+  let crepeEn: Crepe | null = null;
 
   document.addEventListener('astro:page-load', () => {
+    // Clean up previous Crepe instances (View Transitions)
+    if (crepeKo) { crepeKo.destroy(); crepeKo = null; }
+    if (crepeEn) { crepeEn.destroy(); crepeEn = null; }
     const termForm = document.getElementById('term-form');
     if (!termForm) return; // Not the handbook editor page
 
@@ -312,6 +340,41 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       });
     });
 
+    // ===== Initialize Milkdown Crepe body editors =====
+    async function initBodyEditors() {
+      const koEl = document.getElementById('body-editor-ko');
+      const enEl = document.getElementById('body-editor-en');
+
+      if (koEl) {
+        crepeKo = new Crepe({
+          root: koEl,
+          defaultValue: koEl.dataset.content || '',
+          featureConfigs: {
+            [Crepe.Feature.Placeholder]: {
+              text: '본문을 작성하세요...',
+              mode: 'block',
+            },
+          },
+        });
+        await crepeKo.create();
+      }
+
+      if (enEl) {
+        crepeEn = new Crepe({
+          root: enEl,
+          defaultValue: enEl.dataset.content || '',
+          featureConfigs: {
+            [Crepe.Feature.Placeholder]: {
+              text: 'Write the body content...',
+              mode: 'block',
+            },
+          },
+        });
+        await crepeEn.create();
+      }
+    }
+    initBodyEditors();
+
     function showFeedback(message: string, isError = false) {
     const el = document.getElementById('feedback')!;
     el.textContent = message;
@@ -341,6 +404,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     if (!data.id) delete data.id;
 
+    // Body markdown from Crepe editors (not in form anymore)
+    data.body_markdown_ko = crepeKo ? crepeKo.getMarkdown() : '';
+    data.body_markdown_en = crepeEn ? crepeEn.getMarkdown() : '';
+
     return data;
   }
 
@@ -357,12 +424,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const defField = form.querySelector('[name="definition_' + activeLang + '"]') as HTMLTextAreaElement | null;
     const plainField = form.querySelector('[name="plain_explanation_' + activeLang + '"]') as HTMLTextAreaElement | null;
     const exampleField = form.querySelector('[name="example_analogy_' + activeLang + '"]') as HTMLTextAreaElement | null;
-    const bodyField = form.querySelector('[name="body_markdown_' + activeLang + '"]') as HTMLTextAreaElement | null;
 
     const definition = defField?.value || '';
     const plainExplanation = plainField?.value || '';
     const exampleAnalogy = exampleField?.value || '';
-    const bodyMarkdown = bodyField?.value || '';
+    const bodyMarkdown = activeLang === 'ko'
+      ? (crepeKo ? crepeKo.getMarkdown() : '')
+      : (crepeEn ? crepeEn.getMarkdown() : '');
 
     const techField = form.querySelector('[name="technical_description_' + activeLang + '"]') as HTMLTextAreaElement | null;
     const technicalDescription = techField?.value || '';
@@ -373,11 +441,18 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const previewKorean = document.getElementById('preview-korean');
     if (previewKorean) previewKorean.textContent = koreanName;
 
-    const summaryBox = document.getElementById('preview-summary-box');
-    if (summaryBox) {
-      summaryBox.innerHTML = '';
+    // Definition (matches published .handbook-definition)
+    const previewDef = document.getElementById('preview-definition');
+    if (previewDef) {
+      previewDef.textContent = definition;
+      previewDef.style.display = definition ? '' : 'none';
+    }
+
+    // Sections (matches published .handbook-section structure)
+    const sectionsContainer = document.getElementById('preview-sections');
+    if (sectionsContainer) {
+      sectionsContainer.innerHTML = '';
       const sections = [
-        { label: 'Definition', text: definition },
         { label: 'Plain Explanation', text: plainExplanation },
         { label: 'Technical Description', text: technicalDescription },
         { label: 'Example / Analogy', text: exampleAnalogy },
@@ -385,19 +460,20 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       sections.forEach(({ label, text }) => {
         if (!text) return;
         const div = document.createElement('div');
-        div.style.marginBottom = '0.75rem';
-        const strong = document.createElement('strong');
-        strong.style.cssText = 'font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;';
-        strong.textContent = label;
+        div.className = 'handbook-section';
+        const span = document.createElement('span');
+        span.className = 'handbook-section-label';
+        span.textContent = label;
         const p = document.createElement('p');
-        p.style.cssText = 'margin: 0.25rem 0 0; line-height: 1.5;';
+        p.className = 'handbook-section-body';
         p.textContent = text;
-        div.appendChild(strong);
+        div.appendChild(span);
         div.appendChild(p);
-        summaryBox.appendChild(div);
+        sectionsContainer.appendChild(div);
       });
     }
 
+    // Body markdown (matches published .newsprint-prose--no-dropcap)
     const previewBody = document.getElementById('preview-body');
     if (previewBody) {
       previewBody.innerHTML = marked.parse(bodyMarkdown) as string;
@@ -408,7 +484,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   });
 
   document.getElementById('btn-edit-back')?.addEventListener('click', () => {
-    if (draftMode) draftMode.style.display = 'block';
+    if (draftMode) draftMode.style.display = '';
     if (previewMode) previewMode.style.display = 'none';
   });
 
