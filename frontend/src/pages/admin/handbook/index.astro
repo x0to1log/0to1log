@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
-import AdminHeader from '../../../components/admin/AdminHeader.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
@@ -13,120 +13,165 @@ const supabase = createClient(
   { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
 );
 
+// --- Post stats (for sidebar) ---
+let logDraft = 0;
+let logPublished = 0;
+let logTotal = 0;
+const recentItems: Array<{ title: string; slug: string; type: 'post' | 'term' }> = [];
+try {
+  const { data: posts } = await supabase
+    .from('posts')
+    .select('title, slug, status, updated_at')
+    .order('updated_at', { ascending: false });
+  if (posts) {
+    logTotal = posts.length;
+    logDraft = posts.filter((p) => p.status === 'draft').length;
+    logPublished = posts.filter((p) => p.status === 'published').length;
+    posts.slice(0, 2).forEach((p) => recentItems.push({ title: p.title, slug: p.slug, type: 'post' }));
+  }
+} catch {}
+
+// --- Handbook terms ---
 const { data: terms, error } = await supabase
   .from('handbook_terms')
   .select('id, term, slug, korean_name, status, categories, difficulty, definition_ko, definition_en, updated_at')
   .order('updated_at', { ascending: false });
 
 const fetchError = error ? error.message : null;
-const allTerms = terms || [];
+const allTerms = (terms || []).sort((a, b) => {
+  if (a.status === 'draft' && b.status !== 'draft') return -1;
+  if (a.status !== 'draft' && b.status === 'draft') return 1;
+  return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+});
 const draftCount = allTerms.filter((t) => t.status === 'draft').length;
 const publishedCount = allTerms.filter((t) => t.status === 'published').length;
+const handbookDraft = draftCount;
+
+// Add recent terms to sidebar
+allTerms.slice(0, 3).forEach((t) => recentItems.push({ title: t.term, slug: t.slug, type: 'term' }));
 ---
 
 <MainLayout title="Admin — Handbook" locale="en">
-  <div style="max-width: 800px; margin: 0 auto;">
-    <AdminHeader activeTab="handbook" />
+  <AdminSidebar
+    activeSection="handbook"
+    recentPosts={recentItems}
+    stats={{ posts: logTotal, terms: allTerms.length, drafts: logDraft + handbookDraft }}
+  />
 
-    {fetchError ? (
-      <NewsprintNotice
-        variant="unauthorized"
-        message={`Failed to load terms: ${fetchError}`}
-        linkHref="/admin/handbook/"
-        linkLabel="Retry"
-      />
-    ) : (
-      <>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <h1 class="admin-main-title">Handbook</h1>
+        <div class="admin-header-controls">
           <div class="admin-filter-tabs">
-            <button class="admin-filter-btn admin-filter-btn--active" data-filter="all">
-              All ({allTerms.length})
-            </button>
-            <button class="admin-filter-btn" data-filter="draft">
+            <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">
               Draft ({draftCount})
             </button>
             <button class="admin-filter-btn" data-filter="published">
               Published ({publishedCount})
             </button>
+            <button class="admin-filter-btn" data-filter="all">
+              All ({allTerms.length})
+            </button>
           </div>
-          <a href="/admin/handbook/edit/new" class="admin-btn">+ New Term</a>
+          <a href="/admin/handbook/edit/new" class="admin-btn admin-btn-primary">+ New Term</a>
         </div>
+      </div>
 
-        {allTerms.length === 0 ? (
-          <NewsprintNotice
-            variant="empty"
-            message="No handbook terms yet. Create one to get started."
-          />
-        ) : (
-          <ul class="admin-draft-list" id="term-list">
-            {allTerms.map((t) => (
-              <li class="admin-term-item" data-status={t.status}>
-                <div class="admin-term-info">
-                  <div class="admin-term-title">
-                    <a href={`/admin/handbook/edit/${t.slug}`}>{t.term}</a>
-                    {t.korean_name && <span style="color: var(--color-text-secondary); font-weight: 400;"> · {t.korean_name}</span>}
-                  </div>
-                  <div class="admin-term-meta">
-                    <span class={`admin-status-badge admin-status-badge--${t.status}`}>
-                      {t.status}
-                    </span>
-                    {(t.categories || []).length > 0 && (
-                      <span>{(t.categories || []).map((c: string) => getHandbookCategoryLabel('en', c)).join(' · ')}</span>
-                    )}
-                    {t.difficulty && (
-                      <span>{t.difficulty}</span>
-                    )}
-                    <span style="font-size: 0.75rem;">KO {t.definition_ko ? '✅' : '❌'}</span>
-                    <span style="font-size: 0.75rem;">EN {t.definition_en ? '✅' : '❌'}</span>
-                    <span>{new Date(t.updated_at).toLocaleDateString('en-US')}</span>
-                  </div>
+      {fetchError ? (
+        <NewsprintNotice
+          variant="unauthorized"
+          message={`Failed to load terms: ${fetchError}`}
+          linkHref="/admin/handbook/"
+          linkLabel="Retry"
+        />
+      ) : allTerms.length === 0 ? (
+        <NewsprintNotice variant="empty" message="No handbook terms yet. Create one to get started." />
+      ) : (
+        <ul class="admin-list" id="term-list">
+          {allTerms.map((t) => (
+            <li class="admin-list-item" data-status={t.status}>
+              <div class="admin-list-info">
+                <div class="admin-list-title">
+                  <a href={`/admin/handbook/edit/${t.slug}`}>{t.term}</a>
+                  {t.korean_name && <span class="admin-list-subtitle"> · {t.korean_name}</span>}
                 </div>
-                <div class="admin-term-actions">
-                  {t.status === 'draft' ? (
-                    <button class="admin-btn" data-action="publish" data-id={t.id} style="font-size: 0.8rem;">
-                      Publish
-                    </button>
-                  ) : t.status === 'published' ? (
-                    <button class="admin-btn" data-action="unpublish" data-id={t.id} style="font-size: 0.8rem;">
-                      Unpublish
-                    </button>
-                  ) : null}
-                  <a href={`/admin/handbook/edit/${t.slug}`} class="admin-btn" style="font-size: 0.8rem;">Edit</a>
-                  <button class="admin-btn-danger" data-action="delete" data-id={t.id} data-term={t.term} style="font-size: 0.8rem;">
-                    Delete
-                  </button>
+                <div class="admin-list-meta">
+                  <span class={`admin-status-badge admin-status-badge--${t.status}`}>{t.status}</span>
+                  {(t.categories || []).length > 0 && (
+                    <span>{(t.categories || []).map((c: string) => getHandbookCategoryLabel('en', c)).join(' · ')}</span>
+                  )}
+                  {t.difficulty && <span>{t.difficulty}</span>}
+                  <span class="admin-list-indicator">KO {t.definition_ko ? '✓' : '—'}</span>
+                  <span class="admin-list-indicator">EN {t.definition_en ? '✓' : '—'}</span>
+                  <span>{new Date(t.updated_at).toLocaleDateString('en-US')}</span>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </>
-    )}
+              </div>
+              <div class="admin-list-actions">
+                {t.status === 'draft' ? (
+                  <button class="admin-btn" data-action="publish" data-id={t.id}>Publish</button>
+                ) : t.status === 'published' ? (
+                  <button class="admin-btn" data-action="unpublish" data-id={t.id}>Unpublish</button>
+                ) : null}
+                <a href={`/admin/handbook/edit/${t.slug}`} class="admin-btn">Edit</a>
+                <button class="admin-btn-danger" data-action="delete" data-id={t.id} data-term={t.term}>Delete</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+
+    <div class="admin-right-panel">
+      <div class="admin-right-panel-section">
+        <div class="admin-right-panel-title">Overview</div>
+        <div class="admin-stat-cards">
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-label">Posts</div>
+            <div class="admin-stat-card-value">{logTotal}</div>
+            <div class="admin-stat-card-detail">
+              {logDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{logDraft} draft</span>}
+              {logPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{logPublished} published</span>}
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-label">Handbook</div>
+            <div class="admin-stat-card-value">{allTerms.length}</div>
+            <div class="admin-stat-card-detail">
+              {draftCount > 0 && <span class="admin-status-badge admin-status-badge--draft">{draftCount} draft</span>}
+              {publishedCount > 0 && <span class="admin-status-badge admin-status-badge--published">{publishedCount} published</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </MainLayout>
 
 <script>
-  // Filter tabs
+  function applyFilter(filter: string) {
+    document.querySelectorAll<HTMLElement>('#term-list [data-status]').forEach((item) => {
+      if (filter === 'all' || item.dataset.status === filter) {
+        item.style.display = '';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  }
+
   document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const filter = btn.dataset.filter!;
-
       document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) =>
         b.classList.remove('admin-filter-btn--active')
       );
       btn.classList.add('admin-filter-btn--active');
-
-      document.querySelectorAll<HTMLElement>('[data-status]').forEach((item) => {
-        if (filter === 'all' || item.dataset.status === filter) {
-          item.style.display = '';
-        } else {
-          item.style.display = 'none';
-        }
-      });
+      applyFilter(filter);
     });
   });
 
-  // Quick actions (publish/unpublish/delete)
+  applyFilter('draft');
+
   document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const action = btn.dataset.action!;
@@ -135,35 +180,23 @@ const publishedCount = allTerms.filter((t) => t.status === 'published').length;
       if (action === 'delete') {
         const term = btn.dataset.term || 'this term';
         if (!confirm(`Delete "${term}"? This cannot be undone.`)) return;
-
         const res = await fetch('/api/admin/handbook/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id }),
         });
-
-        if (res.ok) {
-          window.location.reload();
-        } else {
-          const err = await res.json();
-          alert(`Delete failed: ${err.error}`);
-        }
+        if (res.ok) { window.location.reload(); }
+        else { const err = await res.json(); alert(`Delete failed: ${err.error}`); }
         return;
       }
 
-      // publish or unpublish
       const res = await fetch('/api/admin/handbook/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action }),
       });
-
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        const err = await res.json();
-        alert(`${action} failed: ${err.error}`);
-      }
+      if (res.ok) { window.location.reload(); }
+      else { const err = await res.json(); alert(`${action} failed: ${err.error}`); }
     });
   });
 </script>

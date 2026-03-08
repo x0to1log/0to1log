@@ -29,7 +29,7 @@ const copy = locale === 'ko'
       pageHome: '홈',
       pageArticle: '기사',
       pageTerm: '용어',
-      pageAdmin: 'Admin',
+      pageAdmin: '관리자',
       pageLibrary: '서재',
       languageItem: '언어 · English',
       themeLabel: '테마',
@@ -38,7 +38,7 @@ const copy = locale === 'ko'
       themePink: '핑크',
       signIn: '로그인',
       signOut: '로그아웃',
-      admin: 'Admin',
+      admin: '관리자',
       menuLabel: user ? '프로필 메뉴' : '설정 메뉴',
       utilityLabel: '설정',
     }
@@ -147,13 +147,21 @@ const navItems = [
 
           <div class="user-dropdown user-dropdown--utility" data-user-dropdown>
             {user && (
-              <a href="/library/" class="user-dropdown-item">
-                {copy.library}
+              <a href="/library/" class="user-dropdown-item user-dropdown-item--has-icon">
+                <span>{copy.library}</span>
+                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                </svg>
               </a>
             )}
 
-            <a href={altPath} class="user-dropdown-item">
-              {copy.languageItem}
+            <a href={altPath} class="user-dropdown-item user-dropdown-item--has-icon">
+              <span>{copy.languageItem}</span>
+              <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                <path d="M2 12h20"></path>
+              </svg>
             </a>
 
             <button
@@ -166,7 +174,26 @@ const navItems = [
               data-pink-label={copy.themePink}
             >
               <span>{copy.themeLabel}</span>
-              <span data-theme-cycle-value></span>
+              <span style="display: flex; align-items: center; gap: 0.35rem;">
+                <span data-theme-cycle-value></span>
+                <svg class="dropdown-icon" data-theme-icon="dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <svg class="dropdown-icon" data-theme-icon="light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="dropdown-icon" data-theme-icon="pink" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              </span>
             </button>
 
             {isAdmin && (
@@ -225,6 +252,9 @@ const navItems = [
     if (valueEl) valueEl.textContent = themeLabel;
     button.setAttribute('aria-label', `${prefix}: ${themeLabel}`);
     button.setAttribute('title', `${prefix}: ${themeLabel}`);
+    button.querySelectorAll<HTMLElement>('[data-theme-icon]').forEach((icon) => {
+      icon.style.display = icon.dataset.themeIcon === theme ? '' : 'none';
+    });
   }
 
   function setTheme(theme: Theme) {

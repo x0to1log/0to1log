@@ -22,6 +22,7 @@ interface Props {
 }
 
 const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false } = Astro.props;
+const isAdmin = Astro.url.pathname.startsWith('/admin');
 
 const gaId = import.meta.env.PUBLIC_GA4_ID || '';
 const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
@@ -87,12 +88,12 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
       Skip to content
     </a>
 
-    <Navigation locale={locale} alwaysVisible={headerAlwaysVisible} altSlug={altSlug} />
+    {!isAdmin && <Navigation locale={locale} alwaysVisible={headerAlwaysVisible} altSlug={altSlug} />}
 
-    <main id="main-content" style={`flex: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 1rem; width: 100%;`}>
+    <main id="main-content" style={isAdmin ? 'flex: 1; width: 100%;' : `flex: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 1rem; width: 100%;`}>
       <slot />
     </main>
 
-    <Footer locale={locale} />
+    {!isAdmin && <Footer locale={locale} />}
   </body>
 </html>

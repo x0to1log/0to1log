@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { id, action } = await request.json();
 
-  if (!id || !['publish', 'unpublish', 'archive'].includes(action)) {
+  if (!id || !['publish', 'unpublish'].includes(action)) {
     return new Response(JSON.stringify({ error: 'Invalid id or action' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
@@ -27,23 +27,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // For publish, validate required fields
   if (action === 'publish') {
-    const { data: term } = await supabase
-      .from('handbook_terms')
-      .select('term, slug, definition_ko, categories')
+    const { data: post } = await supabase
+      .from('posts')
+      .select('title, slug')
       .eq('id', id)
       .single();
 
-    if (!term) {
-      return new Response(JSON.stringify({ error: 'Term not found' }), {
+    if (!post) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
         status: 404, headers: { 'Content-Type': 'application/json' },
       });
     }
 
     const missing = [];
-    if (!term.term) missing.push('term');
-    if (!term.slug) missing.push('slug');
-    if (!term.definition_ko) missing.push('definition_ko');
-    if (!term.categories?.length) missing.push('categories');
+    if (!post.title) missing.push('title');
+    if (!post.slug) missing.push('slug');
 
     if (missing.length > 0) {
       return new Response(JSON.stringify({
@@ -61,12 +59,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     update.published_at = new Date().toISOString();
   } else if (action === 'unpublish') {
     update.status = 'draft';
-  } else if (action === 'archive') {
-    update.status = 'archived';
   }
 
   const { data, error } = await supabase
-    .from('handbook_terms')
+    .from('posts')
     .update(update)
     .eq('id', id)
     .select('id, status')

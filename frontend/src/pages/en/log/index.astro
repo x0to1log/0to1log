@@ -5,8 +5,9 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { getCategoryLabel, normalizeCategorySlug } from '../../../lib/categories';
+import { normalizeCategorySlug } from '../../../lib/categories';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
+import NewsprintHeadline from '../../../components/newsprint/NewsprintHeadline.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
 import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
@@ -18,7 +19,7 @@ let fetchError: string | null = null;
 if (supabase) {
   const { data, error } = await supabase
     .from('posts')
-    .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
+    .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, og_image_url, excerpt')
     .eq('status', 'published')
     .eq('locale', 'en')
     .order('published_at', { ascending: false });
@@ -50,9 +51,9 @@ if (user && accessToken) {
   (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
 }
 
-const featured = posts[0] ?? null;
-const rest = featured ? posts.slice(1) : [];
-const railPosts = featured ? posts.slice(1, 5) : posts.slice(0, 4);
+const headline = posts.find(p => p.post_type === 'business') ?? null;
+const rest = posts.filter(p => p !== headline);
+const railPosts = headline ? rest.slice(0, 4) : posts.slice(0, 4);
 const categories = Array.from(
   new Set(
     posts
@@ -78,39 +79,23 @@ const categories = Array.from(
         linkHref="/en/log/"
         linkLabel={t.en['error.retry']}
       />
-    ) : featured ? (
+    ) : posts.length > 0 ? (
       <>
-        <a
-          href={`/en/log/${featured.slug}/`}
-          class={`newsprint-featured newsprint-card${featured.og_image_url ? ' newsprint-featured--has-img' : ''}`}
-          data-category={normalizeCategorySlug(featured.category)}
-        >
-          {featured.og_image_url && (
-            <div class="newsprint-featured-img-frame">
-              <img
-                src={featured.og_image_url}
-                alt={featured.title}
-                class="newsprint-featured-img img-newsprint"
-                width="600"
-                height="400"
-                loading="eager"
-                fetchpriority="high"
-              />
-            </div>
-          )}
-          <div>
-            <h2 class="newsprint-lead-title">{featured.title}</h2>
-            {featured.excerpt && <p class="newsprint-excerpt">{featured.excerpt}</p>}
-            <div class="newsprint-card-bottom" style="font-size: 0.85rem;">
-              <span class="newsprint-category">{getCategoryLabel('en', featured.category)}</span>
-              {(featured.tags ?? []).slice(0, 5).map((tag: string) => <span class="newsprint-tag">{tag}</span>)}
-              <span class="newsprint-meta-inline">
-                {featured.reading_time_min && <span>{featured.reading_time_min} min read</span>}
-                {featured.published_at && <time datetime={featured.published_at}>{new Date(featured.published_at).toLocaleDateString('en-US')}</time>}
-              </span>
-            </div>
-          </div>
-        </a>
+        {headline && (
+          <NewsprintHeadline
+            href={`/en/log/${headline.slug}/`}
+            title={headline.title}
+            excerpt={headline.excerpt}
+            category={headline.category}
+            publishedAt={headline.published_at}
+            readingTimeMin={headline.reading_time_min}
+            tags={headline.tags}
+            locale="en"
+            isBookmarked={bookmarkedPostIds.has(headline.id)}
+            itemId={headline.id}
+            itemType="post"
+          />
+        )}
 
         {rest.length > 0 && (
           <section class="newsprint-grid-cards">

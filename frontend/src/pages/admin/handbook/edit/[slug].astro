@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import MainLayout from '../../../../layouts/MainLayout.astro';
-import AdminHeader from '../../../../components/admin/AdminHeader.astro';
+import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategories, getHandbookCategoryLabel } from '../../../../lib/handbookCategories';
 import { difficultyLabel, difficultyColor } from '../../../../lib/handbookUtils';
@@ -45,40 +45,40 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 ---
 
 <MainLayout title={`Admin — ${pageTitle}`} locale="en">
-  <div style="max-width: 1100px; margin: 0 auto; padding: 0 1rem;">
-    <AdminHeader activeTab="handbook" />
-
     {loadError ? (
-      <div class="admin-feedback admin-feedback--error" style="margin-bottom: 1rem;">
-        {loadError}
+      <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+        <div class="admin-feedback admin-feedback--error" style="margin-bottom: 1rem;">
+          {loadError}
+        </div>
       </div>
     ) : (
       <>
+        <AdminSidebar activeSection="handbook" />
         {/* ===== DRAFT MODE ===== */}
-        <div id="draft-mode">
-        {/* Toolbar */}
-        <div class="admin-toolbar" style="margin-bottom: 1.5rem;">
-          <div class="admin-toolbar-left">
-            <a href="/admin/handbook/" class="admin-btn" style="font-size: 0.85rem;">&larr; Back</a>
+        <div class="admin-editor-layout" id="draft-mode">
+        {/* Top Bar */}
+        <div class="admin-editor-topbar">
+          <div class="admin-editor-topbar-left">
+            <a href="/admin/handbook/" class="admin-editor-back">&larr; Back</a>
             {term && (
-              <span class={`admin-status-badge admin-status-badge--${term.status}`} style="margin-left: 0.75rem;">
+              <span class={`admin-status-badge admin-status-badge--${term.status}`}>
                 {term.status}
               </span>
             )}
           </div>
-          <div class="admin-toolbar-right">
-            <button id="btn-save" class="admin-btn" style="font-size: 0.85rem;">Save Draft</button>
-            <button id="btn-preview" class="admin-btn" style="font-size: 0.85rem;">Preview</button>
-            <button id="btn-publish" class="admin-btn" style="font-size: 0.85rem;">Publish</button>
+          <div class="admin-editor-topbar-right">
+            <button id="btn-save" class="admin-btn">Save</button>
+            <button id="btn-preview" class="admin-btn">Preview</button>
+            <button id="btn-publish" class="admin-btn admin-btn-primary">Publish</button>
+            <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
             {term && (
-              <button id="btn-delete" class="admin-btn-danger" style="font-size: 0.85rem;">Delete</button>
+              <button id="btn-delete" class="admin-btn-danger">Delete</button>
             )}
           </div>
         </div>
 
-        {/* Split: Form + AI Panel */}
-        <div class="admin-split">
-        <div>
+        {/* Editor Content */}
+        <div class="admin-editor-content">
         <form id="term-form" style="display: flex; flex-direction: column; gap: 1rem;">
           <input type="hidden" name="id" value={term?.id || ''} />
 
@@ -89,25 +89,26 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           </div>
 
           {/* Category + Difficulty (always visible) */}
-          <div class="admin-field-row">
-            <div class="admin-field">
-              <label>Category</label>
-              <select name="category" class="admin-input">
-                <option value="">— select —</option>
-                {categories.map((cat) => (
-                  <option value={cat} selected={term?.category === cat}>{cat}</option>
-                ))}
-              </select>
+          <div class="admin-field">
+            <label>Categories (1–4) *</label>
+            <div class="admin-category-grid">
+              {categories.map((cat) => (
+                <label class="admin-category-check">
+                  <input type="checkbox" name="categories" value={cat}
+                         checked={term?.categories?.includes(cat)} />
+                  {getHandbookCategoryLabel('en', cat)}
+                </label>
+              ))}
             </div>
-            <div class="admin-field">
-              <label>Difficulty</label>
-              <select name="difficulty" class="admin-input">
-                <option value="">— select —</option>
-                {difficulties.map((d) => (
-                  <option value={d} selected={term?.difficulty === d}>{d}</option>
-                ))}
-              </select>
-            </div>
+          </div>
+          <div class="admin-field">
+            <label>Difficulty</label>
+            <select name="difficulty" class="admin-input">
+              <option value="">— select —</option>
+              {difficulties.map((d) => (
+                <option value={d} selected={term?.difficulty === d}>{d}</option>
+              ))}
+            </select>
           </div>
 
           {/* Collapsible secondary fields */}
@@ -193,38 +194,38 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             </div>
           </div>
         </form>
-        </div>
+        </div>{/* /admin-editor-content */}
 
-        {/* AI Advisor Panel */}
-        <div>
-          <div class="admin-panel">
-            <div class="admin-panel-title">AI Advisor</div>
-            <p class="admin-panel-placeholder">
-              AI advisor panel will be connected in a future update.
-              This panel will suggest definitions, plain explanations,
-              and related terms based on the term name and category.
-            </p>
+        {/* AI Suggestions Panel */}
+        <div class="admin-ai-panel" id="ai-panel">
+          <div class="admin-ai-panel-header">
+            <span class="admin-ai-panel-title">AI Suggestions</span>
+            <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
           </div>
+          <p class="admin-ai-panel-placeholder">
+            AI advisor panel will be connected in a future update.
+            This panel will suggest definitions, plain explanations,
+            and related terms based on the term name and category.
+          </p>
         </div>
-        </div>{/* /admin-split */}
-        </div>{/* /draft-mode */}
+        </div>{/* /admin-editor-layout (draft-mode) */}
 
         {/* ===== PREVIEW MODE ===== */}
         <div id="preview-mode" style="display: none;">
           <div class="admin-preview-bar">
             <div class="admin-toolbar-left">
-              <a href="/admin/handbook/" class="admin-btn" style="font-size: 0.85rem;">&larr; Back</a>
+              <a href="/admin/handbook/" class="admin-editor-back">&larr; Back</a>
             </div>
             <div class="admin-toolbar-right">
-              <button id="btn-edit-back" class="admin-btn" style="font-size: 0.85rem;">Edit</button>
-              <button id="btn-publish-preview" class="admin-btn" style="font-size: 0.85rem;">Publish</button>
+              <button id="btn-edit-back" class="admin-btn">Edit</button>
+              <button id="btn-publish-preview" class="admin-btn admin-btn-primary">Publish</button>
             </div>
           </div>
 
           <NewsprintShell
             locale="en"
             masthead="Tech Handbook"
-            editionLabel={term?.category ? getHandbookCategoryLabel('en', term.category) || '' : ''}
+            editionLabel={term?.categories?.length ? term.categories.map((c: string) => getHandbookCategoryLabel('en', c)).join(' · ') : ''}
           >
             <article id="preview-article">
               <header style="margin-bottom: 1.5rem;">
@@ -240,11 +241,11 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                       {difficultyLabel('en', term.difficulty)}
                     </span>
                   )}
-                  {term?.category && (
-                    <span id="preview-category" style="font-size: 0.75rem; color: var(--color-text-muted);">
-                      {getHandbookCategoryLabel('en', term.category)}
+                  {(term?.categories || []).map((c: string) => (
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">
+                      {getHandbookCategoryLabel('en', c)}
                     </span>
-                  )}
+                  ))}
                 </div>
               </header>
 
@@ -262,32 +263,56 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     {/* Toast feedback (fixed position, outside form flow) */}
     <div id="feedback" class="admin-feedback admin-feedback--toast" hidden></div>
-  </div>
 </MainLayout>
 
 <script>
   import { marked } from 'marked';
 
-  // Auto-open details on desktop
-  if (window.innerWidth >= 768) {
-    document.querySelector('.admin-details')?.setAttribute('open', '');
-  }
+  document.addEventListener('astro:page-load', () => {
+    const termForm = document.getElementById('term-form');
+    if (!termForm) return; // Not the handbook editor page
 
-  // Language tab switching
-  document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const lang = btn.dataset.lang!;
-      document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
-        b.classList.remove('admin-lang-tab--active')
-      );
-      btn.classList.add('admin-lang-tab--active');
+    // Auto-open details on desktop
+    if (window.innerWidth >= 768) {
+      document.querySelector('.admin-details')?.setAttribute('open', '');
+    }
 
-      document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
-      document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
+    // AI panel toggle
+    const aiToggleBtn = document.getElementById('btn-ai-toggle');
+    const aiCloseBtn = document.getElementById('btn-ai-close');
+    const editorLayout = document.querySelector('.admin-editor-layout');
+    function toggleAiPanel() {
+      editorLayout?.classList.toggle('admin-editor-layout--collapsed');
+    }
+    aiToggleBtn?.addEventListener('click', toggleAiPanel);
+    aiCloseBtn?.addEventListener('click', toggleAiPanel);
+
+    // Language tab switching
+    document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang!;
+        document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
+          b.classList.remove('admin-lang-tab--active')
+        );
+        btn.classList.add('admin-lang-tab--active');
+
+        document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
+        document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
+      });
     });
-  });
 
-  function showFeedback(message: string, isError = false) {
+    // Enforce max 4 categories
+    document.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const checked = document.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked');
+        if (checked.length > 4) {
+          cb.checked = false;
+          showFeedback('Maximum 4 categories allowed.', true);
+        }
+      });
+    });
+
+    function showFeedback(message: string, isError = false) {
     const el = document.getElementById('feedback')!;
     el.textContent = message;
     el.className = `admin-feedback admin-feedback--toast admin-feedback--${isError ? 'error' : 'success'}`;
@@ -301,8 +326,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const data: Record<string, any> = {};
 
     for (const [key, value] of fd.entries()) {
+      if (key === 'categories') continue; // handled separately
       data[key] = value;
     }
+
+    // Collect categories from checkbox group
+    const catBoxes = form.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked');
+    data.categories = Array.from(catBoxes).map(cb => cb.value);
 
     data.is_favourite = (form.querySelector('[name="is_favourite"]') as HTMLInputElement).checked;
 
@@ -334,6 +364,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const exampleAnalogy = exampleField?.value || '';
     const bodyMarkdown = bodyField?.value || '';
 
+    const techField = form.querySelector('[name="technical_description_' + activeLang + '"]') as HTMLTextAreaElement | null;
+    const technicalDescription = techField?.value || '';
+
     const previewTerm = document.getElementById('preview-term');
     if (previewTerm) previewTerm.textContent = termName;
 
@@ -346,6 +379,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       const sections = [
         { label: 'Definition', text: definition },
         { label: 'Plain Explanation', text: plainExplanation },
+        { label: 'Technical Description', text: technicalDescription },
         { label: 'Example / Analogy', text: exampleAnalogy },
       ];
       sections.forEach(({ label, text }) => {
@@ -458,4 +492,5 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       showFeedback(`Delete failed: ${err.error}`, true);
     }
   });
+  }); // end astro:page-load
 </script>

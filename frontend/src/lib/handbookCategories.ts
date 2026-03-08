@@ -33,3 +33,10 @@ export function getHandbookCategoryLabel(locale: Locale, category?: string | nul
 export function getHandbookCategories(): HandbookCategorySlug[] {
   return Object.keys(HANDBOOK_CATEGORY_LABELS) as HandbookCategorySlug[];
 }
+
+export function getHandbookCategoryLabels(locale: Locale, categories?: string[] | null): string[] {
+  if (!categories?.length) return [];
+  return categories
+    .map((cat) => HANDBOOK_CATEGORY_LABELS[cat as HandbookCategorySlug]?.[locale] ?? cat)
+    .filter(Boolean) as string[];
+}
