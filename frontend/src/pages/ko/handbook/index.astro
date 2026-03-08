@@ -78,6 +78,7 @@ const categories = Array.from(
         id="handbook-search"
         aria-label={t[locale]['handbook.search']}
         placeholder={t[locale]['handbook.search']}
+        data-placeholder-hints={JSON.stringify([t[locale]['handbook.search'], 'RAG', 'MCP', '임베딩'])}
         class="handbook-search-input"
       />
       <div id="handbook-filters" class="handbook-filter-row">
@@ -183,6 +184,10 @@ const categories = Array.from(
 
 <script>
   import '../../../scripts/bookmark';
+</script>
+
+<script>
+  import '../../../scripts/handbookSearchHints';
 </script>
 
 <script>

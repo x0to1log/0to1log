@@ -45,6 +45,7 @@
   --color-bg-primary: #1F1A17;
   --color-bg-secondary: #191512;
   --color-bg-tertiary: #25201C;
+  --color-input-surface: #2A2420;
   --color-text-primary: #E0D8C3;
   --color-text-secondary: #A39D8E;
   --color-text-muted: #948C7E;
@@ -83,6 +84,7 @@
   --color-bg-primary: #F4F1EA;
   --color-bg-secondary: #E9E4D9;
   --color-bg-tertiary: #DDD8CC;
+  --color-input-surface: #E9E4D9;
   --color-text-primary: #333333;
   --color-text-secondary: #555555;
   --color-text-muted: #736B63;
@@ -121,6 +123,7 @@
   --color-bg-primary: #FFF0F3;
   --color-bg-secondary: #FFCCD5;
   --color-bg-tertiary: #FFB3C1;
+  --color-input-surface: #FFE1E7;
   --color-text-primary: #2D1F22;
   --color-text-secondary: #4D3B40;
   --color-text-muted: #6E5459;
@@ -2927,9 +2930,14 @@ code, pre {
 /* Handbook list */
 .handbook-search-input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 3.15rem 0.75rem 1rem;
   border: 1px solid var(--color-border);
-  background: var(--color-bg);
+  background: var(--color-input-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6259' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.2rem 1.2rem;
+  border-radius: 12px;
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 0.9rem;
@@ -2937,6 +2945,17 @@ code, pre {
 .handbook-search-input:focus-visible {
   outline: 2px solid var(--color-accent, #4a90d9);
   outline-offset: -1px;
+}
+
+@media (max-width: 640px) {
+  .handbook-search-input {
+    min-height: 3rem;
+    padding: 0.85rem 3.5rem 0.85rem 1rem;
+    background-position: right 1.05rem center;
+    background-size: 1.3rem 1.3rem;
+    font-size: 1rem;
+    border-radius: 14px;
+  }
 }
 
 .handbook-controls {

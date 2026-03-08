@@ -5,7 +5,7 @@ export type LegacyCategorySlug = CategorySlug | 'tech';
 
 const CATEGORY_LABELS: Record<CategorySlug, Record<Locale, string>> = {
   'ai-news': { en: 'AI News', ko: 'AI 뉴스' },
-  study: { en: 'Study', ko: '서재' },
+  study: { en: 'Study', ko: '학습' },
   career: { en: 'Career', ko: '커리어' },
   project: { en: 'Project', ko: '프로젝트' },
 };

@@ -1,0 +1,273 @@
+---
+export const prerender = true;
+
+import MainLayout from '../../layouts/MainLayout.astro';
+
+const links = [
+  { label: 'GitHub', href: 'https://github.com/ming2tofu33' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/ming2tofu33/' },
+  { label: 'Email', href: 'mailto:ming2tofu33@gmail.com' },
+];
+
+const steps = [
+  { label: 'Discover', desc: 'Tavily-powered search scans for the most significant AI news across research papers, product launches, and industry developments.' },
+  { label: 'Rank', desc: 'OpenAI evaluates each story for relevance, impact, and novelty to surface what matters most.' },
+  { label: 'Write', desc: 'A multi-agent pipeline generates analysis from three perspectives: beginner-friendly context, learner-focused depth, and expert-level insight.' },
+  { label: 'Publish', desc: 'Articles go through editorial review before being published in both English and Korean.' },
+];
+
+const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel', 'Railway'];
+---
+
+<MainLayout title="About" locale="en" headerAlwaysVisible={true}>
+  <div class="about-page">
+
+    <!-- Hero -->
+    <section class="about-hero">
+      <p class="about-overline">About</p>
+      <h1 class="about-title">0to1log</h1>
+      <p class="about-tagline">From Void to Value</p>
+      <div class="about-ornament" aria-hidden="true">&mdash;&thinsp;&diams;&thinsp;&mdash;</div>
+    </section>
+
+    <!-- The Publication -->
+    <section class="about-section">
+      <h2 class="about-heading">The Publication</h2>
+      <p>
+        Every day, hundreds of AI announcements compete for attention. 0to1log cuts through the noise
+        by curating only what matters — then contextualizing it for readers at every level.
+      </p>
+      <p>
+        Each story is delivered in three versions: a plain-language summary for newcomers, a technical
+        breakdown for learners, and an expert analysis with business implications and actionable insights.
+      </p>
+      <p>
+        The <a href="/en/handbook/">AI Glossary</a> complements the news feed with clear, practical
+        definitions of technical terms — from foundational concepts to cutting-edge techniques.
+      </p>
+    </section>
+
+    <!-- How It Works -->
+    <section class="about-section">
+      <h2 class="about-heading">How It Works</h2>
+      <ol class="about-steps">
+        {steps.map((step) => (
+          <li class="about-step">
+            <strong>{step.label}</strong>
+            <span>{step.desc}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <!-- The Editor -->
+    <section class="about-section">
+      <h2 class="about-heading">The Editor</h2>
+      <p>
+        <strong>Amy Domin Kim</strong> — AI Engineer building at the intersection of LLM applications,
+        data analysis, and web development.
+      </p>
+      <p>
+        0to1log began as a personal learning log and grew into a full-stack platform for curating and
+        contextualizing AI developments. It serves as both a daily resource for the AI community and a
+        living portfolio of end-to-end engineering.
+      </p>
+      <nav class="about-links" aria-label="Social links">
+        {links.map((link, i) => (
+          <>
+            {i > 0 && <span class="about-link-sep" aria-hidden="true">&middot;</span>}
+            <a href={link.href} target={link.href.startsWith('http') ? '_blank' : undefined} rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}>
+              {link.label}
+            </a>
+          </>
+        ))}
+      </nav>
+      <p class="about-portfolio-link">
+        <a href="/portfolio/">See the full portfolio &rarr;</a>
+      </p>
+    </section>
+
+    <!-- Built With -->
+    <section class="about-section">
+      <h2 class="about-heading">Built With</h2>
+      <div class="about-stack">
+        {stack.map((tech) => (
+          <span class="about-tag">{tech}</span>
+        ))}
+      </div>
+    </section>
+
+    <!-- Connect -->
+    <section class="about-section about-connect">
+      <h2 class="about-heading">Connect</h2>
+      <p>
+        <a href="/rss.xml">Subscribe via RSS</a> to get new articles in your reader.
+      </p>
+      <nav class="about-links" aria-label="Contact links">
+        {links.map((link, i) => (
+          <>
+            {i > 0 && <span class="about-link-sep" aria-hidden="true">&middot;</span>}
+            <a href={link.href} target={link.href.startsWith('http') ? '_blank' : undefined} rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}>
+              {link.label}
+            </a>
+          </>
+        ))}
+      </nav>
+    </section>
+
+    <!-- Footer ornament -->
+    <div class="about-footer-ornament" aria-hidden="true">
+      &mdash;&thinsp;&diams;&thinsp;&mdash;
+    </div>
+
+  </div>
+</MainLayout>
+
+<style>
+  .about-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  /* Hero */
+  .about-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .about-overline {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .about-title {
+    font-family: var(--font-masthead);
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .about-tagline {
+    font-family: var(--font-heading);
+    font-style: italic;
+    font-size: 1.125rem;
+    color: var(--color-text-muted);
+    margin-top: 0.5rem;
+  }
+  .about-ornament {
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    letter-spacing: 0.2em;
+  }
+
+  /* Sections */
+  .about-section {
+    margin-bottom: 2.5rem;
+  }
+  .about-heading {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+  .about-section p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+  }
+  .about-section a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Steps */
+  .about-steps {
+    list-style: none;
+    padding: 0;
+    counter-reset: step;
+  }
+  .about-step {
+    counter-increment: step;
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .about-step::before {
+    content: counter(step);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    margin-top: 0.15rem;
+  }
+  .about-step strong {
+    display: inline;
+    margin-right: 0.25rem;
+  }
+
+  /* Links */
+  .about-links {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  .about-links a {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .about-link-sep {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+  }
+  .about-portfolio-link {
+    margin-top: 0.75rem;
+  }
+
+  /* Tech stack tags */
+  .about-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .about-tag {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    color: var(--color-text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* Footer ornament */
+  .about-footer-ornament {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    letter-spacing: 0.2em;
+    margin-top: 2rem;
+  }
+</style>
