@@ -204,7 +204,7 @@ def _save_research_post(post: ResearchPost, batch_id: str) -> str:
         "translation_group_id": translation_group_id,
     }
 
-    result = client.table("posts").insert(row).execute()
+    result = client.table("posts").upsert(row, on_conflict="slug").execute()
     post_id = result.data[0]["id"]
     logger.info("Research post saved: id=%s slug=%s", post_id, post.slug)
     return post_id
@@ -236,7 +236,7 @@ def _save_business_post(post: BusinessPost, batch_id: str) -> str:
         "translation_group_id": translation_group_id,
     }
 
-    result = client.table("posts").insert(row).execute()
+    result = client.table("posts").upsert(row, on_conflict="slug").execute()
     post_id = result.data[0]["id"]
     logger.info("Business post saved: id=%s slug=%s", post_id, post.slug)
     return post_id
