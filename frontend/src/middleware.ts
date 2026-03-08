@@ -2,6 +2,23 @@ import { defineMiddleware } from 'astro:middleware';
 import { createClient } from '@supabase/supabase-js';
 
 const isSecure = import.meta.env.PROD;
+
+function buildCspHeader(nonce: string): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.googletagmanager.com https://*.clarity.ms`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: https: https://*.google-analytics.com https://*.clarity.ms",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self' *.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms",
+  ].join('; ');
+}
+
+async function nextWithCsp(next: () => Promise<Response>, nonce: string): Promise<Response> {
+  const response = await next();
+  response.headers.set('Content-Security-Policy', buildCspHeader(nonce));
+  return response;
+}
 async function validateToken(
   cookies: any,
   supabaseUrl: string,
@@ -48,13 +65,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+  // Generate CSP nonce for every request
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  context.locals.cspNonce = nonce;
+
   // Skip auth entirely if Supabase not configured
   if (!supabaseUrl || !supabaseAnonKey) {
     // Admin routes still need to redirect
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
       return context.redirect('/admin/login');
     }
-    return next();
+    return nextWithCsp(next, nonce);
   }
 
   // --- Zone 1: Admin-protected (/admin/*, /api/admin/* except /admin/login) ---
@@ -95,7 +116,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
     context.locals.isAdmin = true;
-    return next();
+    return nextWithCsp(next, nonce);
   }
 
   // --- Zone 2: User-protected (/api/user/*, /library) ---
@@ -129,7 +150,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       context.locals.isAdmin = true;
     }
 
-    return next();
+    return nextWithCsp(next, nonce);
   }
 
   // --- Zone 3: Public (all other routes) ---
@@ -156,5 +177,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  return next();
+  return nextWithCsp(next, nonce);
 });

@@ -529,6 +529,24 @@
   break-inside: avoid;
 }
 
+.newsprint-prose pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.newsprint-prose code {
+  font-family: var(--font-code);
+  font-size: 0.9em;
+}
+
+.newsprint-prose pre code {
+  display: block;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
 .newsprint-article-nav {
   display: flex;
   flex-direction: column;
@@ -1989,6 +2007,7 @@ code, pre {
 #preview-mode {
   margin-left: 220px;
   transition: margin-left 150ms ease;
+  overflow-x: hidden;
 }
 
 #preview-mode.admin-sidebar-collapsed {

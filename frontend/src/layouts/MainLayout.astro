@@ -23,6 +23,7 @@ interface Props {
 
 const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false } = Astro.props;
 const isAdmin = Astro.url.pathname.startsWith('/admin');
+const nonce = Astro.locals.cspNonce || '';
 
 const gaId = import.meta.env.PUBLIC_GA4_ID || '';
 const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
@@ -33,23 +34,27 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
   <Head title={title} description={description} locale={locale} slug={slug} article={article} />
 
   <!-- FOUC Prevention: must run before paint -->
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var stored = localStorage.getItem('theme');
       if (stored === 'midnight') { stored = 'pink'; localStorage.setItem('theme', stored); }
       var tc = { dark: '#241F1C', light: '#F4F1EA', pink: '#FFF0F3' };
+      var cs = { dark: 'dark', light: 'light', pink: 'light' };
+      var theme = stored;
       if (stored) {
         document.documentElement.setAttribute('data-theme', stored);
       } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.setAttribute('data-theme', 'dark');
+        theme = 'dark';
       }
+      document.documentElement.style.colorScheme = cs[theme] || 'light';
       var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.setAttribute('content', tc[stored || 'dark'] || tc.dark);
+      if (m) m.setAttribute('content', tc[theme || 'dark'] || tc.dark);
     })();
   </script>
 
   <!-- Restore theme after ViewTransitions page swap (before paint) -->
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     document.addEventListener('astro:after-swap', function() {
       var stored = localStorage.getItem('theme');
       if (stored) {
@@ -63,8 +68,8 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
   <body style={`min-height: 100vh; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}>
     {gaId && (
       <>
-        <script is:inline src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} async></script>
-        <script is:inline define:vars={{ gaId }}>
+        <script is:inline nonce={nonce} src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} async></script>
+        <script is:inline nonce={nonce} define:vars={{ gaId }}>
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
@@ -74,7 +79,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     )}
 
     {clarityId && (
-      <script is:inline define:vars={{ clarityId }}>
+      <script is:inline nonce={nonce} define:vars={{ clarityId }}>
         (function(c,l,a,r,i,t,y){
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
           t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;

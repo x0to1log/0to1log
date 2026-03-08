@@ -5,5 +5,6 @@ declare namespace App {
     user?: import('@supabase/supabase-js').User;
     accessToken?: string;
     isAdmin?: boolean;
+    cspNonce?: string;
   }
 }

@@ -9,6 +9,7 @@ interface Props {
 
 const { locale, masthead, editionLabel, volumeLabel, subkicker } = Astro.props;
 const isKo = locale === 'ko';
+const nonce = Astro.locals.cspNonce || '';
 const now = new Date();
 const browserLocale = isKo ? 'ko-KR' : 'en-US';
 const browserDateIso = now.toISOString();
@@ -33,7 +34,7 @@ const dateLabel = isKo
       </div>
     )}
   </header>
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     function updateNewsprintLocalDates(root) {
       var scope = root && root.querySelectorAll ? root : document;
       scope.querySelectorAll('[data-local-date]').forEach(function(node) {

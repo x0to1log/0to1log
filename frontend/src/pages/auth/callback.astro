@@ -1,11 +1,12 @@
 ---
 export const prerender = false;
+const nonce = Astro.locals.cspNonce || '';
 ---
 
-<html data-theme="light">
+<html lang="en" data-theme="light">
   <head>
     <title>Signing in...</title>
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       (function() {
         var stored = localStorage.getItem('theme');
         if (stored === 'midnight') { stored = 'pink'; localStorage.setItem('theme', stored); }

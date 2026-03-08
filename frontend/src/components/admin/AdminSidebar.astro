@@ -114,8 +114,11 @@ const currentPath = Astro.url.pathname;
     const mobileBtn = document.getElementById('mobile-menu-btn');
     if (!sidebar) return;
 
-    // Desktop: restore collapsed state
-    if (toggle && localStorage.getItem('admin-sidebar-collapsed') === '1') {
+    // Clear stale localStorage value from previous implementation
+    localStorage.removeItem('admin-sidebar-collapsed');
+
+    // Desktop: restore collapsed state (per-session only, default = expanded)
+    if (toggle && sessionStorage.getItem('admin-sidebar-collapsed') === '1') {
       sidebar.classList.add('admin-sidebar--collapsed');
       document.querySelectorAll('.admin-dashboard, .admin-editor-layout, #preview-mode').forEach((el) => {
         el.classList.add('admin-sidebar-collapsed');
@@ -125,7 +128,7 @@ const currentPath = Astro.url.pathname;
     // Desktop: collapse toggle
     toggle?.addEventListener('click', () => {
       const collapsed = sidebar.classList.toggle('admin-sidebar--collapsed');
-      localStorage.setItem('admin-sidebar-collapsed', collapsed ? '1' : '0');
+      sessionStorage.setItem('admin-sidebar-collapsed', collapsed ? '1' : '0');
       document.querySelectorAll('.admin-dashboard, .admin-editor-layout, #preview-mode').forEach((el) => {
         el.classList.toggle('admin-sidebar-collapsed', collapsed);
       });

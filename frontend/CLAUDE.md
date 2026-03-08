@@ -44,7 +44,9 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 - `/api/revalidate` → server-side only. `REVALIDATE_SECRET` Bearer 검증 필수
 - client에서 revalidate 직접 호출 금지
 - Supabase Service Role Key를 frontend에서 절대 사용 금지 (anon key만)
-- `vercel.json` CSP: `script-src 'self' 'unsafe-inline'` 허용 (초기 FOUC 방지용 → 추후 nonce 방식으로 개선 가능)
+- CSP는 middleware에서 동적으로 설정 (nonce 기반). `script-src 'unsafe-inline'` 제거 완료.
+- 새 `<script is:inline>` 추가 시 반드시 `nonce={Astro.locals.cspNonce || ''}` 속성 포함
+- `style-src 'unsafe-inline'`은 유지 (Astro inline styles + Milkdown editor)
 
 ## SEO
 
