@@ -1,11 +1,14 @@
 import logging
-from datetime import datetime, timezone, timedelta
+import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from core.database import get_supabase
 from services.news_collection import collect_all_news
 from services.agents import rank_candidates, generate_research_post, generate_business_post
-from models.ranking import NewsCandidate
+from models.ranking import NewsCandidate, NewsRankingResult
+from models.research import ResearchPost
+from models.business import BusinessPost
 
 logger = logging.getLogger(__name__)
 
@@ -130,8 +133,117 @@ async def release_pipeline_lock(
     logger.info("Pipeline lock released: run_id=%s status=%s", run_id, status)
 
 
+def _save_candidates(
+    candidates: list[NewsCandidate],
+    ranking: NewsRankingResult,
+    batch_id: str,
+) -> None:
+    """Save ranked candidates to news_candidates table."""
+    client = get_supabase()
+    if not client:
+        return
+
+    # Build a lookup of assigned types from ranking result
+    assigned: dict[str, tuple[str, float, str]] = {}  # url → (type, score, reason)
+    for pick, ptype in [
+        (ranking.research_pick, "research"),
+        (ranking.business_main_pick, "business_main"),
+    ]:
+        if pick:
+            assigned[pick.url] = (ptype, pick.relevance_score, pick.ranking_reason)
+    if ranking.related_picks:
+        for ptype, pick in [
+            ("big_tech", ranking.related_picks.big_tech),
+            ("industry_biz", ranking.related_picks.industry_biz),
+            ("new_tools", ranking.related_picks.new_tools),
+        ]:
+            if pick:
+                assigned[pick.url] = (ptype, pick.relevance_score, pick.ranking_reason)
+
+    rows = []
+    for c in candidates:
+        info = assigned.get(c.url)
+        rows.append({
+            "batch_id": batch_id,
+            "title": c.title,
+            "url": c.url,
+            "snippet": c.snippet,
+            "source": c.source,
+            "assigned_type": info[0] if info else None,
+            "relevance_score": info[1] if info else None,
+            "ranking_reason": info[2] if info else None,
+            "status": "selected" if info else "pending",
+        })
+
+    client.table("news_candidates").insert(rows).execute()
+    logger.info("Saved %d candidates to news_candidates", len(rows))
+
+
+def _save_research_post(post: ResearchPost, batch_id: str) -> str:
+    """Save research post to posts table. Returns the post id."""
+    client = get_supabase()
+    if not client:
+        return ""
+
+    translation_group_id = str(uuid.uuid4())
+    row = {
+        "title": post.title,
+        "slug": post.slug,
+        "locale": "ko",
+        "category": "ai-news",
+        "post_type": "research",
+        "status": "draft",
+        "content_original": post.content_original,
+        "no_news_notice": post.no_news_notice,
+        "recent_fallback": post.recent_fallback,
+        "guide_items": post.guide_items.model_dump() if post.guide_items else None,
+        "source_urls": post.source_urls,
+        "news_temperature": post.news_temperature,
+        "tags": post.tags,
+        "pipeline_batch_id": batch_id,
+        "translation_group_id": translation_group_id,
+    }
+
+    result = client.table("posts").insert(row).execute()
+    post_id = result.data[0]["id"]
+    logger.info("Research post saved: id=%s slug=%s", post_id, post.slug)
+    return post_id
+
+
+def _save_business_post(post: BusinessPost, batch_id: str) -> str:
+    """Save business post to posts table. Returns the post id."""
+    client = get_supabase()
+    if not client:
+        return ""
+
+    translation_group_id = str(uuid.uuid4())
+    row = {
+        "title": post.title,
+        "slug": post.slug,
+        "locale": "ko",
+        "category": "ai-news",
+        "post_type": "business",
+        "status": "draft",
+        "content_beginner": post.content_beginner,
+        "content_learner": post.content_learner,
+        "content_expert": post.content_expert,
+        "guide_items": post.guide_items.model_dump(),
+        "related_news": post.related_news.model_dump(),
+        "source_urls": post.source_urls,
+        "news_temperature": post.news_temperature,
+        "tags": post.tags,
+        "pipeline_batch_id": batch_id,
+        "translation_group_id": translation_group_id,
+    }
+
+    result = client.table("posts").insert(row).execute()
+    post_id = result.data[0]["id"]
+    logger.info("Business post saved: id=%s slug=%s", post_id, post.slug)
+    return post_id
+
+
 async def run_daily_pipeline(batch_id: str) -> None:
-    """Main pipeline orchestrator: collect → rank → generate research & business posts."""
+    """Main pipeline orchestrator: collect → rank → generate → save to DB."""
     run_id = await acquire_pipeline_lock(batch_id)
     if not run_id:
         return
@@ -149,6 +261,9 @@ async def run_daily_pipeline(batch_id: str) -> None:
         # Step 2: Rank candidates
         ranking = await rank_candidates(candidates)
 
+        # Step 2b: Save candidates + ranking to DB
+        _save_candidates(candidates, ranking, batch_id)
+
         # Build context string from candidates for the writing agents
         context = _build_context(candidates)
 
@@ -157,14 +272,16 @@ async def run_daily_pipeline(batch_id: str) -> None:
             ranking.research_pick, context, batch_id
         )
         logger.info("Research post generated: %s", research_post.title)
+        _save_research_post(research_post, batch_id)
 
         # Step 3-B: Generate business post
         business_post = await generate_business_post(
             ranking.business_main_pick, ranking.related_picks, context, batch_id
         )
         logger.info("Business post generated: %s", business_post.title)
+        _save_business_post(business_post, batch_id)
 
-        logger.info("Pipeline %s completed", batch_id)
+        logger.info("Pipeline %s completed — posts saved to DB", batch_id)
         await release_pipeline_lock(run_id, "success")
     except Exception as e:
         logger.error("Pipeline %s failed: %s", batch_id, e)
