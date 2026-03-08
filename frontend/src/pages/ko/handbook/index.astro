@@ -9,6 +9,7 @@ import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
 import { localField, difficultyLabel, difficultyColor } from '../../../lib/handbookUtils';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import HandbookListRail from '../../../components/newsprint/HandbookListRail.astro';
 
 const locale = 'ko';
 let terms: any[] = [];
@@ -46,6 +47,17 @@ if (user && accessToken) {
   ]);
   (histRes.data ?? []).forEach((r: any) => readTermIds.add(r.item_id));
   (bmRes.data ?? []).forEach((r: any) => bookmarkedTermIds.add(r.item_id));
+}
+
+let railTerms: any[] = [];
+if (supabase) {
+  const { data } = await supabase
+    .from('handbook_terms')
+    .select('term, slug, difficulty')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(5);
+  railTerms = data ?? [];
 }
 
 const categories = Array.from(
@@ -163,6 +175,10 @@ const categories = Array.from(
     <div id="handbook-no-results" style="display: none;">
       <NewsprintNotice variant="empty" message={t[locale]['handbook.searchNoResults']} />
     </div>
+
+    <Fragment slot="rail">
+      <HandbookListRail locale={locale} terms={railTerms} />
+    </Fragment>
   </NewsprintShell>
 </MainLayout>
 

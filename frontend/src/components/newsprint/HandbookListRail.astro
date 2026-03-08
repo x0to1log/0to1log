@@ -1,0 +1,57 @@
+---
+import { getHandbookCategoryLabel, getHandbookCategories } from '../../lib/handbookCategories';
+
+interface RailTerm {
+  term: string;
+  slug: string;
+  difficulty?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  terms: RailTerm[];
+}
+
+const { locale, terms } = Astro.props;
+const isKo = locale === 'ko';
+const categories = getHandbookCategories();
+
+const editorialNote = isKo
+  ? 'AI, 백엔드, 프론트엔드, 보안 등 실무 기술 용어를 한눈에 정리합니다.'
+  : 'A concise reference of technical terms across AI, backend, frontend, security, and more.';
+---
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '핸드북 소개' : 'About This Handbook'}</h3>
+  <p class="newsprint-rail-note">{editorialNote}</p>
+</section>
+
+<div style="margin-top: 1.5rem;"></div>
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '많이 찾는 용어' : 'Popular Terms'}</h3>
+  {terms.length === 0 ? (
+    <p class="newsprint-empty">{isKo ? '아직 표시할 용어가 없습니다.' : 'No items yet.'}</p>
+  ) : (
+    <div class="newsprint-stack">
+      {terms.map((t) => (
+        <a class="newsprint-card" href={`/${locale}/handbook/${t.slug}/`}>
+          <strong class="newsprint-rail-link">{t.term}</strong>
+        </a>
+      ))}
+    </div>
+  )}
+</section>
+
+<div style="margin-top: 1.5rem;"></div>
+
+<section>
+  <h3 class="newsprint-section-title">{isKo ? '카테고리 둘러보기' : 'Browse by Category'}</h3>
+  <div class="newsprint-stack">
+    {categories.map((cat) => (
+      <a class="newsprint-card" href={`/${locale}/handbook/?category=${cat}`}>
+        <strong class="newsprint-rail-link">{getHandbookCategoryLabel(locale, cat)}</strong>
+      </a>
+    ))}
+  </div>
+</section>

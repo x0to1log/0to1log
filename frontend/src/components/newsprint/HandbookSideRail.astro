@@ -1,0 +1,78 @@
+---
+interface RailTerm {
+  term: string;
+  slug: string;
+  korean_name?: string | null;
+  difficulty?: string | null;
+}
+
+interface RailArticle {
+  title: string;
+  slug: string;
+  published_at?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  relatedTerms: RailTerm[];
+  sameCategoryTerms: RailTerm[];
+  relatedArticles: RailArticle[];
+}
+
+const { locale, relatedTerms, sameCategoryTerms, relatedArticles } = Astro.props;
+const isKo = locale === 'ko';
+---
+
+{relatedTerms.length > 0 && (
+  <section>
+    <h3 class="newsprint-section-title">{isKo ? '관련 용어' : 'Related Terms'}</h3>
+    <div class="newsprint-stack">
+      {relatedTerms.map((rt) => (
+        <a class="newsprint-card" href={`/${locale}/handbook/${rt.slug}/`}>
+          <strong class="newsprint-rail-link">{rt.term}</strong>
+          {rt.korean_name && (
+            <span class="newsprint-rail-category">{rt.korean_name}</span>
+          )}
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+{relatedTerms.length > 0 && sameCategoryTerms.length > 0 && (
+  <div style="margin-top: 1.5rem;"></div>
+)}
+
+{sameCategoryTerms.length > 0 && (
+  <section>
+    <h3 class="newsprint-section-title">{isKo ? '같은 카테고리' : 'Same Category'}</h3>
+    <div class="newsprint-stack">
+      {sameCategoryTerms.map((ct) => (
+        <a class="newsprint-card" href={`/${locale}/handbook/${ct.slug}/`}>
+          <strong class="newsprint-rail-link">{ct.term}</strong>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+{(relatedTerms.length > 0 || sameCategoryTerms.length > 0) && relatedArticles.length > 0 && (
+  <div style="margin-top: 1.5rem;"></div>
+)}
+
+{relatedArticles.length > 0 && (
+  <section>
+    <h3 class="newsprint-section-title">{isKo ? '관련 글' : 'Related Articles'}</h3>
+    <div class="newsprint-stack">
+      {relatedArticles.map((article) => (
+        <a class="newsprint-card" href={`/${locale}/log/${article.slug}/`}>
+          <strong class="newsprint-rail-link">{article.title}</strong>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+{relatedTerms.length === 0 && sameCategoryTerms.length === 0 && relatedArticles.length === 0 && (
+  <p class="newsprint-empty">{isKo ? '아직 연결된 콘텐츠가 없습니다.' : 'No related content yet.'}</p>
+)}

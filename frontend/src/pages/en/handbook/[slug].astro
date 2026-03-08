@@ -10,6 +10,7 @@ import { localField, difficultyLabel, difficultyColor } from '../../../lib/handb
 import { renderMarkdown } from '../../../lib/markdown';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
 
 const locale = 'en';
 const { slug } = Astro.params;
@@ -40,6 +41,7 @@ if (!term && !termError) {
 
 const definition = term ? localField(term, 'definition', locale) : '';
 const plainExplanation = term ? localField(term, 'plain_explanation', locale) : '';
+const technicalDescription = term ? localField(term, 'technical_description', locale) : '';
 const exampleAnalogy = term ? localField(term, 'example_analogy', locale) : '';
 const bodyMarkdown = term ? localField(term, 'body_markdown', locale) : '';
 const htmlContent = bodyMarkdown ? await renderMarkdown(bodyMarkdown) : '';
@@ -65,6 +67,18 @@ if (supabase && term?.related_term_slugs?.length) {
     .eq('status', 'published')
     .in('slug', term.related_term_slugs);
   relatedTerms = related ?? [];
+}
+
+let sameCategoryTerms: any[] = [];
+if (supabase && term?.categories?.length) {
+  const { data } = await supabase
+    .from('handbook_terms')
+    .select('term, slug, korean_name, difficulty')
+    .eq('status', 'published')
+    .neq('slug', pageSlug)
+    .overlaps('categories', term.categories)
+    .limit(5);
+  sameCategoryTerms = data ?? [];
 }
 
 // User bookmark + learning state
@@ -98,7 +112,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   locale={locale}
   slug={`handbook/${pageSlug}/`}
 >
-  <NewsprintShell locale={locale} masthead="Tech Handbook" editionLabel={term?.category ? getHandbookCategoryLabel(locale, term.category) || '' : ''}>
+  <NewsprintShell locale={locale} masthead="Tech Handbook" editionLabel={term?.categories?.length ? term.categories.map((c: string) => getHandbookCategoryLabel(locale, c)).join(' · ') : ''}>
     {termError ? (
       <NewsprintNotice
         variant="error"
@@ -154,11 +168,11 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
                 {difficultyLabel(locale, term.difficulty)}
               </span>
             )}
-            {term.category && (
+            {(term.categories || []).map((cat: string) => (
               <span style="font-size: 0.75rem; color: var(--color-text-muted);">
-                {getHandbookCategoryLabel(locale, term.category)}
+                {getHandbookCategoryLabel(locale, cat)}
               </span>
-            )}
+            ))}
             {user && (
               <button
                 class={`learning-check ${learningStatus === 'learned' ? 'learning-check--done' : ''}`}
@@ -186,6 +200,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
               <p style="margin: 0.25rem 0 0; line-height: 1.5;">{plainExplanation}</p>
             </div>
           )}
+          {technicalDescription && (
+            <div style="margin-bottom: 0.75rem;">
+              <strong style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">{t[locale]['handbook.technicalDescription']}</strong>
+              <p style="margin: 0.25rem 0 0; line-height: 1.5;">{technicalDescription}</p>
+            </div>
+          )}
           {exampleAnalogy && (
             <div>
               <strong style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Example / Analogy</strong>
@@ -200,46 +220,17 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           </div>
         )}
 
-        {relatedTerms.length > 0 && (
-          <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border);">
-            <h2 style="font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 0.75rem;">
-              {t[locale]['handbook.relatedTerms']}
-            </h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-              {relatedTerms.map((rt) => (
-                <a
-                  href={`/${locale}/handbook/${rt.slug}/`}
-                  style="padding: 0.35rem 0.75rem; border: 1px solid var(--color-border); text-decoration: none; color: var(--color-text); font-size: 0.85rem;"
-                >
-                  {rt.term}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {relatedArticles.length > 0 && (
-          <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border);">
-            <h2 style="font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 0.75rem;">
-              {t[locale]['handbook.relatedArticles']}
-            </h2>
-            {relatedArticles.map((article) => (
-              <a
-                href={`/${locale}/log/${article.slug}/`}
-                style="display: block; padding: 0.5rem 0; text-decoration: none; color: var(--color-text); border-bottom: 1px solid var(--color-border);"
-              >
-                <span style="font-size: 0.9rem;">{article.title}</span>
-                {article.published_at && (
-                  <span style="font-size: 0.75rem; color: var(--color-text-muted); margin-left: 0.5rem;">
-                    {new Date(article.published_at).toLocaleDateString('en-US')}
-                  </span>
-                )}
-              </a>
-            ))}
-          </div>
-        )}
       </article>
     )}
+
+    <Fragment slot="rail">
+      <HandbookSideRail
+        locale={locale}
+        relatedTerms={relatedTerms}
+        sameCategoryTerms={sameCategoryTerms}
+        relatedArticles={relatedArticles}
+      />
+    </Fragment>
   </NewsprintShell>
 </MainLayout>
 
