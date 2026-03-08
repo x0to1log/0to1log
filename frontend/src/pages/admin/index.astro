@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
-import AdminHeader from '../../components/admin/AdminHeader.astro';
+import AdminSidebar from '../../components/admin/AdminSidebar.astro';
 import NewsprintNotice from '../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
 
@@ -19,7 +19,7 @@ let handbookTotal = 0;
 try {
   const { data: terms } = await sb
     .from('handbook_terms')
-    .select('status');
+    .select('id, term, slug, status, updated_at');
   if (terms) {
     handbookTotal = terms.length;
     handbookDraft = terms.filter((t) => t.status === 'draft').length;
@@ -31,93 +31,194 @@ try {
 let logDraft = 0;
 let logPublished = 0;
 let logTotal = 0;
-let drafts: any[] = [];
+let allPosts: any[] = [];
 let fetchError: string | null = null;
 try {
   const { data: posts, error } = await sb
     .from('posts')
-    .select('id, title, slug, category, status, updated_at')
+    .select('id, title, slug, category, status, updated_at, published_at')
     .order('updated_at', { ascending: false });
   if (error) {
     fetchError = error.message;
   } else if (posts) {
+    allPosts = posts.sort((a, b) => {
+      if (a.status === 'draft' && b.status !== 'draft') return -1;
+      if (a.status !== 'draft' && b.status === 'draft') return 1;
+      if (a.status === 'draft' && b.status === 'draft') {
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+      return new Date(b.published_at || b.updated_at).getTime() - new Date(a.published_at || a.updated_at).getTime();
+    });
     logTotal = posts.length;
     logDraft = posts.filter((p) => p.status === 'draft').length;
     logPublished = posts.filter((p) => p.status === 'published').length;
-    drafts = posts.filter((p) => p.status === 'draft');
   }
 } catch (err) {
   fetchError = err instanceof Error ? err.message : 'Unknown error';
 }
+
+// --- Recent items for sidebar ---
+const recentItems: Array<{ title: string; slug: string; type: 'post' | 'term' }> = [];
+// Add recent posts
+allPosts.slice(0, 3).forEach((p) => recentItems.push({ title: p.title, slug: p.slug, type: 'post' }));
+// Add recent handbook terms (already fetched above)
+try {
+  const { data: recentTerms } = await sb
+    .from('handbook_terms')
+    .select('term, slug')
+    .order('updated_at', { ascending: false })
+    .limit(2);
+  (recentTerms || []).forEach((t) => recentItems.push({ title: t.term, slug: t.slug, type: 'term' }));
+} catch {}
 ---
 
 <MainLayout title="Admin Dashboard" locale="en">
-  <div style="max-width: 800px; margin: 0 auto;">
-    <AdminHeader activeTab="posts" />
+  <AdminSidebar
+    activeSection="posts"
+    recentPosts={recentItems}
+    stats={{ posts: logTotal, terms: handbookTotal, drafts: logDraft + handbookDraft }}
+  />
 
-    {/* --- Summary Cards --- */}
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-      <div style="border: 1px solid var(--color-border); padding: 1.25rem;">
-        <div style="font-family: var(--font-ui); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: 0.5rem;">
-          Posts
-        </div>
-        <div style="font-family: var(--font-heading); font-size: 1.75rem; font-weight: 700;">
-          {fetchError ? '—' : logTotal}
-        </div>
-        <div style="font-family: var(--font-ui); font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
-          {fetchError ? 'DB error' : (
-            <>
-              {logDraft > 0 && <span class="admin-status-badge admin-status-badge--draft" style="margin-right: 0.5rem;">{logDraft} draft</span>}
-              {logPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{logPublished} published</span>}
-            </>
-          )}
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <h1 class="admin-main-title">Posts</h1>
+        <div class="admin-header-controls">
+          <div class="admin-filter-tabs">
+            <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">
+              Draft ({logDraft})
+            </button>
+            <button class="admin-filter-btn" data-filter="published">
+              Published ({logPublished})
+            </button>
+            <button class="admin-filter-btn" data-filter="all">
+              All ({logTotal})
+            </button>
+          </div>
+          <a href="/admin/edit/new" class="admin-btn admin-btn-primary">+ New Post</a>
         </div>
       </div>
-      <a href="/admin/handbook/" style="text-decoration: none; color: inherit; border: 1px solid var(--color-border); padding: 1.25rem; display: block;">
-        <div style="font-family: var(--font-ui); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: 0.5rem;">
-          Handbook
-        </div>
-        <div style="font-family: var(--font-heading); font-size: 1.75rem; font-weight: 700;">
-          {handbookTotal}
-        </div>
-        <div style="font-family: var(--font-ui); font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
-          {handbookDraft > 0 && <span class="admin-status-badge admin-status-badge--draft" style="margin-right: 0.5rem;">{handbookDraft} draft</span>}
-          {handbookPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{handbookPublished} published</span>}
-        </div>
-      </a>
+
+      {fetchError ? (
+        <NewsprintNotice
+          variant="unauthorized"
+          message={`Failed to load posts: ${fetchError}`}
+          linkHref="/admin"
+          linkLabel="Retry"
+        />
+      ) : allPosts.length === 0 ? (
+        <NewsprintNotice variant="empty" message="No posts yet." />
+      ) : (
+        <ul class="admin-list" id="post-list">
+          {allPosts.map((post) => (
+            <li class="admin-list-item" data-status={post.status}>
+              <div class="admin-list-info">
+                <div class="admin-list-title">
+                  <a href={`/admin/edit/${post.slug}`}>{post.title}</a>
+                </div>
+                <div class="admin-list-meta">
+                  <span class={`admin-status-badge admin-status-badge--${post.status}`}>
+                    {post.status}
+                  </span>
+                  {post.category && <span>{post.category}</span>}
+                  <span>{new Date(post.updated_at).toLocaleDateString('en-US')}</span>
+                </div>
+              </div>
+              <div class="admin-list-actions">
+                {post.status === 'draft' ? (
+                  <button class="admin-btn" data-action="publish" data-id={post.id}>Publish</button>
+                ) : post.status === 'published' ? (
+                  <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
+                ) : null}
+                <a href={`/admin/edit/${post.slug}`} class="admin-btn">Edit</a>
+                <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
 
-    {/* --- Post Drafts List --- */}
-    <h2 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border);">
-      Post Drafts
-    </h2>
-
-    {fetchError ? (
-      <NewsprintNotice
-        variant="unauthorized"
-        message={`Failed to load posts: ${fetchError}`}
-        linkHref="/admin"
-        linkLabel="Retry"
-      />
-    ) : drafts.length === 0 ? (
-      <NewsprintNotice
-        variant="empty"
-        message="No drafts pending."
-      />
-    ) : (
-      <ul class="admin-draft-list">
-        {drafts.map((draft) => (
-          <li class="admin-draft-item">
-            <div class="admin-draft-info">
-              <div class="admin-draft-title">{draft.title}</div>
-              <div class="admin-draft-meta">
-                {draft.category} &middot; {new Date(draft.updated_at).toLocaleDateString('en-US')}
-              </div>
+    <div class="admin-right-panel">
+      <div class="admin-right-panel-section">
+        <div class="admin-right-panel-title">Overview</div>
+        <div class="admin-stat-cards">
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-label">Posts</div>
+            <div class="admin-stat-card-value">{fetchError ? '—' : logTotal}</div>
+            <div class="admin-stat-card-detail">
+              {logDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{logDraft} draft</span>}
+              {logPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{logPublished} published</span>}
             </div>
-            <a href={`/admin/edit/${draft.slug}`} class="admin-btn">Edit</a>
-          </li>
-        ))}
-      </ul>
-    )}
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-label">Handbook</div>
+            <div class="admin-stat-card-value">{handbookTotal}</div>
+            <div class="admin-stat-card-detail">
+              {handbookDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{handbookDraft} draft</span>}
+              {handbookPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{handbookPublished} published</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </MainLayout>
+
+<script>
+  function initAdminDashboard() {
+    function applyFilter(filter: string) {
+      document.querySelectorAll<HTMLElement>('#post-list [data-status]').forEach((item) => {
+        if (filter === 'all' || item.dataset.status === filter) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter!;
+        document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) =>
+          b.classList.remove('admin-filter-btn--active')
+        );
+        btn.classList.add('admin-filter-btn--active');
+        applyFilter(filter);
+      });
+    });
+
+    applyFilter('draft');
+
+    document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.action!;
+        const id = btn.dataset.id!;
+
+        if (action === 'delete') {
+          const title = btn.dataset.title || 'this post';
+          if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+          const res = await fetch('/api/admin/posts/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          if (res.ok) { window.location.reload(); }
+          else { const err = await res.json(); alert(`Delete failed: ${err.error}`); }
+          return;
+        }
+
+        const res = await fetch('/api/admin/posts/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action }),
+        });
+        if (res.ok) { window.location.reload(); }
+        else { const err = await res.json(); alert(`${action} failed: ${err.error}`); }
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initAdminDashboard);
+  initAdminDashboard();
+</script>
