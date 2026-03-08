@@ -1,4 +1,4 @@
----
+﻿---
 interface Props {
   locale: 'en' | 'ko';
   masthead: string;
@@ -10,6 +10,8 @@ interface Props {
 const { locale, masthead, editionLabel, volumeLabel, subkicker } = Astro.props;
 const isKo = locale === 'ko';
 const now = new Date();
+const browserLocale = isKo ? 'ko-KR' : 'en-US';
+const browserDateIso = now.toISOString();
 const dateLabel = isKo
   ? now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
   : now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -18,9 +20,11 @@ const dateLabel = isKo
 <section class="newsprint-page">
   <header class="newsprint-header">
     <div class="newsprint-kicker">
-      <span>{volumeLabel ?? (isKo ? '제01권 · 제10호' : 'Vol. I · No. 1')}</span>
+      <span>{volumeLabel ?? (isKo ? '제01권 · 제10호' : 'Vol.01 · No.10')}</span>
       <span>{editionLabel ?? (isKo ? 'AI 뉴스 데일리' : 'AI Daily Dispatch')}</span>
-      <span>{dateLabel}</span>
+      <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>
+        {dateLabel}
+      </span>
     </div>
     <h1 class="newsprint-masthead">{masthead}</h1>
     {subkicker && subkicker.length > 0 && (
@@ -29,6 +33,26 @@ const dateLabel = isKo
       </div>
     )}
   </header>
+  <script is:inline>
+    function updateNewsprintLocalDates(root) {
+      var scope = root && root.querySelectorAll ? root : document;
+      scope.querySelectorAll('[data-local-date]').forEach(function(node) {
+        var iso = node.getAttribute('data-date-iso');
+        var locale = node.getAttribute('data-date-locale') || document.documentElement.lang || 'en-US';
+        if (!iso) return;
+        node.textContent = new Date(iso).toLocaleDateString(locale, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      });
+    }
+
+    updateNewsprintLocalDates(document);
+    document.addEventListener('astro:after-swap', function() {
+      updateNewsprintLocalDates(document);
+    });
+  </script>
 
   <div class="newsprint-grid">
     <div class="newsprint-main">

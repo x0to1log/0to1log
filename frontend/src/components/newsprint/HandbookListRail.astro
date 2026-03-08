@@ -50,7 +50,7 @@ const editorialNote = isKo
   <div class="newsprint-stack">
     {categories.map((cat) => (
       <a class="newsprint-card" href={`/${locale}/handbook/?category=${cat}`}>
-        <strong class="newsprint-rail-link">{getHandbookCategoryLabel(locale, cat)}</strong>
+        <span class="newsprint-rail-note" style="margin: 0;">{getHandbookCategoryLabel(locale, cat)}</span>
       </a>
     ))}
   </div>

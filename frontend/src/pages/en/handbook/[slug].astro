@@ -107,12 +107,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 ---
 
 <MainLayout
-  title={`${pageTitle} — Tech Handbook`}
+  title={`${pageTitle} — Handbook`}
   description={pageDescription}
   locale={locale}
   slug={`handbook/${pageSlug}/`}
 >
-  <NewsprintShell locale={locale} masthead="Tech Handbook" editionLabel="CS · AI · Infra">
+  <NewsprintShell locale={locale} masthead="Handbook" editionLabel="CS · AI · Infra" subkicker={['Glossary', 'Reference', 'Learn']}>
     {termError ? (
       <NewsprintNotice
         variant="error"
@@ -199,7 +199,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         )}
 
         {htmlContent && (
-          <div class="newsprint-prose">
+          <div class="newsprint-prose newsprint-prose--no-dropcap">
             <Fragment set:html={htmlContent} />
           </div>
         )}

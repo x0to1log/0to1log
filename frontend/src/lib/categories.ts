@@ -35,5 +35,5 @@ export function getCategoryColorVar(category?: string | null): string {
 }
 
 export function getDefaultCategories(): CategorySlug[] {
-  return ['ai-news', 'study', 'career', 'project'];
+  return ['ai-news', 'study', 'project', 'career'];
 }
