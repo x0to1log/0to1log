@@ -63,8 +63,8 @@ async def acquire_pipeline_lock(batch_id: str) -> Optional[str]:
         .execute()
     )
 
-    if existing.data:
-        row = existing.data
+    row = existing.data if existing else None
+    if row:
         status = row["status"]
 
         if status == "success":
