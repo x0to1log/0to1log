@@ -126,6 +126,8 @@ try {
         </div>
       </div>
 
+      <input type="search" class="admin-input admin-search-input" id="admin-search" placeholder="Search by title..." />
+
       {fetchError ? (
         <NewsprintNotice
           variant="unauthorized"
@@ -163,6 +165,7 @@ try {
             </li>
           ))}
         </ul>
+        <p id="admin-no-results" class="admin-no-results" hidden>No matching items.</p>
       )}
     </div>
 
@@ -171,14 +174,22 @@ try {
 
 <script>
   function initAdminDashboard() {
+    let currentFilter = 'draft';
+    const searchInput = document.getElementById('admin-search') as HTMLInputElement;
+
     function applyFilter(filter: string) {
+      currentFilter = filter;
+      const query = searchInput?.value.toLowerCase().trim() || '';
+      let visibleCount = 0;
       document.querySelectorAll<HTMLElement>('#post-list [data-status]').forEach((item) => {
-        if (filter === 'all' || item.dataset.status === filter) {
-          item.style.display = '';
-        } else {
-          item.style.display = 'none';
-        }
+        const matchesStatus = filter === 'all' || item.dataset.status === filter;
+        const title = item.querySelector('.admin-list-title a')?.textContent?.toLowerCase() || '';
+        const matchesSearch = !query || title.includes(query);
+        item.style.display = (matchesStatus && matchesSearch) ? '' : 'none';
+        if (matchesStatus && matchesSearch) visibleCount++;
       });
+      const noResults = document.getElementById('admin-no-results');
+      if (noResults) noResults.hidden = visibleCount > 0;
     }
 
     document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
@@ -191,6 +202,8 @@ try {
         applyFilter(filter);
       });
     });
+
+    searchInput?.addEventListener('input', () => applyFilter(currentFilter));
 
     applyFilter('draft');
 

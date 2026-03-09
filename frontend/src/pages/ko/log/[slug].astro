@@ -12,6 +12,7 @@ import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import AdminToolbar from '../../../components/admin/AdminToolbar.astro';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
@@ -187,6 +188,9 @@ const htmlContent = rawContent ? await renderMarkdown(rawContent) : '';
       <NewsprintSideRail locale="ko" posts={recentPosts} focusItems={focusItems} />
     </Fragment>
   </NewsprintShell>
+  {Astro.locals.isAdmin && post && (
+    <AdminToolbar itemId={post.id} slug={pageSlug} type="post" />
+  )}
 </MainLayout>
 
 <script>

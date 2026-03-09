@@ -8,6 +8,11 @@
 
 **Tech Stack:** Astro v5, Supabase (PostgreSQL + RLS), Tailwind CSS v4, unified/remark (Markdown)
 
+**Translation Strategy (Future):** Handbook 용어 번역은 뉴스 포스트와 달리 짧은 단문(100-500자)이므로, GPT-4o 대신 오픈소스 T5 모델 `Darong/BlueT` (MIT 라이선스)를 사용할 계획.
+- 선택 이유: EN↔KO 양방향 지원, MIT 라이선스 (상업 사용 완전 자유, UI 출처 표시 불필요), 높임말 제어 가능, 짧은 텍스트에 최적
+- 기술 용어 영문 병기(e.g., "강화학습(Reinforcement Learning)")는 후처리 로직으로 보완 — handbook_terms 테이블 자체가 용어 매핑 소스
+- 도입 시점: Handbook 기능 구현 단계 진입 시
+
 **Design Doc:** `docs/08_Handbook.md` — 비즈니스 전략, 스키마 근거, UX 와이어프레임 참조
 
 **Schema Note:** Current handbook runtime uses `categories TEXT[]` after `00007_handbook_multi_category.sql`. Any older single-`category` examples below are legacy H1 notes unless explicitly updated.

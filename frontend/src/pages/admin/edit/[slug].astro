@@ -206,14 +206,28 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
         <div class="admin-ai-panel" id="ai-panel">
           <div class="admin-ai-panel-header">
-            <span class="admin-ai-panel-title">AI Suggestions</span>
+            <span class="admin-ai-panel-title">AI Advisor</span>
             <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
           </div>
-          <p class="admin-ai-panel-placeholder">
-            AI suggestion panel will be connected in a future update.
-            This panel will show editorial verdicts, accuracy scores,
-            and actionable suggestions with one-click apply.
-          </p>
+          <div class="admin-ai-actions">
+            <button class="admin-ai-action-btn" data-ai-action="generate" type="button">
+              Generate<span class="ai-btn-model">gpt-4o</span>
+            </button>
+            <button class="admin-ai-action-btn" data-ai-action="seo" type="button">
+              SEO<span class="ai-btn-model">gpt-4o-mini</span>
+            </button>
+            <button class="admin-ai-action-btn" data-ai-action="review" type="button">
+              Review<span class="ai-btn-model">gpt-4o-mini</span>
+            </button>
+            <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button">
+              Fact-check<span class="ai-btn-model">gpt-4o</span>
+            </button>
+          </div>
+          <div id="ai-loading" class="admin-ai-loading" hidden>
+            <span class="ai-spinner"></span>
+            <span id="ai-loading-text">Analyzing...</span>
+          </div>
+          <div id="ai-result" class="admin-ai-result"></div>
         </div>
       </div>
 
@@ -570,6 +584,233 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     aiToggleBtn?.addEventListener('click', toggleAiPanel);
     aiCloseBtn?.addEventListener('click', toggleAiPanel);
+
+    // --- AI Advisor ---
+    const aiLoadingEl = document.getElementById('ai-loading');
+    const aiLoadingText = document.getElementById('ai-loading-text');
+    const aiResultEl = document.getElementById('ai-result');
+    const aiActionBtns = document.querySelectorAll<HTMLButtonElement>('.admin-ai-action-btn');
+
+    function setAiLoading(loading: boolean, action?: string) {
+      if (aiLoadingEl) aiLoadingEl.hidden = !loading;
+      if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${action || ''}...` : '';
+      if (aiResultEl && loading) aiResultEl.innerHTML = '';
+      aiActionBtns.forEach(btn => { btn.disabled = loading; });
+    }
+
+    async function runAiAction(action: string) {
+      const title = titleInput?.value || '';
+      const content = crepe ? crepe.getMarkdown() : '';
+      if (!title.trim() && !content.trim()) {
+        showFeedback('error', 'Write some content before using AI Advisor.');
+        return;
+      }
+
+      setAiLoading(true, action);
+
+      try {
+        const res = await fetch('/api/admin/ai/advise', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            post_id: postId || 'new',
+            title,
+            content,
+            category: categorySelect?.value || '',
+            tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            excerpt: excerptInput?.value || '',
+            slug: slugInput?.value || '',
+            post_type: postTypeSelect?.value || '',
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          const msg = err.detail || err.error || `Error ${res.status}`;
+          if (res.status === 429) showFeedback('error', 'Too many requests. Wait a minute.');
+          else if (res.status === 504) showFeedback('error', 'AI request timed out.');
+          else if (res.status === 502) showFeedback('error', 'AI service unavailable.');
+          else showFeedback('error', msg);
+          setAiLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        setAiLoading(false);
+        renderAiResult(action, data.result);
+      } catch (err) {
+        setAiLoading(false);
+        showFeedback('error', 'AI request failed.');
+      }
+    }
+
+    function renderAiResult(action: string, result: any) {
+      if (!aiResultEl) return;
+      if (action === 'generate') renderGenerate(result);
+      else if (action === 'seo') renderSeo(result);
+      else if (action === 'review') renderReview(result);
+      else if (action === 'factcheck') renderFactcheck(result);
+    }
+
+    // --- Generate Result ---
+    function renderGenerate(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Generated Metadata</h4>';
+
+      if (r.excerpt) {
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Excerpt:</strong> ${esc(r.excerpt)}</span><button class="admin-ai-apply-btn" data-apply="excerpt">Use</button></div>`;
+      }
+      if (r.slug) {
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Slug:</strong> ${esc(r.slug)}</span><button class="admin-ai-apply-btn" data-apply="slug">Use</button></div>`;
+      }
+      if (r.tags?.length) {
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Tags:</strong> ${r.tags.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tags.join(', '))}">Use</button></div>`;
+      }
+      if (r.guide_items) {
+        html += '<h4>Guide Items</h4>';
+        const gi = r.guide_items;
+        for (const [key, val] of Object.entries(gi)) {
+          if (key === 'quiz_poll') continue;
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>${esc(key)}:</strong> ${esc(String(val))}</span></div>`;
+        }
+        if (gi.quiz_poll) {
+          const q = gi.quiz_poll;
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Quiz:</strong> ${esc(q.question)} (Answer: ${esc(q.answer)})</span></div>`;
+        }
+      }
+
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-all-generate">Apply All</button>`;
+      aiResultEl.innerHTML = html;
+
+      // Bind apply buttons
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const field = btn.dataset.apply;
+          if (field === 'excerpt' && excerptInput) { excerptInput.value = r.excerpt; showFeedback('success', 'Excerpt applied.'); }
+          else if (field === 'slug' && slugInput) { slugInput.value = r.slug; showFeedback('success', 'Slug applied.'); }
+          else if (field === 'tags' && tagsInput) { tagsInput.value = btn.dataset.value || r.tags.join(', '); showFeedback('success', 'Tags applied.'); }
+        });
+      });
+
+      document.getElementById('ai-apply-all-generate')?.addEventListener('click', () => {
+        if (r.excerpt && excerptInput) excerptInput.value = r.excerpt;
+        if (r.slug && slugInput) slugInput.value = r.slug;
+        if (r.tags?.length && tagsInput) tagsInput.value = r.tags.join(', ');
+        showFeedback('success', 'All fields applied.');
+      });
+    }
+
+    // --- SEO Result ---
+    function renderSeo(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (r.title_suggestions?.length) {
+        html += '<h4>Title Suggestions</h4>';
+        r.title_suggestions.forEach((t: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(t)}</span><button class="admin-ai-apply-btn" data-apply="title" data-value="${esc(t)}">Use</button></div>`;
+        });
+      }
+
+      if (r.excerpt_suggestion) {
+        html += '<h4>Excerpt</h4>';
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(r.excerpt_suggestion)}</span><button class="admin-ai-apply-btn" data-apply="excerpt" data-value="${esc(r.excerpt_suggestion)}">Use</button></div>`;
+      }
+
+      if (r.tag_recommendations?.length) {
+        html += '<h4>Tag Recommendations</h4>';
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${r.tag_recommendations.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tag_recommendations.join(', '))}">Use</button></div>`;
+      }
+
+      if (r.seo_notes) {
+        html += `<h4>Notes</h4><p>${esc(r.seo_notes)}</p>`;
+      }
+
+      aiResultEl.innerHTML = html;
+
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const field = btn.dataset.apply;
+          const val = btn.dataset.value || '';
+          if (field === 'title' && titleInput) { titleInput.value = val; showFeedback('success', 'Title applied.'); }
+          else if (field === 'excerpt' && excerptInput) { excerptInput.value = val; showFeedback('success', 'Excerpt applied.'); }
+          else if (field === 'tags' && tagsInput) { tagsInput.value = val; showFeedback('success', 'Tags applied.'); }
+        });
+      });
+    }
+
+    // --- Review Result ---
+    function renderReview(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (typeof r.score === 'number') {
+        html += `<div class="admin-ai-score">${r.score}/100</div>`;
+      }
+
+      if (r.summary) {
+        html += `<p>${esc(r.summary)}</p>`;
+      }
+
+      if (r.checklist?.length) {
+        html += '<h4>Checklist</h4>';
+        r.checklist.forEach((item: any) => {
+          html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${item.status}">${item.status}</span><span><strong>${esc(item.category)}</strong>: ${esc(item.message)}</span></div>`;
+        });
+      }
+
+      aiResultEl.innerHTML = html;
+    }
+
+    // --- Fact-check Result ---
+    function renderFactcheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (r.overall_confidence) {
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${r.overall_confidence}">Confidence: ${r.overall_confidence}</span>`;
+      }
+
+      if (r.claims?.length) {
+        html += '<h4>Claims</h4>';
+        r.claims.forEach((c: any) => {
+          html += `<div class="admin-ai-claim"><div class="admin-ai-claim-text">"${esc(c.claim)}"</div><div class="admin-ai-claim-meta"><span class="admin-ai-verdict admin-ai-verdict--${c.verdict}">${c.verdict}</span>`;
+          if (c.note) html += `<span>${esc(c.note)}</span>`;
+          html += `</div></div>`;
+        });
+      }
+
+      if (r.broken_links?.length) {
+        html += '<h4>Broken Links</h4>';
+        r.broken_links.forEach((link: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(link)}</span></div>`;
+        });
+      }
+
+      if (r.missing_labels?.length) {
+        html += '<h4>Missing "Unverified" Labels</h4>';
+        r.missing_labels.forEach((label: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(label)}</span></div>`;
+        });
+      }
+
+      aiResultEl.innerHTML = html;
+    }
+
+    function esc(s: string): string {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // Bind AI action buttons
+    aiActionBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.aiAction;
+        if (action) runAiAction(action);
+      });
+    });
 
     // Event listeners
     btnSave?.addEventListener('click', handleSave);

@@ -11,6 +11,7 @@ import { renderMarkdown } from '../../../lib/markdown';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
+import AdminToolbar from '../../../components/admin/AdminToolbar.astro';
 
 const locale = 'ko';
 const { slug } = Astro.params;
@@ -245,6 +246,9 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       />
     </Fragment>
   </NewsprintShell>
+  {Astro.locals.isAdmin && term && (
+    <AdminToolbar itemId={term.id} slug={pageSlug} type="term" />
+  )}
 </MainLayout>
 
 <script>

@@ -1,0 +1,49 @@
+---
+interface Props {
+  itemId: string;
+  slug: string;
+  type: 'post' | 'term';
+}
+const { itemId, slug, type } = Astro.props;
+const editHref = type === 'post' ? `/admin/edit/${slug}` : `/admin/handbook/edit/${slug}`;
+const apiEndpoint = type === 'post' ? '/api/admin/posts/status' : '/api/admin/handbook/status';
+---
+
+<div class="admin-toolbar" data-toolbar-id={itemId} data-toolbar-api={apiEndpoint}>
+  <a href={editHref} class="admin-toolbar-btn">Edit</a>
+  <button type="button" class="admin-toolbar-btn admin-toolbar-btn--unpublish">Unpublish</button>
+</div>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const toolbar = document.querySelector('.admin-toolbar') as HTMLElement | null;
+    if (!toolbar) return;
+
+    const btn = toolbar.querySelector('.admin-toolbar-btn--unpublish');
+    btn?.addEventListener('click', async () => {
+      if (!confirm('Unpublish this item?')) return;
+
+      const id = toolbar.dataset.toolbarId;
+      const api = toolbar.dataset.toolbarApi;
+      if (!id || !api) return;
+
+      try {
+        const res = await fetch(api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: 'unpublish' }),
+        });
+
+        if (res.ok) {
+          const editLink = toolbar.querySelector('a') as HTMLAnchorElement | null;
+          window.location.href = editLink?.href || '/admin';
+        } else {
+          const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+          alert(`Unpublish failed: ${err.error || err.detail}`);
+        }
+      } catch {
+        alert('Unpublish failed: network error');
+      }
+    });
+  });
+</script>
