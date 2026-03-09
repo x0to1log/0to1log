@@ -53,7 +53,7 @@ async def generate_research_post(
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=4096,
+        max_tokens=8192,
     )
 
     raw = response.choices[0].message.content

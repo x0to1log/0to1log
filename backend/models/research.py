@@ -15,6 +15,8 @@ class ResearchPost(BaseModel):
     source_urls: list[str] = []
     news_temperature: int = 3  # 1-5
     tags: list[str] = []
+    excerpt: str = ""
+    focus_items: list[str] = []
 
     @field_validator("news_temperature")
     @classmethod

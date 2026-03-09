@@ -243,6 +243,8 @@ def _save_research_post(
         "source_urls": post.source_urls,
         "news_temperature": post.news_temperature,
         "tags": post.tags,
+        "excerpt": post.excerpt or None,
+        "focus_items": post.focus_items if post.focus_items else None,
         "pipeline_batch_id": batch_id,
         "translation_group_id": translation_group_id,
     }
@@ -287,6 +289,8 @@ def _save_business_post(
         "source_urls": post.source_urls,
         "news_temperature": post.news_temperature,
         "tags": post.tags,
+        "excerpt": post.excerpt or None,
+        "focus_items": post.focus_items if post.focus_items else None,
         "pipeline_batch_id": batch_id,
         "translation_group_id": translation_group_id,
     }
