@@ -11,6 +11,52 @@ if (!Astro.locals.user || !Astro.locals.accessToken) {
 
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
+const profile = Astro.locals.profile;
+const langParam = Astro.url.searchParams.get('lang');
+const cookieLocale = Astro.cookies.get('site-locale')?.value;
+const acceptLang = Astro.request.headers.get('accept-language') || '';
+const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
+const locale = (langParam === 'ko' || langParam === 'en') ? langParam
+  : (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale
+  : profile?.preferred_locale === 'ko' ? 'ko'
+  : profile?.preferred_locale === 'en' ? 'en'
+  : browserLocale;
+
+const copy = locale === 'ko'
+  ? {
+      title: '나의 서재',
+      tabRead: '읽은 글',
+      tabSaved: '저장한 글',
+      tabProgress: '학습 현황',
+      emptyRead: '아직 읽은 기록이 없습니다. 기사와 용어를 탐색해 보세요!',
+      emptySaved: '아직 저장한 글이 없습니다. 기사와 용어를 저장해 보세요!',
+      emptyProgress: '용어집을 방문하면 학습 현황이 기록됩니다!',
+      badgeArticle: '기사',
+      badgeTerm: '용어',
+      savedPrefix: '저장일',
+      overallProgress: '전체 학습 현황',
+      learned: '학습 완료',
+      visited: '방문',
+      removeBookmark: '북마크 해제',
+      dateLocale: 'ko-KR',
+    }
+  : {
+      title: 'My Library',
+      tabRead: 'Read',
+      tabSaved: 'Saved',
+      tabProgress: 'Progress',
+      emptyRead: 'No reading history yet. Start exploring articles and terms!',
+      emptySaved: 'No bookmarks yet. Save articles and terms to find them here!',
+      emptyProgress: 'Visit handbook terms to start tracking your learning progress!',
+      badgeArticle: 'Article',
+      badgeTerm: 'Term',
+      savedPrefix: 'Saved',
+      overallProgress: 'Overall Progress',
+      learned: 'learned',
+      visited: 'visited',
+      removeBookmark: 'Remove bookmark',
+      dateLocale: 'en-US',
+    };
 const authSb = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
@@ -66,23 +112,23 @@ const totalLearned = progressItems.filter((p) => p.status === 'learned').length;
 const totalRead = progressItems.length;
 ---
 
-<MainLayout title="My Library — 0to1log" headerAlwaysVisible={true}>
+<MainLayout title={`${copy.title} — 0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="newsprint-page" style="max-width: 800px;">
     <h1 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">
-      My Library
+      {copy.title}
     </h1>
 
     <div class="library-tabs">
-      <button class="library-tab library-tab--active" data-tab="read">Read</button>
-      <button class="library-tab" data-tab="saved">Saved</button>
-      <button class="library-tab" data-tab="progress">Progress</button>
+      <button class="library-tab library-tab--active" data-tab="read">{copy.tabRead}</button>
+      <button class="library-tab" data-tab="saved">{copy.tabSaved}</button>
+      <button class="library-tab" data-tab="progress">{copy.tabProgress}</button>
     </div>
 
     <!-- Read Tab -->
     <div data-tab-content="read">
       {historyItems.length === 0 ? (
         <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
-          No reading history yet. Start exploring articles and terms!
+          {copy.emptyRead}
         </p>
       ) : (
         <div>
@@ -95,13 +141,13 @@ const totalRead = progressItems.length;
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
                 <div style="flex: 1; min-width: 0;">
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="library-type-badge">{item.item_type === 'post' ? 'Article' : 'Term'}</span>
+                    <span class="library-type-badge">{item.item_type === 'post' ? copy.badgeArticle : copy.badgeTerm}</span>
                     <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                       {title}
                     </a>
                   </div>
                   <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
-                    {new Date(item.read_at).toLocaleDateString('en-US')}
+                    {new Date(item.read_at).toLocaleDateString(copy.dateLocale)}
                   </div>
                 </div>
                 <button class="library-delete-btn" data-delete-type="history" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 1.1rem; padding: 0.35rem; line-height: 1;">
@@ -118,7 +164,7 @@ const totalRead = progressItems.length;
     <div data-tab-content="saved" style="display: none;">
       {bookmarkItems.length === 0 ? (
         <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
-          No bookmarks yet. Save articles and terms to find them here!
+          {copy.emptySaved}
         </p>
       ) : (
         <div>
@@ -131,16 +177,16 @@ const totalRead = progressItems.length;
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
                 <div style="flex: 1; min-width: 0;">
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="library-type-badge">{item.item_type === 'post' ? 'Article' : 'Term'}</span>
+                    <span class="library-type-badge">{item.item_type === 'post' ? copy.badgeArticle : copy.badgeTerm}</span>
                     <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                       {title}
                     </a>
                   </div>
                   <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
-                    Saved {new Date(item.created_at).toLocaleDateString('en-US')}
+                    {copy.savedPrefix} {new Date(item.created_at).toLocaleDateString(copy.dateLocale)}
                   </div>
                 </div>
-                <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title="Remove bookmark">
+                <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title={copy.removeBookmark}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                 </button>
               </div>
@@ -154,9 +200,9 @@ const totalRead = progressItems.length;
     <div data-tab-content="progress" style="display: none;">
       <div style="margin-bottom: 2rem; padding: 1.25rem; border: 1px solid var(--color-border); background: var(--color-bg-secondary);">
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
-          <span style="font-weight: 700;">Overall Progress</span>
+          <span style="font-weight: 700;">{copy.overallProgress}</span>
           <span style="font-size: 0.85rem; color: var(--color-text-muted);">
-            {totalLearned} learned / {totalRead} visited
+            {totalLearned} {copy.learned} / {totalRead} {copy.visited}
           </span>
         </div>
         <div class="learning-progress-bar">
@@ -166,7 +212,7 @@ const totalRead = progressItems.length;
 
       {categoryProgress.size === 0 ? (
         <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
-          Visit handbook terms to start tracking your learning progress!
+          {copy.emptyProgress}
         </p>
       ) : (
         <div>
@@ -175,7 +221,7 @@ const totalRead = progressItems.length;
               <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
                 <span style="font-weight: 600; text-transform: capitalize;">{cat}</span>
                 <span style="font-size: 0.78rem; color: var(--color-text-muted);">
-                  {stats.learned}/{stats.total} learned
+                  {stats.learned}/{stats.total} {copy.learned}
                 </span>
               </div>
               <div class="learning-progress-bar">

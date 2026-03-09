@@ -6,10 +6,15 @@ const user = Astro.locals.user!;
 const profile = Astro.locals.profile;
 const isOnboarding = Astro.url.searchParams.get('onboarding') === 'true';
 
-// Detect default locale from Accept-Language header (Korea → ko, else → en)
+const langParam = Astro.url.searchParams.get('lang');
+const cookieLocale = Astro.cookies.get('site-locale')?.value;
 const acceptLang = Astro.request.headers.get('accept-language') || '';
 const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
-const locale = profile?.preferred_locale ? (profile.preferred_locale === 'ko' ? 'ko' : 'en') : browserLocale;
+const locale = (langParam === 'ko' || langParam === 'en') ? langParam
+  : (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale
+  : profile?.preferred_locale === 'ko' ? 'ko'
+  : profile?.preferred_locale === 'en' ? 'en'
+  : browserLocale;
 
 const copy = locale === 'ko'
   ? {

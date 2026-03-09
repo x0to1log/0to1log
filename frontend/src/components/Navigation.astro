@@ -13,7 +13,7 @@ const altPath = altSlug
   ? `/${altLocale}/log/${altSlug}/`
   : hasLocaleSegment
     ? currentPath.replace(`/${locale}/`, `/${altLocale}/`)
-    : `/${altLocale}/`;
+    : `${currentPath}?lang=${altLocale}`;
 
 const user = Astro.locals.user;
 const isAdmin = Astro.locals.isAdmin;

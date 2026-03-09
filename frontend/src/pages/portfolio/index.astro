@@ -1,6 +1,13 @@
 ---
 import MainLayout from '../../layouts/MainLayout.astro';
 
+export const prerender = false;
+
+const cookieLocale = Astro.cookies.get('site-locale')?.value;
+const acceptLang = Astro.request.headers.get('accept-language') || '';
+const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
+const locale = (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale : browserLocale;
+
 const sections = [
   {
     title: 'Selected Projects',
@@ -23,7 +30,7 @@ const links = [
 ];
 ---
 
-<MainLayout title="Portfolio" locale="en" headerAlwaysVisible={true}>
+<MainLayout title="Portfolio" locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="pf-page">
 
     <!-- Hero -->

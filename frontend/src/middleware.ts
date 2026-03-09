@@ -102,6 +102,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const nonce = crypto.randomUUID().replace(/-/g, '');
   context.locals.cspNonce = nonce;
 
+  // Track site locale via cookie for non-locale-prefixed pages
+  const langParam = context.url.searchParams.get('lang');
+  if (langParam === 'en' || langParam === 'ko') {
+    context.cookies.set('site-locale', langParam, { path: '/', maxAge: 31536000, sameSite: 'lax' });
+  } else if (pathname.startsWith('/en/')) {
+    context.cookies.set('site-locale', 'en', { path: '/', maxAge: 31536000, sameSite: 'lax' });
+  } else if (pathname.startsWith('/ko/')) {
+    context.cookies.set('site-locale', 'ko', { path: '/', maxAge: 31536000, sameSite: 'lax' });
+  }
+
   // Skip auth entirely if Supabase not configured
   if (!supabaseUrl || !supabaseAnonKey) {
     // Admin routes still need to redirect
