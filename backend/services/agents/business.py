@@ -19,7 +19,7 @@ def _build_business_user_prompt(
     batch_id: str,
 ) -> str:
     """Build the user prompt for the business analyst agent."""
-    related_section = "## Related News 후보\n"
+    related_section = "## Related News Candidates\n"
     if related:
         if related.big_tech:
             related_section += f"- Big Tech: {related.big_tech.title} ({related.big_tech.url})\n"
@@ -29,14 +29,14 @@ def _build_business_user_prompt(
             related_section += f"- New Tools: {related.new_tools.title} ({related.new_tools.url})\n"
 
     return (
-        f"아래 메인 뉴스와 관련 뉴스를 바탕으로 3페르소나 포스트를 작성하세요.\n\n"
-        f"## 메인 뉴스\n"
-        f"제목: {candidate.title}\n"
+        f"Write a 3-persona post based on the main news and related news below.\n\n"
+        f"## Main News\n"
+        f"Title: {candidate.title}\n"
         f"URL: {candidate.url}\n"
-        f"요약: {candidate.snippet}\n"
-        f"랭킹 이유: {candidate.ranking_reason}\n\n"
+        f"Summary: {candidate.snippet}\n"
+        f"Ranking reason: {candidate.ranking_reason}\n\n"
         f"{related_section}\n"
-        f"## Tavily 수집 컨텍스트\n{context}\n\n"
+        f"## Tavily Collected Context\n{context}\n\n"
         f"slug: {batch_id}-business-daily"
     )
 
@@ -63,6 +63,7 @@ async def generate_business_post(
         ],
         response_format={"type": "json_object"},
         temperature=0.4,
+        max_tokens=4096,
     )
 
     raw = response.choices[0].message.content

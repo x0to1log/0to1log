@@ -20,18 +20,18 @@ def _build_research_user_prompt(
     """Build the user prompt for the research agent."""
     if candidate is None:
         return (
-            f"오늘({batch_id})은 수집된 research 뉴스가 없습니다.\n"
-            "has_news=false로 설정하고 no_news_notice와 recent_fallback을 작성하세요.\n"
+            f"No research news was collected today ({batch_id}).\n"
+            "Set has_news=false and write no_news_notice and recent_fallback.\n"
             f"slug: {batch_id}-research-daily"
         )
 
     return (
-        f"아래 뉴스를 바탕으로 기술 심화 포스트를 작성하세요.\n\n"
-        f"제목: {candidate.title}\n"
+        f"Write an in-depth technical post based on the following news.\n\n"
+        f"Title: {candidate.title}\n"
         f"URL: {candidate.url}\n"
-        f"요약: {candidate.snippet}\n"
-        f"랭킹 이유: {candidate.ranking_reason}\n\n"
-        f"Tavily 수집 컨텍스트:\n{context}\n\n"
+        f"Summary: {candidate.snippet}\n"
+        f"Ranking reason: {candidate.ranking_reason}\n\n"
+        f"Tavily collected context:\n{context}\n\n"
         f"slug: {batch_id}-research-daily"
     )
 
@@ -53,6 +53,7 @@ async def generate_research_post(
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
+        max_tokens=4096,
     )
 
     raw = response.choices[0].message.content

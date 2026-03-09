@@ -6,6 +6,7 @@ from typing import Optional
 from core.database import get_supabase
 from services.news_collection import collect_all_news
 from services.agents import rank_candidates, generate_research_post, generate_business_post
+from services.agents.translate import translate_post
 from models.ranking import NewsCandidate, NewsRankingResult
 from models.research import ResearchPost
 from models.business import BusinessPost
@@ -179,7 +180,7 @@ def _save_candidates(
     logger.info("Saved %d candidates to news_candidates", len(rows))
 
 
-def _save_post(client, row: dict, batch_id: str, post_type: str) -> str:
+def _save_post(client, row: dict, batch_id: str, post_type: str, locale: str) -> str:
     """Insert or update a post. Returns the post id.
 
     Uses select-then-insert/update because the unique index
@@ -191,6 +192,7 @@ def _save_post(client, row: dict, batch_id: str, post_type: str) -> str:
         .select("id")
         .eq("pipeline_batch_id", batch_id)
         .eq("post_type", post_type)
+        .eq("locale", locale)
         .eq("category", "ai-news")
         .maybe_single()
         .execute()
@@ -199,26 +201,38 @@ def _save_post(client, row: dict, batch_id: str, post_type: str) -> str:
     if existing and existing.data:
         post_id = existing.data["id"]
         client.table("posts").update(row).eq("id", post_id).execute()
-        logger.info("%s post updated: id=%s slug=%s", post_type, post_id, row["slug"])
+        logger.info("%s/%s post updated: id=%s slug=%s", post_type, locale, post_id, row["slug"])
     else:
         result = client.table("posts").insert(row).execute()
         post_id = result.data[0]["id"]
-        logger.info("%s post inserted: id=%s slug=%s", post_type, post_id, row["slug"])
+        logger.info("%s/%s post inserted: id=%s slug=%s", post_type, locale, post_id, row["slug"])
 
     return post_id
 
 
-def _save_research_post(post: ResearchPost, batch_id: str) -> str:
-    """Save research post to posts table. Returns the post id."""
+def _save_research_post(
+    post: ResearchPost,
+    batch_id: str,
+    locale: str = "en",
+    translation_group_id: str | None = None,
+    source_post_id: str | None = None,
+) -> tuple[str, str]:
+    """Save research post to posts table.
+
+    Returns (post_id, translation_group_id).
+    """
     client = get_supabase()
     if not client:
-        return ""
+        return "", ""
 
-    translation_group_id = str(uuid.uuid4())
+    if not translation_group_id:
+        translation_group_id = str(uuid.uuid4())
+
+    slug_suffix = "-ko" if locale == "ko" else ""
     row = {
         "title": post.title,
-        "slug": post.slug,
-        "locale": "ko",
+        "slug": f"{post.slug}{slug_suffix}",
+        "locale": locale,
         "category": "ai-news",
         "post_type": "research",
         "status": "draft",
@@ -232,21 +246,36 @@ def _save_research_post(post: ResearchPost, batch_id: str) -> str:
         "pipeline_batch_id": batch_id,
         "translation_group_id": translation_group_id,
     }
+    if source_post_id:
+        row["source_post_id"] = source_post_id
 
-    return _save_post(client, row, batch_id, "research")
+    post_id = _save_post(client, row, batch_id, "research", locale)
+    return post_id, translation_group_id
 
 
-def _save_business_post(post: BusinessPost, batch_id: str) -> str:
-    """Save business post to posts table. Returns the post id."""
+def _save_business_post(
+    post: BusinessPost,
+    batch_id: str,
+    locale: str = "en",
+    translation_group_id: str | None = None,
+    source_post_id: str | None = None,
+) -> tuple[str, str]:
+    """Save business post to posts table.
+
+    Returns (post_id, translation_group_id).
+    """
     client = get_supabase()
     if not client:
-        return ""
+        return "", ""
 
-    translation_group_id = str(uuid.uuid4())
+    if not translation_group_id:
+        translation_group_id = str(uuid.uuid4())
+
+    slug_suffix = "-ko" if locale == "ko" else ""
     row = {
         "title": post.title,
-        "slug": post.slug,
-        "locale": "ko",
+        "slug": f"{post.slug}{slug_suffix}",
+        "locale": locale,
         "category": "ai-news",
         "post_type": "business",
         "status": "draft",
@@ -261,8 +290,11 @@ def _save_business_post(post: BusinessPost, batch_id: str) -> str:
         "pipeline_batch_id": batch_id,
         "translation_group_id": translation_group_id,
     }
+    if source_post_id:
+        row["source_post_id"] = source_post_id
 
-    return _save_post(client, row, batch_id, "business")
+    post_id = _save_post(client, row, batch_id, "business", locale)
+    return post_id, translation_group_id
 
 
 async def run_daily_pipeline(batch_id: str) -> None:
@@ -293,26 +325,58 @@ async def run_daily_pipeline(batch_id: str) -> None:
         # Build context string from candidates for the writing agents
         context = _build_context(candidates)
 
-        # Step 3-A: Generate research post
+        # Step 3-A: Generate EN research post
         logger.info("Calling research AI agent for batch %s...", batch_id)
         research_post = await generate_research_post(
             ranking.research_pick, context, batch_id
         )
-        logger.info("Research post generated: %s", research_post.title)
-        _save_research_post(research_post, batch_id)
+        logger.info("EN research post generated: %s", research_post.title)
+        en_research_id, research_tg_id = _save_research_post(
+            research_post, batch_id, locale="en"
+        )
 
-        # Step 3-B: Generate business post (skip if no business pick)
+        # Step 3-A-KO: Translate research post to Korean
+        logger.info("Translating research post to Korean for batch %s...", batch_id)
+        ko_research_data = await translate_post(
+            research_post.model_dump(), "research"
+        )
+        ko_research = ResearchPost.model_validate(ko_research_data)
+        _save_research_post(
+            ko_research, batch_id,
+            locale="ko",
+            translation_group_id=research_tg_id,
+            source_post_id=en_research_id,
+        )
+        logger.info("KO research post saved (source_post_id=%s)", en_research_id)
+
+        # Step 3-B: Generate EN business post (skip if no business pick)
         logger.info("Starting business post generation for batch %s...", batch_id)
         if ranking.business_main_pick:
             business_post = await generate_business_post(
                 ranking.business_main_pick, ranking.related_picks, context, batch_id
             )
-            logger.info("Business post generated: %s", business_post.title)
-            _save_business_post(business_post, batch_id)
+            logger.info("EN business post generated: %s", business_post.title)
+            en_business_id, business_tg_id = _save_business_post(
+                business_post, batch_id, locale="en"
+            )
+
+            # Step 3-B-KO: Translate business post to Korean
+            logger.info("Translating business post to Korean for batch %s...", batch_id)
+            ko_business_data = await translate_post(
+                business_post.model_dump(), "business"
+            )
+            ko_business = BusinessPost.model_validate(ko_business_data)
+            _save_business_post(
+                ko_business, batch_id,
+                locale="ko",
+                translation_group_id=business_tg_id,
+                source_post_id=en_business_id,
+            )
+            logger.info("KO business post saved (source_post_id=%s)", en_business_id)
         else:
             logger.warning("No business_main_pick for batch %s, skipping business post", batch_id)
 
-        logger.info("Pipeline %s completed — posts saved to DB", batch_id)
+        logger.info("Pipeline %s completed — EN+KO posts saved to DB", batch_id)
         await release_pipeline_lock(run_id, "success")
     except Exception as e:
         logger.error("Pipeline %s failed: %s", batch_id, e)
