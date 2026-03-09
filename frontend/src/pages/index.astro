@@ -1,4 +1,6 @@
 ---
 export const prerender = false;
-return Astro.redirect('/en/', 307);
+const acceptLang = Astro.request.headers.get('accept-language') || '';
+const locale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
+return Astro.redirect(`/${locale}/`, 307);
 ---
