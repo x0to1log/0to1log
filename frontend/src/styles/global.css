@@ -1653,6 +1653,267 @@ code, pre {
   line-height: 1.6;
 }
 
+/* AI Advisor — Action Buttons */
+.admin-ai-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-ai-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.6rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.admin-ai-action-btn:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-text-muted);
+}
+
+.admin-ai-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-ai-action-btn .ai-btn-model {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* AI Advisor — Loading */
+.admin-ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.admin-ai-loading .ai-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-text-primary);
+  border-radius: 50%;
+  animation: ai-spin 0.6s linear infinite;
+}
+
+@keyframes ai-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* AI Advisor — Result Container */
+.admin-ai-result {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.admin-ai-result h4 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin: 1rem 0 0.4rem;
+}
+
+.admin-ai-result h4:first-child {
+  margin-top: 0;
+}
+
+/* AI Advisor — Apply Buttons */
+.admin-ai-apply-btn {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  margin-left: 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.admin-ai-apply-btn:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+.admin-ai-apply-all-btn {
+  display: block;
+  width: 100%;
+  padding: 0.45rem;
+  margin-top: 0.8rem;
+  border: 1px solid var(--color-text-primary);
+  border-radius: 6px;
+  background: var(--color-text-primary);
+  color: var(--color-bg-primary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.admin-ai-apply-all-btn:hover {
+  opacity: 0.85;
+}
+
+/* AI Advisor — Suggestion Item */
+.admin-ai-suggestion {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-ai-suggestion:last-child {
+  border-bottom: none;
+}
+
+.admin-ai-suggestion-text {
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+/* AI Advisor — Review Checklist */
+.admin-ai-checklist-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-ai-checklist-item:last-child {
+  border-bottom: none;
+}
+
+.admin-ai-status-badge {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.admin-ai-status-badge--pass {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-ai-status-badge--warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.admin-ai-status-badge--fail {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.admin-ai-score {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--color-text-primary);
+  margin: 0.5rem 0;
+}
+
+/* AI Advisor — Fact-check Claims */
+.admin-ai-claim {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-ai-claim:last-child {
+  border-bottom: none;
+}
+
+.admin-ai-claim-text {
+  font-style: italic;
+  margin-bottom: 0.25rem;
+}
+
+.admin-ai-claim-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.admin-ai-verdict {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.admin-ai-verdict--verified {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-ai-verdict--unverified {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.admin-ai-verdict--no_source {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.admin-ai-confidence {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.admin-ai-confidence--high {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-ai-confidence--medium {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.admin-ai-confidence--low {
+  background: #fecaca;
+  color: #991b1b;
+}
+
 /* ===========================
    ADMIN — Shared Components
    =========================== */
@@ -1763,6 +2024,65 @@ code, pre {
   background: var(--color-accent-subtle);
   color: var(--color-text-primary);
   font-weight: 600;
+}
+
+/* Search Input (between overview cards and list) */
+.admin-search-input {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* No Results Message */
+.admin-no-results {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+/* Admin Toolbar (floating on public detail pages) */
+.admin-toolbar {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+}
+
+.admin-toolbar-btn {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  transition: background 150ms ease;
+}
+
+.admin-toolbar-btn:hover {
+  background: var(--color-accent-subtle);
+}
+
+.admin-toolbar-btn--unpublish {
+  color: var(--color-danger, #c53030);
+  border-color: var(--color-danger, #c53030);
+}
+
+.admin-toolbar-btn--unpublish:hover {
+  background: #fef2f2;
 }
 
 
@@ -3086,6 +3406,31 @@ code, pre {
   padding: 0.15rem 0.4rem;
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
+}
+
+/* Sub-tabs (pill toggle inside Saved tab) */
+.library-sub-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.library-sub-tab {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.library-sub-tab:hover {
+  color: var(--color-text-primary);
+}
+.library-sub-tab--active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 @media (max-width: 767px) {

@@ -3,6 +3,8 @@ export const prerender = false;
 
 import MainLayout from '../../layouts/MainLayout.astro';
 import { createClient } from '@supabase/supabase-js';
+import { difficultyColor, difficultyLabel } from '../../lib/handbookUtils';
+import { getHandbookCategoryLabel } from '../../lib/handbookCategories';
 
 // Redirect if not logged in
 if (!Astro.locals.user || !Astro.locals.accessToken) {
@@ -30,6 +32,11 @@ const copy = locale === 'ko'
       tabProgress: '학습 현황',
       emptyRead: '아직 읽은 기록이 없습니다. 기사와 용어를 탐색해 보세요!',
       emptySaved: '아직 저장한 글이 없습니다. 기사와 용어를 저장해 보세요!',
+      subArticles: '기사',
+      subTerms: '용어',
+      emptyArticles: '저장한 기사가 없습니다.',
+      emptyTerms: '저장한 용어가 없습니다.',
+      readingTime: '분',
       emptyProgress: '용어집을 방문하면 학습 현황이 기록됩니다!',
       badgeArticle: '기사',
       badgeTerm: '용어',
@@ -47,6 +54,11 @@ const copy = locale === 'ko'
       tabProgress: 'Progress',
       emptyRead: 'No reading history yet. Start exploring articles and terms!',
       emptySaved: 'No bookmarks yet. Save articles and terms to find them here!',
+      subArticles: 'Articles',
+      subTerms: 'Terms',
+      emptyArticles: 'No saved articles yet.',
+      emptyTerms: 'No saved terms yet.',
+      readingTime: 'min',
       emptyProgress: 'Visit handbook terms to start tracking your learning progress!',
       badgeArticle: 'Article',
       badgeTerm: 'Term',
@@ -89,7 +101,7 @@ const postMap = new Map<string, any>();
 const termMap = new Map<string, any>();
 
 if (supabase && postIds.size > 0) {
-  const { data } = await supabase.from('posts').select('id, title, slug, category, locale').in('id', [...postIds]);
+  const { data } = await supabase.from('posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds]);
   (data ?? []).forEach((p: any) => postMap.set(p.id, p));
 }
 if (supabase && termIds.size > 0) {
@@ -110,6 +122,10 @@ progressItems.forEach((p) => {
 });
 const totalLearned = progressItems.filter((p) => p.status === 'learned').length;
 const totalRead = progressItems.length;
+
+// Split bookmarks by type for sub-tabs
+const articleBookmarks = bookmarkItems.filter((i) => i.item_type === 'post');
+const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
 ---
 
 <MainLayout title={`${copy.title} — 0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
@@ -168,30 +184,89 @@ const totalRead = progressItems.length;
         </p>
       ) : (
         <div>
-          {bookmarkItems.map((item) => {
-            const post = item.item_type === 'post' ? postMap.get(item.item_id) : null;
-            const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
-            const title = post?.title || term?.term || 'Unknown';
-            const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : term ? `/en/handbook/${term.slug}/` : '#';
-            return (
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
-                <div style="flex: 1; min-width: 0;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="library-type-badge">{item.item_type === 'post' ? copy.badgeArticle : copy.badgeTerm}</span>
-                    <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      {title}
-                    </a>
+          <div class="library-sub-tabs">
+            <button class="library-sub-tab library-sub-tab--active" data-sub-tab="articles">
+              {copy.subArticles} ({articleBookmarks.length})
+            </button>
+            <button class="library-sub-tab" data-sub-tab="terms">
+              {copy.subTerms} ({termBookmarks.length})
+            </button>
+          </div>
+
+          <!-- Articles sub-tab -->
+          <div data-sub-content="articles">
+            {articleBookmarks.length === 0 ? (
+              <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
+                {copy.emptyArticles}
+              </p>
+            ) : (
+              articleBookmarks.map((item) => {
+                const post = postMap.get(item.item_id);
+                const title = post?.title || 'Unknown';
+                const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : '#';
+                return (
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                    <div style="flex: 1; min-width: 0;">
+                      <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">
+                        {title}
+                      </a>
+                      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.75rem; color: var(--color-text-muted);">
+                        {post?.category && <span class="library-type-badge">{post.category}</span>}
+                        {post?.reading_time_min && <span>{post.reading_time_min}{copy.readingTime}</span>}
+                        <span>{copy.savedPrefix} {new Date(item.created_at).toLocaleDateString(copy.dateLocale)}</span>
+                      </div>
+                    </div>
+                    <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title={copy.removeBookmark}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
                   </div>
-                  <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
-                    {copy.savedPrefix} {new Date(item.created_at).toLocaleDateString(copy.dateLocale)}
+                );
+              })
+            )}
+          </div>
+
+          <!-- Terms sub-tab -->
+          <div data-sub-content="terms" style="display: none;">
+            {termBookmarks.length === 0 ? (
+              <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
+                {copy.emptyTerms}
+              </p>
+            ) : (
+              termBookmarks.map((item) => {
+                const term = termMap.get(item.item_id);
+                const title = term?.term || 'Unknown';
+                const href = term ? `/en/handbook/${term.slug}/` : '#';
+                return (
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="display: flex; align-items: baseline; gap: 0.4rem;">
+                        <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                          {title}
+                        </a>
+                        {term?.korean_name && locale === 'ko' && (
+                          <span style="font-size: 0.78rem; color: var(--color-text-muted);">{term.korean_name}</span>
+                        )}
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.75rem; color: var(--color-text-muted);">
+                        {term?.difficulty && (
+                          <span style={`padding: 0.1rem 0.35rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)}; font-size: 0.65rem; font-weight: 600;`}>
+                            {difficultyLabel(locale as 'en' | 'ko', term.difficulty)}
+                          </span>
+                        )}
+                        {term?.category && (
+                          <span>{getHandbookCategoryLabel(locale as 'en' | 'ko', term.category)}</span>
+                        )}
+                        <span>{copy.savedPrefix} {new Date(item.created_at).toLocaleDateString(copy.dateLocale)}</span>
+                      </div>
+                    </div>
+                    <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title={copy.removeBookmark}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
                   </div>
-                </div>
-                <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title={copy.removeBookmark}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                </button>
-              </div>
-            );
-          })}
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -248,6 +323,21 @@ const totalRead = progressItems.length;
         tab.classList.add('library-tab--active');
         contents.forEach((c) => {
           c.style.display = c.dataset.tabContent === target ? 'block' : 'none';
+        });
+      });
+    });
+
+    // Sub-tab switching (inside Saved tab)
+    const subTabs = document.querySelectorAll<HTMLButtonElement>('.library-sub-tab');
+    const subContents = document.querySelectorAll<HTMLElement>('[data-sub-content]');
+
+    subTabs.forEach((st) => {
+      st.addEventListener('click', () => {
+        const target = st.dataset.subTab;
+        subTabs.forEach((s) => s.classList.remove('library-sub-tab--active'));
+        st.classList.add('library-sub-tab--active');
+        subContents.forEach((c) => {
+          c.style.display = c.dataset.subContent === target ? 'block' : 'none';
         });
       });
     });
