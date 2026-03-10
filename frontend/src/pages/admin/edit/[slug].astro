@@ -33,7 +33,7 @@ if (!isNew) {
       { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
     );
     const { data, error } = await supabase
-      .from('posts')
+      .from('news_posts')
       .select('*')
       .eq('slug', pageSlug)
       .single();
@@ -673,7 +673,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         }
         showFeedback('success', 'Published! Redirecting...');
         const slugEl = adminData?.dataset.slug || '';
-        setTimeout(() => { window.location.href = `/en/log/${slugEl}/`; }, 1500);
+        setTimeout(() => { window.location.href = `/en/news/${slugEl}/`; }, 1500);
       } catch (err) {
         showFeedback('error', `Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`);
       }

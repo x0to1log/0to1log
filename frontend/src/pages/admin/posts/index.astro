@@ -32,7 +32,7 @@ let logTotal = 0;
 
 try {
   const { data, error } = await sb
-    .from('posts')
+    .from('news_posts')
     .select('id, title, slug, category, locale, status, updated_at, published_at')
     .order('updated_at', { ascending: false });
 

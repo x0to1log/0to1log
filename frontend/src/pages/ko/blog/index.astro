@@ -1,0 +1,131 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { BLOG_CATEGORIES } from '../../../lib/categories';
+import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
+import NewsprintHeadline from '../../../components/newsprint/NewsprintHeadline.astro';
+import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
+import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
+import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+
+let posts: any[] = [];
+let fetchError: string | null = null;
+
+if (supabase) {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, og_image_url, excerpt')
+    .eq('status', 'published')
+    .eq('locale', 'ko')
+    .in('category', BLOG_CATEGORIES)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[blog-list-ko] Supabase error:', error.message);
+    fetchError = error.message;
+  } else {
+    posts = data ?? [];
+  }
+}
+
+// User reading history & bookmarks
+const readPostIds = new Set<string>();
+const bookmarkedPostIds = new Set<string>();
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (user && accessToken) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const [histRes, bmRes] = await Promise.all([
+    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
+    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
+  ]);
+  (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
+  (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
+}
+
+const headline = posts[0] ?? null;
+const rest = headline ? posts.slice(1) : [];
+const railPosts = posts.slice(0, 4);
+---
+
+<MainLayout title={t.ko['blog.title']} locale="ko" slug="blog/">
+  <NewsprintShell
+    locale="ko"
+    masthead="IT 블로그"
+    editionLabel="빌더의 기록"
+    subkicker={['학습 · 커리어 · 프로젝트', '개인 블로그', '공개 열람']}
+  >
+    <NewsprintCategoryFilter locale="ko" categories={BLOG_CATEGORIES} />
+
+    {fetchError ? (
+      <NewsprintNotice
+        variant="error"
+        message={t.ko['blog.error']}
+        linkHref="/ko/blog/"
+        linkLabel={t.ko['error.retry']}
+      />
+    ) : posts.length > 0 ? (
+      <>
+        {headline && (
+          <NewsprintHeadline
+            href={`/ko/blog/${headline.slug}/`}
+            title={headline.title}
+            excerpt={headline.excerpt}
+            category={headline.category}
+            publishedAt={headline.published_at}
+            readingTimeMin={headline.reading_time_min}
+            tags={headline.tags}
+            locale="ko"
+            isBookmarked={bookmarkedPostIds.has(headline.id)}
+            itemId={headline.id}
+            itemType="blog"
+          />
+        )}
+
+        {rest.length > 0 && (
+          <section class="newsprint-grid-cards">
+            {rest.map((post) => (
+              <NewsprintListCard
+                href={`/ko/blog/${post.slug}/`}
+                title={post.title}
+                excerpt={post.excerpt}
+                category={post.category}
+                publishedAt={post.published_at}
+                readingTimeMin={post.reading_time_min}
+                tags={post.tags}
+                locale="ko"
+                isRead={readPostIds.has(post.id)}
+                isBookmarked={bookmarkedPostIds.has(post.id)}
+                itemId={post.id}
+                itemType="blog"
+              />
+            ))}
+          </section>
+        )}
+      </>
+    ) : (
+      <NewsprintNotice variant="empty" message={t.ko['blog.empty']} />
+    )}
+
+    <Fragment slot="rail">
+      <NewsprintListRail
+        locale="ko"
+        posts={railPosts}
+        basePath="/ko/blog"
+      />
+    </Fragment>
+  </NewsprintShell>
+</MainLayout>
+
+<script>
+  import '../../../scripts/bookmark';
+</script>

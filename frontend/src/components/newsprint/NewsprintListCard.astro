@@ -13,10 +13,11 @@ interface Props {
   isRead?: boolean;
   isBookmarked?: boolean;
   itemId?: string;
-  itemType?: 'post' | 'term';
+  itemType?: 'news' | 'blog' | 'term';
+  postType?: string | null;
 }
 
-const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale, isRead = false, isBookmarked = false, itemId, itemType } = Astro.props;
+const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale, isRead = false, isBookmarked = false, itemId, itemType, postType } = Astro.props;
 const dateLabel = publishedAt
   ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
   : null;
@@ -32,7 +33,7 @@ const catColor = getCategoryColorVar(category);
 const cardClasses = ['newsprint-card', isRead && 'newsprint-card--read'].filter(Boolean).join(' ');
 ---
 
-<a href={href} class={cardClasses} data-category={normalizedCategory || 'uncategorized'}>
+<a href={href} class={cardClasses} data-category={normalizedCategory || 'uncategorized'} data-post-type={postType || undefined}>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
     <h2 class="newsprint-card-title" style="flex: 1;">{title}</h2>
     {itemId && (

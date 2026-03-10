@@ -9,8 +9,11 @@ const { locale = 'en', alwaysVisible = false, altSlug } = Astro.props;
 const altLocale = locale === 'en' ? 'ko' : 'en';
 const currentPath = Astro.url.pathname;
 const hasLocaleSegment = currentPath.startsWith('/en/') || currentPath.startsWith('/ko/');
+// Determine which section the current page belongs to for altPath
+const isInBlog = currentPath.startsWith(`/${locale}/blog/`);
+const isInNews = currentPath.startsWith(`/${locale}/news/`);
 const altPath = altSlug
-  ? `/${altLocale}/log/${altSlug}/`
+  ? `/${altLocale}/${isInBlog ? 'blog' : 'news'}/${altSlug}/`
   : hasLocaleSegment
     ? currentPath.replace(`/${locale}/`, `/${altLocale}/`)
     : `${currentPath}?lang=${altLocale}`;
@@ -27,6 +30,7 @@ const copy = locale === 'ko'
       aiNews: 'AI 뉴스',
       handbook: 'AI 용어집',
       library: '나의 서재',
+      blog: 'IT 블로그',
       pageHome: '홈',
       pageArticle: '기사',
       pageTerm: '용어',
@@ -48,6 +52,7 @@ const copy = locale === 'ko'
       aiNews: 'AI News',
       handbook: 'AI Glossary',
       library: 'My Library',
+      blog: 'IT Blog',
       pageHome: 'Home',
       pageArticle: 'Article',
       pageTerm: 'Term',
@@ -71,12 +76,15 @@ function getCurrentPageLabel(pathname: string): string {
   if (pathname.startsWith('/library')) return copy.pageLibrary;
 
   const handbookRoot = `/${locale}/handbook/`;
-  const logRoot = `/${locale}/log/`;
+  const newsRoot = `/${locale}/news/`;
+  const blogRoot = `/${locale}/blog/`;
 
   if (pathname === handbookRoot || pathname === handbookRoot.slice(0, -1)) return copy.handbook;
   if (pathname.startsWith(handbookRoot)) return copy.pageTerm;
-  if (pathname === logRoot || pathname === logRoot.slice(0, -1)) return copy.aiNews;
-  if (pathname.startsWith(logRoot)) return copy.pageArticle;
+  if (pathname === newsRoot || pathname === newsRoot.slice(0, -1)) return copy.aiNews;
+  if (pathname.startsWith(newsRoot)) return copy.pageArticle;
+  if (pathname === blogRoot || pathname === blogRoot.slice(0, -1)) return copy.blog;
+  if (pathname.startsWith(blogRoot)) return copy.pageArticle;
 
   return copy.pageHome;
 }
@@ -85,19 +93,24 @@ const currentPageLabel = getCurrentPageLabel(currentPath);
 
 const navItems = [
   {
-    href: `/${locale}/log/`,
+    href: `/${locale}/news/`,
     label: copy.aiNews,
-    active: currentPath === `/${locale}/log/` || currentPath.startsWith(`/${locale}/log/`),
+    active: currentPath.startsWith(`/${locale}/news`),
   },
   {
     href: `/${locale}/handbook/`,
     label: copy.handbook,
-    active: currentPath === `/${locale}/handbook/` || currentPath.startsWith(`/${locale}/handbook/`),
+    active: currentPath.startsWith(`/${locale}/handbook`),
   },
   {
     href: '/library/',
     label: copy.library,
     active: currentPath.startsWith('/library'),
+  },
+  {
+    href: `/${locale}/blog/`,
+    label: copy.blog,
+    active: currentPath.startsWith(`/${locale}/blog`),
   },
 ];
 ---
@@ -203,8 +216,14 @@ const navItems = [
             )}
 
             {isAdmin && (
-              <a href="/admin/" class="user-dropdown-item">
-                {copy.admin}
+              <a href="/admin/" class="user-dropdown-item user-dropdown-item--has-icon">
+                <span>{copy.admin}</span>
+                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="7.5" cy="15.5" r="2.5"></circle>
+                  <path d="M10 15.5H20"></path>
+                  <path d="M17 12.5v6"></path>
+                  <path d="M14 13.5v4"></path>
+                </svg>
               </a>
             )}
 

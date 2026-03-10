@@ -32,9 +32,15 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 
 ## Naming & Navigation
 
-- Public product labels: `AI News`, `Handbook`, `Library`
-- Internal/admin labels: `Posts`, `Handbook`
-- Compatibility route: public AI News continues to live under `/{locale}/log/`
+- Public product labels: `AI News`, `IT Blog`, `Handbook`, `Library`
+- Internal/admin labels: `News`, `Blog`, `Handbook`
+- Routes:
+  - AI News: `/{locale}/news/` (news_posts 테이블, category='ai-news')
+  - IT Blog: `/{locale}/blog/` (blog_posts 테이블)
+  - Handbook: `/{locale}/handbook/`
+  - Legacy: `/{locale}/log/` → 301 → `/{locale}/news/`
+- Navigation order: AI News · AI Glossary · My Library · IT Blog
+- Footer Portfolio link: IT Blog 페이지에서만 표시
 - Web shell: `[Brand] [Primary Nav] [Utilities]`
 - Mobile/app shell: `[Brand/Page] [Profile or Settings]` + separate primary nav
 - Theme toggle (icon button) and language toggle live in the header utility area, left of profile

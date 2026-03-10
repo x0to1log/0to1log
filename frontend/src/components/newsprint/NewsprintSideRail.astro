@@ -11,14 +11,16 @@ interface Props {
   locale: 'en' | 'ko';
   posts: RailPost[];
   focusItems: string[];
+  basePath?: string;
 }
 
-const { locale, posts, focusItems } = Astro.props;
+const { locale, posts, focusItems, basePath } = Astro.props;
+const resolvedBasePath = basePath || `/${locale}/news`;
 const isKo = locale === 'ko';
 ---
 
 <section>
-  <h3 class="newsprint-section-title">{isKo ? '이 글의 중점' : 'Focus of This Article'}</h3>
+  <h3 class="newsprint-section-title">{isKo ? '이 글의 요약' : 'Summary of This Article'}</h3>
   {focusItems.length === 0 ? (
     <p class="newsprint-empty">{isKo ? '핵심 포인트를 준비 중입니다.' : 'Key points are on the way.'}</p>
   ) : (
@@ -31,13 +33,13 @@ const isKo = locale === 'ko';
 <div style="margin-top: 1.5rem;"></div>
 
 <section>
-  <h3 class="newsprint-section-title">{isKo ? '같은 호에서 더 읽기' : 'More in This Issue'}</h3>
+  <h3 class="newsprint-section-title">{isKo ? '비슷한 뉴스 더 보기' : 'More in This Issue'}</h3>
   {posts.length === 0 ? (
     <p class="newsprint-empty">{isKo ? '아직 연결된 글이 없습니다.' : 'No related items yet.'}</p>
   ) : (
     <div class="newsprint-stack">
       {posts.map((post) => (
-        <a class="newsprint-card" href={`/${locale}/log/${post.slug}/`}>
+        <a class="newsprint-card" href={`${resolvedBasePath}/${post.slug}/`}>
           <strong class="newsprint-rail-link">{post.title}</strong>
           {getCategoryLabel(locale, post.category) && (
             <span class="newsprint-category newsprint-rail-category">

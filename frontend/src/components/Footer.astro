@@ -1,14 +1,16 @@
 ---
 interface Props {
   locale?: 'en' | 'ko';
+  pathname?: string;
 }
 
-const { locale = 'en' } = Astro.props;
+const { locale = 'en', pathname = '' } = Astro.props;
 const year = new Date().getFullYear();
+const showPortfolio = pathname.includes('/blog/');
 
 const links = [
   { en: 'About', ko: 'About', href: '/about/', koHref: '/ko/about/' },
-  { en: 'Portfolio', ko: 'Portfolio', href: '/portfolio/' },
+  ...(showPortfolio ? [{ en: 'Portfolio', ko: 'Portfolio', href: '/portfolio/' }] : []),
   { en: 'RSS', ko: 'RSS', href: '/rss.xml' },
 ];
 ---

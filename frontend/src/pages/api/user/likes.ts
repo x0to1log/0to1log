@@ -27,11 +27,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
+  const contentType = url.searchParams.get('type') || 'news';
+  const likesTable = contentType === 'blog' ? 'blog_likes' : 'news_likes';
+
   const supabase = anonSupabase();
 
   // Count total likes
   const { count, error } = await supabase
-    .from('post_likes')
+    .from(likesTable)
     .select('id', { count: 'exact', head: true })
     .eq('post_id', postId);
 
@@ -46,7 +49,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   if (locals.user && locals.accessToken) {
     const authSb = authSupabase(locals.accessToken);
     const { data: existing } = await authSb
-      .from('post_likes')
+      .from(likesTable)
       .select('id')
       .eq('user_id', locals.user.id)
       .eq('post_id', postId)
@@ -68,7 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { post_id } = body;
+  const { post_id, type: contentType = 'news' } = body;
 
   if (!post_id) {
     return new Response(JSON.stringify({ error: 'Missing post_id' }), {
@@ -76,20 +79,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
+  const likesTable = contentType === 'blog' ? 'blog_likes' : 'news_likes';
+
   const supabase = authSupabase(locals.accessToken);
 
   // Check if already liked
   const { data: existing } = await supabase
-    .from('post_likes')
+    .from(likesTable)
     .select('id')
     .eq('user_id', locals.user.id)
     .eq('post_id', post_id)
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('post_likes').delete().eq('id', existing.id);
+    await supabase.from(likesTable).delete().eq('id', existing.id);
   } else {
-    const { error } = await supabase.from('post_likes').insert({
+    const { error } = await supabase.from(likesTable).insert({
       user_id: locals.user.id,
       post_id,
     });
@@ -103,7 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Return updated count
   const anon = anonSupabase();
   const { count } = await anon
-    .from('post_likes')
+    .from(likesTable)
     .select('id', { count: 'exact', head: true })
     .eq('post_id', post_id);
 

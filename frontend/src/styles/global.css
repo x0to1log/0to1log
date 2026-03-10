@@ -4230,7 +4230,44 @@ code, pre {
 }
 
 
-/* Handbook list */
+/* Sticky search bar (handbook list + detail) */
+.handbook-search-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 0.5rem 0;
+  margin: -0.5rem 0 1rem;
+  transition: top 300ms ease;
+}
+
+.handbook-search-sticky .handbook-search-input {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+  font-size: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky {
+  top: 3.5rem;
+}
+
+@media (max-width: 640px) {
+  .handbook-search-sticky .handbook-search-input {
+    min-height: 2.75rem;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Handbook search (shared between list & detail) */
+.handbook-detail-search {
+  /* margin handled by .handbook-search-sticky */
+}
+
 .handbook-search-input {
   width: 100%;
   padding: 0.75rem 3.15rem 0.75rem 1rem;

@@ -1,0 +1,301 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { normalizeCategorySlug, BLOG_CATEGORIES } from '../../../lib/categories';
+import { getArticleFocusItems } from '../../../lib/articleRail';
+import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../../../lib/markdown';
+import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
+import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+
+const { slug } = Astro.params;
+const pageSlug = slug ?? '';
+
+let post = null;
+let postError: string | null = null;
+
+if (supabase && slug) {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('*')
+    .eq('slug', pageSlug)
+    .eq('status', 'published')
+    .eq('locale', 'en')
+    .in('category', BLOG_CATEGORIES)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('[blog-detail-en] Supabase error:', error.message);
+    postError = error.message;
+  } else {
+    post = data;
+  }
+}
+
+if (!post && !postError) {
+  Astro.response.status = 404;
+}
+
+const masthead = 'IT Blog';
+const editionMap: Record<string, string> = {
+  study: 'Study Notes',
+  career: 'Career Notes',
+  project: 'Build Log',
+};
+const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || ''] || 'Deep Dive') : 'Deep Dive';
+
+let recentPosts: any[] = [];
+let focusItems: string[] = [];
+let articleData: any = undefined;
+let nextPost: { title: string; slug: string; category: string | null } | null = null;
+let pairedSlug: string | null = null;
+
+if (post) {
+  // "More in This Issue" — recent blog posts
+  if (supabase) {
+    recentPosts = (await supabase
+      .from('blog_posts')
+      .select('title, slug, category')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .in('category', BLOG_CATEGORIES)
+      .neq('slug', pageSlug)
+      .order('published_at', { ascending: false })
+      .limit(4)
+    ).data ?? [];
+  }
+
+  if (supabase && post.published_at) {
+    const { data: nextData } = await supabase
+      .from('blog_posts')
+      .select('title, slug, category')
+      .eq('status', 'published')
+      .eq('locale', 'en')
+      .in('category', BLOG_CATEGORIES)
+      .lt('published_at', post.published_at)
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .single();
+    nextPost = nextData;
+  }
+
+  focusItems = (post.focus_items && post.focus_items.length > 0)
+    ? post.focus_items
+    : getArticleFocusItems('en', post.category);
+
+  if (supabase && post.translation_group_id) {
+    const { data: paired } = await supabase
+      .from('blog_posts')
+      .select('slug')
+      .eq('translation_group_id', post.translation_group_id)
+      .eq('locale', 'ko')
+      .eq('status', 'published')
+      .single();
+    pairedSlug = paired?.slug ?? null;
+  }
+
+  articleData = post.published_at
+    ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
+    : undefined;
+}
+
+// User state + engagement counts
+let isBookmarked = false;
+let isLiked = false;
+let likeCount = 0;
+let commentCount = 0;
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+
+if (post && supabase) {
+  const { count: lc } = await supabase
+    .from('blog_likes')
+    .select('id', { count: 'exact', head: true })
+    .eq('post_id', post.id);
+  likeCount = lc ?? 0;
+
+  const { count: cc } = await supabase
+    .from('blog_comments')
+    .select('id', { count: 'exact', head: true })
+    .eq('post_id', post.id);
+  commentCount = cc ?? 0;
+}
+
+if (user && accessToken && post) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const { data: bm } = await authSb
+    .from('user_bookmarks')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('item_type', 'blog')
+    .eq('item_id', post.id)
+    .maybeSingle();
+  isBookmarked = !!bm;
+
+  const { data: lk } = await authSb
+    .from('blog_likes')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('post_id', post.id)
+    .maybeSingle();
+  isLiked = !!lk;
+}
+
+const pageTitle = post ? post.title : 'Not Found';
+
+// Load published handbook terms for inline popups
+let handbookTermsMap: TermsMap = new Map();
+let handbookTermsJson: Record<string, any> = {};
+
+if (post && supabase) {
+  const { data: hbTerms } = await supabase
+    .from('handbook_terms')
+    .select('term, slug, korean_name, difficulty, categories, definition_en, plain_explanation_en, technical_description_en, example_analogy_en')
+    .eq('status', 'published');
+
+  if (hbTerms && hbTerms.length > 0) {
+    for (const t of hbTerms) {
+      const entry = { slug: t.slug, term: t.term };
+      handbookTermsMap.set(t.term.toLowerCase(), entry);
+      if (t.korean_name) handbookTermsMap.set(t.korean_name.toLowerCase(), entry);
+      handbookTermsJson[t.slug] = {
+        term: t.term,
+        korean_name: t.korean_name || '',
+        difficulty: t.difficulty || '',
+        categories: t.categories || [],
+        definition: t.definition_en || '',
+        plain_explanation: t.plain_explanation_en || '',
+        technical_description: t.technical_description_en || '',
+        example_analogy: t.example_analogy_en || '',
+      };
+    }
+  }
+}
+
+const hasTerms = handbookTermsMap.size > 0;
+const renderMd = hasTerms
+  ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
+  : (md: string) => renderMarkdown(md);
+
+const rawContent = post ? (post.content_original || '') : '';
+const htmlContent = rawContent ? await renderMd(rawContent) : '';
+
+const altSlugValue = pairedSlug ? `/ko/blog/${pairedSlug}/` : undefined;
+---
+
+<MainLayout title={pageTitle} locale="en" slug={`blog/${slug}/`} altSlug={pairedSlug ?? undefined} article={articleData}>
+  <NewsprintShell
+    locale="en"
+    masthead={masthead}
+    editionLabel={editionLabel}
+    subkicker={['Study · Career · Projects', 'Personal Blog', 'Open Access']}
+  >
+    {postError ? (
+      <NewsprintNotice
+        variant="error"
+        message={t.en['blog.error']}
+        linkHref="/en/blog/"
+        linkLabel={t.en['blog.back']}
+      />
+    ) : !post ? (
+      <NewsprintNotice
+        variant="notfound"
+        message={t.en['post.notfound']}
+        linkHref="/en/blog/"
+        linkLabel={t.en['blog.back']}
+      />
+    ) : (
+      <NewsprintArticleLayout
+        locale="en"
+        slug={pageSlug}
+        showSlug={false}
+        title={post.title}
+        excerpt={post.excerpt}
+        category={post.category}
+        publishedAt={post.published_at}
+        readingTimeMin={post.reading_time_min}
+        tags={post.tags}
+        htmlContent={htmlContent}
+        backLabel={t.en['blog.back']}
+        nextPost={nextPost}
+        basePath="/en/blog"
+        isBookmarked={isBookmarked}
+        itemId={post.id}
+        itemType="blog"
+        isAdmin={!!Astro.locals.isAdmin}
+        likeCount={likeCount}
+        commentCount={commentCount}
+        isLiked={isLiked}
+      />
+    )}
+
+    <Fragment slot="rail">
+      <NewsprintSideRail locale="en" posts={recentPosts} focusItems={focusItems} basePath="/en/blog" />
+    </Fragment>
+  </NewsprintShell>
+</MainLayout>
+
+{hasTerms && (
+  <script type="application/json" id="handbook-terms-data" set:html={JSON.stringify(handbookTermsJson)} />
+)}
+
+<script>
+  import '../../../scripts/bookmark';
+  import '../../../scripts/likes';
+  import '../../../scripts/comments';
+  import '../../../scripts/handbook-popup';
+
+  function recordReadingHistory(): void {
+    const postId = document.querySelector('[data-item-id][data-item-type="blog"]')?.getAttribute('data-item-id');
+    if (!postId) return;
+    fetch('/api/user/reading-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_type: 'blog', item_id: postId }),
+    }).catch(() => {});
+  }
+
+  function initAdminActions(): void {
+    const actions = document.querySelector('.newsprint-admin-actions') as HTMLElement | null;
+    if (!actions) return;
+
+    const btn = actions.querySelector('.newsprint-admin-action-btn--unpublish');
+    btn?.addEventListener('click', async () => {
+      if (!confirm('Unpublish this item?')) return;
+
+      const id = actions.dataset.toolbarId;
+      const api = actions.dataset.toolbarApi;
+      if (!id || !api) return;
+
+      try {
+        const res = await fetch(api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: 'unpublish' }),
+        });
+
+        if (res.ok) {
+          const editLink = actions.querySelector('a') as HTMLAnchorElement | null;
+          window.location.href = editLink?.href || '/admin';
+        } else {
+          const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+          alert(`Unpublish failed: ${err.error || err.detail}`);
+        }
+      } catch {
+        alert('Unpublish failed: network error');
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', recordReadingHistory);
+  document.addEventListener('astro:page-load', initAdminActions);
+</script>

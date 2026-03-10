@@ -12,10 +12,11 @@ interface Props {
   locale: 'en' | 'ko';
   isBookmarked?: boolean;
   itemId?: string;
-  itemType?: 'post' | 'term';
+  itemType?: 'news' | 'blog' | 'term';
+  postType?: string | null;
 }
 
-const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale, isBookmarked = false, itemId, itemType } = Astro.props;
+const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale, isBookmarked = false, itemId, itemType, postType } = Astro.props;
 const dateLabel = publishedAt
   ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
   : null;
@@ -30,7 +31,7 @@ const catColor = getCategoryColorVar(category);
 const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
 ---
 
-<a href={href} class="newsprint-headline newsprint-card" data-category={normalizedCategory || 'uncategorized'}>
+<a href={href} class="newsprint-headline newsprint-card" data-category={normalizedCategory || 'uncategorized'} data-post-type={postType || undefined}>
   <div class="newsprint-headline-kicker">
     <span>{kickerLabel}</span>
     {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}

@@ -21,7 +21,7 @@ function initComments(): void {
   // Load comments
   async function loadComments() {
     try {
-      const res = await fetch(`/api/user/comments?post_id=${postId}`);
+      const res = await fetch(`/api/user/comments?post_id=${postId}&type=${section.dataset.contentType || 'news'}`);
       if (!res.ok) return;
       const comments = await res.json();
       renderComments(comments);
@@ -77,7 +77,7 @@ function initComments(): void {
         if (!commentId) return;
 
         try {
-          const res = await fetch(`/api/user/comments?id=${commentId}`, { method: 'DELETE' });
+          const res = await fetch(`/api/user/comments?id=${commentId}&type=${section.dataset.contentType || 'news'}`, { method: 'DELETE' });
           if (res.ok) {
             const el = list?.querySelector(`[data-comment-id="${commentId}"]`);
             if (el) el.remove();
@@ -143,7 +143,7 @@ function initComments(): void {
         const res = await fetch('/api/user/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ post_id: postId, body }),
+          body: JSON.stringify({ post_id: postId, body, type: section.dataset.contentType || 'news' }),
         });
 
         if (res.status === 401) {

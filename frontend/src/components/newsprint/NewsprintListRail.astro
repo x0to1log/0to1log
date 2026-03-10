@@ -18,9 +18,11 @@ interface Props {
   posts: RailPost[];
   editorialNote?: string;
   startHereSections?: StarterSection[];
+  basePath?: string;
 }
 
-const { locale, posts, editorialNote: editorialNoteProp, startHereSections: startHereProp } = Astro.props;
+const { locale, posts, editorialNote: editorialNoteProp, startHereSections: startHereProp, basePath } = Astro.props;
+const resolvedBasePath = basePath || `/${locale}/news`;
 const isKo = locale === 'ko';
 
 const editorialNote = editorialNoteProp || (isKo
@@ -58,7 +60,7 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
   ) : (
     <div class="newsprint-stack">
       {posts.map((post) => (
-        <a class="newsprint-card" href={`/${locale}/log/${post.slug}/`}>
+        <a class="newsprint-card" href={`${resolvedBasePath}/${post.slug}/`}>
           <strong class="newsprint-rail-link">{post.title}</strong>
           {getCategoryLabel(locale, post.category) && (
             <span class="newsprint-category newsprint-rail-category">
@@ -77,7 +79,7 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
   <h3 class="newsprint-section-title">{isKo ? '처음 읽는 분께' : 'Start Here'}</h3>
   <div class="newsprint-stack">
     {starterSections.map((section) => (
-      <a class="newsprint-card" href={`/${locale}/log/?category=${section.slug}`}>
+      <a class="newsprint-card" href={`${resolvedBasePath}/?category=${section.slug}`}>
         <strong class="newsprint-rail-link">{section.label}</strong>
         <p class="newsprint-rail-copy">{section.description}</p>
       </a>

@@ -16,7 +16,8 @@ interface Props {
   nextPost?: { title: string; slug: string; category?: string | null } | null;
   isBookmarked?: boolean;
   itemId?: string;
-  itemType?: 'post' | 'term';
+  itemType?: 'news' | 'blog' | 'term';
+  basePath?: string;
   isAdmin?: boolean;
   likeCount?: number;
   commentCount?: number;
@@ -41,6 +42,7 @@ const {
   isBookmarked = false,
   itemId,
   itemType,
+  basePath,
   isAdmin = false,
   likeCount = 0,
   commentCount = 0,
@@ -69,7 +71,8 @@ const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost
 const editHref = itemType === 'term' ? `/admin/handbook/edit/${slug}` : `/admin/edit/${slug}`;
 const unpublishApi = itemType === 'term' ? '/api/admin/handbook/status' : '/api/admin/posts/status';
 
-const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/${locale}/log/${slug}/`;
+const resolvedBasePath = basePath || `/${locale}/news`;
+const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}${resolvedBasePath}/${slug}/`;
 
 const copy = {
   comments: locale === 'ko' ? '댓글' : 'Comments',
@@ -130,6 +133,7 @@ const copy = {
         class={`newsprint-engage-btn ${isLiked ? 'newsprint-engage-btn--active' : ''}`}
         data-like-btn
         data-post-id={itemId}
+        data-content-type={itemType === 'blog' ? 'blog' : 'news'}
         data-liked={isLiked ? 'true' : 'false'}
         aria-label={locale === 'ko' ? '좋아요' : 'Like'}
       >
@@ -208,7 +212,7 @@ const copy = {
   )}
 
   <!-- Comments Section -->
-  <section id="comments" class="newsprint-comments" data-post-id={itemId} data-locale={locale} data-login-url={`/login?redirectTo=/${locale}/log/${slug}/`}>
+  <section id="comments" class="newsprint-comments" data-post-id={itemId} data-content-type={itemType === 'blog' ? 'blog' : 'news'} data-locale={locale} data-login-url={`/login?redirectTo=${resolvedBasePath}/${slug}/`}>
     <h3 class="newsprint-comments-title">{copy.comments} (<span data-comment-total>{commentCount}</span>)</h3>
     <div data-comments-list class="newsprint-comments-list"></div>
     <div data-comment-form-wrapper>
@@ -225,7 +229,7 @@ const copy = {
           <button type="submit" class="newsprint-comment-submit">{copy.postComment}</button>
         </div>
       </form>
-      <a data-comment-login href={`/login?redirectTo=/${locale}/log/${slug}/`} class="newsprint-comment-login" style="display:none;">
+      <a data-comment-login href={`/login?redirectTo=${resolvedBasePath}/${slug}/`} class="newsprint-comment-login" style="display:none;">
         {copy.loginToComment}
       </a>
     </div>
@@ -233,12 +237,12 @@ const copy = {
 
   <nav class="newsprint-article-nav" aria-label={locale === 'ko' ? '글 탐색' : 'Article navigation'}>
     <div class="newsprint-article-nav-row">
-      <a class="newsprint-nav-back" href={`/${locale}/log/`}>
+      <a class="newsprint-nav-back" href={`${resolvedBasePath}/`}>
         <span class="newsprint-nav-back-arrow">&larr;</span>
         <span>{backLabel}</span>
       </a>
       {nextPost && (
-        <a class="newsprint-nav-next" href={`/${locale}/log/${nextPost.slug}/`}>
+        <a class="newsprint-nav-next" href={`${resolvedBasePath}/${nextPost.slug}/`}>
           <span class="newsprint-nav-next-arrow">&rarr;</span>
           <div class="newsprint-nav-next-title">{nextPost.title}</div>
           {nextCategoryLabel && (

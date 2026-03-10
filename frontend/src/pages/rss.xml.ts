@@ -11,7 +11,7 @@ export async function GET(context: APIContext) {
 
   if (supabase) {
     const { data } = await supabase
-      .from('posts')
+      .from('news_posts')
       .select('title, slug, excerpt, category, published_at')
       .eq('status', 'published')
       .eq('locale', 'en')
@@ -27,7 +27,7 @@ export async function GET(context: APIContext) {
     site: siteUrl,
     items: posts.map((post) => ({
       title: post.title,
-      link: `/en/log/${post.slug}/`,
+      link: `/en/news/${post.slug}/`,
       description: post.excerpt || '',
       pubDate: new Date(post.published_at),
       categories: post.category ? [post.category] : [],

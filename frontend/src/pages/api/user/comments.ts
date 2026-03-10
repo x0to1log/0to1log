@@ -27,10 +27,13 @@ export const GET: APIRoute = async ({ url }) => {
     });
   }
 
+  const contentType = url.searchParams.get('type') || 'news';
+  const commentsTable = contentType === 'blog' ? 'blog_comments' : 'news_comments';
+
   const supabase = anonSupabase();
 
   const { data, error } = await supabase
-    .from('post_comments')
+    .from(commentsTable)
     .select('id, user_id, body, created_at')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
@@ -78,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const payload = await request.json();
-  const { post_id, body } = payload;
+  const { post_id, body, type: contentType = 'news' } = payload;
 
   if (!post_id || !body || typeof body !== 'string') {
     return new Response(JSON.stringify({ error: 'Missing post_id or body' }), {
@@ -93,10 +96,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
+  const commentsTable = contentType === 'blog' ? 'blog_comments' : 'news_comments';
   const supabase = authSupabase(locals.accessToken);
 
   const { data, error } = await supabase
-    .from('post_comments')
+    .from(commentsTable)
     .insert({
       user_id: locals.user.id,
       post_id,
@@ -131,9 +135,12 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
     });
   }
 
+  const contentType = url.searchParams.get('type') || 'news';
+  const commentsTable = contentType === 'blog' ? 'blog_comments' : 'news_comments';
+
   const supabase = authSupabase(locals.accessToken);
   const { error } = await supabase
-    .from('post_comments')
+    .from(commentsTable)
     .delete()
     .eq('id', id)
     .eq('user_id', locals.user.id);

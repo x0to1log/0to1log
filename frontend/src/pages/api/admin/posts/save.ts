@@ -68,7 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (id) {
     // Update existing
     const { data, error } = await supabase
-      .from('posts')
+      .from('news_posts')
       .update(row)
       .eq('id', id)
       .select()
@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Insert new
   row.status = 'draft';
   const { data, error } = await supabase
-    .from('posts')
+    .from('news_posts')
     .insert(row)
     .select()
     .single();

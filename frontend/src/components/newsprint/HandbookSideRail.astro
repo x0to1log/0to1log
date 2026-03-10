@@ -78,7 +78,7 @@ const difficultyLabel: Record<string, string> = {
       <h3 class="newsprint-section-title">{isKo ? '관련 글' : 'Related Articles'}</h3>
       <div class="newsprint-stack">
         {relatedArticles.map((article) => (
-          <a class="newsprint-card" href={`/${locale}/log/${article.slug}/`}>
+          <a class="newsprint-card" href={`/${locale}/news/${article.slug}/`}>
             <strong class="newsprint-rail-link">{article.title}</strong>
           </a>
         ))}

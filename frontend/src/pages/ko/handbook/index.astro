@@ -81,7 +81,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
     subkicker={hbSubkicker}
     volumeLabel={sc.volume_issue || undefined}
   >
-    <div id="handbook-controls" class="handbook-controls">
+    <div class="handbook-search-sticky">
       <input
         type="text"
         id="handbook-search"
@@ -90,6 +90,8 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         data-placeholder-hints={JSON.stringify([t[locale]['handbook.search'], 'RAG', 'MCP', '임베딩'])}
         class="handbook-search-input"
       />
+    </div>
+    <div id="handbook-controls" class="handbook-controls">
       <div id="handbook-filters" class="handbook-filter-row">
         <button type="button" class="handbook-filter-btn active" data-filter="all" aria-pressed="true">
           {t[locale]['handbook.allCategories']}
@@ -272,8 +274,10 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
       });
     });
 
-    // Read ?category= query param and auto-activate filter
-    const urlCategory = new URLSearchParams(window.location.search).get('category');
+    // Read URL query params and auto-activate filters
+    const params = new URLSearchParams(window.location.search);
+
+    const urlCategory = params.get('category');
     if (urlCategory) {
       activeCategory = urlCategory;
       filterBtns.forEach((b) => {
@@ -282,6 +286,14 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         el.classList.toggle('active', isMatch);
         el.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
       });
+    }
+
+    const urlQuery = params.get('q');
+    if (urlQuery) {
+      search.value = urlQuery;
+    }
+
+    if (urlCategory || urlQuery) {
       filter();
     }
   }

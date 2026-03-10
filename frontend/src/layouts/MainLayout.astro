@@ -99,6 +99,6 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
       <slot />
     </main>
 
-    {!isAdmin && <Footer locale={locale} />}
+    {!isAdmin && <Footer locale={locale} pathname={Astro.url.pathname} />}
   </body>
 </html>

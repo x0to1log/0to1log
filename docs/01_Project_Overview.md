@@ -60,6 +60,7 @@
 | **관리자 에디터** | 마크다운 편집 + AI 제안 패널 + 페르소나별 탭 전환 리뷰 |
 | **Pink Theme 디자인 시스템** | Dark/Light 적응형 테마, Neon Pink 액센트, 반응형 레이아웃 |
 | **SEO 기반 설계** | JSON-LD 구조화 데이터, 사이트맵 자동 생성, 메타 태그 최적화 |
+| **IT Blog** | 학습/프로젝트/커리어 포스팅을 AI 뉴스와 분리 운영. `blog_posts` 테이블로 독립 관리 |
 | **데이터 분석 도구** | GA4 + MS Clarity 설치 — 유저 행동 패턴 수집 시작 |
 
 ### 🥈 Tier 2 — 고도화 (Phase 3)
@@ -119,13 +120,27 @@
 
 ## 6. 콘텐츠 카테고리
 
+### AI NEWS (`/{locale}/news/` · `news_posts` 테이블)
+
+AI 파이프라인을 통해 자동/반자동 발행되는 뉴스 콘텐츠. `post_type`으로 Research/Business 구분.
+
 | 카테고리 | AI 워크플로우 | 설명 |
 |---|---|---|
 | **AI NEWS (Research)** | 단일 버전 (자동 발행) | 기술 심화 분석 — 모델, 논문, 오픈소스 중심. 뉴스 없는 날은 "없음" 공지 + 최근 동향 보충 |
 | **AI NEWS (Business)** | 3페르소나 (수동 검수) | 시장 분석 — 3페르소나 버전 + Related News 3카테고리 (Big Tech / Industry / New Tools) |
-| **서재 (Study)** | Type A (Multi-Targeting) | PyTorch, SQL 등 원리 설명, 코드 공유 |
+
+### IT Blog (`/{locale}/blog/` · `blog_posts` 테이블)
+
+수동 작성 포스팅. AI 뉴스와 독립 관리. Admin에서 별도 섹션(Blog)으로 관리.
+
+| 카테고리 | AI 워크플로우 | 설명 |
+|---|---|---|
+| **학습 (Study)** | Type A (Multi-Targeting) | PyTorch, SQL 등 원리 설명, 코드 공유 |
 | **커리어 (Career)** | Type B (Authentic Voice) | 성장 서사, 동기부여 — 작성자 목소리 유지 |
 | **프로젝트 (Project)** | Type B (Authentic Voice) | 아키텍처 설계, 트러블슈팅 — 작성자 목소리 유지 |
+
+> **DB 분리 운영:** AI News는 `news_posts` 테이블, IT Blog는 `blog_posts` 테이블로 분리. 워크플로우가 다르므로(파이프라인 자동 vs 수동 작성) 테이블을 분리하여 각각의 스키마를 최적화. 좋아요/댓글도 `news_likes`/`news_comments` + `blog_likes`/`blog_comments`로 각각 분리. 북마크/읽기기록은 polymorphic `item_type` (`'news'`/`'blog'`/`'term'`)로 통합 관리.
+> Admin 사이드바: Dashboard · News · Blog · Handbook · Settings
 
 > 콘텐츠 전략 상세(훅 포인트, 프롬프트 가이드, 포인트 시스템)는 → `02_Content_Strategy.md` 참조
 
@@ -135,13 +150,21 @@
 
 ```
 0to1log.com
-├── /           → EN Home (x-default, 기본 진입)
-├── /en/log     → EN 글 리스트
-├── /en/log/[slug] → EN 포스트 상세
-├── /ko/log     → KO 글 리스트
-├── /ko/log/[slug] → KO 포스트 상세
-├── /portfolio  → 프로젝트 쇼케이스
-├── /admin      → 콘텐츠 관리 대시보드 (Supabase Auth)
+├── /                → EN Home (x-default, 기본 진입)
+├── /en/news/        → EN AI 뉴스 리스트 (news_posts 테이블)
+├── /en/news/[slug]  → EN AI 뉴스 상세
+├── /en/blog/        → EN IT 블로그 리스트 (blog_posts 테이블)
+├── /en/blog/[slug]  → EN IT 블로그 상세
+├── /en/handbook/    → EN AI 용어집 (handbook_terms 테이블)
+├── /ko/news/        → KO AI 뉴스 리스트
+├── /ko/news/[slug]  → KO AI 뉴스 상세
+├── /ko/blog/        → KO IT 블로그 리스트
+├── /ko/blog/[slug]  → KO IT 블로그 상세
+├── /ko/handbook/    → KO AI 용어집
+├── /library/        → 나의 서재
+├── /portfolio/      → 프로젝트 쇼케이스
+├── /admin/          → 관리자 대시보드 (News · Blog · Handbook)
+├── /en/log/ → 301  → /en/news/ (하위 호환 리다이렉트)
 └── 언어 스위처/프로필 드롭다운 → ko/en 전환, 페르소나 설정, 테마 전환
 ```
 
@@ -155,7 +178,7 @@
 블로그 기본 골격 + 인증 + DB 연동 + 그로스 기반 설계
 
 - Astro + Tailwind + Motion One 기반 디자인 시스템
-- 핵심 앱 구조 (Home / AI News(`/log`) / Handbook / Library / Admin, with Portfolio as secondary showcase)
+- 핵심 앱 구조 (Home / AI News(`/news`) / IT Blog(`/blog`) / Handbook / Library / Admin, with Portfolio as secondary showcase)
 - Supabase 스키마 설계 및 CRUD
 - Supabase Auth (Admin 이메일 + 사용자 소셜 로그인)
 - 기본 마크다운 에디터

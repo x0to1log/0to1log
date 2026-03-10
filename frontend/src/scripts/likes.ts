@@ -11,7 +11,7 @@ function initLikes(): void {
       const res = await fetch('/api/user/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ post_id: postId }),
+        body: JSON.stringify({ post_id: postId, type: btn.dataset.contentType || 'news' }),
       });
 
       if (res.status === 401) {

@@ -189,7 +189,7 @@ def _save_post(client, row: dict, batch_id: str, post_type: str, locale: str) ->
     which supabase-py's upsert(on_conflict=...) cannot handle.
     """
     existing = (
-        client.table("posts")
+        client.table("news_posts")
         .select("id")
         .eq("pipeline_batch_id", batch_id)
         .eq("post_type", post_type)
@@ -201,10 +201,10 @@ def _save_post(client, row: dict, batch_id: str, post_type: str, locale: str) ->
 
     if existing and existing.data:
         post_id = existing.data["id"]
-        client.table("posts").update(row).eq("id", post_id).execute()
+        client.table("news_posts").update(row).eq("id", post_id).execute()
         logger.info("%s/%s post updated: id=%s slug=%s", post_type, locale, post_id, row["slug"])
     else:
-        result = client.table("posts").insert(row).execute()
+        result = client.table("news_posts").insert(row).execute()
         post_id = result.data[0]["id"]
         logger.info("%s/%s post inserted: id=%s slug=%s", post_type, locale, post_id, row["slug"])
 

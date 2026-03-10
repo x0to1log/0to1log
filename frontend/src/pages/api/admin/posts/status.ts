@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // For publish, validate required fields
   if (action === 'publish') {
     const { data: post } = await supabase
-      .from('posts')
+      .from('news_posts')
       .select('title, slug')
       .eq('id', id)
       .single();
@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const { data, error } = await supabase
-    .from('posts')
+    .from('news_posts')
     .update(update)
     .eq('id', id)
     .select('id, status')

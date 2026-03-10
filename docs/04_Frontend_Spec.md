@@ -1045,14 +1045,14 @@ export const supabase = createClient(
 ```typescript
 // 글 목록 조회 (SSG 시 빌드 타임)
 const { data: posts } = await supabase
-  .from('posts')
+  .from('news_posts')
   .select('id, title, slug, category, post_type, one_liner, news_temperature, tags, reading_time_min, published_at')
   .eq('status', 'published')
   .order('published_at', { ascending: false });
 
 // 글 상세 조회
 const { data: post } = await supabase
-  .from('posts')
+  .from('news_posts')
   .select('*')
   .eq('slug', slug)
   .eq('status', 'published')

@@ -49,7 +49,7 @@ const htmlContent = bodyMarkdown ? await renderMarkdown(bodyMarkdown) : '';
 let relatedArticles: any[] = [];
 if (supabase && term) {
   const { data: articles } = await supabase
-    .from('posts')
+    .from('news_posts')
     .select('title, slug, category, published_at')
     .eq('status', 'published')
     .contains('tags', [term.term.toLowerCase()])
@@ -113,6 +113,16 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   slug={`handbook/${pageSlug}/`}
 >
   <NewsprintShell locale={locale} masthead="AI 용어집" editionLabel="CS · AI · Infra" subkicker={['용어 사전', '레퍼런스', '학습']}>
+    <form class="handbook-detail-search handbook-search-sticky" action={`/${locale}/handbook/`} method="get">
+      <input
+        type="text"
+        name="q"
+        aria-label={t[locale]['handbook.search']}
+        placeholder={t[locale]['handbook.search']}
+        class="handbook-search-input"
+      />
+    </form>
+
     {termError ? (
       <NewsprintNotice
         variant="error"

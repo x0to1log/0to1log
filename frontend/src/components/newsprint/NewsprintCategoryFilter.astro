@@ -1,32 +1,54 @@
 ---
 import { getCategoryColorVar, getCategoryLabel, getDefaultCategories, normalizeCategorySlug } from '../../lib/categories';
 
+interface FilterItem {
+  value: string;
+  label: string;
+  colorVar?: string;
+}
+
 interface Props {
   locale: 'en' | 'ko';
   categories?: string[];
+  items?: FilterItem[];
+  filterKey?: string;
 }
 
-const { locale, categories = getDefaultCategories() } = Astro.props;
+const { locale, categories = getDefaultCategories(), items, filterKey = 'category' } = Astro.props;
 const isKo = locale === 'ko';
-const tabs = [
-  'all',
-  ...Array.from(
-    new Set(categories.map((category) => normalizeCategorySlug(category)).filter(Boolean) as string[]),
-  ),
-];
+
+const tabs: FilterItem[] = items
+  ? items
+  : Array.from(
+      new Set(categories.map((c) => normalizeCategorySlug(c)).filter(Boolean) as string[]),
+    ).map((slug) => ({
+      value: slug,
+      label: getCategoryLabel(locale, slug) || slug,
+      colorVar: getCategoryColorVar(slug),
+    }));
 ---
 
-<nav class="newsprint-filter-tabs" role="tablist" aria-label={isKo ? '카테고리 필터' : 'Category filter'}>
-  {tabs.map((cat) => (
+<nav class="newsprint-filter-tabs" role="tablist" aria-label={isKo ? '카테고리 필터' : 'Category filter'} data-filter-key={filterKey}>
+  <button
+    class="newsprint-filter-tab"
+    role="tab"
+    data-filter="all"
+    aria-selected="true"
+    tabindex="0"
+    style="--tab-cat-color: var(--color-accent);"
+  >
+    {isKo ? '전체' : 'All'}
+  </button>
+  {tabs.map((tab) => (
     <button
       class="newsprint-filter-tab"
       role="tab"
-      data-filter={cat}
-      aria-selected={cat === 'all' ? 'true' : 'false'}
-      tabindex={cat === 'all' ? '0' : '-1'}
-      style={`--tab-cat-color: ${cat === 'all' ? 'var(--color-accent)' : getCategoryColorVar(cat)};`}
+      data-filter={tab.value}
+      aria-selected="false"
+      tabindex="-1"
+      style={`--tab-cat-color: ${tab.colorVar || 'var(--color-accent)'};`}
     >
-      {cat === 'all' ? (locale === 'ko' ? '전체' : 'All') : getCategoryLabel(locale, cat)}
+      {tab.label}
     </button>
   ))}
 </nav>
@@ -39,33 +61,37 @@ const tabs = [
     const tabs = Array.from(nav.querySelectorAll<HTMLButtonElement>('.newsprint-filter-tab'));
     if (tabs.length === 0) return;
 
+    const filterKey = nav.dataset.filterKey || 'category';
     const params = new URLSearchParams(window.location.search);
-    const rawCategory = params.get('category');
-    const initialCat = rawCategory === 'tech' ? 'study' : (rawCategory || 'all');
+    const rawFilter = params.get(filterKey);
+    const initialCat = filterKey === 'category' && rawFilter === 'tech' ? 'study' : (rawFilter || 'all');
 
-    function activate(category: string, focusTab = false): void {
+    function activate(value: string, focusTab = false): void {
       tabs.forEach((tab) => {
-        const isActive = tab.dataset.filter === category;
+        const isActive = tab.dataset.filter === value;
         tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
         tab.setAttribute('tabindex', isActive ? '0' : '-1');
         if (isActive && focusTab) tab.focus();
       });
 
+      const dataAttr = filterKey === 'category' ? 'category' : 'postType';
       document.querySelectorAll<HTMLElement>('.newsprint-card[data-category]').forEach((card) => {
-        const visible = category === 'all' || card.dataset.category === category;
+        const cardValue = card.dataset[dataAttr];
+        const visible = value === 'all' || cardValue === value;
         card.setAttribute('data-filtered', visible ? 'true' : 'false');
       });
 
       document.querySelectorAll<HTMLElement>('.newsprint-featured').forEach((section) => {
-        const visible = category === 'all' || section.dataset.category === category;
+        const sectionValue = section.dataset[dataAttr];
+        const visible = value === 'all' || sectionValue === value;
         section.setAttribute('data-filtered', visible ? 'true' : 'false');
       });
 
       const url = new URL(window.location.href);
-      if (category === 'all') {
-        url.searchParams.delete('category');
+      if (value === 'all') {
+        url.searchParams.delete(filterKey);
       } else {
-        url.searchParams.set('category', category);
+        url.searchParams.set(filterKey, value);
       }
       history.replaceState(null, '', url.toString());
     }

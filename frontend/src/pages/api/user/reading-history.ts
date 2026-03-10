@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     .eq('user_id', locals.user.id)
     .order('read_at', { ascending: false });
 
-  if (type === 'post' || type === 'term') {
+  if (type === 'news' || type === 'blog' || type === 'term') {
     query = query.eq('item_type', type);
   }
 
@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = await request.json();
   const { item_type, item_id } = body;
 
-  if (!item_type || !item_id || !['post', 'term'].includes(item_type)) {
+  if (!item_type || !item_id || !['news', 'blog', 'term'].includes(item_type)) {
     return new Response(JSON.stringify({ error: 'Invalid item_type or item_id' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });

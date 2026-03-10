@@ -56,7 +56,7 @@ const copy = locale === 'ko'
       title: '나의 서재',
       tabSaved: '저장한 글',
       tabRead: '읽은 글',
-      tabProgress: '학습 현황',
+      tabProgress: '나의 학습 현황',
       emptyRead: siteContent.library_empty_read || '아직 읽은 글이 없어요\n흥미로운 글을 찾아 읽어보세요',
       emptySaved: siteContent.library_empty_saved || '아직 저장한 글이 없어요\n관심 가는 글에서 🔖 버튼을 눌러보세요\n이곳에 차곡차곡 쌓여갈 거예요',
       subArticles: '뉴스',
@@ -82,7 +82,7 @@ const copy = locale === 'ko'
       title: 'My Library',
       tabSaved: 'Saved',
       tabRead: 'Read',
-      tabProgress: 'Progress',
+      tabProgress: 'My Progress',
       emptyRead: siteContent.library_empty_read || 'No reading history yet\nExplore articles and start reading',
       emptySaved: siteContent.library_empty_saved || 'Your shelf is empty\nTap 🔖 on articles you\'d like to keep\nThey\'ll be waiting for you here',
       subArticles: 'Articles',
@@ -116,7 +116,7 @@ const [historyRes, bookmarksRes, progressRes, likesRes] = await Promise.all([
   authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
   authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
   authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
-  authSb.from('post_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+  authSb.from('news_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
 ]);
 
 const historyItems = historyRes.data ?? [];
@@ -128,7 +128,7 @@ const likedItems = likesRes.data ?? [];
 const postIds = new Set<string>();
 const termIds = new Set<string>();
 [...historyItems, ...bookmarkItems].forEach((item) => {
-  if (item.item_type === 'post') postIds.add(item.item_id);
+  if (item.item_type === 'news') postIds.add(item.item_id);
   if (item.item_type === 'term') termIds.add(item.item_id);
 });
 likedItems.forEach((item) => postIds.add(item.post_id));
@@ -140,7 +140,7 @@ const postMap = new Map<string, any>();
 const termMap = new Map<string, any>();
 
 if (supabase && postIds.size > 0) {
-  const { data } = await supabase.from('posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds]);
+  const { data } = await supabase.from('news_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds]);
   (data ?? []).forEach((p: any) => postMap.set(p.id, p));
 }
 if (supabase && termIds.size > 0) {
@@ -163,7 +163,7 @@ const totalLearned = progressItems.filter((p) => p.status === 'learned').length;
 const totalRead = progressItems.length;
 
 // Split bookmarks by type for sub-tabs
-const articleBookmarks = bookmarkItems.filter((i) => i.item_type === 'post');
+const articleBookmarks = bookmarkItems.filter((i) => i.item_type === 'news');
 const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
 
 // Lookup sets for dual icons
@@ -209,7 +209,7 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
                 {articleBookmarks.map((item) => {
                   const post = postMap.get(item.item_id);
                   const title = post?.title || 'Unknown';
-                  const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : '#';
+                  const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : '#';
                   const isLiked = likedPostIds.has(item.item_id);
                   return (
                     <div class="library-item">
@@ -223,7 +223,7 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                               </svg>
                             </button>
-                            <button type="button" class="library-action-btn library-action-btn--active" data-toggle-bookmark data-item-id={item.item_id} data-item-type="post" data-active="true" aria-label="Bookmark">
+                            <button type="button" class="library-action-btn library-action-btn--active" data-toggle-bookmark data-item-id={item.item_id} data-item-type="news" data-active="true" aria-label="Bookmark">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
                                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                               </svg>
@@ -303,24 +303,24 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
       ) : (
         <div class="library-shelf">
           {historyItems.map((item) => {
-            const post = item.item_type === 'post' ? postMap.get(item.item_id) : null;
+            const post = item.item_type === 'news' ? postMap.get(item.item_id) : null;
             const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
             const title = post?.title || term?.term || 'Unknown';
-            const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : term ? `/${locale}/handbook/${term.slug}/` : '#';
-            const isLiked = item.item_type === 'post' && likedPostIds.has(item.item_id);
+            const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : term ? `/${locale}/handbook/${term.slug}/` : '#';
+            const isLiked = item.item_type === 'news' && likedPostIds.has(item.item_id);
             const isBm = bookmarkedItemIds.has(`${item.item_type}:${item.item_id}`);
-            const color = item.item_type === 'post' ? spineColor(post?.category) : difficultyColor(term?.difficulty);
+            const color = item.item_type === 'news' ? spineColor(post?.category) : difficultyColor(term?.difficulty);
             return (
               <div class="library-item">
                 <div class="library-item-spine" style={`background: ${color};`}></div>
                 <div class="library-item-content">
                   <div class="library-item-row">
                     <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
-                      <span class="library-type-badge">{item.item_type === 'post' ? copy.badgeArticle : copy.badgeTerm}</span>
+                      <span class="library-type-badge">{item.item_type === 'news' ? copy.badgeArticle : copy.badgeTerm}</span>
                       <a href={href} class="library-item-title">{title}</a>
                     </div>
                     <div class="library-item-actions">
-                      {item.item_type === 'post' && (
+                      {item.item_type === 'news' && (
                         <button type="button" class={`library-action-btn ${isLiked ? 'library-action-btn--active' : 'library-action-btn--muted'}`} data-toggle-like data-post-id={item.item_id} data-active={isLiked ? 'true' : 'false'} aria-label="Like">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -527,5 +527,3 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
 
   document.addEventListener('astro:page-load', initLibrary);
 </script>
-
-

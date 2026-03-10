@@ -31,7 +31,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
 
   const { error } = await supabase
-    .from('posts')
+    .from('news_posts')
     .delete()
     .eq('id', id);
 

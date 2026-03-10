@@ -34,6 +34,18 @@ export function getCategoryColorVar(category?: string | null): string {
   return CATEGORY_COLOR_VARS[normalized as CategorySlug] ?? 'var(--color-border)';
 }
 
+export const BLOG_CATEGORIES: CategorySlug[] = ['study', 'career', 'project'];
+export const NEWS_CATEGORY: CategorySlug = 'ai-news';
+
+const POST_TYPE_LABELS: Record<string, Record<Locale, string>> = {
+  research: { en: 'Research', ko: '리서치' },
+  business: { en: 'Business', ko: '비즈니스' },
+};
+
+export function getPostTypeLabel(locale: Locale, postType: string): string {
+  return POST_TYPE_LABELS[postType]?.[locale] ?? postType;
+}
+
 export function getDefaultCategories(): CategorySlug[] {
   return ['ai-news', 'study', 'project', 'career'];
 }
