@@ -4853,7 +4853,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 
 /* ── Section Headers (mono, uppercase) ── */
 .blog-section-header {
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -4938,7 +4938,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-mono-tag {
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.68rem;
   padding: 0.15rem 0.45rem;
 }
@@ -5003,14 +5003,14 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-list-item-date {
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.78rem;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .blog-list-item-category {
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -5067,7 +5067,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-toc-header {
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -5135,7 +5135,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.78rem;
   color: var(--color-text-muted);
 }
@@ -5155,7 +5155,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   padding: 0.2rem 0.5rem;
-  font-family: var(--font-code);
+  font-family: var(--font-blog-ui);
   font-size: 0.7rem;
   color: var(--color-text-muted);
   cursor: pointer;
