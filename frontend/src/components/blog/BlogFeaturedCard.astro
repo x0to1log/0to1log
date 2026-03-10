@@ -1,0 +1,49 @@
+---
+import { getCategoryLabel, getCategoryColorVar } from '../../lib/categories';
+
+interface Props {
+  href: string;
+  title: string;
+  excerpt?: string | null;
+  category?: string | null;
+  tags?: string[] | null;
+  locale: 'en' | 'ko';
+}
+
+const { href, title, excerpt, category, tags, locale } = Astro.props;
+
+const catLabel = getCategoryLabel(locale, category);
+const catColor = getCategoryColorVar(category);
+---
+
+<a href={href} class="blog-featured-card">
+  <div class="blog-featured-card-top">
+    <div>
+      {catLabel && (
+        <span
+          class="blog-mono-tag"
+          style={`background: color-mix(in srgb, ${catColor} 15%, transparent); color: ${catColor}; margin-bottom: 0.25rem; display: inline-block;`}
+        >
+          {catLabel}
+        </span>
+      )}
+      <h3 class="blog-featured-card-title">{title}</h3>
+    </div>
+    <svg class="blog-featured-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M7 17L17 7M17 7H7M17 7v10" />
+    </svg>
+  </div>
+  {excerpt && <p class="blog-featured-card-excerpt">{excerpt}</p>}
+  {tags && tags.length > 0 && (
+    <div class="blog-featured-card-tags">
+      {tags.map(tag => (
+        <span
+          class="blog-mono-tag"
+          style={`background: color-mix(in srgb, ${catColor} 15%, transparent); color: ${catColor}`}
+        >
+          #{tag}
+        </span>
+      ))}
+    </div>
+  )}
+</a>
