@@ -6,12 +6,11 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCategorySlug, BLOG_CATEGORIES } from '../../../lib/categories';
-import { getArticleFocusItems } from '../../../lib/articleRail';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../../../lib/markdown';
-import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
-import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
-import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import BlogShell from '../../../components/blog/BlogShell.astro';
+import BlogArticleLayout from '../../../components/blog/BlogArticleLayout.astro';
+import BlogTOC from '../../../components/blog/BlogTOC.astro';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
@@ -50,7 +49,6 @@ const editionMap: Record<string, string> = {
 const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || ''] || 'Deep Dive') : 'Deep Dive';
 
 let recentPosts: any[] = [];
-let focusItems: string[] = [];
 let articleData: any = undefined;
 let nextPost: { title: string; slug: string; category: string | null } | null = null;
 let pairedSlug: string | null = null;
@@ -83,10 +81,6 @@ if (post) {
       .single();
     nextPost = nextData;
   }
-
-  focusItems = (post.focus_items && post.focus_items.length > 0)
-    ? post.focus_items
-    : getArticleFocusItems('en', post.category);
 
   if (supabase && post.translation_group_id) {
     const { data: paired } = await supabase
@@ -190,15 +184,21 @@ const rawContent = post ? (post.content || '') : '';
 const htmlContent = rawContent ? await renderMd(rawContent) : '';
 
 const altSlugValue = pairedSlug ? `/ko/blog/${pairedSlug}/` : undefined;
+
+const sidebarPosts = recentPosts.map(p => ({ title: p.title, slug: p.slug, category: p.category }));
 ---
 
 <MainLayout title={pageTitle} locale="en" slug={`blog/${slug}/`} altSlug={pairedSlug ?? undefined} article={articleData}>
-  <NewsprintShell
-    locale="en"
-    masthead={masthead}
-    editionLabel={editionLabel}
-    subkicker={['Study · Career · Projects', 'Personal Blog', 'Open Access']}
-  >
+  <BlogShell locale="en" sidebarPosts={sidebarPosts} currentSlug={pageSlug} totalCount={sidebarPosts.length} showTOC={!!post}>
+    <!-- Mobile toggle -->
+    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <button class="blog-mobile-toggle" data-sidebar-toggle aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 5h14M3 10h14M3 15h14" />
+        </svg>
+      </button>
+    </div>
+
     {postError ? (
       <NewsprintNotice
         variant="error"
@@ -214,10 +214,9 @@ const altSlugValue = pairedSlug ? `/ko/blog/${pairedSlug}/` : undefined;
         linkLabel={t.en['blog.back']}
       />
     ) : (
-      <NewsprintArticleLayout
+      <BlogArticleLayout
         locale="en"
         slug={pageSlug}
-        showSlug={false}
         title={post.title}
         excerpt={post.excerpt}
         category={post.category}
@@ -238,10 +237,10 @@ const altSlugValue = pairedSlug ? `/ko/blog/${pairedSlug}/` : undefined;
       />
     )}
 
-    <Fragment slot="rail">
-      <NewsprintSideRail locale="en" posts={recentPosts} focusItems={focusItems} basePath="/en/blog" />
+    <Fragment slot="toc">
+      <BlogTOC locale="en" />
     </Fragment>
-  </NewsprintShell>
+  </BlogShell>
 </MainLayout>
 
 {hasTerms && (
@@ -296,6 +295,19 @@ const altSlugValue = pairedSlug ? `/ko/blog/${pairedSlug}/` : undefined;
     });
   }
 
+  function initBlogMobileToggle() {
+    const toggleBtn = document.querySelector('[data-sidebar-toggle]');
+    const sidebar = document.querySelector('.blog-sidebar');
+    const overlay = document.querySelector('[data-sidebar-overlay]');
+    if (!toggleBtn || !sidebar) return;
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.add('blog-sidebar--open');
+      overlay?.classList.add('blog-sidebar-overlay--open');
+    });
+  }
+
   document.addEventListener('astro:page-load', recordReadingHistory);
   document.addEventListener('astro:page-load', initAdminActions);
+  document.addEventListener('DOMContentLoaded', initBlogMobileToggle);
+  initBlogMobileToggle();
 </script>
