@@ -23,6 +23,10 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 - `--font-body`: Georgia + Times New Roman + serif
 - `--font-ui`: Georgia + Times New Roman + serif
 - `--font-code`: JetBrains Mono
+- `--font-blog-heading`: IBM Plex Sans + IBM Plex Sans KR (Blog 전용)
+- `--font-blog-body`: IBM Plex Sans + IBM Plex Sans KR (Blog 전용)
+- `--font-blog-ui`: IBM Plex Sans + IBM Plex Sans KR (Blog 전용)
+- Blog 섹션(`/blog/`)은 IBM Plex Sans를 사용. Google Fonts로 조건부 로딩 (Head.astro에서 isBlogPage 체크)
 
 ## i18n
 
