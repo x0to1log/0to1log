@@ -1,0 +1,30 @@
+---
+import BlogSidebar from './BlogSidebar.astro';
+
+interface SidebarPost {
+  title: string;
+  slug: string;
+  category: string;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  sidebarPosts: SidebarPost[];
+  currentSlug?: string;
+  totalCount: number;
+  showTOC?: boolean;
+}
+
+const { locale, sidebarPosts, currentSlug, totalCount, showTOC } = Astro.props;
+---
+
+<div class="blog-shell">
+  <BlogSidebar locale={locale} posts={sidebarPosts} currentSlug={currentSlug} totalCount={totalCount} />
+  <div class="blog-sidebar-overlay" data-sidebar-overlay></div>
+  <div class="blog-main">
+    <div class="blog-main-inner">
+      <slot />
+    </div>
+  </div>
+  {showTOC && <slot name="toc" />}
+</div>
