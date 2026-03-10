@@ -6,10 +6,9 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { BLOG_CATEGORIES } from '../../../lib/categories';
-import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
-import NewsprintHeadline from '../../../components/newsprint/NewsprintHeadline.astro';
-import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
-import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
+import BlogShell from '../../../components/blog/BlogShell.astro';
+import BlogFeaturedCard from '../../../components/blog/BlogFeaturedCard.astro';
+import BlogListItem from '../../../components/blog/BlogListItem.astro';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 
@@ -52,80 +51,101 @@ if (user && accessToken) {
   (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
 }
 
-const headline = posts[0] ?? null;
-const rest = headline ? posts.slice(1) : [];
-const railPosts = posts.slice(0, 4);
+const featuredPosts = posts.slice(0, 3);
+const remainingPosts = posts.slice(3);
+const sidebarPosts = posts.map(p => ({ title: p.title, slug: p.slug, category: p.category }));
 ---
 
 <MainLayout title={t.ko['blog.title']} locale="ko" slug="blog/">
-  <NewsprintShell
-    locale="ko"
-    masthead="IT 블로그"
-    editionLabel="빌더의 기록"
-    subkicker={['학습 · 커리어 · 프로젝트', '개인 블로그', '공개 열람']}
-  >
+  <BlogShell locale="ko" sidebarPosts={sidebarPosts} totalCount={posts.length}>
+    <!-- Mobile toggle button -->
+    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+      <button class="blog-mobile-toggle" data-sidebar-toggle aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 5h14M3 10h14M3 15h14" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Masthead -->
+    <div class="blog-masthead-section">
+      <div class="blog-masthead-kicker">
+        <span>학습 · 커리어 · 프로젝트</span>
+      </div>
+      <h1 class="blog-masthead-title">IT 블로그</h1>
+      <div class="blog-masthead-subkicker">
+        <span>빌더의 기록</span>
+        <span>개인 블로그</span>
+        <span>공개 열람</span>
+      </div>
+    </div>
+
+    <!-- Category filter tabs -->
     <NewsprintCategoryFilter locale="ko" categories={BLOG_CATEGORIES} />
 
     {fetchError ? (
-      <NewsprintNotice
-        variant="error"
-        message={t.ko['blog.error']}
-        linkHref="/ko/blog/"
-        linkLabel={t.ko['error.retry']}
-      />
+      <NewsprintNotice variant="error" message={t.ko['blog.error']} linkHref="/ko/blog/" linkLabel={t.ko['error.retry']} />
     ) : posts.length > 0 ? (
       <>
-        {headline && (
-          <NewsprintHeadline
-            href={`/ko/blog/${headline.slug}/`}
-            title={headline.title}
-            excerpt={headline.excerpt}
-            category={headline.category}
-            publishedAt={headline.published_at}
-            readingTimeMin={headline.reading_time_min}
-            tags={headline.tags}
-            locale="ko"
-            isBookmarked={bookmarkedPostIds.has(headline.id)}
-            itemId={headline.id}
-            itemType="blog"
-          />
+        <!-- FEATURED section -->
+        {featuredPosts.length > 0 && (
+          <>
+            <h2 class="blog-section-header">{t.ko['blog.featured']}</h2>
+            <div class="blog-featured-grid">
+              {featuredPosts.map(post => (
+                <BlogFeaturedCard
+                  href={`/ko/blog/${post.slug}/`}
+                  title={post.title}
+                  excerpt={post.excerpt}
+                  category={post.category}
+                  tags={post.tags}
+                  locale="ko"
+                />
+              ))}
+            </div>
+          </>
         )}
 
-        {rest.length > 0 && (
-          <section class="newsprint-grid-cards">
-            {rest.map((post) => (
-              <NewsprintListCard
-                href={`/ko/blog/${post.slug}/`}
-                title={post.title}
-                excerpt={post.excerpt}
-                category={post.category}
-                publishedAt={post.published_at}
-                readingTimeMin={post.reading_time_min}
-                tags={post.tags}
-                locale="ko"
-                isRead={readPostIds.has(post.id)}
-                isBookmarked={bookmarkedPostIds.has(post.id)}
-                itemId={post.id}
-                itemType="blog"
-              />
-            ))}
-          </section>
+        <!-- ALL POSTS section -->
+        {remainingPosts.length > 0 && (
+          <>
+            <h2 class="blog-section-header">{t.ko['blog.allPosts']}</h2>
+            <div class="blog-list-section">
+              {remainingPosts.map(post => (
+                <BlogListItem
+                  href={`/ko/blog/${post.slug}/`}
+                  title={post.title}
+                  category={post.category}
+                  publishedAt={post.published_at}
+                  locale="ko"
+                  isRead={readPostIds.has(post.id)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </>
     ) : (
       <NewsprintNotice variant="empty" message={t.ko['blog.empty']} />
     )}
-
-    <Fragment slot="rail">
-      <NewsprintListRail
-        locale="ko"
-        posts={railPosts}
-        basePath="/ko/blog"
-      />
-    </Fragment>
-  </NewsprintShell>
+  </BlogShell>
 </MainLayout>
 
 <script>
   import '../../../scripts/bookmark';
+
+  // Mobile sidebar toggle
+  function initBlogMobileToggle() {
+    const toggleBtn = document.querySelector('[data-sidebar-toggle]');
+    const sidebar = document.querySelector('.blog-sidebar');
+    const overlay = document.querySelector('[data-sidebar-overlay]');
+    if (!toggleBtn || !sidebar) return;
+
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.add('blog-sidebar--open');
+      overlay?.classList.add('blog-sidebar-overlay--open');
+    });
+  }
+  document.addEventListener('DOMContentLoaded', initBlogMobileToggle);
+  initBlogMobileToggle();
 </script>
