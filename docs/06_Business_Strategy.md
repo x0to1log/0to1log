@@ -101,7 +101,7 @@ Phase 1~2          Phase 2 후반         Phase 3~4            Phase 5
 
 | 계층 | 접근 범위 | 대상 |
 |---|---|---|
-| **무료** | Research 포스트 전체 + Business 포스트 (비전공자/학습자 버전) | 모든 방문자 |
+| **무료** | Research 포스트 전체 + Business 포스트 (입문자/학습자 버전) | 모든 방문자 |
 | **프리미엄** | Business 포스트 Expert 버전 + 심층 분석 + 아카이브 검색 | 구독자 |
 
 **전제 조건:**
@@ -285,7 +285,7 @@ GEO(Generative Engine Optimization)는 기존 SEO를 넘어, AI 검색 엔진(Go
 |---|---|---|
 | **Highlight to Share** | 인상적인 문장을 드래그 → SNS 공유 카드 자동 생성 | Phase 3 |
 | **AI 뉴스 요약 카드** | Dynamic OG Image + 핵심 요약을 카드 형태로 공유 가능 | Phase 3 |
-| **페르소나 비교 공유** | "이 뉴스를 비전공자/현직자는 이렇게 봤다" 비교 카드 | Phase 3 |
+| **페르소나 비교 공유** | "이 뉴스를 입문자/현직자는 이렇게 봤다" 비교 카드 | Phase 3 |
 
 **설계 원칙:**
 

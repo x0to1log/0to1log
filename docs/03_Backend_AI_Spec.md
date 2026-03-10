@@ -247,7 +247,7 @@ CREATE TABLE news_posts (
     status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
     
     -- 페르소나별 콘텐츠 (Business Analyst 포스트용)
-    content_beginner    TEXT,          -- 비전공자 버전 (MDX)
+    content_beginner    TEXT,          -- 입문자 버전 (MDX)
     content_learner     TEXT,          -- 학습자 버전 (MDX)
     content_expert      TEXT,          -- 현직자 버전 (MDX)
     
@@ -489,7 +489,7 @@ class BusinessPost(BaseModel):
     """Business Analyst 포스트 검증 스키마"""
     title: str
     slug: str
-    content_beginner: str                     # 비전공자 버전
+    content_beginner: str                     # 입문자 버전
     content_learner: str                      # 학습자 버전
     content_expert: str                       # 현직자 버전
     guide_items: PromptGuideItems
@@ -614,12 +614,12 @@ Respond in JSON format only.
 
 ## 당신의 원칙
 - 기술적 세부사항보다 "그래서 누가 돈을 벌고, 누가 위험해지는가"에 집중합니다
-- 비전공자도 이해할 수 있는 비유를 반드시 포함합니다
+- 입문자도 이해할 수 있는 비유를 반드시 포함합니다
 - 투자, 파트너십, 규제 등 비즈니스 맥락을 놓치지 않습니다
 
 ## 메인 포스트 — 3페르소나 버전
 
-### 비전공자 버전 (content_beginner)
+### 입문자 버전 (content_beginner)
 - 모든 전문 용어를 일상적 비유로 대체
 - 배경지식 없이 이해 가능한 스토리텔링 형식
 - "왜 이게 중요한데?"에 대한 답이 명확해야 함
@@ -637,7 +637,7 @@ Respond in JSON format only.
 
 ## 5블록 항목 (guide_items — 프롬프트 가이드 v1.3)
 
-1. [The One-Liner]: 초등학생도 이해할 수 있는 핵심 한 문장 — 디폴트: 비전공자
+1. [The One-Liner]: 초등학생도 이해할 수 있는 핵심 한 문장 — 디폴트: 입문자
 2. [Action Item]: Dev와 PM 각각이 당장 할 수 있는 것 — 디폴트: 학습자
 3. [Critical Gotcha]: 화려한 수치 뒤 한계점 리얼리티 체크 — 디폴트: 현직자
 4. [회전 항목]: market_context / analogy / source_check 중 이 뉴스에 가장 적합한 1개 선택
@@ -691,7 +691,7 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 
 ## 검수 기준
 1. **기술적 정확도 (1~10):** 사실 오류, 수치 오류, 개념 혼동 여부
-2. **가독성 (1~10):** 페르소나별 톤 적절성, 문장 자연스러움. 특히 비전공자/학습자/현직자 버전이 형식과 깊이에서 확실히 구분되는지 확인
+2. **가독성 (1~10):** 페르소나별 톤 적절성, 문장 자연스러움. 특히 입문자/학습자/현직자 버전이 형식과 깊이에서 확실히 구분되는지 확인
 3. **SEO 적합성 (1~10):** 제목, 태그, 슬러그의 검색 최적화 수준
 4. **톤앤매너 일관성 (1~10):** 0to1log 브랜드 톤과의 일치도
 
@@ -701,7 +701,7 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 - 어느 항목이든 3점 미만 → "major_rewrite"
 
 ## 특별 검수 항목
-- 비전공자 버전에 전문 용어가 비유 없이 사용되었는지
+- 입문자 버전에 전문 용어가 비유 없이 사용되었는지
 - 현직자 버전에 구체적 수치/비용 정보가 포함되어 있는지
 - Related News에 "없음" 표기가 적절한지 (실제로 없는 건지 확인)
 
@@ -1282,7 +1282,7 @@ class TestBusinessPostSchema:
     
     @pytest.mark.asyncio
     async def test_persona_versions_are_different(self):
-        """비전공자/학습자/현직자 버전이 동일하면 경고"""
+        """입문자/학습자/현직자 버전이 동일하면 경고"""
         post = await generate_business_post(
             candidate=sample_business_candidate(),
             source_content="sample source content",

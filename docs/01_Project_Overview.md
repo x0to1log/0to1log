@@ -55,7 +55,7 @@
 | 기능 | 한 줄 설명 |
 |---|---|
 | **Daily Dual News** | 매일 2개 AI NEWS 발행: Research(기술 심화, 자동) + Business(시장 분석, 수동 검수) |
-| **Persona-Based RAG-Refine** | Business 포스트를 비전공자/학습자/현직자 3가지 버전으로 자동 재가공 |
+| **Persona-Based RAG-Refine** | Business 포스트를 입문자/학습자/현직자 3가지 버전으로 자동 재가공 |
 | **멀티 에이전트 시스템** | Ranking → Research/Business → Editorial 4단계 AI 파이프라인 |
 | **관리자 에디터** | 마크다운 편집 + AI 제안 패널 + 페르소나별 탭 전환 리뷰 |
 | **Pink Theme 디자인 시스템** | Dark/Light 적응형 테마, Neon Pink 액센트, 반응형 레이아웃 |
