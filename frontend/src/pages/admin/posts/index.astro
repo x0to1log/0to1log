@@ -154,10 +154,21 @@ const categoryOptions = Array.from(
                   </div>
                   <div class="admin-list-meta">
                     <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
-                    {post.locale && <span>{post.locale.toUpperCase()}</span>}
-                    {post.category && <span>{post.category}</span>}
-                    <span>Updated {new Date(post.updated_at).toLocaleDateString('en-US')}</span>
-                    {post.published_at && <span>Published {new Date(post.published_at).toLocaleDateString('en-US')}</span>}
+                    {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
+                    {post.category && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span>{post.category}</span>
+                      </>
+                    )}
+                    <span class="admin-meta-sep">·</span>
+                    <span class="admin-meta-date">Updated {new Date(post.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                    {post.published_at && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span class="admin-meta-date">Published {new Date(post.published_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div class="admin-list-actions">

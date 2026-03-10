@@ -37,7 +37,8 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 - Compatibility route: public AI News continues to live under `/{locale}/log/`
 - Web shell: `[Brand] [Primary Nav] [Utilities]`
 - Mobile/app shell: `[Brand/Page] [Profile or Settings]` + separate primary nav
-- Language/theme controls belong in the utility drawer, not inline in the public header
+- Theme toggle (icon button) and language toggle live in the header utility area, left of profile
+- Profile dropdown contains: Library, Settings, Admin, Sign Out — no theme control
 
 ## 보안
 

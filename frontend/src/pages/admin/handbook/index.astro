@@ -18,7 +18,7 @@ let fetchError: string | null = null;
 
 const { data: terms, error } = await supabase
   .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, difficulty, definition_ko, definition_en, updated_at, published_at')
+  .select('id, term, slug, korean_name, status, categories, difficulty, definition_ko, definition_en, updated_at, published_at, source')
   .order('updated_at', { ascending: false });
 
 if (error) {
@@ -66,6 +66,12 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
             </div>
           </div>
           <div class="admin-list-toolbar-right">
+            <select id="admin-source-filter" class="admin-select">
+              <option value="">All sources</option>
+              <option value="manual">Manual</option>
+              <option value="pipeline">Pipeline</option>
+              <option value="ai-suggested">AI Suggested</option>
+            </select>
             <input
               type="search"
               class="admin-input admin-search-input"
@@ -115,6 +121,7 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
                 data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
                 data-difficulty={term.difficulty || ''}
                 data-categories={(term.categories || []).join(',')}
+                data-source={term.source || 'manual'}
               >
                 <div class="admin-list-info">
                   <div class="admin-list-title">
@@ -123,13 +130,31 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
                   </div>
                   <div class="admin-list-meta">
                     <span class={`admin-status-badge admin-status-badge--${term.status}`}>{term.status}</span>
-                    {(term.categories || []).length > 0 && (
-                      <span>{(term.categories || []).map((category: string) => getHandbookCategoryLabel('en', category)).join(' · ')}</span>
+                    <span class={`admin-lang-badge ${term.definition_ko ? 'admin-lang-badge--ready' : 'admin-lang-badge--missing'}`}>
+                      KO {term.definition_ko ? '✓' : '✗'}
+                    </span>
+                    <span class={`admin-lang-badge ${term.definition_en ? 'admin-lang-badge--ready' : 'admin-lang-badge--missing'}`}>
+                      EN {term.definition_en ? '✓' : '✗'}
+                    </span>
+                    {term.source && term.source !== 'manual' && (
+                      <span class={`admin-source-badge admin-source-badge--${term.source}`}>
+                        {term.source === 'pipeline' ? 'Pipeline' : 'AI'}
+                      </span>
                     )}
-                    {term.difficulty && <span>{term.difficulty}</span>}
-                    <span>{term.definition_ko ? 'KO ready' : 'KO missing'}</span>
-                    <span>{term.definition_en ? 'EN ready' : 'EN missing'}</span>
-                    <span>Updated {new Date(term.updated_at).toLocaleDateString('en-US')}</span>
+                    {(term.categories || []).length > 0 && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span>{(term.categories || []).map((category: string) => getHandbookCategoryLabel('en', category)).join(' · ')}</span>
+                      </>
+                    )}
+                    {term.difficulty && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span>{term.difficulty}</span>
+                      </>
+                    )}
+                    <span class="admin-meta-sep">·</span>
+                    <span class="admin-meta-date">Updated {new Date(term.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
                   </div>
                 </div>
                 <div class="admin-list-actions">
@@ -245,6 +270,7 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
     const searchInput = document.getElementById('admin-search');
     const difficultyFilter = document.getElementById('admin-difficulty-filter');
     const categoryFilter = document.getElementById('admin-category-filter');
+    const sourceFilter = document.getElementById('admin-source-filter');
     const noResults = document.getElementById('admin-no-results');
     const filtersToggle = document.getElementById('filters-toggle');
     const filtersPanel = document.getElementById('filters-panel');
@@ -259,6 +285,7 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
       const query = (searchInput?.value || '').toLowerCase().trim();
       const difficulty = difficultyFilter?.value || '';
       const category = categoryFilter?.value || '';
+      const source = sourceFilter?.value || '';
       let visibleCount = 0;
 
       Array.from(list.querySelectorAll('.admin-list-item')).forEach((item) => {
@@ -266,7 +293,8 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
         const matchesQuery = !query || (item.dataset.title || '').includes(query);
         const matchesDifficulty = !difficulty || item.dataset.difficulty === difficulty;
         const matchesCategory = !category || (item.dataset.categories || '').split(',').includes(category);
-        const visible = matchesStatus && matchesQuery && matchesDifficulty && matchesCategory;
+        const matchesSource = !source || (item.dataset.source || 'manual') === source;
+        const visible = matchesStatus && matchesQuery && matchesDifficulty && matchesCategory && matchesSource;
         item.style.display = visible ? '' : 'none';
         if (visible) visibleCount += 1;
       });
@@ -286,6 +314,7 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
     searchInput?.addEventListener('input', applyFilter);
     difficultyFilter?.addEventListener('change', applyFilter);
     categoryFilter?.addEventListener('change', applyFilter);
+    sourceFilter?.addEventListener('change', applyFilter);
 
     document.querySelectorAll('[data-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {

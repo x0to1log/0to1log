@@ -382,6 +382,7 @@ async def _extract_and_create_terms(
             "example_analogy_en": content.get("example_analogy_en", ""),
             "body_markdown_ko": content.get("body_markdown_ko", ""),
             "body_markdown_en": content.get("body_markdown_en", ""),
+            "source": "pipeline",
         }
 
         try:

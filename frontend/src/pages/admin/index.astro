@@ -16,6 +16,33 @@ let totalPosts = 0;
 let publishedPosts = 0;
 let totalTerms = 0;
 let totalDrafts = 0;
+let totalUsers = 0;
+let totalLikes = 0;
+let termsBySource = { manual: 0, pipeline: 0, 'ai-suggested': 0 };
+let aiSuggestedTerms: ActivityItem[] = [];
+
+type PipelineRun = {
+  id: string;
+  run_key: string;
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  last_error: string | null;
+};
+let lastRun: PipelineRun | null = null;
+let pipelineCost = 0;
+let pipelineTokens = 0;
+let candidatesTotal = 0;
+let candidatesSelected = 0;
+
+type Notification = {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  created_at: string;
+};
+let notifications: Notification[] = [];
 
 type ActivityItem = {
   title: string;
@@ -23,15 +50,20 @@ type ActivityItem = {
   type: 'post' | 'term';
   status: string;
   updated_at: string;
+  source?: string;
 };
 
 let recentActivity: ActivityItem[] = [];
 let staleDrafts: ActivityItem[] = [];
 
 try {
-  const [postsRes, termsRes] = await Promise.all([
+  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes] = await Promise.all([
     sb.from('posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }),
-    sb.from('handbook_terms').select('term, slug, status, updated_at').order('updated_at', { ascending: false }),
+    sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
+    sb.from('profiles').select('id', { count: 'exact', head: true }),
+    sb.from('post_likes').select('id', { count: 'exact', head: true }),
+    sb.from('pipeline_runs').select('*').order('started_at', { ascending: false }).limit(1),
+    sb.from('admin_notifications').select('id, type, title, message, created_at').eq('is_read', false).order('created_at', { ascending: false }).limit(5),
   ]);
 
   const posts = postsRes.data ?? [];
@@ -45,15 +77,48 @@ try {
   const termDrafts = terms.filter((t) => t.status === 'draft').length;
   totalDrafts = postDrafts + termDrafts;
 
+  terms.forEach((t) => {
+    const src = (t.source || 'manual') as keyof typeof termsBySource;
+    if (src in termsBySource) termsBySource[src] += 1;
+    else termsBySource.manual += 1;
+  });
+
+  aiSuggestedTerms = terms
+    .filter((t) => t.source === 'ai-suggested' && t.status === 'draft')
+    .slice(0, 5)
+    .map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at, source: t.source }));
+
   const allItems: ActivityItem[] = [
     ...posts.map((p) => ({ title: p.title, slug: p.slug, type: 'post' as const, status: p.status, updated_at: p.updated_at })),
-    ...terms.map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at })),
+    ...terms.map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at, source: t.source })),
   ];
   allItems.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   recentActivity = allItems.slice(0, 8);
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   staleDrafts = allItems.filter((item) => item.status === 'draft' && item.updated_at < sevenDaysAgo).slice(0, 5);
+
+  totalUsers = profilesRes.count ?? 0;
+  totalLikes = likesRes.count ?? 0;
+
+  // Pipeline
+  const runData = pipelineRes.data?.[0] ?? null;
+  if (runData) {
+    lastRun = runData as PipelineRun;
+    const [logsRes, candidatesRes] = await Promise.all([
+      sb.from('pipeline_logs').select('cost_usd, tokens_used').eq('run_id', lastRun.id),
+      sb.from('news_candidates').select('status').eq('batch_id', lastRun.run_key),
+    ]);
+    const logs = logsRes.data ?? [];
+    pipelineCost = logs.reduce((sum: number, l: any) => sum + (parseFloat(l.cost_usd) || 0), 0);
+    pipelineTokens = logs.reduce((sum: number, l: any) => sum + (l.tokens_used || 0), 0);
+    const cands = candidatesRes.data ?? [];
+    candidatesTotal = cands.length;
+    candidatesSelected = cands.filter((c: any) => c.status === 'selected' || c.status === 'published').length;
+  }
+
+  // Notifications
+  notifications = (notifsRes.data ?? []) as Notification[];
 } catch {}
 
 function relativeTime(dateStr: string): string {
@@ -108,7 +173,114 @@ function relativeTime(dateStr: string): string {
           <div class="dashboard-stat-label">Drafts</div>
           <div class="dashboard-stat-value">{totalDrafts}</div>
         </div>
+        <div class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Users</div>
+          <div class="dashboard-stat-value">{totalUsers}</div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Likes</div>
+          <div class="dashboard-stat-value">{totalLikes}</div>
+        </div>
       </div>
+
+      {(termsBySource.pipeline > 0 || termsBySource['ai-suggested'] > 0) && (
+        <section class="dashboard-section">
+          <h2 class="dashboard-section-title">Handbook Sources</h2>
+          <div class="dashboard-source-row">
+            <a href="/admin/handbook/" class="dashboard-source-chip">
+              <span class="dashboard-source-label">Manual</span>
+              <span class="dashboard-source-count">{termsBySource.manual}</span>
+            </a>
+            <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--pipeline">
+              <span class="dashboard-source-label">Pipeline</span>
+              <span class="dashboard-source-count">{termsBySource.pipeline}</span>
+            </a>
+            <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--ai">
+              <span class="dashboard-source-label">AI Suggested</span>
+              <span class="dashboard-source-count">{termsBySource['ai-suggested']}</span>
+            </a>
+          </div>
+        </section>
+      )}
+
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Pipeline Status</h2>
+        {lastRun ? (
+          <div class={`dashboard-pipeline dashboard-pipeline--${lastRun.status}`}>
+            <div class="dashboard-pipeline-header">
+              <span class="dashboard-pipeline-status">
+                {lastRun.status === 'success' ? '✓' : lastRun.status === 'failed' ? '✗' : '●'} {lastRun.status}
+              </span>
+              <span class="dashboard-pipeline-time">{relativeTime(lastRun.started_at)}</span>
+            </div>
+            <div class="dashboard-pipeline-details">
+              {lastRun.finished_at && (
+                <span>Duration: {Math.round((new Date(lastRun.finished_at).getTime() - new Date(lastRun.started_at).getTime()) / 1000)}s</span>
+              )}
+              {candidatesTotal > 0 && (
+                <span>Candidates: {candidatesTotal} collected → {candidatesSelected} selected</span>
+              )}
+              {pipelineCost > 0 && (
+                <span>Cost: ${pipelineCost.toFixed(2)} · {pipelineTokens.toLocaleString()} tokens</span>
+              )}
+            </div>
+            {lastRun.status === 'failed' && lastRun.last_error && (
+              <div class="dashboard-pipeline-error">{lastRun.last_error}</div>
+            )}
+            <div class="dashboard-pipeline-actions">
+              <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+            </div>
+          </div>
+        ) : (
+          <div class="dashboard-pipeline dashboard-pipeline--none">
+            <p class="dashboard-empty">No pipeline runs yet.</p>
+            <div class="dashboard-pipeline-actions">
+              <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {aiSuggestedTerms.length > 0 && (
+        <section class="dashboard-section">
+          <h2 class="dashboard-section-title">AI-Suggested Drafts</h2>
+          <p class="dashboard-section-hint">Terms created via AI advisor, awaiting review.</p>
+          <ul class="dashboard-activity-list">
+            {aiSuggestedTerms.map((item) => (
+              <li class="dashboard-activity-item">
+                <a href={`/admin/handbook/edit/${item.slug}`} class="dashboard-activity-link">
+                  <span class="dashboard-activity-type">Term</span>
+                  <span class="dashboard-activity-title">{item.title}</span>
+                  <span class="admin-source-badge admin-source-badge--ai-suggested">AI</span>
+                  <span class="dashboard-activity-time">{relativeTime(item.updated_at)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {notifications.length > 0 && (
+        <section class="dashboard-section">
+          <div class="dashboard-section-header">
+            <h2 class="dashboard-section-title">Notifications</h2>
+            <button type="button" class="admin-btn-text" id="mark-all-read-btn">Mark all read</button>
+          </div>
+          <ul class="dashboard-activity-list">
+            {notifications.map((n) => (
+              <li class="dashboard-activity-item">
+                <div class="dashboard-notification">
+                  <span class="dashboard-notification-icon">
+                    {n.type === 'error' ? '⚠' : n.type === 'pipeline' ? '⚙' : '🔔'}
+                  </span>
+                  <span class="dashboard-notification-title">{n.title}</span>
+                  <span class="dashboard-activity-time">{relativeTime(n.created_at)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section class="dashboard-section">
         <h2 class="dashboard-section-title">Recent Activity</h2>
@@ -125,6 +297,11 @@ function relativeTime(dateStr: string): string {
                   <span class="dashboard-activity-type">{item.type === 'post' ? 'Post' : 'Term'}</span>
                   <span class="dashboard-activity-title">{item.title}</span>
                   <span class={`admin-status-badge admin-status-badge--${item.status}`}>{item.status}</span>
+                  {item.source && item.source !== 'manual' && (
+                    <span class={`admin-source-badge admin-source-badge--${item.source}`}>
+                      {item.source === 'pipeline' ? 'Pipeline' : 'AI'}
+                    </span>
+                  )}
                   <span class="dashboard-activity-time">{relativeTime(item.updated_at)}</span>
                 </a>
               </li>
@@ -166,7 +343,7 @@ function relativeTime(dateStr: string): string {
 
   .dashboard-stats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
@@ -272,9 +449,155 @@ function relativeTime(dateStr: string): string {
     white-space: nowrap;
   }
 
+  .dashboard-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-section-header .dashboard-section-title {
+    margin-bottom: 0;
+  }
+
+  .admin-btn-text {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    text-decoration: underline;
+    font-family: inherit;
+  }
+
+  .admin-btn-text:hover {
+    color: var(--color-text);
+  }
+
+  .dashboard-pipeline {
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    padding: 1rem;
+  }
+
+  .dashboard-pipeline--success {
+    border-left-color: var(--color-success);
+  }
+
+  .dashboard-pipeline--failed {
+    border-left-color: var(--color-error, #c44);
+  }
+
+  .dashboard-pipeline--running {
+    border-left-color: var(--color-accent, #e90);
+  }
+
+  .dashboard-pipeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-pipeline-status {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: capitalize;
+  }
+
+  .dashboard-pipeline-time {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+  }
+
+  .dashboard-pipeline-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .dashboard-pipeline-error {
+    font-size: 0.8rem;
+    color: var(--color-error, #c44);
+    background: var(--color-bg);
+    padding: 0.5rem;
+    border: 1px solid var(--color-error, #c44);
+    margin-bottom: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .dashboard-pipeline-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .dashboard-notification {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.25rem;
+  }
+
+  .dashboard-notification-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .dashboard-notification-title {
+    flex: 1;
+    font-size: 0.9rem;
+  }
+
+  .dashboard-source-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-source-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    text-decoration: none;
+    color: inherit;
+    font-size: 0.85rem;
+    transition: border-color 0.15s;
+  }
+
+  .dashboard-source-chip:hover {
+    border-color: var(--color-text-muted);
+  }
+
+  .dashboard-source-chip--pipeline {
+    border-left: 3px solid var(--color-accent, #0ea5e9);
+  }
+
+  .dashboard-source-chip--ai {
+    border-left: 3px solid #7c3aed;
+  }
+
+  .dashboard-source-label {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+
+  .dashboard-source-count {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
   @media (max-width: 960px) {
     .dashboard-stats {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
@@ -322,3 +645,52 @@ function relativeTime(dateStr: string): string {
     }
   }
 </style>
+
+<script>
+  function initDashboardActions(): void {
+    const pipelineBtn = document.getElementById('run-pipeline-btn');
+    if (pipelineBtn && !pipelineBtn.dataset.init) {
+      pipelineBtn.dataset.init = '1';
+      pipelineBtn.addEventListener('click', async () => {
+        pipelineBtn.setAttribute('disabled', 'true');
+        pipelineBtn.textContent = 'Running…';
+        try {
+          const res = await fetch('/api/trigger-pipeline', { method: 'POST' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          pipelineBtn.textContent = 'Started ✓';
+          setTimeout(() => window.location.reload(), 2000);
+        } catch {
+          pipelineBtn.textContent = 'Failed ✗';
+          pipelineBtn.removeAttribute('disabled');
+          setTimeout(() => { pipelineBtn.textContent = 'Run Pipeline'; }, 3000);
+        }
+      });
+    }
+
+    const markReadBtn = document.getElementById('mark-all-read-btn');
+    if (markReadBtn && !markReadBtn.dataset.init) {
+      markReadBtn.dataset.init = '1';
+      markReadBtn.addEventListener('click', async () => {
+        markReadBtn.textContent = 'Updating…';
+        try {
+          const { createClient } = await import('@supabase/supabase-js');
+          const sb = createClient(
+            (import.meta as any).env.PUBLIC_SUPABASE_URL,
+            (import.meta as any).env.PUBLIC_SUPABASE_ANON_KEY,
+          );
+          const { data: { session } } = await sb.auth.getSession();
+          if (session) {
+            await sb.from('admin_notifications').update({ is_read: true }).eq('is_read', false);
+          }
+          markReadBtn.closest('.dashboard-section')?.remove();
+        } catch {
+          markReadBtn.textContent = 'Failed';
+          setTimeout(() => { markReadBtn.textContent = 'Mark all read'; }, 2000);
+        }
+      });
+    }
+  }
+
+  document.addEventListener('astro:page-load', initDashboardActions);
+  initDashboardActions();
+</script>

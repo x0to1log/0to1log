@@ -231,22 +231,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <span class="admin-ai-panel-title">AI Advisor</span>
             <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
           </div>
-          <div class="admin-ai-actions">
-            <button class="admin-ai-action-btn" data-ai-action="generate" type="button">
-              Generate<span class="ai-btn-model">gpt-4o</span>
-            </button>
-            <button class="admin-ai-action-btn" data-ai-action="seo" type="button">
-              SEO<span class="ai-btn-model">gpt-4o-mini</span>
-            </button>
-            <button class="admin-ai-action-btn" data-ai-action="review" type="button">
-              Review<span class="ai-btn-model">gpt-4o-mini</span>
-            </button>
-            <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button">
-              Fact-check<span class="ai-btn-model">gpt-4o</span>
-            </button>
-            <button class="admin-ai-action-btn admin-ai-action-btn--wide" data-ai-action="deepverify" type="button">
-              Deep Verify<span class="ai-btn-model">gpt-4o + Tavily</span>
-            </button>
+          <div class="admin-ai-actions" id="ai-actions-container">
+            <!-- Populated dynamically by JS based on category -->
           </div>
           <div id="ai-loading" class="admin-ai-loading" hidden>
             <span class="ai-spinner"></span>
@@ -416,6 +402,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       if (field === 'excerpt') return excerptInput;
       if (field === 'slug') return slugInput;
       if (field === 'tags') return tagsInput;
+      if (field === 'focus_items') return focusItemsInput;
       return null;
     }
 
@@ -745,19 +732,77 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const aiLoadingEl = document.getElementById('ai-loading');
     const aiLoadingText = document.getElementById('ai-loading-text');
     const aiResultEl = document.getElementById('ai-result');
-    const aiActionBtns = document.querySelectorAll<HTMLButtonElement>('.admin-ai-action-btn');
+    const aiActionsContainer = document.getElementById('ai-actions-container');
 
+    const CATEGORY_ACTIONS: Record<string, { action: string; label: string; model: string; wide?: boolean }[]> = {
+      'ai-news': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'factcheck', label: 'Fact-check', model: 'gpt-4o' },
+        { action: 'deepverify', label: 'Deep Verify', model: 'gpt-4o + Tavily', wide: true },
+      ],
+      'study': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
+      ],
+      'career': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
+      ],
+      'project': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
+      ],
+    };
+
+    let currentAiButtons: HTMLButtonElement[] = [];
     const aiActionLabels = new Map<string, string>();
-    aiActionBtns.forEach(btn => {
-      const a = btn.dataset.aiAction;
-      if (a) aiActionLabels.set(a, btn.childNodes[0]?.textContent?.trim() || a);
+
+    function renderAiButtons(category: string) {
+      if (!aiActionsContainer) return;
+      const actions = CATEGORY_ACTIONS[category] || CATEGORY_ACTIONS['ai-news'];
+      aiActionsContainer.innerHTML = '';
+      currentAiButtons = [];
+      aiActionLabels.clear();
+
+      for (const a of actions) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'admin-ai-action-btn' + (a.wide ? ' admin-ai-action-btn--wide' : '');
+        btn.dataset.aiAction = a.action;
+        btn.textContent = a.label;
+        const modelSpan = document.createElement('span');
+        modelSpan.className = 'ai-btn-model';
+        modelSpan.textContent = a.model;
+        btn.appendChild(modelSpan);
+        btn.addEventListener('click', () => runAiAction(a.action));
+        aiActionsContainer.appendChild(btn);
+        currentAiButtons.push(btn);
+        aiActionLabels.set(a.action, a.label);
+      }
+    }
+
+    // Render initial buttons based on current category
+    renderAiButtons(categorySelect?.value || 'ai-news');
+
+    // Re-render buttons when category changes
+    categorySelect?.addEventListener('change', () => {
+      renderAiButtons(categorySelect.value);
+      if (aiResultEl) aiResultEl.innerHTML = '';
     });
 
     function setAiLoading(loading: boolean, action?: string) {
       if (aiLoadingEl) aiLoadingEl.hidden = !loading;
       if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${action || ''}...` : '';
       if (aiResultEl && loading) aiResultEl.innerHTML = '';
-      aiActionBtns.forEach(btn => {
+      currentAiButtons.forEach(btn => {
         btn.disabled = loading;
         const a = btn.dataset.aiAction || '';
         if (loading && a === action) {
@@ -833,6 +878,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       else if (action === 'review') renderReview(result);
       else if (action === 'factcheck') renderFactcheck(result);
       else if (action === 'deepverify') renderDeepverify(result);
+      else if (action === 'conceptcheck') renderConceptcheck(result);
+      else if (action === 'voicecheck') renderVoicecheck(result);
+      else if (action === 'retrocheck') renderRetrocheck(result);
     }
 
     // --- Generate Result ---
@@ -848,6 +896,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
       if (r.tags?.length) {
         html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Tags:</strong> ${r.tags.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tags.join(', '))}">Use</button></div>`;
+      }
+      if (r.focus_items?.length) {
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Focus Items:</strong> ${r.focus_items.map(esc).join(' · ')}</span><button class="admin-ai-apply-btn" data-apply="focus_items" data-value="${esc(r.focus_items.join(', '))}">Use</button></div>`;
       }
       if (r.guide_items) {
         html += '<h4>Guide Items</h4>';
@@ -882,6 +933,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         if (r.excerpt && excerptInput) { previousValues.set('excerpt', excerptInput.value); excerptInput.value = r.excerpt; }
         if (r.slug && slugInput) { previousValues.set('slug', slugInput.value); slugInput.value = r.slug; }
         if (r.tags?.length && tagsInput) { previousValues.set('tags', tagsInput.value); tagsInput.value = r.tags.join(', '); }
+        if (r.focus_items?.length && focusItemsInput) { previousValues.set('focus_items', focusItemsInput.value); focusItemsInput.value = r.focus_items.join(', '); }
         showFeedback('success', 'All fields applied.');
       });
     }
@@ -1024,19 +1076,124 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       aiResultEl.innerHTML = html;
     }
 
+    // --- Concept Check Result (Study) ---
+    function renderConceptcheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (r.overall_accuracy) {
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${r.overall_accuracy}">Accuracy: ${r.overall_accuracy}</span>`;
+      }
+      if (r.depth_assessment) {
+        html += `<span class="admin-ai-depth-badge">${r.depth_assessment}</span>`;
+      }
+
+      if (r.concepts?.length) {
+        html += '<h4>Concepts</h4>';
+        const verdictMap: Record<string, string> = { accurate: 'verified', unclear: 'unverified', incorrect: 'no_source' };
+        r.concepts.forEach((c: any) => {
+          const cssVerdict = verdictMap[c.verdict] || c.verdict;
+          html += `<div class="admin-ai-claim"><div class="admin-ai-claim-text">${esc(c.concept)}</div><div class="admin-ai-claim-meta"><span class="admin-ai-verdict admin-ai-verdict--${cssVerdict}">${c.verdict}</span>`;
+          if (c.note) html += `<span>${esc(c.note)}</span>`;
+          html += `</div>`;
+          if (c.suggestion) {
+            html += `<div class="admin-ai-checklist-suggestion">${esc(c.suggestion)}</div>`;
+          }
+          html += `</div>`;
+        });
+      }
+
+      if (r.missing_concepts?.length) {
+        html += '<h4>Missing Concepts</h4>';
+        r.missing_concepts.forEach((mc: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(mc)}</span></div>`;
+        });
+      }
+
+      aiResultEl.innerHTML = html;
+    }
+
+    // --- Voice Check Result (Career) ---
+    function renderVoicecheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (r.overall_voice) {
+        const voiceMap: Record<string, string> = { authentic: 'high', mixed: 'medium', generic: 'low' };
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${voiceMap[r.overall_voice] || 'medium'}">Voice: ${r.overall_voice}</span>`;
+      }
+
+      if (r.tone_profile) {
+        const tp = r.tone_profile;
+        html += '<h4>Tone Profile</h4><div class="admin-ai-tone-profile">';
+        for (const [key, val] of Object.entries(tp)) {
+          const v = val as number;
+          html += `<div class="admin-ai-score-row"><span class="admin-ai-score-label">${esc(key)}</span><div class="admin-ai-score-bar"><div class="admin-ai-score-fill" style="width: ${v}%;"></div></div><span class="admin-ai-score-value">${v}</span></div>`;
+        }
+        html += '</div>';
+      }
+
+      if (r.sections?.length) {
+        html += '<h4>Section Analysis</h4>';
+        r.sections.forEach((s: any) => {
+          const hasIssue = s.issue && s.issue.length > 0;
+          const statusClass = hasIssue ? 'warn' : 'pass';
+          html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${statusClass}">${hasIssue ? 'warn' : 'pass'}</span><span><strong>${esc(s.section)}</strong>: ${esc(s.assessment)}</span></div>`;
+          if (s.suggestion) {
+            html += `<div class="admin-ai-checklist-suggestion">${esc(s.suggestion)}</div>`;
+          }
+        });
+      }
+
+      if (r.generic_phrases?.length) {
+        html += '<h4>Generic Phrases to Replace</h4>';
+        r.generic_phrases.forEach((p: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text admin-ai-generic-phrase">"${esc(p)}"</span></div>`;
+        });
+      }
+
+      aiResultEl.innerHTML = html;
+    }
+
+    // --- Retro Check Result (Project) ---
+    function renderRetrocheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (r.overall_quality) {
+        const qualityMap: Record<string, string> = { 'publication-ready': 'high', 'needs-work': 'medium', 'incomplete': 'low' };
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${qualityMap[r.overall_quality] || 'medium'}">Quality: ${r.overall_quality}</span>`;
+      }
+
+      // Stats
+      html += '<div class="admin-ai-retro-stats">';
+      html += `<div class="admin-ai-stat"><span class="admin-ai-stat-value">${r.decisions_documented ?? 0}</span><span class="admin-ai-stat-label">Decisions</span></div>`;
+      html += `<div class="admin-ai-stat"><span class="admin-ai-stat-value">${r.lessons_extracted ?? 0}</span><span class="admin-ai-stat-label">Lessons</span></div>`;
+      html += `<div class="admin-ai-stat"><span class="admin-ai-stat-value">${r.metrics_included ? 'Yes' : 'No'}</span><span class="admin-ai-stat-label">Metrics</span></div>`;
+      html += '</div>';
+
+      if (r.sections?.length) {
+        html += '<h4>Section Quality</h4>';
+        const statusMap: Record<string, string> = { present: 'pass', weak: 'warn', missing: 'fail' };
+        r.sections.forEach((s: any) => {
+          const css = statusMap[s.status] || s.status;
+          html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${css}">${s.status}</span><span><strong>${esc(s.section)}</strong>: ${esc(s.note)}</span></div>`;
+          if (s.suggestion) {
+            html += `<div class="admin-ai-checklist-suggestion">${esc(s.suggestion)}</div>`;
+          }
+        });
+      }
+
+      aiResultEl.innerHTML = html;
+    }
+
     function esc(s: string): string {
       const d = document.createElement('div');
       d.textContent = s;
       return d.innerHTML;
     }
 
-    // Bind AI action buttons
-    aiActionBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.aiAction;
-        if (action) runAiAction(action);
-      });
-    });
+    // AI action buttons are bound dynamically in renderAiButtons()
 
     // Event listeners
     btnSave?.addEventListener('click', handleSave);

@@ -46,6 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     technical_description_en,
     example_analogy_en,
     body_markdown_en,
+    source,
   } = body;
 
   if (!term) {
@@ -103,10 +104,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  // Insert new
+  // Insert new — include source if provided (manual/pipeline/ai-suggested)
+  const insertRow = source ? { ...row, source } : row;
   const { data, error } = await supabase
     .from('handbook_terms')
-    .insert(row)
+    .insert(insertRow)
     .select()
     .single();
 

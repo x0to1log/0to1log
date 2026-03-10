@@ -15,6 +15,9 @@ from models.advisor import (
     ReviewResult,
     FactcheckResult,
     DeepVerifyResult,
+    ConceptCheckResult,
+    VoiceCheckResult,
+    RetroCheckResult,
     HandbookAdviseRequest,
     RelatedTermsResult,
     TranslateResult,
@@ -23,10 +26,13 @@ from models.advisor import (
 )
 from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts_advisor import (
-    GENERATE_SYSTEM_PROMPT,
-    SEO_SYSTEM_PROMPT,
-    REVIEW_SYSTEM_PROMPT,
+    get_generate_prompt,
+    get_seo_prompt,
+    get_review_prompt,
     FACTCHECK_SYSTEM_PROMPT,
+    CONCEPTCHECK_SYSTEM_PROMPT,
+    VOICECHECK_SYSTEM_PROMPT,
+    RETROCHECK_SYSTEM_PROMPT,
     DEEPVERIFY_CLAIM_EXTRACT_PROMPT,
     DEEPVERIFY_VERIFY_PROMPT,
     RELATED_TERMS_PROMPT,
@@ -38,24 +44,26 @@ from services.agents.prompts_advisor import (
 logger = logging.getLogger(__name__)
 
 # Model + config per action
+# "prompt_fn": callable(category) -> str  for category-aware actions
+# "prompt": str  for category-agnostic actions
 ACTION_CONFIG = {
     "generate": {
         "model_attr": "openai_model_main",
-        "prompt": GENERATE_SYSTEM_PROMPT,
+        "prompt_fn": get_generate_prompt,
         "max_tokens": 4096,
         "temperature": 0.3,
         "validator": GenerateResult,
     },
     "seo": {
         "model_attr": "openai_model_light",
-        "prompt": SEO_SYSTEM_PROMPT,
+        "prompt_fn": get_seo_prompt,
         "max_tokens": 2048,
         "temperature": 0.5,
         "validator": SeoResult,
     },
     "review": {
         "model_attr": "openai_model_light",
-        "prompt": REVIEW_SYSTEM_PROMPT,
+        "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
         "temperature": 0.2,
         "validator": ReviewResult,
@@ -66,6 +74,27 @@ ACTION_CONFIG = {
         "max_tokens": 4096,
         "temperature": 0.2,
         "validator": FactcheckResult,
+    },
+    "conceptcheck": {
+        "model_attr": "openai_model_light",
+        "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
+        "max_tokens": 2048,
+        "temperature": 0.2,
+        "validator": ConceptCheckResult,
+    },
+    "voicecheck": {
+        "model_attr": "openai_model_light",
+        "prompt": VOICECHECK_SYSTEM_PROMPT,
+        "max_tokens": 2048,
+        "temperature": 0.3,
+        "validator": VoiceCheckResult,
+    },
+    "retrocheck": {
+        "model_attr": "openai_model_light",
+        "prompt": RETROCHECK_SYSTEM_PROMPT,
+        "max_tokens": 2048,
+        "temperature": 0.2,
+        "validator": RetroCheckResult,
     },
 }
 
@@ -115,10 +144,16 @@ async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
 
     logger.info("Advisor [%s] starting with model=%s", req.action, model)
 
+    # Resolve system prompt: category-aware (prompt_fn) or static (prompt)
+    if "prompt_fn" in config:
+        system_prompt = config["prompt_fn"](req.category)
+    else:
+        system_prompt = config["prompt"]
+
     response = await client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": config["prompt"]},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         response_format={"type": "json_object"},
@@ -494,7 +529,7 @@ async def _run_generate_term(
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=8192,
+        max_tokens=12000,
     )
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-generate")
     tokens = resp.usage.completion_tokens if resp.usage else 0

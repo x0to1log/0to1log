@@ -45,7 +45,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   };
 
   if (excerpt !== undefined) row.excerpt = excerpt || null;
-  if (post_type !== undefined) row.post_type = post_type || null;
+  // study/career/project categories require post_type to be NULL
+  const nonTypedCategories = ['study', 'career', 'project'];
+  if (nonTypedCategories.includes(row.category)) {
+    row.post_type = null;
+  } else if (post_type !== undefined) {
+    row.post_type = post_type || null;
+  }
   if (locale !== undefined) row.locale = locale || 'en';
   if (focus_items !== undefined) row.focus_items = Array.isArray(focus_items) ? focus_items : [];
   if (og_image_url !== undefined) row.og_image_url = og_image_url || null;

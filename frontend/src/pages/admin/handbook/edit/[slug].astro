@@ -40,6 +40,23 @@ if (!isNew) {
   }
 }
 
+// Resolve related_term_slugs to {slug, term} pairs for chip display
+let resolvedRelatedTerms: { slug: string; term: string }[] = [];
+if (term?.related_term_slugs?.length) {
+  const supabase2 = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const { data: relData } = await supabase2
+    .from('handbook_terms')
+    .select('slug, term')
+    .in('slug', term.related_term_slugs);
+  if (relData) {
+    resolvedRelatedTerms = relData;
+  }
+}
+
 const categories = getHandbookCategories();
 const difficulties = ['beginner', 'intermediate', 'advanced'];
 
@@ -77,6 +94,11 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             {term && (
               <span class={`admin-status-badge admin-status-badge--${term.status}`}>
                 {term.status}
+              </span>
+            )}
+            {term?.source && term.source !== 'manual' && (
+              <span class={`admin-source-badge admin-source-badge--${term.source}`}>
+                {term.source === 'pipeline' ? 'Pipeline' : 'AI Suggested'}
               </span>
             )}
           </div>
@@ -138,8 +160,17 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                 <input type="text" name="korean_name" class="admin-input" value={term?.korean_name || ''} />
               </div>
               <div class="admin-field">
-                <label>Related Term Slugs (comma-separated)</label>
-                <input type="text" name="related_term_slugs" class="admin-input" value={(term?.related_term_slugs || []).join(', ')} />
+                <label>Related Terms</label>
+                <div class="admin-chips-container" id="related-terms-chips">
+                  {resolvedRelatedTerms.map((rt) => (
+                    <span class="admin-chip" data-slug={rt.slug}>
+                      <a href={`/admin/handbook/edit/${rt.slug}`} target="_blank">{rt.term}</a>
+                      <button type="button" class="admin-chip-remove" data-remove-slug={rt.slug}>&times;</button>
+                    </span>
+                  ))}
+                </div>
+                <input type="hidden" name="related_term_slugs" id="related-term-slugs-hidden"
+                  value={JSON.stringify((term?.related_term_slugs || []))} />
               </div>
               <div class="admin-field admin-field--checkbox">
                 <label>
@@ -368,6 +399,46 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     aiToggleBtn?.addEventListener('click', toggleAiPanel);
     aiCloseBtn?.addEventListener('click', toggleAiPanel);
     aiBackdrop?.addEventListener('click', toggleAiPanel);
+
+    // --- Related Terms Chip Management ---
+    const chipsContainer = document.getElementById('related-terms-chips');
+    const hiddenSlugsInput = document.getElementById('related-term-slugs-hidden') as HTMLInputElement | null;
+
+    function getRelatedSlugs(): string[] {
+      try { return JSON.parse(hiddenSlugsInput?.value || '[]'); } catch { return []; }
+    }
+
+    function setRelatedSlugs(slugs: string[]) {
+      if (hiddenSlugsInput) hiddenSlugsInput.value = JSON.stringify(slugs);
+    }
+
+    function addChip(slug: string, termName: string) {
+      const slugs = getRelatedSlugs();
+      if (slugs.includes(slug)) return false;
+      slugs.push(slug);
+      setRelatedSlugs(slugs);
+
+      if (chipsContainer) {
+        const chip = document.createElement('span');
+        chip.className = 'admin-chip';
+        chip.dataset.slug = slug;
+        chip.innerHTML = `<a href="/admin/handbook/edit/${esc(slug)}" target="_blank">${esc(termName)}</a> <button type="button" class="admin-chip-remove" data-remove-slug="${esc(slug)}">&times;</button>`;
+        chip.querySelector('[data-remove-slug]')?.addEventListener('click', () => removeChip(slug));
+        chipsContainer.appendChild(chip);
+      }
+      return true;
+    }
+
+    function removeChip(slug: string) {
+      const slugs = getRelatedSlugs().filter(s => s !== slug);
+      setRelatedSlugs(slugs);
+      chipsContainer?.querySelector(`[data-slug="${slug}"]`)?.remove();
+    }
+
+    // Bind existing chip remove buttons
+    chipsContainer?.querySelectorAll<HTMLButtonElement>('[data-remove-slug]').forEach(btn => {
+      btn.addEventListener('click', () => removeChip(btn.dataset.removeSlug || ''));
+    });
 
     // --- AI Advisor ---
     const aiActionBtns = document.querySelectorAll<HTMLButtonElement>('[data-ai-action]');
@@ -606,26 +677,23 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         });
       });
 
-      // Bind Link buttons
+      // Bind Link buttons → add chip
       aiResultEl.querySelectorAll<HTMLButtonElement>('[data-link-slug]').forEach(btn => {
         btn.addEventListener('click', () => {
           const slug = btn.dataset.linkSlug || '';
-          const input = document.querySelector('[name="related_term_slugs"]') as HTMLInputElement;
-          if (!input || !slug) return;
-          const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
-          if (!current.includes(slug)) {
-            current.push(slug);
-            input.value = current.join(', ');
+          const termName = btn.closest('.admin-ai-related-term')?.querySelector('strong')?.textContent || slug;
+          if (!slug) return;
+          if (addChip(slug, termName)) {
             btn.textContent = 'Linked';
             btn.disabled = true;
-            showFeedback(`Linked: ${slug}`);
+            showFeedback(`Linked: ${termName}`);
           } else {
             showFeedback('Already linked.');
           }
         });
       });
 
-      // Bind Create Draft buttons
+      // Bind Create Draft buttons → create with source 'ai-suggested' + add chip
       aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-create-draft-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const termName = btn.dataset.term || '';
@@ -639,6 +707,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
               body: JSON.stringify({
                 term: termName,
                 status: 'draft',
+                source: 'ai-suggested',
                 categories: Array.from(document.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
                 difficulty: (document.querySelector('[name="difficulty"]') as HTMLSelectElement)?.value || '',
               }),
@@ -646,17 +715,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             if (res.ok) {
               const saved = await res.json();
               btn.textContent = 'Created';
-              // Also link it
-              if (saved.slug) {
-                const input = document.querySelector('[name="related_term_slugs"]') as HTMLInputElement;
-                if (input) {
-                  const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
-                  if (!current.includes(saved.slug)) {
-                    current.push(saved.slug);
-                    input.value = current.join(', ');
-                  }
-                }
-              }
+              if (saved.slug) addChip(saved.slug, termName);
               showFeedback(`Draft created: ${termName}`);
             } else {
               btn.textContent = 'Failed';
@@ -1053,8 +1112,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     data.is_favourite = (form.querySelector('[name="is_favourite"]') as HTMLInputElement).checked;
 
-    const related = (data.related_term_slugs as string || '').trim();
-    data.related_term_slugs = related ? related.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+    try {
+      data.related_term_slugs = JSON.parse(data.related_term_slugs as string || '[]');
+    } catch { data.related_term_slugs = []; }
 
     if (!data.id) delete data.id;
 

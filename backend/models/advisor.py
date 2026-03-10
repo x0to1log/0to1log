@@ -3,7 +3,7 @@ from typing import Literal, Optional
 
 
 class AiAdviseRequest(BaseModel):
-    action: Literal["generate", "seo", "review", "factcheck", "deepverify"]
+    action: Literal["generate", "seo", "review", "factcheck", "deepverify", "conceptcheck", "voicecheck", "retrocheck"]
     post_id: str
     title: str
     content: str
@@ -27,6 +27,7 @@ class AiAdviseResponse(BaseModel):
 
 class GenerateResult(BaseModel):
     guide_items: dict
+    focus_items: list[str] = []
     excerpt: str
     tags: list[str]
     slug: str
@@ -86,6 +87,57 @@ class DeepVerifyResult(BaseModel):
     broken_links: list[BrokenLink] = []
     overall_confidence: Literal["high", "medium", "low"]
     confidence_reason: str = ""
+
+
+# --- Category-specific actions ---
+
+class ConceptCheckConcept(BaseModel):
+    concept: str
+    verdict: Literal["accurate", "unclear", "incorrect"]
+    note: str
+    suggestion: str = ""
+
+
+class ConceptCheckResult(BaseModel):
+    concepts: list[ConceptCheckConcept]
+    missing_concepts: list[str] = []
+    depth_assessment: Literal["shallow", "adequate", "thorough"]
+    overall_accuracy: Literal["high", "medium", "low"]
+
+
+class ToneProfile(BaseModel):
+    authenticity: int
+    specificity: int
+    actionability: int
+
+
+class VoiceCheckSection(BaseModel):
+    section: str
+    assessment: str
+    issue: str = ""
+    suggestion: str = ""
+
+
+class VoiceCheckResult(BaseModel):
+    tone_profile: ToneProfile
+    sections: list[VoiceCheckSection]
+    generic_phrases: list[str] = []
+    overall_voice: Literal["authentic", "mixed", "generic"]
+
+
+class RetroCheckSection(BaseModel):
+    section: str
+    status: Literal["present", "weak", "missing"]
+    note: str
+    suggestion: str = ""
+
+
+class RetroCheckResult(BaseModel):
+    sections: list[RetroCheckSection]
+    decisions_documented: int
+    lessons_extracted: int
+    metrics_included: bool
+    overall_quality: Literal["publication-ready", "needs-work", "incomplete"]
 
 
 # --- Handbook AI Advisor ---
