@@ -1142,15 +1142,15 @@ html {
 
   .site-primary-nav--mobile {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.45rem;
     width: 100%;
   }
 
   .site-nav-pill {
     width: 100%;
-    padding: 0.65rem 0.4rem;
-    font-size: 0.82rem;
+    padding: 0.55rem 0.25rem;
+    font-size: 0.78rem;
   }
 
   .site-brand-link {
