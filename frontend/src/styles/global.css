@@ -31,6 +31,9 @@
   --font-article-deck: 'Playfair Display', Georgia, serif;
   --font-ui: Lora, 'Noto Serif KR', Georgia, serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
+  --font-blog-heading: 'IBM Plex Sans', 'IBM Plex Sans KR', sans-serif;
+  --font-blog-body: 'IBM Plex Sans', 'IBM Plex Sans KR', sans-serif;
+  --font-blog-ui: 'IBM Plex Sans', 'IBM Plex Sans KR', sans-serif;
 
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 768px;
