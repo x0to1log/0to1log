@@ -1,22 +1,5 @@
-﻿-- Site Content: admin-editable editorial text (bilingual ko/en)
--- Used by public rails, masthead copy, and marketing/onboarding sections.
-
-CREATE TABLE site_content (
-  key TEXT PRIMARY KEY,
-  value_ko TEXT NOT NULL DEFAULT '',
-  value_en TEXT NOT NULL DEFAULT '',
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE site_content ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Anyone can read site_content"
-  ON site_content FOR SELECT USING (true);
-
-CREATE POLICY "Admin can update site_content"
-  ON site_content FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid() AND is_active = true)
-  );
+-- Sync site_content keys and copy for existing databases.
+-- Use after 00010_site_content.sql has already created the table.
 
 INSERT INTO site_content (key, value_ko, value_en) VALUES
   ('editorial_note',
@@ -97,4 +80,9 @@ INSERT INTO site_content (key, value_ko, value_en) VALUES
 
   ('library_empty_progress',
    '용어집을 읽기 시작하면 학습 현황이 여기에 쌓입니다.',
-   'Visit handbook terms to start tracking your learning progress.');
+   'Visit handbook terms to start tracking your learning progress.')
+ON CONFLICT (key) DO UPDATE
+SET
+  value_ko = EXCLUDED.value_ko,
+  value_en = EXCLUDED.value_en,
+  updated_at = now();

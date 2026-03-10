@@ -1,11 +1,88 @@
 ---
 export const prerender = false;
+
 import MainLayout from '../../layouts/MainLayout.astro';
 import AdminSidebar from '../../components/admin/AdminSidebar.astro';
+
+const user = Astro.locals.user;
+const profile = Astro.locals.profile;
+const displayName = profile?.display_name || profile?.username || user?.email || 'Admin user';
+const email = user?.email || 'Unknown';
+const accessToken = Astro.locals.accessToken;
+const currentPath = Astro.url.pathname;
+
+const scTabs = [
+  {
+    id: 'news',
+    label: 'News',
+    description: 'Masthead, edition line, rail copy, and onboarding sections for AI News.',
+    keys: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'volume_issue', 'start_here_sections'],
+    fields: [
+      { key: 'news_masthead', label: 'Masthead', type: 'text', hint: 'Main masthead shown above the AI News list.' },
+      { key: 'news_edition_label', label: 'Edition Label', type: 'text', hint: 'Short edition label below the masthead.' },
+      { key: 'news_subkicker', label: 'Subkicker', type: 'textarea', hint: 'Comma-separated phrases. Stored as a JSON array.' },
+      { key: 'editorial_note', label: 'Editorial Note', type: 'textarea', hint: 'Right-rail note shown on AI News list pages.' },
+      { key: 'volume_issue', label: 'Volume / Issue', type: 'text', hint: 'Displayed in the shell header.' },
+    ],
+  },
+  {
+    id: 'handbook',
+    label: 'Handbook',
+    description: 'Glossary masthead, edition line, and handbook intro copy.',
+    keys: ['handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'handbook_intro'],
+    fields: [
+      { key: 'handbook_masthead', label: 'Masthead', type: 'text', hint: 'Main masthead shown on handbook pages.' },
+      { key: 'handbook_edition_label', label: 'Edition Label', type: 'text', hint: 'Small label under the masthead.' },
+      { key: 'handbook_subkicker', label: 'Subkicker', type: 'textarea', hint: 'Comma-separated phrases. Stored as a JSON array.' },
+      { key: 'handbook_intro', label: 'Intro', type: 'textarea', hint: 'Right-rail explanatory intro on the glossary list.' },
+    ],
+  },
+  {
+    id: 'library',
+    label: 'Library',
+    description: 'Empty states and helper copy for the signed-in library view.',
+    keys: ['library_empty_saved', 'library_empty_read', 'library_empty_progress'],
+    fields: [
+      { key: 'library_empty_saved', label: 'Empty Saved', type: 'textarea', hint: 'Shown when there are no saved items.' },
+      { key: 'library_empty_read', label: 'Empty Read', type: 'textarea', hint: 'Shown when there is no reading history.' },
+      { key: 'library_empty_progress', label: 'Empty Progress', type: 'textarea', hint: 'Shown when there is no learning progress yet.' },
+    ],
+  },
+  {
+    id: 'about',
+    label: 'About',
+    description: 'Core publication and editor copy for the About page.',
+    keys: ['about_tagline', 'about_publication_intro', 'about_publication_detail', 'about_editor_intro'],
+    fields: [
+      { key: 'about_tagline', label: 'Tagline', type: 'text', hint: 'Hero tagline under the 0to1log title.' },
+      { key: 'about_publication_intro', label: 'Publication Intro', type: 'textarea', hint: 'First about section paragraph.' },
+      { key: 'about_publication_detail', label: 'Publication Detail', type: 'textarea', hint: 'Second about section paragraph.' },
+      { key: 'about_editor_intro', label: 'Editor Intro', type: 'textarea', hint: 'Editor introduction paragraph.' },
+    ],
+  },
+  {
+    id: 'home',
+    label: 'Home',
+    description: 'Homepage title, subtitle, and intro copy.',
+    keys: ['home_title', 'home_subtitle', 'home_intro'],
+    fields: [
+      { key: 'home_title', label: 'Home Title', type: 'text', hint: 'Main title on the homepage hero.' },
+      { key: 'home_subtitle', label: 'Home Subtitle', type: 'textarea', hint: 'Short supporting line under the title.' },
+      { key: 'home_intro', label: 'Home Intro', type: 'textarea', hint: 'Optional intro paragraph under the hero area.' },
+    ],
+  },
+];
+
+const startHereDefaults = [
+  { slug: 'ai-news', labelKo: 'AI 뉴스', labelEn: 'AI News' },
+  { slug: 'study', labelKo: '학습', labelEn: 'Study' },
+  { slug: 'career', labelKo: '커리어', labelEn: 'Career' },
+  { slug: 'project', labelKo: '프로젝트', labelEn: 'Project' },
+];
 ---
 
 <MainLayout title="Admin Settings" locale="en">
-  <AdminSidebar />
+  <AdminSidebar activeSection="settings" />
 
   <div class="admin-dashboard">
     <div class="admin-main">
@@ -16,120 +93,414 @@ import AdminSidebar from '../../components/admin/AdminSidebar.astro';
               <path d="M3 5h14M3 10h14M3 15h14" />
             </svg>
           </button>
-          <h1 class="admin-main-title">Settings</h1>
+          <div>
+            <h1 class="admin-main-title">Settings</h1>
+          </div>
         </div>
       </div>
 
-      <div class="admin-settings-section">
-        <h2 class="admin-settings-heading">Change Password</h2>
-        <p class="admin-settings-desc">Update your email/password login credentials. This does not affect OAuth (Google/GitHub) login.</p>
+      <div class="admin-filter-tabs" id="settings-tabs">
+        <button class="admin-filter-btn admin-filter-btn--active" type="button" data-settings-tab="site-content">Site Content</button>
+        <button class="admin-filter-btn" type="button" data-settings-tab="account">Account</button>
+      </div>
 
-        <form id="change-password-form" class="admin-settings-form" autocomplete="off">
-          <div class="admin-settings-field">
-            <label for="current-password" class="admin-settings-label">Current Password</label>
-            <input
-              type="password"
-              id="current-password"
-              name="currentPassword"
-              class="admin-input"
-              required
-              minlength="1"
-              autocomplete="current-password"
-            />
-          </div>
+      <!-- Account Tab -->
+      <div id="settings-panel-account" class="settings-panel" style="display:none;">
+        <div class="admin-settings-grid">
+          <section class="admin-settings-card">
+            <h2 class="admin-settings-heading">Account</h2>
+            <p class="admin-settings-desc">Basic account information for the currently signed-in admin.</p>
+            <dl class="admin-settings-summary">
+              <div class="admin-settings-summary-row">
+                <dt>Name</dt>
+                <dd>{displayName}</dd>
+              </div>
+              <div class="admin-settings-summary-row">
+                <dt>Email</dt>
+                <dd>{email}</dd>
+              </div>
+            </dl>
+          </section>
 
-          <div class="admin-settings-field">
-            <label for="new-password" class="admin-settings-label">New Password</label>
-            <input
-              type="password"
-              id="new-password"
-              name="newPassword"
-              class="admin-input"
-              required
-              minlength="8"
-              autocomplete="new-password"
-            />
-            <span class="admin-settings-hint">Minimum 8 characters</span>
-          </div>
+          <section class="admin-settings-card">
+            <h2 class="admin-settings-heading">Change Password</h2>
+            <p class="admin-settings-desc">Update your email/password login credentials. OAuth providers are unaffected.</p>
 
-          <div class="admin-settings-field">
-            <label for="confirm-password" class="admin-settings-label">Confirm New Password</label>
-            <input
-              type="password"
-              id="confirm-password"
-              name="confirmPassword"
-              class="admin-input"
-              required
-              minlength="8"
-              autocomplete="new-password"
-            />
-          </div>
+            <form id="change-password-form" class="admin-settings-form" autocomplete="off">
+              <div class="admin-settings-field">
+                <label for="current-password" class="admin-settings-label">Current Password</label>
+                <input
+                  type="password"
+                  id="current-password"
+                  name="currentPassword"
+                  class="admin-input"
+                  required
+                  minlength="1"
+                  autocomplete="current-password"
+                />
+              </div>
 
-          <div class="admin-settings-actions">
-            <button type="submit" class="admin-btn admin-btn-primary" id="change-pw-btn">
-              Change Password
+              <div class="admin-settings-field">
+                <label for="new-password" class="admin-settings-label">New Password</label>
+                <input
+                  type="password"
+                  id="new-password"
+                  name="newPassword"
+                  class="admin-input"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                />
+                <span class="admin-settings-hint">Minimum 8 characters.</span>
+              </div>
+
+              <div class="admin-settings-field">
+                <label for="confirm-password" class="admin-settings-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  id="confirm-password"
+                  name="confirmPassword"
+                  class="admin-input"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                />
+              </div>
+
+              <div class="admin-settings-actions">
+                <button type="submit" class="admin-btn admin-btn-primary" id="change-pw-btn">Change Password</button>
+              </div>
+
+              <div id="pw-feedback" class="admin-feedback" style="display:none;"></div>
+            </form>
+          </section>
+
+          <section class="admin-settings-card">
+            <h2 class="admin-settings-heading">Session</h2>
+            <p class="admin-settings-desc">End the current session on this device.</p>
+            <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent('/admin/login')}`}>
+              <button type="submit" class="admin-btn">Log Out</button>
+            </form>
+          </section>
+        </div>
+      </div>
+
+      <!-- Site Content Tab -->
+      <div
+        id="settings-panel-site-content"
+        class="settings-panel"
+        data-access-token={accessToken}
+        data-supabase-url={import.meta.env.PUBLIC_SUPABASE_URL}
+        data-supabase-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
+      >
+        <div class="admin-filter-tabs sc-sub-tabs" id="sc-tabs">
+          {scTabs.map((tab, index) => (
+            <button
+              class:list={['admin-filter-btn', { 'admin-filter-btn--active': index === 0 }]}
+              type="button"
+              data-sc-tab={tab.id}
+            >
+              {tab.label}
             </button>
-          </div>
+          ))}
+        </div>
 
-          <div id="pw-feedback" class="admin-feedback" style="display:none;"></div>
-        </form>
+        <div id="sc-loading" class="admin-loading-state">Loading site content...</div>
+
+        {scTabs.map((tab, index) => (
+          <section class="sc-tab-panel" id={`sc-panel-${tab.id}`} style={index === 0 ? '' : 'display:none;'}>
+            <div class="sc-panel-header">
+              <div>
+                <h2 class="sc-panel-title">{tab.label}</h2>
+                <p class="sc-panel-desc">{tab.description}</p>
+              </div>
+              <button type="button" class="admin-btn admin-btn-primary" data-save-group={tab.id}>Save {tab.label}</button>
+            </div>
+
+            <div class="sc-fields">
+              {tab.fields.map((field) => (
+                <div class="sc-field-block">
+                  <div class="sc-field-header">
+                    <h3 class="sc-field-title">{field.label}</h3>
+                    <p class="sc-field-hint">{field.hint}</p>
+                  </div>
+                  <div class="sc-row">
+                    <div class="sc-field">
+                      <label class="sc-label">{field.label} (KO)</label>
+                      {field.type === 'textarea' ? (
+                        <textarea class="admin-input" rows="4" data-sc-key={field.key} data-sc-lang="ko"></textarea>
+                      ) : (
+                        <input type="text" class="admin-input" data-sc-key={field.key} data-sc-lang="ko" />
+                      )}
+                    </div>
+                    <div class="sc-field">
+                      <label class="sc-label">{field.label} (EN)</label>
+                      {field.type === 'textarea' ? (
+                        <textarea class="admin-input" rows="4" data-sc-key={field.key} data-sc-lang="en"></textarea>
+                      ) : (
+                        <input type="text" class="admin-input" data-sc-key={field.key} data-sc-lang="en" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {tab.id === 'news' && (
+              <div class="sc-field-block">
+                <div class="sc-field-header">
+                  <h3 class="sc-field-title">Start Here Sections</h3>
+                  <p class="sc-field-hint">Manage the four onboarding blocks shown in the AI News rail.</p>
+                </div>
+                <div id="start-here-fields"></div>
+              </div>
+            )}
+
+            <p class="admin-feedback" data-feedback-group={tab.id} style="display:none;"></p>
+          </section>
+        ))}
       </div>
     </div>
   </div>
 </MainLayout>
 
 <style>
-  .admin-settings-section {
-    max-width: 480px;
-    margin-top: 1.5rem;
+  .settings-panel {
+    margin-top: 1rem;
   }
+
+  .admin-settings-grid {
+    display: grid;
+    gap: 1rem;
+    max-width: 720px;
+  }
+
+  .admin-settings-card {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    padding: 1rem;
+  }
+
   .admin-settings-heading {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     margin-bottom: 0.25rem;
   }
+
   .admin-settings-desc {
     font-size: 0.85rem;
     color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
+
+  .admin-settings-summary {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .admin-settings-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.92rem;
+  }
+
+  .admin-settings-summary-row dt {
+    color: var(--color-text-muted);
+  }
+
+  .admin-settings-summary-row dd {
+    margin: 0;
+    text-align: right;
+    font-weight: 500;
+  }
+
   .admin-settings-form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
+
   .admin-settings-field {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
   }
+
   .admin-settings-label {
     font-size: 0.85rem;
     font-weight: 500;
   }
+
   .admin-settings-hint {
     font-size: 0.75rem;
     color: var(--color-text-muted);
   }
+
   .admin-settings-actions {
+    margin-top: 0.25rem;
+  }
+
+  /* Site Content styles */
+  .sc-sub-tabs {
+    margin-bottom: 1rem;
+  }
+
+  .admin-loading-state {
+    margin-top: 1rem;
+    color: var(--color-text-muted);
+  }
+
+  .sc-tab-panel {
     margin-top: 0.5rem;
+  }
+
+  .sc-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .sc-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .sc-panel-desc {
+    margin-top: 0.35rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+
+  .sc-fields {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .sc-field-block {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    padding: 1rem;
+  }
+
+  .sc-field-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .sc-field-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .sc-field-hint {
+    margin-top: 0.2rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+
+  .sc-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .sc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .sc-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .sc-fallback {
+    opacity: 0.4;
+  }
+
+  .sc-fallback:focus {
+    opacity: 1;
+  }
+
+  .sc-sh-item {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .sc-sh-item-slug {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-muted);
+  }
+
+  @media (max-width: 720px) {
+    .sc-panel-header,
+    .sc-row {
+      grid-template-columns: 1fr;
+      display: grid;
+    }
+
+    .sc-panel-header {
+      gap: 0.75rem;
+    }
   }
 </style>
 
 <script>
+  // @ts-nocheck
+  function initSettingsTabs() {
+    const tabBtns = document.querySelectorAll('[data-settings-tab]');
+    if (!tabBtns.length || tabBtns[0].dataset.tabInit === '1') return;
+    tabBtns[0].dataset.tabInit = '1';
+
+    function switchSettingsTab(tabId) {
+      document.querySelectorAll('.settings-panel').forEach((panel) => {
+        panel.style.display = panel.id === `settings-panel-${tabId}` ? '' : 'none';
+      });
+      tabBtns.forEach((btn) => {
+        btn.classList.toggle('admin-filter-btn--active', btn.dataset.settingsTab === tabId);
+      });
+      history.replaceState(null, '', `#${tabId}`);
+
+      if (tabId === 'site-content') {
+        initSiteContent();
+      }
+    }
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => switchSettingsTab(btn.dataset.settingsTab || 'account'));
+    });
+
+    const hash = location.hash.replace('#', '');
+    if (hash === 'account') {
+      switchSettingsTab('account');
+    } else {
+      initSiteContent();
+    }
+  }
+
   function initPasswordChange() {
-    const form = document.getElementById('change-password-form') as HTMLFormElement | null;
+    const form = document.getElementById('change-password-form');
     if (!form || form.dataset.init === '1') return;
     form.dataset.init = '1';
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const feedback = document.getElementById('pw-feedback') as HTMLElement;
-      const btn = document.getElementById('change-pw-btn') as HTMLButtonElement;
+      const feedback = document.getElementById('pw-feedback');
+      const btn = document.getElementById('change-pw-btn');
 
-      const currentPassword = (form.querySelector('#current-password') as HTMLInputElement).value;
-      const newPassword = (form.querySelector('#new-password') as HTMLInputElement).value;
-      const confirmPassword = (form.querySelector('#confirm-password') as HTMLInputElement).value;
+      const currentPassword = form.querySelector('#current-password')?.value || '';
+      const newPassword = form.querySelector('#new-password')?.value || '';
+      const confirmPassword = form.querySelector('#confirm-password')?.value || '';
 
       if (newPassword !== confirmPassword) {
         feedback.textContent = 'New passwords do not match.';
@@ -180,6 +551,234 @@ import AdminSidebar from '../../components/admin/AdminSidebar.astro';
     });
   }
 
-  document.addEventListener('DOMContentLoaded', initPasswordChange);
-  initPasswordChange();
+  const FALLBACKS = {
+    news_masthead: { ko: '최신 AI 뉴스 모음집', en: 'Latest AI News' },
+    news_edition_label: { ko: '빌더스 데일리', en: "Builder's Daily" },
+    news_subkicker: { ko: 'AI · 논문 · 프로젝트, 데일리 큐레이션, 공개 열람', en: 'AI · Papers · Projects, Daily Curation, Open Access' },
+    editorial_note: { ko: '', en: '' },
+    volume_issue: { ko: '', en: '' },
+    handbook_masthead: { ko: 'AI 용어집', en: 'AI Glossary' },
+    handbook_edition_label: { ko: 'CS · AI · Infra', en: 'CS · AI · Infra' },
+    handbook_subkicker: { ko: '용어 사전, 레퍼런스, 학습', en: 'Glossary, Reference, Learn' },
+    handbook_intro: { ko: '', en: '' },
+    home_title: { ko: 'AI 뉴스 & 인사이트', en: 'AI News & Insights' },
+    home_subtitle: { ko: '가치를 담는 기록', en: 'From Void to Value' },
+    home_intro: { ko: '지금 중요한 AI 변화를 빠르게 읽고, 실무 맥락까지 함께 이해할 수 있도록 정리한 데일리 퍼블리케이션입니다.', en: 'A concise publication for people who want the latest AI shifts, the right technical context, and a clearer path from signal to action.' },
+    about_tagline: { ko: '신호를 맥락으로 바꾸는 기록', en: 'From signal to understanding' },
+    about_publication_intro: { ko: '0to1log는 빠르게 쏟아지는 AI 소식 속에서 중요한 변화만 골라, 실무 맥락과 함께 정리하는 퍼블리케이션입니다.', en: '0to1log is a focused publication for people who want the latest AI shifts without losing technical context or practical relevance.' },
+    about_publication_detail: { ko: 'AI 뉴스와 AI 용어집을 함께 운영해, 빠른 변화는 빠르게 읽고 필요한 개념은 다시 돌아와 정리할 수 있게 만드는 것이 목표입니다.', en: 'The publication pairs AI News with an AI Glossary so readers can follow fast-moving stories and still slow down when a concept needs unpacking.' },
+    about_editor_intro: { ko: 'Amy Domin Kim은 LLM 애플리케이션, 데이터 시스템, 웹 제품을 연결해 만드는 엔지니어입니다. 0to1log는 개인 학습 기록에서 시작해, 지금은 AI를 더 잘 이해하기 위한 공개 작업실로 확장되고 있습니다.', en: 'Amy Domin Kim builds with LLM applications, data systems, and product-minded engineering. 0to1log started as a personal learning record and grew into a public operating surface for AI curation and explanation.' },
+    library_empty_saved: { ko: '아직 저장한 글이 없어요\n관심 가는 글에서 🔖 버튼을 눌러보세요\n이곳에 차곡차곡 쌓여갈 거예요', en: "Your shelf is empty\nTap 🔖 on articles you'd like to keep\nThey'll be waiting for you here" },
+    library_empty_read: { ko: '아직 읽은 글이 없어요\n흥미로운 글을 찾아 읽어보세요', en: 'No reading history yet\nExplore articles and start reading' },
+    library_empty_progress: { ko: '용어집을 읽기 시작하면\n학습 현황이 여기에 쌓입니다', en: 'Visit handbook terms to start\ntracking your learning progress' },
+  };
+
+  const SC_GROUP_KEYS = {
+    news: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'volume_issue', 'start_here_sections'],
+    handbook: ['handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'handbook_intro'],
+    home: ['home_title', 'home_subtitle', 'home_intro'],
+    about: ['about_tagline', 'about_publication_intro', 'about_publication_detail', 'about_editor_intro'],
+    library: ['library_empty_saved', 'library_empty_read', 'library_empty_progress'],
+  };
+
+  const START_HERE_DEFAULTS = [
+    { slug: 'ai-news', labelKo: 'AI 뉴스', labelEn: 'AI News' },
+    { slug: 'study', labelKo: '학습', labelEn: 'Study' },
+    { slug: 'career', labelKo: '커리어', labelEn: 'Career' },
+    { slug: 'project', labelKo: '프로젝트', labelEn: 'Project' },
+  ];
+
+  function escapeAttr(value) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  async function initSiteContent() {
+    const root = document.getElementById('settings-panel-site-content');
+    if (!root || root.dataset.scInit === '1') return;
+    root.dataset.scInit = '1';
+
+    const supabaseUrl = root.dataset.supabaseUrl;
+    const supabaseKey = root.dataset.supabaseKey;
+    const token = root.dataset.accessToken;
+    if (!supabaseUrl || !supabaseKey || !token) return;
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const anonClient = createClient(supabaseUrl, supabaseKey);
+    const authClient = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const loading = document.getElementById('sc-loading');
+    const startHereContainer = document.getElementById('start-here-fields');
+
+    const { data: rows, error } = await anonClient.from('site_content').select('key, value_ko, value_en');
+    if (error) {
+      loading.textContent = `Failed to load site content: ${error.message}`;
+      loading.style.color = 'var(--color-error)';
+      return;
+    }
+
+    const contentMap = {};
+    (rows ?? []).forEach((row) => {
+      contentMap[row.key] = { ko: row.value_ko || '', en: row.value_en || '' };
+    });
+
+    document.querySelectorAll('[data-sc-key][data-sc-lang]').forEach((field) => {
+      const key = field.dataset.scKey;
+      const lang = field.dataset.scLang;
+      const raw = contentMap[key]?.[lang] || '';
+      let value = raw;
+      let isFallback = false;
+
+      if (key.includes('subkicker')) {
+        try {
+          const parsed = JSON.parse(raw);
+          value = Array.isArray(parsed) ? parsed.join(', ') : raw;
+        } catch {
+          value = raw;
+        }
+      }
+
+      if (!value && FALLBACKS[key]?.[lang]) {
+        value = FALLBACKS[key][lang];
+        isFallback = true;
+      }
+
+      field.value = value;
+      if (isFallback) field.classList.add('sc-fallback');
+
+      field.addEventListener('input', () => {
+        field.classList.remove('sc-fallback');
+      });
+    });
+
+    let sectionsKo = [];
+    let sectionsEn = [];
+    try { sectionsKo = JSON.parse(contentMap.start_here_sections?.ko || '[]'); } catch {}
+    try { sectionsEn = JSON.parse(contentMap.start_here_sections?.en || '[]'); } catch {}
+
+    START_HERE_DEFAULTS.forEach((defaults, index) => {
+      const koItem = sectionsKo[index] || { slug: defaults.slug, label: defaults.labelKo, description: '' };
+      const enItem = sectionsEn[index] || { slug: defaults.slug, label: defaults.labelEn, description: '' };
+      startHereContainer.insertAdjacentHTML('beforeend', `
+        <div class="sc-sh-item">
+          <div class="sc-sh-item-slug">${defaults.slug}</div>
+          <div class="sc-row">
+            <div class="sc-field">
+              <label class="sc-label">Label (KO)</label>
+              <input type="text" class="admin-input" data-sh-idx="${index}" data-sh-lang="ko" data-sh-field="label" value="${escapeAttr(koItem.label)}" />
+            </div>
+            <div class="sc-field">
+              <label class="sc-label">Label (EN)</label>
+              <input type="text" class="admin-input" data-sh-idx="${index}" data-sh-lang="en" data-sh-field="label" value="${escapeAttr(enItem.label)}" />
+            </div>
+          </div>
+          <div class="sc-row">
+            <div class="sc-field">
+              <label class="sc-label">Description (KO)</label>
+              <textarea class="admin-input" rows="3" data-sh-idx="${index}" data-sh-lang="ko" data-sh-field="description">${koItem.description}</textarea>
+            </div>
+            <div class="sc-field">
+              <label class="sc-label">Description (EN)</label>
+              <textarea class="admin-input" rows="3" data-sh-idx="${index}" data-sh-lang="en" data-sh-field="description">${enItem.description}</textarea>
+            </div>
+          </div>
+        </div>
+      `);
+    });
+
+    function switchScTab(tab) {
+      document.querySelectorAll('.sc-tab-panel').forEach((panel) => {
+        panel.style.display = panel.id === `sc-panel-${tab}` ? '' : 'none';
+      });
+      document.querySelectorAll('#sc-tabs [data-sc-tab]').forEach((btn) => {
+        btn.classList.toggle('admin-filter-btn--active', btn.dataset.scTab === tab);
+      });
+    }
+
+    switchScTab('news');
+    loading.style.display = 'none';
+
+    document.querySelectorAll('#sc-tabs [data-sc-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => switchScTab(btn.dataset.scTab || 'news'));
+    });
+
+    async function saveGroup(group) {
+      const keys = SC_GROUP_KEYS[group];
+      if (!keys) return;
+
+      const feedback = document.querySelector(`[data-feedback-group="${group}"]`);
+      const button = document.querySelector(`[data-save-group="${group}"]`);
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Saving...';
+      feedback.style.display = 'none';
+
+      const updates = {};
+
+      keys.forEach((key) => {
+        if (key === 'start_here_sections') return;
+        const koField = document.querySelector(`[data-sc-key="${key}"][data-sc-lang="ko"]`);
+        const enField = document.querySelector(`[data-sc-key="${key}"][data-sc-lang="en"]`);
+        let valueKo = koField?.value?.trim() || '';
+        let valueEn = enField?.value?.trim() || '';
+        if (key.includes('subkicker')) {
+          valueKo = JSON.stringify(valueKo.split(',').map((item) => item.trim()).filter(Boolean));
+          valueEn = JSON.stringify(valueEn.split(',').map((item) => item.trim()).filter(Boolean));
+        }
+        updates[key] = { value_ko: valueKo, value_en: valueEn };
+      });
+
+      if (keys.includes('start_here_sections')) {
+        const ko = [];
+        const en = [];
+        START_HERE_DEFAULTS.forEach((defaults, index) => {
+          const getValue = (lang, field) => document.querySelector(`[data-sh-idx="${index}"][data-sh-lang="${lang}"][data-sh-field="${field}"]`)?.value?.trim() || '';
+          ko.push({ slug: defaults.slug, label: getValue('ko', 'label'), description: getValue('ko', 'description') });
+          en.push({ slug: defaults.slug, label: getValue('en', 'label'), description: getValue('en', 'description') });
+        });
+        updates.start_here_sections = { value_ko: JSON.stringify(ko), value_en: JSON.stringify(en) };
+      }
+
+      let failure = '';
+      for (const [key, value] of Object.entries(updates)) {
+        const { error: updateError } = await authClient
+          .from('site_content')
+          .upsert({ key, ...value, updated_at: new Date().toISOString() });
+        if (updateError) {
+          failure += `${key}: ${updateError.message}\n`;
+        }
+      }
+
+      if (failure) {
+        feedback.textContent = `Error: ${failure.trim()}`;
+        feedback.className = 'admin-feedback admin-feedback--error';
+        feedback.style.display = '';
+      } else {
+        feedback.textContent = 'Saved successfully.';
+        feedback.className = 'admin-feedback admin-feedback--success';
+        feedback.style.display = '';
+        setTimeout(() => { feedback.style.display = 'none'; }, 3000);
+      }
+
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+
+    document.querySelectorAll('[data-save-group]').forEach((button) => {
+      button.addEventListener('click', () => saveGroup(button.dataset.saveGroup));
+    });
+  }
+
+  function initSettings() {
+    initSettingsTabs();
+    initPasswordChange();
+  }
+
+  document.addEventListener('DOMContentLoaded', initSettings);
+  initSettings();
 </script>

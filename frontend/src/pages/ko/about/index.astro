@@ -1,7 +1,8 @@
----
-export const prerender = true;
+﻿---
+export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
+import { getSiteContents } from '../../../lib/siteContent';
 
 const links = [
   { label: 'GitHub', href: 'https://github.com/ming2tofu33' },
@@ -10,46 +11,56 @@ const links = [
 ];
 
 const steps = [
-  { label: '발견', desc: 'Tavily 기반 검색이 연구 논문, 제품 출시, 업계 동향에서 가장 중요한 AI 뉴스를 수집합니다.' },
-  { label: '평가', desc: 'OpenAI가 각 뉴스의 관련성, 영향력, 새로움을 평가하여 핵심만 선별합니다.' },
-  { label: '작성', desc: '멀티 에이전트 파이프라인이 초보자 맥락, 학습자 심화, 전문가 인사이트 세 가지 관점으로 분석을 생성합니다.' },
-  { label: '발행', desc: '편집 검토를 거쳐 영어와 한국어 모두로 기사가 발행됩니다.' },
+  { label: '발견', desc: '리서치, 제품 출시, 툴 업데이트에서 중요한 AI 변화를 먼저 골라냅니다.' },
+  { label: '선별', desc: '화제성보다 실제로 남는 신호를 중심으로 우선순위를 정합니다.' },
+  { label: '정리', desc: '무엇이 바뀌었는지, 왜 중요한지, 어떻게 읽어야 하는지 맥락을 붙여 설명합니다.' },
+  { label: '발행', desc: '선별된 기사와 용어는 검토를 거쳐 한국어와 영어로 정리됩니다.' },
 ];
 
 const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel', 'Railway'];
+
+const sc = await getSiteContents(
+  [
+    'about_tagline',
+    'about_publication_intro',
+    'about_publication_detail',
+    'about_editor_intro',
+  ],
+  'ko',
+);
+
+const aboutTagline = sc.about_tagline || '신호를 맥락으로 바꾸는 기록';
+const aboutPublicationIntro =
+  sc.about_publication_intro ||
+  '0to1log는 빠르게 쏟아지는 AI 소식 속에서 중요한 변화만 골라, 실무 맥락과 함께 정리하는 퍼블리케이션입니다.';
+const aboutPublicationDetail =
+  sc.about_publication_detail ||
+  'AI 뉴스와 AI 용어집을 함께 운영해, 빠른 변화는 빠르게 읽고 필요한 개념은 다시 돌아와 정리할 수 있게 만드는 것이 목표입니다.';
+const aboutEditorIntro =
+  sc.about_editor_intro ||
+  'Amy Domin Kim은 LLM 애플리케이션, 데이터 시스템, 웹 제품을 연결해 만드는 엔지니어입니다. 0to1log는 개인 학습 기록에서 시작해, 지금은 AI를 더 잘 이해하기 위한 공개 작업실로 확장되고 있습니다.';
 ---
 
 <MainLayout title="소개" locale="ko" headerAlwaysVisible={true}>
   <div class="about-page">
-
-    <!-- Hero -->
     <section class="about-hero">
       <p class="about-overline">소개</p>
       <h1 class="about-title">0to1log</h1>
-      <p class="about-tagline">가치를 담는 기록</p>
+      <p class="about-tagline">{aboutTagline}</p>
       <div class="about-ornament" aria-hidden="true">&mdash;&thinsp;&diams;&thinsp;&mdash;</div>
     </section>
 
-    <!-- The Publication -->
     <section class="about-section">
       <h2 class="about-heading">퍼블리케이션</h2>
+      <p>{aboutPublicationIntro}</p>
+      <p>{aboutPublicationDetail}</p>
       <p>
-        매일 수백 건의 AI 소식이 쏟아집니다. 0to1log는 그중 정말 중요한 것만 골라내고,
-        모든 수준의 독자를 위해 맥락을 더합니다.
-      </p>
-      <p>
-        각 기사는 세 가지 버전으로 전달됩니다. 입문자를 위한 쉬운 요약, 학습자를 위한
-        기술적 분석, 그리고 비즈니스 시사점과 실행 가능한 인사이트를 담은 전문가 분석입니다.
-      </p>
-      <p>
-        <a href="/ko/handbook/">AI 용어 사전</a>은 뉴스 피드를 보완하며, 기초 개념부터
-        최신 기법까지 기술 용어를 명확하고 실용적으로 설명합니다.
+        <a href="/ko/handbook/">AI 용어집</a>은 뉴스 피드와 함께 움직이며, 중요한 기술 용어를 쉽게 다시 찾아볼 수 있게 돕습니다.
       </p>
     </section>
 
-    <!-- How It Works -->
     <section class="about-section">
-      <h2 class="about-heading">작동 방식</h2>
+      <h2 class="about-heading">운영 방식</h2>
       <ol class="about-steps">
         {steps.map((step) => (
           <li class="about-step">
@@ -60,18 +71,9 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </ol>
     </section>
 
-    <!-- The Editor -->
     <section class="about-section">
-      <h2 class="about-heading">편집자</h2>
-      <p>
-        <strong>Amy Domin Kim</strong> — LLM 애플리케이션, 데이터 분석, 웹 개발의
-        교차점에서 작업하는 AI 엔지니어입니다.
-      </p>
-      <p>
-        0to1log는 개인 학습 기록에서 시작해, AI 뉴스를 큐레이션하고 맥락을 더하는
-        풀스택 플랫폼으로 성장했습니다. AI 커뮤니티를 위한 일간 리소스이자
-        엔드투엔드 엔지니어링 포트폴리오이기도 합니다.
-      </p>
+      <h2 class="about-heading">에디터</h2>
+      <p>{aboutEditorIntro}</p>
       <nav class="about-links" aria-label="소셜 링크">
         {links.map((link, i) => (
           <>
@@ -87,7 +89,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </p>
     </section>
 
-    <!-- Built With -->
     <section class="about-section">
       <h2 class="about-heading">기술 스택</h2>
       <div class="about-stack">
@@ -97,13 +98,12 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </div>
     </section>
 
-    <!-- Connect -->
     <section class="about-section about-connect">
-      <h2 class="about-heading">연락처</h2>
+      <h2 class="about-heading">연결</h2>
       <p>
-        <a href="/rss.xml">RSS 구독</a>으로 새 기사를 받아보세요.
+        <a href="/rss.xml">RSS 구독</a>으로 새 글을 받아볼 수 있습니다.
       </p>
-      <nav class="about-links" aria-label="연락처 링크">
+      <nav class="about-links" aria-label="연락 링크">
         {links.map((link, i) => (
           <>
             {i > 0 && <span class="about-link-sep" aria-hidden="true">&middot;</span>}
@@ -115,11 +115,9 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </nav>
     </section>
 
-    <!-- Footer ornament -->
     <div class="about-footer-ornament" aria-hidden="true">
       &mdash;&thinsp;&diams;&thinsp;&mdash;
     </div>
-
   </div>
 </MainLayout>
 
@@ -130,7 +128,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     padding: 3rem 1.5rem 4rem;
   }
 
-  /* Hero */
   .about-hero {
     text-align: center;
     margin-bottom: 3rem;
@@ -164,7 +161,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     letter-spacing: 0.2em;
   }
 
-  /* Sections */
   .about-section {
     margin-bottom: 2.5rem;
   }
@@ -178,7 +174,7 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
   .about-section p {
     font-family: var(--font-body);
     font-size: 1rem;
-    line-height: 1.7;
+    line-height: 1.8;
     margin-bottom: 0.75rem;
     color: var(--color-text);
   }
@@ -188,7 +184,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     text-underline-offset: 2px;
   }
 
-  /* Steps */
   .about-steps {
     list-style: none;
     padding: 0;
@@ -201,7 +196,7 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     margin-bottom: 1rem;
     font-family: var(--font-body);
     font-size: 1rem;
-    line-height: 1.6;
+    line-height: 1.7;
   }
   .about-step::before {
     content: counter(step);
@@ -223,7 +218,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     margin-right: 0.25rem;
   }
 
-  /* Links */
   .about-links {
     display: flex;
     gap: 0.5rem;
@@ -246,7 +240,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     margin-top: 0.75rem;
   }
 
-  /* Tech stack tags */
   .about-stack {
     display: flex;
     flex-wrap: wrap;
@@ -262,7 +255,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     letter-spacing: 0.02em;
   }
 
-  /* Footer ornament */
   .about-footer-ornament {
     text-align: center;
     font-size: 0.875rem;

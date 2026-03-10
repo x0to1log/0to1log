@@ -10,6 +10,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });
   }
+  if (!locals.isAdmin) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const { id, action } = await request.json();
 

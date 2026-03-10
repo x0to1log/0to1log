@@ -2,15 +2,26 @@
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
+import { getSiteContents } from '../../lib/siteContent';
+
+const sc = await getSiteContents(['home_title', 'home_subtitle', 'home_intro'], 'en');
+const homeTitle = sc.home_title || t.en['home.title'];
+const homeSubtitle = sc.home_subtitle || t.en['home.subtitle'];
+const homeIntro =
+  sc.home_intro ||
+  'A concise publication for people who want the latest AI shifts, the right technical context, and a clearer path from signal to action.';
 ---
 
-<MainLayout title={t.en['home.title']} locale="en" headerAlwaysVisible={true}>
+<MainLayout title={homeTitle} locale="en" headerAlwaysVisible={true}>
   <section style="text-align: center; padding: 4rem 0;">
     <h1 class="text-display-xl" style={`font-family: var(--font-display); color: var(--color-accent);`}>
       0to1log
     </h1>
     <p class="text-subheading" style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-      {t.en['home.subtitle']}
+      {homeSubtitle}
+    </p>
+    <p style={`max-width: 42rem; margin: 1.25rem auto 0; color: var(--color-text-secondary); line-height: 1.7;`}>
+      {homeIntro}
     </p>
   </section>
 </MainLayout>

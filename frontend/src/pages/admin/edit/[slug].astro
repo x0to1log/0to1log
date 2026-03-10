@@ -15,6 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
 const isNew = pageSlug === 'new';
+const startInPreview = Astro.url.searchParams.get('mode') === 'preview';
 
 const accessToken = Astro.locals.accessToken;
 let post: any = null;
@@ -73,9 +74,12 @@ const editionMap: Record<string, string> = {
 };
 
 // Pre-render initial content and compute derived data for preview
-const initialCategory = post ? (normalizeCategorySlug(post.category) || '') : '';
-const initialEditionLabel = editionMap[initialCategory] || 'Deep Dive';
-const initialFocusItems = post ? getArticleFocusItems('en', post.category) : [];
+const initialStatus = post?.status || 'draft';
+const initialCategory = normalizeCategorySlug(post?.category) || 'ai-news';
+const initialEditionLabel = editionMap[initialCategory] || 'Daily Dispatch';
+const initialFocusItems = getArticleFocusItems('en', initialCategory);
+const initialTitle = post?.title || '';
+const initialTags = post?.tags || [];
 const previewContent = isBusinessPost ? (contentBeginner || contentLearner || contentExpert) : editableContent;
 const initialHtmlContent = post ? await renderMarkdown(previewContent) : '';
 const initialWordCount = post ? previewContent.split(/\s+/).length : 0;
@@ -114,7 +118,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     <>
       <AdminSidebar activeSection="posts" />
       <!-- Draft Mode -->
-      <div class="admin-editor-layout" id="draft-mode">
+      <div class="admin-editor-layout" id="draft-mode" style={startInPreview ? 'display: none;' : undefined}>
         <div class="admin-editor-topbar">
           <div class="admin-editor-topbar-left">
             <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
@@ -122,15 +126,15 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 <path d="M3 5h14M3 10h14M3 15h14" />
               </svg>
             </button>
-            <a href="/admin" class="admin-editor-back">&larr; Back</a>
-            <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
+            <a href="/admin/posts/" class="admin-editor-back">&larr; Back</a>
+            <span class={`admin-status-badge admin-status-badge--${initialStatus}`}>{initialStatus}</span>
           </div>
           <div class="admin-editor-topbar-right">
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
             <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
-            <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>
+            {!isNew && <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>}
           </div>
         </div>
 
@@ -252,10 +256,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       </div>
 
       <!-- Preview Mode (matches published page layout exactly) -->
-      <div id="preview-mode" style="display: none;">
+      <div id="preview-mode" style={startInPreview ? undefined : 'display: none;'}>
         <div class="admin-preview-bar">
           <div class="admin-toolbar-left">
-            <a href="/admin" class="admin-editor-back">&larr; Back</a>
+            <a href="/admin/posts/" class="admin-editor-back">&larr; Back</a>
           </div>
           <div class="admin-toolbar-right">
             <button id="btn-edit-back" class="admin-btn" type="button">Edit</button>
@@ -274,11 +278,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
               locale="en"
               slug={pageSlug}
               showSlug={false}
-              title={post.title}
-              category={post.category}
+              title={initialTitle}
+              category={initialCategory}
               publishedAt={new Date().toISOString()}
               readingTimeMin={initialReadingTime}
-              tags={post.tags}
+              tags={initialTags}
               htmlContent={initialHtmlContent}
               backLabel="Back to List"
             />

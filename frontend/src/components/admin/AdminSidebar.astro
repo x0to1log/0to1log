@@ -1,11 +1,11 @@
----
+﻿---
 interface Props {
-  activeSection?: 'posts' | 'handbook' | 'content';
+  activeSection?: 'dashboard' | 'posts' | 'handbook' | 'settings';
   recentPosts?: Array<{ title: string; slug: string; type: 'post' | 'term' }>;
   stats?: { posts: number; terms: number; drafts: number };
 }
 
-const { activeSection = 'posts', recentPosts = [], stats } = Astro.props;
+const { activeSection = 'dashboard', recentPosts = [], stats } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
@@ -20,7 +20,13 @@ const currentPath = Astro.url.pathname;
   </div>
 
   <nav class="admin-sidebar-nav">
-    <a href="/admin/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'posts' }]}>
+    <a href="/admin/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'dashboard' }]}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" />
+      </svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="/admin/posts/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'posts' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M2 3h12M2 7h8M2 11h10" />
       </svg>
@@ -32,23 +38,25 @@ const currentPath = Astro.url.pathname;
       </svg>
       <span>Handbook</span>
     </a>
-    <a href="/admin/content" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'content' }]}>
+    <a href="/admin/settings" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'settings' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M4 2h5l3 3v9H4z" />
-        <path d="M9 2v3h3" />
-        <path d="M6 8h4M6 11h3" />
+        <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+        <path d="M13.4 10a1.2 1.2 0 0 0 .2 1.3l.1.1a1.4 1.4 0 1 1-2 2l-.1-.1a1.2 1.2 0 0 0-1.3-.2 1.2 1.2 0 0 0-.7 1.1v.2a1.4 1.4 0 1 1-2.8 0v-.1a1.2 1.2 0 0 0-.8-1.1 1.2 1.2 0 0 0-1.3.2l-.1.1a1.4 1.4 0 1 1-2-2l.1-.1a1.2 1.2 0 0 0 .2-1.3 1.2 1.2 0 0 0-1.1-.7h-.2a1.4 1.4 0 1 1 0-2.8h.1a1.2 1.2 0 0 0 1.1-.8 1.2 1.2 0 0 0-.2-1.3l-.1-.1a1.4 1.4 0 1 1 2-2l.1.1a1.2 1.2 0 0 0 1.3.2h.1a1.2 1.2 0 0 0 .7-1.1v-.2a1.4 1.4 0 1 1 2.8 0v.1a1.2 1.2 0 0 0 .7 1.1 1.2 1.2 0 0 0 1.3-.2l.1-.1a1.4 1.4 0 1 1 2 2l-.1.1a1.2 1.2 0 0 0-.2 1.3v.1a1.2 1.2 0 0 0 1.1.7h.2a1.4 1.4 0 1 1 0 2.8h-.1a1.2 1.2 0 0 0-1.1.7z" />
       </svg>
-      <span>Content</span>
+      <span>Settings</span>
     </a>
   </nav>
 
   {recentPosts.length > 0 && (
     <div class="admin-sidebar-section">
-      <div class="admin-sidebar-section-title">Recent</div>
+      <div class="admin-sidebar-section-title">Recent Updates</div>
       <ul class="admin-sidebar-recent">
         {recentPosts.slice(0, 5).map((item) => (
           <li>
-            <a href={item.type === 'post' ? `/admin/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`} class="admin-sidebar-recent-link">
+            <a
+              href={item.type === 'post' ? `/admin/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
+              class="admin-sidebar-recent-link"
+            >
               <span class="admin-sidebar-recent-type">{item.type === 'post' ? 'P' : 'H'}</span>
               <span>{item.title}</span>
             </a>
@@ -60,7 +68,7 @@ const currentPath = Astro.url.pathname;
 
   {stats && (
     <div class="admin-sidebar-section">
-      <div class="admin-sidebar-section-title">Stats</div>
+      <div class="admin-sidebar-section-title">Overview</div>
       <div class="admin-sidebar-stats">
         <div class="admin-sidebar-stat">
           <span class="admin-sidebar-stat-value">{stats.posts}</span>
@@ -95,13 +103,6 @@ const currentPath = Astro.url.pathname;
       </svg>
       <span id="sidebar-theme-label">Theme</span>
     </button>
-    <a href="/admin/settings" class="admin-sidebar-link">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
-        <path d="M13.4 10a1.2 1.2 0 0 0 .2 1.3l.1.1a1.4 1.4 0 1 1-2 2l-.1-.1a1.2 1.2 0 0 0-1.3-.2 1.2 1.2 0 0 0-.7 1.1v.2a1.4 1.4 0 1 1-2.8 0v-.1a1.2 1.2 0 0 0-.8-1.1 1.2 1.2 0 0 0-1.3.2l-.1.1a1.4 1.4 0 1 1-2-2l.1-.1a1.2 1.2 0 0 0 .2-1.3 1.2 1.2 0 0 0-1.1-.7h-.2a1.4 1.4 0 1 1 0-2.8h.1a1.2 1.2 0 0 0 1.1-.8 1.2 1.2 0 0 0-.2-1.3l-.1-.1a1.4 1.4 0 1 1 2-2l.1.1a1.2 1.2 0 0 0 1.3.2h.1a1.2 1.2 0 0 0 .7-1.1v-.2a1.4 1.4 0 1 1 2.8 0v.1a1.2 1.2 0 0 0 .7 1.1 1.2 1.2 0 0 0 1.3-.2l.1-.1a1.4 1.4 0 1 1 2 2l-.1.1a1.2 1.2 0 0 0-.2 1.3v.1a1.2 1.2 0 0 0 1.1.7h.2a1.4 1.4 0 1 1 0 2.8h-.1a1.2 1.2 0 0 0-1.1.7z" />
-      </svg>
-      <span>Settings</span>
-    </a>
     <a href="/en/" class="admin-sidebar-link" target="_blank">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M6 3H3v10h10v-3M9 2h5v5M14 2L7 9" />
@@ -121,21 +122,17 @@ const currentPath = Astro.url.pathname;
 <div class="admin-sidebar-overlay" id="sidebar-overlay"></div>
 
 <script>
+  // @ts-nocheck
   function initSidebar() {
     const sidebar = document.getElementById('admin-sidebar');
     const toggle = document.getElementById('sidebar-toggle');
     const overlay = document.getElementById('sidebar-overlay');
     const mobileBtn = document.getElementById('mobile-menu-btn');
-    if (!sidebar) return;
-
-    // Prevent duplicate listeners on re-init (ViewTransitions navigation)
-    if (sidebar.dataset.sidebarInit === '1') return;
+    if (!sidebar || sidebar.dataset.sidebarInit === '1') return;
     sidebar.dataset.sidebarInit = '1';
 
-    // Clear stale localStorage value from previous implementation
-    localStorage.removeItem('admin-sidebar-collapsed');
+    sessionStorage.removeItem('admin-sidebar-collapsed-legacy');
 
-    // Desktop: restore collapsed state (per-session only, default = expanded)
     if (toggle && sessionStorage.getItem('admin-sidebar-collapsed') === '1') {
       sidebar.classList.add('admin-sidebar--collapsed');
       document.querySelectorAll('.admin-dashboard, .admin-editor-layout, #preview-mode').forEach((el) => {
@@ -143,7 +140,6 @@ const currentPath = Astro.url.pathname;
       });
     }
 
-    // Desktop: collapse toggle
     toggle?.addEventListener('click', () => {
       const collapsed = sidebar.classList.toggle('admin-sidebar--collapsed');
       sessionStorage.setItem('admin-sidebar-collapsed', collapsed ? '1' : '0');
@@ -152,14 +148,12 @@ const currentPath = Astro.url.pathname;
       });
     });
 
-    // Mobile: open sidebar
     function openMobileSidebar() {
       sidebar.classList.add('admin-sidebar--mobile-open');
       overlay?.classList.add('admin-sidebar-overlay--visible');
       document.body.style.overflow = 'hidden';
     }
 
-    // Mobile: close sidebar
     function closeMobileSidebar() {
       sidebar.classList.remove('admin-sidebar--mobile-open');
       overlay?.classList.remove('admin-sidebar-overlay--visible');
@@ -169,26 +163,22 @@ const currentPath = Astro.url.pathname;
     mobileBtn?.addEventListener('click', openMobileSidebar);
     overlay?.addEventListener('click', closeMobileSidebar);
 
-    // Close mobile sidebar on nav link click
     sidebar.querySelectorAll('a').forEach((link) => {
       link.addEventListener('click', () => {
         if (window.innerWidth < 768) closeMobileSidebar();
       });
     });
 
-    // Clean up mobile state on resize to desktop
     window.addEventListener('resize', () => {
       if (window.innerWidth >= 768) closeMobileSidebar();
     });
 
-    // Theme toggle (mirrors Navigation.astro logic)
-    const themeList = ['dark', 'light', 'pink'] as const;
-    type Theme = typeof themeList[number];
-    const themeColors: Record<string, string> = { dark: '#1F1A17', light: '#F4F1EA', pink: '#FFF0F3' };
+    const themeList = ['dark', 'light', 'pink'];
+    const themeColors = { dark: '#1F1A17', light: '#F4F1EA', pink: '#FFF0F3' };
 
-    function getSidebarTheme(): Theme {
+    function getSidebarTheme() {
       const stored = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
-      return themeList.includes(stored as Theme) ? (stored as Theme) : 'dark';
+      return themeList.includes(stored) ? stored : 'dark';
     }
 
     function updateSidebarThemeUI() {
@@ -201,14 +191,13 @@ const currentPath = Astro.url.pathname;
       });
     }
 
-    const sidebarThemeBtn = document.getElementById('sidebar-theme-toggle');
-    sidebarThemeBtn?.addEventListener('click', () => {
+    document.getElementById('sidebar-theme-toggle')?.addEventListener('click', () => {
       const current = getSidebarTheme();
       const idx = themeList.indexOf(current);
       const next = themeList[(idx + 1) % themeList.length];
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
-      const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+      const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute('content', themeColors[next] || themeColors.dark);
       updateSidebarThemeUI();
     });
@@ -219,3 +208,5 @@ const currentPath = Astro.url.pathname;
   document.addEventListener('astro:page-load', initSidebar);
   initSidebar();
 </script>
+
+

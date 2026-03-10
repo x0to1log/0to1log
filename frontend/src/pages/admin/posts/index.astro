@@ -1,44 +1,69 @@
-﻿---
+---
 export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
-import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
+
+type AdminPostRow = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string | null;
+  locale: string | null;
+  status: 'draft' | 'published' | string;
+  updated_at: string;
+  published_at: string | null;
+};
 
 const accessToken = Astro.locals.accessToken;
-const supabase = createClient(
+const sb = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
   { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
 );
 
 let fetchError: string | null = null;
+let allPosts: AdminPostRow[] = [];
+let logDraft = 0;
+let logPublished = 0;
+let logTotal = 0;
 
-const { data: terms, error } = await supabase
-  .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, difficulty, definition_ko, definition_en, updated_at, published_at')
-  .order('updated_at', { ascending: false });
+try {
+  const { data, error } = await sb
+    .from('posts')
+    .select('id, title, slug, category, locale, status, updated_at, published_at')
+    .order('updated_at', { ascending: false });
 
-if (error) {
-  fetchError = error.message;
+  if (error) {
+    fetchError = error.message;
+  } else {
+    allPosts = data ?? [];
+    logTotal = allPosts.length;
+    logDraft = allPosts.filter((post) => post.status === 'draft').length;
+    logPublished = allPosts.filter((post) => post.status === 'published').length;
+  }
+} catch (error) {
+  fetchError = error instanceof Error ? error.message : 'Unknown error';
 }
 
-const allTerms = (terms ?? []).sort((a, b) => {
+allPosts = allPosts.sort((a, b) => {
   if (a.status === 'draft' && b.status !== 'draft') return -1;
   if (a.status !== 'draft' && b.status === 'draft') return 1;
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 });
 
-const draftCount = allTerms.filter((term) => term.status === 'draft').length;
-const publishedCount = allTerms.filter((term) => term.status === 'published').length;
-const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categories || []))).sort();
-const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficulty).filter(Boolean))).sort();
+const localeOptions = Array.from(
+  new Set(allPosts.map((post) => post.locale).filter((locale): locale is string => Boolean(locale))),
+).sort();
+const categoryOptions = Array.from(
+  new Set(allPosts.map((post) => post.category).filter((category): category is string => Boolean(category))),
+).sort();
 ---
 
-<MainLayout title="Admin Handbook" locale="en">
-  <AdminSidebar activeSection="handbook" />
+<MainLayout title="Admin Posts" locale="en">
+  <AdminSidebar activeSection="posts" />
 
   <div class="admin-dashboard">
     <div class="admin-main">
@@ -50,7 +75,7 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
             </svg>
           </button>
           <div>
-            <h1 class="admin-main-title">Handbook</h1>
+            <h1 class="admin-main-title">Posts</h1>
           </div>
         </div>
       </div>
@@ -58,11 +83,11 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
       <div class="admin-list-toolbar">
         <div class="admin-list-toolbar-row">
           <div class="admin-list-toolbar-left">
-            <a href="/admin/handbook/edit/new" class="admin-btn admin-btn-primary">New Term</a>
+            <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
             <div class="admin-filter-tabs">
-              <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({draftCount})</button>
-              <button class="admin-filter-btn" data-filter="published">Published ({publishedCount})</button>
-              <button class="admin-filter-btn" data-filter="all">All ({allTerms.length})</button>
+              <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({logDraft})</button>
+              <button class="admin-filter-btn" data-filter="published">Published ({logPublished})</button>
+              <button class="admin-filter-btn" data-filter="all">All ({logTotal})</button>
             </div>
           </div>
           <div class="admin-list-toolbar-right">
@@ -81,17 +106,22 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
           </div>
         </div>
         <div class="admin-list-toolbar-filters" id="filters-panel" hidden>
-          <select id="admin-difficulty-filter" class="admin-select">
-            <option value="">All difficulties</option>
-            {difficultyOptions.map((difficulty) => (
-              <option value={difficulty}>{difficulty}</option>
+          <select id="admin-locale-filter" class="admin-select">
+            <option value="">All locales</option>
+            {localeOptions.map((locale) => (
+              <option value={locale}>{locale.toUpperCase()}</option>
             ))}
           </select>
           <select id="admin-category-filter" class="admin-select">
             <option value="">All categories</option>
             {categoryOptions.map((category) => (
-              <option value={category}>{getHandbookCategoryLabel('en', category)}</option>
+              <option value={category}>{category}</option>
             ))}
+          </select>
+          <select id="admin-sort" class="admin-select">
+            <option value="updated">Recently updated</option>
+            <option value="published">Recently published</option>
+            <option value="title">Title A-Z</option>
           </select>
         </div>
       </div>
@@ -99,53 +129,51 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
       {fetchError ? (
         <NewsprintNotice
           variant="unauthorized"
-          message={`Failed to load terms: ${fetchError}`}
-          linkHref="/admin/handbook/"
+          message={`Failed to load posts: ${fetchError}`}
+          linkHref="/admin/posts/"
           linkLabel="Retry"
         />
-      ) : allTerms.length === 0 ? (
-        <NewsprintNotice variant="empty" message="No handbook terms yet. Create one to get started." />
+      ) : allPosts.length === 0 ? (
+        <NewsprintNotice variant="empty" message="No posts yet." />
       ) : (
         <>
-          <ul class="admin-list" id="term-list">
-            {allTerms.map((term) => (
+          <ul class="admin-list" id="post-list">
+            {allPosts.map((post) => (
               <li
                 class="admin-list-item"
-                data-status={term.status}
-                data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
-                data-difficulty={term.difficulty || ''}
-                data-categories={(term.categories || []).join(',')}
+                data-status={post.status}
+                data-title={post.title.toLowerCase()}
+                data-locale={post.locale || ''}
+                data-category={post.category || ''}
+                data-updated={post.updated_at || ''}
+                data-published={post.published_at || ''}
               >
                 <div class="admin-list-info">
                   <div class="admin-list-title">
-                    <a href={`/admin/handbook/edit/${term.slug}`}>{term.term}</a>
-                    {term.korean_name && <span class="admin-list-subtitle"> · {term.korean_name}</span>}
+                    <a href={`/admin/edit/${post.slug}`}>{post.title}</a>
                   </div>
                   <div class="admin-list-meta">
-                    <span class={`admin-status-badge admin-status-badge--${term.status}`}>{term.status}</span>
-                    {(term.categories || []).length > 0 && (
-                      <span>{(term.categories || []).map((category: string) => getHandbookCategoryLabel('en', category)).join(' · ')}</span>
-                    )}
-                    {term.difficulty && <span>{term.difficulty}</span>}
-                    <span>{term.definition_ko ? 'KO ready' : 'KO missing'}</span>
-                    <span>{term.definition_en ? 'EN ready' : 'EN missing'}</span>
-                    <span>Updated {new Date(term.updated_at).toLocaleDateString('en-US')}</span>
+                    <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
+                    {post.locale && <span>{post.locale.toUpperCase()}</span>}
+                    {post.category && <span>{post.category}</span>}
+                    <span>Updated {new Date(post.updated_at).toLocaleDateString('en-US')}</span>
+                    {post.published_at && <span>Published {new Date(post.published_at).toLocaleDateString('en-US')}</span>}
                   </div>
                 </div>
                 <div class="admin-list-actions">
-                  <a href={`/admin/handbook/edit/${term.slug}`} class="admin-btn admin-btn-success">Edit</a>
-                  <a href={`/admin/handbook/edit/${term.slug}?mode=preview`} class="admin-btn">Preview</a>
-                  {term.status === 'draft' ? (
-                    <button class="admin-btn admin-btn-primary" data-action="publish" data-id={term.id}>Publish</button>
+                  <a href={`/admin/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
+                  <a href={`/admin/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
+                  {post.status === 'draft' ? (
+                    <button class="admin-btn admin-btn-primary" data-action="publish" data-id={post.id}>Publish</button>
                   ) : (
-                    <button class="admin-btn" data-action="unpublish" data-id={term.id}>Unpublish</button>
+                    <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
                   )}
-                  <button class="admin-btn-danger" data-action="delete" data-id={term.id} data-title={term.term}>Delete</button>
+                  <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
                 </div>
               </li>
             ))}
           </ul>
-          <p id="admin-no-results" class="admin-no-results" hidden>No matching terms.</p>
+          <p id="admin-no-results" class="admin-no-results" hidden>No matching posts.</p>
         </>
       )}
     </div>
@@ -236,15 +264,16 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
 
 <script>
   // @ts-nocheck
-  function initHandbookAdmin() {
-    const list = document.getElementById('term-list');
+  function initPostsList() {
+    const list = document.getElementById('post-list');
     if (!list || list.dataset.init === '1') return;
     list.dataset.init = '1';
 
     let currentFilter = 'draft';
     const searchInput = document.getElementById('admin-search');
-    const difficultyFilter = document.getElementById('admin-difficulty-filter');
+    const localeFilter = document.getElementById('admin-locale-filter');
     const categoryFilter = document.getElementById('admin-category-filter');
+    const sortSelect = document.getElementById('admin-sort');
     const noResults = document.getElementById('admin-no-results');
     const filtersToggle = document.getElementById('filters-toggle');
     const filtersPanel = document.getElementById('filters-panel');
@@ -255,23 +284,43 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
       filtersToggle.setAttribute('aria-expanded', String(!open));
     });
 
+    function getVisibleItems() {
+      return Array.from(list.querySelectorAll('.admin-list-item'));
+    }
+
+    function sortItems(mode) {
+      const items = getVisibleItems();
+      items.sort((a, b) => {
+        if (mode === 'title') {
+          return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+        }
+        if (mode === 'published') {
+          return new Date(b.dataset.published || b.dataset.updated || 0).getTime()
+            - new Date(a.dataset.published || a.dataset.updated || 0).getTime();
+        }
+        return new Date(b.dataset.updated || 0).getTime() - new Date(a.dataset.updated || 0).getTime();
+      });
+      items.forEach((item) => list.appendChild(item));
+    }
+
     function applyFilter() {
       const query = (searchInput?.value || '').toLowerCase().trim();
-      const difficulty = difficultyFilter?.value || '';
+      const locale = localeFilter?.value || '';
       const category = categoryFilter?.value || '';
       let visibleCount = 0;
 
-      Array.from(list.querySelectorAll('.admin-list-item')).forEach((item) => {
+      getVisibleItems().forEach((item) => {
         const matchesStatus = currentFilter === 'all' || item.dataset.status === currentFilter;
         const matchesQuery = !query || (item.dataset.title || '').includes(query);
-        const matchesDifficulty = !difficulty || item.dataset.difficulty === difficulty;
-        const matchesCategory = !category || (item.dataset.categories || '').split(',').includes(category);
-        const visible = matchesStatus && matchesQuery && matchesDifficulty && matchesCategory;
+        const matchesLocale = !locale || item.dataset.locale === locale;
+        const matchesCategory = !category || item.dataset.category === category;
+        const visible = matchesStatus && matchesQuery && matchesLocale && matchesCategory;
         item.style.display = visible ? '' : 'none';
         if (visible) visibleCount += 1;
       });
 
       if (noResults) noResults.hidden = visibleCount > 0;
+      sortItems(sortSelect?.value || 'updated');
     }
 
     document.querySelectorAll('[data-filter]').forEach((btn) => {
@@ -284,8 +333,9 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
     });
 
     searchInput?.addEventListener('input', applyFilter);
-    difficultyFilter?.addEventListener('change', applyFilter);
+    localeFilter?.addEventListener('change', applyFilter);
     categoryFilter?.addEventListener('change', applyFilter);
+    sortSelect?.addEventListener('change', applyFilter);
 
     document.querySelectorAll('[data-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -294,9 +344,9 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
         if (!action || !id) return;
 
         if (action === 'delete') {
-          const title = btn.dataset.title || 'this term';
+          const title = btn.dataset.title || 'this post';
           if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
-          const res = await fetch('/api/admin/handbook/delete', {
+          const res = await fetch('/api/admin/posts/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id }),
@@ -307,7 +357,7 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
           return;
         }
 
-        const res = await fetch('/api/admin/handbook/status', {
+        const res = await fetch('/api/admin/posts/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, action }),
@@ -326,10 +376,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
     applyFilter();
   }
 
-  document.addEventListener('DOMContentLoaded', initHandbookAdmin);
-  initHandbookAdmin();
+  document.addEventListener('DOMContentLoaded', initPostsList);
+  initPostsList();
 </script>
-
-
-
-

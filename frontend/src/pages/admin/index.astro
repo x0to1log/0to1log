@@ -1,8 +1,8 @@
 ---
 export const prerender = false;
+
 import MainLayout from '../../layouts/MainLayout.astro';
 import AdminSidebar from '../../components/admin/AdminSidebar.astro';
-import NewsprintNotice from '../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
 
 const accessToken = Astro.locals.accessToken;
@@ -12,72 +12,65 @@ const sb = createClient(
   { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
 );
 
-// --- Handbook stats ---
-let handbookDraft = 0;
-let handbookPublished = 0;
-let handbookTotal = 0;
+let totalPosts = 0;
+let publishedPosts = 0;
+let totalTerms = 0;
+let totalDrafts = 0;
+
+type ActivityItem = {
+  title: string;
+  slug: string;
+  type: 'post' | 'term';
+  status: string;
+  updated_at: string;
+};
+
+let recentActivity: ActivityItem[] = [];
+let staleDrafts: ActivityItem[] = [];
+
 try {
-  const { data: terms } = await sb
-    .from('handbook_terms')
-    .select('id, term, slug, status, updated_at');
-  if (terms) {
-    handbookTotal = terms.length;
-    handbookDraft = terms.filter((t) => t.status === 'draft').length;
-    handbookPublished = terms.filter((t) => t.status === 'published').length;
-  }
+  const [postsRes, termsRes] = await Promise.all([
+    sb.from('posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }),
+    sb.from('handbook_terms').select('term, slug, status, updated_at').order('updated_at', { ascending: false }),
+  ]);
+
+  const posts = postsRes.data ?? [];
+  const terms = termsRes.data ?? [];
+
+  totalPosts = posts.length;
+  publishedPosts = posts.filter((p) => p.status === 'published').length;
+  totalTerms = terms.length;
+
+  const postDrafts = posts.filter((p) => p.status === 'draft').length;
+  const termDrafts = terms.filter((t) => t.status === 'draft').length;
+  totalDrafts = postDrafts + termDrafts;
+
+  const allItems: ActivityItem[] = [
+    ...posts.map((p) => ({ title: p.title, slug: p.slug, type: 'post' as const, status: p.status, updated_at: p.updated_at })),
+    ...terms.map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at })),
+  ];
+  allItems.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  recentActivity = allItems.slice(0, 8);
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  staleDrafts = allItems.filter((item) => item.status === 'draft' && item.updated_at < sevenDaysAgo).slice(0, 5);
 } catch {}
 
-// --- Post stats (Supabase direct) ---
-let logDraft = 0;
-let logPublished = 0;
-let logTotal = 0;
-let allPosts: any[] = [];
-let fetchError: string | null = null;
-try {
-  const { data: posts, error } = await sb
-    .from('posts')
-    .select('id, title, slug, category, status, updated_at, published_at')
-    .order('updated_at', { ascending: false });
-  if (error) {
-    fetchError = error.message;
-  } else if (posts) {
-    allPosts = posts.sort((a, b) => {
-      if (a.status === 'draft' && b.status !== 'draft') return -1;
-      if (a.status !== 'draft' && b.status === 'draft') return 1;
-      if (a.status === 'draft' && b.status === 'draft') {
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      }
-      return new Date(b.published_at || b.updated_at).getTime() - new Date(a.published_at || a.updated_at).getTime();
-    });
-    logTotal = posts.length;
-    logDraft = posts.filter((p) => p.status === 'draft').length;
-    logPublished = posts.filter((p) => p.status === 'published').length;
-  }
-} catch (err) {
-  fetchError = err instanceof Error ? err.message : 'Unknown error';
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US');
 }
-
-// --- Recent items for sidebar ---
-const recentItems: Array<{ title: string; slug: string; type: 'post' | 'term' }> = [];
-// Add recent posts
-allPosts.slice(0, 3).forEach((p) => recentItems.push({ title: p.title, slug: p.slug, type: 'post' }));
-// Add recent handbook terms (already fetched above)
-try {
-  const { data: recentTerms } = await sb
-    .from('handbook_terms')
-    .select('term, slug')
-    .order('updated_at', { ascending: false })
-    .limit(2);
-  (recentTerms || []).forEach((t) => recentItems.push({ title: t.term, slug: t.slug, type: 'term' }));
-} catch {}
 ---
 
 <MainLayout title="Admin Dashboard" locale="en">
-  <AdminSidebar
-    activeSection="posts"
-    recentPosts={recentItems}
-    stats={{ posts: logTotal, terms: handbookTotal, drafts: logDraft + handbookDraft }}
-  />
+  <AdminSidebar activeSection="dashboard" />
 
   <div class="admin-dashboard">
     <div class="admin-main">
@@ -88,154 +81,244 @@ try {
               <path d="M3 5h14M3 10h14M3 15h14" />
             </svg>
           </button>
-          <h1 class="admin-main-title">Posts</h1>
-        </div>
-        <div class="admin-header-controls">
-          <div class="admin-filter-tabs">
-            <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">
-              Draft ({logDraft})
-            </button>
-            <button class="admin-filter-btn" data-filter="published">
-              Published ({logPublished})
-            </button>
-            <button class="admin-filter-btn" data-filter="all">
-              All ({logTotal})
-            </button>
+          <div>
+            <h1 class="admin-main-title">Dashboard</h1>
           </div>
-          <a href="/admin/edit/new" class="admin-btn admin-btn-primary">+ New Post</a>
+        </div>
+        <div class="admin-quick-actions">
+          <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
+          <a href="/admin/handbook/edit/new" class="admin-btn">New Term</a>
         </div>
       </div>
 
-      <!-- Overview Dashboard -->
-      <div class="admin-overview">
-        <div class="admin-stat-card">
-          <div class="admin-stat-card-label">Posts</div>
-          <div class="admin-stat-card-value">{fetchError ? '—' : logTotal}</div>
-          <div class="admin-stat-card-detail">
-            {logDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{logDraft} draft</span>}
-            {logPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{logPublished} published</span>}
-          </div>
-        </div>
-        <div class="admin-stat-card">
-          <div class="admin-stat-card-label">Handbook</div>
-          <div class="admin-stat-card-value">{handbookTotal}</div>
-          <div class="admin-stat-card-detail">
-            {handbookDraft > 0 && <span class="admin-status-badge admin-status-badge--draft">{handbookDraft} draft</span>}
-            {handbookPublished > 0 && <span class="admin-status-badge admin-status-badge--published">{handbookPublished} published</span>}
-          </div>
+      <div class="dashboard-stats">
+        <a href="/admin/posts/" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Posts</div>
+          <div class="dashboard-stat-value">{totalPosts}</div>
+        </a>
+        <a href="/admin/posts/" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Published</div>
+          <div class="dashboard-stat-value">{publishedPosts}</div>
+        </a>
+        <a href="/admin/handbook/" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Terms</div>
+          <div class="dashboard-stat-value">{totalTerms}</div>
+        </a>
+        <div class="dashboard-stat-card dashboard-stat-card--highlight">
+          <div class="dashboard-stat-label">Drafts</div>
+          <div class="dashboard-stat-value">{totalDrafts}</div>
         </div>
       </div>
 
-      <input type="search" class="admin-input admin-search-input" id="admin-search" placeholder="Search by title..." />
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Recent Activity</h2>
+        {recentActivity.length === 0 ? (
+          <p class="dashboard-empty">No activity yet. Create your first post or term.</p>
+        ) : (
+          <ul class="dashboard-activity-list">
+            {recentActivity.map((item) => (
+              <li class="dashboard-activity-item">
+                <a
+                  href={item.type === 'post' ? `/admin/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
+                  class="dashboard-activity-link"
+                >
+                  <span class="dashboard-activity-type">{item.type === 'post' ? 'Post' : 'Term'}</span>
+                  <span class="dashboard-activity-title">{item.title}</span>
+                  <span class={`admin-status-badge admin-status-badge--${item.status}`}>{item.status}</span>
+                  <span class="dashboard-activity-time">{relativeTime(item.updated_at)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      {fetchError ? (
-        <NewsprintNotice
-          variant="unauthorized"
-          message={`Failed to load posts: ${fetchError}`}
-          linkHref="/admin"
-          linkLabel="Retry"
-        />
-      ) : allPosts.length === 0 ? (
-        <NewsprintNotice variant="empty" message="No posts yet." />
-      ) : (
-        <ul class="admin-list" id="post-list">
-          {allPosts.map((post) => (
-            <li class="admin-list-item" data-status={post.status}>
-              <div class="admin-list-info">
-                <div class="admin-list-title">
-                  <a href={`/admin/edit/${post.slug}`}>{post.title}</a>
-                </div>
-                <div class="admin-list-meta">
-                  <span class={`admin-status-badge admin-status-badge--${post.status}`}>
-                    {post.status}
-                  </span>
-                  {post.category && <span>{post.category}</span>}
-                  <span>{new Date(post.updated_at).toLocaleDateString('en-US')}</span>
-                </div>
-              </div>
-              <div class="admin-list-actions">
-                {post.status === 'draft' ? (
-                  <button class="admin-btn" data-action="publish" data-id={post.id}>Publish</button>
-                ) : post.status === 'published' ? (
-                  <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
-                ) : null}
-                <a href={`/admin/edit/${post.slug}`} class="admin-btn">Edit</a>
-                <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <p id="admin-no-results" class="admin-no-results" hidden>No matching items.</p>
+      {staleDrafts.length > 0 && (
+        <section class="dashboard-section">
+          <h2 class="dashboard-section-title">Drafts Needing Attention</h2>
+          <p class="dashboard-section-hint">These drafts haven't been updated in over 7 days.</p>
+          <ul class="dashboard-activity-list">
+            {staleDrafts.map((item) => (
+              <li class="dashboard-activity-item">
+                <a
+                  href={item.type === 'post' ? `/admin/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
+                  class="dashboard-activity-link"
+                >
+                  <span class="dashboard-activity-type">{item.type === 'post' ? 'Post' : 'Term'}</span>
+                  <span class="dashboard-activity-title">{item.title}</span>
+                  <span class="dashboard-activity-time">{relativeTime(item.updated_at)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
-
   </div>
 </MainLayout>
 
-<script>
-  function initAdminDashboard() {
-    let currentFilter = 'draft';
-    const searchInput = document.getElementById('admin-search') as HTMLInputElement;
-
-    function applyFilter(filter: string) {
-      currentFilter = filter;
-      const query = searchInput?.value.toLowerCase().trim() || '';
-      let visibleCount = 0;
-      document.querySelectorAll<HTMLElement>('#post-list [data-status]').forEach((item) => {
-        const matchesStatus = filter === 'all' || item.dataset.status === filter;
-        const title = item.querySelector('.admin-list-title a')?.textContent?.toLowerCase() || '';
-        const matchesSearch = !query || title.includes(query);
-        item.style.display = (matchesStatus && matchesSearch) ? '' : 'none';
-        if (matchesStatus && matchesSearch) visibleCount++;
-      });
-      const noResults = document.getElementById('admin-no-results');
-      if (noResults) noResults.hidden = visibleCount > 0;
-    }
-
-    document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const filter = btn.dataset.filter!;
-        document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) =>
-          b.classList.remove('admin-filter-btn--active')
-        );
-        btn.classList.add('admin-filter-btn--active');
-        applyFilter(filter);
-      });
-    });
-
-    searchInput?.addEventListener('input', () => applyFilter(currentFilter));
-
-    applyFilter('draft');
-
-    document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const action = btn.dataset.action!;
-        const id = btn.dataset.id!;
-
-        if (action === 'delete') {
-          const title = btn.dataset.title || 'this post';
-          if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-          const res = await fetch('/api/admin/posts/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
-          });
-          if (res.ok) { window.location.reload(); }
-          else { const err = await res.json(); alert(`Delete failed: ${err.error}`); }
-          return;
-        }
-
-        const res = await fetch('/api/admin/posts/status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, action }),
-        });
-        if (res.ok) { window.location.reload(); }
-        else { const err = await res.json(); alert(`${action} failed: ${err.error}`); }
-      });
-    });
+<style>
+  .admin-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
-  document.addEventListener('DOMContentLoaded', initAdminDashboard);
-  initAdminDashboard();
-</script>
+  .dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .dashboard-stat-card {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s;
+  }
+
+  .dashboard-stat-card:hover {
+    border-color: var(--color-text-muted);
+  }
+
+  .dashboard-stat-card--highlight {
+    border-color: var(--color-accent, var(--color-border));
+  }
+
+  .dashboard-stat-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .dashboard-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .dashboard-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .dashboard-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-section-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    padding: 1rem 0;
+  }
+
+  .dashboard-activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dashboard-activity-item {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .dashboard-activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .dashboard-activity-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.25rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.1s;
+  }
+
+  .dashboard-activity-link:hover {
+    background: var(--color-bg-secondary);
+  }
+
+  .dashboard-activity-type {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    min-width: 3rem;
+  }
+
+  .dashboard-activity-title {
+    flex: 1;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-activity-time {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 960px) {
+    .dashboard-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .dashboard-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-quick-actions {
+      flex-direction: row;
+    }
+
+    .admin-quick-actions .admin-btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .dashboard-activity-link {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 0.2rem 0.5rem;
+      padding: 0.65rem 0.25rem;
+    }
+
+    .dashboard-activity-type {
+      min-width: auto;
+      grid-row: 1;
+      grid-column: 1;
+    }
+
+    .dashboard-activity-title {
+      grid-row: 1;
+      grid-column: 2 / -1;
+    }
+
+    .dashboard-activity-time {
+      grid-row: 2;
+      grid-column: 2;
+    }
+
+    .dashboard-activity-link .admin-status-badge {
+      grid-row: 2;
+      grid-column: 1;
+    }
+  }
+</style>

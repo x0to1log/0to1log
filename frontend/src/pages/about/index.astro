@@ -1,7 +1,8 @@
----
-export const prerender = true;
+﻿---
+export const prerender = false;
 
 import MainLayout from '../../layouts/MainLayout.astro';
+import { getSiteContents } from '../../lib/siteContent';
 
 const links = [
   { label: 'GitHub', href: 'https://github.com/ming2tofu33' },
@@ -10,44 +11,54 @@ const links = [
 ];
 
 const steps = [
-  { label: 'Discover', desc: 'Tavily-powered search scans for the most significant AI news across research papers, product launches, and industry developments.' },
-  { label: 'Rank', desc: 'OpenAI evaluates each story for relevance, impact, and novelty to surface what matters most.' },
-  { label: 'Write', desc: 'A multi-agent pipeline generates analysis from three perspectives: beginner-friendly context, learner-focused depth, and expert-level insight.' },
-  { label: 'Publish', desc: 'Articles go through editorial review before being published in both English and Korean.' },
+  { label: 'Discover', desc: 'Source scanning surfaces the most important AI developments across research, tools, and product launches.' },
+  { label: 'Rank', desc: 'Editorial judgment and AI assistance separate durable signals from passing noise.' },
+  { label: 'Write', desc: 'Each story is rewritten with context so readers can understand what changed and why it matters.' },
+  { label: 'Publish', desc: 'Selected coverage and glossary entries are reviewed before release in English and Korean.' },
 ];
 
 const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel', 'Railway'];
+
+const sc = await getSiteContents(
+  [
+    'about_tagline',
+    'about_publication_intro',
+    'about_publication_detail',
+    'about_editor_intro',
+  ],
+  'en',
+);
+
+const aboutTagline = sc.about_tagline || 'From signal to understanding';
+const aboutPublicationIntro =
+  sc.about_publication_intro ||
+  '0to1log is a focused publication for people who want the latest AI shifts without losing technical context or practical relevance.';
+const aboutPublicationDetail =
+  sc.about_publication_detail ||
+  'The publication pairs AI News with an AI Glossary so readers can follow fast-moving stories and still slow down when a concept needs unpacking.';
+const aboutEditorIntro =
+  sc.about_editor_intro ||
+  'Amy Domin Kim builds with LLM applications, data systems, and product-minded engineering. 0to1log started as a personal learning record and grew into a public operating surface for AI curation and explanation.';
 ---
 
 <MainLayout title="About" locale="en" headerAlwaysVisible={true}>
   <div class="about-page">
-
-    <!-- Hero -->
     <section class="about-hero">
       <p class="about-overline">About</p>
       <h1 class="about-title">0to1log</h1>
-      <p class="about-tagline">From Void to Value</p>
+      <p class="about-tagline">{aboutTagline}</p>
       <div class="about-ornament" aria-hidden="true">&mdash;&thinsp;&diams;&thinsp;&mdash;</div>
     </section>
 
-    <!-- The Publication -->
     <section class="about-section">
       <h2 class="about-heading">The Publication</h2>
+      <p>{aboutPublicationIntro}</p>
+      <p>{aboutPublicationDetail}</p>
       <p>
-        Every day, hundreds of AI announcements compete for attention. 0to1log cuts through the noise
-        by curating only what matters — then contextualizing it for readers at every level.
-      </p>
-      <p>
-        Each story is delivered in three versions: a plain-language summary for newcomers, a technical
-        breakdown for learners, and an expert analysis with business implications and actionable insights.
-      </p>
-      <p>
-        The <a href="/en/handbook/">AI Glossary</a> complements the news feed with clear, practical
-        definitions of technical terms — from foundational concepts to cutting-edge techniques.
+        The <a href="/en/handbook/">AI Glossary</a> complements the news feed with clear definitions and plain-language framing for important technical terms.
       </p>
     </section>
 
-    <!-- How It Works -->
     <section class="about-section">
       <h2 class="about-heading">How It Works</h2>
       <ol class="about-steps">
@@ -60,18 +71,9 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </ol>
     </section>
 
-    <!-- The Editor -->
     <section class="about-section">
       <h2 class="about-heading">The Editor</h2>
-      <p>
-        <strong>Amy Domin Kim</strong> — AI Engineer building at the intersection of LLM applications,
-        data analysis, and web development.
-      </p>
-      <p>
-        0to1log began as a personal learning log and grew into a full-stack platform for curating and
-        contextualizing AI developments. It serves as both a daily resource for the AI community and a
-        living portfolio of end-to-end engineering.
-      </p>
+      <p>{aboutEditorIntro}</p>
       <nav class="about-links" aria-label="Social links">
         {links.map((link, i) => (
           <>
@@ -87,7 +89,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </p>
     </section>
 
-    <!-- Built With -->
     <section class="about-section">
       <h2 class="about-heading">Built With</h2>
       <div class="about-stack">
@@ -97,7 +98,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </div>
     </section>
 
-    <!-- Connect -->
     <section class="about-section about-connect">
       <h2 class="about-heading">Connect</h2>
       <p>
@@ -115,11 +115,9 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
       </nav>
     </section>
 
-    <!-- Footer ornament -->
     <div class="about-footer-ornament" aria-hidden="true">
       &mdash;&thinsp;&diams;&thinsp;&mdash;
     </div>
-
   </div>
 </MainLayout>
 
@@ -130,7 +128,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     padding: 3rem 1.5rem 4rem;
   }
 
-  /* Hero */
   .about-hero {
     text-align: center;
     margin-bottom: 3rem;
@@ -164,7 +161,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     letter-spacing: 0.2em;
   }
 
-  /* Sections */
   .about-section {
     margin-bottom: 2.5rem;
   }
@@ -188,7 +184,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     text-underline-offset: 2px;
   }
 
-  /* Steps */
   .about-steps {
     list-style: none;
     padding: 0;
@@ -223,7 +218,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     margin-right: 0.25rem;
   }
 
-  /* Links */
   .about-links {
     display: flex;
     gap: 0.5rem;
@@ -246,7 +240,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     margin-top: 0.75rem;
   }
 
-  /* Tech stack tags */
   .about-stack {
     display: flex;
     flex-wrap: wrap;
@@ -262,7 +255,6 @@ const stack = ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS', 'Vercel
     letter-spacing: 0.02em;
   }
 
-  /* Footer ornament */
   .about-footer-ornament {
     text-align: center;
     font-size: 0.875rem;

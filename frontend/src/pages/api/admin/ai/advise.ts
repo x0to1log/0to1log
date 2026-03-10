@@ -10,6 +10,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+  if (!(locals as any).isAdmin) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const backendUrl = import.meta.env.FASTAPI_URL;
   if (!backendUrl) {

@@ -5,7 +5,8 @@ export const prerender = false;
 
 // If already authenticated, redirect away
 if (Astro.locals.user) {
-  const redirectTo = Astro.url.searchParams.get('redirectTo') || '/';
+  const raw = Astro.url.searchParams.get('redirectTo');
+  const redirectTo = (!raw || !raw.startsWith('/') || raw.startsWith('//')) ? '/' : raw;
   return Astro.redirect(redirectTo);
 }
 
