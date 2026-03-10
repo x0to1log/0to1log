@@ -1,0 +1,38 @@
+---
+import { getCategoryLabel, getCategoryColorVar } from '../../lib/categories';
+
+interface Props {
+  href: string;
+  title: string;
+  category?: string | null;
+  publishedAt?: string | null;
+  locale: 'en' | 'ko';
+  isRead?: boolean;
+}
+
+const { href, title, category, publishedAt, locale, isRead } = Astro.props;
+
+const catLabel = getCategoryLabel(locale, category);
+const catColor = getCategoryColorVar(category);
+
+const dateStr = publishedAt
+  ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' })
+  : null;
+---
+
+<a href={href} class:list={['blog-list-item', { 'blog-list-item--read': isRead }]}>
+  <div class="blog-list-item-left">
+    <svg class="blog-list-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M4 4h16v16H4zM8 8h8M8 12h5" />
+    </svg>
+    <span class="blog-list-item-title">{title}</span>
+  </div>
+  <div class="blog-list-item-meta">
+    {catLabel && (
+      <span class="blog-list-item-category" style={`background: color-mix(in srgb, ${catColor} 15%, transparent); color: ${catColor}`}>
+        {catLabel}
+      </span>
+    )}
+    {dateStr && <span class="blog-list-item-date">{dateStr}</span>}
+  </div>
+</a>
