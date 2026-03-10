@@ -4,6 +4,9 @@ from typing import Optional
 from models.common import PromptGuideItems
 
 
+MIN_CONTENT_CHARS = 6000
+
+
 class ResearchPost(BaseModel):
     has_news: bool = True
     title: str = ""
@@ -17,6 +20,15 @@ class ResearchPost(BaseModel):
     tags: list[str] = []
     excerpt: str = ""
     focus_items: list[str] = []
+
+    @field_validator("content_original")
+    @classmethod
+    def check_min_length(cls, v: Optional[str]) -> Optional[str]:
+        if v and len(v) < MIN_CONTENT_CHARS:
+            raise ValueError(
+                f"Content too short: {len(v)} chars (min {MIN_CONTENT_CHARS})"
+            )
+        return v
 
     @field_validator("news_temperature")
     @classmethod

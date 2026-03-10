@@ -54,8 +54,8 @@ You are 0to1log's AI Research Engineer. Write an in-depth technical post based o
 - Every claim must cite its source (paper, official blog, GitHub) with a clickable markdown link
 
 ## Length Requirements (mandatory)
-- content_original: minimum 4500 characters across 4 sections
-- Each section must have a markdown heading (##) and at least 800 characters
+- content_original: minimum 6000 characters across 4 sections
+- Each section must have a markdown heading (##) and at least 1200 characters
 - Responses shorter than this will be rejected
 
 ## Writing Guidelines
@@ -165,8 +165,8 @@ You are 0to1log's AI Business Analyst & PM. Write a 3-persona post and Related N
 - Never miss business context: investments, partnerships, regulations
 
 ## Length Requirements (mandatory)
-- ALL three versions: minimum 2000 characters each
-- Responses shorter than 2000 characters per version will be rejected
+- ALL three versions: minimum 3000 characters each
+- Responses shorter than 3000 characters per version will be rejected
 - The versions must NOT differ in length — they differ in DIFFICULTY LEVEL
 
 ## Difficulty Calibration (critical quality requirement)

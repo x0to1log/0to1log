@@ -616,33 +616,34 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const aiResultEl = document.getElementById('ai-result');
     const aiActionsContainer = document.getElementById('ai-actions-container');
 
-    const CATEGORY_ACTIONS: Record<string, { action: string; label: string; model: string; wide?: boolean }[]> = {
-      'study': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
-      ],
-      'career': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
-      ],
-      'project': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
-      ],
+    const COMMON_ACTIONS: { action: string; label: string; model: string; wide?: boolean }[] = [
+      { action: 'outline', label: 'Outline', model: 'gpt-4o' },
+      { action: 'draft', label: 'Draft', model: 'gpt-4o' },
+      { action: 'rewrite', label: 'Rewrite', model: 'gpt-4o' },
+      { action: 'suggest', label: 'Suggest', model: 'gpt-4o-mini' },
+      { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+      { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+    ];
+
+    const CATEGORY_SPECIAL: Record<string, { action: string; label: string; model: string; wide?: boolean }> = {
+      'study': { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
+      'career': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
+      'project': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
     };
+
+    const TRANSLATE_ACTION = { action: 'translate', label: 'Translate', model: 'gpt-4o', wide: true };
+
+    function getActionsForCategory(category: string) {
+      const special = CATEGORY_SPECIAL[category] || CATEGORY_SPECIAL['study'];
+      return [...COMMON_ACTIONS, special, TRANSLATE_ACTION];
+    }
 
     let currentAiButtons: HTMLButtonElement[] = [];
     const aiActionLabels = new Map<string, string>();
 
     function renderAiButtons(category: string) {
       if (!aiActionsContainer) return;
-      const actions = CATEGORY_ACTIONS[category] || CATEGORY_ACTIONS['study'];
+      const actions = getActionsForCategory(category);
       aiActionsContainer.innerHTML = '';
       currentAiButtons = [];
       aiActionLabels.clear();
@@ -695,8 +696,25 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     }
 
     async function runAiAction(action: string) {
+      if (action === 'translate') {
+        runTranslate();
+        return;
+      }
+
       const title = titleInput?.value || '';
       const content = crepe ? crepe.getMarkdown() : '';
+
+      if (action === 'outline' && !title.trim()) {
+        showFeedback('error', 'Add a title before generating an outline.');
+        return;
+      }
+      if (action === 'draft') {
+        const hasHeadings = /^#{2,3}\s+/m.test(content);
+        if (!hasHeadings) {
+          showFeedback('error', 'Draft needs an outline with H2/H3 headings first. Try Outline.');
+          return;
+        }
+      }
       if (!title.trim() && !content.trim()) {
         showFeedback('error', 'Write some content before using AI Advisor.');
         return;
@@ -705,7 +723,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       setAiLoading(true, action);
 
       try {
-        const res = await fetch('/api/admin/ai/advise', {
+        const res = await fetch('/api/admin/blog/ai/advise', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -743,8 +761,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     function renderAiResult(action: string, result: any) {
       if (!aiResultEl) return;
-      if (action === 'generate') renderGenerate(result);
-      else if (action === 'seo') renderSeo(result);
+      if (action === 'outline') renderOutline(result);
+      else if (action === 'draft') renderDraft(result);
+      else if (action === 'rewrite') renderRewrite(result);
+      else if (action === 'suggest') renderSuggest(result);
+      else if (action === 'generate') renderGenerate(result);
       else if (action === 'review') renderReview(result);
       else if (action === 'conceptcheck') renderConceptcheck(result);
       else if (action === 'voicecheck') renderVoicecheck(result);
@@ -754,6 +775,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     function renderGenerate(r: any) {
       if (!aiResultEl) return;
       let html = '<h4>Generated Metadata</h4>';
+      if (r.title_suggestions?.length) {
+        html += '<h4>Title Suggestions</h4>';
+        r.title_suggestions.forEach((t: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(t)}</span><button class="admin-ai-apply-btn" data-apply="title" data-value="${esc(t)}">Use</button></div>`;
+        });
+      }
       if (r.excerpt) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Excerpt:</strong> ${esc(r.excerpt)}</span><button class="admin-ai-apply-btn" data-apply="excerpt">Use</button></div>`;
       if (r.slug) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Slug:</strong> ${esc(r.slug)}</span><button class="admin-ai-apply-btn" data-apply="slug">Use</button></div>`;
       if (r.tags?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Tags:</strong> ${r.tags.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tags.join(', '))}">Use</button></div>`;
@@ -766,7 +793,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           const field = btn.dataset.apply;
           if (!field) return;
           let newVal = '';
-          if (field === 'excerpt') newVal = r.excerpt;
+          if (field === 'title') newVal = btn.dataset.value || '';
+          else if (field === 'excerpt') newVal = r.excerpt;
           else if (field === 'slug') newVal = r.slug;
           else if (field === 'tags') newVal = btn.dataset.value || r.tags.join(', ');
           showDiff(btn, field, newVal);
@@ -782,22 +810,163 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       });
     }
 
-    function renderSeo(r: any) {
+    function renderOutline(r: any) {
       if (!aiResultEl) return;
-      let html = '';
-      if (r.title_suggestions?.length) {
-        html += '<h4>Title Suggestions</h4>';
-        r.title_suggestions.forEach((t: string) => {
-          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(t)}</span><button class="admin-ai-apply-btn" data-apply="title" data-value="${esc(t)}">Use</button></div>`;
+      let html = '<h4>Outline</h4>';
+      if (r.sections?.length) {
+        r.sections.forEach((s: any, i: number) => {
+          html += `<div class="admin-ai-claim"><div class="admin-ai-claim-text"><strong>${esc(s.heading)}</strong></div>`;
+          if (s.description) html += `<div class="admin-ai-checklist-suggestion">${esc(s.description)}</div>`;
+          if (s.subsections?.length) {
+            html += '<ul style="margin:0.25rem 0 0.5rem 1rem;padding:0;">';
+            s.subsections.forEach((sub: string) => { html += `<li>${esc(sub)}</li>`; });
+            html += '</ul>';
+          }
+          html += '</div>';
         });
       }
-      if (r.excerpt_suggestion) html += `<h4>Excerpt</h4><div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(r.excerpt_suggestion)}</span><button class="admin-ai-apply-btn" data-apply="excerpt" data-value="${esc(r.excerpt_suggestion)}">Use</button></div>`;
-      if (r.tag_recommendations?.length) html += `<h4>Tag Recommendations</h4><div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${r.tag_recommendations.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tag_recommendations.join(', '))}">Use</button></div>`;
-      if (r.seo_notes) html += `<h4>Notes</h4><p>${esc(r.seo_notes)}</p>`;
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-outline">Apply to Editor</button>`;
       aiResultEl.innerHTML = html;
-      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
-        btn.addEventListener('click', () => { const field = btn.dataset.apply; const val = btn.dataset.value || ''; if (field) showDiff(btn, field, val); });
+
+      document.getElementById('ai-apply-outline')?.addEventListener('click', () => {
+        if (!crepe || !r.sections?.length) return;
+        let md = '';
+        r.sections.forEach((s: any) => {
+          md += `## ${s.heading}\n\n`;
+          if (s.subsections?.length) {
+            s.subsections.forEach((sub: string) => { md += `### ${sub}\n\n`; });
+          }
+        });
+        crepe.setMarkdown(md.trim());
+        showFeedback('success', 'Outline applied to editor.');
       });
+    }
+
+    function renderDraft(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Draft</h4>';
+      if (r.content) {
+        const preview = r.content.length > 500 ? r.content.slice(0, 500) + '…' : r.content;
+        html += `<div class="admin-ai-claim"><div class="admin-ai-claim-text" style="white-space:pre-wrap;font-size:0.85rem;">${esc(preview)}</div></div>`;
+      }
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-draft">Apply to Editor</button>`;
+      aiResultEl.innerHTML = html;
+
+      document.getElementById('ai-apply-draft')?.addEventListener('click', () => {
+        if (!crepe || !r.content) return;
+        crepe.setMarkdown(r.content);
+        showFeedback('success', 'Draft applied to editor.');
+      });
+    }
+
+    function renderRewrite(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Rewrite Suggestions</h4>';
+      if (r.changes?.length) {
+        r.changes.forEach((c: any, i: number) => {
+          html += `<div class="admin-ai-claim">`;
+          html += `<div class="admin-ai-claim-text"><strong>${esc(c.section)}</strong></div>`;
+          html += `<div class="admin-ai-claim-meta"><span class="admin-ai-verdict admin-ai-verdict--no_source">Before</span></div>`;
+          html += `<div class="admin-ai-checklist-suggestion" style="text-decoration:line-through;opacity:0.6;">${esc(c.before)}</div>`;
+          html += `<div class="admin-ai-claim-meta"><span class="admin-ai-verdict admin-ai-verdict--verified">After</span></div>`;
+          html += `<div class="admin-ai-checklist-suggestion">${esc(c.after)}</div>`;
+          if (c.reason) html += `<div class="admin-ai-checklist-suggestion" style="font-style:italic;">${esc(c.reason)}</div>`;
+          html += `<button class="admin-ai-apply-btn ai-rewrite-apply" data-idx="${i}">Apply</button>`;
+          html += `</div>`;
+        });
+      }
+      aiResultEl.innerHTML = html;
+
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.ai-rewrite-apply').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx || '0', 10);
+          const change = r.changes?.[idx];
+          if (!crepe || !change) return;
+          const md = crepe.getMarkdown();
+          if (md.includes(change.before)) {
+            crepe.setMarkdown(md.replace(change.before, change.after));
+            btn.textContent = 'Applied';
+            btn.disabled = true;
+            showFeedback('success', `Applied rewrite for "${change.section}".`);
+          } else {
+            showFeedback('error', 'Could not find the original text in editor.');
+          }
+        });
+      });
+    }
+
+    function renderSuggest(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Suggestions</h4>';
+      if (r.suggestions?.length) {
+        const sorted = [...r.suggestions].sort((a: any, b: any) => {
+          const prio: Record<string, number> = { high: 0, medium: 1, low: 2 };
+          return (prio[a.priority] ?? 1) - (prio[b.priority] ?? 1);
+        });
+        sorted.forEach((s: any) => {
+          const prioClass = s.priority === 'high' ? 'fail' : s.priority === 'low' ? 'pass' : 'warn';
+          html += `<div class="admin-ai-checklist-item">`;
+          html += `<span class="admin-ai-status-badge admin-ai-status-badge--${prioClass}">${esc(s.priority)}</span>`;
+          html += `<span><strong>[${esc(s.type)}]</strong> ${esc(s.section)}: ${esc(s.message)}</span>`;
+          html += `</div>`;
+        });
+      }
+      aiResultEl.innerHTML = html;
+    }
+
+    async function runTranslate() {
+      const title = titleInput?.value || '';
+      const content = crepe ? crepe.getMarkdown() : '';
+      if (!title.trim() || !content.trim()) {
+        showFeedback('error', 'Title and content are required for translation.');
+        return;
+      }
+
+      setAiLoading(true, 'translate');
+
+      try {
+        const res = await fetch('/api/admin/blog/ai/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            content,
+            excerpt: excerptInput?.value || '',
+            tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            category: categorySelect?.value || '',
+            locale: document.documentElement.lang === 'ko' ? 'ko' : 'en',
+            source_post_id: postId || '',
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          const rawMsg = err.detail || err.error || `Error ${res.status}`;
+          const msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg);
+          if (res.status === 429) showFeedback('error', 'Too many requests. Wait a minute.');
+          else showFeedback('error', msg);
+          setAiLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        setAiLoading(false);
+
+        if (!data.success && data.translated_slug) {
+          if (aiResultEl) {
+            aiResultEl.innerHTML = `<h4>Translation Exists</h4><p>A translation already exists.</p><a href="/admin/blog/edit/${esc(data.translated_slug)}" class="admin-ai-apply-all-btn" style="display:inline-block;text-decoration:none;text-align:center;">Open Translation</a>`;
+          }
+          return;
+        }
+
+        if (data.success && data.translated_slug) {
+          showFeedback('success', 'Translation created!');
+          window.location.href = `/admin/blog/edit/${data.translated_slug}`;
+        }
+      } catch (err) {
+        setAiLoading(false);
+        showFeedback('error', 'Translation request failed.');
+      }
     }
 
     function renderReview(r: any) {
