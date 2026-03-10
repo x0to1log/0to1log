@@ -4820,7 +4820,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  font-family: var(--font-ui);
+  font-family: var(--font-code);
   font-size: 0.82rem;
   cursor: pointer;
   transition: border-color 150ms ease;
@@ -4841,8 +4841,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
-  font-size: 0.82rem;
-  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-family: var(--font-code);
 }
 
 .blog-folder-btn {
@@ -4854,7 +4854,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   background: none;
   border: none;
   color: var(--color-text-primary);
-  font-family: var(--font-ui);
+  font-family: var(--font-code);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -4895,7 +4895,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   padding: 0.35rem 0.5rem;
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   transition: color 150ms ease, background-color 150ms ease;
   white-space: nowrap;
   overflow: hidden;
@@ -4931,6 +4931,38 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 
 .blog-sidebar-footer a:hover {
   color: var(--color-text-primary);
+}
+
+/* Sidebar folder "more" button */
+.blog-folder-extra[hidden] {
+  display: none;
+}
+
+.blog-folder-more {
+  display: block;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  text-align: center;
+  transition: color 150ms ease;
+}
+
+.blog-folder-more:hover {
+  color: var(--color-text-primary);
+}
+
+/* Infinite scroll batch */
+.blog-list-batch[hidden] {
+  display: none;
+}
+
+.blog-scroll-sentinel {
+  height: 1px;
 }
 
 /* Mobile sidebar overlay */
@@ -4999,11 +5031,11 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 
 /* ── Section Headers (mono, uppercase) ── */
 .blog-section-header {
-  font-family: var(--font-blog-ui);
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-family: var(--font-code);
+  font-size: 1rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   color: var(--color-text-muted);
   margin-bottom: 1rem;
 }
@@ -5084,7 +5116,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-mono-tag {
-  font-family: var(--font-blog-ui);
+  font-family: var(--font-code);
   font-size: 0.68rem;
   padding: 0.15rem 0.45rem;
 }
@@ -5149,14 +5181,14 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-list-item-date {
-  font-family: var(--font-blog-ui);
+  font-family: var(--font-code);
   font-size: 0.78rem;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .blog-list-item-category {
-  font-family: var(--font-blog-ui);
+  font-family: var(--font-code);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -5213,7 +5245,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-toc-header {
-  font-family: var(--font-blog-ui);
+  font-family: var(--font-code);
   font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -5281,7 +5313,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-family: var(--font-blog-ui);
+  font-family: var(--font-code);
   font-size: 0.78rem;
   color: var(--color-text-muted);
 }
@@ -5301,7 +5333,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   padding: 0.2rem 0.5rem;
-  font-family: var(--font-blog-ui);
+  font-family: var(--font-code);
   font-size: 0.7rem;
   color: var(--color-text-muted);
   cursor: pointer;
