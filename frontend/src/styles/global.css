@@ -4899,8 +4899,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-featured-card-title {
-  font-family: var(--font-display);
-  font-weight: 700;
+  font-family: var(--font-blog-heading);
+  font-weight: 500;
   font-size: 1.05rem;
   line-height: 1.3;
   color: var(--color-text-primary);
@@ -5124,7 +5124,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-article-title {
-  font-family: var(--font-display);
+  font-family: var(--font-blog-heading);
   font-weight: 700;
   font-size: clamp(1.8rem, 3vw, 2.5rem);
   line-height: 1.15;
@@ -5187,8 +5187,8 @@ pre:hover .blog-code-copy {
 }
 
 .blog-masthead-title {
-  font-family: var(--font-masthead);
-  font-weight: 900;
+  font-family: var(--font-blog-heading);
+  font-weight: 600;
   font-size: clamp(2rem, 5vw, 3.5rem);
   line-height: 1.1;
   letter-spacing: -0.02em;
