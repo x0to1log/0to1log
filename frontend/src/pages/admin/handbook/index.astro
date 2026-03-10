@@ -245,11 +245,13 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
 
     .admin-list-toolbar-right {
       margin-left: 0;
+      flex-wrap: wrap;
     }
 
     .admin-list-toolbar-right .admin-search-input {
       width: 100%;
-      flex: 1;
+      flex: 1 1 100%;
+      min-width: 0;
     }
 
     .admin-list-toolbar-filters {

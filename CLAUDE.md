@@ -1,6 +1,6 @@
 # 0to1log
 
-AI 뉴스 큐레이션 플랫폼. Solo 프로젝트 (Amy).
+AI 뉴스 큐레이션 + AI 용어집 + IT 블로그 플랫폼. Solo 프로젝트 (Amy).
 
 ## Stack
 

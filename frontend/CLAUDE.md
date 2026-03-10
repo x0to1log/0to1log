@@ -36,7 +36,7 @@ Astro v5 + Tailwind CSS v4 + Vercel. 상세 스펙 참조 `docs/04_Frontend_Spec
 - Internal/admin labels: `News`, `Blog`, `Handbook`
 - Routes:
   - AI News: `/{locale}/news/` (news_posts 테이블, category='ai-news')
-  - IT Blog: `/{locale}/blog/` (blog_posts 테이블)
+  - IT Blog: `/{locale}/blog/` (blog_posts 테이블, category IN ('study','career','project'))
   - Handbook: `/{locale}/handbook/`
   - Legacy: `/{locale}/log/` → 301 → `/{locale}/news/`
 - Navigation order: AI News · AI Glossary · My Library · IT Blog

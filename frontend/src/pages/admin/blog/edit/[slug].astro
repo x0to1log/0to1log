@@ -1,0 +1,914 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
+import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astro';
+import NewsprintArticleLayout from '../../../../components/newsprint/NewsprintArticleLayout.astro';
+import NewsprintSideRail from '../../../../components/newsprint/NewsprintSideRail.astro';
+import NewsprintNotice from '../../../../components/newsprint/NewsprintNotice.astro';
+import { getCategoryLabel, getCategoryColorVar, normalizeCategorySlug, BLOG_CATEGORIES } from '../../../../lib/categories';
+import { getArticleFocusItems } from '../../../../lib/articleRail';
+import { renderMarkdown } from '../../../../lib/markdown';
+import { createClient } from '@supabase/supabase-js';
+
+const { slug } = Astro.params;
+const pageSlug = slug ?? '';
+const isNew = pageSlug === 'new';
+const startInPreview = Astro.url.searchParams.get('mode') === 'preview';
+
+const accessToken = Astro.locals.accessToken;
+let post: any = null;
+let fetchError: string | null = null;
+
+if (!accessToken) {
+  return Astro.redirect('/admin/login');
+}
+
+if (!isNew) {
+  try {
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+    );
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('*')
+      .eq('slug', pageSlug)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      fetchError = '404';
+    } else if (error) {
+      fetchError = error.message;
+    } else {
+      post = data;
+    }
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : 'Unknown error';
+  }
+
+  if (!fetchError && !post) {
+    fetchError = '404';
+  }
+}
+
+const editableContent = post?.content || '';
+const categories = BLOG_CATEGORIES;
+
+const editionMap: Record<string, string> = {
+  study: 'Study Notes',
+  career: 'Career Notes',
+  project: 'Build Log',
+};
+
+const initialStatus = post?.status || 'draft';
+const initialCategory = normalizeCategorySlug(post?.category) || 'study';
+const initialEditionLabel = editionMap[initialCategory] || 'Deep Dive';
+const initialFocusItems = getArticleFocusItems('en', initialCategory);
+const initialTitle = post?.title || '';
+const initialTags = post?.tags || [];
+const previewContent = editableContent;
+const initialHtmlContent = post ? await renderMarkdown(previewContent) : '';
+const initialWordCount = post ? previewContent.split(/\s+/).length : 0;
+const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
+---
+
+<MainLayout title={isNew ? 'New Blog Post' : (post ? `Edit: ${post.title}` : 'Blog Editor')} locale="en">
+  {fetchError === '403' ? (
+    <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+      <NewsprintNotice
+        variant="unauthorized"
+        message="You do not have permission to access this page."
+        linkHref="/"
+        linkLabel="Go home"
+      />
+    </div>
+  ) : fetchError === '404' ? (
+    <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+      <NewsprintNotice
+        variant="notfound"
+        message="This blog post does not exist or has been deleted."
+        linkHref="/admin/blog/"
+        linkLabel="Back to Blog"
+      />
+    </div>
+  ) : fetchError ? (
+    <div style="max-width: 800px; margin: 0 auto; padding: 2rem;">
+      <NewsprintNotice
+        variant="notfound"
+        message={`Error loading post: ${fetchError}`}
+        linkHref="/admin/blog/"
+        linkLabel="Back to Blog"
+      />
+    </div>
+  ) : (post || isNew) ? (
+    <>
+      <AdminSidebar activeSection="blog" />
+      <!-- Draft Mode -->
+      <div class="admin-editor-layout" id="draft-mode" style={startInPreview ? 'display: none;' : undefined}>
+        <div class="admin-editor-topbar">
+          <div class="admin-editor-topbar-left">
+            <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 5h14M3 10h14M3 15h14" />
+              </svg>
+            </button>
+            <a href="/admin/blog/" class="admin-editor-back">&larr; Back</a>
+            <span class={`admin-status-badge admin-status-badge--${initialStatus}`}>{initialStatus}</span>
+          </div>
+          <div class="admin-editor-topbar-right">
+            <button id="btn-save" class="admin-btn" type="button">Save</button>
+            <button id="btn-preview" class="admin-btn" type="button">Preview</button>
+            <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
+            <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
+            {!isNew && <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>}
+          </div>
+        </div>
+
+        <div class="admin-editor-content">
+          <textarea
+            id="edit-title"
+            class="admin-editor-title"
+            rows="1"
+            placeholder="Untitled"
+          >{post?.title || ''}</textarea>
+
+          <div class="admin-editor-meta">
+            <select id="edit-category" class="admin-select" style="width: auto; min-width: 120px;">
+              {categories.map((cat) => (
+                <option value={cat} selected={cat === post?.category}>
+                  {getCategoryLabel('en', cat)}
+                </option>
+              ))}
+            </select>
+            <input
+              id="edit-tags"
+              class="admin-input"
+              type="text"
+              value={(post?.tags || []).join(', ')}
+              placeholder="Tags: tag1, tag2, tag3..."
+              style="flex: 1;"
+            />
+          </div>
+
+          <details class="admin-details">
+            <summary>More fields (Slug, Excerpt...)</summary>
+            <div class="admin-details-body">
+              <div class="admin-editor-meta-row">
+                <label class="admin-field-label" for="edit-slug">Slug</label>
+                <input id="edit-slug" class="admin-input" type="text" style="flex:1;"
+                  value={post?.slug || ''} placeholder="auto-generated-from-title" />
+              </div>
+              <div class="admin-editor-meta-row">
+                <label class="admin-field-label" for="edit-excerpt">Excerpt</label>
+                <textarea id="edit-excerpt" class="admin-input" rows="2" style="flex:1;"
+                  placeholder="Brief summary for list pages and SEO...">{post?.excerpt || ''}</textarea>
+              </div>
+              <div class="admin-editor-meta-row">
+                <label class="admin-field-label" for="edit-locale">Locale</label>
+                <select id="edit-locale" class="admin-select" style="width:auto;">
+                  <option value="en" selected={!post?.locale || post?.locale === 'en'}>EN</option>
+                  <option value="ko" selected={post?.locale === 'ko'}>KO</option>
+                </select>
+              </div>
+              <div class="admin-editor-meta-row">
+                <label class="admin-field-label" for="edit-focus-items">Focus Items</label>
+                <input id="edit-focus-items" class="admin-input" type="text" style="flex:1;"
+                  value={(post?.focus_items || []).join(', ')} placeholder="item1, item2, item3..." />
+              </div>
+              <div class="admin-editor-meta-row">
+                <label class="admin-field-label" for="edit-og-image">OG Image</label>
+                <input id="edit-og-image" class="admin-input" type="text" style="flex:1;"
+                  value={post?.og_image_url || ''} placeholder="https://..." />
+              </div>
+            </div>
+          </details>
+
+          <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
+        </div>
+
+        <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
+          <span id="admin-feedback-msg"></span>
+        </div>
+
+        <div class="admin-ai-backdrop" id="ai-backdrop"></div>
+        <div class="admin-ai-panel" id="ai-panel">
+          <div class="admin-ai-panel-header">
+            <span class="admin-ai-panel-title">AI Advisor</span>
+            <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
+          </div>
+          <div class="admin-ai-actions" id="ai-actions-container"></div>
+          <div id="ai-loading" class="admin-ai-loading" hidden>
+            <span class="ai-spinner"></span>
+            <span id="ai-loading-text">Analyzing...</span>
+          </div>
+          <div id="ai-result" class="admin-ai-result"></div>
+        </div>
+      </div>
+
+      <!-- Preview Mode -->
+      <div id="preview-mode" style={startInPreview ? undefined : 'display: none;'}>
+        <div class="admin-preview-bar">
+          <div class="admin-toolbar-left">
+            <a href="/admin/blog/" class="admin-editor-back">&larr; Back</a>
+          </div>
+          <div class="admin-toolbar-right">
+            <button id="btn-edit-back" class="admin-btn" type="button">Edit</button>
+            <button id="btn-publish-preview" class="admin-btn admin-btn-primary" type="button">Publish</button>
+          </div>
+        </div>
+
+        <NewsprintShell
+          locale="en"
+          masthead="IT Blog"
+          editionLabel={initialEditionLabel}
+          subkicker={['Study · Career · Project', 'Deep Dive', 'Personal Notes']}
+        >
+          <div id="preview-content">
+            <NewsprintArticleLayout
+              locale="en"
+              slug={pageSlug}
+              showSlug={false}
+              title={initialTitle}
+              category={initialCategory}
+              publishedAt={new Date().toISOString()}
+              readingTimeMin={initialReadingTime}
+              tags={initialTags}
+              htmlContent={initialHtmlContent}
+              backLabel="Back to Blog"
+            />
+          </div>
+
+          <Fragment slot="rail">
+            <NewsprintSideRail locale="en" posts={[]} focusItems={initialFocusItems} />
+          </Fragment>
+        </NewsprintShell>
+      </div>
+    </>
+  ) : (
+    <div style="max-width: 800px; margin: 0 auto;">
+      <NewsprintNotice
+        variant="notfound"
+        message="This blog post does not exist or has been deleted."
+        linkHref="/admin/blog/"
+        linkLabel="Back to Blog"
+      />
+    </div>
+  )}
+  <div id="admin-data" hidden data-access-token={accessToken} data-post-id={post?.id || ''} data-slug={pageSlug} data-is-new={isNew ? 'true' : 'false'} data-post-locale={post?.locale || 'en'}></div>
+</MainLayout>
+
+<script>
+  import { Crepe } from '@milkdown/crepe';
+  import '@milkdown/crepe/theme/common/style.css';
+  import { marked } from 'marked';
+
+  let crepe: Crepe | null = null;
+  let feedbackTimer = 0;
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    study: 'Study',
+    career: 'Career',
+    project: 'Project',
+  };
+
+  const EDITION_MAP: Record<string, string> = {
+    study: 'Study Notes',
+    career: 'Career Notes',
+    project: 'Build Log',
+  };
+
+  const FOCUS_MAP: Record<string, string[]> = {
+    study: ['What concept to understand', 'What to remember from this note', 'What to try after reading'],
+    career: ['What decision matters here', 'What signal is worth noticing', 'What to apply in actual work'],
+    project: ['What was built in this step', 'What tradeoff appeared', 'What to improve next'],
+  };
+
+  const DEFAULT_FOCUS = ['Key insight', 'Practical takeaway', 'Next step'];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (crepe) {
+      crepe.destroy();
+      crepe = null;
+    }
+    clearTimeout(feedbackTimer);
+
+    const editorEl = document.getElementById('milkdown-editor');
+    if (!editorEl) return;
+
+    const draftMode = document.getElementById('draft-mode');
+    const previewMode = document.getElementById('preview-mode');
+    const btnPreview = document.getElementById('btn-preview');
+    const btnEdit = document.getElementById('btn-edit-back');
+    const btnPublish = document.getElementById('btn-publish-preview');
+    const btnSave = document.getElementById('btn-save');
+    const btnDelete = document.getElementById('btn-delete');
+    const btnPublishDraft = document.getElementById('btn-publish-draft');
+    const titleInput = document.getElementById('edit-title') as HTMLTextAreaElement;
+    const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
+    const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
+    const slugInput = document.getElementById('edit-slug') as HTMLInputElement;
+    const excerptInput = document.getElementById('edit-excerpt') as HTMLTextAreaElement;
+    const localeSelect = document.getElementById('edit-locale') as HTMLSelectElement;
+    const focusItemsInput = document.getElementById('edit-focus-items') as HTMLInputElement;
+    const ogImageInput = document.getElementById('edit-og-image') as HTMLInputElement;
+    const adminData = document.getElementById('admin-data');
+    const accessToken = adminData?.dataset.accessToken || '';
+    const postId = adminData?.dataset.postId || '';
+    const isNewPost = adminData?.dataset.isNew === 'true';
+    const postLocale = adminData?.dataset.postLocale || 'en';
+
+    function autoResizeTitle() {
+      if (!titleInput) return;
+      titleInput.style.height = 'auto';
+      titleInput.style.height = titleInput.scrollHeight + 'px';
+    }
+    titleInput?.addEventListener('input', autoResizeTitle);
+    autoResizeTitle();
+
+    function showFeedback(type: 'success' | 'error', message: string) {
+      const el = document.getElementById('admin-feedback');
+      const msgEl = document.getElementById('admin-feedback-msg');
+      if (!el || !msgEl) return;
+      el.classList.remove('admin-feedback--success', 'admin-feedback--error');
+      el.classList.add(`admin-feedback--${type}`);
+      msgEl.textContent = message;
+      el.hidden = false;
+      clearTimeout(feedbackTimer);
+      feedbackTimer = window.setTimeout(() => { el.hidden = true; }, 3000);
+    }
+
+    const previousValues = new Map<string, string>();
+
+    function getInputForField(field: string): HTMLInputElement | HTMLTextAreaElement | null {
+      if (field === 'title') return titleInput;
+      if (field === 'excerpt') return excerptInput;
+      if (field === 'slug') return slugInput;
+      if (field === 'tags') return tagsInput;
+      if (field === 'focus_items') return focusItemsInput;
+      return null;
+    }
+
+    function showDiff(btn: HTMLButtonElement, field: string, newValue: string) {
+      const input = getInputForField(field);
+      if (!input) return;
+      const currentValue = input.value;
+
+      const container = btn.closest('.admin-ai-suggestion') as HTMLElement | null;
+      if (!container) return;
+      const diffId = `diff-${field}-${Date.now()}`;
+      const diffHtml = `<div class="admin-ai-diff" id="${diffId}">` +
+        `<div class="admin-ai-diff--del">${esc(currentValue || '(empty)')}</div>` +
+        `<div class="admin-ai-diff--add">${esc(newValue)}</div>` +
+        `<div class="admin-ai-diff-actions">` +
+        `<button class="admin-ai-diff-confirm" type="button">Apply</button>` +
+        `<button class="admin-ai-diff-cancel" type="button">Cancel</button>` +
+        `</div></div>`;
+
+      btn.hidden = true;
+      container.insertAdjacentHTML('beforeend', diffHtml);
+
+      const diffEl = document.getElementById(diffId);
+      diffEl?.querySelector('.admin-ai-diff-confirm')?.addEventListener('click', () => {
+        previousValues.set(field, currentValue);
+        input.value = newValue;
+        diffEl.remove();
+        btn.hidden = false;
+        btn.textContent = 'Undo';
+        btn.classList.add('admin-ai-undo-btn');
+        btn.onclick = () => {
+          const prev = previousValues.get(field);
+          if (prev !== undefined) { input.value = prev; previousValues.delete(field); }
+          btn.textContent = 'Use';
+          btn.classList.remove('admin-ai-undo-btn');
+          btn.onclick = null;
+          showFeedback('success', `${field} reverted.`);
+        };
+        showFeedback('success', `${field} applied.`);
+      });
+
+      diffEl?.querySelector('.admin-ai-diff-cancel')?.addEventListener('click', () => {
+        diffEl.remove();
+        btn.hidden = false;
+      });
+    }
+
+    async function initEditor() {
+      if (!editorEl) return;
+      const initialContent = editorEl.dataset.content || '';
+
+      crepe = new Crepe({
+        root: editorEl,
+        defaultValue: initialContent,
+        featureConfigs: {
+          [Crepe.Feature.Placeholder]: {
+            text: 'Start writing your blog post...',
+            mode: 'block',
+          },
+        },
+      });
+
+      await crepe.create();
+    }
+
+    async function handleSave() {
+      const title = titleInput?.value || '';
+      if (!title.trim()) {
+        showFeedback('error', 'Save failed: title is required.');
+        return;
+      }
+      const category = categorySelect?.value || 'study';
+      const tagsRaw = tagsInput?.value || '';
+      const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+      const slug = slugInput?.value || '';
+      const excerpt = excerptInput?.value || '';
+      const locale = localeSelect?.value || 'en';
+      const focusRaw = focusItemsInput?.value || '';
+      const focusItems = focusRaw.split(',').map((s: string) => s.trim()).filter(Boolean);
+      const ogImageUrl = ogImageInput?.value || '';
+
+      const saveBody: Record<string, any> = {
+        id: isNewPost ? undefined : postId,
+        title, slug, category, tags,
+        content: crepe ? crepe.getMarkdown() : '',
+        excerpt, locale, focus_items: focusItems, og_image_url: ogImageUrl,
+      };
+
+      try {
+        const res = await fetch('/api/admin/blog/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(saveBody),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || `${res.status}`);
+        }
+        if (res.status === 201) {
+          const created = await res.json();
+          showFeedback('success', 'Post created! Redirecting...');
+          window.location.href = `/admin/blog/edit/${created.slug}`;
+          return;
+        }
+        showFeedback('success', 'Draft saved.');
+      } catch (err) {
+        showFeedback('error', `Save failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+      }
+    }
+
+    function switchToPreview() {
+      const markdown = crepe ? crepe.getMarkdown() : '';
+      const title = titleInput?.value || '';
+      const category = categorySelect?.value || 'study';
+      const tagsRaw = tagsInput?.value || '';
+      const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+
+      showFeedback('success', 'Draft auto-saved.');
+
+      const wordCount = markdown.split(/\s+/).length;
+      const readingTime = Math.max(1, Math.round(wordCount / 200));
+
+      const previewContent = document.getElementById('preview-content');
+      if (previewContent) {
+        const previewTitle = previewContent.querySelector('.newsprint-lead-title');
+        if (previewTitle) previewTitle.textContent = title;
+
+        const previewCategory = previewContent.querySelector('.newsprint-category');
+        if (previewCategory) previewCategory.textContent = CATEGORY_LABELS[category] || category;
+
+        const headerLeft = previewContent.querySelector('.newsprint-article-header-left');
+        if (headerLeft) {
+          headerLeft.querySelectorAll('.newsprint-tag').forEach(el => el.remove());
+          tags.slice(0, 6).forEach(tag => {
+            const span = document.createElement('span');
+            span.className = 'newsprint-tag';
+            span.textContent = tag;
+            headerLeft.appendChild(span);
+          });
+        }
+
+        const headerRight = previewContent.querySelector('.newsprint-article-header-right');
+        if (headerRight) {
+          headerRight.innerHTML = '';
+          const readSpan = document.createElement('span');
+          readSpan.textContent = `${readingTime} min read`;
+          headerRight.appendChild(readSpan);
+          const timeEl = document.createElement('time');
+          timeEl.dateTime = new Date().toISOString();
+          timeEl.textContent = new Date().toLocaleDateString('en-US');
+          headerRight.appendChild(timeEl);
+        }
+
+        const previewProse = previewContent.querySelector('.newsprint-prose');
+        if (previewProse) {
+          previewProse.innerHTML = marked.parse(markdown) as string;
+        }
+      }
+
+      const editionEl = previewMode?.querySelector('.newsprint-kicker span:nth-child(2)');
+      if (editionEl) {
+        editionEl.textContent = EDITION_MAP[category] || 'Deep Dive';
+      }
+
+      const focusSection = previewMode?.querySelector('.newsprint-rail section:first-child');
+      if (focusSection) {
+        const focusItems = FOCUS_MAP[category] || DEFAULT_FOCUS;
+        const existingList = focusSection.querySelector('.newsprint-rail-list');
+        const existingEmpty = focusSection.querySelector('.newsprint-empty');
+        if (existingList) existingList.remove();
+        if (existingEmpty) existingEmpty.remove();
+        const ul = document.createElement('ul');
+        ul.className = 'newsprint-rail-list';
+        focusItems.forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item;
+          ul.appendChild(li);
+        });
+        focusSection.appendChild(ul);
+      }
+
+      if (draftMode) draftMode.style.display = 'none';
+      if (previewMode) previewMode.style.display = 'block';
+    }
+
+    function switchToDraft() {
+      if (draftMode) draftMode.style.display = '';
+      if (previewMode) previewMode.style.display = 'none';
+    }
+
+    async function handlePublish() {
+      const title = titleInput?.value || '';
+      if (!title.trim()) {
+        showFeedback('error', 'Publish failed: title is required.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/admin/blog/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: postId, action: 'publish' }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || `${res.status}`);
+        }
+        showFeedback('success', 'Published! Redirecting...');
+        const locale = localeSelect?.value || postLocale || 'en';
+        const slugEl = adminData?.dataset.slug || '';
+        setTimeout(() => { window.location.href = `/${locale}/blog/${slugEl}/`; }, 1500);
+      } catch (err) {
+        showFeedback('error', `Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+      }
+    }
+
+    async function handleDelete() {
+      const title = titleInput?.value || 'this post';
+      if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+      try {
+        const res = await fetch('/api/admin/blog/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: postId }),
+        });
+        if (res.ok) {
+          window.location.href = '/admin/blog/';
+        } else {
+          const err = await res.json();
+          showFeedback('error', `Delete failed: ${err.error}`);
+        }
+      } catch (err) {
+        showFeedback('error', `Delete failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+      }
+    }
+
+    async function handlePublishFromDraft() {
+      await handleSave();
+      await handlePublish();
+    }
+
+    // AI panel toggle
+    const aiToggleBtn = document.getElementById('btn-ai-toggle');
+    const aiCloseBtn = document.getElementById('btn-ai-close');
+    const editorLayout = document.querySelector('.admin-editor-layout');
+    const aiBackdrop = document.getElementById('ai-backdrop');
+
+    function toggleAiPanel() {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        const panel = document.getElementById('ai-panel');
+        const isOpen = panel?.classList.contains('admin-ai-panel--open');
+        panel?.classList.toggle('admin-ai-panel--open', !isOpen);
+        aiBackdrop?.classList.toggle('admin-ai-backdrop--visible', !isOpen);
+      } else {
+        editorLayout?.classList.toggle('admin-editor-layout--collapsed');
+      }
+    }
+
+    aiToggleBtn?.addEventListener('click', toggleAiPanel);
+    aiCloseBtn?.addEventListener('click', toggleAiPanel);
+    aiBackdrop?.addEventListener('click', toggleAiPanel);
+
+    // --- AI Advisor ---
+    const aiLoadingEl = document.getElementById('ai-loading');
+    const aiLoadingText = document.getElementById('ai-loading-text');
+    const aiResultEl = document.getElementById('ai-result');
+    const aiActionsContainer = document.getElementById('ai-actions-container');
+
+    const CATEGORY_ACTIONS: Record<string, { action: string; label: string; model: string; wide?: boolean }[]> = {
+      'study': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
+      ],
+      'career': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
+      ],
+      'project': [
+        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
+        { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
+      ],
+    };
+
+    let currentAiButtons: HTMLButtonElement[] = [];
+    const aiActionLabels = new Map<string, string>();
+
+    function renderAiButtons(category: string) {
+      if (!aiActionsContainer) return;
+      const actions = CATEGORY_ACTIONS[category] || CATEGORY_ACTIONS['study'];
+      aiActionsContainer.innerHTML = '';
+      currentAiButtons = [];
+      aiActionLabels.clear();
+
+      for (const a of actions) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'admin-ai-action-btn' + (a.wide ? ' admin-ai-action-btn--wide' : '');
+        btn.dataset.aiAction = a.action;
+        btn.textContent = a.label;
+        const modelSpan = document.createElement('span');
+        modelSpan.className = 'ai-btn-model';
+        modelSpan.textContent = a.model;
+        btn.appendChild(modelSpan);
+        btn.addEventListener('click', () => runAiAction(a.action));
+        aiActionsContainer.appendChild(btn);
+        currentAiButtons.push(btn);
+        aiActionLabels.set(a.action, a.label);
+      }
+    }
+
+    renderAiButtons(categorySelect?.value || 'study');
+
+    categorySelect?.addEventListener('change', () => {
+      renderAiButtons(categorySelect.value);
+      if (aiResultEl) aiResultEl.innerHTML = '';
+    });
+
+    function setAiLoading(loading: boolean, action?: string) {
+      if (aiLoadingEl) aiLoadingEl.hidden = !loading;
+      if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${action || ''}...` : '';
+      if (aiResultEl && loading) aiResultEl.innerHTML = '';
+      currentAiButtons.forEach(btn => {
+        btn.disabled = loading;
+        const a = btn.dataset.aiAction || '';
+        if (loading && a === action) {
+          btn.classList.add('admin-ai-action-btn--loading');
+          const orig = aiActionLabels.get(a) || a;
+          btn.childNodes[0].textContent = `${orig}...`;
+          const spinner = document.createElement('span');
+          spinner.className = 'ai-btn-spinner';
+          btn.prepend(spinner);
+        } else {
+          btn.classList.remove('admin-ai-action-btn--loading');
+          btn.querySelector('.ai-btn-spinner')?.remove();
+          const orig = aiActionLabels.get(a);
+          if (orig && btn.childNodes[0]) btn.childNodes[0].textContent = orig;
+        }
+      });
+    }
+
+    async function runAiAction(action: string) {
+      const title = titleInput?.value || '';
+      const content = crepe ? crepe.getMarkdown() : '';
+      if (!title.trim() && !content.trim()) {
+        showFeedback('error', 'Write some content before using AI Advisor.');
+        return;
+      }
+
+      setAiLoading(true, action);
+
+      try {
+        const res = await fetch('/api/admin/ai/advise', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            post_id: postId || 'new',
+            title,
+            content,
+            category: categorySelect?.value || '',
+            tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            excerpt: excerptInput?.value || '',
+            slug: slugInput?.value || '',
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          const rawMsg = err.detail || err.error || `Error ${res.status}`;
+          const msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg);
+          if (res.status === 429) showFeedback('error', 'Too many requests. Wait a minute.');
+          else if (res.status === 504) showFeedback('error', 'AI request timed out.');
+          else if (res.status === 502) showFeedback('error', 'AI service unavailable.');
+          else showFeedback('error', msg);
+          setAiLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        setAiLoading(false);
+        renderAiResult(action, data.result);
+      } catch (err) {
+        setAiLoading(false);
+        showFeedback('error', 'AI request failed.');
+      }
+    }
+
+    function renderAiResult(action: string, result: any) {
+      if (!aiResultEl) return;
+      if (action === 'generate') renderGenerate(result);
+      else if (action === 'seo') renderSeo(result);
+      else if (action === 'review') renderReview(result);
+      else if (action === 'conceptcheck') renderConceptcheck(result);
+      else if (action === 'voicecheck') renderVoicecheck(result);
+      else if (action === 'retrocheck') renderRetrocheck(result);
+    }
+
+    function renderGenerate(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Generated Metadata</h4>';
+      if (r.excerpt) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Excerpt:</strong> ${esc(r.excerpt)}</span><button class="admin-ai-apply-btn" data-apply="excerpt">Use</button></div>`;
+      if (r.slug) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Slug:</strong> ${esc(r.slug)}</span><button class="admin-ai-apply-btn" data-apply="slug">Use</button></div>`;
+      if (r.tags?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Tags:</strong> ${r.tags.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tags.join(', '))}">Use</button></div>`;
+      if (r.focus_items?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Focus Items:</strong> ${r.focus_items.map(esc).join(' · ')}</span><button class="admin-ai-apply-btn" data-apply="focus_items" data-value="${esc(r.focus_items.join(', '))}">Use</button></div>`;
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-all-generate">Apply All</button>`;
+      aiResultEl.innerHTML = html;
+
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const field = btn.dataset.apply;
+          if (!field) return;
+          let newVal = '';
+          if (field === 'excerpt') newVal = r.excerpt;
+          else if (field === 'slug') newVal = r.slug;
+          else if (field === 'tags') newVal = btn.dataset.value || r.tags.join(', ');
+          showDiff(btn, field, newVal);
+        });
+      });
+
+      document.getElementById('ai-apply-all-generate')?.addEventListener('click', () => {
+        if (r.excerpt && excerptInput) { previousValues.set('excerpt', excerptInput.value); excerptInput.value = r.excerpt; }
+        if (r.slug && slugInput) { previousValues.set('slug', slugInput.value); slugInput.value = r.slug; }
+        if (r.tags?.length && tagsInput) { previousValues.set('tags', tagsInput.value); tagsInput.value = r.tags.join(', '); }
+        if (r.focus_items?.length && focusItemsInput) { previousValues.set('focus_items', focusItemsInput.value); focusItemsInput.value = r.focus_items.join(', '); }
+        showFeedback('success', 'All fields applied.');
+      });
+    }
+
+    function renderSeo(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+      if (r.title_suggestions?.length) {
+        html += '<h4>Title Suggestions</h4>';
+        r.title_suggestions.forEach((t: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(t)}</span><button class="admin-ai-apply-btn" data-apply="title" data-value="${esc(t)}">Use</button></div>`;
+        });
+      }
+      if (r.excerpt_suggestion) html += `<h4>Excerpt</h4><div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(r.excerpt_suggestion)}</span><button class="admin-ai-apply-btn" data-apply="excerpt" data-value="${esc(r.excerpt_suggestion)}">Use</button></div>`;
+      if (r.tag_recommendations?.length) html += `<h4>Tag Recommendations</h4><div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${r.tag_recommendations.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(r.tag_recommendations.join(', '))}">Use</button></div>`;
+      if (r.seo_notes) html += `<h4>Notes</h4><p>${esc(r.seo_notes)}</p>`;
+      aiResultEl.innerHTML = html;
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => { const field = btn.dataset.apply; const val = btn.dataset.value || ''; if (field) showDiff(btn, field, val); });
+      });
+    }
+
+    function renderReview(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+      if (typeof r.score === 'number') html += `<div class="admin-ai-score">${r.score}/100</div>`;
+      if (r.summary) html += `<p>${esc(r.summary)}</p>`;
+      if (r.checklist?.length) {
+        html += '<h4>Checklist</h4>';
+        r.checklist.forEach((item: any) => {
+          html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${item.status}">${item.status}</span><span><strong>${esc(item.category)}</strong>: ${esc(item.message)}</span></div>`;
+          if (item.suggestion && item.status !== 'pass') html += `<div class="admin-ai-checklist-suggestion">${esc(item.suggestion)}</div>`;
+        });
+      }
+      aiResultEl.innerHTML = html;
+    }
+
+    function renderConceptcheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+      if (r.overall_accuracy) html += `<span class="admin-ai-confidence admin-ai-confidence--${r.overall_accuracy}">Accuracy: ${r.overall_accuracy}</span>`;
+      if (r.depth_assessment) html += `<span class="admin-ai-depth-badge">${r.depth_assessment}</span>`;
+      if (r.concepts?.length) {
+        html += '<h4>Concepts</h4>';
+        const verdictMap: Record<string, string> = { accurate: 'verified', unclear: 'unverified', incorrect: 'no_source' };
+        r.concepts.forEach((c: any) => {
+          const cssVerdict = verdictMap[c.verdict] || c.verdict;
+          html += `<div class="admin-ai-claim"><div class="admin-ai-claim-text">${esc(c.concept)}</div><div class="admin-ai-claim-meta"><span class="admin-ai-verdict admin-ai-verdict--${cssVerdict}">${c.verdict}</span>`;
+          if (c.note) html += `<span>${esc(c.note)}</span>`;
+          html += `</div>`;
+          if (c.suggestion) html += `<div class="admin-ai-checklist-suggestion">${esc(c.suggestion)}</div>`;
+          html += `</div>`;
+        });
+      }
+      if (r.missing_concepts?.length) {
+        html += '<h4>Missing Concepts</h4>';
+        r.missing_concepts.forEach((mc: string) => { html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(mc)}</span></div>`; });
+      }
+      aiResultEl.innerHTML = html;
+    }
+
+    function renderVoicecheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+      if (r.overall_voice) {
+        const voiceMap: Record<string, string> = { authentic: 'high', mixed: 'medium', generic: 'low' };
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${voiceMap[r.overall_voice] || 'medium'}">Voice: ${r.overall_voice}</span>`;
+      }
+      if (r.tone_profile) {
+        const tp = r.tone_profile;
+        html += '<h4>Tone Profile</h4><div class="admin-ai-tone-profile">';
+        for (const [key, val] of Object.entries(tp)) {
+          const v = val as number;
+          html += `<div class="admin-ai-score-row"><span class="admin-ai-score-label">${esc(key)}</span><div class="admin-ai-score-bar"><div class="admin-ai-score-fill" style="width: ${v}%;"></div></div><span class="admin-ai-score-value">${v}</span></div>`;
+        }
+        html += '</div>';
+      }
+      if (r.sections?.length) {
+        html += '<h4>Section Analysis</h4>';
+        r.sections.forEach((s: any) => {
+          const hasIssue = s.issue && s.issue.length > 0;
+          const statusClass = hasIssue ? 'warn' : 'pass';
+          html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${statusClass}">${hasIssue ? 'warn' : 'pass'}</span><span><strong>${esc(s.section)}</strong>: ${esc(s.assessment)}</span></div>`;
+          if (s.suggestion) html += `<div class="admin-ai-checklist-suggestion">${esc(s.suggestion)}</div>`;
+        });
+      }
+      if (r.generic_phrases?.length) {
+        html += '<h4>Generic Phrases to Replace</h4>';
+        r.generic_phrases.forEach((p: string) => { html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text admin-ai-generic-phrase">"${esc(p)}"</span></div>`; });
+      }
+      aiResultEl.innerHTML = html;
+    }
+
+    function renderRetrocheck(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+      if (r.overall_quality) {
+        const qualityMap: Record<string, string> = { 'publication-ready': 'high', 'needs-work': 'medium', 'incomplete': 'low' };
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${qualityMap[r.overall_quality] || 'medium'}">Quality: ${r.overall_quality}</span>`;
+      }
+      html += '<div class="admin-ai-retro-stats">';
+      html += `<div class="admin-ai-stat"><span class="admin-ai-stat-value">${r.decisions_documented ?? 0}</span><span class="admin-ai-stat-label">Decisions</span></div>`;
+      html += `<div class="admin-ai-stat"><span class="admin-ai-stat-value">${r.lessons_extracted ?? 0}</span><span class="admin-ai-stat-label">Lessons</span></div>`;
+      html += `<div class="admin-ai-stat"><span class="admin-ai-stat-value">${r.metrics_included ? 'Yes' : 'No'}</span><span class="admin-ai-stat-label">Metrics</span></div>`;
+      html += '</div>';
+      if (r.sections?.length) {
+        html += '<h4>Section Quality</h4>';
+        const statusMap: Record<string, string> = { present: 'pass', weak: 'warn', missing: 'fail' };
+        r.sections.forEach((s: any) => {
+          const css = statusMap[s.status] || s.status;
+          html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${css}">${s.status}</span><span><strong>${esc(s.section)}</strong>: ${esc(s.note)}</span></div>`;
+          if (s.suggestion) html += `<div class="admin-ai-checklist-suggestion">${esc(s.suggestion)}</div>`;
+        });
+      }
+      aiResultEl.innerHTML = html;
+    }
+
+    function esc(s: string): string {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // Event listeners
+    btnSave?.addEventListener('click', handleSave);
+    btnPreview?.addEventListener('click', switchToPreview);
+    btnEdit?.addEventListener('click', switchToDraft);
+    btnPublish?.addEventListener('click', handlePublish);
+    btnDelete?.addEventListener('click', handleDelete);
+    btnPublishDraft?.addEventListener('click', handlePublishFromDraft);
+
+    initEditor();
+  });
+</script>

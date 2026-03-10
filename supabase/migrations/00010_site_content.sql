@@ -1,4 +1,4 @@
--- Site Content: admin-editable editorial text (bilingual ko/en)
+﻿-- Site Content: admin-editable editorial text (bilingual ko/en)
 -- Used by public rails, masthead copy, and marketing/onboarding sections.
 
 CREATE TABLE site_content (
@@ -68,7 +68,7 @@ INSERT INTO site_content (key, value_ko, value_en) VALUES
    'From Void to Value'),
 
   ('home_intro',
-   '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 해석을 나누는 AI 퍼블리케이션입니다.',
+   '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 생각을 나누는 공간입니다.',
    'An AI publication where readers can follow the latest shifts quickly, look up key terms instantly, build their own archive of news and concepts, and share their interpretations with others.'),
 
   ('about_tagline',
@@ -98,5 +98,6 @@ INSERT INTO site_content (key, value_ko, value_en) VALUES
   ('library_empty_progress',
    '용어집을 읽기 시작하면 학습 현황이 여기에 쌓입니다.',
    'Visit handbook terms to start tracking your learning progress.');
+
 
 
