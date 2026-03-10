@@ -1,0 +1,111 @@
+---
+import { t } from '../../i18n/index';
+import { getCategoryLabel, getCategoryColorVar, BLOG_CATEGORIES } from '../../lib/categories';
+
+interface SidebarPost {
+  title: string;
+  slug: string;
+  category: string;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  posts: SidebarPost[];
+  currentSlug?: string;
+  totalCount: number;
+}
+
+const { locale, posts, currentSlug, totalCount } = Astro.props;
+
+const grouped = BLOG_CATEGORIES.reduce((acc, cat) => {
+  acc[cat] = posts.filter(p => p.category === cat);
+  return acc;
+}, {} as Record<string, SidebarPost[]>);
+
+const currentCategory = currentSlug
+  ? posts.find(p => p.slug === currentSlug)?.category
+  : undefined;
+---
+
+<aside class="blog-sidebar">
+  <!-- Search trigger -->
+  <div class="blog-sidebar-search">
+    <button type="button">
+      <span>{t[locale]['blog.search']}</span>
+      <kbd>⌘K</kbd>
+    </button>
+  </div>
+
+  <!-- Folder tree -->
+  <nav class="blog-sidebar-nav">
+    {BLOG_CATEGORIES.map((cat) => {
+      const isExpanded = currentCategory === cat;
+      const catPosts = grouped[cat] || [];
+      const label = getCategoryLabel(locale, cat);
+      const colorVar = getCategoryColorVar(cat);
+
+      return (
+        <div class="blog-folder" style={`--folder-color: ${colorVar}`}>
+          <button
+            class="blog-folder-btn"
+            type="button"
+            aria-expanded={isExpanded ? 'true' : 'false'}
+          >
+            <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M6 4l4 4-4 4" />
+            </svg>
+            <span>📂</span>
+            <span>{label}</span>
+          </button>
+          <div class="blog-folder-children" {...(!isExpanded && { hidden: true })}>
+            {catPosts.map((post) => (
+              <a
+                class:list={[
+                  'blog-sidebar-link',
+                  { 'blog-sidebar-link--active': post.slug === currentSlug },
+                ]}
+                href={`/${locale}/blog/${post.slug}/`}
+              >
+                {post.title}
+              </a>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+  </nav>
+
+  <!-- Footer -->
+  <div class="blog-sidebar-footer">
+    <a href={`/${locale}/blog/`}>
+      {t[locale]['blog.allPostsCount']} ({totalCount})
+    </a>
+  </div>
+</aside>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      const children = btn.nextElementSibling as HTMLElement | null;
+      if (children) {
+        if (expanded) {
+          children.hidden = true;
+        } else {
+          children.hidden = false;
+        }
+      }
+    });
+  });
+
+  // Mobile overlay close
+  document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
+    overlay.addEventListener('click', () => {
+      document.querySelectorAll('.blog-sidebar').forEach((sidebar) => {
+        sidebar.classList.remove('blog-sidebar--open');
+      });
+      overlay.classList.remove('blog-sidebar-overlay--open');
+    });
+  });
+</script>
