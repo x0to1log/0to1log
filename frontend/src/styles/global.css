@@ -4641,6 +4641,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   min-height: calc(100vh - 4rem);
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
+  font-family: var(--font-blog-body);
 }
 
 /* ── Left Sidebar ── */
