@@ -1,6 +1,21 @@
 ---
 import { getCategoryLabel } from '../../lib/categories';
 
+interface QuizPoll {
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
+
+interface GuideItems {
+  one_liner?: string;
+  action_item?: string;
+  critical_gotcha?: string;
+  rotating_item?: string;
+  quiz_poll?: QuizPoll | null;
+}
+
 interface Props {
   locale: 'en' | 'ko';
   slug: string;
@@ -24,6 +39,7 @@ interface Props {
   isLiked?: boolean;
   activePersona?: string | null;
   personaHtmlMap?: Record<string, string>;
+  guideItems?: GuideItems | null;
 }
 
 const {
@@ -49,11 +65,15 @@ const {
   isLiked = false,
   activePersona = null,
   personaHtmlMap,
+  guideItems = null,
 } = Astro.props;
+
+const isKo = locale === 'ko';
+const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || guideItems.quiz_poll?.question);
 
 const personaLabels: Record<string, Record<string, string>> = {
   en: { beginner: 'Beginner', learner: 'Learner', expert: 'Expert' },
-  ko: { beginner: '초보자', learner: '학습자', expert: '전문가' },
+  ko: { beginner: '입문자', learner: '학습자', expert: '현직자' },
 };
 const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
@@ -124,6 +144,53 @@ const copy = {
   <div class="newsprint-prose">
     <Fragment set:html={htmlContent} />
   </div>
+
+  {hasGuideItems && (
+    <aside class="newsprint-guide-items">
+      <h3 class="newsprint-section-title">{isKo ? '한눈에 보기' : 'At a Glance'}</h3>
+
+      {guideItems!.one_liner && (
+        <div class="newsprint-guide-block newsprint-guide-oneliner">
+          <span class="newsprint-guide-label">{isKo ? '한 줄 요약' : 'In One Line'}</span>
+          <p>{guideItems!.one_liner}</p>
+        </div>
+      )}
+
+      {guideItems!.action_item && (
+        <div class="newsprint-guide-block">
+          <span class="newsprint-guide-label">{isKo ? '지금 해볼 수 있는 것' : 'Try This Now'}</span>
+          <p>{guideItems!.action_item}</p>
+        </div>
+      )}
+
+      {guideItems!.critical_gotcha && (
+        <div class="newsprint-guide-block newsprint-guide-gotcha">
+          <span class="newsprint-guide-label">{isKo ? '주의할 점' : 'Watch Out'}</span>
+          <p>{guideItems!.critical_gotcha}</p>
+        </div>
+      )}
+
+      {guideItems!.rotating_item && (
+        <div class="newsprint-guide-block">
+          <span class="newsprint-guide-label">{isKo ? '맥락 노트' : 'Context Note'}</span>
+          <p>{guideItems!.rotating_item}</p>
+        </div>
+      )}
+
+      {guideItems!.quiz_poll?.question && (
+        <div class="newsprint-guide-block newsprint-guide-quiz" data-quiz-answer={guideItems!.quiz_poll.answer}>
+          <span class="newsprint-guide-label">{isKo ? '오늘의 퀴즈' : "Today's Quiz"}</span>
+          <p class="newsprint-quiz-question">{guideItems!.quiz_poll.question}</p>
+          <div class="newsprint-quiz-options">
+            {guideItems!.quiz_poll.options.map((opt: string) => (
+              <button type="button" class="newsprint-quiz-option" data-option={opt}>{opt}</button>
+            ))}
+          </div>
+          <p class="newsprint-quiz-explanation" style="display:none;">{guideItems!.quiz_poll.explanation}</p>
+        </div>
+      )}
+    </aside>
+  )}
 
   <!-- Engagement Bar -->
   <div class="newsprint-engagement-bar" data-post-id={itemId}>
@@ -276,5 +343,33 @@ const copy = {
     });
   }
 
+  function initQuiz() {
+    const quizBlock = document.querySelector<HTMLElement>('.newsprint-guide-quiz');
+    if (!quizBlock) return;
+    const answer = quizBlock.dataset.quizAnswer || '';
+    const explanation = quizBlock.querySelector<HTMLElement>('.newsprint-quiz-explanation');
+    const options = quizBlock.querySelectorAll<HTMLButtonElement>('.newsprint-quiz-option');
+    let answered = false;
+
+    options.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const selected = btn.dataset.option || '';
+        const isCorrect = selected === answer;
+        btn.classList.add(isCorrect ? 'newsprint-quiz-option--correct' : 'newsprint-quiz-option--wrong');
+        // Highlight the correct answer if wrong
+        if (!isCorrect) {
+          options.forEach(b => {
+            if (b.dataset.option === answer) b.classList.add('newsprint-quiz-option--correct');
+          });
+        }
+        options.forEach(b => b.setAttribute('disabled', 'true'));
+        if (explanation) explanation.style.display = '';
+      });
+    });
+  }
+
   document.addEventListener('astro:page-load', initPersonaSwitcher);
+  document.addEventListener('astro:page-load', initQuiz);
 </script>

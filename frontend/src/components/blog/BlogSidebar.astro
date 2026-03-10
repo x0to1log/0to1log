@@ -17,6 +17,8 @@ interface Props {
 
 const { locale, posts, currentSlug, totalCount } = Astro.props;
 
+const VISIBLE_LIMIT = 4;
+
 const grouped = BLOG_CATEGORIES.reduce((acc, cat) => {
   acc[cat] = posts.filter(p => p.category === cat);
   return acc;
@@ -28,19 +30,26 @@ const currentCategory = currentSlug
 ---
 
 <aside class="blog-sidebar">
+  <!-- Mobile header with close button -->
+  <div class="blog-sidebar-header">
+    <span class="blog-sidebar-brand">도록</span>
+    <button class="blog-sidebar-close" data-sidebar-close aria-label="Close sidebar">✕</button>
+  </div>
+
   <!-- Search trigger -->
   <div class="blog-sidebar-search">
-    <button type="button">
+    <button class="blog-sidebar-search-btn" type="button" aria-label="Search posts">
       <span>{t[locale]['blog.search']}</span>
-      <kbd>⌘K</kbd>
+      <kbd class="blog-sidebar-search-kbd">⌘K</kbd>
     </button>
   </div>
 
   <!-- Folder tree -->
   <nav class="blog-sidebar-nav">
     {BLOG_CATEGORIES.map((cat) => {
-      const isExpanded = currentCategory === cat;
       const catPosts = grouped[cat] || [];
+      const visiblePosts = catPosts.slice(0, VISIBLE_LIMIT);
+      const extraPosts = catPosts.slice(VISIBLE_LIMIT);
       const label = getCategoryLabel(locale, cat);
       const colorVar = getCategoryColorVar(cat);
 
@@ -49,16 +58,22 @@ const currentCategory = currentSlug
           <button
             class="blog-folder-btn"
             type="button"
-            aria-expanded={isExpanded ? 'true' : 'false'}
+            aria-expanded={catPosts.length > 0 ? "true" : "false"}
           >
             <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M6 4l4 4-4 4" />
             </svg>
-            <span>📂</span>
+            <span class="blog-folder-dot" style={`background: ${colorVar}`}></span>
             <span>{label}</span>
+            <span class="blog-folder-count">({catPosts.length})</span>
           </button>
-          <div class="blog-folder-children" {...(!isExpanded && { hidden: true })}>
-            {catPosts.map((post) => (
+          <div class="blog-folder-children" {...(catPosts.length === 0 && { hidden: true })}>
+            {catPosts.length === 0 && (
+              <span class="blog-folder-empty">
+                {locale === 'ko' ? '글 준비 중' : 'Coming soon'}
+              </span>
+            )}
+            {visiblePosts.map((post) => (
               <a
                 class:list={[
                   'blog-sidebar-link',
@@ -69,6 +84,24 @@ const currentCategory = currentSlug
                 {post.title}
               </a>
             ))}
+            {extraPosts.length > 0 && (
+              <>
+                <div class="blog-folder-extra" hidden>
+                  {extraPosts.map((post) => (
+                    <a
+                      class:list={[
+                        'blog-sidebar-link',
+                        { 'blog-sidebar-link--active': post.slug === currentSlug },
+                      ]}
+                      href={`/${locale}/blog/${post.slug}/`}
+                    >
+                      {post.title}
+                    </a>
+                  ))}
+                </div>
+                <button class="blog-folder-more" type="button" data-folder-more>+{extraPosts.length}{locale === 'ko' ? '개 더보기' : ' more'}</button>
+              </>
+            )}
           </div>
         </div>
       );
@@ -84,28 +117,51 @@ const currentCategory = currentSlug
 </aside>
 
 <script>
-  document.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      btn.setAttribute('aria-expanded', String(!expanded));
-      const children = btn.nextElementSibling as HTMLElement | null;
-      if (children) {
-        if (expanded) {
-          children.hidden = true;
-        } else {
-          children.hidden = false;
+  function initBlogSidebar() {
+    // Folder expand/collapse
+    document.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        const children = btn.nextElementSibling as HTMLElement | null;
+        if (children) {
+          children.hidden = expanded;
         }
-      }
+      });
     });
-  });
 
-  // Mobile overlay close
-  document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
-    overlay.addEventListener('click', () => {
+    // "⁝" more button — reveal extra posts
+    document.querySelectorAll<HTMLButtonElement>('[data-folder-more]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const extra = btn.previousElementSibling as HTMLElement | null;
+        if (extra && extra.classList.contains('blog-folder-extra')) {
+          extra.hidden = false;
+        }
+        btn.remove();
+      });
+    });
+
+    // Close sidebar helper
+    function closeSidebar() {
       document.querySelectorAll('.blog-sidebar').forEach((sidebar) => {
         sidebar.classList.remove('blog-sidebar--open');
       });
-      overlay.classList.remove('blog-sidebar-overlay--open');
+      document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
+        overlay.classList.remove('blog-sidebar-overlay--open');
+      });
+    }
+
+    // Mobile overlay close
+    document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
+      overlay.addEventListener('click', closeSidebar);
     });
-  });
+
+    // Mobile close button
+    document.querySelectorAll<HTMLButtonElement>('[data-sidebar-close]').forEach((btn) => {
+      btn.addEventListener('click', closeSidebar);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initBlogSidebar);
+  initBlogSidebar();
 </script>

@@ -275,11 +275,12 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
         isLiked={isLiked}
         activePersona={activePersona}
         personaHtmlMap={hasPersonaSwitcher ? personaHtmlMap : undefined}
+        guideItems={post.guide_items}
       />
     )}
 
     <Fragment slot="rail">
-      <NewsprintSideRail locale="en" posts={recentPosts} focusItems={focusItems} />
+      <NewsprintSideRail locale="en" posts={recentPosts} focusItems={focusItems} relatedNews={post?.related_news} />
     </Fragment>
   </NewsprintShell>
 </MainLayout>
