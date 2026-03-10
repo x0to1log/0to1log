@@ -186,7 +186,7 @@ const renderMd = hasTerms
   ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
   : (md: string) => renderMarkdown(md);
 
-const rawContent = post ? (post.content_original || '') : '';
+const rawContent = post ? (post.content || '') : '';
 const htmlContent = rawContent ? await renderMd(rawContent) : '';
 
 const altSlugValue = pairedSlug ? `/ko/blog/${pairedSlug}/` : undefined;

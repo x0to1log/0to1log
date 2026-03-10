@@ -1,4 +1,4 @@
-﻿-- Site Content: admin-editable editorial text (bilingual ko/en)
+-- Site Content: admin-editable editorial text (bilingual ko/en)
 -- Used by public rails, masthead copy, and marketing/onboarding sections.
 
 CREATE TABLE site_content (
@@ -52,8 +52,8 @@ INSERT INTO site_content (key, value_ko, value_en) VALUES
    '["Glossary", "Reference", "Learn"]'),
 
   ('start_here_sections',
-   '[{"slug":"ai-news","label":"AI 뉴스","description":"오늘 바뀐 것부터 가장 빠르게 봅니다."},{"slug":"study","label":"학습","description":"공부 개념과 메모 노트를 남깁니다."},{"slug":"career","label":"커리어","description":"일과 성장을 기록합니다."},{"slug":"project","label":"프로젝트","description":"만드는 과정과 회고를 기록합니다."}]',
-   '[{"slug":"ai-news","label":"AI News","description":"Start with what changed today."},{"slug":"study","label":"Study","description":"Follow concepts, notes, and references."},{"slug":"career","label":"Career","description":"Read decisions about work and growth."},{"slug":"project","label":"Project","description":"See build logs and shipping notes."}]'),
+   '[{\"label\":\"AI 뉴스\",\"description\":\"오늘 꼭 봐야 할 AI 변화부터 빠르게 읽습니다.\",\"slug\":\"ai-news\"},{\"label\":\"AI 용어집\",\"description\":\"읽다가 막히는 AI 용어를 바로 찾아 이해합니다.\",\"slug\":\"study\"},{\"label\":\"나의 서재\",\"description\":\"읽은 뉴스와 용어를 차곡차곡 모아둡니다.\",\"slug\":\"career\"},{\"label\":\"IT 블로그\",\"description\":\"빌드 과정과 기록을 찬찬히 풀어봅니다.\",\"slug\":\"project\"}]',
+   '[{"slug":"ai-news","label":"AI News","description":"Read the most important AI shifts first."},{"slug":"study","label":"AI Glossary","description":"Look up unfamiliar terms without leaving the flow."},{"slug":"career","label":"My Library","description":"Keep the news and terms that stay with you."},{"slug":"project","label":"IT Blog","description":"Explore the builds, reflections, and technical work behind the product."}]'),
 
   ('volume_issue',
    '제01권 · 제10호',
@@ -68,8 +68,8 @@ INSERT INTO site_content (key, value_ko, value_en) VALUES
    'From Void to Value'),
 
   ('home_intro',
-   '지금 중요한 AI 변화를 빠르게 읽고, 실무 맥락까지 함께 이해할 수 있도록 정리한 데일리 퍼블리케이션입니다.',
-   'A concise publication for people who want the latest AI shifts, the right technical context, and a clearer path from signal to action.'),
+   '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 해석을 나누는 AI 퍼블리케이션입니다.',
+   'An AI publication where readers can follow the latest shifts quickly, look up key terms instantly, build their own archive of news and concepts, and share their interpretations with others.'),
 
   ('about_tagline',
    '신호를 맥락으로 바꾸는 기록',
@@ -98,3 +98,5 @@ INSERT INTO site_content (key, value_ko, value_en) VALUES
   ('library_empty_progress',
    '용어집을 읽기 시작하면 학습 현황이 여기에 쌓입니다.',
    'Visit handbook terms to start tracking your learning progress.');
+
+

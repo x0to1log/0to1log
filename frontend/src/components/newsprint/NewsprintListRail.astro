@@ -29,18 +29,33 @@ const editorialNote = editorialNoteProp || (isKo
   ? '오늘의 변화와 작업 기록을 AI 뉴스, 서재, 커리어, 프로젝트의 흐름으로 엮어 둡니다.'
   : 'A daily record of shifts, working notes, and build logs across AI, study, career, and projects.');
 
+const getStarterHref = (slug: string) => {
+  switch (slug) {
+    case 'ai-news':
+      return `/${locale}/news/`;
+    case 'study':
+      return `/${locale}/handbook/`;
+    case 'career':
+      return '/library/';
+    case 'project':
+      return `/${locale}/blog/`;
+    default:
+      return `/${locale}/news/`;
+  }
+};
+
 const defaultStarterSections: StarterSection[] = isKo
   ? [
-      { slug: 'ai-news', label: 'AI 뉴스', description: '오늘 바뀐 것부터 가장 빠르게 봅니다.' },
-      { slug: 'study', label: '학습', description: '공부 개념과 메모 노트를 남깁니다.' },
-      { slug: 'career', label: '커리어', description: '일과 성장을 기록합니다.' },
-      { slug: 'project', label: '프로젝트', description: '만드는 과정과 회고를 기록합니다.' },
+      { slug: 'ai-news', label: 'AI 뉴스', description: '오늘 꼭 봐야 할 AI 변화부터 빠르게 읽습니다.' },
+      { slug: 'study', label: 'AI 용어집', description: '읽다가 막히는 AI 용어를 바로 찾아 이해합니다.' },
+      { slug: 'career', label: '나의 서재', description: '읽은 뉴스와 용어를 차곡차곡 모아둡니다.' },
+      { slug: 'project', label: 'IT 블로그', description: '빌드 과정과 기록을 찬찬히 풀어봅니다.' },
     ]
   : [
-      { slug: 'ai-news', label: 'AI News', description: 'Start with what changed today.' },
-      { slug: 'study', label: 'Study', description: 'Follow concepts, notes, and references.' },
-      { slug: 'career', label: 'Career', description: 'Read decisions about work and growth.' },
-      { slug: 'project', label: 'Project', description: 'See build logs and shipping notes.' },
+      { slug: 'ai-news', label: 'AI News', description: 'Read the most important AI shifts first.' },
+      { slug: 'study', label: 'AI Glossary', description: 'Look up unfamiliar terms without leaving the flow.' },
+      { slug: 'career', label: 'My Library', description: 'Keep the news and terms that stay with you.' },
+      { slug: 'project', label: 'IT Blog', description: 'Explore the builds, reflections, and technical work behind the product.' },
     ];
 
 const starterSections = (startHereProp && startHereProp.length > 0) ? startHereProp : defaultStarterSections;
@@ -79,7 +94,7 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
   <h3 class="newsprint-section-title">{isKo ? '처음 읽는 분께' : 'Start Here'}</h3>
   <div class="newsprint-stack">
     {starterSections.map((section) => (
-      <a class="newsprint-card" href={`${resolvedBasePath}/?category=${section.slug}`}>
+      <a class="newsprint-card" href={getStarterHref(section.slug)}>
         <strong class="newsprint-rail-link">{section.label}</strong>
         <p class="newsprint-rail-copy">{section.description}</p>
       </a>

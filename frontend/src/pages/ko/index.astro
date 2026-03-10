@@ -1,4 +1,4 @@
----
+﻿---
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
@@ -9,7 +9,7 @@ const homeTitle = sc.home_title || t.ko['home.title'];
 const homeSubtitle = sc.home_subtitle || t.ko['home.subtitle'];
 const homeIntro =
   sc.home_intro ||
-  '지금 중요한 AI 변화를 빠르게 읽고, 실무 맥락까지 함께 이해할 수 있도록 정리한 데일리 퍼블리케이션입니다.';
+  '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 해석을 나누는 AI 퍼블리케이션입니다.';
 ---
 
 <MainLayout title={homeTitle} locale="ko" headerAlwaysVisible={true}>
@@ -25,3 +25,5 @@ const homeIntro =
     </p>
   </section>
 </MainLayout>
+
+

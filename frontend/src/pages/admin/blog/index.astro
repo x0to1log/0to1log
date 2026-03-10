@@ -1,0 +1,392 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import { createClient } from '@supabase/supabase-js';
+
+type AdminBlogRow = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string | null;
+  locale: string | null;
+  status: 'draft' | 'published' | string;
+  updated_at: string;
+  published_at: string | null;
+};
+
+const accessToken = Astro.locals.accessToken;
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+let fetchError: string | null = null;
+let allPosts: AdminBlogRow[] = [];
+let blogDraft = 0;
+let blogPublished = 0;
+let blogTotal = 0;
+
+try {
+  const { data, error } = await sb
+    .from('blog_posts')
+    .select('id, title, slug, category, locale, status, updated_at, published_at')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    fetchError = error.message;
+  } else {
+    allPosts = data ?? [];
+    blogTotal = allPosts.length;
+    blogDraft = allPosts.filter((post) => post.status === 'draft').length;
+    blogPublished = allPosts.filter((post) => post.status === 'published').length;
+  }
+} catch (error) {
+  fetchError = error instanceof Error ? error.message : 'Unknown error';
+}
+
+allPosts = allPosts.sort((a, b) => {
+  if (a.status === 'draft' && b.status !== 'draft') return -1;
+  if (a.status !== 'draft' && b.status === 'draft') return 1;
+  return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+});
+
+const localeOptions = Array.from(
+  new Set(allPosts.map((post) => post.locale).filter((locale): locale is string => Boolean(locale))),
+).sort();
+const categoryOptions = Array.from(
+  new Set(allPosts.map((post) => post.category).filter((category): category is string => Boolean(category))),
+).sort();
+---
+
+<MainLayout title="Admin Blog" locale="en">
+  <AdminSidebar activeSection="blog" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">Blog</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-list-toolbar">
+        <div class="admin-list-toolbar-row">
+          <div class="admin-list-toolbar-left">
+            <a href="/admin/blog/edit/new" class="admin-btn admin-btn-primary">New Post</a>
+            <div class="admin-filter-tabs">
+              <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({blogDraft})</button>
+              <button class="admin-filter-btn" data-filter="published">Published ({blogPublished})</button>
+              <button class="admin-filter-btn" data-filter="all">All ({blogTotal})</button>
+            </div>
+          </div>
+          <div class="admin-list-toolbar-right">
+            <input
+              type="search"
+              class="admin-input admin-search-input"
+              id="admin-search"
+              placeholder="Search..."
+            />
+            <button class="admin-btn admin-filters-toggle" id="filters-toggle" type="button">
+              Filters
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 5l3 3 3-3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="admin-list-toolbar-filters" id="filters-panel" hidden>
+          <select id="admin-locale-filter" class="admin-select">
+            <option value="">All locales</option>
+            {localeOptions.map((locale) => (
+              <option value={locale}>{locale.toUpperCase()}</option>
+            ))}
+          </select>
+          <select id="admin-category-filter" class="admin-select">
+            <option value="">All categories</option>
+            {categoryOptions.map((category) => (
+              <option value={category}>{category}</option>
+            ))}
+          </select>
+          <select id="admin-sort" class="admin-select">
+            <option value="updated">Recently updated</option>
+            <option value="published">Recently published</option>
+            <option value="title">Title A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      {fetchError ? (
+        <NewsprintNotice
+          variant="unauthorized"
+          message={`Failed to load blog posts: ${fetchError}`}
+          linkHref="/admin/blog/"
+          linkLabel="Retry"
+        />
+      ) : allPosts.length === 0 ? (
+        <NewsprintNotice variant="empty" message="No blog posts yet." />
+      ) : (
+        <>
+          <ul class="admin-list" id="post-list">
+            {allPosts.map((post) => (
+              <li
+                class="admin-list-item"
+                data-status={post.status}
+                data-title={post.title.toLowerCase()}
+                data-locale={post.locale || ''}
+                data-category={post.category || ''}
+                data-updated={post.updated_at || ''}
+                data-published={post.published_at || ''}
+              >
+                <div class="admin-list-info">
+                  <div class="admin-list-title">
+                    <a href={`/admin/blog/edit/${post.slug}`}>{post.title}</a>
+                  </div>
+                  <div class="admin-list-meta">
+                    <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
+                    {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
+                    {post.category && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span>{post.category}</span>
+                      </>
+                    )}
+                    <span class="admin-meta-sep">·</span>
+                    <span class="admin-meta-date">Updated {new Date(post.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                    {post.published_at && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span class="admin-meta-date">Published {new Date(post.published_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div class="admin-list-actions">
+                  <a href={`/admin/blog/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
+                  <a href={`/admin/blog/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
+                  {post.status === 'draft' ? (
+                    <button class="admin-btn admin-btn-primary" data-action="publish" data-id={post.id}>Publish</button>
+                  ) : (
+                    <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
+                  )}
+                  <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p id="admin-no-results" class="admin-no-results" hidden>No matching blog posts.</p>
+        </>
+      )}
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .admin-list-toolbar {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-list-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-list-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-list-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .admin-list-toolbar-right .admin-search-input {
+    width: 160px;
+  }
+
+  .admin-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .admin-filters-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  .admin-list-toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .admin-list-toolbar-filters .admin-select {
+    width: auto;
+  }
+
+  @media (max-width: 640px) {
+    .admin-list-toolbar-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-list-toolbar-left {
+      flex-wrap: wrap;
+    }
+
+    .admin-list-toolbar-right {
+      margin-left: 0;
+    }
+
+    .admin-list-toolbar-right .admin-search-input {
+      width: 100%;
+      flex: 1;
+    }
+
+    .admin-list-toolbar-filters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+
+<script>
+  // @ts-nocheck
+  function initBlogList() {
+    const list = document.getElementById('post-list');
+    if (!list || list.dataset.init === '1') return;
+    list.dataset.init = '1';
+
+    let currentFilter = 'draft';
+    const searchInput = document.getElementById('admin-search');
+    const localeFilter = document.getElementById('admin-locale-filter');
+    const categoryFilter = document.getElementById('admin-category-filter');
+    const sortSelect = document.getElementById('admin-sort');
+    const noResults = document.getElementById('admin-no-results');
+    const filtersToggle = document.getElementById('filters-toggle');
+    const filtersPanel = document.getElementById('filters-panel');
+
+    filtersToggle?.addEventListener('click', () => {
+      const open = filtersPanel?.hidden === false;
+      if (filtersPanel) filtersPanel.hidden = open;
+      filtersToggle.setAttribute('aria-expanded', String(!open));
+    });
+
+    function getVisibleItems() {
+      return Array.from(list.querySelectorAll('.admin-list-item'));
+    }
+
+    function sortItems(mode) {
+      const items = getVisibleItems();
+      items.sort((a, b) => {
+        if (mode === 'title') {
+          return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+        }
+        if (mode === 'published') {
+          return new Date(b.dataset.published || b.dataset.updated || 0).getTime()
+            - new Date(a.dataset.published || a.dataset.updated || 0).getTime();
+        }
+        return new Date(b.dataset.updated || 0).getTime() - new Date(a.dataset.updated || 0).getTime();
+      });
+      items.forEach((item) => list.appendChild(item));
+    }
+
+    function applyFilter() {
+      const query = (searchInput?.value || '').toLowerCase().trim();
+      const locale = localeFilter?.value || '';
+      const category = categoryFilter?.value || '';
+      let visibleCount = 0;
+
+      getVisibleItems().forEach((item) => {
+        const matchesStatus = currentFilter === 'all' || item.dataset.status === currentFilter;
+        const matchesQuery = !query || (item.dataset.title || '').includes(query);
+        const matchesLocale = !locale || item.dataset.locale === locale;
+        const matchesCategory = !category || item.dataset.category === category;
+        const visible = matchesStatus && matchesQuery && matchesLocale && matchesCategory;
+        item.style.display = visible ? '' : 'none';
+        if (visible) visibleCount += 1;
+      });
+
+      if (noResults) noResults.hidden = visibleCount > 0;
+      sortItems(sortSelect?.value || 'updated');
+    }
+
+    document.querySelectorAll('[data-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter || 'draft';
+        document.querySelectorAll('[data-filter]').forEach((target) => target.classList.remove('admin-filter-btn--active'));
+        btn.classList.add('admin-filter-btn--active');
+        applyFilter();
+      });
+    });
+
+    searchInput?.addEventListener('input', applyFilter);
+    localeFilter?.addEventListener('change', applyFilter);
+    categoryFilter?.addEventListener('change', applyFilter);
+    sortSelect?.addEventListener('change', applyFilter);
+
+    document.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (!action || !id) return;
+
+        if (action === 'delete') {
+          const title = btn.dataset.title || 'this post';
+          if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+          const res = await fetch('/api/admin/blog/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          if (res.ok) { window.location.reload(); return; }
+          const data = await res.json();
+          window.alert(`Delete failed: ${data.error || 'Unknown error'}`);
+          return;
+        }
+
+        const res = await fetch('/api/admin/blog/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action }),
+        });
+
+        if (res.ok) {
+          window.location.reload();
+          return;
+        }
+
+        const data = await res.json();
+        window.alert(`${action} failed: ${data.error || 'Unknown error'}`);
+      });
+    });
+
+    applyFilter();
+  }
+
+  document.addEventListener('DOMContentLoaded', initBlogList);
+  initBlogList();
+</script>

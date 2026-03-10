@@ -1,4 +1,4 @@
----
+﻿---
 export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
@@ -9,7 +9,7 @@ const homeTitle = sc.home_title || t.en['home.title'];
 const homeSubtitle = sc.home_subtitle || t.en['home.subtitle'];
 const homeIntro =
   sc.home_intro ||
-  'A concise publication for people who want the latest AI shifts, the right technical context, and a clearer path from signal to action.';
+  'An AI publication where readers can follow the latest shifts quickly, look up key terms instantly, build their own archive of news and concepts, and share their interpretations with others.';
 ---
 
 <MainLayout title={homeTitle} locale="en" headerAlwaysVisible={true}>
@@ -25,3 +25,4 @@ const homeIntro =
     </p>
   </section>
 </MainLayout>
+

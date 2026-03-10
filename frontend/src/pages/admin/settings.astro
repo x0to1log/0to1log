@@ -1,4 +1,4 @@
----
+﻿---
 export const prerender = false;
 
 import MainLayout from '../../layouts/MainLayout.astro';
@@ -74,10 +74,10 @@ const scTabs = [
 ];
 
 const startHereDefaults = [
-  { slug: 'ai-news', labelKo: 'AI 뉴스', labelEn: 'AI News' },
-  { slug: 'study', labelKo: '학습', labelEn: 'Study' },
-  { slug: 'career', labelKo: '커리어', labelEn: 'Career' },
-  { slug: 'project', labelKo: '프로젝트', labelEn: 'Project' },
+  { slug: 'ai-news', labelKo: 'AI ?댁뒪', labelEn: 'AI News' },
+  { slug: 'study', labelKo: '?숈뒿', labelEn: 'Study' },
+  { slug: 'career', labelKo: '而ㅻ━??, labelEn: 'Career' },
+  { slug: 'project', labelKo: '?꾨줈?앺듃', labelEn: 'Project' },
 ];
 ---
 
@@ -552,25 +552,25 @@ const startHereDefaults = [
   }
 
   const FALLBACKS = {
-    news_masthead: { ko: '최신 AI 뉴스 모음집', en: 'Latest AI News' },
-    news_edition_label: { ko: '빌더스 데일리', en: "Builder's Daily" },
-    news_subkicker: { ko: 'AI · 논문 · 프로젝트, 데일리 큐레이션, 공개 열람', en: 'AI · Papers · Projects, Daily Curation, Open Access' },
+    news_masthead: { ko: '理쒖떊 AI ?댁뒪 紐⑥쓬吏?, en: 'Latest AI News' },
+    news_edition_label: { ko: '鍮뚮뜑???곗씪由?, en: "Builder's Daily" },
+    news_subkicker: { ko: 'AI 쨌 ?쇰Ц 쨌 ?꾨줈?앺듃, ?곗씪由??먮젅?댁뀡, 怨듦컻 ?대엺', en: 'AI 쨌 Papers 쨌 Projects, Daily Curation, Open Access' },
     editorial_note: { ko: '', en: '' },
     volume_issue: { ko: '', en: '' },
-    handbook_masthead: { ko: 'AI 용어집', en: 'AI Glossary' },
-    handbook_edition_label: { ko: 'CS · AI · Infra', en: 'CS · AI · Infra' },
-    handbook_subkicker: { ko: '용어 사전, 레퍼런스, 학습', en: 'Glossary, Reference, Learn' },
+    handbook_masthead: { ko: 'AI ?⑹뼱吏?, en: 'AI Glossary' },
+    handbook_edition_label: { ko: 'CS 쨌 AI 쨌 Infra', en: 'CS 쨌 AI 쨌 Infra' },
+    handbook_subkicker: { ko: '?⑹뼱 ?ъ쟾, ?덊띁?곗뒪, ?숈뒿', en: 'Glossary, Reference, Learn' },
     handbook_intro: { ko: '', en: '' },
-    home_title: { ko: 'AI 뉴스 & 인사이트', en: 'AI News & Insights' },
-    home_subtitle: { ko: '가치를 담는 기록', en: 'From Void to Value' },
-    home_intro: { ko: '지금 중요한 AI 변화를 빠르게 읽고, 실무 맥락까지 함께 이해할 수 있도록 정리한 데일리 퍼블리케이션입니다.', en: 'A concise publication for people who want the latest AI shifts, the right technical context, and a clearer path from signal to action.' },
-    about_tagline: { ko: 'AI를 만들고, 기록하는 사람', en: 'Builder of AI, keeper of the log' },
-    about_publication_intro: { ko: '매일 수백 건의 AI 소식이 쏟아집니다. 0to1log는 그중 정말 중요한 것만 골라내고, 모든 수준의 독자를 위해 맥락을 더합니다.', en: 'Every day, hundreds of AI announcements compete for attention. 0to1log cuts through the noise by curating only what matters — then contextualizing it for readers at every level.' },
-    about_publication_detail: { ko: '각 기사는 세 가지 버전으로 전달됩니다. 입문자를 위한 쉬운 요약, 학습자를 위한 기술적 분석, 그리고 비즈니스 시사점과 실행 가능한 인사이트를 담은 전문가 분석입니다.', en: 'Each story is delivered in three versions: a plain-language summary for newcomers, a technical breakdown for learners, and an expert analysis with business implications and actionable insights.' },
-    about_editor_intro: { ko: 'Amy Domin Kim — LLM 애플리케이션, 데이터 분석, 웹 개발의 교차점에서 작업하는 AI 엔지니어입니다. 0to1log는 개인 학습 기록에서 시작해, AI 뉴스를 큐레이션하고 맥락을 더하는 풀스택 플랫폼으로 성장했습니다. AI 커뮤니티를 위한 일간 리소스이자 엔드투엔드 엔지니어링 포트폴리오이기도 합니다.', en: 'Amy Domin Kim — AI Engineer building at the intersection of LLM applications, data analysis, and web development. 0to1log began as a personal learning log and grew into a full-stack platform for curating and contextualizing AI developments. It serves as both a daily resource for the AI community and a living portfolio of end-to-end engineering.' },
-    library_empty_saved: { ko: '아직 저장한 글이 없어요\n관심 가는 글에서 🔖 버튼을 눌러보세요\n이곳에 차곡차곡 쌓여갈 거예요', en: "Your shelf is empty\nTap 🔖 on articles you'd like to keep\nThey'll be waiting for you here" },
-    library_empty_read: { ko: '아직 읽은 글이 없어요\n흥미로운 글을 찾아 읽어보세요', en: 'No reading history yet\nExplore articles and start reading' },
-    library_empty_progress: { ko: '용어집을 읽기 시작하면\n학습 현황이 여기에 쌓입니다', en: 'Visit handbook terms to start\ntracking your learning progress' },
+    home_title: { ko: 'AI ?댁뒪 & ?몄궗?댄듃', en: 'AI News & Insights' },
+    home_subtitle: { ko: '媛移섎? ?대뒗 湲곕줉', en: 'From Void to Value' },
+    home_intro: { ko: '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 해석을 나누는 AI 퍼블리케이션입니다.', en: 'An AI publication where readers can follow the latest shifts quickly, look up key terms instantly, build their own archive of news and concepts, and share their interpretations with others.' },
+    about_tagline: { ko: 'AI瑜?留뚮뱾怨? 湲곕줉?섎뒗 ?щ엺', en: 'Builder of AI, keeper of the log' },
+    about_publication_intro: { ko: '留ㅼ씪 ?섎갚 嫄댁쓽 AI ?뚯떇???잛븘吏묐땲?? 0to1log??洹몄쨷 ?뺣쭚 以묒슂??寃껊쭔 怨⑤씪?닿퀬, 紐⑤뱺 ?섏????낆옄瑜??꾪빐 留λ씫???뷀빀?덈떎.', en: 'Every day, hundreds of AI announcements compete for attention. 0to1log cuts through the noise by curating only what matters ??then contextualizing it for readers at every level.' },
+    about_publication_detail: { ko: '媛?湲곗궗????媛吏 踰꾩쟾?쇰줈 ?꾨떖?⑸땲?? ?낅Ц?먮? ?꾪븳 ?ъ슫 ?붿빟, ?숈뒿?먮? ?꾪븳 湲곗닠??遺꾩꽍, 洹몃━怨?鍮꾩쫰?덉뒪 ?쒖궗?먭낵 ?ㅽ뻾 媛?ν븳 ?몄궗?댄듃瑜??댁? ?꾨Ц媛 遺꾩꽍?낅땲??', en: 'Each story is delivered in three versions: a plain-language summary for newcomers, a technical breakdown for learners, and an expert analysis with business implications and actionable insights.' },
+    about_editor_intro: { ko: 'Amy Domin Kim ??LLM ?좏뵆由ъ??댁뀡, ?곗씠??遺꾩꽍, ??媛쒕컻??援먯감?먯뿉???묒뾽?섎뒗 AI ?붿??덉뼱?낅땲?? 0to1log??媛쒖씤 ?숈뒿 湲곕줉?먯꽌 ?쒖옉?? AI ?댁뒪瑜??먮젅?댁뀡?섍퀬 留λ씫???뷀븯????ㅽ깮 ?뚮옯?쇱쑝濡??깆옣?덉뒿?덈떎. AI 而ㅻ??덊떚瑜??꾪븳 ?쇨컙 由ъ냼?ㅼ씠???붾뱶?ъ뿏???붿??덉뼱留??ы듃?대━?ㅼ씠湲곕룄 ?⑸땲??', en: 'Amy Domin Kim ??AI Engineer building at the intersection of LLM applications, data analysis, and web development. 0to1log began as a personal learning log and grew into a full-stack platform for curating and contextualizing AI developments. It serves as both a daily resource for the AI community and a living portfolio of end-to-end engineering.' },
+    library_empty_saved: { ko: '?꾩쭅 ??ν븳 湲???놁뼱??n愿??媛??湲?먯꽌 ?뵔 踰꾪듉???뚮윭蹂댁꽭??n?닿납??李④끝李④끝 ?볦뿬媛?嫄곗삁??, en: "Your shelf is empty\nTap ?뵔 on articles you'd like to keep\nThey'll be waiting for you here" },
+    library_empty_read: { ko: '?꾩쭅 ?쎌? 湲???놁뼱??n?λ?濡쒖슫 湲??李얠븘 ?쎌뼱蹂댁꽭??, en: 'No reading history yet\nExplore articles and start reading' },
+    library_empty_progress: { ko: '?⑹뼱吏묒쓣 ?쎄린 ?쒖옉?섎㈃\n?숈뒿 ?꾪솴???ш린???볦엯?덈떎', en: 'Visit handbook terms to start\ntracking your learning progress' },
   };
 
   const SC_GROUP_KEYS = {
@@ -582,10 +582,10 @@ const startHereDefaults = [
   };
 
   const START_HERE_DEFAULTS = [
-    { slug: 'ai-news', labelKo: 'AI 뉴스', labelEn: 'AI News' },
-    { slug: 'study', labelKo: '학습', labelEn: 'Study' },
-    { slug: 'career', labelKo: '커리어', labelEn: 'Career' },
-    { slug: 'project', labelKo: '프로젝트', labelEn: 'Project' },
+    { slug: 'ai-news', labelKo: 'AI ?댁뒪', labelEn: 'AI News' },
+    { slug: 'study', labelKo: '?숈뒿', labelEn: 'Study' },
+    { slug: 'career', labelKo: '而ㅻ━??, labelEn: 'Career' },
+    { slug: 'project', labelKo: '?꾨줈?앺듃', labelEn: 'Project' },
   ];
 
   function escapeAttr(value) {
@@ -782,3 +782,5 @@ const startHereDefaults = [
   document.addEventListener('DOMContentLoaded', initSettings);
   initSettings();
 </script>
+
+
