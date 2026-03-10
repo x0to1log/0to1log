@@ -14,6 +14,7 @@ interface Props {
 }
 
 const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '', article } = Astro.props;
+const isBlogPage = Astro.url.pathname.includes('/blog/');
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
 const canonicalUrl = `${siteUrl}/${locale}/${slug}`.replace(/\/+$/, '/');
 const altLocale = locale === 'en' ? 'ko' : 'en';
@@ -46,6 +47,12 @@ const jsonLd = article ? JSON.stringify({
     href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Serif+KR:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap"
     rel="stylesheet"
   />
+  {isBlogPage && (
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  )}
 
   <title>{title} | 0to1log</title>
   <meta name="description" content={description} />
