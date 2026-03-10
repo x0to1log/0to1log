@@ -1,0 +1,27 @@
+---
+import { getCategoryLabel } from '../../lib/categories';
+import { t } from '../../i18n/index';
+
+interface Props {
+  locale: 'en' | 'ko';
+  category?: string | null;
+  title: string;
+}
+
+const { locale, category, title } = Astro.props;
+const catLabel = getCategoryLabel(locale, category);
+---
+
+<nav class="blog-breadcrumb">
+  <a href={`/${locale}/blog/`}>{t[locale]['blog.title']}</a>
+  <span>/</span>
+  {catLabel && (
+    <>
+      <a href={`/${locale}/blog/?category=${category}`}>{catLabel}</a>
+      <span>/</span>
+    </>
+  )}
+  <span class="blog-breadcrumb-current">
+    <span>📘</span> {title}
+  </span>
+</nav>
