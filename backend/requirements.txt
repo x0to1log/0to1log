@@ -11,5 +11,6 @@ ruff>=0.4.0
 pydantic-ai>=0.1.0
 openai>=1.0.0
 tavily-python>=0.3.0
+exa-py>=1.0.0
 slowapi>=0.1.9
 beautifulsoup4>=4.12.0

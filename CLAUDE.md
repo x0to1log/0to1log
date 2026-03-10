@@ -8,7 +8,7 @@ AI 뉴스 큐레이션 플랫폼. Solo 프로젝트 (Amy).
 - Backend: FastAPI + Railway (`backend/`)
 - DB: Supabase (PostgreSQL + Auth + RLS)
 - AI: OpenAI (gpt-4o / gpt-4o-mini) + PydanticAI
-- Search: Tavily API
+- Search: Tavily API (semantic)
 
 ## Phase
 

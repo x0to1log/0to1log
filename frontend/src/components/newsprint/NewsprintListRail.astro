@@ -1,6 +1,12 @@
 ---
 import { getCategoryLabel } from '../../lib/categories';
 
+interface StarterSection {
+  slug: string;
+  label: string;
+  description: string;
+}
+
 interface RailPost {
   title: string;
   slug: string;
@@ -10,16 +16,18 @@ interface RailPost {
 interface Props {
   locale: 'en' | 'ko';
   posts: RailPost[];
+  editorialNote?: string;
+  startHereSections?: StarterSection[];
 }
 
-const { locale, posts } = Astro.props;
+const { locale, posts, editorialNote: editorialNoteProp, startHereSections: startHereProp } = Astro.props;
 const isKo = locale === 'ko';
 
-const editorialNote = isKo
+const editorialNote = editorialNoteProp || (isKo
   ? '오늘의 변화와 작업 기록을 AI 뉴스, 서재, 커리어, 프로젝트의 흐름으로 엮어 둡니다.'
-  : 'A daily record of shifts, working notes, and build logs across AI, study, career, and projects.';
+  : 'A daily record of shifts, working notes, and build logs across AI, study, career, and projects.');
 
-const starterSections = isKo
+const defaultStarterSections: StarterSection[] = isKo
   ? [
       { slug: 'ai-news', label: 'AI 뉴스', description: '오늘 바뀐 것부터 가장 빠르게 봅니다.' },
       { slug: 'study', label: '학습', description: '공부 개념과 메모 노트를 남깁니다.' },
@@ -32,6 +40,8 @@ const starterSections = isKo
       { slug: 'career', label: 'Career', description: 'Read decisions about work and growth.' },
       { slug: 'project', label: 'Project', description: 'See build logs and shipping notes.' },
     ];
+
+const starterSections = (startHereProp && startHereProp.length > 0) ? startHereProp : defaultStarterSections;
 ---
 
 <section>

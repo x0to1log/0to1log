@@ -12,6 +12,7 @@ import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.a
 import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
 
 let posts: any[] = [];
 let fetchError: string | null = null;
@@ -61,14 +62,23 @@ const categories = Array.from(
       .filter((category): category is string => Boolean(category)),
   ),
 ).slice(0, 6);
+
+// Site content from DB (fallback to hardcoded values)
+const sc = await getSiteContents(
+  ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
+  'en',
+);
+const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers · Projects', 'Daily Curation', 'Open Access']);
+const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
 ---
 
 <MainLayout title={t.en['log.title']} locale="en" slug="log/">
   <NewsprintShell
     locale="en"
-    masthead="Latest AI News"
-    editionLabel="Builder's Daily"
-    subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
+    masthead={sc.news_masthead || 'Latest AI News'}
+    editionLabel={sc.news_edition_label || "Builder's Daily"}
+    subkicker={subkicker}
+    volumeLabel={sc.volume_issue || undefined}
   >
     <NewsprintCategoryFilter locale="en" />
 
@@ -123,7 +133,12 @@ const categories = Array.from(
     )}
 
     <Fragment slot="rail">
-      <NewsprintListRail locale="en" posts={railPosts} />
+      <NewsprintListRail
+        locale="en"
+        posts={railPosts}
+        editorialNote={sc.editorial_note || undefined}
+        startHereSections={startHereSections.length > 0 ? startHereSections : undefined}
+      />
     </Fragment>
   </NewsprintShell>
 </MainLayout>

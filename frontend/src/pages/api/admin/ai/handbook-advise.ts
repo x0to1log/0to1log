@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = await request.json();
 
   try {
-    const res = await fetch(`${backendUrl}/api/admin/ai/advise`, {
+    const res = await fetch(`${backendUrl}/api/admin/ai/handbook-advise`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

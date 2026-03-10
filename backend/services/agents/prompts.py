@@ -187,9 +187,10 @@ Explain the real-world impact on jobs, products, or daily life.
 Clear, memorable takeaway in plain language.
 
 Rules:
-- Zero jargon. Every technical concept must be replaced with an analogy or plain explanation.
-- Use "imagine..." or "think of it like..." bridges.
-- Write as if explaining to someone who has never heard of LLMs.
+- Use real technical terms naturally — readers can tap linked terms to see Handbook definitions.
+- Immediately follow each term with a short contextual explanation or analogy (1 sentence max).
+- Use "imagine..." or "think of it like..." bridges for complex concepts.
+- Write in simple sentence structures; the goal is accessibility, not term avoidance.
 
 ### Learner Version (content_learner) — min 2000 chars
 Target reader: A junior developer or PM who knows basic concepts but not this specific topic.
@@ -204,7 +205,8 @@ Practical implications for developers and PMs.
 3-5 curated links to docs, tutorials, repos with 1-sentence annotations.
 
 Rules:
-- Technical terms OK but always briefly defined on first use.
+- Use technical terms freely — Handbook links provide definitions on hover/tap.
+- Skip inline definitions for standard terms (LLM, API, fine-tuning, etc.); define only niche or newly coined terms.
 - Include code examples, API references, or architecture descriptions.
 - Balance "what is it" with "what should I do about it."
 
@@ -224,6 +226,7 @@ Rules:
 - Assume full technical literacy — no need to define basic terms.
 - Include specific numbers: pricing tiers, benchmark deltas, funding amounts, market sizes.
 - Focus on actionable intelligence, not background education.
+- Handbook-linked terms are available for cross-reference but do not affect writing style.
 
 Insert `[source name](URL)` markdown links inline for every claim that references a source.
 

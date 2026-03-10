@@ -53,10 +53,14 @@ if (!isNew) {
   }
 }
 
-// Use content_original, fallback to persona content if empty
-const editableContent = post
-  ? (post.content_original || post.content_beginner || post.content_learner || post.content_expert || '')
-  : '';
+// Content setup: business posts use 3 persona editors, research uses single editor
+const isBusinessPost = post?.post_type === 'business';
+const contentBeginner = post?.content_beginner || '';
+const contentLearner = post?.content_learner || '';
+const contentExpert = post?.content_expert || '';
+const editableContent = isBusinessPost
+  ? ''
+  : (post?.content_original || post?.content_beginner || post?.content_learner || post?.content_expert || '');
 
 const categories = getDefaultCategories();
 
@@ -72,8 +76,9 @@ const editionMap: Record<string, string> = {
 const initialCategory = post ? (normalizeCategorySlug(post.category) || '') : '';
 const initialEditionLabel = editionMap[initialCategory] || 'Deep Dive';
 const initialFocusItems = post ? getArticleFocusItems('en', post.category) : [];
-const initialHtmlContent = post ? await renderMarkdown(editableContent) : '';
-const initialWordCount = post ? editableContent.split(/\s+/).length : 0;
+const previewContent = isBusinessPost ? (contentBeginner || contentLearner || contentExpert) : editableContent;
+const initialHtmlContent = post ? await renderMarkdown(previewContent) : '';
+const initialWordCount = post ? previewContent.split(/\s+/).length : 0;
 const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 ---
 
@@ -130,13 +135,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         </div>
 
         <div class="admin-editor-content">
-          <input
+          <textarea
             id="edit-title"
             class="admin-editor-title"
-            type="text"
-            value={post?.title || ''}
+            rows="1"
             placeholder="Untitled"
-          />
+          >{post?.title || ''}</textarea>
 
           <div class="admin-editor-meta">
             <select id="edit-category" class="admin-select" style="width: auto; min-width: 120px;">
@@ -197,7 +201,20 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             </div>
           </details>
 
-          <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
+          {isBusinessPost ? (
+            <>
+              <div class="admin-lang-tabs">
+                <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="beginner">Beginner</button>
+                <button type="button" class="admin-lang-tab" data-persona-tab="learner">Learner</button>
+                <button type="button" class="admin-lang-tab" data-persona-tab="expert">Expert</button>
+              </div>
+              <div id="persona-beginner" class="admin-editor-wrapper" data-content={contentBeginner}></div>
+              <div id="persona-learner" class="admin-editor-wrapper" style="display:none;" data-content={contentLearner}></div>
+              <div id="persona-expert" class="admin-editor-wrapper" style="display:none;" data-content={contentExpert}></div>
+            </>
+          ) : (
+            <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
+          )}
         </div>
 
         <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
@@ -221,6 +238,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             </button>
             <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button">
               Fact-check<span class="ai-btn-model">gpt-4o</span>
+            </button>
+            <button class="admin-ai-action-btn admin-ai-action-btn--wide" data-ai-action="deepverify" type="button">
+              Deep Verify<span class="ai-btn-model">gpt-4o + Tavily</span>
             </button>
           </div>
           <div id="ai-loading" class="admin-ai-loading" hidden>
@@ -290,6 +310,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
   let crepe: Crepe | null = null;
   let feedbackTimer = 0;
+  const personaEditors: Record<string, Crepe | null> = { beginner: null, learner: null, expert: null };
+  let activePersonaTab = 'beginner';
 
   // Maps (must match server-side values)
   const CATEGORY_LABELS: Record<string, string> = {
@@ -315,16 +337,26 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
   const DEFAULT_FOCUS = ['Key shift', 'Practical impact', 'Next point to watch'];
 
-  document.addEventListener('astro:page-load', () => {
-    // Cleanup previous editor instance (View Transitions re-entry)
+  document.addEventListener('DOMContentLoaded', () => {
+    // Cleanup previous editor instance(s) (View Transitions re-entry)
     if (crepe) {
       crepe.destroy();
       crepe = null;
     }
     clearTimeout(feedbackTimer);
 
+    // Cleanup persona editors from previous page
+    for (const key of Object.keys(personaEditors)) {
+      if (personaEditors[key]) {
+        personaEditors[key]!.destroy();
+        personaEditors[key] = null;
+      }
+    }
+
     const editorEl = document.getElementById('milkdown-editor');
-    if (!editorEl) return; // Not the editor page
+    const personaTabs = document.querySelectorAll<HTMLButtonElement>('[data-persona-tab]');
+    const isBusinessEditor = personaTabs.length > 0;
+    if (!editorEl && !isBusinessEditor) return; // Not the editor page
 
     const draftMode = document.getElementById('draft-mode');
     const previewMode = document.getElementById('preview-mode');
@@ -334,7 +366,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const btnSave = document.getElementById('btn-save');
     const btnDelete = document.getElementById('btn-delete');
     const btnPublishDraft = document.getElementById('btn-publish-draft');
-    const titleInput = document.getElementById('edit-title') as HTMLInputElement;
+    const titleInput = document.getElementById('edit-title') as HTMLTextAreaElement;
     const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
     const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
     const slugInput = document.getElementById('edit-slug') as HTMLInputElement;
@@ -347,6 +379,15 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const accessToken = adminData?.dataset.accessToken || '';
     const postId = adminData?.dataset.postId || '';
     const isNewPost = adminData?.dataset.isNew === 'true';
+
+    // Auto-resize title textarea
+    function autoResizeTitle() {
+      if (!titleInput) return;
+      titleInput.style.height = 'auto';
+      titleInput.style.height = titleInput.scrollHeight + 'px';
+    }
+    titleInput?.addEventListener('input', autoResizeTitle);
+    autoResizeTitle();
 
     // Feedback banner
     function showFeedback(type: 'success' | 'error', message: string) {
@@ -362,8 +403,65 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     }
 
 
-    // Initialize Milkdown Crepe
+    // --- Diff / Undo helpers ---
+    const previousValues = new Map<string, string>();
+
+    function getInputForField(field: string): HTMLInputElement | HTMLTextAreaElement | null {
+      if (field === 'title') return titleInput;
+      if (field === 'excerpt') return excerptInput;
+      if (field === 'slug') return slugInput;
+      if (field === 'tags') return tagsInput;
+      return null;
+    }
+
+    function showDiff(btn: HTMLButtonElement, field: string, newValue: string) {
+      const input = getInputForField(field);
+      if (!input) return;
+      const currentValue = input.value;
+
+      // Replace button with diff UI
+      const container = btn.closest('.admin-ai-suggestion') as HTMLElement | null;
+      if (!container) return;
+      const diffId = `diff-${field}-${Date.now()}`;
+      const diffHtml = `<div class="admin-ai-diff" id="${diffId}">` +
+        `<div class="admin-ai-diff--del">${esc(currentValue || '(empty)')}</div>` +
+        `<div class="admin-ai-diff--add">${esc(newValue)}</div>` +
+        `<div class="admin-ai-diff-actions">` +
+        `<button class="admin-ai-diff-confirm" type="button">Apply</button>` +
+        `<button class="admin-ai-diff-cancel" type="button">Cancel</button>` +
+        `</div></div>`;
+
+      btn.hidden = true;
+      container.insertAdjacentHTML('beforeend', diffHtml);
+
+      const diffEl = document.getElementById(diffId);
+      diffEl?.querySelector('.admin-ai-diff-confirm')?.addEventListener('click', () => {
+        previousValues.set(field, currentValue);
+        input.value = newValue;
+        diffEl.remove();
+        btn.hidden = false;
+        btn.textContent = 'Undo';
+        btn.classList.add('admin-ai-undo-btn');
+        btn.onclick = () => {
+          const prev = previousValues.get(field);
+          if (prev !== undefined) { input.value = prev; previousValues.delete(field); }
+          btn.textContent = 'Use';
+          btn.classList.remove('admin-ai-undo-btn');
+          btn.onclick = null;
+          showFeedback('success', `${field} reverted.`);
+        };
+        showFeedback('success', `${field} applied.`);
+      });
+
+      diffEl?.querySelector('.admin-ai-diff-cancel')?.addEventListener('click', () => {
+        diffEl.remove();
+        btn.hidden = false;
+      });
+    }
+
+    // Initialize Milkdown Crepe (single editor for research posts)
     async function initEditor() {
+      if (!editorEl) return;
       const initialContent = editorEl.dataset.content || '';
 
       crepe = new Crepe({
@@ -380,6 +478,40 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       await crepe.create();
     }
 
+    // Persona editors (business posts)
+    async function initPersonaEditor(persona: string) {
+      const el = document.getElementById(`persona-${persona}`);
+      if (!el || personaEditors[persona]) return;
+      const c = new Crepe({
+        root: el,
+        defaultValue: el.dataset.content || '',
+        featureConfigs: {
+          [Crepe.Feature.Placeholder]: {
+            text: `${persona.charAt(0).toUpperCase() + persona.slice(1)} content...`,
+            mode: 'block',
+          },
+        },
+      });
+      await c.create();
+      personaEditors[persona] = c;
+    }
+
+    function setupPersonaTabs() {
+      personaTabs.forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const p = btn.dataset.personaTab!;
+          personaTabs.forEach(b => b.classList.remove('admin-lang-tab--active'));
+          btn.classList.add('admin-lang-tab--active');
+          (['beginner', 'learner', 'expert'] as const).forEach(k => {
+            const el = document.getElementById(`persona-${k}`);
+            if (el) el.style.display = k === p ? '' : 'none';
+          });
+          activePersonaTab = p;
+          await initPersonaEditor(p);
+        });
+      });
+    }
+
     // Save draft
     async function handleSave() {
       const title = titleInput?.value || '';
@@ -390,8 +522,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const category = categorySelect?.value || '';
       const tagsRaw = tagsInput?.value || '';
       const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-      const content = crepe ? crepe.getMarkdown() : '';
-
       const slug = slugInput?.value || '';
       const excerpt = excerptInput?.value || '';
       const postType = postTypeSelect?.value || '';
@@ -400,15 +530,25 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const focusItems = focusRaw.split(',').map((s: string) => s.trim()).filter(Boolean);
       const ogImageUrl = ogImageInput?.value || '';
 
+      const saveBody: Record<string, any> = {
+        id: isNewPost ? undefined : postId,
+        title, slug, category, tags,
+        excerpt, post_type: postType, locale, focus_items: focusItems, og_image_url: ogImageUrl,
+      };
+
+      if (isBusinessEditor) {
+        saveBody.content_beginner = personaEditors.beginner?.getMarkdown() || '';
+        saveBody.content_learner = personaEditors.learner?.getMarkdown() || '';
+        saveBody.content_expert = personaEditors.expert?.getMarkdown() || '';
+      } else {
+        saveBody.content_original = crepe ? crepe.getMarkdown() : '';
+      }
+
       try {
         const res = await fetch('/api/admin/posts/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: isNewPost ? undefined : postId,
-            title, slug, category, tags, content_original: content,
-            excerpt, post_type: postType, locale, focus_items: focusItems, og_image_url: ogImageUrl,
-          }),
+          body: JSON.stringify(saveBody),
         });
         if (!res.ok) {
           const err = await res.json();
@@ -428,9 +568,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     // Auto-save + switch to Preview
     function switchToPreview() {
-      if (!crepe) return;
-
-      const markdown = crepe.getMarkdown();
+      const markdown = isBusinessEditor
+        ? (personaEditors[activePersonaTab]?.getMarkdown() || '')
+        : (crepe ? crepe.getMarkdown() : '');
+      if (!markdown && !isBusinessEditor && !crepe) return;
       const title = titleInput?.value || '';
       const category = categorySelect?.value || '';
       const tagsRaw = tagsInput?.value || '';
@@ -600,7 +741,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     async function runAiAction(action: string) {
       const title = titleInput?.value || '';
-      const content = crepe ? crepe.getMarkdown() : '';
+      const content = isBusinessEditor
+        ? (personaEditors[activePersonaTab]?.getMarkdown() || '')
+        : (crepe ? crepe.getMarkdown() : '');
       if (!title.trim() && !content.trim()) {
         showFeedback('error', 'Write some content before using AI Advisor.');
         return;
@@ -627,7 +770,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: res.statusText }));
-          const msg = err.detail || err.error || `Error ${res.status}`;
+          const rawMsg = err.detail || err.error || `Error ${res.status}`;
+          const msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg);
           if (res.status === 429) showFeedback('error', 'Too many requests. Wait a minute.');
           else if (res.status === 504) showFeedback('error', 'AI request timed out.');
           else if (res.status === 502) showFeedback('error', 'AI service unavailable.');
@@ -651,6 +795,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       else if (action === 'seo') renderSeo(result);
       else if (action === 'review') renderReview(result);
       else if (action === 'factcheck') renderFactcheck(result);
+      else if (action === 'deepverify') renderDeepverify(result);
     }
 
     // --- Generate Result ---
@@ -683,20 +828,23 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       html += `<button class="admin-ai-apply-all-btn" id="ai-apply-all-generate">Apply All</button>`;
       aiResultEl.innerHTML = html;
 
-      // Bind apply buttons
+      // Bind apply buttons (with diff preview)
       aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const field = btn.dataset.apply;
-          if (field === 'excerpt' && excerptInput) { excerptInput.value = r.excerpt; showFeedback('success', 'Excerpt applied.'); }
-          else if (field === 'slug' && slugInput) { slugInput.value = r.slug; showFeedback('success', 'Slug applied.'); }
-          else if (field === 'tags' && tagsInput) { tagsInput.value = btn.dataset.value || r.tags.join(', '); showFeedback('success', 'Tags applied.'); }
+          if (!field) return;
+          let newVal = '';
+          if (field === 'excerpt') newVal = r.excerpt;
+          else if (field === 'slug') newVal = r.slug;
+          else if (field === 'tags') newVal = btn.dataset.value || r.tags.join(', ');
+          showDiff(btn, field, newVal);
         });
       });
 
       document.getElementById('ai-apply-all-generate')?.addEventListener('click', () => {
-        if (r.excerpt && excerptInput) excerptInput.value = r.excerpt;
-        if (r.slug && slugInput) slugInput.value = r.slug;
-        if (r.tags?.length && tagsInput) tagsInput.value = r.tags.join(', ');
+        if (r.excerpt && excerptInput) { previousValues.set('excerpt', excerptInput.value); excerptInput.value = r.excerpt; }
+        if (r.slug && slugInput) { previousValues.set('slug', slugInput.value); slugInput.value = r.slug; }
+        if (r.tags?.length && tagsInput) { previousValues.set('tags', tagsInput.value); tagsInput.value = r.tags.join(', '); }
         showFeedback('success', 'All fields applied.');
       });
     }
@@ -733,9 +881,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         btn.addEventListener('click', () => {
           const field = btn.dataset.apply;
           const val = btn.dataset.value || '';
-          if (field === 'title' && titleInput) { titleInput.value = val; showFeedback('success', 'Title applied.'); }
-          else if (field === 'excerpt' && excerptInput) { excerptInput.value = val; showFeedback('success', 'Excerpt applied.'); }
-          else if (field === 'tags' && tagsInput) { tagsInput.value = val; showFeedback('success', 'Tags applied.'); }
+          if (field) showDiff(btn, field, val);
         });
       });
     }
@@ -757,6 +903,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         html += '<h4>Checklist</h4>';
         r.checklist.forEach((item: any) => {
           html += `<div class="admin-ai-checklist-item"><span class="admin-ai-status-badge admin-ai-status-badge--${item.status}">${item.status}</span><span><strong>${esc(item.category)}</strong>: ${esc(item.message)}</span></div>`;
+          if (item.suggestion && item.status !== 'pass') {
+            html += `<div class="admin-ai-checklist-suggestion">${esc(item.suggestion)}</div>`;
+          }
         });
       }
 
@@ -798,6 +947,46 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       aiResultEl.innerHTML = html;
     }
 
+    // --- Deep Verify Result ---
+    function renderDeepverify(r: any) {
+      if (!aiResultEl) return;
+      let html = '';
+
+      if (r.overall_confidence) {
+        html += `<span class="admin-ai-confidence admin-ai-confidence--${r.overall_confidence}">Confidence: ${r.overall_confidence}</span>`;
+      }
+      if (r.confidence_reason) {
+        html += `<p class="admin-ai-confidence-reason">${esc(r.confidence_reason)}</p>`;
+      }
+
+      if (r.claims?.length) {
+        html += '<h4>Verified Claims</h4>';
+        r.claims.forEach((c: any) => {
+          html += `<div class="admin-ai-claim"><div class="admin-ai-claim-text">"${esc(c.claim)}"</div><div class="admin-ai-claim-meta"><span class="admin-ai-verdict admin-ai-verdict--${c.verdict}">${c.verdict}</span>`;
+          if (c.note) html += `<span>${esc(c.note)}</span>`;
+          html += `</div>`;
+          if (c.sources?.length) {
+            html += `<div class="admin-ai-claim-sources">`;
+            c.sources.forEach((src: string) => {
+              html += `<a href="${esc(src)}" target="_blank" rel="noopener" class="admin-ai-source-link">${esc(new URL(src).hostname)}</a>`;
+            });
+            html += `</div>`;
+          }
+          html += `</div>`;
+        });
+      }
+
+      if (r.broken_links?.length) {
+        html += '<h4>Broken Links</h4>';
+        r.broken_links.forEach((bl: any) => {
+          const status = bl.status_code ? ` (${bl.status_code})` : '';
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(bl.url)}${status} — ${esc(bl.error)}</span></div>`;
+        });
+      }
+
+      aiResultEl.innerHTML = html;
+    }
+
     function esc(s: string): string {
       const d = document.createElement('div');
       d.textContent = s;
@@ -820,7 +1009,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     btnDelete?.addEventListener('click', handleDelete);
     btnPublishDraft?.addEventListener('click', handlePublishFromDraft);
 
-    // Init
-    initEditor();
+    // Init editor(s)
+    if (isBusinessEditor) {
+      setupPersonaTabs();
+      initPersonaEditor('beginner'); // init first tab immediately
+    } else {
+      initEditor();
+    }
   });
 </script>

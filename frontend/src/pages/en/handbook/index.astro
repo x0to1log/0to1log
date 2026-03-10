@@ -10,6 +10,7 @@ import { localField, difficultyLabel, difficultyColor } from '../../../lib/handb
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import HandbookListRail from '../../../components/newsprint/HandbookListRail.astro';
+import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
 
 const locale = 'en';
 let terms: any[] = [];
@@ -63,14 +64,22 @@ if (supabase) {
 const categories = Array.from(
   new Set(terms.flatMap((t: any) => t.categories || []).filter(Boolean))
 );
+
+// Site content from DB (fallback to hardcoded values)
+const sc = await getSiteContents(
+  ['handbook_intro', 'handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'volume_issue'],
+  'en',
+);
+const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', 'Reference', 'Learn']);
 ---
 
 <MainLayout title={t[locale]['handbook.title']} locale={locale} slug="handbook/">
   <NewsprintShell
     locale={locale}
-    masthead="AI Glossary"
-    editionLabel="CS · AI · Infra"
-    subkicker={['Glossary', 'Reference', 'Learn']}
+    masthead={sc.handbook_masthead || 'AI Glossary'}
+    editionLabel={sc.handbook_edition_label || 'CS · AI · Infra'}
+    subkicker={hbSubkicker}
+    volumeLabel={sc.volume_issue || undefined}
   >
     <div id="handbook-controls" class="handbook-controls">
       <input
@@ -177,7 +186,7 @@ const categories = Array.from(
     </div>
 
     <Fragment slot="rail">
-      <HandbookListRail locale={locale} terms={railTerms} />
+      <HandbookListRail locale={locale} terms={railTerms} editorialNote={sc.handbook_intro || undefined} />
     </Fragment>
   </NewsprintShell>
 </MainLayout>

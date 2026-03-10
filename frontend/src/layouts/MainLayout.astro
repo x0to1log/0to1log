@@ -63,7 +63,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     });
   </script>
 
-  <ViewTransitions />
+  {!isAdmin && <ViewTransitions />}
 
   <body style={`min-height: 100vh; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}>
     {gaId && (

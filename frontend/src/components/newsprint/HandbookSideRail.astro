@@ -21,17 +21,29 @@ interface Props {
 
 const { locale, relatedTerms, sameCategoryTerms, relatedArticles } = Astro.props;
 const isKo = locale === 'ko';
+const hasRelated = relatedTerms.length > 0;
+const difficultyLabel: Record<string, string> = {
+  beginner: isKo ? '입문' : 'Beginner',
+  intermediate: isKo ? '중급' : 'Intermediate',
+  advanced: isKo ? '고급' : 'Advanced',
+};
 ---
 
-{relatedTerms.length > 0 && (
+{/* Primary: Related Terms (curated) */}
+{hasRelated && (
   <section>
-    <h3 class="newsprint-section-title">{isKo ? '관련 용어' : 'Related Terms'}</h3>
+    <h3 class="newsprint-section-title">{isKo ? '연관 개념' : 'Related Terms'}</h3>
     <div class="newsprint-stack">
       {relatedTerms.map((rt) => (
         <a class="newsprint-card" href={`/${locale}/handbook/${rt.slug}/`}>
           <strong class="newsprint-rail-link">{rt.term}</strong>
           {rt.korean_name && (
-            <span class="newsprint-rail-category">{rt.korean_name}</span>
+            <span class="newsprint-rail-subtitle">{rt.korean_name}</span>
+          )}
+          {rt.difficulty && (
+            <span class={`newsprint-rail-badge newsprint-rail-badge--${rt.difficulty}`}>
+              {difficultyLabel[rt.difficulty] || rt.difficulty}
+            </span>
           )}
         </a>
       ))}
@@ -39,38 +51,40 @@ const isKo = locale === 'ko';
   </section>
 )}
 
-{relatedTerms.length > 0 && sameCategoryTerms.length > 0 && (
-  <div style="margin-top: 1.5rem;"></div>
-)}
-
-{sameCategoryTerms.length > 0 && (
+{/* Fallback: Same Category — only when Related Terms is empty */}
+{!hasRelated && sameCategoryTerms.length > 0 && (
   <section>
-    <h3 class="newsprint-section-title">{isKo ? '같은 카테고리' : 'Same Category'}</h3>
+    <h3 class="newsprint-section-title">{isKo ? '같은 분야' : 'More in This Area'}</h3>
     <div class="newsprint-stack">
       {sameCategoryTerms.map((ct) => (
         <a class="newsprint-card" href={`/${locale}/handbook/${ct.slug}/`}>
           <strong class="newsprint-rail-link">{ct.term}</strong>
+          {ct.korean_name && (
+            <span class="newsprint-rail-subtitle">{ct.korean_name}</span>
+          )}
         </a>
       ))}
     </div>
   </section>
 )}
 
-{(relatedTerms.length > 0 || sameCategoryTerms.length > 0) && relatedArticles.length > 0 && (
-  <div style="margin-top: 1.5rem;"></div>
-)}
-
+{/* Related Articles */}
 {relatedArticles.length > 0 && (
-  <section>
-    <h3 class="newsprint-section-title">{isKo ? '관련 글' : 'Related Articles'}</h3>
-    <div class="newsprint-stack">
-      {relatedArticles.map((article) => (
-        <a class="newsprint-card" href={`/${locale}/log/${article.slug}/`}>
-          <strong class="newsprint-rail-link">{article.title}</strong>
-        </a>
-      ))}
-    </div>
-  </section>
+  <>
+    {(hasRelated || sameCategoryTerms.length > 0) && (
+      <div style="margin-top: 1.5rem;"></div>
+    )}
+    <section>
+      <h3 class="newsprint-section-title">{isKo ? '관련 글' : 'Related Articles'}</h3>
+      <div class="newsprint-stack">
+        {relatedArticles.map((article) => (
+          <a class="newsprint-card" href={`/${locale}/log/${article.slug}/`}>
+            <strong class="newsprint-rail-link">{article.title}</strong>
+          </a>
+        ))}
+      </div>
+    </section>
+  </>
 )}
 
 {relatedTerms.length === 0 && sameCategoryTerms.length === 0 && relatedArticles.length === 0 && (

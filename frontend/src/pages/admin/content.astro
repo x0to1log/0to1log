@@ -1,0 +1,474 @@
+---
+export const prerender = false;
+import MainLayout from '../../layouts/MainLayout.astro';
+import AdminSidebar from '../../components/admin/AdminSidebar.astro';
+
+const accessToken = (Astro.locals as any).accessToken || '';
+---
+
+<MainLayout title="Site Content" locale="en">
+  <AdminSidebar activeSection="content" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <h1 class="admin-main-title">Site Content</h1>
+        </div>
+        <div class="admin-header-controls">
+          <div class="admin-filter-tabs" id="sc-tabs">
+            <button class="admin-filter-btn admin-filter-btn--active" data-tab="news" type="button">News</button>
+            <button class="admin-filter-btn" data-tab="handbook" type="button">Handbook</button>
+            <button class="admin-filter-btn" data-tab="general" type="button">General</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="sc-root"
+        data-access-token={accessToken}
+        data-supabase-url={import.meta.env.PUBLIC_SUPABASE_URL}
+        data-supabase-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
+      >
+        <div id="sc-loading" class="sc-loading-msg">Loading site content...</div>
+
+        <!-- News Tab -->
+        <div class="sc-tab-panel" id="panel-news" style="display:none;">
+          <div class="sc-section">
+            <h3 class="sc-section-title">Page Header</h3>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">Masthead (KO)</label>
+                <input type="text" class="admin-input" data-sc-key="news_masthead" data-sc-lang="ko" />
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">Masthead (EN)</label>
+                <input type="text" class="admin-input" data-sc-key="news_masthead" data-sc-lang="en" />
+              </div>
+            </div>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">Edition Label (KO)</label>
+                <input type="text" class="admin-input" data-sc-key="news_edition_label" data-sc-lang="ko" />
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">Edition Label (EN)</label>
+                <input type="text" class="admin-input" data-sc-key="news_edition_label" data-sc-lang="en" />
+              </div>
+            </div>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">Subkicker (KO)</label>
+                <input type="text" class="admin-input" data-sc-key="news_subkicker" data-sc-lang="ko" />
+                <span class="sc-hint">Comma-separated, 3 items</span>
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">Subkicker (EN)</label>
+                <input type="text" class="admin-input" data-sc-key="news_subkicker" data-sc-lang="en" />
+                <span class="sc-hint">Comma-separated, 3 items</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sc-section">
+            <h3 class="sc-section-title">Editorial Note</h3>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">KO</label>
+                <textarea class="admin-input" rows="2" data-sc-key="editorial_note" data-sc-lang="ko"></textarea>
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">EN</label>
+                <textarea class="admin-input" rows="2" data-sc-key="editorial_note" data-sc-lang="en"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="sc-section">
+            <h3 class="sc-section-title">Start Here Sections</h3>
+            <p class="sc-hint" style="margin-bottom: 0.75rem;">The guide cards shown to new visitors on the news list rail.</p>
+            <div id="start-here-fields"></div>
+          </div>
+
+          <div class="sc-save-row">
+            <button type="button" class="admin-btn admin-btn-primary" data-save-tab="news">Save News Content</button>
+            <div class="admin-feedback" data-feedback-tab="news" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Handbook Tab -->
+        <div class="sc-tab-panel" id="panel-handbook" style="display:none;">
+          <div class="sc-section">
+            <h3 class="sc-section-title">Page Header</h3>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">Masthead (KO)</label>
+                <input type="text" class="admin-input" data-sc-key="handbook_masthead" data-sc-lang="ko" />
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">Masthead (EN)</label>
+                <input type="text" class="admin-input" data-sc-key="handbook_masthead" data-sc-lang="en" />
+              </div>
+            </div>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">Edition Label (KO)</label>
+                <input type="text" class="admin-input" data-sc-key="handbook_edition_label" data-sc-lang="ko" />
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">Edition Label (EN)</label>
+                <input type="text" class="admin-input" data-sc-key="handbook_edition_label" data-sc-lang="en" />
+              </div>
+            </div>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">Subkicker (KO)</label>
+                <input type="text" class="admin-input" data-sc-key="handbook_subkicker" data-sc-lang="ko" />
+                <span class="sc-hint">Comma-separated, 3 items</span>
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">Subkicker (EN)</label>
+                <input type="text" class="admin-input" data-sc-key="handbook_subkicker" data-sc-lang="en" />
+                <span class="sc-hint">Comma-separated, 3 items</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sc-section">
+            <h3 class="sc-section-title">Handbook Intro</h3>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">KO</label>
+                <textarea class="admin-input" rows="2" data-sc-key="handbook_intro" data-sc-lang="ko"></textarea>
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">EN</label>
+                <textarea class="admin-input" rows="2" data-sc-key="handbook_intro" data-sc-lang="en"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="sc-save-row">
+            <button type="button" class="admin-btn admin-btn-primary" data-save-tab="handbook">Save Handbook Content</button>
+            <div class="admin-feedback" data-feedback-tab="handbook" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- General Tab -->
+        <div class="sc-tab-panel" id="panel-general" style="display:none;">
+          <div class="sc-section">
+            <h3 class="sc-section-title">Volume / Issue</h3>
+            <p class="sc-hint" style="margin-bottom: 0.75rem;">Displayed in the masthead area on all newsprint pages.</p>
+            <div class="sc-row">
+              <div class="sc-field">
+                <label class="sc-label">KO</label>
+                <input type="text" class="admin-input" data-sc-key="volume_issue" data-sc-lang="ko" />
+              </div>
+              <div class="sc-field">
+                <label class="sc-label">EN</label>
+                <input type="text" class="admin-input" data-sc-key="volume_issue" data-sc-lang="en" />
+              </div>
+            </div>
+          </div>
+
+          <div class="sc-save-row">
+            <button type="button" class="admin-btn admin-btn-primary" data-save-tab="general">Save General</button>
+            <div class="admin-feedback" data-feedback-tab="general" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .sc-loading-msg {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    padding: 1rem 0;
+  }
+  .sc-tab-panel {
+    margin-top: 0.5rem;
+  }
+  .sc-section {
+    margin-bottom: 1.5rem;
+  }
+  .sc-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .sc-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  @media (max-width: 600px) {
+    .sc-row { grid-template-columns: 1fr; }
+  }
+  .sc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .sc-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  .sc-hint {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+  }
+  .sc-save-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .sc-sh-item {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .sc-sh-item-slug {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<script>
+  // Tab key → site_content key mapping
+  const TAB_KEYS: Record<string, string[]> = {
+    news: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'start_here_sections'],
+    handbook: ['handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'handbook_intro'],
+    general: ['volume_issue'],
+  };
+
+  const START_HERE_DEFAULTS = [
+    { slug: 'ai-news', labelKo: 'AI 뉴스', labelEn: 'AI News' },
+    { slug: 'study', labelKo: '학습', labelEn: 'Study' },
+    { slug: 'career', labelKo: '커리어', labelEn: 'Career' },
+    { slug: 'project', labelKo: '프로젝트', labelEn: 'Project' },
+  ];
+
+  function escapeAttr(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function initSiteContent() {
+    const root = document.getElementById('sc-root') as HTMLElement | null;
+    if (!root || root.dataset.init === '1') return;
+    root.dataset.init = '1';
+
+    const supabaseUrl = root.dataset.supabaseUrl;
+    const supabaseKey = root.dataset.supabaseKey;
+    const token = root.dataset.accessToken;
+    if (!supabaseUrl || !supabaseKey) return;
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const anonClient = createClient(supabaseUrl, supabaseKey);
+
+    const loading = document.getElementById('sc-loading') as HTMLElement;
+    const startHereContainer = document.getElementById('start-here-fields') as HTMLElement;
+
+    // ── Fetch data ──
+    const { data: rows, error } = await anonClient.from('site_content').select('key, value_ko, value_en');
+    if (error) {
+      loading.textContent = 'Failed to load site content.';
+      loading.style.color = 'var(--color-error)';
+      return;
+    }
+
+    const contentMap: Record<string, { ko: string; en: string }> = {};
+    (rows ?? []).forEach((row: any) => {
+      contentMap[row.key] = { ko: row.value_ko || '', en: row.value_en || '' };
+    });
+
+    // ── Fill simple fields ──
+    const fields = root.querySelectorAll('[data-sc-key][data-sc-lang]') as NodeListOf<HTMLInputElement | HTMLTextAreaElement>;
+    fields.forEach((field) => {
+      const key = field.dataset.scKey!;
+      const lang = field.dataset.scLang as 'ko' | 'en';
+      const raw = contentMap[key]?.[lang] || '';
+      if (key.includes('subkicker')) {
+        try {
+          const arr = JSON.parse(raw);
+          field.value = Array.isArray(arr) ? arr.join(', ') : raw;
+        } catch { field.value = raw; }
+      } else {
+        field.value = raw;
+      }
+    });
+
+    // ── Fill Start Here sections ──
+    let sectionsKo: Array<{ slug: string; label: string; description: string }> = [];
+    let sectionsEn: Array<{ slug: string; label: string; description: string }> = [];
+    try { sectionsKo = JSON.parse(contentMap.start_here_sections?.ko || '[]'); } catch { /* ignore */ }
+    try { sectionsEn = JSON.parse(contentMap.start_here_sections?.en || '[]'); } catch { /* ignore */ }
+
+    START_HERE_DEFAULTS.forEach((def, i) => {
+      const koItem = sectionsKo[i] || { slug: def.slug, label: def.labelKo, description: '' };
+      const enItem = sectionsEn[i] || { slug: def.slug, label: def.labelEn, description: '' };
+      startHereContainer.insertAdjacentHTML('beforeend', `
+        <div class="sc-sh-item">
+          <div class="sc-sh-item-slug">${def.slug}</div>
+          <div class="sc-row">
+            <div class="sc-field">
+              <label class="sc-label">Label (KO)</label>
+              <input type="text" class="admin-input sh-field" data-sh-idx="${i}" data-sh-lang="ko" data-sh-field="label" value="${escapeAttr(koItem.label)}" />
+            </div>
+            <div class="sc-field">
+              <label class="sc-label">Label (EN)</label>
+              <input type="text" class="admin-input sh-field" data-sh-idx="${i}" data-sh-lang="en" data-sh-field="label" value="${escapeAttr(enItem.label)}" />
+            </div>
+          </div>
+          <div class="sc-row">
+            <div class="sc-field">
+              <label class="sc-label">Description (KO)</label>
+              <input type="text" class="admin-input sh-field" data-sh-idx="${i}" data-sh-lang="ko" data-sh-field="description" value="${escapeAttr(koItem.description)}" />
+            </div>
+            <div class="sc-field">
+              <label class="sc-label">Description (EN)</label>
+              <input type="text" class="admin-input sh-field" data-sh-idx="${i}" data-sh-lang="en" data-sh-field="description" value="${escapeAttr(enItem.description)}" />
+            </div>
+          </div>
+        </div>
+      `);
+    });
+
+    // ── Show first tab, hide loading ──
+    loading.style.display = 'none';
+    switchTab('news');
+
+    // ── Tab switching ──
+    function switchTab(tab: string) {
+      document.querySelectorAll('.sc-tab-panel').forEach((p) => {
+        (p as HTMLElement).style.display = 'none';
+      });
+      const panel = document.getElementById(`panel-${tab}`);
+      if (panel) panel.style.display = '';
+
+      document.querySelectorAll('#sc-tabs .admin-filter-btn').forEach((btn) => {
+        btn.classList.toggle('admin-filter-btn--active', (btn as HTMLElement).dataset.tab === tab);
+      });
+
+      // Update URL hash without scrolling
+      history.replaceState(null, '', `#${tab}`);
+    }
+
+    // Restore tab from URL hash
+    const hash = location.hash.replace('#', '');
+    if (['news', 'handbook', 'general'].includes(hash)) {
+      switchTab(hash);
+    }
+
+    document.querySelectorAll('#sc-tabs .admin-filter-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        switchTab((btn as HTMLElement).dataset.tab || 'news');
+      });
+    });
+
+    // ── Save handlers (per-tab) ──
+    async function saveTab(tab: string) {
+      const keys = TAB_KEYS[tab];
+      if (!keys) return;
+
+      const btn = root!.querySelector(`[data-save-tab="${tab}"]`) as HTMLButtonElement;
+      const feedback = root!.querySelector(`[data-feedback-tab="${tab}"]`) as HTMLElement;
+      btn.disabled = true;
+      const originalText = btn.textContent || '';
+      btn.textContent = 'Saving...';
+      feedback.style.display = 'none';
+
+      const updates: Record<string, { value_ko: string; value_en: string }> = {};
+
+      // Gather simple field values
+      keys.forEach((key) => {
+        if (key === 'start_here_sections') return; // handled separately
+        const koField = root!.querySelector(`[data-sc-key="${key}"][data-sc-lang="ko"]`) as HTMLInputElement | HTMLTextAreaElement | null;
+        const enField = root!.querySelector(`[data-sc-key="${key}"][data-sc-lang="en"]`) as HTMLInputElement | HTMLTextAreaElement | null;
+        let koVal = koField?.value.trim() || '';
+        let enVal = enField?.value.trim() || '';
+        if (key.includes('subkicker')) {
+          koVal = JSON.stringify(koVal.split(',').map(s => s.trim()).filter(Boolean));
+          enVal = JSON.stringify(enVal.split(',').map(s => s.trim()).filter(Boolean));
+        }
+        updates[key] = { value_ko: koVal, value_en: enVal };
+      });
+
+      // Start Here sections (only in news tab)
+      if (keys.includes('start_here_sections')) {
+        const shKo: Array<{ slug: string; label: string; description: string }> = [];
+        const shEn: Array<{ slug: string; label: string; description: string }> = [];
+        START_HERE_DEFAULTS.forEach((def, i) => {
+          const getVal = (lang: string, field: string) => {
+            const el = startHereContainer.querySelector(`[data-sh-idx="${i}"][data-sh-lang="${lang}"][data-sh-field="${field}"]`) as HTMLInputElement;
+            return el?.value.trim() || '';
+          };
+          shKo.push({ slug: def.slug, label: getVal('ko', 'label'), description: getVal('ko', 'description') });
+          shEn.push({ slug: def.slug, label: getVal('en', 'label'), description: getVal('en', 'description') });
+        });
+        updates.start_here_sections = { value_ko: JSON.stringify(shKo), value_en: JSON.stringify(shEn) };
+      }
+
+      // Write using authenticated client
+      const authClient = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+
+      let errorMsg = '';
+      for (const [key, vals] of Object.entries(updates)) {
+        const { error: updateError } = await authClient
+          .from('site_content')
+          .update({ value_ko: vals.value_ko, value_en: vals.value_en, updated_at: new Date().toISOString() })
+          .eq('key', key);
+        if (updateError) errorMsg += `${key}: ${updateError.message}\n`;
+      }
+
+      if (errorMsg) {
+        feedback.textContent = 'Error: ' + errorMsg.trim();
+        feedback.className = 'admin-feedback admin-feedback--error';
+        feedback.style.display = '';
+      } else {
+        feedback.textContent = 'Saved successfully.';
+        feedback.className = 'admin-feedback admin-feedback--success';
+        feedback.style.display = '';
+        // Update local cache
+        Object.entries(updates).forEach(([key, vals]) => {
+          contentMap[key] = { ko: vals.value_ko, en: vals.value_en };
+        });
+        setTimeout(() => { feedback.style.display = 'none'; }, 3000);
+      }
+
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+
+    root!.querySelectorAll('[data-save-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        saveTab((btn as HTMLElement).dataset.saveTab || '');
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initSiteContent);
+  initSiteContent();
+</script>

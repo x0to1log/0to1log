@@ -1,0 +1,185 @@
+---
+export const prerender = false;
+import MainLayout from '../../layouts/MainLayout.astro';
+import AdminSidebar from '../../components/admin/AdminSidebar.astro';
+---
+
+<MainLayout title="Admin Settings" locale="en">
+  <AdminSidebar />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <h1 class="admin-main-title">Settings</h1>
+        </div>
+      </div>
+
+      <div class="admin-settings-section">
+        <h2 class="admin-settings-heading">Change Password</h2>
+        <p class="admin-settings-desc">Update your email/password login credentials. This does not affect OAuth (Google/GitHub) login.</p>
+
+        <form id="change-password-form" class="admin-settings-form" autocomplete="off">
+          <div class="admin-settings-field">
+            <label for="current-password" class="admin-settings-label">Current Password</label>
+            <input
+              type="password"
+              id="current-password"
+              name="currentPassword"
+              class="admin-input"
+              required
+              minlength="1"
+              autocomplete="current-password"
+            />
+          </div>
+
+          <div class="admin-settings-field">
+            <label for="new-password" class="admin-settings-label">New Password</label>
+            <input
+              type="password"
+              id="new-password"
+              name="newPassword"
+              class="admin-input"
+              required
+              minlength="8"
+              autocomplete="new-password"
+            />
+            <span class="admin-settings-hint">Minimum 8 characters</span>
+          </div>
+
+          <div class="admin-settings-field">
+            <label for="confirm-password" class="admin-settings-label">Confirm New Password</label>
+            <input
+              type="password"
+              id="confirm-password"
+              name="confirmPassword"
+              class="admin-input"
+              required
+              minlength="8"
+              autocomplete="new-password"
+            />
+          </div>
+
+          <div class="admin-settings-actions">
+            <button type="submit" class="admin-btn admin-btn-primary" id="change-pw-btn">
+              Change Password
+            </button>
+          </div>
+
+          <div id="pw-feedback" class="admin-feedback" style="display:none;"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .admin-settings-section {
+    max-width: 480px;
+    margin-top: 1.5rem;
+  }
+  .admin-settings-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .admin-settings-desc {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+  }
+  .admin-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .admin-settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .admin-settings-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .admin-settings-hint {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+  .admin-settings-actions {
+    margin-top: 0.5rem;
+  }
+</style>
+
+<script>
+  function initPasswordChange() {
+    const form = document.getElementById('change-password-form') as HTMLFormElement | null;
+    if (!form || form.dataset.init === '1') return;
+    form.dataset.init = '1';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const feedback = document.getElementById('pw-feedback') as HTMLElement;
+      const btn = document.getElementById('change-pw-btn') as HTMLButtonElement;
+
+      const currentPassword = (form.querySelector('#current-password') as HTMLInputElement).value;
+      const newPassword = (form.querySelector('#new-password') as HTMLInputElement).value;
+      const confirmPassword = (form.querySelector('#confirm-password') as HTMLInputElement).value;
+
+      if (newPassword !== confirmPassword) {
+        feedback.textContent = 'New passwords do not match.';
+        feedback.className = 'admin-feedback admin-feedback--error';
+        feedback.style.display = '';
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        feedback.textContent = 'New password must be at least 8 characters.';
+        feedback.className = 'admin-feedback admin-feedback--error';
+        feedback.style.display = '';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Changing...';
+      feedback.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          feedback.textContent = 'Password changed successfully.';
+          feedback.className = 'admin-feedback admin-feedback--success';
+          feedback.style.display = '';
+          form.reset();
+          setTimeout(() => { feedback.style.display = 'none'; }, 3000);
+        } else {
+          feedback.textContent = data.error || 'Failed to change password.';
+          feedback.className = 'admin-feedback admin-feedback--error';
+          feedback.style.display = '';
+        }
+      } catch {
+        feedback.textContent = 'Network error. Please try again.';
+        feedback.className = 'admin-feedback admin-feedback--error';
+        feedback.style.display = '';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Change Password';
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initPasswordChange);
+  initPasswordChange();
+</script>

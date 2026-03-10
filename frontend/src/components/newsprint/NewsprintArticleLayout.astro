@@ -17,6 +17,12 @@ interface Props {
   isBookmarked?: boolean;
   itemId?: string;
   itemType?: 'post' | 'term';
+  isAdmin?: boolean;
+  likeCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
+  activePersona?: string | null;
+  personaHtmlMap?: Record<string, string>;
 }
 
 const {
@@ -35,7 +41,19 @@ const {
   isBookmarked = false,
   itemId,
   itemType,
+  isAdmin = false,
+  likeCount = 0,
+  commentCount = 0,
+  isLiked = false,
+  activePersona = null,
+  personaHtmlMap,
 } = Astro.props;
+
+const personaLabels: Record<string, Record<string, string>> = {
+  en: { beginner: 'Beginner', learner: 'Learner', expert: 'Expert' },
+  ko: { beginner: '초보자', learner: '학습자', expert: '전문가' },
+};
+const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
 const dateLabel = publishedAt
   ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
@@ -47,6 +65,20 @@ const readingLabel = readingTimeMin
   : null;
 const categoryLabel = getCategoryLabel(locale, category);
 const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost.category) : null;
+
+const editHref = itemType === 'term' ? `/admin/handbook/edit/${slug}` : `/admin/edit/${slug}`;
+const unpublishApi = itemType === 'term' ? '/api/admin/handbook/status' : '/api/admin/posts/status';
+
+const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/${locale}/log/${slug}/`;
+
+const copy = {
+  comments: locale === 'ko' ? '댓글' : 'Comments',
+  writeComment: locale === 'ko' ? '댓글을 작성해주세요...' : 'Write a comment...',
+  postComment: locale === 'ko' ? '게시' : 'Post',
+  loginToComment: locale === 'ko' ? '댓글을 작성하려면 로그인하세요' : 'Log in to comment',
+  deleteConfirm: locale === 'ko' ? '댓글을 삭제할까요?' : 'Delete this comment?',
+  copied: locale === 'ko' ? '복사됨' : 'Copied',
+};
 ---
 
 <article class="newsprint-article">
@@ -67,46 +99,137 @@ const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost
     </div>
   </div>
 
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
-    <h1 class="newsprint-lead-title" style="flex: 1;">{title}</h1>
-    {itemId && (
-      <button
-        class={`newsprint-bookmark-icon newsprint-bookmark-icon--detail ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
-        data-item-id={itemId}
-        data-item-type={itemType}
-        data-bookmarked={isBookmarked ? 'true' : 'false'}
-        aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-        style="margin-top: 0.5rem;"
-      >
-        <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-        </svg>
-      </button>
-    )}
-  </div>
+  <h1 class="newsprint-lead-title">{title}</h1>
   {excerpt && <p class="newsprint-deck">{excerpt}</p>}
   <div class="newsprint-divider"></div>
+
+  {showPersonaSwitcher && (
+    <div class="persona-switcher">
+      {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+        <button
+          type="button"
+          class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
+          data-persona={p}
+        >
+          {personaLabels[locale]?.[p] || p}
+        </button>
+      ))}
+    </div>
+    <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
+  )}
 
   <div class="newsprint-prose">
     <Fragment set:html={htmlContent} />
   </div>
 
-  <div class="newsprint-share-bar" data-share-url={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/${locale}/log/${slug}/`} data-share-title={title}>
-    <span class="newsprint-share-bar-label">{locale === 'ko' ? '공유' : 'Share'}</span>
-    <button type="button" class="newsprint-share-btn newsprint-share-btn--native" aria-label="Share" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-    </button>
-    <button type="button" class="newsprint-share-btn newsprint-share-btn--x" aria-label="Share on X">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-    </button>
-    <button type="button" class="newsprint-share-btn newsprint-share-btn--linkedin" aria-label="Share on LinkedIn">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-    </button>
-    <button type="button" class="newsprint-share-btn newsprint-share-btn--copy" aria-label={locale === 'ko' ? 'URL 복사' : 'Copy URL'}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    </button>
-    <span class="newsprint-share-toast">{locale === 'ko' ? '복사됨' : 'Copied'}</span>
+  <!-- Engagement Bar -->
+  <div class="newsprint-engagement-bar" data-post-id={itemId}>
+    <div class="newsprint-engagement-left">
+      <button
+        type="button"
+        class={`newsprint-engage-btn ${isLiked ? 'newsprint-engage-btn--active' : ''}`}
+        data-like-btn
+        data-post-id={itemId}
+        data-liked={isLiked ? 'true' : 'false'}
+        aria-label={locale === 'ko' ? '좋아요' : 'Like'}
+      >
+        <svg viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <span data-like-count>{likeCount}</span>
+      </button>
+      <a
+        class="newsprint-engage-btn"
+        href="#comments"
+        aria-label={locale === 'ko' ? '댓글' : 'Comments'}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span data-comment-count>{commentCount}</span>
+      </a>
+    </div>
+    <div class="newsprint-engagement-right">
+      {itemId && (
+        <button
+          type="button"
+          class={`newsprint-engage-btn newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+          data-item-id={itemId}
+          data-item-type={itemType}
+          data-bookmarked={isBookmarked ? 'true' : 'false'}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+        >
+          <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+      )}
+      <div class="newsprint-share-wrapper">
+        <button
+          type="button"
+          class="newsprint-engage-btn"
+          data-share-toggle
+          aria-label={locale === 'ko' ? '공유' : 'Share'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+        <div class="newsprint-share-dropdown" data-share-url={shareUrl} data-share-title={title} style="display:none;">
+          <button type="button" class="newsprint-share-dropdown-btn" data-share-native style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            <span>{locale === 'ko' ? '공유' : 'Share'}</span>
+          </button>
+          <button type="button" class="newsprint-share-dropdown-btn" data-share-x>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            <span>X</span>
+          </button>
+          <button type="button" class="newsprint-share-dropdown-btn" data-share-linkedin>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            <span>LinkedIn</span>
+          </button>
+          <button type="button" class="newsprint-share-dropdown-btn" data-share-copy>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>{locale === 'ko' ? 'URL 복사' : 'Copy URL'}</span>
+          </button>
+          <span class="newsprint-share-toast">{copy.copied}</span>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Admin Actions (admin only) -->
+  {isAdmin && itemId && (
+    <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi}>
+      <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
+      <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
+    </div>
+  )}
+
+  <!-- Comments Section -->
+  <section id="comments" class="newsprint-comments" data-post-id={itemId} data-locale={locale} data-login-url={`/login?redirectTo=/${locale}/log/${slug}/`}>
+    <h3 class="newsprint-comments-title">{copy.comments} (<span data-comment-total>{commentCount}</span>)</h3>
+    <div data-comments-list class="newsprint-comments-list"></div>
+    <div data-comment-form-wrapper>
+      <form data-comment-form class="newsprint-comment-form" style="display:none;">
+        <textarea
+          data-comment-input
+          placeholder={copy.writeComment}
+          maxlength="2000"
+          rows="3"
+          class="newsprint-comment-input"
+        ></textarea>
+        <div class="newsprint-comment-form-actions">
+          <span data-comment-charcount class="newsprint-comment-charcount"></span>
+          <button type="submit" class="newsprint-comment-submit">{copy.postComment}</button>
+        </div>
+      </form>
+      <a data-comment-login href={`/login?redirectTo=/${locale}/log/${slug}/`} class="newsprint-comment-login" style="display:none;">
+        {copy.loginToComment}
+      </a>
+    </div>
+  </section>
 
   <nav class="newsprint-article-nav" aria-label={locale === 'ko' ? '글 탐색' : 'Article navigation'}>
     <div class="newsprint-article-nav-row">
@@ -128,3 +251,26 @@ const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost
 </article>
 
 <script src="../../scripts/share.ts"></script>
+
+<script>
+  function initPersonaSwitcher() {
+    const template = document.getElementById('persona-data') as HTMLTemplateElement | null;
+    if (!template) return;
+    const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
+    const prose = document.querySelector('.newsprint-prose');
+    const btns = document.querySelectorAll<HTMLButtonElement>('.persona-switcher-btn');
+    if (!prose || btns.length === 0) return;
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.persona!;
+        if (!map[p]) return;
+        prose.innerHTML = map[p];
+        btns.forEach(b => b.classList.remove('persona-switcher-btn--active'));
+        btn.classList.add('persona-switcher-btn--active');
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initPersonaSwitcher);
+</script>

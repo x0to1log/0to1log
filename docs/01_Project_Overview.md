@@ -99,7 +99,7 @@
 | **Frontend** | Astro v5 + Tailwind v4 + MDX | 콘텐츠 중심 정적 사이트, 인터랙티브 컴포넌트 |
 | **Animation** | Motion One + View Transitions API | 페이지 전환, 마이크로 인터랙션 |
 | **AI Engine** | OpenAI API (gpt-4o/gpt-4o-mini) + PydanticAI | 콘텐츠 생성, 검수, 스키마 검증 |
-| **RAG** | Tavily API | 실시간 뉴스 수집, 출처 자동화 |
+| **RAG** | Tavily API (semantic) | 실시간 뉴스 수집, 출처 자동화, 관련 용어 시맨틱 검색 |
 | **Backend** | FastAPI (Python) on Railway | 범용 API 백엔드 (AI 파이프라인/검색/커뮤니티/관리 API) |
 | **Database** | Supabase (PostgreSQL + pgvector) | 콘텐츠 저장, 시맨틱 검색 임베딩 |
 | **Hosting** | Vercel (Frontend + Cron 트리거) + Railway (범용 API 백엔드) | 배포, 도메인 관리 |

@@ -151,27 +151,35 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           {/* KO content */}
           <div id="lang-ko">
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <div class="admin-field">
-                <label>Definition (KO)</label>
-                <textarea name="definition_ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
+              <div class="admin-field-group">
+                <span class="admin-field-group-label">Card Fields</span>
+                <div class="admin-field">
+                  <label>Definition (KO)</label>
+                  <textarea name="definition_ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
+                </div>
+                <div class="admin-field">
+                  <label>Plain Explanation (KO)</label>
+                  <textarea name="plain_explanation_ko" class="admin-textarea" rows="3">{term?.plain_explanation_ko || ''}</textarea>
+                </div>
+                <div class="admin-field">
+                  <label>Technical Description (KO)</label>
+                  <textarea name="technical_description_ko" class="admin-textarea" rows="3">{term?.technical_description_ko || ''}</textarea>
+                </div>
+                <div class="admin-field">
+                  <label>Example / Analogy (KO)</label>
+                  <textarea name="example_analogy_ko" class="admin-textarea" rows="3">{term?.example_analogy_ko || ''}</textarea>
+                </div>
               </div>
-              <div class="admin-field">
-                <label>Plain Explanation (KO)</label>
-                <textarea name="plain_explanation_ko" class="admin-textarea" rows="3">{term?.plain_explanation_ko || ''}</textarea>
-              </div>
-              <div class="admin-field">
-                <label>Technical Description (KO)</label>
-                <textarea name="technical_description_ko" class="admin-textarea" rows="3">{term?.technical_description_ko || ''}</textarea>
-              </div>
-              <div class="admin-field">
-                <label>Example / Analogy (KO)</label>
-                <textarea name="example_analogy_ko" class="admin-textarea" rows="3">{term?.example_analogy_ko || ''}</textarea>
-              </div>
-              <div class="admin-field">
-                <label>Body Markdown (KO)</label>
-                <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
-                     id="body-editor-ko"
-                     data-content={term?.body_markdown_ko || ''}></div>
+              <div class="admin-field-group admin-field-group--body">
+                <span class="admin-field-group-label">Body</span>
+                <div class="admin-field">
+                  <label>Body Markdown (KO)
+                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="ko" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate Body</button>
+                  </label>
+                  <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
+                       id="body-editor-ko"
+                       data-content={term?.body_markdown_ko || ''}></div>
+                </div>
               </div>
             </div>
           </div>
@@ -179,44 +187,70 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           {/* EN content */}
           <div id="lang-en" style="display: none;">
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <div class="admin-field">
-                <label>Definition (EN)</label>
-                <textarea name="definition_en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
+              <div class="admin-field-group">
+                <span class="admin-field-group-label">Card Fields</span>
+                <div class="admin-field">
+                  <label>Definition (EN)</label>
+                  <textarea name="definition_en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
+                </div>
+                <div class="admin-field">
+                  <label>Plain Explanation (EN)</label>
+                  <textarea name="plain_explanation_en" class="admin-textarea" rows="3">{term?.plain_explanation_en || ''}</textarea>
+                </div>
+                <div class="admin-field">
+                  <label>Technical Description (EN)</label>
+                  <textarea name="technical_description_en" class="admin-textarea" rows="3">{term?.technical_description_en || ''}</textarea>
+                </div>
+                <div class="admin-field">
+                  <label>Example / Analogy (EN)</label>
+                  <textarea name="example_analogy_en" class="admin-textarea" rows="3">{term?.example_analogy_en || ''}</textarea>
+                </div>
               </div>
-              <div class="admin-field">
-                <label>Plain Explanation (EN)</label>
-                <textarea name="plain_explanation_en" class="admin-textarea" rows="3">{term?.plain_explanation_en || ''}</textarea>
-              </div>
-              <div class="admin-field">
-                <label>Technical Description (EN)</label>
-                <textarea name="technical_description_en" class="admin-textarea" rows="3">{term?.technical_description_en || ''}</textarea>
-              </div>
-              <div class="admin-field">
-                <label>Example / Analogy (EN)</label>
-                <textarea name="example_analogy_en" class="admin-textarea" rows="3">{term?.example_analogy_en || ''}</textarea>
-              </div>
-              <div class="admin-field">
-                <label>Body Markdown (EN)</label>
-                <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
-                     id="body-editor-en"
-                     data-content={term?.body_markdown_en || ''}></div>
+              <div class="admin-field-group admin-field-group--body">
+                <span class="admin-field-group-label">Body</span>
+                <div class="admin-field">
+                  <label>Body Markdown (EN)
+                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="en" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate Body</button>
+                  </label>
+                  <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
+                       id="body-editor-en"
+                       data-content={term?.body_markdown_en || ''}></div>
+                </div>
               </div>
             </div>
           </div>
         </form>
         </div>{/* /admin-editor-content */}
 
-        {/* AI Suggestions Panel */}
+        {/* AI Advisor Panel */}
         <div class="admin-ai-panel" id="ai-panel">
           <div class="admin-ai-panel-header">
-            <span class="admin-ai-panel-title">AI Suggestions</span>
+            <span class="admin-ai-panel-title">AI Advisor</span>
             <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
           </div>
-          <p class="admin-ai-panel-placeholder">
-            AI advisor panel will be connected in a future update.
-            This panel will suggest definitions, plain explanations,
-            and related terms based on the term name and category.
-          </p>
+          <div class="admin-ai-actions">
+            <button class="admin-ai-action-btn admin-ai-action-btn--primary" data-ai-action="generate" type="button">
+              Generate All Fields<span class="ai-btn-model">gpt-4o</span>
+            </button>
+            <button class="admin-ai-action-btn" data-ai-action="related_terms" type="button">
+              Related Terms<span class="ai-btn-model">gpt-4o + Exa</span>
+            </button>
+            <div class="admin-ai-translate-row">
+              <button class="admin-ai-action-btn" data-ai-action="translate" type="button">
+                Translate<span class="ai-btn-model">gpt-4o</span>
+              </button>
+              <select id="ai-translate-direction" class="admin-select admin-ai-direction-select">
+                <option value="auto">Auto</option>
+                <option value="ko2en">KO → EN</option>
+                <option value="en2ko">EN → KO</option>
+              </select>
+            </div>
+          </div>
+          <div id="ai-loading" class="admin-ai-loading" hidden>
+            <span class="ai-spinner"></span>
+            <span id="ai-loading-text">Analyzing...</span>
+          </div>
+          <div id="ai-result" class="admin-ai-result"></div>
         </div>
         </div>{/* /admin-editor-layout (draft-mode) */}
 
@@ -288,12 +322,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 <script>
   import { marked } from 'marked';
   import { Crepe } from '@milkdown/crepe';
+  import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
 
   let crepeKo: Crepe | null = null;
   let crepeEn: Crepe | null = null;
 
-  document.addEventListener('astro:page-load', () => {
+  document.addEventListener('DOMContentLoaded', () => {
     // Clean up previous Crepe instances (View Transitions)
     if (crepeKo) { crepeKo.destroy(); crepeKo = null; }
     if (crepeEn) { crepeEn.destroy(); crepeEn = null; }
@@ -314,6 +349,577 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     }
     aiToggleBtn?.addEventListener('click', toggleAiPanel);
     aiCloseBtn?.addEventListener('click', toggleAiPanel);
+
+    // --- AI Advisor ---
+    const aiActionBtns = document.querySelectorAll<HTMLButtonElement>('[data-ai-action]');
+    const aiLoadingEl = document.getElementById('ai-loading') as HTMLElement | null;
+    const aiLoadingText = document.getElementById('ai-loading-text');
+    const aiResultEl = document.getElementById('ai-result') as HTMLElement | null;
+
+    function setAiLoading(loading: boolean, action = '') {
+      if (aiLoadingEl) aiLoadingEl.hidden = !loading;
+      if (aiLoadingText) aiLoadingText.textContent = loading ? `${action}...` : '';
+      if (loading && aiResultEl) aiResultEl.innerHTML = '';
+      aiActionBtns.forEach(b => b.disabled = loading);
+    }
+
+    function esc(s: string): string {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // --- Diff / Undo helpers ---
+    const previousValues = new Map<string, string>();
+
+    function getHandbookValue(fieldName: string): string {
+      if (fieldName.startsWith('body_markdown_')) {
+        const lang = fieldName.endsWith('_ko') ? 'ko' : 'en';
+        const editor = lang === 'ko' ? crepeKo : crepeEn;
+        return editor ? editor.getMarkdown() : '';
+      }
+      const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
+      return input?.value || '';
+    }
+
+    function setHandbookValue(fieldName: string, value: string) {
+      if (fieldName.startsWith('body_markdown_')) {
+        const lang = fieldName.endsWith('_ko') ? 'ko' : 'en';
+        const editor = lang === 'ko' ? crepeKo : crepeEn;
+        if (editor) editor.editor.action(replaceAll(value));
+      } else {
+        const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
+        if (input) input.value = value;
+      }
+    }
+
+    function showDiff(btn: HTMLButtonElement, fieldName: string, newValue: string) {
+      const currentValue = getHandbookValue(fieldName);
+      const container = btn.closest('.admin-ai-suggestion') as HTMLElement | null;
+      if (!container) return;
+
+      const diffId = `diff-${fieldName}-${Date.now()}`;
+      const diffHtml = `<div class="admin-ai-diff" id="${diffId}">` +
+        `<div class="admin-ai-diff--del">${esc(currentValue || '(empty)')}</div>` +
+        `<div class="admin-ai-diff--add">${esc(newValue)}</div>` +
+        `<div class="admin-ai-diff-actions">` +
+        `<button class="admin-ai-diff-confirm" type="button">Apply</button>` +
+        `<button class="admin-ai-diff-cancel" type="button">Cancel</button>` +
+        `</div></div>`;
+
+      btn.hidden = true;
+      container.insertAdjacentHTML('beforeend', diffHtml);
+
+      const diffEl = document.getElementById(diffId);
+      diffEl?.querySelector('.admin-ai-diff-confirm')?.addEventListener('click', () => {
+        previousValues.set(fieldName, currentValue);
+        setHandbookValue(fieldName, newValue);
+        diffEl.remove();
+        btn.hidden = false;
+        btn.textContent = 'Undo';
+        btn.classList.add('admin-ai-undo-btn');
+        btn.onclick = () => {
+          const prev = previousValues.get(fieldName);
+          if (prev !== undefined) { setHandbookValue(fieldName, prev); previousValues.delete(fieldName); }
+          btn.textContent = 'Use';
+          btn.classList.remove('admin-ai-undo-btn');
+          btn.onclick = null;
+          showFeedback(`${fieldName} reverted.`);
+        };
+        showFeedback(`${fieldName} applied.`);
+      });
+
+      diffEl?.querySelector('.admin-ai-diff-cancel')?.addEventListener('click', () => {
+        diffEl.remove();
+        btn.hidden = false;
+      });
+    }
+
+    async function runHandbookAi(action: string, overrides?: Record<string, string>) {
+      const form = document.getElementById('term-form') as HTMLFormElement;
+      if (!form) return;
+      const termInput = form.querySelector('[name="term"]') as HTMLInputElement;
+      const term = termInput?.value?.trim();
+      if (!term) {
+        showFeedback('Term name is required for AI analysis.', true);
+        return;
+      }
+
+      const loadingLabels: Record<string, string> = {
+        related_terms: 'Finding related terms',
+        translate: 'Translating',
+        generate: 'Generating all fields',
+      };
+      setAiLoading(true, loadingLabels[action] || action);
+
+      const body: Record<string, any> = {
+        action,
+        term_id: (form.querySelector('[name="id"]') as HTMLInputElement)?.value || 'new',
+        term,
+        korean_name: (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '',
+        categories: Array.from(form.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
+        difficulty: (form.querySelector('[name="difficulty"]') as HTMLSelectElement)?.value || '',
+        definition_ko: (form.querySelector('[name="definition_ko"]') as HTMLTextAreaElement)?.value || '',
+        definition_en: (form.querySelector('[name="definition_en"]') as HTMLTextAreaElement)?.value || '',
+        plain_explanation_ko: (form.querySelector('[name="plain_explanation_ko"]') as HTMLTextAreaElement)?.value || '',
+        plain_explanation_en: (form.querySelector('[name="plain_explanation_en"]') as HTMLTextAreaElement)?.value || '',
+        technical_description_ko: (form.querySelector('[name="technical_description_ko"]') as HTMLTextAreaElement)?.value || '',
+        technical_description_en: (form.querySelector('[name="technical_description_en"]') as HTMLTextAreaElement)?.value || '',
+        example_analogy_ko: (form.querySelector('[name="example_analogy_ko"]') as HTMLTextAreaElement)?.value || '',
+        example_analogy_en: (form.querySelector('[name="example_analogy_en"]') as HTMLTextAreaElement)?.value || '',
+        body_markdown_ko: crepeKo ? crepeKo.getMarkdown() : '',
+        body_markdown_en: crepeEn ? crepeEn.getMarkdown() : '',
+      };
+
+      // Apply overrides (e.g. force body_markdown empty for body-only generation)
+      if (overrides) Object.assign(body, overrides);
+
+      // Add translate direction if not auto
+      if (action === 'translate') {
+        const dirSelect = document.getElementById('ai-translate-direction') as HTMLSelectElement | null;
+        const dir = dirSelect?.value || 'auto';
+        if (dir !== 'auto') body.force_direction = dir;
+      }
+
+      try {
+        const res = await fetch('/api/admin/ai/handbook-advise', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          if (res.status === 429) showFeedback('Too many requests. Wait a moment.', true);
+          else if (res.status === 504) showFeedback('AI request timed out.', true);
+          else showFeedback('AI request failed.', true);
+          setAiLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        setAiLoading(false);
+        if (data.result) {
+          if (action === 'related_terms') renderRelatedTerms(data.result);
+          else if (action === 'translate') renderTranslate(data.result);
+          else if (action === 'generate') renderGenerate(data.result);
+          // Show model/token footer
+          if (aiResultEl && (data.model_used || data.tokens_used)) {
+            aiResultEl.insertAdjacentHTML('beforeend',
+              `<div class="admin-ai-meta-footer">${esc(data.model_used || '')}${data.tokens_used ? ` · ${data.tokens_used} tokens` : ''}</div>`
+            );
+          }
+        }
+      } catch {
+        showFeedback('Network error.', true);
+        setAiLoading(false);
+      }
+    }
+
+    // --- Related Terms Render ---
+    function renderRelatedTerms(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Related Terms</h4>';
+
+      if (r.related_terms?.length) {
+        r.related_terms.forEach((item: any) => {
+          const termName = esc(item.term || '');
+          const reason = esc(item.reason || '');
+          if (item.exists_in_db && item.slug) {
+            html += `<div class="admin-ai-related-term admin-ai-related-term--exists">`;
+            html += `<div class="admin-ai-related-term-header"><strong>${termName}</strong>`;
+            html += `<div class="admin-ai-related-term-actions">`;
+            html += `<a href="/admin/handbook/edit/${esc(item.slug)}" target="_blank" class="admin-ai-source-link">View</a>`;
+            html += `<button class="admin-ai-apply-btn" data-link-slug="${esc(item.slug)}" type="button">Link</button>`;
+            html += `</div></div>`;
+            html += `<span class="admin-ai-related-term-reason admin-ai-related-term-reason--collapsed">${reason}</span>`;
+            html += `</div>`;
+          } else {
+            html += `<div class="admin-ai-related-term admin-ai-related-term--new">`;
+            html += `<div class="admin-ai-related-term-header"><strong>${termName}</strong>`;
+            html += `<button class="admin-ai-create-draft-btn" data-term="${termName}" type="button">+ Create Draft</button>`;
+            html += `</div>`;
+            html += `<span class="admin-ai-related-term-reason admin-ai-related-term-reason--collapsed">${reason}</span>`;
+            html += `</div>`;
+          }
+        });
+      } else {
+        html += '<p>No related terms found.</p>';
+      }
+
+      aiResultEl.innerHTML = html;
+
+      // Bind reason toggle (click term row to expand/collapse reason)
+      aiResultEl.querySelectorAll<HTMLElement>('.admin-ai-related-term-header').forEach(header => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).closest('a, button')) return; // Don't toggle on button/link clicks
+          const reason = header.parentElement?.querySelector('.admin-ai-related-term-reason');
+          reason?.classList.toggle('admin-ai-related-term-reason--collapsed');
+        });
+      });
+
+      // Bind Link buttons
+      aiResultEl.querySelectorAll<HTMLButtonElement>('[data-link-slug]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const slug = btn.dataset.linkSlug || '';
+          const input = document.querySelector('[name="related_term_slugs"]') as HTMLInputElement;
+          if (!input || !slug) return;
+          const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+          if (!current.includes(slug)) {
+            current.push(slug);
+            input.value = current.join(', ');
+            btn.textContent = 'Linked';
+            btn.disabled = true;
+            showFeedback(`Linked: ${slug}`);
+          } else {
+            showFeedback('Already linked.');
+          }
+        });
+      });
+
+      // Bind Create Draft buttons
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-create-draft-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const termName = btn.dataset.term || '';
+          if (!termName) return;
+          btn.disabled = true;
+          btn.textContent = 'Creating...';
+          try {
+            const res = await fetch('/api/admin/handbook/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                term: termName,
+                status: 'draft',
+                categories: Array.from(document.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
+                difficulty: (document.querySelector('[name="difficulty"]') as HTMLSelectElement)?.value || '',
+              }),
+            });
+            if (res.ok) {
+              const saved = await res.json();
+              btn.textContent = 'Created';
+              // Also link it
+              if (saved.slug) {
+                const input = document.querySelector('[name="related_term_slugs"]') as HTMLInputElement;
+                if (input) {
+                  const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+                  if (!current.includes(saved.slug)) {
+                    current.push(saved.slug);
+                    input.value = current.join(', ');
+                  }
+                }
+              }
+              showFeedback(`Draft created: ${termName}`);
+            } else {
+              btn.textContent = 'Failed';
+              showFeedback('Failed to create draft.', true);
+            }
+          } catch {
+            btn.textContent = 'Failed';
+            showFeedback('Network error.', true);
+          }
+        });
+      });
+    }
+
+    // --- Translate Render ---
+    function renderTranslate(r: any) {
+      if (!aiResultEl) return;
+      const direction = `${(r.source_lang || '').toUpperCase()} → ${(r.target_lang || '').toUpperCase()}`;
+      let html = `<h4>Translation (${esc(direction)})</h4>`;
+      const targetLang = r.target_lang || 'en';
+
+      const fields = [
+        { key: 'definition', label: 'Definition' },
+        { key: 'plain_explanation', label: 'Plain Explanation' },
+        { key: 'technical_description', label: 'Technical Description' },
+        { key: 'example_analogy', label: 'Example/Analogy' },
+        { key: 'body_markdown', label: 'Body' },
+      ];
+
+      fields.forEach(f => {
+        const val = r[f.key];
+        if (!val) return;
+        const fieldName = `${f.key}_${targetLang}`;
+        html += `<div class="admin-ai-suggestion">`;
+        const truncLen = 300;
+        const isTruncated = val.length > truncLen;
+        const previewId = `preview-${f.key}-${Date.now()}`;
+        html += `<span class="admin-ai-suggestion-text"><strong>${f.label}:</strong> ` +
+          `<span id="${previewId}">${esc(isTruncated ? val.substring(0, truncLen) + '...' : val)}</span>` +
+          (isTruncated ? ` <button class="admin-ai-expand-btn" data-preview="${previewId}" data-full="${esc(val)}" type="button">Show more</button>` : '') +
+          `</span>`;
+        html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(fieldName)}" data-apply-value="${esc(val)}" type="button">Use</button>`;
+        html += `</div>`;
+      });
+
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-all-translate" type="button">Apply All</button>`;
+      aiResultEl.innerHTML = html;
+
+      // Bind expand/collapse toggles
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-expand-btn').forEach(btn => {
+        const previewId = btn.dataset.preview || '';
+        const fullText = btn.dataset.full || '';
+        const previewEl = document.getElementById(previewId);
+        if (!previewEl) return;
+        const truncated = previewEl.textContent || '';
+        let expanded = false;
+        btn.addEventListener('click', () => {
+          expanded = !expanded;
+          previewEl.textContent = expanded ? fullText : truncated;
+          btn.textContent = expanded ? 'Show less' : 'Show more';
+        });
+      });
+
+      // Bind individual apply buttons — show diff before applying
+      aiResultEl.querySelectorAll<HTMLButtonElement>('[data-apply-field]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fieldName = btn.dataset.applyField || '';
+          const value = btn.dataset.applyValue || '';
+          showDiff(btn, fieldName, value);
+        });
+      });
+
+      // Apply All — save previous values, apply all at once, show Undo All
+      document.getElementById('ai-apply-all-translate')?.addEventListener('click', (e) => {
+        const applyAllBtn = e.currentTarget as HTMLButtonElement;
+        const targetLang = r.target_lang || 'en';
+        const appliedFields: string[] = [];
+        fields.forEach(f => {
+          const val = r[f.key];
+          if (!val) return;
+          const fieldName = `${f.key}_${targetLang}`;
+          previousValues.set(fieldName, getHandbookValue(fieldName));
+          setHandbookValue(fieldName, val);
+          appliedFields.push(fieldName);
+        });
+        applyAllBtn.textContent = 'Undo All';
+        applyAllBtn.classList.add('admin-ai-undo-btn');
+        const origClick = applyAllBtn.onclick;
+        applyAllBtn.onclick = () => {
+          appliedFields.forEach(fieldName => {
+            const prev = previousValues.get(fieldName);
+            if (prev !== undefined) { setHandbookValue(fieldName, prev); previousValues.delete(fieldName); }
+          });
+          applyAllBtn.textContent = 'Apply All';
+          applyAllBtn.classList.remove('admin-ai-undo-btn');
+          applyAllBtn.onclick = origClick;
+          showFeedback('All translations reverted.');
+        };
+        showFeedback('All translations applied.');
+      });
+    }
+
+    // --- Generate Render ---
+    function renderGenerate(r: any) {
+      if (!aiResultEl) return;
+      let html = '<h4>Generated Content</h4>';
+
+      // Metadata fields
+      const metaFields = [
+        { key: 'korean_name', label: 'Korean Name' },
+        { key: 'difficulty', label: 'Difficulty' },
+      ];
+      metaFields.forEach(f => {
+        const val = r[f.key];
+        if (!val) return;
+        html += `<div class="admin-ai-suggestion">`;
+        html += `<span class="admin-ai-suggestion-text"><strong>${f.label}:</strong> ${esc(val)}</span>`;
+        html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(f.key)}" data-apply-value="${esc(val)}" type="button">Use</button>`;
+        html += `</div>`;
+      });
+
+      // Categories
+      if (r.categories?.length) {
+        html += `<div class="admin-ai-suggestion">`;
+        html += `<span class="admin-ai-suggestion-text"><strong>Categories:</strong> ${r.categories.map((c: string) => esc(c)).join(', ')}</span>`;
+        html += `<button class="admin-ai-apply-btn" id="ai-apply-categories" type="button">Use</button>`;
+        html += `</div>`;
+      }
+
+      // Content fields (bilingual)
+      const contentFields = [
+        { key: 'definition', label: 'Definition' },
+        { key: 'plain_explanation', label: 'Plain Explanation' },
+        { key: 'technical_description', label: 'Technical Description' },
+        { key: 'example_analogy', label: 'Example/Analogy' },
+        { key: 'body_markdown', label: 'Body' },
+      ];
+
+      ['ko', 'en'].forEach(lang => {
+        const langLabel = lang.toUpperCase();
+        let hasContent = false;
+        contentFields.forEach(f => {
+          const val = r[`${f.key}_${lang}`];
+          if (val) hasContent = true;
+        });
+        if (!hasContent) return;
+
+        html += `<div class="admin-ai-generate-lang"><strong>${langLabel}</strong></div>`;
+        contentFields.forEach(f => {
+          const val = r[`${f.key}_${lang}`];
+          if (!val) return;
+          const fieldName = `${f.key}_${lang}`;
+          const truncLen = 200;
+          const isTruncated = val.length > truncLen;
+          const previewId = `gen-preview-${fieldName}-${Date.now()}`;
+          html += `<div class="admin-ai-suggestion">`;
+          html += `<span class="admin-ai-suggestion-text"><strong>${f.label}:</strong> ` +
+            `<span id="${previewId}">${esc(isTruncated ? val.substring(0, truncLen) + '...' : val)}</span>` +
+            (isTruncated ? ` <button class="admin-ai-expand-btn" data-preview="${previewId}" data-full="${esc(val)}" type="button">Show more</button>` : '') +
+            `</span>`;
+          html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(fieldName)}" data-apply-value="${esc(val)}" type="button">Use</button>`;
+          html += `</div>`;
+        });
+      });
+
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-all-generate" type="button">Apply All Empty</button>`;
+      aiResultEl.innerHTML = html;
+
+      // Bind expand/collapse
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-expand-btn').forEach(btn => {
+        const previewId = btn.dataset.preview || '';
+        const fullText = btn.dataset.full || '';
+        const previewEl = document.getElementById(previewId);
+        if (!previewEl) return;
+        const truncated = previewEl.textContent || '';
+        let expanded = false;
+        btn.addEventListener('click', () => {
+          expanded = !expanded;
+          previewEl.textContent = expanded ? fullText : truncated;
+          btn.textContent = expanded ? 'Show less' : 'Show more';
+        });
+      });
+
+      // Bind individual apply buttons with diff
+      aiResultEl.querySelectorAll<HTMLButtonElement>('[data-apply-field]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fieldName = btn.dataset.applyField || '';
+          const value = btn.dataset.applyValue || '';
+          if (fieldName === 'korean_name' || fieldName === 'difficulty') {
+            const input = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement | HTMLSelectElement | null;
+            if (input) {
+              previousValues.set(fieldName, input.value);
+              input.value = value;
+              btn.textContent = 'Undo';
+              btn.classList.add('admin-ai-undo-btn');
+              btn.onclick = () => {
+                const prev = previousValues.get(fieldName);
+                if (prev !== undefined) { input.value = prev; previousValues.delete(fieldName); }
+                btn.textContent = 'Use';
+                btn.classList.remove('admin-ai-undo-btn');
+                btn.onclick = null;
+              };
+              showFeedback(`${fieldName} applied.`);
+            }
+          } else {
+            showDiff(btn, fieldName, value);
+          }
+        });
+      });
+
+      // Apply categories
+      document.getElementById('ai-apply-categories')?.addEventListener('click', (e) => {
+        const btn = e.currentTarget as HTMLButtonElement;
+        const checkboxes = document.querySelectorAll<HTMLInputElement>('input[name="categories"]');
+        const prevChecked = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        checkboxes.forEach(cb => { cb.checked = r.categories.includes(cb.value); });
+        btn.textContent = 'Undo';
+        btn.classList.add('admin-ai-undo-btn');
+        btn.onclick = () => {
+          checkboxes.forEach(cb => { cb.checked = prevChecked.includes(cb.value); });
+          btn.textContent = 'Use';
+          btn.classList.remove('admin-ai-undo-btn');
+          btn.onclick = null;
+          showFeedback('Categories reverted.');
+        };
+        showFeedback('Categories applied.');
+      });
+
+      // Apply All Empty — only apply fields that are currently empty
+      document.getElementById('ai-apply-all-generate')?.addEventListener('click', (e) => {
+        const applyAllBtn = e.currentTarget as HTMLButtonElement;
+        const appliedFields: string[] = [];
+
+        // Metadata
+        if (r.korean_name) {
+          const input = document.querySelector('[name="korean_name"]') as HTMLInputElement;
+          if (input && !input.value.trim()) {
+            previousValues.set('korean_name', input.value);
+            input.value = r.korean_name;
+            appliedFields.push('korean_name');
+          }
+        }
+        if (r.difficulty) {
+          const sel = document.querySelector('[name="difficulty"]') as HTMLSelectElement;
+          if (sel && !sel.value) {
+            previousValues.set('difficulty', sel.value);
+            sel.value = r.difficulty;
+            appliedFields.push('difficulty');
+          }
+        }
+        if (r.categories?.length) {
+          const checkboxes = document.querySelectorAll<HTMLInputElement>('input[name="categories"]');
+          const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+          if (!anyChecked) {
+            checkboxes.forEach(cb => { cb.checked = r.categories.includes(cb.value); });
+            appliedFields.push('categories');
+          }
+        }
+
+        // Content fields
+        contentFields.forEach(f => {
+          ['ko', 'en'].forEach(lang => {
+            const fieldName = `${f.key}_${lang}`;
+            const val = r[fieldName];
+            if (!val) return;
+            const current = getHandbookValue(fieldName);
+            if (current.trim()) return; // Skip non-empty
+            previousValues.set(fieldName, current);
+            setHandbookValue(fieldName, val);
+            appliedFields.push(fieldName);
+          });
+        });
+
+        applyAllBtn.textContent = `Undo All (${appliedFields.length})`;
+        applyAllBtn.classList.add('admin-ai-undo-btn');
+        const origClick = applyAllBtn.onclick;
+        applyAllBtn.onclick = () => {
+          appliedFields.forEach(fieldName => {
+            if (fieldName === 'categories') {
+              const checkboxes = document.querySelectorAll<HTMLInputElement>('input[name="categories"]');
+              checkboxes.forEach(cb => { cb.checked = false; });
+            } else {
+              const prev = previousValues.get(fieldName);
+              if (prev !== undefined) { setHandbookValue(fieldName, prev); previousValues.delete(fieldName); }
+            }
+          });
+          applyAllBtn.textContent = 'Apply All Empty';
+          applyAllBtn.classList.remove('admin-ai-undo-btn');
+          applyAllBtn.onclick = origClick;
+          showFeedback('All generated content reverted.');
+        };
+        showFeedback(`Applied ${appliedFields.length} empty fields.`);
+      });
+    }
+
+    // Bind AI action buttons
+    aiActionBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.aiAction;
+        if (action) runHandbookAi(action);
+      });
+    });
+
+    // AI Generate Body buttons (KO/EN)
+    document.querySelectorAll<HTMLButtonElement>('[data-ai-generate-body]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.aiGenerateBody; // 'ko' or 'en'
+        if (lang) {
+          runHandbookAi('generate', { [`body_markdown_${lang}`]: '' });
+        }
+      });
+    });
 
     // Language tab switching
     document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
@@ -568,5 +1174,5 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       showFeedback(`Delete failed: ${err.error}`, true);
     }
   });
-  }); // end astro:page-load
+  }); // end DOMContentLoaded
 </script>

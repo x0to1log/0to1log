@@ -12,6 +12,7 @@ import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.a
 import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
 
 let posts: any[] = [];
 let fetchError: string | null = null;
@@ -61,14 +62,23 @@ const categories = Array.from(
       .filter((category): category is string => Boolean(category)),
   ),
 ).slice(0, 6);
+
+// Site content from DB (fallback to hardcoded values)
+const sc = await getSiteContents(
+  ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
+  'ko',
+);
+const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · 논문 · 프로젝트', '데일리 큐레이션', '공개 열람']);
+const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
 ---
 
 <MainLayout title={t.ko['log.title']} locale="ko" slug="log/">
   <NewsprintShell
     locale="ko"
-    masthead="최신 AI 뉴스 모음집"
-    editionLabel="빌더스 데일리"
-    subkicker={['AI · 논문 · 프로젝트', '데일리 큐레이션', '공개 열람']}
+    masthead={sc.news_masthead || '최신 AI 뉴스 모음집'}
+    editionLabel={sc.news_edition_label || '빌더스 데일리'}
+    subkicker={subkicker}
+    volumeLabel={sc.volume_issue || undefined}
   >
     <NewsprintCategoryFilter locale="ko" />
 
@@ -123,7 +133,12 @@ const categories = Array.from(
     )}
 
     <Fragment slot="rail">
-      <NewsprintListRail locale="ko" posts={railPosts} />
+      <NewsprintListRail
+        locale="ko"
+        posts={railPosts}
+        editorialNote={sc.editorial_note || undefined}
+        startHereSections={startHereSections.length > 0 ? startHereSections : undefined}
+      />
     </Fragment>
   </NewsprintShell>
 </MainLayout>

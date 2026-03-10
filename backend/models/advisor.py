@@ -3,7 +3,7 @@ from typing import Literal, Optional
 
 
 class AiAdviseRequest(BaseModel):
-    action: Literal["generate", "seo", "review", "factcheck"]
+    action: Literal["generate", "seo", "review", "factcheck", "deepverify"]
     post_id: str
     title: str
     content: str
@@ -43,6 +43,7 @@ class ReviewChecklistItem(BaseModel):
     category: str
     status: Literal["pass", "warn", "fail"]
     message: str
+    suggestion: str = ""
 
 
 class ReviewResult(BaseModel):
@@ -63,3 +64,105 @@ class FactcheckResult(BaseModel):
     broken_links: list[str] = []
     missing_labels: list[str] = []
     overall_confidence: Literal["high", "medium", "low"]
+
+
+# --- Deep Verify (Tavily-backed fact-check) ---
+
+class VerifiedClaim(BaseModel):
+    claim: str
+    verdict: Literal["verified", "unverified", "no_source"]
+    sources: list[str] = []
+    note: str = ""
+
+
+class BrokenLink(BaseModel):
+    url: str
+    status_code: int = 0
+    error: str = ""
+
+
+class DeepVerifyResult(BaseModel):
+    claims: list[VerifiedClaim]
+    broken_links: list[BrokenLink] = []
+    overall_confidence: Literal["high", "medium", "low"]
+    confidence_reason: str = ""
+
+
+# --- Handbook AI Advisor ---
+
+class HandbookAdviseRequest(BaseModel):
+    action: Literal["related_terms", "translate", "generate"]
+    term_id: str
+    term: str
+    korean_name: str = ""
+    categories: list[str] = []
+    difficulty: str = ""
+    definition_ko: str = ""
+    definition_en: str = ""
+    plain_explanation_ko: str = ""
+    plain_explanation_en: str = ""
+    technical_description_ko: str = ""
+    technical_description_en: str = ""
+    example_analogy_ko: str = ""
+    example_analogy_en: str = ""
+    body_markdown_ko: str = ""
+    body_markdown_en: str = ""
+    force_direction: str = ""  # "ko2en", "en2ko", or "" (auto)
+
+
+class HandbookAdviseResponse(BaseModel):
+    action: str
+    success: bool
+    result: dict
+    model_used: str
+    tokens_used: int
+
+
+class RelatedTermItem(BaseModel):
+    term: str
+    reason: str
+    exists_in_db: bool = False
+    slug: str = ""
+
+
+class RelatedTermsResult(BaseModel):
+    related_terms: list[RelatedTermItem]
+
+
+class TranslateResult(BaseModel):
+    definition: str = ""
+    plain_explanation: str = ""
+    technical_description: str = ""
+    example_analogy: str = ""
+    body_markdown: str = ""
+    source_lang: str
+    target_lang: str
+
+
+class GenerateTermResult(BaseModel):
+    korean_name: str = ""
+    difficulty: str = ""
+    categories: list[str] = []
+    definition_ko: str = ""
+    definition_en: str = ""
+    plain_explanation_ko: str = ""
+    plain_explanation_en: str = ""
+    technical_description_ko: str = ""
+    technical_description_en: str = ""
+    example_analogy_ko: str = ""
+    example_analogy_en: str = ""
+    body_markdown_ko: str = ""
+    body_markdown_en: str = ""
+
+
+# --- Pipeline Auto-Extract Terms ---
+
+class ExtractedTerm(BaseModel):
+    term: str
+    korean_name: str = ""
+    difficulty: str = ""
+    reason: str = ""
+
+
+class ExtractTermsResult(BaseModel):
+    terms: list[ExtractedTerm]

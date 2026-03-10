@@ -10,15 +10,16 @@ interface RailTerm {
 interface Props {
   locale: 'en' | 'ko';
   terms: RailTerm[];
+  editorialNote?: string;
 }
 
-const { locale, terms } = Astro.props;
+const { locale, terms, editorialNote: editorialNoteProp } = Astro.props;
 const isKo = locale === 'ko';
 const categories = getHandbookCategories();
 
-const editorialNote = isKo
+const editorialNote = editorialNoteProp || (isKo
   ? 'AI, 백엔드, 프론트엔드, 보안 등 실무 기술 용어를 한눈에 정리합니다.'
-  : 'A concise reference of technical terms across AI, backend, frontend, security, and more.';
+  : 'A concise reference of technical terms across AI, backend, frontend, security, and more.');
 ---
 
 <section>

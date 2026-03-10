@@ -27,8 +27,8 @@ const locale = (langParam === 'ko' || langParam === 'en') ? langParam
 const copy = locale === 'ko'
   ? {
       title: '나의 서재',
-      tabRead: '읽은 글',
       tabSaved: '저장한 글',
+      tabRead: '읽은 글',
       tabProgress: '학습 현황',
       emptyRead: '아직 읽은 기록이 없습니다. 기사와 용어를 탐색해 보세요!',
       emptySaved: '아직 저장한 글이 없습니다. 기사와 용어를 저장해 보세요!',
@@ -49,8 +49,8 @@ const copy = locale === 'ko'
     }
   : {
       title: 'My Library',
-      tabRead: 'Read',
       tabSaved: 'Saved',
+      tabRead: 'Read',
       tabProgress: 'Progress',
       emptyRead: 'No reading history yet. Start exploring articles and terms!',
       emptySaved: 'No bookmarks yet. Save articles and terms to find them here!',
@@ -76,15 +76,17 @@ const authSb = createClient(
 );
 
 // Fetch all user data in parallel
-const [historyRes, bookmarksRes, progressRes] = await Promise.all([
+const [historyRes, bookmarksRes, progressRes, likesRes] = await Promise.all([
   authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
   authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
   authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
+  authSb.from('post_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
 ]);
 
 const historyItems = historyRes.data ?? [];
 const bookmarkItems = bookmarksRes.data ?? [];
 const progressItems = progressRes.data ?? [];
+const likedItems = likesRes.data ?? [];
 
 // Collect IDs to batch-fetch metadata
 const postIds = new Set<string>();
@@ -93,6 +95,7 @@ const termIds = new Set<string>();
   if (item.item_type === 'post') postIds.add(item.item_id);
   if (item.item_type === 'term') termIds.add(item.item_id);
 });
+likedItems.forEach((item) => postIds.add(item.post_id));
 progressItems.forEach((p) => termIds.add(p.term_id));
 
 // Fetch post and term metadata
@@ -126,6 +129,10 @@ const totalRead = progressItems.length;
 // Split bookmarks by type for sub-tabs
 const articleBookmarks = bookmarkItems.filter((i) => i.item_type === 'post');
 const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
+
+// Lookup sets for dual icons
+const likedPostIds = new Set(likedItems.map((i) => i.post_id));
+const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.item_id}`));
 ---
 
 <MainLayout title={`${copy.title} — 0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
@@ -135,49 +142,13 @@ const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
     </h1>
 
     <div class="library-tabs">
-      <button class="library-tab library-tab--active" data-tab="read">{copy.tabRead}</button>
-      <button class="library-tab" data-tab="saved">{copy.tabSaved}</button>
+      <button class="library-tab library-tab--active" data-tab="saved">{copy.tabSaved}</button>
+      <button class="library-tab" data-tab="read">{copy.tabRead}</button>
       <button class="library-tab" data-tab="progress">{copy.tabProgress}</button>
     </div>
 
-    <!-- Read Tab -->
-    <div data-tab-content="read">
-      {historyItems.length === 0 ? (
-        <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
-          {copy.emptyRead}
-        </p>
-      ) : (
-        <div>
-          {historyItems.map((item) => {
-            const post = item.item_type === 'post' ? postMap.get(item.item_id) : null;
-            const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
-            const title = post?.title || term?.term || 'Unknown';
-            const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : term ? `/en/handbook/${term.slug}/` : '#';
-            return (
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
-                <div style="flex: 1; min-width: 0;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span class="library-type-badge">{item.item_type === 'post' ? copy.badgeArticle : copy.badgeTerm}</span>
-                    <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      {title}
-                    </a>
-                  </div>
-                  <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
-                    {new Date(item.read_at).toLocaleDateString(copy.dateLocale)}
-                  </div>
-                </div>
-                <button class="library-delete-btn" data-delete-type="history" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 1.1rem; padding: 0.35rem; line-height: 1;">
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-
-    <!-- Saved Tab -->
-    <div data-tab-content="saved" style="display: none;">
+    <!-- Saved Tab (default active) -->
+    <div data-tab-content="saved">
       {bookmarkItems.length === 0 ? (
         <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
           {copy.emptySaved}
@@ -204,6 +175,7 @@ const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
                 const post = postMap.get(item.item_id);
                 const title = post?.title || 'Unknown';
                 const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : '#';
+                const isLiked = likedPostIds.has(item.item_id);
                 return (
                   <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
                     <div style="flex: 1; min-width: 0;">
@@ -216,9 +188,18 @@ const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
                         <span>{copy.savedPrefix} {new Date(item.created_at).toLocaleDateString(copy.dateLocale)}</span>
                       </div>
                     </div>
-                    <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title={copy.removeBookmark}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                      <button type="button" class="library-icon-btn" data-toggle-like data-post-id={item.item_id} data-active={isLiked ? 'true' : 'false'} aria-label="Like" style="background:none;border:none;cursor:pointer;padding:0.2rem;line-height:1;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" style={`color: ${isLiked ? 'var(--color-accent)' : 'var(--color-text-muted)'}; opacity: ${isLiked ? '1' : '0.35'};`}>
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                      </button>
+                      <button type="button" class="library-icon-btn" data-toggle-bookmark data-item-id={item.item_id} data-item-type="post" data-active="true" aria-label="Bookmark" style="background:none;border:none;cursor:pointer;padding:0.2rem;line-height:1;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" style="color: var(--color-accent);">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 );
               })
@@ -259,14 +240,72 @@ const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
                         <span>{copy.savedPrefix} {new Date(item.created_at).toLocaleDateString(copy.dateLocale)}</span>
                       </div>
                     </div>
-                    <button class="library-delete-btn" data-delete-type="bookmark" data-delete-id={item.id} style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.35rem; line-height: 1;" title={copy.removeBookmark}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                      <button type="button" class="library-icon-btn" data-toggle-bookmark data-item-id={item.item_id} data-item-type="term" data-active="true" aria-label="Bookmark" style="background:none;border:none;cursor:pointer;padding:0.2rem;line-height:1;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" style="color: var(--color-accent);">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 );
               })
             )}
           </div>
+        </div>
+      )}
+    </div>
+
+    <!-- Read Tab -->
+    <div data-tab-content="read" style="display: none;">
+      {historyItems.length === 0 ? (
+        <p style="color: var(--color-text-muted); padding: 2rem 0; text-align: center;">
+          {copy.emptyRead}
+        </p>
+      ) : (
+        <div>
+          {historyItems.map((item) => {
+            const post = item.item_type === 'post' ? postMap.get(item.item_id) : null;
+            const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
+            const title = post?.title || term?.term || 'Unknown';
+            const href = post ? `/${post.locale || 'en'}/log/${post.slug}/` : term ? `/en/handbook/${term.slug}/` : '#';
+            const isLiked = item.item_type === 'post' && likedPostIds.has(item.item_id);
+            const isBm = bookmarkedItemIds.has(`${item.item_type}:${item.item_id}`);
+            return (
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--color-border);">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="library-type-badge">{item.item_type === 'post' ? copy.badgeArticle : copy.badgeTerm}</span>
+                    <a href={href} style="font-weight: 600; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      {title}
+                    </a>
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+                    {new Date(item.read_at).toLocaleDateString(copy.dateLocale)}
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                  {item.item_type === 'post' && (
+                    <button type="button" class="library-icon-btn" data-toggle-like data-post-id={item.item_id} data-active={isLiked ? 'true' : 'false'} aria-label="Like" style="background:none;border:none;cursor:pointer;padding:0.2rem;line-height:1;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" style={`color: ${isLiked ? 'var(--color-accent)' : 'var(--color-text-muted)'}; opacity: ${isLiked ? '1' : '0.35'};`}>
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                      </svg>
+                    </button>
+                  )}
+                  <button type="button" class="library-icon-btn" data-toggle-bookmark data-item-id={item.item_id} data-item-type={item.item_type} data-active={isBm ? 'true' : 'false'} aria-label="Bookmark" style="background:none;border:none;cursor:pointer;padding:0.2rem;line-height:1;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5" style={`color: ${isBm ? 'var(--color-accent)' : 'var(--color-text-muted)'}; opacity: ${isBm ? '1' : '0.35'};`}>
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="library-delete-btn" data-delete-type="history" data-delete-id={item.id} data-item-type={item.item_type} data-item-id={item.item_id} data-removed="false" aria-label="Remove" style="background:none;border:none;cursor:pointer;padding:0.2rem;line-height:1;color:var(--color-text-muted);opacity:0.35;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -342,21 +381,102 @@ const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
       });
     });
 
-    // Delete buttons
-    document.querySelectorAll<HTMLButtonElement>('.library-delete-btn').forEach((btn) => {
+    // Like toggle buttons
+    document.querySelectorAll<HTMLButtonElement>('[data-toggle-like]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const type = btn.dataset.deleteType;
-        const id = btn.dataset.deleteId;
-        if (!type || !id) return;
-
-        const endpoint = type === 'history' ? '/api/user/reading-history' : '/api/user/bookmarks';
+        const postId = btn.dataset.postId;
+        if (!postId) return;
         try {
-          const res = await fetch(`${endpoint}?id=${id}`, { method: 'DELETE' });
-          if (res.ok) {
-            const row = btn.closest('[style]') as HTMLElement;
-            if (row) row.remove();
+          const res = await fetch('/api/user/likes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ post_id: postId }),
+          });
+          if (res.status === 401) {
+            window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+            return;
+          }
+          if (!res.ok) return;
+          const data = await res.json();
+          const active = data.liked;
+          btn.dataset.active = active ? 'true' : 'false';
+          const svg = btn.querySelector('svg');
+          if (svg) {
+            svg.setAttribute('fill', active ? 'currentColor' : 'none');
+            svg.style.color = active ? 'var(--color-accent)' : 'var(--color-text-muted)';
+            svg.style.opacity = active ? '1' : '0.35';
           }
         } catch { /* ignore */ }
+      });
+    });
+
+    // Bookmark toggle buttons
+    document.querySelectorAll<HTMLButtonElement>('[data-toggle-bookmark]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const itemId = btn.dataset.itemId;
+        const itemType = btn.dataset.itemType;
+        if (!itemId || !itemType) return;
+        try {
+          const res = await fetch('/api/user/bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_id: itemId, item_type: itemType }),
+          });
+          if (res.status === 401) {
+            window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+            return;
+          }
+          if (!res.ok) return;
+          const data = await res.json();
+          const active = data.bookmarked;
+          btn.dataset.active = active ? 'true' : 'false';
+          const svg = btn.querySelector('svg');
+          if (svg) {
+            svg.setAttribute('fill', active ? 'currentColor' : 'none');
+            svg.style.color = active ? 'var(--color-accent)' : 'var(--color-text-muted)';
+            svg.style.opacity = active ? '1' : '0.35';
+          }
+        } catch { /* ignore */ }
+      });
+    });
+
+    // Delete/restore toggle buttons (X ↔ +)
+    document.querySelectorAll<HTMLButtonElement>('.library-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('[style]') as HTMLElement;
+        const svg = btn.querySelector('svg');
+        if (!row || !svg) return;
+
+        const removed = btn.dataset.removed === 'true';
+
+        if (!removed) {
+          const id = btn.dataset.deleteId;
+          if (!id) return;
+          try {
+            const res = await fetch(`/api/user/reading-history?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) return;
+            btn.dataset.removed = 'true';
+            row.style.opacity = '0.4';
+            svg.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+            btn.setAttribute('aria-label', 'Restore');
+          } catch { /* ignore */ }
+        } else {
+          const itemType = btn.dataset.itemType;
+          const itemId = btn.dataset.itemId;
+          if (!itemType || !itemId) return;
+          try {
+            const res = await fetch('/api/user/reading-history', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ item_type: itemType, item_id: itemId }),
+            });
+            if (!res.ok) return;
+            btn.dataset.removed = 'false';
+            row.style.opacity = '1';
+            svg.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+            btn.setAttribute('aria-label', 'Remove');
+          } catch { /* ignore */ }
+        }
       });
     });
   }

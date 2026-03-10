@@ -7,6 +7,7 @@ from core.database import get_supabase
 from services.news_collection import collect_all_news
 from services.agents import rank_candidates, generate_research_post, generate_business_post
 from services.agents.translate import translate_post
+from core.config import settings
 from models.ranking import NewsCandidate, NewsRankingResult
 from models.research import ResearchPost
 from models.business import BusinessPost
@@ -301,6 +302,98 @@ def _save_business_post(
     return post_id, translation_group_id
 
 
+async def _extract_and_create_terms(
+    content_parts: list[str], batch_id: str
+) -> None:
+    """Extract technical terms from generated posts and create handbook drafts.
+
+    Non-fatal: failures here do NOT break the pipeline.
+    """
+    from services.agents.advisor import extract_terms_from_content, generate_term_content
+
+    combined = "\n\n---\n\n".join(p for p in content_parts if p)
+    if not combined.strip():
+        return
+
+    terms, _, _ = await extract_terms_from_content(combined)
+    if not terms:
+        logger.info("No terms extracted for batch %s", batch_id)
+        return
+
+    client = get_supabase()
+    if not client:
+        return
+
+    created = 0
+    max_terms = settings.max_auto_terms_per_run
+
+    for item in terms:
+        if created >= max_terms:
+            break
+
+        term_name = item.get("term", "").strip()
+        if not term_name:
+            continue
+
+        # Check if term already exists (ILIKE for case-insensitive)
+        try:
+            existing = (
+                client.table("handbook_terms")
+                .select("id")
+                .ilike("term", term_name)
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                continue
+        except Exception as e:
+            logger.warning("DB check failed for term '%s': %s", term_name, e)
+            continue
+
+        # Generate content for the new term
+        try:
+            content, model, tokens = await generate_term_content(
+                term_name,
+                korean_name=item.get("korean_name", ""),
+                difficulty=item.get("difficulty", ""),
+            )
+        except Exception as e:
+            logger.warning("Generate failed for term '%s': %s", term_name, e)
+            continue
+
+        # Build row from generated content
+        slug = term_name.lower().strip().replace(" ", "-")
+        slug = "".join(c for c in slug if c.isalnum() or c == "-")
+
+        row = {
+            "term": term_name,
+            "slug": slug,
+            "status": "draft",
+            "korean_name": content.get("korean_name", item.get("korean_name", "")),
+            "difficulty": content.get("difficulty", item.get("difficulty", "")),
+            "categories": content.get("categories", []),
+            "definition_ko": content.get("definition_ko", ""),
+            "definition_en": content.get("definition_en", ""),
+            "plain_explanation_ko": content.get("plain_explanation_ko", ""),
+            "plain_explanation_en": content.get("plain_explanation_en", ""),
+            "technical_description_ko": content.get("technical_description_ko", ""),
+            "technical_description_en": content.get("technical_description_en", ""),
+            "example_analogy_ko": content.get("example_analogy_ko", ""),
+            "example_analogy_en": content.get("example_analogy_en", ""),
+            "body_markdown_ko": content.get("body_markdown_ko", ""),
+            "body_markdown_en": content.get("body_markdown_en", ""),
+        }
+
+        try:
+            client.table("handbook_terms").insert(row).execute()
+            created += 1
+            logger.info("Auto-created handbook draft: '%s' (batch=%s)", term_name, batch_id)
+        except Exception as e:
+            logger.warning("Insert failed for term '%s': %s", term_name, e)
+
+    logger.info("Pipeline term extraction: %d terms created for batch %s", created, batch_id)
+
+
 async def run_daily_pipeline(batch_id: str) -> None:
     """Main pipeline orchestrator: collect → rank → generate → save to DB."""
     run_id = await acquire_pipeline_lock(batch_id)
@@ -379,6 +472,19 @@ async def run_daily_pipeline(batch_id: str) -> None:
             logger.info("KO business post saved (source_post_id=%s)", en_business_id)
         else:
             logger.warning("No business_main_pick for batch %s, skipping business post", batch_id)
+
+        # Step 4: Extract and create handbook terms from generated content
+        try:
+            content_parts = [research_post.content_original or ""]
+            if ranking.business_main_pick:
+                content_parts.extend([
+                    business_post.content_beginner or "",
+                    business_post.content_learner or "",
+                    business_post.content_expert or "",
+                ])
+            await _extract_and_create_terms(content_parts, batch_id)
+        except Exception as e:
+            logger.error("Term extraction failed (non-fatal): %s", e)
 
         logger.info("Pipeline %s completed — EN+KO posts saved to DB", batch_id)
         await release_pipeline_lock(run_id, "success")
