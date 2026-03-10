@@ -427,6 +427,14 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
       if (svg) svg.setAttribute('fill', active ? 'currentColor' : 'none');
     }
 
+    function checkSavedRowDim(row: HTMLElement): void {
+      if (!row.closest('[data-tab-content="saved"]')) return;
+      const likeBtn = row.querySelector<HTMLButtonElement>('[data-toggle-like]');
+      const bookmarkBtn = row.querySelector<HTMLButtonElement>('[data-toggle-bookmark]');
+      const bothOff = likeBtn?.dataset.active !== 'true' && bookmarkBtn?.dataset.active !== 'true';
+      row.style.opacity = bothOff ? '0.4' : '1';
+    }
+
     // Like toggle buttons
     document.querySelectorAll<HTMLButtonElement>('[data-toggle-like]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -445,6 +453,8 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
           if (!res.ok) return;
           const data = await res.json();
           updateActionBtn(btn, data.liked);
+          const row = btn.closest('.library-item') as HTMLElement;
+          if (row) checkSavedRowDim(row);
         } catch { /* ignore */ }
       });
     });
@@ -468,6 +478,8 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
           if (!res.ok) return;
           const data = await res.json();
           updateActionBtn(btn, data.bookmarked);
+          const row = btn.closest('.library-item') as HTMLElement;
+          if (row) checkSavedRowDim(row);
         } catch { /* ignore */ }
       });
     });

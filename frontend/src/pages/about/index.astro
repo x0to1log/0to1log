@@ -29,16 +29,16 @@ const sc = await getSiteContents(
   'en',
 );
 
-const aboutTagline = sc.about_tagline || 'From signal to understanding';
+const aboutTagline = sc.about_tagline || 'From Void to Value';
 const aboutPublicationIntro =
   sc.about_publication_intro ||
-  '0to1log is a focused publication for people who want the latest AI shifts without losing technical context or practical relevance.';
+  'Every day, hundreds of AI announcements compete for attention. 0to1log cuts through the noise by curating only what matters — then contextualizing it for readers at every level.';
 const aboutPublicationDetail =
   sc.about_publication_detail ||
-  'The publication pairs AI News with an AI Glossary so readers can follow fast-moving stories and still slow down when a concept needs unpacking.';
+  'Each story is delivered in three versions: a plain-language summary for newcomers, a technical breakdown for learners, and an expert analysis with business implications and actionable insights.';
 const aboutEditorIntro =
   sc.about_editor_intro ||
-  'Amy Domin Kim builds with LLM applications, data systems, and product-minded engineering. 0to1log started as a personal learning record and grew into a public operating surface for AI curation and explanation.';
+  'Amy Domin Kim — AI Engineer building at the intersection of LLM applications, data analysis, and web development. 0to1log began as a personal learning log and grew into a full-stack platform for curating and contextualizing AI developments. It serves as both a daily resource for the AI community and a living portfolio of end-to-end engineering.';
 ---
 
 <MainLayout title="About" locale="en" headerAlwaysVisible={true}>

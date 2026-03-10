@@ -141,12 +141,12 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
             >
               <div class="handbook-card-meta">
                 {term.difficulty && (
-                  <span style={`font-size: 0.7rem; padding: 0.1rem 0.4rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
+                  <span class="handbook-diff-pill" data-difficulty={term.difficulty}>
                     {difficultyLabel(locale, term.difficulty)}
                   </span>
                 )}
                 {(term.categories || []).map((cat: string) => (
-                  <span style="font-size: 0.7rem; color: var(--color-text-muted);">
+                  <span class="handbook-cat-pill">
                     {getHandbookCategoryLabel(locale, cat)}
                   </span>
                 ))}

@@ -225,6 +225,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           <span id="admin-feedback-msg"></span>
         </div>
 
+        <div class="admin-ai-backdrop" id="ai-backdrop"></div>
         <div class="admin-ai-panel" id="ai-panel">
           <div class="admin-ai-panel-header">
             <span class="admin-ai-panel-title">AI Advisor</span>
@@ -722,13 +723,23 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const aiToggleBtn = document.getElementById('btn-ai-toggle');
     const aiCloseBtn = document.getElementById('btn-ai-close');
     const editorLayout = document.querySelector('.admin-editor-layout');
+    const aiBackdrop = document.getElementById('ai-backdrop');
 
     function toggleAiPanel() {
-      editorLayout?.classList.toggle('admin-editor-layout--collapsed');
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        const panel = document.getElementById('ai-panel');
+        const isOpen = panel?.classList.contains('admin-ai-panel--open');
+        panel?.classList.toggle('admin-ai-panel--open', !isOpen);
+        aiBackdrop?.classList.toggle('admin-ai-backdrop--visible', !isOpen);
+      } else {
+        editorLayout?.classList.toggle('admin-editor-layout--collapsed');
+      }
     }
 
     aiToggleBtn?.addEventListener('click', toggleAiPanel);
     aiCloseBtn?.addEventListener('click', toggleAiPanel);
+    aiBackdrop?.addEventListener('click', toggleAiPanel);
 
     // --- AI Advisor ---
     const aiLoadingEl = document.getElementById('ai-loading');
@@ -736,11 +747,33 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const aiResultEl = document.getElementById('ai-result');
     const aiActionBtns = document.querySelectorAll<HTMLButtonElement>('.admin-ai-action-btn');
 
+    const aiActionLabels = new Map<string, string>();
+    aiActionBtns.forEach(btn => {
+      const a = btn.dataset.aiAction;
+      if (a) aiActionLabels.set(a, btn.childNodes[0]?.textContent?.trim() || a);
+    });
+
     function setAiLoading(loading: boolean, action?: string) {
       if (aiLoadingEl) aiLoadingEl.hidden = !loading;
       if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${action || ''}...` : '';
       if (aiResultEl && loading) aiResultEl.innerHTML = '';
-      aiActionBtns.forEach(btn => { btn.disabled = loading; });
+      aiActionBtns.forEach(btn => {
+        btn.disabled = loading;
+        const a = btn.dataset.aiAction || '';
+        if (loading && a === action) {
+          btn.classList.add('admin-ai-action-btn--loading');
+          const orig = aiActionLabels.get(a) || a;
+          btn.childNodes[0].textContent = `${orig}...`;
+          const spinner = document.createElement('span');
+          spinner.className = 'ai-btn-spinner';
+          btn.prepend(spinner);
+        } else {
+          btn.classList.remove('admin-ai-action-btn--loading');
+          btn.querySelector('.ai-btn-spinner')?.remove();
+          const orig = aiActionLabels.get(a);
+          if (orig && btn.childNodes[0]) btn.childNodes[0].textContent = orig;
+        }
+      });
     }
 
     async function runAiAction(action: string) {

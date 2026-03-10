@@ -1698,6 +1698,10 @@ code, pre {
   overflow: hidden;
 }
 
+.admin-ai-backdrop {
+  display: none;
+}
+
 .admin-ai-panel-header {
   display: flex;
   justify-content: space-between;
@@ -1768,6 +1772,23 @@ code, pre {
 .admin-ai-action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.admin-ai-action-btn--loading {
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+.admin-ai-action-btn--loading .ai-btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--color-border);
+  border-top-color: var(--color-text-primary);
+  border-radius: 50%;
+  animation: ai-spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.3rem;
 }
 
 .admin-ai-action-btn .ai-btn-model {
@@ -2845,10 +2866,49 @@ code, pre {
     margin-left: 0;
   }
   .admin-ai-panel {
-    display: none;
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    max-height: 75vh;
+    grid-column: auto;
+    grid-row: auto;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.25rem 1.5rem;
+    z-index: 900;
+    transform: translateY(100%);
+    transition: transform 250ms ease;
+    overflow-y: auto;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  }
+  .admin-ai-panel.admin-ai-panel--open {
+    transform: translateY(0);
+  }
+  .admin-editor-layout--collapsed .admin-ai-panel {
+    padding: 1rem 1.25rem 1.5rem;
+    opacity: 1;
+    overflow-y: auto;
   }
   .admin-ai-panel-toggle {
-    display: none;
+    display: inline-flex;
+  }
+  .admin-ai-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 899;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 250ms ease;
+  }
+  .admin-ai-backdrop--visible {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   /* --- Editor topbar --- */
@@ -4024,6 +4084,22 @@ code, pre {
     font-size: 1rem;
     border-radius: 14px;
   }
+
+  .handbook-filter-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+  }
+  .handbook-filter-row::-webkit-scrollbar {
+    display: none;
+  }
+  .handbook-filter-btn,
+  .handbook-difficulty-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 }
 
 .handbook-controls {
@@ -4086,8 +4162,40 @@ code, pre {
 .handbook-card-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  row-gap: 0.25rem;
   margin-bottom: 0.25rem;
+}
+
+.handbook-cat-pill {
+  font-size: 0.72rem;
+  font-family: var(--font-ui);
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.handbook-diff-pill {
+  font-size: 0.72rem;
+  font-family: var(--font-ui);
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.handbook-diff-pill[data-difficulty="beginner"] {
+  border-color: var(--color-cat-ainews);
+  color: var(--color-cat-ainews);
+}
+.handbook-diff-pill[data-difficulty="intermediate"] {
+  border-color: var(--color-cat-study);
+  color: var(--color-cat-study);
+}
+.handbook-diff-pill[data-difficulty="advanced"] {
+  border-color: var(--color-cat-career);
+  color: var(--color-cat-career);
 }
 
 .handbook-card-title-row {
