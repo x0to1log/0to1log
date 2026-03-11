@@ -485,11 +485,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     function esc(s: string): string {
       const d = document.createElement('div');
       d.textContent = s;
-      return d.innerHTML;
+      return d.innerHTML.replace(/"/g, '&quot;');
     }
 
     // --- Diff / Undo helpers ---
     const previousValues = new Map<string, string>();
+    const aiFieldValues = new Map<string, string>();
 
     function getHandbookValue(fieldName: string): string {
       if (fieldName.startsWith('body_markdown_')) {
@@ -754,9 +755,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         const previewId = `preview-${f.key}-${Date.now()}`;
         html += `<span class="admin-ai-suggestion-text"><strong>${f.label}:</strong> ` +
           `<span id="${previewId}">${esc(isTruncated ? val.substring(0, truncLen) + '...' : val)}</span>` +
-          (isTruncated ? ` <button class="admin-ai-expand-btn" data-preview="${previewId}" data-full="${esc(val)}" type="button">Show more</button>` : '') +
+          (isTruncated ? ` <button class="admin-ai-expand-btn" data-preview="${previewId}" data-field-key="${esc(fieldName)}" type="button">Show more</button>` : '') +
           `</span>`;
-        html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(fieldName)}" data-apply-value="${esc(val)}" type="button">Use</button>`;
+        aiFieldValues.set(fieldName, val);
+        html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(fieldName)}" type="button">Use</button>`;
         html += `</div>`;
       });
 
@@ -766,7 +768,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       // Bind expand/collapse toggles
       aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-expand-btn').forEach(btn => {
         const previewId = btn.dataset.preview || '';
-        const fullText = btn.dataset.full || '';
+        const fullText = aiFieldValues.get(btn.dataset.fieldKey || '') || '';
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
         const truncated = previewEl.textContent || '';
@@ -782,7 +784,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       aiResultEl.querySelectorAll<HTMLButtonElement>('[data-apply-field]').forEach(btn => {
         btn.addEventListener('click', () => {
           const fieldName = btn.dataset.applyField || '';
-          const value = btn.dataset.applyValue || '';
+          const value = aiFieldValues.get(fieldName) || '';
           showDiff(btn, fieldName, value);
         });
       });
@@ -832,7 +834,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         if (!val) return;
         html += `<div class="admin-ai-suggestion">`;
         html += `<span class="admin-ai-suggestion-text"><strong>${f.label}:</strong> ${esc(val)}</span>`;
-        html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(f.key)}" data-apply-value="${esc(val)}" type="button">Use</button>`;
+        aiFieldValues.set(f.key, val);
+        html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(f.key)}" type="button">Use</button>`;
         html += `</div>`;
       });
 
@@ -873,9 +876,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           html += `<div class="admin-ai-suggestion">`;
           html += `<span class="admin-ai-suggestion-text"><strong>${f.label}:</strong> ` +
             `<span id="${previewId}">${esc(isTruncated ? val.substring(0, truncLen) + '...' : val)}</span>` +
-            (isTruncated ? ` <button class="admin-ai-expand-btn" data-preview="${previewId}" data-full="${esc(val)}" type="button">Show more</button>` : '') +
+            (isTruncated ? ` <button class="admin-ai-expand-btn" data-preview="${previewId}" data-field-key="${esc(fieldName)}" type="button">Show more</button>` : '') +
             `</span>`;
-          html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(fieldName)}" data-apply-value="${esc(val)}" type="button">Use</button>`;
+          aiFieldValues.set(fieldName, val);
+          html += `<button class="admin-ai-apply-btn" data-apply-field="${esc(fieldName)}" type="button">Use</button>`;
           html += `</div>`;
         });
       });
@@ -886,7 +890,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       // Bind expand/collapse
       aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-expand-btn').forEach(btn => {
         const previewId = btn.dataset.preview || '';
-        const fullText = btn.dataset.full || '';
+        const fullText = aiFieldValues.get(btn.dataset.fieldKey || '') || '';
         const previewEl = document.getElementById(previewId);
         if (!previewEl) return;
         const truncated = previewEl.textContent || '';
@@ -902,7 +906,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       aiResultEl.querySelectorAll<HTMLButtonElement>('[data-apply-field]').forEach(btn => {
         btn.addEventListener('click', () => {
           const fieldName = btn.dataset.applyField || '';
-          const value = btn.dataset.applyValue || '';
+          const value = aiFieldValues.get(fieldName) || '';
           if (fieldName === 'korean_name' || fieldName === 'difficulty') {
             const input = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement | HTMLSelectElement | null;
             if (input) {

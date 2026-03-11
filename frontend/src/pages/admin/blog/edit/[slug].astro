@@ -1100,7 +1100,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     function esc(s: string): string {
       const d = document.createElement('div');
       d.textContent = s;
-      return d.innerHTML;
+      return d.innerHTML.replace(/"/g, '&quot;');
     }
 
     // Event listeners
