@@ -5281,19 +5281,25 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-sidebar-link {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 0.825rem;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.blog-sidebar-link__title {
+  --blog-sidebar-link-line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0.35rem 0.5rem;
-  color: var(--color-text-muted);
-  text-decoration: none;
-  font-size: 0.825rem;
-  line-height: 1.45;
+  line-height: var(--blog-sidebar-link-line-height);
+  max-height: calc(2 * 1em * var(--blog-sidebar-link-line-height));
   word-break: keep-all;
   overflow-wrap: anywhere;
-  transition: color 150ms ease, background-color 150ms ease;
 }
 
 .blog-sidebar-link:hover {

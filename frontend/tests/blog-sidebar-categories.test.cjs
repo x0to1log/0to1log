@@ -22,19 +22,22 @@ assert(
   categories.includes("export const BLOG_SUB_CATEGORIES: BlogCategorySlug[] = ['work-note', 'daily'];"),
   'Blog categories must define the sub posting group',
 );
-assert(categories.includes("main: { en: 'Main Posts', ko: '주요 기록' }"), 'Blog categories must define the main group label');
-assert(categories.includes("sub: { en: 'Small Notes', ko: '작은 노트' }"), 'Blog categories must define the sub group label');
+assert(categories.includes("main: { en: 'Main Posts', ko: '\uc8fc\uc694 \uae30\ub85d' }"), 'Blog categories must define the main group label');
+assert(categories.includes("sub: { en: 'Small Notes', ko: '\uc791\uc740 \ub178\ud2b8' }"), 'Blog categories must define the sub group label');
 
 const sidebar = read('src/components/blog/BlogSidebar.astro');
-assert(sidebar.includes('글쓰기'), 'Blog sidebar must use the writing label');
+assert(sidebar.includes('\uae00\uc4f0\uae30'), 'Blog sidebar must use the writing label');
 assert(sidebar.includes('getBlogSidebarLabel'), 'Blog sidebar must use sidebar-specific category labels');
 assert(sidebar.includes('getBlogCategoryGroupLabel'), 'Blog sidebar must render grouped folder headings from the category model');
 assert(sidebar.includes('const VISIBLE_LIMIT = 3;'), 'Blog sidebar must show only 3 recent posts per category before the more button');
+assert(sidebar.includes('blog-sidebar-link__title'), 'Blog sidebar links must clamp a dedicated title wrapper');
 
 const css = read('src/styles/global.css');
 assert(css.includes('.blog-sidebar-link {'), 'Blog sidebar link styles must exist');
+assert(css.includes('.blog-sidebar-link__title {'), 'Blog sidebar title clamp styles must exist');
 assert(css.includes('-webkit-line-clamp: 2;'), 'Blog sidebar link titles must be clamped to 2 lines');
 assert(css.includes('text-overflow: ellipsis;'), 'Blog sidebar link titles must show an ellipsis when truncated');
+assert(css.includes('max-height: calc(2 * 1em * var(--blog-sidebar-link-line-height));'), 'Blog sidebar titles must hard-cap the visible height to 2 lines');
 
 const editor = read('src/pages/admin/blog/edit/[slug].astro');
 assert(editor.includes("'work-note': 'Work Notes'"), 'Blog editor must define a preview edition for work-note');

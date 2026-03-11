@@ -113,7 +113,7 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
                         ]}
                         href={`/${locale}/blog/${post.slug}/`}
                       >
-                        {post.title}
+                        <span class="blog-sidebar-link__title">{post.title}</span>
                       </a>
                     ))}
 
@@ -128,7 +128,7 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
                               ]}
                               href={`/${locale}/blog/${post.slug}/`}
                             >
-                              {post.title}
+                              <span class="blog-sidebar-link__title">{post.title}</span>
                             </a>
                           ))}
                         </div>
