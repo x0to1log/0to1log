@@ -29,7 +29,11 @@ assertIncludes(handbookFeedback, 'Quick feedback helps improve future explanatio
 
 const handbookDetailEn = read('frontend/src/pages/en/handbook/[slug].astro');
 const handbookDetailKo = read('frontend/src/pages/ko/handbook/[slug].astro');
-assertIncludes(handbookDetailEn, '<HandbookFeedback locale={locale} />', 'EN handbook feedback mount');
-assertIncludes(handbookDetailKo, '<HandbookFeedback locale={locale} />', 'KO handbook feedback mount');
+assertIncludes(handbookDetailEn, '<HandbookFeedback', 'EN handbook feedback mount');
+assertIncludes(handbookDetailEn, 'termId={term.id}', 'EN handbook feedback term id');
+assertIncludes(handbookDetailEn, 'isAuthenticated={!!user}', 'EN handbook feedback auth prop');
+assertIncludes(handbookDetailKo, '<HandbookFeedback', 'KO handbook feedback mount');
+assertIncludes(handbookDetailKo, 'termId={term.id}', 'KO handbook feedback term id');
+assertIncludes(handbookDetailKo, 'isAuthenticated={!!user}', 'KO handbook feedback auth prop');
 
 console.log('news-handbook-feedback-copy.test.cjs passed');

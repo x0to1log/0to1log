@@ -6,7 +6,7 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
-import { localField, difficultyLabel, difficultyColor } from '../../../lib/handbookUtils';
+import { localField, levelLabels } from '../../../lib/handbookUtils';
 import { renderMarkdown } from '../../../lib/markdown';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
@@ -41,11 +41,18 @@ if (!term && !termError) {
 }
 
 const definition = term ? localField(term, 'definition', locale) : '';
-const plainExplanation = term ? localField(term, 'plain_explanation', locale) : '';
-const technicalDescription = term ? localField(term, 'technical_description', locale) : '';
-const exampleAnalogy = term ? localField(term, 'example_analogy', locale) : '';
-const bodyMarkdown = term ? localField(term, 'body_markdown', locale) : '';
-const htmlContent = bodyMarkdown ? await renderMarkdown(bodyMarkdown) : '';
+const bodyBasic = term ? localField(term, 'body_basic', locale) : '';
+const bodyAdvanced = term ? localField(term, 'body_advanced', locale) : '';
+
+// Pre-render both level versions to HTML (same pattern as news persona switcher)
+const levelHtmlMap: Record<string, string> = {};
+if (bodyBasic) levelHtmlMap['basic'] = await renderMarkdown(bodyBasic);
+if (bodyAdvanced) levelHtmlMap['advanced'] = await renderMarkdown(bodyAdvanced);
+
+const userLevel = Astro.locals.profile?.handbook_level || 'basic';
+const activeLevel = levelHtmlMap[userLevel] ? userLevel : (levelHtmlMap['basic'] ? 'basic' : 'advanced');
+const htmlContent = levelHtmlMap[activeLevel] || '';
+const showLevelSwitcher = Object.keys(levelHtmlMap).length > 1;
 
 const isEnFallback = term && !term.definition_en && term.definition_ko;
 
@@ -78,7 +85,7 @@ if (supabase && term) {
     term.related_term_slugs?.length
       ? supabase
           .from('handbook_terms')
-          .select('term, slug, korean_name, difficulty')
+          .select('term, slug, korean_name')
           .eq('status', 'published')
           .in('slug', term.related_term_slugs)
       : Promise.resolve({ data: null }),
@@ -86,7 +93,7 @@ if (supabase && term) {
     term.categories?.length
       ? supabase
           .from('handbook_terms')
-          .select('term, slug, korean_name, difficulty')
+          .select('term, slug, korean_name')
           .eq('status', 'published')
           .neq('slug', pageSlug)
           .overlaps('categories', term.categories)
@@ -155,11 +162,6 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         <header style="margin-bottom: 1.5rem;">
           <div class="handbook-detail-meta">
-            {term.difficulty && (
-              <span style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
-                {difficultyLabel(locale, term.difficulty)}
-              </span>
-            )}
             {(term.categories || []).map((cat: string) => (
               <span style="font-size: 0.8rem; color: var(--color-text-muted);">
                 {getHandbookCategoryLabel(locale, cat)}
@@ -181,34 +183,35 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         <div class="newsprint-divider"></div>
 
-        {plainExplanation && (
-          <div class="handbook-section">
-            <span class="handbook-section-label">{t[locale]['handbook.plainExplanation']}</span>
-            <p class="handbook-section-body">{plainExplanation}</p>
+        {showLevelSwitcher && (
+          <div class="handbook-level-switcher">
+            {(['basic', 'advanced'] as const).filter(l => levelHtmlMap[l]).map(l => (
+              <button
+                type="button"
+                class={`handbook-level-btn ${l === activeLevel ? 'handbook-level-btn--active' : ''}`}
+                data-level={l}
+              >
+                {levelLabels[locale]?.[l] || l}
+              </button>
+            ))}
           </div>
         )}
-
-        {technicalDescription && (
-          <div class="handbook-section">
-            <span class="handbook-section-label">{t[locale]['handbook.technicalDescription']}</span>
-            <p class="handbook-section-body">{technicalDescription}</p>
-          </div>
-        )}
-
-        {exampleAnalogy && (
-          <div class="handbook-section">
-            <span class="handbook-section-label">{t[locale]['handbook.exampleAnalogy']}</span>
-            <p class="handbook-section-body">{exampleAnalogy}</p>
-          </div>
+        {showLevelSwitcher && (
+          <template id="level-data" data-map={JSON.stringify(levelHtmlMap)}></template>
         )}
 
         {htmlContent && (
-          <div class="newsprint-prose newsprint-prose--no-dropcap">
+          <div class="newsprint-prose newsprint-prose--no-dropcap" id="handbook-body">
             <Fragment set:html={htmlContent} />
           </div>
         )}
 
-        <HandbookFeedback locale={locale} />
+        <HandbookFeedback
+          locale={locale}
+          termId={term.id}
+          isAuthenticated={!!user}
+          loginUrl={`/login?redirectTo=/${locale}/handbook/${pageSlug}/`}
+        />
 
         {user && (
           <div class="handbook-action-bar">
@@ -298,6 +301,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
 <script>
   import '../../../scripts/bookmark';
+  import '../../../scripts/handbookFeedback';
   import '../../../scripts/share';
 
   function initHandbookUserFeatures(): void {
@@ -386,6 +390,26 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     });
   }
 
+  function initLevelSwitcher(): void {
+    const template = document.getElementById('level-data') as HTMLTemplateElement | null;
+    if (!template) return;
+    const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
+    const prose = document.getElementById('handbook-body');
+    const btns = document.querySelectorAll<HTMLButtonElement>('.handbook-level-btn');
+    if (!prose || btns.length === 0) return;
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const level = btn.dataset.level!;
+        if (!map[level]) return;
+        prose.innerHTML = map[level];
+        btns.forEach(b => b.classList.remove('handbook-level-btn--active'));
+        btn.classList.add('handbook-level-btn--active');
+      });
+    });
+  }
+
   document.addEventListener('astro:page-load', initHandbookUserFeatures);
   document.addEventListener('astro:page-load', initAdminActions);
+  document.addEventListener('astro:page-load', initLevelSwitcher);
 </script>
