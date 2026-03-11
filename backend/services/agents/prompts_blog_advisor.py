@@ -33,6 +33,22 @@ You are working on a project build-log / retrospective. Focus on:
 - Technical decisions documented with rationale
 - Explicit lessons learned and mistakes acknowledged
 - Concrete metrics or outcomes where applicable""",
+
+    "work-note": """\
+## Category: Work Note
+You are working on an in-progress work memo. Focus on:
+- The current step, blocker, or decision under discussion
+- Fast clarity over polished storytelling
+- Concrete notes the writer can resume from later
+- Honest context about what is still unresolved""",
+
+    "daily": """\
+## Category: Daily
+You are working on a short daily-life reflection. Focus on:
+- Specific moments or observations from the day
+- A light but honest personal voice
+- Clear emotional or practical takeaway
+- Small details that make the note feel lived-in""",
 }
 
 # ---------------------------------------------------------------------------
@@ -92,6 +108,18 @@ _OUTLINE_STRUCTURE = {
 - Cover key technical decisions and their rationale
 - Document implementation highlights or challenges
 - End with results, metrics, and lessons learned""",
+
+    "work-note": """\
+- Start with the task or problem currently on the table
+- Capture what changed, what is blocked, and what is decided
+- Keep the structure scannable and easy to continue later
+- End with the immediate next step or open question""",
+
+    "daily": """\
+- Open with the moment or scene worth remembering
+- Move quickly to the observation or feeling behind it
+- Keep the structure compact and natural, not essay-like
+- End with a small takeaway, question, or resolution""",
 }
 
 
@@ -149,6 +177,16 @@ _DRAFT_TONE = {
 - Be specific about technical choices and their reasoning
 - Include concrete details (tools, versions, configurations)
 - Document both successes and mistakes transparently""",
+
+    "work-note": """\
+- Keep the prose direct, useful, and easy to revisit later
+- Prefer concrete task language over abstract reflection
+- Call out blockers, decisions, and next actions explicitly""",
+
+    "daily": """\
+- Keep the voice personal, calm, and specific
+- Let small observations carry the meaning
+- Avoid over-explaining or turning it into a formal essay""",
 }
 
 
@@ -218,6 +256,14 @@ _REWRITE_PRESERVE = {
     "project": """\
 - Technical decision rationale and specific implementation details
 - Honest acknowledgment of mistakes and lessons""",
+
+    "work-note": """\
+- The raw usefulness of the note as a working memory aid
+- Specific blockers, decisions, and next steps""",
+
+    "daily": """\
+- The writer's personal voice and concrete observations
+- The small emotional or practical takeaway in the note""",
 }
 
 
@@ -372,6 +418,16 @@ _BLOG_FOCUS_GUIDANCE = {
 - Item 1: What was built and its purpose
 - Item 2: A key technical decision or trade-off
 - Item 3: The outcome or lesson learned""",
+
+    "work-note": """\
+- Item 1: What task or issue this memo covers
+- Item 2: The blocker, choice, or notable shift
+- Item 3: The next action to pick up later""",
+
+    "daily": """\
+- Item 1: The moment or topic this note captures
+- Item 2: What it revealed or made clear
+- Item 3: The feeling, lesson, or next thought""",
 }
 
 
