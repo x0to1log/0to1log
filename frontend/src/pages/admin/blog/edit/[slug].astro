@@ -640,6 +640,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     let currentAiButtons: HTMLButtonElement[] = [];
     const aiActionLabels = new Map<string, string>();
+    const aiResultCache = new Map<string, { html: string; result: any }>();
 
     function renderAiButtons(category: string) {
       if (!aiActionsContainer) return;
@@ -659,6 +660,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         modelSpan.textContent = a.model;
         btn.appendChild(modelSpan);
         btn.addEventListener('click', () => runAiAction(a.action));
+        if (aiResultCache.has(a.action)) {
+          const dot = document.createElement('span');
+          dot.className = 'ai-btn-cached-dot';
+          btn.appendChild(dot);
+        }
         aiActionsContainer.appendChild(btn);
         currentAiButtons.push(btn);
         aiActionLabels.set(a.action, a.label);
@@ -668,6 +674,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     renderAiButtons(categorySelect?.value || 'study');
 
     categorySelect?.addEventListener('change', () => {
+      aiResultCache.clear();
       renderAiButtons(categorySelect.value);
       if (aiResultEl) aiResultEl.innerHTML = '';
     });
@@ -695,9 +702,22 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       });
     }
 
-    async function runAiAction(action: string) {
+    async function runAiAction(action: string, forceRerun = false) {
       if (action === 'translate') {
         runTranslate();
+        return;
+      }
+
+      // Show cached result if available (unless force re-run)
+      const cached = aiResultCache.get(action);
+      if (cached && !forceRerun && aiResultEl) {
+        aiResultEl.innerHTML = cached.html;
+        // Prepend re-run banner
+        const banner = document.createElement('div');
+        banner.className = 'admin-ai-cached-banner';
+        banner.innerHTML = `<span>Cached result</span><button type="button" class="admin-ai-rerun-btn">Re-run</button>`;
+        aiResultEl.prepend(banner);
+        banner.querySelector('.admin-ai-rerun-btn')?.addEventListener('click', () => runAiAction(action, true));
         return;
       }
 
@@ -771,6 +791,18 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       else if (action === 'conceptcheck') renderConceptcheck(result);
       else if (action === 'voicecheck') renderVoicecheck(result);
       else if (action === 'retrocheck') renderRetrocheck(result);
+
+      // Cache rendered result
+      aiResultCache.set(action, { html: aiResultEl.innerHTML, result });
+      // Update dot indicators on buttons
+      currentAiButtons.forEach(btn => {
+        const a = btn.dataset.aiAction || '';
+        if (a === action && !btn.querySelector('.ai-btn-cached-dot')) {
+          const dot = document.createElement('span');
+          dot.className = 'ai-btn-cached-dot';
+          btn.appendChild(dot);
+        }
+      });
     }
 
     function renderGenerate(r: any) {
