@@ -307,6 +307,7 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
         "tags": translated.get("tags", req.tags),
         "translation_group_id": group_id,
         "source_post_id": req.source_post_id,
+        "source": "ai-translated",
     }
 
     insert_result = (

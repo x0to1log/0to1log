@@ -1602,6 +1602,22 @@ code, pre {
   background: #2e1065;
   color: #c4b5fd;
 }
+.admin-source-badge--ai-translated {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+[data-theme="dark"] .admin-source-badge--ai-translated {
+  background: #0c4a6e;
+  color: #7dd3fc;
+}
+.admin-source-badge--ai-drafted {
+  background: #f0e6ff;
+  color: #7c3aed;
+}
+[data-theme="dark"] .admin-source-badge--ai-drafted {
+  background: #2e1065;
+  color: #c4b5fd;
+}
 
 /* Chip/tag UI for related terms in editor */
 .admin-chips-container {
