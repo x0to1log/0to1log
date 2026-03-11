@@ -94,6 +94,12 @@ const tabs: FilterItem[] = items
         url.searchParams.set(filterKey, value);
       }
       history.replaceState(null, '', url.toString());
+
+      window.dispatchEvent(
+        new CustomEvent('newsprint:filter-change', {
+          detail: { filterKey, value },
+        }),
+      );
     }
 
     nav.addEventListener('click', (e) => {

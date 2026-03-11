@@ -1,6 +1,12 @@
 ---
 import { t } from '../../i18n/index';
-import { getCategoryLabel, getCategoryColorVar, BLOG_CATEGORIES } from '../../lib/categories';
+import {
+  BLOG_CATEGORIES,
+  BLOG_CATEGORY_GROUPS,
+  getBlogCategoryGroupLabel,
+  getBlogSidebarLabel,
+  getCategoryColorVar,
+} from '../../lib/categories';
 
 interface SidebarPost {
   title: string;
@@ -17,98 +23,131 @@ interface Props {
 
 const { locale, posts, currentSlug, totalCount } = Astro.props;
 
-const VISIBLE_LIMIT = 4;
-
-const grouped = BLOG_CATEGORIES.reduce((acc, cat) => {
-  acc[cat] = posts.filter(p => p.category === cat);
+const VISIBLE_LIMIT = 3;
+const postsByCategory = BLOG_CATEGORIES.reduce((acc, category) => {
+  acc[category] = posts.filter((post) => post.category === category);
   return acc;
 }, {} as Record<string, SidebarPost[]>);
 
 const currentCategory = currentSlug
-  ? posts.find(p => p.slug === currentSlug)?.category
+  ? posts.find((post) => post.slug === currentSlug)?.category
   : undefined;
+
+const sidebarBrand = locale === 'ko' ? '글쓰기' : 'Writing';
+const closeLabel = locale === 'ko' ? '사이드바 닫기' : 'Close sidebar';
+const comingSoonLabel = locale === 'ko' ? '글 준비 중' : 'Coming soon';
+const moreLabel = locale === 'ko' ? '개 더 보기' : ' more';
+const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
 ---
 
-<aside class="blog-sidebar">
-  <!-- Mobile header with close button -->
+<aside class="blog-sidebar" data-blog-sidebar>
   <div class="blog-sidebar-header">
-    <span class="blog-sidebar-brand">도록</span>
-    <button class="blog-sidebar-close" data-sidebar-close aria-label="Close sidebar">✕</button>
-  </div>
-
-  <!-- Search trigger -->
-  <div class="blog-sidebar-search">
-    <button class="blog-sidebar-search-btn" type="button" aria-label="Search posts">
-      <span>{t[locale]['blog.search']}</span>
-      <kbd class="blog-sidebar-search-kbd">⌘K</kbd>
+    <span class="blog-sidebar-brand">{sidebarBrand}</span>
+    <button class="blog-sidebar-close" data-sidebar-close aria-label={closeLabel} type="button">
+      &times;
     </button>
   </div>
 
-  <!-- Folder tree -->
+  <div class="blog-sidebar-search">
+    <button class="blog-sidebar-search-btn" type="button" aria-label={searchLabel}>
+      <span>{t[locale]['blog.search']}</span>
+      <kbd class="blog-sidebar-search-kbd">/</kbd>
+    </button>
+  </div>
+
   <nav class="blog-sidebar-nav">
-    {BLOG_CATEGORIES.map((cat) => {
-      const catPosts = grouped[cat] || [];
-      const visiblePosts = catPosts.slice(0, VISIBLE_LIMIT);
-      const extraPosts = catPosts.slice(VISIBLE_LIMIT);
-      const label = getCategoryLabel(locale, cat);
-      const colorVar = getCategoryColorVar(cat);
+    {BLOG_CATEGORY_GROUPS.map((group) => {
+      const groupCount = group.categories.reduce((total, category) => {
+        return total + (postsByCategory[category]?.length ?? 0);
+      }, 0);
+      const groupExpanded = group.categories.some((category) => category === currentCategory) || groupCount > 0;
 
       return (
-        <div class="blog-folder" style={`--folder-color: ${colorVar}`}>
+        <div class="blog-folder blog-folder--group">
           <button
-            class="blog-folder-btn"
+            class="blog-folder-btn blog-folder-btn--group"
             type="button"
-            aria-expanded={catPosts.length > 0 ? "true" : "false"}
+            aria-expanded={groupExpanded ? 'true' : 'false'}
           >
             <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M6 4l4 4-4 4" />
             </svg>
-            <span class="blog-folder-dot" style={`background: ${colorVar}`}></span>
-            <span>{label}</span>
-            <span class="blog-folder-count">({catPosts.length})</span>
+            <span class="blog-folder-group-label">{getBlogCategoryGroupLabel(locale, group.slug)}</span>
+            <span class="blog-folder-group-count">({groupCount})</span>
           </button>
-          <div class="blog-folder-children" {...(catPosts.length === 0 && { hidden: true })}>
-            {catPosts.length === 0 && (
-              <span class="blog-folder-empty">
-                {locale === 'ko' ? '글 준비 중' : 'Coming soon'}
-              </span>
-            )}
-            {visiblePosts.map((post) => (
-              <a
-                class:list={[
-                  'blog-sidebar-link',
-                  { 'blog-sidebar-link--active': post.slug === currentSlug },
-                ]}
-                href={`/${locale}/blog/${post.slug}/`}
-              >
-                {post.title}
-              </a>
-            ))}
-            {extraPosts.length > 0 && (
-              <>
-                <div class="blog-folder-extra" hidden>
-                  {extraPosts.map((post) => (
-                    <a
-                      class:list={[
-                        'blog-sidebar-link',
-                        { 'blog-sidebar-link--active': post.slug === currentSlug },
-                      ]}
-                      href={`/${locale}/blog/${post.slug}/`}
-                    >
-                      {post.title}
-                    </a>
-                  ))}
+
+          <div class="blog-folder-children blog-folder-children--group" {...(!groupExpanded && { hidden: true })}>
+            {group.categories.map((category) => {
+              const categoryPosts = postsByCategory[category] || [];
+              const visiblePosts = categoryPosts.slice(0, VISIBLE_LIMIT);
+              const extraPosts = categoryPosts.slice(VISIBLE_LIMIT);
+              const categoryExpanded = currentCategory === category || categoryPosts.length > 0;
+              const categoryLabel = getBlogSidebarLabel(locale, category);
+              const colorVar = getCategoryColorVar(category);
+
+              return (
+                <div class="blog-folder" style={`--folder-color: ${colorVar}`}>
+                  <button
+                    class="blog-folder-btn"
+                    type="button"
+                    aria-expanded={categoryExpanded ? 'true' : 'false'}
+                  >
+                    <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M6 4l4 4-4 4" />
+                    </svg>
+                    <span class="blog-folder-dot" style={`background: ${colorVar}`}></span>
+                    <span>{categoryLabel}</span>
+                    <span class="blog-folder-count">({categoryPosts.length})</span>
+                  </button>
+
+                  <div class="blog-folder-children" {...(!categoryExpanded && { hidden: true })}>
+                    {categoryPosts.length === 0 && (
+                      <span class="blog-folder-empty">{comingSoonLabel}</span>
+                    )}
+
+                    {visiblePosts.map((post) => (
+                      <a
+                        class:list={[
+                          'blog-sidebar-link',
+                          { 'blog-sidebar-link--active': post.slug === currentSlug },
+                        ]}
+                        href={`/${locale}/blog/${post.slug}/`}
+                      >
+                        {post.title}
+                      </a>
+                    ))}
+
+                    {extraPosts.length > 0 && (
+                      <>
+                        <div class="blog-folder-extra" hidden>
+                          {extraPosts.map((post) => (
+                            <a
+                              class:list={[
+                                'blog-sidebar-link',
+                                { 'blog-sidebar-link--active': post.slug === currentSlug },
+                              ]}
+                              href={`/${locale}/blog/${post.slug}/`}
+                            >
+                              {post.title}
+                            </a>
+                          ))}
+                        </div>
+                        <button class="blog-folder-more" type="button" data-folder-more>
+                          +{extraPosts.length}
+                          {moreLabel}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <button class="blog-folder-more" type="button" data-folder-more>+{extraPosts.length}{locale === 'ko' ? '개 더보기' : ' more'}</button>
-              </>
-            )}
+              );
+            })}
           </div>
         </div>
       );
     })}
   </nav>
 
-  <!-- Footer -->
   <div class="blog-sidebar-footer">
     <a href={`/${locale}/blog/`}>
       {t[locale]['blog.allPostsCount']} ({totalCount})
@@ -118,7 +157,6 @@ const currentCategory = currentSlug
 
 <script>
   function initBlogSidebar() {
-    // Folder expand/collapse
     document.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const expanded = btn.getAttribute('aria-expanded') === 'true';
@@ -130,7 +168,6 @@ const currentCategory = currentSlug
       });
     });
 
-    // "⁝" more button — reveal extra posts
     document.querySelectorAll<HTMLButtonElement>('[data-folder-more]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const extra = btn.previousElementSibling as HTMLElement | null;
@@ -141,7 +178,6 @@ const currentCategory = currentSlug
       });
     });
 
-    // Close sidebar helper
     function closeSidebar() {
       document.querySelectorAll('.blog-sidebar').forEach((sidebar) => {
         sidebar.classList.remove('blog-sidebar--open');
@@ -151,12 +187,10 @@ const currentCategory = currentSlug
       });
     }
 
-    // Mobile overlay close
     document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
       overlay.addEventListener('click', closeSidebar);
     });
 
-    // Mobile close button
     document.querySelectorAll<HTMLButtonElement>('[data-sidebar-close]').forEach((btn) => {
       btn.addEventListener('click', closeSidebar);
     });

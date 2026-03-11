@@ -61,6 +61,8 @@ const editionMap: Record<string, string> = {
   study: 'Study Notes',
   career: 'Career Notes',
   project: 'Build Log',
+  'work-note': 'Work Notes',
+  daily: 'Daily Life',
 };
 
 const initialStatus = post?.status || 'draft';
@@ -224,7 +226,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           locale="en"
           masthead="IT Blog"
           editionLabel={initialEditionLabel}
-          subkicker={['Study · Career · Project', 'Deep Dive', 'Personal Notes']}
+          subkicker={['Study · Project · Career · Work Notes · Daily Life', 'Deep Dive', 'Personal Notes']}
         >
           <div id="preview-content">
             <NewsprintArticleLayout
@@ -278,18 +280,24 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     study: 'Study',
     career: 'Career',
     project: 'Project',
+    'work-note': 'Work Notes',
+    daily: 'Daily',
   };
 
   const EDITION_MAP: Record<string, string> = {
     study: 'Study Notes',
     career: 'Career Notes',
     project: 'Build Log',
+    'work-note': 'Work Notes',
+    daily: 'Daily Life',
   };
 
   const FOCUS_MAP: Record<string, string[]> = {
     study: ['What concept to understand', 'What to remember from this note', 'What to try after reading'],
     career: ['What decision matters here', 'What signal is worth noticing', 'What to apply in actual work'],
     project: ['What was built in this step', 'What tradeoff appeared', 'What to improve next'],
+    'work-note': ['What moved in this work session', 'What blocker or decision matters', 'What to do next'],
+    daily: ['What stood out today', 'What it made me notice', 'What I want to carry forward'],
   };
 
   const DEFAULT_FOCUS = ['Key insight', 'Practical takeaway', 'Next step'];
@@ -634,6 +642,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       'study': { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
       'career': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
       'project': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
+      'work-note': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
+      'daily': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
     };
 
     const TRANSLATE_ACTION = { action: 'translate', label: 'Translate', model: 'gpt-4o', wide: true };

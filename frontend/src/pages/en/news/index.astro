@@ -68,6 +68,9 @@ const sc = await getSiteContents(
 );
 const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers · Projects', 'Daily Curation', 'Open Access']);
 const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
+const searchPlaceholder = 'Search AI news';
+const searchHints = [searchPlaceholder, 'OpenAI', 'Gemini', 'MCP'];
+const searchEmptyMessage = 'No AI news matches that search.';
 ---
 
 <MainLayout title={t.en['log.title']} locale="en" slug="news/">
@@ -78,7 +81,19 @@ const startHereSections = parseJsonArray<{slug: string; label: string; descripti
     subkicker={subkicker}
     volumeLabel={sc.volume_issue || undefined}
   >
+    <div class="handbook-search-sticky">
+      <input
+        type="search"
+        id="news-search"
+        aria-label={searchPlaceholder}
+        placeholder={searchPlaceholder}
+        data-placeholder-hints={JSON.stringify(searchHints)}
+        class="handbook-search-input"
+      />
+    </div>
+
     <NewsprintCategoryFilter locale="en" items={postTypeItems} filterKey="post_type" />
+    <div id="news-result-count" class="handbook-result-count" aria-live="polite" style="display: none;"></div>
 
     {fetchError ? (
       <NewsprintNotice
@@ -88,7 +103,7 @@ const startHereSections = parseJsonArray<{slug: string; label: string; descripti
         linkLabel={t.en['error.retry']}
       />
     ) : posts.length > 0 ? (
-      <>
+      <div id="news-list-results">
         {headline && (
           <NewsprintHeadline
             href={`/en/news/${headline.slug}/`}
@@ -127,10 +142,14 @@ const startHereSections = parseJsonArray<{slug: string; label: string; descripti
             ))}
           </section>
         )}
-      </>
+      </div>
     ) : (
       <NewsprintNotice variant="empty" message={t.en['log.empty']} />
     )}
+
+    <div id="news-no-results" style="display: none;">
+      <NewsprintNotice variant="empty" message={searchEmptyMessage} />
+    </div>
 
     <Fragment slot="rail">
       <NewsprintListRail
@@ -145,4 +164,12 @@ const startHereSections = parseJsonArray<{slug: string; label: string; descripti
 
 <script>
   import '../../../scripts/bookmark';
+</script>
+
+<script>
+  import '../../../scripts/handbookSearchHints';
+</script>
+
+<script>
+  import '../../../scripts/newsListSearch';
 </script>

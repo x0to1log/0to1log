@@ -1,0 +1,50 @@
+const fs = require('fs');
+const path = require('path');
+
+function read(filePath) {
+  return fs.readFileSync(path.join(__dirname, '..', filePath), 'utf8');
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+const categories = read('src/lib/categories.ts');
+assert(categories.includes("'work-note'"), 'Blog categories must include the work-note slug');
+assert(categories.includes("'daily'"), 'Blog categories must include the daily slug');
+assert(
+  categories.includes("export const BLOG_MAIN_CATEGORIES: BlogCategorySlug[] = ['study', 'project', 'career'];"),
+  'Blog categories must define the main posting group in the requested order',
+);
+assert(
+  categories.includes("export const BLOG_SUB_CATEGORIES: BlogCategorySlug[] = ['work-note', 'daily'];"),
+  'Blog categories must define the sub posting group',
+);
+assert(categories.includes("main: { en: 'Main Posts', ko: '주요 기록' }"), 'Blog categories must define the main group label');
+assert(categories.includes("sub: { en: 'Small Notes', ko: '작은 노트' }"), 'Blog categories must define the sub group label');
+
+const sidebar = read('src/components/blog/BlogSidebar.astro');
+assert(sidebar.includes('글쓰기'), 'Blog sidebar must use the writing label');
+assert(sidebar.includes('getBlogSidebarLabel'), 'Blog sidebar must use sidebar-specific category labels');
+assert(sidebar.includes('getBlogCategoryGroupLabel'), 'Blog sidebar must render grouped folder headings from the category model');
+assert(sidebar.includes('const VISIBLE_LIMIT = 3;'), 'Blog sidebar must show only 3 recent posts per category before the more button');
+
+const css = read('src/styles/global.css');
+assert(css.includes('.blog-sidebar-link {'), 'Blog sidebar link styles must exist');
+assert(css.includes('-webkit-line-clamp: 2;'), 'Blog sidebar link titles must be clamped to 2 lines');
+assert(css.includes('text-overflow: ellipsis;'), 'Blog sidebar link titles must show an ellipsis when truncated');
+
+const editor = read('src/pages/admin/blog/edit/[slug].astro');
+assert(editor.includes("'work-note': 'Work Notes'"), 'Blog editor must define a preview edition for work-note');
+assert(editor.includes("daily: 'Daily Life'"), 'Blog editor must define a preview edition for daily');
+
+const migrationPath = path.join(process.cwd(), 'supabase', 'migrations', '20260311_blog_post_subcategories.sql');
+assert(fs.existsSync(migrationPath), 'Missing migration for blog post subcategories');
+
+const migration = fs.readFileSync(migrationPath, 'utf8');
+assert(migration.includes("'work-note'"), 'Blog post subcategory migration must allow work-note');
+assert(migration.includes("'daily'"), 'Blog post subcategory migration must allow daily');
+
+console.log('blog sidebar category structure ok');

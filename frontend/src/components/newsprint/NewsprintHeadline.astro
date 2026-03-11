@@ -28,10 +28,17 @@ const readingLabel = readingTimeMin
 const normalizedCategory = normalizeCategorySlug(category);
 const categoryLabel = getCategoryLabel(locale, category);
 const catColor = getCategoryColorVar(category);
+const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
 const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
 ---
 
-<a href={href} class="newsprint-headline newsprint-card" data-category={normalizedCategory || 'uncategorized'} data-post-type={postType || undefined}>
+<a
+  href={href}
+  class="newsprint-headline newsprint-card"
+  data-category={normalizedCategory || 'uncategorized'}
+  data-post-type={postType || undefined}
+  data-search-text={searchText}
+>
   <div class="newsprint-headline-kicker">
     <span>{kickerLabel}</span>
     {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}

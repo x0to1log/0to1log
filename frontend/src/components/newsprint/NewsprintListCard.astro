@@ -31,9 +31,16 @@ const categoryLabel = getCategoryLabel(locale, category);
 const catColor = getCategoryColorVar(category);
 
 const cardClasses = ['newsprint-card', isRead && 'newsprint-card--read'].filter(Boolean).join(' ');
+const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
 ---
 
-<a href={href} class={cardClasses} data-category={normalizedCategory || 'uncategorized'} data-post-type={postType || undefined}>
+<a
+  href={href}
+  class={cardClasses}
+  data-category={normalizedCategory || 'uncategorized'}
+  data-post-type={postType || undefined}
+  data-search-text={searchText}
+>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
     <h2 class="newsprint-card-title" style="flex: 1;">{title}</h2>
     {itemId && (
