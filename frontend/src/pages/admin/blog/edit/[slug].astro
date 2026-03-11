@@ -735,6 +735,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
             excerpt: excerptInput?.value || '',
             slug: slugInput?.value || '',
+            locale: localeSelect?.value || 'en',
           }),
         });
 
@@ -797,6 +798,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           else if (field === 'excerpt') newVal = r.excerpt;
           else if (field === 'slug') newVal = r.slug;
           else if (field === 'tags') newVal = btn.dataset.value || r.tags.join(', ');
+          else if (field === 'focus_items') newVal = btn.dataset.value || r.focus_items.join(', ');
           showDiff(btn, field, newVal);
         });
       });
