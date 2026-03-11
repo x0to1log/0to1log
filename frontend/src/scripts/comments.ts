@@ -1,3 +1,5 @@
+Ôªøimport { openAuthPrompt } from './auth-prompt';
+
 function initComments(): void {
   const section = document.querySelector<HTMLElement>('.newsprint-comments');
   if (!section || section.dataset.commentInit === 'true') return;
@@ -5,7 +7,9 @@ function initComments(): void {
 
   const postId = section.dataset.postId;
   const locale = section.dataset.locale || 'en';
-  const loginUrl = section.dataset.loginUrl || '/login';
+  const isAuthenticated = section.dataset.authenticated === 'true';
+  const contentType = section.dataset.contentType || 'news';
+  const commentRedirect = section.dataset.commentRedirect || `${window.location.pathname}${window.location.search}#comments`;
   if (!postId) return;
 
   const list = section.querySelector<HTMLElement>('[data-comments-list]');
@@ -16,11 +20,12 @@ function initComments(): void {
   const totalEl = section.querySelector<HTMLElement>('[data-comment-total]');
   const countEl = document.querySelector<HTMLElement>('[data-comment-count]');
 
-  let currentUserId: string | null = null;
+  if (form) form.style.display = isAuthenticated ? '' : 'none';
+  if (loginLink) loginLink.style.display = isAuthenticated ? 'none' : '';
 
   async function loadComments() {
     try {
-      const res = await fetch(`/api/user/comments?post_id=${postId}&type=${section.dataset.contentType || 'news'}`);
+      const res = await fetch(`/api/user/comments?post_id=${postId}&type=${contentType}`);
       if (!res.ok) return;
       const comments = await res.json();
       renderComments(comments);
@@ -38,49 +43,52 @@ function initComments(): void {
       return;
     }
 
-    list.innerHTML = comments.map((c) => {
-      const date = new Date(c.created_at).toLocaleDateString(
+    list.innerHTML = comments.map((comment) => {
+      const date = new Date(comment.created_at).toLocaleDateString(
         locale === 'ko' ? 'ko-KR' : 'en-US',
         { year: 'numeric', month: 'short', day: 'numeric' }
       );
-      const initial = (c.user.display_name || 'A').charAt(0).toUpperCase();
-      const canDelete = !!c.can_delete;
-      const deleteBtn = canDelete
-        ? `<button class="newsprint-comment-delete" data-delete-comment="${c.id}" aria-label="${locale === 'ko' ? 'ªË¡¶' : 'Delete'}">&times;</button>`
+      const initial = (comment.user.display_name || 'A').charAt(0).toUpperCase();
+      const deleteLabel = locale === 'ko' ? 'ÏÇ≠Ï†ú' : 'Delete';
+      const deleteBtn = comment.can_delete
+        ? `<button class="newsprint-comment-delete" data-delete-comment="${comment.id}" aria-label="${deleteLabel}">&times;</button>`
         : '';
 
-      return `<div class="newsprint-comment" data-comment-id="${c.id}">
+      return `<div class="newsprint-comment" data-comment-id="${comment.id}">
         <div class="newsprint-comment-header">
           <div class="newsprint-comment-avatar">${
-            c.user.avatar_url
-              ? `<img src="${c.user.avatar_url}" alt="" width="28" height="28" style="border-radius:50%;">`
+            comment.user.avatar_url
+              ? `<img src="${comment.user.avatar_url}" alt="" width="28" height="28" style="border-radius:50%;">`
               : `<span>${initial}</span>`
           }</div>
-          <span class="newsprint-comment-author">${escapeHtml(c.user.display_name || 'Anonymous')}</span>
+          <span class="newsprint-comment-author">${escapeHtml(comment.user.display_name || 'Anonymous')}</span>
           <span class="newsprint-comment-date">${date}</span>
           ${deleteBtn}
         </div>
-        <div class="newsprint-comment-body">${escapeHtml(c.body)}</div>
+        <div class="newsprint-comment-body">${escapeHtml(comment.body)}</div>
       </div>`;
     }).join('');
 
     updateCounts(comments.length);
 
-    list.querySelectorAll<HTMLButtonElement>('[data-delete-comment]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const confirmMsg = locale === 'ko' ? '¿Ã ¥Ò±€¿ª ªË¡¶«“±Óø‰?' : 'Delete this comment?';
-        if (!confirm(confirmMsg)) return;
+    list.querySelectorAll<HTMLButtonElement>('[data-delete-comment]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const confirmMsg = locale === 'ko' ? 'Ïù¥ ÎåìÍ∏ÄÏùÑ ÏÇ≠Ï†úÌï†ÍπåÏöî?' : 'Delete this comment?';
+        if (!window.confirm(confirmMsg)) return;
 
-        const commentId = btn.dataset.deleteComment;
+        const commentId = button.dataset.deleteComment;
         if (!commentId) return;
 
         try {
-          const res = await fetch(`/api/user/comments?id=${commentId}&type=${section.dataset.contentType || 'news'}`, { method: 'DELETE' });
+          const res = await fetch(`/api/user/comments?id=${commentId}&type=${contentType}`, { method: 'DELETE' });
+          if (res.status === 401) {
+            openAuthPrompt({ action: 'comment', redirectTo: commentRedirect });
+            return;
+          }
           if (res.ok) {
-            const el = list?.querySelector(`[data-comment-id="${commentId}"]`);
+            const el = list.querySelector(`[data-comment-id="${commentId}"]`);
             if (el) el.remove();
-            const remaining = list?.querySelectorAll('.newsprint-comment').length || 0;
-            updateCounts(remaining);
+            updateCounts(list.querySelectorAll('.newsprint-comment').length);
           }
         } catch {
           // Silently fail
@@ -100,24 +108,6 @@ function initComments(): void {
     return div.innerHTML;
   }
 
-  async function checkAuth() {
-    try {
-      const res = await fetch('/api/user/profile');
-      if (res.ok) {
-        const profile = await res.json();
-        currentUserId = profile.id || null;
-        if (form) form.style.display = '';
-        if (loginLink) loginLink.style.display = 'none';
-      } else {
-        if (form) form.style.display = 'none';
-        if (loginLink) loginLink.style.display = '';
-      }
-    } catch {
-      if (form) form.style.display = 'none';
-      if (loginLink) loginLink.style.display = '';
-    }
-  }
-
   if (input && charcount) {
     input.addEventListener('input', () => {
       const len = input.value.length;
@@ -126,8 +116,8 @@ function initComments(): void {
   }
 
   if (form && input) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
       const body = input.value.trim();
       if (!body) return;
 
@@ -138,17 +128,17 @@ function initComments(): void {
         const res = await fetch('/api/user/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ post_id: postId, body, type: section.dataset.contentType || 'news' }),
+          body: JSON.stringify({ post_id: postId, body, type: contentType }),
         });
 
         if (res.status === 401) {
-          window.location.href = loginUrl;
+          openAuthPrompt({ action: 'comment', redirectTo: commentRedirect });
           return;
         }
 
         if (res.ok) {
           input.value = '';
-          if (charcount) charcount.textContent = '';
+          charcount.textContent = '';
           await loadComments();
         }
       } catch {
@@ -159,7 +149,6 @@ function initComments(): void {
     });
   }
 
-  checkAuth();
   loadComments();
 }
 

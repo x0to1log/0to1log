@@ -6,14 +6,9 @@ import { createClient } from '@supabase/supabase-js';
 import { localField } from '../../lib/handbookUtils';
 import { getHandbookCategoryLabel } from '../../lib/handbookCategories';
 import { getSiteContents } from '../../lib/siteContent';
-
-// Redirect if not logged in
-if (!Astro.locals.user || !Astro.locals.accessToken) {
-  return Astro.redirect(`/login?redirectTo=${encodeURIComponent('/library/')}`);
-}
-
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
+const isAuthenticated = !!user && !!accessToken;
 const profile = Astro.locals.profile;
 const langParam = Astro.url.searchParams.get('lang');
 const cookieLocale = Astro.cookies.get('site-locale')?.value;
@@ -79,6 +74,26 @@ const copy = locale === 'ko'
         read > 0 || learned > 0
           ? `${read}편의 글을 읽고, ${learned}개의 용어를 학습했어요`
           : '서재에 오신 것을 환영합니다',
+      previewSubtitle: '저장한 글, 읽던 글, 학습 흐름을 나만의 서재에 모아보세요.',
+      previewCards: {
+        saved: {
+          kicker: '저장한 글',
+          title: '나중에 다시 볼 글을 한곳에',
+          items: ['북마크한 뉴스와 블로그를 바로 다시 열기', '중요한 글을 주제별로 천천히 쌓아두기'],
+        },
+        history: {
+          kicker: '읽은 기록',
+          title: '읽던 흐름을 끊기지 않게',
+          items: ['최근에 읽은 글을 다시 이어서 보기', '관심이 갔던 주제를 자연스럽게 되짚기'],
+        },
+        progress: {
+          kicker: '학습 현황',
+          title: '용어 학습 진척을 한눈에',
+          items: ['읽은 용어와 익힌 용어의 비율 확인', '카테고리별 학습 흐름을 꾸준히 관리'],
+        },
+      },
+      previewCta: '로그인하고 내 서재 만들기',
+      previewNote: '로그인하면 저장한 글, 읽기 기록, 학습 현황이 같은 서재 안에서 이어집니다.',
     }
   : {
       title: 'My Library',
@@ -107,91 +122,107 @@ const copy = locale === 'ko'
         read > 0 || learned > 0
           ? `${read} articles read, ${learned} terms learned`
           : 'Welcome to your reading room',
+      previewSubtitle: 'Keep saved posts, reading history, and learning momentum together in one place.',
+      previewCards: {
+        saved: {
+          kicker: 'Saved posts',
+          title: 'Keep the posts you want to revisit',
+          items: ['Return to bookmarked news and blog posts anytime', 'Build a shelf of posts worth keeping close'],
+        },
+        history: {
+          kicker: 'Reading history',
+          title: 'Pick up where you left off',
+          items: ['Jump back into the posts you recently opened', 'Reconnect with themes that caught your attention'],
+        },
+        progress: {
+          kicker: 'Learning progress',
+          title: 'See your handbook progress at a glance',
+          items: ['Track what you visited and what you learned', 'Build steady momentum across categories'],
+        },
+      },
+      previewCta: 'Sign in to create my library',
+      previewNote: 'Signing in connects your saved posts, reading trail, and learning progress in one reading room.',
     };
-
-const authSb = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-);
-
-// Fetch all user data in parallel
-const [historyRes, bookmarksRes, progressRes, likesRes] = await Promise.all([
-  authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
-  authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-  authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
-  authSb.from('news_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-]);
-
-const historyItems = historyRes.data ?? [];
-const bookmarkItems = bookmarksRes.data ?? [];
-const progressItems = progressRes.data ?? [];
-const likedItems = likesRes.data ?? [];
-
-// Collect IDs to batch-fetch metadata
-const postIds = new Set<string>();
-const termIds = new Set<string>();
-[...historyItems, ...bookmarkItems].forEach((item) => {
-  if (item.item_type === 'news') postIds.add(item.item_id);
-  if (item.item_type === 'term') termIds.add(item.item_id);
-});
-likedItems.forEach((item) => postIds.add(item.post_id));
-progressItems.forEach((p) => termIds.add(p.term_id));
-
-// Fetch post and term metadata
 const { supabase } = await import('../../lib/supabase');
 const postMap = new Map<string, any>();
 const termMap = new Map<string, any>();
-
-if (supabase && (postIds.size > 0 || termIds.size > 0)) {
-  const [postRes, termRes] = await Promise.all([
-    postIds.size > 0
-      ? supabase.from('news_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds])
-      : Promise.resolve({ data: null }),
-    termIds.size > 0
-      ? supabase.from('handbook_terms').select('id, term, slug, korean_name, category, difficulty').in('id', [...termIds])
-      : Promise.resolve({ data: null }),
-  ]);
-  (postRes.data ?? []).forEach((p: any) => postMap.set(p.id, p));
-  (termRes.data ?? []).forEach((t: any) => termMap.set(t.id, t));
-}
-
-// Aggregate learning progress by category
-const categoryProgress = new Map<string, { total: number; read: number; learned: number }>();
-progressItems.forEach((p) => {
-  const t = termMap.get(p.term_id);
-  const cat = t?.category || 'uncategorized';
-  if (!categoryProgress.has(cat)) categoryProgress.set(cat, { total: 0, read: 0, learned: 0 });
-  const c = categoryProgress.get(cat)!;
-  c.total++;
-  if (p.status === 'read') c.read++;
-  if (p.status === 'learned') c.learned++;
-});
-const totalLearned = progressItems.filter((p) => p.status === 'learned').length;
-const totalRead = progressItems.length;
-
-// Split bookmarks by type for sub-tabs
-const articleBookmarks = bookmarkItems.filter((i) => i.item_type === 'news');
-const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
-
-// Lookup sets for dual icons
-const likedPostIds = new Set(likedItems.map((i) => i.post_id));
-const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.item_id}`));
-
-// Fetch recommended posts from FastAPI (non-fatal)
+let historyItems: any[] = [];
+let bookmarkItems: any[] = [];
+let progressItems: any[] = [];
+let likedItems: any[] = [];
 let recommendedPosts: { post_id: string; slug: string; title: string; category: string }[] = [];
-const fastapiUrl = import.meta.env.FASTAPI_URL;
-if (fastapiUrl && user?.id) {
-  try {
-    const res = await fetch(
-      `${fastapiUrl}/api/recommendations/for-you?user_id=${user.id}&locale=${locale}`,
-      { signal: AbortSignal.timeout(4000) }
-    );
-    if (res.ok) recommendedPosts = await res.json();
-  } catch {
-    // Non-fatal
+
+if (isAuthenticated) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+
+  const [historyRes, bookmarksRes, progressRes, likesRes] = await Promise.all([
+    authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
+    authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+    authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
+    authSb.from('news_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+  ]);
+
+  historyItems = historyRes.data ?? [];
+  bookmarkItems = bookmarksRes.data ?? [];
+  progressItems = progressRes.data ?? [];
+  likedItems = likesRes.data ?? [];
+
+  const postIds = new Set<string>();
+  const termIds = new Set<string>();
+  [...historyItems, ...bookmarkItems].forEach((item) => {
+    if (item.item_type === 'news') postIds.add(item.item_id);
+    if (item.item_type === 'term') termIds.add(item.item_id);
+  });
+  likedItems.forEach((item) => postIds.add(item.post_id));
+  progressItems.forEach((item) => termIds.add(item.term_id));
+
+  if (supabase && (postIds.size > 0 || termIds.size > 0)) {
+    const [postRes, termRes] = await Promise.all([
+      postIds.size > 0
+        ? supabase.from('news_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds])
+        : Promise.resolve({ data: null }),
+      termIds.size > 0
+        ? supabase.from('handbook_terms').select('id, term, slug, korean_name, category, difficulty').in('id', [...termIds])
+        : Promise.resolve({ data: null }),
+    ]);
+    (postRes.data ?? []).forEach((post: any) => postMap.set(post.id, post));
+    (termRes.data ?? []).forEach((term: any) => termMap.set(term.id, term));
+  }
+
+  const fastapiUrl = import.meta.env.FASTAPI_URL;
+  if (fastapiUrl && user?.id) {
+    try {
+      const res = await fetch(
+        `${fastapiUrl}/api/recommendations/for-you?user_id=${user.id}&locale=${locale}`,
+        { signal: AbortSignal.timeout(4000) }
+      );
+      if (res.ok) recommendedPosts = await res.json();
+    } catch {
+      // Non-fatal
+    }
   }
 }
+
+const categoryProgress = new Map<string, { total: number; read: number; learned: number }>();
+progressItems.forEach((item) => {
+  const term = termMap.get(item.term_id);
+  const category = term?.category || 'uncategorized';
+  if (!categoryProgress.has(category)) categoryProgress.set(category, { total: 0, read: 0, learned: 0 });
+  const stats = categoryProgress.get(category)!;
+  stats.total++;
+  if (item.status === 'read') stats.read++;
+  if (item.status === 'learned') stats.learned++;
+});
+const totalLearned = progressItems.filter((item) => item.status === 'learned').length;
+const totalRead = progressItems.length;
+const articleBookmarks = bookmarkItems.filter((item) => item.item_type === 'news');
+const termBookmarks = bookmarkItems.filter((item) => item.item_type === 'term');
+const likedPostIds = new Set(likedItems.map((item) => item.post_id));
+const bookmarkedItemIds = new Set(bookmarkItems.map((item) => `${item.item_type}:${item.item_id}`));
 ---
 
 <MainLayout title={`${copy.title} ??0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
@@ -199,237 +230,294 @@ if (fastapiUrl && user?.id) {
     <div class="library-header">
       <h1 class="library-title">{copy.title}</h1>
       <div class="library-ornament">✦</div>
-      <p class="library-subtitle">{copy.subtitle(historyItems.length, totalLearned)}</p>
+      <p class="library-subtitle">{isAuthenticated ? copy.subtitle(historyItems.length, totalLearned) : copy.previewSubtitle}</p>
     </div>
+    {isAuthenticated ? (
+      <>
+        <div class="library-tabs">
+          <button class="library-tab library-tab--active" data-tab="saved">{copy.tabSaved}</button>
+          <button class="library-tab" data-tab="read">{copy.tabRead}</button>
+          <button class="library-tab" data-tab="progress">{copy.tabProgress}</button>
+          <button class="library-tab" data-tab="recommended">{copy.tabRecommended}</button>
+        </div>
 
-    <div class="library-tabs">
-      <button class="library-tab library-tab--active" data-tab="saved">{copy.tabSaved}</button>
-      <button class="library-tab" data-tab="read">{copy.tabRead}</button>
-      <button class="library-tab" data-tab="progress">{copy.tabProgress}</button>
-      <button class="library-tab" data-tab="recommended">{copy.tabRecommended}</button>
-    </div>
+        <!-- Saved Tab (default active) -->
+        <div data-tab-content="saved">
+          {bookmarkItems.length === 0 ? (
+            <p class="library-empty">{copy.emptySaved}</p>
+          ) : (
+            <div>
+              <div class="library-sub-tabs">
+                <button class="library-sub-tab library-sub-tab--active" data-sub-tab="articles">
+                  {copy.subArticles} ({articleBookmarks.length})
+                </button>
+                <button class="library-sub-tab" data-sub-tab="terms">
+                  {copy.subTerms} ({termBookmarks.length})
+                </button>
+              </div>
 
-    <!-- Saved Tab (default active) -->
-    <div data-tab-content="saved">
-      {bookmarkItems.length === 0 ? (
-        <p class="library-empty">{copy.emptySaved}</p>
-      ) : (
-        <div>
-          <div class="library-sub-tabs">
-            <button class="library-sub-tab library-sub-tab--active" data-sub-tab="articles">
-              {copy.subArticles} ({articleBookmarks.length})
-            </button>
-            <button class="library-sub-tab" data-sub-tab="terms">
-              {copy.subTerms} ({termBookmarks.length})
-            </button>
-          </div>
+              <div data-sub-content="articles">
+                {articleBookmarks.length === 0 ? (
+                  <p class="library-empty">{copy.emptyArticles}</p>
+                ) : (
+                  <div class="library-shelf">
+                    {articleBookmarks.map((item) => {
+                      const post = postMap.get(item.item_id);
+                      const title = post?.title || 'Unknown';
+                      const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : '#';
+                      const isLiked = likedPostIds.has(item.item_id);
+                      return (
+                        <div class="library-item">
+                          <div class="library-item-spine" style={`background: ${spineColor(post?.category)};`}></div>
+                          <div class="library-item-content">
+                            <div class="library-item-row">
+                              <a href={href} class="library-item-title">{title}</a>
+                              <div class="library-item-actions">
+                                <button type="button" class={`library-action-btn ${isLiked ? 'library-action-btn--active' : 'library-action-btn--muted'}`} data-toggle-like data-post-id={item.item_id} data-active={isLiked ? 'true' : 'false'} aria-label="Like">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                  </svg>
+                                </button>
+                                <button type="button" class="library-action-btn library-action-btn--active" data-toggle-bookmark data-item-id={item.item_id} data-item-type="news" data-active="true" aria-label="Bookmark">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <div class="library-item-meta">
+                              {post?.category && <span class="library-type-badge">{post.category}</span>}
+                              {post?.reading_time_min && <span>{post.reading_time_min}{copy.readingTime}</span>}
+                              <span>{relativeDate(item.created_at, locale)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-          <!-- Articles sub-tab -->
-          <div data-sub-content="articles">
-            {articleBookmarks.length === 0 ? (
-              <p class="library-empty">{copy.emptyArticles}</p>
-            ) : (
-              <div class="library-shelf">
-                {articleBookmarks.map((item) => {
-                  const post = postMap.get(item.item_id);
-                  const title = post?.title || 'Unknown';
-                  const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : '#';
-                  const isLiked = likedPostIds.has(item.item_id);
-                  return (
-                    <div class="library-item">
-                      <div class="library-item-spine" style={`background: ${spineColor(post?.category)};`}></div>
-                      <div class="library-item-content">
-                        <div class="library-item-row">
+              <div data-sub-content="terms" style="display: none;">
+                {termBookmarks.length === 0 ? (
+                  <p class="library-empty">{copy.emptyTerms}</p>
+                ) : (
+                  <div class="library-shelf">
+                    {termBookmarks.map((item) => {
+                      const term = termMap.get(item.item_id);
+                      const title = term?.term || 'Unknown';
+                      const href = term ? `/${locale}/handbook/${term.slug}/` : '#';
+                      return (
+                        <div class="library-item">
+                          <div class="library-item-spine" style="background: var(--color-text-muted);"></div>
+                          <div class="library-item-content">
+                            <div class="library-item-row">
+                              <div style="min-width: 0; flex: 1;">
+                                <a href={href} class="library-item-title">
+                                  {title}
+                                  {term?.korean_name && locale === 'ko' && (
+                                    <span style="font-size: 0.78rem; color: var(--color-text-muted); font-weight: 400; margin-left: 0.4rem;">{term.korean_name}</span>
+                                  )}
+                                </a>
+                              </div>
+                              <div class="library-item-actions">
+                                <button type="button" class="library-action-btn library-action-btn--active" data-toggle-bookmark data-item-id={item.item_id} data-item-type="term" data-active="true" aria-label="Bookmark">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <div class="library-item-meta">
+                              {term?.category && (
+                                <span>{getHandbookCategoryLabel(locale as 'en' | 'ko', term.category)}</span>
+                              )}
+                              <span>{relativeDate(item.created_at, locale)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div data-tab-content="read" style="display: none;">
+          {historyItems.length === 0 ? (
+            <p class="library-empty">{copy.emptyRead}</p>
+          ) : (
+            <div class="library-shelf">
+              {historyItems.map((item) => {
+                const post = item.item_type === 'news' ? postMap.get(item.item_id) : null;
+                const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
+                const title = post?.title || term?.term || 'Unknown';
+                const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : term ? `/${locale}/handbook/${term.slug}/` : '#';
+                const isLiked = item.item_type === 'news' && likedPostIds.has(item.item_id);
+                const isBm = bookmarkedItemIds.has(`${item.item_type}:${item.item_id}`);
+                const color = item.item_type === 'news' ? spineColor(post?.category) : 'var(--color-text-muted)';
+                return (
+                  <div class="library-item">
+                    <div class="library-item-spine" style={`background: ${color};`}></div>
+                    <div class="library-item-content">
+                      <div class="library-item-row">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
+                          <span class="library-type-badge">{item.item_type === 'news' ? copy.badgeArticle : copy.badgeTerm}</span>
                           <a href={href} class="library-item-title">{title}</a>
-                          <div class="library-item-actions">
+                        </div>
+                        <div class="library-item-actions">
+                          {item.item_type === 'news' && (
                             <button type="button" class={`library-action-btn ${isLiked ? 'library-action-btn--active' : 'library-action-btn--muted'}`} data-toggle-like data-post-id={item.item_id} data-active={isLiked ? 'true' : 'false'} aria-label="Like">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                               </svg>
                             </button>
-                            <button type="button" class="library-action-btn library-action-btn--active" data-toggle-bookmark data-item-id={item.item_id} data-item-type="news" data-active="true" aria-label="Bookmark">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
-                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        <div class="library-item-meta">
-                          {post?.category && <span class="library-type-badge">{post.category}</span>}
-                          {post?.reading_time_min && <span>{post.reading_time_min}{copy.readingTime}</span>}
-                          <span>{relativeDate(item.created_at, locale)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <!-- Terms sub-tab -->
-          <div data-sub-content="terms" style="display: none;">
-            {termBookmarks.length === 0 ? (
-              <p class="library-empty">{copy.emptyTerms}</p>
-            ) : (
-              <div class="library-shelf">
-                {termBookmarks.map((item) => {
-                  const term = termMap.get(item.item_id);
-                  const title = term?.term || 'Unknown';
-                  const href = term ? `/${locale}/handbook/${term.slug}/` : '#';
-                  return (
-                    <div class="library-item">
-                      <div class="library-item-spine" style="background: var(--color-text-muted);"></div>
-                      <div class="library-item-content">
-                        <div class="library-item-row">
-                          <div style="min-width: 0; flex: 1;">
-                            <a href={href} class="library-item-title">
-                              {title}
-                              {term?.korean_name && locale === 'ko' && (
-                                <span style="font-size: 0.78rem; color: var(--color-text-muted); font-weight: 400; margin-left: 0.4rem;">{term.korean_name}</span>
-                              )}
-                            </a>
-                          </div>
-                          <div class="library-item-actions">
-                            <button type="button" class="library-action-btn library-action-btn--active" data-toggle-bookmark data-item-id={item.item_id} data-item-type="term" data-active="true" aria-label="Bookmark">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
-                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        <div class="library-item-meta">
-                          {term?.category && (
-                            <span>{getHandbookCategoryLabel(locale as 'en' | 'ko', term.category)}</span>
                           )}
-                          <span>{relativeDate(item.created_at, locale)}</span>
+                          <button type="button" class={`library-action-btn ${isBm ? 'library-action-btn--active' : 'library-action-btn--muted'}`} data-toggle-bookmark data-item-id={item.item_id} data-item-type={item.item_type} data-active={isBm ? 'true' : 'false'} aria-label="Bookmark">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5">
+                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                            </svg>
+                          </button>
+                          <button type="button" class="library-action-btn library-action-btn--muted library-delete-btn" data-delete-type="history" data-delete-id={item.id} data-item-type={item.item_type} data-item-id={item.item_id} data-removed="false" aria-label="Remove">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
                         </div>
                       </div>
+                      <div class="library-item-meta">
+                        <span>{relativeDate(item.read_at, locale)}</span>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div data-tab-content="recommended" style="display: none;">
+          {recommendedPosts.length === 0 ? (
+            <p class="library-empty">{copy.emptyRecommended}</p>
+          ) : (
+            <div class="library-shelf">
+              {recommendedPosts.map((item) => (
+                <div class="library-item">
+                  <div class="library-item-spine" style={`background: ${spineColor(item.category)};`}></div>
+                  <div class="library-item-content">
+                    <div class="library-item-row">
+                      <a href={`/${locale}/news/${item.slug}/`} class="library-item-title">{item.title}</a>
+                    </div>
+                    <div class="library-item-meta">
+                      {item.category && <span class="library-type-badge">{item.category}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div data-tab-content="progress" style="display: none;">
+          <div class="library-progress-card">
+            <div class="library-progress-header">
+              <span class="library-progress-label">{copy.overallProgress}</span>
+              <span class="library-progress-stat">
+                {totalLearned} {copy.learned} / {totalRead} {copy.visited}
+              </span>
+            </div>
+            <div class="learning-progress-bar">
+              <div class="learning-progress-fill" style={`width: ${totalRead > 0 ? Math.round((totalLearned / totalRead) * 100) : 0}%;`}></div>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
 
-    <!-- Read Tab -->
-    <div data-tab-content="read" style="display: none;">
-      {historyItems.length === 0 ? (
-        <p class="library-empty">{copy.emptyRead}</p>
-      ) : (
-        <div class="library-shelf">
-          {historyItems.map((item) => {
-            const post = item.item_type === 'news' ? postMap.get(item.item_id) : null;
-            const term = item.item_type === 'term' ? termMap.get(item.item_id) : null;
-            const title = post?.title || term?.term || 'Unknown';
-            const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : term ? `/${locale}/handbook/${term.slug}/` : '#';
-            const isLiked = item.item_type === 'news' && likedPostIds.has(item.item_id);
-            const isBm = bookmarkedItemIds.has(`${item.item_type}:${item.item_id}`);
-            const color = item.item_type === 'news' ? spineColor(post?.category) : 'var(--color-text-muted)';
-            return (
-              <div class="library-item">
-                <div class="library-item-spine" style={`background: ${color};`}></div>
-                <div class="library-item-content">
-                  <div class="library-item-row">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
-                      <span class="library-type-badge">{item.item_type === 'news' ? copy.badgeArticle : copy.badgeTerm}</span>
-                      <a href={href} class="library-item-title">{title}</a>
-                    </div>
-                    <div class="library-item-actions">
-                      {item.item_type === 'news' && (
-                        <button type="button" class={`library-action-btn ${isLiked ? 'library-action-btn--active' : 'library-action-btn--muted'}`} data-toggle-like data-post-id={item.item_id} data-active={isLiked ? 'true' : 'false'} aria-label="Like">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                          </svg>
-                        </button>
-                      )}
-                      <button type="button" class={`library-action-btn ${isBm ? 'library-action-btn--active' : 'library-action-btn--muted'}`} data-toggle-bookmark data-item-id={item.item_id} data-item-type={item.item_type} data-active={isBm ? 'true' : 'false'} aria-label="Bookmark">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5">
-                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                        </svg>
-                      </button>
-                      <button type="button" class="library-action-btn library-action-btn--muted library-delete-btn" data-delete-type="history" data-delete-id={item.id} data-item-type={item.item_type} data-item-id={item.item_id} data-removed="false" aria-label="Remove">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                      </button>
-                    </div>
+          {categoryProgress.size === 0 ? (
+            <p class="library-empty">{copy.emptyProgress}</p>
+          ) : (
+            <div>
+              {[...categoryProgress.entries()].map(([cat, stats]) => (
+                <div class="library-progress-row">
+                  <div class="library-progress-row-header">
+                    <span class="library-progress-cat">{getHandbookCategoryLabel(locale as 'en' | 'ko', cat)}</span>
+                    <span class="library-progress-stat">
+                      {stats.learned}/{stats.total} {copy.learned}
+                    </span>
                   </div>
-                  <div class="library-item-meta">
-                    <span>{relativeDate(item.read_at, locale)}</span>
+                  <div class="learning-progress-bar">
+                    <div class="learning-progress-fill" style={`width: ${stats.total > 0 ? Math.round((stats.learned / stats.total) * 100) : 0}%;`}></div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-
-    <!-- Recommended Tab -->
-    <div data-tab-content="recommended" style="display: none;">
-      {recommendedPosts.length === 0 ? (
-        <p class="library-empty">{copy.emptyRecommended}</p>
-      ) : (
-        <div class="library-shelf">
-          {recommendedPosts.map((p) => (
-            <div class="library-item">
-              <div class="library-item-spine" style={`background: ${spineColor(p.category)};`}></div>
-              <div class="library-item-content">
-                <div class="library-item-row">
-                  <a href={`/${locale}/news/${p.slug}/`} class="library-item-title">{p.title}</a>
-                </div>
-                <div class="library-item-meta">
-                  {p.category && <span class="library-type-badge">{p.category}</span>}
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
-      )}
-    </div>
-
-    <!-- Progress Tab -->
-    <div data-tab-content="progress" style="display: none;">
-      <div class="library-progress-card">
-        <div class="library-progress-header">
-          <span class="library-progress-label">{copy.overallProgress}</span>
-          <span class="library-progress-stat">
-            {totalLearned} {copy.learned} / {totalRead} {copy.visited}
-          </span>
-        </div>
-        <div class="learning-progress-bar">
-          <div class="learning-progress-fill" style={`width: ${totalRead > 0 ? Math.round((totalLearned / totalRead) * 100) : 0}%;`}></div>
-        </div>
-      </div>
-
-      {categoryProgress.size === 0 ? (
-        <p class="library-empty">{copy.emptyProgress}</p>
-      ) : (
-        <div>
-          {[...categoryProgress.entries()].map(([cat, stats]) => (
-            <div class="library-progress-row">
-              <div class="library-progress-row-header">
-                <span class="library-progress-cat">{getHandbookCategoryLabel(locale as 'en' | 'ko', cat)}</span>
-                <span class="library-progress-stat">
-                  {stats.learned}/{stats.total} {copy.learned}
-                </span>
+      </>
+    ) : (
+      <>
+        <div class="library-preview-grid">
+          <section class="library-preview-card library-preview-card--saved">
+            <div class="library-preview-card-spine" aria-hidden="true"></div>
+            <div class="library-preview-card-content">
+              <div class="library-preview-card-header">
+                <p class="library-preview-kicker">{copy.previewCards.saved.kicker}</p>
+                <span class="library-preview-index">01</span>
               </div>
-              <div class="learning-progress-bar">
-                <div class="learning-progress-fill" style={`width: ${stats.total > 0 ? Math.round((stats.learned / stats.total) * 100) : 0}%;`}></div>
-              </div>
+              <h2 class="library-preview-title">{copy.previewCards.saved.title}</h2>
+              <ul class="library-preview-list">
+                {copy.previewCards.saved.items.map((item) => <li>{item}</li>)}
+              </ul>
             </div>
-          ))}
+          </section>
+          <section class="library-preview-card library-preview-card--history">
+            <div class="library-preview-card-spine" aria-hidden="true"></div>
+            <div class="library-preview-card-content">
+              <div class="library-preview-card-header">
+                <p class="library-preview-kicker">{copy.previewCards.history.kicker}</p>
+                <span class="library-preview-index">02</span>
+              </div>
+              <h2 class="library-preview-title">{copy.previewCards.history.title}</h2>
+              <ul class="library-preview-list">
+                {copy.previewCards.history.items.map((item) => <li>{item}</li>)}
+              </ul>
+            </div>
+          </section>
+          <section class="library-preview-card library-preview-card--progress">
+            <div class="library-preview-card-spine" aria-hidden="true"></div>
+            <div class="library-preview-card-content">
+              <div class="library-preview-card-header">
+                <p class="library-preview-kicker">{copy.previewCards.progress.kicker}</p>
+                <span class="library-preview-index">03</span>
+              </div>
+              <h2 class="library-preview-title">{copy.previewCards.progress.title}</h2>
+              <ul class="library-preview-list">
+                {copy.previewCards.progress.items.map((item) => <li>{item}</li>)}
+              </ul>
+            </div>
+          </section>
         </div>
-      )}
-    </div>
+
+        <div class="library-preview-actions">
+          <button
+            type="button"
+            class="newsprint-comment-submit"
+            data-auth-gate
+            data-auth-action="library"
+            data-auth-redirect="/library/"
+          >
+            {copy.previewCta}
+          </button>
+          <p class="library-preview-note">{copy.previewNote}</p>
+        </div>
+      </>
+    )}
   </div>
 </MainLayout>
 
 <script>
+  import { openAuthPrompt } from '../../scripts/auth-prompt';
+
   function initLibrary(): void {
     // Tab switching
     const tabs = document.querySelectorAll<HTMLButtonElement>('.library-tab');
@@ -489,7 +577,7 @@ if (fastapiUrl && user?.id) {
             body: JSON.stringify({ post_id: postId }),
           });
           if (res.status === 401) {
-            window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+            openAuthPrompt({ action: 'like', redirectTo: `${window.location.pathname}${window.location.search}${window.location.hash}` });
             return;
           }
           if (!res.ok) return;
@@ -514,7 +602,7 @@ if (fastapiUrl && user?.id) {
             body: JSON.stringify({ item_id: itemId, item_type: itemType }),
           });
           if (res.status === 401) {
-            window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+            openAuthPrompt({ action: 'bookmark', redirectTo: `${window.location.pathname}${window.location.search}${window.location.hash}` });
             return;
           }
           if (!res.ok) return;

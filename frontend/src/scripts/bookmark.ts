@@ -1,3 +1,9 @@
+import { isAuthenticatedUser, openAuthPrompt } from './auth-prompt';
+
+function resolveRedirect(button: HTMLButtonElement): string {
+  return button.dataset.authRedirect || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
 function initBookmarks(): void {
   const buttons = document.querySelectorAll<HTMLButtonElement>('.newsprint-bookmark-icon');
 
@@ -14,6 +20,11 @@ function initBookmarks(): void {
       const itemType = btn.dataset.itemType;
       if (!itemId || !itemType) return;
 
+      if (!isAuthenticatedUser()) {
+        openAuthPrompt({ action: 'bookmark', redirectTo: resolveRedirect(btn) });
+        return;
+      }
+
       try {
         const res = await fetch('/api/user/bookmarks', {
           method: 'POST',
@@ -22,7 +33,7 @@ function initBookmarks(): void {
         });
 
         if (res.status === 401) {
-          window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+          openAuthPrompt({ action: 'bookmark', redirectTo: resolveRedirect(btn) });
           return;
         }
 

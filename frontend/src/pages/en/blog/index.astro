@@ -140,18 +140,6 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
   import '../../../scripts/bookmark';
 
   // Mobile sidebar toggle
-  function initBlogMobileToggle() {
-    const toggleBtn = document.querySelector('[data-sidebar-toggle]');
-    const sidebar = document.querySelector('.blog-sidebar');
-    const overlay = document.querySelector('[data-sidebar-overlay]');
-    if (!toggleBtn || !sidebar) return;
-
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.add('blog-sidebar--open');
-      overlay?.classList.add('blog-sidebar-overlay--open');
-    });
-  }
-
   // Infinite scroll — reveal next hidden batch when sentinel enters viewport
   function initInfiniteScroll() {
     const sentinel = document.querySelector('[data-blog-sentinel]');
@@ -182,9 +170,7 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    initBlogMobileToggle();
     initInfiniteScroll();
   });
-  initBlogMobileToggle();
   initInfiniteScroll();
 </script>

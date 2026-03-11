@@ -1,0 +1,123 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+}
+
+const { locale } = Astro.props;
+
+const copy =
+  locale === 'ko'
+    ? {
+        close: '닫기',
+        badge: '0to1log 계정',
+        signIn: '로그인하고 계속하기',
+        terms: '로그인하면 저장한 글, 읽은 기록, 학습 현황이 기기 간에 이어집니다.',
+        github: 'GitHub로 계속',
+        google: 'Google로 계속',
+        signingIn: '로그인 중...',
+        fallback: {
+          title: '로그인하면 이어서 사용할 수 있어요',
+          body: '지금 보던 흐름을 유지한 채, 필요한 기능만 자연스럽게 이어서 쓸 수 있게 연결합니다.',
+        },
+        actions: {
+          library: {
+            title: '읽던 글, 저장한 글, 학습 현황이 한곳에 쌓여요',
+            body: '서재에서는 저장한 글과 읽은 기록, 학습 현황을 한 번에 이어서 볼 수 있습니다.',
+          },
+          bookmark: {
+            title: '이 글을 서재에 담아두고 나중에 다시 볼 수 있어요',
+            body: '관심 가는 글을 저장해두면 내 서재에 차곡차곡 쌓이고, 다시 찾기도 쉬워집니다.',
+          },
+          like: {
+            title: '관심 있는 글에 반응을 남기고 다시 찾기 쉬워져요',
+            body: '좋아요를 남기면 내 활동 맥락이 쌓여서 이후 탐색과 정리에 도움이 됩니다.',
+          },
+          feedback: {
+            title: '짧은 반응도 학습 기록처럼 남길 수 있어요',
+            body: '도움 됨, 헷갈림 같은 반응을 남겨두면 더 나은 설명 흐름을 만들 수 있습니다.',
+          },
+          comment: {
+            title: '로그인하고 댓글에 참여해보세요',
+            body: '읽으면서 든 생각이나 정정 포인트를 남기고, 다시 돌아와 대화를 이어갈 수 있습니다.',
+          },
+        },
+      }
+    : {
+        close: 'Close',
+        badge: '0to1log Account',
+        signIn: 'Sign in to continue',
+        terms: 'Signing in keeps your saved posts, reading history, and learning progress connected across visits.',
+        github: 'Continue with GitHub',
+        google: 'Continue with Google',
+        signingIn: 'Signing in...',
+        fallback: {
+          title: 'Sign in to keep going',
+          body: 'Stay in the flow and unlock the next step without losing your place.',
+        },
+        actions: {
+          library: {
+            title: 'Your saved posts, reading history, and progress belong in one place',
+            body: 'My Library keeps what you saved, what you read, and what you learned together in one reading room.',
+          },
+          bookmark: {
+            title: 'Save this post to your library for later',
+            body: 'Keep articles you want to revisit and build a shelf that is waiting for you when you come back.',
+          },
+          like: {
+            title: 'Leave a signal on posts you care about',
+            body: 'A quick reaction helps you keep track of what stood out and makes revisiting easier later on.',
+          },
+          feedback: {
+            title: 'Even quick feedback is worth saving',
+            body: 'Helpful or confusing reactions can become part of the reading trail you build over time.',
+          },
+          comment: {
+            title: 'Sign in to join the conversation',
+            body: 'Share your take, leave a correction, and come back to the discussion without losing your place.',
+          },
+        },
+      };
+---
+
+<div class="auth-prompt" data-auth-prompt data-open="false" aria-hidden="true" hidden>
+  <button
+    type="button"
+    class="auth-prompt-overlay"
+    data-auth-prompt-close
+    aria-label={copy.close}
+  ></button>
+
+  <section class="auth-prompt-sheet" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title" aria-describedby="auth-prompt-body">
+    <button type="button" class="auth-prompt-close" data-auth-prompt-close aria-label={copy.close}>
+      &times;
+    </button>
+
+    <span class="auth-prompt-badge">{copy.badge}</span>
+    <h2 id="auth-prompt-title" class="auth-prompt-title" data-auth-prompt-title>{copy.fallback.title}</h2>
+    <p id="auth-prompt-body" class="auth-prompt-body" data-auth-prompt-body>{copy.fallback.body}</p>
+
+    <div class="auth-prompt-actions" data-oauth-root data-signing-in={copy.signingIn}>
+      <p class="auth-prompt-signin-label">{copy.signIn}</p>
+      <div class="auth-prompt-buttons">
+        <button type="button" class="login-oauth-btn" data-provider="github" data-signing-in={copy.signingIn}>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          {copy.github}
+        </button>
+        <button type="button" class="login-oauth-btn" data-provider="google" data-signing-in={copy.signingIn}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          {copy.google}
+        </button>
+      </div>
+      <p class="auth-prompt-terms">{copy.terms}</p>
+    </div>
+  </section>
+</div>
+
+<script type="application/json" id="auth-prompt-copy" set:html={JSON.stringify({
+  fallback: copy.fallback,
+  actions: copy.actions,
+})} />
+
+<script>
+  import '../../scripts/auth-prompt';
+</script>

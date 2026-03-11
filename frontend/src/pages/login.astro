@@ -3,53 +3,58 @@ import MainLayout from '../layouts/MainLayout.astro';
 
 export const prerender = false;
 
-// If already authenticated, redirect away
 if (Astro.locals.user) {
   const raw = Astro.url.searchParams.get('redirectTo');
-  const redirectTo = (!raw || !raw.startsWith('/') || raw.startsWith('//')) ? '/' : raw;
+  const redirectTo = !raw || !raw.startsWith('/') || raw.startsWith('//') ? '/' : raw;
   return Astro.redirect(redirectTo);
 }
 
 const langParam = Astro.url.searchParams.get('lang');
 const cookieLocale = Astro.cookies.get('site-locale')?.value;
 const acceptLang = Astro.request.headers.get('accept-language') || '';
-const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
-const locale = (langParam === 'ko' || langParam === 'en') ? langParam
-  : (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale
-  : browserLocale;
+const browserLocale = acceptLang.split(',').some((l) => l.trim().startsWith('ko')) ? 'ko' : 'en';
+const locale =
+  langParam === 'ko' || langParam === 'en'
+    ? langParam
+    : cookieLocale === 'ko' || cookieLocale === 'en'
+      ? cookieLocale
+      : browserLocale;
 
 const errorParam = Astro.url.searchParams.get('error');
 
-const copy = locale === 'ko'
-  ? {
-      title: '로그인',
-      subtitle: '기사 북마크, 읽기 기록, 학습 현황을 관리하세요.',
-      github: 'GitHub으로 계속',
-      google: 'Google로 계속',
-      kakao: '카카오로 계속',
-      terms: '로그인하면 이용약관에 동의하게 됩니다.',
-      signingIn: '로그인 중…',
-      errorNoCode: '인증 실패: 인증 코드를 받지 못했습니다.',
-      errorExchange: '인증 실패: 자격 증명을 확인할 수 없습니다.',
-      errorConfig: '인증이 구성되지 않았습니다.',
-      errorGeneric: '인증 오류가 발생했습니다.',
-    }
-  : {
-      title: 'Sign In',
-      subtitle: 'Sign in to bookmark articles, track your reading, and monitor your learning progress.',
-      github: 'Continue with GitHub',
-      google: 'Continue with Google',
-      kakao: 'Continue with Kakao',
-      terms: 'By signing in, you agree to our terms of service.',
-      signingIn: 'Signing in…',
-      errorNoCode: 'Authentication failed: no authorization code received.',
-      errorExchange: 'Authentication failed: could not verify credentials.',
-      errorConfig: 'Authentication is not configured.',
-      errorGeneric: 'An authentication error occurred.',
-    };
+const copy =
+  locale === 'ko'
+    ? {
+        title: '로그인',
+        subtitle: '기사 북마크, 읽기 기록, 학습 현황을 한곳에서 이어서 관리해보세요.',
+        github: 'GitHub로 계속',
+        google: 'Google로 계속',
+        kakao: 'Kakao로 계속',
+        terms: '로그인하면 이용약관과 개인정보 처리방침에 동의한 것으로 간주됩니다.',
+        signingIn: '로그인 중...',
+        comingSoon: '이 로그인 옵션은 곧 열릴 예정입니다.',
+        errorNoCode: '인증에 실패했습니다. 인증 코드를 받지 못했습니다.',
+        errorExchange: '인증에 실패했습니다. 로그인 정보를 확인하지 못했습니다.',
+        errorConfig: '인증 설정이 아직 완료되지 않았습니다.',
+        errorGeneric: '로그인 중 오류가 발생했습니다.',
+      }
+    : {
+        title: 'Sign In',
+        subtitle: 'Sign in to bookmark articles, track your reading, and monitor your learning progress.',
+        github: 'Continue with GitHub',
+        google: 'Continue with Google',
+        kakao: 'Continue with Kakao',
+        terms: 'By signing in, you agree to our terms of service and privacy policy.',
+        signingIn: 'Signing in...',
+        comingSoon: 'This sign-in option is coming soon.',
+        errorNoCode: 'Authentication failed: no authorization code received.',
+        errorExchange: 'Authentication failed: could not verify credentials.',
+        errorConfig: 'Authentication is not configured.',
+        errorGeneric: 'An authentication error occurred.',
+      };
 ---
 
-<MainLayout title={`${copy.title} — 0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
+<MainLayout title={`${copy.title} | 0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="newsprint-page" style="max-width: 420px; margin: 2rem auto; padding-top: 2rem;">
     <h1 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem;">
       {copy.title}
@@ -69,17 +74,27 @@ const copy = locale === 'ko'
       </div>
     )}
 
-    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+    <div
+      style="display: flex; flex-direction: column; gap: 0.75rem;"
+      data-oauth-root
+      data-signing-in={copy.signingIn}
+      data-coming-soon-message={copy.comingSoon}
+    >
       <button class="login-oauth-btn" data-provider="github" data-signing-in={copy.signingIn}>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
         {copy.github}
       </button>
       <button class="login-oauth-btn" data-provider="google" data-signing-in={copy.signingIn}>
-        <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         {copy.google}
       </button>
-      <button class="login-oauth-btn" data-provider="kakao" data-signing-in={copy.signingIn}>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.58 2 10.9c0 2.78 1.86 5.22 4.66 6.62-.15.53-.96 3.41-1 3.58 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.57.08 1.15.12 1.73.12 5.52 0 10-3.58 10-7.9C22 6.58 17.52 3 12 3z"/></svg>
+      <button
+        class="login-oauth-btn"
+        data-provider="kakao"
+        data-signing-in={copy.signingIn}
+        data-coming-soon-message={copy.comingSoon}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.48 3 2 6.58 2 10.9c0 2.78 1.86 5.22 4.66 6.62-.15.53-.96 3.41-1 3.58 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.57.08 1.15.12 1.73.12 5.52 0 10-3.58 10-7.9C22 6.58 17.52 3 12 3z"/></svg>
         {copy.kakao}
       </button>
     </div>
@@ -91,43 +106,7 @@ const copy = locale === 'ko'
 </MainLayout>
 
 <script>
-  import { createClient } from '@supabase/supabase-js';
+  import { initOAuthButtons } from '../scripts/auth-oauth';
 
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-  const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-
-  const COMING_SOON_PROVIDERS = ['kakao'];
-
-  if (supabaseUrl && supabaseKey) {
-    const buttons = document.querySelectorAll<HTMLButtonElement>('[data-provider]');
-    buttons.forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const provider = btn.getAttribute('data-provider');
-        if (!provider) return;
-
-        if (COMING_SOON_PROVIDERS.includes(provider)) {
-          alert('준비 중입니다. 곧 지원될 예정이에요!');
-          return;
-        }
-
-        // Disable all buttons to prevent double-click
-        buttons.forEach((b) => { b.disabled = true; });
-        btn.textContent = btn.dataset.signingIn || 'Signing in\u2026';
-
-        const params = new URLSearchParams(window.location.search);
-        const redirectTo = params.get('redirectTo') || '/';
-
-        // Store redirectTo in sessionStorage (not in callback URL to avoid whitelist mismatch)
-        sessionStorage.setItem('oauth_redirect', redirectTo);
-
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const callbackUrl = `${window.location.origin}/auth/callback`;
-
-        await supabase.auth.signInWithOAuth({
-          provider,
-          options: { redirectTo: callbackUrl },
-        });
-      });
-    });
-  }
+  initOAuthButtons();
 </script>

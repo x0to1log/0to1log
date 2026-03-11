@@ -3798,6 +3798,107 @@ code, pre {
   width: 1.25rem;
   height: 1.25rem;
 }
+body.auth-prompt-open {
+  overflow: hidden;
+}
+
+.auth-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: end center;
+}
+
+.auth-prompt-overlay {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(17, 24, 39, 0.48);
+  cursor: pointer;
+}
+
+.auth-prompt-sheet {
+  position: relative;
+  width: min(100%, 34rem);
+  margin: 1rem;
+  padding: 1.4rem 1.2rem 1.15rem;
+  background: color-mix(in srgb, var(--color-bg) 94%, white 6%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 18px;
+  box-shadow: 0 22px 60px rgba(17, 24, 39, 0.22);
+}
+
+.auth-prompt-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.auth-prompt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  margin-bottom: 0.8rem;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-radius: 999px;
+}
+
+.auth-prompt-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  line-height: 1.25;
+}
+
+.auth-prompt-body {
+  margin: 0.6rem 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+}
+
+.auth-prompt-actions {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.auth-prompt-signin-label {
+  margin: 0 0 0.8rem;
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.auth-prompt-buttons {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.auth-prompt-terms {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
 
 /* ── Library: Personal Reading Room ── */
 
@@ -3833,6 +3934,107 @@ code, pre {
   font-size: 0.85rem;
   color: var(--color-text-muted);
   margin: 0;
+}
+
+.library-preview-grid {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 2rem;
+}
+
+.library-preview-card {
+  display: flex;
+  gap: 0;
+  background: var(--color-bg-secondary);
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.library-preview-card-spine {
+  display: none;
+}
+
+.library-preview-card-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.library-preview-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.library-preview-kicker {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.library-preview-index {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.library-preview-title {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.library-preview-list {
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  display: grid;
+  gap: 0;
+  line-height: 1.6;
+}
+
+.library-preview-list li {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.55rem 0 0;
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.library-preview-list li::before {
+  content: '•';
+  color: var(--color-accent);
+  line-height: 1.5;
+}
+
+.library-preview-actions {
+  margin-top: 1.15rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.library-preview-actions .newsprint-comment-submit {
+  min-width: 14rem;
+}
+
+.library-preview-note {
+  margin: 0;
+  max-width: 34rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  line-height: 1.6;
 }
 
 /* Tabs — bookmark style */
@@ -4510,11 +4712,21 @@ code, pre {
 }
 .newsprint-comment-login {
   display: block;
+  width: 100%;
+  padding: 0;
   color: inherit;
   text-decoration: none;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
 }
 .newsprint-comment-login:hover {
   background: none;
+}
+.newsprint-comment-login:focus-visible .newsprint-comment-login-box {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 .newsprint-comment-login-box {
   padding: 0.6rem 0.75rem;
@@ -4535,6 +4747,9 @@ code, pre {
   line-height: 1.5;
   color: var(--color-text-muted);
   white-space: pre-wrap;
+}
+.newsprint-comment-login-box .newsprint-comment-form-actions {
+  pointer-events: none;
 }
 .newsprint-comment-login-hint {
   display: block;
@@ -4565,6 +4780,13 @@ code, pre {
 .blog-shell .newsprint-comment-submit,
 .blog-shell .newsprint-comment-login-hint {
   font-family: var(--font-blog-ui);
+}
+
+@media (max-width: 900px) {
+  .auth-prompt-sheet {
+    width: min(100%, calc(100% - 1rem));
+    margin: 0.5rem;
+  }
 }
 
 .handbook-feedback {
@@ -5422,7 +5644,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   .blog-sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 0.75rem;
     border-bottom: 1px solid var(--color-border);
   }
@@ -5432,20 +5654,6 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
     font-size: 1.1rem;
   }
 
-  .blog-sidebar-close {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    padding: 0.25rem 0.4rem;
-    border-radius: 0.25rem;
-    transition: color 150ms ease;
-  }
-
-  .blog-sidebar-close:hover {
-    color: var(--color-text-primary);
-  }
 }
 
 /* ── Main Content ── */

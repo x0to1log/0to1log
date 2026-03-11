@@ -34,7 +34,6 @@ const currentCategory = currentSlug
   : undefined;
 
 const sidebarBrand = locale === 'ko' ? '글쓰기' : 'Writing';
-const closeLabel = locale === 'ko' ? '사이드바 닫기' : 'Close sidebar';
 const comingSoonLabel = locale === 'ko' ? '글 준비 중' : 'Coming soon';
 const moreLabel = locale === 'ko' ? '개 더 보기' : ' more';
 const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
@@ -43,9 +42,6 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
 <aside class="blog-sidebar" data-blog-sidebar>
   <div class="blog-sidebar-header">
     <span class="blog-sidebar-brand">{sidebarBrand}</span>
-    <button class="blog-sidebar-close" data-sidebar-close aria-label={closeLabel} type="button">
-      &times;
-    </button>
   </div>
 
   <div class="blog-sidebar-search">
@@ -60,7 +56,8 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
       const groupCount = group.categories.reduce((total, category) => {
         return total + (postsByCategory[category]?.length ?? 0);
       }, 0);
-      const groupExpanded = group.categories.some((category) => category === currentCategory) || groupCount > 0;
+      const groupExpanded =
+        group.categories.some((category) => category === currentCategory) || groupCount > 0;
 
       return (
         <div class="blog-folder blog-folder--group">
@@ -101,9 +98,7 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
                   </button>
 
                   <div class="blog-folder-children" {...(!categoryExpanded && { hidden: true })}>
-                    {categoryPosts.length === 0 && (
-                      <span class="blog-folder-empty">{comingSoonLabel}</span>
-                    )}
+                    {categoryPosts.length === 0 && <span class="blog-folder-empty">{comingSoonLabel}</span>}
 
                     {visiblePosts.map((post) => (
                       <a
@@ -156,8 +151,39 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
 </aside>
 
 <script>
-  function initBlogSidebar() {
-    document.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
+  function initBlogSidebar(): void {
+    const sidebar = document.querySelector<HTMLElement>('[data-blog-sidebar]');
+    const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
+    if (!sidebar || sidebar.dataset.blogSidebarInit === '1') return;
+    sidebar.dataset.blogSidebarInit = '1';
+
+    const mobileToggles = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('[data-sidebar-toggle]'),
+    );
+    const mobileBreakpoint = window.matchMedia('(max-width: 1023px)');
+
+    function closeSidebar(): void {
+      sidebar.classList.remove('blog-sidebar--open');
+      overlay?.classList.remove('blog-sidebar-overlay--open');
+      document.body.style.overflow = '';
+    }
+
+    function openSidebar(): void {
+      sidebar.classList.add('blog-sidebar--open');
+      overlay?.classList.add('blog-sidebar-overlay--open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function toggleSidebar(): void {
+      if (!mobileBreakpoint.matches) return;
+      if (sidebar.classList.contains('blog-sidebar--open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    }
+
+    sidebar.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const expanded = btn.getAttribute('aria-expanded') === 'true';
         btn.setAttribute('aria-expanded', String(!expanded));
@@ -168,7 +194,7 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
       });
     });
 
-    document.querySelectorAll<HTMLButtonElement>('[data-folder-more]').forEach((btn) => {
+    sidebar.querySelectorAll<HTMLButtonElement>('[data-folder-more]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const extra = btn.previousElementSibling as HTMLElement | null;
         if (extra && extra.classList.contains('blog-folder-extra')) {
@@ -178,24 +204,30 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
       });
     });
 
-    function closeSidebar() {
-      document.querySelectorAll('.blog-sidebar').forEach((sidebar) => {
-        sidebar.classList.remove('blog-sidebar--open');
-      });
-      document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
-        overlay.classList.remove('blog-sidebar-overlay--open');
-      });
-    }
-
-    document.querySelectorAll('.blog-sidebar-overlay').forEach((overlay) => {
-      overlay.addEventListener('click', closeSidebar);
+    mobileToggles.forEach((btn) => {
+      if (btn.dataset.mobileMenuInit === '1') return;
+      btn.dataset.mobileMenuInit = '1';
+      btn.addEventListener('click', toggleSidebar);
     });
 
-    document.querySelectorAll<HTMLButtonElement>('[data-sidebar-close]').forEach((btn) => {
-      btn.addEventListener('click', closeSidebar);
+    if (overlay && overlay.dataset.mobileMenuInit !== '1') {
+      overlay.dataset.mobileMenuInit = '1';
+      overlay.addEventListener('click', closeSidebar);
+    }
+
+    sidebar.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
+      link.addEventListener('click', () => {
+        if (mobileBreakpoint.matches) closeSidebar();
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      if (!mobileBreakpoint.matches) {
+        closeSidebar();
+      }
     });
   }
 
-  document.addEventListener('DOMContentLoaded', initBlogSidebar);
+  document.addEventListener('astro:page-load', initBlogSidebar);
   initBlogSidebar();
 </script>

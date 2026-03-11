@@ -281,6 +281,7 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
         itemId={post.id}
         itemType="news"
         isAdmin={!!Astro.locals.isAdmin}
+        isAuthenticated={!!user && !!accessToken}
         likeCount={likeCount}
         commentCount={commentCount}
         isLiked={isLiked}

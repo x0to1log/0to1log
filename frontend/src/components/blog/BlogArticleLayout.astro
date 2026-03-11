@@ -19,6 +19,7 @@ interface Props {
   itemType?: 'news' | 'blog' | 'term';
   basePath?: string;
   isAdmin?: boolean;
+  isAuthenticated?: boolean;
   likeCount?: number;
   commentCount?: number;
   isLiked?: boolean;
@@ -43,6 +44,7 @@ const {
   itemType,
   basePath,
   isAdmin = false,
+  isAuthenticated = false,
   likeCount = 0,
   commentCount = 0,
   isLiked = false,
@@ -70,6 +72,8 @@ const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost
 
 const resolvedBasePath = basePath || `/${locale}/blog`;
 const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}${resolvedBasePath}/${slug}/`;
+const articleRedirect = `${resolvedBasePath}/${slug}/`;
+const commentRedirect = `${resolvedBasePath}/${slug}/#comments`;
 const editHref = `/admin/blog/edit/${slug}`;
 const unpublishApi = '/api/admin/blog/status';
 
@@ -134,6 +138,8 @@ const copy = {
         data-post-id={itemId}
         data-content-type={itemType === 'blog' ? 'blog' : 'news'}
         data-liked={isLiked ? 'true' : 'false'}
+        data-auth-action="like"
+        data-auth-redirect={articleRedirect}
         aria-label={locale === 'ko' ? '좋아요' : 'Like'}
       >
         <svg viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -160,6 +166,8 @@ const copy = {
           data-item-id={itemId}
           data-item-type={itemType}
           data-bookmarked={isBookmarked ? 'true' : 'false'}
+          data-auth-action="bookmark"
+          data-auth-redirect={articleRedirect}
           aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
         >
           <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -211,7 +219,15 @@ const copy = {
   )}
 
   <!-- Comments Section -->
-  <section id="comments" class="newsprint-comments" data-post-id={itemId} data-content-type={itemType === 'blog' ? 'blog' : 'news'} data-locale={locale} data-login-url={`/login?redirectTo=${resolvedBasePath}/${slug}/`}>
+  <section
+    id="comments"
+    class="newsprint-comments"
+    data-post-id={itemId}
+    data-content-type={itemType === 'blog' ? 'blog' : 'news'}
+    data-locale={locale}
+    data-authenticated={isAuthenticated ? 'true' : 'false'}
+    data-comment-redirect={commentRedirect}
+  >
     <h3 class="newsprint-comments-title">{copy.comments} (<span data-comment-total>{commentCount}</span>)</h3>
     <div data-comments-list class="newsprint-comments-list"></div>
     <div data-comment-form-wrapper>
@@ -228,7 +244,15 @@ const copy = {
           <button type="submit" class="newsprint-comment-submit">{copy.postComment}</button>
         </div>
       </form>
-      <a data-comment-login href={`/login?redirectTo=${resolvedBasePath}/${slug}/`} class="newsprint-comment-login" style="display:none;">
+      <button
+        type="button"
+        data-comment-login
+        class="newsprint-comment-login"
+        data-auth-gate
+        data-auth-action="comment"
+        data-auth-redirect={commentRedirect}
+        style="display:none;"
+      >
         <div class="newsprint-comment-login-box">
           <div class="newsprint-comment-login-input" aria-hidden="true">{copy.writeComment}</div>
           <div class="newsprint-comment-form-actions">
@@ -237,7 +261,7 @@ const copy = {
           </div>
           <span class="newsprint-comment-login-hint">{copy.loginToComment}</span>
         </div>
-      </a>
+      </button>
     </div>
   </section>
 

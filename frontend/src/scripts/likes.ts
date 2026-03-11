@@ -1,3 +1,9 @@
+import { isAuthenticatedUser, openAuthPrompt } from './auth-prompt';
+
+function resolveRedirect(button: HTMLButtonElement): string {
+  return button.dataset.authRedirect || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
 function initLikes(): void {
   const btn = document.querySelector<HTMLButtonElement>('[data-like-btn]');
   if (!btn || btn.dataset.likeInit === 'true') return;
@@ -7,6 +13,11 @@ function initLikes(): void {
     const postId = btn.dataset.postId;
     if (!postId) return;
 
+    if (!isAuthenticatedUser()) {
+      openAuthPrompt({ action: 'like', redirectTo: resolveRedirect(btn) });
+      return;
+    }
+
     try {
       const res = await fetch('/api/user/likes', {
         method: 'POST',
@@ -15,7 +26,7 @@ function initLikes(): void {
       });
 
       if (res.status === 401) {
-        window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
+        openAuthPrompt({ action: 'like', redirectTo: resolveRedirect(btn) });
         return;
       }
 

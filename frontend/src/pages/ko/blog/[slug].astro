@@ -214,6 +214,7 @@ const sidebarPosts = recentPosts.map(p => ({ title: p.title, slug: p.slug, categ
         itemId={post.id}
         itemType="blog"
         isAdmin={!!Astro.locals.isAdmin}
+        isAuthenticated={!!user && !!accessToken}
         likeCount={likeCount}
         commentCount={commentCount}
         isLiked={isLiked}
@@ -278,17 +279,6 @@ const sidebarPosts = recentPosts.map(p => ({ title: p.title, slug: p.slug, categ
     });
   }
 
-  function initMobileSidebarToggle(): void {
-    const toggleBtn = document.querySelector('[data-sidebar-toggle]');
-    const sidebar = document.querySelector('[data-blog-sidebar]');
-    if (!toggleBtn || !sidebar) return;
-
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('blog-sidebar--open');
-    });
-  }
-
   document.addEventListener('astro:page-load', recordReadingHistory);
   document.addEventListener('astro:page-load', initAdminActions);
-  document.addEventListener('astro:page-load', initMobileSidebarToggle);
 </script>

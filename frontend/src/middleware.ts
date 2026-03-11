@@ -218,8 +218,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return nextWithCsp(next, nonce);
   }
 
-  // --- Zone 2: User-protected (/api/user/*, /library, /settings) ---
-  if (pathname.startsWith('/api/user/') || pathname.startsWith('/library') || pathname.startsWith('/settings')) {
+  // --- Zone 2: User-protected (/api/user/*, /settings) ---
+  if (pathname.startsWith('/api/user/') || pathname.startsWith('/settings')) {
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
     if (!result) {
       if (pathname.startsWith('/api/')) {

@@ -1,3 +1,9 @@
+import { openAuthPrompt } from './auth-prompt';
+
+function resolveRedirect(root: HTMLElement): string {
+  return root.dataset.authRedirect || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
 function initHandbookFeedback(): void {
   const root = document.querySelector<HTMLElement>('[data-handbook-feedback]');
   if (!root || root.dataset.feedbackInit === 'true') return;
@@ -5,7 +11,6 @@ function initHandbookFeedback(): void {
 
   const termId = root.dataset.termId;
   const locale = root.dataset.locale;
-  const loginUrl = root.dataset.loginUrl || '/login';
   const isAuthenticated = root.dataset.authenticated === 'true';
   const helpfulMessage = root.dataset.thanksHelpful || 'Thanks for the feedback.';
   const confusingMessage = root.dataset.thanksConfusing || 'Thanks for the feedback.';
@@ -48,7 +53,7 @@ function initHandbookFeedback(): void {
       if (!reaction) return;
 
       if (!isAuthenticated) {
-        window.location.href = loginUrl;
+        openAuthPrompt({ action: 'feedback', redirectTo: resolveRedirect(root) });
         return;
       }
 
@@ -65,6 +70,11 @@ function initHandbookFeedback(): void {
             reaction,
           }),
         });
+
+        if (response.status === 401) {
+          openAuthPrompt({ action: 'feedback', redirectTo: resolveRedirect(root) });
+          return;
+        }
 
         if (!response.ok) {
           setStatus(errorMessage);
