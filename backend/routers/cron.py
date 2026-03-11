@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
 from models.posts import PipelineAcceptedResponse, ErrorResponse
+from services.embedding import embed_backfill
 from services.pipeline import run_daily_pipeline
 
 logger = logging.getLogger(__name__)
@@ -90,3 +91,24 @@ async def backfill_pipeline(
         accepted=True,
         message=f"Backfill queued for {days} days: {start_date} to {end_date}",
     )
+
+
+@router.post(
+    "/cron/embed-backfill",
+    status_code=202,
+    response_model=PipelineAcceptedResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid cron secret"},
+    },
+)
+@limiter.limit("2/minute")
+async def run_embed_backfill(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    locale: Optional[str] = Query(None, description="Filter by locale (en/ko). Defaults to all."),
+    _: None = Depends(verify_cron_secret),
+):
+    """Backfill Pinecone embeddings for all published posts."""
+    background_tasks.add_task(embed_backfill, locale)
+    msg = "Embed backfill queued" + (f" for locale={locale}" if locale else " for all locales")
+    return PipelineAcceptedResponse(accepted=True, message=msg)

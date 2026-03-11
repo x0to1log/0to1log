@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from core.database import get_supabase
 from core.rate_limit import limiter
@@ -13,6 +13,7 @@ from models.posts import (
     PostUpdateRequest,
     ErrorResponse,
 )
+from services.embedding import embed_post
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ async def get_draft(request: Request, slug: str, _user=Depends(require_admin)):
     },
 )
 @limiter.limit("10/minute")
-async def publish_post(request: Request, post_id: str, _user=Depends(require_admin)):
+async def publish_post(request: Request, post_id: str, background_tasks: BackgroundTasks, _user=Depends(require_admin)):
     """Change post status from draft to published."""
     client = get_supabase()
     if not client:
@@ -108,6 +109,17 @@ async def publish_post(request: Request, post_id: str, _user=Depends(require_adm
         raise HTTPException(status_code=404, detail="Post not found or not a draft")
 
     row = result.data[0]
+    background_tasks.add_task(
+        embed_post,
+        post_id=str(row["id"]),
+        title=row.get("title", ""),
+        excerpt=row.get("excerpt", "") or "",
+        category=row.get("category", "") or "",
+        tags=row.get("tags", []) or [],
+        locale=row.get("locale", "en"),
+        slug=row.get("slug", ""),
+        published_at=row.get("published_at", "") or "",
+    )
     return PostPublishResponse(
         id=row["id"],
         slug=row["slug"],
