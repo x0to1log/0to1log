@@ -71,6 +71,14 @@ const {
 const isKo = locale === 'ko';
 const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || guideItems.quiz_poll?.question);
 
+// Resolve quiz answer: backend may store "A"/"B"/"C" index instead of the option text
+const resolvedQuizAnswer = (() => {
+  const qp = guideItems?.quiz_poll;
+  if (!qp) return '';
+  const idx = 'ABCD'.indexOf(qp.answer);
+  return idx >= 0 && idx < qp.options.length ? qp.options[idx] : qp.answer;
+})();
+
 const personaLabels: Record<string, Record<string, string>> = {
   en: { beginner: 'Beginner', learner: 'Learner', expert: 'Expert' },
   ko: { beginner: '입문자', learner: '학습자', expert: '현직자' },
@@ -178,7 +186,7 @@ const copy = {
       )}
 
       {guideItems!.quiz_poll?.question && (
-        <div class="newsprint-guide-block newsprint-guide-quiz" data-quiz-answer={guideItems!.quiz_poll.answer}>
+        <div class="newsprint-guide-block newsprint-guide-quiz" data-quiz-answer={resolvedQuizAnswer}>
           <span class="newsprint-guide-label">{isKo ? '오늘의 퀴즈' : "Today's Quiz"}</span>
           <p class="newsprint-quiz-question">{guideItems!.quiz_poll.question}</p>
           <div class="newsprint-quiz-options">
