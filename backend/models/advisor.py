@@ -148,17 +148,12 @@ class HandbookAdviseRequest(BaseModel):
     term: str
     korean_name: str = ""
     categories: list[str] = []
-    difficulty: str = ""
     definition_ko: str = ""
     definition_en: str = ""
-    plain_explanation_ko: str = ""
-    plain_explanation_en: str = ""
-    technical_description_ko: str = ""
-    technical_description_en: str = ""
-    example_analogy_ko: str = ""
-    example_analogy_en: str = ""
-    body_markdown_ko: str = ""
-    body_markdown_en: str = ""
+    body_basic_ko: str = ""
+    body_basic_en: str = ""
+    body_advanced_ko: str = ""
+    body_advanced_en: str = ""
     force_direction: str = ""  # "ko2en", "en2ko", or "" (auto)
 
 
@@ -183,28 +178,21 @@ class RelatedTermsResult(BaseModel):
 
 class TranslateResult(BaseModel):
     definition: str = ""
-    plain_explanation: str = ""
-    technical_description: str = ""
-    example_analogy: str = ""
-    body_markdown: str = ""
+    body_basic: str = ""
+    body_advanced: str = ""
     source_lang: str
     target_lang: str
 
 
 class GenerateTermResult(BaseModel):
     korean_name: str = ""
-    difficulty: str = ""
     categories: list[str] = []
     definition_ko: str = ""
     definition_en: str = ""
-    plain_explanation_ko: str = ""
-    plain_explanation_en: str = ""
-    technical_description_ko: str = ""
-    technical_description_en: str = ""
-    example_analogy_ko: str = ""
-    example_analogy_en: str = ""
-    body_markdown_ko: str = ""
-    body_markdown_en: str = ""
+    body_basic_ko: str = ""
+    body_basic_en: str = ""
+    body_advanced_ko: str = ""
+    body_advanced_en: str = ""
 
 
 # --- Pipeline Auto-Extract Terms ---
@@ -212,7 +200,6 @@ class GenerateTermResult(BaseModel):
 class ExtractedTerm(BaseModel):
     term: str
     korean_name: str = ""
-    difficulty: str = ""
     reason: str = ""
 
 

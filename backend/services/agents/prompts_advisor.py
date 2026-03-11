@@ -529,16 +529,16 @@ You are a technical documentation translator for 0to1log, specializing in AI/tec
 - Preserve markdown formatting (headings, links, code blocks, bold, italics)
 - Maintain the same tone and level of detail as the source
 - Do NOT add, remove, or modify content — only translate
+- body_basic is written for beginners (analogies, everyday language) — preserve that tone
+- body_advanced is written for engineers (precise technical language) — preserve that tone
 
 ## Output JSON Structure
 
 ```json
 {
   "definition": "translated definition",
-  "plain_explanation": "translated plain explanation",
-  "technical_description": "translated technical description",
-  "example_analogy": "translated example/analogy",
-  "body_markdown": "translated body markdown",
+  "body_basic": "translated basic-level body",
+  "body_advanced": "translated advanced-level body",
   "source_lang": "ko",
   "target_lang": "en"
 }
@@ -556,85 +556,105 @@ You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
 Given a term name (and any partially filled fields), generate ALL empty fields to create a complete, publication-quality handbook entry. Write content in BOTH Korean and English simultaneously.
 
+Each term has TWO content versions at different difficulty levels:
+- **body_basic**: For beginners and non-engineers (기초)
+- **body_advanced**: For engineers and technical practitioners (심화)
+
 ## Handbook Categories (choose 1-3, priority order)
 ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3
-
-## Difficulty Levels
-beginner, intermediate, advanced
 
 ## Field Guidelines
 
 ### definition (1-2 sentences, min 80 chars)
-Precise, textbook-style definition. Include the core mechanism or purpose.
+Precise, textbook-style definition. Difficulty-neutral — shared across both levels.
 
-### plain_explanation (4-6 sentences, min 200 chars)
-Explain like teaching a curious non-engineer. MUST include at least one everyday analogy. Avoid jargon or define it inline immediately. End with why this matters to the reader.
+### body_basic (기초 — structured long-form, min 2000 chars per language)
+Written for curious beginners, career-switchers, and non-engineers.
 
-### technical_description (4-6 sentences, min 300 chars)
-For engineers who want the precise technical details. Include: architecture, key components, algorithms, or protocols. Mention specific tools or frameworks where relevant.
+Tone & style:
+- Use everyday analogies and metaphors to explain concepts
+- Avoid jargon, or define it inline immediately when unavoidable
+- Focus on "what it does and why it matters" over "how it works internally"
+- Friendly, approachable tone — like explaining to a smart friend
 
-### example_analogy (3-4 distinct examples, min 200 chars)
-Vivid real-world analogies AND concrete usage examples. Mix metaphors with actual industry use cases. Each on a new line.
-
-### body_markdown (structured long-form, min 2500 chars per language)
-Follow this EXACT section structure with subsections. Each subsection MUST have real content, not placeholders.
-
+Section structure:
 ```
-## 💡 개념 이해 / Understanding the Concept
+## 💡 이 개념은 뭘까? / What Is This?
+Analogy-driven introduction. Start with a relatable comparison.
+Explain what problem this solves in simple terms.
+Min 300 chars.
 
-### 🗨️ 기술적 설명 / Technical Description
-Deep explanation with subsections using **bold headers**.
-Cover: what it is, how it works internally, key components/steps (numbered list), major frameworks/tools.
+## 🍎 쉽게 이해하기 / Easy Explanation
+- 3-4 bullet points with vivid analogies and everyday comparisons
+- Format: **Bold label**: description
+- Mix metaphors with simple real-world examples
+
+## 🔧 어디에 쓰일까? / Where Is It Used?
+3-4 practical examples in plain language.
+"넷플릭스가 추천 영상을 골라주는 데 이 기술이 쓰여요" style.
+Focus on products and services readers already know.
+
+## ⚠️ 알아두면 좋은 점 / Good to Know
+3-4 bullet points on common misconceptions, limitations, or tips.
+Keep it practical and beginner-friendly.
+
+## 💬 이런 표현과 함께 써요 / Common Expressions
+4-6 practical phrases used in meetings or articles.
+**Bold the key term** in each phrase.
+
+## 🔗 함께 알면 좋은 용어 / Related Terms
+3-5 related concepts with one-line plain-language explanations.
+Format: **Term** — why it's related (in simple terms)
+```
+
+### body_advanced (심화 — structured long-form, min 3000 chars per language)
+Written for software engineers, ML practitioners, and technical leaders.
+
+Tone & style:
+- Precise technical language with correct terminology
+- Include architecture details, algorithms, performance characteristics
+- Compare with alternatives and discuss trade-offs
+- Reference papers, official docs, and real implementations
+
+Section structure:
+```
+## 💡 기술적 개요 / Technical Overview
+Precise definition with architectural context.
+Cover: core mechanism, key components, where it fits in the stack.
 Min 400 chars.
 
-### 🗨️ 쉬운 설명 / Plain Explanation
-Analogy-driven explanation for non-engineers.
-Min 150 chars.
+## 🏗️ 작동 원리 / How It Works
+Deep technical explanation:
+- Internal architecture and data flow
+- Key algorithms or protocols (with complexity if relevant)
+- Implementation steps (numbered list)
+- Major frameworks and tools
+Min 500 chars. Include code snippets if applicable.
 
-### 🍎 예시·비유 / Examples & Analogies
-3-4 bullet points mixing metaphors and real-world use cases.
-Format: **Bold label**: description
-
----
-
-## 🔧 실무 활용 / Practical Use
-
-### ✅ 실무 사용 예시 / Practical Examples
-4-5 real-world usage examples in practical speech.
-Use quotes like: "We built X using Y to achieve Z"
+## ✅ 실무 적용 / Practical Application
+4-5 real-world engineering examples.
+Use quotes like: "We use X with Y to achieve Z in our pipeline"
 Group by domain (enterprise, startup, research) when applicable.
 
-### ❓ 왜 중요한가 / Why It Matters
-4-5 bullet points on business/technical impact.
-Connect to: quality, efficiency, reliability, cost, compliance.
+## ❓ 왜 중요한가 / Why It Matters
+4-5 bullet points on technical/business impact.
+Connect to: performance, scalability, reliability, cost, compliance.
 
-### ⚠️ 주의사항 / Precautions & Pitfalls
-4-5 bullet points on common mistakes, performance issues, security risks.
-Be specific with numbers/thresholds where possible.
+## ⚠️ 주의사항과 한계 / Pitfalls & Limitations
+4-5 bullet points on:
+- Common implementation mistakes
+- Performance gotchas (with numbers/thresholds)
+- Security considerations
+- Scaling limitations
 
----
-
-## 📚 학습 자료 / Learning Materials
-
-### 🌐 참조 링크 / Reference Links
-3-6 curated links to REAL resources (official docs, tutorials, papers, GitHub).
+## 📚 참조 자료 / References
+3-6 curated links to REAL resources (official docs, papers, GitHub repos).
 Format: [Display Name](URL) — 1-sentence annotation.
 Only include URLs you are confident are real and active.
 
----
-
-## 💬 커뮤니케이션 / Communication
-
-### 자주 같이 쓰는 표현 / Frequently Used Expressions
-6-8 practical phrases used in meetings, PRs, or documentation.
-**Bold the key term** in each phrase.
-Use natural, workplace tone (not textbook).
-
----
-
 ## 🔗 연관 용어 / Related Terms
-4-6 related concepts with one-line relationship explanations.
-Format: **Term** — relationship to current term
+4-6 related concepts with technical relationship explanations.
+Format: **Term** — technical relationship to current term
 Include: prerequisites, alternatives, complementary concepts, extensions.
 ```
 
@@ -643,32 +663,29 @@ Include: prerequisites, alternatives, complementary concepts, extensions.
 ```json
 {
   "korean_name": "한국어 용어명",
-  "difficulty": "beginner|intermediate|advanced",
   "categories": ["ai-ml"],
   "definition_ko": "...",
   "definition_en": "...",
-  "plain_explanation_ko": "...",
-  "plain_explanation_en": "...",
-  "technical_description_ko": "...",
-  "technical_description_en": "...",
-  "example_analogy_ko": "...",
-  "example_analogy_en": "...",
-  "body_markdown_ko": "...",
-  "body_markdown_en": "..."
+  "body_basic_ko": "...",
+  "body_basic_en": "...",
+  "body_advanced_ko": "...",
+  "body_advanced_en": "..."
 }
 ```
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - korean_name: [한국어 발음] 한국어 명칭 format (e.g., "Transformer" → "[트랜스포머] 트랜스포머")
-- body_markdown MUST use the exact section/subsection structure above with emoji prefixes
-- Korean headers for _ko, English headers for _en
-- Keep KO and EN versions parallel in structure but natural in each language (not word-for-word translation)
-- Code examples in body_markdown should be identical in both languages (only prose differs)
+- body_basic and body_advanced MUST use the exact section structures above with emoji prefixes
+- Korean headers for _ko fields, English headers for _en fields
+- Keep KO and EN versions parallel in structure but natural in each language
+- Code examples should be identical in both languages (only prose differs)
+- body_basic and body_advanced should complement each other, NOT repeat the same content
+- body_basic: accessible analogies, no assumed knowledge
+- body_advanced: precise details, assumed CS fundamentals
 - Every section must contain substantive content — no empty sections or "TBD" placeholders
 - Use **bold formatting** for key terms, tool names, and important concepts throughout
-- Practical examples must use realistic, workplace-appropriate language
-- Reference links must be real URLs to well-known resources (docs, papers, tutorials)
+- Reference links must be real URLs to well-known resources
 
 Respond in JSON format only."""
 
@@ -697,7 +714,6 @@ Given one or more news articles, extract technical terms that would be valuable 
     {
       "term": "Retrieval-Augmented Generation",
       "korean_name": "검색 증강 생성",
-      "difficulty": "intermediate",
       "reason": "Central concept in the article — readers need to understand RAG to follow the discussion"
     }
   ]
@@ -708,7 +724,6 @@ Given one or more news articles, extract technical terms that would be valuable 
 - Extract 5-15 terms per article
 - term: Use the standard English name
 - korean_name: Standard Korean translation
-- difficulty: beginner / intermediate / advanced
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
 - Prefer specific terms over generic ones
