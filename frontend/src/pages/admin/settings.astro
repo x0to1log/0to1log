@@ -8,7 +8,6 @@ const user = Astro.locals.user;
 const profile = Astro.locals.profile;
 const displayName = profile?.display_name || profile?.username || user?.email || 'Admin user';
 const email = user?.email || 'Unknown';
-const accessToken = Astro.locals.accessToken;
 const currentPath = Astro.url.pathname;
 
 const scTabs = [
@@ -189,9 +188,6 @@ const startHereDefaults = [
       <div
         id="settings-panel-site-content"
         class="settings-panel"
-        data-access-token={accessToken}
-        data-supabase-url={import.meta.env.PUBLIC_SUPABASE_URL}
-        data-supabase-key={import.meta.env.PUBLIC_SUPABASE_ANON_KEY}
       >
         <div class="admin-filter-tabs sc-sub-tabs" id="sc-tabs">
           {scTabs.map((tab, index) => (
@@ -601,23 +597,17 @@ const startHereDefaults = [
     if (!root || root.dataset.scInit === '1') return;
     root.dataset.scInit = '1';
 
-    const supabaseUrl = root.dataset.supabaseUrl;
-    const supabaseKey = root.dataset.supabaseKey;
-    const token = root.dataset.accessToken;
-    if (!supabaseUrl || !supabaseKey || !token) return;
-
-    const { createClient } = await import('@supabase/supabase-js');
-    const anonClient = createClient(supabaseUrl, supabaseKey);
-    const authClient = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
     const loading = document.getElementById('sc-loading');
     const startHereContainer = document.getElementById('start-here-fields');
 
-    const { data: rows, error } = await anonClient.from('site_content').select('key, value_ko, value_en');
-    if (error) {
-      loading.textContent = `Failed to load site content: ${error.message}`;
+    let rows;
+    try {
+      const res = await fetch('/api/admin/site-content');
+      if (!res.ok) throw new Error(`${res.status}`);
+      const json = await res.json();
+      rows = json.rows;
+    } catch (err) {
+      loading.textContent = `Failed to load site content.`;
       loading.style.color = 'var(--color-error)';
       return;
     }
@@ -746,11 +736,18 @@ const startHereDefaults = [
 
       let failure = '';
       for (const [key, value] of Object.entries(updates)) {
-        const { error: updateError } = await authClient
-          .from('site_content')
-          .upsert({ key, ...value, updated_at: new Date().toISOString() });
-        if (updateError) {
-          failure += `${key}: ${updateError.message}\n`;
+        try {
+          const res = await fetch('/api/admin/site-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, ...value }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: `${res.status}` }));
+            failure += `${key}: ${err.error}\n`;
+          }
+        } catch {
+          failure += `${key}: network error\n`;
         }
       }
 

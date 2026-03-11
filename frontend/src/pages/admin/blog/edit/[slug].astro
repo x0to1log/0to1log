@@ -257,7 +257,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       />
     </div>
   )}
-  <div id="admin-data" hidden data-access-token={accessToken} data-post-id={post?.id || ''} data-slug={pageSlug} data-is-new={isNew ? 'true' : 'false'} data-post-locale={post?.locale || 'en'}></div>
+  <div id="admin-data" hidden data-post-id={post?.id || ''} data-slug={pageSlug} data-is-new={isNew ? 'true' : 'false'} data-post-locale={post?.locale || 'en'}></div>
 </MainLayout>
 
 <script>
@@ -315,7 +315,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const focusItemsInput = document.getElementById('edit-focus-items') as HTMLInputElement;
     const ogImageInput = document.getElementById('edit-og-image') as HTMLInputElement;
     const adminData = document.getElementById('admin-data');
-    const accessToken = adminData?.dataset.accessToken || '';
     const postId = adminData?.dataset.postId || '';
     const isNewPost = adminData?.dataset.isNew === 'true';
     const postLocale = adminData?.dataset.postLocale || 'en';

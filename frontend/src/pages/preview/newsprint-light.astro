@@ -57,10 +57,11 @@ const mockPosts = [
 
 const featured = mockPosts[0];
 const railPosts = mockPosts.slice(1, 5);
+const nonce = Astro.locals.cspNonce || '';
 ---
 
 <MainLayout title="Newsprint Preview (Light)" locale="en" slug="preview/newsprint-light/">
-  <script is:inline>document.documentElement.setAttribute('data-theme','light');localStorage.setItem('theme','light');</script>
+  <script is:inline nonce={nonce}>document.documentElement.setAttribute('data-theme','light');localStorage.setItem('theme','light');</script>
   <NewsprintShell locale="en" masthead="Latest AI News" editionLabel="Preview / Light"
       subkicker={['AI · Papers · Projects', 'Preview Edition', 'Open Access']}>
 
