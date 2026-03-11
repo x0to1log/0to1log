@@ -9,15 +9,15 @@
 
 ## 스프린트 완료 게이트
 
-- [ ] `handbook_terms` 테이블 + RLS 생성 완료
-- [ ] Notion → Supabase 마이그레이션 1회 완료
-- [ ] `/en/handbook/`, `/ko/handbook/` 목록 정상 렌더링
-- [ ] `/en/handbook/[slug]/`, `/ko/handbook/[slug]/` 상세 정상 렌더링
-- [ ] Handbook 검색 동작
-- [ ] Navigation Handbook 링크 동작
-- [ ] `cd frontend && npm run build` 0 error
-- [ ] handbook 태스크 전체 `상태=done` + `체크=[x]` 일치
-- [ ] `Current Doing`이 비어 있음 (`-`)
+- [x] `handbook_terms` 테이블 + RLS 생성 완료
+- [x] Notion → Supabase 마이그레이션 1회 완료
+- [x] `/en/handbook/`, `/ko/handbook/` 목록 정상 렌더링
+- [x] `/en/handbook/[slug]/`, `/ko/handbook/[slug]/` 상세 정상 렌더링
+- [x] Handbook 검색 동작
+- [x] Navigation Handbook 링크 동작
+- [x] `cd frontend && npm run build` 0 error
+- [x] handbook 태스크 전체 `상태=done` + `체크=[x]` 일치
+- [x] `Current Doing`이 비어 있음 (`-`)
 
 ---
 
@@ -57,8 +57,8 @@
 - 의존성: 없음
 
 ### 2. Notion → Supabase 마이그레이션 `[H1-DB-02]`
-- 체크: [ ]
-- 상태: blocked
+- 체크: [x]
+- 상태: done
 - 목적: 기존 Notion Words DB를 handbook_terms로 1회 이관한다.
 - 산출물: `scripts/migrate-handbook-from-notion.ts`
 - 완료 기준: Notion 용어 수와 DB row 수 일치
@@ -139,3 +139,27 @@
 - 증거: -
 - 참조: `docs/08_Handbook.md` H1-QA-01
 - 의존성: H1-FE-01~05
+
+---
+
+## 다음 초안 태스크 (Handbook H2 Draft)
+
+### 1. 피드백 집계 어드민 뷰 `[H2-FBK-01]`
+- 상태: draft
+- 목적: `term_feedback`의 `helpful / confusing` 비율과 최근 반응을 admin에서 확인한다.
+- 산출물: `/admin/handbook` 집계 카드, 용어별 반응 컬럼
+
+### 2. 헷갈림 상위 용어 큐레이션 `[H2-FBK-02]`
+- 상태: draft
+- 목적: `confusing` 비율이 높은 용어를 우선 보완 대상으로 정렬한다.
+- 산출물: handbook admin 우측 rail 또는 별도 필터
+
+### 3. Advanced 본문 AI 보강 `[H2-AI-01]`
+- 상태: draft
+- 목적: `body_advanced_*`를 AI 초안/보강 파이프라인과 연결한다.
+- 산출물: handbook advanced draft 생성/검수 흐름
+
+### 4. 관련 용어 추천 고도화 `[H2-REC-01]`
+- 상태: draft
+- 목적: categories + source + feedback 신호를 기반으로 related term 품질을 높인다.
+- 산출물: handbook 상세 related terms 개선

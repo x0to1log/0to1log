@@ -17,6 +17,13 @@
 
 **Schema Note:** Current handbook runtime uses `categories TEXT[]` after `00007_handbook_multi_category.sql`. Any older single-`category` examples below are legacy H1 notes unless explicitly updated.
 
+**Runtime Note (2026-03-11):**
+- Current public/admin handbook runtime no longer uses `difficulty`, `plain_explanation_*`, `technical_description_*`, `example_analogy_*`, or `body_markdown_*` as the main editing/display contract.
+- Canonical content fields are now `definition_*`, `body_basic_*`, and `body_advanced_*`.
+- `profiles.handbook_level` is used for `basic / advanced` viewing preference.
+- Public handbook list currently uses search + category filter only. Difficulty filter is not part of the active runtime.
+- `00016` is used by `term_feedback`, and legacy handbook columns were dropped in `00017_drop_handbook_legacy_columns.sql`.
+
 
 ---
 

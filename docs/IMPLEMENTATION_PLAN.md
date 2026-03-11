@@ -68,6 +68,18 @@ flowchart TD
 - **병렬 진행:** Handbook H1은 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md` 기준으로 별도 운영한다.
 - **다음 메인라인 스프린트:** Phase 3-Intelligence (AI 추천 + 학습 고도화)
 
+### Phase 3-Intelligence (Draft Backlog)
+- `P3I-REC-01`: AI News 개인화 추천
+  - 최근 읽기 기록, 북마크, 카테고리 선호를 바탕으로 뉴스 리스트와 상세 rail 추천을 고도화한다.
+- `P3I-LIB-01`: My Library 재방문 흐름 고도화
+  - 저장한 뉴스/용어를 다시 읽게 만드는 resurfacing 규칙과 재방문 UI를 추가한다.
+- `P3I-HBK-01`: Handbook feedback 집계
+  - `term_feedback`의 `helpful / confusing` 신호를 admin에서 집계하고, 보완 우선순위에 연결한다.
+- `P3I-HBK-02`: Handbook advanced body AI 보강
+  - `body_advanced_*`를 AI 초안/보강 파이프라인과 연결해 handbook H2의 핵심 작업을 연다.
+- `P3I-QA-01`: 추천/학습 기능 QA 및 측정
+  - 추천 클릭률, feedback 반응률, 재방문율 같은 지표를 정의하고 QA 시나리오를 만든다.
+
 ---
 
 ## 3) Phase 2 실행 계획 (결정 완료)
