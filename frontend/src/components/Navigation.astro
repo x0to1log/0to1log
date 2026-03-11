@@ -331,6 +331,8 @@ const navItems = [
   }
 
   document.addEventListener('astro:page-load', initUtilityControls);
+  document.addEventListener('DOMContentLoaded', initUtilityControls);
+  initUtilityControls();
 </script>
 
 <script>
@@ -338,6 +340,8 @@ const navItems = [
     const header = document.querySelector('.site-header') as HTMLElement | null;
     const spacer = document.querySelector('.site-header-spacer') as HTMLElement | null;
     if (!header || !spacer) return;
+    if (header.dataset.headerRevealInit === '1') return;
+    header.dataset.headerRevealInit = '1';
     const headerEl = header;
     const spacerEl = spacer;
 
@@ -397,4 +401,6 @@ const navItems = [
   }
 
   document.addEventListener('astro:page-load', initHeaderReveal);
+  document.addEventListener('DOMContentLoaded', initHeaderReveal);
+  initHeaderReveal();
 </script>
