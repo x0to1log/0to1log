@@ -1,5 +1,6 @@
 import logging
-from datetime import datetime, timezone
+from collections import Counter
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
@@ -165,3 +166,60 @@ async def update_post(request: Request, post_id: str, body: PostUpdateRequest, _
         raise HTTPException(status_code=404, detail="Post not found or not a draft")
 
     return PostDraftDetail.model_validate(result.data[0])
+
+
+@router.get("/analytics", responses=ERROR_RESPONSES)
+@limiter.limit("10/minute")
+async def get_analytics(
+    request: Request,
+    days: int = 30,
+    _user=Depends(require_admin),
+):
+    """Return engagement analytics for published posts."""
+    client = get_supabase()
+    if not client:
+        raise HTTPException(status_code=503, detail="Database not configured")
+
+    since = (date.today() - timedelta(days=days)).isoformat()
+
+    # Fetch engagement data since cutoff
+    likes_res = client.table("news_likes").select("post_id").gte("created_at", since).execute()
+    reads_res = client.table("reading_history").select("item_id").eq("item_type", "news").gte("read_at", since).execute()
+    bookmarks_res = client.table("user_bookmarks").select("item_id").eq("item_type", "news").gte("created_at", since).execute()
+
+    like_counts = Counter(r["post_id"] for r in (likes_res.data or []))
+    read_counts = Counter(r["item_id"] for r in (reads_res.data or []))
+    bookmark_counts = Counter(r["item_id"] for r in (bookmarks_res.data or []))
+
+    # Get post metadata for top IDs
+    all_ids = list({*list(like_counts.keys())[:20], *list(read_counts.keys())[:20]})
+    posts_meta: dict[str, dict] = {}
+    if all_ids:
+        meta = client.table("news_posts").select("id, title, slug, category").in_("id", all_ids).execute()
+        posts_meta = {p["id"]: p for p in (meta.data or [])}
+
+    top_ids = set(list(like_counts.keys()) + list(read_counts.keys()))
+    top_posts = sorted(
+        [
+            {
+                "post_id": pid,
+                "title": posts_meta.get(pid, {}).get("title", ""),
+                "slug": posts_meta.get(pid, {}).get("slug", ""),
+                "category": posts_meta.get(pid, {}).get("category", ""),
+                "likes": like_counts.get(pid, 0),
+                "reads": read_counts.get(pid, 0),
+                "bookmarks": bookmark_counts.get(pid, 0),
+            }
+            for pid in top_ids
+        ],
+        key=lambda x: x["reads"] + x["likes"] * 2,
+        reverse=True,
+    )
+
+    return {
+        "days": days,
+        "total_likes": sum(like_counts.values()),
+        "total_reads": sum(read_counts.values()),
+        "total_bookmarks": sum(bookmark_counts.values()),
+        "top_posts": top_posts[:10],
+    }
