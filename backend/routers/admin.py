@@ -41,7 +41,8 @@ async def list_drafts(request: Request, _user=Depends(require_admin)):
         client.table("news_posts")
         .select(
             "id, title, slug, category, post_type, status, "
-            "news_temperature, pipeline_batch_id, created_at, updated_at"
+            "news_temperature, pipeline_batch_id, quality_score, quality_flags, "
+            "created_at, updated_at"
         )
         .eq("status", "draft")
         .order("created_at", desc=True)

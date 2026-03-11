@@ -15,6 +15,8 @@ class PostDraftListItem(BaseModel):
     status: str
     news_temperature: Optional[int] = None
     pipeline_batch_id: Optional[str] = None
+    quality_score: Optional[int] = None
+    quality_flags: Optional[dict] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
