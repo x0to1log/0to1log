@@ -160,13 +160,18 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
     data = parse_ai_json(raw, f"BlogAdvisor-{req.action}")
     tokens = response.usage.completion_tokens if response.usage else 0
 
-    # Validate if validator is defined
+    # Validate and sanitize if validator is defined
     validator = config.get("validator")
     if validator:
         try:
             validator.model_validate(data)
         except ValidationError as e:
             logger.warning("Blog advisor [%s] validation soft-fail: %s", req.action, e)
+            try:
+                sanitized = validator.model_construct(**data)
+                data = sanitized.model_dump()
+            except Exception:
+                pass  # keep raw data as last resort
 
     logger.info("Blog advisor [%s] completed, tokens=%d", req.action, tokens)
     return data, model, tokens
@@ -184,6 +189,24 @@ def _slugify(text: str) -> str:
     slug = re.sub(r'[\s_]+', '-', slug)
     slug = re.sub(r'-+', '-', slug)
     return slug.strip('-')
+
+
+def _ensure_unique_slug(supabase, base_slug: str) -> str:
+    """Append -2, -3, etc. if slug already exists in blog_posts."""
+    slug = base_slug
+    suffix = 2
+    while True:
+        existing = (
+            supabase.table("blog_posts")
+            .select("id")
+            .eq("slug", slug)
+            .limit(1)
+            .execute()
+        )
+        if not existing.data:
+            return slug
+        slug = f"{base_slug}-{suffix}"
+        suffix += 1
 
 
 async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]:
@@ -265,7 +288,8 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
         ).eq("id", req.source_post_id).execute()
 
     # Step 3: Insert translated post
-    new_slug = translated.get("slug") or _slugify(translated.get("title", req.title))
+    raw_slug = translated.get("slug") or _slugify(translated.get("title", req.title))
+    new_slug = _ensure_unique_slug(supabase, raw_slug)
 
     new_row = {
         "title": translated.get("title", req.title),
