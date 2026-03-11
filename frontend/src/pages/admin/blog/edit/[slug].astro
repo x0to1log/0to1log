@@ -262,10 +262,16 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
 <script>
   import { Crepe } from '@milkdown/crepe';
+  import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
   import { marked } from 'marked';
 
   let crepe: Crepe | null = null;
+
+  /** Milkdown Crepe v7.19 has no setMarkdown(). Use editor.action(replaceAll()) instead. */
+  function setEditorContent(md: string) {
+    if (crepe) crepe.editor.action(replaceAll(md));
+  }
   let feedbackTimer = 0;
 
   const CATEGORY_LABELS: Record<string, string> = {
@@ -870,7 +876,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             s.subsections.forEach((sub: string) => { md += `### ${sub}\n\n`; });
           }
         });
-        crepe.setMarkdown(md.trim());
+        setEditorContent(md.trim());
         showFeedback('success', 'Outline applied to editor.');
       });
     }
@@ -887,7 +893,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
       document.getElementById('ai-apply-draft')?.addEventListener('click', () => {
         if (!crepe || !r.content) return;
-        crepe.setMarkdown(r.content);
+        setEditorContent(r.content);
         showFeedback('success', 'Draft applied to editor.');
       });
     }
@@ -917,7 +923,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           if (!crepe || !change) return;
           const md = crepe.getMarkdown();
           if (md.includes(change.before)) {
-            crepe.setMarkdown(md.replace(change.before, change.after));
+            setEditorContent(md.replace(change.before, change.after));
             btn.textContent = 'Applied';
             btn.disabled = true;
             showFeedback('success', `Applied rewrite for "${change.section}".`);
