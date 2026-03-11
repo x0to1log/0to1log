@@ -18,8 +18,7 @@ function authSupabase(accessToken: string) {
   );
 }
 
-// GET ?post_id=X → comments with user profile info
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, locals }) => {
   const postId = url.searchParams.get('post_id');
   if (!postId) {
     return new Response(JSON.stringify({ error: 'Missing post_id' }), {
@@ -44,9 +43,8 @@ export const GET: APIRoute = async ({ url }) => {
     });
   }
 
-  // Fetch profiles for comment authors
   const userIds = [...new Set((data || []).map((c) => c.user_id))];
-  let profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
+  const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
 
   if (userIds.length > 0) {
     const { data: profiles } = await supabase
@@ -64,6 +62,7 @@ export const GET: APIRoute = async ({ url }) => {
     body: c.body,
     created_at: c.created_at,
     user_id: c.user_id,
+    can_delete: !!locals.user && (locals.isAdmin || c.user_id === locals.user.id),
     user: profileMap[c.user_id] || { display_name: 'Anonymous', avatar_url: null },
   }));
 
@@ -72,7 +71,6 @@ export const GET: APIRoute = async ({ url }) => {
   });
 };
 
-// POST { post_id, body } → create comment
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user || !locals.accessToken) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -120,7 +118,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 };
 
-// DELETE ?id=X → delete own comment
 export const DELETE: APIRoute = async ({ locals, url }) => {
   if (!locals.user || !locals.accessToken) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -139,11 +136,16 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
   const commentsTable = contentType === 'blog' ? 'blog_comments' : 'news_comments';
 
   const supabase = authSupabase(locals.accessToken);
-  const { error } = await supabase
+  let deleteQuery = supabase
     .from(commentsTable)
     .delete()
-    .eq('id', id)
-    .eq('user_id', locals.user.id);
+    .eq('id', id);
+
+  if (!locals.isAdmin) {
+    deleteQuery = deleteQuery.eq('user_id', locals.user.id);
+  }
+
+  const { error } = await deleteQuery;
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {

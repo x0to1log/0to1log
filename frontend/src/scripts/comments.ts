@@ -18,7 +18,6 @@ function initComments(): void {
 
   let currentUserId: string | null = null;
 
-  // Load comments
   async function loadComments() {
     try {
       const res = await fetch(`/api/user/comments?post_id=${postId}&type=${section.dataset.contentType || 'news'}`);
@@ -45,9 +44,9 @@ function initComments(): void {
         { year: 'numeric', month: 'short', day: 'numeric' }
       );
       const initial = (c.user.display_name || 'A').charAt(0).toUpperCase();
-      const isOwn = currentUserId && c.user_id === currentUserId;
-      const deleteBtn = isOwn
-        ? `<button class="newsprint-comment-delete" data-delete-comment="${c.id}" aria-label="${locale === 'ko' ? 'ì‚­ì œ' : 'Delete'}">&times;</button>`
+      const canDelete = !!c.can_delete;
+      const deleteBtn = canDelete
+        ? `<button class="newsprint-comment-delete" data-delete-comment="${c.id}" aria-label="${locale === 'ko' ? '»èÁ¦' : 'Delete'}">&times;</button>`
         : '';
 
       return `<div class="newsprint-comment" data-comment-id="${c.id}">
@@ -67,10 +66,9 @@ function initComments(): void {
 
     updateCounts(comments.length);
 
-    // Wire delete buttons
     list.querySelectorAll<HTMLButtonElement>('[data-delete-comment]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const confirmMsg = locale === 'ko' ? 'ëŒ“ê¸€ì„ ì‚­ì œí• ê¹Œìš”?' : 'Delete this comment?';
+        const confirmMsg = locale === 'ko' ? 'ÀÌ ´ñ±ÛÀ» »èÁ¦ÇÒ±î¿ä?' : 'Delete this comment?';
         if (!confirm(confirmMsg)) return;
 
         const commentId = btn.dataset.deleteComment;
@@ -102,7 +100,6 @@ function initComments(): void {
     return div.innerHTML;
   }
 
-  // Detect login state: try a lightweight check
   async function checkAuth() {
     try {
       const res = await fetch('/api/user/profile');
@@ -121,7 +118,6 @@ function initComments(): void {
     }
   }
 
-  // Character count
   if (input && charcount) {
     input.addEventListener('input', () => {
       const len = input.value.length;
@@ -129,7 +125,6 @@ function initComments(): void {
     });
   }
 
-  // Submit comment
   if (form && input) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -164,7 +159,6 @@ function initComments(): void {
     });
   }
 
-  // Initialize
   checkAuth();
   loadComments();
 }
