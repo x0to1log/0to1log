@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
+from core.config import settings
 from core.database import get_supabase
 from core.rate_limit import limiter
 from core.security import require_admin
@@ -223,3 +224,76 @@ async def get_analytics(
         "total_bookmarks": sum(bookmark_counts.values()),
         "top_posts": top_posts[:10],
     }
+
+
+@router.post("/suggest-topics", responses=ERROR_RESPONSES)
+@limiter.limit("5/minute")
+async def suggest_topics(
+    request: Request,
+    _user=Depends(require_admin),
+):
+    """Suggest next pipeline batch topics using recent posts + trending AI news."""
+    import json
+    from openai import AsyncOpenAI
+    from tavily import TavilyClient
+
+    client = get_supabase()
+    if not client:
+        raise HTTPException(status_code=503, detail="Database not configured")
+
+    since = (date.today() - timedelta(days=14)).isoformat()
+
+    # Recent published posts (last 14 days)
+    recent_res = (
+        client.table("news_posts")
+        .select("title, category, tags")
+        .eq("status", "published")
+        .gte("published_at", since)
+        .execute()
+    )
+    recent_posts = recent_res.data or []
+
+    all_tags: list[str] = [t for p in recent_posts for t in (p.get("tags") or [])]
+    top_tags = [t for t, _ in Counter(all_tags).most_common(10)]
+    recent_titles = [p["title"] for p in recent_posts[:10]]
+
+    # Fetch trending news via Tavily
+    tavily_results: list[str] = []
+    if settings.tavily_api_key:
+        try:
+            tavily = TavilyClient(api_key=settings.tavily_api_key)
+            search = tavily.search("latest AI news today", max_results=5)
+            tavily_results = [r.get("title", "") for r in search.get("results", [])]
+        except Exception as e:
+            logger.warning("Tavily search failed: %s", e)
+
+    # GPT-4o-mini suggestion
+    openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
+    prompt = (
+        "You are an AI news editor. Suggest 5 specific, newsworthy AI topics for the next pipeline batch.\n\n"
+        "Recently covered (avoid repetition):\n"
+        + "\n".join(f"- {t}" for t in recent_titles)
+        + "\n\nTrending today:\n"
+        + "\n".join(f"- {t}" for t in tavily_results)
+        + f"\n\nTop tags used: {', '.join(top_tags)}\n\n"
+        'Return a JSON object with key "topics" containing an array of 5 strings. '
+        'Example: {"topics": ["Topic 1", "Topic 2", "Topic 3", "Topic 4", "Topic 5"]}'
+    )
+
+    response = await openai_client.chat.completions.create(
+        model=settings.openai_model_light,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
+        max_tokens=512,
+    )
+
+    try:
+        content = response.choices[0].message.content or "{}"
+        parsed = json.loads(content)
+        topics = parsed.get("topics", [])
+        if not isinstance(topics, list):
+            topics = []
+    except Exception:
+        topics = []
+
+    return {"topics": topics[:5]}
