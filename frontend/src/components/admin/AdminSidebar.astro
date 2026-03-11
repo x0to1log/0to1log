@@ -129,11 +129,45 @@ const currentPath = Astro.url.pathname;
 
 <script>
   // @ts-nocheck
+
+  // Mobile menu — separated from initSidebar so the sidebar guard cannot skip it
+  function initMobileMenu() {
+    const sidebar = document.getElementById('admin-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    if (!sidebar || !mobileBtn || mobileBtn.dataset.mobileInit === '1') return;
+    mobileBtn.dataset.mobileInit = '1';
+
+    function openMobileSidebar() {
+      sidebar.classList.add('admin-sidebar--mobile-open');
+      overlay?.classList.add('admin-sidebar-overlay--visible');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileSidebar() {
+      sidebar.classList.remove('admin-sidebar--mobile-open');
+      overlay?.classList.remove('admin-sidebar-overlay--visible');
+      document.body.style.overflow = '';
+    }
+
+    mobileBtn.addEventListener('click', openMobileSidebar);
+    overlay?.addEventListener('click', closeMobileSidebar);
+
+    sidebar.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth < 768) closeMobileSidebar();
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 768) closeMobileSidebar();
+    });
+  }
+
+  // Desktop sidebar collapse/expand + theme toggle
   function initSidebar() {
     const sidebar = document.getElementById('admin-sidebar');
     const toggle = document.getElementById('sidebar-toggle');
-    const overlay = document.getElementById('sidebar-overlay');
-    const mobileBtn = document.getElementById('mobile-menu-btn');
     if (!sidebar || sidebar.dataset.sidebarInit === '1') return;
     sidebar.dataset.sidebarInit = '1';
 
@@ -152,31 +186,6 @@ const currentPath = Astro.url.pathname;
       document.querySelectorAll('.admin-dashboard, .admin-editor-layout, #preview-mode').forEach((el) => {
         el.classList.toggle('admin-sidebar-collapsed', collapsed);
       });
-    });
-
-    function openMobileSidebar() {
-      sidebar.classList.add('admin-sidebar--mobile-open');
-      overlay?.classList.add('admin-sidebar-overlay--visible');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeMobileSidebar() {
-      sidebar.classList.remove('admin-sidebar--mobile-open');
-      overlay?.classList.remove('admin-sidebar-overlay--visible');
-      document.body.style.overflow = '';
-    }
-
-    mobileBtn?.addEventListener('click', openMobileSidebar);
-    overlay?.addEventListener('click', closeMobileSidebar);
-
-    sidebar.querySelectorAll('a').forEach((link) => {
-      link.addEventListener('click', () => {
-        if (window.innerWidth < 768) closeMobileSidebar();
-      });
-    });
-
-    window.addEventListener('resize', () => {
-      if (window.innerWidth >= 768) closeMobileSidebar();
     });
 
     const themeList = ['dark', 'light', 'pink'];
@@ -212,7 +221,10 @@ const currentPath = Astro.url.pathname;
   }
 
   document.addEventListener('astro:page-load', initSidebar);
+  document.addEventListener('astro:page-load', initMobileMenu);
+  document.addEventListener('DOMContentLoaded', initMobileMenu);
   initSidebar();
+  initMobileMenu();
 </script>
 
 

@@ -54,13 +54,12 @@ const FEATURED_COUNT = 4;
 const BATCH_SIZE = 10;
 
 const featuredPosts = posts.slice(0, FEATURED_COUNT);
-const remainingPosts = posts.slice(FEATURED_COUNT);
 const sidebarPosts = posts.map(p => ({ title: p.title, slug: p.slug, category: p.category }));
 
-// Split remaining posts into batches for infinite scroll
-const batches: any[][] = [];
-for (let i = 0; i < remainingPosts.length; i += BATCH_SIZE) {
-  batches.push(remainingPosts.slice(i, i + BATCH_SIZE));
+// Split ALL posts into batches for infinite scroll in "All Posts" section
+const allPostBatches: any[][] = [];
+for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+  allPostBatches.push(posts.slice(i, i + BATCH_SIZE));
 }
 ---
 
@@ -102,33 +101,29 @@ for (let i = 0; i < remainingPosts.length; i += BATCH_SIZE) {
         )}
 
         <!-- ALL POSTS section with infinite scroll -->
-        {remainingPosts.length > 0 && (
-          <>
-            <h2 class="blog-section-header">{t.en['blog.allPosts']}</h2>
-            <div class="blog-list-section" data-blog-list>
-              {batches.map((batch, batchIdx) => (
-                <div
-                  class="blog-list-batch"
-                  data-blog-batch={batchIdx}
-                  {...(batchIdx > 0 && { hidden: true })}
-                >
-                  {batch.map(post => (
-                    <BlogListItem
-                      href={`/en/blog/${post.slug}/`}
-                      title={post.title}
-                      category={post.category}
-                      publishedAt={post.published_at}
-                      locale="en"
-                      isRead={readPostIds.has(post.id)}
-                    />
-                  ))}
-                </div>
+        <h2 class="blog-section-header">{t.en['blog.allPosts']}</h2>
+        <div class="blog-list-section" data-blog-list>
+          {allPostBatches.map((batch, batchIdx) => (
+            <div
+              class="blog-list-batch"
+              data-blog-batch={batchIdx}
+              {...(batchIdx > 0 && { hidden: true })}
+            >
+              {batch.map(post => (
+                <BlogListItem
+                  href={`/en/blog/${post.slug}/`}
+                  title={post.title}
+                  category={post.category}
+                  publishedAt={post.published_at}
+                  locale="en"
+                  isRead={readPostIds.has(post.id)}
+                />
               ))}
             </div>
-            {batches.length > 1 && (
-              <div class="blog-scroll-sentinel" data-blog-sentinel></div>
-            )}
-          </>
+          ))}
+        </div>
+        {allPostBatches.length > 1 && (
+          <div class="blog-scroll-sentinel" data-blog-sentinel></div>
         )}
       </>
     ) : (

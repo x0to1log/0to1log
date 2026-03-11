@@ -8,6 +8,10 @@ export default defineConfig({
   site: 'https://0to1log.com',
   adapter: vercel(),
 
+  prefetch: {
+    defaultStrategy: 'hover',
+  },
+
   integrations: [
     sitemap(),
     mdx(),

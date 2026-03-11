@@ -93,6 +93,50 @@ async function fetchUserExtras(
   return { isAdmin: !!adminResult.data, profile };
 }
 
+/** Try to read cached user extras from cookie, returns null if missing/expired */
+function getCachedExtras(
+  cookies: any,
+): { isAdmin: boolean; profile: App.Locals['profile'] } | null {
+  const raw = cookies.get('user-extras-cache')?.value;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** Cache user extras in a short-lived cookie (5 min) */
+function setCachedExtras(
+  cookies: any,
+  extras: { isAdmin: boolean; profile: App.Locals['profile'] },
+  isSecureEnv: boolean,
+): void {
+  cookies.set('user-extras-cache', JSON.stringify(extras), {
+    path: '/',
+    httpOnly: true,
+    secure: isSecureEnv,
+    sameSite: 'lax',
+    maxAge: 300,
+  });
+}
+
+/** Fetch user extras, using cookie cache when available */
+async function getOrFetchUserExtras(
+  cookies: any,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  user: any,
+  accessToken: string,
+  isSecureEnv: boolean,
+): Promise<{ isAdmin: boolean; profile: App.Locals['profile'] }> {
+  const cached = getCachedExtras(cookies);
+  if (cached) return cached;
+  const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, user, accessToken);
+  setCachedExtras(cookies, extras, isSecureEnv);
+  return extras;
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -136,6 +180,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect('/admin/login');
     }
 
+    // Admin routes always fetch fresh (no cache) for security
     const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
     if (!extras.isAdmin) {
       if (isApiRoute) {
@@ -151,6 +196,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.accessToken = result.accessToken;
     context.locals.isAdmin = true;
     context.locals.profile = extras.profile;
+    setCachedExtras(context.cookies, extras, isSecure);
     return nextWithCsp(next, nonce);
   }
 
@@ -168,7 +214,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect(`/login?redirectTo=${redirectTo}`);
     }
 
-    const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
+    const extras = await getOrFetchUserExtras(context.cookies, supabaseUrl, supabaseAnonKey, result.user, result.accessToken, isSecure);
     context.locals.user = result.user;
     context.locals.accessToken = result.accessToken;
     context.locals.isAdmin = extras.isAdmin || undefined;
@@ -182,7 +228,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (accessToken) {
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
     if (result) {
-      const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
+      const extras = await getOrFetchUserExtras(context.cookies, supabaseUrl, supabaseAnonKey, result.user, result.accessToken, isSecure);
       context.locals.user = result.user;
       context.locals.accessToken = result.accessToken;
       context.locals.isAdmin = extras.isAdmin || undefined;
