@@ -254,6 +254,19 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           </div>
         </div>
 
+        <div class="admin-preview-frame-shell" data-preview-shell>
+          <div class="admin-preview-frame-loading" data-preview-loading role="status" aria-live="polite" hidden>
+            <span class="admin-preview-frame-spinner" aria-hidden="true"></span>
+            <span data-preview-loading-text>Loading live preview...</span>
+          </div>
+          <iframe
+            id="preview-iframe"
+            class="admin-preview-iframe"
+            title="News preview"
+            loading="lazy"
+          ></iframe>
+        </div>
+        <div style="display: none;">
         <NewsprintShell
           locale="en"
           masthead="Latest AI News"
@@ -279,6 +292,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <NewsprintSideRail locale="en" posts={[]} focusItems={initialFocusItems} />
           </Fragment>
         </NewsprintShell>
+        </div>
       </div>
     </>
   ) : (
@@ -297,36 +311,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 <script>
   import { Crepe } from '@milkdown/crepe';
   import '@milkdown/crepe/theme/common/style.css';
-  import { marked } from 'marked';
 
   let crepe: Crepe | null = null;
   let feedbackTimer = 0;
   const personaEditors: Record<string, Crepe | null> = { beginner: null, learner: null, expert: null };
   let activePersonaTab = 'beginner';
-
-  // Maps (must match server-side values)
-  const CATEGORY_LABELS: Record<string, string> = {
-    'ai-news': 'AI News',
-    study: 'Study',
-    career: 'Career',
-    project: 'Project',
-  };
-
-  const EDITION_MAP: Record<string, string> = {
-    'ai-news': 'Daily Dispatch',
-    study: 'Study Notes',
-    career: 'Career Notes',
-    project: 'Build Log',
-  };
-
-  const FOCUS_MAP: Record<string, string[]> = {
-    'ai-news': ['What changed today', 'Why it matters right now', 'What to watch next'],
-    study: ['What concept to understand', 'What to remember from this note', 'What to try after reading'],
-    career: ['What decision matters here', 'What signal is worth noticing', 'What to apply in actual work'],
-    project: ['What was built in this step', 'What tradeoff appeared', 'What to improve next'],
-  };
-
-  const DEFAULT_FOCUS = ['Key shift', 'Practical impact', 'Next point to watch'];
 
   document.addEventListener('DOMContentLoaded', () => {
     // Cleanup previous editor instance(s) (View Transitions re-entry)
@@ -367,8 +356,168 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const focusItemsInput = document.getElementById('edit-focus-items') as HTMLInputElement;
     const ogImageInput = document.getElementById('edit-og-image') as HTMLInputElement;
     const adminData = document.getElementById('admin-data');
-    const postId = adminData?.dataset.postId || '';
-    const isNewPost = adminData?.dataset.isNew === 'true';
+    const previewShell = document.querySelector<HTMLElement>('[data-preview-shell]');
+    const previewLoading = document.querySelector<HTMLElement>('[data-preview-loading]');
+    const previewLoadingText = document.querySelector<HTMLElement>('[data-preview-loading-text]');
+    const previewFrame = document.getElementById('preview-iframe') as HTMLIFrameElement | null;
+    let postId = adminData?.dataset.postId || '';
+    let isNewPost = adminData?.dataset.isNew === 'true';
+    let currentSlug = slugInput?.value || adminData?.dataset.slug || '';
+    const managedButtons = [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit]
+      .filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
+    const defaultButtonLabels = new Map<HTMLButtonElement, string>();
+    managedButtons.forEach((button) => {
+      defaultButtonLabels.set(button, button.textContent || '');
+    });
+    let previewEnteredFromEditor = false;
+    let previewResizeObserver: ResizeObserver | null = null;
+    let previewWindowResizeCleanup: (() => void) | null = null;
+    let announcePreviewReady = false;
+    let isActionPending = false;
+
+    function restoreActionButtons() {
+      managedButtons.forEach((button) => {
+        button.disabled = false;
+        button.textContent = defaultButtonLabels.get(button) || button.textContent || '';
+      });
+      isActionPending = false;
+    }
+
+    function setButtonLabel(button: HTMLButtonElement | null, label: string) {
+      if (button) button.textContent = label;
+    }
+
+    function beginAction(button: HTMLButtonElement | null, label: string) {
+      managedButtons.forEach((item) => {
+        item.disabled = true;
+        item.textContent = defaultButtonLabels.get(item) || item.textContent || '';
+      });
+      setButtonLabel(button, label);
+      isActionPending = true;
+    }
+
+    function setPreviewShellLoading(loading: boolean, message = 'Loading live preview...') {
+      previewShell?.classList.toggle('admin-preview-frame-shell--loading', loading);
+      if (previewLoading) previewLoading.hidden = !loading;
+      if (previewLoadingText) previewLoadingText.textContent = message;
+      if (previewFrame) previewFrame.setAttribute('aria-busy', loading ? 'true' : 'false');
+    }
+
+    function isPreviewLocation() {
+      return new URL(window.location.href).searchParams.get('mode') === 'preview';
+    }
+
+    function getEditorUrl(mode: 'draft' | 'preview', slugOverride = currentSlug || adminData?.dataset.slug || '') {
+      const url = new URL(window.location.href);
+      if (slugOverride) {
+        url.pathname = `/admin/edit/${slugOverride}`;
+      }
+      if (mode === 'preview') {
+        url.searchParams.set('mode', 'preview');
+      } else {
+        url.searchParams.delete('mode');
+      }
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+
+    function disconnectPreviewResize() {
+      previewResizeObserver?.disconnect();
+      previewResizeObserver = null;
+      if (previewWindowResizeCleanup) {
+        previewWindowResizeCleanup();
+        previewWindowResizeCleanup = null;
+      }
+    }
+
+    function syncPreviewFrameHeight() {
+      if (!previewFrame?.contentDocument) return;
+      const doc = previewFrame.contentDocument;
+      const body = doc.body;
+      const root = doc.documentElement;
+      const nextHeight = Math.max(
+        body?.scrollHeight || 0,
+        body?.offsetHeight || 0,
+        root?.scrollHeight || 0,
+        root?.offsetHeight || 0,
+        root?.clientHeight || 0,
+      );
+      if (nextHeight > 0) {
+        previewFrame.style.height = `${Math.max(nextHeight + 8, 720)}px`;
+      }
+    }
+
+    function attachPreviewAutoResize() {
+      if (!previewFrame?.contentDocument) return;
+      disconnectPreviewResize();
+      const doc = previewFrame.contentDocument;
+      const win = previewFrame.contentWindow;
+      const scheduleResize = () => window.requestAnimationFrame(() => syncPreviewFrameHeight());
+
+      previewResizeObserver = new ResizeObserver(() => scheduleResize());
+      if (doc.body) previewResizeObserver.observe(doc.body);
+      if (doc.documentElement) previewResizeObserver.observe(doc.documentElement);
+      doc.querySelectorAll('img').forEach((image) => {
+        if (!image.complete) {
+          image.addEventListener('load', scheduleResize, { once: true });
+        }
+      });
+      if (win) {
+        const handleResize = () => scheduleResize();
+        win.addEventListener('resize', handleResize);
+        previewWindowResizeCleanup = () => win.removeEventListener('resize', handleResize);
+      }
+
+      scheduleResize();
+      window.setTimeout(scheduleResize, 120);
+      window.setTimeout(scheduleResize, 420);
+      window.setTimeout(scheduleResize, 1200);
+    }
+
+    function showPreviewMode(pushHistory = false) {
+      if (draftMode) draftMode.style.display = 'none';
+      if (previewMode) previewMode.style.display = 'block';
+      if (pushHistory && !isPreviewLocation()) {
+        history.pushState({ mode: 'preview' }, '', getEditorUrl('preview'));
+        previewEnteredFromEditor = true;
+      }
+    }
+
+    function showDraftMode(replaceHistory = false) {
+      if (draftMode) draftMode.style.display = '';
+      if (previewMode) previewMode.style.display = 'none';
+      if (replaceHistory && isPreviewLocation()) {
+        history.replaceState({ mode: 'draft' }, '', getEditorUrl('draft'));
+      }
+      previewEnteredFromEditor = false;
+      setPreviewShellLoading(false);
+      restoreActionButtons();
+    }
+
+    function loadPreviewFrame(previewUrl: string, options: { announce?: boolean; pushHistory?: boolean } = {}) {
+      if (!previewFrame) return;
+      announcePreviewReady = options.announce === true;
+      setPreviewShellLoading(true, 'Loading live preview...');
+      showPreviewMode(options.pushHistory === true);
+      previewFrame.src = previewUrl;
+    }
+
+    function syncModeFromLocation() {
+      if (!isPreviewLocation()) {
+        showDraftMode(false);
+        return;
+      }
+
+      const previewUrl = buildPreviewUrl();
+      if (!previewUrl) {
+        showDraftMode(true);
+        return;
+      }
+
+      showPreviewMode(false);
+      if (!previewFrame?.src || previewFrame.src !== new URL(previewUrl, window.location.origin).toString()) {
+        loadPreviewFrame(previewUrl, { announce: false, pushHistory: false });
+      }
+    }
 
     // Auto-resize title textarea
     function autoResizeTitle() {
@@ -386,6 +535,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       if (!el || !msgEl) return;
       el.classList.remove('admin-feedback--success', 'admin-feedback--error');
       el.classList.add(`admin-feedback--${type}`);
+      el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+      el.setAttribute('aria-atomic', 'true');
       msgEl.textContent = message;
       el.hidden = false;
       clearTimeout(feedbackTimer);
@@ -503,12 +655,47 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       });
     }
 
+    function syncSavedState(saved: { id?: string; slug?: string } | null) {
+      if (!saved) return;
+      if (saved.id) {
+        postId = saved.id;
+        if (adminData) adminData.dataset.postId = saved.id;
+      }
+      if (saved.slug) {
+        currentSlug = saved.slug;
+        if (slugInput) slugInput.value = saved.slug;
+        if (adminData) adminData.dataset.slug = saved.slug;
+      }
+      if (saved.id || saved.slug) {
+        isNewPost = false;
+        if (adminData) adminData.dataset.isNew = 'false';
+      }
+      if (saved.slug) {
+        window.history.replaceState(window.history.state, '', getEditorUrl(isPreviewLocation() ? 'preview' : 'draft', saved.slug));
+      }
+    }
+
+    function buildPreviewUrl() {
+      const locale = localeSelect?.value || 'en';
+      const slug = (slugInput?.value || currentSlug || '').trim();
+      if (!slug) return '';
+      const params = new URLSearchParams({
+        preview: '1',
+        ts: `${Date.now()}`,
+      });
+      if ((postTypeSelect?.value || '') === 'business') {
+        params.set('previewPersona', activePersonaTab);
+      }
+      return `/${locale}/news/${slug}/?${params.toString()}`;
+    }
+
     // Save draft
-    async function handleSave() {
+    async function handleSave(options: { showFeedback?: boolean; redirectOnCreate?: boolean } = {}) {
+      const { showFeedback: shouldShowFeedback = true, redirectOnCreate = true } = options;
       const title = titleInput?.value || '';
       if (!title.trim()) {
-        showFeedback('error', 'Save failed: title is required.');
-        return;
+        if (shouldShowFeedback) showFeedback('error', 'Save failed: title is required.');
+        return null;
       }
       const category = categorySelect?.value || '';
       const tagsRaw = tagsInput?.value || '';
@@ -545,112 +732,51 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           const err = await res.json();
           throw new Error(err.error || `${res.status}`);
         }
-        if (res.status === 201) {
-          const created = await res.json();
-          showFeedback('success', 'Post created! Redirecting...');
-          window.location.href = `/admin/edit/${created.slug}`;
-          return;
+        const saved = await res.json();
+        syncSavedState(saved);
+        if (shouldShowFeedback) {
+          showFeedback('success', res.status === 201 ? 'Post created.' : 'Draft saved.');
         }
-        showFeedback('success', 'Draft saved.');
+        if (res.status === 201 && redirectOnCreate && saved?.slug) {
+          window.location.href = `/admin/edit/${saved.slug}`;
+        }
+        return saved;
       } catch (err) {
-        showFeedback('error', `Save failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+        if (shouldShowFeedback) {
+          showFeedback('error', `Save failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+        }
+        return null;
       }
     }
 
     // Auto-save + switch to Preview
-    function switchToPreview() {
-      const markdown = isBusinessEditor
-        ? (personaEditors[activePersonaTab]?.getMarkdown() || '')
-        : (crepe ? crepe.getMarkdown() : '');
-      if (!markdown && !isBusinessEditor && !crepe) return;
-      const title = titleInput?.value || '';
-      const category = categorySelect?.value || '';
-      const tagsRaw = tagsInput?.value || '';
-      const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-
-      console.log('Auto-saved draft:', { title, category, tags, content: markdown });
-      showFeedback('success', 'Draft auto-saved.');
-
-      // Estimate reading time
-      const wordCount = markdown.split(/\s+/).length;
-      const readingTime = Math.max(1, Math.round(wordCount / 200));
-
-      const previewContent = document.getElementById('preview-content');
-      if (previewContent) {
-        // Update title
-        const previewTitle = previewContent.querySelector('.newsprint-lead-title');
-        if (previewTitle) previewTitle.textContent = title;
-
-        // Update category label (not raw slug)
-        const previewCategory = previewContent.querySelector('.newsprint-category');
-        if (previewCategory) previewCategory.textContent = CATEGORY_LABELS[category] || category;
-
-        // Update tags
-        const headerLeft = previewContent.querySelector('.newsprint-article-header-left');
-        if (headerLeft) {
-          // Remove existing tags
-          headerLeft.querySelectorAll('.newsprint-tag').forEach(el => el.remove());
-          // Add new tags
-          tags.slice(0, 6).forEach(tag => {
-            const span = document.createElement('span');
-            span.className = 'newsprint-tag';
-            span.textContent = tag;
-            headerLeft.appendChild(span);
-          });
-        }
-
-        // Update reading time and date
-        const headerRight = previewContent.querySelector('.newsprint-article-header-right');
-        if (headerRight) {
-          headerRight.innerHTML = '';
-          const readSpan = document.createElement('span');
-          readSpan.textContent = `${readingTime} min read`;
-          headerRight.appendChild(readSpan);
-          const timeEl = document.createElement('time');
-          timeEl.dateTime = new Date().toISOString();
-          timeEl.textContent = new Date().toLocaleDateString('en-US');
-          headerRight.appendChild(timeEl);
-        }
-
-        // Update prose content with proper markdown rendering
-        const previewProse = previewContent.querySelector('.newsprint-prose');
-        if (previewProse) {
-          previewProse.innerHTML = marked.parse(markdown) as string;
-        }
+    async function switchToPreview() {
+      if (isActionPending) return;
+      beginAction(btnPreview, 'Saving...');
+      const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
+      if (!saved) {
+        restoreActionButtons();
+        showFeedback('error', 'Preview failed: save the draft first.');
+        return;
       }
-
-      // Update edition label in shell header
-      const editionEl = previewMode?.querySelector('.newsprint-kicker span:nth-child(2)');
-      if (editionEl) {
-        editionEl.textContent = EDITION_MAP[category] || 'Deep Dive';
+      const previewUrl = buildPreviewUrl();
+      if (!previewUrl) {
+        restoreActionButtons();
+        showFeedback('error', 'Preview failed: save a valid slug first.');
+        return;
       }
-
-      // Update focus items in side rail
-      const focusSection = previewMode?.querySelector('.newsprint-rail section:first-child');
-      if (focusSection) {
-        const focusItems = FOCUS_MAP[category] || DEFAULT_FOCUS;
-        const existingList = focusSection.querySelector('.newsprint-rail-list');
-        const existingEmpty = focusSection.querySelector('.newsprint-empty');
-        if (existingList) existingList.remove();
-        if (existingEmpty) existingEmpty.remove();
-        const ul = document.createElement('ul');
-        ul.className = 'newsprint-rail-list';
-        focusItems.forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = item;
-          ul.appendChild(li);
-        });
-        focusSection.appendChild(ul);
-      }
-
-      if (draftMode) draftMode.style.display = 'none';
-      if (previewMode) previewMode.style.display = 'block';
+      setButtonLabel(btnPreview, 'Loading preview...');
+      loadPreviewFrame(previewUrl, { announce: true, pushHistory: true });
     }
 
     // Switch back to Draft
     function switchToDraft() {
-      if (draftMode) draftMode.style.display = '';
-      if (previewMode) previewMode.style.display = 'none';
+      if (isActionPending) return;
+      if (isPreviewLocation() && previewEnteredFromEditor) {
+        history.back();
+        return;
+      }
+      showDraftMode(true);
     }
 
     // Publish
@@ -658,7 +784,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const title = titleInput?.value || '';
       if (!title.trim()) {
         showFeedback('error', 'Publish failed: title is required.');
-        return;
+        return false;
       }
       try {
         const res = await fetch('/api/admin/posts/status', {
@@ -671,10 +797,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           throw new Error(err.error || `${res.status}`);
         }
         showFeedback('success', 'Published! Redirecting...');
-        const slugEl = adminData?.dataset.slug || '';
-        setTimeout(() => { window.location.href = `/en/news/${slugEl}/`; }, 1500);
+        const locale = localeSelect?.value || 'en';
+        const slugEl = currentSlug || adminData?.dataset.slug || '';
+        setTimeout(() => { window.location.href = `/${locale}/news/${slugEl}/`; }, 1500);
+        return true;
       } catch (err) {
         showFeedback('error', `Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+        return false;
       }
     }
 
@@ -701,7 +830,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     // Publish from draft mode (save first, then publish)
     async function handlePublishFromDraft() {
-      await handleSave();
+      const saved = await handleSave({ redirectOnCreate: false });
+      if (!saved && !postId) return;
       await handlePublish();
     }
 
@@ -1192,15 +1322,48 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       return d.innerHTML.replace(/"/g, '&quot;');
     }
 
+    previewFrame?.addEventListener('load', () => {
+      attachPreviewAutoResize();
+      setPreviewShellLoading(false);
+      restoreActionButtons();
+      if (announcePreviewReady) {
+        showFeedback('success', 'Preview updated.');
+        announcePreviewReady = false;
+      }
+    });
+
+    window.addEventListener('popstate', syncModeFromLocation);
+
     // AI action buttons are bound dynamically in renderAiButtons()
 
     // Event listeners
-    btnSave?.addEventListener('click', handleSave);
+    btnSave?.addEventListener('click', async () => {
+      if (isActionPending) return;
+      beginAction(btnSave, 'Saving...');
+      await handleSave();
+      restoreActionButtons();
+    });
     btnPreview?.addEventListener('click', switchToPreview);
     btnEdit?.addEventListener('click', switchToDraft);
-    btnPublish?.addEventListener('click', handlePublish);
+    btnPublish?.addEventListener('click', async () => {
+      if (isActionPending) return;
+      beginAction(btnPublish, 'Publishing...');
+      const published = await handlePublish();
+      if (!published) restoreActionButtons();
+    });
     btnDelete?.addEventListener('click', handleDelete);
-    btnPublishDraft?.addEventListener('click', handlePublishFromDraft);
+    btnPublishDraft?.addEventListener('click', async () => {
+      if (isActionPending) return;
+      beginAction(btnPublishDraft, 'Publishing...');
+      const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
+      if (!saved) {
+        restoreActionButtons();
+        showFeedback('error', 'Publish failed: save the draft first.');
+        return;
+      }
+      const published = await handlePublish();
+      if (!published) restoreActionButtons();
+    });
 
     // Init editor(s)
     if (isBusinessEditor) {
@@ -1209,5 +1372,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     } else {
       initEditor();
     }
+    syncModeFromLocation();
   });
 </script>

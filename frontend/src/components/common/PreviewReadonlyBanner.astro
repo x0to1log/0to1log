@@ -1,0 +1,16 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+}
+
+const { locale } = Astro.props;
+
+const copy =
+  locale === 'ko'
+    ? '관리자 프리뷰 · 반응, 댓글, 피드백, 학습 진행 업데이트는 비활성화됩니다.'
+    : 'Admin preview · reactions, comments, feedback, and progress updates are disabled.';
+---
+
+<p class="newsprint-preview-banner" data-preview-readonly role="note">
+  {copy}
+</p>

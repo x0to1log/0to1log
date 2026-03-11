@@ -3093,6 +3093,61 @@ code, pre {
   gap: 0.5rem;
 }
 
+.admin-preview-frame-shell {
+  position: relative;
+  min-height: 720px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 86%, white);
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-preview-frame-shell--loading {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(248, 250, 252, 0.96));
+}
+
+.admin-preview-frame-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  background: color-mix(in srgb, var(--color-bg-primary) 82%, transparent);
+  z-index: 1;
+}
+
+.admin-preview-frame-loading[hidden] {
+  display: none;
+}
+
+.admin-preview-frame-spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-top-color: var(--color-accent);
+  animation: admin-preview-spin 0.8s linear infinite;
+}
+
+.admin-preview-iframe {
+  display: block;
+  width: 100%;
+  min-height: 720px;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+@keyframes admin-preview-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ===========================
    ADMIN — Mobile Menu Button
    =========================== */
@@ -4511,6 +4566,37 @@ body.auth-prompt-open {
 .newsprint-engage-btn--active:hover {
   color: var(--color-accent-hover);
 }
+.newsprint-engage-btn[aria-disabled="true"] {
+  opacity: 0.46;
+  cursor: not-allowed;
+  pointer-events: none;
+  color: var(--color-text-muted);
+  background: transparent;
+  transform: none;
+}
+.newsprint-engage-btn[aria-disabled="true"]:hover {
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+.newsprint-preview-banner {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: color-mix(in srgb, var(--color-bg-secondary) 88%, white);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.newsprint-preview-note {
+  margin: 0 0 0.85rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
 
 /* Share dropdown */
 .newsprint-share-wrapper {
@@ -4832,6 +4918,13 @@ body.auth-prompt-open {
   color: var(--color-accent);
 }
 
+.handbook-feedback-preview-note {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.77rem;
+  color: var(--color-text-muted);
+}
+
 .handbook-feedback-actions {
   display: flex;
   flex-wrap: nowrap;
@@ -4876,6 +4969,13 @@ body.auth-prompt-open {
   color: var(--color-accent);
   background: var(--color-accent-subtle);
   transform: translateY(-1px);
+}
+
+.handbook-feedback-btn[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
 }
 
 .handbook-feedback-btn:focus-visible {

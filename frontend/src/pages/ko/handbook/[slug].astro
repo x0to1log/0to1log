@@ -3,118 +3,49 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { supabase } from '../../../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
-import { localField, levelLabels } from '../../../lib/handbookUtils';
-import { renderMarkdown } from '../../../lib/markdown';
+import { levelLabels } from '../../../lib/handbookUtils';
+import { getHandbookDetailPageData } from '../../../lib/pageData/handbookDetailPage';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import HandbookFeedback from '../../../components/newsprint/HandbookFeedback.astro';
 import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
+import PreviewReadonlyBanner from '../../../components/common/PreviewReadonlyBanner.astro';
 
 const locale = 'ko';
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
+const previewRequested = Astro.url.searchParams.get('preview') === '1';
+const previewMode = previewRequested && !!Astro.locals.isAdmin;
+const previewLevel = Astro.url.searchParams.get('previewLevel');
 
-let term: any = null;
-let termError: string | null = null;
-
-if (supabase && slug) {
-  const { data, error } = await supabase
-    .from('handbook_terms')
-    .select('*')
-    .eq('slug', pageSlug)
-    .eq('status', 'published')
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('[handbook-detail-ko] Supabase error:', error.message);
-    termError = error.message;
-  } else {
-    term = data;
-  }
-}
+const {
+  term,
+  termError,
+  definition,
+  levelHtmlMap,
+  activeLevel,
+  htmlContent,
+  showLevelSwitcher,
+  relatedArticles,
+  relatedTerms,
+  sameCategoryTerms,
+  isBookmarked,
+  learningStatus,
+  learningProgressId,
+} = await getHandbookDetailPageData({
+  locale,
+  slug: pageSlug,
+  previewMode,
+  locals: Astro.locals,
+  previewLevel,
+});
 
 if (!term && !termError) {
   Astro.response.status = 404;
 }
 
-const definition = term ? localField(term, 'definition', locale) : '';
-const bodyBasic = term ? localField(term, 'body_basic', locale) : '';
-const bodyAdvanced = term ? localField(term, 'body_advanced', locale) : '';
-
-// Pre-render both level versions to HTML (same pattern as news persona switcher)
-const levelHtmlMap: Record<string, string> = {};
-if (bodyBasic) levelHtmlMap['basic'] = await renderMarkdown(bodyBasic);
-if (bodyAdvanced) levelHtmlMap['advanced'] = await renderMarkdown(bodyAdvanced);
-
-const userLevel = Astro.locals.profile?.handbook_level || 'basic';
-const activeLevel = levelHtmlMap[userLevel] ? userLevel : (levelHtmlMap['basic'] ? 'basic' : 'advanced');
-const htmlContent = levelHtmlMap[activeLevel] || '';
-const showLevelSwitcher = Object.keys(levelHtmlMap).length > 1;
-
-let relatedArticles: any[] = [];
-let relatedTerms: any[] = [];
-let sameCategoryTerms: any[] = [];
-let isBookmarked = false;
-let learningStatus: string | null = null;
-let learningProgressId: string | null = null;
-
 const user = Astro.locals.user;
-const accessToken = Astro.locals.accessToken;
-
-if (supabase && term) {
-  const authSb = (user && accessToken) ? createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  ) : null;
-
-  const [articlesRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
-    // relatedArticles
-    supabase
-      .from('news_posts')
-      .select('title, slug, category, published_at')
-      .eq('status', 'published')
-      .contains('tags', [term.term.toLowerCase()])
-      .limit(5),
-    // relatedTerms
-    term.related_term_slugs?.length
-      ? supabase
-          .from('handbook_terms')
-          .select('term, slug, korean_name')
-          .eq('status', 'published')
-          .in('slug', term.related_term_slugs)
-      : Promise.resolve({ data: null }),
-    // sameCategoryTerms
-    term.categories?.length
-      ? supabase
-          .from('handbook_terms')
-          .select('term, slug, korean_name')
-          .eq('status', 'published')
-          .neq('slug', pageSlug)
-          .overlaps('categories', term.categories)
-          .limit(5)
-      : Promise.resolve({ data: null }),
-    // bookmark
-    authSb
-      ? authSb.from('user_bookmarks').select('id').eq('user_id', user.id).eq('item_type', 'term').eq('item_id', term.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    // learning progress
-    authSb
-      ? authSb.from('learning_progress').select('id, status').eq('user_id', user.id).eq('term_id', term.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
-
-  relatedArticles = articlesRes.data ?? [];
-  relatedTerms = relatedRes.data ?? [];
-  sameCategoryTerms = sameCatRes.data ?? [];
-  isBookmarked = !!bmRes.data;
-  learningStatus = lpRes.data?.status ?? null;
-  learningProgressId = lpRes.data?.id ?? null;
-}
-
 const pageTitle = term
   ? (term.korean_name ? `${term.term} (${term.korean_name})` : term.term)
   : t[locale]['handbook.notfound'];
@@ -122,10 +53,11 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 ---
 
 <MainLayout
-  title={`${pageTitle} — AI 용어집`}
+  title={`${pageTitle} · AI 용어집`}
   description={pageDescription}
   locale={locale}
   slug={`handbook/${pageSlug}/`}
+  previewMode={previewMode}
 >
   <NewsprintShell locale={locale} masthead="AI 용어집" editionLabel="CS · AI · Infra" subkicker={['용어 사전', '레퍼런스', '학습']}>
     <form class="handbook-detail-search handbook-search-sticky" action={`/${locale}/handbook/`} method="get">
@@ -154,6 +86,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       />
     ) : (
       <article>
+        {previewMode && (
+          <>
+            <!-- Admin preview -->
+            <PreviewReadonlyBanner locale={locale} />
+          </>
+        )}
         <header style="margin-bottom: 1.5rem;">
           <div class="handbook-detail-meta">
             {(term.categories || []).map((cat: string) => (
@@ -179,13 +117,13 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         {showLevelSwitcher && (
           <div class="handbook-level-switcher">
-            {(['basic', 'advanced'] as const).filter(l => levelHtmlMap[l]).map(l => (
+            {(['basic', 'advanced'] as const).filter((level) => levelHtmlMap[level]).map((level) => (
               <button
                 type="button"
-                class={`handbook-level-btn ${l === activeLevel ? 'handbook-level-btn--active' : ''}`}
-                data-level={l}
+                class={`handbook-level-btn ${level === activeLevel ? 'handbook-level-btn--active' : ''}`}
+                data-level={level}
               >
-                {levelLabels[locale]?.[l] || l}
+                {levelLabels[locale]?.[level] || level}
               </button>
             ))}
           </div>
@@ -205,9 +143,10 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           termId={term.id}
           isAuthenticated={!!user}
           loginUrl={`/login?redirectTo=/${locale}/handbook/${pageSlug}/`}
+          previewMode={previewMode}
         />
 
-        {user && (
+        {user && !previewMode && (
           <div class="handbook-action-bar">
             <button
               class={`learning-check ${learningStatus === 'learned' ? 'learning-check--done' : ''}`}
@@ -215,22 +154,25 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
               data-term-id={term.id}
               data-status={learningStatus || 'none'}
             >
-              {learningStatus === 'learned' ? '✓ 학습 완료' : '○ 학습 완료 표시'}
+              {learningStatus === 'learned' ? '학습 완료' : '학습 완료 표시'}
             </button>
           </div>
         )}
 
-        <!-- Engagement Bar -->
         <div class="newsprint-engagement-bar">
           <div class="newsprint-engagement-left"></div>
           <div class="newsprint-engagement-right">
             <button
               type="button"
               class={`newsprint-engage-btn newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+              data-preview-mode={previewMode ? 'true' : 'false'}
               data-item-id={term.id}
               data-item-type="term"
               data-bookmarked={isBookmarked ? 'true' : 'false'}
-              aria-label={isBookmarked ? '북마크 제거' : '북마크 추가'}
+              aria-disabled={previewMode ? 'true' : undefined}
+              tabindex={previewMode ? '-1' : undefined}
+              disabled={previewMode}
+              aria-label={isBookmarked ? '북마크 해제' : '북마크 추가'}
             >
               <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
@@ -266,8 +208,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           </div>
         </div>
 
-        <!-- Admin Actions (admin only) -->
-        {Astro.locals.isAdmin && (
+        {Astro.locals.isAdmin && !previewMode && (
           <div class="newsprint-admin-actions" data-toolbar-id={term.id} data-toolbar-api="/api/admin/handbook/status">
             <a href={`/admin/handbook/edit/${pageSlug}`} class="newsprint-admin-action-btn">Edit</a>
             <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
@@ -276,7 +217,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         <nav class="handbook-bottom-nav" aria-label="핸드북 내비게이션">
           <a href={`/${locale}/handbook/`} class="handbook-nav-link">
-            ← {t[locale]['handbook.back']}
+            {t[locale]['handbook.back']}
           </a>
         </nav>
       </article>
@@ -299,6 +240,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   import '../../../scripts/share';
 
   function initHandbookUserFeatures(): void {
+    if (document.body.dataset.previewMode === 'true') return;
     const termId = document.querySelector('[data-term-id]')?.getAttribute('data-term-id');
     if (termId) {
       fetch('/api/user/reading-history', {
@@ -324,7 +266,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
       checkBtn.disabled = true;
       const prevText = checkBtn.textContent;
-      checkBtn.textContent = '\u2026';
+      checkBtn.textContent = '...';
 
       const newStatus = currentStatus === 'learned' ? 'read' : 'learned';
       try {
@@ -341,7 +283,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
 
         checkBtn.dataset.status = newStatus;
         checkBtn.classList.toggle('learning-check--done', newStatus === 'learned');
-        checkBtn.textContent = newStatus === 'learned' ? '✓ 학습 완료' : '○ 학습 완료 표시';
+        checkBtn.textContent = newStatus === 'learned' ? '학습 완료' : '학습 완료 표시';
       } catch {
         checkBtn.textContent = prevText;
       } finally {
@@ -351,6 +293,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   }
 
   function initAdminActions(): void {
+    if (document.body.dataset.previewMode === 'true') return;
     const actions = document.querySelector('.newsprint-admin-actions') as HTMLElement | null;
     if (!actions) return;
 
@@ -390,12 +333,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     const btns = document.querySelectorAll<HTMLButtonElement>('.handbook-level-btn');
     if (!prose || btns.length === 0) return;
 
-    btns.forEach(btn => {
+    btns.forEach((btn) => {
       btn.addEventListener('click', () => {
         const level = btn.dataset.level!;
         if (!map[level]) return;
         prose.innerHTML = map[level];
-        btns.forEach(b => b.classList.remove('handbook-level-btn--active'));
+        btns.forEach((item) => item.classList.remove('handbook-level-btn--active'));
         btn.classList.add('handbook-level-btn--active');
       });
     });

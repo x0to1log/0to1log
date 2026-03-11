@@ -296,6 +296,19 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             </div>
           </div>
 
+          <div class="admin-preview-frame-shell" data-preview-shell>
+            <div class="admin-preview-frame-loading" data-preview-loading role="status" aria-live="polite" hidden>
+              <span class="admin-preview-frame-spinner" aria-hidden="true"></span>
+              <span data-preview-loading-text>Loading live preview...</span>
+            </div>
+            <iframe
+              id="preview-iframe"
+              class="admin-preview-iframe"
+              title="Handbook preview"
+              loading="lazy"
+            ></iframe>
+          </div>
+          <div style="display: none;">
           <NewsprintShell
             locale="en"
             masthead="Handbook"
@@ -335,6 +348,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             />
           </Fragment>
           </NewsprintShell>
+          </div>
         </div>
       </>
     )}
@@ -344,7 +358,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 </MainLayout>
 
 <script>
-  import { marked } from 'marked';
   import { Crepe } from '@milkdown/crepe';
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
@@ -353,6 +366,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   let crepeBasicEn: Crepe | null = null;
   let crepeAdvancedKo: Crepe | null = null;
   let crepeAdvancedEn: Crepe | null = null;
+  let feedbackTimer = 0;
 
   document.addEventListener('DOMContentLoaded', () => {
     // Clean up previous Crepe instances (View Transitions)
@@ -360,8 +374,178 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     if (crepeBasicEn) { crepeBasicEn.destroy(); crepeBasicEn = null; }
     if (crepeAdvancedKo) { crepeAdvancedKo.destroy(); crepeAdvancedKo = null; }
     if (crepeAdvancedEn) { crepeAdvancedEn.destroy(); crepeAdvancedEn = null; }
+    clearTimeout(feedbackTimer);
     const termForm = document.getElementById('term-form');
     if (!termForm) return; // Not the handbook editor page
+    const draftMode = document.getElementById('draft-mode');
+    const previewMode = document.getElementById('preview-mode');
+    const btnSave = document.getElementById('btn-save') as HTMLButtonElement | null;
+    const btnPreview = document.getElementById('btn-preview') as HTMLButtonElement | null;
+    const btnPublish = document.getElementById('btn-publish') as HTMLButtonElement | null;
+    const btnPublishPreview = document.getElementById('btn-publish-preview') as HTMLButtonElement | null;
+    const btnEditBack = document.getElementById('btn-edit-back') as HTMLButtonElement | null;
+    const btnDelete = document.getElementById('btn-delete') as HTMLButtonElement | null;
+    const previewShell = document.querySelector<HTMLElement>('[data-preview-shell]');
+    const previewLoading = document.querySelector<HTMLElement>('[data-preview-loading]');
+    const previewLoadingText = document.querySelector<HTMLElement>('[data-preview-loading-text]');
+    const previewFrame = document.getElementById('preview-iframe') as HTMLIFrameElement | null;
+    const idInput = document.querySelector('[name="id"]') as HTMLInputElement | null;
+    const slugInput = document.querySelector('[name="slug"]') as HTMLInputElement | null;
+    const managedButtons = [btnSave, btnPreview, btnPublish, btnPublishPreview, btnEditBack, btnDelete]
+      .filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
+    const defaultButtonLabels = new Map<HTMLButtonElement, string>();
+    managedButtons.forEach((button) => {
+      defaultButtonLabels.set(button, button.textContent || '');
+    });
+    let previewEnteredFromEditor = false;
+    let previewResizeObserver: ResizeObserver | null = null;
+    let previewWindowResizeCleanup: (() => void) | null = null;
+    let announcePreviewReady = false;
+    let isActionPending = false;
+
+    function restoreActionButtons() {
+      managedButtons.forEach((button) => {
+        button.disabled = false;
+        button.textContent = defaultButtonLabels.get(button) || button.textContent || '';
+      });
+      isActionPending = false;
+    }
+
+    function setButtonLabel(button: HTMLButtonElement | null, label: string) {
+      if (button) button.textContent = label;
+    }
+
+    function beginAction(button: HTMLButtonElement | null, label: string) {
+      managedButtons.forEach((item) => {
+        item.disabled = true;
+        item.textContent = defaultButtonLabels.get(item) || item.textContent || '';
+      });
+      setButtonLabel(button, label);
+      isActionPending = true;
+    }
+
+    function setPreviewShellLoading(loading: boolean, message = 'Loading live preview...') {
+      previewShell?.classList.toggle('admin-preview-frame-shell--loading', loading);
+      if (previewLoading) previewLoading.hidden = !loading;
+      if (previewLoadingText) previewLoadingText.textContent = message;
+      if (previewFrame) previewFrame.setAttribute('aria-busy', loading ? 'true' : 'false');
+    }
+
+    function isPreviewLocation() {
+      return new URL(window.location.href).searchParams.get('mode') === 'preview';
+    }
+
+    function getEditorUrl(mode: 'draft' | 'preview', slugOverride = slugInput?.value || '') {
+      const url = new URL(window.location.href);
+      if (slugOverride) {
+        url.pathname = `/admin/handbook/edit/${slugOverride}`;
+      }
+      if (mode === 'preview') {
+        url.searchParams.set('mode', 'preview');
+      } else {
+        url.searchParams.delete('mode');
+      }
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+
+    function disconnectPreviewResize() {
+      previewResizeObserver?.disconnect();
+      previewResizeObserver = null;
+      if (previewWindowResizeCleanup) {
+        previewWindowResizeCleanup();
+        previewWindowResizeCleanup = null;
+      }
+    }
+
+    function syncPreviewFrameHeight() {
+      if (!previewFrame?.contentDocument) return;
+      const doc = previewFrame.contentDocument;
+      const body = doc.body;
+      const root = doc.documentElement;
+      const nextHeight = Math.max(
+        body?.scrollHeight || 0,
+        body?.offsetHeight || 0,
+        root?.scrollHeight || 0,
+        root?.offsetHeight || 0,
+        root?.clientHeight || 0,
+      );
+      if (nextHeight > 0) {
+        previewFrame.style.height = `${Math.max(nextHeight + 8, 720)}px`;
+      }
+    }
+
+    function attachPreviewAutoResize() {
+      if (!previewFrame?.contentDocument) return;
+      disconnectPreviewResize();
+      const doc = previewFrame.contentDocument;
+      const win = previewFrame.contentWindow;
+      const scheduleResize = () => window.requestAnimationFrame(() => syncPreviewFrameHeight());
+
+      previewResizeObserver = new ResizeObserver(() => scheduleResize());
+      if (doc.body) previewResizeObserver.observe(doc.body);
+      if (doc.documentElement) previewResizeObserver.observe(doc.documentElement);
+      doc.querySelectorAll('img').forEach((image) => {
+        if (!image.complete) {
+          image.addEventListener('load', scheduleResize, { once: true });
+        }
+      });
+      if (win) {
+        const handleResize = () => scheduleResize();
+        win.addEventListener('resize', handleResize);
+        previewWindowResizeCleanup = () => win.removeEventListener('resize', handleResize);
+      }
+
+      scheduleResize();
+      window.setTimeout(scheduleResize, 120);
+      window.setTimeout(scheduleResize, 420);
+      window.setTimeout(scheduleResize, 1200);
+    }
+
+    function showPreviewMode(pushHistory = false) {
+      if (draftMode) draftMode.style.display = 'none';
+      if (previewMode) previewMode.style.display = 'block';
+      if (pushHistory && !isPreviewLocation()) {
+        history.pushState({ mode: 'preview' }, '', getEditorUrl('preview'));
+        previewEnteredFromEditor = true;
+      }
+    }
+
+    function showDraftMode(replaceHistory = false) {
+      if (draftMode) draftMode.style.display = '';
+      if (previewMode) previewMode.style.display = 'none';
+      if (replaceHistory && isPreviewLocation()) {
+        history.replaceState({ mode: 'draft' }, '', getEditorUrl('draft'));
+      }
+      previewEnteredFromEditor = false;
+      setPreviewShellLoading(false);
+      restoreActionButtons();
+    }
+
+    function loadPreviewFrame(previewUrl: string, options: { announce?: boolean; pushHistory?: boolean } = {}) {
+      if (!previewFrame) return;
+      announcePreviewReady = options.announce === true;
+      setPreviewShellLoading(true, 'Loading live preview...');
+      showPreviewMode(options.pushHistory === true);
+      previewFrame.src = previewUrl;
+    }
+
+    function syncModeFromLocation() {
+      if (!isPreviewLocation()) {
+        showDraftMode(false);
+        return;
+      }
+
+      const previewUrl = buildPreviewUrl();
+      if (!previewUrl) {
+        showDraftMode(true);
+        return;
+      }
+
+      showPreviewMode(false);
+      if (!previewFrame?.src || previewFrame.src !== new URL(previewUrl, window.location.origin).toString()) {
+        loadPreviewFrame(previewUrl, { announce: false, pushHistory: false });
+      }
+    }
 
     // Auto-open details on desktop
     if (window.innerWidth >= 768) {
@@ -1074,8 +1258,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const el = document.getElementById('feedback')!;
     el.textContent = message;
     el.className = `admin-feedback admin-feedback--toast admin-feedback--${isError ? 'error' : 'success'}`;
+    el.setAttribute('role', isError ? 'alert' : 'status');
+    el.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+    el.setAttribute('aria-atomic', 'true');
     el.hidden = false;
-    setTimeout(() => { el.hidden = true; }, 3000);
+    clearTimeout(feedbackTimer);
+    feedbackTimer = window.setTimeout(() => { el.hidden = true; }, 3000);
   }
 
   function getFormData(): Record<string, any> {
@@ -1109,60 +1297,49 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     return data;
   }
 
-  // ===== Draft <-> Preview toggle =====
-  const draftMode = document.getElementById('draft-mode');
-  const previewMode = document.getElementById('preview-mode');
+  function getActivePreviewLang() {
+    return document.querySelector('.admin-lang-tab--active')?.getAttribute('data-lang') || 'ko';
+  }
 
-  document.getElementById('btn-preview')?.addEventListener('click', () => {
-    const form = document.getElementById('term-form') as HTMLFormElement;
-    const activeLang = document.querySelector('.admin-lang-tab--active')?.getAttribute('data-lang') || 'ko';
-
-    const termName = (form.querySelector('[name="term"]') as HTMLInputElement).value;
-    const koreanName = (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '';
-    const defField = form.querySelector('[name="definition_' + activeLang + '"]') as HTMLTextAreaElement | null;
-    const definition = defField?.value || '';
-
-    // Get body from active level tab's Crepe editor
+  function getActivePreviewLevel() {
+    const activeLang = getActivePreviewLang();
     const activeLevelBtn = document.querySelector(`[data-level-lang="${activeLang}"].admin-level-tab--active`) as HTMLElement | null;
-    const activeLevel = activeLevelBtn?.dataset.level || 'basic';
-    const bodyMarkdown = activeLevel === 'basic'
-      ? (activeLang === 'ko' ? (crepeBasicKo?.getMarkdown() || '') : (crepeBasicEn?.getMarkdown() || ''))
-      : (activeLang === 'ko' ? (crepeAdvancedKo?.getMarkdown() || '') : (crepeAdvancedEn?.getMarkdown() || ''));
+    return activeLevelBtn?.dataset.level || 'basic';
+  }
 
-    const previewTerm = document.getElementById('preview-term');
-    if (previewTerm) previewTerm.textContent = termName;
-
-    const previewKorean = document.getElementById('preview-korean');
-    if (previewKorean) previewKorean.textContent = koreanName;
-
-    const previewDef = document.getElementById('preview-definition');
-    if (previewDef) {
-      previewDef.textContent = definition;
-      previewDef.style.display = definition ? '' : 'none';
+  function syncSavedState(saved: { id?: string; slug?: string } | null) {
+    if (!saved) return;
+    if (saved.id && idInput) {
+      idInput.value = saved.id;
     }
-
-    const previewBody = document.getElementById('preview-body');
-    if (previewBody) {
-      previewBody.innerHTML = marked.parse(bodyMarkdown) as string;
+    if (saved.slug && slugInput) {
+      slugInput.value = saved.slug;
     }
+    if (saved.slug) {
+      window.history.replaceState(window.history.state, '', getEditorUrl(isPreviewLocation() ? 'preview' : 'draft', saved.slug));
+    }
+  }
 
-    if (draftMode) draftMode.style.display = 'none';
-    if (previewMode) previewMode.style.display = 'block';
-  });
+  function buildPreviewUrl() {
+    const slug = (slugInput?.value || '').trim();
+    if (!slug) return '';
+    const locale = getActivePreviewLang();
+    const level = getActivePreviewLevel();
+    const params = new URLSearchParams({
+      preview: '1',
+      previewLevel: level,
+      ts: `${Date.now()}`,
+    });
+    return `/${locale}/handbook/${slug}/?${params.toString()}`;
+  }
 
-  document.getElementById('btn-edit-back')?.addEventListener('click', () => {
-    if (draftMode) draftMode.style.display = '';
-    if (previewMode) previewMode.style.display = 'none';
-  });
-
-  document.getElementById('btn-publish-preview')?.addEventListener('click', () => {
-    document.getElementById('btn-publish')?.click();
-  });
-
-  // ===== Save Draft =====
-  document.getElementById('btn-save')?.addEventListener('click', async () => {
+  async function handleSave(options: { showFeedback?: boolean } = {}) {
+    const { showFeedback: shouldShowFeedback = true } = options;
     const data = getFormData();
-    if (!data.term) { showFeedback('Term is required.', true); return; }
+    if (!data.term) {
+      if (shouldShowFeedback) showFeedback('Term is required.', true);
+      return null;
+    }
 
     const res = await fetch('/api/admin/handbook/save', {
       method: 'POST',
@@ -1172,34 +1349,19 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     if (res.ok) {
       const saved = await res.json();
-      const idInput = document.querySelector('[name="id"]') as HTMLInputElement;
-      if (saved.id) idInput.value = saved.id;
-      const slugInput = document.querySelector('[name="slug"]') as HTMLInputElement;
-      if (saved.slug) slugInput.value = saved.slug;
-      showFeedback('Saved successfully.');
-      if (!data.id && saved.slug) {
-        window.history.replaceState(null, '', `/admin/handbook/edit/${saved.slug}`);
-      }
-    } else {
-      const err = await res.json();
-      showFeedback(`Save failed: ${err.error}`, true);
+      syncSavedState(saved);
+      if (shouldShowFeedback) showFeedback('Saved successfully.');
+      return saved;
     }
-  });
 
-  document.getElementById('btn-publish')?.addEventListener('click', async () => {
-    const data = getFormData();
-    if (!data.term) { showFeedback('Term is required.', true); return; }
+    const err = await res.json();
+    if (shouldShowFeedback) showFeedback(`Save failed: ${err.error}`, true);
+    return null;
+  }
 
-    const saveRes = await fetch('/api/admin/handbook/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!saveRes.ok) { const err = await saveRes.json(); showFeedback(`Save failed: ${err.error}`, true); return; }
-
-    const saved = await saveRes.json();
-    const idInput = document.querySelector('[name="id"]') as HTMLInputElement;
-    if (saved.id) idInput.value = saved.id;
+  async function handlePublish() {
+    const saved = await handleSave({ showFeedback: false });
+    if (!saved) return false;
 
     const pubRes = await fetch('/api/admin/handbook/status', {
       method: 'POST',
@@ -1209,13 +1371,78 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     if (pubRes.ok) {
       showFeedback('Published successfully.');
       setTimeout(() => window.location.reload(), 1000);
-    } else {
-      const err = await pubRes.json();
-      showFeedback(`Publish failed: ${err.error}`, true);
+      return true;
+    }
+
+    const err = await pubRes.json();
+    showFeedback(`Publish failed: ${err.error}`, true);
+    return false;
+  }
+
+  // ===== Draft <-> Preview toggle =====
+  previewFrame?.addEventListener('load', () => {
+    attachPreviewAutoResize();
+    setPreviewShellLoading(false);
+    restoreActionButtons();
+    if (announcePreviewReady) {
+      showFeedback('Preview updated.');
+      announcePreviewReady = false;
     }
   });
 
-  document.getElementById('btn-delete')?.addEventListener('click', async () => {
+  window.addEventListener('popstate', syncModeFromLocation);
+
+  btnPreview?.addEventListener('click', async () => {
+    if (isActionPending) return;
+    beginAction(btnPreview, 'Saving...');
+    const saved = await handleSave({ showFeedback: false });
+    if (!saved) {
+      restoreActionButtons();
+      showFeedback('Preview failed: save the draft first.', true);
+      return;
+    }
+    const previewUrl = buildPreviewUrl();
+    if (!previewUrl) {
+      restoreActionButtons();
+      showFeedback('Preview failed: save a valid slug first.', true);
+      return;
+    }
+    setButtonLabel(btnPreview, 'Loading preview...');
+    loadPreviewFrame(previewUrl, { announce: true, pushHistory: true });
+  });
+
+  btnEditBack?.addEventListener('click', () => {
+    if (isActionPending) return;
+    if (isPreviewLocation() && previewEnteredFromEditor) {
+      history.back();
+      return;
+    }
+    showDraftMode(true);
+  });
+
+  btnPublishPreview?.addEventListener('click', async () => {
+    if (isActionPending) return;
+    beginAction(btnPublishPreview, 'Publishing...');
+    const published = await handlePublish();
+    if (!published) restoreActionButtons();
+  });
+
+  // ===== Save Draft =====
+  btnSave?.addEventListener('click', async () => {
+    if (isActionPending) return;
+    beginAction(btnSave, 'Saving...');
+    await handleSave();
+    restoreActionButtons();
+  });
+
+  btnPublish?.addEventListener('click', async () => {
+    if (isActionPending) return;
+    beginAction(btnPublish, 'Publishing...');
+    const published = await handlePublish();
+    if (!published) restoreActionButtons();
+  });
+
+  btnDelete?.addEventListener('click', async () => {
     const idInput = document.querySelector('[name="id"]') as HTMLInputElement;
     const id = idInput.value;
     if (!id) return;
@@ -1235,5 +1462,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       showFeedback(`Delete failed: ${err.error}`, true);
     }
   });
+
+  syncModeFromLocation();
   }); // end DOMContentLoaded
 </script>

@@ -1,5 +1,6 @@
 ---
 import { getCategoryLabel } from '../../lib/categories';
+import PreviewReadonlyBanner from '../common/PreviewReadonlyBanner.astro';
 
 interface QuizPoll {
   question: string;
@@ -42,6 +43,7 @@ interface Props {
   personaHtmlMap?: Record<string, string>;
   guideItems?: GuideItems | null;
   initialFindQuery?: string;
+  previewMode?: boolean;
 }
 
 const {
@@ -70,6 +72,7 @@ const {
   personaHtmlMap,
   guideItems = null,
   initialFindQuery = '',
+  previewMode = false,
 } = Astro.props;
 
 const isKo = locale === 'ko';
@@ -135,9 +138,17 @@ const copy = {
   deleteConfirm: locale === 'ko' ? '댓글을 삭제할까요?' : 'Delete this comment?',
   copied: locale === 'ko' ? '복사됨' : 'Copied',
 };
+
+const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 ---
 
 <article class="newsprint-article">
+  {previewMode && (
+    <>
+      <!-- Admin preview -->
+      <PreviewReadonlyBanner locale={locale} />
+    </>
+  )}
   <div class="newsprint-article-header">
     <div class="newsprint-article-header-left">
       {categoryLabel && <span class="newsprint-category">{categoryLabel}</span>}
@@ -253,11 +264,15 @@ const copy = {
         type="button"
         class={`newsprint-engage-btn ${isLiked ? 'newsprint-engage-btn--active' : ''}`}
         data-like-btn
+        data-preview-mode={previewMode ? 'true' : 'false'}
         data-post-id={itemId}
         data-content-type={itemType === 'blog' ? 'blog' : 'news'}
         data-liked={isLiked ? 'true' : 'false'}
         data-auth-action="like"
         data-auth-redirect={articleRedirect}
+        aria-disabled={previewMode ? 'true' : undefined}
+        tabindex={previewMode ? '-1' : undefined}
+        disabled={previewMode}
         aria-label={locale === 'ko' ? '좋아요' : 'Like'}
       >
         <svg viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -281,11 +296,15 @@ const copy = {
         <button
           type="button"
           class={`newsprint-engage-btn newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+          data-preview-mode={previewMode ? 'true' : 'false'}
           data-item-id={itemId}
           data-item-type={itemType}
           data-bookmarked={isBookmarked ? 'true' : 'false'}
           data-auth-action="bookmark"
           data-auth-redirect={articleRedirect}
+          aria-disabled={previewMode ? 'true' : undefined}
+          tabindex={previewMode ? '-1' : undefined}
+          disabled={previewMode}
           aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
         >
           <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -340,6 +359,7 @@ const copy = {
   <section
     id="comments"
     class="newsprint-comments"
+    data-preview-mode={previewMode ? 'true' : 'false'}
     data-post-id={itemId}
     data-content-type={itemType === 'blog' ? 'blog' : 'news'}
     data-locale={locale}
@@ -347,6 +367,12 @@ const copy = {
     data-comment-redirect={commentRedirect}
   >
     <h3 class="newsprint-comments-title">{copy.comments} (<span data-comment-total>{commentCount}</span>)</h3>
+    {previewMode && (
+      <>
+        <!-- Preview mode 쨌 comments are read-only. -->
+        <p class="newsprint-preview-note">{previewCommentsReadonly}</p>
+      </>
+    )}
     <div data-comments-list class="newsprint-comments-list"></div>
     <div data-comment-form-wrapper>
       <form data-comment-form class="newsprint-comment-form" style="display:none;">
