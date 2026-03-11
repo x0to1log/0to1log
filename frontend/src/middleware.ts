@@ -14,10 +14,27 @@ function buildCspHeader(nonce: string): string {
   ].join('; ');
 }
 
+function addNonceToScriptTags(html: string, nonce: string): string {
+  return html.replace(/<script\b(?![^>]*\bnonce=)([^>]*)>/gi, `<script nonce="${nonce}"$1>`);
+}
+
 async function nextWithCsp(next: () => Promise<Response>, nonce: string): Promise<Response> {
   const response = await next();
-  response.headers.set('Content-Security-Policy', buildCspHeader(nonce));
-  return response;
+  const contentType = response.headers.get('content-type') || '';
+
+  if (!contentType.includes('text/html')) {
+    response.headers.set('Content-Security-Policy', buildCspHeader(nonce));
+    return response;
+  }
+
+  const rewrittenHtml = addNonceToScriptTags(await response.text(), nonce);
+  const rewrittenResponse = new Response(rewrittenHtml, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+  rewrittenResponse.headers.set('Content-Security-Policy', buildCspHeader(nonce));
+  return rewrittenResponse;
 }
 async function validateToken(
   cookies: any,
