@@ -21,6 +21,7 @@ class BlogAdviseRequest(BaseModel):
     tags: list[str] = []
     excerpt: str = ""
     slug: str = ""
+    locale: str = "en"
 
 
 class BlogAdviseResponse(BaseModel):

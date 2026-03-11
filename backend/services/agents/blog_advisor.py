@@ -143,7 +143,11 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
     else:
         system_prompt = config["prompt"]
 
-    logger.info("Blog advisor [%s] starting with model=%s", req.action, model)
+    # Inject language instruction based on locale
+    lang = "Korean" if req.locale == "ko" else "English"
+    system_prompt += f"\n\nIMPORTANT: Respond entirely in {lang}."
+
+    logger.info("Blog advisor [%s] starting with model=%s, locale=%s", req.action, model, req.locale)
 
     response = await client.chat.completions.create(
         model=model,
