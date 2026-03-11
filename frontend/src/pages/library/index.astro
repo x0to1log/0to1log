@@ -57,6 +57,7 @@ const copy = locale === 'ko'
       tabSaved: '저장한 글',
       tabRead: '읽은 글',
       tabProgress: '나의 학습 현황',
+      tabRecommended: '추천 읽기',
       emptyRead: siteContent.library_empty_read || '아직 읽은 글이 없어요\n흥미로운 글을 찾아 읽어보세요',
       emptySaved: siteContent.library_empty_saved || '아직 저장한 글이 없어요\n관심 가는 글에서 🔖 버튼을 눌러보세요\n이곳에 차곡차곡 쌓여갈 거예요',
       subArticles: '뉴스',
@@ -65,6 +66,7 @@ const copy = locale === 'ko'
       emptyTerms: '저장한 용어가 없습니다.',
       readingTime: '분',
       emptyProgress: siteContent.library_empty_progress || '용어집을 읽기 시작하면\n학습 현황이 여기에 쌓입니다',
+      emptyRecommended: '읽기 기록이 쌓이면 맞춤 추천이 생겨요',
       badgeArticle: '뉴스',
       badgeTerm: '용어',
       savedPrefix: '저장일',
@@ -83,6 +85,7 @@ const copy = locale === 'ko'
       tabSaved: 'Saved',
       tabRead: 'Read',
       tabProgress: 'My Progress',
+      tabRecommended: 'For You',
       emptyRead: siteContent.library_empty_read || 'No reading history yet\nExplore articles and start reading',
       emptySaved: siteContent.library_empty_saved || 'Your shelf is empty\nTap 🔖 on articles you\'d like to keep\nThey\'ll be waiting for you here',
       subArticles: 'Articles',
@@ -91,6 +94,7 @@ const copy = locale === 'ko'
       emptyTerms: 'No saved terms yet.',
       readingTime: 'min',
       emptyProgress: siteContent.library_empty_progress || 'Visit handbook terms to start\ntracking your learning progress',
+      emptyRecommended: "Read a few articles and we'll suggest more",
       badgeArticle: 'Article',
       badgeTerm: 'Term',
       savedPrefix: 'Saved',
@@ -169,6 +173,21 @@ const termBookmarks = bookmarkItems.filter((i) => i.item_type === 'term');
 // Lookup sets for dual icons
 const likedPostIds = new Set(likedItems.map((i) => i.post_id));
 const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.item_id}`));
+
+// Fetch recommended posts from FastAPI (non-fatal)
+let recommendedPosts: { post_id: string; slug: string; title: string; category: string }[] = [];
+const fastapiUrl = import.meta.env.FASTAPI_URL;
+if (fastapiUrl && user?.id) {
+  try {
+    const res = await fetch(
+      `${fastapiUrl}/api/recommendations/for-you?user_id=${user.id}&locale=${locale}`,
+      { signal: AbortSignal.timeout(4000) }
+    );
+    if (res.ok) recommendedPosts = await res.json();
+  } catch {
+    // Non-fatal
+  }
+}
 ---
 
 <MainLayout title={`${copy.title} ??0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
@@ -183,6 +202,7 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
       <button class="library-tab library-tab--active" data-tab="saved">{copy.tabSaved}</button>
       <button class="library-tab" data-tab="read">{copy.tabRead}</button>
       <button class="library-tab" data-tab="progress">{copy.tabProgress}</button>
+      <button class="library-tab" data-tab="recommended">{copy.tabRecommended}</button>
     </div>
 
     <!-- Saved Tab (default active) -->
@@ -346,6 +366,29 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((i) => `${i.item_type}:${i.i
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+
+    <!-- Recommended Tab -->
+    <div data-tab-content="recommended" style="display: none;">
+      {recommendedPosts.length === 0 ? (
+        <p class="library-empty">{copy.emptyRecommended}</p>
+      ) : (
+        <div class="library-shelf">
+          {recommendedPosts.map((p) => (
+            <div class="library-item">
+              <div class="library-item-spine" style={`background: ${spineColor(p.category)};`}></div>
+              <div class="library-item-content">
+                <div class="library-item-row">
+                  <a href={`/${locale}/news/${p.slug}/`} class="library-item-title">{p.title}</a>
+                </div>
+                <div class="library-item-meta">
+                  {p.category && <span class="library-type-badge">{p.category}</span>}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
