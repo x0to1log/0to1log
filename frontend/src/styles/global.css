@@ -3069,6 +3069,8 @@ code, pre {
     color: var(--color-text-primary);
     cursor: pointer;
     padding: 0.35rem;
+    min-width: 44px;
+    min-height: 44px;
     flex-shrink: 0;
   }
 
@@ -4432,6 +4434,25 @@ code, pre {
   pointer-events: none;
 }
 
+/* Blog-scoped comment typography overrides */
+.blog-shell .newsprint-comments-title {
+  font-family: var(--font-blog-heading);
+}
+
+.blog-shell .newsprint-comment-author,
+.blog-shell .newsprint-comment-input,
+.blog-shell .newsprint-comment-body,
+.blog-shell .newsprint-comment-login-input {
+  font-family: var(--font-blog-body);
+}
+
+.blog-shell .newsprint-comment-date,
+.blog-shell .newsprint-comment-charcount,
+.blog-shell .newsprint-comment-submit,
+.blog-shell .newsprint-comment-login-hint {
+  font-family: var(--font-blog-ui);
+}
+
 .handbook-feedback {
   margin: 2rem 0 1.5rem;
   padding: 0.9rem 1rem;
@@ -5368,6 +5389,15 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   gap: 0.35rem;
 }
 
+.blog-category-badge {
+  font-family: var(--font-blog-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+}
+
 .blog-mono-tag {
   font-family: var(--font-code);
   font-size: 0.68rem;
@@ -5413,6 +5443,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-list-item-title {
+  font-family: var(--font-blog-heading);
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--color-text-primary);
@@ -5441,11 +5472,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 }
 
 .blog-list-item-category {
-  font-family: var(--font-code);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.1rem 0.35rem;
+  text-transform: none;
 }
 
 .blog-list-item--read {

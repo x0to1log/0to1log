@@ -104,9 +104,23 @@ const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}${r
 
 const copy = {
   comments: locale === 'ko' ? '댓글' : 'Comments',
-  writeComment: locale === 'ko' ? '댓글을 작성해주세요...' : 'Write a comment...',
+  writeComment:
+    itemType === 'news'
+      ? locale === 'ko'
+        ? '핵심 변화에 대한 생각이나 해석을 남겨보세요.'
+        : 'Share your take on what changed and why it matters.'
+      : locale === 'ko'
+        ? '댓글을 작성해주세요...'
+        : 'Write a comment...',
   postComment: locale === 'ko' ? '게시' : 'Post',
-  loginToComment: locale === 'ko' ? '댓글을 작성하려면 로그인하세요' : 'Log in to comment',
+  loginToComment:
+    itemType === 'news'
+      ? locale === 'ko'
+        ? '의견을 남기려면 로그인하세요.'
+        : 'Log in to share your thoughts.'
+      : locale === 'ko'
+        ? '댓글을 작성하려면 로그인하세요'
+        : 'Log in to comment',
   deleteConfirm: locale === 'ko' ? '댓글을 삭제할까요?' : 'Delete this comment?',
   copied: locale === 'ko' ? '복사됨' : 'Copied',
 };
@@ -305,7 +319,14 @@ const copy = {
         </div>
       </form>
       <a data-comment-login href={`/login?redirectTo=${resolvedBasePath}/${slug}/`} class="newsprint-comment-login" style="display:none;">
-        {copy.loginToComment}
+        <div class="newsprint-comment-login-box">
+          <div class="newsprint-comment-login-input" aria-hidden="true">{copy.writeComment}</div>
+          <div class="newsprint-comment-form-actions">
+            <span class="newsprint-comment-charcount">0/2000</span>
+            <span class="newsprint-comment-submit newsprint-comment-submit--disabled" aria-hidden="true">{copy.postComment}</span>
+          </div>
+          <span class="newsprint-comment-login-hint">{copy.loginToComment}</span>
+        </div>
       </a>
     </div>
   </section>

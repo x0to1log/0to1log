@@ -10,6 +10,7 @@ import { localField, difficultyLabel, difficultyColor } from '../../../lib/handb
 import { renderMarkdown } from '../../../lib/markdown';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import HandbookFeedback from '../../../components/newsprint/HandbookFeedback.astro';
 import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
 
 const locale = 'ko';
@@ -47,54 +48,61 @@ const bodyMarkdown = term ? localField(term, 'body_markdown', locale) : '';
 const htmlContent = bodyMarkdown ? await renderMarkdown(bodyMarkdown) : '';
 
 let relatedArticles: any[] = [];
-if (supabase && term) {
-  const { data: articles } = await supabase
-    .from('news_posts')
-    .select('title, slug, category, published_at')
-    .eq('status', 'published')
-    .contains('tags', [term.term.toLowerCase()])
-    .limit(5);
-  relatedArticles = articles ?? [];
-}
-
 let relatedTerms: any[] = [];
-if (supabase && term?.related_term_slugs?.length) {
-  const { data: related } = await supabase
-    .from('handbook_terms')
-    .select('term, slug, korean_name, difficulty')
-    .eq('status', 'published')
-    .in('slug', term.related_term_slugs);
-  relatedTerms = related ?? [];
-}
-
 let sameCategoryTerms: any[] = [];
-if (supabase && term?.categories?.length) {
-  const { data } = await supabase
-    .from('handbook_terms')
-    .select('term, slug, korean_name, difficulty')
-    .eq('status', 'published')
-    .neq('slug', pageSlug)
-    .overlaps('categories', term.categories)
-    .limit(5);
-  sameCategoryTerms = data ?? [];
-}
-
-// User bookmark + learning state
 let isBookmarked = false;
 let learningStatus: string | null = null;
 let learningProgressId: string | null = null;
+
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
-if (user && accessToken && term) {
-  const authSb = createClient(
+
+if (supabase && term) {
+  const authSb = (user && accessToken) ? createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const [bmRes, lpRes] = await Promise.all([
-    authSb.from('user_bookmarks').select('id').eq('user_id', user.id).eq('item_type', 'term').eq('item_id', term.id).maybeSingle(),
-    authSb.from('learning_progress').select('id, status').eq('user_id', user.id).eq('term_id', term.id).maybeSingle(),
+  ) : null;
+
+  const [articlesRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
+    // relatedArticles
+    supabase
+      .from('news_posts')
+      .select('title, slug, category, published_at')
+      .eq('status', 'published')
+      .contains('tags', [term.term.toLowerCase()])
+      .limit(5),
+    // relatedTerms
+    term.related_term_slugs?.length
+      ? supabase
+          .from('handbook_terms')
+          .select('term, slug, korean_name, difficulty')
+          .eq('status', 'published')
+          .in('slug', term.related_term_slugs)
+      : Promise.resolve({ data: null }),
+    // sameCategoryTerms
+    term.categories?.length
+      ? supabase
+          .from('handbook_terms')
+          .select('term, slug, korean_name, difficulty')
+          .eq('status', 'published')
+          .neq('slug', pageSlug)
+          .overlaps('categories', term.categories)
+          .limit(5)
+      : Promise.resolve({ data: null }),
+    // bookmark
+    authSb
+      ? authSb.from('user_bookmarks').select('id').eq('user_id', user.id).eq('item_type', 'term').eq('item_id', term.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    // learning progress
+    authSb
+      ? authSb.from('learning_progress').select('id, status').eq('user_id', user.id).eq('term_id', term.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  relatedArticles = articlesRes.data ?? [];
+  relatedTerms = relatedRes.data ?? [];
+  sameCategoryTerms = sameCatRes.data ?? [];
   isBookmarked = !!bmRes.data;
   learningStatus = lpRes.data?.status ?? null;
   learningProgressId = lpRes.data?.id ?? null;
@@ -193,6 +201,8 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
             <Fragment set:html={htmlContent} />
           </div>
         )}
+
+        <HandbookFeedback locale={locale} />
 
         {user && (
           <div class="handbook-action-bar">

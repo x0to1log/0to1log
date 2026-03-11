@@ -112,7 +112,7 @@ const copy = {
     <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
   )}
 
-  <div class="newsprint-prose">
+  <div class="newsprint-prose newsprint-prose--no-dropcap">
     <Fragment set:html={htmlContent} />
   </div>
 
@@ -229,7 +229,14 @@ const copy = {
         </div>
       </form>
       <a data-comment-login href={`/login?redirectTo=${resolvedBasePath}/${slug}/`} class="newsprint-comment-login" style="display:none;">
-        {copy.loginToComment}
+        <div class="newsprint-comment-login-box">
+          <div class="newsprint-comment-login-input" aria-hidden="true">{copy.writeComment}</div>
+          <div class="newsprint-comment-form-actions">
+            <span class="newsprint-comment-charcount">0/2000</span>
+            <span class="newsprint-comment-submit newsprint-comment-submit--disabled" aria-hidden="true">{copy.postComment}</span>
+          </div>
+          <span class="newsprint-comment-login-hint">{copy.loginToComment}</span>
+        </div>
       </a>
     </div>
   </section>
