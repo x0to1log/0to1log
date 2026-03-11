@@ -136,7 +136,7 @@ if (post && supabase) {
     // handbookTerms
     supabase
       .from('handbook_terms')
-      .select('term, slug, korean_name, difficulty, categories, definition_ko, plain_explanation_ko, technical_description_ko, example_analogy_ko')
+      .select('term, slug, korean_name, categories, definition_ko')
       .eq('status', 'published'),
   ]);
 
@@ -157,12 +157,8 @@ if (post && supabase) {
       handbookTermsJson[ht.slug] = {
         term: ht.term,
         korean_name: ht.korean_name || '',
-        difficulty: ht.difficulty || '',
         categories: ht.categories || [],
         definition: ht.definition_ko || '',
-        plain_explanation: ht.plain_explanation_ko || '',
-        technical_description: ht.technical_description_ko || '',
-        example_analogy: ht.example_analogy_ko || '',
       };
     }
   }

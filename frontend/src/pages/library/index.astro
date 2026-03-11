@@ -3,7 +3,7 @@ export const prerender = false;
 
 import MainLayout from '../../layouts/MainLayout.astro';
 import { createClient } from '@supabase/supabase-js';
-import { difficultyColor, difficultyLabel } from '../../lib/handbookUtils';
+import { localField } from '../../lib/handbookUtils';
 import { getHandbookCategoryLabel } from '../../lib/handbookCategories';
 import { getSiteContents } from '../../lib/siteContent';
 
@@ -279,7 +279,7 @@ if (fastapiUrl && user?.id) {
                   const href = term ? `/${locale}/handbook/${term.slug}/` : '#';
                   return (
                     <div class="library-item">
-                      <div class="library-item-spine" style={`background: ${difficultyColor(term?.difficulty)};`}></div>
+                      <div class="library-item-spine" style="background: var(--color-text-muted);"></div>
                       <div class="library-item-content">
                         <div class="library-item-row">
                           <div style="min-width: 0; flex: 1;">
@@ -299,11 +299,6 @@ if (fastapiUrl && user?.id) {
                           </div>
                         </div>
                         <div class="library-item-meta">
-                          {term?.difficulty && (
-                            <span style={`padding: 0.1rem 0.35rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)}; font-size: 0.65rem; font-weight: 600;`}>
-                              {difficultyLabel(locale as 'en' | 'ko', term.difficulty)}
-                            </span>
-                          )}
                           {term?.category && (
                             <span>{getHandbookCategoryLabel(locale as 'en' | 'ko', term.category)}</span>
                           )}
@@ -333,7 +328,7 @@ if (fastapiUrl && user?.id) {
             const href = post ? `/${post.locale || 'en'}/news/${post.slug}/` : term ? `/${locale}/handbook/${term.slug}/` : '#';
             const isLiked = item.item_type === 'news' && likedPostIds.has(item.item_id);
             const isBm = bookmarkedItemIds.has(`${item.item_type}:${item.item_id}`);
-            const color = item.item_type === 'news' ? spineColor(post?.category) : difficultyColor(term?.difficulty);
+            const color = item.item_type === 'news' ? spineColor(post?.category) : 'var(--color-text-muted)';
             return (
               <div class="library-item">
                 <div class="library-item-spine" style={`background: ${color};`}></div>

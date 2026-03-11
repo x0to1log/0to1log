@@ -13,6 +13,7 @@ declare namespace App {
       avatar_url: string | null;
       persona: string | null;
       preferred_locale: string;
+      handbook_level: string;
       is_public: boolean;
       onboarding_completed: boolean;
     };

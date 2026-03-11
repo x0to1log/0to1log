@@ -355,7 +355,6 @@ async def _extract_and_create_terms(
             content, model, tokens = await generate_term_content(
                 term_name,
                 korean_name=item.get("korean_name", ""),
-                difficulty=item.get("difficulty", ""),
             )
         except Exception as e:
             logger.warning("Generate failed for term '%s': %s", term_name, e)
@@ -370,18 +369,13 @@ async def _extract_and_create_terms(
             "slug": slug,
             "status": "draft",
             "korean_name": content.get("korean_name", item.get("korean_name", "")),
-            "difficulty": content.get("difficulty", item.get("difficulty", "")),
             "categories": content.get("categories", []),
             "definition_ko": content.get("definition_ko", ""),
             "definition_en": content.get("definition_en", ""),
-            "plain_explanation_ko": content.get("plain_explanation_ko", ""),
-            "plain_explanation_en": content.get("plain_explanation_en", ""),
-            "technical_description_ko": content.get("technical_description_ko", ""),
-            "technical_description_en": content.get("technical_description_en", ""),
-            "example_analogy_ko": content.get("example_analogy_ko", ""),
-            "example_analogy_en": content.get("example_analogy_en", ""),
-            "body_markdown_ko": content.get("body_markdown_ko", ""),
-            "body_markdown_en": content.get("body_markdown_en", ""),
+            "body_basic_ko": content.get("body_basic_ko", ""),
+            "body_basic_en": content.get("body_basic_en", ""),
+            "body_advanced_ko": content.get("body_advanced_ko", ""),
+            "body_advanced_en": content.get("body_advanced_en", ""),
             "source": "pipeline",
         }
 

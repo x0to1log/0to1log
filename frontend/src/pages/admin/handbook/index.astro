@@ -18,7 +18,7 @@ let fetchError: string | null = null;
 
 const { data: terms, error } = await supabase
   .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, difficulty, definition_ko, definition_en, updated_at, published_at, source')
+  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, updated_at, published_at, source')
   .order('updated_at', { ascending: false });
 
 if (error) {
@@ -34,7 +34,6 @@ const allTerms = (terms ?? []).sort((a, b) => {
 const draftCount = allTerms.filter((term) => term.status === 'draft').length;
 const publishedCount = allTerms.filter((term) => term.status === 'published').length;
 const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categories || []))).sort();
-const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficulty).filter(Boolean))).sort();
 ---
 
 <MainLayout title="Admin Handbook" locale="en">
@@ -87,12 +86,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
           </div>
         </div>
         <div class="admin-list-toolbar-filters" id="filters-panel" hidden>
-          <select id="admin-difficulty-filter" class="admin-select">
-            <option value="">All difficulties</option>
-            {difficultyOptions.map((difficulty) => (
-              <option value={difficulty}>{difficulty}</option>
-            ))}
-          </select>
           <select id="admin-category-filter" class="admin-select">
             <option value="">All categories</option>
             {categoryOptions.map((category) => (
@@ -119,7 +112,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
                 class="admin-list-item"
                 data-status={term.status}
                 data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
-                data-difficulty={term.difficulty || ''}
                 data-categories={(term.categories || []).join(',')}
                 data-source={term.source || 'manual'}
               >
@@ -145,12 +137,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
                       <>
                         <span class="admin-meta-sep">·</span>
                         <span>{(term.categories || []).map((category: string) => getHandbookCategoryLabel('en', category)).join(' · ')}</span>
-                      </>
-                    )}
-                    {term.difficulty && (
-                      <>
-                        <span class="admin-meta-sep">·</span>
-                        <span>{term.difficulty}</span>
                       </>
                     )}
                     <span class="admin-meta-sep">·</span>
@@ -270,7 +256,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
 
     let currentFilter = 'draft';
     const searchInput = document.getElementById('admin-search');
-    const difficultyFilter = document.getElementById('admin-difficulty-filter');
     const categoryFilter = document.getElementById('admin-category-filter');
     const sourceFilter = document.getElementById('admin-source-filter');
     const noResults = document.getElementById('admin-no-results');
@@ -285,7 +270,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
 
     function applyFilter() {
       const query = (searchInput?.value || '').toLowerCase().trim();
-      const difficulty = difficultyFilter?.value || '';
       const category = categoryFilter?.value || '';
       const source = sourceFilter?.value || '';
       let visibleCount = 0;
@@ -293,10 +277,9 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
       Array.from(list.querySelectorAll('.admin-list-item')).forEach((item) => {
         const matchesStatus = currentFilter === 'all' || item.dataset.status === currentFilter;
         const matchesQuery = !query || (item.dataset.title || '').includes(query);
-        const matchesDifficulty = !difficulty || item.dataset.difficulty === difficulty;
         const matchesCategory = !category || (item.dataset.categories || '').split(',').includes(category);
         const matchesSource = !source || (item.dataset.source || 'manual') === source;
-        const visible = matchesStatus && matchesQuery && matchesDifficulty && matchesCategory && matchesSource;
+        const visible = matchesStatus && matchesQuery && matchesCategory && matchesSource;
         item.style.display = visible ? '' : 'none';
         if (visible) visibleCount += 1;
       });
@@ -314,7 +297,6 @@ const difficultyOptions = Array.from(new Set(allTerms.map((term) => term.difficu
     });
 
     searchInput?.addEventListener('input', applyFilter);
-    difficultyFilter?.addEventListener('change', applyFilter);
     categoryFilter?.addEventListener('change', applyFilter);
     sourceFilter?.addEventListener('change', applyFilter);
 

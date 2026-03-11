@@ -3,7 +3,6 @@ interface RailTerm {
   term: string;
   slug: string;
   korean_name?: string | null;
-  difficulty?: string | null;
 }
 
 interface RailArticle {
@@ -22,11 +21,6 @@ interface Props {
 const { locale, relatedTerms, sameCategoryTerms, relatedArticles } = Astro.props;
 const isKo = locale === 'ko';
 const hasRelated = relatedTerms.length > 0;
-const difficultyLabel: Record<string, string> = {
-  beginner: isKo ? '입문' : 'Beginner',
-  intermediate: isKo ? '중급' : 'Intermediate',
-  advanced: isKo ? '고급' : 'Advanced',
-};
 ---
 
 {/* Primary: Related Terms (curated) */}
@@ -39,11 +33,6 @@ const difficultyLabel: Record<string, string> = {
           <strong class="newsprint-rail-link">{rt.term}</strong>
           {rt.korean_name && (
             <span class="newsprint-rail-subtitle">{rt.korean_name}</span>
-          )}
-          {rt.difficulty && (
-            <span class={`newsprint-rail-badge newsprint-rail-badge--${rt.difficulty}`}>
-              {difficultyLabel[rt.difficulty] || rt.difficulty}
-            </span>
           )}
         </a>
       ))}

@@ -4,7 +4,7 @@ import MainLayout from '../../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategories, getHandbookCategoryLabel } from '../../../../lib/handbookCategories';
-import { difficultyLabel, difficultyColor } from '../../../../lib/handbookUtils';
+import { levelLabels } from '../../../../lib/handbookUtils';
 import { renderMarkdown } from '../../../../lib/markdown';
 import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astro';
 import HandbookSideRail from '../../../../components/newsprint/HandbookSideRail.astro';
@@ -58,15 +58,14 @@ if (term?.related_term_slugs?.length) {
 }
 
 const categories = getHandbookCategories();
-const difficulties = ['beginner', 'intermediate', 'advanced'];
 
 const pageTitle = isNew ? 'New Term' : `Edit: ${term?.term || slug}`;
 const initialTermName = term?.term || '';
 const initialKoreanName = term?.korean_name || '';
 const initialCategories = term?.categories || [];
 
-// Preview: server-side initial HTML for body_markdown
-const initialBodyKo = term?.body_markdown_ko || '';
+// Preview: server-side initial HTML for body_basic
+const initialBodyKo = term?.body_basic_ko || '';
 const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : '';
 ---
 
@@ -124,7 +123,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             <input type="text" name="term" class="admin-input" value={term?.term || ''} required />
           </div>
 
-          {/* Category + Difficulty (always visible) */}
+          {/* Categories (always visible) */}
           <div class="admin-field">
             <label>Categories (1–4) *</label>
             <div class="admin-category-grid">
@@ -136,15 +135,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                 </label>
               ))}
             </div>
-          </div>
-          <div class="admin-field">
-            <label>Difficulty</label>
-            <select name="difficulty" class="admin-input">
-              <option value="">— select —</option>
-              {difficulties.map((d) => (
-                <option value={d} selected={term?.difficulty === d}>{d}</option>
-              ))}
-            </select>
           </div>
 
           {/* Collapsible secondary fields */}
@@ -190,34 +180,34 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           {/* KO content */}
           <div id="lang-ko">
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <div class="admin-field-group">
-                <span class="admin-field-group-label">Card Fields</span>
-                <div class="admin-field">
-                  <label>Definition (KO)</label>
-                  <textarea name="definition_ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
-                </div>
-                <div class="admin-field">
-                  <label>Plain Explanation (KO)</label>
-                  <textarea name="plain_explanation_ko" class="admin-textarea" rows="3">{term?.plain_explanation_ko || ''}</textarea>
-                </div>
-                <div class="admin-field">
-                  <label>Technical Description (KO)</label>
-                  <textarea name="technical_description_ko" class="admin-textarea" rows="3">{term?.technical_description_ko || ''}</textarea>
-                </div>
-                <div class="admin-field">
-                  <label>Example / Analogy (KO)</label>
-                  <textarea name="example_analogy_ko" class="admin-textarea" rows="3">{term?.example_analogy_ko || ''}</textarea>
-                </div>
+              <div class="admin-field">
+                <label>Definition (KO)</label>
+                <textarea name="definition_ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
               </div>
-              <div class="admin-field-group admin-field-group--body">
-                <span class="admin-field-group-label">Body</span>
+              <div class="admin-level-tabs">
+                <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="ko" data-level="basic">Basic</button>
+                <button type="button" class="admin-level-tab" data-level-lang="ko" data-level="advanced">Advanced</button>
+              </div>
+              <div class="admin-field-group admin-field-group--body" id="level-basic-ko">
+                <span class="admin-field-group-label">Basic Body (KO)</span>
                 <div class="admin-field">
-                  <label>Body Markdown (KO)
-                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="ko" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate Body</button>
+                  <label>Body Basic (KO)
+                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="basic_ko" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate</button>
                   </label>
                   <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
-                       id="body-editor-ko"
-                       data-content={term?.body_markdown_ko || ''}></div>
+                       id="body-editor-basic-ko"
+                       data-content={term?.body_basic_ko || ''}></div>
+                </div>
+              </div>
+              <div class="admin-field-group admin-field-group--body" id="level-advanced-ko" style="display: none;">
+                <span class="admin-field-group-label">Advanced Body (KO)</span>
+                <div class="admin-field">
+                  <label>Body Advanced (KO)
+                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="advanced_ko" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate</button>
+                  </label>
+                  <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
+                       id="body-editor-advanced-ko"
+                       data-content={term?.body_advanced_ko || ''}></div>
                 </div>
               </div>
             </div>
@@ -226,34 +216,34 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           {/* EN content */}
           <div id="lang-en" style="display: none;">
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <div class="admin-field-group">
-                <span class="admin-field-group-label">Card Fields</span>
-                <div class="admin-field">
-                  <label>Definition (EN)</label>
-                  <textarea name="definition_en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
-                </div>
-                <div class="admin-field">
-                  <label>Plain Explanation (EN)</label>
-                  <textarea name="plain_explanation_en" class="admin-textarea" rows="3">{term?.plain_explanation_en || ''}</textarea>
-                </div>
-                <div class="admin-field">
-                  <label>Technical Description (EN)</label>
-                  <textarea name="technical_description_en" class="admin-textarea" rows="3">{term?.technical_description_en || ''}</textarea>
-                </div>
-                <div class="admin-field">
-                  <label>Example / Analogy (EN)</label>
-                  <textarea name="example_analogy_en" class="admin-textarea" rows="3">{term?.example_analogy_en || ''}</textarea>
-                </div>
+              <div class="admin-field">
+                <label>Definition (EN)</label>
+                <textarea name="definition_en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
               </div>
-              <div class="admin-field-group admin-field-group--body">
-                <span class="admin-field-group-label">Body</span>
+              <div class="admin-level-tabs">
+                <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="en" data-level="basic">Basic</button>
+                <button type="button" class="admin-level-tab" data-level-lang="en" data-level="advanced">Advanced</button>
+              </div>
+              <div class="admin-field-group admin-field-group--body" id="level-basic-en">
+                <span class="admin-field-group-label">Basic Body (EN)</span>
                 <div class="admin-field">
-                  <label>Body Markdown (EN)
-                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="en" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate Body</button>
+                  <label>Body Basic (EN)
+                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="basic_en" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate</button>
                   </label>
                   <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
-                       id="body-editor-en"
-                       data-content={term?.body_markdown_en || ''}></div>
+                       id="body-editor-basic-en"
+                       data-content={term?.body_basic_en || ''}></div>
+                </div>
+              </div>
+              <div class="admin-field-group admin-field-group--body" id="level-advanced-en" style="display: none;">
+                <span class="admin-field-group-label">Advanced Body (EN)</span>
+                <div class="admin-field">
+                  <label>Body Advanced (EN)
+                    <button type="button" class="admin-btn admin-btn--small admin-btn--outline" data-ai-generate-body="advanced_en" style="margin-left: 0.5rem; font-size: 0.75rem;">AI Generate</button>
+                  </label>
+                  <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
+                       id="body-editor-advanced-en"
+                       data-content={term?.body_advanced_en || ''}></div>
                 </div>
               </div>
             </div>
@@ -315,11 +305,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             <article id="preview-article">
               <header style="margin-bottom: 1.5rem;">
                 <div class="handbook-detail-meta">
-                  {term?.difficulty && (
-                    <span style={`font-size: 0.75rem; padding: 0.15rem 0.5rem; border: 1px solid ${difficultyColor(term.difficulty)}; color: ${difficultyColor(term.difficulty)};`}>
-                      {difficultyLabel('en', term.difficulty)}
-                    </span>
-                  )}
                   {initialCategories.map((c: string) => (
                     <span style="font-size: 0.8rem; color: var(--color-text-muted);">
                       {getHandbookCategoryLabel('en', c)}
@@ -336,7 +321,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
               <p id="preview-definition" class="handbook-definition"></p>
               <div class="newsprint-divider"></div>
-              <div id="preview-sections"></div>
               <div id="preview-body" class="newsprint-prose newsprint-prose--no-dropcap">
                 <Fragment set:html={initialBodyHtml} />
               </div>
@@ -365,13 +349,17 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
 
-  let crepeKo: Crepe | null = null;
-  let crepeEn: Crepe | null = null;
+  let crepeBasicKo: Crepe | null = null;
+  let crepeBasicEn: Crepe | null = null;
+  let crepeAdvancedKo: Crepe | null = null;
+  let crepeAdvancedEn: Crepe | null = null;
 
   document.addEventListener('DOMContentLoaded', () => {
     // Clean up previous Crepe instances (View Transitions)
-    if (crepeKo) { crepeKo.destroy(); crepeKo = null; }
-    if (crepeEn) { crepeEn.destroy(); crepeEn = null; }
+    if (crepeBasicKo) { crepeBasicKo.destroy(); crepeBasicKo = null; }
+    if (crepeBasicEn) { crepeBasicEn.destroy(); crepeBasicEn = null; }
+    if (crepeAdvancedKo) { crepeAdvancedKo.destroy(); crepeAdvancedKo = null; }
+    if (crepeAdvancedEn) { crepeAdvancedEn.destroy(); crepeAdvancedEn = null; }
     const termForm = document.getElementById('term-form');
     if (!termForm) return; // Not the handbook editor page
 
@@ -492,25 +480,26 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const previousValues = new Map<string, string>();
     const aiFieldValues = new Map<string, string>();
 
+    function getCrepeEditor(fieldName: string): Crepe | null {
+      if (fieldName === 'body_basic_ko') return crepeBasicKo;
+      if (fieldName === 'body_basic_en') return crepeBasicEn;
+      if (fieldName === 'body_advanced_ko') return crepeAdvancedKo;
+      if (fieldName === 'body_advanced_en') return crepeAdvancedEn;
+      return null;
+    }
+
     function getHandbookValue(fieldName: string): string {
-      if (fieldName.startsWith('body_markdown_')) {
-        const lang = fieldName.endsWith('_ko') ? 'ko' : 'en';
-        const editor = lang === 'ko' ? crepeKo : crepeEn;
-        return editor ? editor.getMarkdown() : '';
-      }
+      const editor = getCrepeEditor(fieldName);
+      if (editor) return editor.getMarkdown();
       const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
       return input?.value || '';
     }
 
     function setHandbookValue(fieldName: string, value: string) {
-      if (fieldName.startsWith('body_markdown_')) {
-        const lang = fieldName.endsWith('_ko') ? 'ko' : 'en';
-        const editor = lang === 'ko' ? crepeKo : crepeEn;
-        if (editor) editor.editor.action(replaceAll(value));
-      } else {
-        const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
-        if (input) input.value = value;
-      }
+      const editor = getCrepeEditor(fieldName);
+      if (editor) { editor.editor.action(replaceAll(value)); return; }
+      const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
+      if (input) input.value = value;
     }
 
     function showDiff(btn: HTMLButtonElement, fieldName: string, newValue: string) {
@@ -578,20 +567,15 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         term,
         korean_name: (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '',
         categories: Array.from(form.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
-        difficulty: (form.querySelector('[name="difficulty"]') as HTMLSelectElement)?.value || '',
         definition_ko: (form.querySelector('[name="definition_ko"]') as HTMLTextAreaElement)?.value || '',
         definition_en: (form.querySelector('[name="definition_en"]') as HTMLTextAreaElement)?.value || '',
-        plain_explanation_ko: (form.querySelector('[name="plain_explanation_ko"]') as HTMLTextAreaElement)?.value || '',
-        plain_explanation_en: (form.querySelector('[name="plain_explanation_en"]') as HTMLTextAreaElement)?.value || '',
-        technical_description_ko: (form.querySelector('[name="technical_description_ko"]') as HTMLTextAreaElement)?.value || '',
-        technical_description_en: (form.querySelector('[name="technical_description_en"]') as HTMLTextAreaElement)?.value || '',
-        example_analogy_ko: (form.querySelector('[name="example_analogy_ko"]') as HTMLTextAreaElement)?.value || '',
-        example_analogy_en: (form.querySelector('[name="example_analogy_en"]') as HTMLTextAreaElement)?.value || '',
-        body_markdown_ko: crepeKo ? crepeKo.getMarkdown() : '',
-        body_markdown_en: crepeEn ? crepeEn.getMarkdown() : '',
+        body_basic_ko: crepeBasicKo ? crepeBasicKo.getMarkdown() : '',
+        body_basic_en: crepeBasicEn ? crepeBasicEn.getMarkdown() : '',
+        body_advanced_ko: crepeAdvancedKo ? crepeAdvancedKo.getMarkdown() : '',
+        body_advanced_en: crepeAdvancedEn ? crepeAdvancedEn.getMarkdown() : '',
       };
 
-      // Apply overrides (e.g. force body_markdown empty for body-only generation)
+      // Apply overrides (e.g. force body_basic/advanced empty for body-only generation)
       if (overrides) Object.assign(body, overrides);
 
       // Add translate direction if not auto
@@ -710,7 +694,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                 status: 'draft',
                 source: 'ai-suggested',
                 categories: Array.from(document.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
-                difficulty: (document.querySelector('[name="difficulty"]') as HTMLSelectElement)?.value || '',
               }),
             });
             if (res.ok) {
@@ -739,10 +722,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
       const fields = [
         { key: 'definition', label: 'Definition' },
-        { key: 'plain_explanation', label: 'Plain Explanation' },
-        { key: 'technical_description', label: 'Technical Description' },
-        { key: 'example_analogy', label: 'Example/Analogy' },
-        { key: 'body_markdown', label: 'Body' },
+        { key: 'body_basic', label: 'Body (Basic)' },
+        { key: 'body_advanced', label: 'Body (Advanced)' },
       ];
 
       fields.forEach(f => {
@@ -827,7 +808,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       // Metadata fields
       const metaFields = [
         { key: 'korean_name', label: 'Korean Name' },
-        { key: 'difficulty', label: 'Difficulty' },
       ];
       metaFields.forEach(f => {
         const val = r[f.key];
@@ -850,10 +830,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       // Content fields (bilingual)
       const contentFields = [
         { key: 'definition', label: 'Definition' },
-        { key: 'plain_explanation', label: 'Plain Explanation' },
-        { key: 'technical_description', label: 'Technical Description' },
-        { key: 'example_analogy', label: 'Example/Analogy' },
-        { key: 'body_markdown', label: 'Body' },
+        { key: 'body_basic', label: 'Body (Basic)' },
+        { key: 'body_advanced', label: 'Body (Advanced)' },
       ];
 
       ['ko', 'en'].forEach(lang => {
@@ -907,7 +885,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         btn.addEventListener('click', () => {
           const fieldName = btn.dataset.applyField || '';
           const value = aiFieldValues.get(fieldName) || '';
-          if (fieldName === 'korean_name' || fieldName === 'difficulty') {
+          if (fieldName === 'korean_name') {
             const input = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement | HTMLSelectElement | null;
             if (input) {
               previousValues.set(fieldName, input.value);
@@ -959,14 +937,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             previousValues.set('korean_name', input.value);
             input.value = r.korean_name;
             appliedFields.push('korean_name');
-          }
-        }
-        if (r.difficulty) {
-          const sel = document.querySelector('[name="difficulty"]') as HTMLSelectElement;
-          if (sel && !sel.value) {
-            previousValues.set('difficulty', sel.value);
-            sel.value = r.difficulty;
-            appliedFields.push('difficulty');
           }
         }
         if (r.categories?.length) {
@@ -1022,12 +992,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       });
     });
 
-    // AI Generate Body buttons (KO/EN)
+    // AI Generate Body buttons (basic_ko, basic_en, advanced_ko, advanced_en)
     document.querySelectorAll<HTMLButtonElement>('[data-ai-generate-body]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const lang = btn.dataset.aiGenerateBody; // 'ko' or 'en'
-        if (lang) {
-          runHandbookAi('generate', { [`body_markdown_${lang}`]: '' });
+        const target = btn.dataset.aiGenerateBody; // 'basic_ko', 'basic_en', etc.
+        if (target) {
+          runHandbookAi('generate', { [`body_${target}`]: '' });
         }
       });
     });
@@ -1046,6 +1016,24 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       });
     });
 
+    // Level sub-tab switching (Basic / Advanced within each language)
+    document.querySelectorAll<HTMLButtonElement>('[data-level-lang]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.levelLang!;
+        const level = btn.dataset.level!;
+        // Toggle active tab within same language
+        document.querySelectorAll<HTMLButtonElement>(`[data-level-lang="${lang}"]`).forEach(b =>
+          b.classList.remove('admin-level-tab--active')
+        );
+        btn.classList.add('admin-level-tab--active');
+        // Show/hide level panels
+        const basicPanel = document.getElementById(`level-basic-${lang}`);
+        const advancedPanel = document.getElementById(`level-advanced-${lang}`);
+        if (basicPanel) basicPanel.style.display = level === 'basic' ? '' : 'none';
+        if (advancedPanel) advancedPanel.style.display = level === 'advanced' ? '' : 'none';
+      });
+    });
+
     // Enforce max 4 categories
     document.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach(cb => {
       cb.addEventListener('change', () => {
@@ -1057,38 +1045,28 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       });
     });
 
-    // ===== Initialize Milkdown Crepe body editors =====
+    // ===== Initialize Milkdown Crepe body editors (4 instances) =====
+    async function initCrepe(elId: string, placeholder: string): Promise<Crepe | null> {
+      const el = document.getElementById(elId);
+      if (!el) return null;
+      const crepe = new Crepe({
+        root: el,
+        defaultValue: el.dataset.content || '',
+        featureConfigs: {
+          [Crepe.Feature.Placeholder]: { text: placeholder, mode: 'block' },
+        },
+      });
+      await crepe.create();
+      return crepe;
+    }
+
     async function initBodyEditors() {
-      const koEl = document.getElementById('body-editor-ko');
-      const enEl = document.getElementById('body-editor-en');
-
-      if (koEl) {
-        crepeKo = new Crepe({
-          root: koEl,
-          defaultValue: koEl.dataset.content || '',
-          featureConfigs: {
-            [Crepe.Feature.Placeholder]: {
-              text: '본문을 작성하세요...',
-              mode: 'block',
-            },
-          },
-        });
-        await crepeKo.create();
-      }
-
-      if (enEl) {
-        crepeEn = new Crepe({
-          root: enEl,
-          defaultValue: enEl.dataset.content || '',
-          featureConfigs: {
-            [Crepe.Feature.Placeholder]: {
-              text: 'Write the body content...',
-              mode: 'block',
-            },
-          },
-        });
-        await crepeEn.create();
-      }
+      [crepeBasicKo, crepeBasicEn, crepeAdvancedKo, crepeAdvancedEn] = await Promise.all([
+        initCrepe('body-editor-basic-ko', '기초 설명을 작성하세요...'),
+        initCrepe('body-editor-basic-en', 'Write basic explanation...'),
+        initCrepe('body-editor-advanced-ko', '심화 설명을 작성하세요...'),
+        initCrepe('body-editor-advanced-en', 'Write advanced explanation...'),
+      ]);
     }
     initBodyEditors();
 
@@ -1122,9 +1100,11 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     if (!data.id) delete data.id;
 
-    // Body markdown from Crepe editors (not in form anymore)
-    data.body_markdown_ko = crepeKo ? crepeKo.getMarkdown() : '';
-    data.body_markdown_en = crepeEn ? crepeEn.getMarkdown() : '';
+    // Body content from Crepe editors (not in form anymore)
+    data.body_basic_ko = crepeBasicKo ? crepeBasicKo.getMarkdown() : '';
+    data.body_basic_en = crepeBasicEn ? crepeBasicEn.getMarkdown() : '';
+    data.body_advanced_ko = crepeAdvancedKo ? crepeAdvancedKo.getMarkdown() : '';
+    data.body_advanced_en = crepeAdvancedEn ? crepeAdvancedEn.getMarkdown() : '';
 
     return data;
   }
@@ -1140,18 +1120,14 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const termName = (form.querySelector('[name="term"]') as HTMLInputElement).value;
     const koreanName = (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '';
     const defField = form.querySelector('[name="definition_' + activeLang + '"]') as HTMLTextAreaElement | null;
-    const plainField = form.querySelector('[name="plain_explanation_' + activeLang + '"]') as HTMLTextAreaElement | null;
-    const exampleField = form.querySelector('[name="example_analogy_' + activeLang + '"]') as HTMLTextAreaElement | null;
-
     const definition = defField?.value || '';
-    const plainExplanation = plainField?.value || '';
-    const exampleAnalogy = exampleField?.value || '';
-    const bodyMarkdown = activeLang === 'ko'
-      ? (crepeKo ? crepeKo.getMarkdown() : '')
-      : (crepeEn ? crepeEn.getMarkdown() : '');
 
-    const techField = form.querySelector('[name="technical_description_' + activeLang + '"]') as HTMLTextAreaElement | null;
-    const technicalDescription = techField?.value || '';
+    // Get body from active level tab's Crepe editor
+    const activeLevelBtn = document.querySelector(`[data-level-lang="${activeLang}"].admin-level-tab--active`) as HTMLElement | null;
+    const activeLevel = activeLevelBtn?.dataset.level || 'basic';
+    const bodyMarkdown = activeLevel === 'basic'
+      ? (activeLang === 'ko' ? (crepeBasicKo?.getMarkdown() || '') : (crepeBasicEn?.getMarkdown() || ''))
+      : (activeLang === 'ko' ? (crepeAdvancedKo?.getMarkdown() || '') : (crepeAdvancedEn?.getMarkdown() || ''));
 
     const previewTerm = document.getElementById('preview-term');
     if (previewTerm) previewTerm.textContent = termName;
@@ -1159,39 +1135,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const previewKorean = document.getElementById('preview-korean');
     if (previewKorean) previewKorean.textContent = koreanName;
 
-    // Definition (matches published .handbook-definition)
     const previewDef = document.getElementById('preview-definition');
     if (previewDef) {
       previewDef.textContent = definition;
       previewDef.style.display = definition ? '' : 'none';
     }
 
-    // Sections (matches published .handbook-section structure)
-    const sectionsContainer = document.getElementById('preview-sections');
-    if (sectionsContainer) {
-      sectionsContainer.innerHTML = '';
-      const sections = [
-        { label: 'Plain Explanation', text: plainExplanation },
-        { label: 'Technical Description', text: technicalDescription },
-        { label: 'Example / Analogy', text: exampleAnalogy },
-      ];
-      sections.forEach(({ label, text }) => {
-        if (!text) return;
-        const div = document.createElement('div');
-        div.className = 'handbook-section';
-        const span = document.createElement('span');
-        span.className = 'handbook-section-label';
-        span.textContent = label;
-        const p = document.createElement('p');
-        p.className = 'handbook-section-body';
-        p.textContent = text;
-        div.appendChild(span);
-        div.appendChild(p);
-        sectionsContainer.appendChild(div);
-      });
-    }
-
-    // Body markdown (matches published .newsprint-prose--no-dropcap)
     const previewBody = document.getElementById('preview-body');
     if (previewBody) {
       previewBody.innerHTML = marked.parse(bodyMarkdown) as string;

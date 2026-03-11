@@ -189,25 +189,19 @@ let handbookTermsJson: Record<string, any> = {};
 if (post && supabase) {
   const { data: hbTerms } = await supabase
     .from('handbook_terms')
-    .select('term, slug, korean_name, difficulty, categories, definition_en, plain_explanation_en, technical_description_en, example_analogy_en')
+    .select('term, slug, korean_name, categories, definition_en')
     .eq('status', 'published');
 
   if (hbTerms && hbTerms.length > 0) {
     for (const t of hbTerms) {
       const entry = { slug: t.slug, term: t.term };
-      // Map both English term and Korean name (lowercase)
       handbookTermsMap.set(t.term.toLowerCase(), entry);
       if (t.korean_name) handbookTermsMap.set(t.korean_name.toLowerCase(), entry);
-      // Store popup data keyed by slug
       handbookTermsJson[t.slug] = {
         term: t.term,
         korean_name: t.korean_name || '',
-        difficulty: t.difficulty || '',
         categories: t.categories || [],
         definition: t.definition_en || '',
-        plain_explanation: t.plain_explanation_en || '',
-        technical_description: t.technical_description_en || '',
-        example_analogy: t.example_analogy_en || '',
       };
     }
   }

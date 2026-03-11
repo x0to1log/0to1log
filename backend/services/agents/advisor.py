@@ -308,27 +308,20 @@ def _build_handbook_user_prompt(req: HandbookAdviseRequest) -> str:
         f"Term: {req.term}",
         f"Korean name: {req.korean_name}" if req.korean_name else None,
         f"Categories: {', '.join(req.categories)}" if req.categories else None,
-        f"Difficulty: {req.difficulty}" if req.difficulty else None,
     ]
     # Include available content
     for lang in ("ko", "en"):
         defn = getattr(req, f"definition_{lang}", "")
-        plain = getattr(req, f"plain_explanation_{lang}", "")
-        tech = getattr(req, f"technical_description_{lang}", "")
-        analogy = getattr(req, f"example_analogy_{lang}", "")
-        body = getattr(req, f"body_markdown_{lang}", "")
-        if any([defn, plain, tech, analogy, body]):
+        basic = getattr(req, f"body_basic_{lang}", "")
+        advanced = getattr(req, f"body_advanced_{lang}", "")
+        if any([defn, basic, advanced]):
             parts.append(f"\n--- Content ({lang.upper()}) ---")
             if defn:
                 parts.append(f"Definition: {defn}")
-            if plain:
-                parts.append(f"Plain explanation: {plain}")
-            if tech:
-                parts.append(f"Technical description: {tech}")
-            if analogy:
-                parts.append(f"Example/Analogy: {analogy}")
-            if body:
-                parts.append(f"Body:\n{body}")
+            if basic:
+                parts.append(f"Body (Basic):\n{basic}")
+            if advanced:
+                parts.append(f"Body (Advanced):\n{advanced}")
     return "\n".join(p for p in parts if p is not None)
 
 
@@ -336,12 +329,10 @@ def _build_translate_user_prompt(req: HandbookAdviseRequest) -> tuple[str, str, 
     """Build translate prompt. Returns (user_prompt, source_lang, target_lang)."""
     # Determine source language (whichever has more content)
     ko_content = " ".join(filter(None, [
-        req.definition_ko, req.plain_explanation_ko,
-        req.technical_description_ko, req.example_analogy_ko, req.body_markdown_ko,
+        req.definition_ko, req.body_basic_ko, req.body_advanced_ko,
     ]))
     en_content = " ".join(filter(None, [
-        req.definition_en, req.plain_explanation_en,
-        req.technical_description_en, req.example_analogy_en, req.body_markdown_en,
+        req.definition_en, req.body_basic_en, req.body_advanced_en,
     ]))
 
     # Allow forced direction override
@@ -362,18 +353,14 @@ def _build_translate_user_prompt(req: HandbookAdviseRequest) -> tuple[str, str, 
     if source_lang == "ko":
         fields = {
             "definition": req.definition_ko,
-            "plain_explanation": req.plain_explanation_ko,
-            "technical_description": req.technical_description_ko,
-            "example_analogy": req.example_analogy_ko,
-            "body_markdown": req.body_markdown_ko,
+            "body_basic": req.body_basic_ko,
+            "body_advanced": req.body_advanced_ko,
         }
     else:
         fields = {
             "definition": req.definition_en,
-            "plain_explanation": req.plain_explanation_en,
-            "technical_description": req.technical_description_en,
-            "example_analogy": req.example_analogy_en,
-            "body_markdown": req.body_markdown_en,
+            "body_basic": req.body_basic_en,
+            "body_advanced": req.body_advanced_en,
         }
 
     parts = [
@@ -529,7 +516,7 @@ async def _run_generate_term(
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=12000,
+        max_tokens=16000,
     )
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-generate")
     tokens = resp.usage.completion_tokens if resp.usage else 0
@@ -579,7 +566,7 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], str, int
 
 
 async def generate_term_content(
-    term_name: str, korean_name: str = "", difficulty: str = ""
+    term_name: str, korean_name: str = ""
 ) -> tuple[dict, str, int]:
     """Generate full content for a handbook term. Used by pipeline auto-creation."""
     req = HandbookAdviseRequest(
@@ -587,7 +574,6 @@ async def generate_term_content(
         term_id="",
         term=term_name,
         korean_name=korean_name,
-        difficulty=difficulty,
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")

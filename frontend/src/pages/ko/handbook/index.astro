@@ -6,7 +6,7 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
-import { localField, difficultyLabel, difficultyColor } from '../../../lib/handbookUtils';
+import { localField } from '../../../lib/handbookUtils';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import HandbookListRail from '../../../components/newsprint/HandbookListRail.astro';
@@ -19,7 +19,7 @@ let fetchError: string | null = null;
 if (supabase) {
   const { data, error } = await supabase
     .from('handbook_terms')
-    .select('id, term, slug, korean_name, definition_ko, definition_en, plain_explanation_ko, plain_explanation_en, difficulty, categories, is_favourite')
+    .select('id, term, slug, korean_name, definition_ko, definition_en, categories, is_favourite')
     .eq('status', 'published')
     .order('term', { ascending: true });
 
@@ -54,7 +54,7 @@ let railTerms: any[] = [];
 if (supabase) {
   const { data } = await supabase
     .from('handbook_terms')
-    .select('term, slug, difficulty')
+    .select('term, slug')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
     .limit(5);
@@ -102,17 +102,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
           </button>
         ))}
       </div>
-      <div id="handbook-difficulty-filters" class="handbook-filter-row">
-        <button type="button" class="handbook-difficulty-btn active" data-difficulty="all" aria-pressed="true">
-          {t[locale]['handbook.allDifficulties']}
-        </button>
-        {['beginner', 'intermediate', 'advanced'].map((d) => (
-          <button type="button" class="handbook-difficulty-btn" data-difficulty={d} aria-pressed="false"
-            style={`border-color: ${difficultyColor(d)}; color: ${difficultyColor(d)};`}>
-            {difficultyLabel(locale, d)}
-          </button>
-        ))}
-      </div>
     </div>
     <div id="handbook-result-count" class="handbook-result-count" aria-live="polite" style="display: none;"></div>
 
@@ -139,14 +128,8 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
               data-term={term.term}
               data-korean={term.korean_name || ''}
               data-def={def}
-              data-difficulty={term.difficulty || ''}
             >
               <div class="handbook-card-meta">
-                {term.difficulty && (
-                  <span class="handbook-diff-pill" data-difficulty={term.difficulty}>
-                    {difficultyLabel(locale, term.difficulty)}
-                  </span>
-                )}
                 {(term.categories || []).map((cat: string) => (
                   <span class="handbook-cat-pill">
                     {getHandbookCategoryLabel(locale, cat)}
@@ -208,11 +191,9 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
     const noResults = document.getElementById('handbook-no-results');
     const countEl = document.getElementById('handbook-result-count');
     const filterBtns = document.querySelectorAll('.handbook-filter-btn');
-    const diffBtns = document.querySelectorAll('.handbook-difficulty-btn');
     if (!search || !list) return;
 
     let activeCategory = 'all';
-    let activeDifficulty = 'all';
 
     function filter(): void {
       const query = search!.value.toLowerCase().trim();
@@ -226,21 +207,19 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         const def = (card.dataset.def || '').toLowerCase();
 
         const matchesCategory = activeCategory === 'all' || cats.includes(activeCategory);
-        const cardDifficulty = card.dataset.difficulty || '';
-        const matchesDifficulty = activeDifficulty === 'all' || cardDifficulty === activeDifficulty;
         const matchesSearch = !query || term.includes(query) || korean.includes(query) || def.includes(query);
 
-        const show = matchesCategory && matchesDifficulty && matchesSearch;
+        const show = matchesCategory && matchesSearch;
         card.style.display = show ? 'block' : 'none';
         if (show) visible++;
       });
 
       if (noResults) {
-        noResults.style.display = visible === 0 && (query || activeCategory !== 'all' || activeDifficulty !== 'all') ? 'block' : 'none';
+        noResults.style.display = visible === 0 && (query || activeCategory !== 'all') ? 'block' : 'none';
       }
       if (countEl) {
         const total = cards.length;
-        const isFiltered = query || activeCategory !== 'all' || activeDifficulty !== 'all';
+        const isFiltered = query || activeCategory !== 'all';
         countEl.textContent = isFiltered ? `${visible} / ${total}` : '';
         countEl.style.display = isFiltered ? 'block' : 'none';
       }
@@ -257,19 +236,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         (btn as HTMLElement).classList.add('active');
         (btn as HTMLElement).setAttribute('aria-pressed', 'true');
         activeCategory = (btn as HTMLElement).dataset.filter || 'all';
-        filter();
-      });
-    });
-
-    diffBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        diffBtns.forEach((b) => {
-          (b as HTMLElement).classList.remove('active');
-          (b as HTMLElement).setAttribute('aria-pressed', 'false');
-        });
-        (btn as HTMLElement).classList.add('active');
-        (btn as HTMLElement).setAttribute('aria-pressed', 'true');
-        activeDifficulty = (btn as HTMLElement).dataset.difficulty || 'all';
         filter();
       });
     });
