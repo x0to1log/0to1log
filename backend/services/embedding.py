@@ -52,11 +52,14 @@ async def embed_post(
     published_at: str,
 ) -> None:
     """Generate embedding for a post and upsert to Pinecone."""
+    if not settings.pinecone_api_key:
+        logger.warning("Pinecone not configured, skipping embed for post %s", post_id)
+        return
     text = _build_embed_text(title, excerpt or "", category or "", tags or [])
     client = _get_openai_client()
 
     response = await client.embeddings.create(
-        model="text-embedding-3-small",
+        model=settings.embedding_model,
         input=text,
     )
     vector = response.data[0].embedding
