@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from core.rate_limit import limiter
 from routers import cron, admin, admin_ai, admin_blog_ai
+from routers.recommendations import router as recommendations_router
 from models.posts import HealthResponse
 
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +30,7 @@ app.include_router(cron.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(admin_ai.router, prefix="/api")
 app.include_router(admin_blog_ai.router, prefix="/api")
+app.include_router(recommendations_router, prefix="/api")
 
 
 @app.get("/health", response_model=HealthResponse)
