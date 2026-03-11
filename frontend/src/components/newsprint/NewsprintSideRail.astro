@@ -19,15 +19,23 @@ interface RelatedNews {
   new_tools?: RelatedNewsItem | null;
 }
 
+interface SimilarPost {
+  post_id: string;
+  slug: string;
+  title: string;
+  category: string;
+}
+
 interface Props {
   locale: 'en' | 'ko';
   posts: RailPost[];
   focusItems: string[];
   relatedNews?: RelatedNews | null;
   basePath?: string;
+  similarPosts?: SimilarPost[];
 }
 
-const { locale, posts, focusItems, relatedNews, basePath } = Astro.props;
+const { locale, posts, focusItems, relatedNews, basePath, similarPosts = [] } = Astro.props;
 const resolvedBasePath = basePath || `/${locale}/news`;
 const isKo = locale === 'ko';
 
@@ -81,6 +89,27 @@ if (relatedNews?.new_tools) relatedEntries.push({ tag: isKo ? '새 도구' : 'Ne
             <span class="newsprint-related-tag">{tag}</span>
             <strong class="newsprint-rail-link">{item.title}</strong>
             <p class="newsprint-related-summary">{item.summary}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  </>
+)}
+
+{similarPosts.length > 0 && (
+  <>
+    <div style="margin-top: 1.5rem;"></div>
+    <section>
+      <h3 class="newsprint-section-title">{isKo ? '비슷한 글' : 'You Might Also Like'}</h3>
+      <div class="newsprint-stack">
+        {similarPosts.map((p) => (
+          <a class="newsprint-card" href={`${resolvedBasePath}/${p.slug}/`}>
+            <strong class="newsprint-rail-link">{p.title}</strong>
+            {getCategoryLabel(locale, p.category) && (
+              <span class="newsprint-category newsprint-rail-category">
+                {getCategoryLabel(locale, p.category)}
+              </span>
+            )}
           </a>
         ))}
       </div>

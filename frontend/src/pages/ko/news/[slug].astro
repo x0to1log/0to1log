@@ -54,6 +54,7 @@ let nextPost: { title: string; slug: string; category: string | null } | null = 
 let focusItems: string[] = [];
 let articleData: any = undefined;
 let pairedSlug: string | null = null;
+let similarPosts: { post_id: string; slug: string; title: string; category: string }[] = [];
 
 if (post) {
   // "More in This Issue" — prefer same batch, fallback to recent
@@ -100,6 +101,22 @@ if (post) {
   focusItems = (post.focus_items && post.focus_items.length > 0)
     ? post.focus_items
     : getArticleFocusItems('ko', post.category);
+
+  // Fetch similar posts from recommendations API (non-fatal)
+  const fastapiUrl = import.meta.env.FASTAPI_URL;
+  if (fastapiUrl && post.id) {
+    try {
+      const res = await fetch(
+        `${fastapiUrl}/api/recommendations/similar?post_id=${post.id}&locale=ko`,
+        { signal: AbortSignal.timeout(3000) }
+      );
+      if (res.ok) {
+        similarPosts = await res.json();
+      }
+    } catch {
+      // Non-fatal: fall back to empty array
+    }
+  }
 
   if (supabase && post.translation_group_id) {
     const { data: paired } = await supabase
@@ -277,7 +294,7 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
     )}
 
     <Fragment slot="rail">
-      <NewsprintSideRail locale="ko" posts={recentPosts} focusItems={focusItems} relatedNews={post?.related_news} />
+      <NewsprintSideRail locale="ko" posts={recentPosts} focusItems={focusItems} relatedNews={post?.related_news} similarPosts={similarPosts} />
     </Fragment>
   </NewsprintShell>
 </MainLayout>
