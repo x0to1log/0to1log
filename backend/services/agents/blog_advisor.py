@@ -228,7 +228,7 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
     # Guard: check if translation already exists via source_post_id
     existing_check = (
         supabase.table("blog_posts")
-        .select("id, slug")
+        .select("id, slug, translation_group_id")
         .eq("source_post_id", req.source_post_id)
         .eq("locale", target_locale)
         .limit(1)
@@ -240,6 +240,7 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
             "existing_post_id": existing_check.data[0]["id"],
             "existing_slug": existing_check.data[0]["slug"],
             "target_locale": target_locale,
+            "translation_group_id": existing_check.data[0].get("translation_group_id", ""),
         }, "", 0
 
     # Step 1: Translate via AI
@@ -319,7 +320,7 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
     new_post = insert_result.data
 
     logger.info(
-        "Blog translate completed: %s → %s (id=%s), tokens=%d",
+        "Blog translate completed: source=%s → new=%s, locale=%s, tokens=%d",
         req.source_post_id, new_post["id"], target_locale, tokens,
     )
 
