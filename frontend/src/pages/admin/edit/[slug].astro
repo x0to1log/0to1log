@@ -439,10 +439,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         body?.offsetHeight || 0,
         root?.scrollHeight || 0,
         root?.offsetHeight || 0,
-        root?.clientHeight || 0,
       );
       if (nextHeight > 0) {
-        previewFrame.style.height = `${Math.max(nextHeight + 8, 720)}px`;
+        // Prevent micro-oscillations
+        const currentHeight = parseInt(previewFrame.style.height || '0');
+        if (Math.abs(nextHeight - currentHeight) > 4) {
+          previewFrame.style.height = `${Math.max(nextHeight, 720)}px`;
+        }
       }
     }
 

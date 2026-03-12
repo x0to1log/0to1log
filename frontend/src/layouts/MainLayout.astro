@@ -70,7 +70,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
   <body
     data-authenticated={Astro.locals.user ? 'true' : 'false'}
     data-preview-mode={previewMode ? 'true' : 'false'}
-    style={`min-height: 100vh; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}
+    style={`min-height: ${previewMode ? 'auto' : '100vh'}; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}
   >
     {gaId && (
       <>

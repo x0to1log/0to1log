@@ -1,0 +1,118 @@
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from models.ranking import RankedCandidate
+from models.research import MIN_CONTENT_CHARS, ResearchPost
+
+
+@pytest.fixture(autouse=True)
+def block_network(monkeypatch):
+    import httpx
+
+    def _blocked(*args, **kwargs):
+        raise RuntimeError("Real network call blocked in tests!")
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", _blocked)
+    monkeypatch.setattr(httpx.Client, "send", _blocked)
+
+
+def _mock_openai_response(data: dict) -> MagicMock:
+    choice = MagicMock()
+    choice.message.content = json.dumps(data)
+    response = MagicMock()
+    response.choices = [choice]
+    return response
+
+
+def _make_content(target_length: int) -> str:
+    section_titles = [
+        "## 1. What Happened",
+        "## 2. By the Numbers",
+        "## 3. So What - Practical Implications",
+        "## 4. Deep Dive - Sources and Code",
+    ]
+    filler = "Technical detail with source-backed analysis and implementation context. "
+    available = max(target_length - sum(len(title) + 2 for title in section_titles), 4800)
+    per_section = available // len(section_titles)
+    remainder = available % len(section_titles)
+    sections = []
+
+    for index, title in enumerate(section_titles):
+        length = per_section + (1 if index < remainder else 0)
+        body = (filler * ((length // len(filler)) + 2))[:length]
+        sections.append(f"{title}\n{body}")
+
+    return "\n\n".join(sections)
+
+
+def _make_research_response(content_length: int) -> dict:
+    return {
+        "has_news": True,
+        "title": "GPT-5 released with lower latency",
+        "slug": "2026-03-12-research-daily",
+        "content_original": _make_content(content_length),
+        "excerpt": "OpenAI shipped a faster model update with clearer practical tradeoffs for production teams.",
+        "focus_items": [
+            "GPT-5 reduced end-to-end latency on interactive workloads.",
+            "Faster responses change how teams budget user-facing AI features.",
+            "Watch for pricing and throughput disclosures in the next API update.",
+        ],
+        "guide_items": {
+            "one_liner": "GPT-5 is a faster general-purpose model update for production inference.",
+            "action_item": "Compare latency and output stability against your current GPT-4o prompts.",
+            "critical_gotcha": "Latency gains do not guarantee lower cost or better long-context behavior.",
+            "rotating_item": "Benchmark wins matter less than reliability under your real workload.",
+            "quiz_poll": {
+                "question": "What should teams validate first after a latency-focused model release?",
+                "options": ["Cost", "Reliability", "Fine-tuning support", "Logo refresh"],
+                "answer": "B",
+                "explanation": "Lower latency is useful only if the outputs stay reliable in production.",
+            },
+        },
+        "source_urls": ["https://openai.com/blog/example"],
+        "news_temperature": 4,
+        "tags": ["gpt-5", "latency", "production-ai"],
+    }
+
+
+@pytest.mark.asyncio
+async def test_generate_research_post_retries_with_specific_length_feedback():
+    short_response = _make_research_response(5498)
+    short_length = len(short_response["content_original"])
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(short_response),
+            _mock_openai_response(_make_research_response(MIN_CONTENT_CHARS + 250)),
+        ]
+    )
+
+    candidate = RankedCandidate(
+        title="GPT-5 Released",
+        url="https://openai.com/blog/example",
+        snippet="OpenAI released a faster flagship model.",
+        source="tavily",
+        assigned_type="research",
+        relevance_score=0.95,
+        ranking_reason="Major model release with production impact",
+    )
+
+    with patch("services.agents.research.get_openai_client", return_value=mock_client):
+        from services.agents.research import generate_research_post
+
+        result = await generate_research_post(
+            candidate=candidate,
+            context="Collected research context",
+            batch_id="2026-03-12",
+        )
+
+    assert isinstance(result, ResearchPost)
+    assert result.content_original is not None
+    assert len(result.content_original) >= MIN_CONTENT_CHARS
+    assert mock_client.chat.completions.create.await_count == 2
+
+    second_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
+    assert f"{short_length} chars" in second_prompt
+    assert str(MIN_CONTENT_CHARS - short_length) in second_prompt
