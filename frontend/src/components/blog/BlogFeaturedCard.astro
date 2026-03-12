@@ -8,9 +8,22 @@ interface Props {
   category?: string | null;
   tags?: string[] | null;
   locale: 'en' | 'ko';
+  isBookmarked?: boolean;
+  itemId?: string;
+  itemType?: 'blog';
 }
 
-const { href, title, excerpt, category, tags, locale } = Astro.props;
+const {
+  href,
+  title,
+  excerpt,
+  category,
+  tags,
+  locale,
+  isBookmarked = false,
+  itemId,
+  itemType = 'blog',
+} = Astro.props;
 
 const catLabel = getCategoryLabel(locale, category);
 const catColor = getCategoryColorVar(category);
@@ -29,9 +42,25 @@ const catColor = getCategoryColorVar(category);
       )}
       <h3 class="blog-featured-card-title">{title}</h3>
     </div>
-    <svg class="blog-featured-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M7 17L17 7M17 7H7M17 7v10" />
-    </svg>
+    <div class="blog-featured-card-actions">
+      {itemId && (
+        <button
+          type="button"
+          class={`newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+          data-item-id={itemId}
+          data-item-type={itemType}
+          data-bookmarked={isBookmarked ? 'true' : 'false'}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+        >
+          <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
+      )}
+      <svg class="blog-featured-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M7 17L17 7M17 7H7M17 7v10" />
+      </svg>
+    </div>
   </div>
   {excerpt && <p class="blog-featured-card-excerpt">{excerpt}</p>}
   {tags && tags.length > 0 && (

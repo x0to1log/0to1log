@@ -1,0 +1,267 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+  variant: 'news' | 'blog' | 'term';
+  placement?: 'inline' | 'rail';
+  title: string;
+  shareUrl: string;
+  itemId?: string;
+  itemType?: 'news' | 'blog' | 'term';
+  isBookmarked?: boolean;
+  previewMode?: boolean;
+  isAuthenticated?: boolean;
+  articleRedirect?: string;
+  commentRedirect?: string;
+  likeCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
+  termId?: string;
+}
+
+const {
+  locale,
+  variant,
+  placement = 'inline',
+  title,
+  shareUrl,
+  itemId,
+  itemType,
+  isBookmarked = false,
+  previewMode = false,
+  isAuthenticated = false,
+  articleRedirect = '',
+  commentRedirect = '',
+  likeCount = 0,
+  commentCount = 0,
+  isLiked = false,
+  termId,
+} = Astro.props;
+
+const copy = locale === 'ko'
+  ? {
+      like: '좋아요',
+      comments: '댓글',
+      bookmark: '북마크',
+      share: '공유',
+      helpful: '유용해요',
+      confusing: '헷갈려요',
+      thanksHelpful: '피드백 감사합니다.',
+      thanksConfusing: '이해했어요. 헷갈리는 표현으로 기록했습니다.',
+      error: '피드백 저장에 실패했습니다.',
+      nativeShare: '공유',
+      copyUrl: 'URL 복사',
+      copied: '복사됨',
+    }
+  : {
+      like: 'Like',
+      comments: 'Comments',
+      bookmark: 'Bookmark',
+      share: 'Share',
+      helpful: 'Helpful',
+      confusing: 'Confusing',
+      thanksHelpful: 'Thanks for the feedback.',
+      thanksConfusing: 'Got it. We recorded that this felt unclear.',
+      error: 'Failed to save feedback.',
+      nativeShare: 'Share',
+      copyUrl: 'Copy URL',
+      copied: 'Copied',
+    };
+
+const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' : '';
+---
+
+{variant === 'term' ? (
+  <aside
+    class={`reading-actions reading-actions--term reading-actions--article ${placementClass}`.trim()}
+    aria-label={locale === 'ko' ? '용어 액션' : 'Term actions'}
+    data-handbook-feedback
+    data-preview-mode={previewMode ? 'true' : 'false'}
+    data-term-id={termId}
+    data-locale={locale}
+    data-authenticated={isAuthenticated ? 'true' : 'false'}
+    data-auth-action="feedback"
+    data-auth-redirect={articleRedirect}
+    data-thanks-helpful={copy.thanksHelpful}
+    data-thanks-confusing={copy.thanksConfusing}
+    data-error={copy.error}
+  >
+    <div class="reading-actions__items reading-actions__items--article reading-actions__items--term">
+      <div class="reading-actions__group reading-actions__group--primary">
+        <button
+          type="button"
+          class="newsprint-engage-btn reading-actions__button reading-actions__button--icon-only reading-actions__button--helpful"
+          data-reading-action="helpful"
+          data-reaction="helpful"
+          aria-label={copy.helpful}
+          aria-pressed="false"
+          aria-disabled={previewMode ? 'true' : undefined}
+          tabindex={previewMode ? '-1' : undefined}
+          disabled={previewMode}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-1 4-3 4v10h11a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z"/><path d="M7 10H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+        <button
+          type="button"
+          class="newsprint-engage-btn reading-actions__button reading-actions__button--icon-only reading-actions__button--confusing"
+          data-reading-action="confusing"
+          data-reaction="confusing"
+          aria-label={copy.confusing}
+          aria-pressed="false"
+          aria-disabled={previewMode ? 'true' : undefined}
+          tabindex={previewMode ? '-1' : undefined}
+          disabled={previewMode}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.75-2.5 2-2.5 4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+      <div class="reading-actions__group reading-actions__group--secondary">
+        {itemId && (
+          <button
+            type="button"
+            class={`newsprint-engage-btn reading-actions__button reading-actions__button--icon-only newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+            data-reading-action="bookmark"
+            data-preview-mode={previewMode ? 'true' : 'false'}
+            data-item-id={itemId}
+            data-item-type={itemType}
+            data-bookmarked={isBookmarked ? 'true' : 'false'}
+            data-auth-action="bookmark"
+            data-auth-redirect={articleRedirect}
+            aria-disabled={previewMode ? 'true' : undefined}
+            tabindex={previewMode ? '-1' : undefined}
+            disabled={previewMode}
+            aria-label={copy.bookmark}
+          >
+            <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        )}
+        <div class="newsprint-share-wrapper reading-actions__share-wrapper">
+          <button
+            type="button"
+            class="newsprint-engage-btn reading-actions__button reading-actions__button--icon-only reading-actions__button--share"
+            data-reading-action="share"
+            data-share-toggle
+            aria-label={copy.share}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+          <div class="newsprint-share-dropdown" data-share-url={shareUrl} data-share-title={title} style="display:none;">
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-native style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              <span>{copy.nativeShare}</span>
+            </button>
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-x>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              <span>X</span>
+            </button>
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-linkedin>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              <span>LinkedIn</span>
+            </button>
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-copy>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>{copy.copyUrl}</span>
+            </button>
+            <span class="newsprint-share-toast">{copy.copied}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="reading-actions__status" data-feedback-status aria-live="polite" hidden></p>
+  </aside>
+) : (
+  <aside class={`reading-actions reading-actions--article ${placementClass}`.trim()} aria-label={locale === 'ko' ? '글 액션' : 'Reading actions'}>
+    <div class="reading-actions__items reading-actions__items--article">
+      <div class="reading-actions__group reading-actions__group--primary">
+        <button
+          type="button"
+          class={`newsprint-engage-btn reading-actions__button reading-actions__button--metric ${isLiked ? 'newsprint-engage-btn--active' : ''}`}
+          data-reading-action="like"
+          data-like-btn
+          data-preview-mode={previewMode ? 'true' : 'false'}
+          data-post-id={itemId}
+          data-content-type={itemType === 'blog' ? 'blog' : 'news'}
+          data-liked={isLiked ? 'true' : 'false'}
+          data-auth-action="like"
+          data-auth-redirect={articleRedirect}
+          aria-disabled={previewMode ? 'true' : undefined}
+          tabindex={previewMode ? '-1' : undefined}
+          disabled={previewMode}
+          aria-label={copy.like}
+        >
+          <svg viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <strong class="reading-actions__count" data-like-count>{likeCount}</strong>
+        </button>
+        <a
+          class="newsprint-engage-btn reading-actions__button reading-actions__button--metric"
+          data-reading-action="comments"
+          href={commentRedirect || '#comments'}
+          aria-label={copy.comments}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <strong class="reading-actions__count" data-comment-count>{commentCount}</strong>
+        </a>
+      </div>
+      <div class="reading-actions__group reading-actions__group--secondary">
+        {itemId && (
+          <button
+            type="button"
+            class={`newsprint-engage-btn reading-actions__button reading-actions__button--icon-only newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+            data-reading-action="bookmark"
+            data-preview-mode={previewMode ? 'true' : 'false'}
+            data-item-id={itemId}
+            data-item-type={itemType}
+            data-bookmarked={isBookmarked ? 'true' : 'false'}
+            data-auth-action="bookmark"
+            data-auth-redirect={articleRedirect}
+            aria-disabled={previewMode ? 'true' : undefined}
+            tabindex={previewMode ? '-1' : undefined}
+            disabled={previewMode}
+            aria-label={copy.bookmark}
+          >
+            <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        )}
+        <div class="newsprint-share-wrapper reading-actions__share-wrapper">
+          <button
+            type="button"
+            class="newsprint-engage-btn reading-actions__button reading-actions__button--icon-only reading-actions__button--share"
+            data-reading-action="share"
+            data-share-toggle
+            aria-label={copy.share}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+          <div class="newsprint-share-dropdown" data-share-url={shareUrl} data-share-title={title} style="display:none;">
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-native style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              <span>{copy.nativeShare}</span>
+            </button>
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-x>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              <span>X</span>
+            </button>
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-linkedin>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              <span>LinkedIn</span>
+            </button>
+            <button type="button" class="newsprint-share-dropdown-btn" data-share-copy>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>{copy.copyUrl}</span>
+            </button>
+            <span class="newsprint-share-toast">{copy.copied}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+)}

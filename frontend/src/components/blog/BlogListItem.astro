@@ -8,9 +8,22 @@ interface Props {
   publishedAt?: string | null;
   locale: 'en' | 'ko';
   isRead?: boolean;
+  isBookmarked?: boolean;
+  itemId?: string;
+  itemType?: 'blog';
 }
 
-const { href, title, category, publishedAt, locale, isRead } = Astro.props;
+const {
+  href,
+  title,
+  category,
+  publishedAt,
+  locale,
+  isRead,
+  isBookmarked = false,
+  itemId,
+  itemType = 'blog',
+} = Astro.props;
 
 const catLabel = getCategoryLabel(locale, category);
 const catColor = getCategoryColorVar(category);
@@ -34,5 +47,19 @@ const dateStr = publishedAt
       </span>
     )}
     {dateStr && <span class="blog-list-item-date">{dateStr}</span>}
+    {itemId && (
+      <button
+        type="button"
+        class={`newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
+        data-item-id={itemId}
+        data-item-type={itemType}
+        data-bookmarked={isBookmarked ? 'true' : 'false'}
+        aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+      >
+        <svg viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+        </svg>
+      </button>
+    )}
   </div>
 </a>

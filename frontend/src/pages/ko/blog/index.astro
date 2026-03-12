@@ -6,6 +6,7 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { BLOG_CATEGORIES } from '../../../lib/categories';
+import { buildBlogSidebarDataset, toSidebarPost } from '../../../lib/pageData/blogSidebar';
 import BlogShell from '../../../components/blog/BlogShell.astro';
 import BlogFeaturedCard from '../../../components/blog/BlogFeaturedCard.astro';
 import BlogListItem from '../../../components/blog/BlogListItem.astro';
@@ -54,7 +55,16 @@ const FEATURED_COUNT = 4;
 const BATCH_SIZE = 10;
 
 const featuredPosts = posts.slice(0, FEATURED_COUNT);
-const sidebarPosts = posts.map(p => ({ title: p.title, slug: p.slug, category: p.category }));
+const sidebarPosts = buildBlogSidebarDataset(
+  posts.map((post) =>
+    toSidebarPost({
+      title: post.title,
+      slug: post.slug,
+      category: post.category,
+      published_at: post.published_at,
+    }),
+  ),
+);
 
 // Split ALL posts into batches for infinite scroll in "All Posts" section
 const allPostBatches: any[][] = [];
@@ -64,9 +74,9 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
 ---
 
 <MainLayout title={t.ko['blog.title']} locale="ko" slug="blog/">
-  <BlogShell locale="ko" sidebarPosts={sidebarPosts} totalCount={posts.length}>
+  <BlogShell locale="ko" sidebarPosts={sidebarPosts} totalCount={posts.length} mode="index">
     <!-- Mobile toggle button -->
-    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+    <div class="blog-mobile-toolbar">
       <button class="blog-mobile-toggle" data-sidebar-toggle aria-label="Menu">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M3 5h14M3 10h14M3 15h14" />
@@ -94,6 +104,9 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
                   category={post.category}
                   tags={post.tags}
                   locale="ko"
+                  isBookmarked={bookmarkedPostIds.has(post.id)}
+                  itemId={post.id}
+                  itemType="blog"
                 />
               ))}
             </div>
@@ -117,6 +130,9 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
                   publishedAt={post.published_at}
                   locale="ko"
                   isRead={readPostIds.has(post.id)}
+                  isBookmarked={bookmarkedPostIds.has(post.id)}
+                  itemId={post.id}
+                  itemType="blog"
                 />
               ))}
             </div>

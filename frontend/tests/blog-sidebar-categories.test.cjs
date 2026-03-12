@@ -26,11 +26,18 @@ assert(categories.includes("main: { en: 'Main Posts', ko: '\uc8fc\uc694 \uae30\u
 assert(categories.includes("sub: { en: 'Small Notes', ko: '\uc791\uc740 \ub178\ud2b8' }"), 'Blog categories must define the sub group label');
 
 const sidebar = read('src/components/blog/BlogSidebar.astro');
-assert(sidebar.includes('\uae00\uc4f0\uae30'), 'Blog sidebar must use the writing label');
+const sidebarHelper = read('src/lib/pageData/blogSidebar.ts');
 assert(sidebar.includes('getBlogSidebarLabel'), 'Blog sidebar must use sidebar-specific category labels');
 assert(sidebar.includes('getBlogCategoryGroupLabel'), 'Blog sidebar must render grouped folder headings from the category model');
-assert(sidebar.includes('const VISIBLE_LIMIT = 3;'), 'Blog sidebar must show only 3 recent posts per category before the more button');
+assert(sidebarHelper.includes('BLOG_SIDEBAR_VISIBLE_LIMIT = 3;'), 'Blog sidebar must show only 3 recent posts per category before the more button');
+assert(sidebarHelper.includes('BLOG_SIDEBAR_SUB_VISIBLE_LIMIT = 1;'), 'Blog sidebar must limit small-note categories to 1 recent post');
+assert(sidebarHelper.includes('BLOG_DETAIL_ACTIVE_VISIBLE_LIMIT = 10;'), 'Blog detail sidebar must expand the active category to 10 posts');
+assert(sidebarHelper.includes('BLOG_SUB_CATEGORIES.includes'), 'Blog sidebar helper must branch the visible post limit for small-note categories');
+assert(sidebar.includes('getBlogSidebarCategoryState'), 'Blog sidebar must delegate category state calculations to the shared helper');
 assert(sidebar.includes('blog-sidebar-link__title'), 'Blog sidebar links must clamp a dedicated title wrapper');
+assert(sidebar.includes('const CATEGORY_ICONS'), 'Blog sidebar cleanup must define category line icons');
+assert(sidebar.includes('blog-folder-icon'), 'Blog sidebar cleanup must render the category icon slot');
+assert(!sidebar.includes('blog-folder-dot'), 'Blog sidebar cleanup must remove the category dot marker');
 
 const css = read('src/styles/global.css');
 assert(css.includes('.blog-sidebar-link {'), 'Blog sidebar link styles must exist');
@@ -38,6 +45,7 @@ assert(css.includes('.blog-sidebar-link__title {'), 'Blog sidebar title clamp st
 assert(css.includes('-webkit-line-clamp: 2;'), 'Blog sidebar link titles must be clamped to 2 lines');
 assert(css.includes('text-overflow: ellipsis;'), 'Blog sidebar link titles must show an ellipsis when truncated');
 assert(css.includes('max-height: calc(2 * 1em * var(--blog-sidebar-link-line-height));'), 'Blog sidebar titles must hard-cap the visible height to 2 lines');
+assert(css.includes('.blog-folder-icon {'), 'Blog sidebar cleanup must style the category line icons');
 
 const editor = read('src/pages/admin/blog/edit/[slug].astro');
 assert(editor.includes("'work-note': 'Work Notes'"), 'Blog editor must define a preview edition for work-note');

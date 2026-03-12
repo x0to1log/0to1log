@@ -1,0 +1,39 @@
+---
+import StickyReadingActions from './StickyReadingActions.astro';
+
+interface Props {
+  locale: 'en' | 'ko';
+  variant: 'news' | 'blog' | 'term';
+  title: string;
+  shareUrl: string;
+  itemId?: string;
+  itemType?: 'news' | 'blog' | 'term';
+  isBookmarked?: boolean;
+  previewMode?: boolean;
+  isAuthenticated?: boolean;
+  articleRedirect?: string;
+  commentRedirect?: string;
+  likeCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
+  termId?: string;
+  className?: string;
+  contentClassName?: string;
+}
+
+const {
+  className = '',
+  contentClassName = '',
+  ...actionProps
+} = Astro.props;
+
+const railClass = ['reading-actions-rail', className].filter(Boolean).join(' ');
+const contentClass = ['reading-actions-rail__content', contentClassName].filter(Boolean).join(' ');
+---
+
+<div class={railClass}>
+  <StickyReadingActions {...actionProps} placement="rail" />
+  <div class={contentClass}>
+    <slot />
+  </div>
+</div>

@@ -20,9 +20,10 @@ interface Props {
   altSlug?: string;
   article?: ArticleData;
   headerAlwaysVisible?: boolean;
+  previewMode?: boolean;
 }
 
-const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false } = Astro.props;
+const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false, previewMode = false } = Astro.props;
 const isAdmin = Astro.url.pathname.startsWith('/admin');
 const nonce = Astro.locals.cspNonce || '';
 
@@ -68,6 +69,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 
   <body
     data-authenticated={Astro.locals.user ? 'true' : 'false'}
+    data-preview-mode={previewMode ? 'true' : 'false'}
     style={`min-height: 100vh; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}
   >
     {gaId && (

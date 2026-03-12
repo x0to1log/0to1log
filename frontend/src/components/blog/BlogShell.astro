@@ -1,25 +1,37 @@
 ---
 import BlogSidebar from './BlogSidebar.astro';
-
-interface SidebarPost {
-  title: string;
-  slug: string;
-  category: string;
-}
+import type { BlogSidebarMode, SidebarPost } from '../../lib/pageData/blogSidebar';
 
 interface Props {
   locale: 'en' | 'ko';
   sidebarPosts: SidebarPost[];
   currentSlug?: string;
+  currentCategory?: string;
   totalCount: number;
+  mode?: BlogSidebarMode;
   showTOC?: boolean;
 }
 
-const { locale, sidebarPosts, currentSlug, totalCount, showTOC } = Astro.props;
+const {
+  locale,
+  sidebarPosts,
+  currentSlug,
+  currentCategory,
+  totalCount,
+  mode = 'index',
+  showTOC,
+} = Astro.props as Props;
 ---
 
 <div class="blog-shell">
-  <BlogSidebar locale={locale} posts={sidebarPosts} currentSlug={currentSlug} totalCount={totalCount} />
+  <BlogSidebar
+    locale={locale}
+    posts={sidebarPosts}
+    currentSlug={currentSlug}
+    currentCategory={currentCategory}
+    totalCount={totalCount}
+    mode={mode}
+  />
   <div class="blog-sidebar-overlay" data-sidebar-overlay></div>
   <div class="blog-main">
     <div class="blog-main-inner">

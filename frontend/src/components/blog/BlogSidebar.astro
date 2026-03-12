@@ -7,43 +7,58 @@ import {
   getBlogSidebarLabel,
   getCategoryColorVar,
 } from '../../lib/categories';
+import {
+  getBlogSidebarCategoryState,
+  getBlogSidebarCurrentCategory,
+  getBlogSidebarGroupExpanded,
+  type BlogSidebarMode,
+  type SidebarPost,
+} from '../../lib/pageData/blogSidebar';
 
-interface SidebarPost {
-  title: string;
-  slug: string;
-  category: string;
-}
+const CATEGORY_ICONS: Record<string, string> = {
+  study:
+    '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  project:
+    '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  career:
+    '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  'work-note':
+    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>',
+  daily:
+    '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+};
 
 interface Props {
   locale: 'en' | 'ko';
   posts: SidebarPost[];
   currentSlug?: string;
+  currentCategory?: string;
   totalCount: number;
+  mode?: BlogSidebarMode;
 }
 
-const { locale, posts, currentSlug, totalCount } = Astro.props;
+const {
+  locale,
+  posts,
+  currentSlug,
+  currentCategory: explicitCurrentCategory,
+  totalCount,
+  mode = 'index',
+} = Astro.props as Props;
 
-const VISIBLE_LIMIT = 3;
 const postsByCategory = BLOG_CATEGORIES.reduce((acc, category) => {
   acc[category] = posts.filter((post) => post.category === category);
   return acc;
 }, {} as Record<string, SidebarPost[]>);
 
-const currentCategory = currentSlug
-  ? posts.find((post) => post.slug === currentSlug)?.category
-  : undefined;
+const currentCategory = getBlogSidebarCurrentCategory(posts, currentSlug, explicitCurrentCategory);
 
-const sidebarBrand = locale === 'ko' ? '글쓰기' : 'Writing';
 const comingSoonLabel = locale === 'ko' ? '글 준비 중' : 'Coming soon';
 const moreLabel = locale === 'ko' ? '개 더 보기' : ' more';
 const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
 ---
 
 <aside class="blog-sidebar" data-blog-sidebar>
-  <div class="blog-sidebar-header">
-    <span class="blog-sidebar-brand">{sidebarBrand}</span>
-  </div>
-
   <div class="blog-sidebar-search">
     <button class="blog-sidebar-search-btn" type="button" aria-label={searchLabel}>
       <span>{t[locale]['blog.search']}</span>
@@ -56,8 +71,11 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
       const groupCount = group.categories.reduce((total, category) => {
         return total + (postsByCategory[category]?.length ?? 0);
       }, 0);
-      const groupExpanded =
-        group.categories.some((category) => category === currentCategory) || groupCount > 0;
+      const groupExpanded = getBlogSidebarGroupExpanded(group.categories, {
+        mode,
+        currentCategory,
+        groupCount,
+      });
 
       return (
         <div class="blog-folder blog-folder--group">
@@ -76,9 +94,15 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
           <div class="blog-folder-children blog-folder-children--group" {...(!groupExpanded && { hidden: true })}>
             {group.categories.map((category) => {
               const categoryPosts = postsByCategory[category] || [];
-              const visiblePosts = categoryPosts.slice(0, VISIBLE_LIMIT);
-              const extraPosts = categoryPosts.slice(VISIBLE_LIMIT);
-              const categoryExpanded = currentCategory === category || categoryPosts.length > 0;
+              const { expanded: categoryExpanded, extraPosts, visiblePosts } = getBlogSidebarCategoryState(
+                categoryPosts,
+                {
+                  mode,
+                  category,
+                  currentCategory,
+                  currentSlug,
+                },
+              );
               const categoryLabel = getBlogSidebarLabel(locale, category);
               const colorVar = getCategoryColorVar(category);
 
@@ -92,7 +116,18 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
                     <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                       <path d="M6 4l4 4-4 4" />
                     </svg>
-                    <span class="blog-folder-dot" style={`background: ${colorVar}`}></span>
+                    <svg
+                      class="blog-folder-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                      style={`color: ${colorVar}`}
+                      set:html={CATEGORY_ICONS[category] ?? ''}
+                    />
                     <span>{categoryLabel}</span>
                     <span class="blog-folder-count">({categoryPosts.length})</span>
                   </button>

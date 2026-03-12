@@ -17,6 +17,14 @@ assert.ok(
   'BlogSidebar.astro must not expose sidebar-close hooks',
 );
 assert.ok(
+  !sidebar.includes('blog-sidebar-header'),
+  'BlogSidebar.astro must not render the sidebar brand header',
+);
+assert.ok(
+  !sidebar.includes('sidebarBrand'),
+  'BlogSidebar.astro must not keep the removed sidebar brand copy',
+);
+assert.ok(
   sidebar.includes('mobileMenuInit') || sidebar.includes('blogSidebarInit'),
   'BlogSidebar.astro must guard sidebar initialization against duplicate listeners',
 );
