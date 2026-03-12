@@ -166,3 +166,188 @@ async def test_generate_business_post_retries_with_field_lengths_and_target_rang
     assert f"content_beginner was {short_lengths['content_beginner']} chars" in retry_prompt
     assert "minimum required is 3000 chars" in retry_prompt
     assert "target 4000-5000 chars" in retry_prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_business_post_fails_fast_when_analysis_stays_too_short():
+    short_analysis = "## Core Analysis\n" + ("Too short. " * 120)
+    complete_payload = _make_business_response(MIN_CONTENT_CHARS + 200)
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(
+                {
+                    "fact_pack": complete_payload["fact_pack"],
+                    "source_cards": complete_payload["source_cards"],
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "title": complete_payload["title"],
+                    "slug": complete_payload["slug"],
+                    "content_analysis": short_analysis,
+                    "excerpt": complete_payload["excerpt"],
+                    "focus_items": complete_payload["focus_items"],
+                    "guide_items": complete_payload["guide_items"],
+                    "related_news": complete_payload["related_news"],
+                    "source_urls": complete_payload["source_urls"],
+                    "news_temperature": complete_payload["news_temperature"],
+                    "tags": complete_payload["tags"],
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "title": complete_payload["title"],
+                    "slug": complete_payload["slug"],
+                    "content_analysis": short_analysis,
+                    "excerpt": complete_payload["excerpt"],
+                    "focus_items": complete_payload["focus_items"],
+                    "guide_items": complete_payload["guide_items"],
+                    "related_news": complete_payload["related_news"],
+                    "source_urls": complete_payload["source_urls"],
+                    "news_temperature": complete_payload["news_temperature"],
+                    "tags": complete_payload["tags"],
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "title": complete_payload["title"],
+                    "slug": complete_payload["slug"],
+                    "content_analysis": short_analysis,
+                    "excerpt": complete_payload["excerpt"],
+                    "focus_items": complete_payload["focus_items"],
+                    "guide_items": complete_payload["guide_items"],
+                    "related_news": complete_payload["related_news"],
+                    "source_urls": complete_payload["source_urls"],
+                    "news_temperature": complete_payload["news_temperature"],
+                    "tags": complete_payload["tags"],
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "title": complete_payload["title"],
+                    "slug": complete_payload["slug"],
+                    "content_analysis": short_analysis,
+                    "excerpt": complete_payload["excerpt"],
+                    "focus_items": complete_payload["focus_items"],
+                    "guide_items": complete_payload["guide_items"],
+                    "related_news": complete_payload["related_news"],
+                    "source_urls": complete_payload["source_urls"],
+                    "news_temperature": complete_payload["news_temperature"],
+                    "tags": complete_payload["tags"],
+                }
+            ),
+        ]
+    )
+
+    candidate = RankedCandidate(
+        title="Anthropic raises funding",
+        url="https://anthropic.com/news/example",
+        snippet="Anthropic secured another major funding round.",
+        source="tavily",
+        assigned_type="business_main",
+        relevance_score=0.91,
+        ranking_reason="Large funding round with enterprise AI implications",
+    )
+    artifact_recorder = MagicMock()
+
+    with patch("services.agents.business.get_openai_client", return_value=mock_client):
+        from services.agents.business import generate_business_post
+
+        with pytest.raises(Exception, match="Business analysis too short"):
+            await generate_business_post(
+                candidate=candidate,
+                related=RelatedPicks(),
+                context="Collected business context",
+                batch_id="2026-03-12",
+                artifact_recorder=artifact_recorder,
+            )
+
+    assert mock_client.chat.completions.create.await_count == 5
+    assert artifact_recorder.call_count == 2
+    latest_partial_state, latest_status, latest_failed_stage, latest_error = artifact_recorder.call_args.args
+    assert latest_status == "partial"
+    assert latest_failed_stage == "business.analysis.en"
+    assert "Business analysis too short" in latest_error
+    assert latest_partial_state["fact_pack"] == complete_payload["fact_pack"]
+    assert latest_partial_state["analysis_data"] == {}
+
+
+@pytest.mark.asyncio
+async def test_generate_business_post_resumes_from_partial_state_and_only_generates_missing_personas():
+    completed = _make_business_response(MIN_CONTENT_CHARS + 1200)
+    partial_state = {
+        "fact_pack": completed["fact_pack"],
+        "source_cards": completed["source_cards"],
+        "analysis_data": {
+            key: completed[key]
+            for key in (
+                "title",
+                "slug",
+                "content_analysis",
+                "excerpt",
+                "focus_items",
+                "guide_items",
+                "related_news",
+                "source_urls",
+                "news_temperature",
+                "tags",
+            )
+        },
+        "persona_payloads": {
+            "beginner": {"content_beginner": completed["content_beginner"]},
+        },
+        "completed_stages": [
+            "business.fact_pack.en",
+            "business.analysis.en",
+            "business.persona.beginner.en",
+        ],
+    }
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response({"content_learner": completed["content_learner"]}),
+            _mock_openai_response({"content_expert": completed["content_expert"]}),
+        ]
+    )
+
+    candidate = RankedCandidate(
+        title="Anthropic raises funding",
+        url="https://anthropic.com/news/example",
+        snippet="Anthropic secured another major funding round.",
+        source="tavily",
+        assigned_type="business_main",
+        relevance_score=0.91,
+        ranking_reason="Large funding round with enterprise AI implications",
+    )
+    artifact_recorder = MagicMock()
+
+    with patch("services.agents.business.get_openai_client", return_value=mock_client):
+        from services.agents.business import generate_business_post
+
+        result = await generate_business_post(
+            candidate=candidate,
+            related=RelatedPicks(),
+            context="Collected business context",
+            batch_id="2026-03-12",
+            partial_state=partial_state,
+            artifact_recorder=artifact_recorder,
+        )
+
+    assert isinstance(result, BusinessPost)
+    assert result.content_beginner == completed["content_beginner"]
+    assert result.content_learner == completed["content_learner"]
+    assert result.content_expert == completed["content_expert"]
+    assert mock_client.chat.completions.create.await_count == 2
+    assert artifact_recorder.call_count == 2
+    final_partial_state, final_status, final_failed_stage, final_error = artifact_recorder.call_args.args
+    assert final_status == "partial"
+    assert final_failed_stage is None
+    assert final_error is None
+    assert final_partial_state["completed_stages"] == [
+        "business.fact_pack.en",
+        "business.analysis.en",
+        "business.persona.beginner.en",
+        "business.persona.learner.en",
+        "business.persona.expert.en",
+    ]

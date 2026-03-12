@@ -76,3 +76,14 @@ def test_normalize_pipeline_error_returns_short_message():
     )
 
     assert message == "Research post too short: 4838 / 5000 chars."
+
+
+def test_normalize_pipeline_error_distinguishes_business_analysis():
+    from services.pipeline import normalize_pipeline_error
+
+    message = normalize_pipeline_error(
+        "1 validation error for BusinessPost\ncontent_analysis\n"
+        "  Value error, Content too short: 1545 chars (min 2000)"
+    )
+
+    assert message == "Business analysis too short: 1545 / 2000 chars."

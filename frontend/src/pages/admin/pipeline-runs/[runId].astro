@@ -31,6 +31,21 @@ type PipelineLog = {
   debug_meta: Record<string, unknown> | null;
 };
 
+type PipelineArtifact = {
+  id: string;
+  status: string | null;
+  post_type: string;
+  locale: string;
+  candidate_title: string | null;
+  candidate_url: string | null;
+  completed_stages: string[] | null;
+  failed_stage: string | null;
+  last_validation_error: string | null;
+  payload: Record<string, unknown> | null;
+  resumed_from_artifact_id: string | null;
+  updated_at: string | null;
+};
+
 const runId = Astro.params.runId ?? '';
 const accessToken = Astro.locals.accessToken;
 const sb = createClient(
@@ -99,18 +114,56 @@ function formatDebugMeta(meta: unknown): string {
   }
 }
 
+function artifactPreview(payload: Record<string, unknown> | null, key: string): string {
+  if (!payload) return '';
+  return formatDebugMeta(payload[key] ?? null);
+}
+
+function artifactTextLength(value: unknown): number | null {
+  return typeof value === 'string' && value.length > 0 ? value.length : null;
+}
+
+function artifactAnalysisLength(payload: Record<string, unknown> | null): number | null {
+  const analysisData = payload?.analysis_data;
+  if (!analysisData || typeof analysisData !== 'object') return null;
+  return artifactTextLength((analysisData as Record<string, unknown>).content_analysis);
+}
+
+function personaLengthEntries(payload: Record<string, unknown> | null): Array<[string, number]> {
+  const personaPayloads = payload?.persona_payloads;
+  if (!personaPayloads || typeof personaPayloads !== 'object') return [];
+
+  return Object.entries(personaPayloads as Record<string, unknown>)
+    .map(([persona, personaPayload]) => {
+      const fieldName = `content_${persona}`;
+      const length =
+        personaPayload && typeof personaPayload === 'object'
+          ? artifactTextLength((personaPayload as Record<string, unknown>)[fieldName])
+          : null;
+      return length === null ? null : [persona, length] as [string, number];
+    })
+    .filter((entry): entry is [string, number] => entry !== null);
+}
+
 let run: PipelineRun | null = null;
 let logs: PipelineLog[] = [];
+let artifacts: PipelineArtifact[] = [];
 
 try {
-  const [{ data: runRow }, { data: logRows }] = await Promise.all([
+  const [{ data: runRow }, { data: logRows }, { data: artifactRows }] = await Promise.all([
     sb.from('pipeline_runs').select('*').eq('id', runId).single(),
     sb.from('pipeline_logs').select('*').eq('run_id', runId).order('created_at', { ascending: true }),
+    sb.from('pipeline_artifacts').select('*').eq('run_id', runId).order('updated_at', { ascending: false }),
   ]);
   run = (runRow as PipelineRun | null) ?? null;
   logs = ((logRows ?? []) as PipelineLog[]).map((log) => ({
     ...log,
     debug_meta: log.debug_meta ?? null,
+  }));
+  artifacts = ((artifactRows ?? []) as PipelineArtifact[]).map((artifact) => ({
+    ...artifact,
+    payload: artifact.payload ?? null,
+    completed_stages: artifact.completed_stages ?? [],
   }));
 } catch {}
 
@@ -213,6 +266,110 @@ const latestLog = logs.at(-1) ?? null;
           <strong class="pipeline-run-stat__value">{duration === null ? 'Running' : `${duration}s`}</strong>
           <span class="pipeline-run-stat__detail">From start to finish</span>
         </div>
+      </section>
+
+      <section class="pipeline-run-section">
+        <div class="pipeline-run-section__header">
+          <div>
+            <h2 class="pipeline-run-section__title">Partial Artifacts</h2>
+            <p class="pipeline-run-section__hint">
+              Internal recovery snapshots saved during business generation. These stay admin-only and are used to
+              resume missing stages on reruns.
+            </p>
+          </div>
+        </div>
+
+        {artifacts.length === 0 ? (
+          <p class="dashboard-empty">No partial artifacts were recorded for this run.</p>
+        ) : (
+          <div class="pipeline-artifact-list">
+            {artifacts.map((artifact) => {
+              const factPackPreview = artifactPreview(artifact.payload, 'fact_pack');
+              const analysisPreview = artifactPreview(artifact.payload, 'analysis_data');
+              const personaPreview = artifactPreview(artifact.payload, 'persona_payloads');
+              const analysisLength = artifactAnalysisLength(artifact.payload);
+              const personaLengths = personaLengthEntries(artifact.payload);
+              return (
+                <article class="pipeline-artifact-card">
+                  <div class="pipeline-artifact-card__header">
+                    <div>
+                      <span class={`pipeline-run-status pipeline-run-status--${statusTone(artifact.status)}`}>
+                        {artifact.status ?? 'idle'}
+                      </span>
+                      <strong class="pipeline-artifact-card__title">
+                        {artifact.candidate_title ?? 'Recovered draft'}
+                      </strong>
+                    </div>
+                    {artifact.candidate_url && (
+                      <a href={artifact.candidate_url} target="_blank" rel="noreferrer" class="pipeline-run-hero__back">
+                        Source
+                      </a>
+                    )}
+                  </div>
+
+                  <div class="pipeline-stage-card__chips">
+                    <span class="pipeline-stage-chip">
+                      <span class="pipeline-stage-chip__label">Post</span>
+                      <span class="pipeline-stage-chip__value">{artifact.post_type}</span>
+                    </span>
+                    <span class="pipeline-stage-chip">
+                      <span class="pipeline-stage-chip__label">Locale</span>
+                      <span class="pipeline-stage-chip__value">{artifact.locale}</span>
+                    </span>
+                    <span class="pipeline-stage-chip">
+                      <span class="pipeline-stage-chip__label">Completed</span>
+                      <span class="pipeline-stage-chip__value">{artifact.completed_stages?.length ?? 0}</span>
+                    </span>
+                    <span class="pipeline-stage-chip">
+                      <span class="pipeline-stage-chip__label">Analysis</span>
+                      <span class="pipeline-stage-chip__value">
+                        {analysisLength === null ? '—' : `${analysisLength} chars`}
+                      </span>
+                    </span>
+                    {personaLengths.map(([persona, length]) => (
+                      <span class="pipeline-stage-chip">
+                        <span class="pipeline-stage-chip__label">{persona}</span>
+                        <span class="pipeline-stage-chip__value">{length} chars</span>
+                      </span>
+                    ))}
+                  </div>
+
+                  {(artifact.failed_stage || artifact.last_validation_error) && (
+                    <div class="pipeline-run-error-card">
+                      <span class="pipeline-run-error-card__label">Recovery status</span>
+                      <p>{artifact.last_validation_error ?? artifact.failed_stage}</p>
+                    </div>
+                  )}
+
+                  {artifact.completed_stages && artifact.completed_stages.length > 0 && (
+                    <p class="pipeline-artifact-card__stages">{artifact.completed_stages.join(' | ')}</p>
+                  )}
+
+                  <div class="pipeline-stage-card__panels">
+                    {factPackPreview && (
+                      <details class="pipeline-stage-panel">
+                        <summary>Artifact preview: fact_pack</summary>
+                        <pre>{factPackPreview}</pre>
+                      </details>
+                    )}
+                    {analysisPreview && (
+                      <details class="pipeline-stage-panel">
+                        <summary>Artifact preview: analysis</summary>
+                        <pre>{analysisPreview}</pre>
+                      </details>
+                    )}
+                    {personaPreview && (
+                      <details class="pipeline-stage-panel">
+                        <summary>Artifact preview: personas</summary>
+                        <pre>{personaPreview}</pre>
+                      </details>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section class="pipeline-run-section">
@@ -513,6 +670,39 @@ const latestLog = logs.at(-1) ?? null;
     gap: 0.85rem;
   }
 
+  .pipeline-artifact-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .pipeline-artifact-card {
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 58%, transparent);
+    padding: 1rem;
+  }
+
+  .pipeline-artifact-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .pipeline-artifact-card__title {
+    display: block;
+    margin-top: 0.55rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .pipeline-artifact-card__stages {
+    margin: 0.9rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
   .pipeline-stage-card {
     display: grid;
     grid-template-columns: 4px 1fr;
@@ -734,7 +924,8 @@ const latestLog = logs.at(-1) ?? null;
     }
 
     .pipeline-run-hero__top,
-    .pipeline-stage-card__header {
+    .pipeline-stage-card__header,
+    .pipeline-artifact-card__header {
       flex-direction: column;
       align-items: stretch;
     }

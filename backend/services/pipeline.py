@@ -77,6 +77,17 @@ def normalize_pipeline_error(error: str | Exception | None) -> str:
     if content_too_short_match:
         actual, minimum = content_too_short_match.groups()
         if "BusinessPost" in raw:
+            field_match = re.search(
+                r"BusinessPost\s*\n([a-z_]+)\s*\n",
+                raw,
+                flags=re.IGNORECASE,
+            )
+            field_name = field_match.group(1) if field_match else None
+            if field_name == "content_analysis":
+                return f"Business analysis too short: {actual} / {minimum} chars."
+            if field_name and field_name.startswith("content_"):
+                persona = field_name.removeprefix("content_").replace("_", " ")
+                return f"Business {persona} persona too short: {actual} / {minimum} chars."
             return f"Business post too short: {actual} / {minimum} chars."
         return f"Research post too short: {actual} / {minimum} chars."
 
@@ -529,6 +540,314 @@ def _save_business_post(
     return post_id, translation_group_id
 
 
+def _get_saved_post_row(
+    batch_id: str,
+    post_type: str,
+    locale: str,
+) -> dict[str, Any] | None:
+    client = get_supabase()
+    if not client:
+        return None
+
+    try:
+        result = (
+            client.table("news_posts")
+            .select("*")
+            .eq("pipeline_batch_id", batch_id)
+            .eq("post_type", post_type)
+            .eq("locale", locale)
+            .eq("category", "ai-news")
+            .maybe_single()
+            .execute()
+        )
+        return result.data if result and result.data else None
+    except Exception as exc:
+        logger.warning(
+            "Failed to load saved %s/%s post for batch %s: %s",
+            post_type,
+            locale,
+            batch_id,
+            exc,
+        )
+        return None
+
+
+def _load_saved_translation_source(
+    batch_id: str,
+    post_type: str,
+) -> dict[str, Any] | None:
+    en_row = _get_saved_post_row(batch_id, post_type, "en")
+    ko_row = _get_saved_post_row(batch_id, post_type, "ko")
+    if en_row and not ko_row:
+        return en_row
+    return None
+
+
+def _hydrate_research_post(row: dict[str, Any]) -> ResearchPost:
+    return ResearchPost.model_validate(
+        {
+            "has_news": bool(row.get("content_original")),
+            "title": row.get("title") or "",
+            "slug": row.get("slug") or "",
+            "content_original": row.get("content_original"),
+            "no_news_notice": row.get("no_news_notice"),
+            "recent_fallback": row.get("recent_fallback"),
+            "guide_items": row.get("guide_items"),
+            "source_urls": row.get("source_urls") or [],
+            "news_temperature": row.get("news_temperature") or 3,
+            "tags": row.get("tags") or [],
+            "excerpt": row.get("excerpt") or "",
+            "focus_items": row.get("focus_items") or [],
+            "source_cards": row.get("source_cards") or [],
+        }
+    )
+
+
+def _hydrate_business_post(row: dict[str, Any]) -> BusinessPost:
+    return BusinessPost.model_validate(
+        {
+            "title": row.get("title") or "",
+            "slug": row.get("slug") or "",
+            "content_analysis": row.get("content_analysis") or "",
+            "content_beginner": row.get("content_beginner") or "",
+            "content_learner": row.get("content_learner") or "",
+            "content_expert": row.get("content_expert") or "",
+            "fact_pack": row.get("fact_pack") or [],
+            "source_cards": row.get("source_cards") or [],
+            "guide_items": row.get("guide_items"),
+            "related_news": row.get("related_news"),
+            "source_urls": row.get("source_urls") or [],
+            "news_temperature": row.get("news_temperature") or 3,
+            "tags": row.get("tags") or [],
+            "excerpt": row.get("excerpt") or "",
+            "focus_items": row.get("focus_items") or [],
+        }
+    )
+
+
+def _artifact_payload_from_state(partial_state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "candidate": partial_state.get("candidate") or {},
+        "fact_pack": partial_state.get("fact_pack") or [],
+        "source_cards": partial_state.get("source_cards") or [],
+        "analysis_data": partial_state.get("analysis_data") or {},
+        "persona_payloads": partial_state.get("persona_payloads") or {},
+    }
+
+
+def _partial_state_from_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
+    payload = artifact.get("payload") or {}
+    return {
+        "candidate": payload.get("candidate") or {
+            "title": artifact.get("candidate_title"),
+            "url": artifact.get("candidate_url"),
+            "batch_id": artifact.get("batch_id"),
+        },
+        "fact_pack": payload.get("fact_pack") or [],
+        "source_cards": payload.get("source_cards") or [],
+        "analysis_data": payload.get("analysis_data") or {},
+        "persona_payloads": payload.get("persona_payloads") or {},
+        "completed_stages": artifact.get("completed_stages") or [],
+    }
+
+
+def _create_pipeline_artifact(
+    *,
+    run_id: str,
+    run_key: str,
+    batch_id: str,
+    post_type: str,
+    locale: str,
+    candidate_title: str,
+    candidate_url: str,
+    status: str,
+    completed_stages: list[str],
+    failed_stage: str | None,
+    last_validation_error: str | None,
+    payload: dict[str, Any],
+    resumed_from_artifact_id: str | None = None,
+) -> dict[str, Any] | None:
+    client = get_supabase()
+    if not client:
+        return None
+
+    result = (
+        client.table("pipeline_artifacts")
+        .insert(
+            {
+                "run_id": run_id,
+                "run_key": run_key,
+                "batch_id": batch_id,
+                "post_type": post_type,
+                "locale": locale,
+                "candidate_title": candidate_title,
+                "candidate_url": candidate_url,
+                "status": status,
+                "completed_stages": completed_stages,
+                "failed_stage": failed_stage,
+                "last_validation_error": last_validation_error,
+                "payload": payload,
+                "resumed_from_artifact_id": resumed_from_artifact_id,
+                "updated_at": _now_iso(),
+            }
+        )
+        .execute()
+    )
+    return result.data[0] if result and result.data else None
+
+
+def _update_pipeline_artifact(
+    artifact_id: str,
+    *,
+    status: str,
+    completed_stages: list[str],
+    failed_stage: str | None,
+    last_validation_error: str | None,
+    payload: dict[str, Any],
+) -> None:
+    client = get_supabase()
+    if not client:
+        return
+
+    (
+        client.table("pipeline_artifacts")
+        .update(
+            {
+                "status": status,
+                "completed_stages": completed_stages,
+                "failed_stage": failed_stage,
+                "last_validation_error": last_validation_error,
+                "payload": payload,
+                "updated_at": _now_iso(),
+            }
+        )
+        .eq("id", artifact_id)
+        .execute()
+    )
+
+
+def _set_pipeline_artifact_status(artifact_id: str, status: str) -> None:
+    client = get_supabase()
+    if not client:
+        return
+    (
+        client.table("pipeline_artifacts")
+        .update({"status": status, "updated_at": _now_iso()})
+        .eq("id", artifact_id)
+        .execute()
+    )
+
+
+def _find_latest_partial_artifact(
+    batch_id: str,
+    post_type: str,
+    locale: str,
+    candidate_url: str,
+) -> dict[str, Any] | None:
+    client = get_supabase()
+    if not client:
+        return None
+    try:
+        result = (
+            client.table("pipeline_artifacts")
+            .select("*")
+            .eq("batch_id", batch_id)
+            .eq("post_type", post_type)
+            .eq("locale", locale)
+            .eq("candidate_url", candidate_url)
+            .eq("status", "partial")
+            .order("updated_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        data = result.data if result else None
+        if isinstance(data, list) and data:
+            return data[0]
+    except Exception as exc:
+        logger.warning("Failed to load partial artifact for %s %s: %s", post_type, candidate_url, exc)
+    return None
+
+
+def _prepare_business_artifact_resume(
+    run_id: str,
+    run_key: str,
+    batch_id: str,
+    candidate: RankedCandidate,
+) -> tuple[str | None, dict[str, Any] | None]:
+    existing = _find_latest_partial_artifact(
+        batch_id=batch_id,
+        post_type="business",
+        locale="en",
+        candidate_url=candidate.url,
+    )
+    if not existing:
+        return None, None
+
+    partial_state = _partial_state_from_artifact(existing)
+    _set_pipeline_artifact_status(existing["id"], "superseded")
+    created = _create_pipeline_artifact(
+        run_id=run_id,
+        run_key=run_key,
+        batch_id=batch_id,
+        post_type="business",
+        locale="en",
+        candidate_title=candidate.title,
+        candidate_url=candidate.url,
+        status="partial",
+        completed_stages=partial_state.get("completed_stages") or [],
+        failed_stage=existing.get("failed_stage"),
+        last_validation_error=existing.get("last_validation_error"),
+        payload=_artifact_payload_from_state(partial_state),
+        resumed_from_artifact_id=existing["id"],
+    )
+    return (created or {}).get("id"), partial_state
+
+
+def _build_business_artifact_recorder(
+    run_id: str,
+    run_key: str,
+    batch_id: str,
+    candidate: RankedCandidate,
+    initial_artifact_id: str | None = None,
+) -> tuple[Any, dict[str, str | None]]:
+    artifact_ref: dict[str, str | None] = {"artifact_id": initial_artifact_id}
+
+    def _recorder(
+        partial_state: dict[str, Any],
+        status: str,
+        failed_stage: str | None,
+        last_validation_error: str | None,
+    ) -> None:
+        if artifact_ref["artifact_id"] is None:
+            created = _create_pipeline_artifact(
+                run_id=run_id,
+                run_key=run_key,
+                batch_id=batch_id,
+                post_type="business",
+                locale="en",
+                candidate_title=candidate.title,
+                candidate_url=candidate.url,
+                status=status,
+                completed_stages=partial_state.get("completed_stages") or [],
+                failed_stage=failed_stage,
+                last_validation_error=last_validation_error,
+                payload=_artifact_payload_from_state(partial_state),
+            )
+            artifact_ref["artifact_id"] = (created or {}).get("id")
+            return
+
+        _update_pipeline_artifact(
+            artifact_ref["artifact_id"],
+            status=status,
+            completed_stages=partial_state.get("completed_stages") or [],
+            failed_stage=failed_stage,
+            last_validation_error=last_validation_error,
+            payload=_artifact_payload_from_state(partial_state),
+        )
+
+    return _recorder, artifact_ref
+
+
 async def _extract_and_create_terms(
     content_parts: list[str], batch_id: str
 ) -> None:
@@ -711,33 +1030,39 @@ async def run_daily_pipeline(batch_id: str) -> None:
         logger.info("Calling research AI agent for batch %s...", batch_id)
         research_started = _now()
         research_usage: dict[str, Any] = {}
-        try:
-            research_post = await generate_research_post(
-                ranking.research_pick,
-                context,
-                batch_id,
-                usage_recorder=research_usage,
-            )
-        except Exception:
-            log_pipeline_stage(
-                run_id,
-                "research.generate.en",
-                "failed",
-                post_type="research",
-                locale="en",
-                duration_ms=int((_now() - research_started).total_seconds() * 1000),
-                output_summary="Research EN draft failed",
-                model_used=research_usage.get("model_used"),
-                tokens_used=research_usage.get("tokens_used"),
-                cost_usd=research_usage.get("cost_usd"),
-                debug_meta={
-                    "research_en_len": None,
-                    "has_news": ranking.research_pick is not None,
-                    "input_tokens": research_usage.get("input_tokens"),
-                    "output_tokens": research_usage.get("output_tokens"),
-                },
-            )
-            raise
+        saved_research_en_row = _load_saved_translation_source(batch_id, "research")
+        if saved_research_en_row:
+            research_post = _hydrate_research_post(saved_research_en_row)
+            en_research_id = saved_research_en_row["id"]
+            research_tg_id = saved_research_en_row.get("translation_group_id") or str(uuid.uuid4())
+        else:
+            try:
+                research_post = await generate_research_post(
+                    ranking.research_pick,
+                    context,
+                    batch_id,
+                    usage_recorder=research_usage,
+                )
+            except Exception:
+                log_pipeline_stage(
+                    run_id,
+                    "research.generate.en",
+                    "failed",
+                    post_type="research",
+                    locale="en",
+                    duration_ms=int((_now() - research_started).total_seconds() * 1000),
+                    output_summary="Research EN draft failed",
+                    model_used=research_usage.get("model_used"),
+                    tokens_used=research_usage.get("tokens_used"),
+                    cost_usd=research_usage.get("cost_usd"),
+                    debug_meta={
+                        "research_en_len": None,
+                        "has_news": ranking.research_pick is not None,
+                        "input_tokens": research_usage.get("input_tokens"),
+                        "output_tokens": research_usage.get("output_tokens"),
+                    },
+                )
+                raise
         log_pipeline_stage(
             run_id,
             "research.generate.en",
@@ -752,22 +1077,24 @@ async def run_daily_pipeline(batch_id: str) -> None:
             debug_meta={
                 "research_en_len": len(research_post.content_original or ""),
                 "has_news": research_post.has_news,
+                "resumed_from_saved_en": saved_research_en_row is not None,
                 "input_tokens": research_usage.get("input_tokens"),
                 "output_tokens": research_usage.get("output_tokens"),
             },
         )
         logger.info("EN research post generated: %s", research_post.title)
-        en_research_id, research_tg_id = _save_research_post(
-            research_post, batch_id, locale="en"
-        )
-        log_pipeline_stage(
-            run_id,
-            "save.research.en",
-            "success",
-            post_type="research",
-            locale="en",
-            output_summary=en_research_id,
-        )
+        if not saved_research_en_row:
+            en_research_id, research_tg_id = _save_research_post(
+                research_post, batch_id, locale="en"
+            )
+            log_pipeline_stage(
+                run_id,
+                "save.research.en",
+                "success",
+                post_type="research",
+                locale="en",
+                output_summary=en_research_id,
+            )
 
         # Step 3-A-KO: Translate research post to Korean
         logger.info("Translating research post to Korean for batch %s...", batch_id)
@@ -838,13 +1165,48 @@ async def run_daily_pipeline(batch_id: str) -> None:
         logger.info("Starting business post generation for batch %s...", batch_id)
         if ranking.business_main_pick:
             business_started = _now()
-            business_post = await generate_business_post(
-                ranking.business_main_pick,
-                ranking.related_picks,
-                context,
-                batch_id,
-                stage_logger=_build_stage_logger(run_id, post_type="business", locale="en"),
-            )
+            saved_business_en_row = _load_saved_translation_source(batch_id, "business")
+            artifact_id = None
+            if saved_business_en_row:
+                business_post = _hydrate_business_post(saved_business_en_row)
+                en_business_id = saved_business_en_row["id"]
+                business_tg_id = saved_business_en_row.get("translation_group_id") or str(uuid.uuid4())
+            else:
+                artifact_id, partial_state = _prepare_business_artifact_resume(
+                    run_id,
+                    f"daily:{batch_id}",
+                    batch_id,
+                    ranking.business_main_pick,
+                )
+                artifact_recorder, artifact_ref = _build_business_artifact_recorder(
+                    run_id,
+                    f"daily:{batch_id}",
+                    batch_id,
+                    ranking.business_main_pick,
+                    initial_artifact_id=artifact_id,
+                )
+                try:
+                    business_post = await generate_business_post(
+                        ranking.business_main_pick,
+                        ranking.related_picks,
+                        context,
+                        batch_id,
+                        stage_logger=_build_stage_logger(run_id, post_type="business", locale="en"),
+                        partial_state=partial_state,
+                        artifact_recorder=artifact_recorder,
+                    )
+                except Exception:
+                    log_pipeline_stage(
+                        run_id,
+                        "business.generate.en",
+                        "failed",
+                        post_type="business",
+                        locale="en",
+                        duration_ms=int((_now() - business_started).total_seconds() * 1000),
+                        output_summary="Business EN draft failed",
+                    )
+                    raise
+                artifact_id = artifact_ref["artifact_id"]
             log_pipeline_stage(
                 run_id,
                 "business.generate.en",
@@ -862,20 +1224,25 @@ async def run_daily_pipeline(batch_id: str) -> None:
                     },
                     "fact_pack_count": len(business_post.fact_pack or []),
                     "source_card_count": len(business_post.source_cards or []),
+                    "resumed_from_saved_en": saved_business_en_row is not None,
+                    "resumed_from_partial": artifact_id is not None and saved_business_en_row is None,
                 },
             )
             logger.info("EN business post generated: %s", business_post.title)
-            en_business_id, business_tg_id = _save_business_post(
-                business_post, batch_id, locale="en"
-            )
-            log_pipeline_stage(
-                run_id,
-                "save.business.en",
-                "success",
-                post_type="business",
-                locale="en",
-                output_summary=en_business_id,
-            )
+            if not saved_business_en_row:
+                en_business_id, business_tg_id = _save_business_post(
+                    business_post, batch_id, locale="en"
+                )
+                log_pipeline_stage(
+                    run_id,
+                    "save.business.en",
+                    "success",
+                    post_type="business",
+                    locale="en",
+                    output_summary=en_business_id,
+                )
+            if artifact_id:
+                _set_pipeline_artifact_status(artifact_id, "consumed")
 
             # Step 3-B-KO: Translate business post to Korean
             logger.info("Translating business post to Korean for batch %s...", batch_id)

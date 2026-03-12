@@ -53,8 +53,11 @@ function run() {
 
   const detailPage = read('frontend/src/pages/admin/pipeline-runs/[runId].astro');
   assertIncludes(detailPage, "from('pipeline_logs')", 'detail page logs query');
+  assertIncludes(detailPage, "from('pipeline_artifacts')", 'detail page artifacts query');
   assertIncludes(detailPage, 'Run Snapshot', 'detail page summary hero');
   assertIncludes(detailPage, 'Stage Timeline', 'detail page timeline title');
+  assertIncludes(detailPage, 'Partial Artifacts', 'detail page partial artifacts section');
+  assertIncludes(detailPage, 'Artifact preview', 'detail page artifact preview details');
   assertIncludes(detailPage, '<details', 'detail page collapsible debug panels');
   assertIncludes(detailPage, '—', 'detail legacy metric placeholder');
   assertIncludes(detailPage, 'raw_error', 'detail page raw error area');

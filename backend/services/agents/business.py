@@ -1,5 +1,6 @@
 import json
 import logging
+from copy import deepcopy
 from typing import Any, Callable
 
 from pydantic import ValidationError
@@ -17,6 +18,61 @@ StageLogger = Callable[
     [str, str, int, dict[str, Any] | None, str | None, str | None, int | None, float | None],
     None,
 ]
+ArtifactRecorder = Callable[[dict[str, Any], str, str | None, str | None], None]
+
+
+class BusinessGenerationError(ValueError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        failed_stage: str,
+        field_name: str | None = None,
+        actual_length: int | None = None,
+        minimum: int | None = None,
+        partial_state: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.failed_stage = failed_stage
+        self.field_name = field_name
+        self.actual_length = actual_length
+        self.minimum = minimum
+        self.partial_state = partial_state or {}
+
+
+def _format_length_failure_message(field_name: str, actual_length: int, minimum: int) -> str:
+    if field_name == "content_analysis":
+        return f"Business analysis too short: {actual_length} / {minimum} chars."
+    persona = field_name.replace("content_", "").replace("_", " ")
+    return f"Business {persona} persona too short: {actual_length} / {minimum} chars."
+
+
+def _is_complete_markdown_field(value: Any, minimum: int) -> bool:
+    return isinstance(value, str) and len(value) >= minimum
+
+
+def _mark_completed_stage(partial_state: dict[str, Any], stage_name: str) -> None:
+    completed_stages = partial_state.setdefault("completed_stages", [])
+    if stage_name not in completed_stages:
+        completed_stages.append(stage_name)
+
+
+def _record_partial_state(
+    artifact_recorder: ArtifactRecorder | None,
+    partial_state: dict[str, Any],
+    *,
+    status: str,
+    failed_stage: str | None = None,
+    last_validation_error: str | None = None,
+) -> None:
+    if not artifact_recorder:
+        return
+    artifact_recorder(
+        deepcopy(partial_state),
+        status,
+        failed_stage,
+        last_validation_error,
+    )
 
 
 def _emit_stage(
@@ -221,6 +277,7 @@ async def _generate_stage_with_retry(
     stage_logger: StageLogger | None = None,
 ) -> dict[str, Any]:
     last_data: dict[str, Any] | None = None
+    current_length = 0
 
     for attempt in range(1 + MAX_RETRIES):
         stage_prompt = prompt if attempt == 0 else _request_retry_prompt(
@@ -271,7 +328,13 @@ async def _generate_stage_with_retry(
             minimum,
         )
 
-    return last_data or {}
+    raise BusinessGenerationError(
+        _format_length_failure_message(field_name, current_length, minimum),
+        failed_stage=stage_name,
+        field_name=field_name,
+        actual_length=current_length,
+        minimum=minimum,
+    )
 
 
 def _validate_fact_pack_payload(payload: dict[str, Any]) -> None:
@@ -289,21 +352,69 @@ async def generate_business_post(
     context: str,
     batch_id: str,
     stage_logger: StageLogger | None = None,
+    partial_state: dict[str, Any] | None = None,
+    artifact_recorder: ArtifactRecorder | None = None,
 ) -> BusinessPost:
     client = get_openai_client()
-
-    fact_pack_data, fact_pack_usage = await _request_json(
-        client,
-        _build_business_fact_pack_prompt(candidate, related, context),
-        "BusinessFactPack",
+    partial_state = deepcopy(partial_state or {})
+    partial_state.setdefault(
+        "candidate",
+        {
+            "title": candidate.title,
+            "url": candidate.url,
+            "batch_id": batch_id,
+        },
     )
-    try:
-        _validate_fact_pack_payload(fact_pack_data)
-    except Exception:
+    partial_state.setdefault("fact_pack", [])
+    partial_state.setdefault("source_cards", [])
+    partial_state.setdefault("analysis_data", {})
+    partial_state.setdefault("persona_payloads", {})
+    partial_state.setdefault("completed_stages", [])
+
+    if partial_state["fact_pack"] and partial_state["source_cards"]:
+        fact_pack_data = {
+            "fact_pack": partial_state["fact_pack"],
+            "source_cards": partial_state["source_cards"],
+        }
+        _mark_completed_stage(partial_state, "business.fact_pack.en")
+    else:
+        fact_pack_data, fact_pack_usage = await _request_json(
+            client,
+            _build_business_fact_pack_prompt(candidate, related, context),
+            "BusinessFactPack",
+        )
+        try:
+            _validate_fact_pack_payload(fact_pack_data)
+        except Exception:
+            _emit_stage(
+                stage_logger,
+                "business.fact_pack.en",
+                "failed",
+                debug_meta={
+                    "fact_pack_count": len(fact_pack_data.get("fact_pack") or []),
+                    "source_card_count": len(fact_pack_data.get("source_cards") or []),
+                },
+                output_summary="BusinessFactPack",
+                model_used=fact_pack_usage.get("model_used"),
+                tokens_used=fact_pack_usage.get("tokens_used"),
+                cost_usd=fact_pack_usage.get("cost_usd"),
+            )
+            _record_partial_state(
+                artifact_recorder,
+                partial_state,
+                status="partial",
+                failed_stage="business.fact_pack.en",
+                last_validation_error="Business fact pack validation failed.",
+            )
+            raise
+        partial_state["fact_pack"] = fact_pack_data.get("fact_pack", [])
+        partial_state["source_cards"] = fact_pack_data.get("source_cards", [])
+        _mark_completed_stage(partial_state, "business.fact_pack.en")
+        _record_partial_state(artifact_recorder, partial_state, status="partial")
         _emit_stage(
             stage_logger,
             "business.fact_pack.en",
-            "failed",
+            "success",
             debug_meta={
                 "fact_pack_count": len(fact_pack_data.get("fact_pack") or []),
                 "source_card_count": len(fact_pack_data.get("source_cards") or []),
@@ -313,48 +424,73 @@ async def generate_business_post(
             tokens_used=fact_pack_usage.get("tokens_used"),
             cost_usd=fact_pack_usage.get("cost_usd"),
         )
-        raise
-    _emit_stage(
-        stage_logger,
-        "business.fact_pack.en",
-        "success",
-        debug_meta={
-            "fact_pack_count": len(fact_pack_data.get("fact_pack") or []),
-            "source_card_count": len(fact_pack_data.get("source_cards") or []),
-        },
-        output_summary="BusinessFactPack",
-        model_used=fact_pack_usage.get("model_used"),
-        tokens_used=fact_pack_usage.get("tokens_used"),
-        cost_usd=fact_pack_usage.get("cost_usd"),
-    )
 
     source_urls = _candidate_sources(candidate, related)
-    analysis_data = await _generate_stage_with_retry(
-        client,
-        prompt=_build_business_analysis_prompt(candidate, batch_id, fact_pack_data, source_urls),
-        field_name="content_analysis",
-        minimum=MIN_ANALYSIS_CHARS,
-        agent_name="BusinessAnalysis",
-        stage_name="business.analysis.en",
-        stage_logger=stage_logger,
-    )
+    analysis_data = partial_state.get("analysis_data", {})
+    if not _is_complete_markdown_field(analysis_data.get("content_analysis"), MIN_ANALYSIS_CHARS):
+        try:
+            analysis_data = await _generate_stage_with_retry(
+                client,
+                prompt=_build_business_analysis_prompt(candidate, batch_id, fact_pack_data, source_urls),
+                field_name="content_analysis",
+                minimum=MIN_ANALYSIS_CHARS,
+                agent_name="BusinessAnalysis",
+                stage_name="business.analysis.en",
+                stage_logger=stage_logger,
+            )
+        except BusinessGenerationError as exc:
+            exc.partial_state = deepcopy(partial_state)
+            _record_partial_state(
+                artifact_recorder,
+                partial_state,
+                status="partial",
+                failed_stage=exc.failed_stage,
+                last_validation_error=str(exc),
+            )
+            raise
+        partial_state["analysis_data"] = analysis_data
+        _mark_completed_stage(partial_state, "business.analysis.en")
+        _record_partial_state(artifact_recorder, partial_state, status="partial")
+    else:
+        _mark_completed_stage(partial_state, "business.analysis.en")
 
-    persona_payloads: dict[str, dict[str, Any]] = {}
+    persona_payloads: dict[str, dict[str, Any]] = deepcopy(partial_state.get("persona_payloads", {}))
     for persona in PERSONA_ORDER:
-        persona_payloads[persona] = await _generate_stage_with_retry(
-            client,
-            prompt=_build_business_persona_prompt(
-                persona,
-                analysis_data.get("content_analysis", ""),
-                fact_pack_data.get("fact_pack", []),
-                fact_pack_data.get("source_cards", []),
-            ),
-            field_name=f"content_{persona}",
-            minimum=MIN_CONTENT_CHARS,
-            agent_name=f"BusinessPersona{persona.title()}",
-            stage_name=f"business.persona.{persona}.en",
-            stage_logger=stage_logger,
-        )
+        field_name = f"content_{persona}"
+        stage_name = f"business.persona.{persona}.en"
+        existing_payload = persona_payloads.get(persona, {})
+        if _is_complete_markdown_field(existing_payload.get(field_name), MIN_CONTENT_CHARS):
+            _mark_completed_stage(partial_state, stage_name)
+            continue
+        try:
+            persona_payloads[persona] = await _generate_stage_with_retry(
+                client,
+                prompt=_build_business_persona_prompt(
+                    persona,
+                    analysis_data.get("content_analysis", ""),
+                    fact_pack_data.get("fact_pack", []),
+                    fact_pack_data.get("source_cards", []),
+                ),
+                field_name=field_name,
+                minimum=MIN_CONTENT_CHARS,
+                agent_name=f"BusinessPersona{persona.title()}",
+                stage_name=stage_name,
+                stage_logger=stage_logger,
+            )
+        except BusinessGenerationError as exc:
+            partial_state["persona_payloads"] = persona_payloads
+            exc.partial_state = deepcopy(partial_state)
+            _record_partial_state(
+                artifact_recorder,
+                partial_state,
+                status="partial",
+                failed_stage=exc.failed_stage,
+                last_validation_error=str(exc),
+            )
+            raise
+        partial_state["persona_payloads"] = persona_payloads
+        _mark_completed_stage(partial_state, stage_name)
+        _record_partial_state(artifact_recorder, partial_state, status="partial")
 
     combined = {
         **analysis_data,
@@ -367,9 +503,30 @@ async def generate_business_post(
 
     try:
         return BusinessPost.model_validate(combined)
-    except ValidationError:
+    except ValidationError as exc:
+        partial_state["analysis_data"] = analysis_data
+        partial_state["persona_payloads"] = persona_payloads
+        errors = exc.errors()
+        field_name = str(errors[0]["loc"][0]) if errors and errors[0].get("loc") else "content_analysis"
+        actual_length = len(combined.get(field_name, "") or "")
+        minimum = MIN_ANALYSIS_CHARS if field_name == "content_analysis" else MIN_CONTENT_CHARS
+        message = _format_length_failure_message(field_name, actual_length, minimum)
+        _record_partial_state(
+            artifact_recorder,
+            partial_state,
+            status="partial",
+            failed_stage=field_name,
+            last_validation_error=message,
+        )
         logger.error(
             "Business generation failed after fact pack/persona assembly.\nData: %s",
             json.dumps(combined, ensure_ascii=False)[:1200],
         )
-        raise
+        raise BusinessGenerationError(
+            message,
+            failed_stage=field_name,
+            field_name=field_name,
+            actual_length=actual_length,
+            minimum=minimum,
+            partial_state=partial_state,
+        ) from exc
