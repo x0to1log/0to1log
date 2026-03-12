@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from typing import Optional
 
 from core.database import get_supabase
@@ -8,13 +9,16 @@ from services.news_collection import collect_all_news
 from services.agents import rank_candidates, generate_research_post, generate_business_post
 from services.agents.translate import translate_post
 from core.config import settings
-from models.ranking import NewsCandidate, NewsRankingResult
+from models.ranking import NewsCandidate, NewsRankingResult, RankedCandidate
 from models.research import ResearchPost
 from models.business import BusinessPost
 
 logger = logging.getLogger(__name__)
 
 STALE_THRESHOLD_SECONDS = 3600  # 1 hour
+RESEARCH_MIN_RELEVANCE_SCORE = 0.85
+RESEARCH_HIGH_SIGNAL_SCORE = 0.95
+RESEARCH_TITLE_SIMILARITY_THRESHOLD = 0.88
 
 
 def _now() -> datetime:
@@ -39,6 +43,97 @@ def _build_context(candidates: list[NewsCandidate]) -> str:
     for i, c in enumerate(candidates, 1):
         lines.append(f"{i}. [{c.source}] {c.title}\n   URL: {c.url}\n   {c.snippet}")
     return "\n\n".join(lines)
+
+
+def _normalize_title_for_similarity(title: str) -> str:
+    normalized = "".join(
+        char.lower() if char.isalnum() else " "
+        for char in (title or "")
+    )
+    return " ".join(normalized.split())
+
+
+def _title_similarity(left: str, right: str) -> float:
+    if not left or not right:
+        return 0.0
+    return SequenceMatcher(
+        None,
+        _normalize_title_for_similarity(left),
+        _normalize_title_for_similarity(right),
+    ).ratio()
+
+
+def _should_skip_research_candidate(
+    candidate: RankedCandidate,
+    latest_post: dict | None,
+) -> bool:
+    score = candidate.relevance_score or 0.0
+    if score < RESEARCH_MIN_RELEVANCE_SCORE:
+        return True
+
+    if not latest_post:
+        return False
+
+    latest_url = (latest_post.get("url") or "").rstrip("/")
+    candidate_url = (candidate.url or "").rstrip("/")
+    if latest_url and candidate_url and latest_url == candidate_url:
+        return True
+
+    title_similarity = _title_similarity(candidate.title, latest_post.get("title", ""))
+    very_high_signal_override = (
+        latest_url != candidate_url and score >= RESEARCH_HIGH_SIGNAL_SCORE
+    )
+    if title_similarity >= RESEARCH_TITLE_SIMILARITY_THRESHOLD and not very_high_signal_override:
+        return True
+
+    return False
+
+
+def _get_latest_research_post(exclude_batch_id: str | None = None) -> dict | None:
+    client = get_supabase()
+    if not client:
+        return None
+
+    try:
+        query = (
+            client.table("news_posts")
+            .select("title,url,created_at,pipeline_batch_id")
+            .eq("category", "ai-news")
+            .eq("post_type", "research")
+            .eq("locale", "en")
+        )
+        if exclude_batch_id:
+            query = query.neq("pipeline_batch_id", exclude_batch_id)
+
+        result = query.order("created_at", desc=True).limit(1).execute()
+        data = result.data if result else None
+        if isinstance(data, list) and data:
+            return data[0]
+    except Exception as exc:
+        logger.warning("Failed to load latest research post for novelty gate: %s", exc)
+
+    return None
+
+
+def _apply_research_novelty_gate(
+    candidate: RankedCandidate | None,
+    batch_id: str,
+) -> RankedCandidate | None:
+    if not candidate:
+        return None
+
+    latest_post = _get_latest_research_post(exclude_batch_id=batch_id)
+    if _should_skip_research_candidate(candidate, latest_post):
+        logger.info(
+            "Research pick gated out for batch %s: score=%.2f title=%s latest=%s",
+            batch_id,
+            candidate.relevance_score,
+            candidate.title[:120],
+            (latest_post or {}).get("title", "-")[:120],
+        )
+        return None
+
+    return candidate
 
 
 async def acquire_pipeline_lock(batch_id: str) -> Optional[str]:
@@ -407,6 +502,7 @@ async def run_daily_pipeline(batch_id: str) -> None:
 
         # Step 2: Rank candidates
         ranking = await rank_candidates(candidates)
+        ranking.research_pick = _apply_research_novelty_gate(ranking.research_pick, batch_id)
 
         # Step 2b: Save candidates + ranking to DB
         try:

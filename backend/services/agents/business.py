@@ -1,10 +1,11 @@
 import json
 import logging
+from typing import Any
 
 from pydantic import ValidationError
 
 from models.ranking import RankedCandidate, RelatedPicks
-from models.business import BusinessPost
+from models.business import MIN_CONTENT_CHARS, TARGET_CONTENT_CHARS, BusinessPost
 from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import BUSINESS_SYSTEM_PROMPT
 from core.config import settings
@@ -41,13 +42,40 @@ def _build_business_user_prompt(
     )
 
 
-MAX_RETRIES = 2
+MAX_RETRIES = 3
 
-RETRY_SUFFIX = (
-    "\n\nIMPORTANT: Your previous response was rejected because content was "
-    "too short. Each persona version MUST be at least 3000 characters. "
-    "Write longer, deeper analysis with more detail and examples."
-)
+
+def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) -> str:
+    if not previous_data:
+        return (
+            f"{base_prompt}\n\n"
+            "IMPORTANT: Your previous response was rejected because the persona content was too short.\n"
+            f"- each persona must be at least {MIN_CONTENT_CHARS} chars\n"
+            f"- target {TARGET_CONTENT_CHARS - 500}-{TARGET_CONTENT_CHARS + 500} chars per persona\n"
+            "- return the full JSON object again with deeper analysis, examples, and practical detail"
+        )
+
+    content_lengths = {
+        field: len(previous_data.get(field, ""))
+        if isinstance(previous_data.get(field), str)
+        else 0
+        for field in ("content_beginner", "content_learner", "content_expert")
+    }
+
+    return (
+        f"{base_prompt}\n\n"
+        "IMPORTANT: Your previous response was rejected.\n"
+        f"- content_beginner was {content_lengths['content_beginner']} chars\n"
+        f"- content_learner was {content_lengths['content_learner']} chars\n"
+        f"- content_expert was {content_lengths['content_expert']} chars\n"
+        f"- minimum required is {MIN_CONTENT_CHARS} chars for each persona\n"
+        f"- target {TARGET_CONTENT_CHARS - 500}-{TARGET_CONTENT_CHARS + 500} chars per persona so the response safely clears validation\n"
+        "- preserve the same story, sources, and 3-persona structure\n"
+        "- deepen the analysis instead of repeating surface-level wording\n"
+        "- return the full JSON object again, not a partial patch\n\n"
+        "PREVIOUS_JSON_DRAFT:\n"
+        f"{json.dumps(previous_data, ensure_ascii=False)}"
+    )
 
 
 async def generate_business_post(
@@ -65,9 +93,10 @@ async def generate_business_post(
     client = get_openai_client()
     user_prompt = _build_business_user_prompt(candidate, related, context, batch_id)
     last_error: ValidationError | None = None
+    last_data: dict[str, Any] | None = None
 
     for attempt in range(1 + MAX_RETRIES):
-        prompt = user_prompt if attempt == 0 else user_prompt + RETRY_SUFFIX
+        prompt = user_prompt if attempt == 0 else _build_retry_prompt(user_prompt, last_data)
 
         response = await client.chat.completions.create(
             model=settings.openai_model_main,
@@ -82,6 +111,7 @@ async def generate_business_post(
 
         raw = response.choices[0].message.content
         data = parse_ai_json(raw, "Business")
+        last_data = data
 
         try:
             return BusinessPost.model_validate(data)

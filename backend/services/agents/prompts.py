@@ -108,7 +108,7 @@ Write exactly 3 short, specific statements (not questions):
 
 ### When no news exists
 Set has_news to false and:
-- no_news_notice: "No substantive AI technology updates were confirmed in the past 24 hours ({date range})."
+- no_news_notice: "No sufficiently distinct AI research or model updates were confirmed in the past 24 hours ({date range}); today's signals substantially overlapped with yesterday's coverage."
 - recent_fallback: Briefly cover noteworthy recent trends (outside the time window) by category:
   - LLM & SOTA Models
   - Open Source & Repos
@@ -167,6 +167,7 @@ You are 0to1log's AI Business Analyst & PM. Write a 3-persona post and Related N
 
 ## Length Requirements (mandatory)
 - ALL three versions: minimum 3000 characters each
+- Target roughly 4000-5000 characters for each persona so the final draft clears validation comfortably
 - Responses shorter than 3000 characters per version will be rejected
 - The versions must NOT differ in length — they differ in DIFFICULTY LEVEL
 
@@ -282,9 +283,9 @@ Each item must include title, url, and a summary of at least 50 characters. Do n
 {
   "title": "...",
   "slug": "topic-name-yyyymmdd",
-  "content_beginner": "Beginner version (markdown, min 2000 chars, 3 sections with ## headings)",
-  "content_learner": "Learner version (markdown, min 2000 chars, 4 sections with ## headings)",
-  "content_expert": "Expert version (markdown, min 2000 chars, 4 sections with ## headings)",
+  "content_beginner": "Beginner version (markdown, min 3000 chars, target 4000-5000, 3 sections with ## headings)",
+  "content_learner": "Learner version (markdown, min 3000 chars, target 4000-5000, 4 sections with ## headings)",
+  "content_expert": "Expert version (markdown, min 3000 chars, target 4000-5000, 4 sections with ## headings)",
   "excerpt": "1-2 sentence summary (100-200 chars)",
   "focus_items": ["What changed", "Why it matters", "What to watch next"],
   "guide_items": {
@@ -314,16 +315,22 @@ Respond in JSON format only."""
 
 TRANSLATE_SYSTEM_PROMPT = """\
 You are a professional Korean localizer for 0to1log, an AI news intelligence platform.
-Translate the given English AI news post into natural Korean.
+Translate English 0to1log content into natural Korean.
 
 ## Rules
 - This is NOT literal translation. Adapt for Korean readers with local market context.
 - Technical terms: keep English original in parentheses (e.g., 정렬(Alignment), 벤치마크(Benchmark))
-- Preserve all markdown formatting, links, and structure exactly
+- You may translate a full post JSON object, a metadata JSON block, or a single markdown section
+- Preserve all markdown formatting, links, headings, tables, code blocks, and structure exactly
 - Preserve all URLs unchanged — do not translate or modify URLs
 - Match the tone: informative but accessible
 - Do NOT add or remove information from the original
+- Keep roughly the same information density and length; do not summarize or compress the content
 - No translationese (번역투 금지): use natural Korean sentence structure
 - Preserve the JSON structure exactly — only translate the text values
 
-Respond in JSON format only. Return the same JSON structure with all text fields translated to Korean."""
+- Preserve the response format requested in the user prompt exactly
+- When translating JSON, preserve the JSON structure exactly ??only translate the text values
+- Keep slugs, field names, booleans, and identifiers unchanged unless the user prompt explicitly asks otherwise
+
+Respond in JSON format only."""

@@ -6,6 +6,7 @@ from models.common import PromptGuideItems, RelatedNews
 
 
 MIN_CONTENT_CHARS = 3000
+TARGET_CONTENT_CHARS = 4500
 
 
 class BusinessPost(BaseModel):

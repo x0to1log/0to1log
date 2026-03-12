@@ -21,7 +21,7 @@ def _build_research_user_prompt(
     """Build the user prompt for the research agent."""
     if candidate is None:
         return (
-            f"No research news was collected today ({batch_id}).\n"
+            f"No sufficiently distinct research or model update cleared today's novelty gate ({batch_id}).\n"
             "Set has_news=false and write no_news_notice and recent_fallback.\n"
             f"slug: {batch_id}-research-daily"
         )

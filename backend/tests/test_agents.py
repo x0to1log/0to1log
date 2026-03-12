@@ -153,6 +153,104 @@ MOCK_BUSINESS_RESPONSE = {
 }
 
 
+def _make_long_markdown(section_titles: list[str], section_length: int, filler: str) -> str:
+    sections = []
+    for title in section_titles:
+        body_length = max(section_length - len(title) - 1, 0)
+        body = (filler * ((body_length // len(filler)) + 2))[:body_length]
+        sections.append(f"{title}\n{body}")
+    return "\n\n".join(sections)
+
+
+MOCK_RESEARCH_RESPONSE = {
+    "has_news": True,
+    "title": "GPT-5: lower latency and stronger multimodal throughput",
+    "slug": "2026-03-07-research-daily",
+    "content_original": _make_long_markdown(
+        [
+            "## 1. What Happened",
+            "## 2. By the Numbers",
+            "## 3. So What",
+            "## 4. Deep Dive",
+        ],
+        1600,
+        "Source-backed technical explanation with benchmark detail and deployment context. ",
+    ),
+    "excerpt": "GPT-5 improved latency enough to change how teams evaluate production UX and cost tradeoffs.",
+    "focus_items": [
+        "GPT-5 reduced latency across multimodal inference paths.",
+        "Lower latency changes product design and budget assumptions for interactive AI.",
+        "The next release notes should confirm pricing and throughput tradeoffs.",
+    ],
+    "guide_items": {
+        "one_liner": "GPT-5 is a faster multimodal model update for production inference.",
+        "action_item": "Benchmark your current prompts against GPT-5 latency and stability.",
+        "critical_gotcha": "Lower latency does not guarantee lower cost or better long-context performance.",
+        "rotating_item": "The market signal matters only if the speed gains persist under real production load.",
+        "quiz_poll": {
+            "question": "What should teams validate first after a latency-focused release?",
+            "options": ["Branding", "Reliability", "Office layout", "Mascot"],
+            "answer": "B",
+            "explanation": "Teams need reliable outputs before they can safely optimize around faster responses.",
+        },
+    },
+    "source_urls": ["https://openai.com/blog/gpt-5"],
+    "news_temperature": 5,
+    "tags": ["gpt-5", "openai", "llm"],
+}
+
+
+MOCK_BUSINESS_RESPONSE = {
+    "title": "Anthropic's new funding reshapes enterprise AI positioning",
+    "slug": "2026-03-07-business-daily",
+    "content_beginner": _make_long_markdown(
+        ["## The Story", "## Why Should I Care?", "## The Bottom Line"],
+        1500,
+        "Plain-language business explanation with examples about products, jobs, and customer trust. ",
+    ),
+    "content_learner": _make_long_markdown(
+        ["## What Happened", "## How It Works", "## What This Means for Your Work", "## Go Deeper"],
+        1200,
+        "Practical technical-business analysis with architecture, pricing, and team workflow implications. ",
+    ),
+    "content_expert": _make_long_markdown(
+        ["## Executive Summary", "## Technical Deep Dive", "## Market & Competitive Analysis", "## Strategic Implications"],
+        1200,
+        "Executive-level competitive analysis with market structure, capital strategy, and deployment risk detail. ",
+    ),
+    "excerpt": "Anthropic's funding round changes how enterprise buyers read vendor durability and platform risk.",
+    "focus_items": [
+        "Anthropic added more capital to support model, compute, and enterprise expansion.",
+        "Balance-sheet strength changes how large buyers evaluate AI platform risk.",
+        "Pricing, hiring, and capacity announcements are the next signals to watch.",
+    ],
+    "guide_items": {
+        "one_liner": "Anthropic raised more money to grow its enterprise AI business.",
+        "action_item": "Review whether your roadmap depends too heavily on a single model vendor.",
+        "critical_gotcha": "Funding size does not guarantee better margins or product execution.",
+        "rotating_item": "Financial depth often matters to enterprise buyers before benchmark wins do.",
+        "quiz_poll": {
+            "question": "What does a large AI funding round most directly increase first?",
+            "options": ["Compute access", "Wall color", "Mascot quality", "Office snacks"],
+            "answer": "A",
+            "explanation": "Big rounds usually increase compute access, hiring capacity, and enterprise execution.",
+        },
+    },
+    "related_news": {
+        "big_tech": None,
+        "industry_biz": None,
+        "new_tools": {
+            "title": "New Open Source LLM Framework",
+            "url": "https://github.com/example/llm-framework",
+            "summary": "Community-driven LLM framework reached 10k stars and drew strong developer adoption.",
+        },
+    },
+    "source_urls": ["https://anthropic.com/news/series-d"],
+    "news_temperature": 4,
+    "tags": ["anthropic", "investment", "ai-safety"],
+}
+
+
 # ---------------------------------------------------------------------------
 # Helper: create a mock OpenAI response
 # ---------------------------------------------------------------------------
