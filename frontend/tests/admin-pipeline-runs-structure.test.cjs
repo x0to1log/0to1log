@@ -17,12 +17,31 @@ function assertNotIncludes(source, needle, label) {
   }
 }
 
+function assertOrdered(source, items, label) {
+  let previous = -1;
+  for (const item of items) {
+    const index = source.indexOf(item);
+    if (index === -1) {
+      throw new Error(`Missing ${label} item: ${item}`);
+    }
+    if (index <= previous) {
+      throw new Error(`Unexpected ${label} order around: ${item}`);
+    }
+    previous = index;
+  }
+}
+
 function run() {
   const adminIndex = read('frontend/src/pages/admin/index.astro');
   assertIncludes(adminIndex, '/admin/pipeline-runs', 'dashboard pipeline runs link');
 
   const sidebar = read('frontend/src/components/admin/AdminSidebar.astro');
   assertIncludes(sidebar, 'Pipeline Runs', 'sidebar pipeline runs navigation');
+  assertOrdered(
+    sidebar,
+    ['Pipeline Runs', 'News', 'Handbook', 'Blog', 'Settings'],
+    'admin sidebar navigation',
+  );
 
   const listPage = read('frontend/src/pages/admin/pipeline-runs/index.astro');
   assertIncludes(listPage, 'Pipeline Runs', 'runs page heading');

@@ -26,17 +26,17 @@ const currentPath = Astro.url.pathname;
       </svg>
       <span>Dashboard</span>
     </a>
-    <a href="/admin/posts/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'posts' }]}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M2 3h12M2 7h8M2 11h10" />
-      </svg>
-      <span>News</span>
-    </a>
     <a href="/admin/pipeline-runs" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'pipeline' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M3 13V8M8 13V3M13 13V6" />
       </svg>
       <span>Pipeline Runs</span>
+    </a>
+    <a href="/admin/posts/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'posts' }]}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 3h12M2 7h8M2 11h10" />
+      </svg>
+      <span>News</span>
     </a>
     <a href="/admin/handbook/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'handbook' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -232,4 +232,3 @@ const currentPath = Astro.url.pathname;
   initSidebar();
   initMobileMenu();
 </script>
-

@@ -16,6 +16,7 @@ function assertIncludes(source, needle, label) {
 function run() {
   const adminIndex = read('src/pages/admin/index.astro');
   assertIncludes(adminIndex, "fetch('/api/admin/run-pipeline'", 'admin pipeline endpoint target');
+  assertIncludes(adminIndex, "credentials: 'same-origin'", 'admin pipeline credentials');
 
   const cronRoute = read('src/pages/api/trigger-pipeline.ts');
   assertIncludes(cronRoute, 'export const GET', 'cron GET handler');
@@ -23,6 +24,8 @@ function run() {
 
   const adminRoute = read('src/pages/api/admin/run-pipeline.ts');
   assertIncludes(adminRoute, 'export const POST', 'admin POST handler');
+  assertIncludes(adminRoute, 'locals.accessToken', 'admin route access token guard');
+  assertIncludes(adminRoute, 'locals.isAdmin', 'admin route admin guard');
   assertIncludes(adminRoute, 'handleAdminTriggerRequest', 'admin trigger helper usage');
 
   const middleware = read('src/middleware.ts');
