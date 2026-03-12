@@ -231,7 +231,7 @@ const likedPostIds = new Set(likedItems.map((item) => item.post_id));
 const bookmarkedItemIds = new Set(bookmarkItems.map((item) => `${item.item_type}:${item.item_id}`));
 ---
 
-<MainLayout title={`${copy.title} ??0to1log`} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
+<MainLayout title={copy.title} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="newsprint-page" style="max-width: 800px;">
     <div class="library-header">
       <h1 class="library-title">{copy.title}</h1>
