@@ -232,6 +232,7 @@ function relativeTime(dateStr: string): string {
             )}
             <div class="dashboard-pipeline-actions">
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
           </div>
         ) : (
@@ -239,6 +240,7 @@ function relativeTime(dateStr: string): string {
             <p class="dashboard-empty">No pipeline runs yet.</p>
             <div class="dashboard-pipeline-actions">
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
           </div>
         )}
@@ -538,6 +540,18 @@ function relativeTime(dateStr: string): string {
   .dashboard-pipeline-actions {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-pipeline-feedback {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+
+  .dashboard-pipeline-feedback[data-state='error'] {
+    color: #b42318;
   }
 
   .dashboard-notification {
@@ -652,20 +666,46 @@ function relativeTime(dateStr: string): string {
 <script>
   function initDashboardActions(): void {
     const pipelineBtn = document.getElementById('run-pipeline-btn');
+    const pipelineFeedback = document.getElementById('run-pipeline-feedback');
     if (pipelineBtn && !pipelineBtn.dataset.init) {
       pipelineBtn.dataset.init = '1';
+      const setPipelineFeedback = (message: string, state?: 'error' | 'success'): void => {
+        if (!pipelineFeedback) return;
+        pipelineFeedback.textContent = message;
+        if (state) {
+          pipelineFeedback.dataset.state = state;
+        } else {
+          delete pipelineFeedback.dataset.state;
+        }
+      };
       pipelineBtn.addEventListener('click', async () => {
         pipelineBtn.setAttribute('disabled', 'true');
-        pipelineBtn.textContent = 'Running…';
+        pipelineBtn.textContent = 'Running...';
+        setPipelineFeedback('');
         try {
-          const res = await fetch('/api/trigger-pipeline', { method: 'POST' });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          pipelineBtn.textContent = 'Started ✓';
+          const res = await fetch('/api/admin/run-pipeline', { method: 'POST' });
+          const payload = await res.json().catch(() => null);
+          if (!res.ok) {
+            let message = payload?.error || `HTTP ${res.status}`;
+            if (res.status === 401) message = 'Unauthorized';
+            else if (res.status === 403) message = 'Admin access required';
+            else if (res.status === 500) message = 'Missing pipeline configuration';
+            else if (res.status === 502) {
+              message = payload?.message || payload?.data?.message || 'Backend trigger failed';
+            }
+            throw new Error(message);
+          }
+          pipelineBtn.textContent = 'Started';
+          setPipelineFeedback(payload?.data?.message || 'Pipeline queued.', 'success');
           setTimeout(() => window.location.reload(), 2000);
-        } catch {
-          pipelineBtn.textContent = 'Failed ✗';
+        } catch (error) {
+          pipelineBtn.textContent = 'Failed';
           pipelineBtn.removeAttribute('disabled');
-          setTimeout(() => { pipelineBtn.textContent = 'Run Pipeline'; }, 3000);
+          const message = error instanceof Error ? error.message : 'Failed to trigger pipeline';
+          setPipelineFeedback(message, 'error');
+          setTimeout(() => {
+            pipelineBtn.textContent = 'Run Pipeline';
+          }, 3000);
         }
       });
     }
