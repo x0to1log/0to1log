@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from models.ranking import RankedCandidate
-from models.research import MIN_CONTENT_CHARS, ResearchPost
+from models.research import EN_MIN_CONTENT_CHARS, KO_MIN_CONTENT_CHARS, ResearchPost
 
 
 @pytest.fixture(autouse=True)
@@ -47,6 +47,27 @@ def _make_content(target_length: int) -> str:
     return "\n\n".join(sections)
 
 
+def _make_ko_content(target_length: int) -> str:
+    section_titles = [
+        "## 1. 무슨 일이 있었나",
+        "## 2. 숫자로 보면",
+        "## 3. 그래서 왜 중요한가",
+        "## 4. 더 깊게 보기",
+    ]
+    filler = "기술적 맥락과 실제 적용 포인트를 근거 중심으로 설명하는 한국어 문장입니다. "
+    available = max(target_length - sum(len(title) + 2 for title in section_titles), 3600)
+    per_section = available // len(section_titles)
+    remainder = available % len(section_titles)
+    sections = []
+
+    for index, title in enumerate(section_titles):
+        length = per_section + (1 if index < remainder else 0)
+        body = (filler * ((length // len(filler)) + 2))[:length]
+        sections.append(f"{title}\n{body}")
+
+    return "\n\n".join(sections)
+
+
 def _make_research_response(content_length: int) -> dict:
     return {
         "has_news": True,
@@ -77,13 +98,23 @@ def _make_research_response(content_length: int) -> dict:
     }
 
 
+def test_research_post_accepts_ko_4000_char_minimum():
+    valid_response = _make_research_response(4099)
+    valid_response["content_original"] = _make_ko_content(4099)
+
+    post = ResearchPost.model_validate(valid_response)
+
+    assert post.content_original is not None
+    assert len(post.content_original) >= KO_MIN_CONTENT_CHARS
+
+
 def test_research_post_accepts_5000_char_minimum():
     valid_response = _make_research_response(5461)
 
     post = ResearchPost.model_validate(valid_response)
 
     assert post.content_original is not None
-    assert len(post.content_original) >= MIN_CONTENT_CHARS
+    assert len(post.content_original) >= EN_MIN_CONTENT_CHARS
 
 
 @pytest.mark.asyncio
@@ -121,12 +152,12 @@ async def test_generate_research_post_retries_with_8000_char_target_feedback():
 
     assert isinstance(result, ResearchPost)
     assert result.content_original is not None
-    assert len(result.content_original) >= MIN_CONTENT_CHARS
+    assert len(result.content_original) >= EN_MIN_CONTENT_CHARS
     assert mock_client.chat.completions.create.await_count == 4
 
     second_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
     assert f"{short_length} chars" in second_prompt
-    assert str(MIN_CONTENT_CHARS - short_length) in second_prompt
+    assert str(EN_MIN_CONTENT_CHARS - short_length) in second_prompt
     assert "target at least 8000 chars" in second_prompt
 
 

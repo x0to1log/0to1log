@@ -59,6 +59,8 @@ function run() {
   assertIncludes(detailPage, '—', 'detail legacy metric placeholder');
   assertIncludes(detailPage, 'raw_error', 'detail page raw error area');
   assertIncludes(detailPage, 'debug_meta', 'detail page debug metadata rendering');
+  assertNotIncludes(detailPage, '(log.tokens_used ?? 0).toLocaleString()', 'forced zero tokens rendering');
+  assertNotIncludes(detailPage, 'String(log.cost_usd ?? 0)', 'forced zero cost rendering');
 
   console.log('admin-pipeline-runs-structure.test: ok');
 }

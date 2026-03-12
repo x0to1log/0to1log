@@ -4,7 +4,9 @@ from typing import Optional
 from models.common import PromptGuideItems, SourceCard
 
 
-MIN_CONTENT_CHARS = 5000
+EN_MIN_CONTENT_CHARS = 5000
+KO_MIN_CONTENT_CHARS = 4000
+MIN_CONTENT_CHARS = KO_MIN_CONTENT_CHARS
 TARGET_CONTENT_CHARS = 8000
 
 

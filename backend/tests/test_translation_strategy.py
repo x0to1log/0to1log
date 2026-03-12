@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from models.business import BusinessPost
-from models.research import MIN_CONTENT_CHARS as RESEARCH_MIN_CONTENT_CHARS, ResearchPost
+from models.research import KO_MIN_CONTENT_CHARS as RESEARCH_KO_MIN_CONTENT_CHARS, ResearchPost
 
 
 @pytest.fixture(autouse=True)
@@ -215,13 +215,49 @@ async def test_translate_research_post_retries_short_section_and_preserves_struc
     validated = ResearchPost.model_validate(result)
 
     assert validated.content_original is not None
-    assert len(validated.content_original) >= RESEARCH_MIN_CONTENT_CHARS
+    assert len(validated.content_original) >= RESEARCH_KO_MIN_CONTENT_CHARS
     assert validated.content_original.count("## ") == 4
     assert mock_client.chat.completions.create.await_count == 6
 
     retry_prompt = mock_client.chat.completions.create.await_args_list[2].kwargs["messages"][1]["content"]
     assert "previous translation was" in retry_prompt
     assert "minimum expected length" in retry_prompt
+
+
+@pytest.mark.asyncio
+async def test_translate_research_post_records_usage_metrics():
+    en_data = _make_research_en_post()
+    responses = [
+        _mock_openai_response(_make_research_metadata_ko()),
+        _mock_openai_response({"translated_text": _make_ko_section("## 1. 무슨 일이 있었나", 1300)}),
+        _mock_openai_response({"translated_text": _make_ko_section("## 2. 숫자로 보면", 1300)}),
+        _mock_openai_response({"translated_text": _make_ko_section("## 3. 그래서 중요한 점", 1300)}),
+        _mock_openai_response({"translated_text": _make_ko_section("## 4. 더 깊게 보기", 1300)}),
+    ]
+    for index, call in enumerate(responses):
+        call.usage = MagicMock(
+            prompt_tokens=500 + (index * 50),
+            completion_tokens=250 + (index * 25),
+            total_tokens=750 + (index * 75),
+        )
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=responses)
+
+    usage = {}
+
+    with patch("services.agents.translate.get_openai_client", return_value=mock_client):
+        from services.agents.translate import translate_post
+
+        result = await translate_post(en_data, "research", usage_recorder=usage)
+
+    validated = ResearchPost.model_validate(result)
+
+    assert validated.content_original is not None
+    assert usage["tokens_used"] > 0
+    assert usage["input_tokens"] > 0
+    assert usage["output_tokens"] > 0
+    assert usage["cost_usd"] is not None
 
 
 @pytest.mark.asyncio

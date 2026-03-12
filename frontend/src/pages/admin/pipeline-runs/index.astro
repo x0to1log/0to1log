@@ -32,7 +32,7 @@ type RunCard = PipelineRun & {
   totalCost: number | null;
   totalTokens: number | null;
   stageCount: number | null;
-  hasMetrics: boolean;
+  hasUsageMetrics: boolean;
   errorSummary: string;
   durationSeconds: number | null;
   statusTone: 'success' | 'failed' | 'running' | 'idle';
@@ -78,6 +78,12 @@ function metricText(value: number | null, formatter?: (num: number) => string): 
   return formatter ? formatter(value) : String(value);
 }
 
+function parseCost(value: number | string | null): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 try {
   const { data: runRows } = await sb
     .from('pipeline_runs')
@@ -90,11 +96,31 @@ try {
     ? await sb.from('pipeline_logs').select('run_id, cost_usd, tokens_used').in('run_id', runIds)
     : { data: [] };
 
-  const totals = new Map<string, { totalCost: number; totalTokens: number; stageCount: number }>();
+  const totals = new Map<
+    string,
+    {
+      totalCost: number | null;
+      totalTokens: number | null;
+      stageCount: number;
+      hasUsageMetrics: boolean;
+    }
+  >();
   for (const log of (logs ?? []) as PipelineLog[]) {
-    const current = totals.get(log.run_id) ?? { totalCost: 0, totalTokens: 0, stageCount: 0 };
-    current.totalCost += Number.parseFloat(String(log.cost_usd ?? 0)) || 0;
-    current.totalTokens += log.tokens_used || 0;
+    const current = totals.get(log.run_id) ?? {
+      totalCost: null,
+      totalTokens: null,
+      stageCount: 0,
+      hasUsageMetrics: false,
+    };
+    const parsedCost = parseCost(log.cost_usd);
+    if (parsedCost !== null) {
+      current.totalCost = (current.totalCost ?? 0) + parsedCost;
+      current.hasUsageMetrics = true;
+    }
+    if (typeof log.tokens_used === 'number') {
+      current.totalTokens = (current.totalTokens ?? 0) + log.tokens_used;
+      current.hasUsageMetrics = true;
+    }
     current.stageCount += 1;
     totals.set(log.run_id, current);
   }
@@ -106,7 +132,7 @@ try {
       totalCost: metric?.totalCost ?? null,
       totalTokens: metric?.totalTokens ?? null,
       stageCount: metric?.stageCount ?? null,
-      hasMetrics: Boolean(metric),
+      hasUsageMetrics: metric?.hasUsageMetrics ?? false,
       errorSummary: formatPipelineError(run.last_error),
       durationSeconds: durationSeconds(run.started_at, run.finished_at),
       statusTone: statusTone(run.status),
@@ -114,7 +140,7 @@ try {
   }
 } catch {}
 
-const runsWithMetrics = runs.filter((run) => run.hasMetrics);
+const runsWithCostMetrics = runs.filter((run) => run.totalCost !== null);
 
 const summary = {
   total: runs.length,
@@ -122,8 +148,8 @@ const summary = {
   failed: runs.filter((run) => run.status === 'failed').length,
   running: runs.filter((run) => run.status === 'running').length,
   avgCost:
-    runsWithMetrics.length
-      ? runsWithMetrics.reduce((sum, run) => sum + (run.totalCost ?? 0), 0) / runsWithMetrics.length
+    runsWithCostMetrics.length
+      ? runsWithCostMetrics.reduce((sum, run) => sum + (run.totalCost ?? 0), 0) / runsWithCostMetrics.length
       : null,
   avgDuration: runs.filter((run) => run.durationSeconds !== null).length
     ? Math.round(

@@ -5,8 +5,13 @@ from typing import Any
 from pydantic import ValidationError
 
 from models.ranking import RankedCandidate
-from models.research import MIN_CONTENT_CHARS, TARGET_CONTENT_CHARS, ResearchPost
-from services.agents.client import get_openai_client, parse_ai_json
+from models.research import EN_MIN_CONTENT_CHARS, TARGET_CONTENT_CHARS, ResearchPost
+from services.agents.client import (
+    extract_usage_metrics,
+    get_openai_client,
+    merge_usage_metrics,
+    parse_ai_json,
+)
 from services.agents.prompts import RESEARCH_SYSTEM_PROMPT
 from core.config import settings
 
@@ -42,25 +47,33 @@ def _build_research_user_prompt(
 MAX_RETRIES = 3
 
 
+def _assert_generation_minimum(post: ResearchPost) -> None:
+    content_length = len(post.content_original or "")
+    if post.has_news and content_length < EN_MIN_CONTENT_CHARS:
+        raise ValueError(
+            f"Content too short: {content_length} chars (min {EN_MIN_CONTENT_CHARS})"
+        )
+
+
 def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) -> str:
     if not previous_data:
         return (
             base_prompt
             + "\n\nIMPORTANT: Your previous response was rejected because "
-            f"content_original was too short. It MUST be at least {MIN_CONTENT_CHARS} characters "
+            f"content_original was too short. It MUST be at least {EN_MIN_CONTENT_CHARS} characters "
             f"and should target at least {TARGET_CONTENT_CHARS} chars "
             "with 4 sections of at least 1200 characters each. Return valid JSON only."
         )
 
     content_original = previous_data.get("content_original")
     content_length = len(content_original) if isinstance(content_original, str) else 0
-    missing_chars = max(MIN_CONTENT_CHARS - content_length, 0)
+    missing_chars = max(EN_MIN_CONTENT_CHARS - content_length, 0)
 
     return (
         f"{base_prompt}\n\n"
         "IMPORTANT: Your previous response was rejected.\n"
         f"- content_original was {content_length} chars\n"
-        f"- minimum required is {MIN_CONTENT_CHARS} chars\n"
+        f"- minimum required is {EN_MIN_CONTENT_CHARS} chars\n"
         f"- target at least {TARGET_CONTENT_CHARS} chars so it clears validation comfortably\n"
         f"- add at least {missing_chars} more chars while keeping the same story\n"
         "- keep the 4 required ## sections\n"
@@ -92,6 +105,7 @@ async def generate_research_post(
     candidate: RankedCandidate | None,
     context: str,
     batch_id: str,
+    usage_recorder: dict[str, Any] | None = None,
 ) -> ResearchPost:
     """Step 3-A: Generate a research post using gpt-4o.
 
@@ -99,8 +113,9 @@ async def generate_research_post(
     """
     client = get_openai_client()
     user_prompt = _build_research_user_prompt(candidate, context, batch_id)
-    last_error: ValidationError | None = None
+    last_error: ValidationError | ValueError | None = None
     last_data: dict[str, Any] | None = None
+    aggregate_usage: dict[str, Any] = {}
 
     for attempt in range(1 + MAX_RETRIES):
         prompt = user_prompt if attempt == 0 else _build_retry_prompt(user_prompt, last_data)
@@ -115,6 +130,13 @@ async def generate_research_post(
             temperature=0.3,
             max_tokens=16384,
         )
+        aggregate_usage = merge_usage_metrics(
+            aggregate_usage,
+            extract_usage_metrics(response, settings.openai_model_main),
+        )
+        if usage_recorder is not None:
+            usage_recorder.clear()
+            usage_recorder.update(aggregate_usage)
 
         raw = response.choices[0].message.content
         data = parse_ai_json(raw, "Research")
@@ -122,6 +144,7 @@ async def generate_research_post(
 
         try:
             validated = ResearchPost.model_validate(data)
+            _assert_generation_minimum(validated)
             if (
                 candidate is not None
                 and validated.has_news
@@ -137,13 +160,21 @@ async def generate_research_post(
                     temperature=0.3,
                     max_tokens=16384,
                 )
+                aggregate_usage = merge_usage_metrics(
+                    aggregate_usage,
+                    extract_usage_metrics(expand_response, settings.openai_model_main),
+                )
+                if usage_recorder is not None:
+                    usage_recorder.clear()
+                    usage_recorder.update(aggregate_usage)
                 expanded_raw = expand_response.choices[0].message.content
                 expanded_data = parse_ai_json(expanded_raw, "ResearchSafeFloor")
                 expanded = ResearchPost.model_validate(expanded_data)
+                _assert_generation_minimum(expanded)
                 if len(expanded.content_original or "") > len(validated.content_original or ""):
                     return expanded
             return validated
-        except ValidationError as e:
+        except (ValidationError, ValueError) as e:
             last_error = e
             logger.warning(
                 "Research validation failed (attempt %d/%d): %s",

@@ -1,10 +1,16 @@
 import json
 import logging
+from typing import Any
 
 from pydantic import ValidationError
 
 from models.ranking import NewsCandidate, NewsRankingResult
-from services.agents.client import get_openai_client, parse_ai_json
+from services.agents.client import (
+    extract_usage_metrics,
+    get_openai_client,
+    merge_usage_metrics,
+    parse_ai_json,
+)
 from services.agents.prompts import RANKING_SYSTEM_PROMPT
 from core.config import settings
 
@@ -19,7 +25,10 @@ def _build_ranking_user_prompt(candidates: list[NewsCandidate]) -> str:
     return "\n".join(lines)
 
 
-async def rank_candidates(candidates: list[NewsCandidate]) -> NewsRankingResult:
+async def rank_candidates(
+    candidates: list[NewsCandidate],
+    usage_recorder: dict[str, Any] | None = None,
+) -> NewsRankingResult:
     """Step 2: Classify and rank news candidates using gpt-4o-mini."""
     client = get_openai_client()
     user_prompt = _build_ranking_user_prompt(candidates)
@@ -33,6 +42,11 @@ async def rank_candidates(candidates: list[NewsCandidate]) -> NewsRankingResult:
         response_format={"type": "json_object"},
         temperature=0.2,
     )
+    usage = extract_usage_metrics(response, settings.openai_model_light)
+    if usage_recorder is not None:
+        merged_usage = merge_usage_metrics(usage_recorder, usage)
+        usage_recorder.clear()
+        usage_recorder.update(merged_usage)
 
     raw = response.choices[0].message.content
     data = parse_ai_json(raw, "Ranking")

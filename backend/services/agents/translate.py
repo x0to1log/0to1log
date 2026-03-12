@@ -9,7 +9,12 @@ from pydantic import ValidationError
 from core.config import settings
 from models.business import MIN_ANALYSIS_CHARS as BUSINESS_MIN_ANALYSIS_CHARS, MIN_CONTENT_CHARS as BUSINESS_MIN_CONTENT_CHARS, BusinessPost
 from models.research import MIN_CONTENT_CHARS as RESEARCH_MIN_CONTENT_CHARS, ResearchPost
-from services.agents.client import get_openai_client, parse_ai_json
+from services.agents.client import (
+    extract_usage_metrics,
+    get_openai_client,
+    merge_usage_metrics,
+    parse_ai_json,
+)
 from services.agents.prompts import TRANSLATE_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -142,6 +147,7 @@ async def _request_json_translation(
     client: Any,
     prompt: str,
     agent_name: str,
+    usage_recorder: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     response = await client.chat.completions.create(
         model=settings.openai_model_main,
@@ -153,6 +159,13 @@ async def _request_json_translation(
         temperature=0.2,
         max_tokens=16384,
     )
+    if usage_recorder is not None:
+        merged_usage = merge_usage_metrics(
+            usage_recorder,
+            extract_usage_metrics(response, settings.openai_model_main),
+        )
+        usage_recorder.clear()
+        usage_recorder.update(merged_usage)
 
     raw = response.choices[0].message.content
     return parse_ai_json(raw, agent_name)
@@ -162,17 +175,24 @@ async def translate_metadata_block(
     client: Any,
     payload: dict[str, Any],
     post_type: str,
+    usage_recorder: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not payload:
         return {}
     prompt = _build_translate_metadata_prompt(payload, post_type)
-    return await _request_json_translation(client, prompt, f"Translate-{post_type}-metadata")
+    return await _request_json_translation(
+        client,
+        prompt,
+        f"Translate-{post_type}-metadata",
+        usage_recorder=usage_recorder,
+    )
 
 
 async def _translate_source_cards(
     client: Any,
     source_cards: list[dict[str, Any]],
     post_type: str,
+    usage_recorder: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     if not source_cards:
         return []
@@ -187,7 +207,12 @@ async def _translate_source_cards(
             for card in source_cards
         ]
     }
-    translated = await translate_metadata_block(client, payload, post_type)
+    translated = await translate_metadata_block(
+        client,
+        payload,
+        post_type,
+        usage_recorder=usage_recorder,
+    )
     translated_cards = translated.get("source_cards") or []
     merged: list[dict[str, Any]] = []
     for index, card in enumerate(source_cards):
@@ -209,6 +234,7 @@ async def translate_section(
     field_name: str,
     min_chars: int,
     recovery_total_min: int | None = None,
+    usage_recorder: dict[str, Any] | None = None,
 ) -> str:
     previous_translation: str | None = None
 
@@ -225,6 +251,7 @@ async def translate_section(
             client,
             prompt,
             f"Translate-{post_type}-{field_name}-section",
+            usage_recorder=usage_recorder,
         )
         translated_text = translated_payload.get("translated_text", "").strip()
 
@@ -245,6 +272,7 @@ async def _translate_markdown_field(
     shrink_ratio: float,
     min_floor: int,
     recovery: bool = False,
+    usage_recorder: dict[str, Any] | None = None,
 ) -> str:
     sections = split_markdown_sections(text)
     if not sections:
@@ -274,6 +302,7 @@ async def _translate_markdown_field(
                 field_name=field_name,
                 min_chars=min_chars,
                 recovery_total_min=total_min_chars if recovery else None,
+                usage_recorder=usage_recorder,
             )
         )
 
@@ -289,7 +318,11 @@ def _extract_failed_fields(error: ValidationError, allowed_fields: set[str]) -> 
     return failed
 
 
-async def translate_research_post(client: Any, en_data: dict[str, Any]) -> dict[str, Any]:
+async def translate_research_post(
+    client: Any,
+    en_data: dict[str, Any],
+    usage_recorder: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     translated = copy.deepcopy(en_data)
     metadata_payload = {
         "title": en_data.get("title", ""),
@@ -304,12 +337,18 @@ async def translate_research_post(client: Any, en_data: dict[str, Any]) -> dict[
 
     translated = _merge_translation(
         translated,
-        await translate_metadata_block(client, metadata_payload, "research"),
+        await translate_metadata_block(
+            client,
+            metadata_payload,
+            "research",
+            usage_recorder=usage_recorder,
+        ),
     )
     translated["source_cards"] = await _translate_source_cards(
         client,
         en_data.get("source_cards") or [],
         "research",
+        usage_recorder=usage_recorder,
     )
 
     if en_data.get("has_news", True) and en_data.get("content_original"):
@@ -321,6 +360,7 @@ async def translate_research_post(client: Any, en_data: dict[str, Any]) -> dict[
             total_min_chars=RESEARCH_MIN_CONTENT_CHARS,
             shrink_ratio=RESEARCH_SECTION_SHRINK_RATIO,
             min_floor=RESEARCH_SECTION_MIN_FLOOR,
+            usage_recorder=usage_recorder,
         )
     else:
         translated["content_original"] = None
@@ -345,12 +385,17 @@ async def translate_research_post(client: Any, en_data: dict[str, Any]) -> dict[
                 shrink_ratio=RESEARCH_SECTION_SHRINK_RATIO,
                 min_floor=RESEARCH_SECTION_MIN_FLOOR,
                 recovery=True,
+                usage_recorder=usage_recorder,
             )
 
     return translated
 
 
-async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[str, Any]:
+async def translate_business_post(
+    client: Any,
+    en_data: dict[str, Any],
+    usage_recorder: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     translated = copy.deepcopy(en_data)
     metadata_payload = {
         "title": en_data.get("title", ""),
@@ -363,12 +408,18 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
     }
     translated = _merge_translation(
         translated,
-        await translate_metadata_block(client, metadata_payload, "business"),
+        await translate_metadata_block(
+            client,
+            metadata_payload,
+            "business",
+            usage_recorder=usage_recorder,
+        ),
     )
     translated["source_cards"] = await _translate_source_cards(
         client,
         en_data.get("source_cards") or [],
         "business",
+        usage_recorder=usage_recorder,
     )
     translated["content_analysis"] = await _translate_markdown_field(
         client=client,
@@ -378,6 +429,7 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
         total_min_chars=BUSINESS_MIN_ANALYSIS_CHARS,
         shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
         min_floor=BUSINESS_SECTION_MIN_FLOOR,
+        usage_recorder=usage_recorder,
     ) if en_data.get("content_analysis") else ""
 
     for field_name in ("content_beginner", "content_learner", "content_expert"):
@@ -389,6 +441,7 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
             total_min_chars=BUSINESS_MIN_CONTENT_CHARS,
             shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
             min_floor=BUSINESS_SECTION_MIN_FLOOR,
+            usage_recorder=usage_recorder,
         )
 
     for recovery_pass in range(1 + POST_RECOVERY_PASSES):
@@ -416,6 +469,7 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
                         shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
                         min_floor=BUSINESS_SECTION_MIN_FLOOR,
                         recovery=True,
+                        usage_recorder=usage_recorder,
                     )
                 else:
                     translated[field_name] = await _translate_markdown_field(
@@ -427,12 +481,17 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
                         shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
                         min_floor=BUSINESS_SECTION_MIN_FLOOR,
                         recovery=True,
+                        usage_recorder=usage_recorder,
                     )
 
     return translated
 
 
-async def translate_post(en_data: dict, post_type: str) -> dict:
+async def translate_post(
+    en_data: dict,
+    post_type: str,
+    usage_recorder: dict[str, Any] | None = None,
+) -> dict:
     """Translate an EN post dict to KO using gpt-4o.
 
     Args:
@@ -445,9 +504,9 @@ async def translate_post(en_data: dict, post_type: str) -> dict:
     client = get_openai_client()
 
     if post_type == "research":
-        translated = await translate_research_post(client, en_data)
+        translated = await translate_research_post(client, en_data, usage_recorder=usage_recorder)
     elif post_type == "business":
-        translated = await translate_business_post(client, en_data)
+        translated = await translate_business_post(client, en_data, usage_recorder=usage_recorder)
     else:
         raise ValueError(f"Unsupported post_type for translation: {post_type}")
 

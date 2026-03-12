@@ -7,13 +7,16 @@ from pydantic import ValidationError
 from core.config import settings
 from models.business import BusinessPost, MIN_ANALYSIS_CHARS, MIN_CONTENT_CHARS, TARGET_CONTENT_CHARS
 from models.ranking import RankedCandidate, RelatedPicks
-from services.agents.client import get_openai_client, parse_ai_json
+from services.agents.client import extract_usage_metrics, get_openai_client, parse_ai_json
 
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
 PERSONA_ORDER = ("beginner", "learner", "expert")
-StageLogger = Callable[[str, str, int, dict[str, Any] | None, str | None], None]
+StageLogger = Callable[
+    [str, str, int, dict[str, Any] | None, str | None, str | None, int | None, float | None],
+    None,
+]
 
 
 def _emit_stage(
@@ -24,10 +27,25 @@ def _emit_stage(
     attempt: int = 0,
     debug_meta: dict[str, Any] | None = None,
     output_summary: str | None = None,
+    model_used: str | None = None,
+    tokens_used: int | None = None,
+    cost_usd: float | None = None,
 ) -> None:
     if not stage_logger:
         return
-    stage_logger(stage_name, status, attempt, debug_meta, output_summary)
+    try:
+        stage_logger(
+            stage_name,
+            status,
+            attempt,
+            debug_meta,
+            output_summary,
+            model_used,
+            tokens_used,
+            cost_usd,
+        )
+    except TypeError:
+        stage_logger(stage_name, status, attempt, debug_meta, output_summary)
 
 
 def _candidate_sources(candidate: RankedCandidate, related: RelatedPicks | None) -> list[str]:
@@ -167,7 +185,7 @@ async def _request_json(
     client: Any,
     prompt: str,
     agent_name: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
     response = await client.chat.completions.create(
         model=settings.openai_model_main,
         messages=[
@@ -186,7 +204,10 @@ async def _request_json(
     )
 
     raw = response.choices[0].message.content
-    return parse_ai_json(raw, agent_name)
+    return (
+        parse_ai_json(raw, agent_name),
+        extract_usage_metrics(response, settings.openai_model_main),
+    )
 
 
 async def _generate_stage_with_retry(
@@ -208,7 +229,7 @@ async def _generate_stage_with_retry(
             minimum=minimum,
             previous_data=last_data,
         )
-        data = await _request_json(client, stage_prompt, agent_name)
+        data, usage = await _request_json(client, stage_prompt, agent_name)
         last_data = data
         value = data.get(field_name, "")
         if isinstance(value, str) and len(value) >= minimum:
@@ -219,6 +240,9 @@ async def _generate_stage_with_retry(
                 attempt=attempt,
                 debug_meta={field_name: len(value)},
                 output_summary=agent_name,
+                model_used=usage.get("model_used"),
+                tokens_used=usage.get("tokens_used"),
+                cost_usd=usage.get("cost_usd"),
             )
             return data
         current_length = len(value) if isinstance(value, str) else 0
@@ -233,6 +257,9 @@ async def _generate_stage_with_retry(
                 "minimum": minimum,
             },
             output_summary=agent_name,
+            model_used=usage.get("model_used"),
+            tokens_used=usage.get("tokens_used"),
+            cost_usd=usage.get("cost_usd"),
         )
         logger.warning(
             "%s validation failed (attempt %d/%d): %s length=%s minimum=%s",
@@ -265,7 +292,7 @@ async def generate_business_post(
 ) -> BusinessPost:
     client = get_openai_client()
 
-    fact_pack_data = await _request_json(
+    fact_pack_data, fact_pack_usage = await _request_json(
         client,
         _build_business_fact_pack_prompt(candidate, related, context),
         "BusinessFactPack",
@@ -282,6 +309,9 @@ async def generate_business_post(
                 "source_card_count": len(fact_pack_data.get("source_cards") or []),
             },
             output_summary="BusinessFactPack",
+            model_used=fact_pack_usage.get("model_used"),
+            tokens_used=fact_pack_usage.get("tokens_used"),
+            cost_usd=fact_pack_usage.get("cost_usd"),
         )
         raise
     _emit_stage(
@@ -293,6 +323,9 @@ async def generate_business_post(
             "source_card_count": len(fact_pack_data.get("source_cards") or []),
         },
         output_summary="BusinessFactPack",
+        model_used=fact_pack_usage.get("model_used"),
+        tokens_used=fact_pack_usage.get("tokens_used"),
+        cost_usd=fact_pack_usage.get("cost_usd"),
     )
 
     source_urls = _candidate_sources(candidate, related)

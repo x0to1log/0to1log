@@ -82,6 +82,12 @@ function metricText(value: number | null, formatter?: (num: number) => string): 
   return formatter ? formatter(value) : String(value);
 }
 
+function parseCost(value: number | string | null): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function formatDebugMeta(meta: unknown): string {
   if (!meta || (typeof meta === 'object' && Object.keys(meta as Record<string, unknown>).length === 0)) {
     return '';
@@ -111,12 +117,14 @@ try {
 const raw_error = run?.last_error || '';
 const normalizedError = formatPipelineError(raw_error);
 const tone = statusTone(run?.status);
-const hasMetrics = logs.length > 0;
-const totalTokens = hasMetrics ? logs.reduce((sum, log) => sum + (log.tokens_used ?? 0), 0) : null;
-const totalCost = hasMetrics
-  ? logs.reduce((sum, log) => sum + (Number.parseFloat(String(log.cost_usd ?? 0)) || 0), 0)
+const hasStageLogs = logs.length > 0;
+const hasTokenMetrics = logs.some((log) => typeof log.tokens_used === 'number');
+const hasCostMetrics = logs.some((log) => parseCost(log.cost_usd) !== null);
+const totalTokens = hasTokenMetrics ? logs.reduce((sum, log) => sum + (log.tokens_used ?? 0), 0) : null;
+const totalCost = hasCostMetrics
+  ? logs.reduce((sum, log) => sum + (parseCost(log.cost_usd) ?? 0), 0)
   : null;
-const failedStages = hasMetrics ? logs.filter((log) => log.status === 'failed').length : null;
+const failedStages = hasStageLogs ? logs.filter((log) => log.status === 'failed').length : null;
 const duration = durationSeconds(run?.started_at ?? null, run?.finished_at ?? null);
 const latestLog = logs.at(-1) ?? null;
 ---
@@ -170,16 +178,16 @@ const latestLog = logs.at(-1) ?? null;
       <section class="pipeline-run-summary-grid">
         <div class="pipeline-run-stat">
           <span class="pipeline-run-stat__label">Stage Count</span>
-          <strong class="pipeline-run-stat__value">{metricText(hasMetrics ? logs.length : null)}</strong>
+          <strong class="pipeline-run-stat__value">{metricText(hasStageLogs ? logs.length : null)}</strong>
           <span class="pipeline-run-stat__detail">
-            {hasMetrics ? 'Tracked log entries for this run' : 'No stage logs recorded for this run'}
+            {hasStageLogs ? 'Tracked log entries for this run' : 'No stage logs recorded for this run'}
           </span>
         </div>
         <div class="pipeline-run-stat">
           <span class="pipeline-run-stat__label">Failed Stages</span>
           <strong class="pipeline-run-stat__value">{metricText(failedStages)}</strong>
           <span class="pipeline-run-stat__detail">
-            {hasMetrics ? 'Entries marked failed' : 'No stage failure data recorded'}
+            {hasStageLogs ? 'Entries marked failed' : 'No stage failure data recorded'}
           </span>
         </div>
         <div class="pipeline-run-stat">
@@ -188,7 +196,7 @@ const latestLog = logs.at(-1) ?? null;
             {metricText(totalTokens, (value) => value.toLocaleString())}
           </strong>
           <span class="pipeline-run-stat__detail">
-            {hasMetrics ? 'Across all recorded stages' : 'Legacy run without token logs'}
+            {hasTokenMetrics ? 'Across all recorded stages' : 'No token usage recorded for this run'}
           </span>
         </div>
         <div class="pipeline-run-stat">
@@ -197,7 +205,7 @@ const latestLog = logs.at(-1) ?? null;
             {metricText(totalCost, (value) => formatCurrency(value))}
           </strong>
           <span class="pipeline-run-stat__detail">
-            {hasMetrics ? 'Accumulated stage spend' : 'Legacy run without cost logs'}
+            {hasCostMetrics ? 'Accumulated stage spend' : 'No cost estimate recorded for this run'}
           </span>
         </div>
         <div class="pipeline-run-stat">
@@ -261,12 +269,14 @@ const latestLog = logs.at(-1) ?? null;
                       )}
                       <span class="pipeline-stage-chip">
                         <span class="pipeline-stage-chip__label">Tokens</span>
-                        <span class="pipeline-stage-chip__value">{(log.tokens_used ?? 0).toLocaleString()}</span>
+                        <span class="pipeline-stage-chip__value">
+                          {metricText(log.tokens_used, (value) => value.toLocaleString())}
+                        </span>
                       </span>
                       <span class="pipeline-stage-chip">
                         <span class="pipeline-stage-chip__label">Cost</span>
                         <span class="pipeline-stage-chip__value">
-                          {formatCurrency(Number.parseFloat(String(log.cost_usd ?? 0)) || 0)}
+                          {metricText(parseCost(log.cost_usd), (value) => formatCurrency(value))}
                         </span>
                       </span>
                     </div>

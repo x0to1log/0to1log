@@ -36,6 +36,37 @@ def test_log_pipeline_stage_includes_debug_meta_and_dimensions():
     assert inserted["debug_meta"]["research_en_len"] == 6123
 
 
+def test_extract_usage_metrics_estimates_cost_for_known_model():
+    from services.agents.client import extract_usage_metrics
+
+    response = MagicMock()
+    response.usage.prompt_tokens = 1200
+    response.usage.completion_tokens = 300
+    response.usage.total_tokens = 1500
+
+    metrics = extract_usage_metrics(response, "gpt-4o")
+
+    assert metrics["model_used"] == "gpt-4o"
+    assert metrics["tokens_used"] == 1500
+    assert metrics["input_tokens"] == 1200
+    assert metrics["output_tokens"] == 300
+    assert metrics["cost_usd"] == ((1200 * 2.5) + (300 * 10.0)) / 1_000_000
+
+
+def test_merge_usage_metrics_accumulates_tokens_and_cost():
+    from services.agents.client import merge_usage_metrics
+
+    merged = merge_usage_metrics(
+        {"tokens_used": 1500, "cost_usd": 0.006, "input_tokens": 1200, "output_tokens": 300},
+        {"tokens_used": 800, "cost_usd": 0.0012, "input_tokens": 500, "output_tokens": 300},
+    )
+
+    assert merged["tokens_used"] == 2300
+    assert merged["input_tokens"] == 1700
+    assert merged["output_tokens"] == 600
+    assert merged["cost_usd"] == 0.0072
+
+
 def test_normalize_pipeline_error_returns_short_message():
     from services.pipeline import normalize_pipeline_error
 

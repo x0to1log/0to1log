@@ -358,12 +358,22 @@ MOCK_BUSINESS_RESPONSE = {
 # Helper: create a mock OpenAI response
 # ---------------------------------------------------------------------------
 
-def _mock_openai_response(data: dict) -> MagicMock:
+def _mock_openai_response(
+    data: dict,
+    *,
+    prompt_tokens: int = 800,
+    completion_tokens: int = 200,
+) -> MagicMock:
     """Create a mock that mimics openai chat completion response."""
     choice = MagicMock()
     choice.message.content = json.dumps(data)
     response = MagicMock()
     response.choices = [choice]
+    response.usage = MagicMock(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=prompt_tokens + completion_tokens,
+    )
     return response
 
 
@@ -402,6 +412,27 @@ class TestRankingAgent:
 
         call_kwargs = mock_client.chat.completions.create.call_args.kwargs
         assert call_kwargs["model"] == "gpt-4o-mini"
+
+    @pytest.mark.asyncio
+    async def test_rank_candidates_records_usage_metrics(self):
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value=_mock_openai_response(
+                MOCK_RANKING_RESPONSE,
+                prompt_tokens=1200,
+                completion_tokens=300,
+            )
+        )
+        usage = {}
+
+        with patch("services.agents.ranking.get_openai_client", return_value=mock_client):
+            from services.agents.ranking import rank_candidates
+            await rank_candidates(SAMPLE_CANDIDATES, usage_recorder=usage)
+
+        assert usage["tokens_used"] == 1500
+        assert usage["input_tokens"] == 1200
+        assert usage["output_tokens"] == 300
+        assert usage["cost_usd"] is not None
 
     @pytest.mark.asyncio
     async def test_rank_candidates_uses_json_format(self):
@@ -445,6 +476,33 @@ class TestResearchAgent:
         assert result.content_original is not None
         assert result.guide_items is not None
         assert result.news_temperature == 5
+
+    @pytest.mark.asyncio
+    async def test_generate_research_post_records_usage_metrics(self):
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value=_mock_openai_response(
+                MOCK_RESEARCH_RESPONSE,
+                prompt_tokens=2400,
+                completion_tokens=600,
+            )
+        )
+
+        candidate = RankedCandidate(**MOCK_RANKING_RESPONSE["research_pick"])
+        usage = {}
+
+        with patch("services.agents.research.get_openai_client", return_value=mock_client):
+            from services.agents.research import generate_research_post
+
+            await generate_research_post(
+                candidate=candidate,
+                context="Tavily collected context...",
+                batch_id="2026-03-07",
+                usage_recorder=usage,
+            )
+
+        assert usage["tokens_used"] >= 3000
+        assert usage["cost_usd"] is not None
 
     @pytest.mark.asyncio
     async def test_generate_research_post_no_news(self):
@@ -524,6 +582,51 @@ class TestBusinessAgent:
         assert result.guide_items is not None
         assert result.related_news is not None
         assert result.news_temperature == 4
+
+    @pytest.mark.asyncio
+    async def test_generate_business_post_stage_logger_receives_usage_metrics(self):
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=[
+                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE, prompt_tokens=1000, completion_tokens=200),
+                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE, prompt_tokens=1200, completion_tokens=400),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"], prompt_tokens=900, completion_tokens=500),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"], prompt_tokens=900, completion_tokens=500),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"], prompt_tokens=900, completion_tokens=500),
+            ]
+        )
+
+        candidate = RankedCandidate(**MOCK_RANKING_RESPONSE["business_main_pick"])
+        related = RelatedPicks(**MOCK_RANKING_RESPONSE["related_picks"])
+        emitted = []
+
+        def stage_logger(stage_name, status, attempt, debug_meta, output_summary, model_used, tokens_used, cost_usd):
+            emitted.append(
+                {
+                    "stage_name": stage_name,
+                    "status": status,
+                    "attempt": attempt,
+                    "model_used": model_used,
+                    "tokens_used": tokens_used,
+                    "cost_usd": cost_usd,
+                }
+            )
+
+        with patch("services.agents.business.get_openai_client", return_value=mock_client):
+            from services.agents.business import generate_business_post
+
+            await generate_business_post(
+                candidate=candidate,
+                related=related,
+                context="Tavily collected context...",
+                batch_id="2026-03-07",
+                stage_logger=stage_logger,
+            )
+
+        assert any(entry["stage_name"] == "business.fact_pack.en" for entry in emitted)
+        assert all(entry["model_used"] == "gpt-4o" for entry in emitted)
+        assert all(isinstance(entry["tokens_used"], int) and entry["tokens_used"] > 0 for entry in emitted)
+        assert all(entry["cost_usd"] is not None for entry in emitted)
 
     @pytest.mark.asyncio
     async def test_business_agent_calls_main_model(self):

@@ -136,6 +136,9 @@ def _build_stage_logger(
         attempt: int,
         debug_meta: dict[str, Any] | None,
         output_summary: str | None,
+        model_used: str | None = None,
+        tokens_used: int | None = None,
+        cost_usd: float | None = None,
     ) -> None:
         log_pipeline_stage(
             run_id,
@@ -146,6 +149,9 @@ def _build_stage_logger(
             locale=locale,
             output_summary=output_summary,
             debug_meta=debug_meta,
+            model_used=model_used,
+            tokens_used=tokens_used,
+            cost_usd=cost_usd,
         )
 
     return _logger
@@ -644,7 +650,25 @@ async def run_daily_pipeline(batch_id: str) -> None:
 
         # Step 2: Rank candidates
         rank_started = _now()
-        ranking = await rank_candidates(candidates)
+        rank_usage: dict[str, Any] = {}
+        try:
+            ranking = await rank_candidates(candidates, usage_recorder=rank_usage)
+        except Exception:
+            log_pipeline_stage(
+                run_id,
+                "rank",
+                "failed",
+                duration_ms=int((_now() - rank_started).total_seconds() * 1000),
+                output_summary="Ranking failed",
+                model_used=rank_usage.get("model_used"),
+                tokens_used=rank_usage.get("tokens_used"),
+                cost_usd=rank_usage.get("cost_usd"),
+                debug_meta={
+                    "input_tokens": rank_usage.get("input_tokens"),
+                    "output_tokens": rank_usage.get("output_tokens"),
+                },
+            )
+            raise
         ranking.research_pick, research_gate = _apply_research_novelty_gate(
             ranking.research_pick, batch_id
         )
@@ -654,9 +678,14 @@ async def run_daily_pipeline(batch_id: str) -> None:
             "success",
             duration_ms=int((_now() - rank_started).total_seconds() * 1000),
             output_summary="Ranking completed",
+            model_used=rank_usage.get("model_used"),
+            tokens_used=rank_usage.get("tokens_used"),
+            cost_usd=rank_usage.get("cost_usd"),
             debug_meta={
                 "research_pick": ranking.research_pick.title if ranking.research_pick else None,
                 "business_pick": ranking.business_main_pick.title if ranking.business_main_pick else None,
+                "input_tokens": rank_usage.get("input_tokens"),
+                "output_tokens": rank_usage.get("output_tokens"),
             },
         )
         log_pipeline_stage(
@@ -681,9 +710,34 @@ async def run_daily_pipeline(batch_id: str) -> None:
         # Step 3-A: Generate EN research post
         logger.info("Calling research AI agent for batch %s...", batch_id)
         research_started = _now()
-        research_post = await generate_research_post(
-            ranking.research_pick, context, batch_id
-        )
+        research_usage: dict[str, Any] = {}
+        try:
+            research_post = await generate_research_post(
+                ranking.research_pick,
+                context,
+                batch_id,
+                usage_recorder=research_usage,
+            )
+        except Exception:
+            log_pipeline_stage(
+                run_id,
+                "research.generate.en",
+                "failed",
+                post_type="research",
+                locale="en",
+                duration_ms=int((_now() - research_started).total_seconds() * 1000),
+                output_summary="Research EN draft failed",
+                model_used=research_usage.get("model_used"),
+                tokens_used=research_usage.get("tokens_used"),
+                cost_usd=research_usage.get("cost_usd"),
+                debug_meta={
+                    "research_en_len": None,
+                    "has_news": ranking.research_pick is not None,
+                    "input_tokens": research_usage.get("input_tokens"),
+                    "output_tokens": research_usage.get("output_tokens"),
+                },
+            )
+            raise
         log_pipeline_stage(
             run_id,
             "research.generate.en",
@@ -692,9 +746,14 @@ async def run_daily_pipeline(batch_id: str) -> None:
             locale="en",
             duration_ms=int((_now() - research_started).total_seconds() * 1000),
             output_summary=research_post.title,
+            model_used=research_usage.get("model_used"),
+            tokens_used=research_usage.get("tokens_used"),
+            cost_usd=research_usage.get("cost_usd"),
             debug_meta={
                 "research_en_len": len(research_post.content_original or ""),
                 "has_news": research_post.has_news,
+                "input_tokens": research_usage.get("input_tokens"),
+                "output_tokens": research_usage.get("output_tokens"),
             },
         )
         logger.info("EN research post generated: %s", research_post.title)
@@ -713,10 +772,34 @@ async def run_daily_pipeline(batch_id: str) -> None:
         # Step 3-A-KO: Translate research post to Korean
         logger.info("Translating research post to Korean for batch %s...", batch_id)
         research_translate_started = _now()
-        ko_research_data = await translate_post(
-            research_post.model_dump(), "research"
-        )
-        ko_research = ResearchPost.model_validate(ko_research_data)
+        research_translate_usage: dict[str, Any] = {}
+        try:
+            ko_research_data = await translate_post(
+                research_post.model_dump(),
+                "research",
+                usage_recorder=research_translate_usage,
+            )
+            ko_research = ResearchPost.model_validate(ko_research_data)
+        except Exception:
+            log_pipeline_stage(
+                run_id,
+                "research.translate.ko",
+                "failed",
+                post_type="research",
+                locale="ko",
+                duration_ms=int((_now() - research_translate_started).total_seconds() * 1000),
+                output_summary="Research KO translation failed",
+                model_used=research_translate_usage.get("model_used"),
+                tokens_used=research_translate_usage.get("tokens_used"),
+                cost_usd=research_translate_usage.get("cost_usd"),
+                debug_meta={
+                    "research_ko_len": None,
+                    "has_news": research_post.has_news,
+                    "input_tokens": research_translate_usage.get("input_tokens"),
+                    "output_tokens": research_translate_usage.get("output_tokens"),
+                },
+            )
+            raise
         log_pipeline_stage(
             run_id,
             "research.translate.ko",
@@ -725,9 +808,14 @@ async def run_daily_pipeline(batch_id: str) -> None:
             locale="ko",
             duration_ms=int((_now() - research_translate_started).total_seconds() * 1000),
             output_summary=ko_research.title,
+            model_used=research_translate_usage.get("model_used"),
+            tokens_used=research_translate_usage.get("tokens_used"),
+            cost_usd=research_translate_usage.get("cost_usd"),
             debug_meta={
                 "research_ko_len": len(ko_research.content_original or ""),
                 "has_news": ko_research.has_news,
+                "input_tokens": research_translate_usage.get("input_tokens"),
+                "output_tokens": research_translate_usage.get("output_tokens"),
             },
         )
         ko_research_id, _ = _save_research_post(
@@ -792,10 +880,34 @@ async def run_daily_pipeline(batch_id: str) -> None:
             # Step 3-B-KO: Translate business post to Korean
             logger.info("Translating business post to Korean for batch %s...", batch_id)
             business_translate_started = _now()
-            ko_business_data = await translate_post(
-                business_post.model_dump(), "business"
-            )
-            ko_business = BusinessPost.model_validate(ko_business_data)
+            business_translate_usage: dict[str, Any] = {}
+            try:
+                ko_business_data = await translate_post(
+                    business_post.model_dump(),
+                    "business",
+                    usage_recorder=business_translate_usage,
+                )
+                ko_business = BusinessPost.model_validate(ko_business_data)
+            except Exception:
+                log_pipeline_stage(
+                    run_id,
+                    "business.translate.ko",
+                    "failed",
+                    post_type="business",
+                    locale="ko",
+                    duration_ms=int((_now() - business_translate_started).total_seconds() * 1000),
+                    output_summary="Business KO translation failed",
+                    model_used=business_translate_usage.get("model_used"),
+                    tokens_used=business_translate_usage.get("tokens_used"),
+                    cost_usd=business_translate_usage.get("cost_usd"),
+                    debug_meta={
+                        "business_analysis_len": None,
+                        "persona_lengths": None,
+                        "input_tokens": business_translate_usage.get("input_tokens"),
+                        "output_tokens": business_translate_usage.get("output_tokens"),
+                    },
+                )
+                raise
             log_pipeline_stage(
                 run_id,
                 "business.translate.ko",
@@ -804,6 +916,9 @@ async def run_daily_pipeline(batch_id: str) -> None:
                 locale="ko",
                 duration_ms=int((_now() - business_translate_started).total_seconds() * 1000),
                 output_summary=ko_business.title,
+                model_used=business_translate_usage.get("model_used"),
+                tokens_used=business_translate_usage.get("tokens_used"),
+                cost_usd=business_translate_usage.get("cost_usd"),
                 debug_meta={
                     "business_analysis_len": len(ko_business.content_analysis or ""),
                     "persona_lengths": {
@@ -813,6 +928,8 @@ async def run_daily_pipeline(batch_id: str) -> None:
                     },
                     "fact_pack_count": len(ko_business.fact_pack or []),
                     "source_card_count": len(ko_business.source_cards or []),
+                    "input_tokens": business_translate_usage.get("input_tokens"),
+                    "output_tokens": business_translate_usage.get("output_tokens"),
                 },
             )
             ko_business_id, _ = _save_business_post(
