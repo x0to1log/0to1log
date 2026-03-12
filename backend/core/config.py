@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     pinecone_api_key: str = ""
     pinecone_index_name: str = "news-posts"
     embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
     tavily_api_key: str = ""
     exa_api_key: str = ""
     admin_email: str = "admin@0to1log.com"

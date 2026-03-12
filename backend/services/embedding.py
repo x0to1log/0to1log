@@ -13,6 +13,16 @@ _openai_client: Optional[AsyncOpenAI] = None
 _pinecone_index = None
 
 
+def _extract_index_dimension(index_description: object) -> Optional[int]:
+    """Normalize Pinecone describe_index responses to a plain dimension value."""
+    if isinstance(index_description, dict):
+        dimension = index_description.get("dimension")
+        return dimension if isinstance(dimension, int) else None
+
+    dimension = getattr(index_description, "dimension", None)
+    return dimension if isinstance(dimension, int) else None
+
+
 def _get_openai_client() -> AsyncOpenAI:
     global _openai_client
     if _openai_client is None:
@@ -26,6 +36,15 @@ def _get_pinecone_index():
         if not settings.pinecone_api_key:
             raise RuntimeError("PINECONE_API_KEY not configured")
         pc = Pinecone(api_key=settings.pinecone_api_key)
+        index_description = pc.describe_index(settings.pinecone_index_name)
+        actual_dimension = _extract_index_dimension(index_description)
+        expected_dimension = settings.embedding_dimensions
+        if actual_dimension != expected_dimension:
+            raise RuntimeError(
+                "Pinecone index dimension mismatch for "
+                f"{settings.pinecone_index_name}: current={actual_dimension}, "
+                f"expected={expected_dimension}"
+            )
         _pinecone_index = pc.Index(settings.pinecone_index_name)
     return _pinecone_index
 
@@ -61,6 +80,7 @@ async def embed_post(
     response = await client.embeddings.create(
         model=settings.embedding_model,
         input=text,
+        dimensions=settings.embedding_dimensions,
     )
     vector = response.data[0].embedding
 

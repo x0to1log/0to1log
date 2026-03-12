@@ -1,5 +1,5 @@
 """Tests for Admin CRUD endpoints with auth 401/403 split."""
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -187,14 +187,17 @@ class TestPublishPost:
             "published_at": "2026-03-07T12:00:00Z",
         }
         mock_db = _mock_supabase_with_data([published_row])
+        mock_embed = AsyncMock()
 
-        with patch("routers.admin.get_supabase", return_value=mock_db):
+        with patch("routers.admin.get_supabase", return_value=mock_db), \
+             patch("routers.admin.embed_post", mock_embed):
             response = admin_client.patch("/api/admin/posts/uuid-001/publish")
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "published"
         assert data["published_at"] is not None
+        mock_embed.assert_awaited_once()
 
     def test_publish_not_found_returns_404(self, admin_client):
         mock_db = _mock_supabase_with_data([])
