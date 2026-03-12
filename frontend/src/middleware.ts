@@ -96,6 +96,10 @@ async function fetchUserExtras(
       .maybeSingle(),
   ]);
 
+  if (adminResult.error) {
+    throw new Error(`Admin lookup failed: ${adminResult.error.message}`);
+  }
+
   const profile = profileResult.data || {
     display_name: user.user_metadata?.full_name || null,
     username: null,
@@ -199,7 +203,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
 
     // Admin routes always fetch fresh (no cache) for security
-    const extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
+    let extras: { isAdmin: boolean; profile: App.Locals['profile'] };
+    try {
+      extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Admin lookup failed';
+      if (isApiRoute) {
+        return new Response(JSON.stringify({ error: 'Admin lookup failed', message }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response('Admin verification unavailable', { status: 503 });
+    }
     if (!extras.isAdmin) {
       if (isApiRoute) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {

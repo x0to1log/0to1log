@@ -30,6 +30,8 @@ function run() {
 
   const middleware = read('src/middleware.ts');
   assertIncludes(middleware, "pathname.startsWith('/api/admin/')", 'admin API middleware protection');
+  assertIncludes(middleware, "error: 'Admin lookup failed'", 'admin lookup failure response');
+  assertIncludes(adminIndex, "res.status === 503", 'admin pipeline 503 handling');
 
   console.log('admin-run-pipeline-structure.test: ok');
 }
