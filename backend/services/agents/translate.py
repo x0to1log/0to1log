@@ -7,7 +7,11 @@ from typing import Any
 from pydantic import ValidationError
 
 from core.config import settings
-from models.business import MIN_ANALYSIS_CHARS as BUSINESS_MIN_ANALYSIS_CHARS, MIN_CONTENT_CHARS as BUSINESS_MIN_CONTENT_CHARS, BusinessPost
+from models.business import (
+    KO_MIN_ANALYSIS_CHARS as BUSINESS_KO_MIN_ANALYSIS_CHARS,
+    KO_MIN_CONTENT_CHARS as BUSINESS_KO_MIN_CONTENT_CHARS,
+    BusinessPost,
+)
 from models.research import MIN_CONTENT_CHARS as RESEARCH_MIN_CONTENT_CHARS, ResearchPost
 from services.agents.client import (
     extract_usage_metrics,
@@ -426,7 +430,7 @@ async def translate_business_post(
         text=en_data.get("content_analysis", ""),
         post_type="business",
         field_name="content_analysis",
-        total_min_chars=BUSINESS_MIN_ANALYSIS_CHARS,
+        total_min_chars=BUSINESS_KO_MIN_ANALYSIS_CHARS,
         shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
         min_floor=BUSINESS_SECTION_MIN_FLOOR,
         usage_recorder=usage_recorder,
@@ -438,7 +442,7 @@ async def translate_business_post(
             text=en_data.get(field_name, ""),
             post_type="business",
             field_name=field_name,
-            total_min_chars=BUSINESS_MIN_CONTENT_CHARS,
+            total_min_chars=BUSINESS_KO_MIN_CONTENT_CHARS,
             shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
             min_floor=BUSINESS_SECTION_MIN_FLOOR,
             usage_recorder=usage_recorder,
@@ -465,7 +469,7 @@ async def translate_business_post(
                         text=en_data.get(field_name, ""),
                         post_type="business",
                         field_name=field_name,
-                        total_min_chars=BUSINESS_MIN_ANALYSIS_CHARS,
+                        total_min_chars=BUSINESS_KO_MIN_ANALYSIS_CHARS,
                         shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
                         min_floor=BUSINESS_SECTION_MIN_FLOOR,
                         recovery=True,
@@ -477,7 +481,7 @@ async def translate_business_post(
                         text=en_data.get(field_name, ""),
                         post_type="business",
                         field_name=field_name,
-                        total_min_chars=BUSINESS_MIN_CONTENT_CHARS,
+                        total_min_chars=BUSINESS_KO_MIN_CONTENT_CHARS,
                         shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
                         min_floor=BUSINESS_SECTION_MIN_FLOOR,
                         recovery=True,

@@ -5,9 +5,13 @@ from pydantic import BaseModel, field_validator
 from models.common import FactPackItem, PromptGuideItems, RelatedNews, SourceCard
 
 
-MIN_CONTENT_CHARS = 3000
+EN_MIN_CONTENT_CHARS = 3000
+KO_MIN_CONTENT_CHARS = 1800
+MIN_CONTENT_CHARS = EN_MIN_CONTENT_CHARS
 TARGET_CONTENT_CHARS = 4500
-MIN_ANALYSIS_CHARS = 2000
+EN_MIN_ANALYSIS_CHARS = 2000
+KO_MIN_ANALYSIS_CHARS = 1700
+MIN_ANALYSIS_CHARS = EN_MIN_ANALYSIS_CHARS
 
 
 class BusinessPost(BaseModel):
@@ -30,18 +34,18 @@ class BusinessPost(BaseModel):
     @field_validator("content_analysis")
     @classmethod
     def check_analysis_min_length(cls, v: str) -> str:
-        if v and len(v) < MIN_ANALYSIS_CHARS:
+        if v and len(v) < KO_MIN_ANALYSIS_CHARS:
             raise ValueError(
-                f"Content too short: {len(v)} chars (min {MIN_ANALYSIS_CHARS})"
+                f"Content too short: {len(v)} chars (min {KO_MIN_ANALYSIS_CHARS})"
             )
         return v
 
     @field_validator("content_beginner", "content_learner", "content_expert")
     @classmethod
     def check_min_length(cls, v: str) -> str:
-        if v and len(v) < MIN_CONTENT_CHARS:
+        if v and len(v) < KO_MIN_CONTENT_CHARS:
             raise ValueError(
-                f"Content too short: {len(v)} chars (min {MIN_CONTENT_CHARS})"
+                f"Content too short: {len(v)} chars (min {KO_MIN_CONTENT_CHARS})"
             )
         return v
 

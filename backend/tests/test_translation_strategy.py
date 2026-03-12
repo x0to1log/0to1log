@@ -3,7 +3,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from models.business import BusinessPost
+from models.business import (
+    KO_MIN_ANALYSIS_CHARS as BUSINESS_KO_MIN_ANALYSIS_CHARS,
+    KO_MIN_CONTENT_CHARS as BUSINESS_KO_MIN_CONTENT_CHARS,
+    BusinessPost,
+)
 from models.research import KO_MIN_CONTENT_CHARS as RESEARCH_KO_MIN_CONTENT_CHARS, ResearchPost
 
 
@@ -309,7 +313,7 @@ async def test_translate_business_post_recovers_only_failing_field():
         side_effect=[
             _mock_openai_response(_make_business_metadata_ko()),
             _mock_openai_response({"translated_text": _make_ko_section("## 이야기", 3300)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 무슨 일이 있었나", 2800)}),
+            _mock_openai_response({"translated_text": _make_ko_section("## 무슨 일이 있었나", 1400)}),
             _mock_openai_response({"translated_text": _make_ko_section("## 핵심 요약", 3300)}),
             _mock_openai_response({"translated_text": _make_ko_section("## 무슨 일이 있었나", 3300)}),
         ]
@@ -322,11 +326,48 @@ async def test_translate_business_post_recovers_only_failing_field():
 
     validated = BusinessPost.model_validate(result)
 
-    assert len(validated.content_beginner) >= 3000
-    assert len(validated.content_learner) >= 3000
-    assert len(validated.content_expert) >= 3000
+    assert len(validated.content_beginner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert len(validated.content_learner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert len(validated.content_expert) >= BUSINESS_KO_MIN_CONTENT_CHARS
     assert mock_client.chat.completions.create.await_count == 5
 
-    recovery_prompt = mock_client.chat.completions.create.await_args_list[4].kwargs["messages"][1]["content"]
-    assert "content_learner" in recovery_prompt
-    assert "minimum required is 3000 chars" in recovery_prompt
+    prompts = [
+        call.kwargs["messages"][1]["content"]
+        for call in mock_client.chat.completions.create.await_args_list
+    ]
+    learner_recovery_prompts = [
+        prompt
+        for prompt in prompts
+        if "content_learner" in prompt and "previous translation was" in prompt
+    ]
+    assert learner_recovery_prompts
+    assert any(
+        "minimum expected length for this translated section is" in prompt
+        for prompt in learner_recovery_prompts
+    )
+
+
+def test_business_post_allows_shorter_korean_lengths():
+    analysis = _make_ko_section("## 핵심 분석", BUSINESS_KO_MIN_ANALYSIS_CHARS + 73)
+    beginner = _make_ko_section("## 이야기", BUSINESS_KO_MIN_CONTENT_CHARS + 93)
+    learner = _make_ko_section("## 무슨 일이 있었나", BUSINESS_KO_MIN_CONTENT_CHARS + 183)
+    expert = _make_ko_section("## 실행 요약", BUSINESS_KO_MIN_CONTENT_CHARS + 220)
+
+    post = BusinessPost.model_validate(
+        {
+            "title": "Legora, 미국 확장을 위해 대규모 자금 조달",
+            "slug": "2026-03-12-business-daily",
+            "content_analysis": analysis,
+            "content_beginner": beginner,
+            "content_learner": learner,
+            "content_expert": expert,
+            "source_urls": ["https://example.com/legora"],
+            "news_temperature": 3,
+            "tags": ["legora"],
+        }
+    )
+
+    assert len(post.content_analysis) >= BUSINESS_KO_MIN_ANALYSIS_CHARS
+    assert len(post.content_beginner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert len(post.content_learner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert len(post.content_expert) >= BUSINESS_KO_MIN_CONTENT_CHARS
