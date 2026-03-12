@@ -38,3 +38,15 @@ examples/
 
 # Claude
 .claude/
+
+# Testing
+coverage/
+.pytest_cache/
+.ruff_cache/
+.jest-cache/
+
+# Logs
+*.log
+*.err
+*.pdm-history
+*.dev-server.*
