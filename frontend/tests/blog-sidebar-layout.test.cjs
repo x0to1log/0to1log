@@ -17,6 +17,10 @@ assert.ok(
   'Desktop blog rails must anchor below the shared header offset',
 );
 assert.ok(
+  css.includes('width: 15.25rem;') && css.includes('flex: 0 0 15.25rem;'),
+  'Desktop blog action and TOC rail should widen slightly to support a single-row action toolbar',
+);
+assert.ok(
   css.includes('height: calc(100vh - var(--blog-shell-header-offset) - (var(--blog-shell-rail-gap) * 2));'),
   'Desktop blog sidebar must use the shared viewport height calculation',
 );
