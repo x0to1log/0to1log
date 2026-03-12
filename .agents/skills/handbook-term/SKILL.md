@@ -23,7 +23,7 @@ Use when the user asks to:
 
 ## Output Format
 
-Output a single JSON object with all DB fields. The user will copy-paste this into the admin editor or use it for API insertion.
+Output a single JSON object with all DB fields. Once generated, ask the user if they want you to automatically insert it into the database (e.g., via the `insert_term` script if provided, or by writing a quick API request script).
 
 ```json
 {
@@ -52,12 +52,12 @@ Output a single JSON object with all DB fields. The user will copy-paste this in
 
 These fields render as `{variable}` in Astro templates, meaning markdown syntax would appear as literal text. Keep them as clean prose.
 
-| Field | Purpose | Length |
-|-------|---------|--------|
-| `definition` | One-sentence technical definition | 1-2 sentences |
-| `plain_explanation` | ELI5-style explanation using everyday analogy | 2-3 sentences |
+| Field                   | Purpose                                                        | Length        |
+| ----------------------- | -------------------------------------------------------------- | ------------- |
+| `definition`            | One-sentence technical definition                              | 1-2 sentences |
+| `plain_explanation`     | ELI5-style explanation using everyday analogy                  | 2-3 sentences |
 | `technical_description` | How it works under the hood — mechanisms, protocols, data flow | 2-4 sentences |
-| `example_analogy` | Concrete real-world example or analogy | 1-2 sentences |
+| `example_analogy`       | Concrete real-world example or analogy                         | 1-2 sentences |
 
 ### Body Markdown
 
@@ -75,8 +75,8 @@ The main content. This IS rendered as HTML via `marked`, so full markdown is all
 [Mechanism, architecture, data flow. Use tables or diagrams where helpful]
 
 | Component | Role |
-|-----------|------|
-| ... | ... |
+| --------- | ---- |
+| ...       | ...  |
 
 ## When You'll See It
 
