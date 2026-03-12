@@ -12,6 +12,7 @@ function initHandbookFeedback(): void {
   const termId = root.dataset.termId;
   const locale = root.dataset.locale;
   const isAuthenticated = root.dataset.authenticated === 'true';
+  const previewMode = root.dataset.previewMode === 'true';
   const helpfulMessage = root.dataset.thanksHelpful || 'Thanks for the feedback.';
   const confusingMessage = root.dataset.thanksConfusing || 'Thanks for the feedback.';
   const errorMessage = root.dataset.error || 'Failed to save feedback.';
@@ -51,6 +52,7 @@ function initHandbookFeedback(): void {
     button.addEventListener('click', async () => {
       const reaction = button.dataset.reaction;
       if (!reaction) return;
+      if (previewMode) return;
 
       if (!isAuthenticated) {
         openAuthPrompt({ action: 'feedback', redirectTo: resolveRedirect(root) });

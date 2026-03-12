@@ -10,6 +10,7 @@ function initLikes(): void {
   btn.dataset.likeInit = 'true';
 
   btn.addEventListener('click', async () => {
+    if (btn.dataset.previewMode === 'true') return;
     const postId = btn.dataset.postId;
     if (!postId) return;
 

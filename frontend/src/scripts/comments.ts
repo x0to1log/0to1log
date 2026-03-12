@@ -9,6 +9,7 @@ function initComments(): void {
   const locale = section.dataset.locale || 'en';
   const isAuthenticated = section.dataset.authenticated === 'true';
   const contentType = section.dataset.contentType || 'news';
+  const previewMode = section.dataset.previewMode === 'true';
   const commentRedirect = section.dataset.commentRedirect || `${window.location.pathname}${window.location.search}#comments`;
   if (!postId) return;
 
@@ -20,8 +21,8 @@ function initComments(): void {
   const totalEl = section.querySelector<HTMLElement>('[data-comment-total]');
   const countEl = document.querySelector<HTMLElement>('[data-comment-count]');
 
-  if (form) form.style.display = isAuthenticated ? '' : 'none';
-  if (loginLink) loginLink.style.display = isAuthenticated ? 'none' : '';
+  if (form) form.style.display = !previewMode && isAuthenticated ? '' : 'none';
+  if (loginLink) loginLink.style.display = !previewMode && !isAuthenticated ? '' : 'none';
 
   async function loadComments() {
     try {
@@ -50,7 +51,7 @@ function initComments(): void {
       );
       const initial = (comment.user.display_name || 'A').charAt(0).toUpperCase();
       const deleteLabel = locale === 'ko' ? '삭제' : 'Delete';
-      const deleteBtn = comment.can_delete
+      const deleteBtn = !previewMode && comment.can_delete
         ? `<button class="newsprint-comment-delete" data-delete-comment="${comment.id}" aria-label="${deleteLabel}">&times;</button>`
         : '';
 
@@ -118,6 +119,7 @@ function initComments(): void {
   if (form && input) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (previewMode) return;
       const body = input.value.trim();
       if (!body) return;
 

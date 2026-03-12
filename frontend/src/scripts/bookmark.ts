@@ -15,6 +15,7 @@ function initBookmarks(): void {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (btn.dataset.previewMode === 'true') return;
 
       const itemId = btn.dataset.itemId;
       const itemType = btn.dataset.itemType;
