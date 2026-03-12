@@ -1,10 +1,11 @@
 import json
 import logging
+from typing import Any
 
 from pydantic import ValidationError
 
 from models.ranking import RankedCandidate
-from models.research import ResearchPost
+from models.research import MIN_CONTENT_CHARS, ResearchPost
 from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import RESEARCH_SYSTEM_PROMPT
 from core.config import settings
@@ -38,11 +39,32 @@ def _build_research_user_prompt(
 
 MAX_RETRIES = 2
 
-RETRY_SUFFIX = (
-    "\n\nIMPORTANT: Your previous response was rejected because content was "
-    "too short. content_original MUST be at least 6000 characters with 4 "
-    "sections of at least 1200 characters each. Write longer, deeper analysis."
-)
+
+def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) -> str:
+    if not previous_data:
+        return (
+            base_prompt
+            + "\n\nIMPORTANT: Your previous response was rejected because "
+            "content_original was too short. It MUST be at least 6000 characters "
+            "with 4 sections of at least 1200 characters each. Return valid JSON only."
+        )
+
+    content_original = previous_data.get("content_original")
+    content_length = len(content_original) if isinstance(content_original, str) else 0
+    missing_chars = max(MIN_CONTENT_CHARS - content_length, 0)
+
+    return (
+        f"{base_prompt}\n\n"
+        "IMPORTANT: Your previous response was rejected.\n"
+        f"- content_original was {content_length} chars\n"
+        f"- minimum required is {MIN_CONTENT_CHARS} chars\n"
+        f"- add at least {missing_chars} more chars while keeping the same story\n"
+        "- keep the 4 required ## sections\n"
+        "- keep all facts source-backed\n"
+        "- return the full JSON object again, not a partial patch\n\n"
+        "PREVIOUS_JSON_DRAFT:\n"
+        f"{json.dumps(previous_data, ensure_ascii=False)}"
+    )
 
 
 async def generate_research_post(
@@ -57,9 +79,10 @@ async def generate_research_post(
     client = get_openai_client()
     user_prompt = _build_research_user_prompt(candidate, context, batch_id)
     last_error: ValidationError | None = None
+    last_data: dict[str, Any] | None = None
 
     for attempt in range(1 + MAX_RETRIES):
-        prompt = user_prompt if attempt == 0 else user_prompt + RETRY_SUFFIX
+        prompt = user_prompt if attempt == 0 else _build_retry_prompt(user_prompt, last_data)
 
         response = await client.chat.completions.create(
             model=settings.openai_model_main,
@@ -74,6 +97,7 @@ async def generate_research_post(
 
         raw = response.choices[0].message.content
         data = parse_ai_json(raw, "Research")
+        last_data = data
 
         try:
             return ResearchPost.model_validate(data)

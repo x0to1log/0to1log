@@ -133,7 +133,7 @@ Set has_news to false and:
   "has_news": true,
   "title": "...",
   "slug": "topic-name-yyyymmdd",
-  "content_original": "Body text (markdown, min 4500 chars, 4 sections with ## headings)",
+  "content_original": "Body text (markdown, min 6000 chars, 4 sections with ## headings)",
   "excerpt": "1-2 sentence summary (100-200 chars)",
   "focus_items": ["What changed", "Why it matters", "What to watch next"],
   "guide_items": {
