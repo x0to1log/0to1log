@@ -6,6 +6,31 @@ import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import { createClient } from '@supabase/supabase-js';
 import { formatPipelineError } from '../../../lib/admin/pipelineError.js';
 
+type StatusTone = 'success' | 'failed' | 'running' | 'idle';
+
+type PipelineRun = {
+  id: string;
+  run_key: string;
+  status: string | null;
+  started_at: string;
+  finished_at: string | null;
+  last_error: string | null;
+};
+
+type PipelineLog = {
+  id: string;
+  pipeline_type: string;
+  status: string | null;
+  created_at: string;
+  post_type: string | null;
+  locale: string | null;
+  attempt: number | null;
+  tokens_used: number | null;
+  cost_usd: number | string | null;
+  error_message: string | null;
+  debug_meta: Record<string, unknown> | null;
+};
+
 const runId = Astro.params.runId ?? '';
 const accessToken = Astro.locals.accessToken;
 const sb = createClient(
@@ -14,25 +39,92 @@ const sb = createClient(
   { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
 );
 
-let run: any = null;
-let logs: any[] = [];
+function statusTone(status: string | null | undefined): StatusTone {
+  if (status === 'success') return 'success';
+  if (status === 'failed') return 'failed';
+  if (status === 'running') return 'running';
+  return 'idle';
+}
+
+function formatDateTime(dateStr: string | null): string {
+  if (!dateStr) return 'In progress';
+  return new Date(dateStr).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function relativeTime(dateStr: string | null): string {
+  if (!dateStr) return 'In progress';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function durationSeconds(startedAt: string | null, finishedAt: string | null): number | null {
+  if (!startedAt || !finishedAt) return null;
+  return Math.max(0, Math.round((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000));
+}
+
+function formatCurrency(value: number): string {
+  return `$${value.toFixed(2)}`;
+}
+
+function metricText(value: number | null, formatter?: (num: number) => string): string {
+  if (value === null) return '—';
+  return formatter ? formatter(value) : String(value);
+}
+
+function formatDebugMeta(meta: unknown): string {
+  if (!meta || (typeof meta === 'object' && Object.keys(meta as Record<string, unknown>).length === 0)) {
+    return '';
+  }
+  try {
+    return JSON.stringify(meta, null, 2);
+  } catch {
+    return String(meta);
+  }
+}
+
+let run: PipelineRun | null = null;
+let logs: PipelineLog[] = [];
 
 try {
   const [{ data: runRow }, { data: logRows }] = await Promise.all([
     sb.from('pipeline_runs').select('*').eq('id', runId).single(),
     sb.from('pipeline_logs').select('*').eq('run_id', runId).order('created_at', { ascending: true }),
   ]);
-  run = runRow;
-  logs = logRows ?? [];
+  run = (runRow as PipelineRun | null) ?? null;
+  logs = ((logRows ?? []) as PipelineLog[]).map((log) => ({
+    ...log,
+    debug_meta: log.debug_meta ?? null,
+  }));
 } catch {}
 
 const raw_error = run?.last_error || '';
+const normalizedError = formatPipelineError(raw_error);
+const tone = statusTone(run?.status);
+const hasMetrics = logs.length > 0;
+const totalTokens = hasMetrics ? logs.reduce((sum, log) => sum + (log.tokens_used ?? 0), 0) : null;
+const totalCost = hasMetrics
+  ? logs.reduce((sum, log) => sum + (Number.parseFloat(String(log.cost_usd ?? 0)) || 0), 0)
+  : null;
+const failedStages = hasMetrics ? logs.filter((log) => log.status === 'failed').length : null;
+const duration = durationSeconds(run?.started_at ?? null, run?.finished_at ?? null);
+const latestLog = logs.at(-1) ?? null;
 ---
 
 <MainLayout title="Pipeline Run Detail" locale="en">
   <AdminSidebar activeSection="pipeline" />
   <div class="admin-dashboard">
-    <div class="admin-main">
+    <div class="admin-main admin-main--pipeline-run-detail">
       <div class="admin-main-header">
         <div class="admin-main-header-top">
           <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
@@ -41,46 +133,615 @@ const raw_error = run?.last_error || '';
             </svg>
           </button>
           <div>
+            <p class="pipeline-run-detail-eyebrow">Run Snapshot</p>
             <h1 class="admin-main-title">Pipeline Run Detail</h1>
-            <p class="dashboard-source-label">{run?.run_key || runId}</p>
+            <p class="pipeline-run-detail-subtitle">
+              Review stage timing, validation failures, cost, token usage, and the debugging context attached to each
+              step.
+            </p>
           </div>
         </div>
       </div>
 
-      <section class="dashboard-section">
-        <h2 class="dashboard-section-title">Summary</h2>
-        <p>Status: {run?.status || 'unknown'}</p>
-        {raw_error && <div class="dashboard-pipeline-error">{formatPipelineError(raw_error)}</div>}
-      </section>
-
-      <section class="dashboard-section">
-        <h2 class="dashboard-section-title">Timeline</h2>
-        {logs.map((log) => (
-          <div class="dashboard-pipeline">
-            <div class="dashboard-pipeline-header">
-              <span class="dashboard-pipeline-status">{log.pipeline_type}</span>
-              <span class="dashboard-pipeline-time">{log.status}</span>
+      <section class={`pipeline-run-hero pipeline-run-hero--${tone}`}>
+        <div class="pipeline-run-hero__content">
+          <div class="pipeline-run-hero__top">
+            <div class="pipeline-run-hero__identity">
+              <span class={`pipeline-run-status pipeline-run-status--${tone}`}>{run?.status ?? 'unknown'}</span>
+              <strong class="pipeline-run-hero__key">{run?.run_key ?? runId}</strong>
             </div>
-            <div class="dashboard-pipeline-details">
-              {log.post_type && <span>{log.post_type}</span>}
-              {log.locale && <span>{log.locale}</span>}
-              {typeof log.attempt === 'number' && <span>Attempt: {log.attempt}</span>}
-              {log.tokens_used && <span>{log.tokens_used} tokens</span>}
-              {log.cost_usd && <span>${Number(log.cost_usd).toFixed(2)}</span>}
-            </div>
-            {log.error_message && <div class="dashboard-pipeline-error">{log.error_message}</div>}
-            <pre class="dashboard-pipeline-error">{JSON.stringify(log.debug_meta || {}, null, 2)}</pre>
-            <div class="dashboard-source-label">debug_meta</div>
+            <a href="/admin/pipeline-runs" class="pipeline-run-hero__back">Back to runs</a>
           </div>
-        ))}
+          <div class="pipeline-run-hero__meta">
+            <span>Started {relativeTime(run?.started_at ?? null)}</span>
+            <span>{formatDateTime(run?.started_at ?? null)}</span>
+            <span>{run?.finished_at ? `Finished ${formatDateTime(run.finished_at)}` : 'Still running'}</span>
+            <span>{latestLog ? `Latest stage: ${latestLog.pipeline_type}` : 'No stage logs yet'}</span>
+          </div>
+          {normalizedError && (
+            <div class="pipeline-run-hero__alert">
+              <span class="pipeline-run-hero__alert-label">Latest error</span>
+              <p>{normalizedError}</p>
+            </div>
+          )}
+        </div>
       </section>
 
-      {raw_error && (
-        <section class="dashboard-section">
-          <h2 class="dashboard-section-title">raw_error</h2>
-          <pre class="dashboard-pipeline-error">{raw_error}</pre>
+      <section class="pipeline-run-summary-grid">
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Stage Count</span>
+          <strong class="pipeline-run-stat__value">{metricText(hasMetrics ? logs.length : null)}</strong>
+          <span class="pipeline-run-stat__detail">
+            {hasMetrics ? 'Tracked log entries for this run' : 'No stage logs recorded for this run'}
+          </span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Failed Stages</span>
+          <strong class="pipeline-run-stat__value">{metricText(failedStages)}</strong>
+          <span class="pipeline-run-stat__detail">
+            {hasMetrics ? 'Entries marked failed' : 'No stage failure data recorded'}
+          </span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Total Tokens</span>
+          <strong class="pipeline-run-stat__value">
+            {metricText(totalTokens, (value) => value.toLocaleString())}
+          </strong>
+          <span class="pipeline-run-stat__detail">
+            {hasMetrics ? 'Across all recorded stages' : 'Legacy run without token logs'}
+          </span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Total Cost</span>
+          <strong class="pipeline-run-stat__value">
+            {metricText(totalCost, (value) => formatCurrency(value))}
+          </strong>
+          <span class="pipeline-run-stat__detail">
+            {hasMetrics ? 'Accumulated stage spend' : 'Legacy run without cost logs'}
+          </span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Duration</span>
+          <strong class="pipeline-run-stat__value">{duration === null ? 'Running' : `${duration}s`}</strong>
+          <span class="pipeline-run-stat__detail">From start to finish</span>
+        </div>
+      </section>
+
+      <section class="pipeline-run-section">
+        <div class="pipeline-run-section__header">
+          <div>
+            <h2 class="pipeline-run-section__title">Stage Timeline</h2>
+            <p class="pipeline-run-section__hint">
+              This timeline shows exactly which stage ran, how many tokens it used, and the debugging payload saved
+              with it.
+            </p>
+          </div>
+        </div>
+
+        {logs.length === 0 ? (
+          <p class="dashboard-empty">No pipeline logs recorded for this run yet.</p>
+        ) : (
+          <div class="pipeline-stage-list">
+            {logs.map((log) => {
+              const logTone = statusTone(log.status);
+              const debugMetaText = formatDebugMeta(log.debug_meta);
+              return (
+                <article class={`pipeline-stage-card pipeline-stage-card--${logTone}`}>
+                  <div class="pipeline-stage-card__rail" aria-hidden="true"></div>
+                  <div class="pipeline-stage-card__body">
+                    <div class="pipeline-stage-card__header">
+                      <div class="pipeline-stage-card__identity">
+                        <span class={`pipeline-run-status pipeline-run-status--${logTone}`}>{log.status ?? 'idle'}</span>
+                        <strong class="pipeline-stage-card__title">{log.pipeline_type}</strong>
+                      </div>
+                      <div class="pipeline-stage-card__time">
+                        <span>{relativeTime(log.created_at)}</span>
+                        <span>{formatDateTime(log.created_at)}</span>
+                      </div>
+                    </div>
+
+                    <div class="pipeline-stage-card__chips">
+                      {log.post_type && (
+                        <span class="pipeline-stage-chip">
+                          <span class="pipeline-stage-chip__label">Post</span>
+                          <span class="pipeline-stage-chip__value">{log.post_type}</span>
+                        </span>
+                      )}
+                      {log.locale && (
+                        <span class="pipeline-stage-chip">
+                          <span class="pipeline-stage-chip__label">Locale</span>
+                          <span class="pipeline-stage-chip__value">{log.locale}</span>
+                        </span>
+                      )}
+                      {typeof log.attempt === 'number' && (
+                        <span class="pipeline-stage-chip">
+                          <span class="pipeline-stage-chip__label">Attempt</span>
+                          <span class="pipeline-stage-chip__value">{log.attempt}</span>
+                        </span>
+                      )}
+                      <span class="pipeline-stage-chip">
+                        <span class="pipeline-stage-chip__label">Tokens</span>
+                        <span class="pipeline-stage-chip__value">{(log.tokens_used ?? 0).toLocaleString()}</span>
+                      </span>
+                      <span class="pipeline-stage-chip">
+                        <span class="pipeline-stage-chip__label">Cost</span>
+                        <span class="pipeline-stage-chip__value">
+                          {formatCurrency(Number.parseFloat(String(log.cost_usd ?? 0)) || 0)}
+                        </span>
+                      </span>
+                    </div>
+
+                    {log.error_message && <p class="pipeline-stage-card__error">{log.error_message}</p>}
+
+                    {(debugMetaText || log.error_message) && (
+                      <div class="pipeline-stage-card__panels">
+                        {debugMetaText && (
+                          <details class="pipeline-stage-panel">
+                            <summary>debug_meta</summary>
+                            <pre>{debugMetaText}</pre>
+                          </details>
+                        )}
+                        {log.error_message && (
+                          <details class="pipeline-stage-panel">
+                            <summary>stage_error</summary>
+                            <pre>{log.error_message}</pre>
+                          </details>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {(raw_error || normalizedError) && (
+        <section class="pipeline-run-section">
+          <div class="pipeline-run-section__header">
+            <div>
+              <h2 class="pipeline-run-section__title">Failure Capture</h2>
+              <p class="pipeline-run-section__hint">
+                The dashboard uses the normalized message. The raw payload stays available for deeper debugging.
+              </p>
+            </div>
+          </div>
+          {normalizedError && (
+            <div class="pipeline-run-error-card">
+              <span class="pipeline-run-error-card__label">Normalized error</span>
+              <p>{normalizedError}</p>
+            </div>
+          )}
+          {raw_error && (
+            <details class="pipeline-stage-panel pipeline-stage-panel--raw">
+              <summary>raw_error</summary>
+              <pre>{raw_error}</pre>
+            </details>
+          )}
         </section>
       )}
     </div>
   </div>
 </MainLayout>
+
+<style>
+  .admin-main--pipeline-run-detail {
+    max-width: 1120px;
+  }
+
+  .pipeline-run-detail-eyebrow {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .pipeline-run-detail-subtitle {
+    margin: 0.4rem 0 0;
+    max-width: 58rem;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+  }
+
+  .pipeline-run-hero {
+    margin-bottom: 1rem;
+    padding: 1.1rem 1.15rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 90%, var(--color-bg-primary));
+    box-shadow: 0 18px 32px -26px var(--color-shadow);
+  }
+
+  .pipeline-run-hero--success {
+    border-color: color-mix(in srgb, var(--color-success) 66%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 10%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-hero--failed {
+    border-color: color-mix(in srgb, var(--color-error) 74%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 12%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-hero--running {
+    border-color: color-mix(in srgb, var(--color-accent) 74%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-hero__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .pipeline-run-hero__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .pipeline-run-hero__key {
+    font-family: var(--font-code);
+    font-size: 1.05rem;
+    word-break: break-word;
+  }
+
+  .pipeline-run-hero__back {
+    align-self: center;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .pipeline-run-hero__back:hover {
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-run-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 1rem;
+    margin-top: 0.9rem;
+    color: var(--color-text-secondary);
+    font-size: 0.86rem;
+  }
+
+  .pipeline-run-hero__alert {
+    margin-top: 0.95rem;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid color-mix(in srgb, var(--color-error) 40%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 9%, var(--color-bg-primary));
+  }
+
+  .pipeline-run-hero__alert-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-error);
+  }
+
+  .pipeline-run-hero__alert p {
+    margin: 0;
+    color: var(--color-error);
+    line-height: 1.55;
+  }
+
+  .pipeline-run-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pipeline-run-stat {
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
+  }
+
+  .pipeline-run-stat__label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .pipeline-run-stat__value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.45rem;
+    line-height: 1;
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-run-stat__detail {
+    display: block;
+    margin-top: 0.45rem;
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .pipeline-run-section {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 74%, transparent);
+  }
+
+  .pipeline-run-section__header {
+    margin-bottom: 1rem;
+  }
+
+  .pipeline-run-section__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .pipeline-run-section__hint {
+    margin: 0.35rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .pipeline-stage-list {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .pipeline-stage-card {
+    display: grid;
+    grid-template-columns: 4px 1fr;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+  }
+
+  .pipeline-stage-card__rail {
+    background: var(--color-border);
+  }
+
+  .pipeline-stage-card--success .pipeline-stage-card__rail {
+    background: var(--color-success);
+  }
+
+  .pipeline-stage-card--failed .pipeline-stage-card__rail {
+    background: var(--color-error);
+  }
+
+  .pipeline-stage-card--running .pipeline-stage-card__rail {
+    background: var(--color-accent);
+  }
+
+  .pipeline-stage-card__body {
+    padding: 0.95rem 1rem;
+  }
+
+  .pipeline-stage-card--success {
+    border-color: color-mix(in srgb, var(--color-success) 54%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg-primary));
+  }
+
+  .pipeline-stage-card--failed {
+    border-color: color-mix(in srgb, var(--color-error) 58%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 5%, var(--color-bg-primary));
+  }
+
+  .pipeline-stage-card--running {
+    border-color: color-mix(in srgb, var(--color-accent) 58%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent) 5%, var(--color-bg-primary));
+  }
+
+  .pipeline-stage-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .pipeline-stage-card__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .pipeline-stage-card__title {
+    font-size: 1rem;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .pipeline-stage-card__time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+  }
+
+  .pipeline-stage-card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+  }
+
+  .pipeline-stage-chip {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 78%, transparent);
+    font-size: 0.8rem;
+  }
+
+  .pipeline-stage-chip__label {
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .pipeline-stage-chip__value {
+    color: var(--color-text-primary);
+    font-family: var(--font-code);
+  }
+
+  .pipeline-stage-card__error {
+    margin: 0.9rem 0 0;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--color-error) 38%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 8%, var(--color-bg-primary));
+    color: var(--color-error);
+    line-height: 1.55;
+    word-break: break-word;
+  }
+
+  .pipeline-stage-card__panels {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+  }
+
+  .pipeline-stage-panel {
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 72%, transparent);
+  }
+
+  .pipeline-stage-panel summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 0.8rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  .pipeline-stage-panel summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pipeline-stage-panel pre {
+    margin: 0;
+    padding: 0 0.9rem 0.9rem;
+    font-family: var(--font-code);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--color-text-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .pipeline-stage-panel--raw {
+    margin-top: 0.9rem;
+  }
+
+  .pipeline-run-error-card {
+    padding: 0.9rem 0.95rem;
+    border: 1px solid color-mix(in srgb, var(--color-error) 38%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 8%, var(--color-bg-primary));
+  }
+
+  .pipeline-run-error-card__label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-error);
+  }
+
+  .pipeline-run-error-card p {
+    margin: 0;
+    color: var(--color-error);
+    line-height: 1.55;
+  }
+
+  .pipeline-run-status {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+  }
+
+  .pipeline-run-status--success {
+    color: var(--color-success);
+    border-color: color-mix(in srgb, var(--color-success) 74%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 18%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-status--failed {
+    color: var(--color-error);
+    border-color: color-mix(in srgb, var(--color-error) 78%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 20%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-status--running {
+    color: var(--color-accent);
+    border-color: color-mix(in srgb, var(--color-accent) 78%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent) 20%, var(--color-bg-secondary));
+  }
+
+  @media (max-width: 1080px) {
+    .pipeline-run-summary-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .pipeline-run-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pipeline-run-hero__top,
+    .pipeline-stage-card__header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .pipeline-stage-card__time {
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .pipeline-run-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .pipeline-run-section,
+    .pipeline-run-hero {
+      padding: 0.9rem;
+    }
+  }
+</style>

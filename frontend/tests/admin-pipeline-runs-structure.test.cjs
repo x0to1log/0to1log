@@ -11,6 +11,12 @@ function assertIncludes(source, needle, label) {
   }
 }
 
+function assertNotIncludes(source, needle, label) {
+  if (source.includes(needle)) {
+    throw new Error(`Unexpected ${label}: ${needle}`);
+  }
+}
+
 function run() {
   const adminIndex = read('frontend/src/pages/admin/index.astro');
   assertIncludes(adminIndex, '/admin/pipeline-runs', 'dashboard pipeline runs link');
@@ -21,9 +27,17 @@ function run() {
   const listPage = read('frontend/src/pages/admin/pipeline-runs/index.astro');
   assertIncludes(listPage, 'Pipeline Runs', 'runs page heading');
   assertIncludes(listPage, "from('pipeline_runs')", 'runs page pipeline query');
+  assertIncludes(listPage, 'Execution Feed', 'runs page execution feed section');
+  assertIncludes(listPage, 'Recent Runs', 'runs page summary metrics');
+  assertIncludes(listPage, '—', 'legacy metric placeholder');
+  assertNotIncludes(listPage, 'translateY(-1px)', 'lift hover transform');
 
   const detailPage = read('frontend/src/pages/admin/pipeline-runs/[runId].astro');
   assertIncludes(detailPage, "from('pipeline_logs')", 'detail page logs query');
+  assertIncludes(detailPage, 'Run Snapshot', 'detail page summary hero');
+  assertIncludes(detailPage, 'Stage Timeline', 'detail page timeline title');
+  assertIncludes(detailPage, '<details', 'detail page collapsible debug panels');
+  assertIncludes(detailPage, '—', 'detail legacy metric placeholder');
   assertIncludes(detailPage, 'raw_error', 'detail page raw error area');
   assertIncludes(detailPage, 'debug_meta', 'detail page debug metadata rendering');
 

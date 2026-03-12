@@ -22,34 +22,30 @@ type PipelineRun = {
   last_error: string | null;
 };
 
-const runs: Array<PipelineRun & { totalCost: number; totalTokens: number; stageCount: number; errorSummary: string }> = [];
+type PipelineLog = {
+  run_id: string;
+  cost_usd: number | string | null;
+  tokens_used: number | null;
+};
 
-try {
-  const { data: runRows } = await sb.from('pipeline_runs').select('*').order('started_at', { ascending: false }).limit(30);
-  const pipelineRuns = (runRows ?? []) as PipelineRun[];
-  const runIds = pipelineRuns.map((run) => run.id);
-  const { data: logs } = runIds.length
-    ? await sb.from('pipeline_logs').select('run_id, cost_usd, tokens_used').in('run_id', runIds)
-    : { data: [] };
+type RunCard = PipelineRun & {
+  totalCost: number | null;
+  totalTokens: number | null;
+  stageCount: number | null;
+  hasMetrics: boolean;
+  errorSummary: string;
+  durationSeconds: number | null;
+  statusTone: 'success' | 'failed' | 'running' | 'idle';
+};
 
-  const totals = new Map();
-  for (const log of logs ?? []) {
-    const current = totals.get(log.run_id) ?? { totalCost: 0, totalTokens: 0, stageCount: 0 };
-    current.totalCost += parseFloat(log.cost_usd) || 0;
-    current.totalTokens += log.tokens_used || 0;
-    current.stageCount += 1;
-    totals.set(log.run_id, current);
-  }
+const runs: RunCard[] = [];
 
-  for (const run of pipelineRuns) {
-    const metric = totals.get(run.id) ?? { totalCost: 0, totalTokens: 0, stageCount: 0 };
-    runs.push({
-      ...run,
-      ...metric,
-      errorSummary: formatPipelineError(run.last_error),
-    });
-  }
-} catch {}
+function statusTone(status: string | null | undefined): RunCard['statusTone'] {
+  if (status === 'success') return 'success';
+  if (status === 'failed') return 'failed';
+  if (status === 'running') return 'running';
+  return 'idle';
+}
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -61,12 +57,89 @@ function relativeTime(dateStr: string): string {
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
 }
+
+function formatDateTime(dateStr: string | null): string {
+  if (!dateStr) return 'In progress';
+  return new Date(dateStr).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function durationSeconds(startedAt: string, finishedAt: string | null): number | null {
+  if (!finishedAt) return null;
+  return Math.max(0, Math.round((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000));
+}
+
+function metricText(value: number | null, formatter?: (num: number) => string): string {
+  if (value === null) return '—';
+  return formatter ? formatter(value) : String(value);
+}
+
+try {
+  const { data: runRows } = await sb
+    .from('pipeline_runs')
+    .select('*')
+    .order('started_at', { ascending: false })
+    .limit(30);
+  const pipelineRuns = (runRows ?? []) as PipelineRun[];
+  const runIds = pipelineRuns.map((run) => run.id);
+  const { data: logs } = runIds.length
+    ? await sb.from('pipeline_logs').select('run_id, cost_usd, tokens_used').in('run_id', runIds)
+    : { data: [] };
+
+  const totals = new Map<string, { totalCost: number; totalTokens: number; stageCount: number }>();
+  for (const log of (logs ?? []) as PipelineLog[]) {
+    const current = totals.get(log.run_id) ?? { totalCost: 0, totalTokens: 0, stageCount: 0 };
+    current.totalCost += Number.parseFloat(String(log.cost_usd ?? 0)) || 0;
+    current.totalTokens += log.tokens_used || 0;
+    current.stageCount += 1;
+    totals.set(log.run_id, current);
+  }
+
+  for (const run of pipelineRuns) {
+    const metric = totals.get(run.id);
+    runs.push({
+      ...run,
+      totalCost: metric?.totalCost ?? null,
+      totalTokens: metric?.totalTokens ?? null,
+      stageCount: metric?.stageCount ?? null,
+      hasMetrics: Boolean(metric),
+      errorSummary: formatPipelineError(run.last_error),
+      durationSeconds: durationSeconds(run.started_at, run.finished_at),
+      statusTone: statusTone(run.status),
+    });
+  }
+} catch {}
+
+const runsWithMetrics = runs.filter((run) => run.hasMetrics);
+
+const summary = {
+  total: runs.length,
+  success: runs.filter((run) => run.status === 'success').length,
+  failed: runs.filter((run) => run.status === 'failed').length,
+  running: runs.filter((run) => run.status === 'running').length,
+  avgCost:
+    runsWithMetrics.length
+      ? runsWithMetrics.reduce((sum, run) => sum + (run.totalCost ?? 0), 0) / runsWithMetrics.length
+      : null,
+  avgDuration: runs.filter((run) => run.durationSeconds !== null).length
+    ? Math.round(
+        runs
+          .filter((run) => run.durationSeconds !== null)
+          .reduce((sum, run) => sum + (run.durationSeconds ?? 0), 0)
+          / runs.filter((run) => run.durationSeconds !== null).length,
+      )
+    : 0,
+};
 ---
 
 <MainLayout title="Pipeline Runs" locale="en">
   <AdminSidebar activeSection="pipeline" />
   <div class="admin-dashboard">
-    <div class="admin-main">
+    <div class="admin-main admin-main--pipeline-runs">
       <div class="admin-main-header">
         <div class="admin-main-header-top">
           <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
@@ -75,24 +148,112 @@ function relativeTime(dateStr: string): string {
             </svg>
           </button>
           <div>
+            <p class="pipeline-runs-eyebrow">Monitoring</p>
             <h1 class="admin-main-title">Pipeline Runs</h1>
+            <p class="pipeline-runs-subtitle">
+              Watch collection, generation, translation, and validation runs without leaving the admin console.
+            </p>
           </div>
         </div>
       </div>
 
-      <section class="dashboard-section">
+      <section class="pipeline-runs-summary">
+        <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
+          <span class="pipeline-runs-stat__label">Recent Runs</span>
+          <strong class="pipeline-runs-stat__value">{summary.total}</strong>
+          <span class="pipeline-runs-stat__detail">Last 30 executions</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--success">
+          <span class="pipeline-runs-stat__label">Successful</span>
+          <strong class="pipeline-runs-stat__value">{summary.success}</strong>
+          <span class="pipeline-runs-stat__detail">Healthy completions</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--failed">
+          <span class="pipeline-runs-stat__label">Failed</span>
+          <strong class="pipeline-runs-stat__value">{summary.failed}</strong>
+          <span class="pipeline-runs-stat__detail">Need inspection</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--running">
+          <span class="pipeline-runs-stat__label">Running</span>
+          <strong class="pipeline-runs-stat__value">{summary.running}</strong>
+          <span class="pipeline-runs-stat__detail">Active right now</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
+          <span class="pipeline-runs-stat__label">Avg Cost</span>
+          <strong class="pipeline-runs-stat__value">
+            {summary.avgCost === null ? '—' : `$${summary.avgCost.toFixed(2)}`}
+          </strong>
+          <span class="pipeline-runs-stat__detail">
+            {summary.avgCost === null ? 'No stage cost recorded yet' : 'Per logged run'}
+          </span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
+          <span class="pipeline-runs-stat__label">Avg Duration</span>
+          <strong class="pipeline-runs-stat__value">{summary.avgDuration}s</strong>
+          <span class="pipeline-runs-stat__detail">Finished runs only</span>
+        </div>
+      </section>
+
+      <section class="pipeline-runs-section">
+        <div class="pipeline-runs-section__header">
+          <div>
+            <h2 class="pipeline-runs-section__title">Execution Feed</h2>
+            <p class="pipeline-runs-section__hint">
+              Each card shows the run key, current status, stage count, token usage, and the latest normalized error.
+            </p>
+          </div>
+        </div>
+
         {runs.length === 0 ? (
           <p class="dashboard-empty">No pipeline runs yet.</p>
         ) : (
-          <div class="admin-table">
+          <div class="pipeline-run-card-list">
             {runs.map((run) => (
-              <a href={`/admin/pipeline-runs/${run.id}`} class="dashboard-activity-link">
-                <span class="dashboard-activity-type">{run.status}</span>
-                <span class="dashboard-activity-title">{run.run_key}</span>
-                <span class="dashboard-activity-time">{relativeTime(run.started_at)}</span>
-                <span class="dashboard-source-label">{run.stageCount} stages</span>
-                <span class="dashboard-source-label">${run.totalCost.toFixed(2)} · {run.totalTokens.toLocaleString()} tokens</span>
-                {run.errorSummary && <span class="dashboard-pipeline-error">{run.errorSummary}</span>}
+              <a href={`/admin/pipeline-runs/${run.id}`} class={`pipeline-run-card pipeline-run-card--${run.statusTone}`}>
+                <div class="pipeline-run-card__top">
+                  <div class="pipeline-run-card__identity">
+                    <span class={`pipeline-run-status pipeline-run-status--${run.statusTone}`}>{run.status}</span>
+                    <strong class="pipeline-run-card__title">{run.run_key}</strong>
+                  </div>
+                  <div class="pipeline-run-card__time">
+                    <span>{relativeTime(run.started_at)}</span>
+                    <span>{formatDateTime(run.started_at)}</span>
+                  </div>
+                </div>
+
+                <div class="pipeline-run-card__metrics">
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Stages</span>
+                    <span class="pipeline-run-chip__value">{metricText(run.stageCount)}</span>
+                  </div>
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Tokens</span>
+                    <span class="pipeline-run-chip__value">
+                      {metricText(run.totalTokens, (value) => value.toLocaleString())}
+                    </span>
+                  </div>
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Cost</span>
+                    <span class="pipeline-run-chip__value">
+                      {metricText(run.totalCost, (value) => `$${value.toFixed(2)}`)}
+                    </span>
+                  </div>
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Duration</span>
+                    <span class="pipeline-run-chip__value">
+                      {run.durationSeconds === null ? 'Running' : `${run.durationSeconds}s`}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="pipeline-run-card__footer">
+                  {run.errorSummary ? (
+                    <p class="pipeline-run-card__error">{run.errorSummary}</p>
+                  ) : (
+                    <p class="pipeline-run-card__ok">No blocking error recorded.</p>
+                  )}
+                  <span class="pipeline-run-card__cta">Open details</span>
+                </div>
               </a>
             ))}
           </div>
@@ -101,3 +262,307 @@ function relativeTime(dateStr: string): string {
     </div>
   </div>
 </MainLayout>
+
+<style>
+  .admin-main--pipeline-runs {
+    max-width: 1120px;
+  }
+
+  .pipeline-runs-eyebrow {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .pipeline-runs-subtitle {
+    margin: 0.4rem 0 0;
+    max-width: 56rem;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+  }
+
+  .pipeline-runs-summary {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .pipeline-runs-stat {
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, var(--color-bg-primary));
+    box-shadow: 0 14px 24px -22px var(--color-shadow);
+  }
+
+  .pipeline-runs-stat--success {
+    border-color: color-mix(in srgb, var(--color-success) 68%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 11%, var(--color-bg-secondary));
+  }
+
+  .pipeline-runs-stat--failed {
+    border-color: color-mix(in srgb, var(--color-error) 72%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 12%, var(--color-bg-secondary));
+  }
+
+  .pipeline-runs-stat--running {
+    border-color: color-mix(in srgb, var(--color-accent) 72%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg-secondary));
+  }
+
+  .pipeline-runs-stat__label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .pipeline-runs-stat__value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-runs-stat__detail {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+  }
+
+  .pipeline-runs-section {
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 78%, transparent);
+    padding: 1rem;
+  }
+
+  .pipeline-runs-section__header {
+    margin-bottom: 1rem;
+  }
+
+  .pipeline-runs-section__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .pipeline-runs-section__hint {
+    margin: 0.35rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .pipeline-run-card-list {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .pipeline-run-card {
+    display: block;
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 140ms ease, background-color 140ms ease;
+  }
+
+  .pipeline-run-card:hover {
+    background: color-mix(in srgb, var(--color-bg-primary) 88%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-card--success {
+    border-color: color-mix(in srgb, var(--color-success) 48%, var(--color-border));
+  }
+
+  .pipeline-run-card--success:hover {
+    border-color: color-mix(in srgb, var(--color-success) 76%, var(--color-border));
+  }
+
+  .pipeline-run-card--failed {
+    border-color: color-mix(in srgb, var(--color-error) 52%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 4%, var(--color-bg-primary));
+  }
+
+  .pipeline-run-card--failed:hover {
+    border-color: color-mix(in srgb, var(--color-error) 82%, var(--color-border));
+  }
+
+  .pipeline-run-card--running {
+    border-color: color-mix(in srgb, var(--color-accent) 52%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent) 4%, var(--color-bg-primary));
+  }
+
+  .pipeline-run-card--running:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 82%, var(--color-border));
+  }
+
+  .pipeline-run-card__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .pipeline-run-card__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .pipeline-run-card__title {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    word-break: break-word;
+  }
+
+  .pipeline-run-status {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+  }
+
+  .pipeline-run-status--success {
+    color: var(--color-success);
+    border-color: color-mix(in srgb, var(--color-success) 72%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 16%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-status--failed {
+    color: var(--color-error);
+    border-color: color-mix(in srgb, var(--color-error) 76%, var(--color-border));
+    background: color-mix(in srgb, var(--color-error) 18%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-status--running {
+    color: var(--color-accent);
+    border-color: color-mix(in srgb, var(--color-accent) 76%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent) 18%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-card__time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+  }
+
+  .pipeline-run-card__metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.95rem;
+  }
+
+  .pipeline-run-chip {
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 78%, transparent);
+  }
+
+  .pipeline-run-chip__label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+  }
+
+  .pipeline-run-chip__value {
+    font-family: var(--font-code);
+    font-size: 0.95rem;
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-run-card__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 0.95rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pipeline-run-card__error,
+  .pipeline-run-card__ok {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .pipeline-run-card__error {
+    color: var(--color-error);
+  }
+
+  .pipeline-run-card__ok {
+    color: var(--color-text-secondary);
+  }
+
+  .pipeline-run-card__cta {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1100px) {
+    .pipeline-runs-summary {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .pipeline-runs-summary,
+    .pipeline-run-card__metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pipeline-run-card__top,
+    .pipeline-run-card__footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .pipeline-run-card__time {
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .pipeline-runs-summary,
+    .pipeline-run-card__metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .pipeline-runs-section {
+      padding: 0.85rem;
+    }
+  }
+</style>
