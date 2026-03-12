@@ -88,13 +88,16 @@ const copy =
   ></button>
 
   <section class="auth-prompt-sheet" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title" aria-describedby="auth-prompt-body">
+    <span class="auth-prompt-handle" aria-hidden="true"></span>
     <button type="button" class="auth-prompt-close" data-auth-prompt-close aria-label={copy.close}>
       &times;
     </button>
 
-    <span class="auth-prompt-badge">{copy.badge}</span>
-    <h2 id="auth-prompt-title" class="auth-prompt-title" data-auth-prompt-title>{copy.fallback.title}</h2>
-    <p id="auth-prompt-body" class="auth-prompt-body" data-auth-prompt-body>{copy.fallback.body}</p>
+    <div class="auth-prompt-header">
+      <span class="auth-prompt-badge">{copy.badge}</span>
+      <h2 id="auth-prompt-title" class="auth-prompt-title" data-auth-prompt-title>{copy.fallback.title}</h2>
+      <p id="auth-prompt-body" class="auth-prompt-body" data-auth-prompt-body>{copy.fallback.body}</p>
+    </div>
 
     <div class="auth-prompt-actions" data-oauth-root data-signing-in={copy.signingIn}>
       <p class="auth-prompt-signin-label">{copy.signIn}</p>

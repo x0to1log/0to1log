@@ -3,39 +3,47 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { supabase } from '../../../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { normalizeCategorySlug } from '../../../lib/categories';
-import { getArticleFocusItems } from '../../../lib/articleRail';
-import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../../../lib/markdown';
+import { getNewsDetailPageData } from '../../../lib/pageData/newsDetailPage';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
 const articleFindQuery = Astro.url.searchParams.get('q')?.trim() ?? '';
+const previewRequested = Astro.url.searchParams.get('preview') === '1';
+const previewMode = previewRequested && !!Astro.locals.isAdmin;
+const previewPersona = Astro.url.searchParams.get('previewPersona');
 
-let post = null;
-let postError: string | null = null;
-
-if (supabase && slug) {
-  const { data, error } = await supabase
-    .from('news_posts')
-    .select('*')
-    .eq('slug', pageSlug)
-    .eq('status', 'published')
-    .eq('locale', 'en')
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('[log-detail-en] Supabase error:', error.message);
-    postError = error.message;
-  } else {
-    post = data;
-  }
-}
+const {
+  post,
+  postError,
+  recentPosts,
+  focusItems,
+  articleData,
+  nextPost,
+  pairedSlug,
+  similarPosts,
+  isBookmarked,
+  isLiked,
+  likeCount,
+  commentCount,
+  handbookTermsJson,
+  hasTerms,
+  htmlContent,
+  activePersona,
+  personaHtmlMap,
+  hasPersonaSwitcher,
+} = await getNewsDetailPageData({
+  locale: 'en',
+  slug: pageSlug,
+  previewMode,
+  locals: Astro.locals,
+  previewPersona,
+});
 
 if (!post && !postError) {
   Astro.response.status = 404;
@@ -49,201 +57,15 @@ const editionMap: Record<string, string> = {
   project: 'Build Log',
 };
 const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || ''] || 'Deep Dive') : 'Deep Dive';
-
-let recentPosts: any[] = [];
-let focusItems: string[] = [];
-let articleData: any = undefined;
-let nextPost: { title: string; slug: string; category: string | null } | null = null;
-let pairedSlug: string | null = null;
-let similarPosts: { post_id: string; slug: string; title: string; category: string }[] = [];
-
-if (post) {
-  // "More in This Issue" — prefer same batch, fallback to recent
-  if (supabase && post.pipeline_batch_id) {
-    const { data: batchPosts } = await supabase
-      .from('news_posts')
-      .select('title, slug, category')
-      .eq('status', 'published')
-      .eq('locale', 'en')
-      .eq('pipeline_batch_id', post.pipeline_batch_id)
-      .neq('slug', pageSlug)
-      .order('published_at', { ascending: false })
-      .limit(4);
-    if (batchPosts && batchPosts.length > 0) {
-      recentPosts = batchPosts;
-    }
-  }
-  if (recentPosts.length === 0 && supabase) {
-    recentPosts = (await supabase
-      .from('news_posts')
-      .select('title, slug, category')
-      .eq('status', 'published')
-      .eq('locale', 'en')
-      .neq('slug', pageSlug)
-      .order('published_at', { ascending: false })
-      .limit(4)
-    ).data ?? [];
-  }
-
-  if (supabase && post.published_at) {
-    const { data: nextData } = await supabase
-      .from('news_posts')
-      .select('title, slug, category')
-      .eq('status', 'published')
-      .eq('locale', 'en')
-      .lt('published_at', post.published_at)
-      .order('published_at', { ascending: false })
-      .limit(1)
-      .single();
-    nextPost = nextData;
-  }
-
-  // Focus items: use post-level data if available, fallback to category template
-  focusItems = (post.focus_items && post.focus_items.length > 0)
-    ? post.focus_items
-    : getArticleFocusItems('en', post.category);
-
-  // Fetch similar posts from recommendations API (non-fatal)
-  const fastapiUrl = import.meta.env.FASTAPI_URL;
-  if (fastapiUrl && post.id) {
-    try {
-      const res = await fetch(
-        `${fastapiUrl}/api/recommendations/similar?post_id=${post.id}&locale=en`,
-        { signal: AbortSignal.timeout(3000) }
-      );
-      if (res.ok) {
-        similarPosts = await res.json();
-      }
-    } catch {
-      // Non-fatal: fall back to empty array
-    }
-  }
-
-  if (supabase && post.translation_group_id) {
-    const { data: paired } = await supabase
-      .from('news_posts')
-      .select('slug')
-      .eq('translation_group_id', post.translation_group_id)
-      .eq('locale', 'ko')
-      .eq('status', 'published')
-      .single();
-    pairedSlug = paired?.slug ?? null;
-  }
-
-  articleData = post.published_at
-    ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
-    : undefined;
-}
-
-// User state + engagement counts
-let isBookmarked = false;
-let isLiked = false;
-let likeCount = 0;
-let commentCount = 0;
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
-
-if (post && supabase) {
-  const { count: lc } = await supabase
-    .from('news_likes')
-    .select('id', { count: 'exact', head: true })
-    .eq('post_id', post.id);
-  likeCount = lc ?? 0;
-
-  const { count: cc } = await supabase
-    .from('news_comments')
-    .select('id', { count: 'exact', head: true })
-    .eq('post_id', post.id);
-  commentCount = cc ?? 0;
-}
-
-if (user && accessToken && post) {
-  const authSb = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const { data: bm } = await authSb
-    .from('user_bookmarks')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('item_type', 'news')
-    .eq('item_id', post.id)
-    .maybeSingle();
-  isBookmarked = !!bm;
-
-  const { data: lk } = await authSb
-    .from('news_likes')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('post_id', post.id)
-    .maybeSingle();
-  isLiked = !!lk;
-}
-
 const pageTitle = post ? post.title : 'Not Found';
-
-// Load published handbook terms for inline popups
-let handbookTermsMap: TermsMap = new Map();
-let handbookTermsJson: Record<string, any> = {};
-
-if (post && supabase) {
-  const { data: hbTerms } = await supabase
-    .from('handbook_terms')
-    .select('term, slug, korean_name, categories, definition_en')
-    .eq('status', 'published');
-
-  if (hbTerms && hbTerms.length > 0) {
-    for (const t of hbTerms) {
-      const entry = { slug: t.slug, term: t.term };
-      handbookTermsMap.set(t.term.toLowerCase(), entry);
-      if (t.korean_name) handbookTermsMap.set(t.korean_name.toLowerCase(), entry);
-      handbookTermsJson[t.slug] = {
-        term: t.term,
-        korean_name: t.korean_name || '',
-        categories: t.categories || [],
-        definition: t.definition_en || '',
-      };
-    }
-  }
-}
-
-const hasTerms = handbookTermsMap.size > 0;
-const renderMd = hasTerms
-  ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
-  : (md: string) => renderMarkdown(md);
-
-// Persona-based content selection
-const userPersona = Astro.locals.profile?.persona; // 'beginner' | 'learner' | 'expert' | null
-const isBusinessPost = post?.post_type === 'business';
-let activePersona: string | null = null;
-let personaHtmlMap: Record<string, string> = {};
-
-let rawContent = '';
-if (post) {
-  if (isBusinessPost) {
-    const personaKey = userPersona || 'learner';
-    const contentMap: Record<string, string> = {
-      beginner: post.content_beginner || '',
-      learner: post.content_learner || '',
-      expert: post.content_expert || '',
-    };
-    rawContent = contentMap[personaKey] || post.content_learner || post.content_beginner || '';
-    activePersona = contentMap[personaKey] ? personaKey : (post.content_learner ? 'learner' : 'beginner');
-
-    // Pre-render all available persona versions for client-side switching
-    for (const [key, md] of Object.entries(contentMap)) {
-      if (md) personaHtmlMap[key] = await renderMd(md);
-    }
-  } else {
-    rawContent = post.content_original || '';
-  }
-}
-const htmlContent = rawContent ? await renderMd(rawContent) : '';
-const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length > 1;
+const altSlugValue = pairedSlug
+  ? `/ko/news/${pairedSlug}/${previewMode ? '?preview=1' : ''}`
+  : undefined;
 ---
 
-<MainLayout title={pageTitle} locale="en" slug={`news/${slug}/`} altSlug={pairedSlug ?? undefined} article={articleData}>
+<MainLayout title={pageTitle} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode}>
   <NewsprintShell
     locale="en"
     masthead={masthead}
@@ -281,7 +103,7 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
         isBookmarked={isBookmarked}
         itemId={post.id}
         itemType="news"
-        isAdmin={!!Astro.locals.isAdmin}
+        isAdmin={!!Astro.locals.isAdmin && !previewMode}
         isAuthenticated={!!user && !!accessToken}
         likeCount={likeCount}
         commentCount={commentCount}
@@ -290,11 +112,31 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
         personaHtmlMap={hasPersonaSwitcher ? personaHtmlMap : undefined}
         guideItems={post.guide_items}
         initialFindQuery={articleFindQuery}
+        previewMode={previewMode}
+        showStickyActions={false}
       />
     )}
 
     <Fragment slot="rail">
-      <NewsprintSideRail locale="en" posts={recentPosts} focusItems={focusItems} relatedNews={post?.related_news} similarPosts={similarPosts} />
+      <ReadingActionsRail
+        className="newsprint-rail-stack"
+        locale="en"
+        variant="news"
+        title={post?.title || pageTitle}
+        shareUrl={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/en/news/${pageSlug}/`}
+        itemId={post?.id}
+        itemType="news"
+        isBookmarked={isBookmarked}
+        previewMode={previewMode}
+        isAuthenticated={!!user && !!accessToken}
+        articleRedirect={`/en/news/${pageSlug}/`}
+        commentRedirect={`/en/news/${pageSlug}/#comments`}
+        likeCount={likeCount}
+        commentCount={commentCount}
+        isLiked={isLiked}
+      >
+        <NewsprintSideRail locale="en" posts={recentPosts} focusItems={focusItems} relatedNews={post?.related_news} similarPosts={similarPosts} />
+      </ReadingActionsRail>
     </Fragment>
   </NewsprintShell>
 </MainLayout>
@@ -310,6 +152,7 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
   import '../../../scripts/handbook-popup';
 
   function recordReadingHistory(): void {
+    if (document.body.dataset.previewMode === 'true') return;
     const postId = document.querySelector('[data-item-id][data-item-type="news"]')?.getAttribute('data-item-id');
     if (!postId) return;
     fetch('/api/user/reading-history', {
@@ -319,8 +162,8 @@ const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length 
     }).catch(() => {});
   }
 
-  // Admin unpublish handler
   function initAdminActions(): void {
+    if (document.body.dataset.previewMode === 'true') return;
     const actions = document.querySelector('.newsprint-admin-actions') as HTMLElement | null;
     if (!actions) return;
 
