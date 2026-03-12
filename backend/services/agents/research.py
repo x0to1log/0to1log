@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from models.ranking import RankedCandidate
-from models.research import MIN_CONTENT_CHARS, ResearchPost
+from models.research import MIN_CONTENT_CHARS, TARGET_CONTENT_CHARS, ResearchPost
 from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import RESEARCH_SYSTEM_PROMPT
 from core.config import settings
@@ -37,7 +37,7 @@ def _build_research_user_prompt(
     )
 
 
-MAX_RETRIES = 2
+MAX_RETRIES = 3
 
 
 def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) -> str:
@@ -45,7 +45,8 @@ def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) 
         return (
             base_prompt
             + "\n\nIMPORTANT: Your previous response was rejected because "
-            "content_original was too short. It MUST be at least 6000 characters "
+            f"content_original was too short. It MUST be at least {MIN_CONTENT_CHARS} characters "
+            f"and should target at least {TARGET_CONTENT_CHARS} chars "
             "with 4 sections of at least 1200 characters each. Return valid JSON only."
         )
 
@@ -58,6 +59,7 @@ def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) 
         "IMPORTANT: Your previous response was rejected.\n"
         f"- content_original was {content_length} chars\n"
         f"- minimum required is {MIN_CONTENT_CHARS} chars\n"
+        f"- target at least {TARGET_CONTENT_CHARS} chars so it clears validation comfortably\n"
         f"- add at least {missing_chars} more chars while keeping the same story\n"
         "- keep the 4 required ## sections\n"
         "- keep all facts source-backed\n"

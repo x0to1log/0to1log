@@ -77,15 +77,26 @@ def _make_research_response(content_length: int) -> dict:
     }
 
 
+def test_research_post_accepts_5000_char_minimum():
+    valid_response = _make_research_response(5461)
+
+    post = ResearchPost.model_validate(valid_response)
+
+    assert post.content_original is not None
+    assert len(post.content_original) >= MIN_CONTENT_CHARS
+
+
 @pytest.mark.asyncio
-async def test_generate_research_post_retries_with_specific_length_feedback():
-    short_response = _make_research_response(5498)
+async def test_generate_research_post_retries_with_8000_char_target_feedback():
+    short_response = _make_research_response(4990)
     short_length = len(short_response["content_original"])
     mock_client = AsyncMock()
     mock_client.chat.completions.create = AsyncMock(
         side_effect=[
             _mock_openai_response(short_response),
-            _mock_openai_response(_make_research_response(MIN_CONTENT_CHARS + 250)),
+            _mock_openai_response(short_response),
+            _mock_openai_response(short_response),
+            _mock_openai_response(_make_research_response(8125)),
         ]
     )
 
@@ -111,8 +122,9 @@ async def test_generate_research_post_retries_with_specific_length_feedback():
     assert isinstance(result, ResearchPost)
     assert result.content_original is not None
     assert len(result.content_original) >= MIN_CONTENT_CHARS
-    assert mock_client.chat.completions.create.await_count == 2
+    assert mock_client.chat.completions.create.await_count == 4
 
     second_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
     assert f"{short_length} chars" in second_prompt
     assert str(MIN_CONTENT_CHARS - short_length) in second_prompt
+    assert "target at least 8000 chars" in second_prompt

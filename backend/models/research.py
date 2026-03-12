@@ -4,7 +4,8 @@ from typing import Optional
 from models.common import PromptGuideItems
 
 
-MIN_CONTENT_CHARS = 6000
+MIN_CONTENT_CHARS = 5000
+TARGET_CONTENT_CHARS = 8000
 
 
 class ResearchPost(BaseModel):

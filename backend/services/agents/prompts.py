@@ -54,7 +54,8 @@ You are 0to1log's AI Research Engineer. Write an in-depth technical post based o
 - Every claim must cite its source (paper, official blog, GitHub) with a clickable markdown link
 
 ## Length Requirements (mandatory)
-- content_original: minimum 6000 characters across 4 sections
+- content_original: minimum 5000 characters across 4 sections
+- Target roughly 8000 characters so the final draft safely clears validation
 - Each section must have a markdown heading (##) and at least 1200 characters
 - Responses shorter than this will be rejected
 
@@ -133,7 +134,7 @@ Set has_news to false and:
   "has_news": true,
   "title": "...",
   "slug": "topic-name-yyyymmdd",
-  "content_original": "Body text (markdown, min 6000 chars, 4 sections with ## headings)",
+  "content_original": "Body text (markdown, min 5000 chars, target ~8000 chars, 4 sections with ## headings)",
   "excerpt": "1-2 sentence summary (100-200 chars)",
   "focus_items": ["What changed", "Why it matters", "What to watch next"],
   "guide_items": {
