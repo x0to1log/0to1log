@@ -6,6 +6,55 @@ interface NewsDetailPageContext extends DetailPageContext {
   previewPersona?: string | null;
 }
 
+function hostnameLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return 'Source';
+  }
+}
+
+function normalizeSourceCards(post: any): Array<{
+  id: string;
+  title: string;
+  publisher: string;
+  url: string;
+  published_at: string;
+  evidence_snippet: string;
+  claim_ids: string[];
+}> {
+  const cards = Array.isArray(post?.source_cards) ? post.source_cards : [];
+  if (cards.length > 0) {
+    return cards.map((card: any, index: number) => ({
+      id: card.id || `src-${index + 1}`,
+      title: card.title || hostnameLabel(card.url || ''),
+      publisher: card.publisher || hostnameLabel(card.url || ''),
+      url: card.url || '',
+      published_at: card.published_at || '',
+      evidence_snippet: card.evidence_snippet || '',
+      claim_ids: Array.isArray(card.claim_ids) ? card.claim_ids : [],
+    }));
+  }
+
+  const urls = Array.isArray(post?.source_urls) ? post.source_urls : [];
+  return urls.map((url: string, index: number) => ({
+    id: `src-${index + 1}`,
+    title: hostnameLabel(url),
+    publisher: hostnameLabel(url),
+    url,
+    published_at: '',
+    evidence_snippet: '',
+    claim_ids: [],
+  }));
+}
+
+function applySourceCitations(html: string): string {
+  if (!html) return html;
+  return html.replace(/\[\[(\d+)\]\]/g, (_match, index) => {
+    return `<sup class="newsprint-citation"><a href="#source-card-${index}">${index}</a></sup>`;
+  });
+}
+
 export async function getNewsDetailPageData({
   locale,
   slug,
@@ -53,6 +102,9 @@ export async function getNewsDetailPageData({
   let commentCount = 0;
   let handbookTermsMap: TermsMap = new Map();
   let handbookTermsJson: Record<string, any> = {};
+  let analysisHtml = '';
+  let factPack: Array<{ id: string; claim: string; why_it_matters: string; source_ids: string[]; confidence: string }> = [];
+  let sourceCards: Array<{ id: string; title: string; publisher: string; url: string; published_at: string; evidence_snippet: string; claim_ids: string[] }> = [];
 
   if (post && publicSupabase) {
     const authSupabase = !previewMode && locals.user && locals.accessToken
@@ -189,6 +241,8 @@ export async function getNewsDetailPageData({
     articleData = post.published_at
       ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
       : undefined;
+    factPack = Array.isArray(post.fact_pack) ? post.fact_pack : [];
+    sourceCards = normalizeSourceCards(post);
   }
 
   const hasTerms = handbookTermsMap.size > 0;
@@ -214,14 +268,15 @@ export async function getNewsDetailPageData({
       activePersona = contentMap[personaKey] ? personaKey : (post.content_learner ? 'learner' : 'beginner');
 
       for (const [key, md] of Object.entries(contentMap)) {
-        if (md) personaHtmlMap[key] = await renderMd(md);
+        if (md) personaHtmlMap[key] = applySourceCitations(await renderMd(md));
       }
+      analysisHtml = post.content_analysis ? applySourceCitations(await renderMd(post.content_analysis)) : '';
     } else {
       rawContent = post.content_original || '';
     }
   }
 
-  const htmlContent = rawContent ? await renderMd(rawContent) : '';
+  const htmlContent = rawContent ? applySourceCitations(await renderMd(rawContent)) : '';
   const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length > 1;
 
   return {
@@ -240,8 +295,12 @@ export async function getNewsDetailPageData({
     handbookTermsJson,
     hasTerms,
     htmlContent,
+    analysisHtml,
+    factPack,
+    sourceCards,
     activePersona,
     personaHtmlMap,
     hasPersonaSwitcher,
+    applySourceCitations,
   };
 }

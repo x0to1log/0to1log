@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator
 from typing import Optional
 
-from models.common import PromptGuideItems
+from models.common import PromptGuideItems, SourceCard
 
 
 MIN_CONTENT_CHARS = 5000
@@ -21,6 +21,7 @@ class ResearchPost(BaseModel):
     tags: list[str] = []
     excerpt: str = ""
     focus_items: list[str] = []
+    source_cards: list[SourceCard] = []
 
     @field_validator("content_original")
     @classmethod

@@ -18,6 +18,24 @@ interface GuideItems {
   quiz_poll?: QuizPoll | null;
 }
 
+interface FactPackItem {
+  id: string;
+  claim: string;
+  why_it_matters: string;
+  source_ids?: string[];
+  confidence?: string;
+}
+
+interface SourceCard {
+  id: string;
+  title: string;
+  publisher: string;
+  url: string;
+  published_at?: string;
+  evidence_snippet?: string;
+  claim_ids?: string[];
+}
+
 interface Props {
   locale: 'en' | 'ko';
   slug: string;
@@ -29,6 +47,9 @@ interface Props {
   readingTimeMin?: number | null;
   tags?: string[] | null;
   htmlContent: string;
+  analysisHtml?: string;
+  factPack?: FactPackItem[] | null;
+  sourceCards?: SourceCard[] | null;
   backLabel: string;
   nextPost?: { title: string; slug: string; category?: string | null } | null;
   isBookmarked?: boolean;
@@ -59,6 +80,9 @@ const {
   readingTimeMin,
   tags,
   htmlContent,
+  analysisHtml = '',
+  factPack = [],
+  sourceCards = [],
   backLabel,
   nextPost = null,
   isBookmarked = false,
@@ -80,6 +104,10 @@ const {
 
 const isKo = locale === 'ko';
 const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || guideItems.quiz_poll?.question);
+const hasFactPack = !!factPack?.length;
+const hasAnalysis = !!analysisHtml;
+const hasSources = !!sourceCards?.length;
+const sourcePublisherSummary = Array.from(new Set((sourceCards || []).map((card) => card.publisher).filter(Boolean))).slice(0, 3).join(' · ');
 
 // Resolve quiz answer: backend may store "A"/"B"/"C" index instead of the option text
 const resolvedQuizAnswer = (() => {
@@ -113,6 +141,29 @@ const resolvedBasePath = basePath || `/${locale}/news`;
 const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}${resolvedBasePath}/${slug}/`;
 const articleRedirect = `${resolvedBasePath}/${slug}/`;
 const commentRedirect = `${resolvedBasePath}/${slug}/#comments`;
+
+const sourcePublisherSummaryText = Array.from(
+  new Set((sourceCards || []).map((card) => card.publisher).filter(Boolean)),
+).slice(0, 3).join(' / ');
+
+const sectionCopy = {
+  factPack: isKo ? '핵심 팩트' : 'Fact Pack',
+  factLabel: isKo ? '핵심' : 'Fact',
+  coreAnalysis: isKo ? '핵심 분석' : 'Core Analysis',
+  personaInsights: isKo ? '페르소나 인사이트' : 'Persona Insights',
+  sources: isKo ? '출처' : 'Sources',
+  sourceCount: isKo ? `${sourceCards.length}개 출처` : `${sourceCards.length} sources`,
+  sourceDetails: isKo ? '출처 자세히 보기' : 'View source details',
+};
+
+function formatSourceDate(dateValue?: string) {
+  if (!dateValue) return '';
+  try {
+    return new Date(dateValue).toLocaleDateString(isKo ? 'ko-KR' : 'en-US');
+  } catch {
+    return dateValue;
+  }
+}
 
 const copy = {
   articleFindLabel: locale === 'ko' ? '기사에서 찾기' : 'Find in this article',
@@ -194,19 +245,46 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </div>
   </div>
 
+  {hasFactPack && (
+    <section class="newsprint-fact-pack">
+      <h2 class="newsprint-section-title">{sectionCopy.factPack}</h2>
+      <div class="newsprint-fact-pack-grid">
+        {factPack!.map((item, index) => (
+          <article class="newsprint-fact-pack-item">
+            <div class="newsprint-guide-label">{sectionCopy.factLabel} {index + 1}</div>
+            <p>{item.claim}</p>
+            <p class="newsprint-fact-pack-meta">{item.why_it_matters}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {hasAnalysis && (
+    <section class="newsprint-core-analysis">
+      <h2 class="newsprint-section-title">{sectionCopy.coreAnalysis}</h2>
+      <div class="newsprint-prose newsprint-prose--analysis">
+        <Fragment set:html={analysisHtml} />
+      </div>
+    </section>
+  )}
+
   {showPersonaSwitcher && (
-    <div class="persona-switcher">
-      {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
-        <button
-          type="button"
-          class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
-          data-persona={p}
-        >
-          {personaLabels[locale]?.[p] || p}
-        </button>
-      ))}
-    </div>
-    <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
+    <>
+      <h2 class="newsprint-section-title">{sectionCopy.personaInsights}</h2>
+      <div class="persona-switcher">
+        {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+          <button
+            type="button"
+            class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
+            data-persona={p}
+          >
+            {personaLabels[locale]?.[p] || p}
+          </button>
+        ))}
+      </div>
+      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
+    </>
   )}
 
   <div class={`reading-actions-layout ${showStickyActions ? 'reading-actions-layout--article' : ''}`.trim()}>
@@ -278,6 +356,31 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         </div>
       )}
     </aside>
+  )}
+
+  {hasSources && (
+    <section class="newsprint-sources">
+      <h2 class="newsprint-section-title">{sectionCopy.sources}</h2>
+      <div class="newsprint-sources-summary">
+        <span>{sectionCopy.sourceCount}</span>
+        {sourcePublisherSummaryText && <span>{sourcePublisherSummaryText}</span>}
+      </div>
+      <details class="newsprint-sources-details">
+        <summary class="newsprint-sources-toggle">{sectionCopy.sourceDetails}</summary>
+        <div class="newsprint-sources-list">
+          {sourceCards!.map((card, index) => (
+            <article class="source-card" id={`source-card-${index + 1}`}>
+              <div class="source-card-index">[{index + 1}]</div>
+              <div class="source-card-body">
+                <a href={card.url} target="_blank" rel="noopener noreferrer">{card.title}</a>
+                <div class="source-card-meta">{card.publisher}{card.published_at ? ` · ${card.published_at}` : ''}</div>
+                {card.evidence_snippet && <p>{card.evidence_snippet}</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </details>
+    </section>
   )}
 
 

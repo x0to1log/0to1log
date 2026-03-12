@@ -1,0 +1,103 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+import { formatPipelineError } from '../../../lib/admin/pipelineError.js';
+
+const accessToken = Astro.locals.accessToken;
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+type PipelineRun = {
+  id: string;
+  run_key: string;
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  last_error: string | null;
+};
+
+const runs: Array<PipelineRun & { totalCost: number; totalTokens: number; stageCount: number; errorSummary: string }> = [];
+
+try {
+  const { data: runRows } = await sb.from('pipeline_runs').select('*').order('started_at', { ascending: false }).limit(30);
+  const pipelineRuns = (runRows ?? []) as PipelineRun[];
+  const runIds = pipelineRuns.map((run) => run.id);
+  const { data: logs } = runIds.length
+    ? await sb.from('pipeline_logs').select('run_id, cost_usd, tokens_used').in('run_id', runIds)
+    : { data: [] };
+
+  const totals = new Map();
+  for (const log of logs ?? []) {
+    const current = totals.get(log.run_id) ?? { totalCost: 0, totalTokens: 0, stageCount: 0 };
+    current.totalCost += parseFloat(log.cost_usd) || 0;
+    current.totalTokens += log.tokens_used || 0;
+    current.stageCount += 1;
+    totals.set(log.run_id, current);
+  }
+
+  for (const run of pipelineRuns) {
+    const metric = totals.get(run.id) ?? { totalCost: 0, totalTokens: 0, stageCount: 0 };
+    runs.push({
+      ...run,
+      ...metric,
+      errorSummary: formatPipelineError(run.last_error),
+    });
+  }
+} catch {}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+---
+
+<MainLayout title="Pipeline Runs" locale="en">
+  <AdminSidebar activeSection="pipeline" />
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">Pipeline Runs</h1>
+          </div>
+        </div>
+      </div>
+
+      <section class="dashboard-section">
+        {runs.length === 0 ? (
+          <p class="dashboard-empty">No pipeline runs yet.</p>
+        ) : (
+          <div class="admin-table">
+            {runs.map((run) => (
+              <a href={`/admin/pipeline-runs/${run.id}`} class="dashboard-activity-link">
+                <span class="dashboard-activity-type">{run.status}</span>
+                <span class="dashboard-activity-title">{run.run_key}</span>
+                <span class="dashboard-activity-time">{relativeTime(run.started_at)}</span>
+                <span class="dashboard-source-label">{run.stageCount} stages</span>
+                <span class="dashboard-source-label">${run.totalCost.toFixed(2)} · {run.totalTokens.toLocaleString()} tokens</span>
+                {run.errorSummary && <span class="dashboard-pipeline-error">{run.errorSummary}</span>}
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  </div>
+</MainLayout>

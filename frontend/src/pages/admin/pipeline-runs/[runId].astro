@@ -1,0 +1,86 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+import { formatPipelineError } from '../../../lib/admin/pipelineError.js';
+
+const runId = Astro.params.runId ?? '';
+const accessToken = Astro.locals.accessToken;
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+let run: any = null;
+let logs: any[] = [];
+
+try {
+  const [{ data: runRow }, { data: logRows }] = await Promise.all([
+    sb.from('pipeline_runs').select('*').eq('id', runId).single(),
+    sb.from('pipeline_logs').select('*').eq('run_id', runId).order('created_at', { ascending: true }),
+  ]);
+  run = runRow;
+  logs = logRows ?? [];
+} catch {}
+
+const raw_error = run?.last_error || '';
+---
+
+<MainLayout title="Pipeline Run Detail" locale="en">
+  <AdminSidebar activeSection="pipeline" />
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">Pipeline Run Detail</h1>
+            <p class="dashboard-source-label">{run?.run_key || runId}</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Summary</h2>
+        <p>Status: {run?.status || 'unknown'}</p>
+        {raw_error && <div class="dashboard-pipeline-error">{formatPipelineError(raw_error)}</div>}
+      </section>
+
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Timeline</h2>
+        {logs.map((log) => (
+          <div class="dashboard-pipeline">
+            <div class="dashboard-pipeline-header">
+              <span class="dashboard-pipeline-status">{log.pipeline_type}</span>
+              <span class="dashboard-pipeline-time">{log.status}</span>
+            </div>
+            <div class="dashboard-pipeline-details">
+              {log.post_type && <span>{log.post_type}</span>}
+              {log.locale && <span>{log.locale}</span>}
+              {typeof log.attempt === 'number' && <span>Attempt: {log.attempt}</span>}
+              {log.tokens_used && <span>{log.tokens_used} tokens</span>}
+              {log.cost_usd && <span>${Number(log.cost_usd).toFixed(2)}</span>}
+            </div>
+            {log.error_message && <div class="dashboard-pipeline-error">{log.error_message}</div>}
+            <pre class="dashboard-pipeline-error">{JSON.stringify(log.debug_meta || {}, null, 2)}</pre>
+            <div class="dashboard-source-label">debug_meta</div>
+          </div>
+        ))}
+      </section>
+
+      {raw_error && (
+        <section class="dashboard-section">
+          <h2 class="dashboard-section-title">raw_error</h2>
+          <pre class="dashboard-pipeline-error">{raw_error}</pre>
+        </section>
+      )}
+    </div>
+  </div>
+</MainLayout>

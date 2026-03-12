@@ -27,3 +27,21 @@ class RelatedNews(BaseModel):
     big_tech: Optional[RelatedNewsItem] = None
     industry_biz: Optional[RelatedNewsItem] = None
     new_tools: Optional[RelatedNewsItem] = None
+
+
+class FactPackItem(BaseModel):
+    id: str = ""
+    claim: str = ""
+    why_it_matters: str = ""
+    source_ids: list[str] = []
+    confidence: str = ""
+
+
+class SourceCard(BaseModel):
+    id: str = ""
+    title: str = ""
+    publisher: str = ""
+    url: str = ""
+    published_at: str = ""
+    evidence_snippet: str = ""
+    claim_ids: list[str] = []

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from models.business import MIN_CONTENT_CHARS, BusinessPost
+from models.business import MIN_ANALYSIS_CHARS, MIN_CONTENT_CHARS, BusinessPost
 from models.ranking import RankedCandidate, RelatedPicks
 
 
@@ -40,9 +40,30 @@ def _make_business_response(persona_length: int) -> dict:
     return {
         "title": "Anthropic raises new funding round",
         "slug": "2026-03-12-business-daily",
+        "content_analysis": _make_persona_content(max(MIN_ANALYSIS_CHARS, 2400), "## Core Analysis"),
         "content_beginner": _make_persona_content(persona_length, "## The Story"),
         "content_learner": _make_persona_content(persona_length, "## What Happened"),
         "content_expert": _make_persona_content(persona_length, "## Executive Summary"),
+        "fact_pack": [
+            {
+                "id": "claim-1",
+                "claim": "Anthropic secured a new funding round. [[1]]",
+                "why_it_matters": "Funding depth affects buyer trust and compute access.",
+                "source_ids": ["src-1"],
+                "confidence": "high",
+            }
+        ],
+        "source_cards": [
+            {
+                "id": "src-1",
+                "title": "Anthropic funding update",
+                "publisher": "Anthropic",
+                "url": "https://anthropic.com/news/example",
+                "published_at": "2026-03-12T00:00:00Z",
+                "evidence_snippet": "Official announcement of the funding round.",
+                "claim_ids": ["claim-1"],
+            }
+        ],
         "excerpt": "Anthropic's new funding changes how teams should think about AI platform competition.",
         "focus_items": [
             "Anthropic secured a major funding round tied to continued model expansion.",
@@ -81,16 +102,35 @@ async def test_generate_business_post_retries_with_field_lengths_and_target_rang
     short_response = _make_business_response(2890)
     short_lengths = {
         "content_beginner": len(short_response["content_beginner"]),
-        "content_learner": len(short_response["content_learner"]),
-        "content_expert": len(short_response["content_expert"]),
     }
     mock_client = AsyncMock()
     mock_client.chat.completions.create = AsyncMock(
         side_effect=[
-            _mock_openai_response(short_response),
-            _mock_openai_response(short_response),
-            _mock_openai_response(short_response),
-            _mock_openai_response(_make_business_response(MIN_CONTENT_CHARS + 1400)),
+            _mock_openai_response({
+                "fact_pack": short_response["fact_pack"],
+                "source_cards": short_response["source_cards"],
+            }),
+            _mock_openai_response({
+                key: short_response[key]
+                for key in (
+                    "title",
+                    "slug",
+                    "content_analysis",
+                    "excerpt",
+                    "focus_items",
+                    "guide_items",
+                    "related_news",
+                    "source_urls",
+                    "news_temperature",
+                    "tags",
+                )
+            }),
+            _mock_openai_response({"content_beginner": short_response["content_beginner"]}),
+            _mock_openai_response({"content_beginner": short_response["content_beginner"]}),
+            _mock_openai_response({"content_beginner": short_response["content_beginner"]}),
+            _mock_openai_response({"content_beginner": _make_business_response(MIN_CONTENT_CHARS + 1400)["content_beginner"]}),
+            _mock_openai_response({"content_learner": _make_business_response(MIN_CONTENT_CHARS + 1400)["content_learner"]}),
+            _mock_openai_response({"content_expert": _make_business_response(MIN_CONTENT_CHARS + 1400)["content_expert"]}),
         ]
     )
 
@@ -116,13 +156,13 @@ async def test_generate_business_post_retries_with_field_lengths_and_target_rang
         )
 
     assert isinstance(result, BusinessPost)
+    assert len(result.content_analysis) >= MIN_ANALYSIS_CHARS
     assert len(result.content_beginner) >= MIN_CONTENT_CHARS
     assert len(result.content_learner) >= MIN_CONTENT_CHARS
     assert len(result.content_expert) >= MIN_CONTENT_CHARS
-    assert mock_client.chat.completions.create.await_count == 4
+    assert mock_client.chat.completions.create.await_count == 8
 
-    second_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
-    assert f"content_beginner was {short_lengths['content_beginner']} chars" in second_prompt
-    assert f"content_learner was {short_lengths['content_learner']} chars" in second_prompt
-    assert f"content_expert was {short_lengths['content_expert']} chars" in second_prompt
-    assert "target 4000-5000 chars per persona" in second_prompt
+    retry_prompt = mock_client.chat.completions.create.await_args_list[3].kwargs["messages"][1]["content"]
+    assert f"content_beginner was {short_lengths['content_beginner']} chars" in retry_prompt
+    assert "minimum required is 3000 chars" in retry_prompt
+    assert "target 4000-5000 chars" in retry_prompt

@@ -8,6 +8,9 @@ export function formatPipelineError(error) {
 
   if (contentTooShortMatch) {
     const [, actual, minimum] = contentTooShortMatch;
+    if (/businesspost/i.test(raw)) {
+      return `Business post too short: ${actual} / ${minimum} chars.`;
+    }
     return `Research post too short: ${actual} / ${minimum} chars.`;
   }
 

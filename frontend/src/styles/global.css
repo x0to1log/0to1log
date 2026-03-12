@@ -4807,6 +4807,141 @@ body.auth-prompt-open {
   border-bottom: none;
 }
 
+.newsprint-fact-pack,
+.newsprint-core-analysis,
+.newsprint-sources {
+  margin: 1.75rem 0;
+}
+
+.newsprint-fact-pack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.newsprint-fact-pack-item {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 84%, transparent);
+  box-shadow: 0 10px 24px -18px var(--color-shadow);
+}
+
+.newsprint-fact-pack-item p {
+  margin: 0;
+}
+
+.newsprint-fact-pack-meta {
+  margin-top: 0.6rem !important;
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+}
+
+.newsprint-prose--analysis {
+  margin-top: 0;
+}
+
+.newsprint-citation {
+  margin-left: 0.18rem;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  vertical-align: super;
+}
+
+.newsprint-citation a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.newsprint-citation a:hover {
+  text-decoration: underline;
+}
+
+.newsprint-sources-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-bottom: 0.8rem;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+.newsprint-sources-details {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.85rem;
+}
+
+.newsprint-sources-toggle {
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  list-style: none;
+}
+
+.newsprint-sources-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.newsprint-sources-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.source-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 76%, transparent);
+}
+
+.source-card-index {
+  font-family: var(--font-code);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.source-card-body a {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.source-card-body a:hover {
+  color: var(--color-accent);
+}
+
+.source-card-meta {
+  margin-top: 0.18rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.source-card-body p {
+  margin-top: 0.55rem;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .newsprint-fact-pack-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .source-card {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+}
+
 .newsprint-quiz-question {
   font-weight: 500;
   margin-bottom: 0.5rem !important;

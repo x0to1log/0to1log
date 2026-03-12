@@ -152,6 +152,44 @@ MOCK_BUSINESS_RESPONSE = {
     "tags": ["anthropic", "investment", "ai-safety"],
 }
 
+MOCK_BUSINESS_FACT_PACK_RESPONSE = {
+    "fact_pack": [
+        {
+            "id": "claim-1",
+            "claim": "Anthropic closed a major new funding round. [[1]]",
+            "why_it_matters": "More capital changes buyer confidence and compute planning.",
+            "source_ids": ["src-1"],
+            "confidence": "high",
+        },
+        {
+            "id": "claim-2",
+            "claim": "The raise strengthens Anthropic's enterprise positioning. [[1]][[2]]",
+            "why_it_matters": "Enterprise buyers care about vendor durability as much as model quality.",
+            "source_ids": ["src-1", "src-2"],
+            "confidence": "medium",
+        },
+    ],
+    "source_cards": [
+        {
+            "id": "src-1",
+            "title": "Anthropic funding announcement",
+            "publisher": "Anthropic",
+            "url": "https://anthropic.com/news/series-d",
+            "published_at": "2026-03-07T00:00:00Z",
+            "evidence_snippet": "Official announcement confirming the funding round and expansion plans.",
+            "claim_ids": ["claim-1", "claim-2"],
+        },
+        {
+            "id": "src-2",
+            "title": "Enterprise AI market analysis",
+            "publisher": "FT",
+            "url": "https://ft.com/ai-enterprise-analysis",
+            "published_at": "2026-03-07T00:00:00Z",
+            "evidence_snippet": "Buyers are increasingly sensitive to platform durability and compute access.",
+            "claim_ids": ["claim-2"],
+        },
+    ],
+}
 
 def _make_long_markdown(section_titles: list[str], section_length: int, filler: str) -> str:
     sections = []
@@ -160,6 +198,71 @@ def _make_long_markdown(section_titles: list[str], section_length: int, filler: 
         body = (filler * ((body_length // len(filler)) + 2))[:body_length]
         sections.append(f"{title}\n{body}")
     return "\n\n".join(sections)
+
+
+MOCK_BUSINESS_ANALYSIS_RESPONSE = {
+    "title": "Anthropic's new funding reshapes enterprise AI positioning",
+    "slug": "2026-03-07-business-daily",
+    "content_analysis": _make_long_markdown(
+        ["## Core Analysis", "## Why This Matters", "## Strategic Outlook"],
+        1300,
+        "Shared market analysis with buyer trust, pricing leverage, and sourcing detail. [[1]] ",
+    ),
+    "excerpt": "Anthropic's funding round changes how enterprise buyers read vendor durability and platform risk.",
+    "focus_items": [
+        "Anthropic added more capital to support model, compute, and enterprise expansion.",
+        "Balance-sheet strength changes how large buyers evaluate AI platform risk.",
+        "Pricing, hiring, and capacity announcements are the next signals to watch.",
+    ],
+    "guide_items": {
+        "one_liner": "Anthropic raised more money to grow its enterprise AI business.",
+        "action_item": "Review whether your roadmap depends too heavily on a single model vendor.",
+        "critical_gotcha": "Funding size does not guarantee better margins or product execution.",
+        "rotating_item": "Financial depth often matters to enterprise buyers before benchmark wins do.",
+        "quiz_poll": {
+            "question": "What does a large AI funding round most directly increase first?",
+            "options": ["Compute access", "Wall color", "Mascot quality", "Office snacks"],
+            "answer": "A",
+            "explanation": "Big rounds usually increase compute access, hiring capacity, and enterprise execution.",
+        },
+    },
+    "related_news": {
+        "big_tech": None,
+        "industry_biz": None,
+        "new_tools": {
+            "title": "New Open Source LLM Framework",
+            "url": "https://github.com/example/llm-framework",
+            "summary": "Community-driven LLM framework reached 10k stars and drew strong developer adoption.",
+        },
+    },
+    "source_urls": ["https://anthropic.com/news/series-d"],
+    "news_temperature": 4,
+    "tags": ["anthropic", "investment", "ai-safety"],
+}
+
+MOCK_BUSINESS_PERSONA_RESPONSES = {
+    "beginner": {
+        "content_beginner": _make_long_markdown(
+            ["## The Story", "## Why Should I Care?", "## The Bottom Line"],
+            1500,
+            "Plain-language business explanation with examples about products, jobs, and customer trust. ",
+        )
+    },
+    "learner": {
+        "content_learner": _make_long_markdown(
+            ["## What Happened", "## How It Works", "## What This Means for Your Work", "## Go Deeper"],
+            1200,
+            "Practical technical-business analysis with architecture, pricing, and team workflow implications. ",
+        )
+    },
+    "expert": {
+        "content_expert": _make_long_markdown(
+            ["## Executive Summary", "## Technical Deep Dive", "## Market & Competitive Analysis", "## Strategic Implications"],
+            1200,
+            "Executive-level competitive analysis with market structure, capital strategy, and deployment risk detail. ",
+        )
+    },
+}
 
 
 MOCK_RESEARCH_RESPONSE = {
@@ -390,7 +493,13 @@ class TestBusinessAgent:
     async def test_generate_business_post(self):
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_mock_openai_response(MOCK_BUSINESS_RESPONSE)
+            side_effect=[
+                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"]),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"]),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"]),
+            ]
         )
 
         candidate = RankedCandidate(**MOCK_RANKING_RESPONSE["business_main_pick"])
@@ -409,6 +518,9 @@ class TestBusinessAgent:
         assert result.content_beginner is not None
         assert result.content_learner is not None
         assert result.content_expert is not None
+        assert result.content_analysis is not None
+        assert result.fact_pack is not None
+        assert result.source_cards is not None
         assert result.guide_items is not None
         assert result.related_news is not None
         assert result.news_temperature == 4
@@ -417,7 +529,13 @@ class TestBusinessAgent:
     async def test_business_agent_calls_main_model(self):
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_mock_openai_response(MOCK_BUSINESS_RESPONSE)
+            side_effect=[
+                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"]),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"]),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"]),
+            ]
         )
 
         candidate = RankedCandidate(**MOCK_RANKING_RESPONSE["business_main_pick"])
@@ -427,14 +545,21 @@ class TestBusinessAgent:
             from services.agents.business import generate_business_post
             await generate_business_post(candidate, related, "ctx", "2026-03-07")
 
-        call_kwargs = mock_client.chat.completions.create.call_args.kwargs
-        assert call_kwargs["model"] == "gpt-4o"
+        assert mock_client.chat.completions.create.await_count == 5
+        for call in mock_client.chat.completions.create.await_args_list:
+            assert call.kwargs["model"] == "gpt-4o"
 
     @pytest.mark.asyncio
     async def test_business_post_three_personas_differ(self):
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
-            return_value=_mock_openai_response(MOCK_BUSINESS_RESPONSE)
+            side_effect=[
+                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"]),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"]),
+                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"]),
+            ]
         )
 
         candidate = RankedCandidate(**MOCK_RANKING_RESPONSE["business_main_pick"])

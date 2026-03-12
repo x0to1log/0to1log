@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from core.config import settings
-from models.business import MIN_CONTENT_CHARS as BUSINESS_MIN_CONTENT_CHARS, BusinessPost
+from models.business import MIN_ANALYSIS_CHARS as BUSINESS_MIN_ANALYSIS_CHARS, MIN_CONTENT_CHARS as BUSINESS_MIN_CONTENT_CHARS, BusinessPost
 from models.research import MIN_CONTENT_CHARS as RESEARCH_MIN_CONTENT_CHARS, ResearchPost
 from services.agents.client import get_openai_client, parse_ai_json
 from services.agents.prompts import TRANSLATE_SYSTEM_PROMPT
@@ -169,6 +169,39 @@ async def translate_metadata_block(
     return await _request_json_translation(client, prompt, f"Translate-{post_type}-metadata")
 
 
+async def _translate_source_cards(
+    client: Any,
+    source_cards: list[dict[str, Any]],
+    post_type: str,
+) -> list[dict[str, Any]]:
+    if not source_cards:
+        return []
+
+    payload = {
+        "source_cards": [
+            {
+                "id": card.get("id", ""),
+                "evidence_snippet": card.get("evidence_snippet", ""),
+                "claim_ids": card.get("claim_ids", []),
+            }
+            for card in source_cards
+        ]
+    }
+    translated = await translate_metadata_block(client, payload, post_type)
+    translated_cards = translated.get("source_cards") or []
+    merged: list[dict[str, Any]] = []
+    for index, card in enumerate(source_cards):
+        local = translated_cards[index] if index < len(translated_cards) else {}
+        merged.append(
+            {
+                **card,
+                "evidence_snippet": local.get("evidence_snippet", card.get("evidence_snippet", "")),
+                "claim_ids": local.get("claim_ids", card.get("claim_ids", [])),
+            }
+        )
+    return merged
+
+
 async def translate_section(
     client: Any,
     section: str,
@@ -273,6 +306,11 @@ async def translate_research_post(client: Any, en_data: dict[str, Any]) -> dict[
         translated,
         await translate_metadata_block(client, metadata_payload, "research"),
     )
+    translated["source_cards"] = await _translate_source_cards(
+        client,
+        en_data.get("source_cards") or [],
+        "research",
+    )
 
     if en_data.get("has_news", True) and en_data.get("content_original"):
         translated["content_original"] = await _translate_markdown_field(
@@ -321,11 +359,26 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
         "guide_items": en_data.get("guide_items"),
         "related_news": en_data.get("related_news"),
         "tags": en_data.get("tags", []),
+        "fact_pack": en_data.get("fact_pack", []),
     }
     translated = _merge_translation(
         translated,
         await translate_metadata_block(client, metadata_payload, "business"),
     )
+    translated["source_cards"] = await _translate_source_cards(
+        client,
+        en_data.get("source_cards") or [],
+        "business",
+    )
+    translated["content_analysis"] = await _translate_markdown_field(
+        client=client,
+        text=en_data.get("content_analysis", ""),
+        post_type="business",
+        field_name="content_analysis",
+        total_min_chars=BUSINESS_MIN_ANALYSIS_CHARS,
+        shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
+        min_floor=BUSINESS_SECTION_MIN_FLOOR,
+    ) if en_data.get("content_analysis") else ""
 
     for field_name in ("content_beginner", "content_learner", "content_expert"):
         translated[field_name] = await _translate_markdown_field(
@@ -347,22 +400,34 @@ async def translate_business_post(client: Any, en_data: dict[str, Any]) -> dict[
 
             failed_fields = _extract_failed_fields(
                 error,
-                {"content_beginner", "content_learner", "content_expert"},
+                {"content_analysis", "content_beginner", "content_learner", "content_expert"},
             )
             if not failed_fields:
                 raise
 
             for field_name in failed_fields:
-                translated[field_name] = await _translate_markdown_field(
-                    client=client,
-                    text=en_data.get(field_name, ""),
-                    post_type="business",
-                    field_name=field_name,
-                    total_min_chars=BUSINESS_MIN_CONTENT_CHARS,
-                    shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
-                    min_floor=BUSINESS_SECTION_MIN_FLOOR,
-                    recovery=True,
-                )
+                if field_name == "content_analysis":
+                    translated[field_name] = await _translate_markdown_field(
+                        client=client,
+                        text=en_data.get(field_name, ""),
+                        post_type="business",
+                        field_name=field_name,
+                        total_min_chars=BUSINESS_MIN_ANALYSIS_CHARS,
+                        shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
+                        min_floor=BUSINESS_SECTION_MIN_FLOOR,
+                        recovery=True,
+                    )
+                else:
+                    translated[field_name] = await _translate_markdown_field(
+                        client=client,
+                        text=en_data.get(field_name, ""),
+                        post_type="business",
+                        field_name=field_name,
+                        total_min_chars=BUSINESS_MIN_CONTENT_CHARS,
+                        shrink_ratio=BUSINESS_SECTION_SHRINK_RATIO,
+                        min_floor=BUSINESS_SECTION_MIN_FLOOR,
+                        recovery=True,
+                    )
 
     return translated
 

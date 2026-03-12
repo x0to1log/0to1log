@@ -128,3 +128,42 @@ async def test_generate_research_post_retries_with_8000_char_target_feedback():
     assert f"{short_length} chars" in second_prompt
     assert str(MIN_CONTENT_CHARS - short_length) in second_prompt
     assert "target at least 8000 chars" in second_prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_research_post_expands_to_safe_translation_floor():
+    initial_response = _make_research_response(5001)
+    expanded_response = _make_research_response(6900)
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(initial_response),
+            _mock_openai_response(expanded_response),
+        ]
+    )
+
+    candidate = RankedCandidate(
+        title="GPT-5 Released",
+        url="https://openai.com/blog/example",
+        snippet="OpenAI released a faster flagship model.",
+        source="tavily",
+        assigned_type="research",
+        relevance_score=0.95,
+        ranking_reason="Major model release with production impact",
+    )
+
+    with patch("services.agents.research.get_openai_client", return_value=mock_client):
+        from services.agents.research import SAFE_TRANSLATION_FLOOR, generate_research_post
+
+        result = await generate_research_post(
+            candidate=candidate,
+            context="Collected research context",
+            batch_id="2026-03-12",
+        )
+
+    assert isinstance(result, ResearchPost)
+    assert len(result.content_original or "") >= SAFE_TRANSLATION_FLOOR
+    assert mock_client.chat.completions.create.await_count == 2
+
+    safe_floor_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
+    assert f"expand it to at least {SAFE_TRANSLATION_FLOOR} chars" in safe_floor_prompt

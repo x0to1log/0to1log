@@ -12,6 +12,8 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
+SAFE_TRANSLATION_FLOOR = 6500
+
 
 def _build_research_user_prompt(
     candidate: RankedCandidate | None,
@@ -69,6 +71,23 @@ def _build_retry_prompt(base_prompt: str, previous_data: dict[str, Any] | None) 
     )
 
 
+def _build_safe_floor_prompt(base_prompt: str, previous_data: dict[str, Any]) -> str:
+    content_original = previous_data.get("content_original")
+    content_length = len(content_original) if isinstance(content_original, str) else 0
+    missing_chars = max(SAFE_TRANSLATION_FLOOR - content_length, 0)
+    return (
+        f"{base_prompt}\n\n"
+        "IMPORTANT: Expand the previous draft before Korean translation.\n"
+        f"- content_original was {content_length} chars\n"
+        f"- expand it to at least {SAFE_TRANSLATION_FLOOR} chars\n"
+        f"- add at least {missing_chars} chars of concrete, source-backed detail\n"
+        "- preserve the same 4 required ## sections\n"
+        "- keep the same story and do not invent new facts\n\n"
+        "PREVIOUS_JSON_DRAFT:\n"
+        f"{json.dumps(previous_data, ensure_ascii=False)}"
+    )
+
+
 async def generate_research_post(
     candidate: RankedCandidate | None,
     context: str,
@@ -102,7 +121,28 @@ async def generate_research_post(
         last_data = data
 
         try:
-            return ResearchPost.model_validate(data)
+            validated = ResearchPost.model_validate(data)
+            if (
+                candidate is not None
+                and validated.has_news
+                and len(validated.content_original or "") < SAFE_TRANSLATION_FLOOR
+            ):
+                expand_response = await client.chat.completions.create(
+                    model=settings.openai_model_main,
+                    messages=[
+                        {"role": "system", "content": RESEARCH_SYSTEM_PROMPT},
+                        {"role": "user", "content": _build_safe_floor_prompt(user_prompt, data)},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.3,
+                    max_tokens=16384,
+                )
+                expanded_raw = expand_response.choices[0].message.content
+                expanded_data = parse_ai_json(expanded_raw, "ResearchSafeFloor")
+                expanded = ResearchPost.model_validate(expanded_data)
+                if len(expanded.content_original or "") > len(validated.content_original or ""):
+                    return expanded
+            return validated
         except ValidationError as e:
             last_error = e
             logger.warning(
