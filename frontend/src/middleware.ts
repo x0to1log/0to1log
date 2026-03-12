@@ -163,6 +163,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const isSelfHandledAdminApiRoute = pathname === '/api/admin/run-pipeline';
 
   // Generate CSP nonce for every request
   const nonce = crypto.randomUUID().replace(/-/g, '');
@@ -181,14 +182,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Skip auth entirely if Supabase not configured
   if (!supabaseUrl || !supabaseAnonKey) {
     // Admin routes still need to redirect
-    if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+    if ((pathname.startsWith('/admin') && pathname !== '/admin/login') || isSelfHandledAdminApiRoute) {
       return context.redirect('/admin/login');
     }
     return nextWithCsp(next, nonce);
   }
 
   // --- Zone 1: Admin-protected (/admin/*, /api/admin/* except /admin/login) ---
-  const isAdminRoute = (pathname.startsWith('/admin') && pathname !== '/admin/login') || pathname.startsWith('/api/admin/');
+  const isAdminRoute = (
+    (pathname.startsWith('/admin') && pathname !== '/admin/login')
+    || pathname.startsWith('/api/admin/')
+  ) && !isSelfHandledAdminApiRoute;
   if (isAdminRoute) {
     const isApiRoute = pathname.startsWith('/api/');
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);

@@ -24,12 +24,13 @@ function run() {
 
   const adminRoute = read('src/pages/api/admin/run-pipeline.ts');
   assertIncludes(adminRoute, 'export const POST', 'admin POST handler');
-  assertIncludes(adminRoute, 'locals.accessToken', 'admin route access token guard');
-  assertIncludes(adminRoute, 'locals.isAdmin', 'admin route admin guard');
+  assertIncludes(adminRoute, 'requireAdminFromCookies', 'admin route cookie auth helper');
+  assertIncludes(adminRoute, "error: 'Not an active admin user'", 'admin route explicit 403 reason');
   assertIncludes(adminRoute, 'handleAdminTriggerRequest', 'admin trigger helper usage');
 
   const middleware = read('src/middleware.ts');
   assertIncludes(middleware, "pathname.startsWith('/api/admin/')", 'admin API middleware protection');
+  assertIncludes(middleware, "pathname === '/api/admin/run-pipeline'", 'run pipeline middleware exemption');
   assertIncludes(middleware, "error: 'Admin lookup failed'", 'admin lookup failure response');
   assertIncludes(adminIndex, "res.status === 503", 'admin pipeline 503 handling');
 
