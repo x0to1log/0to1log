@@ -14,25 +14,88 @@ const { locale } = Astro.props;
 </aside>
 
 <script>
+  type BlogTocElement = HTMLElement & {
+    __blogTocCleanup?: () => void;
+  };
+
+  function slugifyHeading(value: string): string {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9\-]/g, '');
+  }
+
+  function readHeaderOffsetPx(): number {
+    const shell = document.querySelector('.blog-shell');
+    const styles = getComputedStyle(shell || document.documentElement);
+    const rawValue = styles.getPropertyValue('--blog-shell-header-offset').trim();
+    const numericValue = Number.parseFloat(rawValue);
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+    if (!Number.isFinite(numericValue)) {
+      return 80;
+    }
+
+    return rawValue.endsWith('rem') ? numericValue * rootFontSize : numericValue;
+  }
+
   function initBlogTOC() {
-    const nav = document.querySelector('[data-toc-nav]');
-    if (!nav) return;
+    const toc = document.querySelector('[data-blog-toc]') as BlogTocElement | null;
+    const nav = toc?.querySelector('[data-toc-nav]') as HTMLElement | null;
+    if (!toc || !nav) return;
+
+    toc.__blogTocCleanup?.();
+    nav.innerHTML = '';
 
     const prose = document.querySelector('.newsprint-prose');
-    if (!prose) return;
+    if (!prose) {
+      toc.hidden = true;
+      return;
+    }
 
-    const headings = prose.querySelectorAll<HTMLHeadingElement>('h2, h3');
-    if (headings.length === 0) return;
+    const headings = Array.from(prose.querySelectorAll<HTMLHeadingElement>('h2, h3')).filter(
+      (heading) => !!heading.textContent?.trim(),
+    );
+    if (headings.length === 0) {
+      toc.hidden = true;
+      return;
+    }
 
-    // Ensure each heading has an id and build links
-    headings.forEach((heading) => {
-      if (!heading.id) {
-        heading.id = (heading.textContent || '')
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9\-]/g, '');
+    toc.hidden = false;
+    const usedIds = new Map<string, number>();
+    const linkByHeadingId = new Map<string, HTMLAnchorElement>();
+    let activeHeadingId = '';
+
+    function setActiveHeading(id: string) {
+      if (!id || activeHeadingId === id) return;
+      activeHeadingId = id;
+
+      linkByHeadingId.forEach((link, headingId) => {
+        link.classList.toggle('blog-toc-link--active', headingId === id);
+      });
+    }
+
+    function updateActiveHeading() {
+      const scrollMarker = window.scrollY + readHeaderOffsetPx() + 36;
+      let nextActiveHeadingId = headings[0]?.id || '';
+
+      for (const heading of headings) {
+        if (heading.offsetTop <= scrollMarker) {
+          nextActiveHeadingId = heading.id;
+        } else {
+          break;
+        }
       }
+
+      setActiveHeading(nextActiveHeadingId);
+    }
+
+    headings.forEach((heading, index) => {
+      const baseId = heading.id || slugifyHeading(heading.textContent || '') || `section-${index + 1}`;
+      const occurrence = (usedIds.get(baseId) || 0) + 1;
+      usedIds.set(baseId, occurrence);
+      heading.id = occurrence === 1 ? baseId : `${baseId}-${occurrence}`;
 
       const link = document.createElement('a');
       link.className = 'blog-toc-link';
@@ -41,39 +104,46 @@ const { locale } = Astro.props;
       }
       link.href = `#${heading.id}`;
       link.textContent = heading.textContent?.trim() || '';
+      linkByHeadingId.set(heading.id, link);
 
       link.addEventListener('click', (e) => {
         e.preventDefault();
-        heading.scrollIntoView({ behavior: 'smooth' });
+        const top = window.scrollY + heading.getBoundingClientRect().top - readHeaderOffsetPx() - 24;
+        window.scrollTo({ top, behavior: 'smooth' });
+        setActiveHeading(heading.id);
       });
 
       nav.appendChild(link);
     });
 
-    // Scroll tracking via IntersectionObserver
-    const links = nav.querySelectorAll<HTMLAnchorElement>('.blog-toc-link');
-
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const id = entry.target.id;
-            links.forEach((link) => {
-              if (link.getAttribute('href') === `#${id}`) {
-                link.classList.add('blog-toc-link--active');
-              } else {
-                link.classList.remove('blog-toc-link--active');
-              }
-            });
-          }
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
+
+        if (visibleEntries[0]?.target instanceof HTMLElement) {
+          setActiveHeading(visibleEntries[0].target.id);
         }
       },
-      { rootMargin: '0px 0px -80% 0px' },
+      {
+        rootMargin: `-${Math.round(readHeaderOffsetPx() + 24)}px 0px -58% 0px`,
+        threshold: [0, 0.25, 0.6, 1],
+      },
     );
 
     headings.forEach((heading) => observer.observe(heading));
+    window.addEventListener('scroll', updateActiveHeading, { passive: true });
+    window.addEventListener('resize', updateActiveHeading);
+    updateActiveHeading();
+
+    toc.__blogTocCleanup = () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', updateActiveHeading);
+      window.removeEventListener('resize', updateActiveHeading);
+    };
   }
 
   initBlogTOC();
-  document.addEventListener('DOMContentLoaded', initBlogTOC);
+  document.addEventListener('astro:page-load', initBlogTOC);
 </script>

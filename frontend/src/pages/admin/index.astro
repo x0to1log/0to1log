@@ -4,6 +4,7 @@ export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import AdminSidebar from '../../components/admin/AdminSidebar.astro';
 import { createClient } from '@supabase/supabase-js';
+import { formatPipelineError } from '../../lib/admin/pipelineError.js';
 
 const accessToken = Astro.locals.accessToken;
 const sb = createClient(
@@ -30,6 +31,7 @@ type PipelineRun = {
   last_error: string | null;
 };
 let lastRun: PipelineRun | null = null;
+let lastRunError = '';
 let pipelineCost = 0;
 let pipelineTokens = 0;
 let candidatesTotal = 0;
@@ -105,6 +107,7 @@ try {
   const runData = pipelineRes.data?.[0] ?? null;
   if (runData) {
     lastRun = runData as PipelineRun;
+    lastRunError = formatPipelineError(lastRun.last_error);
     const [logsRes, candidatesRes] = await Promise.all([
       sb.from('pipeline_logs').select('cost_usd, tokens_used').eq('run_id', lastRun.id),
       sb.from('news_candidates').select('status').eq('batch_id', lastRun.run_key),
@@ -224,8 +227,8 @@ function relativeTime(dateStr: string): string {
                 <span>Cost: ${pipelineCost.toFixed(2)} · {pipelineTokens.toLocaleString()} tokens</span>
               )}
             </div>
-            {lastRun.status === 'failed' && lastRun.last_error && (
-              <div class="dashboard-pipeline-error">{lastRun.last_error}</div>
+            {lastRun.status === 'failed' && lastRunError && (
+              <div class="dashboard-pipeline-error">{lastRunError}</div>
             )}
             <div class="dashboard-pipeline-actions">
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
