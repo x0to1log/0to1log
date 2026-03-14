@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     revalidate_secret: str = ""
     fastapi_url: str = ""
     max_auto_terms_per_run: int = 5
+    ga4_property_id: str = ""
+    ga4_credentials_json: str = ""
 
 
 settings = Settings()

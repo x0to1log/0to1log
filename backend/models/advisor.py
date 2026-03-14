@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal, Optional
 
 
@@ -163,6 +163,7 @@ class HandbookAdviseResponse(BaseModel):
     result: dict
     model_used: str
     tokens_used: int
+    validation_warnings: list[str] = []
 
 
 class RelatedTermItem(BaseModel):
@@ -187,12 +188,12 @@ class TranslateResult(BaseModel):
 class GenerateTermResult(BaseModel):
     korean_name: str = ""
     categories: list[str] = []
-    definition_ko: str = ""
-    definition_en: str = ""
-    body_basic_ko: str = ""
-    body_basic_en: str = ""
-    body_advanced_ko: str = ""
-    body_advanced_en: str = ""
+    definition_ko: str = Field(default="", min_length=80)
+    definition_en: str = Field(default="", min_length=80)
+    body_basic_ko: str = Field(default="", min_length=2000)
+    body_basic_en: str = Field(default="", min_length=2000)
+    body_advanced_ko: str = Field(default="", min_length=3000)
+    body_advanced_en: str = Field(default="", min_length=3000)
 
 
 # --- Pipeline Auto-Extract Terms ---

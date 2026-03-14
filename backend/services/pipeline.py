@@ -115,6 +115,25 @@ def _ranking_from_saved_candidates(rows: list[dict[str, Any]]) -> NewsRankingRes
     return ranking
 
 
+def _summarize_related_picks(related: RelatedPicks | None) -> dict[str, Any] | None:
+    """Summarize related picks into a compact dict for debug_meta logging."""
+    if not related:
+        return None
+    summary: dict[str, Any] = {}
+    for key, pick in [
+        ("big_tech", related.big_tech),
+        ("industry_biz", related.industry_biz),
+        ("new_tools", related.new_tools),
+    ]:
+        if pick:
+            summary[key] = {
+                "title": pick.title,
+                "score": pick.relevance_score,
+                "reason": pick.ranking_reason,
+            }
+    return summary or None
+
+
 def normalize_pipeline_error(error: str | Exception | None) -> str:
     raw = str(error or "").strip()
     if not raw:
@@ -737,6 +756,22 @@ async def _extract_and_create_terms(
     created = 0
     max_terms = settings.max_auto_terms_per_run
 
+    # Batch DB check: fetch all existing terms in one query
+    term_names = [item.get("term", "").strip() for item in terms]
+    term_names = [t for t in term_names if t]
+    existing_terms: set[str] = set()
+    if term_names:
+        try:
+            result = (
+                client.table("handbook_terms")
+                .select("term")
+                .in_("term", term_names)
+                .execute()
+            )
+            existing_terms = {row["term"].lower() for row in (result.data or [])}
+        except Exception as e:
+            logger.warning("Batch DB check failed: %s", e)
+
     for item in terms:
         if created >= max_terms:
             break
@@ -745,18 +780,7 @@ async def _extract_and_create_terms(
         if not term_name:
             continue
 
-        try:
-            existing = (
-                client.table("handbook_terms")
-                .select("id")
-                .ilike("term", term_name)
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                continue
-        except Exception as e:
-            logger.warning("DB check failed for term '%s': %s", term_name, e)
+        if term_name.lower() in existing_terms:
             continue
 
         try:
@@ -885,7 +909,12 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
             cost_usd=rank_usage.get("cost_usd"),
             debug_meta={
                 "research_pick": ranking.research_pick.title if ranking.research_pick else None,
+                "research_pick_score": ranking.research_pick.relevance_score if ranking.research_pick else None,
+                "research_pick_reason": ranking.research_pick.ranking_reason if ranking.research_pick else None,
                 "business_pick": ranking.business_main_pick.title if ranking.business_main_pick else None,
+                "business_pick_score": ranking.business_main_pick.relevance_score if ranking.business_main_pick else None,
+                "business_pick_reason": ranking.business_main_pick.ranking_reason if ranking.business_main_pick else None,
+                "related_picks": _summarize_related_picks(ranking.related_picks),
                 "reused_ranking": reused_snapshot,
             },
         )

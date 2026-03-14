@@ -52,7 +52,7 @@ async def advise(request: Request, body: AiAdviseRequest, _user=Depends(require_
 async def handbook_advise(request: Request, body: HandbookAdviseRequest, _user=Depends(require_admin)):
     """Run an AI advisor action on a handbook term."""
     try:
-        result, model, tokens = await run_handbook_advise(body)
+        result, model, tokens, warnings = await run_handbook_advise(body)
     except APITimeoutError:
         raise HTTPException(status_code=504, detail="AI request timed out")
     except APIError as e:
@@ -64,8 +64,9 @@ async def handbook_advise(request: Request, body: HandbookAdviseRequest, _user=D
 
     return HandbookAdviseResponse(
         action=body.action,
-        success=True,
+        success=not warnings,
         result=result,
         model_used=model,
         tokens_used=tokens,
+        validation_warnings=warnings,
     )

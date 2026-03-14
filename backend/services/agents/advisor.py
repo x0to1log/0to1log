@@ -374,15 +374,17 @@ def _build_translate_user_prompt(req: HandbookAdviseRequest) -> tuple[str, str, 
     return "\n".join(parts), source_lang, target_lang
 
 
-async def run_handbook_advise(req: HandbookAdviseRequest) -> tuple[dict, str, int]:
-    """Run a handbook advisor action."""
+async def run_handbook_advise(req: HandbookAdviseRequest) -> tuple[dict, str, int, list[str]]:
+    """Run a handbook advisor action. Returns (result, model, tokens, warnings)."""
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
 
     if req.action == "related_terms":
-        return await _run_related_terms(req, client, model)
+        data, model, tokens = await _run_related_terms(req, client, model)
+        return data, model, tokens, []
     elif req.action == "translate":
-        return await _run_translate(req, client, model)
+        data, model, tokens = await _run_translate(req, client, model)
+        return data, model, tokens, []
     elif req.action == "generate":
         return await _run_generate_term(req, client, model)
     else:
@@ -504,8 +506,8 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
 
 async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str
-) -> tuple[dict, str, int]:
-    """Auto-generate all empty fields for a handbook term."""
+) -> tuple[dict, str, int, list[str]]:
+    """Auto-generate all empty fields for a handbook term. Returns (data, model, tokens, warnings)."""
     user_prompt = _build_handbook_user_prompt(req)
 
     resp = await client.chat.completions.create(
@@ -521,13 +523,17 @@ async def _run_generate_term(
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-generate")
     tokens = resp.usage.completion_tokens if resp.usage else 0
 
+    warnings: list[str] = []
     try:
         GenerateTermResult.model_validate(data)
     except ValidationError as e:
-        logger.warning("Handbook generate validation soft-fail: %s", e)
+        for err in e.errors():
+            field = ".".join(str(loc) for loc in err["loc"])
+            warnings.append(f"{field}: {err['msg']}")
+        logger.warning("Handbook generate validation: %s", warnings)
 
-    logger.info("Handbook generate completed for '%s', tokens=%d", req.term, tokens)
-    return data, model, tokens
+    logger.info("Handbook generate completed for '%s', tokens=%d, warnings=%d", req.term, tokens, len(warnings))
+    return data, model, tokens, warnings
 
 
 # --- Pipeline Term Extraction Helpers ---
@@ -577,4 +583,5 @@ async def generate_term_content(
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
-    return await _run_generate_term(req, client, model)
+    data, model, tokens, _warnings = await _run_generate_term(req, client, model)
+    return data, model, tokens
