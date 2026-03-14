@@ -5683,7 +5683,12 @@ body.auth-prompt-open {
   -webkit-backdrop-filter: blur(8px);
   padding: 0.5rem 0;
   margin: -0.5rem 0 1rem;
-  transition: top 300ms ease;
+  transition: top 300ms ease, opacity 200ms ease;
+}
+
+.handbook-search-sticky[data-hidden-by-find] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .handbook-search-sticky .handbook-search-input {
