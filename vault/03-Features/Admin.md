@@ -19,7 +19,7 @@ source: docs/04_Frontend_Spec.md
 | **Dashboard** | 파이프라인 상태, 최근 발행, 비용 모니터링 개요 |
 | **News** | AI NEWS 에디터 — Research/Business 관리, AI 제안 패널, 페르소나별 탭 전환 리뷰 |
 | **Blog** | IT 블로그 에디터 — 마크다운 편집 + AI 어드바이저 |
-| **Handbook** | AI 용어집 에디터 — 용어 CRUD + AI body 생성 |
+| **Handbook** | AI 용어집 에디터 — 용어 CRUD + AI body 생성 + 일괄 발행/아카이브 |
 | **Settings** | 사이트 설정, API 키, 프롬프트 버전 관리 |
 
 ## 에디터 공통 패턴

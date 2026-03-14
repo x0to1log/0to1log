@@ -148,6 +148,25 @@ EN-KO 이중 언어 발행 시 콘텐츠 품질/동기화를 제어하는 게이
 - 상충 출처로 결론 갈리는 이슈
 - 높은 파급력(시장/보안/규제) 주제
 
+## Handbook AI 검증
+
+### Generate 검증 게이트
+
+`GenerateTermResult`에 `Field(min_length=...)` 적용:
+
+| 필드 | 최소 길이 |
+|---|---|
+| `definition_ko/en` | 80자 |
+| `body_basic_ko/en` | 2,000자 |
+| `body_advanced_ko/en` | 3,000자 |
+
+- 검증 실패 시 `success: false` + `validation_warnings: list[str]` 반환 (결과 데이터는 그대로 포함)
+- Frontend에서 warning 토스트 표시
+
+### Pipeline 용어 배치 중복 체크
+
+`_extract_and_create_terms()`에서 추출된 용어를 `in_()` 배치 쿼리로 한 번에 DB 존재 확인 → 이미 있는 용어는 스킵.
+
 ## Related
 
 - [[AI-News-Pipeline-Overview]] — 검증이 적용되는 파이프라인

@@ -239,6 +239,36 @@ graph LR
 | `extract_terms_from_content()` | gpt-4o-mini | 2,048 | 0.2 | 기사 본문 (4,000자) | `ExtractTermsResult` |
 | `generate_term_content()` | gpt-4o | 16,000 | 0.3 | term_name + korean_name | `GenerateTermResult` |
 
+## 품질 검증
+
+### Generate 검증 게이트
+
+`GenerateTermResult`에 `Field(min_length=...)` 적용:
+
+| 필드 | 최소 길이 |
+|---|---|
+| `definition_ko/en` | 80자 |
+| `body_basic_ko/en` | 2,000자 |
+| `body_advanced_ko/en` | 3,000자 |
+
+- 검증 실패 시 `success: false` + `validation_warnings: list[str]` 반환 (결과 데이터는 그대로 포함)
+- Frontend에서 warning 토스트 표시
+
+### 발행 게이트
+
+`status.ts`에서 publish 전 검증:
+- `term`, `slug`, `definition_ko` 필수
+- `categories` 빈 배열 거부
+- `body_basic_ko` 또는 `body_advanced_ko` 최소 1개 필수
+
+### Soft Delete
+
+삭제 시 `status='archived'`로 변경 (hard delete 아님). Admin 리스트에서 기본 표시, 필터로 구분.
+
+### Pipeline 용어 배치 중복 체크
+
+`_extract_and_create_terms()`에서 추출된 용어를 `in_()` 배치 쿼리로 한 번에 DB 존재 확인 → 이미 있는 용어는 `generate_term_content()` 호출 없이 스킵.
+
 ## 핵심 파일
 
 | 파일 | 역할 |
@@ -247,8 +277,11 @@ graph LR
 | `backend/services/agents/prompts_advisor.py` | 프롬프트 상수 |
 | `backend/models/advisor.py` | Request/Response Pydantic 스키마 |
 | `backend/routers/admin_ai.py` | `/admin/ai/handbook-advise` 엔드포인트 |
+| `backend/tests/test_handbook_advisor.py` | Handbook AI 테스트 (8개) |
 | `frontend/src/pages/admin/handbook/edit/[slug].astro` | 에디터 UI + AI 패널 |
+| `frontend/src/pages/admin/handbook/index.astro` | 리스트 + 일괄 액션 + 완성도 도트 |
 | `frontend/src/pages/api/admin/ai/handbook-advise.ts` | 프록시 API Route |
+| `frontend/src/pages/api/admin/handbook/bulk-action.ts` | 일괄 발행/아카이브 API |
 
 ## Related
 

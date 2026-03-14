@@ -106,6 +106,9 @@ AI/CS/Infra 용어집 기능. 단순 정의 사전이 아니라, AI News와 Blog
 
 - Posts admin과 동일 문법: search, status filter, category filter
 - Actions: publish / preview / edit
+- ==일괄 액션==: 체크박스로 다중 선택 → 일괄 발행 / 일괄 아카이브 (`/api/admin/handbook/bulk-action`)
+- ==완성도 도트==: KO Basic · KO Adv · EN Basic · EN Adv (4도트, 초록=채움 / 회색=빈칸)
+- 3줄 메타 레이아웃: 배지+도트+소스 | 카테고리 태그 | 업데이트 날짜
 
 ### Editor Fields
 
@@ -135,9 +138,21 @@ AI/CS/Infra 용어집 기능. 단순 정의 사전이 아니라, AI News와 Blog
 - [ ] feedback 버튼 반응 저장 정상
 - [ ] admin handbook save/publish 흐름 정상
 
+## 품질 게이트
+
+### 발행 게이트 (Publish Gate)
+
+`status.ts` / `bulk-action.ts`에서 publish 전 검증:
+- `term`, `slug`, `definition_ko` 필수
+- `categories` 빈 배열 거부
+- `body_basic_ko` 또는 `body_advanced_ko` 최소 1개 필수
+
+### Soft Delete
+
+삭제 시 `status='archived'`로 변경 (hard delete 아님).
+
 ## Future Work
 
-- Handbook docs/plan의 remaining legacy snippets 추가 정리
 - Admin에서 feedback 집계 보기
 - AI pipeline이 handbook advanced body를 직접 보완하도록 연결 검토
 
