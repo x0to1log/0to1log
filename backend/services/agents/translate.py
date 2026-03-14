@@ -26,7 +26,8 @@ from services.agents.prompts import TRANSLATE_SYSTEM_PROMPT
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
-SOFT_FLOOR_RATIO = 0.70  # Accept translations ≥ 70% of target after all retries
+SOFT_FLOOR_RATIO = 0.50  # Accept translations ≥ 50% of target after all retries
+WARN_RATIO = 0.70        # 50-70% → very_short_translation, 70-100% → short_translation
 
 
 # ---------------------------------------------------------------------------
@@ -195,16 +196,18 @@ async def _translate_research(
         content_len = len(last_merged.get("content_original") or "")
         soft_threshold = int(ko_target * SOFT_FLOOR_RATIO)
         if content_len >= soft_threshold:
+            warn_threshold = int(ko_target * WARN_RATIO)
+            warning = "very_short_translation" if content_len < warn_threshold else "short_translation"
             logger.warning(
-                "TranslateResearch: accepting soft-floor result after %d attempts "
-                "(content=%d >= %d%% threshold %d)",
-                1 + MAX_RETRIES, content_len, int(SOFT_FLOOR_RATIO * 100), soft_threshold,
+                "TranslateResearch: accepting soft-floor result (%s) after %d attempts "
+                "(content=%d, target=%d)",
+                warning, 1 + MAX_RETRIES, content_len, ko_target,
             )
             validated = ResearchPost.model_validate(last_merged)
             cumulative_usage["attempts"] = 1 + MAX_RETRIES
             cumulative_usage["soft_floor"] = True
             result = validated.model_dump()
-            result["_quality_warnings"] = ["short_translation"]
+            result["_quality_warnings"] = [warning]
             return result, cumulative_usage
 
     raise ValueError(f"TranslateResearch failed after {1 + MAX_RETRIES} attempts: {last_error}")
@@ -300,7 +303,7 @@ async def _translate_business(
             if attempt >= MAX_RETRIES:
                 break
 
-    # --- Soft-floor fallback: accept if all fields ≥ 70% of target ---
+    # --- Soft-floor fallback: accept if all fields ≥ 50% of target ---
     if last_merged is not None:
         soft_short: list[str] = []
         for field in persona_fields:
@@ -315,16 +318,26 @@ async def _translate_business(
             soft_short.append(f"content_analysis={analysis_len}/{soft_analysis}")
 
         if not soft_short:
+            # Determine warning level
+            has_very_short = False
+            for field in persona_fields:
+                flen = len(last_merged.get(field) or "")
+                if flen < int(ko_targets[field] * WARN_RATIO):
+                    has_very_short = True
+                    break
+            if not has_very_short and analysis_len < int(ko_analysis_target * WARN_RATIO):
+                has_very_short = True
+
+            warning = "very_short_translation" if has_very_short else "short_translation"
             logger.warning(
-                "TranslateBusiness: accepting soft-floor result after %d attempts "
-                "(fields met %d%% threshold)",
-                1 + MAX_RETRIES, int(SOFT_FLOOR_RATIO * 100),
+                "TranslateBusiness: accepting soft-floor result (%s) after %d attempts",
+                warning, 1 + MAX_RETRIES,
             )
             validated = BusinessPost.model_validate(last_merged)
             cumulative_usage["attempts"] = 1 + MAX_RETRIES
             cumulative_usage["soft_floor"] = True
             result = validated.model_dump()
-            result["_quality_warnings"] = ["short_translation"]
+            result["_quality_warnings"] = [warning]
             return result, cumulative_usage
 
         logger.error(

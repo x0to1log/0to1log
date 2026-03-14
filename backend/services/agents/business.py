@@ -22,6 +22,8 @@ from services.agents.prompts import BUSINESS_DERIVE_PROMPT, BUSINESS_EXPERT_PROM
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
+SOFT_FLOOR_RATIO = 0.50  # Accept content ≥ 50% of target after all retries
+WARN_RATIO = 0.70        # 50-70% → very_short_content, 70-100% → short_content
 
 
 # ---------------------------------------------------------------------------
@@ -119,11 +121,13 @@ async def generate_business_expert(
 
     cumulative_usage: dict[str, Any] = {}
     last_error: Exception | None = None
+    last_data: dict[str, Any] | None = None
 
     for attempt in range(1 + MAX_RETRIES):
         try:
             data, usage = await _call_openai(client, BUSINESS_EXPERT_PROMPT, user_prompt, "BusinessExpert")
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+            last_data = data
 
             # Validate minimum lengths
             analysis_len = len(data.get("content_analysis") or "")
@@ -157,6 +161,29 @@ async def generate_business_expert(
             if attempt >= MAX_RETRIES:
                 break
 
+    # --- Soft-floor fallback: accept if fields ≥ 50% of target ---
+    if last_data is not None:
+        analysis_len = len(last_data.get("content_analysis") or "")
+        expert_len = len(last_data.get("content_expert") or "")
+        soft_analysis = int(MIN_ANALYSIS_CHARS * SOFT_FLOOR_RATIO)
+        soft_expert = int(MIN_CONTENT_CHARS * SOFT_FLOOR_RATIO)
+
+        if analysis_len >= soft_analysis and expert_len >= soft_expert:
+            warnings: list[str] = []
+            if analysis_len < int(MIN_ANALYSIS_CHARS * WARN_RATIO) or expert_len < int(MIN_CONTENT_CHARS * WARN_RATIO):
+                warnings.append("very_short_content")
+            else:
+                warnings.append("short_content")
+            logger.warning(
+                "BusinessExpert: accepting soft-floor result (%s) — "
+                "analysis=%d/%d, expert=%d/%d",
+                warnings[0], analysis_len, MIN_ANALYSIS_CHARS, expert_len, MIN_CONTENT_CHARS,
+            )
+            cumulative_usage["attempts"] = 1 + MAX_RETRIES
+            cumulative_usage["soft_floor"] = True
+            last_data["_quality_warnings"] = warnings
+            return last_data, cumulative_usage
+
     raise ValueError(f"BusinessExpert failed after {1 + MAX_RETRIES} attempts: {last_error}")
 
 
@@ -173,11 +200,13 @@ async def derive_business_personas(
 
     cumulative_usage: dict[str, Any] = {}
     last_error: Exception | None = None
+    last_data: dict[str, Any] | None = None
 
     for attempt in range(1 + MAX_RETRIES):
         try:
             data, usage = await _call_openai(client, BUSINESS_DERIVE_PROMPT, user_prompt, "BusinessDerive")
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+            last_data = data
 
             learner_len = len(data.get("content_learner") or "")
             beginner_len = len(data.get("content_beginner") or "")
@@ -210,6 +239,29 @@ async def derive_business_personas(
             if attempt >= MAX_RETRIES:
                 break
 
+    # --- Soft-floor fallback ---
+    if last_data is not None:
+        learner_len = len(last_data.get("content_learner") or "")
+        beginner_len = len(last_data.get("content_beginner") or "")
+        soft_content = int(MIN_CONTENT_CHARS * SOFT_FLOOR_RATIO)
+
+        if learner_len >= soft_content and beginner_len >= soft_content:
+            warnings: list[str] = []
+            warn_content = int(MIN_CONTENT_CHARS * WARN_RATIO)
+            if learner_len < warn_content or beginner_len < warn_content:
+                warnings.append("very_short_content")
+            else:
+                warnings.append("short_content")
+            logger.warning(
+                "BusinessDerive: accepting soft-floor result (%s) — "
+                "learner=%d/%d, beginner=%d/%d",
+                warnings[0], learner_len, MIN_CONTENT_CHARS, beginner_len, MIN_CONTENT_CHARS,
+            )
+            cumulative_usage["attempts"] = 1 + MAX_RETRIES
+            cumulative_usage["soft_floor"] = True
+            last_data["_quality_warnings"] = warnings
+            return last_data, cumulative_usage
+
     raise ValueError(f"BusinessDerive failed after {1 + MAX_RETRIES} attempts: {last_error}")
 
 
@@ -231,11 +283,13 @@ async def generate_business_post(
     expert_data, expert_usage = await generate_business_expert(
         candidate, related, context, batch_id,
     )
+    expert_warnings = expert_data.pop("_quality_warnings", [])
 
     # Call 2: Derive learner + beginner from expert
     derive_data, derive_usage = await derive_business_personas(
         expert_data.get("content_expert", ""),
     )
+    derive_warnings = derive_data.pop("_quality_warnings", [])
 
     # Assemble
     combined = {
@@ -246,5 +300,10 @@ async def generate_business_post(
 
     post = BusinessPost.model_validate(combined)
     total_usage = merge_usage_metrics(expert_usage, derive_usage)
+
+    # Merge quality warnings from both calls into total_usage
+    all_warnings = list(dict.fromkeys(expert_warnings + derive_warnings))
+    if all_warnings:
+        total_usage["_quality_warnings"] = all_warnings
 
     return post, total_usage, expert_usage, derive_usage

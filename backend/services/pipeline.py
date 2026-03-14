@@ -1089,6 +1089,7 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
                 business_usage = {}
                 expert_usage = {}
                 derive_usage = {}
+                business_en_quality_warnings: list[str] = []
                 logger.info("Reusing saved EN business post: %s", en_business_id)
             else:
                 try:
@@ -1098,6 +1099,7 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
                         context,
                         batch_id,
                     )
+                    business_en_quality_warnings = business_usage.pop("_quality_warnings", [])
                 except Exception:
                     log_pipeline_stage(
                         run_id, "business.generate.en", "failed",
@@ -1205,8 +1207,10 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
                 output_summary=ko_business_id,
             )
             business_quality_score, business_quality_flags = compute_quality(ko_business.model_dump())
-            if business_quality_warnings:
-                business_quality_flags["short_translation"] = True
+            # Merge warnings from EN generation and KO translation
+            for w in business_en_quality_warnings + business_quality_warnings:
+                business_quality_flags[w] = True
+            if business_en_quality_warnings or business_quality_warnings:
                 business_quality_score = max(0, business_quality_score - 1)
             log_pipeline_stage(
                 run_id, "quality.business", "success",
@@ -1214,7 +1218,8 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
                 debug_meta={
                     "quality_score": business_quality_score,
                     "quality_flags": business_quality_flags,
-                    "soft_floor": business_tr_usage.get("soft_floor", False),
+                    "soft_floor_en": business_usage.get("soft_floor", False),
+                    "soft_floor_ko": business_tr_usage.get("soft_floor", False),
                 },
             )
             logger.info("KO business post saved (source_post_id=%s)", en_business_id)
