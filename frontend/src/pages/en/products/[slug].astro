@@ -1,0 +1,34 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+import { getProductDetailData } from '../../../lib/pageData/productsPage';
+import ProductDetail from '../../../components/products/ProductDetail.astro';
+
+const locale = 'en';
+const { slug } = Astro.params;
+const { product, htmlDescription, error } = await getProductDetailData(slug ?? '', locale);
+
+if (!product && !error) {
+  Astro.response.status = 404;
+}
+---
+
+<MainLayout
+  title={product?.name ?? t.en['products.notfound']}
+  description={product?.tagline ?? undefined}
+  locale={locale}
+  altSlug={product?.slug}
+>
+  {product ? (
+    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} />
+  ) : (
+    <div class="products-page">
+      <p class="products-not-found">
+        {error ?? t.en['products.notfound']}
+      </p>
+      <a href="/en/products/" class="products-back-link">← {t.en['products.back']}</a>
+    </div>
+  )}
+</MainLayout>

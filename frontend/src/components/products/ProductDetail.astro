@@ -1,0 +1,143 @@
+---
+import type { ProductDetailData } from '../../lib/pageData/productsPage';
+import { t } from '../../i18n/index';
+import MediaGallery from './MediaGallery.astro';
+
+interface Props {
+  product: ProductDetailData;
+  htmlDescription: string;
+  locale: 'en' | 'ko';
+}
+
+const { product, htmlDescription, locale } = Astro.props;
+const tr = t[locale];
+
+const pricingLabel: Record<string, string> = {
+  free: locale === 'ko' ? '무료' : 'Free',
+  freemium: 'Freemium',
+  paid: locale === 'ko' ? '유료' : 'Paid',
+  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
+};
+
+const platformLabels: Record<string, string> = {
+  web: 'Web',
+  ios: 'iOS',
+  android: 'Android',
+  api: 'API',
+  desktop: 'Desktop',
+};
+
+const releasedYear = product.released_at
+  ? new Date(product.released_at).getFullYear()
+  : null;
+---
+
+<article class="product-detail" id="products-top">
+  <!-- Header -->
+  <header class="product-detail-header">
+    <div class="product-detail-header-left">
+      {product.logo_url && (
+        <img
+          src={product.logo_url}
+          alt={product.name}
+          class="product-detail-logo"
+          width="64"
+          height="64"
+          loading="eager"
+        />
+      )}
+      <div class="product-detail-title-group">
+        <h1 class="product-detail-name">{product.name}</h1>
+        {product.tagline && (
+          <p class="product-detail-tagline">{product.tagline}</p>
+        )}
+      </div>
+    </div>
+
+    <div class="product-detail-header-right">
+      {product.pricing && (
+        <span class="product-pricing-badge" data-pricing={product.pricing}>
+          {pricingLabel[product.pricing] ?? product.pricing}
+        </span>
+      )}
+      <a
+        href={product.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="product-visit-btn"
+      >
+        {tr['products.visitSite']} ↗
+      </a>
+    </div>
+  </header>
+
+  <div class="product-detail-body">
+    <!-- Main content -->
+    <div class="product-detail-main">
+      {product.demo_media.length > 0 && (
+        <MediaGallery media={product.demo_media} />
+      )}
+
+      {htmlDescription && (
+        <div class="product-detail-description prose">
+          <Fragment set:html={htmlDescription} />
+        </div>
+      )}
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="product-detail-sidebar">
+      {product.pricing && (
+        <div class="product-detail-sidebar-section">
+          <h3 class="product-detail-sidebar-label">{tr['products.pricing']}</h3>
+          <span class="product-pricing-badge" data-pricing={product.pricing}>
+            {pricingLabel[product.pricing] ?? product.pricing}
+          </span>
+          {product.pricing_note && (
+            <p class="product-detail-pricing-note">{product.pricing_note}</p>
+          )}
+        </div>
+      )}
+
+      {product.platform && product.platform.length > 0 && (
+        <div class="product-detail-sidebar-section">
+          <h3 class="product-detail-sidebar-label">{tr['products.platforms']}</h3>
+          <div class="product-platform-list">
+            {product.platform.map((p) => (
+              <span class="product-platform-item">{platformLabels[p] ?? p}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {releasedYear && (
+        <div class="product-detail-sidebar-section">
+          <h3 class="product-detail-sidebar-label">{tr['products.releasedAt']}</h3>
+          <span class="product-detail-sidebar-value">{releasedYear}</span>
+        </div>
+      )}
+
+      {product.korean_support && (
+        <div class="product-detail-sidebar-section">
+          <span class="product-korean-badge">{tr['products.koreanSupport']} ✓</span>
+        </div>
+      )}
+
+      {product.tags && product.tags.length > 0 && (
+        <div class="product-detail-sidebar-section">
+          <h3 class="product-detail-sidebar-label">{tr['products.tags']}</h3>
+          <div class="product-tags-list">
+            {product.tags.map((tag) => (
+              <span class="product-tag">{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div class="product-detail-stats">
+        <span class="product-detail-stat">👁 {product.view_count.toLocaleString()}</span>
+        <span class="product-detail-stat">♡ {product.like_count.toLocaleString()}</span>
+      </div>
+    </aside>
+  </div>
+</article>

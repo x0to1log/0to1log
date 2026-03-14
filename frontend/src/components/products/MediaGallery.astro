@@ -1,0 +1,107 @@
+---
+interface MediaItem {
+  type: string;
+  url: string;
+  caption?: string;
+}
+
+interface Props {
+  media: MediaItem[];
+}
+
+const { media } = Astro.props;
+
+function getYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([A-Za-z0-9_-]{11})/);
+  return match?.[1] ?? null;
+}
+
+function isYouTube(url: string): boolean {
+  return url.includes('youtube.com') || url.includes('youtu.be');
+}
+---
+
+{media.length > 0 && (
+  <div class="product-media-gallery" id="media-gallery">
+    <div class="product-media-main" id="media-main">
+      {media.map((item, i) => (
+        <div class="product-media-item" data-index={i} style={i > 0 ? 'display:none' : ''}>
+          {item.type === 'image' && (
+            <img
+              src={item.url}
+              alt={item.caption ?? ''}
+              class="product-media-image"
+              loading="lazy"
+            />
+          )}
+          {item.type === 'video' && isYouTube(item.url) && (
+            <div class="product-media-video-wrap">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${getYouTubeId(item.url)}`}
+                title={item.caption ?? 'Demo video'}
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                class="product-media-iframe"
+                loading="lazy"
+              />
+            </div>
+          )}
+          {item.type === 'video' && !isYouTube(item.url) && (
+            <video
+              src={item.url}
+              controls
+              class="product-media-video"
+              preload="metadata"
+            />
+          )}
+          {item.caption && (
+            <p class="product-media-caption">{item.caption}</p>
+          )}
+        </div>
+      ))}
+    </div>
+
+    {media.length > 1 && (
+      <div class="product-media-thumbs" id="media-thumbs">
+        {media.map((item, i) => (
+          <button
+            class={`product-media-thumb${i === 0 ? ' active' : ''}`}
+            data-index={i}
+            aria-label={item.caption ?? `Media ${i + 1}`}
+            type="button"
+          >
+            {item.type === 'image'
+              ? <img src={item.url} alt="" loading="lazy" />
+              : <span class="product-media-thumb-video">▶</span>
+            }
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
+<script>
+  const gallery = document.getElementById('media-gallery');
+  if (gallery) {
+    const items = gallery.querySelectorAll<HTMLElement>('.product-media-item');
+    const thumbs = gallery.querySelectorAll<HTMLButtonElement>('.product-media-thumb');
+
+    const showItem = (index: number) => {
+      items.forEach((item, i) => {
+        item.style.display = i === index ? '' : 'none';
+      });
+      thumbs.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === index);
+      });
+    };
+
+    thumbs.forEach((thumb) => {
+      thumb.addEventListener('click', () => {
+        const idx = parseInt(thumb.dataset.index ?? '0', 10);
+        showItem(idx);
+      });
+    });
+  }
+</script>

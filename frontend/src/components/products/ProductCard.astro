@@ -1,0 +1,63 @@
+---
+interface Props {
+  href: string;
+  name: string;
+  tagline: string | null;
+  logoUrl: string | null;
+  pricing: string | null;
+  platform: string[] | null;
+  koreanSupport: boolean;
+  locale: 'en' | 'ko';
+}
+
+const { href, name, tagline, logoUrl, pricing, platform, koreanSupport, locale } = Astro.props;
+
+const platformLabels: Record<string, string> = {
+  web: 'Web',
+  ios: 'iOS',
+  android: 'Android',
+  api: 'API',
+  desktop: 'Desktop',
+};
+
+const pricingLabel: Record<string, string> = {
+  free: locale === 'ko' ? '무료' : 'Free',
+  freemium: 'Freemium',
+  paid: locale === 'ko' ? '유료' : 'Paid',
+  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
+};
+---
+
+<a href={href} class="product-card">
+  <div class="product-card-header">
+    {logoUrl
+      ? <img src={logoUrl} alt={name} class="product-card-logo" width="40" height="40" loading="lazy" />
+      : <div class="product-card-logo-placeholder">{name.charAt(0)}</div>
+    }
+    <div class="product-card-title-group">
+      <span class="product-card-name">{name}</span>
+      {pricing && (
+        <span class="product-pricing-badge" data-pricing={pricing}>
+          {pricingLabel[pricing] ?? pricing}
+        </span>
+      )}
+    </div>
+  </div>
+
+  {tagline && <p class="product-card-tagline">{tagline}</p>}
+
+  <div class="product-card-meta">
+    {platform && platform.length > 0 && (
+      <div class="product-platform-list">
+        {platform.map((p) => (
+          <span class="product-platform-item">{platformLabels[p] ?? p}</span>
+        ))}
+      </div>
+    )}
+    {koreanSupport && (
+      <span class="product-korean-badge">
+        {locale === 'ko' ? '한국어 ✓' : 'Korean ✓'}
+      </span>
+    )}
+  </div>
+</a>

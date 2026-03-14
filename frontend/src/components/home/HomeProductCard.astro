@@ -1,0 +1,35 @@
+---
+interface Props {
+  href: string;
+  name: string;
+  tagline: string | null;
+  logoUrl: string | null;
+  pricing: string | null;
+  locale: 'en' | 'ko';
+}
+
+const { href, name, tagline, logoUrl, pricing, locale } = Astro.props;
+
+const pricingLabel: Record<string, string> = {
+  free: locale === 'ko' ? '무료' : 'Free',
+  freemium: 'Freemium',
+  paid: locale === 'ko' ? '유료' : 'Paid',
+  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
+};
+---
+
+<a href={href} class="home-product-card">
+  {logoUrl
+    ? <img src={logoUrl} alt={name} class="home-product-card-logo" width="36" height="36" loading="lazy" />
+    : <div class="home-product-card-logo-placeholder">{name.charAt(0)}</div>
+  }
+  <div class="home-product-card-text">
+    <span class="home-product-card-name">{name}</span>
+    {tagline && <p class="home-product-card-tagline">{tagline}</p>}
+  </div>
+  {pricing && (
+    <span class="product-pricing-badge" data-pricing={pricing} style="margin-left:auto;flex-shrink:0">
+      {pricingLabel[pricing] ?? pricing}
+    </span>
+  )}
+</a>

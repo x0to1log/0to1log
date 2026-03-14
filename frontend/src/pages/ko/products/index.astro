@@ -1,0 +1,39 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import { t } from '../../../i18n/index';
+import { getProductsPageData } from '../../../lib/pageData/productsPage';
+import ProductHero from '../../../components/products/ProductHero.astro';
+import CategoryNav from '../../../components/products/CategoryNav.astro';
+import CategorySection from '../../../components/products/CategorySection.astro';
+
+const locale = 'ko';
+const { categories, featuredProducts, productsByCategory, error } = await getProductsPageData(locale);
+---
+
+<MainLayout
+  title={t.ko['products.title']}
+  description={t.ko['products.heroSubtitle']}
+  locale={locale}
+>
+  <div class="products-page" id="products-top">
+    {error && <p class="products-error">{t.ko['products.error']}</p>}
+
+    <ProductHero products={featuredProducts} locale={locale} />
+
+    <CategoryNav categories={categories} locale={locale} />
+
+    {categories.map((cat) => (
+      <CategorySection
+        category={cat}
+        products={productsByCategory[cat.id] ?? []}
+        locale={locale}
+      />
+    ))}
+
+    {categories.length === 0 && !error && (
+      <p class="products-empty">{t.ko['products.empty']}</p>
+    )}
+  </div>
+</MainLayout>

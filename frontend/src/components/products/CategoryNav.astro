@@ -1,0 +1,66 @@
+---
+import type { ProductCategory } from '../../lib/pageData/productsPage';
+import { t } from '../../i18n/index';
+import { getCategoryIcon } from '../../lib/productCategoryIcons';
+
+interface Props {
+  categories: ProductCategory[];
+  locale: 'en' | 'ko';
+}
+
+const { categories, locale } = Astro.props;
+const tr = t[locale];
+---
+
+<nav class="product-category-nav" aria-label={tr['products.title']}>
+  <a href="#products-top" class="product-category-tab" data-category="all">
+    {tr['products.categoryAll']}
+  </a>
+  {categories.map((cat) => (
+    <a
+      href={`#category-${cat.id}`}
+      class="product-category-tab"
+      data-category={cat.id}
+    >
+      <span class="product-category-tab-icon" set:html={getCategoryIcon(cat.id)} />
+      <span>{locale === 'ko' ? cat.label_ko : cat.label_en}</span>
+    </a>
+  ))}
+</nav>
+
+<script>
+  const nav = document.querySelector('.product-category-nav');
+  const tabs = nav?.querySelectorAll<HTMLElement>('.product-category-tab');
+  const sections = document.querySelectorAll<HTMLElement>('.product-category-section');
+
+  if (tabs && sections.length > 0) {
+    const setActive = (categoryId: string) => {
+      tabs.forEach((tab) => {
+        const isActive = tab.dataset.category === categoryId;
+        tab.classList.toggle('active', isActive);
+      });
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = (entry.target as HTMLElement).dataset.categoryId ?? 'all';
+            setActive(id);
+          }
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+
+    // "all" tab active when near top
+    const topObserver = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setActive('all'); },
+      { rootMargin: '0px 0px -90% 0px', threshold: 0 },
+    );
+    const heroSection = document.querySelector<HTMLElement>('.product-hero');
+    if (heroSection) topObserver.observe(heroSection);
+  }
+</script>
