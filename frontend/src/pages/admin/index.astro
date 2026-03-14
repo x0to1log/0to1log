@@ -200,14 +200,14 @@ function relativeTime(dateStr: string): string {
           <div class="dashboard-stat-label">Drafts</div>
           <div class="dashboard-stat-value">{totalDrafts}</div>
         </div>
-        <div class="dashboard-stat-card">
+        <a href="/admin/analytics#traffic" class="dashboard-stat-card dashboard-stat-card--link">
           <div class="dashboard-stat-label">Users</div>
           <div class="dashboard-stat-value">{totalUsers}</div>
-        </div>
-        <div class="dashboard-stat-card">
+        </a>
+        <a href="/admin/analytics#traffic" class="dashboard-stat-card dashboard-stat-card--link">
           <div class="dashboard-stat-label">Likes</div>
           <div class="dashboard-stat-value">{totalLikes}</div>
-        </div>
+        </a>
       </div>
 
       {(termsBySource.pipeline > 0 || termsBySource['ai-suggested'] > 0) && (
@@ -450,6 +450,15 @@ function relativeTime(dateStr: string): string {
 
   .dashboard-stat-card:hover {
     border-color: var(--color-text-muted);
+  }
+
+  .dashboard-stat-card--link {
+    cursor: pointer;
+  }
+
+  .dashboard-stat-card--link:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 1px 6px var(--color-shadow);
   }
 
   .dashboard-stat-card--highlight {

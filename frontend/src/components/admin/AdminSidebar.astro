@@ -1,6 +1,6 @@
 ﻿---
 interface Props {
-  activeSection?: 'dashboard' | 'posts' | 'pipeline' | 'analytics' | 'blog' | 'handbook' | 'settings';
+  activeSection?: 'dashboard' | 'posts' | 'pipeline' | 'pipeline-analytics' | 'site-analytics' | 'blog' | 'handbook' | 'settings';
   recentPosts?: Array<{ title: string; slug: string; type: 'post' | 'term' }>;
   stats?: { posts: number; terms: number; drafts: number };
 }
@@ -32,12 +32,18 @@ const currentPath = Astro.url.pathname;
       </svg>
       <span>Pipeline Runs</span>
     </a>
-    <a href="/admin/pipeline-analytics" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'analytics' }]}>
+    <a href="/admin/pipeline-analytics" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'pipeline-analytics' }]}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 13V8M5 13V5M8 13V9M11 13V3M14 13V7" />
+      </svg>
+      <span>Pipeline Costs</span>
+    </a>
+    <a href="/admin/analytics" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'site-analytics' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M2 14l4-5 3 3 5-7" />
         <circle cx="14" cy="5" r="1.5" />
       </svg>
-      <span>Analytics</span>
+      <span>Site Analytics</span>
     </a>
     <a href="/admin/posts/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'posts' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">

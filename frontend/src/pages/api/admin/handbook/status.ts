@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (action === 'publish') {
     const { data: term } = await supabase
       .from('handbook_terms')
-      .select('term, slug, definition_ko, categories')
+      .select('term, slug, definition_ko, categories, body_basic_ko, body_advanced_ko')
       .eq('id', id)
       .single();
 
@@ -48,7 +48,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!term.term) missing.push('term');
     if (!term.slug) missing.push('slug');
     if (!term.definition_ko) missing.push('definition_ko');
-    if (!term.categories?.length) missing.push('categories');
+    if (!Array.isArray(term.categories) || term.categories.length === 0) missing.push('categories');
+    if (!term.body_basic_ko && !term.body_advanced_ko) missing.push('body_basic_ko or body_advanced_ko');
 
     if (missing.length > 0) {
       return new Response(JSON.stringify({

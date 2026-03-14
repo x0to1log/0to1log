@@ -1,0 +1,1311 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../layouts/MainLayout.astro';
+import AdminSidebar from '../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+import { getHandbookCategoryLabel } from '../../lib/handbookCategories';
+
+const accessToken = Astro.locals.accessToken;
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+// ─── Types ───────────────────────────────────────────────────
+type HandbookRow = {
+  id: string;
+  term: string;
+  slug: string;
+  status: string;
+  source: string | null;
+  categories: string[] | null;
+  is_favourite: boolean | null;
+  updated_at: string;
+};
+
+type BlogRow = {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  locale: string | null;
+  category: string | null;
+  source: string | null;
+  updated_at: string;
+};
+
+type NewsRow = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string | null;
+  locale: string | null;
+  status: string;
+  post_type: string | null;
+  updated_at: string;
+};
+
+// ─── Queries ─────────────────────────────────────────────────
+const [{ data: rawHandbook }, { data: rawBlog }, { data: rawNews }] = await Promise.all([
+  sb.from('handbook_terms')
+    .select('id, term, slug, status, source, categories, is_favourite, updated_at')
+    .order('updated_at', { ascending: false }),
+  sb.from('blog_posts')
+    .select('id, title, slug, status, locale, category, source, updated_at')
+    .order('updated_at', { ascending: false }),
+  sb.from('news_posts')
+    .select('id, title, slug, category, locale, status, post_type, updated_at')
+    .order('updated_at', { ascending: false }),
+]);
+
+// ─── Handbook Data ───────────────────────────────────────────
+const handbookTerms = (rawHandbook ?? []) as HandbookRow[];
+const handbookTotal = handbookTerms.length;
+const handbookPublished = handbookTerms.filter((t) => t.status === 'published').length;
+const handbookDraft = handbookTerms.filter((t) => t.status === 'draft').length;
+const handbookFavourites = handbookTerms.filter((t) => t.is_favourite).length;
+
+const handbookBySource: Record<string, number> = {};
+for (const t of handbookTerms) {
+  const src = t.source || 'manual';
+  handbookBySource[src] = (handbookBySource[src] || 0) + 1;
+}
+
+const handbookCategoryMap = new Map<string, number>();
+for (const t of handbookTerms) {
+  for (const cat of t.categories ?? []) {
+    handbookCategoryMap.set(cat, (handbookCategoryMap.get(cat) || 0) + 1);
+  }
+}
+const handbookCategories = Array.from(handbookCategoryMap.entries())
+  .sort((a, b) => b[1] - a[1]);
+
+const recentHandbook = handbookTerms.slice(0, 5);
+
+// ─── Blog Data ───────────────────────────────────────────────
+const blogPosts = (rawBlog ?? []) as BlogRow[];
+const blogTotal = blogPosts.length;
+const blogPublished = blogPosts.filter((p) => p.status === 'published').length;
+const blogDraft = blogPosts.filter((p) => p.status === 'draft').length;
+
+const blogByLocale: Record<string, number> = {};
+for (const p of blogPosts) {
+  const loc = p.locale || 'unknown';
+  blogByLocale[loc] = (blogByLocale[loc] || 0) + 1;
+}
+
+const blogByCategory: Record<string, number> = {};
+for (const p of blogPosts) {
+  const cat = p.category || 'uncategorized';
+  blogByCategory[cat] = (blogByCategory[cat] || 0) + 1;
+}
+
+const blogBySource: Record<string, number> = {};
+for (const p of blogPosts) {
+  const src = p.source || 'manual';
+  blogBySource[src] = (blogBySource[src] || 0) + 1;
+}
+
+const recentBlog = blogPosts.slice(0, 5);
+
+// ─── News Data ──────────────────────────────────────────────
+const newsPosts = (rawNews ?? []) as NewsRow[];
+const newsTotal = newsPosts.length;
+const newsPublished = newsPosts.filter((p) => p.status === 'published').length;
+const newsDraft = newsPosts.filter((p) => p.status === 'draft').length;
+
+const newsByCategory: Record<string, number> = {};
+for (const p of newsPosts) {
+  const cat = p.category || 'uncategorized';
+  newsByCategory[cat] = (newsByCategory[cat] || 0) + 1;
+}
+
+const newsByLocale: Record<string, number> = {};
+for (const p of newsPosts) {
+  const loc = p.locale || 'unknown';
+  newsByLocale[loc] = (newsByLocale[loc] || 0) + 1;
+}
+
+const newsByType: Record<string, number> = {};
+for (const p of newsPosts) {
+  const t = p.post_type || 'article';
+  newsByType[t] = (newsByType[t] || 0) + 1;
+}
+
+const recentNews = newsPosts.slice(0, 5);
+
+const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
+const ga4PropertyId = import.meta.env.GA4_PROPERTY_ID || '';
+const nonce = Astro.locals.cspNonce || '';
+---
+
+<MainLayout title="Site Analytics" locale="en">
+  <AdminSidebar activeSection="site-analytics" />
+  <div class="admin-dashboard">
+    <div class="admin-main admin-main--site-analytics">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <p class="sa-eyebrow">Content & Traffic</p>
+            <h1 class="admin-main-title">Site Analytics</h1>
+            <p class="sa-subtitle">
+              Content statistics, visitor analytics, and external tool integrations.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brief Cards -->
+      <section class="sa-briefs">
+        <button class="sa-brief-card sa-brief-card--news" type="button" data-tab-target="news" aria-label="View News details">
+          <div class="sa-brief-card__header">
+            <svg class="sa-brief-card__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+              <path d="M18 14h-8 M15 18h-5 M10 6h8v4h-8V6Z" />
+            </svg>
+            <h3 class="sa-brief-card__title">News</h3>
+          </div>
+          <div class="sa-brief-card__stats">
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{newsTotal}</span>
+              <span class="sa-brief-stat__label">Posts</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{newsPublished}</span>
+              <span class="sa-brief-stat__label">Published</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{Object.keys(newsByCategory).length}</span>
+              <span class="sa-brief-stat__label">Categories</span>
+            </div>
+          </div>
+        </button>
+        <button class="sa-brief-card sa-brief-card--handbook" type="button" data-tab-target="handbook" aria-label="View Handbook details">
+          <div class="sa-brief-card__header">
+            <svg class="sa-brief-card__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+            </svg>
+            <h3 class="sa-brief-card__title">Handbook</h3>
+          </div>
+          <div class="sa-brief-card__stats">
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{handbookTotal}</span>
+              <span class="sa-brief-stat__label">Terms</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{handbookPublished}</span>
+              <span class="sa-brief-stat__label">Published</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{handbookFavourites}</span>
+              <span class="sa-brief-stat__label">Starred</span>
+            </div>
+          </div>
+        </button>
+        <button class="sa-brief-card sa-brief-card--blog" type="button" data-tab-target="blog" aria-label="View Blog details">
+          <div class="sa-brief-card__header">
+            <svg class="sa-brief-card__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+            <h3 class="sa-brief-card__title">Blog</h3>
+          </div>
+          <div class="sa-brief-card__stats">
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{blogTotal}</span>
+              <span class="sa-brief-stat__label">Posts</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{blogPublished}</span>
+              <span class="sa-brief-stat__label">Published</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{Object.keys(blogByLocale).length}</span>
+              <span class="sa-brief-stat__label">Locales</span>
+            </div>
+          </div>
+        </button>
+      </section>
+
+      <!-- Tab Bar -->
+      <nav class="sa-tab-bar" role="tablist">
+        <button class="sa-tab sa-tab--active" role="tab" aria-selected="true" aria-controls="tab-traffic" id="tab-btn-traffic">
+          <span class="sa-tab__dot sa-tab__dot--traffic"></span>
+          Traffic
+        </button>
+        <button class="sa-tab" role="tab" aria-selected="false" aria-controls="tab-news" id="tab-btn-news">
+          <span class="sa-tab__dot sa-tab__dot--news"></span>
+          News
+        </button>
+        <button class="sa-tab" role="tab" aria-selected="false" aria-controls="tab-handbook" id="tab-btn-handbook">
+          <span class="sa-tab__dot sa-tab__dot--handbook"></span>
+          Handbook
+        </button>
+        <button class="sa-tab" role="tab" aria-selected="false" aria-controls="tab-blog" id="tab-btn-blog">
+          <span class="sa-tab__dot sa-tab__dot--blog"></span>
+          Blog
+        </button>
+      </nav>
+
+      <!-- ═══ News Tab ═══ -->
+      <div id="tab-news" role="tabpanel" class="sa-tab-panel" hidden>
+        <section class="sa-stats-grid sa-stats-grid--3">
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Total Posts</span>
+            <strong class="sa-stat-card__value">{newsTotal}</strong>
+            <span class="sa-stat-card__detail">All news articles</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Published</span>
+            <strong class="sa-stat-card__value">{newsPublished}</strong>
+            <span class="sa-stat-card__detail">Live on site</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Draft</span>
+            <strong class="sa-stat-card__value">{newsDraft}</strong>
+            <span class="sa-stat-card__detail">Awaiting review</span>
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Category</h2>
+          <div class="sa-chips">
+            {Object.entries(newsByCategory).map(([cat, count]) => (
+              <span class="sa-chip">
+                <span class="sa-chip__label">{cat}</span>
+                <strong class="sa-chip__value">{count}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Locale</h2>
+          <div class="sa-chips">
+            {Object.entries(newsByLocale).map(([loc, count]) => (
+              <span class="sa-chip">
+                <span class="sa-chip__label">{loc.toUpperCase()}</span>
+                <strong class="sa-chip__value">{count}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {Object.keys(newsByType).length > 1 && (
+          <section class="sa-section">
+            <h2 class="sa-section__title">By Type</h2>
+            <div class="sa-chips">
+              {Object.entries(newsByType).map(([t, count]) => (
+                <span class="sa-chip">
+                  <span class="sa-chip__label">{t}</span>
+                  <strong class="sa-chip__value">{count}</strong>
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">Recent Posts</h2>
+          {recentNews.length === 0 ? (
+            <p class="sa-empty">No news posts yet.</p>
+          ) : (
+            <ul class="sa-recent-list">
+              {recentNews.map((p) => (
+                <li class="sa-recent-item">
+                  <a href={`/admin/edit/${p.slug}`} class="sa-recent-item__link">
+                    <span class="sa-recent-item__title">{p.title}</span>
+                    <span class="sa-recent-item__meta">
+                      <span class={`sa-badge sa-badge--${p.status}`}>{p.status}</span>
+                      {p.locale && <span class="sa-badge sa-badge--locale">{p.locale.toUpperCase()}</span>}
+                      {p.category && <span class="sa-badge sa-badge--source">{p.category}</span>}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <!-- ═══ Handbook Tab ═══ -->
+      <div id="tab-handbook" role="tabpanel" class="sa-tab-panel" hidden>
+        <section class="sa-stats-grid sa-stats-grid--4">
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Total Terms</span>
+            <strong class="sa-stat-card__value">{handbookTotal}</strong>
+            <span class="sa-stat-card__detail">All handbook entries</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Published</span>
+            <strong class="sa-stat-card__value">{handbookPublished}</strong>
+            <span class="sa-stat-card__detail">Live on site</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Draft</span>
+            <strong class="sa-stat-card__value">{handbookDraft}</strong>
+            <span class="sa-stat-card__detail">Awaiting review</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Favourites</span>
+            <strong class="sa-stat-card__value">{handbookFavourites}</strong>
+            <span class="sa-stat-card__detail">Starred terms</span>
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Source</h2>
+          <div class="sa-chips">
+            {Object.entries(handbookBySource).map(([src, count]) => (
+              <span class="sa-chip">
+                <span class="sa-chip__label">{src}</span>
+                <strong class="sa-chip__value">{count}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {handbookCategories.length > 0 && (
+          <section class="sa-section">
+            <h2 class="sa-section__title">By Category</h2>
+            <div class="sa-chips">
+              {handbookCategories.map(([cat, count]) => (
+                <span class="sa-chip">
+                  <span class="sa-chip__label">{getHandbookCategoryLabel('en', cat) || cat}</span>
+                  <strong class="sa-chip__value">{count}</strong>
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">Recent Terms</h2>
+          {recentHandbook.length === 0 ? (
+            <p class="sa-empty">No handbook terms yet.</p>
+          ) : (
+            <ul class="sa-recent-list">
+              {recentHandbook.map((t) => (
+                <li class="sa-recent-item">
+                  <a href={`/admin/handbook/edit/${t.slug}`} class="sa-recent-item__link">
+                    <span class="sa-recent-item__title">{t.term}</span>
+                    <span class="sa-recent-item__meta">
+                      <span class={`sa-badge sa-badge--${t.status}`}>{t.status}</span>
+                      {t.source && <span class="sa-badge sa-badge--source">{t.source}</span>}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <!-- ═══ Blog Tab ═══ -->
+      <div id="tab-blog" role="tabpanel" class="sa-tab-panel" hidden>
+        <section class="sa-stats-grid sa-stats-grid--3">
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Total Posts</span>
+            <strong class="sa-stat-card__value">{blogTotal}</strong>
+            <span class="sa-stat-card__detail">All blog entries</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Published</span>
+            <strong class="sa-stat-card__value">{blogPublished}</strong>
+            <span class="sa-stat-card__detail">Live on site</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Draft</span>
+            <strong class="sa-stat-card__value">{blogDraft}</strong>
+            <span class="sa-stat-card__detail">Awaiting review</span>
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Locale</h2>
+          <div class="sa-chips">
+            {Object.entries(blogByLocale).map(([loc, count]) => (
+              <span class="sa-chip">
+                <span class="sa-chip__label">{loc.toUpperCase()}</span>
+                <strong class="sa-chip__value">{count}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Category</h2>
+          <div class="sa-chips">
+            {Object.entries(blogByCategory).map(([cat, count]) => (
+              <span class="sa-chip">
+                <span class="sa-chip__label">{cat}</span>
+                <strong class="sa-chip__value">{count}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Source</h2>
+          <div class="sa-chips">
+            {Object.entries(blogBySource).map(([src, count]) => (
+              <span class="sa-chip">
+                <span class="sa-chip__label">{src}</span>
+                <strong class="sa-chip__value">{count}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">Recent Posts</h2>
+          {recentBlog.length === 0 ? (
+            <p class="sa-empty">No blog posts yet.</p>
+          ) : (
+            <ul class="sa-recent-list">
+              {recentBlog.map((p) => (
+                <li class="sa-recent-item">
+                  <a href={`/admin/blog/edit/${p.slug}`} class="sa-recent-item__link">
+                    <span class="sa-recent-item__title">{p.title}</span>
+                    <span class="sa-recent-item__meta">
+                      <span class={`sa-badge sa-badge--${p.status}`}>{p.status}</span>
+                      {p.locale && <span class="sa-badge sa-badge--locale">{p.locale.toUpperCase()}</span>}
+                      {p.source && <span class="sa-badge sa-badge--source">{p.source}</span>}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <!-- ═══ Traffic Tab ═══ -->
+      <div id="tab-traffic" role="tabpanel" class="sa-tab-panel">
+
+        <!-- GA4 Summary Cards -->
+        <div id="ga4-loading" class="sa-ga4-loading">
+          <div class="sa-ga4-spinner"></div>
+          <span>Loading GA4 analytics…</span>
+        </div>
+        <div id="ga4-error" class="sa-info-box" style="display:none"></div>
+        <div id="ga4-content" style="display:none">
+          <section class="sa-stats-grid sa-stats-grid--5">
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Pageviews</span>
+              <strong class="sa-stat-card__value" id="ga4-pageviews">—</strong>
+              <span class="sa-stat-card__detail" id="ga4-period"></span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Sessions</span>
+              <strong class="sa-stat-card__value" id="ga4-sessions">—</strong>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Users</span>
+              <strong class="sa-stat-card__value" id="ga4-users">—</strong>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Avg Duration</span>
+              <strong class="sa-stat-card__value" id="ga4-duration">—</strong>
+              <span class="sa-stat-card__detail">seconds</span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Bounce Rate</span>
+              <strong class="sa-stat-card__value" id="ga4-bounce">—</strong>
+            </div>
+          </section>
+
+          <!-- Charts -->
+          <section class="sa-section">
+            <h2 class="sa-section__title">Daily Pageviews</h2>
+            <div class="sa-chart-wrap">
+              <canvas id="ga4-chart-daily"></canvas>
+            </div>
+          </section>
+
+          <div class="sa-chart-row">
+            <section class="sa-section sa-section--half">
+              <h2 class="sa-section__title">Traffic Sources</h2>
+              <div class="sa-chart-wrap sa-chart-wrap--sm">
+                <canvas id="ga4-chart-sources"></canvas>
+              </div>
+            </section>
+            <section class="sa-section sa-section--half">
+              <h2 class="sa-section__title">Top Countries</h2>
+              <div class="sa-chart-wrap sa-chart-wrap--sm">
+                <canvas id="ga4-chart-countries"></canvas>
+              </div>
+            </section>
+          </div>
+
+          <!-- Top Pages Table -->
+          <section class="sa-section">
+            <h2 class="sa-section__title">Top Pages</h2>
+            <div class="sa-table-wrap">
+              <table class="sa-table">
+                <thead>
+                  <tr>
+                    <th>Page</th>
+                    <th>Pageviews</th>
+                    <th>Sessions</th>
+                  </tr>
+                </thead>
+                <tbody id="ga4-top-pages"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- External Links -->
+        <section class="sa-section sa-section--links">
+          <h2 class="sa-section__title">External Dashboards</h2>
+          <div class="sa-links-row">
+            {ga4PropertyId ? (
+              <a
+                href={`https://analytics.google.com/analytics/web/#/p${ga4PropertyId}/reports/reportinghub`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="sa-external-link"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3" />
+                </svg>
+                Open GA4 Dashboard
+              </a>
+            ) : (
+              <span class="sa-external-link sa-external-link--disabled">GA4 not configured</span>
+            )}
+            {clarityId ? (
+              <a
+                href={`https://clarity.microsoft.com/projects/view/${clarityId}/dashboard`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="sa-external-link"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3" />
+                </svg>
+                Open Clarity Dashboard
+              </a>
+            ) : (
+              <span class="sa-external-link sa-external-link--disabled">Clarity not configured</span>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
+<script is:inline nonce={nonce}>
+  (function () {
+    /* ── Tab switching ─────────────────────────────── */
+    var tabs = document.querySelectorAll('.sa-tab');
+    var panels = document.querySelectorAll('.sa-tab-panel');
+    var briefCards = document.querySelectorAll('.sa-brief-card[data-tab-target]');
+    var ga4Loaded = false;
+
+    function activateTab(id) {
+      tabs.forEach(function (t) {
+        var active = t.id === 'tab-btn-' + id;
+        t.classList.toggle('sa-tab--active', active);
+        t.setAttribute('aria-selected', String(active));
+      });
+      panels.forEach(function (p) {
+        p.hidden = p.id !== 'tab-' + id;
+      });
+      briefCards.forEach(function (c) {
+        c.classList.toggle('sa-brief-card--selected', c.getAttribute('data-tab-target') === id);
+      });
+      history.replaceState(null, '', '#' + id);
+      if (id === 'traffic' && !ga4Loaded) {
+        ga4Loaded = true;
+        loadGA4();
+      }
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        activateTab(t.id.replace('tab-btn-', ''));
+      });
+    });
+    briefCards.forEach(function (c) {
+      c.addEventListener('click', function () {
+        activateTab(c.getAttribute('data-tab-target'));
+      });
+    });
+
+    var hash = location.hash.replace('#', '');
+    var initial = ['traffic', 'news', 'handbook', 'blog'].indexOf(hash) !== -1 ? hash : 'traffic';
+    activateTab(initial);
+
+    /* ── GA4 fetch & render ────────────────────────── */
+    function fmt(n) {
+      return n.toLocaleString('en-US');
+    }
+
+    function loadGA4() {
+      var loading = document.getElementById('ga4-loading');
+      var errBox = document.getElementById('ga4-error');
+      var content = document.getElementById('ga4-content');
+
+      fetch('/api/admin/ga4?days=30')
+        .then(function (r) {
+          if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || d.error || 'Failed'); });
+          return r.json();
+        })
+        .then(function (data) {
+          loading.style.display = 'none';
+          content.style.display = 'block';
+          renderGA4(data);
+        })
+        .catch(function (err) {
+          loading.style.display = 'none';
+          errBox.style.display = 'flex';
+          errBox.innerHTML =
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
+            '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4 M12 8h.01"/></svg>' +
+            '<span>GA4 data unavailable: ' + err.message + '</span>';
+        });
+    }
+
+    function renderGA4(d) {
+      document.getElementById('ga4-pageviews').textContent = fmt(d.summary.pageviews);
+      document.getElementById('ga4-sessions').textContent = fmt(d.summary.sessions);
+      document.getElementById('ga4-users').textContent = fmt(d.summary.users);
+      document.getElementById('ga4-duration').textContent = d.summary.avg_session_duration.toFixed(1);
+      document.getElementById('ga4-bounce').textContent = (d.summary.bounce_rate * 100).toFixed(1) + '%';
+      document.getElementById('ga4-period').textContent = d.period_start + ' → ' + d.period_end;
+
+      /* Chart theme colors */
+      var style = getComputedStyle(document.documentElement);
+      var accent = style.getPropertyValue('--color-accent').trim() || '#8B5F3C';
+      var textMuted = style.getPropertyValue('--color-text-muted').trim() || '#999';
+      var border = style.getPropertyValue('--color-border').trim() || '#ddd';
+
+      var chartDefaults = {
+        color: textMuted,
+        borderColor: border,
+      };
+      Chart.defaults.color = textMuted;
+      Chart.defaults.borderColor = border;
+      Chart.defaults.font.family = style.getPropertyValue('--font-ui').trim() || 'Lora, serif';
+      Chart.defaults.font.size = 11;
+
+      /* Daily Pageviews — line chart */
+      var dailyCtx = document.getElementById('ga4-chart-daily');
+      if (dailyCtx && d.daily_pageviews.length) {
+        new Chart(dailyCtx, {
+          type: 'line',
+          data: {
+            labels: d.daily_pageviews.map(function (r) {
+              return r.date.slice(5); /* MM-DD */
+            }),
+            datasets: [{
+              label: 'Pageviews',
+              data: d.daily_pageviews.map(function (r) { return r.pageviews; }),
+              borderColor: accent,
+              backgroundColor: accent + '18',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      /* Traffic Sources — doughnut */
+      var srcCtx = document.getElementById('ga4-chart-sources');
+      if (srcCtx && d.traffic_sources.length) {
+        var srcPalette = ['#8B5F3C', '#C3A370', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+        new Chart(srcCtx, {
+          type: 'doughnut',
+          data: {
+            labels: d.traffic_sources.map(function (r) { return r.source; }),
+            datasets: [{
+              data: d.traffic_sources.map(function (r) { return r.sessions; }),
+              backgroundColor: srcPalette.slice(0, d.traffic_sources.length),
+              borderWidth: 0,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } },
+            },
+          },
+        });
+      }
+
+      /* Countries — horizontal bar */
+      var countryCtx = document.getElementById('ga4-chart-countries');
+      if (countryCtx && d.countries.length) {
+        new Chart(countryCtx, {
+          type: 'bar',
+          data: {
+            labels: d.countries.map(function (r) { return r.country; }),
+            datasets: [{
+              label: 'Sessions',
+              data: d.countries.map(function (r) { return r.sessions; }),
+              backgroundColor: accent + '60',
+              borderColor: accent,
+              borderWidth: 1,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true, grid: { display: false } },
+              y: { grid: { display: false } },
+            },
+          },
+        });
+      }
+
+      /* Top Pages table */
+      var tbody = document.getElementById('ga4-top-pages');
+      if (tbody && d.top_pages.length) {
+        tbody.innerHTML = d.top_pages.map(function (p) {
+          return '<tr>' +
+            '<td class="sa-table__page">' + p.page + '</td>' +
+            '<td>' + fmt(p.pageviews) + '</td>' +
+            '<td>' + fmt(p.sessions) + '</td>' +
+            '</tr>';
+        }).join('');
+      }
+    }
+  })();
+</script>
+
+<style>
+  @keyframes saSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .admin-main--site-analytics {
+    max-width: 1200px;
+  }
+
+  .sa-eyebrow {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .sa-subtitle {
+    margin: 0.4rem 0 0;
+    max-width: 52rem;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  /* ─── Brief Cards ───────────────────────────── */
+  .sa-briefs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .sa-brief-card {
+    position: relative;
+    display: block;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--color-border);
+    border-top: 3px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    animation: saSlideUp 0.4s ease both;
+  }
+
+  .sa-brief-card:nth-child(2) { animation-delay: 0.06s; }
+  .sa-brief-card:nth-child(3) { animation-delay: 0.12s; }
+
+  .sa-brief-card:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+    box-shadow: 0 2px 12px var(--color-shadow);
+    transform: translateY(-1px);
+  }
+
+  .sa-brief-card--news { border-top-color: #6366f1; }
+  .sa-brief-card--handbook { border-top-color: var(--color-success); }
+  .sa-brief-card--blog { border-top-color: var(--color-warning); }
+
+  .sa-brief-card--selected.sa-brief-card--news { box-shadow: 0 1px 10px color-mix(in srgb, #6366f1 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--handbook { box-shadow: 0 1px 10px color-mix(in srgb, var(--color-success) 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--blog { box-shadow: 0 1px 10px color-mix(in srgb, var(--color-warning) 15%, transparent); }
+
+  .sa-brief-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .sa-brief-card__icon { color: var(--color-text-muted); flex-shrink: 0; opacity: 0.7; }
+
+  .sa-brief-card__title {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .sa-brief-card__stats { display: flex; gap: 1.3rem; }
+  .sa-brief-stat { display: flex; flex-direction: column; }
+
+  .sa-brief-stat__value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-text-primary);
+  }
+
+  .sa-brief-stat__label {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  /* ─── Tab Bar ───────────────────────────────── */
+  .sa-tab-bar {
+    display: flex;
+    gap: 0.2rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sa-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.1rem;
+    border: none;
+    background: none;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.18s, border-color 0.18s, background 0.18s;
+  }
+
+  .sa-tab:hover { color: var(--color-text-primary); background: var(--color-accent-subtle); }
+  .sa-tab--active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+  .sa-tab__dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    opacity: 0.4;
+    transition: opacity 0.18s;
+  }
+
+  .sa-tab--active .sa-tab__dot { opacity: 1; }
+  .sa-tab__dot--traffic { background: #6366f1; }
+  .sa-tab__dot--news { background: var(--color-accent); }
+  .sa-tab__dot--handbook { background: var(--color-success); }
+  .sa-tab__dot--blog { background: var(--color-warning); }
+
+  /* ─── Tab Panels ────────────────────────────── */
+  .sa-tab-panel { animation: saSlideUp 0.3s ease both; }
+
+  /* ─── Stats Grid ────────────────────────────── */
+  .sa-stats-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .sa-stats-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sa-stats-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .sa-stat-card {
+    position: relative;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--color-border);
+    border-left: 3px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .sa-stat-card:hover {
+    border-left-color: var(--color-accent);
+    box-shadow: 0 1px 6px var(--color-shadow);
+  }
+
+  .sa-stat-card__label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .sa-stat-card__value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--color-text-primary);
+  }
+
+  .sa-stat-card__detail {
+    display: block;
+    margin-top: 0.4rem;
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  /* ─── Sections ──────────────────────────────── */
+  .sa-section {
+    margin-bottom: 1rem;
+    padding: 1.15rem 1.2rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 74%, transparent);
+  }
+
+  .sa-section__title {
+    margin: 0 0 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .sa-section__hint {
+    margin: -0.4rem 0 0.85rem;
+    color: var(--color-text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  /* ─── Chips ─────────────────────────────────── */
+  .sa-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  .sa-chip {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 78%, transparent);
+    font-size: 0.82rem;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+
+  .sa-chip:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent-subtle) 60%, var(--color-bg-secondary));
+    transform: translateY(-1px);
+  }
+
+  .sa-chip__label { color: var(--color-text-secondary); font-size: 0.78rem; }
+  .sa-chip__value { font-family: var(--font-code); font-size: 0.82rem; color: var(--color-text-primary); }
+
+  /* ─── Recent List ───────────────────────────── */
+  .sa-recent-list { list-style: none; padding: 0; margin: 0; }
+
+  .sa-recent-item {
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  }
+  .sa-recent-item:last-child { border-bottom: none; }
+
+  .sa-recent-item__link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.6rem;
+    text-decoration: none;
+    color: var(--color-text-primary);
+    transition: background 0.15s, padding-left 0.15s;
+  }
+
+  .sa-recent-item__link:hover {
+    background: color-mix(in srgb, var(--color-accent-subtle) 50%, var(--color-bg-secondary));
+    padding-left: 0.9rem;
+  }
+
+  .sa-recent-item__title {
+    font-size: 0.88rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sa-recent-item__meta { display: flex; gap: 0.35rem; flex-shrink: 0; }
+
+  /* ─── Badges ────────────────────────────────── */
+  .sa-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-family: var(--font-ui);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+  }
+
+  .sa-badge--published {
+    color: var(--color-success);
+    border-color: color-mix(in srgb, var(--color-success) 60%, var(--color-border));
+    background: color-mix(in srgb, var(--color-success) 12%, var(--color-bg-secondary));
+  }
+
+  .sa-badge--draft { color: var(--color-text-muted); }
+
+  .sa-badge--locale {
+    color: var(--color-accent);
+    border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+  }
+
+  .sa-badge--source { color: var(--color-text-muted); font-style: italic; }
+
+  /* ─── Info Box ──────────────────────────────── */
+  .sa-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-top: 0.85rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border);
+    border-left: 3px solid color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+    background: color-mix(in srgb, var(--color-bg-secondary) 40%, transparent);
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .sa-info-box__icon { flex-shrink: 0; margin-top: 1px; opacity: 0.55; }
+  .sa-info-box code {
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    padding: 0.1rem 0.3rem;
+    background: color-mix(in srgb, var(--color-bg-tertiary) 80%, transparent);
+    border: 1px solid var(--color-border);
+  }
+
+  /* ─── External Link ─────────────────────────── */
+  .sa-external-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    padding: 0.65rem 1.1rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent-subtle) 40%, var(--color-bg-secondary));
+    color: var(--color-accent);
+    text-decoration: none;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+
+  .sa-external-link:hover {
+    background: color-mix(in srgb, var(--color-accent-subtle) 80%, var(--color-bg-secondary));
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+  }
+
+  .sa-external-link--disabled {
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .sa-empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  /* ─── GA4 Loading ────────────────────────────── */
+  .sa-ga4-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+  }
+
+  @keyframes saSpinGA4 {
+    to { transform: rotate(360deg); }
+  }
+
+  .sa-ga4-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: saSpinGA4 0.7s linear infinite;
+  }
+
+  /* ─── 5-col stats grid ───────────────────────── */
+  .sa-stats-grid--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+  /* ─── Charts ─────────────────────────────────── */
+  .sa-chart-wrap {
+    position: relative;
+    height: 260px;
+  }
+
+  .sa-chart-wrap--sm {
+    height: 220px;
+  }
+
+  .sa-chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .sa-section--half {
+    margin-bottom: 0;
+  }
+
+  /* ─── Links row ──────────────────────────────── */
+  .sa-section--links {
+    margin-top: 0.5rem;
+  }
+
+  .sa-links-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .sa-links-row .sa-external-link {
+    margin-top: 0;
+  }
+
+  /* ─── Top Pages Table ────────────────────────── */
+  .sa-table-wrap {
+    overflow-x: auto;
+  }
+
+  .sa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .sa-table th {
+    text-align: left;
+    padding: 0.55rem 0.7rem;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sa-table td {
+    padding: 0.55rem 0.7rem;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  }
+
+  .sa-table tr:hover td {
+    background: color-mix(in srgb, var(--color-accent-subtle) 30%, transparent);
+  }
+
+  .sa-table__page {
+    font-family: var(--font-code);
+    font-size: 0.78rem;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ─── Responsive ────────────────────────────── */
+  @media (max-width: 900px) {
+    .sa-briefs { grid-template-columns: 1fr; }
+    .sa-chart-row { grid-template-columns: 1fr; }
+    .sa-stats-grid--5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 720px) {
+    .sa-stats-grid--4,
+    .sa-stats-grid--3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sa-stats-grid--5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sa-brief-card__stats { flex-wrap: wrap; }
+    .sa-tab { padding: 0.5rem 0.8rem; font-size: 0.74rem; }
+  }
+
+  @media (max-width: 520px) {
+    .sa-stats-grid--4,
+    .sa-stats-grid--3,
+    .sa-stats-grid--5 {
+      grid-template-columns: 1fr;
+    }
+    .sa-section { padding: 0.9rem; }
+    .sa-tab__dot { display: none; }
+  }
+</style>

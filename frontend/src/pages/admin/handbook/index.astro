@@ -18,7 +18,7 @@ let fetchError: string | null = null;
 
 const { data: terms, error } = await supabase
   .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, updated_at, published_at, source')
+  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, body_basic_ko, body_basic_en, body_advanced_ko, body_advanced_en, updated_at, published_at, source')
   .order('updated_at', { ascending: false });
 
 if (error) {
@@ -95,6 +95,14 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
         </div>
       </div>
 
+      <!-- Bulk action bar -->
+      <div class="handbook-bulk-bar" id="bulk-bar" hidden>
+        <label class="handbook-bulk-count" id="bulk-count">0 selected</label>
+        <button class="admin-btn admin-btn-primary admin-btn-sm" id="bulk-publish">Publish</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-archive">Archive</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-deselect">Deselect All</button>
+      </div>
+
       {fetchError ? (
         <NewsprintNotice
           variant="unauthorized"
@@ -114,33 +122,35 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
                 data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
                 data-categories={(term.categories || []).join(',')}
                 data-source={term.source || 'manual'}
+                data-id={term.id}
               >
+                <input type="checkbox" class="handbook-bulk-check" data-bulk-id={term.id} />
                 <div class="admin-list-info">
                   <div class="admin-list-title">
                     <a href={`/admin/handbook/edit/${term.slug}`}>{term.term}</a>
                     {term.korean_name && <span class="admin-list-subtitle"> · {term.korean_name}</span>}
                   </div>
-                  <div class="admin-list-meta">
+                  <div class="handbook-meta-row">
                     <span class={`admin-status-badge admin-status-badge--${term.status}`}>{term.status}</span>
-                    <span class={`admin-lang-badge ${term.definition_ko ? 'admin-lang-badge--ready' : 'admin-lang-badge--missing'}`}>
-                      KO {term.definition_ko ? '✓' : '✗'}
-                    </span>
-                    <span class={`admin-lang-badge ${term.definition_en ? 'admin-lang-badge--ready' : 'admin-lang-badge--missing'}`}>
-                      EN {term.definition_en ? '✓' : '✗'}
+                    <span class="handbook-completeness" title="KO Basic / KO Adv / EN Basic / EN Adv">
+                      <span class={`handbook-dot ${term.body_basic_ko ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.body_advanced_ko ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.body_basic_en ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.body_advanced_en ? 'handbook-dot--ok' : ''}`}></span>
                     </span>
                     {term.source && term.source !== 'manual' && (
                       <span class={`admin-source-badge admin-source-badge--${term.source}`}>
                         {term.source === 'pipeline' ? 'Pipeline' : 'AI'}
                       </span>
                     )}
-                    {(term.categories || []).length > 0 && (
-                      <>
-                        <span class="admin-meta-sep">·</span>
-                        <span>{(term.categories || []).map((category: string) => getHandbookCategoryLabel('en', category)).join(' · ')}</span>
-                      </>
-                    )}
-                    <span class="admin-meta-sep">·</span>
-                    <span class="admin-meta-date">Updated {new Date(term.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                  </div>
+                  {(term.categories || []).length > 0 && (
+                    <div class="handbook-meta-row handbook-meta-tags">
+                      <span>{(term.categories || []).map((category: string) => getHandbookCategoryLabel('en', category)).join(' · ')}</span>
+                    </div>
+                  )}
+                  <div class="handbook-meta-row handbook-meta-date">
+                    Updated {new Date(term.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
                   </div>
                 </div>
                 <div class="admin-list-actions">
@@ -148,9 +158,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
                   <a href={`/admin/handbook/edit/${term.slug}?mode=preview`} class="admin-btn">Preview</a>
                   {term.status === 'draft' ? (
                     <button class="admin-btn admin-btn-primary" data-action="publish" data-id={term.id}>Publish</button>
-                  ) : (
+                  ) : term.status === 'published' ? (
                     <button class="admin-btn" data-action="unpublish" data-id={term.id}>Unpublish</button>
-                  )}
+                  ) : null}
                   <button class="admin-btn-danger" data-action="delete" data-id={term.id} data-title={term.term}>Delete</button>
                 </div>
               </li>
@@ -219,6 +229,75 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     width: auto;
   }
 
+  .handbook-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: var(--admin-surface-alt, #f0f4ff);
+    border: 1px solid var(--admin-border, #d1d5db);
+    border-radius: 6px;
+    font-size: 0.82rem;
+  }
+
+  .handbook-bulk-count {
+    font-weight: 600;
+    margin-right: auto;
+  }
+
+  .admin-btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.78rem;
+  }
+
+  .handbook-bulk-check {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    accent-color: var(--admin-primary, #3b82f6);
+    align-self: flex-start;
+    margin-top: 0.35rem;
+  }
+
+  .handbook-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .handbook-meta-tags {
+    color: var(--admin-text-secondary, #6b7280);
+  }
+
+  .handbook-meta-date {
+    color: var(--admin-text-tertiary, #9ca3af);
+    font-size: 0.75rem;
+  }
+
+  .handbook-completeness {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .handbook-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--admin-muted, #d1d5db);
+  }
+
+  .handbook-dot--ok {
+    background: #22c55e;
+  }
+
   @media (max-width: 640px) {
     .admin-list-toolbar-row {
       flex-direction: column;
@@ -243,6 +322,25 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     .admin-list-toolbar-filters {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    .admin-list-item {
+      flex-wrap: wrap;
+    }
+
+    .admin-list-info {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+
+    .admin-list-actions {
+      flex: 1 1 100%;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+
+    .handbook-bulk-check {
+      margin-top: 0.2rem;
     }
   }
 </style>
@@ -337,6 +435,52 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     });
 
     applyFilter();
+
+    // --- Bulk selection ---
+    const bulkBar = document.getElementById('bulk-bar');
+    const bulkCount = document.getElementById('bulk-count');
+    const checkboxes = list.querySelectorAll('.handbook-bulk-check');
+
+    function updateBulkBar() {
+      const checked = list.querySelectorAll('.handbook-bulk-check:checked');
+      const count = checked.length;
+      if (bulkBar) bulkBar.hidden = count === 0;
+      if (bulkCount) bulkCount.textContent = `${count} selected`;
+    }
+
+    checkboxes.forEach((cb) => cb.addEventListener('change', updateBulkBar));
+
+    document.getElementById('bulk-deselect')?.addEventListener('click', () => {
+      checkboxes.forEach((cb) => { cb.checked = false; });
+      updateBulkBar();
+    });
+
+    async function bulkAction(action) {
+      const checked = list.querySelectorAll('.handbook-bulk-check:checked');
+      const ids = Array.from(checked).map((cb) => cb.dataset.bulkId);
+      if (ids.length === 0) return;
+
+      const label = action === 'publish' ? 'Publish' : 'Archive';
+      if (!window.confirm(`${label} ${ids.length} term(s)?`)) return;
+
+      const res = await fetch('/api/admin/handbook/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids }),
+      });
+
+      const data = await res.json();
+      if (data.errors?.length > 0) {
+        const reasons = data.errors.map((e) => e.reason).join(', ');
+        window.alert(`${data.success} succeeded, ${data.failed} failed: ${reasons}`);
+      } else {
+        window.alert(`${data.success} term(s) ${action === 'publish' ? 'published' : 'archived'}.`);
+      }
+      window.location.reload();
+    }
+
+    document.getElementById('bulk-publish')?.addEventListener('click', () => bulkAction('publish'));
+    document.getElementById('bulk-archive')?.addEventListener('click', () => bulkAction('archive'));
   }
 
   document.addEventListener('DOMContentLoaded', initHandbookAdmin);

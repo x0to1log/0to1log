@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { error } = await supabase
     .from('handbook_terms')
-    .delete()
+    .update({ status: 'archived', updated_at: new Date().toISOString() })
     .eq('id', id);
 
   if (error) {
