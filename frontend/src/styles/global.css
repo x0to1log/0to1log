@@ -169,22 +169,22 @@
    PINK THEME
    =========================== */
 [data-theme="pink"] {
-  --color-bg-primary: #FFF0F3;
-  --color-bg-secondary: #FFCCD5;
-  --color-bg-tertiary: #FFB3C1;
-  --color-input-surface: #FFE1E7;
+  --color-bg-primary: #FFF5F7;
+  --color-bg-secondary: #FFE8ED;
+  --color-bg-tertiary: #FFD8E0;
+  --color-input-surface: #FFF0F4;
   --color-text-primary: #2D1F22;
   --color-text-secondary: #4D3B40;
   --color-text-muted: #6E5459;
-  --color-border: #FF8FA3;
-  --color-accent: #FF758F;
-  --color-accent-hover: #FF5C7A;
-  --color-accent-glow: rgba(255, 117, 143, 0.18);
-  --color-accent-subtle: rgba(255, 117, 143, 0.10);
+  --color-border: #F4A8B8;
+  --color-accent: #E8496A;
+  --color-accent-hover: #D43860;
+  --color-accent-glow: rgba(232, 73, 106, 0.18);
+  --color-accent-subtle: rgba(232, 73, 106, 0.10);
   --color-success: #3D7A40;
   --color-warning: #A06E28;
   --color-error: #C9384A;
-  --color-shadow: rgba(60, 30, 40, 0.15);
+  --color-shadow: rgba(60, 20, 30, 0.15);
 
   /* Category Colors */
   --color-cat-ainews: #A34535;
@@ -194,12 +194,12 @@
   --color-cat-work-note: #4E6770;
   --color-cat-daily: #8A6156;
 
-  /* Shiki — Rose */
+  /* Shiki — Cherry */
   --shiki-token-keyword: #C9384A;
   --shiki-token-string: #3A6A4C;
   --shiki-token-function: #4B5B8A;
-  --shiki-token-comment: #6E5459;
-  --shiki-token-constant: #FF758F;
+  --shiki-token-comment: #8E6070;
+  --shiki-token-constant: #E8496A;
   --shiki-token-punctuation: #2D1F22;
   --shiki-color-text: #2D1F22;
   --shiki-color-background: var(--color-bg-tertiary);
@@ -294,6 +294,11 @@
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
   }
+}
+
+body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
+  top: calc(3.5rem + 0.5rem);
+  max-height: calc(100vh - 3.5rem - 1rem);
 }
 
 .newsprint-rail::-webkit-scrollbar {
@@ -1280,6 +1285,23 @@ html {
   color: var(--color-text-secondary);
 }
 
+.site-page-label--link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 150ms ease;
+  align-items: center;
+  gap: 0.2em;
+}
+
+.site-page-label--link:hover {
+  color: var(--color-accent);
+}
+
+.site-page-label-arrow {
+  font-style: normal;
+  margin-right: 0.1em;
+}
+
 .site-header--fixed {
   position: fixed;
   top: 0;
@@ -1451,6 +1473,10 @@ html {
 
   .site-page-label {
     display: block;
+  }
+
+  .site-page-label--link {
+    display: flex;
   }
 
   .site-utility-btn {
@@ -5657,6 +5683,7 @@ body.auth-prompt-open {
   -webkit-backdrop-filter: blur(8px);
   padding: 0.5rem 0;
   margin: -0.5rem 0 1rem;
+  transition: top 300ms ease;
 }
 
 .handbook-search-sticky .handbook-search-input {
@@ -7172,10 +7199,10 @@ pre:hover .blog-code-copy {
     right: auto;
     bottom: auto;
     z-index: auto;
-    padding: 0.72rem;
-    background: color-mix(in srgb, var(--color-bg-primary) 76%, var(--color-bg-secondary));
-    border: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
-    border-radius: 1.15rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
     box-shadow: none;
   }
 
@@ -7230,20 +7257,17 @@ pre:hover .blog-code-copy {
     width: 100%;
     min-height: 3.35rem;
     padding: 0.64rem 0.46rem;
-    border-color: color-mix(in srgb, var(--color-border) 44%, transparent);
-    background: color-mix(in srgb, var(--color-bg-primary) 90%, transparent);
+    background: transparent;
     color: var(--color-text-secondary);
     box-shadow: none;
     transition:
-      border-color 160ms ease,
       background-color 160ms ease,
       color 160ms ease;
   }
 
   .reading-actions--rail-placement .reading-actions__button:hover {
     color: var(--color-text-primary);
-    border-color: color-mix(in srgb, var(--color-border) 60%, var(--color-accent-subtle));
-    background: color-mix(in srgb, var(--color-bg-primary) 82%, var(--color-accent-subtle));
+    background: var(--color-accent-subtle);
   }
 
   .reading-actions--rail-placement .reading-actions__button:focus-visible {
@@ -7271,7 +7295,7 @@ pre:hover .blog-code-copy {
   }
 
   .blog-rail .reading-actions--rail-placement {
-    padding: 0.58rem;
+    padding: 0;
   }
 
   .blog-rail .reading-actions--rail-placement .reading-actions__items--article {
@@ -7309,5 +7333,15 @@ pre:hover .blog-code-copy {
 
   .reading-actions--rail-placement .reading-actions__status {
     margin-top: 0.75rem;
+  }
+
+  /* Sticky within rail: reading actions pin to top even if rail scrolls internally */
+  .newsprint-rail .reading-actions--rail-placement,
+  .blog-rail .reading-actions--rail-placement {
+    position: sticky;
+    top: 0;
+    background: var(--color-bg-primary);
+    padding-bottom: 0.5rem;
+    z-index: 1;
   }
 }

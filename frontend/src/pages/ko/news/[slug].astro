@@ -21,7 +21,6 @@ const previewPersona = Astro.url.searchParams.get('previewPersona');
 const {
   post,
   postError,
-  recentPosts,
   focusItems,
   articleData,
   nextPost,
@@ -75,6 +74,16 @@ const altSlugValue = pairedSlug
     editionLabel={editionLabel}
     subkicker={['AI · 논문 · 프로젝트', '데일리 큐레이션', '공개 아카이브']}
   >
+    <form class="handbook-detail-search handbook-search-sticky" action="/ko/news/" method="get">
+      <input
+        type="text"
+        name="q"
+        aria-label={t.ko['news.search']}
+        placeholder={t.ko['news.search']}
+        class="handbook-search-input"
+      />
+    </form>
+
     {postError ? (
       <NewsprintNotice
         variant="error"
@@ -141,7 +150,7 @@ const altSlugValue = pairedSlug
         commentCount={commentCount}
         isLiked={isLiked}
       >
-        <NewsprintSideRail locale="ko" posts={recentPosts} focusItems={focusItems} relatedNews={post?.related_news} similarPosts={similarPosts} />
+        <NewsprintSideRail locale="ko" focusItems={focusItems} relatedNews={post?.related_news} similarPosts={similarPosts} />
       </ReadingActionsRail>
     </Fragment>
   </NewsprintShell>

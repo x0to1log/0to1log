@@ -90,7 +90,6 @@ export async function getNewsDetailPageData({
     }
   }
 
-  let recentPosts: any[] = [];
   let focusItems: string[] = [];
   let articleData: any = undefined;
   let nextPost: { title: string; slug: string; category: string | null } | null = null;
@@ -112,34 +111,6 @@ export async function getNewsDetailPageData({
       : null;
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
     const definitionField = getDefinitionField(locale);
-
-    if (post.pipeline_batch_id) {
-      const { data: batchPosts } = await publicSupabase
-        .from('news_posts')
-        .select('title, slug, category')
-        .eq('status', 'published')
-        .eq('locale', locale)
-        .eq('pipeline_batch_id', post.pipeline_batch_id)
-        .neq('slug', pageSlug)
-        .order('published_at', { ascending: false })
-        .limit(4);
-
-      if (batchPosts?.length) {
-        recentPosts = batchPosts;
-      }
-    }
-
-    if (recentPosts.length === 0) {
-      recentPosts = (await publicSupabase
-        .from('news_posts')
-        .select('title, slug, category')
-        .eq('status', 'published')
-        .eq('locale', locale)
-        .neq('slug', pageSlug)
-        .order('published_at', { ascending: false })
-        .limit(4)
-      ).data ?? [];
-    }
 
     const [
       nextRes,
@@ -282,7 +253,6 @@ export async function getNewsDetailPageData({
   return {
     post,
     postError,
-    recentPosts,
     focusItems,
     articleData,
     nextPost,

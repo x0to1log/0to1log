@@ -73,13 +73,13 @@ const copy = locale === 'ko'
       utilityLabel: 'Settings',
     };
 
+const handbookRoot = `/${locale}/handbook/`;
+const newsRoot = `/${locale}/news/`;
+const blogRoot = `/${locale}/blog/`;
+
 function getCurrentPageLabel(pathname: string): string {
   if (pathname.startsWith('/admin')) return copy.pageAdmin;
   if (pathname.startsWith('/library')) return copy.pageLibrary;
-
-  const handbookRoot = `/${locale}/handbook/`;
-  const newsRoot = `/${locale}/news/`;
-  const blogRoot = `/${locale}/blog/`;
 
   if (pathname === handbookRoot || pathname === handbookRoot.slice(0, -1)) return copy.handbook;
   if (pathname.startsWith(handbookRoot)) return copy.pageTerm;
@@ -92,6 +92,17 @@ function getCurrentPageLabel(pathname: string): string {
 }
 
 const currentPageLabel = getCurrentPageLabel(currentPath);
+
+// On detail pages, the page label becomes a back link to the section list
+const detailBack = (() => {
+  if (currentPath.startsWith(handbookRoot) && currentPath !== handbookRoot && currentPath !== handbookRoot.slice(0, -1))
+    return { label: copy.handbook, href: handbookRoot };
+  if (currentPath.startsWith(newsRoot) && currentPath !== newsRoot && currentPath !== newsRoot.slice(0, -1))
+    return { label: copy.aiNews, href: newsRoot };
+  if (currentPath.startsWith(blogRoot) && currentPath !== blogRoot && currentPath !== blogRoot.slice(0, -1))
+    return { label: copy.blog, href: blogRoot };
+  return null;
+})();
 
 const navItems = [
   {
@@ -124,7 +135,13 @@ const navItems = [
         <a href={`/${locale}/`} class="site-brand-link">
           0to1log
         </a>
-        <span class="site-page-label">{currentPageLabel}</span>
+        {detailBack ? (
+          <a href={detailBack.href} class="site-page-label site-page-label--link">
+            <span class="site-page-label-arrow" aria-hidden="true">&larr;</span>{detailBack.label}
+          </a>
+        ) : (
+          <span class="site-page-label">{currentPageLabel}</span>
+        )}
       </div>
 
       <div class="site-primary-nav site-primary-nav--desktop" aria-label="Primary navigation">
