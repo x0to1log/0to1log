@@ -45,5 +45,8 @@ async def require_admin(authorization: str = Header(None)):
 
 def verify_cron_secret(x_cron_secret: str = Header(None, alias="x-cron-secret")):
     """Dependency: validates x-cron-secret header matches configured secret."""
+    if not settings.cron_secret:
+        logger.error("CRON_SECRET is not configured — cron endpoints are disabled")
+        raise HTTPException(status_code=503, detail="Cron not configured")
     if not x_cron_secret or x_cron_secret != settings.cron_secret:
         raise HTTPException(status_code=401, detail="Invalid cron secret")
