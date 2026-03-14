@@ -1,3 +1,4 @@
+-- 00007_locale_unique_index.sql
 -- Migration: Add locale to posts unique index for EN/KO dual-row support
 -- Context: Pipeline now creates EN (canonical) + KO (translated) rows per batch.
 -- The old index only covered (pipeline_batch_id, post_type), which would conflict

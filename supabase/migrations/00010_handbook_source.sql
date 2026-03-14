@@ -1,3 +1,4 @@
+-- 00010_handbook_source.sql
 -- Add source column to track how handbook terms were created
 ALTER TABLE handbook_terms
   ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';

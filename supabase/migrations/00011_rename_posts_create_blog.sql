@@ -1,4 +1,4 @@
--- 00013_rename_posts_create_blog.sql
+-- 00011_rename_posts_create_blog.sql
 -- Rename posts → news_posts (AI news only) + create blog_posts (study/career/project)
 -- Also rename post_likes → news_likes, post_comments → news_comments
 -- Create blog_likes, blog_comments

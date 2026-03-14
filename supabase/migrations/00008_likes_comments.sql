@@ -1,3 +1,6 @@
+-- 00008_likes_comments.sql
+-- Post likes and comments tables (news engagement)
+
 -- Post Likes (1 like per user per post, toggle)
 CREATE TABLE post_likes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,4 +1,5 @@
--- Drop legacy handbook columns after 00015 migration has been verified in production.
+-- 00015_drop_handbook_legacy_columns.sql
+-- Drop legacy handbook columns after 00013 migration has been verified in production.
 -- Safe to re-run: all drops use IF EXISTS.
 
 DROP INDEX IF EXISTS idx_handbook_difficulty;

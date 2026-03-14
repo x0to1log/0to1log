@@ -1,3 +1,6 @@
+-- 00014_term_feedback.sql
+-- User feedback on handbook terms (helpful / confusing reactions)
+
 CREATE TABLE term_feedback (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

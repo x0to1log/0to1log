@@ -1,3 +1,4 @@
+-- 00012_blog_source.sql
 -- Add source column to track how blog posts were created
 -- Values: 'manual', 'pipeline', 'ai-translated', 'ai-drafted'
 ALTER TABLE blog_posts

@@ -1,4 +1,4 @@
--- 00006_delete_account_fn.sql
+-- 00005_delete_account_fn.sql
 -- Allow users to delete their own account via RPC
 -- All user tables use ON DELETE CASCADE from auth.users, so only the auth row needs deletion.
 

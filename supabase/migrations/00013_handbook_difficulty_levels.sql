@@ -1,3 +1,4 @@
+-- 00013_handbook_difficulty_levels.sql
 -- Handbook difficulty-level content system: basic (기초) / advanced (심화)
 -- Replaces single body_markdown + card fields with two content versions per language.
 

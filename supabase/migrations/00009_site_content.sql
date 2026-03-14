@@ -1,4 +1,5 @@
-﻿-- Site Content: admin-editable editorial text (bilingual ko/en)
+-- 00009_site_content.sql
+-- Site Content: admin-editable editorial text (bilingual ko/en)
 -- Used by public rails, masthead copy, and marketing/onboarding sections.
 
 CREATE TABLE site_content (
