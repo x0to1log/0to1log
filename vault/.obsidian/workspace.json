@@ -1,0 +1,240 @@
+{
+  "main": {
+    "id": "2eee91685053575e",
+    "type": "split",
+    "children": [
+      {
+        "id": "965f0da4a63da9c6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1dc87515b9f13e01",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "09-Implementation/Implementation-Plan.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Implementation-Plan"
+            }
+          },
+          {
+            "id": "11f25604731d78bb",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "AI-Handbook-Pipeline-Overview"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "76117bc847d1a152",
+    "type": "split",
+    "children": [
+      {
+        "id": "db09ab4ad2b06f0b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "55888c614779e776",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "파일 탐색기"
+            }
+          },
+          {
+            "id": "2b5d1b6aff9804a5",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "검색"
+            }
+          },
+          {
+            "id": "b8fbbd9c0e78c9ed",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "북마크"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "c3f946f59621e780",
+    "type": "split",
+    "children": [
+      {
+        "id": "7c757d9e68279e5f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "84f30495b9fab9b1",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "AI-Handbook-Pipeline-Overview 의 백링크"
+            }
+          },
+          {
+            "id": "3e6ab192f5ef7356",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "AI-Handbook-Pipeline-Overview 의 나가는 링크"
+            }
+          },
+          {
+            "id": "ad4d84f1b07875d4",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "태그"
+            }
+          },
+          {
+            "id": "19be144e0f6c8b12",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "모든 속성"
+            }
+          },
+          {
+            "id": "01c163351b3eb69f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "AI-Handbook-Pipeline-Overview 의 개요"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:빠른 전환기 열기": false,
+      "graph:그래프 뷰 열기": false,
+      "canvas:새 캔버스 만들기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
+      "templates:템플릿 삽입": false,
+      "command-palette:명령어 팔레트 열기": false,
+      "bases:새 베이스 생성하기": false
+    }
+  },
+  "active": "11f25604731d78bb",
+  "lastOpenFiles": [
+    "09-Implementation/plans/2026-03-14-pipeline-analytics-impl.md",
+    "09-Implementation/plans/2026-03-14-pipeline-analytics-impl.md.tmp.28412.1773473714332",
+    "09-Implementation/_MOC.md.tmp.28412.1773473400402",
+    "09-Implementation/plans/ACTIVE_SPRINT_HANDBOOK.md",
+    "09-Implementation/plans/ACTIVE_SPRINT.md",
+    "09-Implementation/plans/2026-03-14-pipeline-analytics-dashboard.md",
+    "09-Implementation/plans/2026-03-13-pipeline-rerun-reuse-and-ko-stability.md",
+    "09-Implementation/plans/2026-03-13-business-partial-resume-and-fail-fast.md",
+    "09-Implementation/plans/2026-03-12-pipeline-usage-cost-logging.md",
+    "09-Implementation/plans/2026-03-12-news-pipeline-fact-pack-and-runs.md",
+    "09-Implementation/plans/2026-03-11-security-hardening.md",
+    "09-Implementation/plans/2026-03-11-blog-typography-plan.md",
+    "09-Implementation/plans/2026-03-11-blog-typography-design.md",
+    "09-Implementation/plans/2026-03-11-blog-kb-impl.md",
+    "09-Implementation/plans/2026-03-11-blog-kb-design.md",
+    "09-Implementation/plans/2026-03-11-blog-ai-advisor-design.md",
+    "09-Implementation/plans/2026-03-10-phase3-intelligence.md",
+    "09-Implementation/plans/2026-03-10-phase3-intelligence-design.md",
+    "09-Implementation/plans/2026-03-10-ai-advisor-design.md",
+    "09-Implementation/plans/2026-03-10-admin-dashboard-impl.md",
+    "09-Implementation/plans/2026-03-10-admin-dashboard-design.md",
+    "09-Implementation/plans/2026-03-09-profiles-redesign.md",
+    "09-Implementation/plans/2026-03-08-user-features-design.md",
+    "09-Implementation/plans/2026-03-08-header-footer-design.md",
+    "09-Implementation/plans/2026-03-08-admin-ui-redesign.md",
+    "09-Implementation/plans/2026-03-08-admin-ui-redesign-plan.md",
+    "09-Implementation/plans/2026-03-08-3a-sec-csp-hardening.md",
+    "09-Implementation/plans/2026-03-07-list-rail-information-design.md",
+    "09-Implementation/plans",
+    "09-Implementation/Checklists-&-DoD.md.tmp.44116.1773469958817",
+    "03-Features/AI-News-Product.md.tmp.44116.1773469956092",
+    "03-Features/Admin.md.tmp.44116.1773469949508",
+    "03-Features/Daily-Dual-News.md.tmp.44116.1773469945350",
+    "05-Content/Global-Local-Intelligence.md.tmp.44116.1773469941317",
+    "01-Core/Phases-Roadmap.md.tmp.44116.1773469932147",
+    "01-Core/Target-Audience.md.tmp.44116.1773469911620"
+  ]
+}
