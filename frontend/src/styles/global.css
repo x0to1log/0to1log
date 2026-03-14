@@ -87,14 +87,14 @@
    MIDNIGHT THEME (temp preview — stitch_black palette, improved)
    =========================== */
 [data-theme="midnight"] {
-  --color-bg-primary: #1A1A1A;
+  --color-bg-primary: #000000;
   --color-bg-secondary: #111111;
-  --color-bg-tertiary: #252525;
-  --color-input-surface: #1F1F1F;
-  --color-text-primary: #D4CEC4;
-  --color-text-secondary: #A8A39B;
-  --color-text-muted: #8A847F;
-  --color-border: #777777;
+  --color-bg-tertiary: #1C1C1C;
+  --color-input-surface: #0D0D0D;
+  --color-text-primary: #D1C7B7;
+  --color-text-secondary: #B8AEA0;
+  --color-text-muted: #A0968A;
+  --color-border: #5A5348;
   --color-accent: #C3A370;
   --color-accent-hover: #D4B882;
   --color-accent-glow: rgba(195, 163, 112, 0.15);
@@ -102,8 +102,8 @@
   --color-success: #52875A;
   --color-warning: #C99B38;
   --color-error: #A04842;
-  --color-shadow: rgba(0, 0, 0, 0.45);
-  --noise-opacity: 0.018;
+  --color-shadow: rgba(0, 0, 0, 0.6);
+  --noise-opacity: 0.025;
 
   /* Category Colors — same as dark */
   --color-cat-ainews: #D46A58;
@@ -113,14 +113,14 @@
   --color-cat-work-note: #6E8C92;
   --color-cat-daily: #A97C68;
 
-  /* Shiki — updated for new text-primary */
+  /* Shiki — stitch_black ink */
   --shiki-token-keyword: #D4A87C;
   --shiki-token-string: #8FAE7E;
   --shiki-token-function: #B8A9D4;
-  --shiki-token-comment: #8A847F;
+  --shiki-token-comment: #A0968A;
   --shiki-token-constant: #C3A370;
-  --shiki-token-punctuation: #D4CEC4;
-  --shiki-color-text: #D4CEC4;
+  --shiki-token-punctuation: #D1C7B7;
+  --shiki-color-text: #D1C7B7;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
