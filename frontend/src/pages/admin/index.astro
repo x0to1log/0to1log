@@ -15,9 +15,11 @@ const sb = createClient(
 
 let totalPosts = 0;
 let totalTerms = 0;
-let totalDrafts = 0;
+let newsDrafts = 0;
+let handbookDrafts = 0;
 let totalUsers = 0;
 let totalLikes = 0;
+let aiPendingCount = 0;
 let termsBySource = { manual: 0, pipeline: 0, 'ai-suggested': 0 };
 let aiSuggestedTerms: ActivityItem[] = [];
 
@@ -36,6 +38,7 @@ let pipelineTokens = 0;
 let candidatesTotal = 0;
 let candidatesSelected = 0;
 let totalBlogPosts = 0;
+let blogDrafts = 0;
 let monthlyCost = 0;
 let monthlyTokens = 0;
 
@@ -69,7 +72,7 @@ try {
     sb.from('news_likes').select('id', { count: 'exact', head: true }),
     sb.from('pipeline_runs').select('*').order('started_at', { ascending: false }).limit(1),
     sb.from('admin_notifications').select('id, type, title, message, created_at').eq('is_read', false).order('created_at', { ascending: false }).limit(5),
-    sb.from('blog_posts').select('id', { count: 'exact', head: true }),
+    sb.from('blog_posts').select('id, status'),
     sb.from('pipeline_logs').select('cost_usd, tokens_used').gte('created_at', thirtyDaysAgo),
   ]);
 
@@ -79,9 +82,9 @@ try {
   totalPosts = posts.length;
   totalTerms = terms.length;
 
-  const postDrafts = posts.filter((p) => p.status === 'draft').length;
-  const termDrafts = terms.filter((t) => t.status === 'draft').length;
-  totalDrafts = postDrafts + termDrafts;
+  newsDrafts = posts.filter((p) => p.status === 'draft').length;
+  handbookDrafts = terms.filter((t) => t.status === 'draft').length;
+  aiPendingCount = terms.filter((t) => (t.source === 'ai-suggested' || t.source === 'pipeline') && t.status === 'draft').length;
 
   terms.forEach((t) => {
     const src = (t.source || 'manual') as keyof typeof termsBySource;
@@ -106,7 +109,9 @@ try {
 
   totalUsers = profilesRes.count ?? 0;
   totalLikes = likesRes.count ?? 0;
-  totalBlogPosts = blogRes.count ?? 0;
+  const blogs = blogRes.data ?? [];
+  totalBlogPosts = blogs.length;
+  blogDrafts = blogs.filter((b: any) => b.status === 'draft').length;
 
   const monthlyLogs = monthlyLogsRes.data ?? [];
   monthlyCost = monthlyLogs.reduce((sum: number, l: any) => sum + (parseFloat(l.cost_usd) || 0), 0);
@@ -163,9 +168,9 @@ function relativeTime(dateStr: string): string {
           </div>
         </div>
         <div class="admin-quick-actions">
-          <a href="/admin/posts/" class="admin-btn">Check News</a>
+          <a href="/admin/posts/" class="admin-btn admin-btn-primary">Check News</a>
           <a href="/admin/handbook/edit/new" class="admin-btn">New Term</a>
-          <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
+          <a href="/admin/edit/new" class="admin-btn">New Post</a>
         </div>
       </div>
 
@@ -173,15 +178,24 @@ function relativeTime(dateStr: string): string {
       <div class="dashboard-stats-zone-a">
         <a href="/admin/posts/" class="dashboard-stat-card">
           <div class="dashboard-stat-label">News</div>
-          <div class="dashboard-stat-value">{totalPosts}</div>
+          <div class="dashboard-stat-value">
+            {totalPosts}
+            {newsDrafts > 0 && <span class="dashboard-stat-draft">/ {newsDrafts}</span>}
+          </div>
         </a>
         <a href="/admin/handbook/" class="dashboard-stat-card">
           <div class="dashboard-stat-label">Handbook</div>
-          <div class="dashboard-stat-value">{totalTerms}</div>
+          <div class="dashboard-stat-value">
+            {totalTerms}
+            {handbookDrafts > 0 && <span class="dashboard-stat-draft">/ {handbookDrafts}</span>}
+          </div>
         </a>
         <a href="/admin/blog/" class="dashboard-stat-card">
           <div class="dashboard-stat-label">Blog</div>
-          <div class="dashboard-stat-value">{totalBlogPosts}</div>
+          <div class="dashboard-stat-value">
+            {totalBlogPosts}
+            {blogDrafts > 0 && <span class="dashboard-stat-draft">/ {blogDrafts}</span>}
+          </div>
         </a>
       </div>
 
@@ -196,10 +210,10 @@ function relativeTime(dateStr: string): string {
 
       <!-- Zone C: 사이트 성과 -->
       <div class="dashboard-stats-zone-c">
-        <div class="dashboard-stat-card dashboard-stat-card--highlight">
-          <div class="dashboard-stat-label">Drafts</div>
-          <div class="dashboard-stat-value">{totalDrafts}</div>
-        </div>
+        <a href="/admin/handbook/" class="dashboard-stat-card dashboard-stat-card--highlight">
+          <div class="dashboard-stat-label">AI Review</div>
+          <div class="dashboard-stat-value">{aiPendingCount}</div>
+        </a>
         <a href="/admin/analytics#traffic" class="dashboard-stat-card dashboard-stat-card--link">
           <div class="dashboard-stat-label">Users</div>
           <div class="dashboard-stat-value">{totalUsers}</div>
@@ -210,25 +224,23 @@ function relativeTime(dateStr: string): string {
         </a>
       </div>
 
-      {(termsBySource.pipeline > 0 || termsBySource['ai-suggested'] > 0) && (
-        <section class="dashboard-section">
-          <h2 class="dashboard-section-title">Handbook Sources</h2>
-          <div class="dashboard-source-row">
-            <a href="/admin/handbook/" class="dashboard-source-chip">
-              <span class="dashboard-source-label">Manual</span>
-              <span class="dashboard-source-count">{termsBySource.manual}</span>
-            </a>
-            <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--pipeline">
-              <span class="dashboard-source-label">Pipeline</span>
-              <span class="dashboard-source-count">{termsBySource.pipeline}</span>
-            </a>
-            <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--ai">
-              <span class="dashboard-source-label">AI Suggested</span>
-              <span class="dashboard-source-count">{termsBySource['ai-suggested']}</span>
-            </a>
-          </div>
-        </section>
-      )}
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Site Analytics</h2>
+        <div class="dashboard-source-row">
+          <a href="/admin/handbook/" class="dashboard-source-chip">
+            <span class="dashboard-source-label">Manual</span>
+            <span class="dashboard-source-count">{termsBySource.manual}</span>
+          </a>
+          <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--pipeline">
+            <span class="dashboard-source-label">Pipeline</span>
+            <span class="dashboard-source-count">{termsBySource.pipeline}</span>
+          </a>
+          <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--ai">
+            <span class="dashboard-source-label">AI Suggested</span>
+            <span class="dashboard-source-count">{termsBySource['ai-suggested']}</span>
+          </a>
+        </div>
+      </section>
 
       <section class="dashboard-section">
         <h2 class="dashboard-section-title">Pipeline Status</h2>
@@ -390,6 +402,15 @@ function relativeTime(dateStr: string): string {
 
   .dashboard-stats-zone-a .dashboard-stat-value {
     font-size: 2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+
+  .dashboard-stat-draft {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
   }
 
   /* Zone B — AI 운영 비용 */
