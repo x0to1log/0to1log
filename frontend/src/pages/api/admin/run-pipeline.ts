@@ -114,5 +114,9 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     }
   } catch {}
 
-  return handleAdminTriggerRequest(import.meta.env, mode);
+  const env = {
+    CRON_SECRET: import.meta.env.CRON_SECRET,
+    FASTAPI_URL: import.meta.env.FASTAPI_URL,
+  };
+  return handleAdminTriggerRequest(env, mode);
 };
