@@ -145,11 +145,17 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
     deleteQuery = deleteQuery.eq('user_id', locals.user.id);
   }
 
-  const { error } = await deleteQuery;
+  const { data, error } = await deleteQuery.select('id');
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!data || data.length === 0) {
+    return new Response(JSON.stringify({ error: 'Comment not found or not authorized' }), {
+      status: 404, headers: { 'Content-Type': 'application/json' },
     });
   }
 

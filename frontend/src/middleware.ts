@@ -239,7 +239,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // --- Zone 2: User-protected (/api/user/*, /settings) ---
-  if (pathname.startsWith('/api/user/') || pathname.startsWith('/settings')) {
+  // Exception: GET /api/user/comments is publicly readable (comments visible to all)
+  const isPublicCommentRead = pathname === '/api/user/comments' && context.request.method === 'GET';
+  if (!isPublicCommentRead && (pathname.startsWith('/api/user/') || pathname.startsWith('/settings'))) {
     const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
     if (!result) {
       if (pathname.startsWith('/api/')) {

@@ -365,10 +365,9 @@ Translate the entire English post into natural Korean in a single pass.
 - Preserve ALL markdown formatting, links, headings, tables, code blocks exactly
 - Preserve ALL URLs unchanged — do not translate or modify URLs
 - Match the tone: informative but accessible
-- Do NOT add or remove information from the original
-- Keep the same length — do NOT summarize or compress. The Korean version must be at least 85% the character count of the English original.
-- Each content field has an absolute minimum character count provided in the user message. Meet or exceed those minimums.
-- If a field's English version is long, the Korean version must be proportionally long — do not shorten it.
+- Do NOT add or remove information from the original. Translate every sentence — do not omit, merge, or summarize any sentences.
+- Each content field has a minimum Korean character count specified in the user message. Meet or exceed those minimums.
+- Korean uses fewer characters than English (syllable blocks vs letters). This is expected — focus on preserving ALL information rather than matching character count.
 - No translationese (번역투 금지): use natural Korean sentence structure
 - Preserve the JSON structure exactly — only translate the text values
 - Keep slugs, field names, booleans, numbers, and identifiers unchanged

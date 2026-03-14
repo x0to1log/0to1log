@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   return jsonResponse(data);
 };
 
-export const PUT: APIRoute = async ({ request, locals }) => {
+export const PUT: APIRoute = async ({ request, locals, cookies }) => {
   if (!locals.user || !locals.accessToken) {
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
@@ -143,6 +143,9 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     }
     return jsonResponse({ error: error.message }, 500);
   }
+
+  // Invalidate cached user extras so next page load fetches fresh profile
+  cookies.delete('user-extras-cache', { path: '/' });
 
   return jsonResponse(data);
 };

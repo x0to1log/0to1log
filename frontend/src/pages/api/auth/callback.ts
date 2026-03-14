@@ -55,6 +55,8 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     sameSite: 'lax',
     maxAge: 604800,
   });
+  // Clear stale user extras cache from previous session
+  cookies.delete('user-extras-cache', { path: '/' });
 
   return new Response(null, {
     status: 302,
@@ -95,6 +97,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       sameSite: 'lax',
       maxAge: 604800, // 7 days
     });
+    // Clear stale user extras cache from previous session
+    cookies.delete('user-extras-cache', { path: '/' });
 
     // Auto-create profile on first login (best-effort, never blocks login)
     try {

@@ -133,7 +133,7 @@ async def _translate_research(
 
     # Compute dynamic threshold from actual EN length
     en_content_len = len(en_data.get("content_original") or "")
-    ko_target = max(RESEARCH_KO_MIN_CONTENT, int(en_content_len * 0.65))
+    ko_target = max(RESEARCH_KO_MIN_CONTENT, int(en_content_len * 0.45))
 
     length_hints = (
         "IMPORTANT — Length requirements for Korean translation:\n"
@@ -208,7 +208,7 @@ async def _translate_business(
     hint_lines: list[str] = []
     for field in persona_fields:
         en_len = len(en_data.get(field) or "")
-        target = max(BUSINESS_KO_MIN_CONTENT, int(en_len * 0.65))
+        target = max(BUSINESS_KO_MIN_CONTENT, int(en_len * 0.45))
         en_lengths[field] = en_len
         ko_targets[field] = target
         hint_lines.append(
@@ -216,7 +216,7 @@ async def _translate_business(
         )
 
     en_analysis_len = len(en_data.get("content_analysis") or "")
-    ko_analysis_target = max(BUSINESS_KO_MIN_ANALYSIS, int(en_analysis_len * 0.65))
+    ko_analysis_target = max(BUSINESS_KO_MIN_ANALYSIS, int(en_analysis_len * 0.45))
     en_lengths["content_analysis"] = en_analysis_len
     ko_targets["content_analysis"] = ko_analysis_target
     hint_lines.append(

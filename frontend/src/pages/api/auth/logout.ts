@@ -5,6 +5,7 @@ export const prerender = false;
 function logout(cookies: Parameters<APIRoute>[0]['cookies'], url: URL) {
   cookies.delete('sb-access-token', { path: '/' });
   cookies.delete('sb-refresh-token', { path: '/' });
+  cookies.delete('user-extras-cache', { path: '/' });
 
   const redirectTo = url.searchParams.get('redirectTo') || '/';
   return new Response(null, {

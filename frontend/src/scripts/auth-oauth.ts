@@ -60,9 +60,13 @@ export function initOAuthButtons(rootNode: ParentNode = document): void {
 
         try {
           const supabase = createClient(supabaseUrl, supabaseKey);
+          const oauthOptions: Record<string, unknown> = { redirectTo: callbackUrl };
+          if (provider === 'google') {
+            oauthOptions.queryParams = { prompt: 'select_account' };
+          }
           const { error } = await supabase.auth.signInWithOAuth({
             provider: provider as 'github' | 'google' | 'kakao',
-            options: { redirectTo: callbackUrl },
+            options: oauthOptions,
           });
 
           if (error) {

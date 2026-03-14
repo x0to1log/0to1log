@@ -89,6 +89,11 @@ function initComments(): void {
             openAuthPrompt({ action: 'comment', redirectTo: commentRedirect });
             return;
           }
+          if (!res.ok) {
+            const msg = locale === 'ko' ? '삭제할 수 없습니다.' : 'Could not delete comment.';
+            window.alert(msg);
+            return;
+          }
           if (res.ok) {
             const el = list.querySelector(`[data-comment-id="${commentId}"]`);
             if (el) el.remove();

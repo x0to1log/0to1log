@@ -9,11 +9,11 @@ from models.common import PromptGuideItems, RelatedNews
 
 # --- Length thresholds (v4: all personas equal) ---
 EN_MIN_CONTENT_CHARS = 5000      # EN generation floor
-KO_MIN_CONTENT_CHARS = 4000      # KO translation floor (~85% of EN)
+KO_MIN_CONTENT_CHARS = 3000      # KO translation floor (~45% of EN, Korean syllable chars)
 MIN_CONTENT_CHARS = EN_MIN_CONTENT_CHARS
 TARGET_CONTENT_CHARS = 6500      # target 6000-7000
 EN_MIN_ANALYSIS_CHARS = 2500
-KO_MIN_ANALYSIS_CHARS = 1400
+KO_MIN_ANALYSIS_CHARS = 1000
 MIN_ANALYSIS_CHARS = EN_MIN_ANALYSIS_CHARS
 
 

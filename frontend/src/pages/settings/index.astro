@@ -97,13 +97,19 @@ const copy = locale === 'ko'
 const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null;
 const displayName = profile?.display_name || user.user_metadata?.full_name || '';
 const username = profile?.username || '';
-const usernamePlaceholder = displayName
+const asciiName = displayName
   .toLowerCase()
   .replace(/[^a-z0-9\s-]/g, '')
   .trim()
   .replace(/\s+/g, '-')
   .replace(/-+/g, '-')
-  .slice(0, 20) || 'jane-doe';
+  .slice(0, 20);
+const emailPrefix = (user.email || '')
+  .split('@')[0]
+  .toLowerCase()
+  .replace(/[^a-z0-9-]/g, '')
+  .slice(0, 20);
+const usernamePlaceholder = asciiName || emailPrefix || 'jane-doe';
 const bio = profile?.bio || '';
 const persona = profile?.persona || '';
 const preferredLocale = profile?.preferred_locale || browserLocale;

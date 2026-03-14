@@ -65,6 +65,12 @@ const nonce = Astro.locals.cspNonce || '';
           return;
         }
 
+        // Clear stale Supabase session from localStorage to prevent
+        // race condition where old session is restored before new OAuth code exchange
+        try {
+          Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+        } catch { /* localStorage may be unavailable */ }
+
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         let handled = false;
