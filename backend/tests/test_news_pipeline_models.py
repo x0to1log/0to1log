@@ -70,3 +70,9 @@ def test_pipeline_result_with_errors():
     from models.news_pipeline import PipelineResult
     pr = PipelineResult(batch_id="2026-03-15", posts_created=2, errors=["research fact extraction failed"], usage={})
     assert len(pr.errors) == 1
+
+
+def test_pipeline_result_missing_batch_id_fails():
+    from models.news_pipeline import PipelineResult
+    with pytest.raises(ValidationError):
+        PipelineResult.model_validate({"posts_created": 0, "errors": [], "usage": {}})
