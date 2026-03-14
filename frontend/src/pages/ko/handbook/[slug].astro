@@ -60,7 +60,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   previewMode={previewMode}
 >
   <NewsprintShell locale={locale} masthead="AI 용어집" editionLabel="CS · AI · Infra" subkicker={['용어 사전', '레퍼런스', '학습']}>
-    <form class="handbook-detail-search handbook-search-sticky" action={`/${locale}/handbook/`} method="get">
+    <form class="handbook-detail-search handbook-search-sticky handbook-search-sticky--detail" action={`/${locale}/handbook/`} method="get">
       <input
         type="text"
         name="q"
@@ -171,6 +171,15 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     )}
 
     <Fragment slot="rail">
+      <form class="handbook-detail-search newsprint-rail-search" action={`/${locale}/handbook/`} method="get">
+        <input
+          type="text"
+          name="q"
+          aria-label={t[locale]['handbook.search']}
+          placeholder={t[locale]['handbook.search']}
+          class="handbook-search-input"
+        />
+      </form>
       <ReadingActionsRail
         className="newsprint-rail-stack"
         locale={locale}

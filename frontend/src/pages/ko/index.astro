@@ -1,35 +1,148 @@
-﻿---
+---
 export const prerender = false;
+
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
-import { getSiteContents } from '../../lib/siteContent';
+import { getHomePageData } from '../../lib/pageData/homePage';
+import HomeMasthead from '../../components/home/HomeMasthead.astro';
+import HomeHeroCard from '../../components/home/HomeHeroCard.astro';
+import HomeNewsCard from '../../components/home/HomeNewsCard.astro';
+import HomeTermCard from '../../components/home/HomeTermCard.astro';
+import HomeSectionHeader from '../../components/home/HomeSectionHeader.astro';
+import BlogFeaturedCard from '../../components/blog/BlogFeaturedCard.astro';
 
-const sc = await getSiteContents(['home_title', 'home_subtitle', 'home_intro'], 'ko');
-const homeTitle = sc.home_title || t.ko['home.title'];
-const homeSubtitle = sc.home_subtitle || t.ko['home.subtitle'];
-const homeIntro =
-  sc.home_intro ||
+const locale = 'ko';
+const { news, terms, blog, siteContent } = await getHomePageData(locale);
+
+const heroNews = news[0] ?? null;
+const moreNews = news.slice(1, 4);
+const featuredBlog = blog[0] ?? null;
+const recentBlog = blog.slice(1, 4);
+
+const homeTitle = siteContent.home_title || t.ko['home.title'];
+const homeIntro = siteContent.home_intro ||
   '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 생각을 나누는 공간입니다.';
-const homeIntroParts = homeIntro.split(',').map((part) => part.trim()).filter(Boolean);
 ---
 
-<MainLayout title={homeTitle} locale="ko" headerAlwaysVisible={true}>
-  <section style="text-align: center; padding: 4rem 0;">
-    <h1 class="text-display-xl" style={`font-family: var(--font-display); color: var(--color-accent);`}>
-      0to1log
-    </h1>
-    <p class="text-subheading" style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-      {homeSubtitle}
-    </p>
-    <p style={`max-width: 42rem; margin: 1.75rem auto 0; color: var(--color-text-secondary); line-height: 1.8;`}>
-      {homeIntroParts.map((part, index) => (
-        <>
-          {index > 0 && <br />}
-          {index < homeIntroParts.length - 1 ? `${part},` : part}
-        </>
-      ))}
-    </p>
-  </section>
+<MainLayout title={homeTitle} locale={locale} headerAlwaysVisible={true}>
+  <div class="home-page">
+
+    <!-- Section A: Masthead -->
+    <HomeMasthead locale={locale} />
+
+    <!-- Hero Headline -->
+    {heroNews ? (
+      <HomeHeroCard
+        href={`/ko/news/${heroNews.slug}`}
+        title={heroNews.title}
+        excerpt={heroNews.excerpt}
+        category="ai-news"
+        publishedAt={heroNews.published_at}
+        readingTimeMin={heroNews.reading_time_min}
+        tags={heroNews.tags}
+        locale={locale}
+        postType={heroNews.post_type}
+      />
+    ) : (
+      <p class="home-coming-soon">{t.ko['home.comingSoon']}</p>
+    )}
+
+    <!-- Section B: Latest AI News -->
+    {moreNews.length > 0 && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.ko['home.latestNews']}
+          viewAllHref="/ko/news/"
+          viewAllLabel={t.ko['home.viewAll']}
+        />
+        <div class="home-news-grid">
+          {moreNews.map((post) => (
+            <HomeNewsCard
+              href={`/ko/news/${post.slug}`}
+              title={post.title}
+              excerpt={post.excerpt}
+              category="ai-news"
+              publishedAt={post.published_at}
+              readingTimeMin={post.reading_time_min}
+              tags={post.tags}
+              locale={locale}
+              postType={post.post_type}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Section C: Glossary Spotlight -->
+    {terms.length > 0 && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.ko['home.glossarySpotlight']}
+          viewAllHref="/ko/handbook/"
+          viewAllLabel={t.ko['home.viewAll']}
+        />
+        <div class="home-term-grid">
+          {terms.map((term) => (
+            <HomeTermCard
+              href={`/ko/handbook/${term.slug}`}
+              term={term.term}
+              koreanName={term.korean_name}
+              definition={term.definition_ko}
+              categories={term.categories}
+              locale={locale}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Section D: From the Blog -->
+    {(featuredBlog || recentBlog.length > 0) && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.ko['home.fromBlog']}
+          viewAllHref="/ko/blog/"
+          viewAllLabel={t.ko['home.viewAll']}
+        />
+        <div class="home-blog-split">
+          {featuredBlog && (
+            <BlogFeaturedCard
+              href={`/ko/blog/${featuredBlog.slug}`}
+              title={featuredBlog.title}
+              excerpt={featuredBlog.excerpt}
+              category={featuredBlog.category}
+              tags={featuredBlog.tags}
+              locale={locale}
+            />
+          )}
+          {recentBlog.length > 0 && (
+            <nav class="home-blog-list" aria-label="최근 블로그 글">
+              {recentBlog.map((post) => {
+                const dateLabel = post.published_at
+                  ? new Date(post.published_at).toLocaleDateString('ko-KR')
+                  : null;
+                return (
+                  <a href={`/ko/blog/${post.slug}`} class="home-blog-list-item">
+                    <h3 class="home-blog-list-item-title">{post.title}</h3>
+                    {dateLabel && <time class="home-blog-list-item-meta" datetime={post.published_at ?? undefined}>{dateLabel}</time>}
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+        </div>
+      </section>
+    )}
+
+    <!-- Section E: CTA -->
+    <div class="home-cta">
+      <p class="home-cta-intro">{homeIntro}</p>
+      <div class="home-cta-links">
+        <a href="/ko/news/" class="home-cta-link">AI 뉴스</a>
+        <a href="/ko/handbook/" class="home-cta-link">AI 용어집</a>
+        <a href="/ko/blog/" class="home-cta-link">IT 블로그</a>
+      </div>
+    </div>
+
+  </div>
 </MainLayout>
-
-

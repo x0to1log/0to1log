@@ -212,11 +212,18 @@ export async function getNewsDetailPageData({
     articleData = post.published_at
       ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
       : undefined;
+
     factPack = Array.isArray(post.fact_pack) ? post.fact_pack : [];
     sourceCards = normalizeSourceCards(post);
   }
 
   const hasTerms = handbookTermsMap.size > 0;
+  const relatedTerms = Object.entries(handbookTermsJson).slice(0, 3).map(([slug, data]) => ({
+    slug,
+    term: data.term as string,
+    koreanName: data.korean_name as string,
+    definition: data.definition as string,
+  }));
   const renderMd = hasTerms
     ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
     : (md: string) => renderMarkdown(md);
@@ -264,6 +271,7 @@ export async function getNewsDetailPageData({
     commentCount,
     handbookTermsJson,
     hasTerms,
+    relatedTerms,
     htmlContent,
     analysisHtml,
     factPack,

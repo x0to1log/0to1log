@@ -1,18 +1,6 @@
 ---
 import { getCategoryLabel } from '../../lib/categories';
 
-interface RelatedNewsItem {
-  title: string;
-  url: string;
-  summary: string;
-}
-
-interface RelatedNews {
-  big_tech?: RelatedNewsItem | null;
-  industry_biz?: RelatedNewsItem | null;
-  new_tools?: RelatedNewsItem | null;
-}
-
 interface SimilarPost {
   post_id: string;
   slug: string;
@@ -20,22 +8,24 @@ interface SimilarPost {
   category: string;
 }
 
+interface RelatedTerm {
+  slug: string;
+  term: string;
+  koreanName: string;
+  definition: string;
+}
+
 interface Props {
   locale: 'en' | 'ko';
   focusItems: string[];
-  relatedNews?: RelatedNews | null;
   basePath?: string;
   similarPosts?: SimilarPost[];
+  relatedTerms?: RelatedTerm[];
 }
 
-const { locale, focusItems, relatedNews, basePath, similarPosts = [] } = Astro.props;
+const { locale, focusItems, basePath, similarPosts = [], relatedTerms = [] } = Astro.props;
 const resolvedBasePath = basePath || `/${locale}/news`;
 const isKo = locale === 'ko';
-
-const relatedEntries: { tag: string; item: RelatedNewsItem }[] = [];
-if (relatedNews?.big_tech) relatedEntries.push({ tag: 'Big Tech', item: relatedNews.big_tech });
-if (relatedNews?.industry_biz) relatedEntries.push({ tag: isKo ? '산업·비즈' : 'Industry & Biz', item: relatedNews.industry_biz });
-if (relatedNews?.new_tools) relatedEntries.push({ tag: isKo ? '새 도구' : 'New Tools', item: relatedNews.new_tools });
 ---
 
 <section>
@@ -48,6 +38,24 @@ if (relatedNews?.new_tools) relatedEntries.push({ tag: isKo ? '새 도구' : 'Ne
     </ul>
   )}
 </section>
+
+{relatedTerms.length > 0 && (
+  <>
+    <div style="margin-top: 1.5rem;"></div>
+    <section>
+      <h3 class="newsprint-section-title">{isKo ? '이 글의 키워드' : 'Keywords in This Article'}</h3>
+      <div class="newsprint-stack">
+        {relatedTerms.map((t) => (
+          <a class="newsprint-card" href={`/${locale}/handbook/${t.slug}/`}>
+            <strong class="newsprint-rail-link">{isKo && t.koreanName ? t.koreanName : t.term}</strong>
+            {!isKo || t.koreanName ? <span class="newsprint-related-tag" style="font-weight: 400;">{t.term}</span> : null}
+            {t.definition && <p class="newsprint-related-summary">{t.definition}</p>}
+          </a>
+        ))}
+      </div>
+    </section>
+  </>
+)}
 
 {similarPosts.length > 0 && (
   <>
@@ -63,24 +71,6 @@ if (relatedNews?.new_tools) relatedEntries.push({ tag: isKo ? '새 도구' : 'Ne
                 {getCategoryLabel(locale, p.category)}
               </span>
             )}
-          </a>
-        ))}
-      </div>
-    </section>
-  </>
-)}
-
-{relatedEntries.length > 0 && (
-  <>
-    <div style="margin-top: 1.5rem;"></div>
-    <section>
-      <h3 class="newsprint-section-title">{isKo ? '관련 뉴스' : 'Related News'}</h3>
-      <div class="newsprint-stack">
-        {relatedEntries.map(({ tag, item }) => (
-          <a class="newsprint-card newsprint-related-card" href={item.url} target="_blank" rel="noopener noreferrer">
-            <span class="newsprint-related-tag">{tag}</span>
-            <strong class="newsprint-rail-link">{item.title}</strong>
-            <p class="newsprint-related-summary">{item.summary}</p>
           </a>
         ))}
       </div>

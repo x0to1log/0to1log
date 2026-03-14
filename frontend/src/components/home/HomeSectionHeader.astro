@@ -1,0 +1,14 @@
+---
+interface Props {
+  title: string;
+  viewAllHref: string;
+  viewAllLabel: string;
+}
+
+const { title, viewAllHref, viewAllLabel } = Astro.props;
+---
+
+<div class="home-section-header">
+  <h2 class="home-section-title">{title}</h2>
+  <a href={viewAllHref} class="home-section-viewall">{viewAllLabel} →</a>
+</div>

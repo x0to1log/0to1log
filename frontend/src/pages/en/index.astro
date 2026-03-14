@@ -1,34 +1,148 @@
-﻿---
+---
 export const prerender = false;
+
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
-import { getSiteContents } from '../../lib/siteContent';
+import { getHomePageData } from '../../lib/pageData/homePage';
+import HomeMasthead from '../../components/home/HomeMasthead.astro';
+import HomeHeroCard from '../../components/home/HomeHeroCard.astro';
+import HomeNewsCard from '../../components/home/HomeNewsCard.astro';
+import HomeTermCard from '../../components/home/HomeTermCard.astro';
+import HomeSectionHeader from '../../components/home/HomeSectionHeader.astro';
+import BlogFeaturedCard from '../../components/blog/BlogFeaturedCard.astro';
 
-const sc = await getSiteContents(['home_title', 'home_subtitle', 'home_intro'], 'en');
-const homeTitle = sc.home_title || t.en['home.title'];
-const homeSubtitle = sc.home_subtitle || t.en['home.subtitle'];
-const homeIntro =
-  sc.home_intro ||
+const locale = 'en';
+const { news, terms, blog, siteContent } = await getHomePageData(locale);
+
+const heroNews = news[0] ?? null;
+const moreNews = news.slice(1, 4);
+const featuredBlog = blog[0] ?? null;
+const recentBlog = blog.slice(1, 4);
+
+const homeTitle = siteContent.home_title || t.en['home.title'];
+const homeIntro = siteContent.home_intro ||
   'An AI publication where readers can follow the latest shifts quickly, look up key terms instantly, build their own archive of news and concepts, and share their interpretations with others.';
-const homeIntroParts = homeIntro.split(',').map((part) => part.trim()).filter(Boolean);
 ---
 
-<MainLayout title={homeTitle} locale="en" headerAlwaysVisible={true}>
-  <section style="text-align: center; padding: 4rem 0;">
-    <h1 class="text-display-xl" style={`font-family: var(--font-display); color: var(--color-accent);`}>
-      0to1log
-    </h1>
-    <p class="text-subheading" style={`color: var(--color-text-secondary); margin-top: 1rem;`}>
-      {homeSubtitle}
-    </p>
-    <p style={`max-width: 42rem; margin: 1.75rem auto 0; color: var(--color-text-secondary); line-height: 1.7;`}>
-      {homeIntroParts.map((part, index) => (
-        <>
-          {index > 0 && <br />}
-          {index < homeIntroParts.length - 1 ? `${part},` : part}
-        </>
-      ))}
-    </p>
-  </section>
-</MainLayout>
+<MainLayout title={homeTitle} locale={locale} headerAlwaysVisible={true}>
+  <div class="home-page">
 
+    <!-- Section A: Masthead -->
+    <HomeMasthead locale={locale} />
+
+    <!-- Hero Headline -->
+    {heroNews ? (
+      <HomeHeroCard
+        href={`/en/news/${heroNews.slug}`}
+        title={heroNews.title}
+        excerpt={heroNews.excerpt}
+        category="ai-news"
+        publishedAt={heroNews.published_at}
+        readingTimeMin={heroNews.reading_time_min}
+        tags={heroNews.tags}
+        locale={locale}
+        postType={heroNews.post_type}
+      />
+    ) : (
+      <p class="home-coming-soon">{t.en['home.comingSoon']}</p>
+    )}
+
+    <!-- Section B: Latest AI News -->
+    {moreNews.length > 0 && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.en['home.latestNews']}
+          viewAllHref="/en/news/"
+          viewAllLabel={t.en['home.viewAll']}
+        />
+        <div class="home-news-grid">
+          {moreNews.map((post) => (
+            <HomeNewsCard
+              href={`/en/news/${post.slug}`}
+              title={post.title}
+              excerpt={post.excerpt}
+              category="ai-news"
+              publishedAt={post.published_at}
+              readingTimeMin={post.reading_time_min}
+              tags={post.tags}
+              locale={locale}
+              postType={post.post_type}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Section C: Glossary Spotlight -->
+    {terms.length > 0 && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.en['home.glossarySpotlight']}
+          viewAllHref="/en/handbook/"
+          viewAllLabel={t.en['home.viewAll']}
+        />
+        <div class="home-term-grid">
+          {terms.map((term) => (
+            <HomeTermCard
+              href={`/en/handbook/${term.slug}`}
+              term={term.term}
+              koreanName={term.korean_name}
+              definition={term.definition_en}
+              categories={term.categories}
+              locale={locale}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Section D: From the Blog -->
+    {(featuredBlog || recentBlog.length > 0) && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.en['home.fromBlog']}
+          viewAllHref="/en/blog/"
+          viewAllLabel={t.en['home.viewAll']}
+        />
+        <div class="home-blog-split">
+          {featuredBlog && (
+            <BlogFeaturedCard
+              href={`/en/blog/${featuredBlog.slug}`}
+              title={featuredBlog.title}
+              excerpt={featuredBlog.excerpt}
+              category={featuredBlog.category}
+              tags={featuredBlog.tags}
+              locale={locale}
+            />
+          )}
+          {recentBlog.length > 0 && (
+            <nav class="home-blog-list" aria-label="Recent blog posts">
+              {recentBlog.map((post) => {
+                const dateLabel = post.published_at
+                  ? new Date(post.published_at).toLocaleDateString('en-US')
+                  : null;
+                return (
+                  <a href={`/en/blog/${post.slug}`} class="home-blog-list-item">
+                    <h3 class="home-blog-list-item-title">{post.title}</h3>
+                    {dateLabel && <time class="home-blog-list-item-meta" datetime={post.published_at ?? undefined}>{dateLabel}</time>}
+                  </a>
+                );
+              })}
+            </nav>
+          )}
+        </div>
+      </section>
+    )}
+
+    <!-- Section E: CTA -->
+    <div class="home-cta">
+      <p class="home-cta-intro">{homeIntro}</p>
+      <div class="home-cta-links">
+        <a href="/en/news/" class="home-cta-link">AI News</a>
+        <a href="/en/handbook/" class="home-cta-link">AI Glossary</a>
+        <a href="/en/blog/" class="home-cta-link">IT Blog</a>
+      </div>
+    </div>
+
+  </div>
+</MainLayout>

@@ -1,0 +1,34 @@
+---
+import { getHandbookCategoryLabels } from '../../lib/handbookCategories';
+
+interface Props {
+  href: string;
+  term: string;
+  koreanName?: string | null;
+  definition?: string | null;
+  categories?: string[] | null;
+  locale: 'en' | 'ko';
+}
+
+const { href, term, koreanName, definition, categories, locale } = Astro.props;
+
+const categoryLabels = getHandbookCategoryLabels(locale, categories);
+const truncatedDef = definition && definition.length > 80
+  ? definition.slice(0, 80) + '…'
+  : definition;
+---
+
+<a href={href} class="home-term-card">
+  <div class="home-term-card-header">
+    <span class="home-term-card-name">{term}</span>
+    {koreanName && <span class="home-term-card-korean">{koreanName}</span>}
+  </div>
+  {truncatedDef && <p class="home-term-card-def">{truncatedDef}</p>}
+  {categoryLabels.length > 0 && (
+    <div class="home-term-card-cats">
+      {categoryLabels.slice(0, 2).map((label) => (
+        <span class="home-term-card-cat">{label}</span>
+      ))}
+    </div>
+  )}
+</a>

@@ -32,6 +32,7 @@ const {
   commentCount,
   handbookTermsJson,
   hasTerms,
+  relatedTerms,
   htmlContent,
   analysisHtml,
   factPack,
@@ -74,7 +75,7 @@ const altSlugValue = pairedSlug
     editionLabel={editionLabel}
     subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
   >
-    <form class="handbook-detail-search handbook-search-sticky" action="/en/news/" method="get">
+    <form class="handbook-detail-search handbook-search-sticky handbook-search-sticky--detail" action="/en/news/" method="get">
       <input
         type="text"
         name="q"
@@ -133,6 +134,15 @@ const altSlugValue = pairedSlug
     )}
 
     <Fragment slot="rail">
+      <form class="handbook-detail-search newsprint-rail-search" action="/en/news/" method="get">
+        <input
+          type="text"
+          name="q"
+          aria-label={t.en['news.search']}
+          placeholder={t.en['news.search']}
+          class="handbook-search-input"
+        />
+      </form>
       <ReadingActionsRail
         className="newsprint-rail-stack"
         locale="en"
@@ -150,7 +160,7 @@ const altSlugValue = pairedSlug
         commentCount={commentCount}
         isLiked={isLiked}
       >
-        <NewsprintSideRail locale="en" focusItems={focusItems} relatedNews={post?.related_news} similarPosts={similarPosts} />
+        <NewsprintSideRail locale="en" focusItems={focusItems} similarPosts={similarPosts} relatedTerms={relatedTerms} />
       </ReadingActionsRail>
     </Fragment>
   </NewsprintShell>
@@ -210,6 +220,25 @@ const altSlugValue = pairedSlug
     });
   }
 
+  function syncSearchBarVisibility(): void {
+    const articleFind = document.querySelector('.newsprint-article-find');
+    const stickySearch = document.querySelector<HTMLElement>('.handbook-search-sticky');
+    if (!articleFind || !stickySearch) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          stickySearch.setAttribute('data-hidden-by-find', '');
+        } else {
+          stickySearch.removeAttribute('data-hidden-by-find');
+        }
+      },
+      { threshold: 0 }
+    );
+    observer.observe(articleFind);
+  }
+
   document.addEventListener('astro:page-load', recordReadingHistory);
   document.addEventListener('astro:page-load', initAdminActions);
+  document.addEventListener('astro:page-load', syncSearchBarVisibility);
 </script>

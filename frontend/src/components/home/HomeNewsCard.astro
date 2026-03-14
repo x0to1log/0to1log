@@ -1,0 +1,42 @@
+---
+import { getCategoryLabel, getCategoryColorVar } from '../../lib/categories';
+
+interface Props {
+  href: string;
+  title: string;
+  excerpt?: string | null;
+  category?: string | null;
+  publishedAt?: string | null;
+  readingTimeMin?: number | null;
+  tags?: string[] | null;
+  locale: 'en' | 'ko';
+  postType?: string | null;
+}
+
+const { href, title, excerpt, category, publishedAt, readingTimeMin, tags, locale, postType } = Astro.props;
+
+const dateLabel = publishedAt
+  ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
+  : null;
+const readingLabel = readingTimeMin
+  ? locale === 'ko'
+    ? `약 ${readingTimeMin}분`
+    : `${readingTimeMin} min read`
+  : null;
+const categoryLabel = getCategoryLabel(locale, category);
+const catColor = getCategoryColorVar(category);
+---
+
+<a href={href} class="home-news-card">
+  <div class="home-news-card-body">
+    {categoryLabel && (
+      <span class="home-news-card-category" style={`color: ${catColor};`}>{categoryLabel}</span>
+    )}
+    <h3 class="home-news-card-title">{title}</h3>
+    {excerpt && <p class="home-news-card-excerpt">{excerpt}</p>}
+  </div>
+  <div class="home-news-card-meta">
+    {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
+    {readingLabel && <span>{readingLabel}</span>}
+  </div>
+</a>
