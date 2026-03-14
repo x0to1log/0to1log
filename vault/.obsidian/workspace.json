@@ -22,7 +22,7 @@
             }
           },
           {
-            "id": "11f25604731d78bb",
+            "id": "54ec1356afe800b5",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -198,8 +198,13 @@
       "bases:새 베이스 생성하기": false
     }
   },
-  "active": "11f25604731d78bb",
+  "active": "54ec1356afe800b5",
   "lastOpenFiles": [
+    "05-Content/AI-NEWS-Research-Writing.md",
+    "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+    "05-Content/AI-NEWS-Business-Writing.md",
+    "08-Design/AI-News-Page-Layouts.md",
+    "09-Implementation/Implementation-Plan.md",
     "09-Implementation/plans/2026-03-14-admin-dashboard-stat-cards.md",
     "09-Implementation/plans/2026-03-14-admin-dashboard-stat-cards.md.tmp.25980.1773479405929",
     "09-Implementation/plans/2026-03-14-admin-dashboard-redesign.md",
@@ -230,11 +235,6 @@
     "09-Implementation/plans/2026-03-11-blog-kb-design.md",
     "09-Implementation/plans/2026-03-11-blog-ai-advisor-design.md",
     "09-Implementation/plans/2026-03-10-phase3-intelligence.md",
-    "09-Implementation/plans/2026-03-10-phase3-intelligence-design.md",
-    "09-Implementation/plans/2026-03-10-ai-advisor-design.md",
-    "09-Implementation/plans/2026-03-10-admin-dashboard-impl.md",
-    "09-Implementation/plans/2026-03-10-admin-dashboard-design.md",
-    "09-Implementation/plans/2026-03-09-profiles-redesign.md",
-    "09-Implementation/plans/2026-03-08-user-features-design.md"
+    "09-Implementation/plans/2026-03-10-phase3-intelligence-design.md"
   ]
 }

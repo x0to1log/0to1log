@@ -7,24 +7,25 @@ const cookieLocale = Astro.cookies.get('site-locale')?.value;
 const acceptLang = Astro.request.headers.get('accept-language') || '';
 const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
 const locale = (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale : browserLocale;
+const isKo = locale === 'ko';
 
 const skills = [
   { label: 'AI / LLM', items: ['LangGraph', 'LangChain', 'RAG', 'OpenAI API', 'Prompt Engineering'] },
   { label: 'ML / CV', items: ['PyTorch', 'YOLOv8', 'Scikit-learn'] },
-  { label: 'Data', items: ['Pandas', 'NumPy', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'] },
-  { label: 'Backend', items: ['Python', 'FastAPI', 'PostgreSQL', 'Supabase'] },
-  { label: 'Frontend', items: ['Astro', 'Tailwind CSS', 'Streamlit'] },
-  { label: 'Tools', items: ['Git', 'GitHub', 'Docker', 'Notion'] },
+  { label: isKo ? '데이터' : 'Data', items: ['Pandas', 'NumPy', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'] },
+  { label: isKo ? '백엔드' : 'Backend', items: ['Python', 'FastAPI', 'PostgreSQL', 'Supabase'] },
+  { label: isKo ? '프론트엔드' : 'Frontend', items: ['Astro', 'Tailwind CSS', 'Streamlit'] },
+  { label: isKo ? '도구' : 'Tools', items: ['Git', 'GitHub', 'Docker', 'Notion'] },
 ];
 ---
 
-<MainLayout title="Skills — Portfolio" locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
+<MainLayout title={isKo ? '기술 스택 — 포트폴리오' : 'Skills — Portfolio'} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="pf-page">
 
-    <a class="pf-back" href="/portfolio/">&larr; Portfolio</a>
+    <a class="pf-back" href="/portfolio/">&larr; {isKo ? '포트폴리오' : 'Portfolio'}</a>
 
     <section class="pf-section" style="--reveal: 0;">
-      <h1 class="pf-section-title">Skills &amp; Tools</h1>
+      <h1 class="pf-section-title">{isKo ? '기술 스택' : 'Skills & Tools'}</h1>
       <div class="pf-skills-grid">
         {skills.map((cat) => (
           <div class="pf-skill-group">

@@ -7,46 +7,78 @@ const cookieLocale = Astro.cookies.get('site-locale')?.value;
 const acceptLang = Astro.request.headers.get('accept-language') || '';
 const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
 const locale = (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale : browserLocale;
+const isKo = locale === 'ko';
 
-const projects = [
-  {
-    title: '0to1log',
-    description: 'AI news curation platform with a newsprint-inspired editorial design. Full-stack solo project covering content pipeline, admin editor, and multilingual publishing.',
-    stack: ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS'],
-    href: '/en/news/',
-    year: '2026',
-  },
-  {
-    title: 'MarryRoute',
-    description: 'AI wedding planner agent powered by LangGraph. Conversational AI assistant "Marie" provides personalized venue recommendations, budget tracking, and schedule management.',
-    stack: ['LangGraph', 'GPT-4', 'Streamlit', 'PostgreSQL', 'Tavily'],
-    href: 'https://github.com/ming2tofu33/pjt-wedding_planner_AI_agent',
-    year: '2025',
-  },
-  {
-    title: 'Healthcare Pill Detection',
-    description: 'Medical pill object detection pipeline achieving 0.995 mAP score. Five-stage reproducible pipeline with automatic experiment tracking across 108+ training runs.',
-    stack: ['PyTorch', 'YOLOv8', 'OpenCV', 'Albumentations'],
-    href: 'https://github.com/ming2tofu33/pjt-sprint_ai07_healthcare',
-    year: '2025',
-  },
-  {
-    title: 'Korean Movie Analysis',
-    description: 'Comprehensive data analysis of 927 Korean films (2005-2019). Explored box office trends, critic-audience correlation, and director-actor collaboration networks.',
-    stack: ['Pandas', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'],
-    href: 'https://github.com/ming2tofu33/pjt-movie_analysis',
-    year: '2025',
-  },
-];
+const projects = isKo
+  ? [
+      {
+        title: '0to1log',
+        description: 'AI 뉴스 큐레이션 플랫폼. 신문 스타일의 에디토리얼 디자인과 콘텐츠 파이프라인, 어드민 에디터, 다국어 발행을 포함한 풀스택 솔로 프로젝트.',
+        stack: ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS'],
+        href: '/ko/news/',
+        year: '2026',
+      },
+      {
+        title: 'MarryRoute',
+        description: 'LangGraph 기반 AI 웨딩 플래너 에이전트. 대화형 AI 어시스턴트 "Marie"가 맞춤형 장소 추천, 예산 관리, 일정 관리를 제공합니다.',
+        stack: ['LangGraph', 'GPT-4', 'Streamlit', 'PostgreSQL', 'Tavily'],
+        href: 'https://github.com/ming2tofu33/pjt-wedding_planner_AI_agent',
+        year: '2025',
+      },
+      {
+        title: 'Healthcare Pill Detection',
+        description: '의료용 알약 객체 감지 파이프라인. mAP 0.995 달성. 108회 이상의 학습 실험에 걸친 자동 추적 기능을 갖춘 5단계 재현 가능 파이프라인.',
+        stack: ['PyTorch', 'YOLOv8', 'OpenCV', 'Albumentations'],
+        href: 'https://github.com/ming2tofu33/pjt-sprint_ai07_healthcare',
+        year: '2025',
+      },
+      {
+        title: 'Korean Movie Analysis',
+        description: '한국 영화 927편(2005–2019) 종합 데이터 분석. 박스오피스 트렌드, 평론가-관객 상관관계, 감독-배우 협업 네트워크를 분석했습니다.',
+        stack: ['Pandas', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'],
+        href: 'https://github.com/ming2tofu33/pjt-movie_analysis',
+        year: '2025',
+      },
+    ]
+  : [
+      {
+        title: '0to1log',
+        description: 'AI news curation platform with a newsprint-inspired editorial design. Full-stack solo project covering content pipeline, admin editor, and multilingual publishing.',
+        stack: ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS'],
+        href: '/en/news/',
+        year: '2026',
+      },
+      {
+        title: 'MarryRoute',
+        description: 'AI wedding planner agent powered by LangGraph. Conversational AI assistant "Marie" provides personalized venue recommendations, budget tracking, and schedule management.',
+        stack: ['LangGraph', 'GPT-4', 'Streamlit', 'PostgreSQL', 'Tavily'],
+        href: 'https://github.com/ming2tofu33/pjt-wedding_planner_AI_agent',
+        year: '2025',
+      },
+      {
+        title: 'Healthcare Pill Detection',
+        description: 'Medical pill object detection pipeline achieving 0.995 mAP score. Five-stage reproducible pipeline with automatic experiment tracking across 108+ training runs.',
+        stack: ['PyTorch', 'YOLOv8', 'OpenCV', 'Albumentations'],
+        href: 'https://github.com/ming2tofu33/pjt-sprint_ai07_healthcare',
+        year: '2025',
+      },
+      {
+        title: 'Korean Movie Analysis',
+        description: 'Comprehensive data analysis of 927 Korean films (2005-2019). Explored box office trends, critic-audience correlation, and director-actor collaboration networks.',
+        stack: ['Pandas', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'],
+        href: 'https://github.com/ming2tofu33/pjt-movie_analysis',
+        year: '2025',
+      },
+    ];
 ---
 
-<MainLayout title="Projects — Portfolio" locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
+<MainLayout title={isKo ? '프로젝트 — 포트폴리오' : 'Projects — Portfolio'} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="pf-page">
 
-    <a class="pf-back" href="/portfolio/">&larr; Portfolio</a>
+    <a class="pf-back" href="/portfolio/">&larr; {isKo ? '포트폴리오' : 'Portfolio'}</a>
 
     <section class="pf-section" style="--reveal: 0;">
-      <h1 class="pf-section-title">Selected Projects</h1>
+      <h1 class="pf-section-title">{isKo ? '주요 프로젝트' : 'Selected Projects'}</h1>
       <div class="pf-project-grid">
         {projects.map((project, i) => (
           <a

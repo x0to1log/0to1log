@@ -134,6 +134,10 @@ async def generate_business_expert(
                     "BusinessExpert attempt %d: analysis=%d/%d, expert=%d/%d",
                     attempt + 1, analysis_len, MIN_ANALYSIS_CHARS, expert_len, MIN_CONTENT_CHARS,
                 )
+                last_error = ValueError(
+                    f"Fields too short: analysis={analysis_len}/{MIN_ANALYSIS_CHARS}, "
+                    f"expert={expert_len}/{MIN_CONTENT_CHARS}"
+                )
                 user_prompt = (
                     f"{user_prompt}\n\n"
                     f"IMPORTANT: Previous response was too short. "
@@ -182,6 +186,10 @@ async def derive_business_personas(
                 logger.warning(
                     "BusinessDerive attempt %d: learner=%d/%d, beginner=%d/%d",
                     attempt + 1, learner_len, MIN_CONTENT_CHARS, beginner_len, MIN_CONTENT_CHARS,
+                )
+                last_error = ValueError(
+                    f"Fields too short: learner={learner_len}/{MIN_CONTENT_CHARS}, "
+                    f"beginner={beginner_len}/{MIN_CONTENT_CHARS}"
                 )
                 user_prompt = (
                     f"{user_prompt}\n\n"

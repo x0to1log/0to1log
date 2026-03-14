@@ -9,7 +9,7 @@ const year = new Date().getFullYear();
 const showPortfolio = pathname.includes('/blog/');
 
 const links = [
-  { en: 'About', ko: 'About', href: '/about/', koHref: '/ko/about/' },
+  { en: 'About', ko: 'About', href: '/en/about/', koHref: '/ko/about/' },
   ...(showPortfolio ? [{ en: 'Portfolio', ko: 'Portfolio', href: '/portfolio/' }] : []),
   { en: 'RSS', ko: 'RSS', href: '/rss.xml' },
 ];

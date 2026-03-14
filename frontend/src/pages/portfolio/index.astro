@@ -7,21 +7,89 @@ const cookieLocale = Astro.cookies.get('site-locale')?.value;
 const acceptLang = Astro.request.headers.get('accept-language') || '';
 const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
 const locale = (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale : browserLocale;
+const isKo = locale === 'ko';
 
-const sections = [
-  {
-    title: 'Selected Projects',
-    description: 'AI agents, computer vision pipelines, data analysis, and full-stack platforms.',
-    href: '/portfolio/projects/',
-    count: '4 projects',
-  },
-  {
-    title: 'Skills & Tools',
-    description: 'LLM applications, deep learning, data engineering, and web development.',
-    href: '/portfolio/skills/',
-    count: '6 categories',
-  },
-];
+const copy = isKo
+  ? {
+      overline: '포트폴리오',
+      tagline: 'AI를 만들고, 기록하는 사람',
+      bio: 'LLM 애플리케이션, 데이터 분석, 웹 개발의 교차점에서 작업하는 AI 엔지니어입니다. 멀티 에이전트 시스템 설계부터 900편 이상의 영화 분석까지, 호기심을 작동하는 소프트웨어로 만들고 그 과정을 공유합니다.',
+      projectsHeading: '주요 프로젝트',
+      skillsTitle: '기술 스택',
+      skillsDesc: 'LLM 애플리케이션, 딥러닝, 데이터 엔지니어링, 웹 개발.',
+      skillsCount: '6개 카테고리',
+    }
+  : {
+      overline: 'Portfolio',
+      tagline: 'AI를 만들고, 기록하는 사람',
+      bio: 'AI Engineer building at the intersection of LLM applications, data analysis, and web development. From designing multi-agent systems to analyzing 900+ films, I turn curiosity into working software and share what I learn along the way.',
+      projectsHeading: 'Selected Projects',
+      skillsTitle: 'Skills & Tools',
+      skillsDesc: 'LLM applications, deep learning, data engineering, and web development.',
+      skillsCount: '6 categories',
+    };
+
+const projects = isKo
+  ? [
+      {
+        title: '0to1log',
+        description: 'AI 뉴스 큐레이션 플랫폼. 신문 스타일의 에디토리얼 디자인과 콘텐츠 파이프라인, 어드민 에디터, 다국어 발행을 포함한 풀스택 솔로 프로젝트.',
+        stack: ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS'],
+        href: '/ko/news/',
+        year: '2026',
+      },
+      {
+        title: 'MarryRoute',
+        description: 'LangGraph 기반 AI 웨딩 플래너 에이전트. 대화형 AI 어시스턴트 "Marie"가 맞춤형 장소 추천, 예산 관리, 일정 관리를 제공합니다.',
+        stack: ['LangGraph', 'GPT-4', 'Streamlit', 'PostgreSQL', 'Tavily'],
+        href: 'https://github.com/ming2tofu33/pjt-wedding_planner_AI_agent',
+        year: '2025',
+      },
+      {
+        title: 'Healthcare Pill Detection',
+        description: '의료용 알약 객체 감지 파이프라인. mAP 0.995 달성. 108회 이상의 학습 실험에 걸친 자동 추적 기능을 갖춘 5단계 재현 가능 파이프라인.',
+        stack: ['PyTorch', 'YOLOv8', 'OpenCV', 'Albumentations'],
+        href: 'https://github.com/ming2tofu33/pjt-sprint_ai07_healthcare',
+        year: '2025',
+      },
+      {
+        title: 'Korean Movie Analysis',
+        description: '한국 영화 927편(2005–2019) 종합 데이터 분석. 박스오피스 트렌드, 평론가-관객 상관관계, 감독-배우 협업 네트워크를 분석했습니다.',
+        stack: ['Pandas', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'],
+        href: 'https://github.com/ming2tofu33/pjt-movie_analysis',
+        year: '2025',
+      },
+    ]
+  : [
+      {
+        title: '0to1log',
+        description: 'AI news curation platform with a newsprint-inspired editorial design. Full-stack solo project covering content pipeline, admin editor, and multilingual publishing.',
+        stack: ['Astro', 'FastAPI', 'Supabase', 'OpenAI', 'Tailwind CSS'],
+        href: '/en/news/',
+        year: '2026',
+      },
+      {
+        title: 'MarryRoute',
+        description: 'AI wedding planner agent powered by LangGraph. Conversational AI assistant "Marie" provides personalized venue recommendations, budget tracking, and schedule management.',
+        stack: ['LangGraph', 'GPT-4', 'Streamlit', 'PostgreSQL', 'Tavily'],
+        href: 'https://github.com/ming2tofu33/pjt-wedding_planner_AI_agent',
+        year: '2025',
+      },
+      {
+        title: 'Healthcare Pill Detection',
+        description: 'Medical pill object detection pipeline achieving 0.995 mAP score. Five-stage reproducible pipeline with automatic experiment tracking across 108+ training runs.',
+        stack: ['PyTorch', 'YOLOv8', 'OpenCV', 'Albumentations'],
+        href: 'https://github.com/ming2tofu33/pjt-sprint_ai07_healthcare',
+        year: '2025',
+      },
+      {
+        title: 'Korean Movie Analysis',
+        description: 'Comprehensive data analysis of 927 Korean films (2005-2019). Explored box office trends, critic-audience correlation, and director-actor collaboration networks.',
+        stack: ['Pandas', 'Matplotlib', 'Seaborn', 'NetworkX', 'BeautifulSoup'],
+        href: 'https://github.com/ming2tofu33/pjt-movie_analysis',
+        year: '2025',
+      },
+    ];
 
 const links = [
   { label: 'GitHub', href: 'https://github.com/ming2tofu33' },
@@ -30,20 +98,16 @@ const links = [
 ];
 ---
 
-<MainLayout title="Portfolio" locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
+<MainLayout title={isKo ? '포트폴리오' : 'Portfolio'} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
   <div class="pf-page">
 
     <!-- Hero -->
     <section class="pf-hero" style="--reveal: 0;">
-      <p class="pf-overline">Portfolio</p>
+      <p class="pf-overline">{copy.overline}</p>
       <h1 class="pf-name">Amy Domin Kim</h1>
-      <p class="pf-tagline">AI를 만들고, 기록하는 사람</p>
+      <p class="pf-tagline">{copy.tagline}</p>
       <div class="pf-ornament" aria-hidden="true">&mdash;&thinsp;&diams;&thinsp;&mdash;</div>
-      <p class="pf-bio">
-        AI Engineer building at the intersection of LLM applications, data analysis, and web development.
-        From designing multi-agent systems to analyzing 900+ films, I turn curiosity into working software
-        and share what I learn along the way.
-      </p>
+      <p class="pf-bio">{copy.bio}</p>
       <nav class="pf-links" aria-label="Social links">
         {links.map((link, i) => (
           <>
@@ -56,22 +120,47 @@ const links = [
       </nav>
     </section>
 
-    <!-- Section Links -->
-    <div class="pf-landing-grid" style="--reveal: 1;">
-      {sections.map((section, i) => (
-        <a class="pf-landing-card" href={section.href} style={`--card-i: ${i};`}>
-          <div class="pf-landing-card-header">
-            <h2 class="pf-landing-card-title">{section.title}</h2>
-            <span class="pf-landing-card-count">{section.count}</span>
-          </div>
-          <p class="pf-landing-card-desc">{section.description}</p>
-          <span class="pf-landing-card-arrow" aria-hidden="true">&rarr;</span>
-        </a>
-      ))}
+    <!-- Projects -->
+    <section class="pf-section" style="--reveal: 1;">
+      <h2 class="pf-section-title">{copy.projectsHeading}</h2>
+      <div class="pf-project-grid">
+        {projects.map((project, i) => (
+          <a
+            class="pf-project-card"
+            href={project.href}
+            target={project.href.startsWith('http') ? '_blank' : undefined}
+            rel={project.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+            style={`--card-i: ${i};`}
+          >
+            <div class="pf-project-header">
+              <h3 class="pf-project-title">{project.title}</h3>
+              <span class="pf-project-year">{project.year}</span>
+            </div>
+            <p class="pf-project-desc">{project.description}</p>
+            <div class="pf-project-stack">
+              {project.stack.map((tech) => (
+                <span class="newsprint-tag">{tech}</span>
+              ))}
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- Skills link -->
+    <div class="pf-landing-grid" style="--reveal: 2;">
+      <a class="pf-landing-card" href="/portfolio/skills/">
+        <div class="pf-landing-card-header">
+          <h2 class="pf-landing-card-title">{copy.skillsTitle}</h2>
+          <span class="pf-landing-card-count">{copy.skillsCount}</span>
+        </div>
+        <p class="pf-landing-card-desc">{copy.skillsDesc}</p>
+        <span class="pf-landing-card-arrow" aria-hidden="true">&rarr;</span>
+      </a>
     </div>
 
     <!-- Footer ornament -->
-    <div class="pf-footer-ornament" aria-hidden="true" style="--reveal: 2;">
+    <div class="pf-footer-ornament" aria-hidden="true" style="--reveal: 3;">
       &mdash;&thinsp;&diams;&thinsp;&mdash;
     </div>
 

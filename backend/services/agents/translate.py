@@ -66,12 +66,18 @@ def _build_business_translation_payload(en_data: dict[str, Any]) -> dict[str, An
     }
 
 
-def _build_user_prompt(payload: dict[str, Any], post_type: str) -> str:
+def _build_user_prompt(
+    payload: dict[str, Any],
+    post_type: str,
+    length_hints: str = "",
+) -> str:
     """Build the user prompt for whole-post translation."""
+    hint_block = f"\n\n{length_hints}" if length_hints else ""
     return (
         f"Translate this {post_type} post from English to Korean.\n"
         "Return the same JSON structure with all text values translated.\n"
-        "Keep URLs, slugs, field names, booleans, and identifiers unchanged.\n\n"
+        "Keep URLs, slugs, field names, booleans, and identifiers unchanged."
+        f"{hint_block}\n\n"
         f"```json\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n```"
     )
 
@@ -118,7 +124,12 @@ async def _translate_research(
     """Translate a research post EN → KO. Returns (ko_data, usage)."""
     client = get_openai_client()
     payload = _build_research_translation_payload(en_data)
-    user_prompt = _build_user_prompt(payload, "research")
+    length_hints = (
+        "IMPORTANT — Minimum Korean character counts (hard floors):\n"
+        f"- content_original: {RESEARCH_KO_MIN_CONTENT} chars minimum\n"
+        "Do NOT summarize or compress. Translate every sentence fully."
+    )
+    user_prompt = _build_user_prompt(payload, "research", length_hints=length_hints)
 
     cumulative_usage: dict[str, Any] = {}
     last_error: Exception | None = None
@@ -138,11 +149,17 @@ async def _translate_research(
                         "TranslateResearch attempt %d: content=%d/%d",
                         attempt + 1, content_len, RESEARCH_KO_MIN_CONTENT,
                     )
+                    last_error = ValueError(
+                        f"content_original too short: {content_len}/{RESEARCH_KO_MIN_CONTENT}"
+                    )
+                    shortfall = RESEARCH_KO_MIN_CONTENT - content_len
                     user_prompt = (
                         f"{user_prompt}\n\n"
-                        f"IMPORTANT: content_original was {content_len} chars "
-                        f"(min {RESEARCH_KO_MIN_CONTENT}). "
-                        "Translate more completely without compression."
+                        f"CRITICAL: content_original was {content_len} chars "
+                        f"but minimum is {RESEARCH_KO_MIN_CONTENT} "
+                        f"(need {shortfall} more). "
+                        "Translate every English sentence fully into Korean — "
+                        "do NOT paraphrase, summarize, or merge sentences."
                     )
                     continue
 
@@ -170,7 +187,15 @@ async def _translate_business(
     """Translate a business post EN → KO. Returns (ko_data, usage)."""
     client = get_openai_client()
     payload = _build_business_translation_payload(en_data)
-    user_prompt = _build_user_prompt(payload, "business")
+    length_hints = (
+        "IMPORTANT — Minimum Korean character counts (hard floors):\n"
+        f"- content_beginner: {BUSINESS_KO_MIN_CONTENT} chars minimum\n"
+        f"- content_learner: {BUSINESS_KO_MIN_CONTENT} chars minimum\n"
+        f"- content_expert: {BUSINESS_KO_MIN_CONTENT} chars minimum\n"
+        f"- content_analysis: {BUSINESS_KO_MIN_ANALYSIS} chars minimum\n"
+        "Do NOT summarize or compress. Translate every sentence fully."
+    )
+    user_prompt = _build_user_prompt(payload, "business", length_hints=length_hints)
 
     cumulative_usage: dict[str, Any] = {}
     last_error: Exception | None = None
@@ -198,12 +223,16 @@ async def _translate_business(
                     "TranslateBusiness attempt %d too short: %s",
                     attempt + 1, ", ".join(short_fields),
                 )
+                last_error = ValueError(
+                    f"Fields too short: {', '.join(short_fields)}"
+                )
                 user_prompt = (
                     f"{user_prompt}\n\n"
-                    f"IMPORTANT: These fields were too short: {', '.join(short_fields)}. "
+                    f"CRITICAL: These fields were too short: {', '.join(short_fields)}. "
                     f"Minimum persona content: {BUSINESS_KO_MIN_CONTENT} chars. "
                     f"Minimum analysis: {BUSINESS_KO_MIN_ANALYSIS} chars. "
-                    "Translate more completely without compression."
+                    "Translate every English sentence fully into Korean — "
+                    "do NOT paraphrase, summarize, or merge sentences."
                 )
                 continue
 

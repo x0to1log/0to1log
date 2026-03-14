@@ -18,14 +18,19 @@ CREATE POLICY "Admin can update site_content"
     EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid() AND is_active = true)
   );
 
+CREATE POLICY "Admin can insert site_content"
+  ON site_content FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid() AND is_active = true)
+  );
+
 INSERT INTO site_content (key, value_ko, value_en) VALUES
   ('editorial_note',
-   '오늘 바뀐 것부터 가장 빠르게 보고, 필요한 맥락은 차분하게 붙이는 AI 퍼블리케이션입니다.',
-   'A daily publication for reading the latest AI shifts first, then slowing down for the right context.'),
+   '쏟아지는 AI 변화를 가장 먼저 포착하고, 핵심적인 맥락을 전달합니다.',
+   'Catching the latest AI shifts first, delivering the essential context.'),
 
   ('handbook_intro',
-   'AI, 백엔드, 보안, 인프라 실무에서 자주 만나는 기술 용어를 짧고 또렷하게 정리합니다.',
-   'A concise reference for technical terms that appear across AI, backend, security, and infrastructure work.'),
+   '단순한 정의를 넘어 실무적 쓰임새를 연결하는 IT 기술 용어 사전입니다.',
+   'An IT glossary that goes beyond simple definitions to connect practical applications.'),
 
   ('news_masthead',
    '최신 AI 뉴스 모음집',
