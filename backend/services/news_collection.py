@@ -30,7 +30,7 @@ async def collect_news(
         logger.error("Failed to create Tavily client: %s", e)
         return []
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     all_results: list[dict] = []
 
     for query in SEARCH_QUERIES:
@@ -72,3 +72,40 @@ async def collect_news(
         len(all_results),
     )
     return candidates
+
+
+async def collect_community_reactions(title: str, url: str) -> str:
+    """Collect community reactions (Reddit, HN) for a given article.
+
+    Returns combined text of reactions, or empty string on failure.
+    """
+    if not settings.tavily_api_key:
+        logger.warning("Tavily API key not configured, skipping community reactions")
+        return ""
+
+    query = f'"{title}" site:reddit.com OR site:news.ycombinator.com'
+
+    try:
+        tavily = TavilyClient(api_key=settings.tavily_api_key)
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: tavily.search(
+                query=query,
+                search_depth="basic",
+                max_results=5,
+            ),
+        )
+        results = response.get("results", [])
+        parts: list[str] = []
+        for item in results:
+            item_url = item.get("url", "")
+            content = item.get("content", "")
+            if item_url or content:
+                parts.append(f"{item_url}\n{content}")
+        combined = "\n\n".join(parts)
+        logger.info("Collected community reactions for '%s': %d results", title, len(results))
+        return combined
+    except Exception as e:
+        logger.warning("Failed to collect community reactions for '%s': %s", title, e)
+        return ""
