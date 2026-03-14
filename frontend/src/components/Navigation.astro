@@ -31,9 +31,11 @@ const copy = locale === 'ko'
       handbook: 'AI 용어집',
       library: '나의 서재',
       blog: 'IT 블로그',
+      products: 'AI 제품군',
       pageHome: '홈',
       pageArticle: '기사',
       pageTerm: '용어',
+      pageProduct: '제품',
       pageAdmin: '관리자',
       pageLibrary: '나의 서재',
       languageItem: '언어 · English',
@@ -54,9 +56,11 @@ const copy = locale === 'ko'
       handbook: 'AI Glossary',
       library: 'My Library',
       blog: 'IT Blog',
+      products: 'AI Products',
       pageHome: 'Home',
       pageArticle: 'Article',
       pageTerm: 'Term',
+      pageProduct: 'Product',
       pageAdmin: 'Admin',
       pageLibrary: 'My Library',
       languageItem: 'Language · 한국어',
@@ -76,6 +80,7 @@ const copy = locale === 'ko'
 const handbookRoot = `/${locale}/handbook/`;
 const newsRoot = `/${locale}/news/`;
 const blogRoot = `/${locale}/blog/`;
+const productsRoot = `/${locale}/products/`;
 
 function getCurrentPageLabel(pathname: string): string {
   if (pathname.startsWith('/admin')) return copy.pageAdmin;
@@ -87,6 +92,8 @@ function getCurrentPageLabel(pathname: string): string {
   if (pathname.startsWith(newsRoot)) return copy.pageArticle;
   if (pathname === blogRoot || pathname === blogRoot.slice(0, -1)) return copy.blog;
   if (pathname.startsWith(blogRoot)) return copy.pageArticle;
+  if (pathname === productsRoot || pathname === productsRoot.slice(0, -1)) return copy.products;
+  if (pathname.startsWith(productsRoot)) return copy.pageProduct;
 
   return copy.pageHome;
 }
@@ -101,6 +108,8 @@ const detailBack = (() => {
     return { label: copy.aiNews, href: newsRoot };
   if (currentPath.startsWith(blogRoot) && currentPath !== blogRoot && currentPath !== blogRoot.slice(0, -1))
     return { label: copy.blog, href: blogRoot };
+  if (currentPath.startsWith(productsRoot) && currentPath !== productsRoot && currentPath !== productsRoot.slice(0, -1))
+    return { label: copy.products, href: productsRoot };
   return null;
 })();
 
@@ -114,6 +123,11 @@ const navItems = [
     href: `/${locale}/handbook/`,
     label: copy.handbook,
     active: currentPath.startsWith(`/${locale}/handbook`),
+  },
+  {
+    href: productsRoot,
+    label: copy.products,
+    active: currentPath.startsWith(`/${locale}/products`),
   },
   {
     href: '/library/',
@@ -382,6 +396,7 @@ const navItems = [
 
     const headerH = header.offsetHeight;
     spacer.style.height = `${headerH}px`;
+    document.documentElement.style.setProperty('--header-h', `${headerH}px`);
 
     let lastY = window.scrollY;
     let ticking = false;

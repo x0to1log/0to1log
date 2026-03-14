@@ -10,9 +10,10 @@ import HomeNewsCard from '../../components/home/HomeNewsCard.astro';
 import HomeTermCard from '../../components/home/HomeTermCard.astro';
 import HomeSectionHeader from '../../components/home/HomeSectionHeader.astro';
 import BlogFeaturedCard from '../../components/blog/BlogFeaturedCard.astro';
+import HomeProductCard from '../../components/home/HomeProductCard.astro';
 
 const locale = 'en';
-const { news, terms, blog, siteContent } = await getHomePageData(locale);
+const { news, terms, blog, siteContent, featuredProducts } = await getHomePageData(locale);
 
 const heroNews = news[0] ?? null;
 const moreNews = news.slice(1, 4);
@@ -134,15 +135,51 @@ const homeIntro = siteContent.home_intro ||
       </section>
     )}
 
-    <!-- Section E: CTA -->
-    <div class="home-cta">
-      <p class="home-cta-intro">{homeIntro}</p>
-      <div class="home-cta-links">
-        <a href="/en/news/" class="home-cta-link">AI News</a>
-        <a href="/en/handbook/" class="home-cta-link">AI Glossary</a>
-        <a href="/en/blog/" class="home-cta-link">IT Blog</a>
+    <!-- Section E: Featured AI Products -->
+    {featuredProducts.length > 0 && (
+      <section class="home-section">
+        <HomeSectionHeader
+          title={t.en['home.featuredProducts']}
+          viewAllHref="/en/products/"
+          viewAllLabel={t.en['home.viewAll']}
+        />
+        <div class="home-product-grid">
+          {featuredProducts.map((product) => (
+            <HomeProductCard
+              href={`/en/products/${product.slug}/`}
+              name={product.name}
+              tagline={product.tagline}
+              logoUrl={product.logo_url}
+              pricing={product.pricing}
+              locale={locale}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Section F: Start Here -->
+    <section class="home-section home-start-here">
+      <h2 class="home-start-here-title">Start Here</h2>
+      <div class="home-start-here-grid">
+        <a href="/en/news/" class="home-start-here-card">
+          <strong>AI News</strong>
+          <p>Read the most important AI shifts first.</p>
+        </a>
+        <a href="/en/handbook/" class="home-start-here-card">
+          <strong>AI Glossary</strong>
+          <p>Look up unfamiliar terms without leaving the flow.</p>
+        </a>
+        <a href="/library/" class="home-start-here-card">
+          <strong>My Library</strong>
+          <p>Keep the news and terms that stay with you.</p>
+        </a>
+        <a href="/en/blog/" class="home-start-here-card">
+          <strong>IT Blog</strong>
+          <p>Explore the builds, reflections, and technical work behind the product.</p>
+        </a>
       </div>
-    </div>
+    </section>
 
   </div>
 </MainLayout>

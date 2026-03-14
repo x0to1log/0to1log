@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
 import { getSiteContents } from '../siteContent';
+import { fetchHomeFeaturedProducts, type HomeFeaturedProduct } from './productsPage';
+
+export type { HomeFeaturedProduct };
 
 export interface HomeNewsPost {
   id: string;
@@ -39,14 +42,15 @@ export interface HomePageData {
   terms: HomeHandbookTerm[];
   blog: HomeBlogPost[];
   siteContent: Record<string, string>;
+  featuredProducts: HomeFeaturedProduct[];
 }
 
 export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData> {
   if (!supabase) {
-    return { news: [], terms: [], blog: [], siteContent: {} };
+    return { news: [], terms: [], blog: [], siteContent: {}, featuredProducts: [] };
   }
 
-  const [newsRes, termsRes, blogRes, sc] = await Promise.all([
+  const [newsRes, termsRes, blogRes, sc, featuredProducts] = await Promise.all([
     supabase
       .from('news_posts')
       .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
@@ -71,6 +75,7 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
       .limit(4),
 
     getSiteContents(['home_title', 'home_subtitle', 'home_intro'], locale),
+    fetchHomeFeaturedProducts(),
   ]);
 
   let terms: HomeHandbookTerm[] = (termsRes.data ?? []) as HomeHandbookTerm[];
@@ -99,5 +104,6 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
     terms,
     blog: (blogRes.data ?? []) as HomeBlogPost[],
     siteContent: sc,
+    featuredProducts,
   };
 }
