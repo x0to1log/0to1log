@@ -6,7 +6,8 @@ from models.common import PromptGuideItems, SourceCard
 
 EN_MIN_CONTENT_CHARS = 5000
 KO_MIN_CONTENT_CHARS = 3000
-MIN_CONTENT_CHARS = KO_MIN_CONTENT_CHARS
+KO_HARD_FLOOR_CONTENT = 2100     # Absolute floor for Pydantic validation (70% of target)
+MIN_CONTENT_CHARS = KO_HARD_FLOOR_CONTENT
 TARGET_CONTENT_CHARS = 8000
 
 

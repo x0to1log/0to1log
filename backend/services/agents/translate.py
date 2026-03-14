@@ -26,6 +26,7 @@ from services.agents.prompts import TRANSLATE_SYSTEM_PROMPT
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
+SOFT_FLOOR_RATIO = 0.70  # Accept translations ≥ 70% of target after all retries
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +147,7 @@ async def _translate_research(
 
     cumulative_usage: dict[str, Any] = {}
     last_error: Exception | None = None
+    last_merged: dict[str, Any] | None = None
 
     for attempt in range(1 + MAX_RETRIES):
         try:
@@ -153,6 +155,7 @@ async def _translate_research(
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
             merged = _merge_translation(en_data, translated)
+            last_merged = merged
 
             # Validate with dynamic threshold
             if en_data.get("has_news", True):
@@ -186,6 +189,23 @@ async def _translate_research(
             logger.warning("TranslateResearch attempt %d failed: %s", attempt + 1, exc)
             if attempt >= MAX_RETRIES:
                 break
+
+    # --- Soft-floor fallback ---
+    if last_merged is not None and en_data.get("has_news", True):
+        content_len = len(last_merged.get("content_original") or "")
+        soft_threshold = int(ko_target * SOFT_FLOOR_RATIO)
+        if content_len >= soft_threshold:
+            logger.warning(
+                "TranslateResearch: accepting soft-floor result after %d attempts "
+                "(content=%d >= %d%% threshold %d)",
+                1 + MAX_RETRIES, content_len, int(SOFT_FLOOR_RATIO * 100), soft_threshold,
+            )
+            validated = ResearchPost.model_validate(last_merged)
+            cumulative_usage["attempts"] = 1 + MAX_RETRIES
+            cumulative_usage["soft_floor"] = True
+            result = validated.model_dump()
+            result["_quality_warnings"] = ["short_translation"]
+            return result, cumulative_usage
 
     raise ValueError(f"TranslateResearch failed after {1 + MAX_RETRIES} attempts: {last_error}")
 
@@ -232,6 +252,7 @@ async def _translate_business(
 
     cumulative_usage: dict[str, Any] = {}
     last_error: Exception | None = None
+    last_merged: dict[str, Any] | None = None  # Track best result for soft-floor
 
     for attempt in range(1 + MAX_RETRIES):
         try:
@@ -239,6 +260,7 @@ async def _translate_business(
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
             merged = _merge_translation(en_data, translated)
+            last_merged = merged  # Keep best result
 
             # Check minimum lengths with dynamic thresholds
             short_fields: list[str] = []
@@ -277,6 +299,38 @@ async def _translate_business(
             logger.warning("TranslateBusiness attempt %d failed: %s", attempt + 1, exc)
             if attempt >= MAX_RETRIES:
                 break
+
+    # --- Soft-floor fallback: accept if all fields ≥ 70% of target ---
+    if last_merged is not None:
+        soft_short: list[str] = []
+        for field in persona_fields:
+            flen = len(last_merged.get(field) or "")
+            soft_threshold = int(ko_targets[field] * SOFT_FLOOR_RATIO)
+            if flen < soft_threshold:
+                soft_short.append(f"{field}={flen}/{soft_threshold}")
+
+        analysis_len = len(last_merged.get("content_analysis") or "")
+        soft_analysis = int(ko_analysis_target * SOFT_FLOOR_RATIO)
+        if analysis_len < soft_analysis:
+            soft_short.append(f"content_analysis={analysis_len}/{soft_analysis}")
+
+        if not soft_short:
+            logger.warning(
+                "TranslateBusiness: accepting soft-floor result after %d attempts "
+                "(fields met %d%% threshold)",
+                1 + MAX_RETRIES, int(SOFT_FLOOR_RATIO * 100),
+            )
+            validated = BusinessPost.model_validate(last_merged)
+            cumulative_usage["attempts"] = 1 + MAX_RETRIES
+            cumulative_usage["soft_floor"] = True
+            result = validated.model_dump()
+            result["_quality_warnings"] = ["short_translation"]
+            return result, cumulative_usage
+
+        logger.error(
+            "TranslateBusiness: soft-floor also failed: %s",
+            ", ".join(soft_short),
+        )
 
     raise ValueError(f"TranslateBusiness failed after {1 + MAX_RETRIES} attempts: {last_error}")
 

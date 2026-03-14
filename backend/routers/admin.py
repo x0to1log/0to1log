@@ -297,3 +297,71 @@ async def suggest_topics(
         topics = []
 
     return {"topics": topics[:5]}
+
+
+@router.delete(
+    "/pipeline/{batch_id}",
+    responses=ERROR_RESPONSES,
+)
+@limiter.limit("5/minute")
+async def delete_pipeline_batch(
+    request: Request,
+    batch_id: str,
+    _user=Depends(require_admin),
+):
+    """Delete all pipeline data for a given batch_id (e.g. '2026-03-14').
+
+    Removes: news_posts, news_candidates, pipeline_logs, pipeline_runs.
+    """
+    client = get_supabase()
+    if not client:
+        raise HTTPException(status_code=503, detail="Database not configured")
+
+    run_key = f"daily:{batch_id}"
+    deleted: dict[str, int] = {}
+
+    # 1. Find pipeline_runs row to get run_id for log cleanup
+    run_row = (
+        client.table("pipeline_runs")
+        .select("id")
+        .eq("run_key", run_key)
+        .maybe_single()
+        .execute()
+    )
+    run_id = run_row.data["id"] if run_row and run_row.data else None
+
+    # 2. Delete pipeline_logs (FK dependency first)
+    if run_id:
+        logs_res = (
+            client.table("pipeline_logs")
+            .delete()
+            .eq("run_id", run_id)
+            .execute()
+        )
+        deleted["pipeline_logs"] = len(logs_res.data or [])
+
+    # 3. Delete news_posts
+    posts_res = (
+        client.table("news_posts")
+        .delete()
+        .eq("pipeline_batch_id", batch_id)
+        .execute()
+    )
+    deleted["news_posts"] = len(posts_res.data or [])
+
+    # 4. Delete news_candidates
+    candidates_res = (
+        client.table("news_candidates")
+        .delete()
+        .eq("batch_id", batch_id)
+        .execute()
+    )
+    deleted["news_candidates"] = len(candidates_res.data or [])
+
+    # 5. Delete pipeline_runs (last, after logs are gone)
+    if run_id:
+        client.table("pipeline_runs").delete().eq("id", run_id).execute()
+        deleted["pipeline_runs"] = 1
+
+    logger.info("Deleted pipeline batch %s: %s", batch_id, deleted)
+    return {"batch_id": batch_id, "deleted": deleted}

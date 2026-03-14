@@ -9,11 +9,13 @@ from models.common import PromptGuideItems, RelatedNews
 
 # --- Length thresholds (v4: all personas equal) ---
 EN_MIN_CONTENT_CHARS = 5000      # EN generation floor
-KO_MIN_CONTENT_CHARS = 3000      # KO translation floor (~45% of EN, Korean syllable chars)
+KO_MIN_CONTENT_CHARS = 3000      # KO translation target (~45% of EN, Korean syllable chars)
+KO_HARD_FLOOR_CONTENT = 2100     # Absolute floor for Pydantic validation (70% of target)
 MIN_CONTENT_CHARS = EN_MIN_CONTENT_CHARS
 TARGET_CONTENT_CHARS = 6500      # target 6000-7000
 EN_MIN_ANALYSIS_CHARS = 2500
 KO_MIN_ANALYSIS_CHARS = 1000
+KO_HARD_FLOOR_ANALYSIS = 700     # Absolute floor for analysis validation (70% of target)
 MIN_ANALYSIS_CHARS = EN_MIN_ANALYSIS_CHARS
 
 
@@ -46,18 +48,18 @@ class BusinessPost(BaseModel):
     @field_validator("content_analysis")
     @classmethod
     def check_analysis_min_length(cls, v: str) -> str:
-        if v and len(v) < KO_MIN_ANALYSIS_CHARS:
+        if v and len(v) < KO_HARD_FLOOR_ANALYSIS:
             raise ValueError(
-                f"Content too short: {len(v)} chars (min {KO_MIN_ANALYSIS_CHARS})"
+                f"Content too short: {len(v)} chars (min {KO_HARD_FLOOR_ANALYSIS})"
             )
         return v
 
     @field_validator("content_beginner", "content_learner", "content_expert")
     @classmethod
     def check_min_length(cls, v: str) -> str:
-        if v and len(v) < KO_MIN_CONTENT_CHARS:
+        if v and len(v) < KO_HARD_FLOOR_CONTENT:
             raise ValueError(
-                f"Content too short: {len(v)} chars (min {KO_MIN_CONTENT_CHARS})"
+                f"Content too short: {len(v)} chars (min {KO_HARD_FLOOR_CONTENT})"
             )
         return v
 

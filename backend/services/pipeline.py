@@ -1014,6 +1014,7 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
             ko_research_data, research_tr_usage = await translate_post(
                 research_post.model_dump(), "research",
             )
+            research_quality_warnings = ko_research_data.pop("_quality_warnings", [])
             ko_research = ResearchPost.model_validate(ko_research_data)
         except Exception:
             log_pipeline_stage(
@@ -1054,12 +1055,16 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
             output_summary=ko_research_id,
         )
         research_quality_score, research_quality_flags = compute_quality(ko_research.model_dump())
+        if research_quality_warnings:
+            research_quality_flags["short_translation"] = True
+            research_quality_score = max(0, research_quality_score - 1)
         log_pipeline_stage(
             run_id, "quality.research", "success",
             post_type="research", locale="ko",
             debug_meta={
                 "quality_score": research_quality_score,
                 "quality_flags": research_quality_flags,
+                "soft_floor": research_tr_usage.get("soft_floor", False),
             },
         )
         logger.info("KO research post saved (source_post_id=%s)", en_research_id)
@@ -1157,6 +1162,7 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
                 ko_business_data, business_tr_usage = await translate_post(
                     business_post.model_dump(), "business",
                 )
+                business_quality_warnings = ko_business_data.pop("_quality_warnings", [])
                 ko_business = BusinessPost.model_validate(ko_business_data)
             except Exception:
                 log_pipeline_stage(
@@ -1199,12 +1205,16 @@ async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_R
                 output_summary=ko_business_id,
             )
             business_quality_score, business_quality_flags = compute_quality(ko_business.model_dump())
+            if business_quality_warnings:
+                business_quality_flags["short_translation"] = True
+                business_quality_score = max(0, business_quality_score - 1)
             log_pipeline_stage(
                 run_id, "quality.business", "success",
                 post_type="business", locale="ko",
                 debug_meta={
                     "quality_score": business_quality_score,
                     "quality_flags": business_quality_flags,
+                    "soft_floor": business_tr_usage.get("soft_floor", False),
                 },
             )
             logger.info("KO business post saved (source_post_id=%s)", en_business_id)
