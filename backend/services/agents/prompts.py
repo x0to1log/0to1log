@@ -257,7 +257,7 @@ Each item: title, url, summary (≥50 chars). Set to null if none.
   "fact_pack": {
     "key_facts": ["..."],
     "numbers": ["..."],
-    "entities": [{"name": "...", "role": "..."}],
+    "entities": ["Company A (role)", "Person B (role)"],
     "timeline": ["..."]
   },
   "source_cards": [

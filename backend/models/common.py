@@ -29,13 +29,6 @@ class RelatedNews(BaseModel):
     new_tools: Optional[RelatedNewsItem] = None
 
 
-class FactPackItem(BaseModel):
-    id: str = ""
-    claim: str = ""
-    why_it_matters: str = ""
-    source_ids: list[str] = []
-    confidence: str = ""
-
 
 class SourceCard(BaseModel):
     id: str = ""

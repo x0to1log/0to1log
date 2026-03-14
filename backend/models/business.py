@@ -36,6 +36,13 @@ class BusinessPost(BaseModel):
     excerpt: str = ""
     focus_items: list[str] = []
 
+    @field_validator("fact_pack", mode="before")
+    @classmethod
+    def coerce_fact_pack(cls, v: Any) -> dict[str, Any]:
+        if isinstance(v, list):
+            return {"items": v}
+        return v
+
     @field_validator("content_analysis")
     @classmethod
     def check_analysis_min_length(cls, v: str) -> str:
