@@ -14,7 +14,6 @@ const sb = createClient(
 );
 
 let totalPosts = 0;
-let publishedPosts = 0;
 let totalTerms = 0;
 let totalDrafts = 0;
 let totalUsers = 0;
@@ -36,6 +35,9 @@ let pipelineCost = 0;
 let pipelineTokens = 0;
 let candidatesTotal = 0;
 let candidatesSelected = 0;
+let totalBlogPosts = 0;
+let monthlyCost = 0;
+let monthlyTokens = 0;
 
 type Notification = {
   id: string;
@@ -59,20 +61,22 @@ let recentActivity: ActivityItem[] = [];
 let staleDrafts: ActivityItem[] = [];
 
 try {
-  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes] = await Promise.all([
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes, blogRes, monthlyLogsRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
     sb.from('news_likes').select('id', { count: 'exact', head: true }),
     sb.from('pipeline_runs').select('*').order('started_at', { ascending: false }).limit(1),
     sb.from('admin_notifications').select('id, type, title, message, created_at').eq('is_read', false).order('created_at', { ascending: false }).limit(5),
+    sb.from('blog_posts').select('id', { count: 'exact', head: true }),
+    sb.from('pipeline_logs').select('cost_usd, tokens_used').gte('created_at', thirtyDaysAgo),
   ]);
 
   const posts = postsRes.data ?? [];
   const terms = termsRes.data ?? [];
 
   totalPosts = posts.length;
-  publishedPosts = posts.filter((p) => p.status === 'published').length;
   totalTerms = terms.length;
 
   const postDrafts = posts.filter((p) => p.status === 'draft').length;
@@ -102,6 +106,11 @@ try {
 
   totalUsers = profilesRes.count ?? 0;
   totalLikes = likesRes.count ?? 0;
+  totalBlogPosts = blogRes.count ?? 0;
+
+  const monthlyLogs = monthlyLogsRes.data ?? [];
+  monthlyCost = monthlyLogs.reduce((sum: number, l: any) => sum + (parseFloat(l.cost_usd) || 0), 0);
+  monthlyTokens = monthlyLogs.reduce((sum: number, l: any) => sum + (l.tokens_used || 0), 0);
 
   // Pipeline
   const runData = pipelineRes.data?.[0] ?? null;
@@ -154,24 +163,39 @@ function relativeTime(dateStr: string): string {
           </div>
         </div>
         <div class="admin-quick-actions">
-          <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
+          <a href="/admin/posts/" class="admin-btn">Check News</a>
           <a href="/admin/handbook/edit/new" class="admin-btn">New Term</a>
+          <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
         </div>
       </div>
 
-      <div class="dashboard-stats">
+      <!-- Zone A: 콘텐츠 현황 -->
+      <div class="dashboard-stats-zone-a">
         <a href="/admin/posts/" class="dashboard-stat-card">
-          <div class="dashboard-stat-label">Posts</div>
+          <div class="dashboard-stat-label">News</div>
           <div class="dashboard-stat-value">{totalPosts}</div>
         </a>
-        <a href="/admin/posts/" class="dashboard-stat-card">
-          <div class="dashboard-stat-label">Published</div>
-          <div class="dashboard-stat-value">{publishedPosts}</div>
-        </a>
         <a href="/admin/handbook/" class="dashboard-stat-card">
-          <div class="dashboard-stat-label">Terms</div>
+          <div class="dashboard-stat-label">Handbook</div>
           <div class="dashboard-stat-value">{totalTerms}</div>
         </a>
+        <a href="/admin/blog/" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Blog</div>
+          <div class="dashboard-stat-value">{totalBlogPosts}</div>
+        </a>
+      </div>
+
+      <!-- Zone B: AI 운영 비용 -->
+      <a href="/admin/pipeline-analytics" class="dashboard-ai-cost-card">
+        <div class="dashboard-ai-cost-label">AI Cost (this month)</div>
+        <div class="dashboard-ai-cost-body">
+          <span class="dashboard-ai-cost-main">${monthlyCost.toFixed(2)}</span>
+          <span class="dashboard-ai-cost-tokens">{monthlyTokens.toLocaleString()} tokens</span>
+        </div>
+      </a>
+
+      <!-- Zone C: 사이트 성과 -->
+      <div class="dashboard-stats-zone-c">
         <div class="dashboard-stat-card dashboard-stat-card--highlight">
           <div class="dashboard-stat-label">Drafts</div>
           <div class="dashboard-stat-value">{totalDrafts}</div>
@@ -352,9 +376,65 @@ function relativeTime(dateStr: string): string {
     gap: 0.5rem;
   }
 
-  .dashboard-stats {
+  /* Zone A — 콘텐츠 현황 */
+  .dashboard-stats-zone-a {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .dashboard-stats-zone-a .dashboard-stat-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .dashboard-stats-zone-a .dashboard-stat-value {
+    font-size: 2rem;
+  }
+
+  /* Zone B — AI 운영 비용 */
+  .dashboard-ai-cost-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    padding: 0.875rem 1rem;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.15s;
+  }
+
+  .dashboard-ai-cost-card:hover {
+    border-color: var(--color-text-muted);
+  }
+
+  .dashboard-ai-cost-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  .dashboard-ai-cost-body {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .dashboard-ai-cost-main {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .dashboard-ai-cost-tokens {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+
+  /* Zone C — 사이트 성과 */
+  .dashboard-stats-zone-c {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
@@ -623,15 +703,11 @@ function relativeTime(dateStr: string): string {
     font-size: 1.1rem;
   }
 
-  @media (max-width: 960px) {
-    .dashboard-stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-
   @media (max-width: 640px) {
-    .dashboard-stats {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .dashboard-ai-cost-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
     }
 
     .admin-quick-actions {
