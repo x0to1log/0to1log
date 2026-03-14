@@ -10,9 +10,6 @@ import pytest
 from models.advisor import (
     GenerateTermResult,
     HandbookAdviseRequest,
-    RelatedTermsResult,
-    TranslateResult,
-    ExtractTermsResult,
 )
 
 

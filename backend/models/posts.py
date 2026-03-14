@@ -92,7 +92,3 @@ class HealthResponse(BaseModel):
     timestamp: str
 
 
-class PipelineAcceptedResponse(BaseModel):
-    """POST /cron/news-pipeline 202 response."""
-    accepted: bool
-    message: str
