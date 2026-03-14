@@ -35,8 +35,7 @@
               "title": "AI-Handbook-Pipeline-Overview"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -109,7 +108,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "file": "09-Implementation/Implementation-Plan.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -119,7 +118,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "AI-Handbook-Pipeline-Overview 의 백링크"
+              "title": "Implementation-Plan 의 백링크"
             }
           },
           {
@@ -128,12 +127,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "file": "09-Implementation/Implementation-Plan.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "AI-Handbook-Pipeline-Overview 의 나가는 링크"
+              "title": "Implementation-Plan 의 나가는 링크"
             }
           },
           {
@@ -171,13 +170,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+                "file": "09-Implementation/Implementation-Plan.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "AI-Handbook-Pipeline-Overview 의 개요"
+              "title": "Implementation-Plan 의 개요"
             }
           }
         ]
@@ -198,10 +197,10 @@
       "bases:새 베이스 생성하기": false
     }
   },
-  "active": "54ec1356afe800b5",
+  "active": "1dc87515b9f13e01",
   "lastOpenFiles": [
-    "05-Content/AI-NEWS-Research-Writing.md",
     "04-AI-System/AI-Handbook-Pipeline-Overview.md",
+    "05-Content/AI-NEWS-Research-Writing.md",
     "05-Content/AI-NEWS-Business-Writing.md",
     "08-Design/AI-News-Page-Layouts.md",
     "09-Implementation/Implementation-Plan.md",

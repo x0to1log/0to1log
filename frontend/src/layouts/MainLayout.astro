@@ -39,9 +39,8 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
   <script is:inline nonce={nonce}>
     (function() {
       var stored = localStorage.getItem('theme');
-      if (stored === 'midnight') { stored = 'pink'; localStorage.setItem('theme', stored); }
-      var tc = { dark: '#241F1C', light: '#F4F1EA', pink: '#FFF0F3' };
-      var cs = { dark: 'dark', light: 'light', pink: 'light' };
+      var tc = { dark: '#241F1C', light: '#F4F1EA', pink: '#FFF0F3', midnight: '#1A1A1A' };
+      var cs = { dark: 'dark', light: 'light', pink: 'light', midnight: 'dark' };
       var theme = stored;
       if (stored) {
         document.documentElement.setAttribute('data-theme', stored);

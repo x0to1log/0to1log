@@ -84,6 +84,47 @@
 }
 
 /* ===========================
+   MIDNIGHT THEME (temp preview — stitch_black palette, improved)
+   =========================== */
+[data-theme="midnight"] {
+  --color-bg-primary: #1A1A1A;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #252525;
+  --color-input-surface: #1F1F1F;
+  --color-text-primary: #D4CEC4;
+  --color-text-secondary: #A8A39B;
+  --color-text-muted: #8A847F;
+  --color-border: #777777;
+  --color-accent: #C3A370;
+  --color-accent-hover: #D4B882;
+  --color-accent-glow: rgba(195, 163, 112, 0.15);
+  --color-accent-subtle: rgba(195, 163, 112, 0.08);
+  --color-success: #52875A;
+  --color-warning: #C99B38;
+  --color-error: #A04842;
+  --color-shadow: rgba(0, 0, 0, 0.45);
+  --noise-opacity: 0.018;
+
+  /* Category Colors — same as dark */
+  --color-cat-ainews: #D46A58;
+  --color-cat-study: #7A8B78;
+  --color-cat-career: #A09080;
+  --color-cat-project: #8888A0;
+  --color-cat-work-note: #6E8C92;
+  --color-cat-daily: #A97C68;
+
+  /* Shiki — updated for new text-primary */
+  --shiki-token-keyword: #D4A87C;
+  --shiki-token-string: #8FAE7E;
+  --shiki-token-function: #B8A9D4;
+  --shiki-token-comment: #8A847F;
+  --shiki-token-constant: #C3A370;
+  --shiki-token-punctuation: #D4CEC4;
+  --shiki-color-text: #D4CEC4;
+  --shiki-color-background: var(--color-bg-tertiary);
+}
+
+/* ===========================
    LIGHT THEME
    =========================== */
 [data-theme="light"] {
@@ -203,7 +244,7 @@
   margin-bottom: 0.75rem;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-size: clamp(3rem, 8vw, 4.5rem);
   line-height: 1.08;
   letter-spacing: -0.02em;
   text-transform: uppercase;
@@ -5616,7 +5657,6 @@ body.auth-prompt-open {
   -webkit-backdrop-filter: blur(8px);
   padding: 0.5rem 0;
   margin: -0.5rem 0 1rem;
-  transition: top 300ms ease;
 }
 
 .handbook-search-sticky .handbook-search-input {
