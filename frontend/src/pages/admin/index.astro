@@ -232,7 +232,9 @@ function relativeTime(dateStr: string): string {
             )}
             <div class="dashboard-pipeline-actions">
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              <button type="button" class="admin-btn" id="force-refresh-btn">Force Refresh</button>
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
+              <span class="dashboard-pipeline-helper">Run Pipeline reuses the batch snapshot when possible. Force Refresh recollects and reranks.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
           </div>
@@ -241,7 +243,9 @@ function relativeTime(dateStr: string): string {
             <p class="dashboard-empty">No pipeline runs yet.</p>
             <div class="dashboard-pipeline-actions">
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              <button type="button" class="admin-btn" id="force-refresh-btn">Force Refresh</button>
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
+              <span class="dashboard-pipeline-helper">Run Pipeline reuses the batch snapshot when possible. Force Refresh recollects and reranks.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
           </div>
@@ -552,6 +556,11 @@ function relativeTime(dateStr: string): string {
     color: var(--color-text-muted);
   }
 
+  .dashboard-pipeline-helper {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
   .dashboard-pipeline-feedback[data-state='error'] {
     color: #b42318;
   }
@@ -668,26 +677,37 @@ function relativeTime(dateStr: string): string {
 <script>
   function initDashboardActions(): void {
     const pipelineBtn = document.getElementById('run-pipeline-btn');
+    const forceRefreshBtn = document.getElementById('force-refresh-btn');
     const pipelineFeedback = document.getElementById('run-pipeline-feedback');
-    if (pipelineBtn && !pipelineBtn.dataset.init) {
-      pipelineBtn.dataset.init = '1';
-      const setPipelineFeedback = (message: string, state?: 'error' | 'success'): void => {
-        if (!pipelineFeedback) return;
-        pipelineFeedback.textContent = message;
-        if (state) {
-          pipelineFeedback.dataset.state = state;
-        } else {
-          delete pipelineFeedback.dataset.state;
-        }
-      };
-      pipelineBtn.addEventListener('click', async () => {
-        pipelineBtn.setAttribute('disabled', 'true');
-        pipelineBtn.textContent = 'Running...';
+    const setPipelineFeedback = (message: string, state?: 'error' | 'success'): void => {
+      if (!pipelineFeedback) return;
+      pipelineFeedback.textContent = message;
+      if (state) {
+        pipelineFeedback.dataset.state = state;
+      } else {
+        delete pipelineFeedback.dataset.state;
+      }
+    };
+    const bindPipelineButton = (
+      button: HTMLElement | null,
+      idleLabel: string,
+      mode: 'resume' | 'force_refresh',
+    ): void => {
+      if (!button || button.dataset.init === '1') return;
+      button.dataset.init = '1';
+      button.addEventListener('click', async () => {
+        if (pipelineBtn) pipelineBtn.setAttribute('disabled', 'true');
+        if (forceRefreshBtn) forceRefreshBtn.setAttribute('disabled', 'true');
+        button.textContent = 'Running...';
         setPipelineFeedback('');
         try {
           const res = await fetch('/api/admin/run-pipeline', {
             method: 'POST',
             credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ mode }),
           });
           const payload = await res.json().catch(() => null);
           if (!res.ok) {
@@ -703,20 +723,25 @@ function relativeTime(dateStr: string): string {
             }
             throw new Error(message);
           }
-          pipelineBtn.textContent = 'Started';
+          button.textContent = 'Started';
           setPipelineFeedback(payload?.data?.message || 'Pipeline queued.', 'success');
           setTimeout(() => window.location.reload(), 2000);
         } catch (error) {
-          pipelineBtn.textContent = 'Failed';
-          pipelineBtn.removeAttribute('disabled');
+          button.textContent = 'Failed';
           const message = error instanceof Error ? error.message : 'Failed to trigger pipeline';
           setPipelineFeedback(message, 'error');
           setTimeout(() => {
-            pipelineBtn.textContent = 'Run Pipeline';
+            button.textContent = idleLabel;
           }, 3000);
+        } finally {
+          if (pipelineBtn) pipelineBtn.removeAttribute('disabled');
+          if (forceRefreshBtn) forceRefreshBtn.removeAttribute('disabled');
         }
       });
-    }
+    };
+
+    bindPipelineButton(pipelineBtn, 'Run Pipeline', 'resume');
+    bindPipelineButton(forceRefreshBtn, 'Force Refresh', 'force_refresh');
 
     const markReadBtn = document.getElementById('mark-all-read-btn');
     if (markReadBtn && !markReadBtn.dataset.init) {

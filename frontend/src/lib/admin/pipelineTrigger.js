@@ -18,7 +18,7 @@ function getPipelineConfig(env) {
   return { cronSecret, backendUrl };
 }
 
-async function forwardPipelineTrigger(env) {
+async function forwardPipelineTrigger(env, mode = 'resume') {
   const config = getPipelineConfig(env);
   if (!config) {
     return jsonResponse({ error: 'Missing configuration' }, 500);
@@ -31,6 +31,7 @@ async function forwardPipelineTrigger(env) {
         'Content-Type': 'application/json',
         'x-cron-secret': config.cronSecret,
       },
+      body: JSON.stringify({ mode }),
       signal: AbortSignal.timeout(8000),
     });
 
@@ -61,9 +62,9 @@ export async function handleCronTriggerRequest(request, env) {
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
-  return forwardPipelineTrigger(env);
+  return forwardPipelineTrigger(env, 'resume');
 }
 
-export async function handleAdminTriggerRequest(env) {
-  return forwardPipelineTrigger(env);
+export async function handleAdminTriggerRequest(env, mode = 'resume') {
+  return forwardPipelineTrigger(env, mode);
 }

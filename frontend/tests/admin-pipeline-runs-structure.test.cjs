@@ -53,11 +53,14 @@ function run() {
 
   const detailPage = read('frontend/src/pages/admin/pipeline-runs/[runId].astro');
   assertIncludes(detailPage, "from('pipeline_logs')", 'detail page logs query');
-  assertIncludes(detailPage, "from('pipeline_artifacts')", 'detail page artifacts query');
   assertIncludes(detailPage, 'Run Snapshot', 'detail page summary hero');
+  assertIncludes(detailPage, 'Reuse Signals', 'detail page reuse signals section');
+  assertIncludes(detailPage, 'Run mode', 'detail page run mode metric');
+  assertIncludes(detailPage, 'Reused candidates', 'detail page reused candidates signal');
+  assertIncludes(detailPage, 'Resumed saved EN', 'detail page saved EN signal');
   assertIncludes(detailPage, 'Stage Timeline', 'detail page timeline title');
-  assertIncludes(detailPage, 'Partial Artifacts', 'detail page partial artifacts section');
-  assertIncludes(detailPage, 'Artifact preview', 'detail page artifact preview details');
+  assertNotIncludes(detailPage, 'Partial Artifacts', 'detail page should not have artifact section (v4)');
+  assertNotIncludes(detailPage, 'pipeline_artifacts', 'detail page should not query artifacts (v4)');
   assertIncludes(detailPage, '<details', 'detail page collapsible debug panels');
   assertIncludes(detailPage, '—', 'detail legacy metric placeholder');
   assertIncludes(detailPage, 'raw_error', 'detail page raw error area');

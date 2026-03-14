@@ -1,0 +1,667 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../layouts/MainLayout.astro';
+import AdminSidebar from '../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+
+const accessToken = Astro.locals.accessToken;
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+type AnalyticsLog = {
+  pipeline_type: string;
+  status: string | null;
+  tokens_used: number | null;
+  cost_usd: number | string | null;
+  debug_meta: Record<string, unknown> | null;
+  created_at: string;
+  pipeline_runs: {
+    id: string;
+    run_key: string;
+    status: string | null;
+    started_at: string;
+  };
+};
+
+const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+// Exclude internal/save/quality stages — only actual AI call stages
+const excludeStages = [
+  'pipeline',
+  'research.novelty_gate',
+  'candidates.save',
+  'save.research.en',
+  'save.research.ko',
+  'save.business.en',
+  'save.business.ko',
+  'quality.research',
+  'quality.business',
+];
+
+const { data: rawLogs } = await sb
+  .from('pipeline_logs')
+  .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
+  .gte('pipeline_runs.started_at', thirtyDaysAgo)
+  .not('pipeline_type', 'in', `(${excludeStages.map((s) => `"${s}"`).join(',')})`)
+  .order('created_at', { ascending: true });
+
+const logs: AnalyticsLog[] = (rawLogs ?? []) as AnalyticsLog[];
+
+function parseCost(value: number | string | null): number {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+// Group logs by run
+type RunGroup = {
+  runKey: string;
+  startedAt: string;
+  stages: AnalyticsLog[];
+  totalCost: number;
+  totalTokens: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+};
+
+const runMap = new Map<string, RunGroup>();
+for (const log of logs) {
+  const runId = log.pipeline_runs.id;
+  if (!runMap.has(runId)) {
+    runMap.set(runId, {
+      runKey: log.pipeline_runs.run_key,
+      startedAt: log.pipeline_runs.started_at,
+      stages: [],
+      totalCost: 0,
+      totalTokens: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+    });
+  }
+  const group = runMap.get(runId)!;
+  group.stages.push(log);
+  group.totalCost += parseCost(log.cost_usd);
+  group.totalTokens += log.tokens_used ?? 0;
+  const meta = (log.debug_meta ?? {}) as Record<string, unknown>;
+  group.totalInputTokens += (meta.input_tokens as number) ?? 0;
+  group.totalOutputTokens += (meta.output_tokens as number) ?? 0;
+}
+
+const runs = Array.from(runMap.values()).sort(
+  (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+);
+
+// Quality scores from quality.* logs (need separate query)
+const { data: qualityLogs } = await sb
+  .from('pipeline_logs')
+  .select('debug_meta, pipeline_type, pipeline_runs!inner(id, run_key, started_at)')
+  .gte('pipeline_runs.started_at', thirtyDaysAgo)
+  .in('pipeline_type', ['quality.research', 'quality.business'])
+  .order('created_at', { ascending: true });
+
+type QualityEntry = {
+  runKey: string;
+  startedAt: string;
+  type: string;
+  score: number;
+};
+
+const qualityEntries: QualityEntry[] = [];
+for (const q of (qualityLogs ?? []) as AnalyticsLog[]) {
+  const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
+  if (typeof meta.quality_score === 'number') {
+    qualityEntries.push({
+      runKey: q.pipeline_runs.run_key,
+      startedAt: q.pipeline_runs.started_at,
+      type: q.pipeline_type.replace('quality.', ''),
+      score: meta.quality_score as number,
+    });
+  }
+}
+
+// Stage names for stacked cost chart
+const stageNames = ['collect', 'rank', 'research.generate.en', 'research.translate.ko', 'business.generate.en', 'business.translate.ko'];
+const stageLabels: Record<string, string> = {
+  'collect': 'Collect',
+  'rank': 'Rank',
+  'research.generate.en': 'Research EN',
+  'research.translate.ko': 'Research KO',
+  'business.generate.en': 'Business EN',
+  'business.translate.ko': 'Business KO',
+};
+
+// Per-run per-stage cost data
+type StackedCostData = { label: string; costs: number[]; tokens: number[] };
+const stackedData: StackedCostData[] = stageNames.map((stage) => ({
+  label: stageLabels[stage] || stage,
+  costs: runs.map((run) => {
+    const stageLog = run.stages.find((s) => s.pipeline_type === stage);
+    return stageLog ? parseCost(stageLog.cost_usd) : 0;
+  }),
+  tokens: runs.map((run) => {
+    const stageLog = run.stages.find((s) => s.pipeline_type === stage);
+    return stageLog?.tokens_used ?? 0;
+  }),
+}));
+
+// Summary stats
+const totalRunCount = runs.length;
+const totalCostAll = runs.reduce((sum, r) => sum + r.totalCost, 0);
+const avgCostPerRun = totalRunCount > 0 ? totalCostAll / totalRunCount : 0;
+const totalTokensAll = runs.reduce((sum, r) => sum + r.totalTokens, 0);
+const avgTokensPerRun = totalRunCount > 0 ? Math.round(totalTokensAll / totalRunCount) : 0;
+const avgQuality = qualityEntries.length > 0
+  ? qualityEntries.reduce((sum, q) => sum + q.score, 0) / qualityEntries.length
+  : null;
+
+// Chart data serialization
+const chartData = {
+  runLabels: runs.map((r) => {
+    const d = new Date(r.startedAt);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }),
+  totalCosts: runs.map((r) => Number(r.totalCost.toFixed(4))),
+  stacked: stackedData.map((s) => ({
+    label: s.label,
+    costs: s.costs.map((c) => Number(c.toFixed(6))),
+    tokens: s.tokens,
+  })),
+  quality: {
+    labels: qualityEntries.map((q) => {
+      const d = new Date(q.startedAt);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    }),
+    research: qualityEntries.filter((q) => q.type === 'research').map((q) => q.score),
+    business: qualityEntries.filter((q) => q.type === 'business').map((q) => q.score),
+    researchLabels: qualityEntries.filter((q) => q.type === 'research').map((q) => {
+      const d = new Date(q.startedAt);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    }),
+    businessLabels: qualityEntries.filter((q) => q.type === 'business').map((q) => {
+      const d = new Date(q.startedAt);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    }),
+  },
+};
+
+// Stats table: per-stage averages
+type StageStats = { stage: string; avgTokens: number; avgCost: number; avgAttempts: number; count: number };
+const stageStatsMap = new Map<string, { totalTokens: number; totalCost: number; totalAttempts: number; count: number }>();
+for (const run of runs) {
+  for (const log of run.stages) {
+    const key = log.pipeline_type;
+    const existing = stageStatsMap.get(key) ?? { totalTokens: 0, totalCost: 0, totalAttempts: 0, count: 0 };
+    existing.totalTokens += log.tokens_used ?? 0;
+    existing.totalCost += parseCost(log.cost_usd);
+    const meta = (log.debug_meta ?? {}) as Record<string, unknown>;
+    existing.totalAttempts += (meta.attempts as number) ?? 1;
+    existing.count += 1;
+    stageStatsMap.set(key, existing);
+  }
+}
+const stageStats: StageStats[] = Array.from(stageStatsMap.entries())
+  .map(([stage, s]) => ({
+    stage,
+    avgTokens: Math.round(s.totalTokens / s.count),
+    avgCost: s.totalCost / s.count,
+    avgAttempts: s.totalAttempts / s.count,
+    count: s.count,
+  }))
+  .sort((a, b) => b.avgCost - a.avgCost);
+
+const nonce = Astro.locals.cspNonce || '';
+---
+
+<MainLayout title="Pipeline Analytics" locale="en">
+  <AdminSidebar activeSection="analytics" />
+  <div class="admin-dashboard">
+    <div class="admin-main admin-main--analytics">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <p class="analytics-eyebrow">Pipeline Insights</p>
+            <h1 class="admin-main-title">Analytics</h1>
+            <p class="analytics-subtitle">
+              Cost, token usage, and quality trends across the last 30 days of pipeline runs.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <section class="analytics-summary-grid">
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Runs (30d)</span>
+          <strong class="pipeline-run-stat__value">{totalRunCount}</strong>
+          <span class="pipeline-run-stat__detail">Pipeline executions in window</span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Total Cost</span>
+          <strong class="pipeline-run-stat__value">${totalCostAll.toFixed(2)}</strong>
+          <span class="pipeline-run-stat__detail">All stages combined</span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Avg Cost / Run</span>
+          <strong class="pipeline-run-stat__value">${avgCostPerRun.toFixed(3)}</strong>
+          <span class="pipeline-run-stat__detail">Mean cost per execution</span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Total Tokens</span>
+          <strong class="pipeline-run-stat__value">{totalTokensAll.toLocaleString()}</strong>
+          <span class="pipeline-run-stat__detail">Input + output across all runs</span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Avg Quality</span>
+          <strong class="pipeline-run-stat__value">{avgQuality !== null ? `${avgQuality.toFixed(1)}/4` : '—'}</strong>
+          <span class="pipeline-run-stat__detail">Mean quality score</span>
+        </div>
+      </section>
+
+      {runs.length === 0 ? (
+        <p class="dashboard-empty">No pipeline runs found in the last 30 days.</p>
+      ) : (
+        <>
+          <section class="analytics-charts">
+            <div class="analytics-chart-card">
+              <h3 class="analytics-chart-title">Total Cost per Run</h3>
+              <canvas id="chart-total-cost" width="600" height="280"></canvas>
+            </div>
+            <div class="analytics-chart-card">
+              <h3 class="analytics-chart-title">Cost by Stage (Stacked)</h3>
+              <canvas id="chart-stacked-cost" width="600" height="280"></canvas>
+            </div>
+            <div class="analytics-chart-card">
+              <h3 class="analytics-chart-title">Tokens by Stage</h3>
+              <canvas id="chart-tokens" width="600" height="280"></canvas>
+            </div>
+            <div class="analytics-chart-card">
+              <h3 class="analytics-chart-title">Quality Score Trend</h3>
+              <canvas id="chart-quality" width="600" height="280"></canvas>
+            </div>
+          </section>
+
+          <section class="pipeline-run-section">
+            <div class="pipeline-run-section__header">
+              <div>
+                <h2 class="pipeline-run-section__title">Stage Statistics</h2>
+                <p class="pipeline-run-section__hint">
+                  Average token usage, cost, and retry rate per stage across all runs in the window.
+                </p>
+              </div>
+            </div>
+            <div class="pipeline-cost-table-wrap">
+              <table class="pipeline-cost-table">
+                <thead>
+                  <tr>
+                    <th>Stage</th>
+                    <th>Runs</th>
+                    <th>Avg Tokens</th>
+                    <th>Avg Cost</th>
+                    <th>Avg Attempts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stageStats.map((s) => (
+                    <tr>
+                      <td class="pipeline-cost-table__stage">{s.stage}</td>
+                      <td>{s.count}</td>
+                      <td>{s.avgTokens.toLocaleString()}</td>
+                      <td>${s.avgCost.toFixed(4)}</td>
+                      <td>{s.avgAttempts.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  </div>
+</MainLayout>
+
+<script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
+<script is:inline nonce={nonce} define:vars={{ chartData }}>
+  (function () {
+    if (typeof Chart === 'undefined') return;
+
+    const style = getComputedStyle(document.documentElement);
+    const textColor = style.getPropertyValue('--color-text-secondary').trim() || '#888';
+    const gridColor = style.getPropertyValue('--color-border').trim() || '#e5e5e5';
+
+    const stageColors = [
+      '#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4',
+    ];
+
+    const commonScales = {
+      x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } },
+    };
+
+    // 1. Total Cost Line
+    new Chart(document.getElementById('chart-total-cost'), {
+      type: 'line',
+      data: {
+        labels: chartData.runLabels,
+        datasets: [{
+          label: 'Total Cost ($)',
+          data: chartData.totalCosts,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          ...commonScales,
+          y: { ticks: { color: textColor, callback: (v) => '$' + v }, grid: { color: gridColor } },
+        },
+      },
+    });
+
+    // 2. Stacked Cost Bar
+    new Chart(document.getElementById('chart-stacked-cost'), {
+      type: 'bar',
+      data: {
+        labels: chartData.runLabels,
+        datasets: chartData.stacked.map((s, i) => ({
+          label: s.label,
+          data: s.costs,
+          backgroundColor: stageColors[i % stageColors.length],
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+        scales: {
+          ...commonScales,
+          x: { ...commonScales.x, stacked: true },
+          y: {
+            stacked: true,
+            ticks: { color: textColor, callback: (v) => '$' + v },
+            grid: { color: gridColor },
+          },
+        },
+      },
+    });
+
+    // 3. Token Grouped Bar
+    new Chart(document.getElementById('chart-tokens'), {
+      type: 'bar',
+      data: {
+        labels: chartData.runLabels,
+        datasets: chartData.stacked.map((s, i) => ({
+          label: s.label,
+          data: s.tokens,
+          backgroundColor: stageColors[i % stageColors.length],
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+        scales: {
+          ...commonScales,
+          y: { ticks: { color: textColor }, grid: { color: gridColor } },
+        },
+      },
+    });
+
+    // 4. Quality Line
+    const qualityDatasets = [];
+    if (chartData.quality.research.length > 0) {
+      qualityDatasets.push({
+        label: 'Research',
+        data: chartData.quality.research,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 4,
+      });
+    }
+    if (chartData.quality.business.length > 0) {
+      qualityDatasets.push({
+        label: 'Business',
+        data: chartData.quality.business,
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 4,
+      });
+    }
+
+    const qualityLabels = chartData.quality.researchLabels.length >= chartData.quality.businessLabels.length
+      ? chartData.quality.researchLabels
+      : chartData.quality.businessLabels;
+
+    new Chart(document.getElementById('chart-quality'), {
+      type: 'line',
+      data: {
+        labels: qualityLabels,
+        datasets: qualityDatasets.length > 0 ? qualityDatasets : [{
+          label: 'No data',
+          data: [],
+          borderColor: '#ccc',
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+        scales: {
+          ...commonScales,
+          y: {
+            min: 0,
+            max: 4,
+            ticks: { color: textColor, stepSize: 1 },
+            grid: { color: gridColor },
+          },
+        },
+      },
+    });
+  })();
+</script>
+
+<style>
+  .admin-main--analytics {
+    max-width: 1200px;
+  }
+
+  .analytics-eyebrow {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .analytics-subtitle {
+    margin: 0.4rem 0 0;
+    max-width: 58rem;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+  }
+
+  .analytics-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .analytics-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .analytics-chart-card {
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
+  }
+
+  .analytics-chart-card canvas {
+    width: 100% !important;
+    height: 260px !important;
+  }
+
+  .analytics-chart-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  /* Reuse pipeline-run-stat and pipeline-cost-table styles from [runId] page */
+  .pipeline-run-stat {
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
+  }
+
+  .pipeline-run-stat__label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .pipeline-run-stat__value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.45rem;
+    line-height: 1;
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-run-stat__detail {
+    display: block;
+    margin-top: 0.45rem;
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .pipeline-run-section {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 74%, transparent);
+  }
+
+  .pipeline-run-section__header {
+    margin-bottom: 1rem;
+  }
+
+  .pipeline-run-section__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .pipeline-run-section__hint {
+    margin: 0.35rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .pipeline-cost-table-wrap {
+    overflow-x: auto;
+  }
+
+  .pipeline-cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+
+  .pipeline-cost-table th,
+  .pipeline-cost-table td {
+    padding: 0.55rem 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pipeline-cost-table th {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  }
+
+  .pipeline-cost-table td {
+    font-family: var(--font-code);
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-cost-table__stage {
+    text-align: left !important;
+    font-family: var(--font-ui) !important;
+    font-weight: 600;
+  }
+
+  .pipeline-cost-table th:first-child {
+    text-align: left;
+  }
+
+  .dashboard-empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+
+  @media (max-width: 1080px) {
+    .analytics-summary-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .analytics-charts {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .analytics-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 520px) {
+    .analytics-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .pipeline-run-section {
+      padding: 0.9rem;
+    }
+  }
+</style>

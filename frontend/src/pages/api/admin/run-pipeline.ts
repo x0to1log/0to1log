@@ -93,7 +93,7 @@ async function requireAdminFromCookies(
   return { accessToken };
 }
 
-export const POST: APIRoute = async ({ cookies }) => {
+export const POST: APIRoute = async ({ cookies, request }) => {
   const authResult = await requireAdminFromCookies(cookies);
   if (authResult instanceof Response) {
     return authResult;
@@ -106,5 +106,13 @@ export const POST: APIRoute = async ({ cookies }) => {
     });
   }
 
-  return handleAdminTriggerRequest(import.meta.env);
+  let mode = 'resume';
+  try {
+    const payload = await request.json();
+    if (payload?.mode === 'force_refresh' || payload?.mode === 'resume') {
+      mode = payload.mode;
+    }
+  } catch {}
+
+  return handleAdminTriggerRequest(import.meta.env, mode);
 };

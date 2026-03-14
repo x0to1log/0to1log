@@ -31,21 +31,6 @@ type PipelineLog = {
   debug_meta: Record<string, unknown> | null;
 };
 
-type PipelineArtifact = {
-  id: string;
-  status: string | null;
-  post_type: string;
-  locale: string;
-  candidate_title: string | null;
-  candidate_url: string | null;
-  completed_stages: string[] | null;
-  failed_stage: string | null;
-  last_validation_error: string | null;
-  payload: Record<string, unknown> | null;
-  resumed_from_artifact_id: string | null;
-  updated_at: string | null;
-};
-
 const runId = Astro.params.runId ?? '';
 const accessToken = Astro.locals.accessToken;
 const sb = createClient(
@@ -114,56 +99,38 @@ function formatDebugMeta(meta: unknown): string {
   }
 }
 
-function artifactPreview(payload: Record<string, unknown> | null, key: string): string {
-  if (!payload) return '';
-  return formatDebugMeta(payload[key] ?? null);
+function debugMetaObject(log: PipelineLog | null): Record<string, unknown> {
+  return log?.debug_meta && typeof log.debug_meta === 'object'
+    ? (log.debug_meta as Record<string, unknown>)
+    : {};
 }
 
-function artifactTextLength(value: unknown): number | null {
-  return typeof value === 'string' && value.length > 0 ? value.length : null;
+function firstTruthyDebugValue(logs: PipelineLog[], key: string): unknown {
+  for (const log of logs) {
+    const value = debugMetaObject(log)[key];
+    if (value !== undefined && value !== null && value !== false && value !== '') {
+      return value;
+    }
+  }
+  return null;
 }
 
-function artifactAnalysisLength(payload: Record<string, unknown> | null): number | null {
-  const analysisData = payload?.analysis_data;
-  if (!analysisData || typeof analysisData !== 'object') return null;
-  return artifactTextLength((analysisData as Record<string, unknown>).content_analysis);
-}
-
-function personaLengthEntries(payload: Record<string, unknown> | null): Array<[string, number]> {
-  const personaPayloads = payload?.persona_payloads;
-  if (!personaPayloads || typeof personaPayloads !== 'object') return [];
-
-  return Object.entries(personaPayloads as Record<string, unknown>)
-    .map(([persona, personaPayload]) => {
-      const fieldName = `content_${persona}`;
-      const length =
-        personaPayload && typeof personaPayload === 'object'
-          ? artifactTextLength((personaPayload as Record<string, unknown>)[fieldName])
-          : null;
-      return length === null ? null : [persona, length] as [string, number];
-    })
-    .filter((entry): entry is [string, number] => entry !== null);
+function hasTruthyDebugFlag(logs: PipelineLog[], key: string): boolean {
+  return logs.some((log) => debugMetaObject(log)[key] === true);
 }
 
 let run: PipelineRun | null = null;
 let logs: PipelineLog[] = [];
-let artifacts: PipelineArtifact[] = [];
 
 try {
-  const [{ data: runRow }, { data: logRows }, { data: artifactRows }] = await Promise.all([
+  const [{ data: runRow }, { data: logRows }] = await Promise.all([
     sb.from('pipeline_runs').select('*').eq('id', runId).single(),
     sb.from('pipeline_logs').select('*').eq('run_id', runId).order('created_at', { ascending: true }),
-    sb.from('pipeline_artifacts').select('*').eq('run_id', runId).order('updated_at', { ascending: false }),
   ]);
   run = (runRow as PipelineRun | null) ?? null;
   logs = ((logRows ?? []) as PipelineLog[]).map((log) => ({
     ...log,
     debug_meta: log.debug_meta ?? null,
-  }));
-  artifacts = ((artifactRows ?? []) as PipelineArtifact[]).map((artifact) => ({
-    ...artifact,
-    payload: artifact.payload ?? null,
-    completed_stages: artifact.completed_stages ?? [],
   }));
 } catch {}
 
@@ -180,6 +147,35 @@ const totalCost = hasCostMetrics
 const failedStages = hasStageLogs ? logs.filter((log) => log.status === 'failed').length : null;
 const duration = durationSeconds(run?.started_at ?? null, run?.finished_at ?? null);
 const latestLog = logs.at(-1) ?? null;
+
+// Cost breakdown: group by pipeline_type for the Cost Breakdown table
+type CostBreakdownRow = {
+  stage: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  attempts: number | null;
+};
+const costBreakdown: CostBreakdownRow[] = logs
+  .filter((log) => log.status === 'success' && (log.tokens_used || parseCost(log.cost_usd)))
+  .map((log) => {
+    const meta = debugMetaObject(log);
+    return {
+      stage: log.pipeline_type,
+      inputTokens: (meta.input_tokens as number) ?? 0,
+      outputTokens: (meta.output_tokens as number) ?? 0,
+      totalTokens: log.tokens_used ?? 0,
+      costUsd: parseCost(log.cost_usd) ?? 0,
+      attempts: (meta.attempts as number) ?? null,
+    };
+  });
+const hasCostBreakdown = costBreakdown.length > 0;
+
+const runMode = String(firstTruthyDebugValue(logs, 'mode') ?? 'resume');
+const reusedCandidates = hasTruthyDebugFlag(logs, 'reused_candidates');
+const reusedRanking = hasTruthyDebugFlag(logs, 'reused_ranking');
+const resumedFromSavedEn = hasTruthyDebugFlag(logs, 'resumed_from_saved_en');
 ---
 
 <MainLayout title="Pipeline Run Detail" locale="en">
@@ -268,108 +264,76 @@ const latestLog = logs.at(-1) ?? null;
         </div>
       </section>
 
+      {hasCostBreakdown && (
+        <section class="pipeline-run-section">
+          <div class="pipeline-run-section__header">
+            <div>
+              <h2 class="pipeline-run-section__title">Cost Breakdown</h2>
+              <p class="pipeline-run-section__hint">
+                Per-stage token usage and estimated cost. Only successful stages with token data are shown.
+              </p>
+            </div>
+          </div>
+          <div class="pipeline-cost-table-wrap">
+            <table class="pipeline-cost-table">
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Input</th>
+                  <th>Output</th>
+                  <th>Total</th>
+                  <th>Cost</th>
+                  <th>Attempts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {costBreakdown.map((row) => (
+                  <tr>
+                    <td class="pipeline-cost-table__stage">{row.stage}</td>
+                    <td>{row.inputTokens ? row.inputTokens.toLocaleString() : '—'}</td>
+                    <td>{row.outputTokens ? row.outputTokens.toLocaleString() : '—'}</td>
+                    <td>{row.totalTokens ? row.totalTokens.toLocaleString() : '—'}</td>
+                    <td>{row.costUsd ? `$${row.costUsd.toFixed(4)}` : '—'}</td>
+                    <td>{row.attempts ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <section class="pipeline-run-section">
         <div class="pipeline-run-section__header">
           <div>
-            <h2 class="pipeline-run-section__title">Partial Artifacts</h2>
+            <h2 class="pipeline-run-section__title">Reuse Signals</h2>
             <p class="pipeline-run-section__hint">
-              Internal recovery snapshots saved during business generation. These stay admin-only and are used to
-              resume missing stages on reruns.
+              These indicators show whether the rerun reused saved snapshots or EN drafts.
             </p>
           </div>
         </div>
-
-        {artifacts.length === 0 ? (
-          <p class="dashboard-empty">No partial artifacts were recorded for this run.</p>
-        ) : (
-          <div class="pipeline-artifact-list">
-            {artifacts.map((artifact) => {
-              const factPackPreview = artifactPreview(artifact.payload, 'fact_pack');
-              const analysisPreview = artifactPreview(artifact.payload, 'analysis_data');
-              const personaPreview = artifactPreview(artifact.payload, 'persona_payloads');
-              const analysisLength = artifactAnalysisLength(artifact.payload);
-              const personaLengths = personaLengthEntries(artifact.payload);
-              return (
-                <article class="pipeline-artifact-card">
-                  <div class="pipeline-artifact-card__header">
-                    <div>
-                      <span class={`pipeline-run-status pipeline-run-status--${statusTone(artifact.status)}`}>
-                        {artifact.status ?? 'idle'}
-                      </span>
-                      <strong class="pipeline-artifact-card__title">
-                        {artifact.candidate_title ?? 'Recovered draft'}
-                      </strong>
-                    </div>
-                    {artifact.candidate_url && (
-                      <a href={artifact.candidate_url} target="_blank" rel="noreferrer" class="pipeline-run-hero__back">
-                        Source
-                      </a>
-                    )}
-                  </div>
-
-                  <div class="pipeline-stage-card__chips">
-                    <span class="pipeline-stage-chip">
-                      <span class="pipeline-stage-chip__label">Post</span>
-                      <span class="pipeline-stage-chip__value">{artifact.post_type}</span>
-                    </span>
-                    <span class="pipeline-stage-chip">
-                      <span class="pipeline-stage-chip__label">Locale</span>
-                      <span class="pipeline-stage-chip__value">{artifact.locale}</span>
-                    </span>
-                    <span class="pipeline-stage-chip">
-                      <span class="pipeline-stage-chip__label">Completed</span>
-                      <span class="pipeline-stage-chip__value">{artifact.completed_stages?.length ?? 0}</span>
-                    </span>
-                    <span class="pipeline-stage-chip">
-                      <span class="pipeline-stage-chip__label">Analysis</span>
-                      <span class="pipeline-stage-chip__value">
-                        {analysisLength === null ? '—' : `${analysisLength} chars`}
-                      </span>
-                    </span>
-                    {personaLengths.map(([persona, length]) => (
-                      <span class="pipeline-stage-chip">
-                        <span class="pipeline-stage-chip__label">{persona}</span>
-                        <span class="pipeline-stage-chip__value">{length} chars</span>
-                      </span>
-                    ))}
-                  </div>
-
-                  {(artifact.failed_stage || artifact.last_validation_error) && (
-                    <div class="pipeline-run-error-card">
-                      <span class="pipeline-run-error-card__label">Recovery status</span>
-                      <p>{artifact.last_validation_error ?? artifact.failed_stage}</p>
-                    </div>
-                  )}
-
-                  {artifact.completed_stages && artifact.completed_stages.length > 0 && (
-                    <p class="pipeline-artifact-card__stages">{artifact.completed_stages.join(' | ')}</p>
-                  )}
-
-                  <div class="pipeline-stage-card__panels">
-                    {factPackPreview && (
-                      <details class="pipeline-stage-panel">
-                        <summary>Artifact preview: fact_pack</summary>
-                        <pre>{factPackPreview}</pre>
-                      </details>
-                    )}
-                    {analysisPreview && (
-                      <details class="pipeline-stage-panel">
-                        <summary>Artifact preview: analysis</summary>
-                        <pre>{analysisPreview}</pre>
-                      </details>
-                    )}
-                    {personaPreview && (
-                      <details class="pipeline-stage-panel">
-                        <summary>Artifact preview: personas</summary>
-                        <pre>{personaPreview}</pre>
-                      </details>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
+        <div class="pipeline-run-summary-grid pipeline-run-summary-grid--reuse">
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Run mode</span>
+            <strong class="pipeline-run-stat__value">{runMode}</strong>
+            <span class="pipeline-run-stat__detail">`resume` reuses saved state when possible.</span>
           </div>
-        )}
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Reused candidates</span>
+            <strong class="pipeline-run-stat__value">{reusedCandidates ? 'Yes' : 'No'}</strong>
+            <span class="pipeline-run-stat__detail">Saved `news_candidates` snapshot reused.</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Reused ranking</span>
+            <strong class="pipeline-run-stat__value">{reusedRanking ? 'Yes' : 'No'}</strong>
+            <span class="pipeline-run-stat__detail">Ranking reconstructed from the saved batch snapshot.</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Resumed saved EN</span>
+            <strong class="pipeline-run-stat__value">{resumedFromSavedEn ? 'Yes' : 'No'}</strong>
+            <span class="pipeline-run-stat__detail">Skipped EN regeneration because only KO was missing.</span>
+          </div>
+        </div>
       </section>
 
       <section class="pipeline-run-section">
@@ -430,12 +394,44 @@ const latestLog = logs.at(-1) ?? null;
                           {metricText(log.tokens_used, (value) => value.toLocaleString())}
                         </span>
                       </span>
+                      {typeof debugMetaObject(log).input_tokens === 'number' && (
+                        <span class="pipeline-stage-chip">
+                          <span class="pipeline-stage-chip__label">In</span>
+                          <span class="pipeline-stage-chip__value">
+                            {(debugMetaObject(log).input_tokens as number).toLocaleString()}
+                          </span>
+                        </span>
+                      )}
+                      {typeof debugMetaObject(log).output_tokens === 'number' && (
+                        <span class="pipeline-stage-chip">
+                          <span class="pipeline-stage-chip__label">Out</span>
+                          <span class="pipeline-stage-chip__value">
+                            {(debugMetaObject(log).output_tokens as number).toLocaleString()}
+                          </span>
+                        </span>
+                      )}
                       <span class="pipeline-stage-chip">
                         <span class="pipeline-stage-chip__label">Cost</span>
                         <span class="pipeline-stage-chip__value">
                           {metricText(parseCost(log.cost_usd), (value) => formatCurrency(value))}
                         </span>
                       </span>
+                      {typeof debugMetaObject(log).attempts === 'number' && (debugMetaObject(log).attempts as number) > 1 && (
+                        <span class="pipeline-stage-chip pipeline-stage-chip--warn">
+                          <span class="pipeline-stage-chip__label">Retries</span>
+                          <span class="pipeline-stage-chip__value">
+                            {(debugMetaObject(log).attempts as number) - 1}
+                          </span>
+                        </span>
+                      )}
+                      {typeof debugMetaObject(log).quality_score === 'number' && (
+                        <span class="pipeline-stage-chip">
+                          <span class="pipeline-stage-chip__label">Quality</span>
+                          <span class="pipeline-stage-chip__value">
+                            {debugMetaObject(log).quality_score}/4
+                          </span>
+                        </span>
+                      )}
                     </div>
 
                     {log.error_message && <p class="pipeline-stage-card__error">{log.error_message}</p>}
@@ -608,6 +604,10 @@ const latestLog = logs.at(-1) ?? null;
     margin-bottom: 1.1rem;
   }
 
+  .pipeline-run-summary-grid--reuse {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .pipeline-run-stat {
     padding: 1rem 1.05rem;
     border: 1px solid var(--color-border);
@@ -668,39 +668,6 @@ const latestLog = logs.at(-1) ?? null;
   .pipeline-stage-list {
     display: grid;
     gap: 0.85rem;
-  }
-
-  .pipeline-artifact-list {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .pipeline-artifact-card {
-    border: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-bg-secondary) 58%, transparent);
-    padding: 1rem;
-  }
-
-  .pipeline-artifact-card__header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-
-  .pipeline-artifact-card__title {
-    display: block;
-    margin-top: 0.55rem;
-    font-size: 1rem;
-    line-height: 1.4;
-  }
-
-  .pipeline-artifact-card__stages {
-    margin: 0.9rem 0 0;
-    color: var(--color-text-secondary);
-    font-size: 0.86rem;
-    line-height: 1.6;
-    word-break: break-word;
   }
 
   .pipeline-stage-card {
@@ -803,6 +770,53 @@ const latestLog = logs.at(-1) ?? null;
   .pipeline-stage-chip__value {
     color: var(--color-text-primary);
     font-family: var(--font-code);
+  }
+
+  .pipeline-cost-table-wrap {
+    overflow-x: auto;
+  }
+
+  .pipeline-cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+
+  .pipeline-cost-table th,
+  .pipeline-cost-table td {
+    padding: 0.55rem 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pipeline-cost-table th {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  }
+
+  .pipeline-cost-table td {
+    font-family: var(--font-code);
+    color: var(--color-text-primary);
+  }
+
+  .pipeline-cost-table__stage {
+    text-align: left !important;
+    font-family: var(--font-ui) !important;
+    font-weight: 600;
+  }
+
+  .pipeline-cost-table th:first-child {
+    text-align: left;
+  }
+
+  .pipeline-stage-chip--warn {
+    border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 60%, var(--color-border));
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, var(--color-bg-secondary));
   }
 
   .pipeline-stage-card__error {
@@ -924,8 +938,7 @@ const latestLog = logs.at(-1) ?? null;
     }
 
     .pipeline-run-hero__top,
-    .pipeline-stage-card__header,
-    .pipeline-artifact-card__header {
+    .pipeline-stage-card__header {
       flex-direction: column;
       align-items: stretch;
     }
