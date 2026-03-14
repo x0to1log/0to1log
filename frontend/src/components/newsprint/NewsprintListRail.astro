@@ -88,16 +88,3 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
   )}
 </section>
 
-<div style="margin-top: 1.5rem;"></div>
-
-<section>
-  <h3 class="newsprint-section-title">{isKo ? '처음 읽는 분께' : 'Start Here'}</h3>
-  <div class="newsprint-stack">
-    {starterSections.map((section) => (
-      <a class="newsprint-card" href={getStarterHref(section.slug)}>
-        <strong class="newsprint-rail-link">{section.label}</strong>
-        <p class="newsprint-rail-copy">{section.description}</p>
-      </a>
-    ))}
-  </div>
-</section>

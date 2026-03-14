@@ -54,10 +54,66 @@ function closeAuthPrompt(): void {
   const root = getPromptRoot();
   if (!root) return;
 
-  root.hidden = true;
-  root.setAttribute('aria-hidden', 'true');
   root.dataset.open = 'false';
   document.body.classList.remove('auth-prompt-open');
+
+  const sheet = root.querySelector<HTMLElement>('.auth-prompt-sheet');
+  let settled = false;
+
+  const finish = (): void => {
+    if (settled) return;
+    settled = true;
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+    sheet?.removeEventListener('transitionend', onEnd);
+  };
+
+  const onEnd = (e: TransitionEvent): void => {
+    if (e.target === sheet && e.propertyName === 'transform') finish();
+  };
+
+  if (sheet) {
+    sheet.addEventListener('transitionend', onEnd);
+    setTimeout(finish, 400);
+  } else {
+    finish();
+  }
+}
+
+function initDragDismiss(root: HTMLElement): void {
+  const sheet = root.querySelector<HTMLElement>('.auth-prompt-sheet');
+  if (!sheet) return;
+
+  let startY = 0;
+  let startTime = 0;
+  let currentDeltaY = 0;
+
+  sheet.addEventListener('touchstart', (e: TouchEvent) => {
+    if (root.dataset.open !== 'true') return;
+    startY = e.touches[0].clientY;
+    startTime = Date.now();
+    currentDeltaY = 0;
+    sheet.classList.add('dragging');
+  }, { passive: true });
+
+  sheet.addEventListener('touchmove', (e: TouchEvent) => {
+    const deltaY = e.touches[0].clientY - startY;
+    if (deltaY <= 0) return;
+    currentDeltaY = deltaY;
+    sheet.style.transform = `translateY(${deltaY}px)`;
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', () => {
+    sheet.classList.remove('dragging');
+    const elapsed = Date.now() - startTime;
+    const velocity = currentDeltaY / elapsed; // px/ms
+    if (currentDeltaY > 100 || velocity > 0.5) {
+      sheet.style.transform = '';
+      closeAuthPrompt();
+    } else {
+      sheet.style.transform = '';
+    }
+  });
 }
 
 function renderPrompt(detail: AuthPromptDetail): void {
@@ -75,14 +131,17 @@ function renderPrompt(detail: AuthPromptDetail): void {
   if (bodyEl) bodyEl.textContent = detail.body || actionCopy.body;
   if (oauthRoot) oauthRoot.dataset.redirectTo = detail.redirectTo || resolveDefaultRedirect();
 
+  // Remove hidden first so the element is in the DOM, then trigger transition on next frame
   root.hidden = false;
   root.setAttribute('aria-hidden', 'false');
-  root.dataset.open = 'true';
   document.body.classList.add('auth-prompt-open');
 
   window.requestAnimationFrame(() => {
-    const firstButton = root.querySelector<HTMLButtonElement>('[data-provider]');
-    firstButton?.focus();
+    root.dataset.open = 'true';
+    window.requestAnimationFrame(() => {
+      const firstButton = root.querySelector<HTMLButtonElement>('[data-provider]');
+      firstButton?.focus();
+    });
   });
 }
 
@@ -92,6 +151,7 @@ function initAuthPrompt(): void {
   root.dataset.authPromptInit = 'true';
 
   initOAuthButtons(root);
+  initDragDismiss(root);
 
   window.addEventListener('auth-prompt:open', (event) => {
     const customEvent = event as CustomEvent<AuthPromptDetail>;
