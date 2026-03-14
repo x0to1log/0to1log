@@ -27,18 +27,15 @@ def _saved_business_row() -> dict:
         "slug": "2026-03-12-business-daily",
         "locale": "en",
         "content_analysis": "## Core Analysis\n" + ("Shared analysis. " * 200),
-        "content_beginner": "## The Story\n" + ("Beginner insight. " * 220),
-        "content_learner": "## What Happened\n" + ("Learner insight. " * 220),
-        "content_expert": "## Executive Summary\n" + ("Expert insight. " * 220),
-        "fact_pack": [
-            {
-                "id": "claim-1",
-                "claim": "Anthropic raised new capital. [[1]]",
-                "why_it_matters": "It changes buyer confidence.",
-                "source_ids": ["src-1"],
-                "confidence": "high",
-            }
-        ],
+        "content_beginner": "## The Story\n" + ("Beginner insight. " * 260),
+        "content_learner": "## What Happened\n" + ("Learner insight. " * 260),
+        "content_expert": "## Executive Summary\n" + ("Expert insight. " * 260),
+        "fact_pack": {
+            "key_facts": ["Anthropic raised new capital."],
+            "numbers": ["Funding amount not disclosed."],
+            "entities": ["Anthropic", "Enterprise AI"],
+            "timeline": ["2026-Q1 — Funding round announced."],
+        },
         "source_cards": [
             {
                 "id": "src-1",
@@ -125,6 +122,79 @@ def _saved_research_row() -> dict:
     }
 
 
+def _saved_ranked_candidates() -> list[dict]:
+    return [
+        {
+            "title": "GPT-5 update",
+            "url": "https://openai.com/blog/gpt-5",
+            "snippet": "Latency improvements.",
+            "source": "tavily",
+            "assigned_type": "research",
+            "relevance_score": 0.93,
+            "ranking_reason": "Clear model update with production impact",
+        },
+        {
+            "title": "Anthropic raises funding",
+            "url": "https://anthropic.com/news/example",
+            "snippet": "Anthropic secured another major funding round.",
+            "source": "tavily",
+            "assigned_type": "business_main",
+            "relevance_score": 0.91,
+            "ranking_reason": "Large funding round with enterprise AI implications",
+        },
+        {
+            "title": "OpenAI expands bundles",
+            "url": "https://openai.com/blog/bundles",
+            "snippet": "Enterprise bundles widened.",
+            "source": "tavily",
+            "assigned_type": "industry_biz",
+            "relevance_score": 0.71,
+            "ranking_reason": "Useful related enterprise context",
+        },
+    ]
+
+
+def _no_news_research_post() -> ResearchPost:
+    return ResearchPost(
+        has_news=False,
+        title="No sufficiently distinct AI research updates today",
+        slug="2026-03-12-research-daily",
+        no_news_notice="No sufficiently distinct AI research or model updates were confirmed in the past 24 hours.",
+        recent_fallback="Yesterday's major themes still dominated today's signals.",
+        source_urls=[],
+        news_temperature=1,
+        tags=["no-news"],
+    )
+
+
+def _ko_no_news_research_payload() -> dict:
+    return {
+        "has_news": False,
+        "title": "오늘은 충분히 다른 AI 연구 업데이트가 없었습니다.",
+        "slug": "2026-03-12-research-daily",
+        "no_news_notice": "오늘은 충분히 다른 AI 연구 업데이트가 없었습니다.",
+        "recent_fallback": "어제의 주요 흐름이 계속 이어졌습니다.",
+        "source_urls": [],
+        "news_temperature": 1,
+        "tags": ["no-news"],
+        "focus_items": [],
+    }
+
+
+def test_ranking_snapshot_rebuild_restores_research_business_and_related_picks():
+    from services.pipeline import _ranking_from_saved_candidates
+
+    ranking = _ranking_from_saved_candidates(_saved_ranked_candidates())
+
+    assert ranking.research_pick is not None
+    assert ranking.research_pick.url == "https://openai.com/blog/gpt-5"
+    assert ranking.business_main_pick is not None
+    assert ranking.business_main_pick.url == "https://anthropic.com/news/example"
+    assert ranking.related_picks is not None
+    assert ranking.related_picks.industry_biz is not None
+    assert ranking.related_picks.industry_biz.url == "https://openai.com/blog/bundles"
+
+
 @pytest.mark.asyncio
 async def test_run_daily_pipeline_reuses_existing_business_en_when_only_ko_is_missing():
     from services.pipeline import run_daily_pipeline
@@ -183,7 +253,7 @@ async def test_run_daily_pipeline_reuses_existing_business_en_when_only_ko_is_mi
         patch("services.pipeline._apply_research_novelty_gate", return_value=(None, {"skip": True, "reason": "missing_candidate"})),
         patch("services.pipeline._save_candidates"),
         patch("services.pipeline.generate_research_post", AsyncMock(return_value=research_post)),
-        patch("services.pipeline.translate_post", AsyncMock(side_effect=[ko_research, ko_business])) as mock_translate,
+        patch("services.pipeline.translate_post", AsyncMock(side_effect=[(ko_research, {}), (ko_business, {})])) as mock_translate,
         patch("services.pipeline._save_research_post", MagicMock(return_value=("research-en-id", "tg-research"))),
         patch("services.pipeline._save_business_post", MagicMock(return_value=("business-ko-id", "tg-business"))) as mock_save_business,
         patch("services.pipeline._extract_and_create_terms", AsyncMock()),
@@ -232,7 +302,7 @@ async def test_run_daily_pipeline_reuses_existing_research_en_when_only_ko_is_mi
         patch("services.pipeline._apply_research_novelty_gate", return_value=(None, {"skip": True, "reason": "missing_candidate"})),
         patch("services.pipeline._save_candidates"),
         patch("services.pipeline._save_research_post", MagicMock(return_value=("research-ko-id", "tg-research"))),
-        patch("services.pipeline.translate_post", AsyncMock(return_value=ko_research)) as mock_translate,
+        patch("services.pipeline.translate_post", AsyncMock(return_value=(ko_research, {}))) as mock_translate,
         patch("services.pipeline._extract_and_create_terms", AsyncMock()),
         patch("services.pipeline.release_pipeline_lock", AsyncMock()) as mock_release,
         patch("services.pipeline._get_saved_post_row", side_effect=lambda batch_id, post_type, locale: (
@@ -247,4 +317,92 @@ async def test_run_daily_pipeline_reuses_existing_research_en_when_only_ko_is_mi
     mock_translate.assert_awaited_once()
     translated_research_payload = mock_translate.await_args.args[0]
     assert translated_research_payload["content_original"] == _saved_research_row()["content_original"]
+    mock_release.assert_awaited_once_with("run-1", "success")
+
+
+@pytest.mark.asyncio
+async def test_run_daily_pipeline_resume_mode_skips_collect_and_rank_when_snapshot_exists():
+    from services.pipeline import run_daily_pipeline
+
+    ranking = NewsRankingResult(
+        research_pick=RankedCandidate(**_saved_ranked_candidates()[0]),
+        business_main_pick=None,
+        related_picks=RelatedPicks(),
+    )
+    saved_candidates = [
+        NewsCandidate(
+            title=row["title"],
+            url=row["url"],
+            snippet=row["snippet"],
+            source=row["source"],
+        )
+        for row in _saved_ranked_candidates()
+    ]
+
+    with (
+        patch("services.pipeline.acquire_pipeline_lock", AsyncMock(return_value="run-1")),
+        patch("services.pipeline._load_saved_ranking_snapshot", return_value=(saved_candidates, ranking), create=True),
+        patch("services.pipeline.collect_all_news", AsyncMock()) as mock_collect,
+        patch("services.pipeline.rank_candidates", AsyncMock()) as mock_rank,
+        patch("services.pipeline._apply_research_novelty_gate", return_value=(None, {"skip": True, "reason": "missing_candidate"})),
+        patch("services.pipeline._save_candidates"),
+        patch("services.pipeline.generate_research_post", AsyncMock(return_value=_no_news_research_post())),
+        patch("services.pipeline.translate_post", AsyncMock(return_value=(_ko_no_news_research_payload(), {}))),
+        patch("services.pipeline._save_research_post", MagicMock(return_value=("research-ko-id", "tg-research"))),
+        patch("services.pipeline._extract_and_create_terms", AsyncMock()),
+        patch("services.pipeline.release_pipeline_lock", AsyncMock()) as mock_release,
+        patch("services.pipeline.get_supabase", return_value=_make_supabase_mock()),
+    ):
+        await run_daily_pipeline("2026-03-12", mode="resume")
+
+    mock_collect.assert_not_awaited()
+    mock_rank.assert_not_awaited()
+    mock_release.assert_awaited_once_with("run-1", "success")
+
+
+@pytest.mark.asyncio
+async def test_run_daily_pipeline_force_refresh_recollects_even_if_snapshot_exists():
+    from services.pipeline import run_daily_pipeline
+
+    ranking = NewsRankingResult(
+        research_pick=None,
+        business_main_pick=None,
+        related_picks=RelatedPicks(),
+    )
+    collected = [
+        NewsCandidate(
+            title="GPT-5 update",
+            url="https://openai.com/blog/gpt-5",
+            snippet="Latency improvements.",
+            source="tavily",
+        )
+    ]
+    saved_candidates = [
+        NewsCandidate(
+            title=row["title"],
+            url=row["url"],
+            snippet=row["snippet"],
+            source=row["source"],
+        )
+        for row in _saved_ranked_candidates()
+    ]
+
+    with (
+        patch("services.pipeline.acquire_pipeline_lock", AsyncMock(return_value="run-1")),
+        patch("services.pipeline._load_saved_ranking_snapshot", return_value=(saved_candidates, ranking), create=True),
+        patch("services.pipeline.collect_all_news", AsyncMock(return_value=collected)) as mock_collect,
+        patch("services.pipeline.rank_candidates", AsyncMock(return_value=ranking)) as mock_rank,
+        patch("services.pipeline._apply_research_novelty_gate", return_value=(None, {"skip": True, "reason": "missing_candidate"})),
+        patch("services.pipeline._save_candidates"),
+        patch("services.pipeline.generate_research_post", AsyncMock(return_value=_no_news_research_post())),
+        patch("services.pipeline.translate_post", AsyncMock(return_value=(_ko_no_news_research_payload(), {}))),
+        patch("services.pipeline._save_research_post", MagicMock(return_value=("research-ko-id", "tg-research"))),
+        patch("services.pipeline._extract_and_create_terms", AsyncMock()),
+        patch("services.pipeline.release_pipeline_lock", AsyncMock()) as mock_release,
+        patch("services.pipeline.get_supabase", return_value=_make_supabase_mock()),
+    ):
+        await run_daily_pipeline("2026-03-12", mode="force_refresh")
+
+    mock_collect.assert_awaited_once()
+    mock_rank.assert_awaited_once()
     mock_release.assert_awaited_once_with("run-1", "success")

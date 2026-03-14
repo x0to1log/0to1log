@@ -1,7 +1,7 @@
 # ⚙️ 0to1log — Backend & AI Spec
 
-> **문서 버전:** v3.3  
-> **최종 수정:** 2026-03-05  
+> **문서 버전:** v4.0
+> **최종 수정:** 2026-03-14
 > **작성자:** Amy (Solo)  
 > **상태:** Planning  
 > **상위 문서:** `01_Project_Overview.md`
@@ -15,6 +15,16 @@
 | FastAPI 엔드포인트 분류 | Cron + AI 중심 | 검색/커뮤니티/구독 권한 API 범위 확장 | Phase 3~4 기능 수용 |
 | 비용 모델 | API 비용 중심 | API 비용 + Railway 운영비 단계형 분리 | 인프라 의사결정 가시성 강화 |
 | 테스트 전략 | 파이프라인/RLS 중심 | API 경계 검증 시나리오 추가 | 문서-구현 불일치 예방 |
+
+### v4.0 변경 이력
+
+| 항목 | v3.3 | v4.0 | 이유 |
+|---|---|---|---|
+| Business 생성 | 5회 개별 호출 (fact_pack + analysis + 3 persona) | 2-Call Expert-First Cascade | Expert 품질 집중 + 호출 수 60% 감소 |
+| 번역 방식 | 섹션별 번역 (8-26회 호출) | 전문 번역 (1회/포스트) | 상태머신 복잡성 제거, 안정성 향상 |
+| Persona 분량 | beginner 300-500자, learner 500-800자, expert 800-1200자 | 모든 persona 동일 5,000-7,000자 | 길이 ≠ 이해도, 서술 방식으로만 차별화 |
+| 에러 핸들링 | 섹션별 재시도 + recovery pass + partial artifact | 단순 2회 재시도 루프 | 코드 복잡성 63% 감소 |
+| 비용 산정 | 번역 비용 미포함 ($0.14/일) | 번역 포함 전체 비용 ($0.32/일) | 실제 비용 반영 |
 
 ---
 
@@ -486,12 +496,15 @@ class ResearchPost(BaseModel):
 
 ```python
 class BusinessPost(BaseModel):
-    """Business Analyst 포스트 검증 스키마"""
+    """Business Analyst 포스트 검증 스키마 (v4: Expert-First Cascade)"""
     title: str
     slug: str
-    content_beginner: str                     # 입문자 버전
-    content_learner: str                      # 학습자 버전
-    content_expert: str                       # 현직자 버전
+    fact_pack: dict                           # 핵심 팩트 구조화 요약
+    source_cards: list[dict]                  # 출처별 근거 카드
+    content_analysis: str                     # 공유 분석 프레임워크 (min 2,500자)
+    content_beginner: str                     # 입문자 버전 (min 5,000자)
+    content_learner: str                      # 학습자 버전 (min 5,000자)
+    content_expert: str                       # 현직자 버전 (min 5,000자)
     guide_items: PromptGuideItems
     related_news: RelatedNews
     source_urls: list[str] = []
@@ -512,6 +525,14 @@ class EditorialFeedback(BaseModel):
     critical_issues: list[str]
     overall_verdict: Literal["publish_ready", "needs_revision", "major_rewrite"]
 ```
+
+> **v4 변경 — Expert-First Cascade:**
+> - 길이로 이해도를 구분하지 않음. 모든 persona 동일 최소 5,000자, 목표 6,000~7,000자.
+> - expert: 기술 용어 OK, 데이터 중심, 산업 맥락 깊이
+> - learner: 핵심 용어 설명 포함, 배경 맥락 보충
+> - beginner: 비유 활용, 전문 용어 풀어쓰기, "왜 중요한가" 강조
+> - `fact_pack`, `source_cards`, `content_analysis`는 Call 1(Expert 생성)에서 함께 생성됨
+> - `content_learner`, `content_beginner`는 Call 2(파생 생성)에서 expert 기반으로 생성됨
 
 > **교차 검증 규칙 (field_validator로 구현):**
 > - `ResearchPost`: has_news=True → content_original 필수
@@ -605,57 +626,97 @@ has_news를 false로 설정하고:
 Respond in JSON format only.
 </prompt>
 
-### 5-3. Business Analyst Agent 프롬프트
+### 5-3. Business Analyst Agent — Expert-First 2-Call Cascade
 
-변수명: `BUSINESS_SYSTEM_PROMPT` / 출력 스키마: `BusinessPost`
+> **v4 변경:** 기존 5회 개별 호출(fact_pack + analysis + 3 persona) → 2-Call Cascade로 전환.
+> Call 1에서 expert를 정성스럽게 생성한 뒤, Call 2에서 expert를 기반으로 learner + beginner를 파생한다.
+
+#### Call 1: Expert 생성
+
+변수명: `BUSINESS_EXPERT_PROMPT` / 출력 스키마: `BusinessExpertOutput`
 
 <prompt>
-당신은 0to1log의 AI 비즈니스 분석가이자 PM입니다. Tavily가 수집한 기사를 바탕으로 3가지 독자 페르소나에 맞춘 포스트와 Related News를 작성합니다.
+당신은 0to1log의 AI 비즈니스 분석가이자 PM입니다. Tavily가 수집한 기사를 바탕으로 현직자(expert) 수준의 심층 분석 포스트를 작성합니다.
 
 ## 당신의 원칙
 - 기술적 세부사항보다 "그래서 누가 돈을 벌고, 누가 위험해지는가"에 집중합니다
-- 입문자도 이해할 수 있는 비유를 반드시 포함합니다
 - 투자, 파트너십, 규제 등 비즈니스 맥락을 놓치지 않습니다
+- 구체적 수치, 비용 분석, 경쟁 구도를 반드시 포함합니다
 
-## 메인 포스트 — 3페르소나 버전
+## 출력 구조
 
-### 입문자 버전 (content_beginner)
-- 모든 전문 용어를 일상적 비유로 대체
-- 배경지식 없이 이해 가능한 스토리텔링 형식
-- "왜 이게 중요한데?"에 대한 답이 명확해야 함
-- 분량: 300~500자
+### fact_pack
+핵심 팩트를 구조화된 요약으로 정리합니다.
 
-### 학습자 버전 (content_learner)
-- 핵심 개념 + 코드 스니펫 또는 레퍼런스 링크 포함
-- "왜 중요한지" 맥락 + "뭘 공부하면 되는지" 방향 제시
-- 분량: 500~800자
+### source_cards
+출처별 근거 카드를 작성합니다. 각 카드에는 출처 URL, 핵심 인용, 신뢰도 평가를 포함합니다.
 
-### 현직자 버전 (content_expert)
+### content_analysis (공유 분석 프레임워크)
+- 시장 맥락과 배경
+- 핵심 변경점/발표 요약
+- 산업 영향도 분석
+- 경쟁 구도 변화
+- 분량: 최소 2,500자
+
+### content_expert (현직자 버전)
 - 기술적 세부사항 + 업계 영향도 + 실무 적용 포인트
 - 비용 분석, 경쟁 구도, 비즈니스 기회 포함
-- 분량: 800~1200자
+- 데이터와 수치 중심의 분석적 서술
+- 전문 용어 자유 사용 (별도 설명 불필요)
+- 분량: 최소 5,000자, 목표 6,000~7,000자
 
-## 5블록 항목 (guide_items — 프롬프트 가이드 v1.3)
-
-1. [The One-Liner]: 초등학생도 이해할 수 있는 핵심 한 문장 — 디폴트: 입문자
-2. [Action Item]: Dev와 PM 각각이 당장 할 수 있는 것 — 디폴트: 학습자
-3. [Critical Gotcha]: 화려한 수치 뒤 한계점 리얼리티 체크 — 디폴트: 현직자
-4. [회전 항목]: market_context / analogy / source_check 중 이 뉴스에 가장 적합한 1개 선택
+### guide_items — 프롬프트 가이드 v1.3
+1. [The One-Liner]: 초등학생도 이해할 수 있는 핵심 한 문장
+2. [Action Item]: Dev와 PM 각각이 당장 할 수 있는 것
+3. [Critical Gotcha]: 화려한 수치 뒤 한계점 리얼리티 체크
+4. [회전 항목]: market_context / analogy / source_check 중 가장 적합한 1개
 5. [Today's Quiz/Poll]: 뉴스 기반 퀴즈 또는 도발적인 투표 주제
 
-## Related News — 3개 카테고리 (related_news)
-
-Tavily 수집 결과 중 메인 뉴스 외의 기사들을 아래 카테고리별로 한 줄 요약하세요.
-해당 카테고리에 뉴스가 없으면 반드시 "지난 24시간 내 확인된 [카테고리] 소식 없음" 형식으로 작성하세요.
-
-1. **Big Tech:** OpenAI, Google, Microsoft, Meta 등의 주요 발표
-2. **Industry & Biz:** AI 스타트업 투자, 기업 파트너십, 규제 이슈
-3. **New Tools:** 새로 출시된 AI 툴이나 서비스
+### related_news — 3개 카테고리
+Tavily 수집 결과 중 메인 뉴스 외의 기사를 카테고리별 한 줄 요약.
+없으면 "지난 24시간 내 확인된 [카테고리] 소식 없음" 형식.
+1. **Big Tech:** OpenAI, Google, Microsoft, Meta 등
+2. **Industry & Biz:** AI 스타트업 투자, 파트너십, 규제
+3. **New Tools:** 새로 출시된 AI 툴/서비스
 
 ## Verification Filters
 - Write in English. Use precise technical terminology.
 - Unverified figures must be marked "unverified"
 - No fabricated information
+
+Respond in JSON format only.
+</prompt>
+
+#### Call 2: Learner + Beginner 파생
+
+변수명: `BUSINESS_DERIVE_PROMPT` / 출력 스키마: `BusinessDerivedOutput`
+
+> **핵심 원칙:** 길이로 이해도를 구분하지 않는다. 서술 방식과 깊이로만 차별화한다. 모든 persona는 동일한 분량(5,000~7,000자)을 목표로 한다.
+
+<prompt>
+당신은 0to1log의 콘텐츠 에디터입니다. 아래에 주어진 현직자(expert) 수준의 분석 글을 기반으로, 동일한 스토리라인을 유지하면서 학습자(learner)와 입문자(beginner) 버전을 작성합니다.
+
+## 공통 규칙
+- expert 글의 핵심 포인트와 스토리라인을 그대로 따릅니다
+- 정보를 삭제하지 않습니다 — 서술 방식만 바꿉니다
+- 각 버전은 expert와 동일한 분량(5,000~7,000자)을 목표로 합니다
+
+## 학습자 버전 (content_learner)
+- expert의 모든 포인트를 다루되, 핵심 용어에 설명을 추가합니다
+- 배경 맥락을 보충합니다 ("이 기술이 왜 나왔는지", "이전에는 어떻게 했는지")
+- "뭘 공부하면 되는지" 방향을 제시합니다
+- 코드 스니펫이나 레퍼런스 링크를 포함할 수 있습니다
+
+## 입문자 버전 (content_beginner)
+- expert의 모든 포인트를 다루되, 일상적 비유로 설명합니다
+- 전문 용어를 쉬운 말로 풀어씁니다
+- "왜 이게 중요한데?"에 대한 답이 명확해야 합니다
+- 배경지식 없이 이해 가능한 스토리텔링 형식
+
+## Verification Filters
+- Write in English. Use precise technical terminology in parentheses where helpful.
+- Do NOT add or remove factual information from the expert version
+- Each version must cover the same topics as the expert version
 
 Respond in JSON format only.
 </prompt>
@@ -728,26 +789,29 @@ Respond in JSON format only. Return the same JSON structure with all text fields
   (10초 내)                 │
                             ▼
                      [Step 2] Ranking Agent (gpt-4o-mini): 분류 + 랭킹
-                            │  ├── research_pick: Top 1 URL (또는 null)
-                            │  ├── business_main_pick: Top 1 URL
-                            │  └── related_picks: {big_tech, industry_biz, new_tools} 각 1개 URL
                             │
-                            ▼ (병렬 실행)
+                            ▼
                      [Step 3-A] Research Engineer Agent (gpt-4o)
                             │  ├── 뉴스 있음 → 기술 심화 포스트 생성 → PydanticAI 검증 → 자동 발행
                             │  └── 뉴스 없음 → "없음" 공지 + 최근 동향 보충 → 자동 발행
                             │
-                     [Step 3-B] Business Analyst Agent (gpt-4o)
-                            │  ├── 메인 뉴스 → 3페르소나 포스트 + 5블록 생성
-                            │  └── Related News → 3카테고리 한 줄 요약 (없으면 "없음" 표기)
+                     [Step 3-A-KO] Research 번역 (gpt-4o): EN → KO 전문 번역
+                            │
+                     [Step 3-B] Business Expert 생성 (gpt-4o, Call 1)
+                            │  └── fact_pack + source_cards + content_analysis + content_expert
+                            │
+                     [Step 3-B-2] Business Learner + Beginner 파생 (gpt-4o, Call 2)
+                            │  └── expert 기반 → content_learner + content_beginner
+                            │
+                     [Step 3-B-KO] Business 번역 (gpt-4o): EN → KO 전문 번역
                             │
                             ▼
                      [Step 4] PydanticAI 스키마 검증
                             │
                             ▼
                      [Step 5] Supabase 저장
-                            │  ├── Research → status: 'published' (자동)
-                            │  └── Business → status: 'draft' (검수 대기)
+                            │  ├── Research EN/KO → status: 'published' (자동)
+                            │  └── Business EN/KO → status: 'draft' (검수 대기)
                             │
                             ▼
                      [Step 6] Business 포스트: Editorial Agent (gpt-4o) 검수
@@ -789,8 +853,11 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 | Step | 함수 | 모델 | 입력 | 출력 스키마 | 핵심 로직 |
 |---|---|---|---|---|---|
 | 2 | `rank_news()` | gpt-4o-mini | 수집된 후보 + batch_id | `NewsRankingResult` | JSON mode, RANKING_SYSTEM_PROMPT |
-| 3-A | `generate_research_post()` | gpt-4o | research_pick 후보 + 본문 (또는 None) | `ResearchPost` | 뉴스 유무에 따라 user_content 분기 |
-| 3-B | `generate_business_post()` | gpt-4o | business_main 후보 + 본문 + related 3카테고리 | `BusinessPost` | 메인 뉴스 + Related News 섹션 조합 |
+| 3-A | `generate_research_post()` | gpt-4o | research_pick 후보 + 본문 | `ResearchPost` | 뉴스 유무에 따라 user_content 분기 |
+| 3-A-KO | `translate_post()` | gpt-4o | Research EN 전문 | Research KO 전문 | 전문 번역 (1회 호출) |
+| 3-B Call 1 | `generate_business_expert()` | gpt-4o | business_main 후보 + 본문 + related | `BusinessExpertOutput` | Expert-first: fact_pack + analysis + expert |
+| 3-B Call 2 | `derive_business_personas()` | gpt-4o | expert 전문 + analysis | `BusinessDerivedOutput` | Expert 기반 learner + beginner 파생 |
+| 3-B-KO | `translate_post()` | gpt-4o | Business EN 전문 | Business KO 전문 | 전문 번역 (1회 호출) |
 | 6 | `review_business_post()` | gpt-4o | Business 초안 JSON | `EditorialFeedback` | EDITORIAL_SYSTEM_PROMPT로 검수 |
 
 **user_content 구성 규칙:**
@@ -805,9 +872,10 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 **핵심 규칙:**
 - **batch_id:** KST 기준 `YYYY-MM-DD` (예: `2026-03-04`)
 - **중복 실행 방지:** `pipeline_runs` 테이블에 `run_key = "daily:{batch_id}"` INSERT 시도 → 이미 존재하면 스킵
-- **Research/Business 병렬:** `asyncio.gather()`로 두 에이전트 동시 실행
+- **실행 순서:** Research EN → Research KO → Business Expert(Call 1) → Business Derive(Call 2) → Business KO (순차 실행)
 - **slug 패턴:** `{batch_id}-research-daily`, `{batch_id}-business-daily` (멱등성)
-- **발행 분리:** Research → `status='published'` (자동), Business → `status='draft'` (검수 대기)
+- **발행 분리:** Research EN/KO → `status='published'` (자동), Business EN/KO → `status='draft'` (검수 대기)
+- **번역:** 각 EN 포스트 생성 직후 전문 번역 1회 호출로 KO 생성. source_post_id로 EN-KO 연결.
 - **멱등 저장:** `supabase.table("news_posts").upsert(data, on_conflict="slug")` — 같은 slug면 갱신
 - **실패 처리:** `pipeline_logs`에 실패 기록 + `admin_notifications`에 알림 + `pipeline_runs` status='failed'
 
@@ -944,12 +1012,16 @@ export async function POST({ request }) {
 
 ### 8-1. 파이프라인 체인별 에러 정책
 
+> **v4 단순화:** 섹션별 재시도, recovery pass, partial artifact recovery를 모두 제거. 단순 재시도 루프로 통일.
+
 | 단계 | 실패 원인 | 재시도 | 실패 시 동작 |
 |---|---|---|---|
 | **Tavily 수집** | API 타임아웃, 429 Rate Limit | 30초 후 1회 | 해당 쿼리 스킵, 나머지 쿼리로 진행 |
 | **Ranking (4o-mini)** | API 타임아웃, 잘못된 JSON | 60초 후 1회 | 랭킹 없이 전체 후보를 Admin에게 전달 |
 | **Research Draft (4o)** | API 타임아웃, 잘못된 JSON | 60초 후 2회 | "뉴스 없음" 공지로 대체 발행 |
-| **Business Draft (4o)** | API 타임아웃, 잘못된 JSON | 60초 후 2회 | 해당 뉴스 스킵, 로그 기록 |
+| **Business Expert (4o, Call 1)** | API 타임아웃, 잘못된 JSON | 60초 후 2회 | 해당 뉴스 스킵, 로그 기록 |
+| **Business Derive (4o, Call 2)** | API 타임아웃, 잘못된 JSON | 60초 후 2회 | expert만 저장, learner/beginner 없이 draft |
+| **번역 (4o, 전문 번역)** | API 타임아웃, 잘못된 JSON | 60초 후 2회 | EN만 저장, KO 없이 진행 |
 | **Editorial (4o)** | API 타임아웃, 잘못된 JSON | 60초 후 1회 | 검수 없이 draft 저장, "수동 검수 필요" 태그 |
 | **PydanticAI 검증** | 스키마 불일치 | 재시도 없음 | 에러 내용 포함하여 재생성 1회 시도 |
 | **Supabase 저장** | 연결 실패, 중복 slug | 10초 후 2회 | 실패 로그 + Admin 알림 |
@@ -1066,29 +1138,50 @@ async def notify_admin_on_failure(pipeline_type: str, error: str):
 #### 일일 예상 비용 산정
 
 ```
-[매일 뉴스 2건 기준 — gpt-4o 기준가]
+[매일 뉴스 2건 기준 — gpt-4o 기준가, v4 Expert-First Cascade + 전문 번역 포함]
 
 Step 2 — 랭킹 (gpt-4o-mini):
   Input: ~3,000 tokens × $0.15/1M = $0.00045
   Output: ~1,500 tokens × $0.60/1M = $0.0009
+  소계: ~$0.001
 
-Step 3-A — Research (gpt-4o):
+Step 3-A — Research EN (gpt-4o):
   Input: ~3,000 tokens × $2.50/1M = $0.0075
-  Output: ~2,000 tokens × $10.00/1M = $0.02
+  Output: ~2,500 tokens × $10.00/1M = $0.025
+  소계: ~$0.033
 
-Step 3-B — Business (gpt-4o):
+Step 3-A-KO — Research 번역 (gpt-4o, 전문 번역):
+  Input: ~3,500 tokens × $2.50/1M = $0.009
+  Output: ~2,500 tokens × $10.00/1M = $0.025
+  소계: ~$0.034
+
+Step 3-B Call 1 — Business Expert (gpt-4o):
   Input: ~5,000 tokens × $2.50/1M = $0.0125
+  Output: ~5,000 tokens × $10.00/1M = $0.05
+  소계: ~$0.063
+
+Step 3-B Call 2 — Business Derive (gpt-4o):
+  Input: ~6,000 tokens × $2.50/1M = $0.015
   Output: ~4,000 tokens × $10.00/1M = $0.04
+  소계: ~$0.055
+
+Step 3-B-KO — Business 번역 (gpt-4o, 전문 번역):
+  Input: ~7,000 tokens × $2.50/1M = $0.018
+  Output: ~5,000 tokens × $10.00/1M = $0.05
+  소계: ~$0.068
 
 Step 6 — Editorial (gpt-4o):
-  Input: ~4,000 tokens × $2.50/1M = $0.01
+  Input: ~5,000 tokens × $2.50/1M = $0.013
   Output: ~1,000 tokens × $10.00/1M = $0.01
+  소계: ~$0.023
 
 Tavily API: 기본 ~4 queries × $0.01 = $0.04
-            (쿼리별 재시도 발생 시 최대 ~8 queries = $0.08)
 
-일일 예상 총 비용: ~$0.14 (재시도 평균 포함 ~$0.15 내외)
-월간 예상 총 비용: ~$4.2~4.5
+일일 예상 총 비용: ~$0.32 (번역 포함, 재시도 평균 포함 ~$0.35 내외)
+월간 예상 총 비용: ~$9.6~10.5
+
+vs v3 실제 비용 (번역 포함): $0.22-0.31/일, $6.6-9.3/월
+→ v4는 호출 수 대폭 감소(17-36 → ~7), 안정성 향상. 비용은 persona당 분량 증가(3-5K자 → 5-7K자)로 인해 유사 또는 소폭 상승.
 ```
 
 > **API 비용 모니터링:** 모든 API 호출의 토큰/비용을 pipeline_logs 테이블에 기록하여 Phase 3 AI Ops Dashboard에서 추적. 월 $10 초과 시 admin_notifications에 비용 경고 알림 생성.

@@ -5,7 +5,6 @@ from datetime import datetime, timezone, timedelta
 from services.pipeline import (
     acquire_pipeline_lock,
     release_pipeline_lock,
-    STALE_THRESHOLD_SECONDS,
 )
 
 

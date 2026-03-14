@@ -3,7 +3,7 @@ from services.quality import compute_quality
 
 def test_perfect_post():
     post = {
-        "content_learner": "x" * 3001,
+        "content_learner": "x" * 4001,
         "guide_items": {
             "one_liner": "a", "action_item": "b",
             "critical_gotcha": "c", "rotating_item": "d",
@@ -28,7 +28,7 @@ def test_empty_post():
 
 def test_partial_post():
     post = {
-        "content_learner": "x" * 3001,
+        "content_learner": "x" * 4001,
         "guide_items": {"one_liner": "a"},  # missing 3 fields
     }
     score, flags = compute_quality(post)

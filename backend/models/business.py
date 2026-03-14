@@ -1,28 +1,33 @@
-from typing import Optional
+"""BusinessPost schema — v4 Expert-First Cascade."""
+
+from typing import Any, Optional
 
 from pydantic import BaseModel, field_validator
 
-from models.common import FactPackItem, PromptGuideItems, RelatedNews, SourceCard
+from models.common import PromptGuideItems, RelatedNews
 
 
-EN_MIN_CONTENT_CHARS = 3000
-KO_MIN_CONTENT_CHARS = 1800
+# --- Length thresholds (v4: all personas equal) ---
+EN_MIN_CONTENT_CHARS = 5000      # EN generation floor
+KO_MIN_CONTENT_CHARS = 4000      # KO translation floor (~85% of EN)
 MIN_CONTENT_CHARS = EN_MIN_CONTENT_CHARS
-TARGET_CONTENT_CHARS = 4500
-EN_MIN_ANALYSIS_CHARS = 2000
-KO_MIN_ANALYSIS_CHARS = 1700
+TARGET_CONTENT_CHARS = 6500      # target 6000-7000
+EN_MIN_ANALYSIS_CHARS = 2500
+KO_MIN_ANALYSIS_CHARS = 1400
 MIN_ANALYSIS_CHARS = EN_MIN_ANALYSIS_CHARS
 
 
 class BusinessPost(BaseModel):
+    """Business Analyst 포스트 검증 스키마 (v4: Expert-First Cascade)."""
+
     title: str = ""
     slug: str = ""
-    content_analysis: str = ""
-    content_beginner: str = ""
-    content_learner: str = ""
-    content_expert: str = ""
-    fact_pack: list[FactPackItem] = []
-    source_cards: list[SourceCard] = []
+    fact_pack: dict[str, Any] = {}          # structured facts (key_facts, numbers, entities, timeline)
+    source_cards: list[dict[str, Any]] = []  # per-source evidence cards
+    content_analysis: str = ""               # shared analysis framework (min 2500 EN / 2000 KO)
+    content_beginner: str = ""               # beginner version (min 5000 EN / 4000 KO)
+    content_learner: str = ""                # learner version  (min 5000 EN / 4000 KO)
+    content_expert: str = ""                 # expert version   (min 5000 EN / 4000 KO)
     guide_items: Optional[PromptGuideItems] = None
     related_news: Optional[RelatedNews] = None
     source_urls: list[str] = []

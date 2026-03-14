@@ -20,18 +20,15 @@ def test_business_post_accepts_fact_pack_analysis_and_source_cards():
             "title": "OpenAI expands enterprise bundles",
             "slug": "2026-03-12-business-daily",
             "content_analysis": "## Core Analysis\n" + ("Shared analysis context. " * 120),
-            "content_beginner": "## The Story\n" + ("Beginner insight. " * 220),
-            "content_learner": "## What Happened\n" + ("Learner insight. " * 220),
-            "content_expert": "## Executive Summary\n" + ("Expert insight. " * 220),
-            "fact_pack": [
-                {
-                    "id": "claim-1",
-                    "claim": "OpenAI launched a new enterprise bundle. [[1]]",
-                    "why_it_matters": "Bundling affects procurement and vendor selection.",
-                    "source_ids": ["src-1"],
-                    "confidence": "high",
-                }
-            ],
+            "content_beginner": "## The Story\n" + ("Beginner insight. " * 260),
+            "content_learner": "## What Happened\n" + ("Learner insight. " * 260),
+            "content_expert": "## Executive Summary\n" + ("Expert insight. " * 260),
+            "fact_pack": {
+                "key_facts": ["OpenAI launched a new enterprise bundle."],
+                "numbers": ["Bundle pricing details pending."],
+                "entities": ["OpenAI", "Enterprise AI"],
+                "timeline": ["2026-Q1 — Enterprise bundle announced."],
+            },
             "source_cards": [_make_source_card("src-1", ["claim-1"])],
             "excerpt": "Enterprise bundles change how teams compare vendors.",
             "focus_items": [
@@ -46,8 +43,8 @@ def test_business_post_accepts_fact_pack_analysis_and_source_cards():
     )
 
     assert post.content_analysis.startswith("## Core Analysis")
-    assert post.fact_pack[0].source_ids == ["src-1"]
-    assert post.source_cards[0].claim_ids == ["claim-1"]
+    assert "OpenAI launched a new enterprise bundle." in post.fact_pack["key_facts"]
+    assert post.source_cards[0]["claim_ids"] == ["claim-1"]
 
 
 def test_research_post_accepts_source_cards_for_citation_rendering():

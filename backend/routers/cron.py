@@ -36,7 +36,15 @@ async def run_news_pipeline(
 ):
     """Trigger daily news pipeline. Returns 202 immediately; runs async."""
     resolved_batch = batch_id or date.today().isoformat()
-    background_tasks.add_task(run_daily_pipeline, resolved_batch)
+    mode = "resume"
+    try:
+        payload = await request.json()
+        if isinstance(payload, dict) and payload.get("mode") in {"resume", "force_refresh"}:
+            mode = payload["mode"]
+    except Exception:
+        pass
+
+    background_tasks.add_task(run_daily_pipeline, resolved_batch, mode)
     return PipelineAcceptedResponse(
         accepted=True,
         message=f"Pipeline queued for batch {resolved_batch}",

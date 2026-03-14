@@ -128,7 +128,7 @@ async def test_run_daily_pipeline_demotes_research_pick_before_generation():
         patch("services.pipeline.get_supabase", return_value=mock_db),
         patch("services.pipeline._save_candidates"),
         patch("services.pipeline.generate_research_post", AsyncMock(return_value=research_no_news)) as mock_generate_research,
-        patch("services.pipeline.translate_post", AsyncMock(return_value=ko_no_news)),
+        patch("services.pipeline.translate_post", AsyncMock(return_value=(ko_no_news, {}))),
         patch("services.pipeline._save_research_post", MagicMock(return_value=("post-id", "tg-id"))),
         patch("services.pipeline._extract_and_create_terms", AsyncMock()),
         patch("services.pipeline.release_pipeline_lock", AsyncMock()) as mock_release,

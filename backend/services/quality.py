@@ -1,7 +1,7 @@
 from typing import Any
 
 
-MIN_CONTENT_CHARS = 3000
+MIN_CONTENT_CHARS = 4000  # KO floor (v4: all personas min 5000 EN / 4000 KO)
 GUIDE_FIELDS = ("one_liner", "action_item", "critical_gotcha", "rotating_item")
 RELATED_NEWS_KEYS = ("big_tech", "industry_biz", "new_tools")
 

@@ -1,3 +1,5 @@
+"""Tests for whole-post translation (v4: single gpt-4o call per post)."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,38 +24,33 @@ def block_network(monkeypatch):
     monkeypatch.setattr(httpx.Client, "send", _blocked)
 
 
-def _mock_openai_response(data: dict) -> MagicMock:
+def _mock_openai_response(data: dict, prompt_tokens: int = 500, completion_tokens: int = 300) -> MagicMock:
     choice = MagicMock()
     choice.message.content = json.dumps(data, ensure_ascii=False)
     response = MagicMock()
     response.choices = [choice]
+    response.usage = MagicMock(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=prompt_tokens + completion_tokens,
+    )
     return response
 
 
-def _make_markdown_sections(section_titles: list[str], section_length: int, filler: str) -> str:
-    sections = []
-    for title in section_titles:
-        body_length = max(section_length - len(title) - 1, 0)
-        body = (filler * ((body_length // len(filler)) + 2))[:body_length]
-        sections.append(f"{title}\n{body}")
-    return "\n\n".join(sections)
+def _filler(length: int, phrase: str = "Korean-style sentence with detail. ") -> str:
+    return (phrase * ((length // len(phrase)) + 2))[:length]
 
+
+# ---------------------------------------------------------------------------
+# Research fixtures
+# ---------------------------------------------------------------------------
 
 def _make_research_en_post() -> dict:
     return {
         "has_news": True,
         "title": "GPT-5 reduces latency for multimodal workloads",
         "slug": "2026-03-12-research-daily",
-        "content_original": _make_markdown_sections(
-            [
-                "## 1. What Happened",
-                "## 2. By the Numbers",
-                "## 3. So What",
-                "## 4. Deep Dive",
-            ],
-            1600,
-            "Technical source-backed explanation with implementation detail and benchmark context. ",
-        ),
+        "content_original": "## 1. What Happened\n" + _filler(1600) + "\n\n## 2. By the Numbers\n" + _filler(1600) + "\n\n## 3. Why It Matters\n" + _filler(1600) + "\n\n## 4. Deep Dive\n" + _filler(1600),
         "excerpt": "OpenAI reduced latency while keeping enough context for practical production evaluation.",
         "focus_items": [
             "GPT-5 improved latency on multimodal inference paths.",
@@ -78,46 +75,54 @@ def _make_research_en_post() -> dict:
     }
 
 
-def _make_research_metadata_ko() -> dict:
+def _make_research_ko_full() -> dict:
+    """Full Korean translation payload for a research post."""
+    ko_content = "## 1. 무슨 일이 있었나\n" + _filler(1600, "한국어 번역된 기술 분석 문장입니다. ") + "\n\n## 2. 숫자로 보기\n" + _filler(1600, "한국어 번역된 기술 분석 문장입니다. ") + "\n\n## 3. 왜 중요한가\n" + _filler(1600, "한국어 번역된 기술 분석 문장입니다. ") + "\n\n## 4. 심층 분석\n" + _filler(1600, "한국어 번역된 기술 분석 문장입니다. ")
     return {
-        "title": "GPT-5가 멀티모달 워크로드의 지연 시간을 줄였습니다",
-        "excerpt": "실사용 관점에서 지연 시간이 줄어들었고, 제품팀이 검토할 실무 포인트가 더 명확해졌습니다.",
+        "title": "GPT-5 한국어 제목",
+        "excerpt": "한국어 번역된 요약 텍스트입니다.",
+        "tags": ["gpt-5", "latency", "multimodal"],
         "focus_items": [
-            "GPT-5는 멀티모달 추론 경로의 지연 시간을 줄였습니다.",
-            "낮은 지연 시간은 인터랙티브 AI 제품의 비용과 설계를 바꿉니다.",
-            "다음 공개 자료에서는 가격과 처리량 정보를 함께 봐야 합니다.",
+            "GPT-5 멀티모달 추론 경로에서 지연 시간이 개선되었습니다.",
+            "지연 시간 감소는 인터랙티브 AI의 제품 및 비용 계획을 변경합니다.",
+            "다음 릴리스 노트에서 가격 및 처리량 공개를 주시하세요.",
         ],
         "guide_items": {
-            "one_liner": "GPT-5는 더 빠른 멀티모달 추론을 목표로 한 모델 업데이트입니다.",
-            "action_item": "현재 프롬프트를 새 지연 시간 프로파일과 비교 측정해보세요.",
-            "critical_gotcha": "지연 시간 개선이 비용과 긴 문맥 성능까지 보장하는 것은 아닙니다.",
-            "rotating_item": "긴 문맥 입력에서도 같은 속도 개선이 유지되는지가 핵심입니다.",
+            "one_liner": "GPT-5는 프로덕션 추론을 위한 더 빠른 멀티모달 모델 릴리스입니다.",
+            "action_item": "현재 프롬프트를 새로운 지연 시간 프로필과 비교 벤치마크하세요.",
+            "critical_gotcha": "지연 시간 개선은 여전히 비용 및 처리량 트레이드오프를 동반할 수 있습니다.",
+            "rotating_item": "가장 큰 질문은 속도 개선이 긴 컨텍스트 작업에서도 유지되는지입니다.",
             "quiz_poll": {
-                "question": "지연 시간 중심 모델 업데이트 후 가장 먼저 확인할 것은 무엇일까요?",
-                "options": ["처리량", "신뢰성", "로고", "블로그 길이"],
+                "question": "지연 시간 중심 릴리스 후 가장 먼저 중요한 지표는?",
+                "options": ["처리량", "안정성", "로고 새로고침", "블로그 길이"],
                 "answer": "B",
-                "explanation": "실서비스에서는 속도보다 출력 신뢰성이 먼저 검증되어야 합니다.",
+                "explanation": "팀은 지연 시간을 최적화하기 전에 출력이 안정적인지 확인해야 합니다.",
             },
         },
-        "tags": ["gpt-5", "지연시간", "멀티모달"],
+        "content_original": ko_content,
     }
 
 
-def _make_ko_section(title: str, target_length: int) -> str:
-    filler = "실제 적용 맥락과 기술적 근거를 함께 설명하는 한국어 번역 문장입니다. "
-    body_length = max(target_length - len(title) - 1, 0)
-    body = (filler * ((body_length // len(filler)) + 2))[:body_length]
-    return f"{title}\n{body}"
+def _make_research_ko_short() -> dict:
+    """Korean translation with content_original below minimum length."""
+    ko = _make_research_ko_full()
+    ko["content_original"] = "## 1. 짧은 섹션\n" + _filler(500, "짧은 한국어 문장. ")
+    return ko
 
+
+# ---------------------------------------------------------------------------
+# Business fixtures
+# ---------------------------------------------------------------------------
 
 def _make_business_en_post() -> dict:
     filler = "Business explanation with operational implications, competitive analysis, and buyer impact. "
     return {
         "title": "Anthropic expands enterprise AI financing",
         "slug": "2026-03-12-business-daily",
-        "content_beginner": _make_markdown_sections(["## The Story"], 3400, filler),
-        "content_learner": _make_markdown_sections(["## What Happened"], 3400, filler),
-        "content_expert": _make_markdown_sections(["## Executive Summary"], 3400, filler),
+        "content_analysis": "## Core Analysis\n" + _filler(3000, filler),
+        "content_beginner": "## The Story\n" + _filler(5200, filler),
+        "content_learner": "## What Happened\n" + _filler(5200, filler),
+        "content_expert": "## Executive Summary\n" + _filler(5200, filler),
         "excerpt": "Anthropic's funding round changes how enterprise buyers read platform risk.",
         "focus_items": [
             "Anthropic added more capital to support product and compute expansion.",
@@ -145,119 +150,157 @@ def _make_business_en_post() -> dict:
             },
             "new_tools": None,
         },
+        "fact_pack": {
+            "key_facts": ["Anthropic expanded enterprise financing."],
+            "numbers": ["New funding amount not disclosed publicly."],
+            "entities": ["Anthropic", "Enterprise AI"],
+            "timeline": ["2026-Q1 — Funding round announced."],
+        },
+        "source_cards": [
+            {
+                "id": "src-1",
+                "title": "Anthropic financing announcement",
+                "publisher": "Anthropic",
+                "url": "https://anthropic.com/news/example",
+                "published_at": "2026-03-12T00:00:00Z",
+                "evidence_snippet": "Anthropic said the financing will support enterprise and compute expansion.",
+                "claim_ids": ["claim-1"],
+            }
+        ],
         "source_urls": ["https://anthropic.com/news/example"],
         "news_temperature": 4,
         "tags": ["anthropic", "enterprise", "funding"],
     }
 
 
-def _make_business_metadata_ko() -> dict:
+def _make_business_ko_full() -> dict:
+    """Full Korean translation payload for a business post."""
+    ko_filler = "한국어 비즈니스 분석 문장으로 운영적 함의와 경쟁 분석 및 구매자 영향을 포함합니다. "
     return {
-        "title": "Anthropic가 엔터프라이즈 AI 투자 기반을 넓혔습니다",
-        "excerpt": "이번 투자 라운드는 엔터프라이즈 고객이 플랫폼 리스크를 해석하는 방식에도 영향을 줍니다.",
+        "title": "Anthropic 한국어 제목",
+        "excerpt": "한국어 비즈니스 요약 텍스트입니다.",
+        "tags": ["anthropic", "enterprise", "funding"],
         "focus_items": [
-            "Anthropic는 제품과 연산 자원을 확장할 자본을 더 확보했습니다.",
-            "엔터프라이즈 구매자는 재무 체력을 공급 안정성 신호로 읽습니다.",
-            "다음으로는 가격 정책과 채용 확대가 실무적 신호가 됩니다.",
+            "Anthropic은 제품 및 컴퓨트 확장을 위해 더 많은 자본을 추가했습니다.",
+            "엔터프라이즈 구매자들은 재무 건전성을 전달 위험 신호로 읽습니다.",
+            "가격 및 채용 움직임이 다음 실질적인 신호입니다.",
         ],
         "guide_items": {
-            "one_liner": "Anthropic는 엔터프라이즈 AI 운영을 확대할 자본을 추가로 확보했습니다.",
-            "action_item": "이번 분기에 단일 벤더 의존 가정을 다시 점검해보세요.",
-            "critical_gotcha": "투자 규모가 비용 구조나 제품 실행력까지 보장하지는 않습니다.",
-            "rotating_item": "대차대조표의 안정성은 벤치마크보다 먼저 구매자 신뢰에 영향을 줍니다.",
+            "one_liner": "Anthropic은 엔터프라이즈 AI 운영 확장을 위해 추가 자본을 조달했습니다.",
+            "action_item": "이번 분기 AI 로드맵에서 단일 벤더 가정을 검토하세요.",
+            "critical_gotcha": "자금 조달이 더 나은 비용 구조나 제품 실행을 보장하지는 않습니다.",
+            "rotating_item": "재무 건전성은 벤치마크 결과가 변하기 훨씬 전에 구매자 신뢰에 영향을 미칩니다.",
             "quiz_poll": {
-                "question": "대규모 AI 투자 유치가 가장 먼저 바꾸는 것은 무엇일까요?",
-                "options": ["연산 자원 접근성", "마스코트", "배경화면", "간식"],
+                "question": "주요 AI 자금 조달이 가장 먼저 직접적으로 변화시키는 것은?",
+                "options": ["컴퓨트 접근성", "마스코트 품질", "배경화면", "간식"],
                 "answer": "A",
-                "explanation": "큰 투자 라운드는 보통 연산 자원과 엔터프라이즈 실행 역량을 늘립니다.",
+                "explanation": "대규모 투자는 일반적으로 컴퓨트 접근성과 엔터프라이즈 실행 역량을 증가시킵니다.",
             },
         },
         "related_news": {
             "big_tech": None,
             "industry_biz": {
-                "title": "OpenAI가 엔터프라이즈 번들을 확장했습니다",
+                "title": "OpenAI 엔터프라이즈 번들 확장",
                 "url": "https://openai.com/blog/bundles",
-                "summary": "대규모 팀이 AI를 도입할 때 검토할 수 있는 계약 옵션이 더 넓어졌습니다.",
+                "summary": "OpenAI는 대규모 팀을 위한 더 넓은 계약 옵션을 도입했습니다.",
             },
             "new_tools": None,
         },
-        "tags": ["anthropic", "enterprise", "funding"],
+        "fact_pack": {
+            "key_facts": ["Anthropic이 엔터프라이즈 자금을 확대했습니다."],
+            "numbers": ["새로운 자금 규모는 공개되지 않았습니다."],
+            "entities": ["Anthropic", "엔터프라이즈 AI"],
+            "timeline": ["2026년 1분기 — 자금 조달 라운드 발표."],
+        },
+        "content_analysis": "## 핵심 분석\n" + _filler(2200, ko_filler),
+        "content_beginner": "## 이야기\n" + _filler(4200, ko_filler),
+        "content_learner": "## 무슨 일이 있었나\n" + _filler(4200, ko_filler),
+        "content_expert": "## 경영진 요약\n" + _filler(4200, ko_filler),
     }
 
 
-def test_split_markdown_sections_preserves_heading_order():
-    from services.agents.translate import split_markdown_sections
+def _make_business_ko_short_fields() -> dict:
+    """Korean translation with some persona fields below minimum length."""
+    ko = _make_business_ko_full()
+    ko["content_learner"] = "## 짧은 학습자 섹션\n" + _filler(500, "짧은 한국어. ")
+    return ko
 
-    text = "## 1. First\nBody one\n\n## 2. Second\nBody two"
 
-    assert split_markdown_sections(text) == [
-        "## 1. First\nBody one",
-        "## 2. Second\nBody two",
-    ]
+# ---------------------------------------------------------------------------
+# Research translation tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_translate_research_post_whole_post_success():
+    """Single gpt-4o call translates the full research post and returns (dict, usage)."""
+    en_data = _make_research_en_post()
+    ko_full = _make_research_ko_full()
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        return_value=_mock_openai_response(ko_full)
+    )
+
+    with patch("services.agents.translate.get_openai_client", return_value=mock_client):
+        from services.agents.translate import translate_post
+
+        ko_data, usage = await translate_post(en_data, "research")
+
+    validated = ResearchPost.model_validate(ko_data)
+    assert validated.content_original is not None
+    assert len(validated.content_original) >= RESEARCH_KO_MIN_CONTENT_CHARS
+    assert validated.title == ko_full["title"]
+    assert mock_client.chat.completions.create.await_count == 1
+
+    # Usage metrics returned as second tuple element
+    assert usage["tokens_used"] > 0
 
 
 @pytest.mark.asyncio
-async def test_translate_research_post_retries_short_section_and_preserves_structure():
+async def test_translate_research_post_retries_on_short_content():
+    """When content_original is too short, the translator retries with an expanded prompt."""
     en_data = _make_research_en_post()
+    ko_short = _make_research_ko_short()
+    ko_full = _make_research_ko_full()
+
     mock_client = AsyncMock()
     mock_client.chat.completions.create = AsyncMock(
         side_effect=[
-            _mock_openai_response(_make_research_metadata_ko()),
-            _mock_openai_response({"translated_text": _make_ko_section("## 1. 무슨 일이 있었나", 320)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 1. 무슨 일이 있었나", 1300)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 2. 숫자로 보면", 1300)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 3. 그래서 중요한 점", 1300)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 4. 더 깊게 보기", 1300)}),
+            _mock_openai_response(ko_short),
+            _mock_openai_response(ko_full),
         ]
     )
 
     with patch("services.agents.translate.get_openai_client", return_value=mock_client):
         from services.agents.translate import translate_post
 
-        result = await translate_post(en_data, "research")
+        ko_data, usage = await translate_post(en_data, "research")
 
-    validated = ResearchPost.model_validate(result)
-
+    validated = ResearchPost.model_validate(ko_data)
     assert validated.content_original is not None
     assert len(validated.content_original) >= RESEARCH_KO_MIN_CONTENT_CHARS
-    assert validated.content_original.count("## ") == 4
-    assert mock_client.chat.completions.create.await_count == 6
+    assert mock_client.chat.completions.create.await_count == 2
 
-    retry_prompt = mock_client.chat.completions.create.await_args_list[2].kwargs["messages"][1]["content"]
-    assert "previous translation was" in retry_prompt
-    assert "minimum expected length" in retry_prompt
+    # Second call prompt should mention the short content
+    retry_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
+    assert "content_original" in retry_prompt
 
 
 @pytest.mark.asyncio
-async def test_translate_research_post_records_usage_metrics():
+async def test_translate_research_post_returns_usage_metrics():
+    """Usage metrics are accumulated across retries and returned."""
     en_data = _make_research_en_post()
-    responses = [
-        _mock_openai_response(_make_research_metadata_ko()),
-        _mock_openai_response({"translated_text": _make_ko_section("## 1. 무슨 일이 있었나", 1300)}),
-        _mock_openai_response({"translated_text": _make_ko_section("## 2. 숫자로 보면", 1300)}),
-        _mock_openai_response({"translated_text": _make_ko_section("## 3. 그래서 중요한 점", 1300)}),
-        _mock_openai_response({"translated_text": _make_ko_section("## 4. 더 깊게 보기", 1300)}),
-    ]
-    for index, call in enumerate(responses):
-        call.usage = MagicMock(
-            prompt_tokens=500 + (index * 50),
-            completion_tokens=250 + (index * 25),
-            total_tokens=750 + (index * 75),
-        )
+    ko_full = _make_research_ko_full()
 
+    resp = _mock_openai_response(ko_full, prompt_tokens=800, completion_tokens=600)
     mock_client = AsyncMock()
-    mock_client.chat.completions.create = AsyncMock(side_effect=responses)
-
-    usage = {}
+    mock_client.chat.completions.create = AsyncMock(return_value=resp)
 
     with patch("services.agents.translate.get_openai_client", return_value=mock_client):
         from services.agents.translate import translate_post
 
-        result = await translate_post(en_data, "research", usage_recorder=usage)
+        _, usage = await translate_post(en_data, "research")
 
-    validated = ResearchPost.model_validate(result)
-
-    assert validated.content_original is not None
     assert usage["tokens_used"] > 0
     assert usage["input_tokens"] > 0
     assert usage["output_tokens"] > 0
@@ -265,7 +308,8 @@ async def test_translate_research_post_records_usage_metrics():
 
 
 @pytest.mark.asyncio
-async def test_translate_research_no_news_skips_section_translation():
+async def test_translate_research_no_news_skips_content_validation():
+    """No-news research posts skip content_original length validation."""
     en_data = {
         "has_news": False,
         "title": "No sufficiently distinct research update today",
@@ -280,82 +324,118 @@ async def test_translate_research_no_news_skips_section_translation():
         "news_temperature": 1,
         "tags": ["no-news"],
     }
-    metadata_ko = {
-        "title": "오늘은 충분히 다른 리서치 업데이트가 없었습니다",
-        "no_news_notice": "지난 24시간 동안 어제와 충분히 다른 AI 연구 업데이트는 확인되지 않았습니다.",
-        "recent_fallback": "어제의 주요 흐름이 오늘 신호에서도 계속 우세했습니다.",
+    ko_payload = {
+        "title": "오늘은 충분히 다른 AI 연구 업데이트가 없었습니다",
+        "no_news_notice": "오늘은 충분히 다른 AI 연구 업데이트가 확인되지 않았습니다.",
+        "recent_fallback": "어제의 주요 흐름이 계속 이어졌습니다.",
         "focus_items": [],
         "guide_items": None,
         "tags": ["no-news"],
     }
     mock_client = AsyncMock()
     mock_client.chat.completions.create = AsyncMock(
-        return_value=_mock_openai_response(metadata_ko)
+        return_value=_mock_openai_response(ko_payload)
     )
 
     with patch("services.agents.translate.get_openai_client", return_value=mock_client):
         from services.agents.translate import translate_post
 
-        result = await translate_post(en_data, "research")
+        ko_data, usage = await translate_post(en_data, "research")
 
-    validated = ResearchPost.model_validate(result)
-
+    validated = ResearchPost.model_validate(ko_data)
     assert validated.has_news is False
     assert validated.content_original is None
     assert mock_client.chat.completions.create.await_count == 1
 
 
+# ---------------------------------------------------------------------------
+# Business translation tests
+# ---------------------------------------------------------------------------
+
 @pytest.mark.asyncio
-async def test_translate_business_post_recovers_only_failing_field():
+async def test_translate_business_post_whole_post_success():
+    """Single gpt-4o call translates the full business post."""
     en_data = _make_business_en_post()
+    ko_full = _make_business_ko_full()
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        return_value=_mock_openai_response(ko_full)
+    )
+
+    with patch("services.agents.translate.get_openai_client", return_value=mock_client):
+        from services.agents.translate import translate_post
+
+        ko_data, usage = await translate_post(en_data, "business")
+
+    validated = BusinessPost.model_validate(ko_data)
+    assert len(validated.content_analysis) >= BUSINESS_KO_MIN_ANALYSIS_CHARS
+    assert len(validated.content_beginner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert len(validated.content_learner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert len(validated.content_expert) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    assert mock_client.chat.completions.create.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_translate_business_post_retries_on_short_fields():
+    """When persona or analysis fields are too short, the translator retries."""
+    en_data = _make_business_en_post()
+    ko_short = _make_business_ko_short_fields()
+    ko_full = _make_business_ko_full()
+
     mock_client = AsyncMock()
     mock_client.chat.completions.create = AsyncMock(
         side_effect=[
-            _mock_openai_response(_make_business_metadata_ko()),
-            _mock_openai_response({"translated_text": _make_ko_section("## 이야기", 3300)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 무슨 일이 있었나", 1400)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 핵심 요약", 3300)}),
-            _mock_openai_response({"translated_text": _make_ko_section("## 무슨 일이 있었나", 3300)}),
+            _mock_openai_response(ko_short),
+            _mock_openai_response(ko_full),
         ]
     )
 
     with patch("services.agents.translate.get_openai_client", return_value=mock_client):
         from services.agents.translate import translate_post
 
-        result = await translate_post(en_data, "business")
+        ko_data, usage = await translate_post(en_data, "business")
 
-    validated = BusinessPost.model_validate(result)
-
-    assert len(validated.content_beginner) >= BUSINESS_KO_MIN_CONTENT_CHARS
+    validated = BusinessPost.model_validate(ko_data)
     assert len(validated.content_learner) >= BUSINESS_KO_MIN_CONTENT_CHARS
-    assert len(validated.content_expert) >= BUSINESS_KO_MIN_CONTENT_CHARS
-    assert mock_client.chat.completions.create.await_count == 5
+    assert mock_client.chat.completions.create.await_count == 2
 
-    prompts = [
-        call.kwargs["messages"][1]["content"]
-        for call in mock_client.chat.completions.create.await_args_list
-    ]
-    learner_recovery_prompts = [
-        prompt
-        for prompt in prompts
-        if "content_learner" in prompt and "previous translation was" in prompt
-    ]
-    assert learner_recovery_prompts
-    assert any(
-        "minimum expected length for this translated section is" in prompt
-        for prompt in learner_recovery_prompts
+    retry_prompt = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"][1]["content"]
+    assert "content_learner" in retry_prompt
+
+
+@pytest.mark.asyncio
+async def test_translate_business_post_fails_after_max_retries():
+    """After MAX_RETRIES, raises ValueError if fields stay too short."""
+    en_data = _make_business_en_post()
+    ko_short = _make_business_ko_short_fields()
+
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        return_value=_mock_openai_response(ko_short)
     )
+
+    with patch("services.agents.translate.get_openai_client", return_value=mock_client):
+        from services.agents.translate import translate_post
+
+        with pytest.raises(ValueError, match="TranslateBusiness failed"):
+            await translate_post(en_data, "business")
+
+    # 1 initial + 2 retries = 3 total calls
+    assert mock_client.chat.completions.create.await_count == 3
 
 
 def test_business_post_allows_shorter_korean_lengths():
-    analysis = _make_ko_section("## 핵심 분석", BUSINESS_KO_MIN_ANALYSIS_CHARS + 73)
-    beginner = _make_ko_section("## 이야기", BUSINESS_KO_MIN_CONTENT_CHARS + 93)
-    learner = _make_ko_section("## 무슨 일이 있었나", BUSINESS_KO_MIN_CONTENT_CHARS + 183)
-    expert = _make_ko_section("## 실행 요약", BUSINESS_KO_MIN_CONTENT_CHARS + 220)
+    """BusinessPost Pydantic model accepts KO-length content (>= KO_MIN thresholds)."""
+    ko_filler = "한국어 비즈니스 분석 문장. "
+    analysis = "## Core Analysis\n" + _filler(BUSINESS_KO_MIN_ANALYSIS_CHARS + 73, ko_filler)
+    beginner = "## Beginner View\n" + _filler(BUSINESS_KO_MIN_CONTENT_CHARS + 93, ko_filler)
+    learner = "## Learner View\n" + _filler(BUSINESS_KO_MIN_CONTENT_CHARS + 183, ko_filler)
+    expert = "## Expert View\n" + _filler(BUSINESS_KO_MIN_CONTENT_CHARS + 220, ko_filler)
 
     post = BusinessPost.model_validate(
         {
-            "title": "Legora, 미국 확장을 위해 대규모 자금 조달",
+            "title": "Legora raises a larger financing round",
             "slug": "2026-03-12-business-daily",
             "content_analysis": analysis,
             "content_beginner": beginner,

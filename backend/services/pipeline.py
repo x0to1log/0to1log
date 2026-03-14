@@ -1,18 +1,32 @@
+"""Daily News Pipeline — v4 sequential orchestrator.
+
+Flow: Collect → Rank → Research EN → Research KO → Business EN → Business KO
+     → Terms → Done.
+
+No artifact system — resume is handled by checking saved EN posts in DB.
+"""
+
 import logging
 import re
 import uuid
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from core.database import get_supabase
-from services.news_collection import collect_all_news
-from services.agents import rank_candidates, generate_research_post, generate_business_post
-from services.agents.translate import translate_post
 from core.config import settings
-from models.ranking import NewsCandidate, NewsRankingResult, RankedCandidate
-from models.research import ResearchPost
+from core.database import get_supabase
 from models.business import BusinessPost
+from models.ranking import (
+    NewsCandidate,
+    NewsRankingResult,
+    RankedCandidate,
+    RelatedPicks,
+)
+from models.research import ResearchPost
+from services.agents import generate_business_post, generate_research_post, rank_candidates
+from services.agents.translate import translate_post
+from services.news_collection import collect_all_news
+from services.quality import compute_quality
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +34,14 @@ STALE_THRESHOLD_SECONDS = 3600  # 1 hour
 RESEARCH_MIN_RELEVANCE_SCORE = 0.85
 RESEARCH_HIGH_SIGNAL_SCORE = 0.95
 RESEARCH_TITLE_SIMILARITY_THRESHOLD = 0.88
+PIPELINE_MODE_RESUME = "resume"
+PIPELINE_MODE_FORCE_REFRESH = "force_refresh"
+PipelineMode = Literal["resume", "force_refresh"]
 
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -46,22 +67,52 @@ def _build_context(candidates: list[NewsCandidate]) -> str:
     return "\n\n".join(lines)
 
 
-def _normalize_title_for_similarity(title: str) -> str:
-    normalized = "".join(
-        char.lower() if char.isalnum() else " "
-        for char in (title or "")
+def _candidate_from_saved_row(row: dict[str, Any]) -> NewsCandidate:
+    return NewsCandidate(
+        title=row.get("title") or "",
+        url=row.get("url") or "",
+        snippet=row.get("snippet") or "",
+        source=row.get("source") or "unknown",
     )
-    return " ".join(normalized.split())
 
 
-def _title_similarity(left: str, right: str) -> float:
-    if not left or not right:
-        return 0.0
-    return SequenceMatcher(
-        None,
-        _normalize_title_for_similarity(left),
-        _normalize_title_for_similarity(right),
-    ).ratio()
+def _ranked_from_saved_row(row: dict[str, Any]) -> RankedCandidate:
+    return RankedCandidate(
+        title=row.get("title") or "",
+        url=row.get("url") or "",
+        snippet=row.get("snippet") or "",
+        source=row.get("source") or "unknown",
+        assigned_type=row.get("assigned_type") or "unknown",
+        relevance_score=float(row.get("relevance_score") or 0.0),
+        ranking_reason=row.get("ranking_reason"),
+    )
+
+
+def _ranking_from_saved_candidates(rows: list[dict[str, Any]]) -> NewsRankingResult:
+    ranking = NewsRankingResult(related_picks=None)
+    related = {}
+
+    for row in rows:
+        assigned_type = row.get("assigned_type")
+        if not assigned_type:
+            continue
+
+        ranked = _ranked_from_saved_row(row)
+        if assigned_type == "research":
+            ranking.research_pick = ranked
+        elif assigned_type == "business_main":
+            ranking.business_main_pick = ranked
+        elif assigned_type in {"big_tech", "industry_biz", "new_tools"}:
+            related[assigned_type] = ranked
+
+    if related:
+        ranking.related_picks = RelatedPicks(
+            big_tech=related.get("big_tech"),
+            industry_biz=related.get("industry_biz"),
+            new_tools=related.get("new_tools"),
+        )
+
+    return ranking
 
 
 def normalize_pipeline_error(error: str | Exception | None) -> str:
@@ -94,78 +145,26 @@ def normalize_pipeline_error(error: str | Exception | None) -> str:
     return raw.splitlines()[0]
 
 
-def log_pipeline_stage(
-    run_id: str,
-    pipeline_type: str,
-    status: str,
-    *,
-    attempt: int = 0,
-    post_type: str | None = None,
-    locale: str | None = None,
-    input_summary: str | None = None,
-    output_summary: str | None = None,
-    error_message: str | None = None,
-    duration_ms: int | None = None,
-    model_used: str | None = None,
-    tokens_used: int | None = None,
-    cost_usd: float | None = None,
-    debug_meta: dict[str, Any] | None = None,
-) -> None:
-    client = get_supabase()
-    if not client:
-        return
+# ---------------------------------------------------------------------------
+# Novelty gate (research deduplication)
+# ---------------------------------------------------------------------------
 
-    client.table("pipeline_logs").insert(
-        {
-            "run_id": run_id,
-            "pipeline_type": pipeline_type,
-            "status": status,
-            "attempt": attempt,
-            "post_type": post_type,
-            "locale": locale,
-            "input_summary": input_summary,
-            "output_summary": output_summary,
-            "error_message": error_message,
-            "duration_ms": duration_ms,
-            "model_used": model_used,
-            "tokens_used": tokens_used,
-            "cost_usd": cost_usd,
-            "debug_meta": debug_meta or {},
-        }
-    ).execute()
+def _normalize_title_for_similarity(title: str) -> str:
+    normalized = "".join(
+        char.lower() if char.isalnum() else " "
+        for char in (title or "")
+    )
+    return " ".join(normalized.split())
 
 
-def _build_stage_logger(
-    run_id: str,
-    *,
-    post_type: str,
-    locale: str,
-) -> Any:
-    def _logger(
-        stage_name: str,
-        status: str,
-        attempt: int,
-        debug_meta: dict[str, Any] | None,
-        output_summary: str | None,
-        model_used: str | None = None,
-        tokens_used: int | None = None,
-        cost_usd: float | None = None,
-    ) -> None:
-        log_pipeline_stage(
-            run_id,
-            stage_name,
-            status,
-            attempt=attempt,
-            post_type=post_type,
-            locale=locale,
-            output_summary=output_summary,
-            debug_meta=debug_meta,
-            model_used=model_used,
-            tokens_used=tokens_used,
-            cost_usd=cost_usd,
-        )
-
-    return _logger
+def _title_similarity(left: str, right: str) -> float:
+    if not left or not right:
+        return 0.0
+    return SequenceMatcher(
+        None,
+        _normalize_title_for_similarity(left),
+        _normalize_title_for_similarity(right),
+    ).ratio()
 
 
 def _get_research_gate_decision(
@@ -275,6 +274,55 @@ def _apply_research_novelty_gate(
     return candidate, decision
 
 
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+
+def log_pipeline_stage(
+    run_id: str,
+    pipeline_type: str,
+    status: str,
+    *,
+    attempt: int = 0,
+    post_type: str | None = None,
+    locale: str | None = None,
+    input_summary: str | None = None,
+    output_summary: str | None = None,
+    error_message: str | None = None,
+    duration_ms: int | None = None,
+    model_used: str | None = None,
+    tokens_used: int | None = None,
+    cost_usd: float | None = None,
+    debug_meta: dict[str, Any] | None = None,
+) -> None:
+    client = get_supabase()
+    if not client:
+        return
+
+    client.table("pipeline_logs").insert(
+        {
+            "run_id": run_id,
+            "pipeline_type": pipeline_type,
+            "status": status,
+            "attempt": attempt,
+            "post_type": post_type,
+            "locale": locale,
+            "input_summary": input_summary,
+            "output_summary": output_summary,
+            "error_message": error_message,
+            "duration_ms": duration_ms,
+            "model_used": model_used,
+            "tokens_used": tokens_used,
+            "cost_usd": cost_usd,
+            "debug_meta": debug_meta or {},
+        }
+    ).execute()
+
+
+# ---------------------------------------------------------------------------
+# Pipeline lock (distributed)
+# ---------------------------------------------------------------------------
+
 async def acquire_pipeline_lock(batch_id: str) -> Optional[str]:
     """Attempt to acquire a pipeline lock for the given batch.
 
@@ -369,6 +417,10 @@ async def release_pipeline_lock(
     logger.info("Pipeline lock released: run_id=%s status=%s", run_id, status)
 
 
+# ---------------------------------------------------------------------------
+# Candidate persistence
+# ---------------------------------------------------------------------------
+
 def _save_candidates(
     candidates: list[NewsCandidate],
     ranking: NewsRankingResult,
@@ -379,8 +431,12 @@ def _save_candidates(
     if not client:
         return
 
-    # Build a lookup of assigned types from ranking result
-    assigned: dict[str, tuple[str, float, str]] = {}  # url → (type, score, reason)
+    try:
+        client.table("news_candidates").delete().eq("batch_id", batch_id).execute()
+    except Exception as exc:
+        logger.warning("Failed to clear existing candidate snapshot for %s: %s", batch_id, exc)
+
+    assigned: dict[str, tuple[str, float, str]] = {}
     for pick, ptype in [
         (ranking.research_pick, "research"),
         (ranking.business_main_pick, "business_main"),
@@ -414,6 +470,40 @@ def _save_candidates(
     client.table("news_candidates").insert(rows).execute()
     logger.info("Saved %d candidates to news_candidates", len(rows))
 
+
+def _load_saved_ranking_snapshot(
+    batch_id: str,
+) -> tuple[list[NewsCandidate], NewsRankingResult] | None:
+    client = get_supabase()
+    if not client:
+        return None
+
+    try:
+        result = (
+            client.table("news_candidates")
+            .select("title,url,snippet,source,assigned_type,relevance_score,ranking_reason")
+            .eq("batch_id", batch_id)
+            .execute()
+        )
+        rows = result.data if result and result.data else []
+    except Exception as exc:
+        logger.warning("Failed to load saved candidate snapshot for %s: %s", batch_id, exc)
+        return None
+
+    if not rows:
+        return None
+
+    if not any(row.get("assigned_type") for row in rows):
+        return None
+
+    candidates = [_candidate_from_saved_row(row) for row in rows]
+    ranking = _ranking_from_saved_candidates(rows)
+    return candidates, ranking
+
+
+# ---------------------------------------------------------------------------
+# Post DB layer
+# ---------------------------------------------------------------------------
 
 def _save_post(client, row: dict, batch_id: str, post_type: str, locale: str) -> str:
     """Insert or update a post. Returns the post id.
@@ -452,10 +542,7 @@ def _save_research_post(
     translation_group_id: str | None = None,
     source_post_id: str | None = None,
 ) -> tuple[str, str]:
-    """Save research post to posts table.
-
-    Returns (post_id, translation_group_id).
-    """
+    """Save research post. Returns (post_id, translation_group_id)."""
     client = get_supabase()
     if not client:
         return "", ""
@@ -498,10 +585,7 @@ def _save_business_post(
     translation_group_id: str | None = None,
     source_post_id: str | None = None,
 ) -> tuple[str, str]:
-    """Save business post to posts table.
-
-    Returns (post_id, translation_group_id).
-    """
+    """Save business post. Returns (post_id, translation_group_id)."""
     client = get_supabase()
     if not client:
         return "", ""
@@ -521,8 +605,8 @@ def _save_business_post(
         "content_beginner": post.content_beginner,
         "content_learner": post.content_learner,
         "content_expert": post.content_expert,
-        "fact_pack": [item.model_dump() for item in post.fact_pack] if post.fact_pack else None,
-        "source_cards": [card.model_dump() for card in post.source_cards] if post.source_cards else None,
+        "fact_pack": post.fact_pack if post.fact_pack else None,
+        "source_cards": post.source_cards if post.source_cards else None,
         "guide_items": post.guide_items.model_dump() if post.guide_items else None,
         "related_news": post.related_news.model_dump() if post.related_news else None,
         "source_urls": post.source_urls,
@@ -539,6 +623,10 @@ def _save_business_post(
     post_id = _save_post(client, row, batch_id, "business", locale)
     return post_id, translation_group_id
 
+
+# ---------------------------------------------------------------------------
+# Resume helpers (saved EN post reuse)
+# ---------------------------------------------------------------------------
 
 def _get_saved_post_row(
     batch_id: str,
@@ -564,10 +652,7 @@ def _get_saved_post_row(
     except Exception as exc:
         logger.warning(
             "Failed to load saved %s/%s post for batch %s: %s",
-            post_type,
-            locale,
-            batch_id,
-            exc,
+            post_type, locale, batch_id, exc,
         )
         return None
 
@@ -576,6 +661,7 @@ def _load_saved_translation_source(
     batch_id: str,
     post_type: str,
 ) -> dict[str, Any] | None:
+    """Return saved EN row only if KO doesn't exist yet (= needs translation)."""
     en_row = _get_saved_post_row(batch_id, post_type, "en")
     ko_row = _get_saved_post_row(batch_id, post_type, "ko")
     if en_row and not ko_row:
@@ -612,7 +698,7 @@ def _hydrate_business_post(row: dict[str, Any]) -> BusinessPost:
             "content_beginner": row.get("content_beginner") or "",
             "content_learner": row.get("content_learner") or "",
             "content_expert": row.get("content_expert") or "",
-            "fact_pack": row.get("fact_pack") or [],
+            "fact_pack": row.get("fact_pack") or {},
             "source_cards": row.get("source_cards") or [],
             "guide_items": row.get("guide_items"),
             "related_news": row.get("related_news"),
@@ -625,236 +711,14 @@ def _hydrate_business_post(row: dict[str, Any]) -> BusinessPost:
     )
 
 
-def _artifact_payload_from_state(partial_state: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "candidate": partial_state.get("candidate") or {},
-        "fact_pack": partial_state.get("fact_pack") or [],
-        "source_cards": partial_state.get("source_cards") or [],
-        "analysis_data": partial_state.get("analysis_data") or {},
-        "persona_payloads": partial_state.get("persona_payloads") or {},
-    }
-
-
-def _partial_state_from_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
-    payload = artifact.get("payload") or {}
-    return {
-        "candidate": payload.get("candidate") or {
-            "title": artifact.get("candidate_title"),
-            "url": artifact.get("candidate_url"),
-            "batch_id": artifact.get("batch_id"),
-        },
-        "fact_pack": payload.get("fact_pack") or [],
-        "source_cards": payload.get("source_cards") or [],
-        "analysis_data": payload.get("analysis_data") or {},
-        "persona_payloads": payload.get("persona_payloads") or {},
-        "completed_stages": artifact.get("completed_stages") or [],
-    }
-
-
-def _create_pipeline_artifact(
-    *,
-    run_id: str,
-    run_key: str,
-    batch_id: str,
-    post_type: str,
-    locale: str,
-    candidate_title: str,
-    candidate_url: str,
-    status: str,
-    completed_stages: list[str],
-    failed_stage: str | None,
-    last_validation_error: str | None,
-    payload: dict[str, Any],
-    resumed_from_artifact_id: str | None = None,
-) -> dict[str, Any] | None:
-    client = get_supabase()
-    if not client:
-        return None
-
-    result = (
-        client.table("pipeline_artifacts")
-        .insert(
-            {
-                "run_id": run_id,
-                "run_key": run_key,
-                "batch_id": batch_id,
-                "post_type": post_type,
-                "locale": locale,
-                "candidate_title": candidate_title,
-                "candidate_url": candidate_url,
-                "status": status,
-                "completed_stages": completed_stages,
-                "failed_stage": failed_stage,
-                "last_validation_error": last_validation_error,
-                "payload": payload,
-                "resumed_from_artifact_id": resumed_from_artifact_id,
-                "updated_at": _now_iso(),
-            }
-        )
-        .execute()
-    )
-    return result.data[0] if result and result.data else None
-
-
-def _update_pipeline_artifact(
-    artifact_id: str,
-    *,
-    status: str,
-    completed_stages: list[str],
-    failed_stage: str | None,
-    last_validation_error: str | None,
-    payload: dict[str, Any],
-) -> None:
-    client = get_supabase()
-    if not client:
-        return
-
-    (
-        client.table("pipeline_artifacts")
-        .update(
-            {
-                "status": status,
-                "completed_stages": completed_stages,
-                "failed_stage": failed_stage,
-                "last_validation_error": last_validation_error,
-                "payload": payload,
-                "updated_at": _now_iso(),
-            }
-        )
-        .eq("id", artifact_id)
-        .execute()
-    )
-
-
-def _set_pipeline_artifact_status(artifact_id: str, status: str) -> None:
-    client = get_supabase()
-    if not client:
-        return
-    (
-        client.table("pipeline_artifacts")
-        .update({"status": status, "updated_at": _now_iso()})
-        .eq("id", artifact_id)
-        .execute()
-    )
-
-
-def _find_latest_partial_artifact(
-    batch_id: str,
-    post_type: str,
-    locale: str,
-    candidate_url: str,
-) -> dict[str, Any] | None:
-    client = get_supabase()
-    if not client:
-        return None
-    try:
-        result = (
-            client.table("pipeline_artifacts")
-            .select("*")
-            .eq("batch_id", batch_id)
-            .eq("post_type", post_type)
-            .eq("locale", locale)
-            .eq("candidate_url", candidate_url)
-            .eq("status", "partial")
-            .order("updated_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        data = result.data if result else None
-        if isinstance(data, list) and data:
-            return data[0]
-    except Exception as exc:
-        logger.warning("Failed to load partial artifact for %s %s: %s", post_type, candidate_url, exc)
-    return None
-
-
-def _prepare_business_artifact_resume(
-    run_id: str,
-    run_key: str,
-    batch_id: str,
-    candidate: RankedCandidate,
-) -> tuple[str | None, dict[str, Any] | None]:
-    existing = _find_latest_partial_artifact(
-        batch_id=batch_id,
-        post_type="business",
-        locale="en",
-        candidate_url=candidate.url,
-    )
-    if not existing:
-        return None, None
-
-    partial_state = _partial_state_from_artifact(existing)
-    _set_pipeline_artifact_status(existing["id"], "superseded")
-    created = _create_pipeline_artifact(
-        run_id=run_id,
-        run_key=run_key,
-        batch_id=batch_id,
-        post_type="business",
-        locale="en",
-        candidate_title=candidate.title,
-        candidate_url=candidate.url,
-        status="partial",
-        completed_stages=partial_state.get("completed_stages") or [],
-        failed_stage=existing.get("failed_stage"),
-        last_validation_error=existing.get("last_validation_error"),
-        payload=_artifact_payload_from_state(partial_state),
-        resumed_from_artifact_id=existing["id"],
-    )
-    return (created or {}).get("id"), partial_state
-
-
-def _build_business_artifact_recorder(
-    run_id: str,
-    run_key: str,
-    batch_id: str,
-    candidate: RankedCandidate,
-    initial_artifact_id: str | None = None,
-) -> tuple[Any, dict[str, str | None]]:
-    artifact_ref: dict[str, str | None] = {"artifact_id": initial_artifact_id}
-
-    def _recorder(
-        partial_state: dict[str, Any],
-        status: str,
-        failed_stage: str | None,
-        last_validation_error: str | None,
-    ) -> None:
-        if artifact_ref["artifact_id"] is None:
-            created = _create_pipeline_artifact(
-                run_id=run_id,
-                run_key=run_key,
-                batch_id=batch_id,
-                post_type="business",
-                locale="en",
-                candidate_title=candidate.title,
-                candidate_url=candidate.url,
-                status=status,
-                completed_stages=partial_state.get("completed_stages") or [],
-                failed_stage=failed_stage,
-                last_validation_error=last_validation_error,
-                payload=_artifact_payload_from_state(partial_state),
-            )
-            artifact_ref["artifact_id"] = (created or {}).get("id")
-            return
-
-        _update_pipeline_artifact(
-            artifact_ref["artifact_id"],
-            status=status,
-            completed_stages=partial_state.get("completed_stages") or [],
-            failed_stage=failed_stage,
-            last_validation_error=last_validation_error,
-            payload=_artifact_payload_from_state(partial_state),
-        )
-
-    return _recorder, artifact_ref
-
+# ---------------------------------------------------------------------------
+# Handbook term extraction (non-fatal)
+# ---------------------------------------------------------------------------
 
 async def _extract_and_create_terms(
     content_parts: list[str], batch_id: str
 ) -> None:
-    """Extract technical terms from generated posts and create handbook drafts.
-
-    Non-fatal: failures here do NOT break the pipeline.
-    """
+    """Extract technical terms from generated posts and create handbook drafts."""
     from services.agents.advisor import extract_terms_from_content, generate_term_content
 
     combined = "\n\n---\n\n".join(p for p in content_parts if p)
@@ -881,7 +745,6 @@ async def _extract_and_create_terms(
         if not term_name:
             continue
 
-        # Check if term already exists (ILIKE for case-insensitive)
         try:
             existing = (
                 client.table("handbook_terms")
@@ -896,7 +759,6 @@ async def _extract_and_create_terms(
             logger.warning("DB check failed for term '%s': %s", term_name, e)
             continue
 
-        # Generate content for the new term
         try:
             content, model, tokens = await generate_term_content(
                 term_name,
@@ -906,7 +768,6 @@ async def _extract_and_create_terms(
             logger.warning("Generate failed for term '%s': %s", term_name, e)
             continue
 
-        # Build row from generated content
         slug = term_name.lower().strip().replace(" ", "-")
         slug = "".join(c for c in slug if c.isalnum() or c == "-")
 
@@ -935,8 +796,15 @@ async def _extract_and_create_terms(
     logger.info("Pipeline term extraction: %d terms created for batch %s", created, batch_id)
 
 
-async def run_daily_pipeline(batch_id: str) -> None:
-    """Main pipeline orchestrator: collect → rank → generate → save to DB."""
+# ---------------------------------------------------------------------------
+# Main orchestrator
+# ---------------------------------------------------------------------------
+
+async def run_daily_pipeline(batch_id: str, mode: PipelineMode = PIPELINE_MODE_RESUME) -> None:
+    """Main pipeline orchestrator: collect → rank → generate → translate → save."""
+    if mode not in {PIPELINE_MODE_RESUME, PIPELINE_MODE_FORCE_REFRESH}:
+        mode = PIPELINE_MODE_RESUME
+
     run_id = await acquire_pipeline_lock(batch_id)
     if not run_id:
         return
@@ -948,63 +816,77 @@ async def run_daily_pipeline(batch_id: str) -> None:
             "pipeline",
             "started",
             input_summary=f"daily:{batch_id}",
-            debug_meta={"batch_id": batch_id},
+            debug_meta={"batch_id": batch_id, "mode": mode},
         )
 
-        # Step 1: Collect news from all sources
+        # ---------------------------------------------------------------
+        # Step 1: Collect news (or reuse saved snapshot)
+        # ---------------------------------------------------------------
+        saved_snapshot = (
+            _load_saved_ranking_snapshot(batch_id)
+            if mode == PIPELINE_MODE_RESUME
+            else None
+        )
+        reused_snapshot = saved_snapshot is not None
+
         collect_started = _now()
-        candidates = await collect_all_news(batch_id)
+        if saved_snapshot:
+            candidates, ranking = saved_snapshot
+        else:
+            candidates = await collect_all_news(batch_id)
         log_pipeline_stage(
             run_id,
             "collect",
             "success",
             duration_ms=int((_now() - collect_started).total_seconds() * 1000),
-            output_summary=f"Collected {len(candidates)} candidates",
-            debug_meta={"candidate_count": len(candidates)},
+            output_summary=(
+                f"Reused {len(candidates)} saved candidates"
+                if reused_snapshot
+                else f"Collected {len(candidates)} candidates"
+            ),
+            debug_meta={
+                "candidate_count": len(candidates),
+                "reused_candidates": reused_snapshot,
+            },
         )
         if not candidates:
             logger.warning("No candidates for batch %s, finishing early", batch_id)
             await release_pipeline_lock(run_id, "success")
             return
 
+        # ---------------------------------------------------------------
         # Step 2: Rank candidates
+        # ---------------------------------------------------------------
         rank_started = _now()
         rank_usage: dict[str, Any] = {}
-        try:
-            ranking = await rank_candidates(candidates, usage_recorder=rank_usage)
-        except Exception:
-            log_pipeline_stage(
-                run_id,
-                "rank",
-                "failed",
-                duration_ms=int((_now() - rank_started).total_seconds() * 1000),
-                output_summary="Ranking failed",
-                model_used=rank_usage.get("model_used"),
-                tokens_used=rank_usage.get("tokens_used"),
-                cost_usd=rank_usage.get("cost_usd"),
-                debug_meta={
-                    "input_tokens": rank_usage.get("input_tokens"),
-                    "output_tokens": rank_usage.get("output_tokens"),
-                },
-            )
-            raise
+        if not reused_snapshot:
+            try:
+                ranking = await rank_candidates(candidates, usage_recorder=rank_usage)
+            except Exception:
+                log_pipeline_stage(
+                    run_id, "rank", "failed",
+                    duration_ms=int((_now() - rank_started).total_seconds() * 1000),
+                    output_summary="Ranking failed",
+                    model_used=rank_usage.get("model_used"),
+                    tokens_used=rank_usage.get("tokens_used"),
+                    cost_usd=rank_usage.get("cost_usd"),
+                )
+                raise
+
         ranking.research_pick, research_gate = _apply_research_novelty_gate(
             ranking.research_pick, batch_id
         )
         log_pipeline_stage(
-            run_id,
-            "rank",
-            "success",
+            run_id, "rank", "success",
             duration_ms=int((_now() - rank_started).total_seconds() * 1000),
-            output_summary="Ranking completed",
+            output_summary="Reused saved ranking" if reused_snapshot else "Ranking completed",
             model_used=rank_usage.get("model_used"),
             tokens_used=rank_usage.get("tokens_used"),
             cost_usd=rank_usage.get("cost_usd"),
             debug_meta={
                 "research_pick": ranking.research_pick.title if ranking.research_pick else None,
                 "business_pick": ranking.business_main_pick.title if ranking.business_main_pick else None,
-                "input_tokens": rank_usage.get("input_tokens"),
-                "output_tokens": rank_usage.get("output_tokens"),
+                "reused_ranking": reused_snapshot,
             },
         )
         log_pipeline_stage(
@@ -1017,24 +899,33 @@ async def run_daily_pipeline(batch_id: str) -> None:
             debug_meta=research_gate,
         )
 
-        # Step 2b: Save candidates + ranking to DB
-        try:
-            _save_candidates(candidates, ranking, batch_id)
-        except Exception as e:
-            logger.error("Failed to save candidates (non-fatal): %s", e)
+        # Save candidates
+        if not reused_snapshot:
+            try:
+                _save_candidates(candidates, ranking, batch_id)
+            except Exception as e:
+                logger.error("Failed to save candidates (non-fatal): %s", e)
 
-        # Build context string from candidates for the writing agents
         context = _build_context(candidates)
 
-        # Step 3-A: Generate EN research post
-        logger.info("Calling research AI agent for batch %s...", batch_id)
+        # ---------------------------------------------------------------
+        # Step 3-A: Research EN
+        # ---------------------------------------------------------------
+        logger.info("Research EN generation for batch %s...", batch_id)
         research_started = _now()
         research_usage: dict[str, Any] = {}
-        saved_research_en_row = _load_saved_translation_source(batch_id, "research")
+
+        saved_research_en_row = (
+            _load_saved_translation_source(batch_id, "research")
+            if mode == PIPELINE_MODE_RESUME
+            else None
+        )
+
         if saved_research_en_row:
             research_post = _hydrate_research_post(saved_research_en_row)
             en_research_id = saved_research_en_row["id"]
             research_tg_id = saved_research_en_row.get("translation_group_id") or str(uuid.uuid4())
+            logger.info("Reusing saved EN research post: %s", en_research_id)
         else:
             try:
                 research_post = await generate_research_post(
@@ -1045,30 +936,29 @@ async def run_daily_pipeline(batch_id: str) -> None:
                 )
             except Exception:
                 log_pipeline_stage(
-                    run_id,
-                    "research.generate.en",
-                    "failed",
-                    post_type="research",
-                    locale="en",
+                    run_id, "research.generate.en", "failed",
+                    post_type="research", locale="en",
                     duration_ms=int((_now() - research_started).total_seconds() * 1000),
                     output_summary="Research EN draft failed",
                     model_used=research_usage.get("model_used"),
                     tokens_used=research_usage.get("tokens_used"),
                     cost_usd=research_usage.get("cost_usd"),
-                    debug_meta={
-                        "research_en_len": None,
-                        "has_news": ranking.research_pick is not None,
-                        "input_tokens": research_usage.get("input_tokens"),
-                        "output_tokens": research_usage.get("output_tokens"),
-                    },
                 )
                 raise
+
+            en_research_id, research_tg_id = _save_research_post(
+                research_post, batch_id, locale="en"
+            )
+            log_pipeline_stage(
+                run_id, "save.research.en", "success",
+                post_type="research", locale="en",
+                output_summary=en_research_id,
+            )
+
         log_pipeline_stage(
-            run_id,
-            "research.generate.en",
+            run_id, "research.generate.en",
             "no_news" if not research_post.has_news else "success",
-            post_type="research",
-            locale="en",
+            post_type="research", locale="en",
             duration_ms=int((_now() - research_started).total_seconds() * 1000),
             output_summary=research_post.title,
             model_used=research_usage.get("model_used"),
@@ -1080,69 +970,47 @@ async def run_daily_pipeline(batch_id: str) -> None:
                 "resumed_from_saved_en": saved_research_en_row is not None,
                 "input_tokens": research_usage.get("input_tokens"),
                 "output_tokens": research_usage.get("output_tokens"),
+                "attempts": research_usage.get("attempts", 1),
             },
         )
-        logger.info("EN research post generated: %s", research_post.title)
-        if not saved_research_en_row:
-            en_research_id, research_tg_id = _save_research_post(
-                research_post, batch_id, locale="en"
-            )
-            log_pipeline_stage(
-                run_id,
-                "save.research.en",
-                "success",
-                post_type="research",
-                locale="en",
-                output_summary=en_research_id,
-            )
+        logger.info("EN research post ready: %s", research_post.title)
 
-        # Step 3-A-KO: Translate research post to Korean
+        # ---------------------------------------------------------------
+        # Step 3-A-KO: Research translation
+        # ---------------------------------------------------------------
         logger.info("Translating research post to Korean for batch %s...", batch_id)
-        research_translate_started = _now()
-        research_translate_usage: dict[str, Any] = {}
+        research_tr_started = _now()
+
         try:
-            ko_research_data = await translate_post(
-                research_post.model_dump(),
-                "research",
-                usage_recorder=research_translate_usage,
+            ko_research_data, research_tr_usage = await translate_post(
+                research_post.model_dump(), "research",
             )
             ko_research = ResearchPost.model_validate(ko_research_data)
         except Exception:
             log_pipeline_stage(
-                run_id,
-                "research.translate.ko",
-                "failed",
-                post_type="research",
-                locale="ko",
-                duration_ms=int((_now() - research_translate_started).total_seconds() * 1000),
+                run_id, "research.translate.ko", "failed",
+                post_type="research", locale="ko",
+                duration_ms=int((_now() - research_tr_started).total_seconds() * 1000),
                 output_summary="Research KO translation failed",
-                model_used=research_translate_usage.get("model_used"),
-                tokens_used=research_translate_usage.get("tokens_used"),
-                cost_usd=research_translate_usage.get("cost_usd"),
-                debug_meta={
-                    "research_ko_len": None,
-                    "has_news": research_post.has_news,
-                    "input_tokens": research_translate_usage.get("input_tokens"),
-                    "output_tokens": research_translate_usage.get("output_tokens"),
-                },
             )
             raise
+
         log_pipeline_stage(
-            run_id,
-            "research.translate.ko",
+            run_id, "research.translate.ko",
             "no_news" if not ko_research.has_news else "success",
-            post_type="research",
-            locale="ko",
-            duration_ms=int((_now() - research_translate_started).total_seconds() * 1000),
+            post_type="research", locale="ko",
+            duration_ms=int((_now() - research_tr_started).total_seconds() * 1000),
             output_summary=ko_research.title,
-            model_used=research_translate_usage.get("model_used"),
-            tokens_used=research_translate_usage.get("tokens_used"),
-            cost_usd=research_translate_usage.get("cost_usd"),
+            model_used=research_tr_usage.get("model_used"),
+            tokens_used=research_tr_usage.get("tokens_used"),
+            cost_usd=research_tr_usage.get("cost_usd"),
             debug_meta={
                 "research_ko_len": len(ko_research.content_original or ""),
                 "has_news": ko_research.has_news,
-                "input_tokens": research_translate_usage.get("input_tokens"),
-                "output_tokens": research_translate_usage.get("output_tokens"),
+                "resumed_from_saved_en": saved_research_en_row is not None,
+                "input_tokens": research_tr_usage.get("input_tokens"),
+                "output_tokens": research_tr_usage.get("output_tokens"),
+                "attempts": research_tr_usage.get("attempts", 1),
             },
         )
         ko_research_id, _ = _save_research_post(
@@ -1152,67 +1020,74 @@ async def run_daily_pipeline(batch_id: str) -> None:
             source_post_id=en_research_id,
         )
         log_pipeline_stage(
-            run_id,
-            "save.research.ko",
-            "success",
-            post_type="research",
-            locale="ko",
+            run_id, "save.research.ko", "success",
+            post_type="research", locale="ko",
             output_summary=ko_research_id,
+        )
+        research_quality_score, research_quality_flags = compute_quality(ko_research.model_dump())
+        log_pipeline_stage(
+            run_id, "quality.research", "success",
+            post_type="research", locale="ko",
+            debug_meta={
+                "quality_score": research_quality_score,
+                "quality_flags": research_quality_flags,
+            },
         )
         logger.info("KO research post saved (source_post_id=%s)", en_research_id)
 
-        # Step 3-B: Generate EN business post (skip if no business pick)
+        # ---------------------------------------------------------------
+        # Step 3-B: Business EN (Expert-First 2-Call Cascade)
+        # ---------------------------------------------------------------
         logger.info("Starting business post generation for batch %s...", batch_id)
         if ranking.business_main_pick:
             business_started = _now()
-            saved_business_en_row = _load_saved_translation_source(batch_id, "business")
-            artifact_id = None
+
+            saved_business_en_row = (
+                _load_saved_translation_source(batch_id, "business")
+                if mode == PIPELINE_MODE_RESUME
+                else None
+            )
+
             if saved_business_en_row:
                 business_post = _hydrate_business_post(saved_business_en_row)
                 en_business_id = saved_business_en_row["id"]
                 business_tg_id = saved_business_en_row.get("translation_group_id") or str(uuid.uuid4())
+                business_usage = {}
+                expert_usage = {}
+                derive_usage = {}
+                logger.info("Reusing saved EN business post: %s", en_business_id)
             else:
-                artifact_id, partial_state = _prepare_business_artifact_resume(
-                    run_id,
-                    f"daily:{batch_id}",
-                    batch_id,
-                    ranking.business_main_pick,
-                )
-                artifact_recorder, artifact_ref = _build_business_artifact_recorder(
-                    run_id,
-                    f"daily:{batch_id}",
-                    batch_id,
-                    ranking.business_main_pick,
-                    initial_artifact_id=artifact_id,
-                )
                 try:
-                    business_post = await generate_business_post(
+                    business_post, business_usage, expert_usage, derive_usage = await generate_business_post(
                         ranking.business_main_pick,
                         ranking.related_picks,
                         context,
                         batch_id,
-                        stage_logger=_build_stage_logger(run_id, post_type="business", locale="en"),
-                        partial_state=partial_state,
-                        artifact_recorder=artifact_recorder,
                     )
                 except Exception:
                     log_pipeline_stage(
-                        run_id,
-                        "business.generate.en",
-                        "failed",
-                        post_type="business",
-                        locale="en",
+                        run_id, "business.generate.en", "failed",
+                        post_type="business", locale="en",
                         duration_ms=int((_now() - business_started).total_seconds() * 1000),
                         output_summary="Business EN draft failed",
                     )
                     raise
-                artifact_id = artifact_ref["artifact_id"]
+
+                en_business_id, business_tg_id = _save_business_post(
+                    business_post, batch_id, locale="en"
+                )
+                log_pipeline_stage(
+                    run_id, "save.business.en", "success",
+                    post_type="business", locale="en",
+                    output_summary=en_business_id,
+                    model_used=business_usage.get("model_used"),
+                    tokens_used=business_usage.get("tokens_used"),
+                    cost_usd=business_usage.get("cost_usd"),
+                )
+
             log_pipeline_stage(
-                run_id,
-                "business.generate.en",
-                "success",
-                post_type="business",
-                locale="en",
+                run_id, "business.generate.en", "success",
+                post_type="business", locale="en",
                 duration_ms=int((_now() - business_started).total_seconds() * 1000),
                 output_summary=business_post.title,
                 debug_meta={
@@ -1222,70 +1097,55 @@ async def run_daily_pipeline(batch_id: str) -> None:
                         "learner": len(business_post.content_learner or ""),
                         "expert": len(business_post.content_expert or ""),
                     },
-                    "fact_pack_count": len(business_post.fact_pack or []),
+                    "fact_pack_keys": list((business_post.fact_pack or {}).keys()),
                     "source_card_count": len(business_post.source_cards or []),
                     "resumed_from_saved_en": saved_business_en_row is not None,
-                    "resumed_from_partial": artifact_id is not None and saved_business_en_row is None,
+                    "input_tokens": business_usage.get("input_tokens"),
+                    "output_tokens": business_usage.get("output_tokens"),
+                    "expert_call_tokens": {
+                        "input": expert_usage.get("input_tokens"),
+                        "output": expert_usage.get("output_tokens"),
+                    },
+                    "derive_call_tokens": {
+                        "input": derive_usage.get("input_tokens"),
+                        "output": derive_usage.get("output_tokens"),
+                    },
+                    "attempts": {
+                        "expert": expert_usage.get("attempts", 1),
+                        "derive": derive_usage.get("attempts", 1),
+                    },
                 },
             )
-            logger.info("EN business post generated: %s", business_post.title)
-            if not saved_business_en_row:
-                en_business_id, business_tg_id = _save_business_post(
-                    business_post, batch_id, locale="en"
-                )
-                log_pipeline_stage(
-                    run_id,
-                    "save.business.en",
-                    "success",
-                    post_type="business",
-                    locale="en",
-                    output_summary=en_business_id,
-                )
-            if artifact_id:
-                _set_pipeline_artifact_status(artifact_id, "consumed")
+            logger.info("EN business post ready: %s", business_post.title)
 
-            # Step 3-B-KO: Translate business post to Korean
+            # -----------------------------------------------------------
+            # Step 3-B-KO: Business translation
+            # -----------------------------------------------------------
             logger.info("Translating business post to Korean for batch %s...", batch_id)
-            business_translate_started = _now()
-            business_translate_usage: dict[str, Any] = {}
+            business_tr_started = _now()
+
             try:
-                ko_business_data = await translate_post(
-                    business_post.model_dump(),
-                    "business",
-                    usage_recorder=business_translate_usage,
+                ko_business_data, business_tr_usage = await translate_post(
+                    business_post.model_dump(), "business",
                 )
                 ko_business = BusinessPost.model_validate(ko_business_data)
             except Exception:
                 log_pipeline_stage(
-                    run_id,
-                    "business.translate.ko",
-                    "failed",
-                    post_type="business",
-                    locale="ko",
-                    duration_ms=int((_now() - business_translate_started).total_seconds() * 1000),
+                    run_id, "business.translate.ko", "failed",
+                    post_type="business", locale="ko",
+                    duration_ms=int((_now() - business_tr_started).total_seconds() * 1000),
                     output_summary="Business KO translation failed",
-                    model_used=business_translate_usage.get("model_used"),
-                    tokens_used=business_translate_usage.get("tokens_used"),
-                    cost_usd=business_translate_usage.get("cost_usd"),
-                    debug_meta={
-                        "business_analysis_len": None,
-                        "persona_lengths": None,
-                        "input_tokens": business_translate_usage.get("input_tokens"),
-                        "output_tokens": business_translate_usage.get("output_tokens"),
-                    },
                 )
                 raise
+
             log_pipeline_stage(
-                run_id,
-                "business.translate.ko",
-                "success",
-                post_type="business",
-                locale="ko",
-                duration_ms=int((_now() - business_translate_started).total_seconds() * 1000),
+                run_id, "business.translate.ko", "success",
+                post_type="business", locale="ko",
+                duration_ms=int((_now() - business_tr_started).total_seconds() * 1000),
                 output_summary=ko_business.title,
-                model_used=business_translate_usage.get("model_used"),
-                tokens_used=business_translate_usage.get("tokens_used"),
-                cost_usd=business_translate_usage.get("cost_usd"),
+                model_used=business_tr_usage.get("model_used"),
+                tokens_used=business_tr_usage.get("tokens_used"),
+                cost_usd=business_tr_usage.get("cost_usd"),
                 debug_meta={
                     "business_analysis_len": len(ko_business.content_analysis or ""),
                     "persona_lengths": {
@@ -1293,10 +1153,9 @@ async def run_daily_pipeline(batch_id: str) -> None:
                         "learner": len(ko_business.content_learner or ""),
                         "expert": len(ko_business.content_expert or ""),
                     },
-                    "fact_pack_count": len(ko_business.fact_pack or []),
-                    "source_card_count": len(ko_business.source_cards or []),
-                    "input_tokens": business_translate_usage.get("input_tokens"),
-                    "output_tokens": business_translate_usage.get("output_tokens"),
+                    "input_tokens": business_tr_usage.get("input_tokens"),
+                    "output_tokens": business_tr_usage.get("output_tokens"),
+                    "attempts": business_tr_usage.get("attempts", 1),
                 },
             )
             ko_business_id, _ = _save_business_post(
@@ -1306,18 +1165,26 @@ async def run_daily_pipeline(batch_id: str) -> None:
                 source_post_id=en_business_id,
             )
             log_pipeline_stage(
-                run_id,
-                "save.business.ko",
-                "success",
-                post_type="business",
-                locale="ko",
+                run_id, "save.business.ko", "success",
+                post_type="business", locale="ko",
                 output_summary=ko_business_id,
+            )
+            business_quality_score, business_quality_flags = compute_quality(ko_business.model_dump())
+            log_pipeline_stage(
+                run_id, "quality.business", "success",
+                post_type="business", locale="ko",
+                debug_meta={
+                    "quality_score": business_quality_score,
+                    "quality_flags": business_quality_flags,
+                },
             )
             logger.info("KO business post saved (source_post_id=%s)", en_business_id)
         else:
             logger.warning("No business_main_pick for batch %s, skipping business post", batch_id)
 
-        # Step 4: Extract and create handbook terms from generated content
+        # ---------------------------------------------------------------
+        # Step 4: Handbook term extraction (non-fatal)
+        # ---------------------------------------------------------------
         try:
             content_parts = [research_post.content_original or ""]
             if ranking.business_main_pick:
@@ -1332,6 +1199,7 @@ async def run_daily_pipeline(batch_id: str) -> None:
 
         logger.info("Pipeline %s completed — EN+KO posts saved to DB", batch_id)
         await release_pipeline_lock(run_id, "success")
+
     except Exception as e:
         logger.error("Pipeline %s failed: %s", batch_id, e)
         raw_error = str(e)

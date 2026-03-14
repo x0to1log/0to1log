@@ -45,6 +45,7 @@ async def rank_candidates(
     usage = extract_usage_metrics(response, settings.openai_model_light)
     if usage_recorder is not None:
         merged_usage = merge_usage_metrics(usage_recorder, usage)
+        merged_usage["attempts"] = 1
         usage_recorder.clear()
         usage_recorder.update(merged_usage)
 

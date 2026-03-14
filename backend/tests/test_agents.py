@@ -87,6 +87,14 @@ MOCK_RANKING_RESPONSE = {
     },
 }
 
+def _make_long_markdown(section_titles: list[str], section_length: int, filler: str) -> str:
+    sections = []
+    for title in section_titles:
+        body_length = max(section_length - len(title) - 1, 0)
+        body = (filler * ((body_length // len(filler)) + 2))[:body_length]
+        sections.append(f"{title}\n{body}")
+    return "\n\n".join(sections)
+
 MOCK_RESEARCH_RESPONSE = {
     "has_news": True,
     "title": "GPT-5: 10배 빠른 추론 속도의 비밀",
@@ -152,23 +160,15 @@ MOCK_BUSINESS_RESPONSE = {
     "tags": ["anthropic", "investment", "ai-safety"],
 }
 
-MOCK_BUSINESS_FACT_PACK_RESPONSE = {
-    "fact_pack": [
-        {
-            "id": "claim-1",
-            "claim": "Anthropic closed a major new funding round. [[1]]",
-            "why_it_matters": "More capital changes buyer confidence and compute planning.",
-            "source_ids": ["src-1"],
-            "confidence": "high",
-        },
-        {
-            "id": "claim-2",
-            "claim": "The raise strengthens Anthropic's enterprise positioning. [[1]][[2]]",
-            "why_it_matters": "Enterprise buyers care about vendor durability as much as model quality.",
-            "source_ids": ["src-1", "src-2"],
-            "confidence": "medium",
-        },
-    ],
+MOCK_BUSINESS_EXPERT_RESPONSE = {
+    "title": "Anthropic's new funding reshapes enterprise AI positioning",
+    "slug": "2026-03-07-business-daily",
+    "fact_pack": {
+        "key_facts": ["Anthropic closed a major new funding round."],
+        "numbers": ["$5B Series D round."],
+        "entities": ["Anthropic", "Enterprise AI"],
+        "timeline": ["2026-Q1 — Series D announced."],
+    },
     "source_cards": [
         {
             "id": "src-1",
@@ -177,36 +177,18 @@ MOCK_BUSINESS_FACT_PACK_RESPONSE = {
             "url": "https://anthropic.com/news/series-d",
             "published_at": "2026-03-07T00:00:00Z",
             "evidence_snippet": "Official announcement confirming the funding round and expansion plans.",
-            "claim_ids": ["claim-1", "claim-2"],
-        },
-        {
-            "id": "src-2",
-            "title": "Enterprise AI market analysis",
-            "publisher": "FT",
-            "url": "https://ft.com/ai-enterprise-analysis",
-            "published_at": "2026-03-07T00:00:00Z",
-            "evidence_snippet": "Buyers are increasingly sensitive to platform durability and compute access.",
-            "claim_ids": ["claim-2"],
+            "claim_ids": ["claim-1"],
         },
     ],
-}
-
-def _make_long_markdown(section_titles: list[str], section_length: int, filler: str) -> str:
-    sections = []
-    for title in section_titles:
-        body_length = max(section_length - len(title) - 1, 0)
-        body = (filler * ((body_length // len(filler)) + 2))[:body_length]
-        sections.append(f"{title}\n{body}")
-    return "\n\n".join(sections)
-
-
-MOCK_BUSINESS_ANALYSIS_RESPONSE = {
-    "title": "Anthropic's new funding reshapes enterprise AI positioning",
-    "slug": "2026-03-07-business-daily",
     "content_analysis": _make_long_markdown(
         ["## Core Analysis", "## Why This Matters", "## Strategic Outlook"],
         1300,
-        "Shared market analysis with buyer trust, pricing leverage, and sourcing detail. [[1]] ",
+        "Shared market analysis with buyer trust, pricing leverage, and sourcing detail. ",
+    ),
+    "content_expert": _make_long_markdown(
+        ["## Executive Summary", "## Technical Deep Dive", "## Market & Competitive Analysis", "## Strategic Implications"],
+        1600,
+        "Executive-level competitive analysis with market structure, capital strategy, and deployment risk detail. ",
     ),
     "excerpt": "Anthropic's funding round changes how enterprise buyers read vendor durability and platform risk.",
     "focus_items": [
@@ -240,30 +222,18 @@ MOCK_BUSINESS_ANALYSIS_RESPONSE = {
     "tags": ["anthropic", "investment", "ai-safety"],
 }
 
-MOCK_BUSINESS_PERSONA_RESPONSES = {
-    "beginner": {
-        "content_beginner": _make_long_markdown(
-            ["## The Story", "## Why Should I Care?", "## The Bottom Line"],
-            1500,
-            "Plain-language business explanation with examples about products, jobs, and customer trust. ",
-        )
-    },
-    "learner": {
-        "content_learner": _make_long_markdown(
-            ["## What Happened", "## How It Works", "## What This Means for Your Work", "## Go Deeper"],
-            1200,
-            "Practical technical-business analysis with architecture, pricing, and team workflow implications. ",
-        )
-    },
-    "expert": {
-        "content_expert": _make_long_markdown(
-            ["## Executive Summary", "## Technical Deep Dive", "## Market & Competitive Analysis", "## Strategic Implications"],
-            1200,
-            "Executive-level competitive analysis with market structure, capital strategy, and deployment risk detail. ",
-        )
-    },
+MOCK_BUSINESS_DERIVE_RESPONSE = {
+    "content_learner": _make_long_markdown(
+        ["## What Happened", "## How It Works", "## What This Means for Your Work", "## Go Deeper"],
+        1600,
+        "Practical technical-business analysis with architecture, pricing, and team workflow implications. ",
+    ),
+    "content_beginner": _make_long_markdown(
+        ["## The Story", "## Why Should I Care?", "## The Bottom Line"],
+        2200,
+        "Plain-language business explanation with examples about products, jobs, and customer trust. ",
+    ),
 }
-
 
 MOCK_RESEARCH_RESPONSE = {
     "has_news": True,
@@ -300,57 +270,6 @@ MOCK_RESEARCH_RESPONSE = {
     "source_urls": ["https://openai.com/blog/gpt-5"],
     "news_temperature": 5,
     "tags": ["gpt-5", "openai", "llm"],
-}
-
-
-MOCK_BUSINESS_RESPONSE = {
-    "title": "Anthropic's new funding reshapes enterprise AI positioning",
-    "slug": "2026-03-07-business-daily",
-    "content_beginner": _make_long_markdown(
-        ["## The Story", "## Why Should I Care?", "## The Bottom Line"],
-        1500,
-        "Plain-language business explanation with examples about products, jobs, and customer trust. ",
-    ),
-    "content_learner": _make_long_markdown(
-        ["## What Happened", "## How It Works", "## What This Means for Your Work", "## Go Deeper"],
-        1200,
-        "Practical technical-business analysis with architecture, pricing, and team workflow implications. ",
-    ),
-    "content_expert": _make_long_markdown(
-        ["## Executive Summary", "## Technical Deep Dive", "## Market & Competitive Analysis", "## Strategic Implications"],
-        1200,
-        "Executive-level competitive analysis with market structure, capital strategy, and deployment risk detail. ",
-    ),
-    "excerpt": "Anthropic's funding round changes how enterprise buyers read vendor durability and platform risk.",
-    "focus_items": [
-        "Anthropic added more capital to support model, compute, and enterprise expansion.",
-        "Balance-sheet strength changes how large buyers evaluate AI platform risk.",
-        "Pricing, hiring, and capacity announcements are the next signals to watch.",
-    ],
-    "guide_items": {
-        "one_liner": "Anthropic raised more money to grow its enterprise AI business.",
-        "action_item": "Review whether your roadmap depends too heavily on a single model vendor.",
-        "critical_gotcha": "Funding size does not guarantee better margins or product execution.",
-        "rotating_item": "Financial depth often matters to enterprise buyers before benchmark wins do.",
-        "quiz_poll": {
-            "question": "What does a large AI funding round most directly increase first?",
-            "options": ["Compute access", "Wall color", "Mascot quality", "Office snacks"],
-            "answer": "A",
-            "explanation": "Big rounds usually increase compute access, hiring capacity, and enterprise execution.",
-        },
-    },
-    "related_news": {
-        "big_tech": None,
-        "industry_biz": None,
-        "new_tools": {
-            "title": "New Open Source LLM Framework",
-            "url": "https://github.com/example/llm-framework",
-            "summary": "Community-driven LLM framework reached 10k stars and drew strong developer adoption.",
-        },
-    },
-    "source_urls": ["https://anthropic.com/news/series-d"],
-    "news_temperature": 4,
-    "tags": ["anthropic", "investment", "ai-safety"],
 }
 
 
@@ -549,14 +468,12 @@ class TestResearchAgent:
 class TestBusinessAgent:
     @pytest.mark.asyncio
     async def test_generate_business_post(self):
+        """v4: 2-call cascade — Call 1 (expert+metadata) + Call 2 (derive personas)."""
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             side_effect=[
-                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE),
-                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"]),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"]),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"]),
+                _mock_openai_response(MOCK_BUSINESS_EXPERT_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_DERIVE_RESPONSE),
             ]
         )
 
@@ -565,7 +482,7 @@ class TestBusinessAgent:
 
         with patch("services.agents.business.get_openai_client", return_value=mock_client):
             from services.agents.business import generate_business_post
-            result = await generate_business_post(
+            result, usage, _, _ = await generate_business_post(
                 candidate=candidate,
                 related=related,
                 context="Tavily collected context...",
@@ -582,62 +499,39 @@ class TestBusinessAgent:
         assert result.guide_items is not None
         assert result.related_news is not None
         assert result.news_temperature == 4
+        assert isinstance(usage, dict)
 
     @pytest.mark.asyncio
-    async def test_generate_business_post_stage_logger_receives_usage_metrics(self):
+    async def test_generate_business_post_returns_usage_metrics(self):
+        """v4: usage metrics are returned as the second tuple element."""
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             side_effect=[
-                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE, prompt_tokens=1000, completion_tokens=200),
-                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE, prompt_tokens=1200, completion_tokens=400),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"], prompt_tokens=900, completion_tokens=500),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"], prompt_tokens=900, completion_tokens=500),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"], prompt_tokens=900, completion_tokens=500),
+                _mock_openai_response(MOCK_BUSINESS_EXPERT_RESPONSE, prompt_tokens=1000, completion_tokens=400),
+                _mock_openai_response(MOCK_BUSINESS_DERIVE_RESPONSE, prompt_tokens=900, completion_tokens=500),
             ]
         )
 
         candidate = RankedCandidate(**MOCK_RANKING_RESPONSE["business_main_pick"])
         related = RelatedPicks(**MOCK_RANKING_RESPONSE["related_picks"])
-        emitted = []
-
-        def stage_logger(stage_name, status, attempt, debug_meta, output_summary, model_used, tokens_used, cost_usd):
-            emitted.append(
-                {
-                    "stage_name": stage_name,
-                    "status": status,
-                    "attempt": attempt,
-                    "model_used": model_used,
-                    "tokens_used": tokens_used,
-                    "cost_usd": cost_usd,
-                }
-            )
 
         with patch("services.agents.business.get_openai_client", return_value=mock_client):
             from services.agents.business import generate_business_post
+            _, usage, _, _ = await generate_business_post(candidate, related, "ctx", "2026-03-07")
 
-            await generate_business_post(
-                candidate=candidate,
-                related=related,
-                context="Tavily collected context...",
-                batch_id="2026-03-07",
-                stage_logger=stage_logger,
-            )
-
-        assert any(entry["stage_name"] == "business.fact_pack.en" for entry in emitted)
-        assert all(entry["model_used"] == "gpt-4o" for entry in emitted)
-        assert all(isinstance(entry["tokens_used"], int) and entry["tokens_used"] > 0 for entry in emitted)
-        assert all(entry["cost_usd"] is not None for entry in emitted)
+        assert usage["tokens_used"] > 0
+        assert usage["input_tokens"] > 0
+        assert usage["output_tokens"] > 0
+        assert usage["cost_usd"] is not None
 
     @pytest.mark.asyncio
     async def test_business_agent_calls_main_model(self):
+        """v4: exactly 2 gpt-4o calls (expert + derive)."""
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             side_effect=[
-                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE),
-                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"]),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"]),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"]),
+                _mock_openai_response(MOCK_BUSINESS_EXPERT_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_DERIVE_RESPONSE),
             ]
         )
 
@@ -648,7 +542,7 @@ class TestBusinessAgent:
             from services.agents.business import generate_business_post
             await generate_business_post(candidate, related, "ctx", "2026-03-07")
 
-        assert mock_client.chat.completions.create.await_count == 5
+        assert mock_client.chat.completions.create.await_count == 2
         for call in mock_client.chat.completions.create.await_args_list:
             assert call.kwargs["model"] == "gpt-4o"
 
@@ -657,11 +551,8 @@ class TestBusinessAgent:
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
             side_effect=[
-                _mock_openai_response(MOCK_BUSINESS_FACT_PACK_RESPONSE),
-                _mock_openai_response(MOCK_BUSINESS_ANALYSIS_RESPONSE),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["beginner"]),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["learner"]),
-                _mock_openai_response(MOCK_BUSINESS_PERSONA_RESPONSES["expert"]),
+                _mock_openai_response(MOCK_BUSINESS_EXPERT_RESPONSE),
+                _mock_openai_response(MOCK_BUSINESS_DERIVE_RESPONSE),
             ]
         )
 
@@ -670,9 +561,8 @@ class TestBusinessAgent:
 
         with patch("services.agents.business.get_openai_client", return_value=mock_client):
             from services.agents.business import generate_business_post
-            result = await generate_business_post(candidate, related, "ctx", "2026-03-07")
+            result, _, _, _ = await generate_business_post(candidate, related, "ctx", "2026-03-07")
 
-        # 3 personas should have different content
         assert result.content_beginner != result.content_learner
         assert result.content_learner != result.content_expert
 

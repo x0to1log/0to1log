@@ -164,6 +164,7 @@ async def generate_research_post(
                     aggregate_usage,
                     extract_usage_metrics(expand_response, settings.openai_model_main),
                 )
+                aggregate_usage["attempts"] = attempt + 1
                 if usage_recorder is not None:
                     usage_recorder.clear()
                     usage_recorder.update(aggregate_usage)
@@ -173,6 +174,10 @@ async def generate_research_post(
                 _assert_generation_minimum(expanded)
                 if len(expanded.content_original or "") > len(validated.content_original or ""):
                     return expanded
+            aggregate_usage["attempts"] = attempt + 1
+            if usage_recorder is not None:
+                usage_recorder.clear()
+                usage_recorder.update(aggregate_usage)
             return validated
         except (ValidationError, ValueError) as e:
             last_error = e
