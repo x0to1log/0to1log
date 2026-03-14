@@ -89,15 +89,19 @@ Fields:
 
 **API:** `GET /api/recommendations/similar?post_id={id}&locale={locale}`
 
-**렌더링 위치:** `NewsprintSideRail` 하단 (현재 "More in This Issue" / Related News 아래)
+**렌더링 위치:** `NewsprintSideRail` — "비슷한 뉴스 더 보기" 섹션 (EN: "More Like This")
+
+> **2026-03-15 변경:** 기존에 같은 파이프라인 배치 기반의 "비슷한 뉴스 더 보기" 섹션이 별도 존재했으나 제거. 벡터 유사도 기반 섹션(이전 명칭 "비슷한 글")이 단일 추천 섹션으로 통합되었으며 제목을 "비슷한 뉴스 더 보기"로 변경. 배치 기반 `recentPosts` 쿼리 및 `posts` prop도 함께 제거됨.
 
 **신규 파일:**
-- `frontend/src/pages/api/recommendations/similar.ts`
+- `backend/routers/recommendations.py` — `/recommendations/similar` 엔드포인트
+- `backend/services/embedding.py` — `get_similar_posts()` 구현
 
 **기존 파일 수정:**
-- `frontend/src/components/newsprint/NewsprintSideRail.astro` — "추천 글" 섹션 추가
-- `frontend/src/pages/en/news/[slug].astro` — similar posts 데이터 패스
+- `frontend/src/components/newsprint/NewsprintSideRail.astro` — 섹션 통합, `posts` prop 제거
+- `frontend/src/pages/en/news/[slug].astro` — `recentPosts` 제거, `similarPosts` 패스
 - `frontend/src/pages/ko/news/[slug].astro` — 동일
+- `frontend/src/lib/pageData/newsDetailPage.ts` — 배치 쿼리 제거
 
 ---
 
