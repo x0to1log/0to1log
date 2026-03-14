@@ -336,24 +336,29 @@ const navItems = [
 </script>
 
 <script>
+  let headerScrollAbort: AbortController | null = null;
+
   function initHeaderReveal() {
+    // Cancel previous scroll listener (prevents duplicates on VT navigation)
+    if (headerScrollAbort) {
+      headerScrollAbort.abort();
+      headerScrollAbort = null;
+    }
+
     const header = document.querySelector('.site-header') as HTMLElement | null;
     const spacer = document.querySelector('.site-header-spacer') as HTMLElement | null;
     if (!header || !spacer) return;
-    if (header.dataset.headerRevealInit === '1') return;
-    header.dataset.headerRevealInit = '1';
-    const headerEl = header;
-    const spacerEl = spacer;
 
-    if (headerEl.dataset.alwaysVisible === 'true') {
-      headerEl.classList.remove('site-header--fixed', 'site-header--hidden');
-      spacerEl.style.display = 'none';
+    // Always re-evaluate — alwaysVisible changes per page
+    header.classList.remove('site-header--fixed', 'site-header--hidden');
+    spacer.style.display = 'none';
+
+    if (header.dataset.alwaysVisible === 'true') {
       return;
     }
 
-    const headerH = headerEl.offsetHeight;
-    spacerEl.style.height = `${headerH}px`;
-    spacerEl.style.display = 'none';
+    const headerH = header.offsetHeight;
+    spacer.style.height = `${headerH}px`;
 
     let lastY = window.scrollY;
     let ticking = false;
@@ -367,28 +372,28 @@ const navItems = [
 
         if (currentY <= headerH) {
           if (fixed) {
-            headerEl.classList.add('site-header--no-transition');
-            headerEl.classList.remove('site-header--fixed', 'site-header--hidden');
-            spacerEl.style.display = 'none';
+            header.classList.add('site-header--no-transition');
+            header.classList.remove('site-header--fixed', 'site-header--hidden');
+            spacer.style.display = 'none';
             requestAnimationFrame(() => {
-              headerEl.classList.remove('site-header--no-transition');
+              header.classList.remove('site-header--no-transition');
             });
             fixed = false;
           }
         } else {
           if (!fixed) {
-            headerEl.classList.add('site-header--fixed', 'site-header--hidden', 'site-header--no-transition');
-            spacerEl.style.display = 'block';
+            header.classList.add('site-header--fixed', 'site-header--hidden', 'site-header--no-transition');
+            spacer.style.display = 'block';
             requestAnimationFrame(() => {
-              headerEl.classList.remove('site-header--no-transition');
+              header.classList.remove('site-header--no-transition');
             });
             fixed = true;
           }
 
           if (currentY < lastY - 5) {
-            headerEl.classList.remove('site-header--hidden');
+            header.classList.remove('site-header--hidden');
           } else if (currentY > lastY + 5) {
-            headerEl.classList.add('site-header--hidden');
+            header.classList.add('site-header--hidden');
           }
         }
 
@@ -397,7 +402,8 @@ const navItems = [
       });
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    headerScrollAbort = new AbortController();
+    window.addEventListener('scroll', onScroll, { passive: true, signal: headerScrollAbort.signal });
   }
 
   document.addEventListener('astro:page-load', initHeaderReveal);

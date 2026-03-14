@@ -189,12 +189,8 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
   function initBlogSidebar(): void {
     const sidebar = document.querySelector<HTMLElement>('[data-blog-sidebar]');
     const overlay = document.querySelector<HTMLElement>('[data-sidebar-overlay]');
-    if (!sidebar || sidebar.dataset.blogSidebarInit === '1') return;
-    sidebar.dataset.blogSidebarInit = '1';
+    if (!sidebar) return;
 
-    const mobileToggles = Array.from(
-      document.querySelectorAll<HTMLButtonElement>('[data-sidebar-toggle]'),
-    );
     const mobileBreakpoint = window.matchMedia('(max-width: 1023px)');
 
     function closeSidebar(): void {
@@ -218,48 +214,54 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
       }
     }
 
-    sidebar.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        btn.setAttribute('aria-expanded', String(!expanded));
-        const children = btn.nextElementSibling as HTMLElement | null;
-        if (children) {
-          children.hidden = expanded;
+    // Sidebar-internal bindings — only once
+    if (sidebar.dataset.blogSidebarInit !== '1') {
+      sidebar.dataset.blogSidebarInit = '1';
+
+      sidebar.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const expanded = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!expanded));
+          const children = btn.nextElementSibling as HTMLElement | null;
+          if (children) {
+            children.hidden = expanded;
+          }
+        });
+      });
+
+      sidebar.querySelectorAll<HTMLButtonElement>('[data-folder-more]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const extra = btn.previousElementSibling as HTMLElement | null;
+          if (extra && extra.classList.contains('blog-folder-extra')) {
+            extra.hidden = false;
+          }
+          btn.remove();
+        });
+      });
+
+      if (overlay && overlay.dataset.mobileMenuInit !== '1') {
+        overlay.dataset.mobileMenuInit = '1';
+        overlay.addEventListener('click', closeSidebar);
+      }
+
+      sidebar.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (mobileBreakpoint.matches) closeSidebar();
+        });
+      });
+
+      window.addEventListener('resize', () => {
+        if (!mobileBreakpoint.matches) {
+          closeSidebar();
         }
       });
-    });
+    }
 
-    sidebar.querySelectorAll<HTMLButtonElement>('[data-folder-more]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const extra = btn.previousElementSibling as HTMLElement | null;
-        if (extra && extra.classList.contains('blog-folder-extra')) {
-          extra.hidden = false;
-        }
-        btn.remove();
-      });
-    });
-
-    mobileToggles.forEach((btn) => {
+    // Toggle buttons — always re-bind (new buttons appear on view transitions)
+    document.querySelectorAll<HTMLButtonElement>('[data-sidebar-toggle]').forEach((btn) => {
       if (btn.dataset.mobileMenuInit === '1') return;
       btn.dataset.mobileMenuInit = '1';
       btn.addEventListener('click', toggleSidebar);
-    });
-
-    if (overlay && overlay.dataset.mobileMenuInit !== '1') {
-      overlay.dataset.mobileMenuInit = '1';
-      overlay.addEventListener('click', closeSidebar);
-    }
-
-    sidebar.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => {
-      link.addEventListener('click', () => {
-        if (mobileBreakpoint.matches) closeSidebar();
-      });
-    });
-
-    window.addEventListener('resize', () => {
-      if (!mobileBreakpoint.matches) {
-        closeSidebar();
-      }
     });
   }
 

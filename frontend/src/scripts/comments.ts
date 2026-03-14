@@ -27,11 +27,14 @@ function initComments(): void {
   async function loadComments() {
     try {
       const res = await fetch(`/api/user/comments?post_id=${postId}&type=${contentType}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        updateCounts(0);
+        return;
+      }
       const comments = await res.json();
       renderComments(comments);
     } catch {
-      // Silently fail
+      updateCounts(0);
     }
   }
 

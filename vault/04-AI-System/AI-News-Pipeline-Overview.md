@@ -184,6 +184,9 @@ graph LR
 ### Step 3-A-KO: Research 번역 (gpt-4o)
 
 `translate_post()` — EN 전문을 KO로 1회 호출 번역.
+- 동적 threshold: `max(KO_MIN, int(en_len × 0.65))` — EN이 길수록 KO도 비례
+- 프롬프트에 실제 EN 글자 수와 KO 목표치 명시
+- `finish_reason=length` 감지 시 truncation 경고
 
 ### Step 3-B: Business Expert-First 2-Call Cascade (gpt-4o)
 
@@ -198,7 +201,9 @@ graph LR
 
 ### Step 3-B-KO: Business 번역 (gpt-4o)
 
-`translate_post()` — Business EN 전문 (3 persona)을 KO로 1회 호출 번역.
+`translate_post()` — Business EN 전문 (3 persona + analysis)을 KO로 1회 호출 번역.
+- 각 필드별 동적 threshold: `max(KO_MIN, int(en_len × 0.65))`
+- 프롬프트에 필드별 EN 글자 수 → KO 최소치 명시
 
 ## Step 4-5: 검증 & 저장
 

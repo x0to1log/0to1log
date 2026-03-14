@@ -479,22 +479,23 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
     const prose = document.querySelector('.newsprint-prose');
-    const btns = document.querySelectorAll<HTMLButtonElement>('.persona-switcher-btn');
-    if (!prose || btns.length === 0) return;
+    const switcher = document.querySelector('.persona-switcher');
+    if (!prose || !switcher) return;
 
-    btns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const p = btn.dataset.persona!;
-        if (!map[p]) return;
-        prose.innerHTML = map[p];
-        btns.forEach(b => b.classList.remove('persona-switcher-btn--active'));
-        btn.classList.add('persona-switcher-btn--active');
-        document.dispatchEvent(
-          new CustomEvent('newsprint:article-content-updated', {
-            detail: { root: prose, persona: p },
-          }),
-        );
-      });
+    switcher.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-switcher-btn');
+      if (!btn) return;
+      const p = btn.dataset.persona!;
+      if (!map[p]) return;
+      prose.innerHTML = map[p];
+      switcher.querySelectorAll('.persona-switcher-btn').forEach(b =>
+        b.classList.remove('persona-switcher-btn--active'));
+      btn.classList.add('persona-switcher-btn--active');
+      document.dispatchEvent(
+        new CustomEvent('newsprint:article-content-updated', {
+          detail: { root: prose, persona: p },
+        }),
+      );
     });
   }
 

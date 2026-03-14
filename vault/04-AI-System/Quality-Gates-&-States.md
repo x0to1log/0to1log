@@ -59,13 +59,20 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 | **Research EN (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | "뉴스 없음" 대체 발행 |
 | **Business Expert (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | 스킵, 로그 기록 |
 | **Business Derive (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | 스킵, 로그 기록 |
-| **번역 (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | EN만 저장, KO 누락 로그 |
+| **번역 (4o)** | 타임아웃, JSON 오류, KO 길이 미달 | 동적 threshold 기준 2회 | EN만 저장, KO 누락 로그 |
 | **Editorial (4o)** | 타임아웃, JSON 오류 | 60초 후 1회 | 검수 없이 draft, "수동 검수 필요" 태그 |
 | **PydanticAI 검증** | 스키마 불일치 | 없음 | 에러 포함 재생성 1회 |
 | **Supabase 저장** | 연결 실패, 중복 slug | 10초 후 2회 | 실패 로그 + Admin 알림 |
 
 > [!note] v4 변경
 > Business를 Expert/Derive 2행으로 분리, 번역 행 추가. 섹션별 재시도·recovery pass·partial artifact 제거 — 포스트 전체 단위 재시도로 단순화.
+
+> [!note] 번역 재시도 개선 (2026-03-14)
+> - 번역 threshold를 고정값에서 **동적 계산**으로 변경: `max(KO_MIN, int(en_len × 0.65))`
+> - 프롬프트에 실제 EN 필드 길이 명시 → 모델이 비례적 번역 생성
+> - 재시도 시 부족분(shortfall) 정확히 명시
+> - `finish_reason=length` 감지로 truncation 안전장치 추가
+> - `last_error` 미설정 버그 수정 → 에러 메시지에 구체적 필드명/길이 표시
 
 ### 재시도 유틸리티
 

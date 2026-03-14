@@ -98,6 +98,12 @@ async def _call_translate(
         temperature=0.2,
         max_tokens=16384,
     )
+    finish_reason = response.choices[0].finish_reason
+    if finish_reason == "length":
+        logger.warning(
+            "%s: response truncated (finish_reason=length, max_tokens=16384)",
+            agent_name,
+        )
     raw = response.choices[0].message.content
     return (
         parse_ai_json(raw, agent_name),
@@ -124,9 +130,16 @@ async def _translate_research(
     """Translate a research post EN → KO. Returns (ko_data, usage)."""
     client = get_openai_client()
     payload = _build_research_translation_payload(en_data)
+
+    # Compute dynamic threshold from actual EN length
+    en_content_len = len(en_data.get("content_original") or "")
+    ko_target = max(RESEARCH_KO_MIN_CONTENT, int(en_content_len * 0.65))
+
     length_hints = (
-        "IMPORTANT — Minimum Korean character counts (hard floors):\n"
-        f"- content_original: {RESEARCH_KO_MIN_CONTENT} chars minimum\n"
+        "IMPORTANT — Length requirements for Korean translation:\n"
+        f"- content_original: English is {en_content_len} chars "
+        f"→ Korean must be at least {ko_target} chars "
+        f"(absolute floor: {RESEARCH_KO_MIN_CONTENT}).\n"
         "Do NOT summarize or compress. Translate every sentence fully."
     )
     user_prompt = _build_user_prompt(payload, "research", length_hints=length_hints)
@@ -141,22 +154,22 @@ async def _translate_research(
 
             merged = _merge_translation(en_data, translated)
 
-            # Validate
+            # Validate with dynamic threshold
             if en_data.get("has_news", True):
                 content_len = len(merged.get("content_original") or "")
-                if content_len < RESEARCH_KO_MIN_CONTENT:
+                if content_len < ko_target:
                     logger.warning(
-                        "TranslateResearch attempt %d: content=%d/%d",
-                        attempt + 1, content_len, RESEARCH_KO_MIN_CONTENT,
+                        "TranslateResearch attempt %d: content=%d/%d (en=%d)",
+                        attempt + 1, content_len, ko_target, en_content_len,
                     )
                     last_error = ValueError(
-                        f"content_original too short: {content_len}/{RESEARCH_KO_MIN_CONTENT}"
+                        f"content_original too short: {content_len}/{ko_target} (en={en_content_len})"
                     )
-                    shortfall = RESEARCH_KO_MIN_CONTENT - content_len
+                    shortfall = ko_target - content_len
                     user_prompt = (
                         f"{user_prompt}\n\n"
                         f"CRITICAL: content_original was {content_len} chars "
-                        f"but minimum is {RESEARCH_KO_MIN_CONTENT} "
+                        f"but minimum is {ko_target} "
                         f"(need {shortfall} more). "
                         "Translate every English sentence fully into Korean — "
                         "do NOT paraphrase, summarize, or merge sentences."
@@ -187,12 +200,32 @@ async def _translate_business(
     """Translate a business post EN → KO. Returns (ko_data, usage)."""
     client = get_openai_client()
     payload = _build_business_translation_payload(en_data)
+
+    # Compute dynamic thresholds from actual EN lengths
+    persona_fields = ("content_beginner", "content_learner", "content_expert")
+    en_lengths: dict[str, int] = {}
+    ko_targets: dict[str, int] = {}
+    hint_lines: list[str] = []
+    for field in persona_fields:
+        en_len = len(en_data.get(field) or "")
+        target = max(BUSINESS_KO_MIN_CONTENT, int(en_len * 0.65))
+        en_lengths[field] = en_len
+        ko_targets[field] = target
+        hint_lines.append(
+            f"- {field}: English {en_len} chars → Korean ≥ {target} chars"
+        )
+
+    en_analysis_len = len(en_data.get("content_analysis") or "")
+    ko_analysis_target = max(BUSINESS_KO_MIN_ANALYSIS, int(en_analysis_len * 0.65))
+    en_lengths["content_analysis"] = en_analysis_len
+    ko_targets["content_analysis"] = ko_analysis_target
+    hint_lines.append(
+        f"- content_analysis: English {en_analysis_len} chars → Korean ≥ {ko_analysis_target} chars"
+    )
+
     length_hints = (
-        "IMPORTANT — Minimum Korean character counts (hard floors):\n"
-        f"- content_beginner: {BUSINESS_KO_MIN_CONTENT} chars minimum\n"
-        f"- content_learner: {BUSINESS_KO_MIN_CONTENT} chars minimum\n"
-        f"- content_expert: {BUSINESS_KO_MIN_CONTENT} chars minimum\n"
-        f"- content_analysis: {BUSINESS_KO_MIN_ANALYSIS} chars minimum\n"
+        "IMPORTANT — Length requirements for Korean translation:\n"
+        + "\n".join(hint_lines) + "\n"
         "Do NOT summarize or compress. Translate every sentence fully."
     )
     user_prompt = _build_user_prompt(payload, "business", length_hints=length_hints)
@@ -207,16 +240,16 @@ async def _translate_business(
 
             merged = _merge_translation(en_data, translated)
 
-            # Check minimum lengths before Pydantic validation
+            # Check minimum lengths with dynamic thresholds
             short_fields: list[str] = []
-            for field in ("content_beginner", "content_learner", "content_expert"):
+            for field in persona_fields:
                 flen = len(merged.get(field) or "")
-                if flen < BUSINESS_KO_MIN_CONTENT:
-                    short_fields.append(f"{field}={flen}")
+                if flen < ko_targets[field]:
+                    short_fields.append(f"{field}={flen}/{ko_targets[field]}")
 
             analysis_len = len(merged.get("content_analysis") or "")
-            if analysis_len < BUSINESS_KO_MIN_ANALYSIS:
-                short_fields.append(f"content_analysis={analysis_len}")
+            if analysis_len < ko_analysis_target:
+                short_fields.append(f"content_analysis={analysis_len}/{ko_analysis_target}")
 
             if short_fields:
                 logger.warning(
@@ -229,8 +262,6 @@ async def _translate_business(
                 user_prompt = (
                     f"{user_prompt}\n\n"
                     f"CRITICAL: These fields were too short: {', '.join(short_fields)}. "
-                    f"Minimum persona content: {BUSINESS_KO_MIN_CONTENT} chars. "
-                    f"Minimum analysis: {BUSINESS_KO_MIN_ANALYSIS} chars. "
                     "Translate every English sentence fully into Korean — "
                     "do NOT paraphrase, summarize, or merge sentences."
                 )
