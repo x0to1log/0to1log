@@ -576,7 +576,7 @@ async def _run_generate_term(
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=10000,
+        max_tokens=16000,
     )
     basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
     usage1 = extract_usage_metrics(resp1, model)
@@ -605,7 +605,7 @@ async def _run_generate_term(
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=12000,
+        max_tokens=16000,
     )
     advanced_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-advanced")
     usage2 = extract_usage_metrics(resp2, model)

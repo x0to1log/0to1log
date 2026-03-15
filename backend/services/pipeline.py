@@ -714,14 +714,24 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         logger.info("No article content for handbook extraction (batch %s)", batch_id)
         return PipelineResult(batch_id=batch_id)
 
-    # Create separate pipeline run
+    # Create separate pipeline run (delete existing if retry)
     run_id = str(uuid.uuid4())
+    run_key = f"handbook-extract-{batch_id}"
     all_errors: list[str] = []
+
+    try:
+        # Clean up previous run if exists (for retry support)
+        old_runs = supabase.table("pipeline_runs").select("id").eq("run_key", run_key).execute()
+        for old_run in (old_runs.data or []):
+            supabase.table("pipeline_logs").delete().eq("run_id", old_run["id"]).execute()
+        supabase.table("pipeline_runs").delete().eq("run_key", run_key).execute()
+    except Exception as e:
+        logger.warning("Failed to clean up old handbook run: %s", e)
 
     try:
         supabase.table("pipeline_runs").insert({
             "id": run_id,
-            "run_key": f"handbook-extract-{batch_id}",
+            "run_key": run_key,
             "status": "running",
         }).execute()
     except Exception as e:
