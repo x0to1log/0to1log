@@ -150,11 +150,11 @@ try {
 
 // Show Retry Handbook when:
 // 1. Last handbook-extract run failed, OR
-// 2. Last news run succeeded but no handbook-extract run exists for that batch
+// 2. News run exists but no handbook-extract run for that batch (regardless of news status)
 const lastNewsBatchId = lastRun?.run_key?.replace('news-v2-', '') ?? '';
 const handbookFailed = lastHandbookRun?.status === 'failed';
-const newsSucceededNoHandbook = lastRun?.status === 'success' && lastNewsBatchId && !lastHandbookRun;
-const showRetryHandbook = handbookFailed || newsSucceededNoHandbook;
+const newsExistsNoHandbook = !!lastNewsBatchId && !lastHandbookRun;
+const showRetryHandbook = handbookFailed || newsExistsNoHandbook;
 const retryBatchId = handbookFailed
   ? (lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '')
   : lastNewsBatchId;
