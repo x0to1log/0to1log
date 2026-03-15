@@ -1,54 +1,29 @@
 ---
-import type { ProductCardData } from '../../lib/pageData/productsPage';
+import type { ProductCategory } from '../../lib/pageData/productsPage';
 import { t } from '../../i18n/index';
 
 interface Props {
-  products: ProductCardData[];
+  categories: ProductCategory[];
+  totalProducts: number;
   locale: 'en' | 'ko';
 }
 
-const { products, locale } = Astro.props;
+const { categories, totalProducts, locale } = Astro.props;
 const tr = t[locale];
-
-const pricingLabel: Record<string, string> = {
-  free: locale === 'ko' ? '무료' : 'Free',
-  freemium: 'Freemium',
-  paid: locale === 'ko' ? '유료' : 'Paid',
-  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
-};
-
-// Show max 5 on desktop, 3 on mobile (CSS handles)
-const displayProducts = products.slice(0, 5);
 ---
 
 <section class="product-hero">
   <div class="product-hero-text">
     <h1 class="product-hero-title">{tr['products.heroTitle']}</h1>
     <p class="product-hero-subtitle">{tr['products.heroSubtitle']}</p>
+    <p class="product-hero-stats">
+      <span class="product-hero-stat">
+        <strong>{totalProducts}+</strong> {locale === 'ko' ? 'AI 도구' : 'AI Tools'}
+      </span>
+      <span class="product-hero-stat-sep" aria-hidden="true">·</span>
+      <span class="product-hero-stat">
+        <strong>{categories.length}</strong> {locale === 'ko' ? '카테고리' : 'Categories'}
+      </span>
+    </p>
   </div>
-
-  {displayProducts.length > 0 && (
-    <div class="product-hero-cards">
-      {displayProducts.map((product) => (
-        <a href={`/${locale}/products/${product.slug}/`} class="product-hero-card">
-          {product.thumbnail_url
-            ? <img src={product.thumbnail_url} alt={product.name} class="product-hero-card-thumb" loading="lazy" />
-            : <div class="product-hero-card-thumb-placeholder" />
-          }
-          <div class="product-hero-card-body">
-            {product.logo_url && (
-              <img src={product.logo_url} alt="" class="product-hero-card-logo" width="28" height="28" loading="lazy" />
-            )}
-            <span class="product-hero-card-name">{product.name}</span>
-            {product.tagline && <p class="product-hero-card-tagline">{product.tagline}</p>}
-            {product.pricing && (
-              <span class="product-pricing-badge" data-pricing={product.pricing}>
-                {pricingLabel[product.pricing] ?? product.pricing}
-              </span>
-            )}
-          </div>
-        </a>
-      ))}
-    </div>
-  )}
 </section>

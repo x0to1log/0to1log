@@ -7,9 +7,23 @@ import { getProductsPageData } from '../../../lib/pageData/productsPage';
 import ProductHero from '../../../components/products/ProductHero.astro';
 import CategoryNav from '../../../components/products/CategoryNav.astro';
 import CategorySection from '../../../components/products/CategorySection.astro';
+import { getCategoryIcon } from '../../../lib/productCategoryIcons';
 
 const locale = 'en';
-const { categories, featuredProducts, productsByCategory, error } = await getProductsPageData(locale);
+const { categories, featuredProducts, productsByCategory, totalProducts, error } = await getProductsPageData(locale);
+
+const showcaseCards: Record<string, { tags: string; desc: string }> = {
+  assistant: { tags: 'ChatGPT · Claude · Gemini · Perplexity', desc: 'Write, summarize, translate, and analyze — all through a single conversation. Try asking one question to start.' },
+  image:     { tags: 'Midjourney · DALL-E · Stable Diffusion', desc: 'One line of text, one finished image. From illustrations to photo-realistic styles, visualize ideas instantly.' },
+  video:     { tags: 'Synthesia · HeyGen · Opus Clip', desc: 'Write a script and AI produces the video. Avatar presentations, subtitle editing, short-form clips — all in one.' },
+  audio:     { tags: 'Suno · ElevenLabs · Udio', desc: 'Voice cloning, narration, music composition. Create any sound with AI — no recording equipment needed.' },
+  coding:    { tags: 'Cursor · Copilot · Claude Code', desc: 'From writing code to debugging and refactoring, AI codes alongside you. Your development speed will never be the same.' },
+  workflow:  { tags: 'Zapier · Make · n8n · Pipedream', desc: 'Automate repetitive tasks — sort emails, save to Notion, notify Slack — no code needed. AI handles the decisions in between.' },
+  builder:   { tags: 'Bolt.new · v0 · Dify · Flowise', desc: 'Build AI apps and workflows without writing a single line of code. Go from idea to prototype in minutes.' },
+  platform:  { tags: 'PortKey · LangFuse · Helicone', desc: 'API key management, cost tracking, rate limiting. Run your entire team\'s AI ops infrastructure from one place.' },
+  research:  { tags: 'arXiv · Semantic Scholar', desc: 'Keep up with the latest AI papers and research trends at a glance. AI summaries let you skip the PDFs.' },
+  community: { tags: 'Reddit · Hacker News · Discord', desc: 'Follow real-time discussions among researchers and developers. Catch new breakthroughs the moment they drop.' },
+};
 ---
 
 <MainLayout
@@ -20,7 +34,7 @@ const { categories, featuredProducts, productsByCategory, error } = await getPro
   <div class="products-page" id="products-top">
     {error && <p class="products-error">{t.en['products.error']}</p>}
 
-    <ProductHero products={featuredProducts} locale={locale} />
+    <ProductHero categories={categories} totalProducts={totalProducts} locale={locale} />
 
     <div class="product-sticky-toolbar">
       <div class="product-search-bar">
@@ -43,6 +57,26 @@ const { categories, featuredProducts, productsByCategory, error } = await getPro
       </div>
       <CategoryNav categories={categories} locale={locale} />
     </div>
+
+    {categories.length > 0 && (
+      <section class="product-category-showcase">
+        <div class="product-category-showcase-grid">
+          {categories.map((cat) => {
+            const card = showcaseCards[cat.id];
+            return (
+              <a href={`#category-${cat.id}`} class="product-category-showcase-card">
+                <div class="product-category-showcase-card-header">
+                  <span class="product-category-showcase-icon" set:html={getCategoryIcon(cat.id)} />
+                  <strong class="product-category-showcase-name">{cat.label_en}</strong>
+                </div>
+                {card && <p class="product-category-showcase-tags">{card.tags}</p>}
+                {card && <p class="product-category-showcase-desc">{card.desc}</p>}
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
 
     {categories.map((cat) => (
       <CategorySection
@@ -71,42 +105,43 @@ const { categories, featuredProducts, productsByCategory, error } = await getPro
 <script>
   import '../../../scripts/handbookSearchHints';
 
-  const input = document.getElementById('product-search') as HTMLInputElement | null;
-  const noResults = document.getElementById('product-search-no-results');
-  const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card'));
-  const sections = Array.from(document.querySelectorAll<HTMLElement>('.product-category-section'));
+  document.addEventListener('astro:page-load', () => {
+    const input = document.getElementById('product-search') as HTMLInputElement | null;
+    if (!input) return;
+    const noResults = document.getElementById('product-search-no-results');
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card'));
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('.product-category-section'));
 
-  function applyFilter(query: string) {
-    const q = query.trim().toLowerCase();
+    function applyFilter(query: string) {
+      const q = query.trim().toLowerCase();
 
-    if (!q) {
-      cards.forEach((c) => c.removeAttribute('hidden'));
-      sections.forEach((s) => s.removeAttribute('hidden'));
-      if (noResults) noResults.setAttribute('hidden', '');
-      return;
-    }
+      if (!q) {
+        cards.forEach((c) => c.removeAttribute('hidden'));
+        sections.forEach((s) => s.removeAttribute('hidden'));
+        if (noResults) noResults.setAttribute('hidden', '');
+        return;
+      }
 
-    let totalVisible = 0;
-    sections.forEach((section) => {
-      const sectionCards = section.querySelectorAll<HTMLElement>('.product-card');
-      let visible = 0;
-      sectionCards.forEach((card) => {
-        const text = card.dataset.searchText ?? '';
-        const matched = text.includes(q);
-        if (matched) { card.removeAttribute('hidden'); visible++; totalVisible++; }
-        else card.setAttribute('hidden', '');
+      let totalVisible = 0;
+      sections.forEach((section) => {
+        const sectionCards = section.querySelectorAll<HTMLElement>('.product-card');
+        let visible = 0;
+        sectionCards.forEach((card) => {
+          const text = card.dataset.searchText ?? '';
+          const matched = text.includes(q);
+          if (matched) { card.removeAttribute('hidden'); visible++; totalVisible++; }
+          else card.setAttribute('hidden', '');
+        });
+        if (visible === 0) section.setAttribute('hidden', '');
+        else section.removeAttribute('hidden');
       });
-      if (visible === 0) section.setAttribute('hidden', '');
-      else section.removeAttribute('hidden');
-    });
 
-    if (noResults) {
-      if (totalVisible === 0) noResults.removeAttribute('hidden');
-      else noResults.setAttribute('hidden', '');
+      if (noResults) {
+        if (totalVisible === 0) noResults.removeAttribute('hidden');
+        else noResults.setAttribute('hidden', '');
+      }
     }
-  }
 
-  if (input) {
     input.addEventListener('input', () => {
       const q = input.value;
       history.replaceState(null, '', q ? `?q=${encodeURIComponent(q)}` : location.pathname);
@@ -116,5 +151,5 @@ const { categories, featuredProducts, productsByCategory, error } = await getPro
     // Initialize from URL
     const urlQ = new URLSearchParams(location.search).get('q') ?? '';
     if (urlQ) { input.value = urlQ; applyFilter(urlQ); }
-  }
+  });
 </script>

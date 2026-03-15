@@ -60,6 +60,7 @@ export interface ProductsPageData {
   categories: ProductCategory[];
   featuredProducts: ProductCardData[];
   productsByCategory: Record<string, ProductCardData[]>;
+  totalProducts: number;
   error: string | null;
 }
 
@@ -90,7 +91,7 @@ const CARD_COLUMNS =
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
-    return { categories: [], featuredProducts: [], productsByCategory: {}, error: null };
+    return { categories: [], featuredProducts: [], productsByCategory: {}, totalProducts: 0, error: null };
   }
 
   const [categoriesRes, productsRes] = await Promise.all([
@@ -104,7 +105,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
   ]);
 
   if (categoriesRes.error) {
-    return { categories: [], featuredProducts: [], productsByCategory: {}, error: categoriesRes.error.message };
+    return { categories: [], featuredProducts: [], productsByCategory: {}, totalProducts: 0, error: categoriesRes.error.message };
   }
 
   const categories = (categoriesRes.data ?? []) as ProductCategory[];
@@ -127,7 +128,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     productsByCategory[cat.id] = resolvedProducts.filter((p) => p.primary_category === cat.id);
   }
 
-  return { categories, featuredProducts, productsByCategory, error: null };
+  return { categories, featuredProducts, productsByCategory, totalProducts: resolvedProducts.length, error: null };
 }
 
 // =============================================================================

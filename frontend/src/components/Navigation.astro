@@ -413,6 +413,7 @@ const navItems = [
             header.classList.add('site-header--no-transition');
             header.classList.remove('site-header--fixed', 'site-header--hidden');
             spacer.style.display = 'none';
+            document.documentElement.style.setProperty('--toolbar-top', '0px');
             requestAnimationFrame(() => {
               header.classList.remove('site-header--no-transition');
             });
@@ -422,6 +423,7 @@ const navItems = [
           if (!fixed) {
             header.classList.add('site-header--fixed', 'site-header--hidden', 'site-header--no-transition');
             spacer.style.display = 'block';
+            document.documentElement.style.setProperty('--toolbar-top', '0px');
             requestAnimationFrame(() => {
               header.classList.remove('site-header--no-transition');
             });
@@ -430,8 +432,10 @@ const navItems = [
 
           if (currentY < lastY - 5) {
             header.classList.remove('site-header--hidden');
+            document.documentElement.style.setProperty('--toolbar-top', `${headerH}px`);
           } else if (currentY > lastY + 5) {
             header.classList.add('site-header--hidden');
+            document.documentElement.style.setProperty('--toolbar-top', '0px');
           }
         }
 

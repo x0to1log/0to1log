@@ -29,39 +29,42 @@ const tr = t[locale];
 </nav>
 
 <script>
-  const nav = document.querySelector('.product-category-nav');
-  const tabs = nav?.querySelectorAll<HTMLElement>('.product-category-tab');
-  const sections = document.querySelectorAll<HTMLElement>('.product-category-section');
+  document.addEventListener('astro:page-load', () => {
+    const nav = document.querySelector('.product-category-nav');
+    if (!nav) return;
+    const tabs = nav.querySelectorAll<HTMLElement>('.product-category-tab');
+    const sections = document.querySelectorAll<HTMLElement>('.product-category-section');
 
-  if (tabs && sections.length > 0) {
-    const setActive = (categoryId: string) => {
-      tabs.forEach((tab) => {
-        const isActive = tab.dataset.category === categoryId;
-        tab.classList.toggle('active', isActive);
-        if (isActive) tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      });
-    };
+    if (tabs.length > 0 && sections.length > 0) {
+      const setActive = (categoryId: string) => {
+        tabs.forEach((tab) => {
+          const isActive = tab.dataset.category === categoryId;
+          tab.classList.toggle('active', isActive);
+          if (isActive) tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        });
+      };
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const id = (entry.target as HTMLElement).dataset.categoryId ?? 'all';
-            setActive(id);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const id = (entry.target as HTMLElement).dataset.categoryId ?? 'all';
+              setActive(id);
+            }
           }
-        }
-      },
-      { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
-    );
+        },
+        { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
+      );
 
-    sections.forEach((section) => observer.observe(section));
+      sections.forEach((section) => observer.observe(section));
 
-    // "all" tab active when near top
-    const topObserver = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setActive('all'); },
-      { rootMargin: '0px 0px -90% 0px', threshold: 0 },
-    );
-    const heroSection = document.querySelector<HTMLElement>('.product-hero');
-    if (heroSection) topObserver.observe(heroSection);
-  }
+      // "all" tab active when near top
+      const topObserver = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActive('all'); },
+        { rootMargin: '0px 0px -90% 0px', threshold: 0 },
+      );
+      const heroSection = document.querySelector<HTMLElement>('.product-hero');
+      if (heroSection) topObserver.observe(heroSection);
+    }
+  });
 </script>
