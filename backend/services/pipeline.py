@@ -610,30 +610,14 @@ async def run_daily_pipeline(
             all_errors.extend(errors)
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
-        # Stage: handbook term extraction
-        handbook_terms_created = 0
-        article_texts = [
-            raw_content_map.get(candidate.url, "")
-            for _, candidate in picks
-            if raw_content_map.get(candidate.url, "")
-        ]
-        if article_texts:
-            try:
-                handbook_terms_created, handbook_errors = await _extract_and_create_handbook_terms(
-                    article_texts, supabase, run_id,
-                )
-                all_errors.extend(handbook_errors)
-            except Exception as e:
-                logger.warning("Handbook extraction stage failed: %s", e)
-
-        # Stage: summary
+        # Stage: summary (news only — handbook runs separately)
         t_summary = time.monotonic()
         status = "success" if not all_errors else "failed"
 
         await _log_stage(
             supabase, run_id, "summary", status, t_summary,
             input_summary=f"{len(candidates)} candidates, {len(picks)} selected",
-            output_summary=f"{total_posts} posts created, {handbook_terms_created} handbook terms",
+            output_summary=f"{total_posts} posts created",
             usage=cumulative_usage,
             error_message="; ".join(all_errors) if all_errors else None,
             debug_meta={
@@ -641,7 +625,6 @@ async def run_daily_pipeline(
                 "target_date": target_date,
                 "batch_id": batch_id,
                 "total_posts": total_posts,
-                "handbook_terms_created": handbook_terms_created,
                 "total_cost": cumulative_usage.get("cost_usd"),
                 "picks": [pt for pt, _ in picks],
             },
@@ -674,5 +657,96 @@ async def run_daily_pipeline(
         errors=all_errors,
         usage=cumulative_usage,
     )
-    logger.info("Pipeline complete: %d posts, %d errors", total_posts, len(all_errors))
+    logger.info("News pipeline complete: %d posts, %d errors", total_posts, len(all_errors))
+
+    # Auto-trigger handbook extraction as a separate run (non-blocking)
+    if total_posts > 0:
+        try:
+            await run_handbook_extraction(batch_id)
+        except Exception as e:
+            logger.warning("Handbook extraction auto-trigger failed: %s", e)
+
     return result
+
+
+async def run_handbook_extraction(batch_id: str) -> PipelineResult:
+    """Run handbook term extraction from existing news posts. Independent pipeline run.
+
+    Reads news_posts for the given batch_id and extracts/generates handbook terms.
+    Can be called independently to retry after failure without re-running news.
+    """
+    supabase = get_supabase()
+    if not supabase:
+        return PipelineResult(batch_id=batch_id, errors=["Supabase not configured"])
+
+    # Fetch article content from existing news posts
+    try:
+        posts_result = (
+            supabase.table("news_posts")
+            .select("content_expert, title")
+            .eq("pipeline_batch_id", batch_id)
+            .eq("locale", "en")
+            .execute()
+        )
+        article_texts = [
+            p.get("content_expert", "") or p.get("title", "")
+            for p in (posts_result.data or [])
+            if p.get("content_expert")
+        ]
+    except Exception as e:
+        return PipelineResult(batch_id=batch_id, errors=[f"Failed to fetch posts: {e}"])
+
+    if not article_texts:
+        logger.info("No article content for handbook extraction (batch %s)", batch_id)
+        return PipelineResult(batch_id=batch_id)
+
+    # Create separate pipeline run
+    run_id = str(uuid.uuid4())
+    all_errors: list[str] = []
+
+    try:
+        supabase.table("pipeline_runs").insert({
+            "id": run_id,
+            "run_key": f"handbook-extract-{batch_id}",
+            "status": "running",
+        }).execute()
+    except Exception as e:
+        logger.warning("Failed to create handbook extraction run: %s", e)
+
+    try:
+        terms_created, errors = await _extract_and_create_handbook_terms(
+            article_texts, supabase, run_id,
+        )
+        all_errors.extend(errors)
+
+        status = "success" if not errors else "failed"
+        try:
+            supabase.table("pipeline_runs").update({
+                "status": status,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": errors[0] if errors else None,
+            }).eq("id", run_id).execute()
+        except Exception as e:
+            logger.warning("Failed to update handbook run: %s", e)
+
+        logger.info(
+            "Handbook extraction complete (batch %s): %d terms, %d errors",
+            batch_id, terms_created, len(errors),
+        )
+    except Exception as e:
+        logger.error("Handbook extraction failed: %s", e)
+        all_errors.append(str(e))
+        try:
+            supabase.table("pipeline_runs").update({
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": str(e),
+            }).eq("id", run_id).execute()
+        except Exception:
+            pass
+
+    return PipelineResult(
+        batch_id=batch_id,
+        posts_created=0,
+        errors=all_errors,
+    )

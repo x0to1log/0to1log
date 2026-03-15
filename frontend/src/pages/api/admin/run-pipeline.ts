@@ -111,7 +111,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   let force = false;
   try {
     const payload = await request.json();
-    if (payload?.mode === 'force_refresh' || payload?.mode === 'resume') {
+    if (payload?.mode === 'force_refresh' || payload?.mode === 'resume' || payload?.mode === 'handbook-extract') {
       mode = payload.mode;
     }
     if (payload?.target_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.target_date)) {

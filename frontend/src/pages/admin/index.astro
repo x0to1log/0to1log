@@ -41,6 +41,7 @@ let totalBlogPosts = 0;
 let blogDrafts = 0;
 let monthlyCost = 0;
 let monthlyTokens = 0;
+let lastHandbookRun: { id: string; run_key: string; status: string; started_at: string; last_error: string | null } | null = null;
 
 type Notification = {
   id: string;
@@ -65,7 +66,7 @@ let staleDrafts: ActivityItem[] = [];
 
 try {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes, blogRes, monthlyLogsRes] = await Promise.all([
+  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes, blogRes, monthlyLogsRes, handbookRunRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
@@ -74,6 +75,12 @@ try {
     sb.from('admin_notifications').select('id, type, title, message, created_at').eq('is_read', false).order('created_at', { ascending: false }).limit(5),
     sb.from('blog_posts').select('id, status'),
     sb.from('pipeline_logs').select('cost_usd, tokens_used').gte('created_at', thirtyDaysAgo),
+    sb.from('pipeline_runs')
+      .select('id, run_key, status, started_at, last_error')
+      .like('run_key', 'handbook-extract-%')
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const posts = postsRes.data ?? [];
@@ -117,6 +124,9 @@ try {
   monthlyCost = monthlyLogs.reduce((sum: number, l: any) => sum + (parseFloat(l.cost_usd) || 0), 0);
   monthlyTokens = monthlyLogs.reduce((sum: number, l: any) => sum + (l.tokens_used || 0), 0);
 
+  // Handbook retry
+  lastHandbookRun = handbookRunRes.data ?? null;
+
   // Pipeline
   const runData = pipelineRes.data?.[0] ?? null;
   if (runData) {
@@ -137,6 +147,9 @@ try {
   // Notifications
   notifications = (notifsRes.data ?? []) as Notification[];
 } catch {}
+
+const showRetryHandbook = lastHandbookRun?.status === 'failed';
+const retryBatchId = lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '';
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -271,9 +284,15 @@ function relativeTime(dateStr: string): string {
                      max={new Date().toISOString().slice(0,10)}
                      title="Leave empty for today" />
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
-              <button type="button" class="admin-btn" id="force-refresh-btn">Force Refresh</button>
+              {showRetryHandbook && (
+                <button type="button" class="admin-btn" id="retry-handbook-btn"
+                        data-batch-id={retryBatchId}
+                        title={`Retry handbook extraction for ${retryBatchId}`}>
+                  Retry Handbook
+                </button>
+              )}
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
-              <span class="dashboard-pipeline-helper">Run Pipeline reuses the batch snapshot when possible. Force Refresh recollects and reranks.</span>
+              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
           </div>
@@ -285,9 +304,15 @@ function relativeTime(dateStr: string): string {
                      max={new Date().toISOString().slice(0,10)}
                      title="Leave empty for today" />
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
-              <button type="button" class="admin-btn" id="force-refresh-btn">Force Refresh</button>
+              {showRetryHandbook && (
+                <button type="button" class="admin-btn" id="retry-handbook-btn"
+                        data-batch-id={retryBatchId}
+                        title={`Retry handbook extraction for ${retryBatchId}`}>
+                  Retry Handbook
+                </button>
+              )}
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
-              <span class="dashboard-pipeline-helper">Run Pipeline reuses the batch snapshot when possible. Force Refresh recollects and reranks.</span>
+              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
           </div>
@@ -806,7 +831,6 @@ function relativeTime(dateStr: string): string {
 <script>
   function initDashboardActions(): void {
     const pipelineBtn = document.getElementById('run-pipeline-btn');
-    const forceRefreshBtn = document.getElementById('force-refresh-btn');
     const pipelineFeedback = document.getElementById('run-pipeline-feedback');
     const setPipelineFeedback = (message: string, state?: 'error' | 'success'): void => {
       if (!pipelineFeedback) return;
@@ -840,13 +864,12 @@ function relativeTime(dateStr: string): string {
     const bindPipelineButton = (
       button: HTMLElement | null,
       idleLabel: string,
-      mode: 'resume' | 'force_refresh',
+      mode: 'resume',
     ): void => {
       if (!button || button.dataset.init === '1') return;
       button.dataset.init = '1';
       button.addEventListener('click', async () => {
         if (pipelineBtn) pipelineBtn.setAttribute('disabled', 'true');
-        if (forceRefreshBtn) forceRefreshBtn.setAttribute('disabled', 'true');
         button.textContent = 'Running...';
         setPipelineFeedback('');
         const targetDate = dateInput?.value || null;
@@ -901,13 +924,42 @@ function relativeTime(dateStr: string): string {
           }, 3000);
         } finally {
           if (pipelineBtn) pipelineBtn.removeAttribute('disabled');
-          if (forceRefreshBtn) forceRefreshBtn.removeAttribute('disabled');
         }
       });
     };
 
     bindPipelineButton(pipelineBtn, 'Run Pipeline', 'resume');
-    bindPipelineButton(forceRefreshBtn, 'Force Refresh', 'force_refresh');
+
+    // Retry Handbook button handler
+    const retryHandbookBtn = document.getElementById('retry-handbook-btn');
+    if (retryHandbookBtn) {
+      retryHandbookBtn.addEventListener('click', async () => {
+        const batchId = (retryHandbookBtn as HTMLElement & { dataset: DOMStringMap }).dataset.batchId;
+        if (!batchId) return;
+        retryHandbookBtn.textContent = 'Retrying...';
+        retryHandbookBtn.setAttribute('disabled', 'true');
+        try {
+          const res = await fetch('/api/admin/run-pipeline', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'handbook-extract', target_date: batchId }),
+          });
+          if (!res.ok) {
+            const payload = await res.json().catch(() => null);
+            throw new Error(payload?.error || `HTTP ${res.status}`);
+          }
+          retryHandbookBtn.textContent = 'Started';
+          setPipelineFeedback(`Handbook extraction retrying for ${batchId}`, 'success');
+          setTimeout(() => window.location.reload(), 2000);
+        } catch (error) {
+          retryHandbookBtn.textContent = 'Failed';
+          const message = error instanceof Error ? error.message : 'Failed to retry handbook';
+          setPipelineFeedback(message, 'error');
+          setTimeout(() => { retryHandbookBtn.textContent = 'Retry Handbook'; }, 3000);
+        }
+      });
+    }
 
     const markReadBtn = document.getElementById('mark-all-read-btn');
     if (markReadBtn && !markReadBtn.dataset.init) {

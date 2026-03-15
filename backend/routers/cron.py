@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 from core.security import verify_cron_secret
-from services.pipeline import check_existing_batch, cleanup_existing_batch, run_daily_pipeline
+from services.pipeline import check_existing_batch, cleanup_existing_batch, run_daily_pipeline, run_handbook_extraction
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,38 @@ async def trigger_news_pipeline(
         "status": "accepted",
         "batch_id": batch_id,
         "message": "Pipeline started in background",
+    }
+
+
+class HandbookExtractBody(BaseModel):
+    batch_id: str
+
+
+@router.post("/handbook-extract", status_code=202)
+async def trigger_handbook_extraction(
+    background_tasks: BackgroundTasks,
+    body: HandbookExtractBody,
+    _secret=Depends(verify_cron_secret),
+):
+    """Trigger handbook term extraction from existing news posts. Returns 202 immediately."""
+    batch_id = body.batch_id
+
+    async def _run():
+        try:
+            result = await run_handbook_extraction(batch_id)
+            logger.info(
+                "Handbook extraction batch %s finished: %d errors",
+                batch_id, len(result.errors),
+            )
+        except Exception as e:
+            logger.error("Handbook extraction batch %s crashed: %s", batch_id, e)
+
+    background_tasks.add_task(_run)
+
+    return {
+        "status": "accepted",
+        "batch_id": batch_id,
+        "message": "Handbook extraction started in background",
     }
 
 
