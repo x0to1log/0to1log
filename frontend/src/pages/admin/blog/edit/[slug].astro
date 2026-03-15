@@ -143,10 +143,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           </div>
           <div class="admin-editor-topbar-right">
             <span id="last-saved-time" class="admin-last-saved"></span>
+            <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
-            <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
             {!isNew && <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>}
           </div>
         </div>

@@ -103,11 +103,11 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           </div>
           <div class="admin-editor-topbar-right">
             <span class="hb-action-bar__saved-time" id="last-saved-time" style="font-size:0.72rem;color:var(--color-text-muted)"></span>
+            <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish" class="admin-btn admin-btn-primary" type="button">Publish</button>
             {term && <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>}
-            <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
           </div>
         </div>
 
