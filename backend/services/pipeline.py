@@ -12,6 +12,7 @@ from models.news_pipeline import (
     PipelineResult,
     RankedCandidate,
 )
+from services.agents.advisor import extract_terms_from_content, generate_term_content
 from services.agents.client import merge_usage_metrics
 from services.agents.fact_extractor import extract_facts
 from services.agents.persona_writer import write_persona
@@ -99,6 +100,134 @@ def _trim(text: str | None, max_len: int = 1000) -> str:
     if not text:
         return ""
     return text[:max_len] + ("..." if len(text) > max_len else "")
+
+
+async def _extract_and_create_handbook_terms(
+    article_texts: list[str],
+    supabase,
+    run_id: str,
+) -> tuple[int, list[str]]:
+    """Extract AI terms from news articles and create handbook drafts.
+
+    Returns (terms_created, errors). Never raises — errors are logged.
+    """
+    terms_created = 0
+    errors: list[str] = []
+
+    # Combine article texts for extraction
+    combined = "\n\n---\n\n".join(article_texts)
+    if not combined.strip():
+        return 0, []
+
+    # Step 1: Extract terms
+    t0 = time.monotonic()
+    try:
+        extracted, extract_model, extract_tokens = await extract_terms_from_content(combined)
+    except Exception as e:
+        logger.warning("Handbook term extraction failed: %s", e)
+        await _log_stage(
+            supabase, run_id, "handbook.extract", "failed", t0,
+            error_message=str(e),
+        )
+        return 0, [f"Term extraction failed: {e}"]
+
+    await _log_stage(
+        supabase, run_id, "handbook.extract", "success", t0,
+        input_summary=f"{len(article_texts)} articles, {len(combined)} chars",
+        output_summary=f"{len(extracted)} terms extracted",
+        debug_meta={
+            "terms": [t.get("term", "") for t in extracted],
+            "model": extract_model,
+            "tokens": extract_tokens,
+        },
+    )
+
+    if not extracted:
+        return 0, []
+
+    # Step 2: Check duplicates and generate content for new terms
+    for term_info in extracted:
+        term_name = term_info.get("term", "").strip()
+        korean_name = term_info.get("korean_name", "").strip()
+        if not term_name:
+            continue
+
+        slug = _slugify(term_name)
+        if not slug:
+            continue
+
+        # Check if term already exists
+        try:
+            existing = (
+                supabase.table("handbook_terms")
+                .select("id")
+                .or_(f"slug.eq.{slug},term.ilike.{term_name}")
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                logger.info("Handbook term '%s' already exists, skipping", term_name)
+                continue
+        except Exception as e:
+            logger.warning("Duplicate check failed for '%s': %s", term_name, e)
+            continue
+
+        # Generate content (2 LLM calls)
+        t_gen = time.monotonic()
+        try:
+            content_data, gen_model, gen_tokens = await generate_term_content(
+                term_name, korean_name,
+            )
+        except Exception as e:
+            error_msg = f"Handbook generate failed for '{term_name}': {e}"
+            logger.warning(error_msg)
+            errors.append(error_msg)
+            await _log_stage(
+                supabase, run_id, "handbook.auto_generate", "failed", t_gen,
+                error_message=error_msg,
+                debug_meta={"term": term_name},
+            )
+            continue
+
+        # Insert as draft
+        try:
+            row = {
+                "term": term_name,
+                "slug": slug,
+                "korean_name": content_data.get("korean_name", korean_name),
+                "term_full": content_data.get("term_full", ""),
+                "korean_full": content_data.get("korean_full", ""),
+                "categories": content_data.get("categories", []),
+                "definition_ko": content_data.get("definition_ko", ""),
+                "definition_en": content_data.get("definition_en", ""),
+                "body_basic_ko": content_data.get("body_basic_ko", ""),
+                "body_basic_en": content_data.get("body_basic_en", ""),
+                "body_advanced_ko": content_data.get("body_advanced_ko", ""),
+                "body_advanced_en": content_data.get("body_advanced_en", ""),
+                "status": "draft",
+                "source": "pipeline",
+            }
+            supabase.table("handbook_terms").insert(row).execute()
+            terms_created += 1
+            logger.info("Created handbook draft: %s (%s)", term_name, slug)
+
+            await _log_stage(
+                supabase, run_id, "handbook.auto_generate", "success", t_gen,
+                output_summary=f"term={term_name}, slug={slug}",
+                debug_meta={
+                    "term": term_name,
+                    "slug": slug,
+                    "model": gen_model,
+                    "tokens": gen_tokens,
+                },
+            )
+        except Exception as e:
+            error_msg = f"Failed to save handbook term '{term_name}': {e}"
+            logger.warning(error_msg)
+            errors.append(error_msg)
+
+    logger.info("Handbook auto-extraction: %d terms created, %d errors", terms_created, len(errors))
+    return terms_created, errors
 
 
 async def _generate_post(
@@ -401,6 +530,22 @@ async def run_daily_pipeline(
             all_errors.extend(errors)
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
+        # Stage: handbook term extraction
+        handbook_terms_created = 0
+        article_texts = [
+            raw_content_map.get(candidate.url, "")
+            for _, candidate in picks
+            if raw_content_map.get(candidate.url, "")
+        ]
+        if article_texts:
+            try:
+                handbook_terms_created, handbook_errors = await _extract_and_create_handbook_terms(
+                    article_texts, supabase, run_id,
+                )
+                all_errors.extend(handbook_errors)
+            except Exception as e:
+                logger.warning("Handbook extraction stage failed: %s", e)
+
         # Stage: summary
         t_summary = time.monotonic()
         status = "success" if not all_errors else "failed"
@@ -408,7 +553,7 @@ async def run_daily_pipeline(
         await _log_stage(
             supabase, run_id, "summary", status, t_summary,
             input_summary=f"{len(candidates)} candidates, {len(picks)} selected",
-            output_summary=f"{total_posts} posts created",
+            output_summary=f"{total_posts} posts created, {handbook_terms_created} handbook terms",
             usage=cumulative_usage,
             error_message="; ".join(all_errors) if all_errors else None,
             debug_meta={
@@ -416,6 +561,7 @@ async def run_daily_pipeline(
                 "target_date": target_date,
                 "batch_id": batch_id,
                 "total_posts": total_posts,
+                "handbook_terms_created": handbook_terms_created,
                 "total_cost": cumulative_usage.get("cost_usd"),
                 "picks": [pt for pt, _ in picks],
             },
