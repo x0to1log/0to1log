@@ -1,4 +1,4 @@
-﻿# ACTIVE SPRINT — Handbook H1 (Read-Only)
+# ACTIVE SPRINT — Handbook H1 (Read-Only)
 
 > **스프린트 시작:** 2026-03-07
 > **목표:** `/en|ko/handbook` 읽기 전용 기능을 메인 app과 병렬로 구현한다.

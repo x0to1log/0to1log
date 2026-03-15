@@ -8219,6 +8219,18 @@ pre:hover .blog-code-copy {
   overflow: hidden;
 }
 
+@media (max-width: 639px) {
+  .product-category-showcase-name {
+    font-size: 0.92rem;
+  }
+  .product-category-showcase-desc {
+    -webkit-line-clamp: 2;
+  }
+  .product-category-showcase-tags {
+    font-size: 0.7rem;
+  }
+}
+
 @media (min-width: 640px) {
   .product-category-showcase-grid {
     grid-template-columns: repeat(3, 1fr);
