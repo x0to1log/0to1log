@@ -448,6 +448,7 @@ async def _generate_post(
             "source_cards": source_cards,
             "source_urls": source_urls,
             "pipeline_batch_id": batch_id,
+            "published_at": f"{batch_id}T09:00:00Z",
             "pipeline_model": settings.openai_model_main,
             "pipeline_tokens": cumulative_usage.get("tokens_used") if locale == "en" else None,
             "pipeline_cost": cumulative_usage.get("cost_usd") if locale == "en" else None,
