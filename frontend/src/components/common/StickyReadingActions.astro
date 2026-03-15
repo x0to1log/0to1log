@@ -85,6 +85,7 @@ const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' 
     data-thanks-confusing={copy.thanksConfusing}
     data-error={copy.error}
   >
+    <div class="reading-progress-bar" aria-hidden="true"><div class="reading-progress__fill"></div></div>
     <div class="reading-actions__items reading-actions__items--article reading-actions__items--term">
       <div class="reading-actions__group reading-actions__group--primary">
         <button
@@ -173,6 +174,7 @@ const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' 
   </aside>
 ) : (
   <aside class={`reading-actions reading-actions--article ${placementClass}`.trim()} aria-label={locale === 'ko' ? '글 액션' : 'Reading actions'}>
+    <div class="reading-progress-bar" aria-hidden="true"><div class="reading-progress__fill"></div></div>
     <div class="reading-actions__items reading-actions__items--article">
       <div class="reading-actions__group reading-actions__group--primary">
         <button

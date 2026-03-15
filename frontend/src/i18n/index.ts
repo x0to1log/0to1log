@@ -81,6 +81,11 @@ export const t: Record<Locale, Record<string, string>> = {
     'products.notfound': 'Product not found.',
     'products.empty': 'No products yet.',
     'products.error': 'Failed to load products.',
+    'products.searchPlaceholder': 'Search AI tools...',
+    'products.searchNoResults': 'No matching tools found. Try a different keyword.',
+    'products.outroTitle': 'Not sure where to start with AI?',
+    'products.outroBody': 'From AI assistants to image generation, coding tools, and workflow automation — browse a curated collection of AI products organized by category. Pricing information is included so you can find the right fit, from free tools to pro plans.',
+    'products.outroCta': 'Browse by category to find the right tool for you.',
   },
   ko: {
     'nav.log': 'AI 뉴스',
@@ -154,5 +159,10 @@ export const t: Record<Locale, Record<string, string>> = {
     'products.notfound': '해당 제품을 찾을 수 없습니다.',
     'products.empty': '아직 제품이 없습니다.',
     'products.error': '제품을 불러오는 데 문제가 발생했습니다.',
+    'products.searchPlaceholder': 'AI 도구 검색...',
+    'products.searchNoResults': '일치하는 도구가 없습니다. 다른 키워드를 입력해보세요.',
+    'products.outroTitle': 'AI 도구, 어디서부터 시작할지 모르겠다면',
+    'products.outroBody': 'AI 어시스턴트부터 이미지·영상 생성, 코딩 도구, 워크플로우 자동화까지 — 카테고리별로 엄선한 AI 제품을 한곳에서 탐색할 수 있습니다. 무료 도구부터 팀 단위 프로 플랜까지 가격 정보도 함께 확인하세요.',
+    'products.outroCta': '카테고리를 둘러보며 나에게 맞는 도구를 찾아보세요.',
   },
 };

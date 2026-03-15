@@ -11,6 +11,7 @@ import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro
 import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
 import PreviewReadonlyBanner from '../../../components/common/PreviewReadonlyBanner.astro';
 import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
+import ReadingProgressBar from '../../../components/common/ReadingProgressBar.astro';
 
 const locale = 'ko';
 const { slug } = Astro.params;
@@ -168,6 +169,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           </div>
         </div>
       </article>
+      <ReadingProgressBar locale="ko" />
     )}
 
     <Fragment slot="rail">

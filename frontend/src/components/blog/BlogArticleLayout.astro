@@ -2,6 +2,7 @@
 import BlogBreadcrumb from './BlogBreadcrumb.astro';
 import PreviewReadonlyBanner from '../common/PreviewReadonlyBanner.astro';
 import StickyReadingActions from '../common/StickyReadingActions.astro';
+import ReadingProgressBar from '../common/ReadingProgressBar.astro';
 import { getCategoryLabel, getCategoryColorVar } from '../../lib/categories';
 
 interface Props {
@@ -245,6 +246,8 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </div>
   </div>
 </article>
+
+<ReadingProgressBar locale={locale} />
 
 <script src="../../scripts/share.ts"></script>
 

@@ -100,7 +100,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 
     {!isAdmin && <Navigation locale={locale} alwaysVisible={headerAlwaysVisible} altSlug={altSlug} />}
 
-    <main id="main-content" style={isAdmin ? 'flex: 1; width: 100%;' : `flex: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 1rem; width: 100%;`}>
+    <main id="main-content" class={isAdmin ? 'main-admin' : 'main-public'}>
       <slot />
     </main>
 

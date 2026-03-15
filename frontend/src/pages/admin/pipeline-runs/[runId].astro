@@ -172,10 +172,27 @@ const costBreakdown: CostBreakdownRow[] = logs
   });
 const hasCostBreakdown = costBreakdown.length > 0;
 
-const runMode = String(firstTruthyDebugValue(logs, 'mode') ?? 'resume');
-const reusedCandidates = hasTruthyDebugFlag(logs, 'reused_candidates');
-const reusedRanking = hasTruthyDebugFlag(logs, 'reused_ranking');
-const resumedFromSavedEn = hasTruthyDebugFlag(logs, 'resumed_from_saved_en');
+const runMode = String(firstTruthyDebugValue(logs, 'mode') ?? 'daily');
+const targetDate = String(firstTruthyDebugValue(logs, 'target_date') ?? 'today');
+const dateKwargs = (() => {
+  const dk = firstTruthyDebugValue(logs, 'date_kwargs') as Record<string, unknown> | null;
+  if (!dk) return 'days: 2';
+  if (dk.start_date) return `${dk.start_date} → ${dk.end_date}`;
+  return `days: ${dk.days}`;
+})();
+const uniqueCandidates = String(firstTruthyDebugValue(logs, 'unique_candidates') ?? '—');
+
+const batchId = run?.run_key?.replace('news-v2-', '') ?? '';
+let createdPosts: Array<{id: string; title: string; slug: string; locale: string; post_type: string; status: string}> = [];
+if (batchId) {
+  const { data } = await sb
+    .from('news_posts')
+    .select('id, title, slug, locale, post_type, status')
+    .eq('pipeline_batch_id', batchId)
+    .order('post_type')
+    .order('locale');
+  createdPosts = data ?? [];
+}
 ---
 
 <MainLayout title="Pipeline Run Detail" locale="en">
@@ -206,6 +223,12 @@ const resumedFromSavedEn = hasTruthyDebugFlag(logs, 'resumed_from_saved_en');
             <div class="pipeline-run-hero__identity">
               <span class={`pipeline-run-status pipeline-run-status--${tone}`}>{run?.status ?? 'unknown'}</span>
               <strong class="pipeline-run-hero__key">{run?.run_key ?? runId}</strong>
+              {firstTruthyDebugValue(logs, 'mode') === 'backfill' && (
+                <span class="pipeline-stage-chip pipeline-stage-chip--warn">
+                  <span class="pipeline-stage-chip__label">Backfill</span>
+                  <span class="pipeline-stage-chip__value">{firstTruthyDebugValue(logs, 'target_date')}</span>
+                </span>
+              )}
             </div>
             <a href="/admin/pipeline-runs" class="pipeline-run-hero__back">Back to runs</a>
           </div>
@@ -306,32 +329,32 @@ const resumedFromSavedEn = hasTruthyDebugFlag(logs, 'resumed_from_saved_en');
       <section class="pipeline-run-section">
         <div class="pipeline-run-section__header">
           <div>
-            <h2 class="pipeline-run-section__title">Reuse Signals</h2>
+            <h2 class="pipeline-run-section__title">Run Context</h2>
             <p class="pipeline-run-section__hint">
-              These indicators show whether the rerun reused saved snapshots or EN drafts.
+              Configuration and parameters used for this pipeline execution.
             </p>
           </div>
         </div>
         <div class="pipeline-run-summary-grid pipeline-run-summary-grid--reuse">
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Run mode</span>
+            <span class="pipeline-run-stat__label">Run Mode</span>
             <strong class="pipeline-run-stat__value">{runMode}</strong>
-            <span class="pipeline-run-stat__detail">`resume` reuses saved state when possible.</span>
+            <span class="pipeline-run-stat__detail">"backfill" collects news for a past date.</span>
           </div>
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Reused candidates</span>
-            <strong class="pipeline-run-stat__value">{reusedCandidates ? 'Yes' : 'No'}</strong>
-            <span class="pipeline-run-stat__detail">Saved `news_candidates` snapshot reused.</span>
+            <span class="pipeline-run-stat__label">Target Date</span>
+            <strong class="pipeline-run-stat__value">{targetDate}</strong>
+            <span class="pipeline-run-stat__detail">The date this run collected news for.</span>
           </div>
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Reused ranking</span>
-            <strong class="pipeline-run-stat__value">{reusedRanking ? 'Yes' : 'No'}</strong>
-            <span class="pipeline-run-stat__detail">Ranking reconstructed from the saved batch snapshot.</span>
+            <span class="pipeline-run-stat__label">Search Params</span>
+            <strong class="pipeline-run-stat__value">{dateKwargs}</strong>
+            <span class="pipeline-run-stat__detail">Tavily API date filter parameters.</span>
           </div>
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Resumed saved EN</span>
-            <strong class="pipeline-run-stat__value">{resumedFromSavedEn ? 'Yes' : 'No'}</strong>
-            <span class="pipeline-run-stat__detail">Skipped EN regeneration because only KO was missing.</span>
+            <span class="pipeline-run-stat__label">Candidates</span>
+            <strong class="pipeline-run-stat__value">{uniqueCandidates}</strong>
+            <span class="pipeline-run-stat__detail">Unique news candidates after deduplication.</span>
           </div>
         </div>
       </section>
@@ -459,6 +482,35 @@ const resumedFromSavedEn = hasTruthyDebugFlag(logs, 'resumed_from_saved_en');
           </div>
         )}
       </section>
+
+      {createdPosts.length > 0 && (
+        <section class="pipeline-run-section">
+          <div class="pipeline-run-section__header">
+            <h2 class="pipeline-run-section__title">Created Posts</h2>
+            <p class="pipeline-run-section__hint">Draft posts generated by this pipeline run.</p>
+          </div>
+          <div class="pipeline-run-posts-grid">
+            {createdPosts.map(post => (
+              <div class="pipeline-run-post-card">
+                <div class="pipeline-run-post-card__title">{post.title}</div>
+                <div class="pipeline-run-post-card__chips">
+                  <span class="pipeline-stage-chip">
+                    <span class="pipeline-stage-chip__label">Type</span>
+                    <span class="pipeline-stage-chip__value">{post.post_type}</span>
+                  </span>
+                  <span class="pipeline-stage-chip">
+                    <span class="pipeline-stage-chip__label">Lang</span>
+                    <span class="pipeline-stage-chip__value">{post.locale.toUpperCase()}</span>
+                  </span>
+                  <span class={`pipeline-run-status pipeline-run-status--${post.status === 'published' ? 'success' : 'idle'}`}>
+                    {post.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {(raw_error || normalizedError) && (
         <section class="pipeline-run-section">
@@ -924,6 +976,30 @@ const resumedFromSavedEn = hasTruthyDebugFlag(logs, 'resumed_from_saved_en');
     color: var(--color-accent);
     border-color: color-mix(in srgb, var(--color-accent) 78%, var(--color-border));
     background: color-mix(in srgb, var(--color-accent) 20%, var(--color-bg-secondary));
+  }
+
+  .pipeline-run-posts-grid {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .pipeline-run-post-card {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  }
+
+  .pipeline-run-post-card__title {
+    font-weight: 600;
+    font-size: 0.88rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .pipeline-run-post-card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
   }
 
   @media (max-width: 1080px) {

@@ -1,0 +1,86 @@
+---
+interface Props {
+  locale?: 'en' | 'ko';
+}
+
+const { locale = 'ko' } = Astro.props;
+const nonce = Astro.locals.cspNonce || '';
+---
+
+<script is:inline nonce={nonce}>
+(function() {
+  var progressAbort = null;
+
+  function initProgressBar() {
+    if (progressAbort) { progressAbort.abort(); progressAbort = null; }
+
+    var article = document.querySelector('.newsprint-article')
+               || document.querySelector('article')
+               || document.querySelector('[data-article-body]');
+    if (!article) return;
+
+    var fills = document.querySelectorAll('.reading-progress__fill');
+    if (!fills.length) return;
+
+    document.querySelectorAll('.reading-progress-bar--done').forEach(function(bar) {
+      bar.classList.remove('reading-progress-bar--done');
+    });
+    fills.forEach(function(f) { f.style.width = '0%'; });
+
+    var ticking = false;
+    var hasCompleted = false;
+
+    function spawnConfetti(bar) {
+      bar.classList.add('reading-progress-bar--done');
+      var colors = [
+        'var(--color-accent)',
+        'color-mix(in srgb, var(--color-accent) 70%, white)',
+        'color-mix(in srgb, var(--color-accent) 50%, white)',
+        'var(--color-text-primary)'
+      ];
+      for (var i = 0; i < 12; i++) {
+        var dot = document.createElement('span');
+        dot.className = 'confetti-particle';
+        dot.style.setProperty('--cx', (Math.random() * 40 - 20) + 'px');
+        dot.style.setProperty('--cy', -(Math.random() * 40 + 15) + 'px');
+        dot.style.setProperty('--cr', (Math.random() * 360) + 'deg');
+        dot.style.setProperty('--cd', (Math.random() * 0.4 + 0.8) + 's');
+        dot.style.background = colors[i % colors.length];
+        bar.appendChild(dot);
+      }
+      setTimeout(function() {
+        var particles = bar.querySelectorAll('.confetti-particle');
+        particles.forEach(function(p) { p.remove(); });
+      }, 2000);
+    }
+
+    function updateProgress() {
+      var rect = article.getBoundingClientRect();
+      var scrolled = window.scrollY + window.innerHeight;
+      var articleTop = rect.top + window.scrollY;
+      var progress = Math.min(100, Math.max(0,
+        ((scrolled - articleTop) / rect.height) * 100
+      ));
+      fills.forEach(function(f) { f.style.width = progress + '%'; });
+
+      if (progress >= 100 && !hasCompleted) {
+        hasCompleted = true;
+        document.querySelectorAll('.reading-progress-bar').forEach(function(bar) {
+          spawnConfetti(bar);
+        });
+      }
+
+      ticking = false;
+    }
+
+    progressAbort = new AbortController();
+    window.addEventListener('scroll', function() {
+      if (!ticking) { requestAnimationFrame(updateProgress); ticking = true; }
+    }, { passive: true, signal: progressAbort.signal });
+    updateProgress();
+  }
+
+  document.addEventListener('DOMContentLoaded', initProgressBar);
+  document.addEventListener('astro:page-load', initProgressBar);
+})();
+</script>

@@ -102,6 +102,7 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
                   title={post.title}
                   excerpt={post.excerpt}
                   category={post.category}
+                  readingTimeMin={post.reading_time_min}
                   tags={post.tags}
                   locale="en"
                   isBookmarked={bookmarkedPostIds.has(post.id)}
@@ -128,6 +129,7 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
                   title={post.title}
                   category={post.category}
                   publishedAt={post.published_at}
+                  readingTimeMin={post.reading_time_min}
                   locale="en"
                   isRead={readPostIds.has(post.id)}
                   isBookmarked={bookmarkedPostIds.has(post.id)}
