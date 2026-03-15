@@ -158,17 +158,26 @@
 - **의존성:** HB-COST-01
 
 ### 17. 파이프라인 분리: News Run + Handbook Run `[PIPE-SPLIT-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 뉴스 파이프라인과 용어 추출을 별도 pipeline_runs로 분리
+- **산출물:** `pipeline.py` (run_handbook_extraction), `cron.py` (/handbook-extract), Retry Handbook 버튼
+- **완료 기준:** 뉴스 run 완료 → 용어 run 자동 트리거 + 실패 시 Retry 버튼
+
+### 18. pipeline_logs 기록 안 되는 버그 `[BUG-LOGS-01]`
 - **체크:** [ ]
 - **상태:** todo
-- **목적:** 뉴스 파이프라인과 용어 추출을 별도 pipeline_runs로 분리하여 독립적 성공/실패 추적, 로그 분리, 비용 분리
-- **산출물:** `pipeline.py` (용어 추출을 별도 run으로), `pipeline-runs/index.astro` (News/Handbook 탭)
-- **완료 기준:** 뉴스 run 완료 → 용어 run 자동 트리거 → 각각 독립 run_id + 로그 + 상태
-- **의존성:** HB-COST-01
-- **run_key 규칙:** `news-v2-{batch_id}` (뉴스), `handbook-extract-{batch_id}` (용어)
-- **Resume 요구사항:**
-  - 뉴스 성공 + 용어 실패 → 용어 run만 재실행 (뉴스 비용 재발생 방지)
-  - 뉴스 중간 실패 → 실패 지점부터 재개 (이미 생성된 포스트 보존)
-  - 어드민에서 "Retry Handbook" 버튼으로 용어 run만 재트리거
+- **목적:** `_log_stage()` 호출이 실제로 DB에 기록되지 않는 문제 해결
+- **원인 후보:** RLS 정책 (service role key + auth.uid() 불일치), 또는 호출 자체가 안 됨
+- **확인 방법:** Railway 로그에서 "Failed to log stage" 경고 확인, Supabase RLS 정책 점검
+- **산출물:** pipeline_logs에 스테이지별 로그 정상 기록
+
+### 19. Supabase 마이그레이션 실행 `[DB-MIGRATE-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** term_full, korean_full 컬럼을 프로덕션 DB에 추가
+- **SQL:** `ALTER TABLE handbook_terms ADD COLUMN IF NOT EXISTS term_full text, ADD COLUMN IF NOT EXISTS korean_full text;`
+- **실행 위치:** Supabase 대시보드 SQL Editor
 
 ---
 
@@ -186,8 +195,10 @@ NP2-COLLECT-01 → NP2-RANK-01 → NP2-REACT-01 ─────────┤
 HB-SPLIT-01 ✅ → HB-COST-01 ✅ → HB-ANALYTICS-01 ✅
 HB-MODEL-01 ✅
 
-[Pipeline Split]
-PIPE-SPLIT-01 (다음 세션)
+[Pipeline Split & Fixes]
+PIPE-SPLIT-01 ✅
+BUG-LOGS-01 (미해결)
+DB-MIGRATE-01 (수동 실행 필요)
 ```
 
 ---
