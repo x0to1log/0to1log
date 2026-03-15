@@ -88,3 +88,4 @@ graph TD
 ## Related
 - [[Business-Strategy]] — 상위 비즈니스 전략
 - [[KPI-Gates-&-Stages]] — 그로스 KPI
+- [[Newsletter-&-Email-Strategy]] — RSS/뉴스레터 리텐션 루프 상세

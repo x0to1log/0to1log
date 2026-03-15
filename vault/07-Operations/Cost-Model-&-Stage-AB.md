@@ -149,6 +149,7 @@ Phase마다 인프라 구성이 단계적으로 확장된다 (docs/05 §12).
 ## Related
 - [[Infrastructure-Topology]] — 비용이 발생하는 인프라
 - [[Monitoring-&-Logging]] — 운영 모니터링 및 로그
+- [[Risk-Analysis]] — API 비용 관련 리스크 분석
 
 ## See Also
 - [[Business-Strategy]] — Stage 전환 비즈니스 기준 (06-Business)

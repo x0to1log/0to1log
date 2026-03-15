@@ -160,3 +160,4 @@ FOR INSERT WITH CHECK (
 
 ## Related
 - [[Infrastructure-Topology]] — 보안 대상 인프라
+- [[Legal-&-Compliance]] — 법률/컴플라이언스 정책

@@ -190,3 +190,4 @@ source: docs/04_Frontend_Spec.md
 
 ## See Also
 - [[Frontend-Stack]] — 디자인이 동작하는 프론트엔드 (02-Architecture)
+- [[Brand-Identity]] — 브랜드 정체성과 보이스 (08-Design)

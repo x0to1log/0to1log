@@ -20,8 +20,8 @@ tags:
 | Business | [[Business-Strategy]] — KPI, 그로스, 수익화 |
 | Operations | [[Infrastructure-Topology]] — 인프라, 배포, 비용 |
 | Design | [[Design-System]] — UI 패턴, 레이아웃, 컴포넌트 |
-| Implementation | [[Active-Sprint]] — 스프린트, 체크리스트, Phase 흐름 |
+| Implementation | [[ACTIVE_SPRINT]] — 스프린트, 체크리스트, Phase 흐름 |
 
 ## Quick Access
 
-- [[CURRENT-SPRINT]] — 현재 스프린트 현황
+- [[ACTIVE_SPRINT]] — 현재 스프린트 현황

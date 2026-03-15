@@ -20,8 +20,23 @@
               "icon": "lucide-file",
               "title": "Target-Audience"
             }
+          },
+          {
+            "id": "de1bf9374022d3d2",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "09-Implementation/plans/ACTIVE_SPRINT.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "ACTIVE_SPRINT"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -94,7 +109,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "01-Core/Target-Audience.md",
+                "file": "09-Implementation/plans/ACTIVE_SPRINT.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +119,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Target-Audience 의 백링크"
+              "title": "ACTIVE_SPRINT 의 백링크"
             }
           },
           {
@@ -113,12 +128,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "01-Core/Target-Audience.md",
+                "file": "09-Implementation/plans/ACTIVE_SPRINT.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Target-Audience 의 나가는 링크"
+              "title": "ACTIVE_SPRINT 의 나가는 링크"
             }
           },
           {
@@ -156,13 +171,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "01-Core/Target-Audience.md",
+                "file": "09-Implementation/plans/ACTIVE_SPRINT.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Target-Audience 의 개요"
+              "title": "ACTIVE_SPRINT 의 개요"
             }
           }
         ]
@@ -183,43 +198,43 @@
       "bases:새 베이스 생성하기": false
     }
   },
-  "active": "12f00e3cdaab8ef1",
+  "active": "de1bf9374022d3d2",
   "lastOpenFiles": [
-    "04-AI-System/AI-News-Pipeline-Operations.md.tmp.25368.1773564650257",
-    "04-AI-System/AI-News-Pipeline-Design.md.tmp.25368.1773564620218",
-    "VAULT_RULES.md",
-    "VAULT_RULES.md.tmp.22624.1773563230769",
-    "05-Content/AI-Products-Categories.md.tmp.22624.1773563099097",
-    "03-Features/MyLibrary.md.tmp.22624.1773562744712",
-    "04-AI-System/AI-Handbook-Pipeline-Overview.md.tmp.22624.1773562714973",
-    "04-AI-System/AI-News-Pipeline-Design.md.tmp.22624.1773562710982",
-    "00-Root/_migration-log.md.tmp.22624.1773562127440",
-    "09-Implementation/plans/2026-03-11-security-hardening.md.tmp.22624.1773561979491",
-    "09-Implementation/plans/2026-03-08-admin-ui-redesign-plan.md.tmp.22624.1773561947980",
-    "04-AI-System/AI-News-Pipeline-Operations.md",
-    "00-Root/00-INDEX.md",
-    "09-Implementation/plans/2026-03-10-phase3-intelligence-design.md.tmp.22624.1773560038363",
-    "90-Archive/2026-03/99-Reference-_MOC.md",
-    "90-Archive/2026-03/12-Journal-Decisions-_MOC.md",
-    "90-Archive/2026-03/11-Analytics-Research-_MOC.md",
-    "90-Archive/2026-03/09-Implementation-_MOC.md",
-    "90-Archive/2026-03/08-Design-_MOC.md",
-    "90-Archive/2026-03/07-Operations-_MOC.md",
-    "90-Archive/2026-03/06-Business-_MOC.md",
-    "90-Archive/2026-03/05-Content-_MOC.md",
-    "90-Archive/2026-03/04-AI-System-_MOC.md",
-    "90-Archive/2026-03/03-Features-_MOC.md",
-    "90-Archive/2026-03/02-Architecture-_MOC.md",
-    "90-Archive/2026-03/01-Core-_MOC.md",
-    "07-Operations/Pipeline-Stage-Logging-Schema.md",
-    "04-AI-System/AI-News-Feature-Design.md",
-    "04-AI-System/AI-News-Pipeline-Design.md",
-    "04-AI-System/AI-News-Content-Structure.md",
-    "08-Design/Animations-&-Transitions.md",
-    "08-Design/AI-Products-Page-Layouts.md",
+    "07-Operations/Handbook-Blog-AI-Cost-Tracking.md.tmp.25368.1773591422258",
+    "00-Root/CURRENT-SPRINT.md",
+    "06-Business/Competitive-Analysis.md",
+    "06-Business/KPI-Gates-&-Stages.md",
+    "09-Implementation/Phase-Flow.md",
     "09-Implementation/Implementation-Plan.md",
-    "09-Implementation/plans/2026-03-15-category-nav-mobile-impl.md",
-    "09-Implementation/plans/2026-03-15-category-nav-mobile-design.md",
-    "09-Implementation/plans/2026-03-15-news-pipeline-v2-impl.md"
+    "09-Implementation/Checklists-&-DoD.md",
+    "09-Implementation/plans/ACTIVE_SPRINT.md",
+    "00-Root/Structure_example.md",
+    "09-Implementation/plans/ACTIVE_SPRINT_HANDBOOK.md",
+    "90-Archive/2026-03/DONE_SPRINT_HANDBOOK_H1.md",
+    "08-Design/Design-System.md.tmp.73136.1773585394013",
+    "06-Business/Growth-Loop-&-Viral.md.tmp.73136.1773585388021",
+    "06-Business/Partnership-&-B2B.md",
+    "08-Design/Brand-Identity.md",
+    "07-Operations/Risk-Analysis.md.tmp.73136.1773584492909",
+    "07-Operations/Risk-Analysis.md",
+    "09-Implementation/plans/2026-03-15-news-pipeline-v2-impl.md",
+    "06-Business/Newsletter-&-Email-Strategy.md",
+    "06-Business/Business-Strategy.md",
+    "07-Operations/Legal-&-Compliance.md.tmp.73136.1773583574065",
+    "09-Implementation/plans/2026-03-15-factcheck-impl.md",
+    "07-Operations/Legal-&-Compliance.md",
+    "09-Implementation/plans/2026-03-15-factcheck-design.md",
+    "00-Root/00-INDEX.md",
+    "04-AI-System/AI-News-Pipeline-Design.md",
+    "00-Root/_migration-log.md",
+    "09-Implementation/Active-Sprint.md",
+    "04-AI-System/Handbook-Prompt-Redesign.md",
+    "09-Implementation/plans/ACTIVE_SPRINT.md.tmp.25368.1773574025466",
+    "09-Implementation/plans/ACTIVE_SPRINT.md.tmp.25368.1773574013924",
+    "09-Implementation/plans/ACTIVE_SPRINT.md.tmp.25368.1773573837875",
+    "07-Operations/Handbook-Blog-AI-Cost-Tracking.md.tmp.25368.1773573744776",
+    "04-AI-System/Handbook-Prompt-Redesign.md.tmp.25368.1773573719339",
+    "09-Implementation/plans/2026-03-15-handbook-quality-design.md.tmp.25368.1773573127851",
+    "01-Core/Target-Audience.md"
   ]
 }
