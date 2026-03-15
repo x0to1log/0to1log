@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from datetime import date, datetime, timedelta
+from typing import Any
 
 from tavily import TavilyClient
 
@@ -26,21 +27,22 @@ BACKFILL_QUERIES = [
 async def collect_news(
     max_results_per_query: int = 10,
     target_date: str | None = None,
-) -> list[NewsCandidate]:
-    """Collect AI news candidates from Tavily. Returns deduplicated list.
+) -> tuple[list[NewsCandidate], dict[str, Any]]:
+    """Collect AI news candidates from Tavily.
 
+    Returns (deduplicated candidates list, collection metadata dict).
     Args:
         target_date: "YYYY-MM-DD" string for backfill, or None for today.
     """
     if not settings.tavily_api_key:
         logger.warning("Tavily API key not configured, skipping collection")
-        return []
+        return [], {}
 
     try:
         tavily = TavilyClient(api_key=settings.tavily_api_key)
     except Exception as e:
         logger.error("Failed to create Tavily client: %s", e)
-        return []
+        return [], {}
 
     # Determine date params and query set
     is_backfill = False
@@ -103,7 +105,15 @@ async def collect_news(
         len(candidates),
         len(all_results),
     )
-    return candidates
+
+    meta: dict[str, Any] = {
+        "is_backfill": is_backfill,
+        "queries": list(queries),
+        "date_kwargs": date_kwargs,
+        "total_results": len(all_results),
+        "unique_candidates": len(candidates),
+    }
+    return candidates, meta
 
 
 async def collect_community_reactions(title: str, url: str) -> str:

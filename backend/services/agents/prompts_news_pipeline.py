@@ -32,6 +32,7 @@ Extract a structured JSON "FactPack" that will be used by writers to create arti
 ```json
 {
   "headline": "Clear, factual one-line headline (English)",
+  "headline_ko": "명확하고 사실 기반의 한 줄 헤드라인 (한국어)",
   "key_facts": [
     {"id": "f1", "claim": "Specific factual claim", "why_it_matters": "Why this matters", "source_ids": ["s1"], "confidence": "high|medium|low"}
   ],
@@ -54,6 +55,7 @@ Extract a structured JSON "FactPack" that will be used by writers to create arti
 3. Extract ALL concrete numbers (dollars, percentages, dates, counts)
 4. community_summary should be 2-3 sentences summarizing public reaction sentiment
 5. headline must be factual, not clickbait
+7. headline_ko must be a natural Korean translation of the headline, not a literal word-by-word translation
 6. Source IDs must be unique strings like "s1", "s2", etc."""
 
 
@@ -95,17 +97,18 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 
 
 EXPERT_SECTIONS = """- **## 핵심 요약 / ## Executive Summary** — 3-line executive summary for busy decision-makers
+- **## 뉴스 상세 / ## The Story** — Full story: what happened, who is involved, background context, timeline of events. Be thorough — this is the core of the article. Minimum 3 paragraphs.
 - **## 기술 심층 분석 / ## Technical Deep Dive** — Architecture, benchmarks, diffs vs. prior work. Concrete numbers required.
-- **## 시장 & 경쟁 분석 / ## Market & Competitive Analysis** — Who wins/loses, investment signals, regulatory changes
-- **## 전략적 시사점 / ## Strategic Implications** — Build/buy/wait decision, migration path, 6-month outlook"""
+- **## 시장 영향 & 전망 / ## Market Impact & Outlook** — Who wins/loses, investment signals, competitive landscape, 6-month outlook"""
 
-LEARNER_SECTIONS = """- **## 무슨 일이 있었나 / ## What Happened** — Who did what, why, with background context
+LEARNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — This news in one sentence
+- **## 뉴스 상세 / ## The Story** — Full story with background context. Explain who did what, when, why, and how. Include relevant history and precedents. Minimum 3 paragraphs.
 - **## 기술 해부 / ## Technical Breakdown** — How it works. Code snippets and comparison tables welcome.
 - **## 실무 적용 / ## Practical Applications** — "How does this affect my work?" for developers/PMs
 - **## 참고 자료 / ## References** — Official docs, tutorials, GitHub repos"""
 
 BEGINNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — This news in one sentence
-- **## 무슨 일이 있었나 / ## What Happened** — Explanation accessible without prior knowledge. Use Handbook links liberally.
+- **## 뉴스 상세 / ## The Story** — Full story explained for someone with no AI background. Use simple language, analogies, and Handbook links. Minimum 3 paragraphs.
 - **## 왜 중요한가 / ## Why It Matters** — Impact on daily life, society, jobs
 - **## 알아두면 좋은 것 / ## Good to Know** — Basic concepts to understand this topic. Link to Handbook."""
 

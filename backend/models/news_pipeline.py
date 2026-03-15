@@ -60,6 +60,7 @@ class FactSource(BaseModel):
 class FactPack(BaseModel):
     """Structured facts extracted from a news article + community reactions."""
     headline: str
+    headline_ko: str = ""
     key_facts: list[FactClaim] = []
     numbers: list[FactNumber] = []
     entities: list[FactEntity] = []

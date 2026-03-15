@@ -32,11 +32,13 @@ async def test_collect_news_returns_candidates():
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
-        candidates = await collect_news()
+        candidates, meta = await collect_news()
 
     assert len(candidates) == 2
     assert candidates[0].title == "GPT-5 Released by OpenAI"
     assert candidates[0].url == "https://openai.com/blog/gpt-5"
+    assert meta["is_backfill"] is False
+    assert meta["unique_candidates"] == 2
     mock_tavily.search.assert_called()
 
 
@@ -57,9 +59,11 @@ async def test_collect_news_deduplicates_urls():
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
-        candidates = await collect_news()
+        candidates, meta = await collect_news()
 
     assert len(candidates) == 2
+    assert meta["total_results"] == 9  # 3 results × 3 queries
+    assert meta["unique_candidates"] == 2
 
 
 @pytest.mark.asyncio
@@ -68,9 +72,10 @@ async def test_collect_news_no_api_key_returns_empty():
         mock_settings.tavily_api_key = ""
 
         from services.news_collection import collect_news
-        candidates = await collect_news()
+        candidates, meta = await collect_news()
 
     assert candidates == []
+    assert meta == {}
 
 
 @pytest.mark.asyncio
@@ -83,9 +88,10 @@ async def test_collect_news_api_error_returns_empty():
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
-        candidates = await collect_news()
+        candidates, meta = await collect_news()
 
     assert candidates == []
+    assert meta["unique_candidates"] == 0
 
 
 TAVILY_REACTION_RESPONSE = {

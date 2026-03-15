@@ -17,6 +17,14 @@ SAMPLE_CANDIDATES = [
     NewsCandidate(title="AI Fund", url="https://b.com/2", snippet="$500M raised", source="tavily"),
 ]
 
+SAMPLE_COLLECT_META = {
+    "is_backfill": False,
+    "queries": ["latest AI artificial intelligence news today"],
+    "date_kwargs": {"days": 2},
+    "total_results": 2,
+    "unique_candidates": 2,
+}
+
 SAMPLE_RANKING = RankingResult(
     research=RankedCandidate(
         title="GPT-5", url="https://a.com/1", snippet="Model release",
@@ -36,11 +44,7 @@ SAMPLE_FACT_PACK = FactPack.model_validate({
     "community_summary": "Positive reactions.",
 })
 
-SAMPLE_PERSONAS = {
-    "expert": PersonaOutput(en="Expert EN content " + "x" * 3000, ko="Expert KO content " + "가" * 3000),
-    "learner": PersonaOutput(en="Learner EN content " + "y" * 3000, ko="Learner KO content " + "나" * 3000),
-    "beginner": PersonaOutput(en="Beginner EN content " + "z" * 3000, ko="Beginner KO content " + "다" * 3000),
-}
+SAMPLE_PERSONA = PersonaOutput(en="Expert EN content " + "x" * 3000, ko="Expert KO content " + "가" * 3000)
 
 EMPTY_USAGE = {"model_used": "gpt-4o", "input_tokens": 0, "output_tokens": 0, "tokens_used": 0, "cost_usd": 0.0}
 
@@ -63,11 +67,11 @@ async def test_run_daily_pipeline_happy_path():
     mock_sb = _mock_supabase()
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
-         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=SAMPLE_CANDIDATES), \
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
          patch("services.pipeline.rank_candidates", new_callable=AsyncMock, return_value=(SAMPLE_RANKING, EMPTY_USAGE)), \
          patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="Reactions text"), \
          patch("services.pipeline.extract_facts", new_callable=AsyncMock, return_value=(SAMPLE_FACT_PACK, EMPTY_USAGE)), \
-         patch("services.pipeline.write_all_personas", new_callable=AsyncMock, return_value=(SAMPLE_PERSONAS, EMPTY_USAGE)):
+         patch("services.pipeline.write_persona", new_callable=AsyncMock, return_value=(SAMPLE_PERSONA, EMPTY_USAGE)):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
@@ -87,11 +91,11 @@ async def test_pipeline_no_research_creates_2_posts():
     mock_sb = _mock_supabase()
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
-         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=SAMPLE_CANDIDATES), \
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
          patch("services.pipeline.rank_candidates", new_callable=AsyncMock, return_value=(ranking_no_research, EMPTY_USAGE)), \
          patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="Reactions"), \
          patch("services.pipeline.extract_facts", new_callable=AsyncMock, return_value=(SAMPLE_FACT_PACK, EMPTY_USAGE)), \
-         patch("services.pipeline.write_all_personas", new_callable=AsyncMock, return_value=(SAMPLE_PERSONAS, EMPTY_USAGE)):
+         patch("services.pipeline.write_persona", new_callable=AsyncMock, return_value=(SAMPLE_PERSONA, EMPTY_USAGE)):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
@@ -105,7 +109,7 @@ async def test_pipeline_no_candidates_returns_zero_posts():
     mock_sb = _mock_supabase()
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
-         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=[]):
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=([], {})):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
@@ -130,11 +134,11 @@ async def test_pipeline_fact_extraction_failure_continues():
         return SAMPLE_FACT_PACK, EMPTY_USAGE
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
-         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=SAMPLE_CANDIDATES), \
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
          patch("services.pipeline.rank_candidates", new_callable=AsyncMock, return_value=(SAMPLE_RANKING, EMPTY_USAGE)), \
          patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="Reactions"), \
          patch("services.pipeline.extract_facts", side_effect=_mock_extract), \
-         patch("services.pipeline.write_all_personas", new_callable=AsyncMock, return_value=(SAMPLE_PERSONAS, EMPTY_USAGE)):
+         patch("services.pipeline.write_persona", new_callable=AsyncMock, return_value=(SAMPLE_PERSONA, EMPTY_USAGE)):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
