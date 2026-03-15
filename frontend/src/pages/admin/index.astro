@@ -148,8 +148,16 @@ try {
   notifications = (notifsRes.data ?? []) as Notification[];
 } catch {}
 
-const showRetryHandbook = lastHandbookRun?.status === 'failed';
-const retryBatchId = lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '';
+// Show Retry Handbook when:
+// 1. Last handbook-extract run failed, OR
+// 2. Last news run succeeded but no handbook-extract run exists for that batch
+const lastNewsBatchId = lastRun?.run_key?.replace('news-v2-', '') ?? '';
+const handbookFailed = lastHandbookRun?.status === 'failed';
+const newsSucceededNoHandbook = lastRun?.status === 'success' && lastNewsBatchId && !lastHandbookRun;
+const showRetryHandbook = handbookFailed || newsSucceededNoHandbook;
+const retryBatchId = handbookFailed
+  ? (lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '')
+  : lastNewsBatchId;
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
