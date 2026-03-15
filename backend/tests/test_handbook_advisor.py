@@ -244,13 +244,15 @@ async def test_extract_terms_returns_list():
     with patch("services.agents.advisor.get_openai_client", return_value=mock_client):
         from services.agents.advisor import extract_terms_from_content
 
-        terms, model, tokens = await extract_terms_from_content(
+        terms, usage = await extract_terms_from_content(
             "Transformers use attention mechanisms for parallel processing..."
         )
 
     assert len(terms) == 2
     assert terms[0]["term"] == "Transformer"
     assert terms[1]["term"] == "Attention"
+    assert "tokens_used" in usage
+    assert "cost_usd" in usage
 
 
 # ---------------------------------------------------------------------------

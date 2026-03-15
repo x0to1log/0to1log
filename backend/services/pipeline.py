@@ -102,6 +102,87 @@ def _trim(text: str | None, max_len: int = 1000) -> str:
     return text[:max_len] + ("..." if len(text) > max_len else "")
 
 
+def check_existing_batch(batch_id: str) -> dict[str, Any] | None:
+    """Check if data already exists for a batch_id.
+
+    Returns info dict if data exists, None otherwise.
+    """
+    supabase = get_supabase()
+    if not supabase:
+        return None
+
+    run_key = f"news-v2-{batch_id}"
+    runs = supabase.table("pipeline_runs").select("id, status, started_at").eq("run_key", run_key).execute()
+    posts = supabase.table("news_posts").select("id, status").eq("pipeline_batch_id", batch_id).execute()
+
+    run_data = runs.data or []
+    post_data = posts.data or []
+
+    if not run_data and not post_data:
+        return None
+
+    published_count = sum(1 for p in post_data if p.get("status") == "published")
+    last_run = run_data[0] if run_data else None
+
+    return {
+        "run_count": len(run_data),
+        "post_count": len(post_data),
+        "published_count": published_count,
+        "last_status": last_run.get("status") if last_run else None,
+        "last_run_at": last_run.get("started_at") if last_run else None,
+    }
+
+
+def cleanup_existing_batch(batch_id: str) -> dict[str, int]:
+    """Delete existing pipeline data for a batch_id.
+
+    Raises ValueError if published posts exist.
+    Returns cleanup summary.
+    """
+    supabase = get_supabase()
+    if not supabase:
+        return {"deleted_runs": 0, "deleted_logs": 0, "deleted_posts": 0}
+
+    run_key = f"news-v2-{batch_id}"
+
+    # Check for published posts first
+    published = (
+        supabase.table("news_posts")
+        .select("id")
+        .eq("pipeline_batch_id", batch_id)
+        .eq("status", "published")
+        .execute()
+    )
+    if published.data:
+        raise ValueError(
+            f"{len(published.data)} published posts exist for {batch_id} — cannot overwrite"
+        )
+
+    # Get run IDs for log cleanup
+    runs = supabase.table("pipeline_runs").select("id").eq("run_key", run_key).execute()
+    run_ids = [r["id"] for r in (runs.data or [])]
+
+    # Delete pipeline_logs first (no ON DELETE CASCADE)
+    deleted_logs = 0
+    for rid in run_ids:
+        result = supabase.table("pipeline_logs").delete().eq("run_id", rid).execute()
+        deleted_logs += len(result.data or [])
+
+    # Delete pipeline_runs (pipeline_artifacts has ON DELETE CASCADE)
+    if run_ids:
+        supabase.table("pipeline_runs").delete().eq("run_key", run_key).execute()
+
+    # Delete news_posts
+    posts = supabase.table("news_posts").delete().eq("pipeline_batch_id", batch_id).execute()
+    deleted_posts = len(posts.data or [])
+
+    logger.info(
+        "Cleaned up batch %s: %d runs, %d logs, %d posts",
+        batch_id, len(run_ids), deleted_logs, deleted_posts,
+    )
+    return {"deleted_runs": len(run_ids), "deleted_logs": deleted_logs, "deleted_posts": deleted_posts}
+
+
 async def _extract_and_create_handbook_terms(
     article_texts: list[str],
     supabase,
@@ -122,7 +203,7 @@ async def _extract_and_create_handbook_terms(
     # Step 1: Extract terms
     t0 = time.monotonic()
     try:
-        extracted, extract_model, extract_tokens = await extract_terms_from_content(combined)
+        extracted, extract_usage = await extract_terms_from_content(combined)
     except Exception as e:
         logger.warning("Handbook term extraction failed: %s", e)
         await _log_stage(
@@ -135,10 +216,9 @@ async def _extract_and_create_handbook_terms(
         supabase, run_id, "handbook.extract", "success", t0,
         input_summary=f"{len(article_texts)} articles, {len(combined)} chars",
         output_summary=f"{len(extracted)} terms extracted",
+        usage=extract_usage,
         debug_meta={
             "terms": [t.get("term", "") for t in extracted],
-            "model": extract_model,
-            "tokens": extract_tokens,
         },
     )
 
@@ -175,7 +255,7 @@ async def _extract_and_create_handbook_terms(
         # Generate content (2 LLM calls)
         t_gen = time.monotonic()
         try:
-            content_data, gen_model, gen_tokens = await generate_term_content(
+            content_data, gen_usage = await generate_term_content(
                 term_name, korean_name,
             )
         except Exception as e:
@@ -214,11 +294,10 @@ async def _extract_and_create_handbook_terms(
             await _log_stage(
                 supabase, run_id, "handbook.auto_generate", "success", t_gen,
                 output_summary=f"term={term_name}, slug={slug}",
+                usage=gen_usage,
                 debug_meta={
                     "term": term_name,
                     "slug": slug,
-                    "model": gen_model,
-                    "tokens": gen_tokens,
                 },
             )
         except Exception as e:

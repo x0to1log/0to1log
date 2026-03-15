@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 from core.security import verify_cron_secret
-from services.pipeline import run_daily_pipeline
+from services.pipeline import check_existing_batch, cleanup_existing_batch, run_daily_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 class PipelineTriggerBody(BaseModel):
     mode: str = "resume"
     target_date: Optional[str] = None
+    force: bool = False
 
 
 @router.post("/news-pipeline", status_code=202)
@@ -30,6 +31,7 @@ async def trigger_news_pipeline(
 ):
     """Trigger the daily AI news pipeline. Returns 202 immediately."""
     target_date = body.target_date if body else None
+    force = body.force if body else False
 
     if target_date:
         if not _DATE_RE.match(target_date):
@@ -42,6 +44,36 @@ async def trigger_news_pipeline(
             raise HTTPException(400, "target_date cannot be in the future")
 
     batch_id = target_date or date.today().isoformat()
+
+    # Check for existing data
+    existing = check_existing_batch(batch_id)
+    if existing:
+        if existing["published_count"] > 0:
+            raise HTTPException(422, {
+                "error": "published_protected",
+                "batch_id": batch_id,
+                "published_count": existing["published_count"],
+                "message": (
+                    f"Cannot overwrite: {existing['published_count']} published "
+                    f"posts exist for {batch_id}."
+                ),
+            })
+        if not force:
+            raise HTTPException(409, {
+                "error": "batch_exists",
+                "batch_id": batch_id,
+                "existing": existing,
+                "message": (
+                    f"Data already exists for {batch_id}. "
+                    f"Use force=true to overwrite."
+                ),
+            })
+        # force=True: clean up existing data
+        try:
+            cleanup = cleanup_existing_batch(batch_id)
+            logger.info("Force cleanup for %s: %s", batch_id, cleanup)
+        except ValueError as e:
+            raise HTTPException(422, {"error": "published_protected", "message": str(e)})
 
     async def _run():
         try:

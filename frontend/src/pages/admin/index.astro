@@ -819,6 +819,24 @@ function relativeTime(dateStr: string): string {
     };
     const dateInput = document.getElementById('pipeline-target-date') as HTMLInputElement | null;
 
+    async function firePipelineRequest(
+      mode: string,
+      targetDate: string | null,
+      force: boolean,
+    ): Promise<{ res: Response; payload: any }> {
+      const reqBody: Record<string, unknown> = { mode };
+      if (targetDate) reqBody.target_date = targetDate;
+      if (force) reqBody.force = true;
+      const res = await fetch('/api/admin/run-pipeline', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqBody),
+      });
+      const payload = await res.json().catch(() => null);
+      return { res, payload };
+    }
+
     const bindPipelineButton = (
       button: HTMLElement | null,
       idleLabel: string,
@@ -833,17 +851,30 @@ function relativeTime(dateStr: string): string {
         setPipelineFeedback('');
         const targetDate = dateInput?.value || null;
         try {
-          const reqBody: Record<string, string> = { mode };
-          if (targetDate) reqBody.target_date = targetDate;
-          const res = await fetch('/api/admin/run-pipeline', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(reqBody),
-          });
-          const payload = await res.json().catch(() => null);
+          let { res, payload } = await firePipelineRequest(mode, targetDate, false);
+
+          // Handle duplicate batch — ask user to confirm overwrite
+          if (res.status === 409) {
+            const detail = payload?.data?.detail || payload?.detail || payload;
+            const existing = detail?.existing || {};
+            const msg = `${detail?.batch_id || targetDate || 'today'} already has data:\n`
+              + `${existing.post_count ?? '?'} posts, ${existing.run_count ?? '?'} pipeline runs.\n\n`
+              + `Overwrite existing data?`;
+            if (!window.confirm(msg)) {
+              button.textContent = idleLabel;
+              setPipelineFeedback('Cancelled — existing data kept.', 'error');
+              return;
+            }
+            // Retry with force=true
+            ({ res, payload } = await firePipelineRequest(mode, targetDate, true));
+          }
+
+          // Handle published protection
+          if (res.status === 422) {
+            const detail = payload?.data?.detail || payload?.detail || payload;
+            throw new Error(detail?.message || 'Cannot overwrite: published posts exist.');
+          }
+
           if (!res.ok) {
             let message = payload?.error || `HTTP ${res.status}`;
             if (res.status === 401) message = payload?.error || 'Unauthorized';
