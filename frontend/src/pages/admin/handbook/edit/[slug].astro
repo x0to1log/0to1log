@@ -290,11 +290,11 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             </div>
             <div class="hb-ai-group">
               <span class="hb-ai-group__label">Quality</span>
-              <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="Quick accuracy check on claims and facts in the content">
-                Quick Check
+              <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="LLM이 작성된 콘텐츠의 기술적 정확성을 자체 검증합니다">
+                Quick Check<span class="ai-btn-model">gpt-4o</span>
               </button>
-              <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button" title="In-depth verification with source citations for each claim">
-                Deep Verify
+              <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button" title="LLM이 팩트를 추출하고 Tavily로 웹 검색하여 근거를 확인합니다">
+                Deep Verify<span class="ai-btn-model">gpt-4o + Tavily</span>
               </button>
             </div>
             <div class="hb-ai-group">
@@ -513,6 +513,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   .admin-ai-panel-toggle:focus-visible {
     outline: 2px solid var(--color-accent, #3b82f6);
     outline-offset: 2px;
+  }
+
+  /* Prevent layout shift when AI content is applied to editors */
+  .admin-editor-wrapper--handbook :global(.ProseMirror),
+  .admin-editor-wrapper--handbook :global(.milkdown) {
+    min-height: 200px;
+    transition: min-height 0.3s ease;
   }
 
 </style>

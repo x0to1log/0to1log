@@ -165,8 +165,26 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             />
           </div>
 
+          <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem">
+            <div style="flex:1">
+              <label class="admin-label" for="edit-locale">Locale</label>
+              <select id="edit-locale" class="admin-select" style="width:100%;">
+                <option value="en" selected={!post?.locale || post?.locale === 'en'}>EN</option>
+                <option value="ko" selected={post?.locale === 'ko'}>KO</option>
+              </select>
+            </div>
+            <div style="flex:1">
+              <label class="admin-label" for="edit-post-type">Post Type</label>
+              <select id="edit-post-type" class="admin-select" style="width:100%;">
+                <option value="" selected={!post?.post_type}>—</option>
+                <option value="research" selected={post?.post_type === 'research'}>Research</option>
+                <option value="business" selected={post?.post_type === 'business'}>Business</option>
+              </select>
+            </div>
+          </div>
+
           <details class="admin-details">
-            <summary>More fields (Slug, Excerpt, Post Type...)</summary>
+            <summary>More fields (Slug, Excerpt...)</summary>
             <div class="admin-details-body">
               <div class="admin-editor-meta-row">
                 <label class="admin-field-label" for="edit-slug">Slug</label>
@@ -177,21 +195,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 <label class="admin-field-label" for="edit-excerpt">Excerpt</label>
                 <textarea id="edit-excerpt" class="admin-input" rows="2" style="flex:1;"
                   placeholder="Brief summary for list pages and SEO...">{post?.excerpt || ''}</textarea>
-              </div>
-              <div class="admin-editor-meta-row">
-                <label class="admin-field-label" for="edit-post-type">Post Type</label>
-                <select id="edit-post-type" class="admin-select" style="width:auto;">
-                  <option value="" selected={!post?.post_type}>—</option>
-                  <option value="research" selected={post?.post_type === 'research'}>Research</option>
-                  <option value="business" selected={post?.post_type === 'business'}>Business</option>
-                </select>
-              </div>
-              <div class="admin-editor-meta-row">
-                <label class="admin-field-label" for="edit-locale">Locale</label>
-                <select id="edit-locale" class="admin-select" style="width:auto;">
-                  <option value="en" selected={!post?.locale || post?.locale === 'en'}>EN</option>
-                  <option value="ko" selected={post?.locale === 'ko'}>KO</option>
-                </select>
               </div>
               <div class="admin-editor-meta-row">
                 <label class="admin-field-label" for="edit-focus-items">Focus Items</label>
