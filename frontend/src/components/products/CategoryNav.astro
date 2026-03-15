@@ -38,6 +38,7 @@ const tr = t[locale];
       tabs.forEach((tab) => {
         const isActive = tab.dataset.category === categoryId;
         tab.classList.toggle('active', isActive);
+        if (isActive) tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       });
     };
 

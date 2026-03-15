@@ -8,9 +8,10 @@ interface Props {
   platform: string[] | null;
   koreanSupport: boolean;
   locale: 'en' | 'ko';
+  searchText?: string;
 }
 
-const { href, name, tagline, logoUrl, pricing, platform, koreanSupport, locale } = Astro.props;
+const { href, name, tagline, logoUrl, pricing, platform, koreanSupport, locale, searchText } = Astro.props;
 
 const platformLabels: Record<string, string> = {
   web: 'Web',
@@ -28,7 +29,7 @@ const pricingLabel: Record<string, string> = {
 };
 ---
 
-<a href={href} class="product-card">
+<a href={href} class="product-card" data-search-text={searchText}>
   <div class="product-card-header">
     {logoUrl
       ? <img src={logoUrl} alt={name} class="product-card-logo" width="40" height="40" loading="lazy" />

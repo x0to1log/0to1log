@@ -22,7 +22,27 @@ const { categories, featuredProducts, productsByCategory, error } = await getPro
 
     <ProductHero products={featuredProducts} locale={locale} />
 
-    <CategoryNav categories={categories} locale={locale} />
+    <div class="product-sticky-toolbar">
+      <div class="product-search-bar">
+        <input
+          type="search"
+          id="product-search"
+          class="handbook-search-input"
+          placeholder={t.ko['products.searchPlaceholder']}
+          aria-label={t.ko['products.searchPlaceholder']}
+          autocomplete="off"
+          data-placeholder-hints={JSON.stringify([
+            'ChatGPT, Claude, Gemini...',
+            '이미지 생성 도구는?',
+            '무료로 쓸 수 있는 AI는?',
+            '코딩 도구 찾기',
+            '영상 만드는 AI는?',
+            '한국어 지원 AI 도구',
+          ])}
+        />
+      </div>
+      <CategoryNav categories={categories} locale={locale} />
+    </div>
 
     {categories.map((cat) => (
       <CategorySection
@@ -32,8 +52,69 @@ const { categories, featuredProducts, productsByCategory, error } = await getPro
       />
     ))}
 
+    <p id="product-search-no-results" class="products-search-no-results" hidden>
+      {t.ko['products.searchNoResults']}
+    </p>
+
     {categories.length === 0 && !error && (
       <p class="products-empty">{t.ko['products.empty']}</p>
     )}
+
+    <section class="product-outro">
+      <h2 class="product-outro-title">{t.ko['products.outroTitle']}</h2>
+      <p class="product-outro-body">{t.ko['products.outroBody']}</p>
+      <p class="product-outro-cta">{t.ko['products.outroCta']}</p>
+    </section>
   </div>
 </MainLayout>
+
+<script>
+  import '../../../scripts/handbookSearchHints';
+
+  const input = document.getElementById('product-search') as HTMLInputElement | null;
+  const noResults = document.getElementById('product-search-no-results');
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card'));
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('.product-category-section'));
+
+  function applyFilter(query: string) {
+    const q = query.trim().toLowerCase();
+
+    if (!q) {
+      cards.forEach((c) => c.removeAttribute('hidden'));
+      sections.forEach((s) => s.removeAttribute('hidden'));
+      if (noResults) noResults.setAttribute('hidden', '');
+      return;
+    }
+
+    let totalVisible = 0;
+    sections.forEach((section) => {
+      const sectionCards = section.querySelectorAll<HTMLElement>('.product-card');
+      let visible = 0;
+      sectionCards.forEach((card) => {
+        const text = card.dataset.searchText ?? '';
+        const matched = text.includes(q);
+        if (matched) { card.removeAttribute('hidden'); visible++; totalVisible++; }
+        else card.setAttribute('hidden', '');
+      });
+      if (visible === 0) section.setAttribute('hidden', '');
+      else section.removeAttribute('hidden');
+    });
+
+    if (noResults) {
+      if (totalVisible === 0) noResults.removeAttribute('hidden');
+      else noResults.setAttribute('hidden', '');
+    }
+  }
+
+  if (input) {
+    input.addEventListener('input', () => {
+      const q = input.value;
+      history.replaceState(null, '', q ? `?q=${encodeURIComponent(q)}` : location.pathname);
+      applyFilter(q);
+    });
+
+    // Initialize from URL
+    const urlQ = new URLSearchParams(location.search).get('q') ?? '';
+    if (urlQ) { input.value = urlQ; applyFilter(urlQ); }
+  }
+</script>
