@@ -102,13 +102,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             )}
           </div>
           <div class="admin-editor-topbar-right">
-            <button id="btn-save" class="admin-btn">Save</button>
-            <button id="btn-preview" class="admin-btn">Preview</button>
-            <button id="btn-publish" class="admin-btn admin-btn-primary">Publish</button>
             <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
-            {term && (
-              <button id="btn-delete" class="admin-btn-danger">Delete</button>
-            )}
           </div>
         </div>
 
@@ -119,13 +113,19 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
           {/* Term (always visible) */}
           <div class="admin-field">
-            <label>Term (English) *</label>
-            <input type="text" name="term" class="admin-input" value={term?.term || ''} required />
+            <label for="field-term">Term (English) *</label>
+            <input type="text" name="term" id="field-term" class="admin-input" value={term?.term || ''} required />
+          </div>
+
+          {/* Korean Name (always visible) */}
+          <div class="admin-field">
+            <label for="field-korean-name">Korean Name *</label>
+            <input type="text" name="korean_name" id="field-korean-name" class="admin-input" value={term?.korean_name || ''} />
           </div>
 
           {/* Categories (always visible) */}
           <div class="admin-field">
-            <label>Categories (1–4) *</label>
+            <label>Categories (1-4) *</label>
             <div class="admin-category-grid">
               {categories.map((cat) => (
                 <label class="admin-category-check">
@@ -138,24 +138,20 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           </div>
 
           {/* Collapsible secondary fields */}
-          <details class="admin-details">
-            <summary>More fields (Slug, Korean Name, Related Terms...)</summary>
+          <details class="admin-details" id="meta-details">
+            <summary id="meta-details-summary">More fields <span class="hb-meta-filled-count" id="meta-filled-count"></span></summary>
             <div class="admin-details-body">
               <div class="admin-field">
-                <label>Slug</label>
-                <input type="text" name="slug" class="admin-input" value={term?.slug || ''} placeholder="auto-generated from term" />
+                <label for="field-slug">Slug</label>
+                <input type="text" name="slug" id="field-slug" class="admin-input" value={term?.slug || ''} placeholder="auto-generated from term" />
               </div>
               <div class="admin-field">
-                <label>Korean Name</label>
-                <input type="text" name="korean_name" class="admin-input" value={term?.korean_name || ''} />
+                <label for="field-term-full">Full Name (EN)</label>
+                <input type="text" name="term_full" id="field-term-full" class="admin-input" value={term?.term_full || ''} placeholder="e.g., Long Short-Term Memory" />
               </div>
               <div class="admin-field">
-                <label>Full Name (EN)</label>
-                <input type="text" name="term_full" class="admin-input" value={term?.term_full || ''} placeholder="e.g., Long Short-Term Memory" />
-              </div>
-              <div class="admin-field">
-                <label>정식 명칭</label>
-                <input type="text" name="korean_full" class="admin-input" value={term?.korean_full || ''} placeholder="e.g., 장단기 기억 네트워크" />
+                <label for="field-korean-full">Full Name (KO)</label>
+                <input type="text" name="korean_full" id="field-korean-full" class="admin-input" value={term?.korean_full || ''} placeholder="e.g., 장단기 기억 네트워크" />
               </div>
               <div class="admin-field">
                 <label>Related Terms</label>
@@ -190,20 +186,20 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
           {/* Language tabs */}
           <div class="admin-lang-tabs">
-            <button type="button" class="admin-lang-tab admin-lang-tab--active" data-lang="ko">KO</button>
-            <button type="button" class="admin-lang-tab" data-lang="en">EN</button>
+            <button type="button" class="admin-lang-tab admin-lang-tab--active" data-lang="ko">KO <span class="hb-tab-indicator" id="lang-indicator-ko" hidden></span></button>
+            <button type="button" class="admin-lang-tab" data-lang="en">EN <span class="hb-tab-indicator" id="lang-indicator-en" hidden></span></button>
           </div>
 
           {/* KO content */}
           <div id="lang-ko">
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
               <div class="admin-field">
-                <label>Definition (KO)</label>
-                <textarea name="definition_ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
+                <label for="field-definition-ko">Definition (KO)</label>
+                <textarea name="definition_ko" id="field-definition-ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
               </div>
               <div class="admin-level-tabs">
-                <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="ko" data-level="basic">Basic</button>
-                <button type="button" class="admin-level-tab" data-level-lang="ko" data-level="advanced">Advanced</button>
+                <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="ko" data-level="basic">Basic <span class="hb-tab-indicator" id="level-indicator-basic-ko" hidden></span></button>
+                <button type="button" class="admin-level-tab" data-level-lang="ko" data-level="advanced">Advanced <span class="hb-tab-indicator" id="level-indicator-advanced-ko" hidden></span></button>
               </div>
               <div class="admin-field-group admin-field-group--body" id="level-basic-ko">
                 <span class="admin-field-group-label">Basic Body (KO)</span>
@@ -214,6 +210,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                   <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
                        id="body-editor-basic-ko"
                        data-content={term?.body_basic_ko || ''}></div>
+                  <div class="hb-char-count" id="charcount-basic-ko"></div>
                 </div>
               </div>
               <div class="admin-field-group admin-field-group--body" id="level-advanced-ko" style="display: none;">
@@ -225,6 +222,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                   <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
                        id="body-editor-advanced-ko"
                        data-content={term?.body_advanced_ko || ''}></div>
+                  <div class="hb-char-count" id="charcount-advanced-ko"></div>
                 </div>
               </div>
             </div>
@@ -234,12 +232,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           <div id="lang-en" style="display: none;">
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
               <div class="admin-field">
-                <label>Definition (EN)</label>
-                <textarea name="definition_en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
+                <label for="field-definition-en">Definition (EN)</label>
+                <textarea name="definition_en" id="field-definition-en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
               </div>
               <div class="admin-level-tabs">
-                <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="en" data-level="basic">Basic</button>
-                <button type="button" class="admin-level-tab" data-level-lang="en" data-level="advanced">Advanced</button>
+                <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="en" data-level="basic">Basic <span class="hb-tab-indicator" id="level-indicator-basic-en" hidden></span></button>
+                <button type="button" class="admin-level-tab" data-level-lang="en" data-level="advanced">Advanced <span class="hb-tab-indicator" id="level-indicator-advanced-en" hidden></span></button>
               </div>
               <div class="admin-field-group admin-field-group--body" id="level-basic-en">
                 <span class="admin-field-group-label">Basic Body (EN)</span>
@@ -250,6 +248,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                   <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
                        id="body-editor-basic-en"
                        data-content={term?.body_basic_en || ''}></div>
+                  <div class="hb-char-count" id="charcount-basic-en"></div>
                 </div>
               </div>
               <div class="admin-field-group admin-field-group--body" id="level-advanced-en" style="display: none;">
@@ -261,11 +260,27 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                   <div class="admin-editor-wrapper admin-editor-wrapper--handbook"
                        id="body-editor-advanced-en"
                        data-content={term?.body_advanced_en || ''}></div>
+                  <div class="hb-char-count" id="charcount-advanced-en"></div>
                 </div>
               </div>
             </div>
           </div>
         </form>
+
+        {/* Sticky action bar */}
+        <div class="hb-action-bar" id="action-bar">
+          <div class="hb-action-bar__left">
+            <span class="hb-action-bar__saved-time" id="last-saved-time"></span>
+          </div>
+          <div class="hb-action-bar__right">
+            {term && (
+              <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>
+            )}
+            <button id="btn-preview" class="admin-btn" type="button">Preview</button>
+            <button id="btn-save" class="admin-btn" type="button">Save</button>
+            <button id="btn-publish" class="admin-btn admin-btn-primary" type="button">Publish</button>
+          </div>
+        </div>
         </div>{/* /admin-editor-content */}
 
         {/* AI Advisor Panel */}
@@ -276,29 +291,37 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
           </div>
           <div class="admin-ai-actions">
-            <button class="admin-ai-action-btn admin-ai-action-btn--primary" data-ai-action="generate" type="button">
-              Generate All Fields<span class="ai-btn-model">gpt-4o</span>
-            </button>
-            <button class="admin-ai-action-btn" data-ai-action="related_terms" type="button">
-              Related Terms<span class="ai-btn-model">gpt-4o + Exa</span>
-            </button>
-            <div class="admin-ai-translate-row">
-              <button class="admin-ai-action-btn" data-ai-action="translate" type="button">
-                Translate<span class="ai-btn-model">gpt-4o</span>
+            <div class="hb-ai-group">
+              <span class="hb-ai-group__label">Content</span>
+              <button class="admin-ai-action-btn admin-ai-action-btn--primary" data-ai-action="generate" type="button" title="Auto-generate all empty fields (definition, body, metadata) using AI">
+                Generate All Fields<span class="ai-btn-model">gpt-4o</span>
               </button>
-              <select id="ai-translate-direction" class="admin-select admin-ai-direction-select">
-                <option value="auto">Auto</option>
-                <option value="ko2en">KO → EN</option>
-                <option value="en2ko">EN → KO</option>
-              </select>
             </div>
-            <hr style="border:none;border-top:1px solid var(--color-border);margin:0.5rem 0" />
-            <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button">
-              Quick Check
-            </button>
-            <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button">
-              Deep Verify
-            </button>
+            <div class="hb-ai-group">
+              <span class="hb-ai-group__label">Quality</span>
+              <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="Quick accuracy check on claims and facts in the content">
+                Quick Check
+              </button>
+              <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button" title="In-depth verification with source citations for each claim">
+                Deep Verify
+              </button>
+            </div>
+            <div class="hb-ai-group">
+              <span class="hb-ai-group__label">Utility</span>
+              <button class="admin-ai-action-btn" data-ai-action="related_terms" type="button" title="Find related handbook terms to link to this entry">
+                Related Terms<span class="ai-btn-model">gpt-4o + Exa</span>
+              </button>
+              <div class="admin-ai-translate-row">
+                <button class="admin-ai-action-btn" data-ai-action="translate" type="button" title="Translate content between Korean and English">
+                  Translate<span class="ai-btn-model">gpt-4o</span>
+                </button>
+                <select id="ai-translate-direction" class="admin-select admin-ai-direction-select" aria-label="Translation direction">
+                  <option value="auto">Auto</option>
+                  <option value="ko2en">KO &rarr; EN</option>
+                  <option value="en2ko">EN &rarr; KO</option>
+                </select>
+              </div>
+            </div>
           </div>
           <div id="ai-loading" class="admin-ai-loading" hidden>
             <span class="ai-spinner"></span>
@@ -414,6 +437,132 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     font-weight: 600;
     color: var(--color-text-secondary);
     white-space: nowrap;
+  }
+
+  /* --- Sticky action bar --- */
+  .hb-action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-bg, #fff);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  }
+  .hb-action-bar__left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .hb-action-bar__right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .hb-action-bar__saved-time {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  /* --- Tab content indicators --- */
+  .hb-tab-indicator {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-success, #22c55e);
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* --- Character count below editors --- */
+  .hb-char-count {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    text-align: right;
+    padding: 0.25rem 0.5rem 0;
+    min-height: 1.2em;
+  }
+
+  /* --- Meta filled count badge --- */
+  .hb-meta-filled-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-left: 0.25rem;
+  }
+
+  /* --- AI panel groups --- */
+  .hb-ai-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding-bottom: 0.625rem;
+    margin-bottom: 0.625rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .hb-ai-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .hb-ai-group__label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    padding-bottom: 0.125rem;
+  }
+
+  /* --- Accessibility: focus states & cursor --- */
+  .admin-lang-tab,
+  .admin-level-tab,
+  .admin-ai-action-btn,
+  .admin-ai-panel-toggle,
+  .admin-btn,
+  .admin-btn-primary,
+  .admin-btn-danger,
+  .admin-chip-remove,
+  .admin-category-check,
+  .admin-details summary {
+    cursor: pointer;
+  }
+  .admin-input:focus,
+  .admin-textarea:focus,
+  .admin-select:focus,
+  .admin-lang-tab:focus-visible,
+  .admin-level-tab:focus-visible,
+  .admin-btn:focus-visible,
+  .admin-btn-primary:focus-visible,
+  .admin-btn-danger:focus-visible,
+  .admin-ai-action-btn:focus-visible,
+  .admin-ai-panel-toggle:focus-visible {
+    outline: 2px solid var(--color-accent, #3b82f6);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .hb-action-bar {
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .hb-action-bar__right {
+      gap: 0.375rem;
+    }
+    .hb-action-bar__right .admin-btn,
+    .hb-action-bar__right .admin-btn-primary,
+    .hb-action-bar__right .admin-btn-danger {
+      font-size: 0.8rem;
+      padding: 0.375rem 0.625rem;
+    }
   }
 </style>
 
@@ -756,9 +905,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     function setHandbookValue(fieldName: string, value: string) {
       const editor = getCrepeEditor(fieldName);
-      if (editor) { editor.editor.action(replaceAll(value)); updateCompleteness(); return; }
+      if (editor) { editor.editor.action(replaceAll(value)); updateAllIndicators(); return; }
       const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
-      if (input) { input.value = value; updateCompleteness(); }
+      if (input) { input.value = value; updateAllIndicators(); }
     }
 
     function showDiff(btn: HTMLButtonElement, fieldName: string, newValue: string) {
@@ -1403,7 +1552,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       ]);
     }
     initBodyEditors().then(() => {
-      updateCompleteness();
+      updateAllIndicators();
+      // Periodic char count / indicator refresh (Crepe doesn't fire input events reliably)
+      setInterval(updateAllIndicators, 3000);
     });
 
     // --- Completeness indicator ---
@@ -1434,13 +1585,87 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       if (text) text.textContent = `${filled}/8`;
     }
 
+    // --- Meta details filled count ---
+    function updateMetaFilledCount(): void {
+      const metaFields = [
+        () => (document.querySelector<HTMLInputElement>('[name="slug"]')?.value || '').length > 0,
+        () => (document.querySelector<HTMLInputElement>('[name="term_full"]')?.value || '').length > 0,
+        () => (document.querySelector<HTMLInputElement>('[name="korean_full"]')?.value || '').length > 0,
+        () => getRelatedSlugs().length > 0,
+      ];
+      const filled = metaFields.filter(fn => { try { return fn(); } catch { return false; } }).length;
+      const el = document.getElementById('meta-filled-count');
+      if (el) el.textContent = `(${filled}/${metaFields.length} filled)`;
+    }
+
+    // --- Tab content indicators ---
+    function updateTabIndicators(): void {
+      const defKo = (document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.value || '').trim();
+      const bodyBasicKo = crepeBasicKo ? crepeBasicKo.getMarkdown().trim() : '';
+      const bodyAdvKo = crepeAdvancedKo ? crepeAdvancedKo.getMarkdown().trim() : '';
+      const koHasContent = defKo.length > 0 || bodyBasicKo.length > 0 || bodyAdvKo.length > 0;
+
+      const defEn = (document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.value || '').trim();
+      const bodyBasicEn = crepeBasicEn ? crepeBasicEn.getMarkdown().trim() : '';
+      const bodyAdvEn = crepeAdvancedEn ? crepeAdvancedEn.getMarkdown().trim() : '';
+      const enHasContent = defEn.length > 0 || bodyBasicEn.length > 0 || bodyAdvEn.length > 0;
+
+      const koIndicator = document.getElementById('lang-indicator-ko');
+      const enIndicator = document.getElementById('lang-indicator-en');
+      if (koIndicator) koIndicator.hidden = !koHasContent;
+      if (enIndicator) enIndicator.hidden = !enHasContent;
+
+      // Level indicators
+      const indicators: [string, string][] = [
+        ['level-indicator-basic-ko', bodyBasicKo],
+        ['level-indicator-advanced-ko', bodyAdvKo],
+        ['level-indicator-basic-en', bodyBasicEn],
+        ['level-indicator-advanced-en', bodyAdvEn],
+      ];
+      indicators.forEach(([id, content]) => {
+        const el = document.getElementById(id);
+        if (el) el.hidden = content.length === 0;
+      });
+    }
+
+    // --- Character count ---
+    function updateCharCounts(): void {
+      const editors: [Crepe | null, string][] = [
+        [crepeBasicKo, 'charcount-basic-ko'],
+        [crepeAdvancedKo, 'charcount-advanced-ko'],
+        [crepeBasicEn, 'charcount-basic-en'],
+        [crepeAdvancedEn, 'charcount-advanced-en'],
+      ];
+      editors.forEach(([editor, elId]) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        if (!editor) { el.textContent = ''; return; }
+        const md = editor.getMarkdown();
+        const charCount = md.length;
+        const wordCount = md.trim() ? md.trim().split(/\s+/).length : 0;
+        el.textContent = charCount > 0 ? `${charCount} chars / ${wordCount} words` : '';
+      });
+    }
+
+    // Combined update for all indicators
+    function updateAllIndicators(): void {
+      updateCompleteness();
+      updateMetaFilledCount();
+      updateTabIndicators();
+      updateCharCounts();
+    }
+
     // Update completeness on meta field input changes
-    document.querySelector<HTMLInputElement>('[name="korean_name"]')?.addEventListener('input', updateCompleteness);
-    document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.addEventListener('input', updateCompleteness);
-    document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.addEventListener('input', updateCompleteness);
+    document.querySelector<HTMLInputElement>('[name="korean_name"]')?.addEventListener('input', updateAllIndicators);
+    document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.addEventListener('input', updateAllIndicators);
+    document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.addEventListener('input', updateAllIndicators);
     document.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach(cb => {
-      cb.addEventListener('change', updateCompleteness);
+      cb.addEventListener('change', updateAllIndicators);
     });
+    // Meta detail fields
+    document.querySelector<HTMLInputElement>('[name="slug"]')?.addEventListener('input', updateMetaFilledCount);
+    document.querySelector<HTMLInputElement>('[name="term_full"]')?.addEventListener('input', updateMetaFilledCount);
+    document.querySelector<HTMLInputElement>('[name="korean_full"]')?.addEventListener('input', updateMetaFilledCount);
 
     function showFeedback(message: string, isError = false) {
     const el = document.getElementById('feedback')!;
@@ -1539,6 +1764,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       if (res.ok) {
         const saved = await res.json();
         syncSavedState(saved);
+        // Update last saved time display
+        const savedTimeEl = document.getElementById('last-saved-time');
+        if (savedTimeEl) {
+          const now = new Date();
+          savedTimeEl.textContent = `Saved ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        updateAllIndicators();
         if (shouldShowFeedback) showFeedback('Saved successfully.');
         return saved;
       }

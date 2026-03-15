@@ -33,6 +33,7 @@ const allTerms = (terms ?? []).sort((a, b) => {
 
 const draftCount = allTerms.filter((term) => term.status === 'draft').length;
 const publishedCount = allTerms.filter((term) => term.status === 'published').length;
+const archivedCount = allTerms.filter((term) => term.status === 'archived').length;
 const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categories || []))).sort();
 ---
 
@@ -61,6 +62,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
             <div class="admin-filter-tabs">
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({draftCount})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({publishedCount})</button>
+              {archivedCount > 0 && <button class="admin-filter-btn" data-filter="archived">Archived ({archivedCount})</button>}
               <button class="admin-filter-btn" data-filter="all">All ({allTerms.length})</button>
             </div>
           </div>
@@ -71,12 +73,16 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
               <option value="pipeline">Pipeline</option>
               <option value="ai-suggested">AI Suggested</option>
             </select>
-            <input
-              type="search"
-              class="admin-input admin-search-input"
-              id="admin-search"
-              placeholder="Search..."
-            />
+            <div class="admin-search-wrapper">
+              <input
+                type="search"
+                class="admin-input admin-search-input"
+                id="admin-search"
+                placeholder="Search terms or Korean names..."
+                aria-label="Search handbook terms"
+              />
+              <button class="admin-search-clear" id="search-clear" type="button" hidden aria-label="Clear search">x</button>
+            </div>
             <button class="admin-btn admin-filters-toggle" id="filters-toggle" type="button">
               Filters
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -95,6 +101,18 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
         </div>
       </div>
 
+      <!-- Result count + completeness legend -->
+      <div class="handbook-results-bar">
+        <span class="handbook-results-count" id="results-count">{allTerms.length} terms</span>
+        <span class="handbook-legend">
+          <span class="handbook-legend-label">Completeness:</span>
+          <span class="handbook-dot handbook-dot--ok"></span> KO Basic
+          <span class="handbook-dot handbook-dot--ok"></span> KO Adv
+          <span class="handbook-dot handbook-dot--ok"></span> EN Basic
+          <span class="handbook-dot handbook-dot--ok"></span> EN Adv
+        </span>
+      </div>
+
       <!-- Bulk action bar -->
       <div class="handbook-bulk-bar" id="bulk-bar" hidden>
         <label class="handbook-bulk-count" id="bulk-count">0 selected</label>
@@ -111,13 +129,17 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
           linkLabel="Retry"
         />
       ) : allTerms.length === 0 ? (
-        <NewsprintNotice variant="empty" message="No handbook terms yet. Create one to get started." />
+        <div class="handbook-empty-state">
+          <p class="handbook-empty-title">No handbook terms yet</p>
+          <p class="handbook-empty-desc">Create your first term to start building the AI glossary.</p>
+          <a href="/admin/handbook/edit/new" class="admin-btn admin-btn-primary">Create First Term</a>
+        </div>
       ) : (
         <>
           <ul class="admin-list" id="term-list">
             {allTerms.map((term) => (
               <li
-                class="admin-list-item"
+                class={`admin-list-item handbook-card handbook-card--${term.status}`}
                 data-status={term.status}
                 data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
                 data-categories={(term.categories || []).join(',')}
@@ -166,7 +188,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
               </li>
             ))}
           </ul>
-          <p id="admin-no-results" class="admin-no-results" hidden>No matching terms.</p>
+          <p id="admin-no-results" class="admin-no-results" hidden>No matching terms found. Try adjusting your search or filters.</p>
         </>
       )}
     </div>
@@ -200,8 +222,41 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     margin-left: auto;
   }
 
-  .admin-list-toolbar-right .admin-search-input {
-    width: 160px;
+  .admin-search-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .admin-search-wrapper .admin-search-input {
+    width: 200px;
+    padding-right: 1.8rem;
+  }
+
+  .admin-search-clear {
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: var(--font-ui);
+    padding: 0.15rem 0.3rem;
+    border-radius: 3px;
+    line-height: 1;
+  }
+
+  .admin-search-clear:hover {
+    color: var(--color-text-primary);
+    background: var(--color-accent-subtle);
+  }
+
+  .admin-search-clear:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
   }
 
   .admin-filters-toggle {
@@ -211,6 +266,11 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     font-size: 0.82rem;
     white-space: nowrap;
     cursor: pointer;
+  }
+
+  .admin-filters-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .admin-filters-toggle[aria-expanded="true"] svg {
@@ -227,6 +287,39 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
 
   .admin-list-toolbar-filters .admin-select {
     width: auto;
+  }
+
+  /* Results bar with count + legend */
+  .handbook-results-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+  }
+
+  .handbook-results-count {
+    font-weight: 600;
+  }
+
+  .handbook-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .handbook-legend-label {
+    margin-right: 2px;
+  }
+
+  .handbook-legend .handbook-dot {
+    width: 6px;
+    height: 6px;
   }
 
   .handbook-bulk-bar {
@@ -292,10 +385,92 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     height: 8px;
     border-radius: 50%;
     background: var(--admin-muted, #d1d5db);
+    border: 1px solid var(--admin-muted, #c5c9d0);
   }
 
   .handbook-dot--ok {
     background: #22c55e;
+    border-color: #16a34a;
+  }
+
+  /* Status-based card visual differentiation */
+  .handbook-card {
+    border-left: 3px solid transparent;
+    padding-left: calc(0.875rem - 3px);
+    cursor: pointer;
+    transition: background 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    border-radius: 2px;
+  }
+
+  .handbook-card:hover {
+    background: var(--color-accent-subtle);
+  }
+
+  .handbook-card:focus-within {
+    background: var(--color-accent-subtle);
+  }
+
+  .handbook-card--draft {
+    border-left-color: var(--color-accent, #c9a96e);
+  }
+
+  .handbook-card--published {
+    border-left-color: var(--color-success, #5a8e5d);
+  }
+
+  .handbook-card--archived {
+    border-left-color: var(--admin-muted, #d1d5db);
+    opacity: 0.6;
+  }
+
+  .handbook-card--archived:hover {
+    opacity: 0.85;
+  }
+
+  /* Empty state */
+  .handbook-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    margin-top: 1rem;
+  }
+
+  .handbook-empty-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .handbook-empty-desc {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin: 0 0 1.25rem 0;
+  }
+
+  /* Focus visible states for interactive elements */
+  .admin-filter-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .admin-list-title a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .admin-btn:focus-visible,
+  .admin-btn-danger:focus-visible,
+  .admin-btn-primary:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   @media (max-width: 640px) {
@@ -313,10 +488,13 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       flex-wrap: wrap;
     }
 
-    .admin-list-toolbar-right .admin-search-input {
-      width: 100%;
+    .admin-search-wrapper {
       flex: 1 1 100%;
       min-width: 0;
+    }
+
+    .admin-search-wrapper .admin-search-input {
+      width: 100%;
     }
 
     .admin-list-toolbar-filters {
@@ -342,6 +520,12 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     .handbook-bulk-check {
       margin-top: 0.2rem;
     }
+
+    .handbook-results-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
   }
 </style>
 
@@ -354,16 +538,33 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
 
     let currentFilter = 'draft';
     const searchInput = document.getElementById('admin-search');
+    const searchClear = document.getElementById('search-clear');
     const categoryFilter = document.getElementById('admin-category-filter');
     const sourceFilter = document.getElementById('admin-source-filter');
     const noResults = document.getElementById('admin-no-results');
+    const resultsCount = document.getElementById('results-count');
     const filtersToggle = document.getElementById('filters-toggle');
     const filtersPanel = document.getElementById('filters-panel');
+    const totalCount = list ? list.querySelectorAll('.admin-list-item').length : 0;
 
     filtersToggle?.addEventListener('click', () => {
       const open = filtersPanel?.hidden === false;
       if (filtersPanel) filtersPanel.hidden = open;
       filtersToggle.setAttribute('aria-expanded', String(!open));
+    });
+
+    // Search clear button
+    function updateSearchClear() {
+      if (searchClear) {
+        searchClear.hidden = !(searchInput?.value);
+      }
+    }
+
+    searchClear?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      updateSearchClear();
+      applyFilter();
+      searchInput?.focus();
     });
 
     function applyFilter() {
@@ -383,6 +584,18 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       });
 
       if (noResults) noResults.hidden = visibleCount > 0;
+
+      // Update result count
+      if (resultsCount) {
+        const isFiltered = query || category || source || currentFilter !== 'all';
+        if (isFiltered && visibleCount !== totalCount) {
+          resultsCount.textContent = `Showing ${visibleCount} of ${totalCount} terms`;
+        } else {
+          resultsCount.textContent = `${visibleCount} term${visibleCount !== 1 ? 's' : ''}`;
+        }
+      }
+
+      updateSearchClear();
     }
 
     document.querySelectorAll('[data-filter]').forEach((btn) => {
@@ -394,7 +607,12 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       });
     });
 
-    searchInput?.addEventListener('input', applyFilter);
+    // Debounced search
+    let searchTimer = null;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(applyFilter, 200);
+    });
     categoryFilter?.addEventListener('change', applyFilter);
     sourceFilter?.addEventListener('change', applyFilter);
 
@@ -431,6 +649,16 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
 
         const data = await res.json();
         window.alert(`${action} failed: ${data.error || 'Unknown error'}`);
+      });
+    });
+
+    // Card row click → navigate to edit (unless clicking a button, link, or checkbox)
+    list.querySelectorAll('.handbook-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.closest('a') || target.closest('button') || target.closest('input')) return;
+        const link = card.querySelector('.admin-list-title a');
+        if (link) window.location.href = link.href;
       });
     });
 
