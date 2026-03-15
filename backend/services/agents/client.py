@@ -12,6 +12,12 @@ logger = logging.getLogger(__name__)
 OPENAI_MODEL_PRICING_PER_1M = {
     "gpt-4o": {"input": Decimal("2.50"), "output": Decimal("10.00")},
     "gpt-4o-mini": {"input": Decimal("0.15"), "output": Decimal("0.60")},
+    "gpt-4.1": {"input": Decimal("2.00"), "output": Decimal("8.00")},
+    "gpt-4.1-mini": {"input": Decimal("0.40"), "output": Decimal("1.60")},
+    "gpt-4.1-nano": {"input": Decimal("0.10"), "output": Decimal("0.40")},
+    "o4-mini": {"input": Decimal("1.10"), "output": Decimal("4.40")},
+    "o3": {"input": Decimal("2.00"), "output": Decimal("8.00")},
+    "o3-mini": {"input": Decimal("1.10"), "output": Decimal("4.40")},
 }
 
 
@@ -27,7 +33,8 @@ def _resolve_pricing_key(model_name: str | None) -> str | None:
     if model_name in OPENAI_MODEL_PRICING_PER_1M:
         return model_name
 
-    for candidate in OPENAI_MODEL_PRICING_PER_1M:
+    # Match longest key first to avoid e.g. "gpt-4o-mini" matching "gpt-4o"
+    for candidate in sorted(OPENAI_MODEL_PRICING_PER_1M, key=len, reverse=True):
         if model_name.startswith(candidate):
             return candidate
 

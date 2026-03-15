@@ -241,6 +241,8 @@ async def _generate_post(
             "source_urls": source_urls,
             "pipeline_batch_id": batch_id,
             "pipeline_model": settings.openai_model_main,
+            "pipeline_tokens": cumulative_usage.get("tokens_used") if locale == "en" else None,
+            "pipeline_cost": cumulative_usage.get("cost_usd") if locale == "en" else None,
             "translation_group_id": translation_group_id,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }

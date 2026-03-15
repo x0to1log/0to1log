@@ -144,6 +144,15 @@ const totalTokens = hasTokenMetrics ? logs.reduce((sum, log) => sum + (log.token
 const totalCost = hasCostMetrics
   ? logs.reduce((sum, log) => sum + (parseCost(log.cost_usd) ?? 0), 0)
   : null;
+const totalInputTokens = logs.reduce((sum, log) => {
+  const v = debugMetaObject(log).input_tokens;
+  return sum + (typeof v === 'number' ? v : 0);
+}, 0);
+const totalOutputTokens = logs.reduce((sum, log) => {
+  const v = debugMetaObject(log).output_tokens;
+  return sum + (typeof v === 'number' ? v : 0);
+}, 0);
+const hasInputOutputBreakdown = totalInputTokens > 0 || totalOutputTokens > 0;
 const failedStages = hasStageLogs ? logs.filter((log) => log.status === 'failed').length : null;
 const duration = durationSeconds(run?.started_at ?? null, run?.finished_at ?? null);
 const latestLog = logs.at(-1) ?? null;
@@ -268,7 +277,9 @@ if (batchId) {
             {metricText(totalTokens, (value) => value.toLocaleString())}
           </strong>
           <span class="pipeline-run-stat__detail">
-            {hasTokenMetrics ? 'Across all recorded stages' : 'No token usage recorded for this run'}
+            {hasInputOutputBreakdown
+              ? `In ${totalInputTokens.toLocaleString()} · Out ${totalOutputTokens.toLocaleString()}`
+              : hasTokenMetrics ? 'Across all recorded stages' : 'No token usage recorded for this run'}
           </span>
         </div>
         <div class="pipeline-run-stat">
