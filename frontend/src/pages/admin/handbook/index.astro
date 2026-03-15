@@ -139,7 +139,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
           <ul class="admin-list" id="term-list">
             {allTerms.map((term) => (
               <li
-                class={`admin-list-item handbook-card handbook-card--${term.status}`}
+                class="admin-list-item handbook-card"
                 data-status={term.status}
                 data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
                 data-categories={(term.categories || []).join(',')}
@@ -393,12 +393,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     border-color: #16a34a;
   }
 
-  /* Status-based card visual differentiation */
   .handbook-card {
-    border-left: 3px solid transparent;
-    padding-left: calc(0.875rem - 3px);
     cursor: pointer;
-    transition: background 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    transition: background 150ms ease, box-shadow 150ms ease;
     border-radius: 2px;
   }
 
@@ -408,23 +405,6 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
 
   .handbook-card:focus-within {
     background: var(--color-accent-subtle);
-  }
-
-  .handbook-card--draft {
-    border-left-color: var(--color-accent, #c9a96e);
-  }
-
-  .handbook-card--published {
-    border-left-color: var(--color-success, #5a8e5d);
-  }
-
-  .handbook-card--archived {
-    border-left-color: var(--admin-muted, #d1d5db);
-    opacity: 0.6;
-  }
-
-  .handbook-card--archived:hover {
-    opacity: 0.85;
   }
 
   /* Empty state */

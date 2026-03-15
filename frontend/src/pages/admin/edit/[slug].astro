@@ -130,6 +130,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <span class={`admin-status-badge admin-status-badge--${initialStatus}`}>{initialStatus}</span>
           </div>
           <div class="admin-editor-topbar-right">
+            <span id="last-saved-time" class="admin-last-saved"></span>
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
@@ -219,6 +220,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           ) : (
             <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
           )}
+          <div id="editor-char-count" class="admin-char-count"></div>
         </div>
 
         <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
@@ -356,6 +358,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const focusItemsInput = document.getElementById('edit-focus-items') as HTMLInputElement;
     const ogImageInput = document.getElementById('edit-og-image') as HTMLInputElement;
     const adminData = document.getElementById('admin-data');
+    const lastSavedEl = document.getElementById('last-saved-time');
     const previewShell = document.querySelector<HTMLElement>('[data-preview-shell]');
     const previewLoading = document.querySelector<HTMLElement>('[data-preview-loading]');
     const previewLoadingText = document.querySelector<HTMLElement>('[data-preview-loading-text]');
@@ -739,6 +742,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         syncSavedState(saved);
         if (shouldShowFeedback) {
           showFeedback('success', res.status === 201 ? 'Post created.' : 'Draft saved.');
+        }
+        // Update last-saved timestamp
+        if (lastSavedEl) {
+          const now = new Date();
+          lastSavedEl.textContent = `Last saved: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
         }
         if (res.status === 201 && redirectOnCreate && saved?.slug) {
           window.location.href = `/admin/edit/${saved.slug}`;
@@ -1367,6 +1375,27 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const published = await handlePublish();
       if (!published) restoreActionButtons();
     });
+
+    // --- Character / word count ---
+    const charCountEl = document.getElementById('editor-char-count');
+    function updateCharCount() {
+      if (!charCountEl) return;
+      let md = '';
+      if (isBusinessEditor) {
+        const activeEditor = personaEditors[activePersonaTab];
+        md = activeEditor ? activeEditor.getMarkdown() : '';
+      } else {
+        md = crepe ? crepe.getMarkdown() : '';
+      }
+      if (!md || !md.trim()) {
+        charCountEl.textContent = '';
+        return;
+      }
+      const chars = md.length;
+      const words = md.trim().split(/\s+/).filter(Boolean).length;
+      charCountEl.textContent = `${chars} chars / ${words} words`;
+    }
+    setInterval(updateCharCount, 3000);
 
     // Init editor(s)
     if (isBusinessEditor) {

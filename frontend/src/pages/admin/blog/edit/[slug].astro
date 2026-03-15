@@ -121,6 +121,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <span class={`admin-status-badge admin-status-badge--${initialStatus}`}>{initialStatus}</span>
           </div>
           <div class="admin-editor-topbar-right">
+            <span id="last-saved-time" class="admin-last-saved"></span>
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
@@ -189,6 +190,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           </details>
 
           <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
+          <div class="admin-char-count" id="char-count"></div>
         </div>
 
         <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
@@ -652,6 +654,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         if (shouldShowFeedback) {
           showFeedback('success', res.status === 201 ? 'Post created.' : 'Draft saved.');
         }
+        updateLastSavedTime();
         if (res.status === 201 && redirectOnCreate && saved?.slug) {
           window.location.href = `/admin/blog/edit/${saved.slug}`;
         }
@@ -1304,7 +1307,52 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       if (!published) restoreActionButtons();
     });
 
+    // --- Character / word count ---
+    const charCountEl = document.getElementById('char-count');
+    function updateCharCount() {
+      if (!charCountEl || !crepe) return;
+      const md = crepe.getMarkdown();
+      const chars = md.length;
+      const words = md.trim() ? md.trim().split(/\s+/).length : 0;
+      charCountEl.textContent = `${chars} chars / ${words} words`;
+    }
+    setInterval(updateCharCount, 3000);
+
+    // --- Last saved time display ---
+    const lastSavedEl = document.getElementById('last-saved-time');
+    function updateLastSavedTime() {
+      if (!lastSavedEl) return;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      lastSavedEl.textContent = `Last saved: ${hh}:${mm}:${ss}`;
+    }
+
     initEditor();
     syncModeFromLocation();
   });
 </script>
+
+<style>
+  .admin-editor-content ::selection,
+  .admin-editor-content *::selection {
+    background: rgba(59, 130, 246, 0.3);
+    color: inherit;
+  }
+
+  .admin-char-count {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #888);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-last-saved {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #888);
+    white-space: nowrap;
+    align-self: center;
+  }
+</style>

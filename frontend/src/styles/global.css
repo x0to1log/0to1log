@@ -3090,6 +3090,27 @@ pre {
   min-height: 400px;
 }
 
+.admin-char-count {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  padding: 0.35rem 0;
+  min-height: 1.25rem;
+}
+
+.admin-last-saved {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.admin-editor-content ::selection,
+.admin-editor-content *::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
 .admin-field-group {
   display: flex;
   flex-direction: column;
@@ -7505,7 +7526,7 @@ pre:hover .blog-code-copy {
 /* Masthead */
 .home-masthead {
   text-align: center;
-  padding: 0 0 1.25rem;
+  padding: 1.5rem 0 1.25rem;
   border-bottom: 2px solid var(--color-border);
   margin-bottom: 0;
 }
@@ -8005,7 +8026,7 @@ pre:hover .blog-code-copy {
 
 @media (min-width: 768px) {
   .home-start-here-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
