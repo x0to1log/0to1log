@@ -2217,6 +2217,29 @@ pre {
   line-height: 1.6;
 }
 
+/* AI advisor action groups (shared across editors) */
+.admin-ai-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-bottom: 0.625rem;
+  margin-bottom: 0.625rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.admin-ai-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.admin-ai-group__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  padding-bottom: 0.125rem;
+}
+
 /* AI Advisor — Action Buttons */
 .admin-ai-actions {
   display: grid;

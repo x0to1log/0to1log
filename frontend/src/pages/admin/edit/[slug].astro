@@ -915,20 +915,41 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       currentAiButtons = [];
       aiActionLabels.clear();
 
-      for (const a of actions) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'admin-ai-action-btn' + (a.wide ? ' admin-ai-action-btn--wide' : '');
-        btn.dataset.aiAction = a.action;
-        btn.textContent = a.label;
-        const modelSpan = document.createElement('span');
-        modelSpan.className = 'ai-btn-model';
-        modelSpan.textContent = a.model;
-        btn.appendChild(modelSpan);
-        btn.addEventListener('click', () => runAiAction(a.action));
-        aiActionsContainer.appendChild(btn);
-        currentAiButtons.push(btn);
-        aiActionLabels.set(a.action, a.label);
+      // Define groups
+      const contentActionNames = ['generate', 'seo'];
+      const qualityActionNames = ['review', 'factcheck', 'deepverify', 'conceptcheck', 'voicecheck', 'retrocheck'];
+
+      const groups: { label: string; items: typeof actions }[] = [
+        { label: 'Content', items: actions.filter(a => contentActionNames.includes(a.action)) },
+        { label: 'Quality', items: actions.filter(a => qualityActionNames.includes(a.action)) },
+      ];
+
+      for (const group of groups) {
+        if (group.items.length === 0) continue;
+        const groupEl = document.createElement('div');
+        groupEl.className = 'admin-ai-group';
+        const labelEl = document.createElement('span');
+        labelEl.className = 'admin-ai-group__label';
+        labelEl.textContent = group.label;
+        groupEl.appendChild(labelEl);
+
+        for (const a of group.items) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'admin-ai-action-btn' + (a.wide ? ' admin-ai-action-btn--wide' : '');
+          btn.dataset.aiAction = a.action;
+          btn.textContent = a.label;
+          const modelSpan = document.createElement('span');
+          modelSpan.className = 'ai-btn-model';
+          modelSpan.textContent = a.model;
+          btn.appendChild(modelSpan);
+          btn.addEventListener('click', () => runAiAction(a.action));
+          groupEl.appendChild(btn);
+          currentAiButtons.push(btn);
+          aiActionLabels.set(a.action, a.label);
+        }
+
+        aiActionsContainer.appendChild(groupEl);
       }
     }
 

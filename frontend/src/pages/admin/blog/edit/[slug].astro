@@ -811,25 +811,47 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       currentAiButtons = [];
       aiActionLabels.clear();
 
-      for (const a of actions) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'admin-ai-action-btn' + (a.wide ? ' admin-ai-action-btn--wide' : '');
-        btn.dataset.aiAction = a.action;
-        btn.textContent = a.label;
-        const modelSpan = document.createElement('span');
-        modelSpan.className = 'ai-btn-model';
-        modelSpan.textContent = a.model;
-        btn.appendChild(modelSpan);
-        btn.addEventListener('click', () => runAiAction(a.action));
-        if (aiResultCache.has(a.action)) {
-          const dot = document.createElement('span');
-          dot.className = 'ai-btn-cached-dot';
-          btn.appendChild(dot);
+      const contentActions = ['outline', 'draft', 'rewrite', 'generate'];
+      const qualityActions = ['review', 'suggest', 'conceptcheck', 'voicecheck', 'retrocheck'];
+      const utilityActions = ['translate'];
+
+      const groups: { label: string; items: typeof actions }[] = [
+        { label: 'Content', items: actions.filter(a => contentActions.includes(a.action)) },
+        { label: 'Quality', items: actions.filter(a => qualityActions.includes(a.action)) },
+        { label: 'Utility', items: actions.filter(a => utilityActions.includes(a.action)) },
+      ];
+
+      for (const group of groups) {
+        if (group.items.length === 0) continue;
+        const groupEl = document.createElement('div');
+        groupEl.className = 'admin-ai-group';
+        const labelEl = document.createElement('span');
+        labelEl.className = 'admin-ai-group__label';
+        labelEl.textContent = group.label;
+        groupEl.appendChild(labelEl);
+
+        for (const a of group.items) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'admin-ai-action-btn' + (a.wide ? ' admin-ai-action-btn--wide' : '');
+          btn.dataset.aiAction = a.action;
+          btn.textContent = a.label;
+          const modelSpan = document.createElement('span');
+          modelSpan.className = 'ai-btn-model';
+          modelSpan.textContent = a.model;
+          btn.appendChild(modelSpan);
+          btn.addEventListener('click', () => runAiAction(a.action));
+          if (aiResultCache.has(a.action)) {
+            const dot = document.createElement('span');
+            dot.className = 'ai-btn-cached-dot';
+            btn.appendChild(dot);
+          }
+          groupEl.appendChild(btn);
+          currentAiButtons.push(btn);
+          aiActionLabels.set(a.action, a.label);
         }
-        aiActionsContainer.appendChild(btn);
-        currentAiButtons.push(btn);
-        aiActionLabels.set(a.action, a.label);
+
+        aiActionsContainer.appendChild(groupEl);
       }
     }
 

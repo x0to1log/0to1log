@@ -282,14 +282,14 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             <button id="btn-ai-close" class="admin-ai-panel-toggle" type="button">&times;</button>
           </div>
           <div class="admin-ai-actions">
-            <div class="hb-ai-group">
-              <span class="hb-ai-group__label">Content</span>
+            <div class="admin-ai-group">
+              <span class="admin-ai-group__label">Content</span>
               <button class="admin-ai-action-btn admin-ai-action-btn--primary" data-ai-action="generate" type="button" title="Auto-generate all empty fields (definition, body, metadata) using AI">
                 Generate All Fields<span class="ai-btn-model">gpt-4o</span>
               </button>
             </div>
-            <div class="hb-ai-group">
-              <span class="hb-ai-group__label">Quality</span>
+            <div class="admin-ai-group">
+              <span class="admin-ai-group__label">Quality</span>
               <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="LLM이 작성된 콘텐츠의 기술적 정확성을 자체 검증합니다">
                 Quick Check<span class="ai-btn-model">gpt-4o</span>
               </button>
@@ -297,8 +297,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                 Deep Verify<span class="ai-btn-model">gpt-4o + Tavily</span>
               </button>
             </div>
-            <div class="hb-ai-group">
-              <span class="hb-ai-group__label">Utility</span>
+            <div class="admin-ai-group">
+              <span class="admin-ai-group__label">Utility</span>
               <button class="admin-ai-action-btn" data-ai-action="related_terms" type="button" title="Find related handbook terms to link to this entry">
                 Related Terms<span class="ai-btn-model">gpt-4o + Exa</span>
               </button>
@@ -465,28 +465,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     margin-left: 0.25rem;
   }
 
-  /* --- AI panel groups --- */
-  .hb-ai-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    padding-bottom: 0.625rem;
-    margin-bottom: 0.625rem;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .hb-ai-group:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-  .hb-ai-group__label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
-    padding-bottom: 0.125rem;
-  }
 
   /* --- Accessibility: focus states & cursor --- */
   .admin-lang-tab,
