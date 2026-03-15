@@ -18,20 +18,23 @@ function getPipelineConfig(env) {
   return { cronSecret, backendUrl };
 }
 
-async function forwardPipelineTrigger(env, mode = 'resume') {
+async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null) {
   const config = getPipelineConfig(env);
   if (!config) {
     return jsonResponse({ error: 'Missing configuration' }, 500);
   }
 
   try {
+    const payload = { mode };
+    if (targetDate) payload.target_date = targetDate;
+
     const response = await fetch(`${config.backendUrl}/api/cron/news-pipeline`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-cron-secret': config.cronSecret,
       },
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(8000),
     });
 
@@ -65,6 +68,6 @@ export async function handleCronTriggerRequest(request, env) {
   return forwardPipelineTrigger(env, 'resume');
 }
 
-export async function handleAdminTriggerRequest(env, mode = 'resume') {
-  return forwardPipelineTrigger(env, mode);
+export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null) {
+  return forwardPipelineTrigger(env, mode, targetDate);
 }

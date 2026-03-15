@@ -108,6 +108,14 @@
 - **완료 기준:** 실제 AI 뉴스로 draft 생성 성공
 - **의존성:** NP2-E2E-01
 
+### 11. 파이프라인 과거 날짜 백필 지원 `[NP2-BACKFILL-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 어드민이 과거 날짜를 지정하여 파이프라인을 실행할 수 있게 지원
+- **산출물:** `news_collection.py` (target_date + start_date/end_date), `cron.py` (PipelineTriggerBody), 어드민 UI 날짜 선택기
+- **완료 기준:** 어드민 대시보드에서 과거 날짜 선택 → 해당 날짜 뉴스 수집 + draft 저장
+- **의존성:** NP2-CRON-01
+
 ---
 
 ## 의존성 순서

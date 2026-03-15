@@ -267,6 +267,9 @@ function relativeTime(dateStr: string): string {
               <div class="dashboard-pipeline-error">{lastRunError}</div>
             )}
             <div class="dashboard-pipeline-actions">
+              <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
+                     max={new Date().toISOString().slice(0,10)}
+                     title="Leave empty for today" />
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
               <button type="button" class="admin-btn" id="force-refresh-btn">Force Refresh</button>
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
@@ -278,6 +281,9 @@ function relativeTime(dateStr: string): string {
           <div class="dashboard-pipeline dashboard-pipeline--none">
             <p class="dashboard-empty">No pipeline runs yet.</p>
             <div class="dashboard-pipeline-actions">
+              <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
+                     max={new Date().toISOString().slice(0,10)}
+                     title="Leave empty for today" />
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
               <button type="button" class="admin-btn" id="force-refresh-btn">Force Refresh</button>
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
@@ -671,6 +677,15 @@ function relativeTime(dateStr: string): string {
     color: var(--color-text-muted);
   }
 
+  .admin-input--date {
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
   .dashboard-pipeline-feedback[data-state='error'] {
     color: #b42318;
   }
@@ -802,6 +817,8 @@ function relativeTime(dateStr: string): string {
         delete pipelineFeedback.dataset.state;
       }
     };
+    const dateInput = document.getElementById('pipeline-target-date') as HTMLInputElement | null;
+
     const bindPipelineButton = (
       button: HTMLElement | null,
       idleLabel: string,
@@ -814,14 +831,17 @@ function relativeTime(dateStr: string): string {
         if (forceRefreshBtn) forceRefreshBtn.setAttribute('disabled', 'true');
         button.textContent = 'Running...';
         setPipelineFeedback('');
+        const targetDate = dateInput?.value || null;
         try {
+          const reqBody: Record<string, string> = { mode };
+          if (targetDate) reqBody.target_date = targetDate;
           const res = await fetch('/api/admin/run-pipeline', {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ mode }),
+            body: JSON.stringify(reqBody),
           });
           const payload = await res.json().catch(() => null);
           if (!res.ok) {
@@ -838,7 +858,8 @@ function relativeTime(dateStr: string): string {
             throw new Error(message);
           }
           button.textContent = 'Started';
-          setPipelineFeedback(payload?.data?.message || 'Pipeline queued.', 'success');
+          const dateLabel = targetDate || 'today';
+          setPipelineFeedback(payload?.data?.message || `Pipeline queued for ${dateLabel}.`, 'success');
           setTimeout(() => window.location.reload(), 2000);
         } catch (error) {
           button.textContent = 'Failed';

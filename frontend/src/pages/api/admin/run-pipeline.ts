@@ -107,10 +107,14 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   }
 
   let mode = 'resume';
+  let targetDate: string | null = null;
   try {
     const payload = await request.json();
     if (payload?.mode === 'force_refresh' || payload?.mode === 'resume') {
       mode = payload.mode;
+    }
+    if (payload?.target_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.target_date)) {
+      targetDate = payload.target_date;
     }
   } catch {}
 
@@ -118,5 +122,5 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     CRON_SECRET: import.meta.env.CRON_SECRET,
     FASTAPI_URL: import.meta.env.FASTAPI_URL,
   };
-  return handleAdminTriggerRequest(env, mode);
+  return handleAdminTriggerRequest(env, mode, targetDate);
 };

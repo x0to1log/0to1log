@@ -144,13 +144,14 @@ async def _generate_post(
 
 async def run_daily_pipeline(
     batch_id: str | None = None,
+    target_date: str | None = None,
 ) -> PipelineResult:
     """Run the full daily AI news pipeline.
 
     Flow: collect → rank → (react + extract + personas) × 2 → save drafts.
     """
     if batch_id is None:
-        batch_id = date.today().isoformat()
+        batch_id = target_date or date.today().isoformat()
 
     supabase = get_supabase()
     if not supabase:
@@ -174,7 +175,7 @@ async def run_daily_pipeline(
         logger.warning("Failed to record pipeline run: %s", e)
 
     try:
-        candidates = await collect_news()
+        candidates = await collect_news(target_date=target_date)
         if not candidates:
             logger.info("No news candidates found, pipeline complete")
             try:

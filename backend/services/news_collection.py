@@ -1,6 +1,7 @@
 """Tavily-based news collection and community reaction gathering."""
 import asyncio
 import logging
+from datetime import date, datetime, timedelta
 
 from tavily import TavilyClient
 
@@ -15,11 +16,22 @@ SEARCH_QUERIES = [
     "new AI model release benchmark",
 ]
 
+BACKFILL_QUERIES = [
+    "AI artificial intelligence news",
+    "AI startup funding investment announcement",
+    "new AI model release benchmark",
+]
+
 
 async def collect_news(
     max_results_per_query: int = 10,
+    target_date: str | None = None,
 ) -> list[NewsCandidate]:
-    """Collect AI news candidates from Tavily. Returns deduplicated list."""
+    """Collect AI news candidates from Tavily. Returns deduplicated list.
+
+    Args:
+        target_date: "YYYY-MM-DD" string for backfill, or None for today.
+    """
     if not settings.tavily_api_key:
         logger.warning("Tavily API key not configured, skipping collection")
         return []
@@ -30,19 +42,39 @@ async def collect_news(
         logger.error("Failed to create Tavily client: %s", e)
         return []
 
+    # Determine date params and query set
+    is_backfill = False
+    if target_date:
+        try:
+            td = datetime.strptime(target_date, "%Y-%m-%d").date()
+            is_backfill = td < date.today()
+        except ValueError:
+            logger.warning("Invalid target_date format: %s, falling back to today", target_date)
+
+    if is_backfill:
+        queries = BACKFILL_QUERIES
+        start_d = (td - timedelta(days=1)).isoformat()
+        end_d = td.isoformat()
+        date_kwargs = {"start_date": start_d, "end_date": end_d}
+        logger.info("Backfill mode: searching %s to %s", start_d, end_d)
+    else:
+        queries = SEARCH_QUERIES
+        date_kwargs = {"days": 2}
+
     loop = asyncio.get_running_loop()
     all_results: list[dict] = []
 
-    for query in SEARCH_QUERIES:
+    for query in queries:
         try:
             response = await loop.run_in_executor(
                 None,
-                lambda q=query: tavily.search(
+                lambda q=query, dk=date_kwargs: tavily.search(
                     query=q,
                     search_depth="advanced",
                     max_results=max_results_per_query,
                     topic="news",
-                    days=2,
+                    include_raw_content=True,
+                    **dk,
                 ),
             )
             all_results.extend(response.get("results", []))
@@ -62,7 +94,7 @@ async def collect_news(
                 url=url,
                 snippet=item.get("content", ""),
                 source="tavily",
-                raw_content=item.get("raw_content", ""),
+                raw_content=item.get("raw_content") or "",
             )
         )
 

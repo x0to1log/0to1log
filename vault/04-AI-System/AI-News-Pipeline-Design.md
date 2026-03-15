@@ -12,6 +12,7 @@
 ```mermaid
 flowchart TD
     CRON["⏰ Cron Trigger (매일 아침)"] --> COLLECT["1. 뉴스 수집\nTavily API"]
+    ADMIN_BTN["👤 Admin 수동 실행\n(target_date 지정 가능)"] --> COLLECT
     COLLECT --> RANK["2. LLM 랭킹\nresearch 1건 + business 1건 선정"]
     RANK --> HAS_R{"research \n 뉴스 있나?"}
 
@@ -92,6 +93,9 @@ flowchart LR
 ## 수집 & 선정
 
 - **소스**: Tavily API (AI 관련 키워드 검색)
+  - 기본: `days=2` (오늘+어제)
+  - 백필: `start_date` / `end_date` 지정 (admin이 `target_date` 선택 시)
+  - `include_raw_content=True`로 뉴스 원문 전체 수집
 - **선정**: LLM이 후보 뉴스를 랭킹
   - **Research**: 기술/논문/모델 중심 1건
   - **Business**: 시장/투자/전략 중심 1건
