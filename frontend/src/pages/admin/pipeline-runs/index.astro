@@ -425,6 +425,40 @@ const handbookSummary = buildSummary(handbookRuns);
     line-height: 1.55;
   }
 
+  .pcosts-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--color-border);
+    margin-bottom: 1.25rem;
+  }
+
+  .pcosts-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color 150ms, border-color 150ms;
+  }
+
+  .pcosts-tab:hover {
+    color: var(--color-text);
+  }
+
+  .pcosts-tab--active {
+    color: var(--color-accent, #c9a96e);
+    border-bottom-color: var(--color-accent, #c9a96e);
+  }
+
+  .pcosts-tab:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
   .pipeline-runs-summary {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -515,11 +549,18 @@ const handbookSummary = buildSummary(handbookRuns);
     background: var(--color-bg-primary);
     color: inherit;
     text-decoration: none;
-    transition: border-color 140ms ease, background-color 140ms ease;
+    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
   }
 
   .pipeline-run-card:hover {
+    border-color: var(--color-accent, #c9a96e);
     background: color-mix(in srgb, var(--color-bg-primary) 88%, var(--color-bg-secondary));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .pipeline-run-card:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .pipeline-run-card--success {
@@ -528,6 +569,7 @@ const handbookSummary = buildSummary(handbookRuns);
 
   .pipeline-run-card--success:hover {
     border-color: color-mix(in srgb, var(--color-success) 76%, var(--color-border));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .pipeline-run-card--failed {
@@ -537,6 +579,7 @@ const handbookSummary = buildSummary(handbookRuns);
 
   .pipeline-run-card--failed:hover {
     border-color: color-mix(in srgb, var(--color-error) 82%, var(--color-border));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .pipeline-run-card--running {
@@ -546,6 +589,7 @@ const handbookSummary = buildSummary(handbookRuns);
 
   .pipeline-run-card--running:hover {
     border-color: color-mix(in srgb, var(--color-accent) 82%, var(--color-border));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .pipeline-run-card__top {

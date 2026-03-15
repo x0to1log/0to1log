@@ -808,7 +808,7 @@ if (batchId) {
   .pipeline-stage-card__chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem 0.6rem;
     margin-top: 0.9rem;
   }
 
@@ -867,6 +867,14 @@ if (batchId) {
     color: var(--color-text-primary);
   }
 
+  .pipeline-cost-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--color-bg-secondary) 50%, transparent);
+  }
+
+  .pipeline-cost-table tbody tr:hover {
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  }
+
   .pipeline-cost-table__stage {
     text-align: left !important;
     font-family: var(--font-ui) !important;
@@ -912,6 +920,22 @@ if (batchId) {
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--color-text-secondary);
+  }
+
+  .pipeline-stage-panel summary::before {
+    content: '\25B6';
+    display: inline-block;
+    margin-right: 0.4rem;
+    font-size: 0.65rem;
+    transition: transform 200ms;
+  }
+
+  .pipeline-stage-panel[open] summary::before {
+    transform: rotate(90deg);
+  }
+
+  .pipeline-stage-panel summary:hover {
+    color: var(--color-text);
   }
 
   .pipeline-stage-panel summary::-webkit-details-marker {
@@ -1011,6 +1035,12 @@ if (batchId) {
     flex-wrap: wrap;
     gap: 0.35rem;
     align-items: center;
+  }
+
+  .pipeline-stage-panel summary:focus-visible,
+  .pipeline-run-hero a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   @media (max-width: 1080px) {
