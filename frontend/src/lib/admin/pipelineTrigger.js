@@ -41,13 +41,18 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
 
     const data = await response.json();
 
+    // Pass through meaningful status codes (409=conflict, 422=published protection)
+    const forwardStatus = response.ok ? 200
+      : [409, 422].includes(response.status) ? response.status
+      : 502;
+
     return jsonResponse(
       {
         ok: response.ok,
         status: response.status,
         data,
       },
-      response.ok ? 200 : 502,
+      forwardStatus,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
