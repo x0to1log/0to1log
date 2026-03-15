@@ -24,7 +24,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.client import extract_usage_metrics, get_openai_client, parse_ai_json
+from services.agents.client import extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
     get_generate_prompt,
@@ -388,7 +388,8 @@ async def run_handbook_advise(req: HandbookAdviseRequest) -> tuple[dict, str, in
         data, model, tokens = await _run_translate(req, client, model)
         return data, model, tokens, []
     elif req.action == "generate":
-        return await _run_generate_term(req, client, model)
+        data, usage, warnings = await _run_generate_term(req, client, model)
+        return data, usage.get("model_used", model), usage.get("tokens_used", 0), warnings
     elif req.action in ("factcheck", "deepverify"):
         # Reuse news editor's factcheck/deepverify with handbook content
         content_parts = [
@@ -466,7 +467,6 @@ async def _run_related_terms(req: HandbookAdviseRequest, client, model: str) -> 
             logger.warning("Exa search failed for related terms: %s", e)
 
     # Step 3: Check DB for existing terms
-    from core.database import get_supabase
     supabase = get_supabase()
     for item in related:
         term_name = item.get("term", "")
@@ -528,20 +528,44 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
 
 
 async def _run_generate_term(
-    req: HandbookAdviseRequest, client, model: str
-) -> tuple[dict, str, int, list[str]]:
+    req: HandbookAdviseRequest, client, model: str,
+    source: str = "manual",
+) -> tuple[dict, dict, list[str]]:
     """Auto-generate all empty fields for a handbook term via 2 LLM calls.
 
     Call 1: meta + Basic (term_full, korean_full, categories, definition, body_basic)
     Call 2: Advanced (body_advanced, with definition as context)
 
-    Returns (merged_data, model, total_tokens, warnings).
+    Args:
+        source: "manual" (admin editor) or "pipeline" (auto-extraction)
+
+    Returns (merged_data, merged_usage, warnings).
     """
     user_prompt = _build_handbook_user_prompt(req)
-    total_tokens = 0
     warnings: list[str] = []
-
     supabase = get_supabase()
+
+    def _log_handbook_stage(stage: str, usage: dict) -> None:
+        """Log a handbook generate stage to pipeline_logs. Never raises."""
+        if not supabase:
+            return
+        try:
+            supabase.table("pipeline_logs").insert({
+                "pipeline_type": stage,
+                "status": "success",
+                "input_summary": f"term={req.term}",
+                "model_used": usage.get("model_used"),
+                "tokens_used": usage.get("tokens_used"),
+                "cost_usd": usage.get("cost_usd"),
+                "debug_meta": {
+                    "term": req.term,
+                    "source": source,
+                    "input_tokens": usage.get("input_tokens"),
+                    "output_tokens": usage.get("output_tokens"),
+                },
+            }).execute()
+        except Exception as e:
+            logger.warning("Failed to log handbook %s stage: %s", stage, e)
 
     # --- Call 1: Meta + Basic ---
     resp1 = await client.chat.completions.create(
@@ -556,32 +580,12 @@ async def _run_generate_term(
     )
     basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
     usage1 = extract_usage_metrics(resp1, model)
-    total_tokens += usage1.get("tokens_used", 0)
 
     logger.info(
         "Handbook generate call 1 (basic) for '%s': %d tokens",
         req.term, usage1.get("tokens_used", 0),
     )
-
-    # Log call 1 to pipeline_logs
-    if supabase:
-        try:
-            supabase.table("pipeline_logs").insert({
-                "pipeline_type": "handbook.generate.basic",
-                "status": "success",
-                "input_summary": f"term={req.term}",
-                "output_summary": "basic fields generated",
-                "model_used": usage1.get("model_used"),
-                "tokens_used": usage1.get("tokens_used"),
-                "cost_usd": usage1.get("cost_usd"),
-                "debug_meta": {
-                    "term": req.term,
-                    "input_tokens": usage1.get("input_tokens"),
-                    "output_tokens": usage1.get("output_tokens"),
-                },
-            }).execute()
-        except Exception as e:
-            logger.warning("Failed to log handbook basic stage: %s", e)
+    _log_handbook_stage("handbook.generate.basic", usage1)
 
     # --- Call 2: Advanced (with definition as context) ---
     definition_context = basic_data.get("definition_en", "") or req.definition_en
@@ -605,35 +609,16 @@ async def _run_generate_term(
     )
     advanced_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-advanced")
     usage2 = extract_usage_metrics(resp2, model)
-    total_tokens += usage2.get("tokens_used", 0)
 
     logger.info(
         "Handbook generate call 2 (advanced) for '%s': %d tokens",
         req.term, usage2.get("tokens_used", 0),
     )
-
-    # Log call 2 to pipeline_logs
-    if supabase:
-        try:
-            supabase.table("pipeline_logs").insert({
-                "pipeline_type": "handbook.generate.advanced",
-                "status": "success",
-                "input_summary": f"term={req.term}",
-                "output_summary": "advanced fields generated",
-                "model_used": usage2.get("model_used"),
-                "tokens_used": usage2.get("tokens_used"),
-                "cost_usd": usage2.get("cost_usd"),
-                "debug_meta": {
-                    "term": req.term,
-                    "input_tokens": usage2.get("input_tokens"),
-                    "output_tokens": usage2.get("output_tokens"),
-                },
-            }).execute()
-        except Exception as e:
-            logger.warning("Failed to log handbook advanced stage: %s", e)
+    _log_handbook_stage("handbook.generate.advanced", usage2)
 
     # --- Merge results ---
     data = {**basic_data, **advanced_data}
+    merged_usage = merge_usage_metrics(usage1, usage2)
 
     try:
         GenerateTermResult.model_validate(data)
@@ -643,14 +628,20 @@ async def _run_generate_term(
             warnings.append(f"{field}: {err['msg']}")
         logger.warning("Handbook generate validation: %s", warnings)
 
-    logger.info("Handbook generate completed for '%s', total_tokens=%d, warnings=%d", req.term, total_tokens, len(warnings))
-    return data, model, total_tokens, warnings
+    logger.info(
+        "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",
+        req.term, merged_usage.get("tokens_used", 0), len(warnings),
+    )
+    return data, merged_usage, warnings
 
 
 # --- Pipeline Term Extraction Helpers ---
 
-async def extract_terms_from_content(content: str) -> tuple[list[dict], str, int]:
-    """Extract technical terms from article content. Uses light model for cost."""
+async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
+    """Extract technical terms from article content. Uses light model for cost.
+
+    Returns (terms_list, usage_metrics_dict).
+    """
     client = get_openai_client()
     model = getattr(settings, "openai_model_light")
 
@@ -670,7 +661,7 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], str, int
         max_tokens=2048,
     )
     data = parse_ai_json(resp.choices[0].message.content, "Extract-terms")
-    tokens = resp.usage.completion_tokens if resp.usage else 0
+    usage = extract_usage_metrics(resp, model)
 
     try:
         ExtractTermsResult.model_validate(data)
@@ -678,14 +669,20 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], str, int
         logger.warning("Extract terms validation soft-fail: %s", e)
 
     terms = data.get("terms", [])
-    logger.info("Extracted %d terms, tokens=%d", len(terms), tokens)
-    return terms, model, tokens
+    logger.info("Extracted %d terms, tokens=%d", len(terms), usage.get("tokens_used", 0))
+    return terms, usage
 
 
 async def generate_term_content(
-    term_name: str, korean_name: str = ""
-) -> tuple[dict, str, int]:
-    """Generate full content for a handbook term. Used by pipeline auto-creation."""
+    term_name: str, korean_name: str = "", source: str = "pipeline",
+) -> tuple[dict, dict]:
+    """Generate full content for a handbook term. Used by pipeline auto-creation.
+
+    Args:
+        source: "pipeline" (auto-extraction) or "manual" (admin editor)
+
+    Returns (content_data, usage_metrics_dict).
+    """
     req = HandbookAdviseRequest(
         action="generate",
         term_id="",
@@ -694,5 +691,5 @@ async def generate_term_content(
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
-    data, model, tokens, _warnings = await _run_generate_term(req, client, model)
-    return data, model, tokens
+    data, usage, _warnings = await _run_generate_term(req, client, model, source=source)
+    return data, usage

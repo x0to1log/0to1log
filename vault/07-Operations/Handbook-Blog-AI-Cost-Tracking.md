@@ -25,20 +25,27 @@ Handbook과 Blog의 AI 호출은 비용 추적 **미구현**:
 
 ## Future Plan
 
-### 1. Handbook 비용 추적 (설계 확정, 구현 대기)
+### 1. Handbook 비용 추적 (구현 중)
 
 Generate 액션이 2회 LLM 호출로 분리됨에 따라 각각 별도 기록:
 
 | pipeline_type | 용도 | 기록 내용 |
 |--------------|------|---------|
-| `handbook.generate.basic` | 메타 + Basic 생성 (호출 1) | input/output 토큰, cost, model, duration, debug_meta |
-| `handbook.generate.advanced` | Advanced 생성 (호출 2) | input/output 토큰, cost, model, duration, debug_meta |
+| `handbook.generate.basic` | 메타 + Basic 생성 (호출 1) | input/output 토큰, cost, model, debug_meta |
+| `handbook.generate.advanced` | Advanced 생성 (호출 2) | input/output 토큰, cost, model, debug_meta |
 | `handbook.extract` | 뉴스 → 용어 자동 추출 | 추출된 용어 목록, 토큰, 비용 |
-| `handbook.translate` | 번역 | 토큰, 비용 |
-| `handbook.related` | 관련 용어 추천 | 토큰, 비용 |
 
 - `pipeline_runs` 없이 `pipeline_logs` 단독 기록 (on-demand 실행)
 - `pipeline_type` prefix로 News(`collect`, `rank`, ...) vs Handbook(`handbook.*`) 필터링
+- **자동 vs 수동 구분**: `debug_meta.source` = `"pipeline"` (뉴스 파이프라인 자동 추출) 또는 `"manual"` (어드민 에디터 수동 생성)
+
+### 1-1. 자동/수동 분리 그래프 (구현 예정)
+
+Analytics Handbook 탭에:
+- **자동 비용 시계열**: `debug_meta.source = "pipeline"` 필터
+- **수동 비용 시계열**: `debug_meta.source = "manual"` 필터
+- **합산 비용 시계열**: 두 source 합산
+- 기존 summary 카드 + 호출 테이블 유지
 
 ### 2. Blog 비용 추적 (미구현)
 

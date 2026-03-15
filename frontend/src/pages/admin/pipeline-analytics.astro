@@ -49,11 +49,10 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }] = await
     .in('pipeline_type', ['quality.research', 'quality.business'])
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
-    .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at')
+    .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .like('pipeline_type', 'handbook.%')
-    .gte('created_at', thirtyDaysAgo)
-    .order('created_at', { ascending: false })
-    .limit(50),
+    .gte('pipeline_runs.started_at', thirtyDaysAgo)
+    .order('created_at', { ascending: true }),
 ]);
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -193,14 +192,7 @@ const stageStats: StageStats[] = Array.from(stageStatsMap.entries())
   .sort((a, b) => b.avgCost - a.avgCost);
 
 // ─── Handbook Data ──────────────────────────────────────────
-type HandbookLog = {
-  pipeline_type: string;
-  status: string | null;
-  tokens_used: number | null;
-  cost_usd: number | string | null;
-  debug_meta: Record<string, unknown> | null;
-  created_at: string;
-};
+type HandbookLog = AnalyticsLog;
 
 const hbLogs: HandbookLog[] = (handbookLogs ?? []) as HandbookLog[];
 const hbTotalCalls = hbLogs.length;
@@ -208,16 +200,137 @@ const hbTotalCost = hbLogs.reduce((sum, l) => sum + parseCost(l.cost_usd), 0);
 const hbTotalTokens = hbLogs.reduce((sum, l) => sum + (l.tokens_used ?? 0), 0);
 const hbAvgCost = hbTotalCalls > 0 ? hbTotalCost / hbTotalCalls : 0;
 
+// Separate auto (pipeline) vs manual (editor) handbook logs
+const hbAutoLogs = (handbookLogs ?? []).filter(
+  (l: any) => l.debug_meta?.source === 'pipeline'
+);
+const hbManualLogs = (handbookLogs ?? []).filter(
+  (l: any) => !l.debug_meta?.source || l.debug_meta?.source === 'manual'
+);
+
+// Compute costs
+const hbAutoCost = hbAutoLogs.reduce((s: number, l: any) => s + (parseFloat(l.cost_usd) || 0), 0);
+const hbManualCost = hbManualLogs.reduce((s: number, l: any) => s + (parseFloat(l.cost_usd) || 0), 0);
+const hbAutoTokens = hbAutoLogs.reduce((s: number, l: any) => s + (l.tokens_used || 0), 0);
+const hbManualTokens = hbManualLogs.reduce((s: number, l: any) => s + (l.tokens_used || 0), 0);
+
+// Group by date for chart
+function groupByDate(logs: any[]): Record<string, number> {
+  const grouped: Record<string, number> = {};
+  for (const l of logs) {
+    const date = l.created_at?.slice(0, 10) || '';
+    if (!date) continue;
+    grouped[date] = (grouped[date] || 0) + (parseFloat(l.cost_usd) || 0);
+  }
+  return grouped;
+}
+
+const hbAutoDailyCost = groupByDate(hbAutoLogs);
+const hbManualDailyCost = groupByDate(hbManualLogs);
+const allDates = [...new Set([...Object.keys(hbAutoDailyCost), ...Object.keys(hbManualDailyCost)])].sort();
+
+// Group by run (same pattern as News)
+type HbRunGroup = {
+  runKey: string;
+  startedAt: string;
+  stages: HandbookLog[];
+  totalCost: number;
+  totalTokens: number;
+  termsExtracted: number;
+};
+const hbRunMap = new Map<string, HbRunGroup>();
+for (const log of hbLogs) {
+  const runId = log.pipeline_runs.id;
+  if (!hbRunMap.has(runId)) {
+    hbRunMap.set(runId, {
+      runKey: log.pipeline_runs.run_key,
+      startedAt: log.pipeline_runs.started_at,
+      stages: [],
+      totalCost: 0,
+      totalTokens: 0,
+      termsExtracted: 0,
+    });
+  }
+  const group = hbRunMap.get(runId)!;
+  group.stages.push(log);
+  group.totalCost += parseCost(log.cost_usd);
+  group.totalTokens += log.tokens_used ?? 0;
+  if (log.pipeline_type === 'handbook.extract') {
+    const meta = (log.debug_meta ?? {}) as Record<string, unknown>;
+    const terms = meta.terms as unknown[];
+    group.termsExtracted += Array.isArray(terms) ? terms.length : 0;
+  }
+}
+const hbRuns = Array.from(hbRunMap.values()).sort(
+  (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+);
+
+const hbTotalRuns = hbRuns.length;
+const hbTotalTerms = hbRuns.reduce((sum, r) => sum + r.termsExtracted, 0);
+
+// Chart data
+const hbStageNames = ['handbook.extract', 'handbook.auto_generate'];
+const hbStageLabels: Record<string, string> = {
+  'handbook.extract': 'Extract',
+  'handbook.auto_generate': 'Generate',
+};
+const hbStackedData = hbStageNames.map((stage) => ({
+  label: hbStageLabels[stage] || stage,
+  costs: hbRuns.map((run) => {
+    return run.stages.filter((s) => s.pipeline_type === stage).reduce((sum, s) => sum + parseCost(s.cost_usd), 0);
+  }),
+  tokens: hbRuns.map((run) => {
+    return run.stages.filter((s) => s.pipeline_type === stage).reduce((sum, s) => sum + (s.tokens_used ?? 0), 0);
+  }),
+}));
+
+const hbChartData = {
+  runLabels: hbRuns.map((r) => {
+    const d = new Date(r.startedAt);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }),
+  totalCosts: hbRuns.map((r) => Number(r.totalCost.toFixed(4))),
+  stacked: hbStackedData.map((s) => ({
+    label: s.label,
+    costs: s.costs.map((c) => Number(c.toFixed(6))),
+    tokens: s.tokens,
+  })),
+  termsPerRun: hbRuns.map((r) => r.termsExtracted),
+};
+
+// Stage stats
+type HbStageStatEntry = { totalTokens: number; totalCost: number; count: number };
+const hbStageStatsMap = new Map<string, HbStageStatEntry>();
+for (const run of hbRuns) {
+  for (const log of run.stages) {
+    const key = log.pipeline_type;
+    const existing = hbStageStatsMap.get(key) ?? { totalTokens: 0, totalCost: 0, count: 0 };
+    existing.totalTokens += log.tokens_used ?? 0;
+    existing.totalCost += parseCost(log.cost_usd);
+    existing.count += 1;
+    hbStageStatsMap.set(key, existing);
+  }
+}
+const hbStageStats = Array.from(hbStageStatsMap.entries())
+  .map(([stage, s]) => ({
+    stage,
+    avgTokens: Math.round(s.totalTokens / s.count),
+    avgCost: s.totalCost / s.count,
+    count: s.count,
+  }))
+  .sort((a, b) => b.avgCost - a.avgCost);
+
+// Recent calls table
 type HandbookRow = {
   date: string;
   type: string;
   term: string;
   tokens: number;
   cost: number;
+  source: string;
 };
-const hbRows: HandbookRow[] = hbLogs.map((l) => {
+const hbRows: HandbookRow[] = hbLogs.slice(-50).reverse().map((l) => {
   const meta = (l.debug_meta ?? {}) as Record<string, unknown>;
-  // Extract type: handbook.generate.basic → basic, handbook.generate.advanced → advanced
   const parts = l.pipeline_type.split('.');
   const typeLabel = parts.length >= 3 ? parts.slice(1).join('.') : parts.slice(1).join('.') || l.pipeline_type;
   return {
@@ -226,6 +339,7 @@ const hbRows: HandbookRow[] = hbLogs.map((l) => {
     term: (meta.term_title as string) ?? (meta.term as string) ?? '—',
     tokens: l.tokens_used ?? 0,
     cost: parseCost(l.cost_usd),
+    source: (meta.source as string) === 'pipeline' ? 'Auto' : 'Manual',
   };
 });
 
@@ -355,16 +469,21 @@ const nonce = Astro.locals.cspNonce || '';
 
       <!-- ═══ Handbook Tab ═══ -->
       <div id="tab-handbook" style="display:none">
-        <section class="pcosts-summary-grid pcosts-summary-grid--4col">
+        <section class="pcosts-summary-grid">
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Total Calls (30d)</span>
-            <strong class="pipeline-run-stat__value">{hbTotalCalls}</strong>
-            <span class="pipeline-run-stat__detail">Handbook AI invocations</span>
+            <span class="pipeline-run-stat__label">Runs (30d)</span>
+            <strong class="pipeline-run-stat__value">{hbTotalRuns}</strong>
+            <span class="pipeline-run-stat__detail">Pipeline runs with handbook stages</span>
           </div>
           <div class="pipeline-run-stat">
             <span class="pipeline-run-stat__label">Total Cost</span>
-            <strong class="pipeline-run-stat__value">${hbTotalCost.toFixed(4)}</strong>
+            <strong class="pipeline-run-stat__value">${hbTotalCost.toFixed(2)}</strong>
             <span class="pipeline-run-stat__detail">All handbook AI calls</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Avg Cost / Run</span>
+            <strong class="pipeline-run-stat__value">${hbTotalRuns > 0 ? (hbTotalCost / hbTotalRuns).toFixed(3) : '0'}</strong>
+            <span class="pipeline-run-stat__detail">Mean cost per execution</span>
           </div>
           <div class="pipeline-run-stat">
             <span class="pipeline-run-stat__label">Total Tokens</span>
@@ -372,21 +491,123 @@ const nonce = Astro.locals.cspNonce || '';
             <span class="pipeline-run-stat__detail">Input + output combined</span>
           </div>
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Avg Cost / Call</span>
-            <strong class="pipeline-run-stat__value">${hbAvgCost.toFixed(4)}</strong>
-            <span class="pipeline-run-stat__detail">Mean cost per invocation</span>
+            <span class="pipeline-run-stat__label">Terms Extracted</span>
+            <strong class="pipeline-run-stat__value">{hbTotalTerms}</strong>
+            <span class="pipeline-run-stat__detail">Total terms found across all runs</span>
           </div>
         </section>
 
-        {hbRows.length === 0 ? (
-          <p class="dashboard-empty">No handbook AI calls found in the last 30 days.</p>
+        <div class="pcosts-summary-grid pcosts-summary-grid--4col" style="margin-top:0.75rem">
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Auto (Pipeline)</span>
+            <strong class="pipeline-run-stat__value">${hbAutoCost.toFixed(4)}</strong>
+            <span class="pipeline-run-stat__detail">{hbAutoLogs.length} calls, {hbAutoTokens.toLocaleString()} tokens</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Manual (Editor)</span>
+            <strong class="pipeline-run-stat__value">${hbManualCost.toFixed(4)}</strong>
+            <span class="pipeline-run-stat__detail">{hbManualLogs.length} calls, {hbManualTokens.toLocaleString()} tokens</span>
+          </div>
+        </div>
+
+        <h3 class="pcosts-section-title" style="margin-top:1.5rem">Daily Cost (Auto vs Manual)</h3>
+        <div class="hb-cost-chart">
+          {allDates.length === 0 ? (
+            <p class="pcosts-empty">No cost data yet.</p>
+          ) : (
+            <div class="hb-cost-bars">
+              {allDates.map(date => {
+                const auto = hbAutoDailyCost[date] || 0;
+                const manual = hbManualDailyCost[date] || 0;
+                const total = auto + manual;
+                const maxCost = Math.max(...allDates.map(d => (hbAutoDailyCost[d] || 0) + (hbManualDailyCost[d] || 0)), 0.01);
+                const barPct = (total / maxCost) * 100;
+                const autoPct = total > 0 ? (auto / total) * 100 : 0;
+                return (
+                  <div class="hb-cost-bar-row">
+                    <span class="hb-cost-bar-date">{date.slice(5)}</span>
+                    <div class="hb-cost-bar-track">
+                      <div class="hb-cost-bar-fill" style={`width:${barPct}%`}>
+                        <div class="hb-cost-bar-auto" style={`width:${autoPct}%`}></div>
+                      </div>
+                    </div>
+                    <span class="hb-cost-bar-value">${total.toFixed(3)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div class="hb-cost-legend">
+            <span><span class="hb-cost-legend-dot hb-cost-legend-dot--auto"></span> Auto (Pipeline)</span>
+            <span><span class="hb-cost-legend-dot hb-cost-legend-dot--manual"></span> Manual (Editor)</span>
+          </div>
+        </div>
+
+        {hbRuns.length === 0 ? (
+          <p class="dashboard-empty">No handbook pipeline data found in the last 30 days.</p>
         ) : (
+          <>
+            <section class="pcosts-charts">
+              <div class="pcosts-chart-card">
+                <h3 class="pcosts-chart-title">Total Cost per Run</h3>
+                <canvas id="hb-chart-total-cost" width="600" height="280"></canvas>
+              </div>
+              <div class="pcosts-chart-card">
+                <h3 class="pcosts-chart-title">Cost by Stage (Stacked)</h3>
+                <canvas id="hb-chart-stacked-cost" width="600" height="280"></canvas>
+              </div>
+              <div class="pcosts-chart-card">
+                <h3 class="pcosts-chart-title">Tokens by Stage</h3>
+                <canvas id="hb-chart-tokens" width="600" height="280"></canvas>
+              </div>
+              <div class="pcosts-chart-card">
+                <h3 class="pcosts-chart-title">Terms Extracted per Run</h3>
+                <canvas id="hb-chart-terms" width="600" height="280"></canvas>
+              </div>
+            </section>
+
+            <section class="pipeline-run-section">
+              <div class="pipeline-run-section__header">
+                <div>
+                  <h2 class="pipeline-run-section__title">Stage Statistics</h2>
+                  <p class="pipeline-run-section__hint">
+                    Average token usage and cost per handbook stage across all runs.
+                  </p>
+                </div>
+              </div>
+              <div class="pipeline-cost-table-wrap">
+                <table class="pipeline-cost-table">
+                  <thead>
+                    <tr>
+                      <th>Stage</th>
+                      <th>Runs</th>
+                      <th>Avg Tokens</th>
+                      <th>Avg Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hbStageStats.map((s) => (
+                      <tr>
+                        <td class="pipeline-cost-table__stage">{s.stage}</td>
+                        <td>{s.count}</td>
+                        <td>{s.avgTokens.toLocaleString()}</td>
+                        <td>${s.avgCost.toFixed(4)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {hbRows.length > 0 && (
           <section class="pipeline-run-section">
             <div class="pipeline-run-section__header">
               <div>
-                <h2 class="pipeline-run-section__title">Recent Handbook AI Calls</h2>
+                <h2 class="pipeline-run-section__title">Recent Calls</h2>
                 <p class="pipeline-run-section__hint">
-                  Last {hbRows.length} handbook generation calls (generate, translate, etc.).
+                  Last {hbRows.length} handbook AI calls.
                 </p>
               </div>
             </div>
@@ -396,6 +617,7 @@ const nonce = Astro.locals.cspNonce || '';
                   <tr>
                     <th>Date</th>
                     <th>Type</th>
+                    <th>Source</th>
                     <th>Term</th>
                     <th>Tokens</th>
                     <th>Cost</th>
@@ -406,6 +628,7 @@ const nonce = Astro.locals.cspNonce || '';
                     <tr>
                       <td class="pipeline-cost-table__stage">{r.date}</td>
                       <td>{r.type}</td>
+                      <td>{r.source}</td>
                       <td class="pipeline-cost-table__stage">{r.term}</td>
                       <td>{r.tokens.toLocaleString()}</td>
                       <td>${r.cost.toFixed(4)}</td>
@@ -429,7 +652,7 @@ const nonce = Astro.locals.cspNonce || '';
 </MainLayout>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
-<script is:inline nonce={nonce} define:vars={{ chartData }}>
+<script is:inline nonce={nonce} define:vars={{ chartData, hbChartData }}>
   (function () {
     if (typeof Chart === 'undefined') return;
     var canvases = document.querySelectorAll('canvas');
@@ -538,6 +761,94 @@ const nonce = Astro.locals.cspNonce || '';
         },
       },
     });
+
+    // ─── Handbook Charts ──────────────────────────
+    var hbColors = ['#8b5cf6', '#f59e0b'];
+
+    if (document.getElementById('hb-chart-total-cost') && hbChartData.runLabels.length > 0) {
+      new Chart(document.getElementById('hb-chart-total-cost'), {
+        type: 'line',
+        data: {
+          labels: hbChartData.runLabels,
+          datasets: [{
+            label: 'Total Cost ($)',
+            data: hbChartData.totalCosts,
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            fill: true, tension: 0.3, pointRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            ...commonScales,
+            y: { ticks: { color: textColor, callback: function(v) { return '$' + v; } }, grid: { color: gridColor } },
+          },
+        },
+      });
+
+      new Chart(document.getElementById('hb-chart-stacked-cost'), {
+        type: 'bar',
+        data: {
+          labels: hbChartData.runLabels,
+          datasets: hbChartData.stacked.map(function(s, i) { return {
+            label: s.label, data: s.costs,
+            backgroundColor: hbColors[i % hbColors.length],
+          }; }),
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+          scales: {
+            ...commonScales,
+            x: { ...commonScales.x, stacked: true },
+            y: { stacked: true, ticks: { color: textColor, callback: function(v) { return '$' + v; } }, grid: { color: gridColor } },
+          },
+        },
+      });
+
+      new Chart(document.getElementById('hb-chart-tokens'), {
+        type: 'bar',
+        data: {
+          labels: hbChartData.runLabels,
+          datasets: hbChartData.stacked.map(function(s, i) { return {
+            label: s.label, data: s.tokens,
+            backgroundColor: hbColors[i % hbColors.length],
+          }; }),
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+          scales: {
+            ...commonScales,
+            y: { ticks: { color: textColor }, grid: { color: gridColor } },
+          },
+        },
+      });
+
+      new Chart(document.getElementById('hb-chart-terms'), {
+        type: 'line',
+        data: {
+          labels: hbChartData.runLabels,
+          datasets: [{
+            label: 'Terms Extracted',
+            data: hbChartData.termsPerRun,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true, tension: 0.3, pointRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            ...commonScales,
+            y: { ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
+          },
+        },
+      });
+    }
   })();
 </script>
 
@@ -806,6 +1117,40 @@ const nonce = Astro.locals.cspNonce || '';
     color: var(--color-text-muted);
     font-style: italic;
   }
+
+  /* ─── Handbook Auto/Manual Chart ─────────── */
+  .pcosts-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+  }
+
+  .pcosts-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: 0.84rem;
+  }
+
+  .hb-cost-chart {
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
+    margin-bottom: 1.25rem;
+  }
+
+  .hb-cost-bars { display: flex; flex-direction: column; gap: 0.25rem; }
+  .hb-cost-bar-row { display: flex; align-items: center; gap: 0.5rem; }
+  .hb-cost-bar-date { font-size: 0.72rem; color: var(--color-text-muted); width: 3rem; text-align: right; font-variant-numeric: tabular-nums; }
+  .hb-cost-bar-track { flex: 1; height: 16px; background: var(--color-border); border-radius: 3px; overflow: hidden; }
+  .hb-cost-bar-fill { height: 100%; background: var(--color-accent, #c9a96e); border-radius: 3px; display: flex; transition: width 0.3s; }
+  .hb-cost-bar-auto { height: 100%; background: var(--color-success, #5a8e5d); border-radius: 3px 0 0 3px; }
+  .hb-cost-bar-value { font-size: 0.72rem; color: var(--color-text-secondary); width: 3.5rem; font-variant-numeric: tabular-nums; }
+  .hb-cost-legend { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.72rem; color: var(--color-text-muted); }
+  .hb-cost-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.25rem; vertical-align: middle; }
+  .hb-cost-legend-dot--auto { background: var(--color-success, #5a8e5d); }
+  .hb-cost-legend-dot--manual { background: var(--color-accent, #c9a96e); }
 
   /* ─── Responsive ────────────────────────────── */
   @media (max-width: 1080px) {
