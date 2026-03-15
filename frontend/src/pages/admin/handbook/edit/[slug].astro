@@ -179,6 +179,15 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             </div>
           </details>
 
+          {/* Completeness indicator */}
+          <div class="hb-completeness" id="completeness-bar">
+            <span class="hb-completeness__label">Completeness</span>
+            <div class="hb-completeness__track">
+              <div class="hb-completeness__fill" id="completeness-fill"></div>
+            </div>
+            <span class="hb-completeness__text" id="completeness-text">0/8</span>
+          </div>
+
           {/* Language tabs */}
           <div class="admin-lang-tabs">
             <button type="button" class="admin-lang-tab admin-lang-tab--active" data-lang="ko">KO</button>
@@ -364,6 +373,42 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     {/* Toast feedback (fixed position, outside form flow) */}
     <div id="feedback" class="admin-feedback admin-feedback--toast" hidden></div>
 </MainLayout>
+
+<style>
+  .hb-completeness {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    margin-bottom: 0.75rem;
+  }
+  .hb-completeness__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+  .hb-completeness__track {
+    flex: 1;
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .hb-completeness__fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s, background-color 0.3s;
+    width: 0%;
+  }
+  .hb-completeness__text {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+</style>
 
 <script>
   import { Crepe } from '@milkdown/crepe';
@@ -634,10 +679,22 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       const a = btn.dataset.aiAction;
       if (a) aiActionLabels.set(a, btn.childNodes[0]?.textContent?.trim() || a);
     });
+    let aiTimerInterval: ReturnType<typeof setInterval> | null = null;
 
     function setAiLoading(loading: boolean, action = '') {
       if (aiLoadingEl) aiLoadingEl.hidden = !loading;
-      if (aiLoadingText) aiLoadingText.textContent = loading ? `${action}...` : '';
+      if (loading) {
+        if (aiLoadingText) aiLoadingText.textContent = `${action}... (0s)`;
+        let elapsed = 0;
+        if (aiTimerInterval) clearInterval(aiTimerInterval);
+        aiTimerInterval = setInterval(() => {
+          elapsed++;
+          if (aiLoadingText) aiLoadingText.textContent = `${action}... (${elapsed}s)`;
+        }, 1000);
+      } else {
+        if (aiTimerInterval) { clearInterval(aiTimerInterval); aiTimerInterval = null; }
+        if (aiLoadingText) aiLoadingText.textContent = '';
+      }
       if (loading && aiResultEl) aiResultEl.innerHTML = '';
       // Map display label to data-ai-action value for button matching
       const actionMap: Record<string, string> = {
@@ -692,9 +749,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     function setHandbookValue(fieldName: string, value: string) {
       const editor = getCrepeEditor(fieldName);
-      if (editor) { editor.editor.action(replaceAll(value)); return; }
+      if (editor) { editor.editor.action(replaceAll(value)); updateCompleteness(); return; }
       const input = document.querySelector(`[name="${fieldName}"]`) as HTMLTextAreaElement | HTMLInputElement | null;
-      if (input) input.value = value;
+      if (input) { input.value = value; updateCompleteness(); }
     }
 
     function showDiff(btn: HTMLButtonElement, fieldName: string, newValue: string) {
@@ -1269,7 +1326,45 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         initCrepe('body-editor-advanced-en', 'Write advanced explanation...'),
       ]);
     }
-    initBodyEditors();
+    initBodyEditors().then(() => {
+      updateCompleteness();
+    });
+
+    // --- Completeness indicator ---
+    function updateCompleteness(): void {
+      const fields = [
+        () => (document.querySelector<HTMLInputElement>('[name="korean_name"]')?.value || '').length > 0,
+        () => (document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.value || '').length > 0,
+        () => (document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.value || '').length > 0,
+        () => {
+          const cats = document.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked');
+          return cats.length > 0;
+        },
+        () => (crepeBasicKo ? crepeBasicKo.getMarkdown() : '').length > 50,
+        () => (crepeBasicEn ? crepeBasicEn.getMarkdown() : '').length > 50,
+        () => (crepeAdvancedKo ? crepeAdvancedKo.getMarkdown() : '').length > 50,
+        () => (crepeAdvancedEn ? crepeAdvancedEn.getMarkdown() : '').length > 50,
+      ];
+
+      const filled = fields.filter(fn => { try { return fn(); } catch { return false; } }).length;
+      const pct = Math.round((filled / 8) * 100);
+
+      const fill = document.getElementById('completeness-fill');
+      const text = document.getElementById('completeness-text');
+      if (fill) {
+        fill.style.width = `${pct}%`;
+        fill.style.backgroundColor = filled <= 3 ? 'var(--color-error, #c44)' : filled <= 6 ? 'var(--color-warning, #f59e0b)' : 'var(--color-success)';
+      }
+      if (text) text.textContent = `${filled}/8`;
+    }
+
+    // Update completeness on meta field input changes
+    document.querySelector<HTMLInputElement>('[name="korean_name"]')?.addEventListener('input', updateCompleteness);
+    document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.addEventListener('input', updateCompleteness);
+    document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.addEventListener('input', updateCompleteness);
+    document.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach(cb => {
+      cb.addEventListener('change', updateCompleteness);
+    });
 
     function showFeedback(message: string, isError = false) {
     const el = document.getElementById('feedback')!;
@@ -1358,22 +1453,31 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       return null;
     }
 
-    const res = await fetch('/api/admin/handbook/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch('/api/admin/handbook/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
 
-    if (res.ok) {
-      const saved = await res.json();
-      syncSavedState(saved);
-      if (shouldShowFeedback) showFeedback('Saved successfully.');
-      return saved;
+      if (res.ok) {
+        const saved = await res.json();
+        syncSavedState(saved);
+        if (shouldShowFeedback) showFeedback('Saved successfully.');
+        return saved;
+      }
+
+      let errMsg = 'Save failed.';
+      try {
+        const err = await res.json();
+        errMsg = `Save failed: ${err.error}`;
+      } catch { /* JSON parse failed, use fallback message */ }
+      if (shouldShowFeedback) showFeedback(errMsg, true);
+      return null;
+    } catch {
+      if (shouldShowFeedback) showFeedback('Save failed: network error. Check your connection.', true);
+      return null;
     }
-
-    const err = await res.json();
-    if (shouldShowFeedback) showFeedback(`Save failed: ${err.error}`, true);
-    return null;
   }
 
   async function handlePublish() {
