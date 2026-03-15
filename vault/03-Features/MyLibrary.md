@@ -25,7 +25,7 @@ source: docs/01_Project_Overview.md
 > 북마크/읽기기록은 polymorphic `item_type` (`'news'`/`'blog'`/`'term'`)로 통합 관리. 단일 테이블에서 모든 콘텐츠 타입의 저장/기록을 처리.
 
 ## Related
+- [[Community-&-Gamification]] — 커뮤니티 기능
 
-- [[Daily-Dual-News]] — 북마크 대상 뉴스 콘텐츠
-- [[IT-Blog]] — 북마크 대상 블로그 콘텐츠
-- [[Database-Schema-Overview]] — 북마크/읽기기록 테이블 설계
+## See Also
+- [[Persona-System]] — 페르소나별 라이브러리 (03-Features)

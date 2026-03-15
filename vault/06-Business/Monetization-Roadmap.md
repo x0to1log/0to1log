@@ -149,8 +149,5 @@ Phase 1~2          Phase 2 후반         Phase 3~4            Phase 5
 > 비용 상향은 "기술 선투자"가 아니라 ==KPI 달성 이후 "수요 확인된 증설"==로 진행한다.
 
 ## Related
-
-- [[Business-Strategy]] — 전체 비즈니스 전략
-- [[KPI-Gates-&-Stages]] — 수익 KPI 게이트
-- [[Cost-Model-&-Stage-AB]] — 비용 vs 수익 균형
-- [[Growth-Loop-&-Viral]] — 수익 성장을 견인하는 바이럴
+- [[Business-Strategy]] — 상위 비즈니스 전략
+- [[KPI-Gates-&-Stages]] — 수익화 KPI

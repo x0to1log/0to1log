@@ -38,16 +38,20 @@ source: docs/04_Frontend_Spec.md
 ## 파이프라인 제어
 
 - 수동 파이프라인 트리거 (Research / Business 개별 실행)
+- **날짜 선택기**: 과거 날짜를 선택하여 백필 실행 가능 (빈칸 = 오늘)
 - 파이프라인 실행 로그 조회 (`/admin/pipeline-runs/[runId]`)
+  - **Run Context**: 실행 모드(daily/backfill), target_date, 검색 파라미터, 후보 수
+  - **Stage Timeline**: 스테이지별 input/output 토큰, 비용, debug_meta 펼치기
+  - **Created Posts**: 해당 run에서 생성된 draft 목록
+  - 백필 실행 시 Hero 영역에 Backfill 배지 표시
 - 실패 시 부분 재개 (Partial Resume) 지원
 
 > [!note] 인증
 > Admin 페이지는 Supabase Auth 세션 쿠키 기반 인증. RLS로 `admin` 역할 검증.
 
 ## Related
-
+- [[Handbook]] — Handbook 에디터 상세
 - [[Daily-Dual-News]] — News 에디터에서 관리하는 콘텐츠
-- [[IT-Blog]] — Blog 에디터에서 관리하는 콘텐츠
-- [[Handbook]] — Handbook 에디터 상세 (데이터 모델, 피드백, 검증)
-- [[AI-News-Pipeline-Overview]] — Admin에서 트리거하는 파이프라인
-- [[Frontend-Stack]] — Admin이 동작하는 프론트엔드 스택
+
+## See Also
+- [[Backend-Stack]] — Admin이 동작하는 백엔드 (02-Architecture)

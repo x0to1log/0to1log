@@ -39,13 +39,13 @@
 
 ## 구현
 
-- Agent: [[AI-News-Pipeline-Overview#business-agent\|Business Analyst]]
+- Agent: [[AI-News-Pipeline-Design#business-agent\|Business Analyst]]
 - DB: [[Database-Schema-Overview#persona-columns\|persona 컬럼 구조]]
 - UI: [[Component-States#PersonaSwitcher\|Persona Switcher]]
 
 ## Related
+- [[Daily-Dual-News]] — 페르소나가 적용되는 뉴스 기능
+- [[AI-News-Product]] — 페르소나 기반 AI News 제품
 
-- [[Content-Strategy]] — 페르소나 기반 콘텐츠 전략
-- [[Prompt-Guides]] — 페르소나별 5블록 프롬프트 항목
-- [[KPI-Gates-&-Stages#페르소나-전환율]] — 성과 측정
-- [[Global-Local-Intelligence]] — 다국어 톤 & 스타일 상세
+## See Also
+- [[AI-News-Pipeline-Design]] — 페르소나 생성 파이프라인 (04-AI-System)

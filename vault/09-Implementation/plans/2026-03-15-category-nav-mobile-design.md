@@ -31,3 +31,8 @@ We will maintain the horizontal scroll pattern but optimize it for mobile UX fol
 
 We will likely only need to modify `frontend/src/styles/global.css` and potentially `frontend/src/components/products/CategoryNav.astro` (if HTML adjustments are needed, like removing the spacer/adjusting padding classes).
 
+## Related Plans
+
+- [[plans/2026-03-15-category-nav-mobile-impl|카테고리 모바일 구현]]
+- [[plans/2026-03-15-ai-products-design|AI Products 설계]]
+

@@ -104,7 +104,7 @@ Phase마다 인프라 구성이 단계적으로 확장된다 (docs/05 §12).
 | **1a** | Vercel free + Supabase free + GitHub CI | 정적 배포, RLS, SEO 기반 |
 | **1b** | + GA4, Clarity, Vercel Analytics, Lighthouse CI | 분석/모니터링 추가 |
 | **2** | + Railway (sleep mode) + Vercel Cron | Stage A, 파이프라인 스케줄링, $5 크레딧 내 운영 |
-| **3** | + pgvector + Railway always-on 검토 | Stage A→B 전환 판단, 시맨틱 검색, [[AI-News-Pipeline-Overview\|AI Ops Dashboard]] |
+| **3** | + pgvector + Railway always-on 검토 | Stage A→B 전환 판단, 시맨틱 검색, [[AI-News-Pipeline-Design\|AI Ops Dashboard]] |
 | **4** | + Polar 결제 + PWA + Supabase Pro (필요 시) | 수익화, 커뮤니티, 트래픽 확장 |
 | **5** | + Expo 네이티브 앱 | 앱 스토어 배포 |
 
@@ -147,10 +147,8 @@ Phase마다 인프라 구성이 단계적으로 확장된다 (docs/05 §12).
 > [!note] 자동 failover는 현 단계에서 범위 밖. Minimal manual runbook만 유지.
 
 ## Related
-
-- [[AI-News-Pipeline-Overview]] — 비용이 발생하는 파이프라인
-- [[Backend-Stack]] — 비용이 발생하는 인프라
-- [[Infrastructure-Topology]] — 서비스 배포 토폴로지
-- [[KPI-Gates-&-Stages]] — Stage 전환 기준 KPI
+- [[Infrastructure-Topology]] — 비용이 발생하는 인프라
 - [[Monitoring-&-Logging]] — 운영 모니터링 및 로그
-- [[Phase-Flow]] — Phase별 진행 흐름
+
+## See Also
+- [[Business-Strategy]] — Stage 전환 비즈니스 기준 (06-Business)

@@ -131,10 +131,9 @@ backend/  (Railway FastAPI)
 ```
 
 ## Related
-
 - [[System-Architecture]] — 전체 시스템 아키텍처
-- [[Frontend-Stack]] — Astro 프론트엔드
 - [[Database-Schema-Overview]] — DB 스키마 상세
-- [[AI-News-Pipeline-Overview]] — AI 뉴스 파이프라인 상세
-- [[Cost-Model-&-Stage-AB]] — Railway 운영비 + API 비용
-- [[Admin]] — Admin 대시보드 기능
+- [[Frontend-Stack]] — Astro 프론트엔드
+
+## See Also
+- [[Cost-Model-&-Stage-AB]] — Railway 운영비 + API 비용 (07-Operations)

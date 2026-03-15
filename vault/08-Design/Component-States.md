@@ -131,10 +131,5 @@ source: docs/04_Frontend_Spec.md
 - **Optimistic Update** — 댓글/좋아요 즉시 반영, 실패 시 롤백
 
 ## Related
-
-- [[AI-News-Page-Layouts]] — 컴포넌트가 배치되는 페이지 레이아웃
-- [[Design-System]] — 컴포넌트에 적용되는 디자인 토큰
-- [[Persona-System]] — 페르소나 전환 로직 상세
-- [[Frontend-Stack]] — 컴포넌트 구현 기술 스택
-- [[Mobile-UX]] — 모바일 컴포넌트 변형
-- [[Accessibility]] — 컴포넌트 접근성 요구사항
+- [[Design-System]] — 상위 디자인 시스템
+- [[Mobile-UX]] — 모바일 컴포넌트 상태

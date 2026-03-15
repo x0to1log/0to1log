@@ -80,7 +80,7 @@ Implementation Plan 문서 자체의 정합성 검증 항목.
 ## Related
 
 - [[Quality-Gates-&-States]] — PydanticAI 검증 + 에러 핸들링 상세
-- [[AI-News-Pipeline-Overview]] — 테스트 대상 파이프라인
+- [[AI-News-Pipeline-Design]] — 테스트 대상 파이프라인
 - [[Backend-Stack]] — RLS + API 경계 정의
 - [[Database-Schema-Overview]] — 테스트 대상 스키마
 - [[Active-Sprint]] — 현재 스프린트 태스크

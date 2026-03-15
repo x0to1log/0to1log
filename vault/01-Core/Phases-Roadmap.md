@@ -29,7 +29,7 @@ MVP → Intelligence → Community → App 확장까지 5단계 로드맵.
 ==핵심 AI 파이프라인 구축 — 포트폴리오 임팩트의 핵심==
 
 - Railway에 FastAPI 배포 (범용 API 서버)
-- [[AI-News-Pipeline-Overview|멀티 에이전트 파이프라인]] (Ranking → Research/Business → Editorial)
+- [[AI-News-Pipeline-Design|멀티 에이전트 파이프라인]] (Ranking → Research/Business → Editorial)
 - [[Daily-Dual-News]]: Research(자동) + Business(수동 검수)
 - [[Persona-System|Persona-Based RAG-Refine]] (Tavily → OpenAI → Supabase)
 - PydanticAI 검증 레이어
@@ -77,8 +77,8 @@ MVP → Intelligence → Community → App 확장까지 5단계 로드맵.
 > PWA 주간 활성 사용자 일정 수 이상 + 프리미엄 구독 전환율 검증 완료. 수치 기준은 Phase 4 데이터 기반.
 
 ## Related
+- [[Project-Vision]] — 로드맵의 기반이 되는 비전
+- [[Target-Audience]] — 로드맵이 서비스하는 오디언스
 
-- [[Project-Vision]] — 로드맵의 근거가 되는 비전
-- [[Implementation-Plan]] — 로드맵을 실행하는 구체적 계획
-- [[Active-Sprint]] — 현재 진행 중인 스프린트
-- [[Phase-Flow]] — Phase별 게이트 조건과 흐름
+## See Also
+- [[Phase-Flow]] — Phase별 프론트엔드 구현 범위 (09-Implementation)

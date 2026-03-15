@@ -107,3 +107,7 @@ CREATE POLICY "Users update own profile"
 - 관심 카테고리 (`interests TEXT[]`) — 내부 알림 기능 구현 시
 - 알림 설정 — 사이트 내부 알림 기능 구현 시 별도 테이블 또는 JSONB
 - 소셜 링크 — 커뮤니티 기능(Phase C) 시
+
+## Related Plans
+
+- [[plans/2026-03-08-user-features-design|사용자 기능 설계]]

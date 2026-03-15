@@ -52,3 +52,7 @@ Added in-memory rate limiting:
 - admin audit logging
 - MFA / step-up auth
 - stronger shared rate limiting storage
+
+## Related Plans
+
+- [[plans/2026-03-08-3a-sec-csp-hardening|CSP 하드닝]]

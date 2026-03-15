@@ -163,3 +163,7 @@
 - 상태: draft
 - 목적: categories + source + feedback 신호를 기반으로 related term 품질을 높인다.
 - 산출물: handbook 상세 related terms 개선
+
+## Related Plans
+
+- [[plans/2026-03-14-handbook-quality-plan|핸드북 품질 계획]]

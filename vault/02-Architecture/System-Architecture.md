@@ -21,7 +21,7 @@ graph TB
 
 ## 데이터 흐름
 
-1. [[AI-News-Pipeline-Overview\|뉴스 파이프라인]]: 수집 → 랭킹 → 생성 → 검수
+1. [[AI-News-Pipeline-Design\|뉴스 파이프라인]]: 수집 → 랭킹 → 생성 → 검수
 2. Research → 자동 발행 / Business → [[Admin]] 수동 발행
 3. [[Persona-System]]이 Business를 3페르소나 버전으로 변환
 4. [[Database-Schema-Overview#news_posts\|news_posts]] 테이블에 저장
@@ -33,9 +33,10 @@ graph TB
 - **댓글 Supabase 직결:** 단순 CRUD는 RLS로 충분, FastAPI 미경유
 
 ## Related
-
-- [[AI-News-Pipeline-Overview]] — AI 파이프라인 상세
 - [[Backend-Stack]] — 백엔드 스택 + API 목록
 - [[Frontend-Stack]] — 프론트엔드 스택
-- [[Deployment-Pipeline]] — 배포 파이프라인
-- [[Cost-Model-&-Stage-AB]] — 비용 모델
+- [[Database-Schema-Overview]] — DB 스키마 상세
+
+## See Also
+- [[AI-News-Pipeline-Design]] — AI 파이프라인 상세 (04-AI-System)
+

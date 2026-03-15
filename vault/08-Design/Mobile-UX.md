@@ -50,9 +50,5 @@ source: docs/04_Frontend_Spec.md
 - **읽기 인디케이터**: 모바일에서는 하단 슬림 바 (40px), 본문 스크롤 시 fade-in
 
 ## Related
-
-- [[Component-States]]
-- [[AI-News-Page-Layouts]]
-- [[Design-System]]
-- [[Animations-&-Transitions]]
-- [[Accessibility]]
+- [[Design-System]] — 상위 디자인 시스템
+- [[Component-States]] — 모바일 컴포넌트 상태

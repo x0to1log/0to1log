@@ -28,7 +28,7 @@ Phase 4 포인트 시스템의 시각적 표현 디자인.
 | 71~100% | Gold Neon Pink (화려) | 오라 효과 추가 |
 
 ## Related
+- [[Design-System]] — 상위 디자인 시스템
 
-- [[Community-&-Gamification]] — 포인트 시스템 기능 정의
-- [[AI-News-Page-Layouts]] — 뉴스 페이지 시각 요소
-- [[Component-States]] — 컴포넌트 상태 정의
+## See Also
+- [[Community-&-Gamification]] — 게이미피케이션 기능 (03-Features)

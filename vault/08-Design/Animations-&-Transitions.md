@@ -39,8 +39,5 @@ source: docs/04_Frontend_Spec.md
 > [!important] 모든 motion은 `prefers-reduced-motion` 체크 필수. 성능 우선: `transform`과 `opacity`만 애니메이션 (layout thrashing 방지).
 
 ## Related
-
-- [[Design-System]]
-- [[Mobile-UX]]
-- [[Frontend-Stack]]
-- [[Accessibility]]
+- [[Design-System]] — 상위 디자인 시스템
+- [[Component-States]] — 애니메이션이 적용되는 컴포넌트

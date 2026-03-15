@@ -294,3 +294,7 @@ Task 8 (docs) ──→ after Task 7
 ```
 
 Tasks 2-6 can run in any order after Task 1, but are written sequentially for clarity.
+
+## Related Plans
+
+- [[plans/2026-03-11-blog-typography-design|Blog 타이포그래피 설계]]

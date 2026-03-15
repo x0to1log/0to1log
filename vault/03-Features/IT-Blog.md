@@ -31,7 +31,7 @@ source: docs/01_Project_Overview.md
 > `blog_posts` 테이블로 독립 관리. 워크플로우가 다르므로(파이프라인 자동 vs 수동 작성) AI News와 테이블 분리. 좋아요/댓글도 `blog_likes`/`blog_comments`로 분리. 북마크/읽기기록은 polymorphic `item_type` (`'news'`/`'blog'`/`'term'`)로 통합.
 
 ## Related
+- [[Admin]] — Blog 에디터 관리
 
-- [[Daily-Dual-News]] — AI 뉴스와 독립되지만 같은 플랫폼
-- [[Content-Strategy]] — 블로그 콘텐츠 전략
-- [[Target-Audience]] — 블로그가 서비스하는 "함께 성장하는 동료" 세그먼트
+## See Also
+- [[Content-Strategy]] — 블로그 콘텐츠 전략 (05-Content)

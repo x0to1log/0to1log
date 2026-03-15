@@ -176,8 +176,9 @@ EN-KO 이중 언어 발행 시 콘텐츠 품질/동기화를 제어하는 게이
 
 ## Related
 
-- [[AI-News-Pipeline-Overview]] — 검증이 적용되는 파이프라인
+- [[AI-News-Pipeline-Design]] — 검증이 적용되는 파이프라인
 - [[Prompt-Guides]] — 검증 대상 프롬프트 출력
-- [[Database-Schema-Overview]] — 검증 후 저장되는 스키마
-- [[Backend-Stack]] — 에러 핸들링이 동작하는 백엔드
-- [[Global-Local-Intelligence]] — 발행 품질 게이트의 전략 문서
+
+## See Also
+
+- [[Database-Schema-Overview]] — 검증 후 저장되는 스키마 (02-Architecture)

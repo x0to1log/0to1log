@@ -60,7 +60,10 @@ flowchart TD
 | 번역 호출 | 0 |
 | **총** | **8 calls/day** |
 
-- 예상 비용: **~$0.22/day ≈ $7/month** (gpt-4o 기준)
+- 예상 비용: **~$0.30~0.40/day** (gpt-4o 기준, raw_content 입력으로 input 토큰 증가)
+
+> [!note] raw_content로 인한 비용 변동
+> 팩트 추출에 전체 기사(최대 8000자)를 입력하므로, snippet(300자) 대비 input 토큰이 증가. 그러나 출력 품질이 크게 향상됨.
 
 ---
 
@@ -81,7 +84,38 @@ flowchart TD
 
 - Research도 3 페르소나 → `content_beginner`, `content_learner`, `content_expert` 컬럼 재활용
 - `content_original` 불필요 (이전 research 전용)
-- 구체적 스키마 변경은 구현 시 확정
+- `title` 컬럼: EN row → `fact_pack.headline`, KO row → `fact_pack.headline_ko` (팩트 추출 시 EN+KO 동시 생성)
+
+---
+
+## 백필 (Backfill) 운영
+
+### 목적
+
+사이트에 이전 날짜의 뉴스를 채워 넣고 싶을 때, 과거 날짜를 지정하여 파이프라인을 실행.
+
+### 사용 방법
+
+1. 어드민 대시보드 (`/admin/`) → Pipeline Status 영역
+2. 날짜 선택기에서 원하는 과거 날짜 선택
+3. "Run Pipeline" 또는 "Force Refresh" 클릭
+4. Pipeline Runs에서 실행 결과 확인 → Open details에서 스테이지별 로그
+
+### 동작 방식
+
+| 항목 | 일반 실행 (날짜 미선택) | 백필 실행 |
+|------|----------------------|----------|
+| batch_id | 오늘 날짜 | 선택한 날짜 |
+| Tavily 검색 | `days=2` | `start_date=(날짜-1일)`, `end_date=날짜` |
+| 검색 쿼리 | SEARCH_QUERIES ("today", "latest" 포함) | BACKFILL_QUERIES (시간 표현 제거) |
+| slug 형식 | `2026-03-15-headline` | `2026-03-10-headline` |
+
+### 주의사항
+
+- **미래 날짜**: 백엔드에서 400 에러로 거부
+- **같은 날짜 재실행**: slug 기반 upsert → 기존 포스트를 덮어씀 (중복 생성 없음)
+- **Tavily 한계**: 너무 오래된 날짜는 결과가 적을 수 있음
+- **검증**: Run Detail 페이지에서 "Run Context" 섹션으로 백필 파라미터 확인
 
 ---
 
@@ -92,3 +126,12 @@ flowchart TD
 - 뉴스 상세/리스트 페이지
 - `news_posts` 테이블 스키마 (컬럼 재활용)
 - EN/KO 언어 전환
+
+## Related
+
+- [[AI-News-Pipeline-Design]] — 파이프라인 설계
+- [[Quality-Gates-&-States]] — 품질 게이트
+
+## See Also
+
+- [[Infrastructure-Topology]] — 운영 인프라 (07-Operations)

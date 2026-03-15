@@ -55,3 +55,7 @@ Status: implemented
 - Partial artifacts are recovery snapshots, not publishable drafts.
 - Old runs do not gain artifacts retroactively.
 - New runs created after this change can resume from saved `business` partials.
+
+## Related Plans
+
+- [[plans/ACTIVE_SPRINT|ACTIVE SPRINT]]

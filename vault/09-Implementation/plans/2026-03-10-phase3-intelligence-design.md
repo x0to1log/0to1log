@@ -227,3 +227,7 @@ Task 6: Topic Suggestion    ← Task 5와 병렬 가능
 5. Admin 글 목록에 quality 배지 표시 확인
 6. Admin 대시보드 analytics 섹션 렌더링 확인
 7. Topic Suggestion 버튼 클릭 → AI 제안 5개 표시 확인
+
+## Related Plans
+
+- [[plans/2026-03-10-phase3-intelligence|Phase 3 구현]]

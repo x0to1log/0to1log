@@ -100,10 +100,9 @@ flowchart LR
 | **Phase 4 이전 유료 광고** | 수익 전 광고비 지출은 Solo 프로젝트에서 리스크가 큼. 오가닉 트래픽 확보가 우선. |
 
 ## Related
-
-- [[Monetization-Roadmap]] — 수익화 단계별 계획
 - [[KPI-Gates-&-Stages]] — 비즈니스 KPI와 Stage 게이트
+- [[Monetization-Roadmap]] — 수익화 단계별 계획
 - [[Growth-Loop-&-Viral]] — 바이럴 루프와 그로스 전략
-- [[SEO-&-GEO-Strategy]] — 검색 최적화 전략
-- [[Project-Vision]] — 비즈니스 전략의 기반이 되는 비전
-- [[Phases-Roadmap]] — Phase별 전체 로드맵
+
+## See Also
+- [[Project-Vision]] — 비즈니스 전략의 기반이 되는 비전 (01-Core)

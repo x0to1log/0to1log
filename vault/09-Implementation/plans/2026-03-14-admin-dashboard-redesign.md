@@ -77,3 +77,8 @@ Zone C — 사이트 성과 (3 small)
 - [ ] Quick Actions — Check News / New Term / New Post 3개 버튼
 - [ ] 모바일 반응형 유지 (Zone A: 1-col, Zone B: full-width, Zone C: 3-col)
 - [ ] npm run build 0 errors
+
+## Related Plans
+
+- [[plans/2026-03-14-admin-dashboard-stat-cards|Stat Cards]]
+- [[plans/2026-03-10-admin-dashboard-design|Dashboard 초기 설계]]

@@ -101,8 +101,5 @@ pg_dump --format=custom --file=backup_$(date +%Y%m%d).dump "$DATABASE_URL"
 ---
 
 ## Related
-
-- [[Infrastructure-Topology]] — 복구 대상 서비스
-- [[Database-Schema-Overview]] — 백업 대상 스키마
-- [[Deployment-Pipeline]] — 코드 롤백 절차
-- [[Security]] — 시크릿 유출 대응
+- [[Infrastructure-Topology]] — 백업 대상 인프라
+- [[Security]] — 보안과 연결된 복구 전략

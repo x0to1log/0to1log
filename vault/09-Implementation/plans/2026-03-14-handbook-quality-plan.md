@@ -130,9 +130,6 @@ Phase 3 ─ 콘텐츠 품질
   └── 3-4. SEO 구조화 데이터
 ```
 
-## Related
+## Related Plans
 
-- [[AI-Handbook-Pipeline-Overview]] — Handbook 파이프라인 전체 흐름
-- [[Handbook]] — Handbook 기능 상세
-- [[Quality-Gates-&-States]] — 품질 게이트 정책
-- [[Admin]] — Admin 대시보드 기능
+- [[plans/ACTIVE_SPRINT_HANDBOOK|핸드북 스프린트]]

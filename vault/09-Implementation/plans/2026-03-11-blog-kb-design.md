@@ -179,3 +179,8 @@ IT Blog가 AI News와 동일한 NewsprintShell/카드를 공유하고 있어 개
 ## Reference
 - `frontend/examples/layout/example_blog_1.html` — Knowledge Base 리스트 페이지
 - `frontend/examples/layout/example_blog_2.html` — Knowledge Base 상세 페이지
+
+## Related Plans
+
+- [[plans/2026-03-11-blog-kb-impl|Blog KB 구현]]
+- [[plans/2026-03-11-blog-typography-design|Blog 타이포그래피]]

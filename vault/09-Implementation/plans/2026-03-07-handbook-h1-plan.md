@@ -1764,3 +1764,7 @@ git commit -m "fix: QA fixes for handbook H1"
 | 10 | `feat: add Notion → Supabase handbook migration script (KO only, status=draft)` | script |
 | 11 | Data migration (no commit) | — |
 | 12 | `fix: QA fixes for handbook H1` | varies |
+
+## Related Plans
+
+- [[plans/ACTIVE_SPRINT_HANDBOOK|핸드북 스프린트]]

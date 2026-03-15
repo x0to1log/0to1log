@@ -437,3 +437,7 @@ git commit -m "chore: remove unused .newsprint-back CSS"
 7. **Top back link gone**: No more "← Back to Log" above the article title
 8. **Preview pages**: Bottom nav shows only "← Back to Log" (no `nextPost` passed)
 9. **Global header "Log" link**: Still works as alternative navigation
+
+## Related Plans
+
+- [[plans/2026-03-07-article-nav-ux-design|Article Nav 설계]]

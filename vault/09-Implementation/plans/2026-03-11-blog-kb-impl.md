@@ -1024,3 +1024,7 @@ git commit -m "feat(blog): complete Knowledge Base style redesign"
 - [ ] TOC 스크롤 추적
 - [ ] 코드 블록 copy 버튼
 - [ ] 북마크/좋아요/댓글 동작
+
+## Related Plans
+
+- [[plans/2026-03-11-blog-kb-design|Blog KB 설계]]

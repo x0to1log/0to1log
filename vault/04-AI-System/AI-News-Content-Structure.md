@@ -63,3 +63,12 @@
 - 번역 단계 완전 제거 → 번역체(번역투) 문제 해결
 - 한국어가 처음부터 자연스럽게 작성됨
 - `max_tokens=16384` (EN ~1000토큰 + KO ~1000토큰 + JSON 오버헤드 충분)
+
+## Related
+
+- [[AI-News-Pipeline-Design]] — 파이프라인 설계
+- [[AI-News-Feature-Design]] — 기능 설계
+
+## See Also
+
+- [[Content-Strategy]] — 콘텐츠 전략 (05-Content)

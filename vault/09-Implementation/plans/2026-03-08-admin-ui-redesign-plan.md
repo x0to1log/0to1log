@@ -1273,3 +1273,7 @@ Expected: 0 errors
 ```bash
 git commit -m "chore: admin UI redesign complete — visual QA pass"
 ```
+
+## Related Plans
+
+- [[plans/2026-03-08-admin-ui-redesign|Admin UI 리디자인 설계]]

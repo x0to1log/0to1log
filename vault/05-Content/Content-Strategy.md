@@ -104,10 +104,10 @@ source: docs/02_Content_Strategy.md
 
 ## Related
 
-- [[Daily-Dual-News]] — 콘텐츠 전략이 적용되는 핵심 기능
-- [[Persona-System]] — 3페르소나 재가공 시스템
-- [[Prompt-Guides]] — 5블록 프롬프트 가이드
 - [[Global-Local-Intelligence]] — 다국어 운영 상세 전략
 - [[AI-NEWS-Research-Writing]] — Research 작성 가이드
 - [[AI-NEWS-Business-Writing]] — Business 작성 가이드
-- [[Phases-Roadmap]] — 기능별 구현 시점
+
+## See Also
+
+- [[Persona-System]] — 3페르소나 재가공 시스템 (03-Features)

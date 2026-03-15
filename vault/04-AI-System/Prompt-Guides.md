@@ -105,9 +105,9 @@ AI 콘텐츠 생성 시 활용하는 구조화된 항목 시스템. ==디폴트 
 
 ## Related
 
-- [[Content-Strategy]] — 프롬프트가 서비스하는 콘텐츠 전략
-- [[Persona-System]] — 프롬프트가 대응하는 3페르소나
-- [[AI-News-Pipeline-Overview]] — 프롬프트가 실행되는 파이프라인
-- [[AI-NEWS-Business-Writing]] — Business 포스트 작성 가이드
-- [[AI-NEWS-Research-Writing]] — Research 포스트 작성 가이드
-- [[Global-Local-Intelligence]] — Locale별 톤 & 스타일 상세
+- [[AI-News-Pipeline-Design]] — 프롬프트가 실행되는 파이프라인
+- [[Quality-Gates-&-States]] — 검증 대상 프롬프트 출력
+
+## See Also
+
+- [[Content-Strategy]] — 프롬프트가 서비스하는 콘텐츠 전략 (05-Content)

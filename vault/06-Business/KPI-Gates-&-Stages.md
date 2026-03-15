@@ -156,10 +156,8 @@ KPI 집계 윈도우 규칙 (v1.4 계약):
 | **5** | Expo 네이티브 앱 출시 | `[4W-Cohort]` ==PWA 설치율 4%+ 4주 유지== + ==설치자 4주 유지율 25%+== |
 
 ## Related
+- [[Business-Strategy]] — 상위 비즈니스 전략
+- [[Growth-Loop-&-Viral]] — 그로스 루프
 
-- [[Business-Strategy]] — 전체 비즈니스 전략
-- [[Monetization-Roadmap]] — 수익화 계획
-- [[Growth-Loop-&-Viral]] — 그로스 메트릭
-- [[SEO-&-GEO-Strategy]] — 트래픽 획득 전략
-- [[Cost-Model-&-Stage-AB]] — Stage A/B 전환 기준
-- [[Phases-Roadmap]] — 전체 Phase 로드맵
+## See Also
+- [[Phase-Flow]] — Phase별 게이트 (09-Implementation)

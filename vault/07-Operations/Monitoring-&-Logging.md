@@ -26,8 +26,12 @@ source: docs/05_Infrastructure.md
 
 - **Frontend**: Vercel Functions logs — 서버사이드 렌더링(SSR) 에러, 빌드 실패 로그
 - **Backend**: Railway logs — FastAPI stdout 기반 structured logging
-- **Pipeline**: `pipeline_logs` 테이블 (Supabase) — per-run status, 토큰 사용량, cost tracking
-  - 최근 24시간 조회: `SELECT pipeline_type, status, created_at, error_message, tokens_used, cost_usd FROM pipeline_logs WHERE created_at > NOW() - INTERVAL '24 hours' ORDER BY created_at DESC;`
+- **Pipeline**: `pipeline_logs` 테이블 (Supabase) — **per-stage** status (1회 실행당 6~8개 로그)
+  - `_log_stage()` 헬퍼로 각 스테이지(collect, rank, facts, persona, save, summary) 기록
+  - 각 LLM 스테이지: `tokens_used`, `cost_usd`, `model_used`, `duration_ms`, `attempt` 기록
+  - `debug_meta` (JSONB): input/output 토큰, LLM 입출력 내용, 백필 파라미터 등
+  - 상세 스키마: [[Pipeline-Stage-Logging-Schema]]
+  - 최근 24시간 조회: `SELECT pipeline_type, status, created_at, error_message, tokens_used, cost_usd, debug_meta FROM pipeline_logs WHERE created_at > NOW() - INTERVAL '24 hours' ORDER BY created_at DESC;`
 - **Alerts**: `admin_notifications` 테이블 — editorial/error 알림 저장, Admin 대시보드에서 확인
 
 ## Alerting
@@ -60,8 +64,8 @@ Stage A→B 전환 판단 및 서비스 건강성 추적을 위한 핵심 운영
 > Phase 3에서 Admin 대시보드 내 AI Ops 뷰를 구축하여 위 KPI를 시각적으로 추적할 예정. 검색 일 평균 요청 수 + 커뮤니티 액션 수가 임계치를 넘으면 Railway Always-on(Stage B) 전환을 검토한다. 구체적 임계치는 Phase 2 운영 데이터 축적 후 결정.
 
 ## Related
-
 - [[Infrastructure-Topology]] — 모니터링 대상 서비스
-- [[Cost-Model-&-Stage-AB]] — 비용 모니터링
-- [[AI-News-Pipeline-Overview]] — 파이프라인 로깅
-- [[Admin]] — AI Ops Dashboard (Phase 3)
+- [[Pipeline-Stage-Logging-Schema]] — 스테이지별 로깅 스키마
+
+## See Also
+- [[AI-News-Pipeline-Design]] — 파이프라인 로깅 (04-AI-System)

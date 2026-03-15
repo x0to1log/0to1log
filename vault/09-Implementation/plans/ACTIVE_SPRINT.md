@@ -2,7 +2,7 @@
 
 > **스프린트 시작:** 2026-03-15
 > **목표:** AI News Pipeline v2 백엔드 구현 (수집 → 팩트 추출 → 3 페르소나 생성 → 저장)
-> **설계 참조:** `vault/04-AI-System/AI-News-Pipeline-v2-Design.md`
+> **설계 참조:** `vault/04-AI-System/AI-News-Pipeline-Design.md`
 > **이전 스프린트:** Phase 3A-SEC — 2026-03-09 게이트 전체 통과
 
 ---
@@ -116,6 +116,14 @@
 - **완료 기준:** 어드민 대시보드에서 과거 날짜 선택 → 해당 날짜 뉴스 수집 + draft 저장
 - **의존성:** NP2-CRON-01
 
+### 12. 스테이지별 로깅 + 백필 검증 UI `[NP2-OBSERVE-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 파이프라인 각 LLM 단계의 입출력/토큰/비용/attempt을 기록하고, Run Detail에서 확인 가능하게
+- **산출물:** `pipeline.py` (_log_stage 헬퍼 + 6~8개 스테이지 로깅), `[runId].astro` (Run Context, 백필 배지, Created Posts)
+- **완료 기준:** Run Detail에서 각 스테이지 debug_meta 확인 + input/output 토큰 칩 표시 + 생성된 포스트 목록
+- **의존성:** NP2-BACKFILL-01
+
 ---
 
 ## 의존성 순서
@@ -139,3 +147,8 @@ NP2-COLLECT-01 → NP2-RANK-01 → NP2-REACT-01 ─────────┤
 
 > AI News Pipeline v1 (2026-03-10~14) — 삭제됨.
 > - 콘텐츠 길이 검증 실패로 반복 장애 → 코드 + DB 전체 삭제 후 v2 재설계
+
+## Related Plans
+
+- [[plans/2026-03-15-news-pipeline-v2-impl|Pipeline v2 구현]]
+- [[plans/2026-03-13-business-partial-resume-and-fail-fast|부분 실행 + Fail-Fast]]

@@ -123,3 +123,7 @@
 | `pages/admin/edit/[slug].astro` | 사이드바 없는 에디터 중심 레이아웃 |
 | `pages/admin/handbook/edit/[slug].astro` | 동일 패턴 적용 |
 | `styles/global.css` | `.admin-*` 클래스 전면 교체 |
+
+## Related Plans
+
+- [[plans/2026-03-08-admin-ui-redesign-plan|Admin UI 리디자인 구현]]

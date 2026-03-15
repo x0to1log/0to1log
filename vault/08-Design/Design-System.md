@@ -185,9 +185,8 @@ source: docs/04_Frontend_Spec.md
 > **FOUC 방지:** `<head>` 인라인 스크립트로 페이지 렌더 전에 `data-theme` 속성을 즉시 설정해야 한다. 이 스크립트는 반드시 `<head>` 내부, 스타일시트보다 앞에 위치해야 테마 깜빡임(Flash of Unstyled Content)을 방지할 수 있다.
 
 ## Related
+- [[Component-States]] — 컴포넌트 상태 정의
+- [[Animations-&-Transitions]] — 애니메이션 & 트랜지션
 
-- [[Frontend-Stack]] — 테마 시스템이 적용되는 프론트엔드
-- [[AI-News-Page-Layouts]] — 테마가 적용되는 페이지 레이아웃
-- [[Component-States]] — 컴포넌트별 상태 디자인
-- [[Accessibility]] — 고대비 모드 대응
-- [[Mobile-UX]] — 모바일 디자인 적용
+## See Also
+- [[Frontend-Stack]] — 디자인이 동작하는 프론트엔드 (02-Architecture)

@@ -71,8 +71,7 @@ Phase 4에서 도입. 사용자 참여 유도 + 수익 모델 검증.
 | **푸시 알림** | 일일 AI 뉴스, 맞춤 콘텐츠 추천 |
 
 ## Related
+- [[MyLibrary]] — 커뮤니티와 연결된 라이브러리 기능
 
-- [[Phases-Roadmap#Phase 4: Community & Monetization (6개월+)|Phase 4 로드맵]] — 커뮤니티 도입 시점
-- [[KPI-Gates-&-Stages]] — 커뮤니티 성과 측정 지표
-- [[Monetization-Roadmap]] — 수익화와 연결된 커뮤니티 기능
-- [[Gamification-UI]] — 게이미피케이션 UI 디자인
+## See Also
+- [[Growth-Loop-&-Viral]] — 그로스 루프와 바이럴 (06-Business)

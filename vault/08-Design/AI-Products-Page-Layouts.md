@@ -127,3 +127,10 @@ Hero featured 카드:
 - 카드 hover: scale + shadow 전환
 - CategoryNav active indicator: 부드러운 슬라이드
 - 페이지 진입: 카드 stagger fade-in
+
+## Related
+- [[Design-System]] — 상위 디자인 시스템
+- [[Mobile-UX]] — 모바일 레이아웃
+
+## See Also
+- [[AI-Products]] — AI Products 기능 (03-Features)

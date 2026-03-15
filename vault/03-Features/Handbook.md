@@ -160,9 +160,8 @@ AI/CS/Infra 용어집 기능. 단순 정의 사전이 아니라, AI News와 Blog
 > Schema: `00015`, `00016`, `00017` migrations / Public: `frontend/src/pages/*/handbook/*` / Admin: `frontend/src/pages/admin/handbook/*`
 
 ## Related
+- [[Admin]] — Admin 대시보드에서 관리
+- [[AI-Products]] — 같은 Feature 레이어의 제품
 
-- [[Admin]] — Handbook admin 에디터가 포함된 관리자 시스템
-- [[Handbook-Content-Rules]] — Handbook 콘텐츠 작성 규칙 (레벨 체계, 이중 언어)
-- [[Database-Schema-Overview]] — 전체 DB 스키마
-- [[Persona-System]] — 뉴스 3페르소나 vs 핸드북 2레벨 비교
-- [[Daily-Dual-News]] — 핸드북 팝업이 연결되는 뉴스
+## See Also
+- [[AI-Handbook-Pipeline-Overview]] — 핸드북 AI 파이프라인 (04-AI-System)

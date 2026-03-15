@@ -120,6 +120,7 @@ products: {
 
 ## Navigation 변경
 
+
 `Navigation.astro`의 `navItems` 배열에 추가:
 
 ```ts
@@ -136,3 +137,8 @@ products: {
 
 `frontend/src/lib/pageData/homePage.ts`에서 `fetchFeaturedProducts(limit=5)` 호출 →
 홈 페이지에 "주목할 AI 도구" 섹션으로 노출 (별도 컴포넌트).
+
+## Related Plans
+
+- [[plans/2026-03-15-ai-products-schema|AI Products 스키마]]
+- [[plans/2026-03-15-category-nav-mobile-design|카테고리 모바일]]

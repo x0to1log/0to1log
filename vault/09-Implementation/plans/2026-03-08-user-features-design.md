@@ -456,3 +456,7 @@ Backend              ░░░░░░░░░░  미시작
 14. 비로그인 시 학습 완료 버튼 미표시 확인
 15. 로그아웃 → cookie 삭제 → 읽기 기록/북마크/학습 UI 미표시 확인
 16. `cd frontend && npm run build` — 0 errors
+
+## Related Plans
+
+- [[plans/2026-03-09-profiles-redesign|프로필 리디자인]]

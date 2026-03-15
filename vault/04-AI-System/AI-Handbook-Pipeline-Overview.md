@@ -285,8 +285,10 @@ graph LR
 
 ## Related
 
-- [[AI-News-Pipeline-Overview]] — 뉴스 수집·생성 파이프라인
-- [[Handbook]] — Handbook 기능 상세 (데이터 모델, 피드백, 검증)
-- [[Handbook-Content-Rules]] — 콘텐츠 작성 규칙
 - [[Prompt-Guides]] — 프롬프트 엔지니어링 가이드
-- [[Admin]] — Admin 대시보드 기능
+- [[Quality-Gates-&-States]] — 품질 게이트
+- [[AI-News-Pipeline-Design]] — 뉴스 파이프라인 (같은 패턴)
+
+## See Also
+
+- [[Handbook]] — Handbook 기능 상세 (03-Features)

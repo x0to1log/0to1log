@@ -249,3 +249,7 @@ git commit -m "docs: mark P2C-UI-13 done"
 3. Hover on image: color restores with 400ms transition
 4. Image-less posts: featured card renders as full-width text (no broken layout)
 5. Mobile viewport (<768px): image stacks above text
+
+## Related Plans
+
+- [[plans/2026-03-07-article-nav-ux-design|Article Nav 설계]]

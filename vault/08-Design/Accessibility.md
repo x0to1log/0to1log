@@ -60,9 +60,5 @@ source: docs/04_Frontend_Spec.md
 - **고대비 모드**: `prefers-contrast: more` 미디어 쿼리 대응 — 테두리 진하게, glow 효과 제거
 
 ## Related
-
-- [[Component-States]]
-- [[Design-System]]
-- [[Frontend-Stack]]
-- [[Animations-&-Transitions]]
-- [[Mobile-UX]]
+- [[Design-System]] — 상위 디자인 시스템
+- [[Mobile-UX]] — 접근성이 중요한 모바일

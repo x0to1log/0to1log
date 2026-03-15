@@ -19,11 +19,12 @@ source: docs/01_Project_Overview.md
 ## 오디언스 → 기능 매핑
 
 - **개발자** → [[Daily-Dual-News]] (기술 심화), [[Persona-System]] (수준별 콘텐츠)
-- **리크루터** → Portfolio 쇼케이스, [[AI-News-Pipeline-Overview]] (기술 역량 증명)
+- **리크루터** → Portfolio 쇼케이스, [[AI-News-Pipeline-Design]] (기술 역량 증명)
 - **동료** → [[IT-Blog]] (학습/커리어), [[Community-&-Gamification]] (참여)
 
 ## Related
-
 - [[Project-Vision]] — 오디언스를 위한 프로젝트 목표
-- [[Content-Strategy]] — 오디언스별 콘텐츠 전략
-- [[Persona-System]] — 3단계 페르소나로 오디언스 니즈 대응
+- [[Phases-Roadmap]] — 오디언스 기능의 단계별 구현
+
+## See Also
+- [[Persona-System]] — 3단계 페르소나로 오디언스 니즈 대응 (03-Features)

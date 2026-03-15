@@ -105,3 +105,7 @@ The current implementation only fixes:
 - approved rail labels
 - list/detail rail separation
 - safe fallback behavior until real curation and ranking data exist
+
+## Related Plans
+
+- [[plans/2026-03-07-article-nav-ux-design|Article Nav 설계]]

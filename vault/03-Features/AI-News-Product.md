@@ -18,7 +18,7 @@ source: docs/01_Project_Overview.md
 |---|---|
 | **[[Daily-Dual-News]]** | 매일 2개 AI NEWS: Research(자동) + Business(수동 검수) |
 | **[[Persona-System\|Persona-Based RAG-Refine]]** | Business 포스트를 입문자/학습자/현직자 3버전으로 자동 재가공 |
-| **멀티 에이전트 시스템** | Ranking → Research/Business → Editorial 4단계 [[AI-News-Pipeline-Overview\|AI 파이프라인]] |
+| **멀티 에이전트 시스템** | Ranking → Research/Business → Editorial 4단계 [[AI-News-Pipeline-Design\|AI 파이프라인]] |
 | **관리자 에디터** | 마크다운 편집 + AI 제안 패널 + 페르소나별 탭 전환 리뷰 |
 | **Pink Theme 디자인 시스템** | Dark/Light 적응형, Neon Pink 액센트, 반응형 레이아웃 |
 | **SEO 기반 설계** | JSON-LD 구조화 데이터, 사이트맵 자동 생성, 메타 태그 최적화 |
@@ -37,8 +37,8 @@ source: docs/01_Project_Overview.md
 
 
 ## Related
+- [[Daily-Dual-News]] — 매일 2개 AI NEWS 기능
+- [[Persona-System]] — 3페르소나 재가공
 
-- [[Daily-Dual-News]] — 핵심 뉴스 기능 상세
-- [[Persona-System]] — 페르소나 재가공 시스템
-- [[Frontend-Stack]] — 제품이 동작하는 프론트엔드 스택
-- [[Phases-Roadmap]] — Tier별 구현 시점
+## See Also
+- [[AI-News-Pipeline-Design]] — 멀티 에이전트 파이프라인 (04-AI-System)

@@ -159,8 +159,4 @@ FOR INSERT WITH CHECK (
 `.env` 파일은 커밋 금지. `.env.example`만 커밋한다.
 
 ## Related
-
-- [[Infrastructure-Topology]] — 보안이 적용되는 인프라
-- [[Backend-Stack]] — API 보안 상세 (RLS, admin auth)
-- [[Database-Schema-Overview]] — RLS 정책 대상 테이블
-- [[Checklists-&-DoD]] — RLS 테스트 시나리오
+- [[Infrastructure-Topology]] — 보안 대상 인프라

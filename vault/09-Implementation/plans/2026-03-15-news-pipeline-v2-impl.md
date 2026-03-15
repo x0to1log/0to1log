@@ -2417,3 +2417,7 @@ git add backend/routers/cron.py backend/tests/test_cron.py backend/main.py && gi
 - `c:\Users\amy\Desktop\0to1log\backend\services\pipeline.py` - Orchestrator that ties collect/rank/extract/write/save together with error handling
 - `c:\Users\amy\Desktop\0to1log\backend\services\agents\client.py` - Existing utility (parse_ai_json, extract_usage_metrics, merge_usage_metrics) reused by all new agents
 - `c:\Users\amy\Desktop\0to1log\backend\main.py` - Must register new cron router to expose the pipeline endpoint
+
+## Related Plans
+
+- [[plans/ACTIVE_SPRINT|ACTIVE SPRINT]]

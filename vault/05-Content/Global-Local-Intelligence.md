@@ -240,10 +240,8 @@ flowchart TD
 ## Related
 
 - [[Content-Strategy]] — GLI가 서비스하는 콘텐츠 전략
-- [[AI-News-Pipeline-Overview]] — 듀얼패스가 실행되는 파이프라인
-- [[Quality-Gates-&-States]] — 발행 품질 게이트 상세
-- [[KPI-Gates-&-Stages]] — 다국어 채널 KPI
-- [[SEO-&-GEO-Strategy]] — SEO/i18n 상세 전략
-- [[Prompt-Guides]] — Locale별 톤 & 스타일
-- [[Persona-System]] — 독자별 콘텐츠 최적화
-- [[Database-Schema-Overview]] — 데이터 모델 구현
+- [[Handbook-Content-Rules]] — 핸드북 콘텐츠 규칙
+
+## See Also
+
+- [[Quality-Gates-&-States]] — 발행 품질 게이트 (04-AI-System)

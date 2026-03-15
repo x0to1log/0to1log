@@ -341,3 +341,7 @@ git commit -m "feat(admin): redesign dashboard stat cards into Zone A/B/C layout
 - [ ] Quick Actions: Check News / New Term / New Post 3개
 - [ ] `publishedPosts` 변수 완전 제거
 - [ ] `npm run build` 0 errors
+
+## Related Plans
+
+- [[plans/2026-03-14-admin-dashboard-redesign|Dashboard 리디자인]]

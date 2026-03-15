@@ -89,8 +89,8 @@ Supabase PostgreSQL 기반. pgvector 확장 (Phase 3). RLS로 권한 관리.
 > guide_items 5개 컬럼 + related_news 3개 컬럼을 각각 JSONB 1개로 통합. 항상 한 덩어리로 읽고 쓰므로 JOIN 불필요. [[Quality-Gates-&-States\|PydanticAI]]가 내부 구조 검증.
 
 ## Related
-
-- [[Backend-Stack]] — DB를 사용하는 백엔드
 - [[System-Architecture]] — 전체 시스템에서 DB 위치
-- [[Quality-Gates-&-States]] — PydanticAI 스키마 검증
-- [[AI-News-Pipeline-Overview]] — 파이프라인이 DB에 쓰는 방식
+- [[Backend-Stack]] — DB를 사용하는 백엔드
+
+## See Also
+- [[Quality-Gates-&-States]] — PydanticAI 스키마 검증 (04-AI-System)

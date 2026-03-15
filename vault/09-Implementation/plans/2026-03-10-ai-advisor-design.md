@@ -47,3 +47,7 @@ Frontend sends live editor state (not DB state).
 - `backend/main.py` — router registration
 - `frontend/src/pages/admin/edit/[slug].astro` — AI panel UI + script
 - `frontend/src/styles/global.css` — AI panel CSS
+
+## Related Plans
+
+- [[plans/2026-03-11-blog-ai-advisor-design|Blog AI Advisor]]

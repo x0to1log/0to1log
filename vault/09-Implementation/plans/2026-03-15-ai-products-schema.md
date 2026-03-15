@@ -122,3 +122,7 @@ CREATE INDEX idx_ai_products_published ON ai_products(is_published, sort_order);
 - `SELECT`: `is_published = true` 조건으로 공개 접근 허용
 - `INSERT/UPDATE/DELETE`: 어드민 role만 허용 (기존 어드민 정책 패턴 동일)
 - `view_count`, `like_count` 업데이트: 별도 RPC 함수로 처리 (anon 허용)
+
+## Related Plans
+
+- [[plans/2026-03-15-ai-products-design|AI Products 설계]]

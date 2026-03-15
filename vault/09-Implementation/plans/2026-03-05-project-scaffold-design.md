@@ -999,3 +999,7 @@ git commit -m "chore: Phase 1a scaffold complete — P1-BOOT-01/02 + P1-FE-01"
 - P1-BOOT-02 → `상태: done`, `체크: [x]` (Supabase 프로젝트는 수동 생성 확인 후)
 - P1-FE-01 → `상태: done`, `체크: [x]`
 - Current Doing 슬롯 → `-` (비움)
+
+## Related Plans
+
+- [[plans/2026-03-08-header-footer-design|Header/Footer 설계]]

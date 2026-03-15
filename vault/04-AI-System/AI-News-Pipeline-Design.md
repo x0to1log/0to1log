@@ -96,6 +96,12 @@ flowchart LR
   - 기본: `days=2` (오늘+어제)
   - 백필: `start_date` / `end_date` 지정 (admin이 `target_date` 선택 시)
   - `include_raw_content=True`로 뉴스 원문 전체 수집
+  - 팩트 추출 시 `raw_content` (전체 기사, 최대 8000자) 사용 — snippet(300자)보다 풍부한 입력
+- **팩트 추출 출력**: `headline` (EN) + `headline_ko` (KO) 동시 생성 → KO 포스트에 한국어 제목 저장
+- **스테이지별 로깅**: 각 LLM 호출(rank, facts, persona)마다 `pipeline_logs`에 기록
+  - `debug_meta`: LLM 입출력 내용, input/output 토큰, attempt 횟수, 비용
+  - Run Detail 페이지에서 `debug_meta` 펼쳐서 퀄리티 확인 가능
+  - 상세 스키마: [[Pipeline-Stage-Logging-Schema]]
 - **선정**: LLM이 후보 뉴스를 랭킹
   - **Research**: 기술/논문/모델 중심 1건
   - **Business**: 시장/투자/전략 중심 1건
@@ -109,7 +115,7 @@ flowchart LR
 
 | 순서 | 호출 | 입력 | 출력 |
 |------|------|------|------|
-| Call 1 | **팩트 추출** | 뉴스 원문 + Tavily 컨텍스트 + 커뮤니티 반응 | 구조화된 팩트 JSON (핵심 사실, 수치, 출처, 반응 요약) |
+| Call 1 | **팩트 추출** | 뉴스 전체 기사(raw_content, 최대 8000자) + 커뮤니티 반응 | 구조화된 팩트 JSON (headline EN+KO, 핵심 사실, 수치, 출처, 반응 요약) |
 | Call 2 | **현직자(Expert)** | 팩트 JSON | Expert EN+KO 동시 출력 (JSON) |
 | Call 3 | **학습자(Learner)** | 팩트 JSON | Learner EN+KO 동시 출력 (JSON) |
 | Call 4 | **입문자(Beginner)** | 팩트 JSON | Beginner EN+KO 동시 출력 (JSON) |
@@ -119,3 +125,14 @@ flowchart LR
 - **팩트 일관성**: 모든 페르소나가 같은 구조화된 팩트에서 출발 → 수치/사실 불일치 방지
 - **독립 품질**: 각 페르소나가 독립적으로 작성됨 → "파생 = 축약" 문제 없음
 - **팩트 재활용**: 추출된 팩트를 프론트엔드(출처 카드, 커뮤니티 반응 표시)에도 활용
+
+## Related
+
+- [[Quality-Gates-&-States]] — 스키마 검증 + 에러 핸들링
+- [[Prompt-Guides]] — 파이프라인 프롬프트
+- [[AI-News-Pipeline-Operations]] — 운영 가이드
+
+## See Also
+
+- [[Persona-System]] — 3페르소나 재가공 (03-Features)
+

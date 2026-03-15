@@ -99,3 +99,7 @@ cd frontend && git add src/styles/global.css
 git commit -m "style: redesign category tabs as interactive chips"
 ```
 
+## Related Plans
+
+- [[plans/2026-03-15-category-nav-mobile-design|카테고리 모바일 설계]]
+

@@ -180,9 +180,8 @@ supabase/
   ```
 
 ## Related
-
 - [[Infrastructure-Topology]] — 서비스 토폴로지
-- [[Backend-Stack]] — FastAPI 배포 대상
-- [[Frontend-Stack]] — Astro 배포 대상
-- [[Database-Schema-Overview]] — 마이그레이션 대상 스키마
-- [[Checklists-&-DoD]] — 배포 전 체크리스트
+- [[Monitoring-&-Logging]] — 배포 모니터링
+
+## See Also
+- [[Backend-Stack]] — 배포 대상 백엔드 (02-Architecture)

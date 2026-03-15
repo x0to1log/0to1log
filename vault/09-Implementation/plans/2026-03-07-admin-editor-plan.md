@@ -757,3 +757,7 @@ git commit -m "docs: update sprint status and frontend rules for admin editor"
 - [ ] Mobile: single column layout, AI panel below
 - [ ] 3 themes (dark/light/pink) render correctly
 - [ ] All commits follow `feat:`/`docs:` convention
+
+## Related Plans
+
+- [[plans/2026-03-07-admin-editor-design|Admin Editor 설계]]

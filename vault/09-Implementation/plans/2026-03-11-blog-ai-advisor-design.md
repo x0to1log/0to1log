@@ -200,3 +200,8 @@ frontend/src/pages/admin/blog/edit/
 | Translate creates new DB row | Matches existing schema (translation_group_id, source_post_id) |
 | Generate absorbs SEO | Eliminates duplicate excerpt/tags generation |
 | gpt-4o-mini only for Suggest | No text generation needed, cost efficiency |
+
+## Related Plans
+
+- [[plans/2026-03-11-blog-kb-design|Blog KB 설계]]
+- [[plans/2026-03-10-ai-advisor-design|AI Advisor 설계]]

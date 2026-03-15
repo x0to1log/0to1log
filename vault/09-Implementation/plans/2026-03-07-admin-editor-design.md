@@ -196,3 +196,7 @@ All colors use existing `--color-*` variables for automatic 3-theme support.
 - Auth/error state handling: 401/403/404/loading (P2C-UI-15)
 - AI suggestion panel functionality (future)
 - Persona tabs (future)
+
+## Related Plans
+
+- [[plans/2026-03-07-admin-editor-plan|Admin Editor 구현]]

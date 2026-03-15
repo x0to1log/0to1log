@@ -180,11 +180,8 @@ src/
 - 검증 기준: 클라이언트 번들에 `/api/revalidate` fetch 호출 0건
 
 ## Related
+- [[System-Architecture]] — 전체 시스템에서 프론트엔드 위치
+- [[Backend-Stack]] — 연동하는 백엔드
 
-- [[System-Architecture]] — 프론트엔드가 속한 전체 시스템 아키텍처
-- [[Backend-Stack]] — API를 제공하는 백엔드
-- [[AI-News-Page-Layouts]] — 뉴스 페이지 레이아웃 디자인
-- [[Component-States]] — 컴포넌트 상태 정의
-- [[Design-System]] — 디자인 시스템 (폰트, 색상, 테마)
-- [[Mobile-UX]] — 모바일 UX 최적화
-- [[Accessibility]] — 접근성 정책
+## See Also
+- [[Design-System]] — UI 컴포넌트 설계 (08-Design)

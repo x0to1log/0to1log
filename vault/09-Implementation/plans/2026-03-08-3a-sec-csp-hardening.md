@@ -425,3 +425,7 @@ Task 3 완료 후 → Task 4 (보안 점검) → Task 5 (문서 + 최종 검증)
 - [ ] `pytest` 전체 통과
 - [ ] 보안 점검 체크리스트 통과
 - [ ] 문서 상태 갱신 완료
+
+## Related Plans
+
+- [[plans/2026-03-11-security-hardening|보안 강화]]

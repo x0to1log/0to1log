@@ -492,3 +492,7 @@ Visually confirm:
 | `frontend/src/pages/admin/index.astro` | Modify (data, HTML, CSS, JS) |
 
 All changes are in a single file, keeping the implementation atomic and easy to review.
+
+## Related Plans
+
+- [[plans/2026-03-10-admin-dashboard-design|Dashboard 설계]]

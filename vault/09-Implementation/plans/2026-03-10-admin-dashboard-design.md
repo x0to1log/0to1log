@@ -81,3 +81,8 @@ JS: "Run Pipeline" 버튼 + "Mark all read" 버튼용 바닐라 JS.
 
 ## 검증
 `cd frontend && npm run build` — 0 errors
+
+## Related Plans
+
+- [[plans/2026-03-10-admin-dashboard-impl|Dashboard 구현]]
+- [[plans/2026-03-14-admin-dashboard-redesign|Dashboard 리디자인]]

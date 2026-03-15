@@ -150,7 +150,7 @@ tags:
 ## Related
 
 - [[Implementation-Plan]] — Phase 흐름 + 게이트
-- [[AI-News-Pipeline-Overview]] — v4 파이프라인 다이어그램
+- [[AI-News-Pipeline-Design]] — v4 파이프라인 다이어그램
 - [[Quality-Gates-&-States]] — 재시도 정책
 - [[Prompt-Guides]] — Expert-First Cascade 프롬프트 설명
 - [[Cost-Model-&-Stage-AB]] — v4 비용 테이블

@@ -63,3 +63,7 @@ LIMIT 1
 - No new dependencies
 - Preview pages and admin editor: `nextPost` is optional, so bottom nav shows only the list button
 - Newsprint design language maintained (dividers, serif typography, muted colors)
+
+## Related Plans
+
+- [[plans/2026-03-07-article-nav-ux-plan|Article Nav 구현]]

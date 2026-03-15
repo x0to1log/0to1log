@@ -101,7 +101,10 @@ const bodyAdvanced = localField(term, 'body_advanced', locale);
 - 코드 예시, 아키텍처 다이어그램 포함 가능
 
 ## Related
-- [[Handbook]] — Handbook 기능 전체 정의
-- [[Content-Strategy]] — 전체 콘텐츠 전략
-- [[Persona-System\|Persona System]] — 뉴스 3페르소나와의 비교 (Handbook는 2레벨)
-- [[Global-Local-Intelligence\|Global Local Intelligence]] — EN/KO 이중 언어 운영 전략
+
+- [[Content-Strategy]] — 상위 콘텐츠 전략
+- [[Global-Local-Intelligence]] — 다국어 운영 전략
+
+## See Also
+
+- [[Handbook]] — Handbook 기능 상세 (03-Features)

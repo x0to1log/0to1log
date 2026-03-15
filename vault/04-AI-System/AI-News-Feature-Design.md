@@ -95,3 +95,12 @@
 - 뉴스 상세 페이지 구조 (페르소나 탭, 사이드레일, 가이드 블록)
 - `news_posts` 테이블 스키마 (컬럼 재활용 가능)
 - EN/KO 언어 전환
+
+## Related
+
+- [[AI-News-Pipeline-Design]] — 파이프라인 설계
+- [[AI-News-Content-Structure]] — 콘텐츠 구조
+
+## See Also
+
+- [[Daily-Dual-News]] — 뉴스 기능 (03-Features)

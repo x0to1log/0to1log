@@ -67,3 +67,7 @@ About ? Portfolio ? RSS
 - This redesign changes IA and product language, not the route structure
 - `/log` continues to back the public AI News surface
 - The goal is to keep web and future app navigation structurally aligned
+
+## Related Plans
+
+- [[plans/2026-03-08-admin-ui-redesign|Admin UI 리디자인]]

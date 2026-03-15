@@ -86,10 +86,5 @@ graph TD
 > - 유지율: 4주 코호트 `[4W-Cohort]`
 
 ## Related
-
-- [[Business-Strategy]] -- 그로스가 속한 비즈니스 전략
-- [[SEO-&-GEO-Strategy]] -- 오가닉 트래픽 엔진
-- [[KPI-Gates-&-Stages]] -- 그로스 KPI
-- [[Community-&-Gamification]] -- 바이럴 장치 (포인트, 예측 게임)
-- [[AI-News-Page-Layouts]] -- Highlight to Share UI
-- [[Content-Strategy]] -- 바이럴을 위한 콘텐츠 구조
+- [[Business-Strategy]] — 상위 비즈니스 전략
+- [[KPI-Gates-&-Stages]] — 그로스 KPI

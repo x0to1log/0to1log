@@ -1314,3 +1314,7 @@ Task 8 (Quality Gate) — parallel with Tasks 5-7
 Task 9 (Analytics) — parallel with Tasks 5-7
 Task 10 (Topic Suggestion) — parallel with Tasks 5-7
 ```
+
+## Related Plans
+
+- [[plans/2026-03-10-phase3-intelligence-design|Phase 3 설계]]

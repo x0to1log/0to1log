@@ -42,9 +42,8 @@ graph LR
 ```
 
 ## Related
-
-- [[AI-News-Pipeline-Overview]] — 뉴스를 생성하는 멀티 에이전트 시스템
+- [[AI-News-Product]] — AI News 제품 전체 개요
 - [[Persona-System]] — Business 뉴스의 3단계 페르소나 재가공
-- [[AI-NEWS-Research-Writing]] — Research 뉴스 작성 가이드
-- [[AI-NEWS-Business-Writing]] — Business 뉴스 작성 가이드
-- [[Content-Strategy]] — 뉴스 콘텐츠의 상위 전략
+
+## See Also
+- [[AI-News-Pipeline-Design]] — 뉴스를 생성하는 멀티 에이전트 시스템 (04-AI-System)

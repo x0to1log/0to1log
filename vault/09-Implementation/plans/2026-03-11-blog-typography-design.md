@@ -79,3 +79,8 @@ Loaded conditionally in `Head.astro` only when the page URL contains `/blog/`. U
 - IBM Plex Sans latin (5 weights): ~120KB
 - IBM Plex Sans KR (4 weights): ~1.5MB total, but Google Fonts serves unicode-range splits so actual download is much smaller
 - Conditional loading means zero impact on non-blog pages
+
+## Related Plans
+
+- [[plans/2026-03-11-blog-typography-plan|Blog 타이포그래피 구현]]
+- [[plans/2026-03-11-blog-kb-design|Blog KB 설계]]

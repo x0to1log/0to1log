@@ -87,9 +87,8 @@ GEO는 기존 SEO를 넘어, **AI 검색 엔진**(Google AI Overview, ChatGPT, P
 > GEO를 Phase 3에서 시작하는 이유: GEO는 기존 콘텐츠가 풍부해야 효과가 있다. Phase 1~2에서 콘텐츠와 기본 SEO를 확보한 뒤, Phase 3에서 콘텐츠 구조를 AI 검색에 맞게 고도화한다.
 
 ## Related
+- [[Business-Strategy]] — 상위 비즈니스 전략
+- [[Growth-Loop-&-Viral]] — SEO와 연결된 그로스
 
-- [[Business-Strategy]] — SEO/GEO가 속한 비즈니스 전략
-- [[KPI-Gates-&-Stages]] — SEO/GEO 성과 KPI
-- [[Frontend-Stack]] — SEO 구현 (meta, JSON-LD, sitemap)
-- [[Content-Strategy]] — SEO 최적화 대상 콘텐츠
-- [[Global-Local-Intelligence]] — EN canonical 다국어 전략
+## See Also
+- [[Content-Strategy]] — SEO 대상 콘텐츠 전략 (05-Content)
