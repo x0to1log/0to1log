@@ -143,7 +143,7 @@ class RetroCheckResult(BaseModel):
 # --- Handbook AI Advisor ---
 
 class HandbookAdviseRequest(BaseModel):
-    action: Literal["related_terms", "translate", "generate"]
+    action: Literal["related_terms", "translate", "generate", "factcheck", "deepverify"]
     term_id: str
     term: str
     korean_name: str = ""

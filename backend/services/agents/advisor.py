@@ -389,6 +389,27 @@ async def run_handbook_advise(req: HandbookAdviseRequest) -> tuple[dict, str, in
         return data, model, tokens, []
     elif req.action == "generate":
         return await _run_generate_term(req, client, model)
+    elif req.action in ("factcheck", "deepverify"):
+        # Reuse news editor's factcheck/deepverify with handbook content
+        content_parts = [
+            f"Term: {req.term}",
+            f"Definition (KO): {req.definition_ko}" if req.definition_ko else "",
+            f"Definition (EN): {req.definition_en}" if req.definition_en else "",
+            f"Body Basic (KO):\n{req.body_basic_ko}" if req.body_basic_ko else "",
+            f"Body Basic (EN):\n{req.body_basic_en}" if req.body_basic_en else "",
+            f"Body Advanced (KO):\n{req.body_advanced_ko}" if req.body_advanced_ko else "",
+            f"Body Advanced (EN):\n{req.body_advanced_en}" if req.body_advanced_en else "",
+        ]
+        content = "\n\n".join(p for p in content_parts if p)
+        fake_req = AiAdviseRequest(
+            action=req.action, post_id="", title=req.term,
+            content=content, category="study",
+        )
+        if req.action == "deepverify":
+            data, model, tokens = await run_deep_verify(fake_req)
+        else:
+            data, model, tokens = await run_advise(fake_req)
+        return data, model, tokens, []
     else:
         raise ValueError(f"Unknown handbook action: {req.action}")
 
