@@ -74,23 +74,37 @@ async def _log_stage(
     if usage.get("output_tokens"):
         meta["output_tokens"] = usage["output_tokens"]
 
+    # Build log row, omitting None values to let DB defaults apply
+    # (attempt is NOT NULL DEFAULT 0, debug_meta is NOT NULL DEFAULT '{}')
+    log_row: dict[str, Any] = {
+        "run_id": run_id,
+        "pipeline_type": stage,
+        "status": status,
+        "duration_ms": duration_ms,
+    }
+    if input_summary:
+        log_row["input_summary"] = input_summary
+    if output_summary:
+        log_row["output_summary"] = output_summary
+    if error_message:
+        log_row["error_message"] = error_message
+    if usage.get("model_used"):
+        log_row["model_used"] = usage["model_used"]
+    if usage.get("tokens_used"):
+        log_row["tokens_used"] = usage["tokens_used"]
+    if usage.get("cost_usd") is not None:
+        log_row["cost_usd"] = usage["cost_usd"]
+    if post_type:
+        log_row["post_type"] = post_type
+    if locale:
+        log_row["locale"] = locale
+    if attempt is not None:
+        log_row["attempt"] = attempt
+    if meta:
+        log_row["debug_meta"] = meta
+
     try:
-        supabase.table("pipeline_logs").insert({
-            "run_id": run_id,
-            "pipeline_type": stage,
-            "status": status,
-            "input_summary": input_summary,
-            "output_summary": output_summary,
-            "error_message": error_message,
-            "duration_ms": duration_ms,
-            "model_used": usage.get("model_used"),
-            "tokens_used": usage.get("tokens_used"),
-            "cost_usd": usage.get("cost_usd"),
-            "post_type": post_type,
-            "locale": locale,
-            "attempt": attempt,
-            "debug_meta": meta or None,
-        }).execute()
+        supabase.table("pipeline_logs").insert(log_row).execute()
     except Exception as e:
         logger.warning("Failed to log stage %s: %s", stage, e)
 
