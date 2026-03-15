@@ -54,6 +54,27 @@ if (!isNew) {
   }
 }
 
+// Fetch the translation partner (other locale)
+let partnerPost: any = null;
+if (post?.translation_group_id) {
+  const partnerLocale = post.locale === 'en' ? 'ko' : 'en';
+  const sb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const { data: partnerData } = await sb.from('blog_posts')
+    .select('*')
+    .eq('translation_group_id', post.translation_group_id)
+    .eq('locale', partnerLocale)
+    .maybeSingle();
+  partnerPost = partnerData;
+}
+
+// Determine which is KO and which is EN
+const koPost = post?.locale === 'ko' ? post : partnerPost;
+const enPost = post?.locale === 'en' ? post : partnerPost;
+
 const editableContent = post?.content || '';
 const categories = BLOG_CATEGORIES;
 
@@ -169,13 +190,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 <textarea id="edit-excerpt" class="admin-input" rows="2" style="flex:1;"
                   placeholder="Brief summary for list pages and SEO...">{post?.excerpt || ''}</textarea>
               </div>
-              <div class="admin-editor-meta-row">
-                <label class="admin-field-label" for="edit-locale">Locale</label>
-                <select id="edit-locale" class="admin-select" style="width:auto;">
-                  <option value="en" selected={!post?.locale || post?.locale === 'en'}>EN</option>
-                  <option value="ko" selected={post?.locale === 'ko'}>KO</option>
-                </select>
-              </div>
+              {/* Locale is now controlled by KO/EN tabs — no dropdown */}
               <div class="admin-editor-meta-row">
                 <label class="admin-field-label" for="edit-focus-items">Focus Items</label>
                 <input id="edit-focus-items" class="admin-input" type="text" style="flex:1;"
@@ -189,8 +204,22 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             </div>
           </details>
 
-          <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
-          <div class="admin-char-count" id="char-count"></div>
+          <div class="admin-lang-tabs">
+            <button type="button" class="admin-lang-tab admin-lang-tab--active" data-lang="ko">KO</button>
+            <button type="button" class="admin-lang-tab" data-lang="en">EN</button>
+          </div>
+
+          {/* KO content */}
+          <div id="lang-ko">
+            <div id="blog-editor-ko" class="admin-editor-wrapper" data-content={koPost?.content || ''}></div>
+            <div class="admin-char-count" id="char-count-ko"></div>
+          </div>
+
+          {/* EN content (hidden by default) */}
+          <div id="lang-en" style="display: none;">
+            <div id="blog-editor-en" class="admin-editor-wrapper" data-content={enPost?.content || ''}></div>
+            <div class="admin-char-count" id="char-count-en"></div>
+          </div>
         </div>
 
         <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
@@ -275,7 +304,14 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       />
     </div>
   )}
-  <div id="admin-data" hidden data-post-id={post?.id || ''} data-slug={pageSlug} data-is-new={isNew ? 'true' : 'false'} data-post-locale={post?.locale || 'en'}></div>
+  <div id="admin-data" hidden
+    data-post-id={post?.id || ''}
+    data-ko-post-id={koPost?.id || ''}
+    data-en-post-id={enPost?.id || ''}
+    data-translation-group-id={post?.translation_group_id || ''}
+    data-slug={pageSlug}
+    data-is-new={isNew ? 'true' : 'false'}
+    data-post-locale={post?.locale || 'en'}></div>
 </MainLayout>
 
 <script>
@@ -283,23 +319,33 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
 
-  let crepe: Crepe | null = null;
+  let crepeKo: Crepe | null = null;
+  let crepeEn: Crepe | null = null;
+
+  function getActiveLang(): 'ko' | 'en' {
+    const active = document.querySelector('.admin-lang-tab--active') as HTMLElement;
+    return (active?.dataset.lang as 'ko' | 'en') || 'ko';
+  }
+
+  function getActiveCrepe(): Crepe | null {
+    return getActiveLang() === 'ko' ? crepeKo : crepeEn;
+  }
 
   /** Milkdown Crepe v7.19 has no setMarkdown(). Use editor.action(replaceAll()) instead. */
   function setEditorContent(md: string) {
-    if (crepe) crepe.editor.action(replaceAll(md));
+    const activeCrepe = getActiveCrepe();
+    if (activeCrepe) activeCrepe.editor.action(replaceAll(md));
   }
   let feedbackTimer = 0;
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (crepe) {
-      crepe.destroy();
-      crepe = null;
-    }
+    if (crepeKo) { crepeKo.destroy(); crepeKo = null; }
+    if (crepeEn) { crepeEn.destroy(); crepeEn = null; }
     clearTimeout(feedbackTimer);
 
-    const editorEl = document.getElementById('milkdown-editor');
-    if (!editorEl) return;
+    const editorKoEl = document.getElementById('blog-editor-ko');
+    const editorEnEl = document.getElementById('blog-editor-en');
+    if (!editorKoEl && !editorEnEl) return;
 
     const draftMode = document.getElementById('draft-mode');
     const previewMode = document.getElementById('preview-mode');
@@ -314,7 +360,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
     const slugInput = document.getElementById('edit-slug') as HTMLInputElement;
     const excerptInput = document.getElementById('edit-excerpt') as HTMLTextAreaElement;
-    const localeSelect = document.getElementById('edit-locale') as HTMLSelectElement;
     const focusItemsInput = document.getElementById('edit-focus-items') as HTMLInputElement;
     const ogImageInput = document.getElementById('edit-og-image') as HTMLInputElement;
     const adminData = document.getElementById('admin-data');
@@ -564,28 +609,61 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     }
 
     async function initEditor() {
-      if (!editorEl) return;
-      const initialContent = editorEl.dataset.content || '';
-
-      crepe = new Crepe({
-        root: editorEl,
-        defaultValue: initialContent,
-        featureConfigs: {
-          [Crepe.Feature.Placeholder]: {
-            text: 'Start writing your blog post...',
-            mode: 'block',
+      if (editorKoEl) {
+        crepeKo = new Crepe({
+          root: editorKoEl,
+          defaultValue: editorKoEl.dataset.content || '',
+          featureConfigs: {
+            [Crepe.Feature.Placeholder]: {
+              text: '블로그 포스트를 작성하세요...',
+              mode: 'block',
+            },
           },
-        },
-      });
-
-      await crepe.create();
+        });
+        await crepeKo.create();
+      }
+      if (editorEnEl) {
+        crepeEn = new Crepe({
+          root: editorEnEl,
+          defaultValue: editorEnEl.dataset.content || '',
+          featureConfigs: {
+            [Crepe.Feature.Placeholder]: {
+              text: 'Start writing your blog post...',
+              mode: 'block',
+            },
+          },
+        });
+        await crepeEn.create();
+      }
     }
 
-    function syncSavedState(saved: { id?: string; slug?: string; locale?: string } | null) {
+    // Language tab switching
+    document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang!;
+        document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
+          b.classList.remove('admin-lang-tab--active')
+        );
+        btn.classList.add('admin-lang-tab--active');
+        document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
+        document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
+      });
+    });
+
+    function syncSavedState(saved: { id?: string; slug?: string; locale?: string; translation_group_id?: string } | null) {
       if (!saved) return;
       if (saved.id) {
         postId = saved.id;
         if (adminData) adminData.dataset.postId = saved.id;
+        // Update locale-specific post ID
+        const lang = saved.locale || getActiveLang();
+        if (adminData) {
+          if (lang === 'ko') adminData.dataset.koPostId = saved.id;
+          else adminData.dataset.enPostId = saved.id;
+        }
+      }
+      if (saved.translation_group_id && adminData) {
+        adminData.dataset.translationGroupId = saved.translation_group_id;
       }
       if (saved.slug) {
         currentSlug = saved.slug;
@@ -605,7 +683,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     }
 
     function buildPreviewUrl() {
-      const locale = localeSelect?.value || postLocale || 'en';
+      const locale = getActiveLang();
       const slug = (slugInput?.value || currentSlug || '').trim();
       if (!slug) return '';
       const params = new URLSearchParams({
@@ -627,16 +705,24 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
       const slug = slugInput?.value || '';
       const excerpt = excerptInput?.value || '';
-      const locale = localeSelect?.value || 'en';
+      const activeLang = getActiveLang();
+      const activeCrepe = getActiveCrepe();
       const focusRaw = focusItemsInput?.value || '';
       const focusItems = focusRaw.split(',').map((s: string) => s.trim()).filter(Boolean);
       const ogImageUrl = ogImageInput?.value || '';
 
+      // Determine the correct post ID for the active locale
+      const activePostId = activeLang === 'ko'
+        ? (adminData?.dataset.koPostId || '')
+        : (adminData?.dataset.enPostId || '');
+      const isActiveNew = isNewPost || !activePostId;
+
       const saveBody: Record<string, any> = {
-        id: isNewPost ? undefined : postId,
+        id: isActiveNew ? undefined : activePostId,
         title, slug, category, tags,
-        content: crepe ? crepe.getMarkdown() : '',
-        excerpt, locale, focus_items: focusItems, og_image_url: ogImageUrl,
+        content: activeCrepe ? activeCrepe.getMarkdown() : '',
+        excerpt, locale: activeLang, focus_items: focusItems, og_image_url: ogImageUrl,
+        translation_group_id: adminData?.dataset.translationGroupId || undefined,
       };
 
       try {
@@ -712,7 +798,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           throw new Error(err.error || `${res.status}`);
         }
         showFeedback('success', 'Published! Redirecting...');
-        const locale = localeSelect?.value || postLocale || 'en';
+        const locale = getActiveLang();
         const slugEl = currentSlug || adminData?.dataset.slug || '';
         setTimeout(() => { window.location.href = `/${locale}/blog/${slugEl}/`; }, 1500);
         return true;
@@ -906,7 +992,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
 
       const title = titleInput?.value || '';
-      const content = crepe ? crepe.getMarkdown() : '';
+      const content = getActiveCrepe()?.getMarkdown() || '';
 
       if (action === 'outline' && !title.trim()) {
         showFeedback('error', 'Add a title before generating an outline.');
@@ -939,7 +1025,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
             excerpt: excerptInput?.value || '',
             slug: slugInput?.value || '',
-            locale: localeSelect?.value || 'en',
+            locale: getActiveLang(),
           }),
         });
 
@@ -1047,7 +1133,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       aiResultEl.innerHTML = html;
 
       document.getElementById('ai-apply-outline')?.addEventListener('click', () => {
-        if (!crepe || !r.sections?.length) return;
+        if (!getActiveCrepe() || !r.sections?.length) return;
         let md = '';
         r.sections.forEach((s: any) => {
           md += `## ${s.heading}\n\n`;
@@ -1071,7 +1157,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       aiResultEl.innerHTML = html;
 
       document.getElementById('ai-apply-draft')?.addEventListener('click', () => {
-        if (!crepe || !r.content) return;
+        if (!getActiveCrepe() || !r.content) return;
         setEditorContent(r.content);
         showFeedback('success', 'Draft applied to editor.');
       });
@@ -1099,8 +1185,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.dataset.idx || '0', 10);
           const change = r.changes?.[idx];
-          if (!crepe || !change) return;
-          const md = crepe.getMarkdown();
+          const ac = getActiveCrepe();
+          if (!ac || !change) return;
+          const md = ac.getMarkdown();
           if (md.includes(change.before)) {
             setEditorContent(md.replace(change.before, change.after));
             btn.textContent = 'Applied';
@@ -1134,7 +1221,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     async function runTranslate() {
       const title = titleInput?.value || '';
-      const content = crepe ? crepe.getMarkdown() : '';
+      const content = getActiveCrepe()?.getMarkdown() || '';
       if (!title.trim() || !content.trim()) {
         showFeedback('error', 'Title and content are required for translation.');
         return;
@@ -1152,7 +1239,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             excerpt: excerptInput?.value || '',
             tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
             category: categorySelect?.value || '',
-            locale: document.documentElement.lang === 'ko' ? 'ko' : 'en',
+            locale: getActiveLang(),
             source_post_id: postId || '',
           }),
         });
@@ -1330,13 +1417,18 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     });
 
     // --- Character / word count ---
-    const charCountEl = document.getElementById('char-count');
+    const charCountKoEl = document.getElementById('char-count-ko');
+    const charCountEnEl = document.getElementById('char-count-en');
     function updateCharCount() {
-      if (!charCountEl || !crepe) return;
-      const md = crepe.getMarkdown();
-      const chars = md.length;
-      const words = md.trim() ? md.trim().split(/\s+/).length : 0;
-      charCountEl.textContent = `${chars} chars / ${words} words`;
+      function updateOne(el: HTMLElement | null, c: Crepe | null) {
+        if (!el || !c) return;
+        const md = c.getMarkdown();
+        const chars = md.length;
+        const words = md.trim() ? md.trim().split(/\s+/).length : 0;
+        el.textContent = `${chars} chars / ${words} words`;
+      }
+      updateOne(charCountKoEl, crepeKo);
+      updateOne(charCountEnEl, crepeEn);
     }
     setInterval(updateCharCount, 3000);
 
