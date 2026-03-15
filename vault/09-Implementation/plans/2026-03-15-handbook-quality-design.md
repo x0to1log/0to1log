@@ -135,11 +135,25 @@
 
 ### 프롬프트 재설계 원칙
 
+- **KO/EN 헤더 분리**: `_ko` 필드는 한국어 섹션 헤더, `_en` 필드는 영어 섹션 헤더. 이중 언어 헤더(`## 한국어 / English`) 금지. 단, KO 본문 안에서 기술 용어(Transformer, API, fine-tuning 등)는 영어 그대로 사용 — 실제 한국어 기술 콘텐츠에서 자연스러운 표현 유지.
 - **섹션별 지시**: H2 헤더와 함께 각 섹션에서 무엇을 써야 하는지 명시
 - **톤 가이드**: Basic → "중학생도 이해할 수 있게", Advanced → "시니어 개발자가 읽기에 충분하게"
 - **필수 요소 체크**: 대화 예시, 실사용 사례, 주의점을 프롬프트에서 명시적으로 요구
-- **EN+KO 동시 생성**: 현재 패턴 유지 (번역이 아닌 각 언어 네이티브 작성)
 - **4개 명칭 생성**: term, term_full, korean_name, korean_full을 AI가 함께 생성
+
+### LLM 호출 분리 전략 (C안 확정)
+
+기존: 1회 호출로 8개 필드 동시 생성 → 출력이 ~13,000자+로 너무 길어 후반부 퀄리티 저하.
+
+**개선: 2회 호출로 분리**
+
+| 호출 | 생성 필드 | 이유 |
+|------|---------|------|
+| **호출 1: 메타 + Basic** | term_full, korean_full, categories, definition_ko/en, body_basic_ko/en | 가벼운 필드들 + Basic은 분량이 적음 |
+| **호출 2: Advanced** | body_advanced_ko/en | 수식, 코드, 기술 비교표 등 가장 길고 복잡한 콘텐츠에 집중 |
+
+- 호출 2에 호출 1의 `definition`을 컨텍스트로 전달 → Advanced가 Basic과 중복 없이 보완적 작성
+- 비용: 1회 ~$0.05 → 2회 ~$0.10. 수동(on-demand) 생성이라 수용 가능
 
 ### 출력 JSON 구조 (확장)
 
@@ -162,37 +176,46 @@
 
 ## 6. 파이프라인 & 워크플로우 재설계
 
-### 현재 흐름
+### 용어 생성 경로 2가지
 
 ```
-뉴스 파이프라인 → 용어 자동 추출 (gpt-4o-mini)
-                → 콘텐츠 생성 (gpt-4o)
-                → draft 저장 → (방치됨)
+경로 1: 자동 (뉴스 파이프라인 연계)
+뉴스 파이프라인 실행
+  → 뉴스 콘텐츠에서 AI 용어 추출 (gpt-4o-mini)
+  → 중복 체크
+  → 용어별 2회 LLM 호출 (호출1: 메타+Basic, 호출2: Advanced)
+  → draft로 저장 + pipeline_logs 기록
+  → 어드민 검수 → 발행
 
-어드민 수동 → 에디터에서 AI Generate → Apply → 저장 → 발행
+경로 2: 수동 (어드민 에디터)
+어드민이 용어 직접 입력 또는 기존 용어 선택
+  → AI Generate 버튼 → 2회 LLM 호출
+  → pipeline_logs 기록
+  → 검수 → 발행
 ```
 
-### 개선 흐름
+### 비용/토큰 추적
 
-```
-[자동 추출]
-뉴스 파이프라인 → 용어 추출 → 중복 체크 → draft 저장
-                                          ↓
-[어드민 검수 대시보드]
-draft 목록 → 용어별 퀄리티 점수 표시 → 어드민 확인
-  ↓
-  ├─ 승인 → published
-  ├─ 수정 필요 → AI Regenerate → 재검수
-  └─ 불필요 → archived (soft delete)
+뉴스 파이프라인의 `_log_stage()` 패턴을 핸드북에도 적용:
 
-[퀄리티 게이트 강화]
+| pipeline_type | 호출 | 기록 내용 |
+|--------------|------|---------|
+| `handbook.generate.basic` | 호출 1 | input/output 토큰, cost_usd, model_used, duration_ms, debug_meta |
+| `handbook.generate.advanced` | 호출 2 | input/output 토큰, cost_usd, model_used, duration_ms, debug_meta |
+| `handbook.extract` | 자동 추출 | 추출된 용어 목록, 토큰, 비용 |
+
+- `pipeline_runs` 없이 `pipeline_logs` 단독 기록 (수동 실행이므로 run 개념 불필요)
+- `pipeline_type` prefix로 뉴스/핸드북 필터링 가능
+- 어드민 analytics 페이지에서 Handbook 탭으로 분리 확인
+
+### 퀄리티 게이트 강화
+
 발행 시 자동 검증:
-  1. 글자 수 (기존)
-  2. 섹션 구조 검증 (H2 7/8개 존재 확인)
-  3. 필수 요소 검증 (대화 예시, 사용 사례 포함 여부)
-  4. Basic/Advanced 모두 작성 확인
-  5. term_full, korean_full 작성 확인
-```
+1. 글자 수 (기존)
+2. 섹션 구조 검증 (Basic H2 8개, Advanced H2 9개 존재 확인)
+3. 필수 요소 검증 (대화 예시, 사용 사례 포함 여부)
+4. Basic/Advanced 모두 작성 확인
+5. term_full, korean_full 작성 확인
 
 ### 미완성 항목 (기존 plan에서 이관)
 
@@ -210,12 +233,17 @@ draft 목록 → 용어별 퀄리티 점수 표시 → 어드민 확인
 
 ### Phase 1: 데이터 모델 + 프롬프트 재설계
 - DB 마이그레이션: `term_full`, `korean_full` 컬럼 추가
-- `prompts_advisor.py`의 `GENERATE_TERM_PROMPT` 재작성 (새 섹션 구조)
-- `advisor.py`의 응답 모델에 `term_full`, `korean_full` 추가
+- `prompts_advisor.py`의 `GENERATE_TERM_PROMPT` 재작성 — KO/EN 분리, 새 섹션 구조 ✅ 완료
+- `advisor.py`: Generate 로직을 2회 호출(Basic+Advanced)로 분리
+- `models/advisor.py`: `GenerateTermResult`에 `term_full`, `korean_full` 추가 ✅ 완료
 - 프론트엔드 에디터에 새 필드 표시
 - 테스트
 
-### Phase 2: 퀄리티 게이트 강화
+### Phase 2: 비용/토큰 추적
+- `advisor.py`에 `_log_stage()` 호출 추가 (handbook.generate.basic, handbook.generate.advanced)
+- `pipeline-analytics.astro`에 Handbook 탭 추가
+
+### Phase 3: 퀄리티 게이트 강화
 - 발행 시 섹션 구조 검증 로직 추가
 - 필수 요소 체크 (프론트엔드 또는 백엔드)
 - `term_full`, `korean_full` 필수 검증

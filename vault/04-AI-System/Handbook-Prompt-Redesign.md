@@ -113,61 +113,55 @@ tags:
 
 ---
 
-## 재설계 원칙
+## 재설계 결정 사항
 
-### 원칙 1: KO/EN 섹션 구조 완전 분리
+### 결정 1: KO/EN 헤더 분리 + 자연스러운 언어 혼합
 
-프롬프트 안에서 KO 템플릿과 EN 템플릿을 별도로 명시:
+- `_ko` 필드는 **한국어 섹션 헤더** 사용 (`## 쉽게 이해하기`)
+- `_en` 필드는 **영어 섹션 헤더** 사용 (`## Plain Explanation`)
+- 이중 언어 헤더 (`## 한국어 / English`) 금지
+- **단, KO 본문 안에서 기술 용어는 영어 그대로 사용** — "Transformer", "API", "fine-tuning" 등은 한국어 기술 콘텐츠에서 자연스럽게 영어로 쓰임. 한국인 독자가 실제로 궁금해하는 영어 용어를 자연스럽게 녹이는 것이 중요.
 
-```
-### body_basic_ko 섹션 구조:
-## 쉽게 이해하기
-## 예시와 비유
-## 한눈에 보기
-...
+### 결정 2: LLM 호출 2회 분리 (C안 확정)
 
-### body_basic_en 섹션 구조:
-## Plain Explanation
-## Example & Analogy
-## At a Glance
-...
-```
+| 호출 | 생성 필드 | 이유 |
+|------|---------|------|
+| **호출 1: 메타 + Basic** | term_full, korean_full, categories, definition_ko/en, body_basic_ko/en | 가벼운 필드 + Basic 분량 적음 |
+| **호출 2: Advanced** | body_advanced_ko/en | 수식/코드/비교표가 포함된 가장 긴 콘텐츠에 집중 |
 
-### 원칙 2: 대상 명확 정의
+- 호출 2에 호출 1의 definition을 컨텍스트로 전달
+- 기존 1회 호출 대비 퀄리티 향상, 비용은 ~$0.05 추가
 
-```
-body_basic 대상: 중학생도 이해 가능. PM, 디자이너, 경영진, 학생.
-body_advanced 대상: 시니어 개발자가 읽기에 충분. 코드와 아키텍처 수준.
-```
+### 결정 3: 비용/토큰 추적
 
-### 원칙 3: 필수 요소 명시적 요구
+News Pipeline의 `_log_stage()` 패턴을 핸드북에도 적용:
+- `pipeline_type = "handbook.generate.basic"` / `"handbook.generate.advanced"`
+- input/output 토큰, cost_usd, model_used, duration_ms, debug_meta 기록
+- 어드민 analytics에서 News/Handbook 탭으로 분리 확인 가능
 
-각 섹션에서 반드시 포함해야 하는 내용을 프롬프트에서 명시:
-- 대화 예시 문장 (Basic 4~5개, Advanced 6~8개)
-- 비교표/설명표 (Basic 1개+, Advanced 해당 시)
-- 주의점 (Basic 3~4개, Advanced 4~5개)
-- 실사용 사례 (Basic 4~5개, Advanced 4~5개)
+### 결정 4: 이모지 헤더 유지
 
-### 원칙 4: 새 용어 필드 생성
+현재 이모지 헤더(💡, 🍎, 📊 등) 유지 — 시각적 구분에 효과적.
 
-```
-term_full: 영어 풀네임 (약어가 있을 때)
-korean_full: 한국어 정식 명칭
-```
+### 결정 5: 프롬프트 재작성 완료
 
-### 원칙 5: 이모지 헤더 유지/제거 결정
-
-현재 이모지 헤더(💡, 🍎, 🔧 등) 사용 중 — 유지할지 제거할지 결정 필요.
+`GENERATE_TERM_PROMPT` 재작성 완료 (2026-03-15). 주요 변경:
+- KO/EN 섹션 구조 완전 분리 (8+8 = 16개 템플릿 블록)
+- Basic 8개 섹션 + Advanced 9개 섹션 명시
+- `term_full`, `korean_full` 생성 지시
+- 대상/톤 명확 정의
+- 수식/도표/비교표 전용 섹션 추가
 
 ---
 
 ## 구현 파일
 
-| 파일 | 변경 |
-|------|------|
-| `backend/services/agents/prompts_advisor.py` | `GENERATE_TERM_PROMPT` 전체 재작성 |
-| `backend/models/advisor.py` | `GenerateTermResult`에 `term_full`, `korean_full` 추가 |
-| `backend/services/agents/advisor.py` | 응답 처리에 새 필드 반영 |
+| 파일 | 변경 | 상태 |
+|------|------|------|
+| `backend/services/agents/prompts_advisor.py` | `GENERATE_TERM_PROMPT` 전체 재작성 | ✅ 완료 |
+| `backend/models/advisor.py` | `GenerateTermResult`에 `term_full`, `korean_full` 추가 | ✅ 완료 |
+| `backend/services/agents/advisor.py` | Generate 로직 2회 호출 분리 + `_log_stage()` 추가 | TODO |
+| `frontend/src/pages/admin/pipeline-analytics.astro` | Handbook 탭 추가 | TODO |
 
 ---
 
