@@ -165,12 +165,16 @@
 - **완료 기준:** 뉴스 run 완료 → 용어 run 자동 트리거 + 실패 시 Retry 버튼
 
 ### 18. pipeline_logs 기록 안 되는 버그 `[BUG-LOGS-01]`
+- **체크:** [x]
+- **상태:** done
+- **원인:** `_log_stage()`에서 `attempt=None`, `debug_meta=None`을 명시적으로 전달 → NOT NULL DEFAULT 컬럼에 NULL insert 시도 → PostgREST 거부 → try/except에서 조용히 무시
+- **해결:** None인 필드를 INSERT dict에서 제외하여 DB DEFAULT 사용
+
+### 20. Pipeline Runs 페이지 News/Handbook 탭 분리 `[RUNS-TAB-01]`
 - **체크:** [ ]
 - **상태:** todo
-- **목적:** `_log_stage()` 호출이 실제로 DB에 기록되지 않는 문제 해결
-- **원인 후보:** RLS 정책 (service role key + auth.uid() 불일치), 또는 호출 자체가 안 됨
-- **확인 방법:** Railway 로그에서 "Failed to log stage" 경고 확인, Supabase RLS 정책 점검
-- **산출물:** pipeline_logs에 스테이지별 로그 정상 기록
+- **목적:** Pipeline Runs 페이지에서 뉴스 run과 핸드북 run을 탭으로 구분
+- **산출물:** `pipeline-runs/index.astro` — News/Handbook 탭 + run_key prefix 필터링
 
 ### 19. Supabase 마이그레이션 실행 `[DB-MIGRATE-01]`
 - **체크:** [ ]

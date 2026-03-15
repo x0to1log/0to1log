@@ -140,26 +140,28 @@ try {
   }
 } catch {}
 
-const runsWithCostMetrics = runs.filter((run) => run.totalCost !== null);
+const newsRuns = runs.filter((r) => r.run_key?.startsWith('news-v2-'));
+const handbookRuns = runs.filter((r) => r.run_key?.startsWith('handbook-extract-'));
 
-const summary = {
-  total: runs.length,
-  success: runs.filter((run) => run.status === 'success').length,
-  failed: runs.filter((run) => run.status === 'failed').length,
-  running: runs.filter((run) => run.status === 'running').length,
-  avgCost:
-    runsWithCostMetrics.length
-      ? runsWithCostMetrics.reduce((sum, run) => sum + (run.totalCost ?? 0), 0) / runsWithCostMetrics.length
+function buildSummary(subset: RunCard[]) {
+  const withCost = subset.filter((r) => r.totalCost !== null);
+  const withDuration = subset.filter((r) => r.durationSeconds !== null);
+  return {
+    total: subset.length,
+    success: subset.filter((r) => r.status === 'success').length,
+    failed: subset.filter((r) => r.status === 'failed').length,
+    running: subset.filter((r) => r.status === 'running').length,
+    avgCost: withCost.length
+      ? withCost.reduce((sum, r) => sum + (r.totalCost ?? 0), 0) / withCost.length
       : null,
-  avgDuration: runs.filter((run) => run.durationSeconds !== null).length
-    ? Math.round(
-        runs
-          .filter((run) => run.durationSeconds !== null)
-          .reduce((sum, run) => sum + (run.durationSeconds ?? 0), 0)
-          / runs.filter((run) => run.durationSeconds !== null).length,
-      )
-    : 0,
-};
+    avgDuration: withDuration.length
+      ? Math.round(withDuration.reduce((sum, r) => sum + (r.durationSeconds ?? 0), 0) / withDuration.length)
+      : 0,
+  };
+}
+
+const summary = buildSummary(newsRuns);
+const handbookSummary = buildSummary(handbookRuns);
 ---
 
 <MainLayout title="Pipeline Runs" locale="en">
@@ -183,6 +185,12 @@ const summary = {
         </div>
       </div>
 
+      <div class="pcosts-tabs">
+        <button class="pcosts-tab pcosts-tab--active" data-tab="news" type="button">News</button>
+        <button class="pcosts-tab" data-tab="handbook" type="button">Handbook</button>
+      </div>
+
+      <div id="tab-news">
       <section class="pipeline-runs-summary">
         <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
           <span class="pipeline-runs-stat__label">Recent Runs</span>
@@ -230,11 +238,11 @@ const summary = {
           </div>
         </div>
 
-        {runs.length === 0 ? (
-          <p class="dashboard-empty">No pipeline runs yet.</p>
+        {newsRuns.length === 0 ? (
+          <p class="dashboard-empty">No news pipeline runs yet.</p>
         ) : (
           <div class="pipeline-run-card-list">
-            {runs.map((run) => (
+            {newsRuns.map((run) => (
               <a href={`/admin/pipeline-runs/${run.id}`} class={`pipeline-run-card pipeline-run-card--${run.statusTone}`}>
                 <div class="pipeline-run-card__top">
                   <div class="pipeline-run-card__identity">
@@ -285,6 +293,112 @@ const summary = {
           </div>
         )}
       </section>
+      </div>
+
+      <div id="tab-handbook" style="display:none">
+      <section class="pipeline-runs-summary">
+        <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
+          <span class="pipeline-runs-stat__label">Recent Runs</span>
+          <strong class="pipeline-runs-stat__value">{handbookSummary.total}</strong>
+          <span class="pipeline-runs-stat__detail">Last 30 executions</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--success">
+          <span class="pipeline-runs-stat__label">Successful</span>
+          <strong class="pipeline-runs-stat__value">{handbookSummary.success}</strong>
+          <span class="pipeline-runs-stat__detail">Healthy completions</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--failed">
+          <span class="pipeline-runs-stat__label">Failed</span>
+          <strong class="pipeline-runs-stat__value">{handbookSummary.failed}</strong>
+          <span class="pipeline-runs-stat__detail">Need inspection</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--running">
+          <span class="pipeline-runs-stat__label">Running</span>
+          <strong class="pipeline-runs-stat__value">{handbookSummary.running}</strong>
+          <span class="pipeline-runs-stat__detail">Active right now</span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
+          <span class="pipeline-runs-stat__label">Avg Cost</span>
+          <strong class="pipeline-runs-stat__value">
+            {handbookSummary.avgCost === null ? '—' : `$${handbookSummary.avgCost.toFixed(2)}`}
+          </strong>
+          <span class="pipeline-runs-stat__detail">
+            {handbookSummary.avgCost === null ? 'No stage cost recorded yet' : 'Per logged run'}
+          </span>
+        </div>
+        <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
+          <span class="pipeline-runs-stat__label">Avg Duration</span>
+          <strong class="pipeline-runs-stat__value">{handbookSummary.avgDuration}s</strong>
+          <span class="pipeline-runs-stat__detail">Finished runs only</span>
+        </div>
+      </section>
+
+      <section class="pipeline-runs-section">
+        <div class="pipeline-runs-section__header">
+          <div>
+            <h2 class="pipeline-runs-section__title">Execution Feed</h2>
+            <p class="pipeline-runs-section__hint">
+              Each card shows the run key, current status, stage count, token usage, and the latest normalized error.
+            </p>
+          </div>
+        </div>
+
+        {handbookRuns.length === 0 ? (
+          <p class="dashboard-empty">No handbook pipeline runs yet.</p>
+        ) : (
+          <div class="pipeline-run-card-list">
+            {handbookRuns.map((run) => (
+              <a href={`/admin/pipeline-runs/${run.id}`} class={`pipeline-run-card pipeline-run-card--${run.statusTone}`}>
+                <div class="pipeline-run-card__top">
+                  <div class="pipeline-run-card__identity">
+                    <span class={`pipeline-run-status pipeline-run-status--${run.statusTone}`}>{run.status}</span>
+                    <strong class="pipeline-run-card__title">{run.run_key}</strong>
+                  </div>
+                  <div class="pipeline-run-card__time">
+                    <span>{relativeTime(run.started_at)}</span>
+                    <span>{formatDateTime(run.started_at)}</span>
+                  </div>
+                </div>
+
+                <div class="pipeline-run-card__metrics">
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Stages</span>
+                    <span class="pipeline-run-chip__value">{metricText(run.stageCount)}</span>
+                  </div>
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Tokens</span>
+                    <span class="pipeline-run-chip__value">
+                      {metricText(run.totalTokens, (value) => value.toLocaleString())}
+                    </span>
+                  </div>
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Cost</span>
+                    <span class="pipeline-run-chip__value">
+                      {metricText(run.totalCost, (value) => `$${value.toFixed(2)}`)}
+                    </span>
+                  </div>
+                  <div class="pipeline-run-chip">
+                    <span class="pipeline-run-chip__label">Duration</span>
+                    <span class="pipeline-run-chip__value">
+                      {run.durationSeconds === null ? 'Running' : `${run.durationSeconds}s`}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="pipeline-run-card__footer">
+                  {run.errorSummary ? (
+                    <p class="pipeline-run-card__error">{run.errorSummary}</p>
+                  ) : (
+                    <p class="pipeline-run-card__ok">No blocking error recorded.</p>
+                  )}
+                  <span class="pipeline-run-card__cta">Open details</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+      </div>
     </div>
   </div>
 </MainLayout>
@@ -592,3 +706,23 @@ const summary = {
     }
   }
 </style>
+
+<script is:inline nonce={Astro.locals.cspNonce || ''}>
+  (function() {
+    var tabs = document.querySelectorAll('.pcosts-tab');
+    var panels = {
+      news: document.getElementById('tab-news'),
+      handbook: document.getElementById('tab-handbook'),
+    };
+    tabs.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var target = btn.getAttribute('data-tab');
+        tabs.forEach(function(t) { t.classList.remove('pcosts-tab--active'); });
+        btn.classList.add('pcosts-tab--active');
+        Object.keys(panels).forEach(function(key) {
+          if (panels[key]) panels[key].style.display = key === target ? '' : 'none';
+        });
+      });
+    });
+  })();
+</script>
