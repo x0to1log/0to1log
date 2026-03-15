@@ -165,6 +165,10 @@
 - **완료 기준:** 뉴스 run 완료 → 용어 run 자동 트리거 → 각각 독립 run_id + 로그 + 상태
 - **의존성:** HB-COST-01
 - **run_key 규칙:** `news-v2-{batch_id}` (뉴스), `handbook-extract-{batch_id}` (용어)
+- **Resume 요구사항:**
+  - 뉴스 성공 + 용어 실패 → 용어 run만 재실행 (뉴스 비용 재발생 방지)
+  - 뉴스 중간 실패 → 실패 지점부터 재개 (이미 생성된 포스트 보존)
+  - 어드민에서 "Retry Handbook" 버튼으로 용어 run만 재트리거
 
 ---
 
