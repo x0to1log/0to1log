@@ -371,6 +371,7 @@ const nonce = Astro.locals.cspNonce || '';
       <div class="pcosts-tabs">
         <button class="pcosts-tab pcosts-tab--active" data-tab="news" type="button">News</button>
         <button class="pcosts-tab" data-tab="handbook" type="button">Handbook</button>
+        <button class="pcosts-tab" data-tab="blog" type="button">Blog</button>
       </div>
 
       <!-- ═══ News Tab ═══ -->
@@ -641,6 +642,14 @@ const nonce = Astro.locals.cspNonce || '';
         )}
       </div><!-- /tab-handbook -->
 
+      <!-- ═══ Blog Tab (placeholder) ═══ -->
+      <div id="tab-blog" style="display:none">
+        <div style="padding:2rem 1rem;text-align:center;color:var(--color-text-muted)">
+          <p style="font-size:1.1rem;font-weight:600;margin-bottom:0.5rem">Blog AI Cost Tracking</p>
+          <p style="font-size:0.85rem">Coming soon — blog AI advisor and translation cost tracking will be added here.</p>
+        </div>
+      </div><!-- /tab-blog -->
+
       <div class="pcosts-info-box">
         <svg class="pcosts-info-box__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="12" cy="12" r="10" /><path d="M12 16v-4 M12 8h.01" />
@@ -858,6 +867,7 @@ const nonce = Astro.locals.cspNonce || '';
     var panels = {
       news: document.getElementById('tab-news'),
       handbook: document.getElementById('tab-handbook'),
+      blog: document.getElementById('tab-blog'),
     };
     tabs.forEach(function (btn) {
       btn.addEventListener('click', function () {
