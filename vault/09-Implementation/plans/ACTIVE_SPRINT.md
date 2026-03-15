@@ -125,8 +125,8 @@
 - **의존성:** NP2-BACKFILL-01
 
 ### 13. Handbook 프롬프트 2회 호출 분리 `[HB-SPLIT-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** Generate 액션을 2회 LLM 호출(메타+Basic / Advanced)로 분리하여 콘텐츠 퀄리티 향상
 - **산출물:** `advisor.py` (generate 로직 분리), `prompts_advisor.py` (프롬프트 재작성 완료)
 - **완료 기준:** AI Generate → 2회 호출 실행 → Basic/Advanced 독립 생성 + KO/EN 헤더 분리 확인
@@ -134,28 +134,37 @@
 - **설계 참조:** [[2026-03-15-handbook-quality-design]], [[Handbook-Prompt-Redesign]]
 
 ### 14. Handbook DB 모델 확장 `[HB-MODEL-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** `term_full`, `korean_full` 컬럼 추가 + 프론트엔드 에디터 반영
 - **산출물:** Supabase 마이그레이션, 에디터 UI 필드 추가
 - **완료 기준:** 어드민 에디터에서 4개 명칭 필드(term, term_full, korean_name, korean_full) 입력/표시
 - **의존성:** 없음
 
 ### 15. Handbook 비용/토큰 추적 `[HB-COST-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** Handbook AI 호출의 input/output 토큰, 비용을 pipeline_logs에 기록
 - **산출물:** `advisor.py`에 `_log_stage()` 호출 추가 (handbook.generate.basic, handbook.generate.advanced)
 - **완료 기준:** Handbook AI Generate 실행 → pipeline_logs에 2개 스테이지 로그 기록 확인
 - **의존성:** HB-SPLIT-01
 
 ### 16. Pipeline Analytics에 Handbook 탭 추가 `[HB-ANALYTICS-01]`
-- **체크:** [ ]
-- **상태:** todo
+- **체크:** [x]
+- **상태:** done
 - **목적:** 어드민 pipeline-analytics 페이지에서 Handbook AI 비용/토큰을 News와 분리 확인
 - **산출물:** `pipeline-analytics.astro` Handbook 탭 추가
 - **완료 기준:** News / Handbook 탭 전환 → 각각의 비용/토큰 차트 표시
 - **의존성:** HB-COST-01
+
+### 17. 파이프라인 분리: News Run + Handbook Run `[PIPE-SPLIT-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 뉴스 파이프라인과 용어 추출을 별도 pipeline_runs로 분리하여 독립적 성공/실패 추적, 로그 분리, 비용 분리
+- **산출물:** `pipeline.py` (용어 추출을 별도 run으로), `pipeline-runs/index.astro` (News/Handbook 탭)
+- **완료 기준:** 뉴스 run 완료 → 용어 run 자동 트리거 → 각각 독립 run_id + 로그 + 상태
+- **의존성:** HB-COST-01
+- **run_key 규칙:** `news-v2-{batch_id}` (뉴스), `handbook-extract-{batch_id}` (용어)
 
 ---
 
@@ -170,8 +179,11 @@ NP2-COLLECT-01 → NP2-RANK-01 → NP2-REACT-01 ─────────┤
                                               NP2-PIPE-01 → NP2-CRON-01 → NP2-E2E-01 → NP2-DEPLOY-01
 
 [Handbook Quality]
-HB-SPLIT-01 ──→ HB-COST-01 ──→ HB-ANALYTICS-01
-HB-MODEL-01 (독립)
+HB-SPLIT-01 ✅ → HB-COST-01 ✅ → HB-ANALYTICS-01 ✅
+HB-MODEL-01 ✅
+
+[Pipeline Split]
+PIPE-SPLIT-01 (다음 세션)
 ```
 
 ---
