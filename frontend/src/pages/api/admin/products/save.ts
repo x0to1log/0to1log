@@ -1,0 +1,114 @@
+import type { APIRoute } from 'astro';
+import { createClient } from '@supabase/supabase-js';
+
+export const prerender = false;
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const accessToken = locals.accessToken;
+  if (!accessToken) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  if (!locals.isAdmin) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const body = await request.json();
+  const {
+    id, name, name_ko, url, slug,
+    primary_category, secondary_categories,
+    tagline, tagline_ko, description, description_ko,
+    logo_url, thumbnail_url,
+    pricing, pricing_note,
+    platform, tags,
+    korean_support, released_at,
+    featured, featured_order, sort_order,
+  } = body;
+
+  if (!name?.trim()) {
+    return new Response(JSON.stringify({ error: 'name is required' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const row: Record<string, any> = {
+    name: name.trim(),
+    slug: slug?.trim() || slugify(name),
+    updated_at: new Date().toISOString(),
+  };
+
+  if (name_ko !== undefined) row.name_ko = name_ko || null;
+  if (url !== undefined) row.url = url || null;
+  if (primary_category !== undefined) row.primary_category = primary_category || null;
+  if (secondary_categories !== undefined) row.secondary_categories = Array.isArray(secondary_categories) ? secondary_categories : [];
+  if (tagline !== undefined) row.tagline = tagline || null;
+  if (tagline_ko !== undefined) row.tagline_ko = tagline_ko || null;
+  if (description !== undefined) row.description = description || null;
+  if (description_ko !== undefined) row.description_ko = description_ko || null;
+  if (logo_url !== undefined) row.logo_url = logo_url || null;
+  if (thumbnail_url !== undefined) row.thumbnail_url = thumbnail_url || null;
+  if (pricing !== undefined) row.pricing = pricing || null;
+  if (pricing_note !== undefined) row.pricing_note = pricing_note || null;
+  if (platform !== undefined) row.platform = Array.isArray(platform) ? platform : [];
+  if (tags !== undefined) row.tags = Array.isArray(tags) ? tags : [];
+  if (korean_support !== undefined) row.korean_support = Boolean(korean_support);
+  if (released_at !== undefined) row.released_at = released_at || null;
+  if (featured !== undefined) row.featured = Boolean(featured);
+  if (featured_order !== undefined) row.featured_order = featured_order != null ? Number(featured_order) : null;
+  if (sort_order !== undefined) row.sort_order = sort_order != null ? Number(sort_order) : 0;
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+
+  if (id) {
+    const { data, error } = await supabase
+      .from('ai_products')
+      .update(row)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify(data), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  row.is_published = false;
+  const { data, error } = await supabase
+    .from('ai_products')
+    .insert(row)
+    .select()
+    .single();
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(JSON.stringify(data), {
+    status: 201, headers: { 'Content-Type': 'application/json' },
+  });
+};

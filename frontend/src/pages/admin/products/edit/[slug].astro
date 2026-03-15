@@ -1,0 +1,614 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
+import NewsprintNotice from '../../../../components/newsprint/NewsprintNotice.astro';
+import { createClient } from '@supabase/supabase-js';
+
+const { slug } = Astro.params;
+const pageSlug = slug ?? '';
+const isNew = pageSlug === 'new';
+
+const accessToken = Astro.locals.accessToken;
+if (!accessToken) return Astro.redirect('/admin/login');
+
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+let product: any = null;
+let fetchError: string | null = null;
+
+const { data: categories } = await supabase
+  .from('ai_product_categories')
+  .select('*')
+  .order('sort_order');
+
+const allCategories = categories ?? [];
+
+if (!isNew) {
+  const { data, error } = await supabase
+    .from('ai_products')
+    .select('*')
+    .eq('slug', pageSlug)
+    .single();
+
+  if (error?.code === 'PGRST116') {
+    fetchError = '404';
+  } else if (error) {
+    fetchError = error.message;
+  } else {
+    product = data;
+  }
+}
+
+const isPublished = product?.is_published ?? false;
+const isFeatured = product?.featured ?? false;
+---
+
+<MainLayout title={isNew ? 'New Product' : (product ? `Edit: ${product.name}` : 'Product Editor')} locale="en">
+  <AdminSidebar activeSection="products" />
+
+  {fetchError === '404' ? (
+    <div class="admin-dashboard">
+      <div class="admin-main">
+        <NewsprintNotice variant="empty" message="Product not found." linkHref="/admin/products/" linkLabel="Back to Products" />
+      </div>
+    </div>
+  ) : fetchError ? (
+    <div class="admin-dashboard">
+      <div class="admin-main">
+        <NewsprintNotice variant="unauthorized" message={`Error: ${fetchError}`} linkHref="/admin/products/" linkLabel="Back" />
+      </div>
+    </div>
+  ) : (
+    <div class="admin-editor-layout" id="editor-layout">
+      <!-- Top bar -->
+      <div class="admin-editor-topbar">
+        <div class="admin-editor-topbar-left">
+          <a href="/admin/products/" class="admin-editor-back">← Products</a>
+          <span class={`admin-status-badge admin-status-badge--${isPublished ? 'published' : 'draft'}`} id="status-badge">
+            {isPublished ? 'published' : 'draft'}
+          </span>
+          <span class="admin-featured-badge" id="featured-badge" hidden={!isFeatured}>featured</span>
+        </div>
+        <div class="admin-editor-topbar-right">
+          <button class="admin-btn" id="ai-panel-toggle" type="button">AI</button>
+          <button class="admin-btn" id="save-btn" type="button">Save</button>
+          {product && (
+            <>
+              <button
+                class="admin-btn admin-btn-primary"
+                id="publish-btn"
+                type="button"
+                data-action={isPublished ? 'unpublish' : 'publish'}
+              >
+                {isPublished ? 'Unpublish' : 'Publish'}
+              </button>
+              <button
+                class="admin-btn"
+                id="feature-btn"
+                type="button"
+                data-action={isFeatured ? 'unfeature' : 'feature'}
+              >
+                {isFeatured ? 'Unfeature' : 'Feature'}
+              </button>
+              <button class="admin-btn admin-btn-danger" id="delete-btn" type="button">Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <!-- Editor content -->
+      <div class="admin-editor-content" id="editor-content">
+        <input type="hidden" id="product-id" value={product?.id || ''} />
+
+        <div class="admin-editor-meta">
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-name">Name</label>
+            <input class="admin-input" id="field-name" type="text" value={product?.name || ''} placeholder="Product name" required />
+          </div>
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-name-ko">Name KO</label>
+            <input class="admin-input" id="field-name-ko" type="text" value={product?.name_ko || ''} placeholder="한국어 이름" />
+          </div>
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-url">URL</label>
+            <input class="admin-input" id="field-url" type="url" value={product?.url || ''} placeholder="https://..." />
+          </div>
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-slug">Slug</label>
+            <input class="admin-input" id="field-slug" type="text" value={product?.slug || ''} placeholder="auto-generated" />
+          </div>
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-category">Category</label>
+            <select class="admin-input" id="field-category">
+              <option value="">— Select —</option>
+              {allCategories.map((cat) => (
+                <option value={cat.id} selected={product?.primary_category === cat.id}>
+                  {cat.icon} {cat.label_en}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div class="admin-editor-meta-row" style="align-items: flex-start;">
+            <label class="admin-field-label" style="padding-top: 4px;">Secondary</label>
+            <div class="admin-product-checkbox-group">
+              {allCategories.map((cat) => (
+                <label>
+                  <input
+                    type="checkbox"
+                    class="product-secondary-cat"
+                    value={cat.id}
+                    checked={(product?.secondary_categories || []).includes(cat.id)}
+                  />
+                  {cat.icon} {cat.label_en}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-tagline">Tagline EN</label>
+            <input class="admin-input" id="field-tagline" type="text" value={product?.tagline || ''} placeholder="Short one-liner" />
+          </div>
+          <div class="admin-editor-meta-row">
+            <label class="admin-field-label" for="field-tagline-ko">Tagline KO</label>
+            <input class="admin-input" id="field-tagline-ko" type="text" value={product?.tagline_ko || ''} placeholder="한줄 설명" />
+          </div>
+
+          <div class="admin-editor-meta-row" style="align-items: flex-start;">
+            <label class="admin-field-label" style="padding-top: 6px;">Description EN</label>
+            <textarea class="admin-input" id="field-description" rows="5" placeholder="Markdown supported">{product?.description || ''}</textarea>
+          </div>
+          <div class="admin-editor-meta-row" style="align-items: flex-start;">
+            <label class="admin-field-label" style="padding-top: 6px;">Description KO</label>
+            <textarea class="admin-input" id="field-description-ko" rows="5" placeholder="마크다운 지원">{product?.description_ko || ''}</textarea>
+          </div>
+        </div>
+
+        <!-- More fields (collapsed) -->
+        <details class="admin-editor-meta" style="margin-top: 1.5rem;">
+          <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--color-text-muted);padding:0.5rem 0;user-select:none;">
+            More fields
+          </summary>
+
+          <div style="margin-top: 0.75rem;">
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-logo-url">Logo URL</label>
+              <div style="flex:1;">
+                <input class="admin-input" id="field-logo-url" type="url" value={product?.logo_url || ''} placeholder="https://..." />
+                <img id="logo-preview" class="admin-image-preview" src={product?.logo_url || ''} alt="logo preview" style={product?.logo_url ? '' : 'display:none'} />
+              </div>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-thumbnail-url">Thumbnail</label>
+              <div style="flex:1;">
+                <input class="admin-input" id="field-thumbnail-url" type="url" value={product?.thumbnail_url || ''} placeholder="https://..." />
+                <img id="thumbnail-preview" class="admin-image-preview" src={product?.thumbnail_url || ''} alt="thumbnail preview" style={product?.thumbnail_url ? '' : 'display:none'} />
+              </div>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-pricing">Pricing</label>
+              <select class="admin-input" id="field-pricing" style="max-width:180px">
+                <option value="">— None —</option>
+                {['free', 'freemium', 'paid', 'enterprise'].map((p) => (
+                  <option value={p} selected={product?.pricing === p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-pricing-note">Pricing Note</label>
+              <input class="admin-input" id="field-pricing-note" type="text" value={product?.pricing_note || ''} placeholder="e.g. Free up to 10 users" />
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-platform">Platform</label>
+              <input class="admin-input" id="field-platform" type="text" value={(product?.platform || []).join(', ')} placeholder="Web, iOS, Android (comma separated)" />
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-tags">Tags</label>
+              <input class="admin-input" id="field-tags" type="text" value={(product?.tags || []).join(', ')} placeholder="llm, chatbot, productivity (comma separated)" />
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-released-at">Released At</label>
+              <input class="admin-input" id="field-released-at" type="date" value={product?.released_at || ''} style="max-width:180px" />
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label">Korean Support</label>
+              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+                <input type="checkbox" id="field-korean-support" checked={product?.korean_support ?? false} />
+                Yes
+              </label>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label">Featured</label>
+              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+                <input type="checkbox" id="field-featured" checked={product?.featured ?? false} />
+                Show in featured section
+              </label>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-featured-order">Featured Order</label>
+              <input class="admin-input" id="field-featured-order" type="number" value={product?.featured_order ?? ''} placeholder="1, 2, 3…" style="max-width:100px" />
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-sort-order">Sort Order</label>
+              <input class="admin-input" id="field-sort-order" type="number" value={product?.sort_order ?? 0} style="max-width:100px" />
+            </div>
+          </div>
+        </details>
+
+        <div class="admin-feedback" id="feedback" hidden></div>
+      </div>
+
+      <!-- AI Panel -->
+      <div class="admin-ai-panel" id="ai-panel">
+        <div class="admin-ai-panel-header">
+          <span class="admin-ai-panel-title">AI Product Advisor</span>
+          <button class="admin-ai-panel-toggle" id="ai-panel-close" type="button">✕</button>
+        </div>
+        <div class="admin-ai-actions">
+          <button class="admin-ai-action-btn admin-ai-action-btn--wide" data-action="generate_from_url" type="button">
+            Generate from URL
+          </button>
+          <button class="admin-ai-action-btn" data-action="tagline_en" type="button">Tagline EN</button>
+          <button class="admin-ai-action-btn" data-action="tagline_ko" type="button">Tagline KO</button>
+          <button class="admin-ai-action-btn" data-action="description_en" type="button">Description EN</button>
+          <button class="admin-ai-action-btn" data-action="description_ko" type="button">Description KO</button>
+        </div>
+        <div class="admin-ai-loading" id="ai-loading" hidden>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="spin">
+            <path d="M8 2a6 6 0 1 0 6 6" />
+          </svg>
+          Generating…
+        </div>
+        <div id="ai-result-area" hidden>
+          <div id="ai-result-label" style="font-size:0.75rem;color:var(--color-text-muted);margin-bottom:0.4rem;"></div>
+          <div id="ai-result-text" style="font-size:0.85rem;line-height:1.5;white-space:pre-wrap;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;padding:0.75rem;"></div>
+          <button class="admin-btn admin-btn-primary admin-btn--small" id="ai-apply-btn" type="button" style="margin-top:0.5rem;">Apply</button>
+        </div>
+        <div class="admin-feedback" id="ai-feedback" hidden></div>
+      </div>
+    </div>
+  )}
+</MainLayout>
+
+<script>
+  // @ts-nocheck
+
+  // ── Helpers ───────────────────────────────────────────
+  function slugify(text) {
+    return text.toLowerCase().trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function showFeedback(msg, isError = false, elId = 'feedback') {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = isError ? 'admin-feedback admin-feedback--error' : 'admin-feedback';
+    el.hidden = false;
+    setTimeout(() => { el.hidden = true; }, 4000);
+  }
+
+  function getPayload() {
+    const nameVal = document.getElementById('field-name')?.value.trim() || '';
+    const secondaryCats = Array.from(document.querySelectorAll('.product-secondary-cat:checked'))
+      .map((cb) => cb.value);
+    const platformStr = document.getElementById('field-platform')?.value || '';
+    const tagsStr = document.getElementById('field-tags')?.value || '';
+    const featuredOrderVal = document.getElementById('field-featured-order')?.value;
+    const sortOrderVal = document.getElementById('field-sort-order')?.value;
+
+    return {
+      id: document.getElementById('product-id')?.value || undefined,
+      name: nameVal,
+      name_ko: document.getElementById('field-name-ko')?.value.trim() || null,
+      url: document.getElementById('field-url')?.value.trim() || null,
+      slug: document.getElementById('field-slug')?.value.trim() || slugify(nameVal),
+      primary_category: document.getElementById('field-category')?.value || null,
+      secondary_categories: secondaryCats,
+      tagline: document.getElementById('field-tagline')?.value.trim() || null,
+      tagline_ko: document.getElementById('field-tagline-ko')?.value.trim() || null,
+      description: document.getElementById('field-description')?.value || null,
+      description_ko: document.getElementById('field-description-ko')?.value || null,
+      logo_url: document.getElementById('field-logo-url')?.value.trim() || null,
+      thumbnail_url: document.getElementById('field-thumbnail-url')?.value.trim() || null,
+      pricing: document.getElementById('field-pricing')?.value || null,
+      pricing_note: document.getElementById('field-pricing-note')?.value.trim() || null,
+      platform: platformStr.split(',').map((s) => s.trim()).filter(Boolean),
+      tags: tagsStr.split(',').map((s) => s.trim()).filter(Boolean),
+      korean_support: document.getElementById('field-korean-support')?.checked ?? false,
+      released_at: document.getElementById('field-released-at')?.value || null,
+      featured: document.getElementById('field-featured')?.checked ?? false,
+      featured_order: featuredOrderVal ? Number(featuredOrderVal) : null,
+      sort_order: sortOrderVal ? Number(sortOrderVal) : 0,
+    };
+  }
+
+  // ── Auto-slug from name ───────────────────────────────
+  const nameField = document.getElementById('field-name');
+  const slugField = document.getElementById('field-slug');
+  const productId = document.getElementById('product-id')?.value;
+
+  nameField?.addEventListener('input', () => {
+    if (!productId) {
+      slugField.value = slugify(nameField.value);
+    }
+  });
+
+  // ── Image previews ────────────────────────────────────
+  document.getElementById('field-logo-url')?.addEventListener('input', (e) => {
+    const preview = document.getElementById('logo-preview');
+    if (!preview) return;
+    const url = e.target.value.trim();
+    preview.src = url;
+    preview.style.display = url ? '' : 'none';
+  });
+
+  document.getElementById('field-thumbnail-url')?.addEventListener('input', (e) => {
+    const preview = document.getElementById('thumbnail-preview');
+    if (!preview) return;
+    const url = e.target.value.trim();
+    preview.src = url;
+    preview.style.display = url ? '' : 'none';
+  });
+
+  // ── Save ──────────────────────────────────────────────
+  document.getElementById('save-btn')?.addEventListener('click', async () => {
+    const saveBtn = document.getElementById('save-btn');
+    const payload = getPayload();
+    if (!payload.name) { showFeedback('Name is required', true); return; }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+      const res = await fetch('/api/admin/products/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) { showFeedback(data.error || 'Save failed', true); return; }
+
+      if (!payload.id && data.id) {
+        document.getElementById('product-id').value = data.id;
+        if (data.slug) {
+          slugField.value = data.slug;
+          history.replaceState(null, '', `/admin/products/edit/${data.slug}`);
+        }
+      }
+      showFeedback('Saved');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  });
+
+  // ── Publish / Unpublish ───────────────────────────────
+  document.getElementById('publish-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('publish-btn');
+    const id = document.getElementById('product-id')?.value;
+    if (!id) { showFeedback('Save first before publishing', true); return; }
+    const action = btn.dataset.action;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/admin/products/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+
+      const badge = document.getElementById('status-badge');
+      if (action === 'publish') {
+        badge.textContent = 'published';
+        badge.className = 'admin-status-badge admin-status-badge--published';
+        btn.textContent = 'Unpublish';
+        btn.dataset.action = 'unpublish';
+      } else {
+        badge.textContent = 'draft';
+        badge.className = 'admin-status-badge admin-status-badge--draft';
+        btn.textContent = 'Publish';
+        btn.dataset.action = 'publish';
+      }
+      showFeedback(`${action === 'publish' ? 'Published' : 'Unpublished'}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── Feature / Unfeature ───────────────────────────────
+  document.getElementById('feature-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('feature-btn');
+    const id = document.getElementById('product-id')?.value;
+    if (!id) { showFeedback('Save first', true); return; }
+    const action = btn.dataset.action;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/admin/products/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+
+      const featuredBadge = document.getElementById('featured-badge');
+      if (action === 'feature') {
+        if (featuredBadge) featuredBadge.hidden = false;
+        btn.textContent = 'Unfeature';
+        btn.dataset.action = 'unfeature';
+        document.getElementById('field-featured').checked = true;
+      } else {
+        if (featuredBadge) featuredBadge.hidden = true;
+        btn.textContent = 'Feature';
+        btn.dataset.action = 'feature';
+        document.getElementById('field-featured').checked = false;
+      }
+      showFeedback(`${action === 'feature' ? 'Featured' : 'Unfeatured'}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── Delete ────────────────────────────────────────────
+  document.getElementById('delete-btn')?.addEventListener('click', async () => {
+    const id = document.getElementById('product-id')?.value;
+    const name = document.getElementById('field-name')?.value || 'this product';
+    if (!id) { showFeedback('No product to delete', true); return; }
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const btn = document.getElementById('delete-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/admin/products/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) { showFeedback('Delete failed', true); return; }
+      window.location.href = '/admin/products/';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── AI Panel ──────────────────────────────────────────
+  let aiCurrentAction = null;
+  let aiResultTarget = null;
+
+  document.getElementById('ai-panel-toggle')?.addEventListener('click', () => {
+    const layout = document.getElementById('editor-layout');
+    layout?.classList.toggle('admin-editor-layout--collapsed');
+  });
+
+  document.getElementById('ai-panel-close')?.addEventListener('click', () => {
+    document.getElementById('editor-layout')?.classList.add('admin-editor-layout--collapsed');
+  });
+
+  document.querySelectorAll('.admin-ai-action-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const action = btn.dataset.action;
+      const url = document.getElementById('field-url')?.value.trim();
+      const name = document.getElementById('field-name')?.value.trim();
+
+      if (action === 'generate_from_url' && !url) {
+        showFeedback('Enter a URL first', true, 'ai-feedback');
+        return;
+      }
+      if (!url && !name) {
+        showFeedback('Enter a name or URL first', true, 'ai-feedback');
+        return;
+      }
+
+      aiCurrentAction = action;
+      document.getElementById('ai-loading').hidden = false;
+      document.getElementById('ai-result-area').hidden = true;
+      document.querySelectorAll('.admin-ai-action-btn').forEach((b) => b.disabled = true);
+
+      try {
+        const res = await fetch('/api/admin/products/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, url, name }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showFeedback(data.error || 'AI request failed', true, 'ai-feedback');
+          return;
+        }
+
+        const resultText = typeof data.result === 'object'
+          ? JSON.stringify(data.result, null, 2)
+          : String(data.result || '');
+
+        document.getElementById('ai-result-label').textContent = action.replace(/_/g, ' ');
+        document.getElementById('ai-result-text').textContent = resultText;
+        document.getElementById('ai-result-area').hidden = false;
+
+        // Determine which field(s) to apply to
+        const targetMap = {
+          tagline_en: 'field-tagline',
+          tagline_ko: 'field-tagline-ko',
+          description_en: 'field-description',
+          description_ko: 'field-description-ko',
+        };
+        aiResultTarget = targetMap[action] || null;
+        document.getElementById('ai-apply-btn').hidden = !aiResultTarget && action !== 'generate_from_url';
+      } finally {
+        document.getElementById('ai-loading').hidden = true;
+        document.querySelectorAll('.admin-ai-action-btn').forEach((b) => b.disabled = false);
+      }
+    });
+  });
+
+  document.getElementById('ai-apply-btn')?.addEventListener('click', () => {
+    const resultText = document.getElementById('ai-result-text')?.textContent || '';
+
+    if (aiCurrentAction === 'generate_from_url') {
+      // Try to parse structured result {tagline, description} or {tagline_en, description_en}
+      try {
+        const parsed = JSON.parse(resultText);
+        if (parsed.tagline || parsed.tagline_en) {
+          const el = document.getElementById('field-tagline');
+          if (el) el.value = parsed.tagline || parsed.tagline_en;
+        }
+        if (parsed.description || parsed.description_en) {
+          const el = document.getElementById('field-description');
+          if (el) el.value = parsed.description || parsed.description_en;
+        }
+        if (parsed.tagline_ko) {
+          const el = document.getElementById('field-tagline-ko');
+          if (el) el.value = parsed.tagline_ko;
+        }
+        if (parsed.description_ko) {
+          const el = document.getElementById('field-description-ko');
+          if (el) el.value = parsed.description_ko;
+        }
+      } catch {
+        // Plain text fallback — apply to tagline
+        const el = document.getElementById('field-tagline');
+        if (el) el.value = resultText;
+      }
+    } else if (aiResultTarget) {
+      const el = document.getElementById(aiResultTarget);
+      if (el) el.value = resultText;
+    }
+    showFeedback('Applied');
+  });
+</script>
+
+<style>
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Form container: stack rows vertically */
+  .admin-editor-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Form rows: inputs fill remaining space */
+  .admin-editor-meta-row .admin-input,
+  .admin-editor-meta-row .admin-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Label width: accommodate longer labels (Description EN, Featured Order…) */
+  .admin-editor-meta-row .admin-field-label {
+    min-width: 120px;
+  }
+</style>

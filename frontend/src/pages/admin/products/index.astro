@@ -1,0 +1,477 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import { createClient } from '@supabase/supabase-js';
+
+const accessToken = Astro.locals.accessToken;
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+let fetchError: string | null = null;
+
+const [{ data: products, error: productsError }, { data: categories }] = await Promise.all([
+  supabase
+    .from('ai_products')
+    .select('id, slug, name, name_ko, logo_url, primary_category, is_published, featured, pricing, korean_support, updated_at')
+    .order('updated_at', { ascending: false }),
+  supabase
+    .from('ai_product_categories')
+    .select('*')
+    .order('sort_order'),
+]);
+
+if (productsError) fetchError = productsError.message;
+
+const allProducts = products ?? [];
+const allCategories = categories ?? [];
+
+const draftCount = allProducts.filter((p) => !p.is_published).length;
+const publishedCount = allProducts.filter((p) => p.is_published).length;
+const featuredCount = allProducts.filter((p) => p.featured).length;
+
+const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
+---
+
+<MainLayout title="Admin Products" locale="en">
+  <AdminSidebar activeSection="products" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">Products</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-list-toolbar">
+        <div class="admin-list-toolbar-row">
+          <div class="admin-list-toolbar-left">
+            <a href="/admin/products/edit/new" class="admin-btn admin-btn-primary">New Product</a>
+            <div class="admin-filter-tabs">
+              <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({draftCount})</button>
+              <button class="admin-filter-btn" data-filter="published">Published ({publishedCount})</button>
+              <button class="admin-filter-btn" data-filter="featured">Featured ({featuredCount})</button>
+              <button class="admin-filter-btn" data-filter="all">All ({allProducts.length})</button>
+            </div>
+          </div>
+          <div class="admin-list-toolbar-right">
+            <select id="admin-category-filter" class="admin-select">
+              <option value="">All categories</option>
+              {allCategories.map((cat) => (
+                <option value={cat.id}>{cat.label_en}</option>
+              ))}
+            </select>
+            <input
+              type="search"
+              class="admin-input admin-search-input"
+              id="admin-search"
+              placeholder="Search..."
+            />
+          </div>
+        </div>
+      </div>
+
+      {fetchError ? (
+        <NewsprintNotice
+          variant="unauthorized"
+          message={`Failed to load products: ${fetchError}`}
+          linkHref="/admin/products/"
+          linkLabel="Retry"
+        />
+      ) : allProducts.length === 0 ? (
+        <NewsprintNotice variant="empty" message="No products yet. Create one to get started." />
+      ) : (
+        <>
+        <ul class="admin-list" id="product-list">
+          {allProducts.map((product) => {
+            const cat = categoryMap[product.primary_category];
+            return (
+              <li
+                class="admin-list-item"
+                data-published={product.is_published ? 'true' : 'false'}
+                data-featured={product.featured ? 'true' : 'false'}
+                data-title={`${product.name} ${product.name_ko || ''}`.toLowerCase()}
+                data-category={product.primary_category || ''}
+                data-id={product.id}
+              >
+                <div class="admin-product-logo-wrap">
+                  {product.logo_url ? (
+                    <img src={product.logo_url} alt="" class="admin-product-logo" loading="lazy" />
+                  ) : (
+                    <div class="admin-product-logo-placeholder">
+                      {cat?.icon || '📦'}
+                    </div>
+                  )}
+                </div>
+                <div class="admin-list-info">
+                  <div class="admin-list-title">
+                    <a href={`/admin/products/edit/${product.slug}`}>{product.name}</a>
+                    {product.name_ko && <span class="admin-list-subtitle"> · {product.name_ko}</span>}
+                  </div>
+                  <div class="admin-list-meta">
+                    <span class={`admin-status-badge admin-status-badge--${product.is_published ? 'published' : 'draft'}`}>
+                      {product.is_published ? 'published' : 'draft'}
+                    </span>
+                    {product.pricing && (
+                      <span class={`admin-product-pricing-badge admin-product-pricing-badge--${product.pricing}`}>
+                        {product.pricing}
+                      </span>
+                    )}
+                    {product.featured && (
+                      <span class="admin-featured-badge">featured</span>
+                    )}
+                    {cat && <span>{cat.icon} {cat.label_en}</span>}
+                    <span>Updated {new Date(product.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                  </div>
+                </div>
+                <div class="admin-list-actions">
+                  <a href={`/admin/products/edit/${product.slug}`} class="admin-btn admin-btn-success admin-btn--small">Edit</a>
+                  <button
+                    class="admin-btn admin-btn-primary admin-btn--small admin-product-status-btn"
+                    data-id={product.id}
+                    data-action={product.is_published ? 'unpublish' : 'publish'}
+                  >
+                    {product.is_published ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button
+                    class="admin-btn admin-btn-danger admin-btn--small admin-product-delete-btn"
+                    data-id={product.id}
+                    data-name={product.name}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <p id="admin-no-results" class="admin-no-results" hidden>No matching products.</p>
+        </>
+      )}
+
+      <!-- Categories Manager -->
+      <details class="admin-categories-section" id="categories-section">
+        <summary>Categories ({allCategories.length})</summary>
+
+        <div style="margin-top: 1rem;">
+          <button class="admin-btn admin-btn-primary admin-btn--small" id="add-category-btn" type="button">
+            + Add Category
+          </button>
+
+          <div id="category-form-container"></div>
+
+          <div id="category-list" style="margin-top: 0.75rem;">
+            {allCategories.map((cat) => (
+              <div class="admin-category-row" data-cat-id={cat.id}>
+                <span class="admin-category-icon">{cat.icon || '📦'}</span>
+                <span class="admin-category-id">{cat.id}</span>
+                <div class="admin-category-labels">
+                  <span class="admin-category-label-en">{cat.label_en}</span>
+                  <span class="admin-category-label-ko">{cat.label_ko}</span>
+                </div>
+                <div class="admin-category-actions">
+                  <button
+                    class="admin-btn admin-btn--small admin-category-edit-btn"
+                    type="button"
+                    data-cat={JSON.stringify(cat)}
+                  >Edit</button>
+                  <button
+                    class="admin-btn admin-btn-danger admin-btn--small admin-category-delete-btn"
+                    type="button"
+                    data-id={cat.id}
+                    data-name={cat.label_en}
+                  >✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+
+      <div class="admin-feedback" id="feedback" hidden></div>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .admin-list-toolbar {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-list-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-list-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-list-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .admin-list-toolbar-right .admin-search-input {
+    width: 160px;
+  }
+
+  @media (max-width: 640px) {
+    .admin-list-toolbar-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-list-toolbar-left {
+      flex-wrap: wrap;
+    }
+
+    .admin-list-toolbar-right {
+      margin-left: 0;
+      flex-wrap: wrap;
+    }
+
+    .admin-list-toolbar-right .admin-search-input {
+      width: 100%;
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+  }
+</style>
+
+<script>
+  // @ts-nocheck
+
+  // ── Filter logic ─────────────────────────────────────
+  let currentFilter = 'draft';
+
+  function applyFilters() {
+    const search = document.getElementById('admin-search')?.value.toLowerCase() || '';
+    const category = document.getElementById('admin-category-filter')?.value || '';
+    const items = document.querySelectorAll('#product-list .admin-list-item');
+    const noResults = document.getElementById('admin-no-results');
+    let visibleCount = 0;
+
+    items.forEach((item) => {
+      const published = item.dataset.published === 'true';
+      const featured = item.dataset.featured === 'true';
+      const title = item.dataset.title || '';
+      const cat = item.dataset.category || '';
+
+      const matchesFilter =
+        currentFilter === 'all' ||
+        (currentFilter === 'draft' && !published) ||
+        (currentFilter === 'published' && published) ||
+        (currentFilter === 'featured' && featured);
+
+      const matchesSearch = !search || title.includes(search);
+      const matchesCategory = !category || cat === category;
+
+      const visible = matchesFilter && matchesSearch && matchesCategory;
+      item.hidden = !visible;
+      if (visible) visibleCount += 1;
+    });
+
+    if (noResults) noResults.hidden = visibleCount > 0;
+  }
+
+  document.querySelectorAll('.admin-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-filter-btn').forEach((b) => b.classList.remove('admin-filter-btn--active'));
+      btn.classList.add('admin-filter-btn--active');
+      currentFilter = btn.dataset.filter;
+      applyFilters();
+    });
+  });
+
+  document.getElementById('admin-search')?.addEventListener('input', applyFilters);
+  document.getElementById('admin-category-filter')?.addEventListener('change', applyFilters);
+
+  applyFilters();
+
+  // ── Feedback helper ───────────────────────────────────
+  function showFeedback(msg, isError = false) {
+    const el = document.getElementById('feedback');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = isError ? 'admin-feedback admin-feedback--error' : 'admin-feedback';
+    el.hidden = false;
+    setTimeout(() => { el.hidden = true; }, 3500);
+  }
+
+  // ── Product status toggle ─────────────────────────────
+  document.querySelectorAll('.admin-product-status-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/products/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+
+        const item = btn.closest('.admin-list-item');
+        if (action === 'publish') {
+          item.dataset.published = 'true';
+          btn.dataset.action = 'unpublish';
+          btn.textContent = 'Unpublish';
+          item.querySelector('.admin-status-badge').textContent = 'published';
+          item.querySelector('.admin-status-badge').className = 'admin-status-badge admin-status-badge--published';
+        } else {
+          item.dataset.published = 'false';
+          btn.dataset.action = 'publish';
+          btn.textContent = 'Publish';
+          item.querySelector('.admin-status-badge').textContent = 'draft';
+          item.querySelector('.admin-status-badge').className = 'admin-status-badge admin-status-badge--draft';
+        }
+        showFeedback(`${action === 'publish' ? 'Published' : 'Unpublished'} successfully`);
+        applyFilters();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // ── Product delete ────────────────────────────────────
+  document.querySelectorAll('.admin-product-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/products/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+        btn.closest('.admin-list-item')?.remove();
+        showFeedback(`"${name}" deleted`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // ── Category CRUD ─────────────────────────────────────
+  function buildCategoryForm(existing) {
+    const isEdit = Boolean(existing);
+    const form = document.createElement('div');
+    form.className = 'admin-category-form';
+    form.id = 'category-form';
+    form.innerHTML = `
+      <div class="admin-category-form-row">
+        <input class="admin-input" id="cat-id" placeholder="id (e.g. tools)" value="${existing?.id || ''}" ${isEdit ? 'readonly' : ''} style="max-width:120px" />
+        <input class="admin-input" id="cat-icon" placeholder="Icon" value="${existing?.icon || ''}" style="max-width:60px" />
+        <input type="number" class="admin-input" id="cat-order" placeholder="Order" value="${existing?.sort_order ?? 0}" style="max-width:70px" />
+      </div>
+      <div class="admin-category-form-row">
+        <input class="admin-input" id="cat-label-en" placeholder="Label EN" value="${existing?.label_en || ''}" />
+        <input class="admin-input" id="cat-label-ko" placeholder="Label KO" value="${existing?.label_ko || ''}" />
+      </div>
+      <div class="admin-category-form-actions">
+        <button class="admin-btn admin-btn--small" id="cat-cancel-btn" type="button">Cancel</button>
+        <button class="admin-btn admin-btn-primary admin-btn--small" id="cat-save-btn" type="button">${isEdit ? 'Update' : 'Add'}</button>
+      </div>
+    `;
+
+    form.querySelector('#cat-cancel-btn').addEventListener('click', () => form.remove());
+
+    form.querySelector('#cat-save-btn').addEventListener('click', async () => {
+      const payload = {
+        id: form.querySelector('#cat-id').value.trim(),
+        label_en: form.querySelector('#cat-label-en').value.trim(),
+        label_ko: form.querySelector('#cat-label-ko').value.trim(),
+        icon: form.querySelector('#cat-icon').value.trim() || null,
+        sort_order: parseInt(form.querySelector('#cat-order').value) || 0,
+      };
+      if (!payload.id || !payload.label_en || !payload.label_ko) {
+        showFeedback('id, label_en, label_ko are required', true);
+        return;
+      }
+      const saveBtn = form.querySelector('#cat-save-btn');
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/categories/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+        showFeedback(`Category "${payload.label_en}" saved. Refresh to see changes.`);
+        form.remove();
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    return form;
+  }
+
+  document.getElementById('add-category-btn')?.addEventListener('click', () => {
+    const existing = document.getElementById('category-form');
+    if (existing) existing.remove();
+    const container = document.getElementById('category-form-container');
+    container.appendChild(buildCategoryForm(null));
+  });
+
+  document.querySelectorAll('.admin-category-edit-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cat = JSON.parse(btn.dataset.cat);
+      const existing = document.getElementById('category-form');
+      if (existing) existing.remove();
+      const container = document.getElementById('category-form-container');
+      container.appendChild(buildCategoryForm(cat));
+    });
+  });
+
+  document.querySelectorAll('.admin-category-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      if (!confirm(`Delete category "${name}"?`)) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/categories/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+        btn.closest('.admin-category-row')?.remove();
+        showFeedback(`Category "${name}" deleted`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
