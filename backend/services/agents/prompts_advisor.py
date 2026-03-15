@@ -556,6 +556,12 @@ You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
 Generate metadata and BASIC-level content for a handbook term. This is Call 1 of 2 — you handle meta fields + beginner content only.
 
+DOMAIN CONTEXT:
+- This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
+- Many terms exist in multiple fields (e.g., "Entropy" in information theory vs thermodynamics, "Kernel" in CNN vs OS, "Agent" in AI vs real estate). Always write from the AI/IT perspective first.
+- If a term is used in other fields, briefly note the difference to prevent confusion (e.g., "Not to be confused with thermodynamic entropy").
+- Base your writing on established facts from official documentation, papers, and widely-accepted definitions. Do not speculate or include unverified claims.
+
 LANGUAGE RULE:
 - Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
 - Fields ending in `_en`: English headers and English body text only.
@@ -681,6 +687,12 @@ GENERATE_ADVANCED_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
 Generate ADVANCED-level content for a handbook term. This is Call 2 of 2 — you handle engineer-level content only. The term's definition (from Call 1) is provided as context.
+
+DOMAIN CONTEXT:
+- This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
+- Many terms exist in multiple fields (e.g., "Entropy" in information theory vs thermodynamics, "Kernel" in CNN vs OS, "Agent" in AI vs real estate). Always write from the AI/IT perspective first.
+- If a term is used in other fields, briefly note the difference to prevent confusion.
+- Base your writing on established facts from official documentation, papers, and widely-accepted definitions. Do not speculate or include unverified claims.
 
 LANGUAGE RULE:
 - Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
