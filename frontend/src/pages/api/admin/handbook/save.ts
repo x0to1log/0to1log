@@ -30,8 +30,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const {
     id,
     term,
+    term_full,
     slug,
     korean_name,
+    korean_full,
     categories,
     related_term_slugs,
     is_favourite,
@@ -54,8 +56,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const row = {
     term,
+    term_full: term_full || null,
     slug: finalSlug,
     korean_name: korean_name || null,
+    korean_full: korean_full || null,
     categories: Array.isArray(categories) ? categories : (categories ? [categories] : []),
     related_term_slugs: related_term_slugs || [],
     is_favourite: is_favourite ?? false,

@@ -37,7 +37,7 @@ const excludeStages = [
   'quality.research', 'quality.business',
 ];
 
-const [{ data: rawLogs }, { data: qualityLogs }] = await Promise.all([
+const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }] = await Promise.all([
   sb.from('pipeline_logs')
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .gte('pipeline_runs.started_at', thirtyDaysAgo)
@@ -48,6 +48,12 @@ const [{ data: rawLogs }, { data: qualityLogs }] = await Promise.all([
     .gte('pipeline_runs.started_at', thirtyDaysAgo)
     .in('pipeline_type', ['quality.research', 'quality.business'])
     .order('created_at', { ascending: true }),
+  sb.from('pipeline_logs')
+    .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at')
+    .like('pipeline_type', 'handbook.%')
+    .gte('created_at', thirtyDaysAgo)
+    .order('created_at', { ascending: false })
+    .limit(50),
 ]);
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -186,6 +192,43 @@ const stageStats: StageStats[] = Array.from(stageStatsMap.entries())
   }))
   .sort((a, b) => b.avgCost - a.avgCost);
 
+// ─── Handbook Data ──────────────────────────────────────────
+type HandbookLog = {
+  pipeline_type: string;
+  status: string | null;
+  tokens_used: number | null;
+  cost_usd: number | string | null;
+  debug_meta: Record<string, unknown> | null;
+  created_at: string;
+};
+
+const hbLogs: HandbookLog[] = (handbookLogs ?? []) as HandbookLog[];
+const hbTotalCalls = hbLogs.length;
+const hbTotalCost = hbLogs.reduce((sum, l) => sum + parseCost(l.cost_usd), 0);
+const hbTotalTokens = hbLogs.reduce((sum, l) => sum + (l.tokens_used ?? 0), 0);
+const hbAvgCost = hbTotalCalls > 0 ? hbTotalCost / hbTotalCalls : 0;
+
+type HandbookRow = {
+  date: string;
+  type: string;
+  term: string;
+  tokens: number;
+  cost: number;
+};
+const hbRows: HandbookRow[] = hbLogs.map((l) => {
+  const meta = (l.debug_meta ?? {}) as Record<string, unknown>;
+  // Extract type: handbook.generate.basic → basic, handbook.generate.advanced → advanced
+  const parts = l.pipeline_type.split('.');
+  const typeLabel = parts.length >= 3 ? parts.slice(1).join('.') : parts.slice(1).join('.') || l.pipeline_type;
+  return {
+    date: new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    type: typeLabel,
+    term: (meta.term_title as string) ?? (meta.term as string) ?? '—',
+    tokens: l.tokens_used ?? 0,
+    cost: parseCost(l.cost_usd),
+  };
+});
+
 const nonce = Astro.locals.cspNonce || '';
 ---
 
@@ -204,11 +247,20 @@ const nonce = Astro.locals.cspNonce || '';
             <p class="pcosts-eyebrow">AI Pipeline</p>
             <h1 class="admin-main-title">Pipeline Costs</h1>
             <p class="pcosts-subtitle">
-              Token usage, API costs, and quality trends for News Pipeline runs (last 30 days).
+              Token usage, API costs, and quality trends across pipelines (last 30 days).
             </p>
           </div>
         </div>
       </div>
+
+      <!-- Tab Switcher -->
+      <div class="pcosts-tabs">
+        <button class="pcosts-tab pcosts-tab--active" data-tab="news" type="button">News</button>
+        <button class="pcosts-tab" data-tab="handbook" type="button">Handbook</button>
+      </div>
+
+      <!-- ═══ News Tab ═══ -->
+      <div id="tab-news">
 
       <!-- Summary Stats -->
       <section class="pcosts-summary-grid">
@@ -299,11 +351,78 @@ const nonce = Astro.locals.cspNonce || '';
         </>
       )}
 
+      </div><!-- /tab-news -->
+
+      <!-- ═══ Handbook Tab ═══ -->
+      <div id="tab-handbook" style="display:none">
+        <section class="pcosts-summary-grid pcosts-summary-grid--4col">
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Total Calls (30d)</span>
+            <strong class="pipeline-run-stat__value">{hbTotalCalls}</strong>
+            <span class="pipeline-run-stat__detail">Handbook AI invocations</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Total Cost</span>
+            <strong class="pipeline-run-stat__value">${hbTotalCost.toFixed(4)}</strong>
+            <span class="pipeline-run-stat__detail">All handbook AI calls</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Total Tokens</span>
+            <strong class="pipeline-run-stat__value">{hbTotalTokens.toLocaleString()}</strong>
+            <span class="pipeline-run-stat__detail">Input + output combined</span>
+          </div>
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Avg Cost / Call</span>
+            <strong class="pipeline-run-stat__value">${hbAvgCost.toFixed(4)}</strong>
+            <span class="pipeline-run-stat__detail">Mean cost per invocation</span>
+          </div>
+        </section>
+
+        {hbRows.length === 0 ? (
+          <p class="dashboard-empty">No handbook AI calls found in the last 30 days.</p>
+        ) : (
+          <section class="pipeline-run-section">
+            <div class="pipeline-run-section__header">
+              <div>
+                <h2 class="pipeline-run-section__title">Recent Handbook AI Calls</h2>
+                <p class="pipeline-run-section__hint">
+                  Last {hbRows.length} handbook generation calls (generate, translate, etc.).
+                </p>
+              </div>
+            </div>
+            <div class="pipeline-cost-table-wrap">
+              <table class="pipeline-cost-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Term</th>
+                    <th>Tokens</th>
+                    <th>Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hbRows.map((r) => (
+                    <tr>
+                      <td class="pipeline-cost-table__stage">{r.date}</td>
+                      <td>{r.type}</td>
+                      <td class="pipeline-cost-table__stage">{r.term}</td>
+                      <td>{r.tokens.toLocaleString()}</td>
+                      <td>${r.cost.toFixed(4)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </div><!-- /tab-handbook -->
+
       <div class="pcosts-info-box">
         <svg class="pcosts-info-box__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="12" cy="12" r="10" /><path d="M12 16v-4 M12 8h.01" />
         </svg>
-        <span>Handbook and Blog AI cost tracking will be added here once logging infrastructure is in place.</span>
+        <span>Blog AI cost tracking will be added once logging infrastructure is in place.</span>
       </div>
     </div>
   </div>
@@ -422,6 +541,26 @@ const nonce = Astro.locals.cspNonce || '';
   })();
 </script>
 
+<script is:inline nonce={nonce}>
+  (function () {
+    var tabs = document.querySelectorAll('.pcosts-tab');
+    var panels = {
+      news: document.getElementById('tab-news'),
+      handbook: document.getElementById('tab-handbook'),
+    };
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var target = btn.getAttribute('data-tab');
+        tabs.forEach(function (t) { t.classList.remove('pcosts-tab--active'); });
+        btn.classList.add('pcosts-tab--active');
+        Object.keys(panels).forEach(function (key) {
+          panels[key].style.display = key === target ? '' : 'none';
+        });
+      });
+    });
+  })();
+</script>
+
 <style>
   /* ─── Entry Animation ───────────────────────── */
   @keyframes pcostsSlideUp {
@@ -451,6 +590,36 @@ const nonce = Astro.locals.cspNonce || '';
     line-height: 1.55;
   }
 
+  /* ─── Tab Switcher ─────────────────────────── */
+  .pcosts-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pcosts-tab {
+    padding: 0.55rem 1.2rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .pcosts-tab:hover {
+    color: var(--color-text-primary);
+  }
+
+  .pcosts-tab--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+
   /* ─── Summary Stats Grid ────────────────────── */
   .pcosts-summary-grid {
     display: grid;
@@ -458,6 +627,10 @@ const nonce = Astro.locals.cspNonce || '';
     gap: 0.75rem;
     margin-bottom: 1.25rem;
     animation: pcostsSlideUp 0.4s ease both;
+  }
+
+  .pcosts-summary-grid--4col {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   /* ─── Stat Cards ────────────────────────────── */
@@ -637,6 +810,7 @@ const nonce = Astro.locals.cspNonce || '';
   /* ─── Responsive ────────────────────────────── */
   @media (max-width: 1080px) {
     .pcosts-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pcosts-summary-grid--4col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 900px) {

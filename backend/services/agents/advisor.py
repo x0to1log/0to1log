@@ -24,7 +24,8 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.client import get_openai_client, parse_ai_json
+from services.agents.client import extract_usage_metrics, get_openai_client, parse_ai_json
+from core.database import get_supabase
 from services.agents.prompts_advisor import (
     get_generate_prompt,
     get_seo_prompt,
@@ -37,7 +38,8 @@ from services.agents.prompts_advisor import (
     DEEPVERIFY_VERIFY_PROMPT,
     RELATED_TERMS_PROMPT,
     TRANSLATE_PROMPT,
-    GENERATE_TERM_PROMPT,
+    GENERATE_BASIC_PROMPT,
+    GENERATE_ADVANCED_PROMPT,
     EXTRACT_TERMS_PROMPT,
 )
 
@@ -507,23 +509,111 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
 async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str
 ) -> tuple[dict, str, int, list[str]]:
-    """Auto-generate all empty fields for a handbook term. Returns (data, model, tokens, warnings)."""
-    user_prompt = _build_handbook_user_prompt(req)
+    """Auto-generate all empty fields for a handbook term via 2 LLM calls.
 
-    resp = await client.chat.completions.create(
+    Call 1: meta + Basic (term_full, korean_full, categories, definition, body_basic)
+    Call 2: Advanced (body_advanced, with definition as context)
+
+    Returns (merged_data, model, total_tokens, warnings).
+    """
+    user_prompt = _build_handbook_user_prompt(req)
+    total_tokens = 0
+    warnings: list[str] = []
+
+    supabase = get_supabase()
+
+    # --- Call 1: Meta + Basic ---
+    resp1 = await client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": GENERATE_TERM_PROMPT},
+            {"role": "system", "content": GENERATE_BASIC_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
         response_format={"type": "json_object"},
         temperature=0.3,
-        max_tokens=16000,
+        max_tokens=10000,
     )
-    data = parse_ai_json(resp.choices[0].message.content, "Handbook-generate")
-    tokens = resp.usage.completion_tokens if resp.usage else 0
+    basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
+    usage1 = extract_usage_metrics(resp1, model)
+    total_tokens += usage1.get("tokens_used", 0)
 
-    warnings: list[str] = []
+    logger.info(
+        "Handbook generate call 1 (basic) for '%s': %d tokens",
+        req.term, usage1.get("tokens_used", 0),
+    )
+
+    # Log call 1 to pipeline_logs
+    if supabase:
+        try:
+            supabase.table("pipeline_logs").insert({
+                "pipeline_type": "handbook.generate.basic",
+                "status": "success",
+                "input_summary": f"term={req.term}",
+                "output_summary": "basic fields generated",
+                "model_used": usage1.get("model_used"),
+                "tokens_used": usage1.get("tokens_used"),
+                "cost_usd": usage1.get("cost_usd"),
+                "debug_meta": {
+                    "term": req.term,
+                    "input_tokens": usage1.get("input_tokens"),
+                    "output_tokens": usage1.get("output_tokens"),
+                },
+            }).execute()
+        except Exception as e:
+            logger.warning("Failed to log handbook basic stage: %s", e)
+
+    # --- Call 2: Advanced (with definition as context) ---
+    definition_context = basic_data.get("definition_en", "") or req.definition_en
+    definition_ko_context = basic_data.get("definition_ko", "") or req.definition_ko
+    advanced_prompt = (
+        f"{user_prompt}\n\n"
+        f"--- Context from Call 1 ---\n"
+        f"Definition (EN): {definition_context}\n"
+        f"Definition (KO): {definition_ko_context}"
+    )
+
+    resp2 = await client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": GENERATE_ADVANCED_PROMPT},
+            {"role": "user", "content": advanced_prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+        max_tokens=12000,
+    )
+    advanced_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-advanced")
+    usage2 = extract_usage_metrics(resp2, model)
+    total_tokens += usage2.get("tokens_used", 0)
+
+    logger.info(
+        "Handbook generate call 2 (advanced) for '%s': %d tokens",
+        req.term, usage2.get("tokens_used", 0),
+    )
+
+    # Log call 2 to pipeline_logs
+    if supabase:
+        try:
+            supabase.table("pipeline_logs").insert({
+                "pipeline_type": "handbook.generate.advanced",
+                "status": "success",
+                "input_summary": f"term={req.term}",
+                "output_summary": "advanced fields generated",
+                "model_used": usage2.get("model_used"),
+                "tokens_used": usage2.get("tokens_used"),
+                "cost_usd": usage2.get("cost_usd"),
+                "debug_meta": {
+                    "term": req.term,
+                    "input_tokens": usage2.get("input_tokens"),
+                    "output_tokens": usage2.get("output_tokens"),
+                },
+            }).execute()
+        except Exception as e:
+            logger.warning("Failed to log handbook advanced stage: %s", e)
+
+    # --- Merge results ---
+    data = {**basic_data, **advanced_data}
+
     try:
         GenerateTermResult.model_validate(data)
     except ValidationError as e:
@@ -532,8 +622,8 @@ async def _run_generate_term(
             warnings.append(f"{field}: {err['msg']}")
         logger.warning("Handbook generate validation: %s", warnings)
 
-    logger.info("Handbook generate completed for '%s', tokens=%d, warnings=%d", req.term, tokens, len(warnings))
-    return data, model, tokens, warnings
+    logger.info("Handbook generate completed for '%s', total_tokens=%d, warnings=%d", req.term, total_tokens, len(warnings))
+    return data, model, total_tokens, warnings
 
 
 # --- Pipeline Term Extraction Helpers ---

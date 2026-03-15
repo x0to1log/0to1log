@@ -150,6 +150,14 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                 <input type="text" name="korean_name" class="admin-input" value={term?.korean_name || ''} />
               </div>
               <div class="admin-field">
+                <label>Full Name (EN)</label>
+                <input type="text" name="term_full" class="admin-input" value={term?.term_full || ''} placeholder="e.g., Long Short-Term Memory" />
+              </div>
+              <div class="admin-field">
+                <label>정식 명칭</label>
+                <input type="text" name="korean_full" class="admin-input" value={term?.korean_full || ''} placeholder="e.g., 장단기 기억 네트워크" />
+              </div>
+              <div class="admin-field">
                 <label>Related Terms</label>
                 <div class="admin-chips-container" id="related-terms-chips">
                   {resolvedRelatedTerms.map((rt) => (
@@ -752,7 +760,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         action,
         term_id: (form.querySelector('[name="id"]') as HTMLInputElement)?.value || 'new',
         term,
+        term_full: (form.querySelector('[name="term_full"]') as HTMLInputElement)?.value || '',
         korean_name: (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '',
+        korean_full: (form.querySelector('[name="korean_full"]') as HTMLInputElement)?.value || '',
         categories: Array.from(form.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
         definition_ko: (form.querySelector('[name="definition_ko"]') as HTMLTextAreaElement)?.value || '',
         definition_en: (form.querySelector('[name="definition_en"]') as HTMLTextAreaElement)?.value || '',
@@ -995,6 +1005,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       // Metadata fields
       const metaFields = [
         { key: 'korean_name', label: 'Korean Name' },
+        { key: 'term_full', label: 'Full Name (EN)' },
+        { key: 'korean_full', label: '정식 명칭' },
       ];
       metaFields.forEach(f => {
         const val = r[f.key];
@@ -1072,7 +1084,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         btn.addEventListener('click', () => {
           const fieldName = btn.dataset.applyField || '';
           const value = aiFieldValues.get(fieldName) || '';
-          if (fieldName === 'korean_name') {
+          if (['korean_name', 'term_full', 'korean_full'].includes(fieldName)) {
             const input = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement | HTMLSelectElement | null;
             if (input) {
               previousValues.set(fieldName, input.value);
@@ -1118,14 +1130,16 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         const appliedFields: string[] = [];
 
         // Metadata
-        if (r.korean_name) {
-          const input = document.querySelector('[name="korean_name"]') as HTMLInputElement;
-          if (input && !input.value.trim()) {
-            previousValues.set('korean_name', input.value);
-            input.value = r.korean_name;
-            appliedFields.push('korean_name');
+        ['korean_name', 'term_full', 'korean_full'].forEach(metaKey => {
+          if (r[metaKey]) {
+            const input = document.querySelector(`[name="${metaKey}"]`) as HTMLInputElement;
+            if (input && !input.value.trim()) {
+              previousValues.set(metaKey, input.value);
+              input.value = r[metaKey];
+              appliedFields.push(metaKey);
+            }
           }
-        }
+        });
         if (r.categories?.length) {
           const checkboxes = document.querySelectorAll<HTMLInputElement>('input[name="categories"]');
           const anyChecked = Array.from(checkboxes).some(cb => cb.checked);

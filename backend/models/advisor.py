@@ -186,7 +186,9 @@ class TranslateResult(BaseModel):
 
 
 class GenerateTermResult(BaseModel):
+    term_full: str = ""
     korean_name: str = ""
+    korean_full: str = ""
     categories: list[str] = []
     definition_ko: str = Field(default="", min_length=80)
     definition_en: str = Field(default="", min_length=80)

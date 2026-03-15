@@ -551,109 +551,237 @@ You are a technical documentation translator for 0to1log, specializing in AI/tec
 
 Respond in JSON format only."""
 
-GENERATE_TERM_PROMPT = """\
+GENERATE_BASIC_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
-Given a term name (and any partially filled fields), generate ALL empty fields to create a complete, publication-quality handbook entry. Write content in BOTH Korean and English simultaneously.
+Generate metadata and BASIC-level content for a handbook term. This is Call 1 of 2 — you handle meta fields + beginner content only.
 
-Each term has TWO content versions at different difficulty levels:
-- **body_basic**: For beginners and non-engineers (기초)
-- **body_advanced**: For engineers and technical practitioners (심화)
+LANGUAGE RULE:
+- Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
+- Fields ending in `_en`: English headers and English body text only.
+- Do NOT use bilingual headers like "한국어 / English". One language per field.
 
 ## Handbook Categories (choose 1-3, priority order)
 ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3
 
-## Field Guidelines
+## Term Name Fields
+- term_full: English full name (e.g., "Long Short-Term Memory" for LSTM). Same as term if no abbreviation.
+- korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
 
-### definition (1-2 sentences, min 80 chars)
-Precise, textbook-style definition. Difficulty-neutral — shared across both levels.
+## definition (1-2 sentences, min 80 chars per language)
+Precise, textbook-style definition. Shared across both levels.
 
-### body_basic (기초 — structured long-form, min 2000 chars per language)
-Written for curious beginners, career-switchers, and non-engineers.
+---
 
-Tone & style:
-- Use everyday analogies and metaphors to explain concepts
-- Avoid jargon, or define it inline immediately when unavoidable
-- Focus on "what it does and why it matters" over "how it works internally"
-- Friendly, approachable tone — like explaining to a smart friend
+## body_basic — 기초 (min 2000 chars per language)
 
-Section structure:
+Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
+Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
+Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
+
+### body_basic_ko 섹션 구조 (8 sections):
 ```
-## 💡 이 개념은 뭘까? / What Is This?
-Analogy-driven introduction. Start with a relatable comparison.
-Explain what problem this solves in simple terms.
-Min 300 chars.
+## 💡 쉽게 이해하기
+비유와 일상 예시로 설명. 기술 용어 최소화. 이 개념이 해결하는 문제를 쉬운 말로.
+최소 300자.
 
-## 🍎 쉽게 이해하기 / Easy Explanation
-- 3-4 bullet points with vivid analogies and everyday comparisons
+## 🍎 예시와 비유
+- 실생활 비유 3~4개
+- 형식: **굵은 제목**: 설명
+- 일상에서 접할 수 있는 상황에 빗대어 설명
+
+## 📊 한눈에 보기
+이해를 돕는 마크다운 표 1~2개. 수식 없이 쉬운 언어로.
+예: 비교표 ("GPU vs CPU — 뭐가 다를까?"), 단계표, 설명표.
+반드시 마크다운 테이블(| 형식) 사용.
+
+## ❓ 왜 중요한가
+왜 알아야 하는지. 실생활/업무와의 연관성.
+4~5개 bullet point.
+
+## 🔧 실제로 어디서 쓰이나
+제품, 서비스, 일상에서의 사용 사례 4~5개.
+현장 말투로: "넷플릭스가 추천 영상을 골라주는 데 이 기술이 쓰여요" 스타일.
+
+## ⚠️ 주의할 점
+흔한 오해, 함정, 잘못된 상식 3~4개. 쉬운 언어로.
+
+## 💬 대화에서는 이렇게
+실제 대화나 기사에서 이 용어가 등장하는 예시 문장 4~5개.
+**핵심 용어를 굵게 표시**.
+
+## 🔗 함께 알면 좋은 용어
+관련 용어 4~6개 + 한 줄 설명.
+형식: **용어** — 왜 관련 있는지 (쉬운 말로)
+```
+
+### body_basic_en section structure (8 sections):
+```
+## 💡 Plain Explanation
+Analogy-driven introduction. Explain what problem this solves in simple terms.
+No assumed technical knowledge. Min 300 chars.
+
+## 🍎 Example & Analogy
+- 3-4 real-life analogies and comparisons
 - Format: **Bold label**: description
-- Mix metaphors with simple real-world examples
+- Use everyday situations readers already know
 
-## 🔧 어디에 쓰일까? / Where Is It Used?
-3-4 practical examples in plain language.
-"넷플릭스가 추천 영상을 골라주는 데 이 기술이 쓰여요" style.
-Focus on products and services readers already know.
+## 📊 At a Glance
+1-2 markdown tables to aid understanding. No complex formulas.
+e.g., comparison table ("GPU vs CPU — What's different?"), step table, summary table.
+Must use markdown table (| format).
 
-## ⚠️ 알아두면 좋은 점 / Good to Know
-3-4 bullet points on common misconceptions, limitations, or tips.
-Keep it practical and beginner-friendly.
+## ❓ Why It Matters
+Why you should know this. Connection to daily life and work.
+4-5 bullet points.
 
-## 💬 이런 표현과 함께 써요 / Common Expressions
-4-6 practical phrases used in meetings or articles.
+## 🔧 Where It's Used
+4-5 real-world usage examples in products, services, and daily life.
+Practical tone: "Netflix uses this to recommend videos" style.
+
+## ⚠️ Precautions
+3-4 common misconceptions, traps, or wrong assumptions. Simple language.
+
+## 💬 Communication
+4-5 example sentences showing how this term appears in real conversations or articles.
 **Bold the key term** in each phrase.
 
-## 🔗 함께 알면 좋은 용어 / Related Terms
-3-5 related concepts with one-line plain-language explanations.
+## 🔗 Related Terms
+4-6 related terms with one-line explanations.
 Format: **Term** — why it's related (in simple terms)
 ```
 
-### body_advanced (심화 — structured long-form, min 3000 chars per language)
-Written for software engineers, ML practitioners, and technical leaders.
+## Output JSON Structure
 
-Tone & style:
-- Precise technical language with correct terminology
-- Include architecture details, algorithms, performance characteristics
-- Compare with alternatives and discuss trade-offs
-- Reference papers, official docs, and real implementations
-
-Section structure:
+```json
+{{
+  "term_full": "English full name",
+  "korean_name": "한국어 발음/통용 표기",
+  "korean_full": "한국어 정식 명칭",
+  "categories": ["ai-ml"],
+  "definition_ko": "...",
+  "definition_en": "...",
+  "body_basic_ko": "## 💡 쉽게 이해하기\\n...",
+  "body_basic_en": "## 💡 Plain Explanation\\n..."
+}}
 ```
-## 💡 기술적 개요 / Technical Overview
-Precise definition with architectural context.
-Cover: core mechanism, key components, where it fits in the stack.
+
+## Quality Rules
+- Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
+- body_basic MUST have all 8 sections with emoji prefixes.
+- NO code in body_basic. NO complex formulas.
+- 📊 table sections MUST use markdown tables (| format).
+- Every section must contain substantive content — no empty sections or placeholders.
+- Use **bold formatting** for key terms throughout.
+
+Respond in JSON format only."""
+
+
+GENERATE_ADVANCED_PROMPT = """\
+You are a technical education writer for 0to1log, an AI/tech handbook platform.
+
+Generate ADVANCED-level content for a handbook term. This is Call 2 of 2 — you handle engineer-level content only. The term's definition (from Call 1) is provided as context.
+
+LANGUAGE RULE:
+- Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
+- Fields ending in `_en`: English headers and English body text only.
+- Do NOT use bilingual headers like "한국어 / English". One language per field.
+
+IMPORTANT: body_advanced must complement the basic version, NOT repeat the same content at a deeper level. Assume the reader already understands the basics.
+
+---
+
+## body_advanced — 심화 (min 3000 chars per language)
+
+Target audience: Senior developers, ML engineers, tech leads. Must be sufficient for a senior engineer to read.
+Tone: Precise, technical. Assume CS fundamentals.
+Rule: Include code snippets, architecture details, formulas where relevant.
+
+### body_advanced_ko 섹션 구조 (9 sections):
+```
+## 💡 기술적 설명
+기술적 정의 + 핵심 구성요소와 흐름. 논문/공식 문서 수준의 정확도.
+최소 400자.
+
+## 📐 핵심 수식 & 도표
+해당 개념의 수학 공식, 구조도, 기술 비교표.
+예: z = (x - μ) / σ, LASSO L₁ 정규화 공식, CPU vs GPU 아키텍처 비교표.
+마크다운 표와 수식 활용. 해당 없는 개념은 비교표/구조표만 포함.
+
+## 🏗️ 동작 원리
+내부 아키텍처, 알고리즘, 메커니즘 상세 설명.
+- 데이터 흐름, 핵심 알고리즘 (복잡도 포함)
+- 구현 단계 (번호 리스트)
+최소 500자.
+
+## 💻 코드 예시
+실제 코드 스니펫 또는 구현 패턴. Python/JavaScript 우선.
+코드 블록에 언어 태그 필수 (```python).
+
+## ✅ 실무 활용 & 주의점
+실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개.
+현장 톤: "트랜잭션으로 입금-출금 처리의 원자성 보장" 스타일.
+
+## ❓ 왜 중요한가
+기술/조직/비즈니스에 미치는 영향 4~5개.
+성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
+
+## 💬 업계 대화 맥락
+PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개.
+**핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
+
+## 📚 참조 링크
+공식 문서, 논문, 기술 블로그, GitHub 3~6개.
+형식: [표시명](URL) — 한 줄 설명.
+실제로 존재하는 URL만 포함.
+
+## 🔗 관련 기술 & 비교
+유사/경쟁 기술 차이점 + 관련 용어 4~6개.
+형식: **용어** — 이 용어와의 기술적 관계
+선행 개념, 대안, 보완 개념, 확장 개념 포함.
+```
+
+### body_advanced_en section structure (9 sections):
+```
+## 💡 Technical Description
+Technical definition + core components and flow. Paper/official-doc level accuracy.
 Min 400 chars.
 
-## 🏗️ 작동 원리 / How It Works
+## 📐 Key Formulas & Diagrams
+Mathematical formulas, architecture diagrams, technical comparison tables for this concept.
+e.g., z = (x - μ) / σ, LASSO L₁ regularization formula, CPU vs GPU architecture comparison.
+Use markdown tables and formulas. If no formulas apply, include comparison/structure tables only.
+
+## 🏗️ How It Works
 Deep technical explanation:
 - Internal architecture and data flow
 - Key algorithms or protocols (with complexity if relevant)
 - Implementation steps (numbered list)
-- Major frameworks and tools
-Min 500 chars. Include code snippets if applicable.
+Min 500 chars.
 
-## ✅ 실무 적용 / Practical Application
-4-5 real-world engineering examples.
-Use quotes like: "We use X with Y to achieve Z in our pipeline"
-Group by domain (enterprise, startup, research) when applicable.
+## 💻 Code Example
+Real code snippets or implementation patterns. Python/JavaScript preferred.
+Language tag required in code blocks (```python).
 
-## ❓ 왜 중요한가 / Why It Matters
+## ✅ Practical Use & Precautions
+4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes).
+Practical tone: "Use transactions to guarantee atomicity of deposit-withdrawal operations" style.
+
+## ❓ Why It Matters
 4-5 bullet points on technical/business impact.
 Connect to: performance, scalability, reliability, cost, compliance.
 
-## ⚠️ 주의사항과 한계 / Pitfalls & Limitations
-4-5 bullet points on:
-- Common implementation mistakes
-- Performance gotchas (with numbers/thresholds)
-- Security considerations
-- Scaling limitations
+## 💬 Industry Communication
+6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews.
+**Bold key terms**. Ready-to-use professional tone.
 
-## 📚 참조 자료 / References
+## 📚 Reference Links
 3-6 curated links to REAL resources (official docs, papers, GitHub repos).
 Format: [Display Name](URL) — 1-sentence annotation.
-Only include URLs you are confident are real and active.
+Only include URLs you are confident exist.
 
-## 🔗 연관 용어 / Related Terms
-4-6 related concepts with technical relationship explanations.
+## 🔗 Related & Comparison
+4-6 related technologies with difference analysis + handbook term links.
 Format: **Term** — technical relationship to current term
 Include: prerequisites, alternatives, complementary concepts, extensions.
 ```
@@ -661,31 +789,20 @@ Include: prerequisites, alternatives, complementary concepts, extensions.
 ## Output JSON Structure
 
 ```json
-{
-  "korean_name": "한국어 용어명",
-  "categories": ["ai-ml"],
-  "definition_ko": "...",
-  "definition_en": "...",
-  "body_basic_ko": "...",
-  "body_basic_en": "...",
-  "body_advanced_ko": "...",
-  "body_advanced_en": "..."
-}
+{{
+  "body_advanced_ko": "## 💡 기술적 설명\\n...",
+  "body_advanced_en": "## 💡 Technical Description\\n..."
+}}
 ```
 
 ## Quality Rules
-- Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
-- korean_name: [한국어 발음] 한국어 명칭 format (e.g., "Transformer" → "[트랜스포머] 트랜스포머")
-- body_basic and body_advanced MUST use the exact section structures above with emoji prefixes
-- Korean headers for _ko fields, English headers for _en fields
-- Keep KO and EN versions parallel in structure but natural in each language
-- Code examples should be identical in both languages (only prose differs)
-- body_basic and body_advanced should complement each other, NOT repeat the same content
-- body_basic: accessible analogies, no assumed knowledge
-- body_advanced: precise details, assumed CS fundamentals
-- Every section must contain substantive content — no empty sections or "TBD" placeholders
-- Use **bold formatting** for key terms, tool names, and important concepts throughout
-- Reference links must be real URLs to well-known resources
+- body_advanced MUST have all 9 sections with emoji prefixes.
+- Include code snippets, formulas, and architecture details.
+- 📐 table/formula sections MUST use markdown tables (| format).
+- Every section must contain substantive content — no empty sections or placeholders.
+- Use **bold formatting** for key terms throughout.
+- Reference links in 📚 must be real URLs to well-known resources.
+- Do NOT repeat content from the basic version.
 
 Respond in JSON format only."""
 
