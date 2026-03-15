@@ -47,8 +47,31 @@ type NewsRow = {
   updated_at: string;
 };
 
+// ─── Types ─ Products ──────────────────────────────────────
+type ProductRow = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  primary_category: string | null;
+  pricing: string | null;
+  featured: boolean;
+  view_count: number;
+  like_count: number;
+};
+
 // ─── Queries ─────────────────────────────────────────────────
-const [{ data: rawHandbook }, { data: rawBlog }, { data: rawNews }] = await Promise.all([
+const [
+  { data: rawHandbook },
+  { data: rawBlog },
+  { data: rawNews },
+  { data: rawProducts },
+  { count: userCount },
+  { count: bookmarkCount },
+  { count: readingCount },
+  { count: learningCount },
+  { count: activeUserCount },
+] = await Promise.all([
   sb.from('handbook_terms')
     .select('id, term, slug, status, source, categories, is_favourite, updated_at')
     .order('updated_at', { ascending: false }),
@@ -58,6 +81,15 @@ const [{ data: rawHandbook }, { data: rawBlog }, { data: rawNews }] = await Prom
   sb.from('news_posts')
     .select('id, title, slug, category, locale, status, post_type, updated_at')
     .order('updated_at', { ascending: false }),
+  sb.from('ai_products')
+    .select('id, name, slug, status, primary_category, pricing, featured, view_count, like_count')
+    .order('view_count', { ascending: false }),
+  sb.from('profiles').select('*', { count: 'exact', head: true }),
+  sb.from('user_bookmarks').select('*', { count: 'exact', head: true }),
+  sb.from('reading_history').select('*', { count: 'exact', head: true }),
+  sb.from('learning_progress').select('*', { count: 'exact', head: true }),
+  sb.from('profiles').select('*', { count: 'exact', head: true })
+    .gte('updated_at', new Date(Date.now() - 7 * 86400000).toISOString()),
 ]);
 
 // ─── Handbook Data ───────────────────────────────────────────
@@ -136,6 +168,27 @@ for (const p of newsPosts) {
 
 const recentNews = newsPosts.slice(0, 5);
 
+// ─── Products Data ──────────────────────────────────────────
+const products = (rawProducts ?? []) as ProductRow[];
+const productsTotal = products.length;
+const productsPublished = products.filter((p) => p.status === 'published').length;
+const productsDraft = products.filter((p) => p.status === 'draft').length;
+const productsFeatured = products.filter((p) => p.featured).length;
+
+const productsByCategory: Record<string, number> = {};
+for (const p of products) {
+  const cat = p.primary_category || 'uncategorized';
+  productsByCategory[cat] = (productsByCategory[cat] || 0) + 1;
+}
+
+const productsByPricing: Record<string, number> = {};
+for (const p of products) {
+  const pr = p.pricing || 'unknown';
+  productsByPricing[pr] = (productsByPricing[pr] || 0) + 1;
+}
+
+const topProducts = products.slice(0, 5);
+
 const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 const ga4PropertyId = import.meta.env.GA4_PROPERTY_ID || '';
 const nonce = Astro.locals.cspNonce || '';
@@ -164,6 +217,29 @@ const nonce = Astro.locals.cspNonce || '';
 
       <!-- Brief Cards -->
       <section class="sa-briefs">
+        <button class="sa-brief-card sa-brief-card--users" type="button" data-tab-target="traffic" aria-label="View User stats">
+          <div class="sa-brief-card__header">
+            <svg class="sa-brief-card__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <h3 class="sa-brief-card__title">Users</h3>
+          </div>
+          <div class="sa-brief-card__stats">
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{userCount ?? 0}</span>
+              <span class="sa-brief-stat__label">Registered</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{bookmarkCount ?? 0}</span>
+              <span class="sa-brief-stat__label">Bookmarks</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{activeUserCount ?? 0}</span>
+              <span class="sa-brief-stat__label">Active 7d</span>
+            </div>
+          </div>
+        </button>
         <button class="sa-brief-card sa-brief-card--news" type="button" data-tab-target="news" aria-label="View News details">
           <div class="sa-brief-card__header">
             <svg class="sa-brief-card__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -231,6 +307,29 @@ const nonce = Astro.locals.cspNonce || '';
             </div>
           </div>
         </button>
+        <button class="sa-brief-card sa-brief-card--products" type="button" data-tab-target="products" aria-label="View Products details">
+          <div class="sa-brief-card__header">
+            <svg class="sa-brief-card__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.29 7 12 12 20.71 7" /><line x1="12" y1="22" x2="12" y2="12" />
+            </svg>
+            <h3 class="sa-brief-card__title">Products</h3>
+          </div>
+          <div class="sa-brief-card__stats">
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{productsTotal}</span>
+              <span class="sa-brief-stat__label">Total</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{productsPublished}</span>
+              <span class="sa-brief-stat__label">Published</span>
+            </div>
+            <div class="sa-brief-stat">
+              <span class="sa-brief-stat__value">{productsFeatured}</span>
+              <span class="sa-brief-stat__label">Featured</span>
+            </div>
+          </div>
+        </button>
       </section>
 
       <!-- Tab Bar -->
@@ -250,6 +349,10 @@ const nonce = Astro.locals.cspNonce || '';
         <button class="sa-tab" role="tab" aria-selected="false" aria-controls="tab-blog" id="tab-btn-blog">
           <span class="sa-tab__dot sa-tab__dot--blog"></span>
           Blog
+        </button>
+        <button class="sa-tab" role="tab" aria-selected="false" aria-controls="tab-products" id="tab-btn-products">
+          <span class="sa-tab__dot sa-tab__dot--products"></span>
+          Products
         </button>
       </nav>
 
@@ -486,6 +589,83 @@ const nonce = Astro.locals.cspNonce || '';
         </section>
       </div>
 
+      <!-- ═══ Products Tab ═══ -->
+      <div id="tab-products" role="tabpanel" class="sa-tab-panel" hidden>
+        <section class="sa-stats-grid sa-stats-grid--4">
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Total Products</span>
+            <strong class="sa-stat-card__value">{productsTotal}</strong>
+            <span class="sa-stat-card__detail">All AI products</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Published</span>
+            <strong class="sa-stat-card__value">{productsPublished}</strong>
+            <span class="sa-stat-card__detail">Live on site</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Draft</span>
+            <strong class="sa-stat-card__value">{productsDraft}</strong>
+            <span class="sa-stat-card__detail">Awaiting review</span>
+          </div>
+          <div class="sa-stat-card">
+            <span class="sa-stat-card__label">Featured</span>
+            <strong class="sa-stat-card__value">{productsFeatured}</strong>
+            <span class="sa-stat-card__detail">On hero carousel</span>
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Category</h2>
+          <div class="sa-chips">
+            {Object.entries(productsByCategory)
+              .sort((a, b) => b[1] - a[1])
+              .map(([cat, count]) => (
+                <span class="sa-chip">
+                  <span class="sa-chip__label">{cat}</span>
+                  <strong class="sa-chip__value">{count}</strong>
+                </span>
+              ))}
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">By Pricing</h2>
+          <div class="sa-chips">
+            {Object.entries(productsByPricing)
+              .sort((a, b) => b[1] - a[1])
+              .map(([pr, count]) => (
+                <span class="sa-chip">
+                  <span class="sa-chip__label">{pr}</span>
+                  <strong class="sa-chip__value">{count}</strong>
+                </span>
+              ))}
+          </div>
+        </section>
+
+        <section class="sa-section">
+          <h2 class="sa-section__title">Top Products by Views</h2>
+          {topProducts.length === 0 ? (
+            <p class="sa-empty">No products yet.</p>
+          ) : (
+            <ul class="sa-recent-list">
+              {topProducts.map((p) => (
+                <li class="sa-recent-item">
+                  <a href={`/admin/products/edit/${p.slug}`} class="sa-recent-item__link">
+                    <span class="sa-recent-item__title">{p.name}</span>
+                    <span class="sa-recent-item__meta">
+                      <span class={`sa-badge sa-badge--${p.status}`}>{p.status}</span>
+                      {p.primary_category && <span class="sa-badge sa-badge--source">{p.primary_category}</span>}
+                      <span class="sa-badge">👁 {p.view_count}</span>
+                      {p.like_count > 0 && <span class="sa-badge">♥ {p.like_count}</span>}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
       <!-- ═══ Traffic Tab ═══ -->
       <div id="tab-traffic" role="tabpanel" class="sa-tab-panel">
 
@@ -561,6 +741,39 @@ const nonce = Astro.locals.cspNonce || '';
             </div>
           </section>
         </div>
+
+        <!-- User Engagement -->
+        <section class="sa-section">
+          <h2 class="sa-section__title">User Engagement</h2>
+          <p class="sa-section__hint">DB-sourced stats from registered user activity.</p>
+          <div class="sa-stats-grid sa-stats-grid--5">
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Registered Users</span>
+              <strong class="sa-stat-card__value">{userCount ?? 0}</strong>
+              <span class="sa-stat-card__detail">Total accounts</span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Active (7d)</span>
+              <strong class="sa-stat-card__value">{activeUserCount ?? 0}</strong>
+              <span class="sa-stat-card__detail">Profile updated</span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Bookmarks</span>
+              <strong class="sa-stat-card__value">{bookmarkCount ?? 0}</strong>
+              <span class="sa-stat-card__detail">Saved articles</span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Reading History</span>
+              <strong class="sa-stat-card__value">{readingCount ?? 0}</strong>
+              <span class="sa-stat-card__detail">Articles read</span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Learning Progress</span>
+              <strong class="sa-stat-card__value">{learningCount ?? 0}</strong>
+              <span class="sa-stat-card__detail">Terms studied</span>
+            </div>
+          </div>
+        </section>
 
         <!-- External Links -->
         <section class="sa-section sa-section--links">
@@ -643,7 +856,7 @@ const nonce = Astro.locals.cspNonce || '';
     });
 
     var hash = location.hash.replace('#', '');
-    var initial = ['traffic', 'news', 'handbook', 'blog'].indexOf(hash) !== -1 ? hash : 'traffic';
+    var initial = ['traffic', 'news', 'handbook', 'blog', 'products'].indexOf(hash) !== -1 ? hash : 'traffic';
     activateTab(initial);
 
     /* ── GA4 fetch & render ────────────────────────── */
@@ -830,7 +1043,7 @@ const nonce = Astro.locals.cspNonce || '';
   /* ─── Brief Cards ───────────────────────────── */
   .sa-briefs {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
     margin-bottom: 1.25rem;
   }
@@ -859,13 +1072,17 @@ const nonce = Astro.locals.cspNonce || '';
     transform: translateY(-1px);
   }
 
-  .sa-brief-card--news { border-top-color: #6366f1; }
-  .sa-brief-card--handbook { border-top-color: var(--color-success); }
-  .sa-brief-card--blog { border-top-color: var(--color-warning); }
+  .sa-brief-card--users { border-top-color: #eab308; }
+  .sa-brief-card--news { border-top-color: #ef4444; }
+  .sa-brief-card--handbook { border-top-color: #10b981; }
+  .sa-brief-card--blog { border-top-color: #ec4899; }
+  .sa-brief-card--products { border-top-color: #8b5cf6; }
 
-  .sa-brief-card--selected.sa-brief-card--news { box-shadow: 0 1px 10px color-mix(in srgb, #6366f1 15%, transparent); }
-  .sa-brief-card--selected.sa-brief-card--handbook { box-shadow: 0 1px 10px color-mix(in srgb, var(--color-success) 15%, transparent); }
-  .sa-brief-card--selected.sa-brief-card--blog { box-shadow: 0 1px 10px color-mix(in srgb, var(--color-warning) 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--users { box-shadow: 0 1px 10px color-mix(in srgb, #eab308 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--news { box-shadow: 0 1px 10px color-mix(in srgb, #ef4444 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--handbook { box-shadow: 0 1px 10px color-mix(in srgb, #10b981 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--blog { box-shadow: 0 1px 10px color-mix(in srgb, #ec4899 15%, transparent); }
+  .sa-brief-card--selected.sa-brief-card--products { box-shadow: 0 1px 10px color-mix(in srgb, #8b5cf6 15%, transparent); }
 
   .sa-brief-card__header {
     display: flex;
@@ -949,10 +1166,11 @@ const nonce = Astro.locals.cspNonce || '';
   }
 
   .sa-tab--active .sa-tab__dot { opacity: 1; }
-  .sa-tab__dot--traffic { background: #6366f1; }
-  .sa-tab__dot--news { background: var(--color-accent); }
-  .sa-tab__dot--handbook { background: var(--color-success); }
-  .sa-tab__dot--blog { background: var(--color-warning); }
+  .sa-tab__dot--traffic { background: #eab308; }
+  .sa-tab__dot--news { background: #ef4444; }
+  .sa-tab__dot--handbook { background: #10b981; }
+  .sa-tab__dot--blog { background: #ec4899; }
+  .sa-tab__dot--products { background: #8b5cf6; }
 
   /* ─── Tab Panels ────────────────────────────── */
   .sa-tab-panel { animation: saSlideUp 0.3s ease both; }
@@ -1283,8 +1501,11 @@ const nonce = Astro.locals.cspNonce || '';
   }
 
   /* ─── Responsive ────────────────────────────── */
+  @media (max-width: 1100px) {
+    .sa-briefs { grid-template-columns: repeat(3, 1fr); }
+  }
+
   @media (max-width: 900px) {
-    .sa-briefs { grid-template-columns: 1fr; }
     .sa-chart-row { grid-template-columns: 1fr; }
     .sa-stats-grid--5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
@@ -1299,7 +1520,12 @@ const nonce = Astro.locals.cspNonce || '';
     .sa-tab { padding: 0.5rem 0.8rem; font-size: 0.74rem; }
   }
 
+  @media (max-width: 720px) {
+    .sa-briefs { grid-template-columns: repeat(2, 1fr); }
+  }
+
   @media (max-width: 520px) {
+    .sa-briefs { grid-template-columns: 1fr; }
     .sa-stats-grid--4,
     .sa-stats-grid--3,
     .sa-stats-grid--5 {
