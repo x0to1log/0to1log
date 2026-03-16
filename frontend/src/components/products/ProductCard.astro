@@ -4,22 +4,21 @@ interface Props {
   name: string;
   tagline: string | null;
   logoUrl: string | null;
+  thumbnailUrl: string | null;
+  demoMediaFirst: string | null;
   pricing: string | null;
   platform: string[] | null;
   koreanSupport: boolean;
   locale: 'en' | 'ko';
   searchText?: string;
+  categoryId: string;
+  viewCount: number;
 }
 
-const { href, name, tagline, logoUrl, pricing, platform, koreanSupport, locale, searchText } = Astro.props;
-
-const platformLabels: Record<string, string> = {
-  web: 'Web',
-  ios: 'iOS',
-  android: 'Android',
-  api: 'API',
-  desktop: 'Desktop',
-};
+const {
+  href, name, tagline, logoUrl, thumbnailUrl, demoMediaFirst,
+  pricing, platform, koreanSupport, locale, searchText, categoryId, viewCount,
+} = Astro.props;
 
 const pricingLabel: Record<string, string> = {
   free: locale === 'ko' ? '무료' : 'Free',
@@ -27,38 +26,56 @@ const pricingLabel: Record<string, string> = {
   paid: locale === 'ko' ? '유료' : 'Paid',
   enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
 };
+
+// 이미지 우선순위: demoMediaFirst > thumbnailUrl > fallback
+const imageUrl = demoMediaFirst ?? thumbnailUrl;
+
+// 조회수 포매팅
+const formatViews = (n: number) => {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+};
 ---
 
-<a href={href} class="product-card" data-search-text={searchText}>
-  <div class="product-card-header">
-    {logoUrl
-      ? <img src={logoUrl} alt={name} class="product-card-logo" width="40" height="40" loading="lazy" />
-      : <div class="product-card-logo-placeholder">{name.charAt(0)}</div>
-    }
-    <div class="product-card-title-group">
+<a href={href} class="product-card" data-search-text={searchText} data-category={categoryId}>
+  <div class="product-card-thumbnail">
+    {imageUrl ? (
+      <img src={imageUrl} alt={name} class="product-card-thumb-img" loading="lazy" />
+    ) : (
+      <div class="product-card-thumb-fallback" data-category={categoryId}>
+        {logoUrl ? (
+          <img src={logoUrl} alt="" class="product-card-thumb-fallback-logo" />
+        ) : (
+          <span class="product-card-thumb-fallback-initial">{name.charAt(0)}</span>
+        )}
+      </div>
+    )}
+  </div>
+
+  <div class="product-card-body">
+    <div class="product-card-header">
+      {logoUrl && imageUrl && (
+        <img src={logoUrl} alt="" class="product-card-logo" width="24" height="24" loading="lazy" />
+      )}
       <span class="product-card-name">{name}</span>
+    </div>
+
+    {tagline && <p class="product-card-tagline">{tagline}</p>}
+
+    <div class="product-card-meta">
       {pricing && (
         <span class="product-pricing-badge" data-pricing={pricing}>
           {pricingLabel[pricing] ?? pricing}
         </span>
       )}
+      {viewCount > 0 && (
+        <span class="product-card-views">{formatViews(viewCount)} views</span>
+      )}
+      {koreanSupport && (
+        <span class="product-korean-badge">
+          {locale === 'ko' ? '한국어' : 'KR'}
+        </span>
+      )}
     </div>
-  </div>
-
-  {tagline && <p class="product-card-tagline">{tagline}</p>}
-
-  <div class="product-card-meta">
-    {platform && platform.length > 0 && (
-      <div class="product-platform-list">
-        {platform.map((p) => (
-          <span class="product-platform-item">{platformLabels[p] ?? p}</span>
-        ))}
-      </div>
-    )}
-    {koreanSupport && (
-      <span class="product-korean-badge">
-        {locale === 'ko' ? '한국어 ✓' : 'Korean ✓'}
-      </span>
-    )}
   </div>
 </a>
