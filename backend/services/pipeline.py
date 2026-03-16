@@ -292,13 +292,6 @@ async def _extract_and_create_handbook_terms(
     if not extracted:
         return 0, []
 
-    # Step 1.5: LLM 2nd-pass filter — verify extracted terms are real tech terms
-    extracted = await _filter_terms_with_llm(extracted)
-    logger.info("After LLM filter: %d terms remain", len(extracted))
-
-    if not extracted:
-        return 0, []
-
     # Step 2: Check duplicates and generate content for new terms
     VALID_CATEGORIES = {
         "ai-ml", "db-data", "backend", "frontend-ux", "network",

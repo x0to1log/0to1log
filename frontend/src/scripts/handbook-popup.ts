@@ -1,9 +1,12 @@
 /**
  * Inline handbook term popup.
  *
+ * Two trigger sources:
+ * 1. `.handbook-term` spans (legacy inline markup)
+ * 2. `<a href="/handbook/*">` links inside `.newsprint-prose` (auto-linked terms)
+ *
  * Reads term data from #handbook-terms-data JSON embed,
- * attaches click handlers to .handbook-term spans,
- * and shows a popup with the term definition.
+ * shows a popup with the term definition + "Learn more" link to full page.
  */
 
 interface TermData {
@@ -23,7 +26,7 @@ function getLocale(): string {
   return document.documentElement.lang || 'en';
 }
 
-function buildPopupHtml(data: TermData): string {
+function buildPopupHtml(data: TermData, slug: string): string {
   const locale = getLocale();
   const catLabels = (data.categories || []).join(' · ');
   const learnMoreText = locale === 'ko' ? '자세히 보기' : 'Learn more';
@@ -41,7 +44,7 @@ function buildPopupHtml(data: TermData): string {
   html += `</div>`;
   html += `<div class="handbook-popup-footer">`;
   if (catLabels) html += `<span class="handbook-popup-categories">${esc(catLabels)}</span>`;
-  html += `<a href="/${locale}/handbook/" class="handbook-popup-link">${learnMoreText}</a>`;
+  html += `<a href="/${locale}/handbook/${slug}/" class="handbook-popup-link">${learnMoreText}</a>`;
   html += `</div>`;
   html += `</div>`;
   return html;
@@ -73,6 +76,12 @@ function positionPopup(popup: HTMLElement, anchor: HTMLElement): void {
   });
 }
 
+/** Extract slug from a handbook URL path like /ko/handbook/slug/ or /handbook/slug/ */
+function extractSlugFromHref(href: string): string {
+  const match = href.match(/\/handbook\/([^/]+)\/?$/);
+  return match ? match[1] : '';
+}
+
 function initHandbookPopup(): void {
   const dataEl = document.getElementById('handbook-terms-data');
   if (!dataEl) return;
@@ -95,6 +104,31 @@ function initHandbookPopup(): void {
     }
   }
 
+  function showPopup(slug: string, anchor: HTMLElement): void {
+    const data = termsData[slug];
+    if (!data) return;
+
+    if (activePopup && activePopup.dataset.forSlug === slug) {
+      closePopup();
+      return;
+    }
+
+    closePopup();
+
+    const html = buildPopupHtml(data, slug);
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const popup = container.firstElementChild as HTMLElement;
+    popup.dataset.forSlug = slug;
+
+    document.body.appendChild(popup);
+    activePopup = popup;
+
+    positionPopup(popup, anchor);
+
+    popup.querySelector('.handbook-popup-close')?.addEventListener('click', closePopup);
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePopup();
   });
@@ -102,38 +136,33 @@ function initHandbookPopup(): void {
   document.addEventListener('click', (e) => {
     if (!activePopup) return;
     const target = e.target as HTMLElement;
-    if (activePopup.contains(target) || target.closest('.handbook-term')) return;
+    if (
+      activePopup.contains(target) ||
+      target.closest('.handbook-term') ||
+      target.closest('a[href*="/handbook/"]')
+    ) return;
     closePopup();
   });
 
+  // Source 1: .handbook-term spans
   document.querySelectorAll<HTMLElement>('.handbook-term').forEach(el => {
     el.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-
       const slug = el.dataset.slug || '';
-      const data = termsData[slug];
-      if (!data) return;
+      showPopup(slug, el);
+    });
+  });
 
-      if (activePopup && activePopup.dataset.forSlug === slug) {
-        closePopup();
-        return;
-      }
+  // Source 2: <a href="/handbook/*"> links inside prose content
+  document.querySelectorAll<HTMLAnchorElement>('.newsprint-prose a[href*="/handbook/"]').forEach(link => {
+    const slug = extractSlugFromHref(link.getAttribute('href') || '');
+    if (!slug || !termsData[slug]) return; // no popup data → let it navigate normally
 
-      closePopup();
-
-      const html = buildPopupHtml(data);
-      const container = document.createElement('div');
-      container.innerHTML = html;
-      const popup = container.firstElementChild as HTMLElement;
-      popup.dataset.forSlug = slug;
-
-      document.body.appendChild(popup);
-      activePopup = popup;
-
-      positionPopup(popup, el);
-
-      popup.querySelector('.handbook-popup-close')?.addEventListener('click', closePopup);
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showPopup(slug, link);
     });
   });
 }

@@ -822,29 +822,26 @@ Respond in JSON format only."""
 EXTRACT_TERMS_PROMPT = """\
 You are a technical term extractor for 0to1log, an AI/IT/CS handbook platform.
 
-Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI domain and would be valuable entries in a technology handbook for learners.
+Given one or more news articles, extract terms that belong to the IT/CS/AI domain and would be valuable entries in a technology handbook for learners. Be thorough — it is better to include a borderline term than to miss a valuable one. Downstream filters will catch false positives.
 
-## Allowed domains (extract ONLY from these)
-- AI/ML & Algorithms (e.g., Transformer, RAG, RLHF, attention mechanism)
-- DB / Data Infrastructure (e.g., vector database, sharding, indexing)
-- Backend / Service Architecture (e.g., microservices, load balancing, gRPC)
-- Frontend & UX/UI (e.g., server-side rendering, virtual DOM)
-- Network / Communication (e.g., WebSocket, HTTP/3, CDN)
-- Security / Access Control (e.g., zero trust, OAuth, encryption)
+## Allowed domains
+- AI/ML & Algorithms (e.g., Transformer, RAG, RLHF, attention mechanism, MoE, LoRA)
+- DB / Data Infrastructure (e.g., vector database, sharding, indexing, embeddings)
+- Backend / Service Architecture (e.g., microservices, load balancing, gRPC, REST)
+- Frontend & UX/UI (e.g., server-side rendering, virtual DOM, WebAssembly)
+- Network / Communication (e.g., WebSocket, HTTP/3, CDN, edge computing)
+- Security / Access Control (e.g., zero trust, OAuth, encryption, homomorphic encryption)
 - OS / Core Principles (e.g., kernel, process scheduling, memory management)
-- DevOps / Operations (e.g., CI/CD, containerization, Kubernetes)
-- Performance / Cost Management (e.g., inference cost, token limit, latency)
+- DevOps / Operations (e.g., CI/CD, containerization, Kubernetes, observability)
+- Performance / Cost Management (e.g., inference cost, token limit, latency, quantization)
 - Decentralization / Web3 (e.g., smart contract, consensus mechanism)
-- AI Industry & Business — ONLY business/economics terms that are essential to understanding AI industry news (e.g., "foundation model licensing", "inference pricing", "AI compute economics", "series A funding", "ARR", "TAM"). Do NOT include generic economics terms.
+- AI Industry & Business — business terms essential to AI industry (e.g., "foundation model licensing", "inference pricing", "AI compute economics", "ARR", "TAM")
 
 ## What to EXCLUDE
-- Generic words (e.g., "performance", "model", "data", "update")
-- Company/product names unless they ARE the technology (e.g., skip "OpenAI", include "GPT-4")
-- Obvious terms that need no explanation (e.g., "API", "database", "server")
-- Acronyms that are just abbreviations (e.g., "CEO", "IPO")
-- Terms from non-IT domains: medicine, biology, law, politics (e.g., "interval cancer", "antitrust", "due process")
-- Generic economics/finance terms unrelated to AI industry (e.g., "GDP", "inflation", "interest rate", "bond yield")
-- Generic marketing terms unrelated to tech (e.g., "funnel", "brand awareness", "market segmentation")
+- Generic single words without technical meaning (e.g., "performance", "data", "update")
+- Company names that are NOT the technology itself (e.g., skip "OpenAI", include "GPT-4")
+- Terms from non-IT domains: medicine, biology, law (e.g., "interval cancer", "antitrust")
+- Adjective/modifier phrases (e.g., "AI-powered", "AI-driven", "data-driven")
 
 ## Output JSON Structure
 
@@ -862,29 +859,27 @@ Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI 
 ```
 
 ## Rules
-- Extract 3-10 terms per article (quality over quantity)
-- ONLY extract terms that fit the allowed domains above
+- Extract 5-15 terms per article — be thorough, cover all technical concepts mentioned
 - term: Use the standard English name
 - korean_name: Standard Korean translation
 - category: One of: ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
-- When in doubt whether a term is IT/CS/AI, skip it
-- Do NOT extract multi-word phrases longer than 3 words (e.g., "deep learning architecture" is too broad — extract "deep learning" instead)
+- When in doubt, INCLUDE the term — a borderline technical term is more valuable than a missed one
+- Do NOT extract multi-word phrases longer than 3 words
 
 ## Self-check before including each term
-Ask yourself: "Would a developer search for this exact term in a technical glossary?"
-- "Transformer" → YES (specific technique with a clear definition)
-- "Data Misinterpretation" → NO (general concept, not a technology)
-- "Deep Learning Architecture" → NO (umbrella category, too broad)
+Ask yourself: "Would a developer or tech learner search for this term in a glossary?"
+- "Transformer" → YES (specific architecture)
+- "fine-tuning" → YES (specific technique)
+- "RAG" → YES (specific pattern)
 - "AUC" → YES (specific metric with a formula)
-- "content accuracy" → NO (generic phrase, not a technical term)
 - "CNN" → YES (specific architecture)
+- "vLLM" → YES (specific tool/framework)
+- "quantization" → YES (specific optimization technique)
+- "edge computing" → YES (specific infrastructure concept)
 - "AI-powered" → NO (adjective/modifier, not a standalone term)
-- "AI-driven" → NO (adjective/modifier, not a standalone term)
-- "AI guidelines" → NO (general concept, not a technology)
 - "data collection" → NO (too generic, not a specific technique)
-- "vulnerability" → NO (too generic without qualifier like "SQL injection")
-If the answer is NO, do not include it.
+- "Deep Learning Architecture" → NO (umbrella category, too broad — extract "deep learning" instead)
 
 Respond in JSON format only."""
