@@ -5794,11 +5794,7 @@ body.auth-prompt-open {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  background: transparent;
   padding: 0.5rem 0;
   margin: -0.5rem 0 1rem;
   transition: opacity 200ms ease, top 300ms ease;
