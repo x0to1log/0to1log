@@ -665,20 +665,34 @@ const isFeatured = product?.featured ?? false;
   // ── String List Editors (features, use_cases) ────────
   function setupStringListEditor(listId, addBtnId, hiddenInputId) {
     const list = document.getElementById(listId);
-    const initialData = JSON.parse(document.getElementById(hiddenInputId)?.value || '[]');
+    if (!list) return () => [];
+
+    let initialData = [];
+    try {
+      initialData = JSON.parse(document.getElementById(hiddenInputId)?.value || '[]');
+    } catch { /* empty */ }
 
     function addRow(value = '') {
       const row = document.createElement('div');
       row.className = 'string-list-row';
-      row.innerHTML = `
-        <input class="admin-input string-list-input" type="text" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="Enter text..." />
-        <button class="admin-btn admin-btn-danger admin-btn--small string-list-remove" type="button">✕</button>
-      `;
-      row.querySelector('.string-list-remove').addEventListener('click', () => row.remove());
+      const input = document.createElement('input');
+      input.className = 'admin-input string-list-input';
+      input.type = 'text';
+      input.value = value || '';
+      input.placeholder = 'Enter text...';
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small string-list-remove';
+      removeBtn.type = 'button';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => row.remove());
+      row.appendChild(input);
+      row.appendChild(removeBtn);
       list.appendChild(row);
     }
 
-    initialData.forEach((v) => addRow(v));
+    if (Array.isArray(initialData)) {
+      initialData.forEach((v) => addRow(v));
+    }
     document.getElementById(addBtnId)?.addEventListener('click', () => addRow());
 
     return () => {
@@ -963,8 +977,17 @@ const isFeatured = product?.featured ?? false;
               parsed[key].forEach((val) => {
                 const row = document.createElement('div');
                 row.className = 'string-list-row';
-                row.innerHTML = `<input class="admin-input string-list-input" type="text" value="${String(val).replace(/"/g, '&quot;')}" /><button class="admin-btn admin-btn-danger admin-btn--small string-list-remove" type="button">✕</button>`;
-                row.querySelector('.string-list-remove').addEventListener('click', () => row.remove());
+                const input = document.createElement('input');
+                input.className = 'admin-input string-list-input';
+                input.type = 'text';
+                input.value = String(val);
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small string-list-remove';
+                removeBtn.type = 'button';
+                removeBtn.textContent = '✕';
+                removeBtn.addEventListener('click', () => row.remove());
+                row.appendChild(input);
+                row.appendChild(removeBtn);
                 list.appendChild(row);
               });
             }
