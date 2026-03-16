@@ -603,6 +603,10 @@ async def _generate_digest(
     )
 
     # Save EN + KO rows
+    missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
+    if missing:
+        logger.warning("Missing personas for %s digest: %s", digest_type, missing)
+
     t_save = time.monotonic()
     translation_group_id = str(uuid.uuid4())
     slug_base = f"{batch_id}-{digest_type}-digest"
@@ -635,12 +639,9 @@ async def _generate_digest(
             "category": "ai-news",
             "post_type": digest_type,
             "status": "draft",
-            "content_expert": personas.get("expert", PersonaOutput()).en if locale == "en"
-                else personas.get("expert", PersonaOutput()).ko,
-            "content_learner": personas.get("learner", PersonaOutput()).en if locale == "en"
-                else personas.get("learner", PersonaOutput()).ko,
-            "content_beginner": personas.get("beginner", PersonaOutput()).en if locale == "en"
-                else personas.get("beginner", PersonaOutput()).ko,
+            "content_expert": (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else None,
+            "content_learner": (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else None,
+            "content_beginner": (personas["beginner"].en if locale == "en" else personas["beginner"].ko) if "beginner" in personas else None,
             "source_urls": source_urls,
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "pipeline_batch_id": batch_id,
@@ -732,6 +733,7 @@ async def _generate_post(
         return 0, errors, cumulative_usage
 
     # Step 3: Write all 3 personas (log each individually)
+    personas: dict[str, PersonaOutput] = {}
     for persona_name in ("expert", "learner", "beginner"):
         t_p = time.monotonic()
         try:
@@ -759,10 +761,7 @@ async def _generate_post(
                 },
             )
 
-            # Store for later save
-            if not hasattr(fact_pack, '_personas'):
-                fact_pack._personas = {}
-            fact_pack._personas[persona_name] = persona_output
+            personas[persona_name] = persona_output
 
         except Exception as e:
             error_msg = f"{post_type} {persona_name} writing failed: {e}"
@@ -774,11 +773,14 @@ async def _generate_post(
                 error_message=error_msg, post_type=post_type,
             )
 
-    personas: dict[str, PersonaOutput] = getattr(fact_pack, '_personas', {})
     if not personas:
         return 0, errors, cumulative_usage
 
     # Step 4: Save EN + KO rows
+    missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
+    if missing:
+        logger.warning("Missing personas for %s %s: %s", post_type, candidate.title, missing)
+
     t_save = time.monotonic()
     translation_group_id = str(uuid.uuid4())
     base_slug = _slugify(fact_pack.headline or candidate.title)
@@ -799,12 +801,9 @@ async def _generate_post(
             "category": "ai-news",
             "post_type": post_type,
             "status": "draft",
-            "content_expert": personas.get("expert", PersonaOutput()).en if locale == "en"
-                else personas.get("expert", PersonaOutput()).ko,
-            "content_learner": personas.get("learner", PersonaOutput()).en if locale == "en"
-                else personas.get("learner", PersonaOutput()).ko,
-            "content_beginner": personas.get("beginner", PersonaOutput()).en if locale == "en"
-                else personas.get("beginner", PersonaOutput()).ko,
+            "content_expert": (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else None,
+            "content_learner": (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else None,
+            "content_beginner": (personas["beginner"].en if locale == "en" else personas["beginner"].ko) if "beginner" in personas else None,
             "fact_pack": fact_pack_json,
             "source_cards": source_cards,
             "source_urls": source_urls,
