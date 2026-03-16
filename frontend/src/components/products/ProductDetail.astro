@@ -75,31 +75,41 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
   </header>
 
   <!-- 3. Meta Chips -->
-  <div class="product-detail-chips">
-    {product.primary_category && (
-      <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
-        {product.primary_category}
-      </a>
+  <div class="product-detail-meta">
+    {(product.platform && product.platform.length > 0) && (
+      <div class="product-detail-meta-row">
+        {product.platform.map((p) => (
+          <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
+        ))}
+        {product.korean_support && (
+          <span class="product-detail-chip product-detail-chip--accent">
+            {locale === 'ko' ? '한국어' : 'Korean'} ✓
+          </span>
+        )}
+      </div>
     )}
-    {product.platform && product.platform.length > 0 && product.platform.map((p) => (
-      <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
-    ))}
-    {product.korean_support && (
-      <span class="product-detail-chip product-detail-chip--accent">
-        {locale === 'ko' ? '한국어' : 'Korean'} ✓
+    {product.tags && product.tags.length > 0 && (
+      <div class="product-detail-meta-row">
+        {product.tags.map((tag) => (
+          <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
+        ))}
+      </div>
+    )}
+    <div class="product-detail-meta-row">
+      {product.primary_category && (
+        <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
+          {product.primary_category}
+        </a>
+      )}
+      <span class="product-detail-chip product-detail-chip--stat">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        {product.view_count.toLocaleString()}
       </span>
-    )}
-    {product.tags && product.tags.length > 0 && product.tags.map((tag) => (
-      <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
-    ))}
-    <span class="product-detail-chip product-detail-chip--stat">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      {product.view_count.toLocaleString()}
-    </span>
-    <span class="product-detail-chip product-detail-chip--stat">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      {product.like_count.toLocaleString()}
-    </span>
+      <span class="product-detail-chip product-detail-chip--stat">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        {product.like_count.toLocaleString()}
+      </span>
+    </div>
   </div>
 
   <!-- 4. Key Features -->
