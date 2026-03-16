@@ -203,24 +203,26 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 7. Each news item should be 1-2 paragraphs at the depth specified by the persona guide
 8. These news items were collected TODAY — write in present tense for events, do not reference them as past events from weeks ago.
 9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
+10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". See the section definitions for both versions.
+11. If a section has no news items for the day, keep the section header and write a single parenthetical note — e.g. "(No notable releases today)" for en, "(오늘 주목할 만한 소식은 없습니다)" for ko. Do NOT omit the section.
 {handbook_section}
 
 ## Output JSON format
 ```json
 {{{{
   "en": "## One-Line Summary\\n...\\n\\n## LLM & SOTA Models\\n...",
-  "ko": "## \ud55c \uc904 \uc694\uc57d\\n...\\n\\n## LLM & SOTA Models\\n..."
+  "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA 모델\\n..."
 }}}}
 ```"""
 
 
 # --- Research Digest Sections (기술 정리 중심) ---
 
-RESEARCH_EXPERT_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models** — New models with benchmarks, parameters, architecture details. Include comparison tables where relevant.
-- **## Open Source & Repos** — Notable releases with GitHub/HuggingFace links, star counts, key features.
-- **## Research Papers** — Significant papers with arXiv links, core contribution, key results.
-- **## 기술적 시사점 / ## Technical Outlook** — How these developments connect and what direction they point to. 2-3 paragraphs."""
+RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
+- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models with benchmarks, parameters, architecture details. Include comparison tables where relevant.
+- **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases with GitHub/HuggingFace links, star counts, key features.
+- **## Research Papers (ko: ## 연구 논문)** — Significant papers with arXiv links, core contribution, key results.
+- **## Technical Outlook (ko: ## 기술적 시사점)** — How these developments connect and what direction they point to. 2-3 paragraphs."""
 
 RESEARCH_EXPERT_GUIDE = """Expert-level: Write for senior ML engineers and researchers.
 - Include specific benchmarks, parameter counts, FLOPs, latency numbers
@@ -228,11 +230,11 @@ RESEARCH_EXPERT_GUIDE = """Expert-level: Write for senior ML engineers and resea
 - Use precise technical terminology without simplification
 - Compare with prior SOTA where applicable"""
 
-RESEARCH_LEARNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models** — New models explained with context: what changed, why it matters for developers.
-- **## Open Source & Repos** — Notable releases: what they do, who would use them, how to get started.
-- **## Research Papers** — Key papers explained: the problem they solve, approach, and practical relevance.
-- **## 기술적 시사점 / ## Technical Outlook** — What developers should pay attention to. 2-3 paragraphs."""
+RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
+- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models explained with context: what changed, why it matters for developers.
+- **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do, who would use them, how to get started.
+- **## Research Papers (ko: ## 연구 논문)** — Key papers explained: the problem they solve, approach, and practical relevance.
+- **## Technical Outlook (ko: ## 기술적 시사점)** — What developers should pay attention to. 2-3 paragraphs."""
 
 RESEARCH_LEARNER_GUIDE = """Learner-level: Write for developers who follow AI but aren't ML specialists.
 - Explain technical concepts with enough context to understand
@@ -240,11 +242,11 @@ RESEARCH_LEARNER_GUIDE = """Learner-level: Write for developers who follow AI bu
 - Link to tutorials, docs, getting-started guides where applicable
 - Use technical terms but briefly explain less common ones"""
 
-RESEARCH_BEGINNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models** — New AI models: what they are, what they can do, explained simply.
-- **## Open Source & Repos** — Cool new tools anyone can try. What they do in plain language.
-- **## Research Papers** — Interesting discoveries: what scientists found and why it's exciting.
-- **## 기술적 시사점 / ## Technical Outlook** — What this means for the future of AI. 2-3 paragraphs."""
+RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
+- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New AI models: what they are, what they can do, explained simply.
+- **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Cool new tools anyone can try. What they do in plain language.
+- **## Research Papers (ko: ## 연구 논문)** — Interesting discoveries: what scientists found and why it's exciting.
+- **## Technical Outlook (ko: ## 기술적 시사점)** — What this means for the future of AI. 2-3 paragraphs."""
 
 RESEARCH_BEGINNER_GUIDE = """Beginner-level: Write for curious non-engineers (PMs, designers, students).
 - Use analogies and everyday comparisons to AID understanding
@@ -256,12 +258,12 @@ RESEARCH_BEGINNER_GUIDE = """Beginner-level: Write for curious non-engineers (PM
 
 # --- Business Digest Sections (연결 분석 + 액션 아이템) ---
 
-BUSINESS_EXPERT_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — Today's AI business scene in one sentence
-- **## Big Tech** — Major announcements from OpenAI, Google, Microsoft, Meta, etc. Include market implications.
-- **## Industry & Biz** — Startup funding, acquisitions, partnerships, regulatory changes. Include deal sizes.
-- **## New Tools** — New AI products/services launched. Include pricing, target users, competitive positioning.
-- **## 연결 분석 / ## Connecting the Dots** — How today's news items relate to each other. What trend or pattern emerges. What strategic moves are being made. 2-3 paragraphs.
-- **## 그래서 나는? / ## Action Items** — Specific, actionable recommendations for senior engineers and tech leads. What to evaluate, migrate, or prepare for."""
+BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
+- **## Big Tech (ko: ## 빅테크)** — Major announcements from OpenAI, Google, Microsoft, Meta, etc. Include market implications.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Startup funding, acquisitions, partnerships, regulatory changes. Include deal sizes.
+- **## New Tools (ko: ## 새로운 도구)** — New AI products/services launched. Include pricing, target users, competitive positioning.
+- **## Connecting the Dots (ko: ## 연결 분석)** — How today's news items relate to each other. What trend or pattern emerges. What strategic moves are being made. 2-3 paragraphs.
+- **## Action Items (ko: ## 그래서 나는?)** — Specific, actionable recommendations for senior engineers and tech leads. What to evaluate, migrate, or prepare for."""
 
 BUSINESS_EXPERT_GUIDE = """Expert-level: Write for CTOs, senior engineers, and tech leads.
 - Include specific numbers: funding amounts, pricing, market share
@@ -269,12 +271,12 @@ BUSINESS_EXPERT_GUIDE = """Expert-level: Write for CTOs, senior engineers, and t
 - Provide concrete action items with technical specificity
 - Reference industry reports and analyst insights where applicable"""
 
-BUSINESS_LEARNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — Today's AI business scene in one sentence
-- **## Big Tech** — What the big companies announced and why it matters for the industry.
-- **## Industry & Biz** — Who got funded, who partnered with whom, what regulations changed.
-- **## New Tools** — New tools worth knowing about: what they do and who they're for.
-- **## 연결 분석 / ## Connecting the Dots** — The bigger picture: what pattern do you see across today's news? 2-3 paragraphs.
-- **## 그래서 나는? / ## Action Items** — Practical suggestions for developers and PMs. What to try, learn, or watch."""
+BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
+- **## Big Tech (ko: ## 빅테크)** — What the big companies announced and why it matters for the industry.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Who got funded, who partnered with whom, what regulations changed.
+- **## New Tools (ko: ## 새로운 도구)** — New tools worth knowing about: what they do and who they're for.
+- **## Connecting the Dots (ko: ## 연결 분석)** — The bigger picture: what pattern do you see across today's news? 2-3 paragraphs.
+- **## Action Items (ko: ## 그래서 나는?)** — Practical suggestions for developers and PMs. What to try, learn, or watch."""
 
 BUSINESS_LEARNER_GUIDE = """Learner-level: Write for developers and PMs who want to stay informed.
 - Explain business context (why a $500M round matters)
@@ -282,12 +284,12 @@ BUSINESS_LEARNER_GUIDE = """Learner-level: Write for developers and PMs who want
 - Suggest concrete next steps: tools to try, skills to learn
 - Balance business insight with technical relevance"""
 
-BUSINESS_BEGINNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — Today's AI business scene in one sentence
-- **## Big Tech** — What big companies like Google and OpenAI did today, explained simply.
-- **## Industry & Biz** — Money moves and partnerships in AI, and why they matter.
-- **## New Tools** — New AI apps and tools you might want to try.
-- **## 연결 분석 / ## Connecting the Dots** — The simple version: what's the big story today? 2-3 paragraphs.
-- **## 그래서 나는? / ## Action Items** — Easy things you can do: apps to try, topics to read about."""
+BUSINESS_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
+- **## Big Tech (ko: ## 빅테크)** — What big companies like Google and OpenAI did today, explained simply.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Money moves and partnerships in AI, and why they matter.
+- **## New Tools (ko: ## 새로운 도구)** — New AI apps and tools you might want to try.
+- **## Connecting the Dots (ko: ## 연결 분석)** — The simple version: what's the big story today? 2-3 paragraphs.
+- **## Action Items (ko: ## 그래서 나는?)** — Easy things you can do: apps to try, topics to read about."""
 
 BUSINESS_BEGINNER_GUIDE = """Beginner-level: Write for curious non-engineers who want to understand AI business.
 - Use clear language but DO NOT remove technical/business terms
