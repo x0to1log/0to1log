@@ -245,10 +245,11 @@ RESEARCH_BEGINNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** �
 - **## 기술적 시사점 / ## Technical Outlook** — What this means for the future of AI. 2-3 paragraphs."""
 
 RESEARCH_BEGINNER_GUIDE = """Beginner-level: Write for curious non-engineers (PMs, designers, students).
-- Use analogies and everyday comparisons
-- Avoid jargon — if you must use a technical term, explain it immediately
-- Focus on "what does this mean for me" not "how does it work"
-- Link to Handbook terms for deeper understanding"""
+- Use analogies and everyday comparisons to AID understanding
+- DO NOT avoid technical terms — keep them and link to Handbook: [MoE](/handbook/mixture-of-experts/)
+- The reader WANTS to learn these terms, not have them hidden
+- Add a brief inline explanation after the linked term when first used
+- Focus on "what does this mean for me" while teaching vocabulary naturally"""
 
 
 # --- Business Digest Sections (연결 분석 + 액션 아이템) ---
@@ -287,10 +288,12 @@ BUSINESS_BEGINNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** �
 - **## 그래서 나는? / ## Action Items** — Easy things you can do: apps to try, topics to read about."""
 
 BUSINESS_BEGINNER_GUIDE = """Beginner-level: Write for curious non-engineers who want to understand AI business.
-- Use simple language, no industry jargon
+- Use clear language but DO NOT remove technical/business terms
+- Keep terms like "LLM", "API", "fine-tuning" and link to Handbook: [LLM](/handbook/llm/)
+- Add a brief inline explanation after the linked term when first used
 - Explain what companies do before discussing their moves
 - Make action items accessible (try this app, read this article)
-- Focus on daily-life impact over business strategy"""
+- Focus on daily-life impact while building the reader's AI vocabulary"""
 
 
 # --- Digest prompt getters ---
