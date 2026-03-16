@@ -693,22 +693,23 @@ Respond in JSON format only."""
 GENERATE_ADVANCED_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
-Generate ADVANCED-level content for a handbook term. This is Call 3 of 3 — you handle engineer-level content only. The term's definition (from Call 1) is provided as context.
+Generate KOREAN content only. English content will be generated in a separate call.
+
+Generate ADVANCED-level KOREAN content for a handbook term. This is Call 3 of 4 — you handle Korean engineer-level content only. The term's definition (from Call 1) is provided as context.
 
 DOMAIN CONTEXT:
 - Focus on the AI/IT meaning. Note cross-field differences if applicable.
 - Base content on established facts from official docs and papers.
 
 LANGUAGE RULE:
-- Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
-- Fields ending in `_en`: English headers and English body text only.
-- Do NOT use bilingual headers like "한국어 / English". One language per field.
+- Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
+- Do NOT use bilingual headers like "한국어 / English". Korean only.
 
 IMPORTANT: body_advanced must complement the basic version, NOT repeat the same content at a deeper level. Assume the reader already understands the basics.
 
 ---
 
-## body_advanced — 심화 (min 3000 chars per language)
+## body_advanced — 심화 (min 3000 chars)
 
 Target audience: Senior developers, ML engineers, tech leads. Must be sufficient for a senior engineer to read.
 Tone: Precise, technical. Assume CS fundamentals.
@@ -726,6 +727,59 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. 형식: [표시명](URL) — 한 줄 설명. 실제로 존재하는 URL만 포함.
 - **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. 형식: **용어** — 이 용어와의 기술적 관계. 선행 개념, 대안, 보완 개념, 확장 개념 포함.
 
+## Output JSON Structure
+
+```json
+{{
+  "adv_ko_1_technical": "기술적 정의...",
+  "adv_ko_2_formulas": "수식/도표...",
+  "adv_ko_3_howworks": "동작 원리...",
+  "adv_ko_4_code": "```python\\n...\\n```",
+  "adv_ko_5_practical": "실무 활용 + 주의점...",
+  "adv_ko_6_why": "왜 중요한가...",
+  "adv_ko_7_comm": "업계 대화 맥락...",
+  "adv_ko_8_refs": "[링크](URL) — 설명",
+  "adv_ko_9_related": "**용어** — 관계..."
+}}
+```
+
+## Quality Rules
+- Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
+- Include code snippets, formulas, and architecture details.
+- 📐 formulas/table sections MUST use markdown tables (| format).
+- Every section field must have substantive content.
+- Use **bold formatting** for key terms.
+- Reference links in refs fields must be real URLs to well-known resources.
+- Do NOT repeat content from the basic version.
+
+Respond in JSON format only."""
+
+
+GENERATE_ADVANCED_EN_PROMPT = """\
+You are a technical education writer for 0to1log, an AI/tech handbook platform.
+
+Generate ENGLISH content only. Korean content was generated in a separate call.
+
+Generate ADVANCED-level ENGLISH content for a handbook term. This is Call 4 of 4 — you handle English engineer-level content only. The term's definition (from Call 1) is provided as context.
+
+DOMAIN CONTEXT:
+- Focus on the AI/IT meaning. Note cross-field differences if applicable.
+- Base content on established facts from official docs and papers.
+
+LANGUAGE RULE:
+- All fields must be in English only.
+- Do NOT use bilingual headers like "한국어 / English". English only.
+
+IMPORTANT: body_advanced must complement the basic version, NOT repeat the same content at a deeper level. Assume the reader already understands the basics.
+
+---
+
+## body_advanced — Advanced (min 3000 chars)
+
+Target audience: Senior developers, ML engineers, tech leads. Must be sufficient for a senior engineer to read.
+Tone: Precise, technical. Assume CS fundamentals.
+Rule: Include code snippets, architecture details, formulas where relevant.
+
 ### Section key descriptions (English — adv_en_*):
 
 - **adv_en_1_technical**: Technical definition + core components and flow. Paper/official-doc level accuracy. Min 400 chars.
@@ -742,15 +796,6 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 
 ```json
 {{
-  "adv_ko_1_technical": "기술적 정의...",
-  "adv_ko_2_formulas": "수식/도표...",
-  "adv_ko_3_howworks": "동작 원리...",
-  "adv_ko_4_code": "```python\\n...\\n```",
-  "adv_ko_5_practical": "실무 활용 + 주의점...",
-  "adv_ko_6_why": "왜 중요한가...",
-  "adv_ko_7_comm": "업계 대화 맥락...",
-  "adv_ko_8_refs": "[링크](URL) — 설명",
-  "adv_ko_9_related": "**용어** — 관계...",
   "adv_en_1_technical": "...",
   "adv_en_2_formulas": "...",
   "adv_en_3_howworks": "...",

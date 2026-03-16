@@ -204,7 +204,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 8. These news items were collected TODAY — write in present tense for events, do not reference them as past events from weeks ago.
 9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
 10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". See the section definitions for both versions.
-11. If a section has no news items for the day, keep the section header and write a single parenthetical note — e.g. "(No notable releases today)" for en, "(오늘 주목할 만한 소식은 없습니다)" for ko. Do NOT omit the section.
+11. If a section has no news items for the day, OMIT the section entirely. Do NOT include an empty header or placeholder text. Focus the output on sections that have actual news — this gives more depth to what matters.
 {handbook_section}
 
 ## Output JSON format

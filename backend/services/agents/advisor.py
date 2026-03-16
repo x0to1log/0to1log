@@ -41,6 +41,7 @@ from services.agents.prompts_advisor import (
     GENERATE_BASIC_PROMPT,
     GENERATE_BASIC_EN_PROMPT,
     GENERATE_ADVANCED_PROMPT,
+    GENERATE_ADVANCED_EN_PROMPT,
     EXTRACT_TERMS_PROMPT,
 )
 
@@ -660,11 +661,12 @@ async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str,
     source: str = "manual",
 ) -> tuple[dict, dict, list[str]]:
-    """Auto-generate all empty fields for a handbook term via 3 LLM calls.
+    """Auto-generate all empty fields for a handbook term via 4 LLM calls.
 
     Call 1: meta + KO Basic (term_full, korean_full, categories, definition, body_basic_ko)
     Call 2: EN Basic (body_basic_en, with KO definition as context)
-    Call 3: Advanced (body_advanced, with definition as context)
+    Call 3: KO Advanced (body_advanced_ko, with definition as context)
+    Call 4: EN Advanced (body_advanced_en, with definition as context)
 
     Args:
         source: "manual" (admin editor) or "pipeline" (auto-extraction)
@@ -744,7 +746,7 @@ async def _run_generate_term(
     )
     _log_handbook_stage("handbook.generate.basic.en", usage2)
 
-    # --- Call 3: Advanced (with definition as context) ---
+    # --- Call 3: KO Advanced (with definition as context) ---
     definition_context = basic_data.get("definition_en", "") or en_basic_data.get("definition_en", "") or req.definition_en
     definition_ko_context = basic_data.get("definition_ko", "") or req.definition_ko
     advanced_prompt = (
@@ -764,18 +766,41 @@ async def _run_generate_term(
         temperature=0.3,
         max_tokens=16000,
     )
-    advanced_data = parse_ai_json(resp3.choices[0].message.content, "Handbook-generate-advanced")
+    advanced_ko_data = parse_ai_json(resp3.choices[0].message.content, "Handbook-generate-advanced-ko")
     usage3 = extract_usage_metrics(resp3, model)
 
     logger.info(
-        "Handbook generate call 3 (advanced) for '%s': %d tokens",
+        "Handbook generate call 3 (advanced KO) for '%s': %d tokens",
         req.term, usage3.get("tokens_used", 0),
     )
-    _log_handbook_stage("handbook.generate.advanced", usage3)
+    _log_handbook_stage("handbook.generate.advanced.ko", usage3)
+
+    # --- Call 4: EN Advanced (with definition as context) ---
+    resp4 = await client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": GENERATE_ADVANCED_EN_PROMPT},
+            {"role": "user", "content": advanced_prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+        max_tokens=16000,
+    )
+    advanced_en_data = parse_ai_json(resp4.choices[0].message.content, "Handbook-generate-advanced-en")
+    usage4 = extract_usage_metrics(resp4, model)
+
+    logger.info(
+        "Handbook generate call 4 (advanced EN) for '%s': %d tokens",
+        req.term, usage4.get("tokens_used", 0),
+    )
+    _log_handbook_stage("handbook.generate.advanced.en", usage4)
 
     # --- Merge results ---
-    raw_data = {**basic_data, **en_basic_data, **advanced_data}
-    merged_usage = merge_usage_metrics(merge_usage_metrics(usage1, usage2), usage3)
+    raw_data = {**basic_data, **en_basic_data, **advanced_ko_data, **advanced_en_data}
+    merged_usage = merge_usage_metrics(
+        merge_usage_metrics(usage1, usage2),
+        merge_usage_metrics(usage3, usage4),
+    )
 
     # --- Assemble section keys into markdown ---
     data = _assemble_all_sections(raw_data)

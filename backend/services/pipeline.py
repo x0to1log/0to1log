@@ -529,7 +529,7 @@ async def _generate_digest(
     # Build user prompt from classified news items
     news_items = []
     for item in classified:
-        body = raw_content_map.get(item.url, item.snippet)[:2000]
+        body = raw_content_map.get(item.url, item.snippet)[:4000]
         news_items.append(
             f"### [{item.subcategory}] {item.title}\n"
             f"URL: {item.url}\n"
