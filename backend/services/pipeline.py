@@ -254,6 +254,11 @@ async def _extract_and_create_handbook_terms(
         if not term_name:
             continue
 
+        # Skip overly broad terms (3+ words are usually categories, not specific terms)
+        if len(term_name.split()) > 3:
+            logger.info("Skipping '%s' — too many words (likely a category, not a term)", term_name)
+            continue
+
         # Skip terms with invalid/missing category (non-IT domain)
         category = term_info.get("category", "")
         if category not in VALID_CATEGORIES:

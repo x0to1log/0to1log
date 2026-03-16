@@ -680,6 +680,13 @@ Format: **Term** — why it's related (in simple terms)
 - Every section must contain substantive content — no empty sections or placeholders.
 - Use **bold formatting** for key terms throughout.
 
+## MANDATORY CHECKLIST
+Before responding, verify:
+1. body_basic MUST contain ALL 8 H2 sections with emoji prefixes: 💡, 🍎, 📊, ❓, 🔧, ⚠️, 💬, 🔗
+2. body_basic MUST contain at least 3 handbook links in format [term](/handbook/slug/)
+3. Do NOT skip the last sections (⚠️, 💬, 🔗) — these are the most commonly missed.
+4. Every section must have substantive content, not just a header.
+
 Respond in JSON format only."""
 
 
@@ -816,6 +823,13 @@ Include: prerequisites, alternatives, complementary concepts, extensions.
 - Reference links in 📚 must be real URLs to well-known resources.
 - Do NOT repeat content from the basic version.
 
+## MANDATORY CHECKLIST
+Before responding, verify:
+1. body_advanced MUST contain ALL 9 H2 sections with emoji prefixes: 💡, 📐, 🏗️, 💻, ✅, ❓, 💬, 📚, 🔗
+2. body_advanced MUST contain at least 5 handbook links in format [term](/handbook/slug/)
+3. Do NOT skip the last sections (💬, 📚, 🔗) — these are the most commonly missed.
+4. Every section must have substantive content, not just a header.
+
 Respond in JSON format only."""
 
 EXTRACT_TERMS_PROMPT = """\
@@ -869,5 +883,15 @@ Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI 
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
 - When in doubt whether a term is IT/CS/AI, skip it
+
+## Self-check before including each term
+Ask yourself: "Would a developer search for this exact term in a technical glossary?"
+- "Transformer" → YES (specific technique with a clear definition)
+- "Data Misinterpretation" → NO (general concept, not a technology)
+- "Deep Learning Architecture" → NO (umbrella category, too broad)
+- "AUC" → YES (specific metric with a formula)
+- "content accuracy" → NO (generic phrase, not a technical term)
+- "CNN" → YES (specific architecture)
+If the answer is NO, do not include it.
 
 Respond in JSON format only."""

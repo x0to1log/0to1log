@@ -628,6 +628,28 @@ async def _run_generate_term(
             warnings.append(f"{field}: {err['msg']}")
         logger.warning("Handbook generate validation: %s", warnings)
 
+    # Check section completeness and handbook links
+    for lang in ("ko", "en"):
+        basic_key = f"body_basic_{lang}"
+        basic_content = data.get(basic_key, "")
+        if basic_content:
+            h2_count = basic_content.count("## ")
+            if h2_count < 8:
+                warnings.append(f"{basic_key}: only {h2_count}/8 sections found")
+            link_count = basic_content.count("/handbook/")
+            if link_count < 1:
+                warnings.append(f"{basic_key}: no handbook links found")
+
+        adv_key = f"body_advanced_{lang}"
+        adv_content = data.get(adv_key, "")
+        if adv_content:
+            h2_count = adv_content.count("## ")
+            if h2_count < 9:
+                warnings.append(f"{adv_key}: only {h2_count}/9 sections found")
+            link_count = adv_content.count("/handbook/")
+            if link_count < 1:
+                warnings.append(f"{adv_key}: no handbook links found")
+
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",
         req.term, merged_usage.get("tokens_used", 0), len(warnings),
