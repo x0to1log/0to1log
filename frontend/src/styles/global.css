@@ -46,10 +46,10 @@
    DARK THEME (Default)
    =========================== */
 [data-theme="dark"] {
-  --color-bg-primary: #18140F;
-  --color-bg-secondary: #120F0C;
-  --color-bg-tertiary: #1F1A15;
-  --color-input-surface: #221D18;
+  --color-bg-primary: #181412;
+  --color-bg-secondary: #12100E;
+  --color-bg-tertiary: #1F1B18;
+  --color-input-surface: #221E1A;
   --color-text-primary: #E0D8C3;
   --color-text-secondary: #A39D8E;
   --color-text-muted: #948C7E;
