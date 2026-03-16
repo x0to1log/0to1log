@@ -5,7 +5,8 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
+import { getHandbookCategoryLabel, getHandbookCategories } from '../../../lib/handbookCategories';
+import { getHandbookCategoryIcon } from '../../../lib/handbookCategoryIcons';
 import { localField } from '../../../lib/handbookUtils';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
@@ -61,9 +62,7 @@ if (supabase) {
   railTerms = data ?? [];
 }
 
-const categories = Array.from(
-  new Set(terms.flatMap((t: any) => t.categories || []).filter(Boolean))
-);
+const categories = getHandbookCategories();
 
 // Site content from DB (fallback to hardcoded values)
 const sc = await getSiteContents(
@@ -98,6 +97,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
         </button>
         {categories.map((cat) => (
           <button type="button" class="handbook-filter-btn" data-filter={cat} aria-pressed="false">
+            <span class="handbook-filter-icon" set:html={getHandbookCategoryIcon(cat)} />
             {getHandbookCategoryLabel(locale, cat)}
           </button>
         ))}
