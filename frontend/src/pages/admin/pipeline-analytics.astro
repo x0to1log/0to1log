@@ -112,7 +112,9 @@ type DateGroup = {
 
 const dateMap = new Map<string, DateGroup>();
 for (const run of runs) {
-  const dateKey = run.startedAt.slice(0, 10); // YYYY-MM-DD
+  // Use batch date from run_key (news target date), not execution date
+  const batchMatch = run.runKey.match(/\d{4}-\d{2}-\d{2}/);
+  const dateKey = batchMatch ? batchMatch[0] : run.startedAt.slice(0, 10);
   if (!dateMap.has(dateKey)) {
     dateMap.set(dateKey, { date: dateKey, stages: [], totalCost: 0, totalTokens: 0 });
   }
