@@ -62,6 +62,10 @@ export interface ProductDetailData {
   features_ko: string[];
   use_cases: string[];
   use_cases_ko: string[];
+  getting_started: string[];
+  getting_started_ko: string[];
+  pricing_detail: string | null;
+  pricing_detail_ko: string | null;
 }
 
 export interface ProductsPageData {
@@ -212,6 +216,10 @@ export async function getProductDetailData(
     features_ko: (raw.features_ko as string[]) ?? [],
     use_cases: (raw.use_cases as string[]) ?? [],
     use_cases_ko: (raw.use_cases_ko as string[]) ?? [],
+    getting_started: (raw.getting_started as string[]) ?? [],
+    getting_started_ko: (raw.getting_started_ko as string[]) ?? [],
+    pricing_detail: raw.pricing_detail ?? null,
+    pricing_detail_ko: raw.pricing_detail_ko ?? null,
   };
 
   const rawDescription =
@@ -249,6 +257,37 @@ export async function fetchAlternatives(
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
   }));
+}
+
+// =============================================================================
+// Detail page: related news
+// =============================================================================
+
+export interface RelatedNewsItem {
+  slug: string;
+  title: string;
+  published_at: string;
+}
+
+export async function fetchRelatedNews(
+  productName: string,
+  productUrl: string,
+  limit = 5,
+): Promise<RelatedNewsItem[]> {
+  const db = getPublicSupabase();
+  if (!db) return [];
+
+  // Search news_posts where title contains product name
+  const { data } = await db
+    .from('news_posts')
+    .select('slug, title, published_at')
+    .eq('status', 'published')
+    .eq('locale', 'en')
+    .ilike('title', `%${productName}%`)
+    .order('published_at', { ascending: false })
+    .limit(limit);
+
+  return (data ?? []) as RelatedNewsItem[];
 }
 
 // =============================================================================
