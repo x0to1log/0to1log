@@ -9187,7 +9187,8 @@ pre:hover .blog-code-copy {
   object-fit: contain;
   border-radius: 16px;
   flex-shrink: 0;
-  background: var(--color-bg-secondary);
+  background: #fff;
+  padding: 4px;
 }
 
 .product-detail-hero-text {
