@@ -13,21 +13,6 @@ const tr = t[locale];
 ---
 
 <div class="product-filter-bar">
-  <nav class="product-filter-tabs" aria-label={tr['products.title']}>
-    <button class="product-filter-tab active" data-category="all" type="button">
-      {tr['products.categoryAll']}
-    </button>
-    {categories.map((cat) => (
-      <button
-        class="product-filter-tab"
-        data-category={cat.id}
-        type="button"
-      >
-        <span class="product-filter-tab-icon" set:html={getCategoryIcon(cat.id)} />
-        <span>{locale === 'ko' ? cat.label_ko : cat.label_en}</span>
-      </button>
-    ))}
-  </nav>
   <div class="product-filter-search">
     <input
       type="search"
@@ -43,6 +28,21 @@ const tr = t[locale];
       )}
     />
   </div>
+  <nav class="product-filter-tabs" aria-label={tr['products.title']}>
+    <button class="product-filter-tab active" data-category="all" type="button">
+      {tr['products.categoryAll']}
+    </button>
+    {categories.map((cat) => (
+      <button
+        class="product-filter-tab"
+        data-category={cat.id}
+        type="button"
+      >
+        <span class="product-filter-tab-icon" set:html={getCategoryIcon(cat.id)} />
+        <span>{locale === 'ko' ? cat.label_ko : cat.label_en}</span>
+      </button>
+    ))}
+  </nav>
 </div>
 
 <script>
