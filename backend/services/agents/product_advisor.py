@@ -96,6 +96,25 @@ Do NOT output this analysis — use it to inform your JSON.
 12. **use_cases_ko** (KO, array of 2-3 strings):
     - "[대상]이 [상황]할 때" format
 
+13. **getting_started** (EN, array of exactly 3 strings):
+    - Step 1: How to sign up or access the tool
+    - Step 2: First meaningful action to take
+    - Step 3: A power-user tip or next step
+    - Each step: one sentence, start with a verb
+    - GOOD: ["Create a free account at chat.openai.com", "Ask your first question or upload a file to analyze", "Build a Custom GPT to automate your recurring workflow"]
+
+14. **getting_started_ko** (KO, array of exactly 3 strings):
+    - Same 3 steps in natural Korean
+
+15. **pricing_detail** (EN, markdown string):
+    - A concise markdown table or bullet list of pricing plans
+    - Include plan name, price, and key limits/features per plan
+    - If pricing is not available on the page, use null
+    - GOOD: "| Plan | Price | Includes |\n|---|---|---|\n| Free | $0 | 10 messages/day |\n| Plus | $20/mo | Unlimited, GPT-4o |"
+
+16. **pricing_detail_ko** (KO, markdown string):
+    - Same pricing info in Korean. Translate plan descriptions, keep $ prices as-is
+
 ## Examples
 
 ### ChatGPT (assistant)
@@ -114,7 +133,11 @@ Do NOT output this analysis — use it to inform your JSON.
   "features": ["Multi-modal input: text, images, files, and voice in one conversation", "Web browsing and real-time information retrieval", "Code Interpreter for data analysis and chart generation", "Image generation with DALL-E integration", "Custom GPTs for specialized workflows"],
   "features_ko": ["텍스트, 이미지, 파일, 음성을 하나의 대화에서 멀티모달 입력", "웹 브라우징과 실시간 정보 검색", "Code Interpreter로 데이터 분석과 차트 생성", "DALL-E 통합 이미지 생성", "맞춤형 GPTs로 전문 워크플로우 구성"],
   "use_cases": ["Knowledge workers drafting and refining documents with AI feedback", "Developers debugging code and generating boilerplate in conversation", "Students researching topics with cited sources and summaries"],
-  "use_cases_ko": ["지식 노동자가 AI 피드백으로 문서를 작성·수정할 때", "개발자가 대화형으로 코드를 디버깅하고 보일러플레이트를 생성할 때", "학생이 출처가 달린 요약으로 주제를 리서치할 때"]
+  "use_cases_ko": ["지식 노동자가 AI 피드백으로 문서를 작성·수정할 때", "개발자가 대화형으로 코드를 디버깅하고 보일러플레이트를 생성할 때", "학생이 출처가 달린 요약으로 주제를 리서치할 때"],
+  "getting_started": ["Create a free account at chat.openai.com", "Ask your first question or upload a file to analyze", "Build a Custom GPT to automate your recurring workflow"],
+  "getting_started_ko": ["chat.openai.com에서 무료 계정 생성", "첫 질문을 하거나 파일을 업로드해서 분석", "반복 작업을 자동화하는 Custom GPT 만들기"],
+  "pricing_detail": "| Plan | Price | Includes |\n|---|---|---|\n| Free | $0 | GPT-4o mini, 제한적 GPT-4o |\n| Plus | $20/mo | GPT-4o 무제한, DALL-E, Advanced Voice |\n| Team | $30/mo/seat | 협업, 더 긴 컨텍스트, 관리자 콘솔 |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\n|---|---|---|\n| Free | $0 | GPT-4o mini, 제한적 GPT-4o |\n| Plus | $20/월 | GPT-4o 무제한, DALL-E, Advanced Voice |\n| Team | $30/월/인 | 협업, 더 긴 컨텍스트, 관리자 콘솔 |"
 }
 ```
 
@@ -134,7 +157,11 @@ Do NOT output this analysis — use it to inform your JSON.
   "features": ["Inline code generation from natural language comments", "Multi-file refactoring with project-wide context", "Chat with your codebase using @-mentions for files and symbols", "Supports Claude, GPT-4o, and custom model endpoints", "Built on VS Code with full extension compatibility"],
   "features_ko": ["자연어 주석에서 인라인 코드 생성", "프로젝트 전체 컨텍스트를 활용한 멀티파일 리팩토링", "@멘션으로 파일과 심볼을 지정해 코드베이스와 대화", "Claude, GPT-4o, 커스텀 모델 엔드포인트 지원", "VS Code 기반으로 모든 확장 프로그램 호환"],
   "use_cases": ["Developers refactoring legacy codebases across multiple files", "Teams prototyping new features with AI-assisted code generation", "Solo developers who want IDE-level AI without switching editors"],
-  "use_cases_ko": ["레거시 코드베이스를 멀티파일로 리팩토링하는 개발자", "AI 코드 생성으로 새 기능을 빠르게 프로토타이핑하는 팀", "에디터를 바꾸지 않고 IDE 수준 AI를 원하는 1인 개발자"]
+  "use_cases_ko": ["레거시 코드베이스를 멀티파일로 리팩토링하는 개발자", "AI 코드 생성으로 새 기능을 빠르게 프로토타이핑하는 팀", "에디터를 바꾸지 않고 IDE 수준 AI를 원하는 1인 개발자"],
+  "getting_started": ["Download Cursor from cursor.com", "Open an existing project or create a new one", "Press Cmd+K to generate code from a natural language prompt"],
+  "getting_started_ko": ["cursor.com에서 Cursor 다운로드", "기존 프로젝트를 열거나 새 프로젝트 생성", "Cmd+K를 눌러 자연어 프롬프트로 코드 생성"],
+  "pricing_detail": "| Plan | Price | Includes |\n|---|---|---|\n| Hobby | $0 | 2000 completions/mo |\n| Pro | $20/mo | Unlimited, fast models |\n| Business | $40/mo/seat | Admin, SSO, audit logs |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\n|---|---|---|\n| Hobby | $0 | 월 2000 완성 |\n| Pro | $20/월 | 무제한, 빠른 모델 |\n| Business | $40/월/인 | 관리자, SSO, 감사 로그 |"
 }
 ```
 
@@ -154,7 +181,11 @@ Do NOT output this analysis — use it to inform your JSON.
   "features": ["Text-to-image generation with industry-leading aesthetic quality", "Style tuning with --style, --stylize, and reference images", "Upscaling and variations from generated results", "Pan and zoom for extending image compositions", "Describe command to reverse-engineer prompts from images"],
   "features_ko": ["업계 최고 수준의 미적 품질로 텍스트→이미지 생성", "--style, --stylize, 참조 이미지로 스타일 튜닝", "생성된 결과물에서 업스케일링과 변형 생성", "팬/줌으로 이미지 구도 확장", "Describe 명령어로 이미지에서 프롬프트 역추출"],
   "use_cases": ["Designers creating concept art and mood boards for client pitches", "Content creators generating unique visuals for social media and blogs", "Game developers prototyping character and environment art"],
-  "use_cases_ko": ["클라이언트 프레젠테이션용 컨셉 아트와 무드보드를 만드는 디자이너", "소셜 미디어와 블로그용 독창적 비주얼을 생성하는 콘텐츠 크리에이터", "캐릭터와 환경 아트를 프로토타이핑하는 게임 개발자"]
+  "use_cases_ko": ["클라이언트 프레젠테이션용 컨셉 아트와 무드보드를 만드는 디자이너", "소셜 미디어와 블로그용 독창적 비주얼을 생성하는 콘텐츠 크리에이터", "캐릭터와 환경 아트를 프로토타이핑하는 게임 개발자"],
+  "getting_started": ["Subscribe to a plan at midjourney.com", "Join the Discord server and use /imagine with a text prompt", "Experiment with --style and --stylize flags to refine your aesthetic"],
+  "getting_started_ko": ["midjourney.com에서 플랜 구독", "Discord 서버에 가입하고 /imagine으로 텍스트 프롬프트 입력", "--style과 --stylize 플래그로 원하는 스타일 조정"],
+  "pricing_detail": "| Plan | Price | Includes |\n|---|---|---|\n| Basic | $10/mo | ~200 images/mo |\n| Standard | $30/mo | 15h fast generation |\n| Pro | $60/mo | 30h fast, stealth mode |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\n|---|---|---|\n| Basic | $10/월 | 약 200장/월 |\n| Standard | $30/월 | 15시간 빠른 생성 |\n| Pro | $60/월 | 30시간 빠른 생성, 스텔스 모드 |"
 }
 ```
 
@@ -174,7 +205,11 @@ Do NOT output this analysis — use it to inform your JSON.
   "features": ["Visual workflow builder with 400+ pre-built app integrations", "JavaScript/Python code nodes for custom logic", "Self-hostable with Docker or native installation", "AI agent nodes for LLM-powered decision making", "Webhook triggers and cron scheduling for event-driven automation"],
   "features_ko": ["400개 이상의 앱 연동이 내장된 비주얼 워크플로우 빌더", "커스텀 로직을 위한 JavaScript/Python 코드 노드", "Docker 또는 네이티브 설치로 셀프호스트 가능", "LLM 기반 의사결정을 위한 AI 에이전트 노드", "이벤트 기반 자동화를 위한 웹훅 트리거와 크론 스케줄링"],
   "use_cases": ["DevOps teams automating deployment pipelines and monitoring alerts", "Marketers connecting CRM, email, and analytics tools without engineering help", "AI builders chaining LLM calls with data sources and external APIs"],
-  "use_cases_ko": ["배포 파이프라인과 모니터링 알림을 자동화하는 DevOps 팀", "엔지니어 도움 없이 CRM, 이메일, 분석 도구를 연결하는 마케터", "LLM 호출을 데이터 소스 및 외부 API와 체이닝하는 AI 빌더"]
+  "use_cases_ko": ["배포 파이프라인과 모니터링 알림을 자동화하는 DevOps 팀", "엔지니어 도움 없이 CRM, 이메일, 분석 도구를 연결하는 마케터", "LLM 호출을 데이터 소스 및 외부 API와 체이닝하는 AI 빌더"],
+  "getting_started": ["Sign up at n8n.io or self-host with Docker", "Create your first workflow by connecting two apps with a trigger", "Add an AI Agent node to make LLM-powered decisions in your flow"],
+  "getting_started_ko": ["n8n.io에서 가입하거나 Docker로 셀프호스트", "트리거로 두 앱을 연결하는 첫 워크플로우 생성", "AI Agent 노드를 추가해 LLM 기반 의사결정 구현"],
+  "pricing_detail": "| Plan | Price | Includes |\n|---|---|---|\n| Community | $0 | Self-host, unlimited workflows |\n| Starter | $20/mo | Cloud, 2500 executions |\n| Pro | $50/mo | 10K executions, advanced features |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\n|---|---|---|\n| Community | $0 | 셀프호스트, 무제한 워크플로우 |\n| Starter | $20/월 | 클라우드, 2500 실행 |\n| Pro | $50/월 | 10K 실행, 고급 기능 |"
 }
 ```
 
@@ -205,7 +240,11 @@ Respond with JSON only:
   "features": ["...", "..."],
   "features_ko": ["...", "..."],
   "use_cases": ["...", "..."],
-  "use_cases_ko": ["...", "..."]
+  "use_cases_ko": ["...", "..."],
+  "getting_started": ["Step 1", "Step 2", "Step 3"],
+  "getting_started_ko": ["1단계", "2단계", "3단계"],
+  "pricing_detail": "| Plan | Price | Includes |\\n|---|---|---|\\n| Free | $0 | ... |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 |\\n|---|---|---|\\n| Free | $0 | ... |"
 }"""
 
 TAGLINE_EN_SYSTEM = """You write punchy product taglines for an AI publication.
