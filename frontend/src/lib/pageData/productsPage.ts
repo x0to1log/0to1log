@@ -31,6 +31,7 @@ export interface ProductCardData {
   featured_order: number | null;
   demo_media: Array<{ type: string; url: string }> | null;
   view_count: number;
+  sort_order: number | null;
 }
 
 export interface ProductDetailData {
@@ -89,7 +90,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count';
+  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
@@ -113,11 +114,25 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
   const categories = (categoriesRes.data ?? []) as ProductCategory[];
   const allProducts = (productsRes.data ?? []) as ProductCardData[];
 
+  // Category sort order map for grouping products by category
+  const catOrder = Object.fromEntries(categories.map((c) => [c.id, c.sort_order]));
+
   const resolvedProducts = allProducts.map((p) => ({
     ...p,
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
   }));
+
+  // Sort: category order → product sort_order → name
+  resolvedProducts.sort((a, b) => {
+    const catA = catOrder[a.primary_category] ?? 99;
+    const catB = catOrder[b.primary_category] ?? 99;
+    if (catA !== catB) return catA - catB;
+    const sortA = a.sort_order ?? 99;
+    const sortB = b.sort_order ?? 99;
+    if (sortA !== sortB) return sortA - sortB;
+    return a.name.localeCompare(b.name);
+  });
 
   // Spotlight: 가장 높은 featured_order를 가진 featured 제품 1개
   const spotlightProduct = resolvedProducts
