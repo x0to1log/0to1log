@@ -37,6 +37,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     korean_support, released_at,
     featured, featured_order, sort_order,
     features, features_ko, use_cases, use_cases_ko,
+    getting_started, getting_started_ko, pricing_detail, pricing_detail_ko,
   } = body;
 
   if (!name?.trim()) {
@@ -75,6 +76,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (features_ko !== undefined) row.features_ko = Array.isArray(features_ko) ? features_ko : [];
   if (use_cases !== undefined) row.use_cases = Array.isArray(use_cases) ? use_cases : [];
   if (use_cases_ko !== undefined) row.use_cases_ko = Array.isArray(use_cases_ko) ? use_cases_ko : [];
+  if (getting_started !== undefined) row.getting_started = Array.isArray(getting_started) ? getting_started : [];
+  if (getting_started_ko !== undefined) row.getting_started_ko = Array.isArray(getting_started_ko) ? getting_started_ko : [];
+  if (pricing_detail !== undefined) row.pricing_detail = pricing_detail || null;
+  if (pricing_detail_ko !== undefined) row.pricing_detail_ko = pricing_detail_ko || null;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,

@@ -3,7 +3,7 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { getProductDetailData, fetchAlternatives } from '../../../lib/pageData/productsPage';
+import { getProductDetailData, fetchAlternatives, fetchRelatedNews } from '../../../lib/pageData/productsPage';
 import ProductDetail from '../../../components/products/ProductDetail.astro';
 
 const locale = 'en';
@@ -12,6 +12,7 @@ const { product, htmlDescription, error } = await getProductDetailData(slug ?? '
 const alternatives = product
   ? await fetchAlternatives(product.primary_category, slug ?? '', locale)
   : [];
+const relatedNews = product ? await fetchRelatedNews(product.name, product.url) : [];
 
 if (!product && !error) {
   Astro.response.status = 404;
@@ -25,7 +26,7 @@ if (!product && !error) {
   altSlug={product?.slug}
 >
   {product ? (
-    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} />
+    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} relatedNews={relatedNews} />
   ) : (
     <div class="products-page">
       <p class="products-not-found">
