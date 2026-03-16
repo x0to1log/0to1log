@@ -1,0 +1,38 @@
+<h2>상세페이지 레이아웃 방향</h2>
+<p class="subtitle">Sidebar를 유지할지, 단일 컬럼으로 갈지 — 클릭해서 선택해주세요</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Clean Editorial (단일 컬럼)</h3>
+      <p>Sidebar 제거. 메타 정보(pricing, platform, tags)를 Hero 아래 가로 칩으로 배치. 위에서 아래로 자연스럽게 흐름. Features는 2열 카드 그리드. 모바일과 데스크탑 경험 동일.</p>
+      <div class="pros-cons" style="margin-top:0.75rem;">
+        <div class="pros"><h4>Pros</h4><ul><li>깔끔하고 일관된 레이아웃</li><li>모바일/데스크탑 같은 경험</li><li>콘텐츠 흐름이 자연스러움</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>데스크탑 여백이 넓어질 수 있음</li><li>Sidebar 정보가 스크롤 아래로 밀림</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Sidebar 유지 (현재 구조 개선)</h3>
+      <p>데스크탑에서 2컬럼 유지. Sidebar에 pricing, platform, tags, CTA 버튼 sticky 고정. 모바일에서는 Hero 아래 칩으로 전환.</p>
+      <div class="pros-cons" style="margin-top:0.75rem;">
+        <div class="pros"><h4>Pros</h4><ul><li>데스크탑에서 정보 밀도 높음</li><li>CTA가 항상 보임 (sticky)</li><li>기존 코드 변경 최소화</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>모바일에서 Sidebar가 아래로 밀림</li><li>지저분해 보일 수 있음</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:2rem;">
+  <h3>공통 개선 (둘 다 적용)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.75rem;">
+    <div style="background:rgba(255,255,255,0.05);padding:0.75rem;border-radius:6px;font-size:0.85rem;">카드에서 로고 제거 → 상세페이지에서만 로고</div>
+    <div style="background:rgba(255,255,255,0.05);padding:0.75rem;border-radius:6px;font-size:0.85rem;">이모지(👁♡) → SVG 아이콘</div>
+    <div style="background:rgba(255,255,255,0.05);padding:0.75rem;border-radius:6px;font-size:0.85rem;">카테고리 뱃지 → 클릭 시 /products/?cat= 링크</div>
+    <div style="background:rgba(255,255,255,0.05);padding:0.75rem;border-radius:6px;font-size:0.85rem;">하단 FAQ 아래 CTA 반복</div>
+  </div>
+</div>

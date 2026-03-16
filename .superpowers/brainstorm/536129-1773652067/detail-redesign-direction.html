@@ -1,0 +1,121 @@
+<h2>상세페이지 리디자인 방향</h2>
+<p class="subtitle">현재 구조 vs 개선안 — 어떤 방향이 좋을까요?</p>
+
+<div class="cards">
+  <!-- Option A: Clean Editorial -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a1a;padding:1.5rem;border-radius:8px;font-family:system-ui;color:#e0d8c3;">
+        <!-- Hero -->
+        <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1.5rem;">
+          <div style="width:56px;height:56px;border-radius:12px;background:#2a2520;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:1.5rem;font-weight:700;color:#c3a370;">C</span>
+          </div>
+          <div>
+            <div style="font-size:1.3rem;font-weight:700;">ChatGPT</div>
+            <div style="font-size:0.75rem;color:#9a9080;">Conversational AI for writing, analysis, and code</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
+            <span style="background:#22c55e20;color:#86efac;font-size:0.65rem;padding:0.15rem 0.5rem;border-radius:99px;">Freemium</span>
+            <span style="background:#c3a370;color:#1a1a1a;font-size:0.75rem;padding:0.35rem 0.8rem;border-radius:4px;font-weight:600;">Visit Site ↗</span>
+          </div>
+        </div>
+        <!-- Chips row -->
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+          <span style="font-size:0.65rem;background:#2a2520;padding:0.2rem 0.5rem;border-radius:3px;color:#9a9080;">Web</span>
+          <span style="font-size:0.65rem;background:#2a2520;padding:0.2rem 0.5rem;border-radius:3px;color:#9a9080;">iOS</span>
+          <span style="font-size:0.65rem;background:#2a2520;padding:0.2rem 0.5rem;border-radius:3px;color:#9a9080;">Android</span>
+          <span style="font-size:0.65rem;background:#2a2520;padding:0.2rem 0.5rem;border-radius:3px;color:#9a9080;">API</span>
+          <span style="font-size:0.65rem;background:#c3a37020;padding:0.2rem 0.5rem;border-radius:3px;color:#c3a370;">한국어 ✓</span>
+        </div>
+        <!-- Media placeholder -->
+        <div style="background:#2a2520;height:120px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#555;margin-bottom:1rem;">
+          Media Gallery
+        </div>
+        <!-- Description -->
+        <div style="font-size:0.72rem;color:#9a9080;line-height:1.7;margin-bottom:1rem;">
+          Chat with GPT-4o to draft emails, debug code, summarize documents...
+        </div>
+        <!-- Features as cards -->
+        <div style="font-size:0.7rem;font-weight:600;color:#c3a370;margin-bottom:0.5rem;">Key Features</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:1rem;">
+          <div style="background:#2a2520;padding:0.5rem;border-radius:4px;font-size:0.6rem;color:#9a9080;">Multi-modal input</div>
+          <div style="background:#2a2520;padding:0.5rem;border-radius:4px;font-size:0.6rem;color:#9a9080;">Web browsing</div>
+          <div style="background:#2a2520;padding:0.5rem;border-radius:4px;font-size:0.6rem;color:#9a9080;">Code Interpreter</div>
+          <div style="background:#2a2520;padding:0.5rem;border-radius:4px;font-size:0.6rem;color:#9a9080;">Image generation</div>
+        </div>
+        <!-- Bottom CTA -->
+        <div style="text-align:center;padding:0.75rem;border-top:1px solid #2a2520;">
+          <span style="color:#c3a370;font-size:0.7rem;">Visit Site ↗</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Clean Editorial</h3>
+      <p>Sidebar 제거 → 메타 정보를 Hero 아래 칩으로. 단일 컬럼, 위에서 아래로 자연스럽게 흐르는 구조. Features는 2열 카드 그리드.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Sidebar Keep -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1a1a;padding:1.5rem;border-radius:8px;font-family:system-ui;color:#e0d8c3;">
+        <!-- Hero -->
+        <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">
+          <div style="width:56px;height:56px;border-radius:12px;background:#2a2520;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:1.5rem;font-weight:700;color:#c3a370;">C</span>
+          </div>
+          <div>
+            <div style="font-size:1.3rem;font-weight:700;">ChatGPT</div>
+            <div style="font-size:0.75rem;color:#9a9080;">Conversational AI for writing, analysis...</div>
+          </div>
+        </div>
+        <!-- Two column -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;">
+          <div>
+            <div style="background:#2a2520;height:100px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#555;margin-bottom:0.75rem;">
+              Media Gallery
+            </div>
+            <div style="font-size:0.65rem;color:#9a9080;line-height:1.6;">
+              Description text here...
+            </div>
+            <div style="margin-top:0.75rem;">
+              <div style="font-size:0.65rem;font-weight:600;color:#c3a370;margin-bottom:0.3rem;">Key Features</div>
+              <div style="font-size:0.6rem;color:#9a9080;">✦ Feature 1<br/>✦ Feature 2<br/>✦ Feature 3</div>
+            </div>
+          </div>
+          <!-- Sidebar -->
+          <div style="border-left:1px solid #2a2520;padding-left:0.75rem;">
+            <div style="font-size:0.6rem;color:#555;margin-bottom:0.3rem;">PRICING</div>
+            <span style="background:#22c55e20;color:#86efac;font-size:0.6rem;padding:0.1rem 0.4rem;border-radius:99px;">Freemium</span>
+            <div style="font-size:0.6rem;color:#555;margin-top:0.75rem;margin-bottom:0.3rem;">PLATFORMS</div>
+            <div style="font-size:0.6rem;color:#9a9080;">Web, iOS, Android, API</div>
+            <div style="font-size:0.6rem;color:#555;margin-top:0.75rem;margin-bottom:0.3rem;">TAGS</div>
+            <div style="display:flex;gap:0.2rem;flex-wrap:wrap;">
+              <span style="font-size:0.55rem;background:#2a2520;padding:0.1rem 0.3rem;border-radius:2px;color:#9a9080;">llm</span>
+              <span style="font-size:0.55rem;background:#2a2520;padding:0.1rem 0.3rem;border-radius:2px;color:#9a9080;">chatbot</span>
+            </div>
+            <div style="margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid #2a2520;">
+              <span style="background:#c3a370;color:#1a1a1a;font-size:0.6rem;padding:0.3rem 0.6rem;border-radius:4px;font-weight:600;display:block;text-align:center;">Visit Site ↗</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Sidebar 유지 (현재 개선)</h3>
+      <p>현재 2컬럼 유지하되 시각적으로 다듬기. Sidebar에 CTA 버튼 배치. 데스크탑에서 정보 밀도 유지.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:2rem;">
+  <h3>공통 개선 (둘 다 적용)</h3>
+  <ul style="font-size:0.9rem;line-height:1.8;color:#aaa;">
+    <li>카드에서 로고 제거 → 상세페이지에서만 로고 표시</li>
+    <li>👁 ♡ 이모지 → SVG 아이콘</li>
+    <li>카테고리 뱃지 클릭 → /products/?cat=coding 링크</li>
+    <li>하단 CTA 반복 (FAQ 아래)</li>
+    <li>모바일: 메타 칩을 Hero 바로 아래 가로 배치</li>
+  </ul>
+</div>

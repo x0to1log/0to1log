@@ -1,0 +1,50 @@
+<h2>Key Features 표현 방식</h2>
+<p class="subtitle">Features를 어떻게 보여줄까요?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>2열 카드 그리드</h3>
+      <p>각 기능을 카드로 — 배경색 + 텍스트. 시각적으로 풍부하고 스캔하기 좋음.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.75rem;">
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:6px;font-size:0.8rem;">Multi-modal input: text, images, files</div>
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:6px;font-size:0.8rem;">Web browsing and real-time search</div>
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:6px;font-size:0.8rem;">Code Interpreter for data analysis</div>
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:6px;font-size:0.8rem;">Custom GPTs for workflows</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>심플 리스트</h3>
+      <p>깔끔한 bullet list. 군더더기 없이 정보만 빠르게 전달.</p>
+      <div style="margin-top:0.75rem;font-size:0.85rem;line-height:2;color:#aaa;">
+        <div>✦ Multi-modal input: text, images, files, and voice</div>
+        <div>✦ Web browsing and real-time information retrieval</div>
+        <div>✦ Code Interpreter for data analysis and charts</div>
+        <div>✦ Custom GPTs for specialized workflows</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>아이콘 + 설명</h3>
+      <p>각 기능에 작은 아이콘 + 제목 + 한줄 설명. 가장 상세하지만 공간을 많이 차지.</p>
+      <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.6rem;">
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <span style="color:#c3a370;font-size:1rem;">◎</span>
+          <div><div style="font-size:0.85rem;font-weight:600;">Multi-modal Input</div><div style="font-size:0.75rem;color:#888;">Text, images, files, and voice in one conversation</div></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <span style="color:#c3a370;font-size:1rem;">◎</span>
+          <div><div style="font-size:0.85rem;font-weight:600;">Web Browsing</div><div style="font-size:0.75rem;color:#888;">Real-time information retrieval with citations</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
