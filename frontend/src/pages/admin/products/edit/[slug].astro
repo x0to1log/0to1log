@@ -105,6 +105,7 @@ const isFeatured = product?.featured ?? false;
       <!-- Editor content -->
       <div class="admin-editor-content" id="editor-content">
         <input type="hidden" id="product-id" value={product?.id || ''} />
+        <input type="hidden" id="product-demo-media" value={JSON.stringify(product?.demo_media ?? [])} />
 
         <div class="admin-editor-meta">
           <div class="admin-editor-meta-row">
@@ -192,6 +193,16 @@ const isFeatured = product?.featured ?? false;
                 <img id="thumbnail-preview" class="admin-image-preview" src={product?.thumbnail_url || ''} alt="thumbnail preview" style={product?.thumbnail_url ? '' : 'display:none'} />
               </div>
             </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Media</label>
+              <div style="flex:1;">
+                <div id="demo-media-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-media-btn" type="button" style="margin-top:0.5rem;">
+                  + Add Image / Video
+                </button>
+              </div>
+            </div>
+
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-pricing">Pricing</label>
               <select class="admin-input" id="field-pricing" style="max-width:180px">
@@ -321,6 +332,7 @@ const isFeatured = product?.featured ?? false;
       description_ko: document.getElementById('field-description-ko')?.value || null,
       logo_url: document.getElementById('field-logo-url')?.value.trim() || null,
       thumbnail_url: document.getElementById('field-thumbnail-url')?.value.trim() || null,
+      demo_media: getMediaItems(),
       pricing: document.getElementById('field-pricing')?.value || null,
       pricing_note: document.getElementById('field-pricing-note')?.value.trim() || null,
       platform: platformStr.split(',').map((s) => s.trim()).filter(Boolean),
@@ -360,6 +372,88 @@ const isFeatured = product?.featured ?? false;
     preview.src = url;
     preview.style.display = url ? '' : 'none';
   });
+
+  // ── Demo Media editor ────────────────────────────────
+  const mediaList = document.getElementById('demo-media-list');
+  const initialMedia = JSON.parse(document.getElementById('product-demo-media')?.value || '[]');
+
+  function getMediaItems() {
+    const rows = document.querySelectorAll('.demo-media-row');
+    const items = [];
+    rows.forEach((row) => {
+      const url = row.querySelector('.demo-media-url')?.value.trim();
+      const type = row.querySelector('.demo-media-type')?.value;
+      const caption = row.querySelector('.demo-media-caption')?.value.trim();
+      if (url) items.push({ type, url, ...(caption ? { caption } : {}) });
+    });
+    return items;
+  }
+
+  function addMediaRow(item = null) {
+    const row = document.createElement('div');
+    row.className = 'demo-media-row';
+    row.innerHTML = `
+      <div class="demo-media-row-top">
+        <select class="admin-input demo-media-type" style="width:90px;flex:0 0 90px;">
+          <option value="image"${item?.type === 'image' || !item ? ' selected' : ''}>Image</option>
+          <option value="video"${item?.type === 'video' ? ' selected' : ''}>Video</option>
+        </select>
+        <input class="admin-input demo-media-url" type="url" placeholder="https://..." value="${item?.url || ''}" style="flex:1;" />
+        <button class="admin-btn admin-btn-danger admin-btn--small demo-media-remove" type="button">✕</button>
+      </div>
+      <div class="demo-media-row-bottom">
+        <input class="admin-input demo-media-caption" type="text" placeholder="Caption (optional)" value="${item?.caption || ''}" style="flex:1;" />
+      </div>
+      <div class="demo-media-preview-wrap"></div>
+    `;
+
+    row.querySelector('.demo-media-remove').addEventListener('click', () => row.remove());
+
+    const urlInput = row.querySelector('.demo-media-url');
+    const typeSelect = row.querySelector('.demo-media-type');
+    const previewWrap = row.querySelector('.demo-media-preview-wrap');
+
+    function updatePreview() {
+      const url = urlInput.value.trim();
+      const type = typeSelect.value;
+      previewWrap.innerHTML = '';
+      if (!url) return;
+      if (type === 'image') {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'preview';
+        img.className = 'demo-media-preview-img';
+        img.onerror = () => { img.style.display = 'none'; };
+        previewWrap.appendChild(img);
+      } else {
+        const isYT = url.includes('youtube.com') || url.includes('youtu.be');
+        if (isYT) {
+          const span = document.createElement('span');
+          span.className = 'demo-media-preview-label';
+          span.textContent = 'YouTube video';
+          previewWrap.appendChild(span);
+        } else {
+          const span = document.createElement('span');
+          span.className = 'demo-media-preview-label';
+          span.textContent = 'Video: ' + url.split('/').pop();
+          previewWrap.appendChild(span);
+        }
+      }
+    }
+
+    urlInput.addEventListener('input', updatePreview);
+    typeSelect.addEventListener('change', updatePreview);
+    if (item?.url) updatePreview();
+
+    mediaList.appendChild(row);
+  }
+
+  // Initialize with existing data
+  if (initialMedia.length > 0) {
+    initialMedia.forEach((item) => addMediaRow(item));
+  }
+
+  document.getElementById('add-media-btn')?.addEventListener('click', () => addMediaRow());
 
   // ── Save ──────────────────────────────────────────────
   document.getElementById('save-btn')?.addEventListener('click', async () => {
@@ -610,5 +704,43 @@ const isFeatured = product?.featured ?? false;
   /* Label width: accommodate longer labels (Description EN, Featured Order…) */
   .admin-editor-meta-row .admin-field-label {
     min-width: 120px;
+  }
+
+  /* Demo Media editor rows */
+  .demo-media-row {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: var(--color-bg-secondary);
+  }
+
+  .demo-media-row-top {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .demo-media-row-bottom {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+
+  .demo-media-preview-wrap {
+    margin-top: 0.4rem;
+  }
+
+  .demo-media-preview-img {
+    max-width: 200px;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+  }
+
+  .demo-media-preview-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
   }
 </style>
