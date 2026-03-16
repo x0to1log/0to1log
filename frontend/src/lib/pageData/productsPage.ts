@@ -57,6 +57,10 @@ export interface ProductDetailData {
   pricing_note: string | null;
   view_count: number;
   like_count: number;
+  features: string[];
+  features_ko: string[];
+  use_cases: string[];
+  use_cases_ko: string[];
 }
 
 export interface ProductsPageData {
@@ -203,6 +207,10 @@ export async function getProductDetailData(
     pricing_note: raw.pricing_note,
     view_count: raw.view_count ?? 0,
     like_count: raw.like_count ?? 0,
+    features: (raw.features as string[]) ?? [],
+    features_ko: (raw.features_ko as string[]) ?? [],
+    use_cases: (raw.use_cases as string[]) ?? [],
+    use_cases_ko: (raw.use_cases_ko as string[]) ?? [],
   };
 
   const rawDescription =
@@ -211,6 +219,35 @@ export async function getProductDetailData(
   const htmlDescription = rawDescription ? await renderMarkdown(rawDescription) : '';
 
   return { product, htmlDescription, error: null };
+}
+
+// =============================================================================
+// Detail page: alternatives
+// =============================================================================
+
+export async function fetchAlternatives(
+  category: string,
+  excludeSlug: string,
+  locale: 'en' | 'ko',
+  limit = 4,
+): Promise<ProductCardData[]> {
+  const db = getPublicSupabase();
+  if (!db) return [];
+  const { data } = await db
+    .from('ai_products')
+    .select(CARD_COLUMNS)
+    .eq('primary_category', category)
+    .eq('is_published', true)
+    .neq('slug', excludeSlug)
+    .order('featured', { ascending: false })
+    .order('sort_order')
+    .limit(limit);
+  if (!data) return [];
+  return (data as ProductCardData[]).map((p) => ({
+    ...p,
+    name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
+    tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
+  }));
 }
 
 // =============================================================================
