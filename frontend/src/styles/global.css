@@ -835,6 +835,58 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   break-inside: avoid;
 }
 
+.newsprint-prose ul,
+.newsprint-prose ol {
+  padding-left: 1.5rem;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.newsprint-prose ul {
+  list-style-type: disc;
+}
+
+.newsprint-prose ol {
+  list-style-type: decimal;
+}
+
+.newsprint-prose li {
+  margin-bottom: 0.35rem;
+}
+
+.newsprint-prose li > ul,
+.newsprint-prose li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.newsprint-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.92em;
+}
+
+.newsprint-prose th,
+.newsprint-prose td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.newsprint-prose th {
+  background: var(--color-bg-secondary);
+  font-weight: 700;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.newsprint-prose tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--color-bg-secondary) 40%, transparent);
+}
+
 .newsprint-prose pre {
   overflow-x: auto;
   max-width: 100%;
