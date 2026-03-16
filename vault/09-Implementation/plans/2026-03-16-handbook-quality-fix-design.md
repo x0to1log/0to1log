@@ -57,13 +57,36 @@ Missing any = invalid. Do not skip the last sections.
 
 ---
 
+## 1차 개선 (구현 완료)
+
+- EXTRACT_TERMS_PROMPT self-check 예시
+- GENERATE 프롬프트 mandatory checklist
+- 코드: 3단어 초과 skip + H2/링크 수 warning
+
+## 2차 개선: 근본적 프롬프트 아키텍처 변경
+
+### 원칙 1: 핸드북 링크 → 코드 후처리로 이동
+- 프롬프트에서 200개 slug 목록 + 링크 지시 **제거**
+- LLM은 용어를 자연스럽게 쓰기만 함
+- 생성 후 코드가 handbook_terms DB에서 매칭하여 자동 링크 삽입
+- 프롬프트 30%+ 간소화 + 100% 링크 보장
+
+### 원칙 2: 섹션 → JSON 키별 분리
+- 마크다운 하나로 뭉치면 후반 섹션 생략됨
+- 각 섹션을 별도 JSON 키로 분리 → 구조적으로 생략 불가
+- 코드에서 나중에 `## 💡 + section_1 + ## 🍎 + section_2...`로 조합
+
+### 원칙 3: 프롬프트 간소화
+- 핸드북 링크 지시 제거 + 체크리스트 제거 → 핵심 지시만 남김
+- LLM은 짧은 프롬프트를 더 잘 따름
+
 ## 구현 파일
 
 | 파일 | 변경 |
 |------|------|
-| `backend/services/agents/prompts_advisor.py` | EXTRACT_TERMS_PROMPT self-check, GENERATE 프롬프트 링크 강제 + 체크리스트 |
-| `backend/services/pipeline.py` | 용어명 길이 검증 (3단어 이상 skip) |
-| `backend/services/agents/advisor.py` | 생성 후 H2 수 + 링크 수 검증 → warning |
+| `backend/services/agents/prompts_advisor.py` | GENERATE 프롬프트 재구성 (JSON 키 분리, 핸드북 지시 제거) |
+| `backend/services/agents/advisor.py` | 생성 후 JSON 키 → 마크다운 조합 + 핸드북 링크 후처리 |
+| `backend/services/pipeline.py` | 핸드북 링크 후처리 함수 |
 
 ---
 
