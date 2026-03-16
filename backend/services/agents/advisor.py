@@ -527,6 +527,134 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
     return data, model, tokens
 
 
+def _fetch_handbook_term_map() -> dict[str, str]:
+    """Fetch {term_name: slug} map of published handbook terms."""
+    supabase = get_supabase()
+    if not supabase:
+        return {}
+    try:
+        result = supabase.table("handbook_terms").select("term, slug").eq("status", "published").execute()
+        return {t["term"]: t["slug"] for t in (result.data or [])}
+    except Exception:
+        return {}
+
+
+def _auto_link_handbook_terms(content: str, handbook_map: dict[str, str]) -> str:
+    """Replace first occurrence of each handbook term with a markdown link.
+
+    Longer terms are matched first to avoid partial matches.
+    Already-linked terms (inside [...]) are skipped.
+    """
+    linked: set[str] = set()
+    for term, slug in sorted(handbook_map.items(), key=lambda x: -len(x[0])):
+        if slug in linked:
+            continue
+        pattern = re.compile(r'(?<!\[)(' + re.escape(term) + r')(?!\])', re.IGNORECASE)
+        if pattern.search(content):
+            content = pattern.sub(f'[\\1](/handbook/{slug}/)', content, count=1)
+            linked.add(slug)
+    return content
+
+
+# --- Section assembly: JSON keys → markdown ---
+
+BASIC_SECTIONS_KO = [
+    ("basic_ko_1_plain", "## 💡 쉽게 이해하기"),
+    ("basic_ko_2_example", "## 🍎 예시와 비유"),
+    ("basic_ko_3_glance", "## 📊 한눈에 보기"),
+    ("basic_ko_4_why", "## ❓ 왜 중요한가"),
+    ("basic_ko_5_where", "## 🔧 실제로 어디서 쓰이나"),
+    ("basic_ko_6_caution", "## ⚠️ 주의할 점"),
+    ("basic_ko_7_comm", "## 💬 대화에서는 이렇게"),
+    ("basic_ko_8_related", "## 🔗 함께 알면 좋은 용어"),
+]
+
+BASIC_SECTIONS_EN = [
+    ("basic_en_1_plain", "## 💡 Plain Explanation"),
+    ("basic_en_2_example", "## 🍎 Example & Analogy"),
+    ("basic_en_3_glance", "## 📊 At a Glance"),
+    ("basic_en_4_why", "## ❓ Why It Matters"),
+    ("basic_en_5_where", "## 🔧 Where It's Used"),
+    ("basic_en_6_caution", "## ⚠️ Precautions"),
+    ("basic_en_7_comm", "## 💬 Communication"),
+    ("basic_en_8_related", "## 🔗 Related Terms"),
+]
+
+ADVANCED_SECTIONS_KO = [
+    ("adv_ko_1_technical", "## 💡 기술적 설명"),
+    ("adv_ko_2_formulas", "## 📐 핵심 수식 & 도표"),
+    ("adv_ko_3_howworks", "## 🏗️ 동작 원리"),
+    ("adv_ko_4_code", "## 💻 코드 예시"),
+    ("adv_ko_5_practical", "## ✅ 실무 활용 & 주의점"),
+    ("adv_ko_6_why", "## ❓ 왜 중요한가"),
+    ("adv_ko_7_comm", "## 💬 업계 대화 맥락"),
+    ("adv_ko_8_refs", "## 📚 참조 링크"),
+    ("adv_ko_9_related", "## 🔗 관련 기술 & 비교"),
+]
+
+ADVANCED_SECTIONS_EN = [
+    ("adv_en_1_technical", "## 💡 Technical Description"),
+    ("adv_en_2_formulas", "## 📐 Key Formulas & Diagrams"),
+    ("adv_en_3_howworks", "## 🏗️ How It Works"),
+    ("adv_en_4_code", "## 💻 Code Example"),
+    ("adv_en_5_practical", "## ✅ Practical Use & Precautions"),
+    ("adv_en_6_why", "## ❓ Why It Matters"),
+    ("adv_en_7_comm", "## 💬 Industry Communication"),
+    ("adv_en_8_refs", "## 📚 Reference Links"),
+    ("adv_en_9_related", "## 🔗 Related & Comparison"),
+]
+
+
+def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
+    """Assemble section-per-key JSON data into markdown with H2 headers."""
+    parts = []
+    for key, header in sections:
+        content = data.get(key, "").strip()
+        if content:
+            parts.append(f"{header}\n{content}")
+    return "\n\n".join(parts)
+
+
+def _assemble_all_sections(raw_data: dict) -> dict:
+    """Convert section-per-key LLM output to body_basic/advanced_ko/en fields.
+
+    Preserves meta fields (term_full, korean_name, etc.) and assembles
+    section keys into markdown. If body_basic_ko already exists (old format),
+    passes through unchanged.
+    """
+    data = {}
+
+    # Copy meta fields
+    for key in ("term_full", "korean_name", "korean_full", "categories",
+                "definition_ko", "definition_en"):
+        if key in raw_data:
+            data[key] = raw_data[key]
+
+    # Assemble basic sections (or pass through if already assembled)
+    if "body_basic_ko" in raw_data:
+        data["body_basic_ko"] = raw_data["body_basic_ko"]
+    elif "basic_ko_1_plain" in raw_data:
+        data["body_basic_ko"] = _assemble_markdown(raw_data, BASIC_SECTIONS_KO)
+
+    if "body_basic_en" in raw_data:
+        data["body_basic_en"] = raw_data["body_basic_en"]
+    elif "basic_en_1_plain" in raw_data:
+        data["body_basic_en"] = _assemble_markdown(raw_data, BASIC_SECTIONS_EN)
+
+    # Assemble advanced sections (or pass through if already assembled)
+    if "body_advanced_ko" in raw_data:
+        data["body_advanced_ko"] = raw_data["body_advanced_ko"]
+    elif "adv_ko_1_technical" in raw_data:
+        data["body_advanced_ko"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_KO)
+
+    if "body_advanced_en" in raw_data:
+        data["body_advanced_en"] = raw_data["body_advanced_en"]
+    elif "adv_en_1_technical" in raw_data:
+        data["body_advanced_en"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_EN)
+
+    return data
+
+
 async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str,
     source: str = "manual",
@@ -617,8 +745,11 @@ async def _run_generate_term(
     _log_handbook_stage("handbook.generate.advanced", usage2)
 
     # --- Merge results ---
-    data = {**basic_data, **advanced_data}
+    raw_data = {**basic_data, **advanced_data}
     merged_usage = merge_usage_metrics(usage1, usage2)
+
+    # --- Assemble section keys into markdown ---
+    data = _assemble_all_sections(raw_data)
 
     try:
         GenerateTermResult.model_validate(data)
@@ -628,27 +759,21 @@ async def _run_generate_term(
             warnings.append(f"{field}: {err['msg']}")
         logger.warning("Handbook generate validation: %s", warnings)
 
-    # Check section completeness and handbook links
+    # Check section completeness
     for lang in ("ko", "en"):
-        basic_key = f"body_basic_{lang}"
-        basic_content = data.get(basic_key, "")
-        if basic_content:
-            h2_count = basic_content.count("## ")
-            if h2_count < 8:
-                warnings.append(f"{basic_key}: only {h2_count}/8 sections found")
-            link_count = basic_content.count("/handbook/")
-            if link_count < 1:
-                warnings.append(f"{basic_key}: no handbook links found")
+        basic_content = data.get(f"body_basic_{lang}", "")
+        if basic_content and basic_content.count("## ") < 8:
+            warnings.append(f"body_basic_{lang}: only {basic_content.count('## ')}/8 sections")
+        adv_content = data.get(f"body_advanced_{lang}", "")
+        if adv_content and adv_content.count("## ") < 9:
+            warnings.append(f"body_advanced_{lang}: only {adv_content.count('## ')}/9 sections")
 
-        adv_key = f"body_advanced_{lang}"
-        adv_content = data.get(adv_key, "")
-        if adv_content:
-            h2_count = adv_content.count("## ")
-            if h2_count < 9:
-                warnings.append(f"{adv_key}: only {h2_count}/9 sections found")
-            link_count = adv_content.count("/handbook/")
-            if link_count < 1:
-                warnings.append(f"{adv_key}: no handbook links found")
+    # Auto-link handbook terms in generated content
+    handbook_map = _fetch_handbook_term_map()
+    if handbook_map:
+        for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
+            if data.get(field):
+                data[field] = _auto_link_handbook_terms(data[field], handbook_map)
 
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",

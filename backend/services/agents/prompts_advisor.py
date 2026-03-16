@@ -585,77 +585,27 @@ Target audience: Non-engineers. PM, designers, executives, students. A middle sc
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
 Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
-### body_basic_ko 섹션 구조 (8 sections):
-```
-## 💡 쉽게 이해하기
-비유와 일상 예시로 설명. 기술 용어 최소화. 이 개념이 해결하는 문제를 쉬운 말로.
-최소 300자.
+### Section key descriptions (Korean — basic_ko_*):
 
-## 🍎 예시와 비유
-- 실생활 비유 3~4개
-- 형식: **굵은 제목**: 설명
-- 일상에서 접할 수 있는 상황에 빗대어 설명
+- **basic_ko_1_plain**: 비유와 일상 예시로 설명. 기술 용어 최소화. 이 개념이 해결하는 문제를 쉬운 말로. 최소 300자.
+- **basic_ko_2_example**: 실생활 비유 3~4개. 형식: **굵은 제목**: 설명. 일상에서 접할 수 있는 상황에 빗대어 설명.
+- **basic_ko_3_glance**: 이해를 돕는 마크다운 표 1~2개. 수식 없이 쉬운 언어로. 예: 비교표, 단계표, 설명표. 반드시 마크다운 테이블(| 형식) 사용.
+- **basic_ko_4_why**: 왜 알아야 하는지. 실생활/업무와의 연관성. 4~5개 bullet point.
+- **basic_ko_5_where**: 제품, 서비스, 일상에서의 사용 사례 4~5개. 현장 말투로: "넷플릭스가 추천 영상을 골라주는 데 이 기술이 쓰여요" 스타일.
+- **basic_ko_6_caution**: 흔한 오해, 함정, 잘못된 상식 3~4개. 쉬운 언어로.
+- **basic_ko_7_comm**: 실제 대화나 기사에서 이 용어가 등장하는 예시 문장 4~5개. **핵심 용어를 굵게 표시**.
+- **basic_ko_8_related**: 관련 용어 4~6개 + 한 줄 설명. 형식: **용어** — 왜 관련 있는지 (쉬운 말로)
 
-## 📊 한눈에 보기
-이해를 돕는 마크다운 표 1~2개. 수식 없이 쉬운 언어로.
-예: 비교표 ("GPU vs CPU — 뭐가 다를까?"), 단계표, 설명표.
-반드시 마크다운 테이블(| 형식) 사용.
+### Section key descriptions (English — basic_en_*):
 
-## ❓ 왜 중요한가
-왜 알아야 하는지. 실생활/업무와의 연관성.
-4~5개 bullet point.
-
-## 🔧 실제로 어디서 쓰이나
-제품, 서비스, 일상에서의 사용 사례 4~5개.
-현장 말투로: "넷플릭스가 추천 영상을 골라주는 데 이 기술이 쓰여요" 스타일.
-
-## ⚠️ 주의할 점
-흔한 오해, 함정, 잘못된 상식 3~4개. 쉬운 언어로.
-
-## 💬 대화에서는 이렇게
-실제 대화나 기사에서 이 용어가 등장하는 예시 문장 4~5개.
-**핵심 용어를 굵게 표시**.
-
-## 🔗 함께 알면 좋은 용어
-관련 용어 4~6개 + 한 줄 설명.
-형식: **용어** — 왜 관련 있는지 (쉬운 말로)
-```
-
-### body_basic_en section structure (8 sections):
-```
-## 💡 Plain Explanation
-Analogy-driven introduction. Explain what problem this solves in simple terms.
-No assumed technical knowledge. Min 300 chars.
-
-## 🍎 Example & Analogy
-- 3-4 real-life analogies and comparisons
-- Format: **Bold label**: description
-- Use everyday situations readers already know
-
-## 📊 At a Glance
-1-2 markdown tables to aid understanding. No complex formulas.
-e.g., comparison table ("GPU vs CPU — What's different?"), step table, summary table.
-Must use markdown table (| format).
-
-## ❓ Why It Matters
-Why you should know this. Connection to daily life and work.
-4-5 bullet points.
-
-## 🔧 Where It's Used
-4-5 real-world usage examples in products, services, and daily life.
-Practical tone: "Netflix uses this to recommend videos" style.
-
-## ⚠️ Precautions
-3-4 common misconceptions, traps, or wrong assumptions. Simple language.
-
-## 💬 Communication
-4-5 example sentences showing how this term appears in real conversations or articles.
-**Bold the key term** in each phrase.
-
-## 🔗 Related Terms
-4-6 related terms with one-line explanations.
-Format: **Term** — why it's related (in simple terms)
-```
+- **basic_en_1_plain**: Analogy-driven introduction. Explain what problem this solves in simple terms. No assumed technical knowledge. Min 300 chars.
+- **basic_en_2_example**: 3-4 real-life analogies and comparisons. Format: **Bold label**: description. Use everyday situations readers already know.
+- **basic_en_3_glance**: 1-2 markdown tables to aid understanding. No complex formulas. Must use markdown table (| format).
+- **basic_en_4_why**: Why you should know this. Connection to daily life and work. 4-5 bullet points.
+- **basic_en_5_where**: 4-5 real-world usage examples in products, services, and daily life. Practical tone: "Netflix uses this to recommend videos" style.
+- **basic_en_6_caution**: 3-4 common misconceptions, traps, or wrong assumptions. Simple language.
+- **basic_en_7_comm**: 4-5 example sentences showing how this term appears in real conversations or articles. **Bold the key term** in each phrase.
+- **basic_en_8_related**: 4-6 related terms with one-line explanations. Format: **Term** — why it's related (in simple terms)
 
 ## Output JSON Structure
 
@@ -667,25 +617,31 @@ Format: **Term** — why it's related (in simple terms)
   "categories": ["ai-ml"],
   "definition_ko": "...",
   "definition_en": "...",
-  "body_basic_ko": "## 💡 쉽게 이해하기\\n...",
-  "body_basic_en": "## 💡 Plain Explanation\\n..."
+  "basic_ko_1_plain": "비유와 일상 예시로 설명. 최소 300자.",
+  "basic_ko_2_example": "- **비유1**: 설명\\n- **비유2**: 설명\\n- **비유3**: 설명",
+  "basic_ko_3_glance": "| 항목 | 설명 |\\n|---|---|\\n| ... | ... |",
+  "basic_ko_4_why": "- 이유1\\n- 이유2\\n- 이유3\\n- 이유4",
+  "basic_ko_5_where": "- 사례1\\n- 사례2\\n- 사례3\\n- 사례4",
+  "basic_ko_6_caution": "- 주의1\\n- 주의2\\n- 주의3",
+  "basic_ko_7_comm": "- **용어** 이런 맥락에서 사용\\n- ...",
+  "basic_ko_8_related": "- **용어** — 관계 설명\\n- ...",
+  "basic_en_1_plain": "...",
+  "basic_en_2_example": "...",
+  "basic_en_3_glance": "...",
+  "basic_en_4_why": "...",
+  "basic_en_5_where": "...",
+  "basic_en_6_caution": "...",
+  "basic_en_7_comm": "...",
+  "basic_en_8_related": "..."
 }}
 ```
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
-- body_basic MUST have all 8 sections with emoji prefixes.
-- NO code in body_basic. NO complex formulas.
-- 📊 table sections MUST use markdown tables (| format).
-- Every section must contain substantive content — no empty sections or placeholders.
-- Use **bold formatting** for key terms throughout.
-
-## MANDATORY CHECKLIST
-Before responding, verify:
-1. body_basic MUST contain ALL 8 H2 sections with emoji prefixes: 💡, 🍎, 📊, ❓, 🔧, ⚠️, 💬, 🔗
-2. body_basic MUST contain at least 3 handbook links in format [term](/handbook/slug/)
-3. Do NOT skip the last sections (⚠️, 💬, 🔗) — these are the most commonly missed.
-4. Every section must have substantive content, not just a header.
+- NO code in basic sections. NO complex formulas.
+- 📊 glance sections MUST use markdown tables (| format).
+- Every section field must have substantive content.
+- Use **bold formatting** for key terms.
 
 Respond in JSON format only."""
 
@@ -716,119 +672,63 @@ Target audience: Senior developers, ML engineers, tech leads. Must be sufficient
 Tone: Precise, technical. Assume CS fundamentals.
 Rule: Include code snippets, architecture details, formulas where relevant.
 
-### body_advanced_ko 섹션 구조 (9 sections):
-```
-## 💡 기술적 설명
-기술적 정의 + 핵심 구성요소와 흐름. 논문/공식 문서 수준의 정확도.
-최소 400자.
+### Section key descriptions (Korean — adv_ko_*):
 
-## 📐 핵심 수식 & 도표
-해당 개념의 수학 공식, 구조도, 기술 비교표.
-예: z = (x - μ) / σ, LASSO L₁ 정규화 공식, CPU vs GPU 아키텍처 비교표.
-마크다운 표와 수식 활용. 해당 없는 개념은 비교표/구조표만 포함.
+- **adv_ko_1_technical**: 기술적 정의 + 핵심 구성요소와 흐름. 논문/공식 문서 수준의 정확도. 최소 400자.
+- **adv_ko_2_formulas**: 해당 개념의 수학 공식, 구조도, 기술 비교표. 마크다운 표와 수식 활용. 해당 없는 개념은 비교표/구조표만 포함.
+- **adv_ko_3_howworks**: 내부 아키텍처, 알고리즘, 메커니즘 상세 설명. 데이터 흐름, 핵심 알고리즘 (복잡도 포함), 구현 단계 (번호 리스트). 최소 500자.
+- **adv_ko_4_code**: 실제 코드 스니펫 또는 구현 패턴. Python/JavaScript 우선. 코드 블록에 언어 태그 필수 (```python).
+- **adv_ko_5_practical**: 실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개. 현장 톤.
+- **adv_ko_6_why**: 기술/조직/비즈니스에 미치는 영향 4~5개. 성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
+- **adv_ko_7_comm**: PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
+- **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. 형식: [표시명](URL) — 한 줄 설명. 실제로 존재하는 URL만 포함.
+- **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. 형식: **용어** — 이 용어와의 기술적 관계. 선행 개념, 대안, 보완 개념, 확장 개념 포함.
 
-## 🏗️ 동작 원리
-내부 아키텍처, 알고리즘, 메커니즘 상세 설명.
-- 데이터 흐름, 핵심 알고리즘 (복잡도 포함)
-- 구현 단계 (번호 리스트)
-최소 500자.
+### Section key descriptions (English — adv_en_*):
 
-## 💻 코드 예시
-실제 코드 스니펫 또는 구현 패턴. Python/JavaScript 우선.
-코드 블록에 언어 태그 필수 (```python).
-
-## ✅ 실무 활용 & 주의점
-실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개.
-현장 톤: "트랜잭션으로 입금-출금 처리의 원자성 보장" 스타일.
-
-## ❓ 왜 중요한가
-기술/조직/비즈니스에 미치는 영향 4~5개.
-성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
-
-## 💬 업계 대화 맥락
-PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개.
-**핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
-
-## 📚 참조 링크
-공식 문서, 논문, 기술 블로그, GitHub 3~6개.
-형식: [표시명](URL) — 한 줄 설명.
-실제로 존재하는 URL만 포함.
-
-## 🔗 관련 기술 & 비교
-유사/경쟁 기술 차이점 + 관련 용어 4~6개.
-형식: **용어** — 이 용어와의 기술적 관계
-선행 개념, 대안, 보완 개념, 확장 개념 포함.
-```
-
-### body_advanced_en section structure (9 sections):
-```
-## 💡 Technical Description
-Technical definition + core components and flow. Paper/official-doc level accuracy.
-Min 400 chars.
-
-## 📐 Key Formulas & Diagrams
-Mathematical formulas, architecture diagrams, technical comparison tables for this concept.
-e.g., z = (x - μ) / σ, LASSO L₁ regularization formula, CPU vs GPU architecture comparison.
-Use markdown tables and formulas. If no formulas apply, include comparison/structure tables only.
-
-## 🏗️ How It Works
-Deep technical explanation:
-- Internal architecture and data flow
-- Key algorithms or protocols (with complexity if relevant)
-- Implementation steps (numbered list)
-Min 500 chars.
-
-## 💻 Code Example
-Real code snippets or implementation patterns. Python/JavaScript preferred.
-Language tag required in code blocks (```python).
-
-## ✅ Practical Use & Precautions
-4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes).
-Practical tone: "Use transactions to guarantee atomicity of deposit-withdrawal operations" style.
-
-## ❓ Why It Matters
-4-5 bullet points on technical/business impact.
-Connect to: performance, scalability, reliability, cost, compliance.
-
-## 💬 Industry Communication
-6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews.
-**Bold key terms**. Ready-to-use professional tone.
-
-## 📚 Reference Links
-3-6 curated links to REAL resources (official docs, papers, GitHub repos).
-Format: [Display Name](URL) — 1-sentence annotation.
-Only include URLs you are confident exist.
-
-## 🔗 Related & Comparison
-4-6 related technologies with difference analysis + handbook term links.
-Format: **Term** — technical relationship to current term
-Include: prerequisites, alternatives, complementary concepts, extensions.
-```
+- **adv_en_1_technical**: Technical definition + core components and flow. Paper/official-doc level accuracy. Min 400 chars.
+- **adv_en_2_formulas**: Mathematical formulas, architecture diagrams, technical comparison tables. Use markdown tables and formulas. If no formulas apply, include comparison/structure tables only.
+- **adv_en_3_howworks**: Deep technical explanation: internal architecture and data flow, key algorithms or protocols (with complexity if relevant), implementation steps (numbered list). Min 500 chars.
+- **adv_en_4_code**: Real code snippets or implementation patterns. Python/JavaScript preferred. Language tag required in code blocks (```python).
+- **adv_en_5_practical**: 4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes). Practical tone.
+- **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
+- **adv_en_7_comm**: 6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews. **Bold key terms**. Ready-to-use professional tone.
+- **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). Format: [Display Name](URL) — 1-sentence annotation. Only include URLs you are confident exist.
+- **adv_en_9_related**: 4-6 related technologies with difference analysis. Format: **Term** — technical relationship to current term. Include: prerequisites, alternatives, complementary concepts, extensions.
 
 ## Output JSON Structure
 
 ```json
 {{
-  "body_advanced_ko": "## 💡 기술적 설명\\n...",
-  "body_advanced_en": "## 💡 Technical Description\\n..."
+  "adv_ko_1_technical": "기술적 정의...",
+  "adv_ko_2_formulas": "수식/도표...",
+  "adv_ko_3_howworks": "동작 원리...",
+  "adv_ko_4_code": "```python\\n...\\n```",
+  "adv_ko_5_practical": "실무 활용 + 주의점...",
+  "adv_ko_6_why": "왜 중요한가...",
+  "adv_ko_7_comm": "업계 대화 맥락...",
+  "adv_ko_8_refs": "[링크](URL) — 설명",
+  "adv_ko_9_related": "**용어** — 관계...",
+  "adv_en_1_technical": "...",
+  "adv_en_2_formulas": "...",
+  "adv_en_3_howworks": "...",
+  "adv_en_4_code": "...",
+  "adv_en_5_practical": "...",
+  "adv_en_6_why": "...",
+  "adv_en_7_comm": "...",
+  "adv_en_8_refs": "...",
+  "adv_en_9_related": "..."
 }}
 ```
 
 ## Quality Rules
-- body_advanced MUST have all 9 sections with emoji prefixes.
+- Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - Include code snippets, formulas, and architecture details.
-- 📐 table/formula sections MUST use markdown tables (| format).
-- Every section must contain substantive content — no empty sections or placeholders.
-- Use **bold formatting** for key terms throughout.
-- Reference links in 📚 must be real URLs to well-known resources.
+- 📐 formulas/table sections MUST use markdown tables (| format).
+- Every section field must have substantive content.
+- Use **bold formatting** for key terms.
+- Reference links in refs fields must be real URLs to well-known resources.
 - Do NOT repeat content from the basic version.
-
-## MANDATORY CHECKLIST
-Before responding, verify:
-1. body_advanced MUST contain ALL 9 H2 sections with emoji prefixes: 💡, 📐, 🏗️, 💻, ✅, ❓, 💬, 📚, 🔗
-2. body_advanced MUST contain at least 5 handbook links in format [term](/handbook/slug/)
-3. Do NOT skip the last sections (💬, 📚, 🔗) — these are the most commonly missed.
-4. Every section must have substantive content, not just a header.
 
 Respond in JSON format only."""
 
