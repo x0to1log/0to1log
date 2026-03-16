@@ -22,7 +22,8 @@ const privacyHref = locale === 'ko' ? '/ko/privacy/' : '/en/privacy/';
   <div style="max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
     <p style="font-family: var(--font-body); font-size: 0.9rem; color: var(--color-text); margin: 0; flex: 1; min-width: 200px;">
       {t[locale]['cookie.message']}
-      <a href={privacyHref} style="color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; margin-left: 0.25rem;">
+      <br />
+      <a href={privacyHref} style="color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; font-size: 0.8rem;">
         {t[locale]['cookie.learnMore']}
       </a>
     </p>
