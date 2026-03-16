@@ -9421,6 +9421,74 @@ pre:hover .blog-code-copy {
   color: var(--color-accent);
 }
 
+/* --- Product Detail: Getting Started Steps --- */
+.product-detail-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.product-detail-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.product-detail-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* --- Product Detail: Pricing Table --- */
+.product-detail-pricing-table {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  white-space: pre-line;
+}
+
+/* --- Product Detail: Related News --- */
+.product-detail-news-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.product-detail-news-list li a {
+  font-size: 0.88rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.product-detail-news-list li a:hover {
+  opacity: 0.7;
+}
+
+.product-detail-news-list li a::before {
+  content: '\2192 ';
+  color: var(--color-text-muted);
+}
+
 /* --- Product Detail: Alternatives --- */
 .product-detail-alternatives {
   margin-top: 2.5rem;
