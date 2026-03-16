@@ -573,16 +573,16 @@ const isFeatured = product?.featured ?? false;
     }
   });
 
-  // Also update when demo_media changes
-  const mediaObserver = new MutationObserver(updatePreview);
-  if (mediaList) mediaObserver.observe(mediaList, { childList: true, subtree: true });
-
   // Initial render
   updatePreview();
 
   // ── Demo Media editor ────────────────────────────────
   const mediaList = document.getElementById('demo-media-list');
   const initialMedia = JSON.parse(document.getElementById('product-demo-media')?.value || '[]');
+
+  // Update preview when demo_media changes
+  const mediaObserver = new MutationObserver(updatePreview);
+  if (mediaList) mediaObserver.observe(mediaList, { childList: true, subtree: true });
 
   function getMediaItems() {
     const rows = document.querySelectorAll('.demo-media-row');
