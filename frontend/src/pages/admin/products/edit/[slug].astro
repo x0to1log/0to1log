@@ -168,11 +168,11 @@ const isFeatured = product?.featured ?? false;
 
           <div class="admin-editor-meta-row" style="align-items: flex-start;">
             <label class="admin-field-label" style="padding-top: 6px;">Description EN</label>
-            <textarea class="admin-input" id="field-description" rows="5" placeholder="Markdown supported">{product?.description || ''}</textarea>
+            <textarea class="admin-input" id="field-description" rows="8" placeholder="Markdown supported · 2-3 sentences">{product?.description || ''}</textarea>
           </div>
           <div class="admin-editor-meta-row" style="align-items: flex-start;">
             <label class="admin-field-label" style="padding-top: 6px;">Description KO</label>
-            <textarea class="admin-input" id="field-description-ko" rows="5" placeholder="마크다운 지원">{product?.description_ko || ''}</textarea>
+            <textarea class="admin-input" id="field-description-ko" rows="8" placeholder="마크다운 지원 · 2-3문장">{product?.description_ko || ''}</textarea>
           </div>
         </div>
 
@@ -212,13 +212,10 @@ const isFeatured = product?.featured ?? false;
           </div>
         </div>
 
-        <!-- More fields (collapsed) -->
-        <details class="admin-editor-meta" style="margin-top: 1.5rem;">
-          <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--color-text-muted);padding:0.5rem 0;user-select:none;">
-            More fields
-          </summary>
-
-          <div style="margin-top: 0.75rem;">
+        <!-- Media -->
+        <details class="admin-editor-section">
+          <summary class="admin-editor-section-summary">Media</summary>
+          <div class="admin-editor-section-body">
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-logo-url">Logo URL</label>
               <div style="flex:1;">
@@ -234,15 +231,19 @@ const isFeatured = product?.featured ?? false;
               </div>
             </div>
             <div class="admin-editor-meta-row" style="align-items: flex-start;">
-              <label class="admin-field-label" style="padding-top: 6px;">Media</label>
+              <label class="admin-field-label" style="padding-top: 6px;">Demo Media</label>
               <div style="flex:1;">
                 <div id="demo-media-list"></div>
-                <button class="admin-btn admin-btn--small" id="add-media-btn" type="button" style="margin-top:0.5rem;">
-                  + Add Image / Video
-                </button>
+                <button class="admin-btn admin-btn--small" id="add-media-btn" type="button" style="margin-top:0.5rem;">+ Add Image / Video</button>
               </div>
             </div>
+          </div>
+        </details>
 
+        <!-- Features & Use Cases -->
+        <details class="admin-editor-section">
+          <summary class="admin-editor-section-summary">Features & Use Cases</summary>
+          <div class="admin-editor-section-body">
             <div class="admin-editor-meta-row" style="align-items: flex-start;">
               <label class="admin-field-label" style="padding-top: 6px;">Features EN</label>
               <div style="flex:1;">
@@ -271,7 +272,13 @@ const isFeatured = product?.featured ?? false;
                 <button class="admin-btn admin-btn--small" id="add-usecase-ko-btn" type="button" style="margin-top:0.4rem;">+ Add Use Case KO</button>
               </div>
             </div>
+          </div>
+        </details>
 
+        <!-- Metadata -->
+        <details class="admin-editor-section">
+          <summary class="admin-editor-section-summary">Metadata</summary>
+          <div class="admin-editor-section-body">
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-pricing">Pricing</label>
               <select class="admin-input" id="field-pricing" style="max-width:180px">
@@ -287,23 +294,30 @@ const isFeatured = product?.featured ?? false;
             </div>
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-platform">Platform</label>
-              <input class="admin-input" id="field-platform" type="text" value={(product?.platform || []).join(', ')} placeholder="Web, iOS, Android (comma separated)" />
+              <input class="admin-input" id="field-platform" type="text" value={(product?.platform || []).join(', ')} placeholder="Web, iOS, Android, API, Desktop" />
             </div>
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-tags">Tags</label>
-              <input class="admin-input" id="field-tags" type="text" value={(product?.tags || []).join(', ')} placeholder="llm, chatbot, productivity (comma separated)" />
+              <input class="admin-input" id="field-tags" type="text" value={(product?.tags || []).join(', ')} placeholder="llm, chatbot, productivity" />
             </div>
             <div class="admin-editor-meta-row">
-              <label class="admin-field-label" for="field-released-at">Released At</label>
+              <label class="admin-field-label" for="field-released-at">Released</label>
               <input class="admin-input" id="field-released-at" type="date" value={product?.released_at || ''} style="max-width:180px" />
             </div>
             <div class="admin-editor-meta-row">
-              <label class="admin-field-label">Korean Support</label>
+              <label class="admin-field-label">Korean</label>
               <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
                 <input type="checkbox" id="field-korean-support" checked={product?.korean_support ?? false} />
-                Yes
+                Korean UI supported
               </label>
             </div>
+          </div>
+        </details>
+
+        <!-- Display Settings -->
+        <details class="admin-editor-section">
+          <summary class="admin-editor-section-summary">Display Settings</summary>
+          <div class="admin-editor-section-body">
             <div class="admin-editor-meta-row">
               <label class="admin-field-label">Featured</label>
               <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
@@ -832,11 +846,14 @@ const isFeatured = product?.featured ?? false;
 
   document.getElementById('ai-panel-toggle')?.addEventListener('click', () => {
     const layout = document.getElementById('editor-layout');
+    const panel = document.getElementById('ai-panel');
     layout?.classList.toggle('admin-editor-layout--collapsed');
+    panel?.classList.toggle('admin-ai-panel--open');
   });
 
   document.getElementById('ai-panel-close')?.addEventListener('click', () => {
     document.getElementById('editor-layout')?.classList.add('admin-editor-layout--collapsed');
+    document.getElementById('ai-panel')?.classList.remove('admin-ai-panel--open');
   });
 
   document.querySelectorAll('.admin-ai-action-btn').forEach((btn) => {
@@ -1105,6 +1122,54 @@ const isFeatured = product?.featured ?? false;
     gap: 0.75rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  /* Editor grouped sections */
+  .admin-editor-section {
+    margin-top: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .admin-editor-section-summary {
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    padding: 0.6rem 1rem;
+    background: var(--color-bg-secondary);
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .admin-editor-section-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .admin-editor-section-summary::before {
+    content: '▸';
+    font-size: 0.7rem;
+    transition: transform 0.15s ease;
+  }
+
+  .admin-editor-section[open] .admin-editor-section-summary::before {
+    transform: rotate(90deg);
+  }
+
+  .admin-editor-section[open] .admin-editor-section-summary {
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+  }
+
+  .admin-editor-section-body {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   /* String list editor rows (features, use_cases) */
