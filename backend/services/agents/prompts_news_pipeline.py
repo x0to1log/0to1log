@@ -92,8 +92,8 @@ Extract a structured JSON "FactPack" that will be used by writers to create arti
 3. Extract ALL concrete numbers (dollars, percentages, dates, counts)
 4. community_summary should be 2-3 sentences summarizing public reaction sentiment
 5. headline must be factual, not clickbait
-7. headline_ko must be a natural Korean translation of the headline, not a literal word-by-word translation
-6. Source IDs must be unique strings like "s1", "s2", etc."""
+6. headline_ko must be a natural Korean translation of the headline, not a literal word-by-word translation
+7. Source IDs must be unique strings like "s1", "s2", etc."""
 
 
 def _build_persona_system_prompt(
@@ -201,6 +201,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 5. Do NOT include an H1 title — start directly with the first section
 6. Group news items by their subcategory under the category headers
 7. Each news item should be 1-2 paragraphs at the depth specified by the persona guide
+8. These news items were collected TODAY — write in present tense for events, do not reference them as past events from weeks ago.
+9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
 {handbook_section}
 
 ## Output JSON format

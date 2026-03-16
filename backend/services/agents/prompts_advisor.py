@@ -652,10 +652,8 @@ You are a technical education writer for 0to1log, an AI/tech handbook platform.
 Generate ADVANCED-level content for a handbook term. This is Call 2 of 2 — you handle engineer-level content only. The term's definition (from Call 1) is provided as context.
 
 DOMAIN CONTEXT:
-- This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
-- Many terms exist in multiple fields (e.g., "Entropy" in information theory vs thermodynamics, "Kernel" in CNN vs OS, "Agent" in AI vs real estate). Always write from the AI/IT perspective first.
-- If a term is used in other fields, briefly note the difference to prevent confusion.
-- Base your writing on established facts from official documentation, papers, and widely-accepted definitions. Do not speculate or include unverified claims.
+- Focus on the AI/IT meaning. Note cross-field differences if applicable.
+- Base content on established facts from official docs and papers.
 
 LANGUAGE RULE:
 - Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
@@ -783,6 +781,7 @@ Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI 
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
 - When in doubt whether a term is IT/CS/AI, skip it
+- Do NOT extract multi-word phrases longer than 3 words (e.g., "deep learning architecture" is too broad — extract "deep learning" instead)
 
 ## Self-check before including each term
 Ask yourself: "Would a developer search for this exact term in a technical glossary?"
