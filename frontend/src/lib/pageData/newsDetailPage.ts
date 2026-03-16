@@ -229,13 +229,13 @@ export async function getNewsDetailPageData({
     : (md: string) => renderMarkdown(md);
 
   const userPersona = previewMode ? null : locals.profile?.persona;
-  const isBusinessPost = post?.post_type === 'business';
   let activePersona: string | null = null;
   let personaHtmlMap: Record<string, string> = {};
   let rawContent = '';
 
   if (post) {
-    if (isBusinessPost) {
+    const hasPersonaContent = post.content_beginner || post.content_learner || post.content_expert;
+    if (hasPersonaContent) {
       const personaKey = previewMode ? (previewPersona || 'learner') : (userPersona || 'learner');
       const contentMap: Record<string, string> = {
         beginner: post.content_beginner || '',
@@ -255,7 +255,7 @@ export async function getNewsDetailPageData({
   }
 
   const htmlContent = rawContent ? applySourceCitations(await renderMd(rawContent)) : '';
-  const hasPersonaSwitcher = isBusinessPost && Object.keys(personaHtmlMap).length > 1;
+  const hasPersonaSwitcher = Object.keys(personaHtmlMap).length > 1;
 
   return {
     post,
