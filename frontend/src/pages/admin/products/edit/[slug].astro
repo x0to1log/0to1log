@@ -106,6 +106,10 @@ const isFeatured = product?.featured ?? false;
       <div class="admin-editor-content" id="editor-content">
         <input type="hidden" id="product-id" value={product?.id || ''} />
         <input type="hidden" id="product-demo-media" value={JSON.stringify(product?.demo_media ?? [])} />
+        <input type="hidden" id="product-features" value={JSON.stringify(product?.features ?? [])} />
+        <input type="hidden" id="product-features-ko" value={JSON.stringify(product?.features_ko ?? [])} />
+        <input type="hidden" id="product-use-cases" value={JSON.stringify(product?.use_cases ?? [])} />
+        <input type="hidden" id="product-use-cases-ko" value={JSON.stringify(product?.use_cases_ko ?? [])} />
 
         <div class="admin-editor-meta">
           <div class="admin-editor-meta-row">
@@ -239,6 +243,35 @@ const isFeatured = product?.featured ?? false;
               </div>
             </div>
 
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Features EN</label>
+              <div style="flex:1;">
+                <div id="features-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-feature-btn" type="button" style="margin-top:0.4rem;">+ Add Feature</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Features KO</label>
+              <div style="flex:1;">
+                <div id="features-ko-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-feature-ko-btn" type="button" style="margin-top:0.4rem;">+ Add Feature KO</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Use Cases EN</label>
+              <div style="flex:1;">
+                <div id="usecases-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-usecase-btn" type="button" style="margin-top:0.4rem;">+ Add Use Case</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Use Cases KO</label>
+              <div style="flex:1;">
+                <div id="usecases-ko-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-usecase-ko-btn" type="button" style="margin-top:0.4rem;">+ Add Use Case KO</button>
+              </div>
+            </div>
+
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-pricing">Pricing</label>
               <select class="admin-input" id="field-pricing" style="max-width:180px">
@@ -369,6 +402,10 @@ const isFeatured = product?.featured ?? false;
       logo_url: document.getElementById('field-logo-url')?.value.trim() || null,
       thumbnail_url: document.getElementById('field-thumbnail-url')?.value.trim() || null,
       demo_media: getMediaItems(),
+      features: getFeatures(),
+      features_ko: getFeaturesKo(),
+      use_cases: getUseCases(),
+      use_cases_ko: getUseCasesKo(),
       pricing: document.getElementById('field-pricing')?.value || null,
       pricing_note: document.getElementById('field-pricing-note')?.value.trim() || null,
       platform: platformStr.split(',').map((s) => s.trim()).filter(Boolean),
@@ -614,6 +651,37 @@ const isFeatured = product?.featured ?? false;
 
   document.getElementById('add-media-btn')?.addEventListener('click', () => addMediaRow());
 
+  // ── String List Editors (features, use_cases) ────────
+  function setupStringListEditor(listId, addBtnId, hiddenInputId) {
+    const list = document.getElementById(listId);
+    const initialData = JSON.parse(document.getElementById(hiddenInputId)?.value || '[]');
+
+    function addRow(value = '') {
+      const row = document.createElement('div');
+      row.className = 'string-list-row';
+      row.innerHTML = `
+        <input class="admin-input string-list-input" type="text" value="${(value || '').replace(/"/g, '&quot;')}" placeholder="Enter text..." />
+        <button class="admin-btn admin-btn-danger admin-btn--small string-list-remove" type="button">✕</button>
+      `;
+      row.querySelector('.string-list-remove').addEventListener('click', () => row.remove());
+      list.appendChild(row);
+    }
+
+    initialData.forEach((v) => addRow(v));
+    document.getElementById(addBtnId)?.addEventListener('click', () => addRow());
+
+    return () => {
+      return Array.from(list.querySelectorAll('.string-list-input'))
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+    };
+  }
+
+  const getFeatures = setupStringListEditor('features-list', 'add-feature-btn', 'product-features');
+  const getFeaturesKo = setupStringListEditor('features-ko-list', 'add-feature-ko-btn', 'product-features-ko');
+  const getUseCases = setupStringListEditor('usecases-list', 'add-usecase-btn', 'product-use-cases');
+  const getUseCasesKo = setupStringListEditor('usecases-ko-list', 'add-usecase-ko-btn', 'product-use-cases-ko');
+
   // ── Save ──────────────────────────────────────────────
   document.getElementById('save-btn')?.addEventListener('click', async () => {
     const saveBtn = document.getElementById('save-btn');
@@ -847,6 +915,28 @@ const isFeatured = product?.featured ?? false;
           const el = document.getElementById('field-tags');
           if (el) el.value = parsed.tags.join(', ');
         }
+        // Features & Use Cases — clear existing rows and add new ones
+        const listConfigs = [
+          { key: 'features', listId: 'features-list', addBtnId: 'add-feature-btn' },
+          { key: 'features_ko', listId: 'features-ko-list', addBtnId: 'add-feature-ko-btn' },
+          { key: 'use_cases', listId: 'usecases-list', addBtnId: 'add-usecase-btn' },
+          { key: 'use_cases_ko', listId: 'usecases-ko-list', addBtnId: 'add-usecase-ko-btn' },
+        ];
+        for (const { key, listId } of listConfigs) {
+          if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+            const list = document.getElementById(listId);
+            if (list) {
+              list.innerHTML = '';
+              parsed[key].forEach((val) => {
+                const row = document.createElement('div');
+                row.className = 'string-list-row';
+                row.innerHTML = `<input class="admin-input string-list-input" type="text" value="${String(val).replace(/"/g, '&quot;')}" /><button class="admin-btn admin-btn-danger admin-btn--small string-list-remove" type="button">✕</button>`;
+                row.querySelector('.string-list-remove').addEventListener('click', () => row.remove());
+                list.appendChild(row);
+              });
+            }
+          }
+        }
       } catch {
         const el = document.getElementById('field-tagline');
         if (el) el.value = resultText;
@@ -959,6 +1049,18 @@ const isFeatured = product?.featured ?? false;
     gap: 0.75rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  /* String list editor rows (features, use_cases) */
+  .string-list-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    margin-bottom: 0.35rem;
+  }
+
+  .string-list-row .string-list-input {
+    flex: 1;
   }
 
   /* Demo Media editor rows */
