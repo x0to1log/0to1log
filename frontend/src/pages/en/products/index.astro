@@ -7,9 +7,11 @@ import { getProductsPageData } from '../../../lib/pageData/productsPage';
 import ProductSpotlight from '../../../components/products/ProductSpotlight.astro';
 import ProductFilterBar from '../../../components/products/ProductFilterBar.astro';
 import ProductCard from '../../../components/products/ProductCard.astro';
+import { getCategoryIcon } from '../../../lib/productCategoryIcons';
 
 const locale = 'en';
-const { categories, spotlightProduct, allProducts, totalProducts, error } = await getProductsPageData(locale);
+const PREVIEW_COUNT = 4;
+const { categories, spotlightProduct, allProducts, productsByCategory, totalProducts, error } = await getProductsPageData(locale);
 
 const buildSearchText = (product: typeof allProducts[0]) =>
   [
@@ -38,7 +40,54 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
 
     <ProductFilterBar categories={categories} locale={locale} />
 
-    <div class="product-grid">
+    <!-- Category Preview Mode (default) -->
+    <div id="category-preview">
+      {categories.map((cat) => {
+        const products = productsByCategory[cat.id] ?? [];
+        if (products.length === 0) return null;
+        const preview = products.slice(0, PREVIEW_COUNT);
+        const hasMore = products.length > PREVIEW_COUNT;
+        const label = cat.label_en;
+        return (
+          <section class="product-category-preview">
+            <div class="product-category-preview-header">
+              <div class="product-category-preview-title-group">
+                <span class="product-category-preview-icon" set:html={getCategoryIcon(cat.id)} />
+                <h2 class="product-category-preview-title">{label}</h2>
+                <span class="product-category-preview-count">{products.length}</span>
+              </div>
+              {hasMore && (
+                <button class="product-category-see-all" data-category={cat.id} type="button">
+                  See all &rarr;
+                </button>
+              )}
+            </div>
+            <div class="product-grid product-grid--preview">
+              {preview.map((product) => (
+                <ProductCard
+                  href={`/${locale}/products/${product.slug}/`}
+                  name={product.name}
+                  tagline={product.tagline}
+                  logoUrl={product.logo_url}
+                  thumbnailUrl={product.thumbnail_url}
+                  demoMediaFirst={getFirstImageUrl(product)}
+                  pricing={product.pricing}
+                  platform={product.platform}
+                  koreanSupport={product.korean_support}
+                  locale={locale}
+                  searchText={buildSearchText(product)}
+                  categoryId={product.primary_category}
+                  viewCount={product.view_count}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+
+    <!-- Filtered Grid Mode (when category or search active) -->
+    <div class="product-grid" id="filtered-grid" hidden>
       {allProducts.map((product) => (
         <ProductCard
           href={`/${locale}/products/${product.slug}/`}
@@ -80,10 +129,41 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
     const input = document.getElementById('product-search') as HTMLInputElement | null;
     if (!input) return;
     const noResults = document.getElementById('product-search-no-results');
-    const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card'));
+    const preview = document.getElementById('category-preview');
+    const filtered = document.getElementById('filtered-grid');
+    const cards = filtered ? Array.from(filtered.querySelectorAll<HTMLElement>('.product-card')) : [];
 
     let currentCategory = 'all';
     let currentQuery = '';
+
+    function switchToFiltered(cat: string) {
+      currentCategory = cat;
+      if (preview) preview.hidden = true;
+      if (filtered) filtered.hidden = false;
+      applyFilters();
+
+      // Update filter bar active tab
+      document.querySelectorAll('.product-filter-tab').forEach((t) =>
+        t.classList.toggle('active', t.dataset.category === cat)
+      );
+    }
+
+    function switchToPreview() {
+      currentCategory = 'all';
+      currentQuery = '';
+      if (input) input.value = '';
+      if (preview) preview.hidden = false;
+      if (filtered) filtered.hidden = true;
+      if (noResults) noResults.hidden = true;
+
+      // Update URL
+      history.replaceState(null, '', location.pathname);
+
+      // Reset filter bar
+      document.querySelectorAll('.product-filter-tab').forEach((t) =>
+        t.classList.toggle('active', t.dataset.category === 'all')
+      );
+    }
 
     function applyFilters() {
       const q = currentQuery.trim().toLowerCase();
@@ -107,28 +187,59 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       }
     }
 
-    // Search input
+    // Search input → switch to filtered mode
     input.addEventListener('input', () => {
       currentQuery = input.value;
       const url = new URL(window.location.href);
-      if (currentQuery) url.searchParams.set('q', currentQuery);
-      else url.searchParams.delete('q');
+      if (currentQuery) {
+        url.searchParams.set('q', currentQuery);
+        url.searchParams.delete('cat');
+        currentCategory = 'all';
+        if (preview) preview.hidden = true;
+        if (filtered) filtered.hidden = false;
+      } else if (currentCategory === 'all') {
+        url.searchParams.delete('q');
+        switchToPreview();
+        return;
+      } else {
+        url.searchParams.delete('q');
+      }
       history.replaceState(null, '', url.toString());
       applyFilters();
     });
 
     // Category filter (from ProductFilterBar)
     document.addEventListener('product-filter', ((e: CustomEvent) => {
-      currentCategory = e.detail.category;
-      applyFilters();
+      const cat = e.detail.category;
+      if (cat === 'all' && !currentQuery) {
+        switchToPreview();
+      } else {
+        switchToFiltered(cat);
+      }
     }) as EventListener);
+
+    // "See all →" buttons in category previews
+    document.querySelectorAll<HTMLButtonElement>('.product-category-see-all').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cat = btn.dataset.category ?? '';
+        const url = new URL(window.location.href);
+        url.searchParams.set('cat', cat);
+        history.replaceState(null, '', url.toString());
+        switchToFiltered(cat);
+      });
+    });
 
     // Initialize from URL
     const params = new URLSearchParams(location.search);
     const urlQ = params.get('q') ?? '';
-    const urlCat = params.get('cat') ?? 'all';
-    if (urlQ) { input.value = urlQ; currentQuery = urlQ; }
-    if (urlCat !== 'all') currentCategory = urlCat;
-    if (urlQ || urlCat !== 'all') applyFilters();
+    const urlCat = params.get('cat') ?? '';
+    if (urlQ) {
+      input.value = urlQ;
+      currentQuery = urlQ;
+      switchToFiltered(urlCat || 'all');
+    } else if (urlCat) {
+      switchToFiltered(urlCat);
+    }
+    // else: stay in preview mode (default)
   });
 </script>

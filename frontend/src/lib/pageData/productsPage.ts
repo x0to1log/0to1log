@@ -63,6 +63,7 @@ export interface ProductsPageData {
   categories: ProductCategory[];
   spotlightProduct: ProductCardData | null;
   allProducts: ProductCardData[];
+  productsByCategory: Record<string, ProductCardData[]>;
   totalProducts: number;
   error: string | null;
 }
@@ -94,7 +95,7 @@ const CARD_COLUMNS =
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
-    return { categories: [], spotlightProduct: null, allProducts: [], totalProducts: 0, error: null };
+    return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: null };
   }
 
   const [categoriesRes, productsRes] = await Promise.all([
@@ -108,7 +109,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
   ]);
 
   if (categoriesRes.error) {
-    return { categories: [], spotlightProduct: null, allProducts: [], totalProducts: 0, error: categoriesRes.error.message };
+    return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: categoriesRes.error.message };
   }
 
   const categories = (categoriesRes.data ?? []) as ProductCategory[];
@@ -139,7 +140,13 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     .filter((p) => p.featured)
     .sort((a, b) => (a.featured_order ?? 99) - (b.featured_order ?? 99))[0] ?? null;
 
-  return { categories, spotlightProduct, allProducts: resolvedProducts, totalProducts: resolvedProducts.length, error: null };
+  // Group by category for preview mode
+  const productsByCategory: Record<string, ProductCardData[]> = {};
+  for (const cat of categories) {
+    productsByCategory[cat.id] = resolvedProducts.filter((p) => p.primary_category === cat.id);
+  }
+
+  return { categories, spotlightProduct, allProducts: resolvedProducts, productsByCategory, totalProducts: resolvedProducts.length, error: null };
 }
 
 // =============================================================================
