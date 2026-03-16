@@ -964,7 +964,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     function setAiLoading(loading: boolean, action?: string) {
       if (aiLoadingEl) aiLoadingEl.hidden = !loading;
-      if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${action || ''}...` : '';
+      const actionLabel = action ? (aiActionLabels.get(action) || action) : '';
+      if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${actionLabel}...` : '';
       if (aiResultEl && loading) aiResultEl.innerHTML = '';
       currentAiButtons.forEach(btn => {
         btn.disabled = loading;
@@ -996,6 +997,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
 
       setAiLoading(true, action);
+
+      const label = aiActionLabels.get(action) || action;
+      let elapsed = 0;
+      const elapsedTimer = setInterval(() => {
+        elapsed++;
+        if (aiLoadingText) aiLoadingText.textContent = `Running ${label}... (${elapsed}s)`;
+      }, 1000);
 
       try {
         const res = await fetch('/api/admin/ai/advise', {
@@ -1032,6 +1040,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       } catch (err) {
         setAiLoading(false);
         showFeedback('error', 'AI request failed.');
+      } finally {
+        clearInterval(elapsedTimer);
       }
     }
 
