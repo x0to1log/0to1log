@@ -1,5 +1,5 @@
 ---
-import type { ProductDetailData, ProductCardData } from '../../lib/pageData/productsPage';
+import type { ProductDetailData, ProductCardData, RelatedNewsItem } from '../../lib/pageData/productsPage';
 import { t } from '../../i18n/index';
 import MediaGallery from './MediaGallery.astro';
 import ProductCard from './ProductCard.astro';
@@ -9,9 +9,10 @@ interface Props {
   htmlDescription: string;
   locale: 'en' | 'ko';
   alternatives: ProductCardData[];
+  relatedNews: RelatedNewsItem[];
 }
 
-const { product, htmlDescription, locale, alternatives } = Astro.props;
+const { product, htmlDescription, locale, alternatives, relatedNews } = Astro.props;
 const tr = t[locale];
 
 const pricingLabel: Record<string, string> = {
@@ -29,6 +30,10 @@ const features = locale === 'ko' && product.features_ko.length > 0
   ? product.features_ko : product.features;
 const useCases = locale === 'ko' && product.use_cases_ko.length > 0
   ? product.use_cases_ko : product.use_cases;
+const gettingStarted = locale === 'ko' && product.getting_started_ko.length > 0
+  ? product.getting_started_ko : product.getting_started;
+const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
+  ? product.pricing_detail_ko : product.pricing_detail;
 ---
 
 <article class="product-detail" id="products-top">
@@ -125,6 +130,15 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
       </section>
     )}
 
+    {pricingDetailMd && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '가격 정보' : 'Pricing'}
+        </h2>
+        <div class="product-detail-pricing-table" set:html={pricingDetailMd} />
+      </section>
+    )}
+
     <!-- 5. Description -->
     {htmlDescription && (
       <section class="product-detail-section">
@@ -134,6 +148,22 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
         <div class="product-detail-description prose">
           <Fragment set:html={htmlDescription} />
         </div>
+      </section>
+    )}
+
+    {gettingStarted.length > 0 && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '시작하는 법' : 'Getting Started'}
+        </h2>
+        <ol class="product-detail-steps">
+          {gettingStarted.map((step, i) => (
+            <li>
+              <span class="product-detail-step-num">{i + 1}</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
       </section>
     )}
 
@@ -149,6 +179,21 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
       </section>
     )}
   </div>
+
+  {relatedNews.length > 0 && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">
+        {locale === 'ko' ? '관련 뉴스' : 'Related News'}
+      </h2>
+      <ul class="product-detail-news-list">
+        {relatedNews.map((news) => (
+          <li>
+            <a href={`/${locale}/news/${news.slug}/`}>{news.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
 
   <!-- 7. Similar Tools -->
   {alternatives.length > 0 && (
