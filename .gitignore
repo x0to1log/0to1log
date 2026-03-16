@@ -50,3 +50,6 @@ coverage/
 *.err
 *.pdm-history
 *.dev-server.*
+
+# Superpowers plugin brainstorm sessions
+.superpowers/
