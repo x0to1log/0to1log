@@ -9246,12 +9246,19 @@ pre:hover .blog-code-copy {
 }
 
 /* Meta Chips */
-.product-detail-chips {
+.product-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.product-detail-meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  align-items: center;
 }
 
 .product-detail-chip {

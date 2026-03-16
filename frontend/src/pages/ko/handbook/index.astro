@@ -19,6 +19,20 @@ const PREVIEW_COUNT = 4;
 
 const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
 
+const handbookTags: Record<string, string> = {
+  'ai-ml': 'ChatGPT · 딥러닝 · 신경망 · 프롬프트',
+  'db-data': 'SQL · NoSQL · Redis · 벡터 DB',
+  backend: 'API · 서버 · REST · 마이크로서비스',
+  'frontend-ux': 'React · CSS · 반응형 · 다크모드',
+  network: 'HTTP · DNS · CDN · 로드밸런싱',
+  security: '로그인 · 암호화 · 토큰 · 방화벽',
+  'os-core': 'CPU · 메모리 · 프로세스 · 리눅스',
+  devops: 'Docker · CI/CD · 배포 · 모니터링',
+  performance: '캐시 · 속도 · 최적화 · 비용 절감',
+  web3: '블록체인 · NFT · 스마트컨트랙트 · 지갑',
+  'ai-business': 'AI 트렌드 · 자동화 · 스타트업 · 투자',
+};
+
 // User reading history & bookmarks
 const readTermIds = new Set<string>();
 const bookmarkedTermIds = new Set<string>();
@@ -83,6 +97,27 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         class="handbook-search-input"
       />
     </div>
+    <!-- Category showcase cards -->
+    <section class="product-category-showcase" id="handbook-showcase">
+      <div class="product-category-showcase-grid">
+        {categories.map((cat) => {
+          const catTerms = termsByCategory[cat] ?? [];
+          const topNames = handbookTags[cat] || '';
+          const desc = getHandbookCategoryDescription(locale, cat);
+          return (
+            <a href={`/${locale}/handbook/category/${cat}/`} class="product-category-showcase-card">
+              <div class="product-category-showcase-card-header">
+                <span class="product-category-showcase-icon" set:html={getHandbookCategoryIcon(cat)} />
+                <strong class="product-category-showcase-name">{getHandbookCategoryLabel(locale, cat)}</strong>
+              </div>
+              {topNames && <p class="product-category-showcase-tags">{topNames}</p>}
+              {desc && <p class="product-category-showcase-desc">{desc}</p>}
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
     <div id="handbook-controls" class="handbook-controls">
       <div id="handbook-filters" class="handbook-filter-row">
         <button type="button" class="handbook-filter-btn active" data-filter="all" aria-pressed="true">
@@ -367,6 +402,41 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
 
     if (urlCategory || urlQuery) {
       filter();
+    }
+
+    // IntersectionObserver: auto-activate pill on scroll
+    const previewSections = categoryPreview?.querySelectorAll<HTMLElement>('.handbook-category-preview');
+    if (previewSections && previewSections.length > 0) {
+      const setActiveByScroll = (catSlug: string) => {
+        filterBtns.forEach((b) => {
+          const el = b as HTMLElement;
+          const isMatch = el.dataset.filter === catSlug;
+          el.classList.toggle('active', isMatch);
+          el.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+          if (isMatch) {
+            const row = el.closest('.handbook-filter-row') as HTMLElement | null;
+            if (row) {
+              const left = el.offsetLeft - row.offsetWidth / 2 + el.offsetWidth / 2;
+              row.scrollTo({ left, behavior: 'smooth' });
+            }
+          }
+        });
+      };
+
+      const sectionObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const id = (entry.target as HTMLElement).id; // handbook-cat-ai-ml
+              const slug = id.replace('handbook-cat-', '');
+              if (slug) setActiveByScroll(slug);
+            }
+          }
+        },
+        { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
+      );
+
+      previewSections.forEach((section) => sectionObserver.observe(section));
     }
   }
 
