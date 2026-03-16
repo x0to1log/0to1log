@@ -496,6 +496,7 @@ async def _generate_post(
 async def run_daily_pipeline(
     batch_id: str | None = None,
     target_date: str | None = None,
+    skip_handbook: bool = False,
 ) -> PipelineResult:
     """Run the full daily AI news pipeline.
 
@@ -674,7 +675,7 @@ async def run_daily_pipeline(
     logger.info("News pipeline complete: %d posts, %d errors", total_posts, len(all_errors))
 
     # Auto-trigger handbook extraction as a separate run (non-blocking)
-    if total_posts > 0:
+    if total_posts > 0 and not skip_handbook:
         try:
             await run_handbook_extraction(batch_id)
         except Exception as e:

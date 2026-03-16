@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
+from core.database import get_supabase
 from core.security import verify_cron_secret
 from services.pipeline import check_existing_batch, cleanup_existing_batch, run_daily_pipeline, run_handbook_extraction
 
@@ -21,6 +22,11 @@ class PipelineTriggerBody(BaseModel):
     mode: str = "resume"
     target_date: Optional[str] = None
     force: bool = False
+    skip_handbook: bool = False
+
+
+class PipelineCancelBody(BaseModel):
+    run_id: str
 
 
 @router.post("/news-pipeline", status_code=202)
@@ -77,8 +83,10 @@ async def trigger_news_pipeline(
 
     async def _run():
         try:
+            skip_handbook = body.skip_handbook if body else False
             result = await run_daily_pipeline(
                 batch_id=batch_id, target_date=target_date,
+                skip_handbook=skip_handbook,
             )
             logger.info(
                 "Pipeline batch %s finished: %d posts, %d errors",
@@ -126,6 +134,26 @@ async def trigger_handbook_extraction(
         "batch_id": batch_id,
         "message": "Handbook extraction started in background",
     }
+
+
+@router.post("/pipeline-cancel", status_code=200)
+async def cancel_pipeline_run(
+    body: PipelineCancelBody,
+    _secret=Depends(verify_cron_secret),
+):
+    """Cancel a running pipeline by marking it as failed."""
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(500, "Supabase not configured")
+    try:
+        supabase.table("pipeline_runs").update({
+            "status": "failed",
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "last_error": "Cancelled by admin",
+        }).eq("id", body.run_id).eq("status", "running").execute()
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    return {"status": "cancelled", "run_id": body.run_id}
 
 
 @router.get("/health")

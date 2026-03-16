@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import { handleAdminTriggerRequest } from '../../../lib/admin/pipelineTrigger.js';
+import { handleCancelRequest } from '../../../lib/admin/pipelineTrigger.js';
 
 export const prerender = false;
 const isSecure = import.meta.env.PROD;
@@ -106,29 +106,22 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     });
   }
 
-  let mode = 'resume';
-  let targetDate: string | null = null;
-  let force = false;
-  let skipHandbook = false;
+  let runId = '';
   try {
     const payload = await request.json();
-    if (payload?.mode === 'force_refresh' || payload?.mode === 'resume' || payload?.mode === 'handbook-extract') {
-      mode = payload.mode;
-    }
-    if (payload?.target_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.target_date)) {
-      targetDate = payload.target_date;
-    }
-    if (payload?.force === true) {
-      force = true;
-    }
-    if (payload?.skip_handbook === true) {
-      skipHandbook = true;
-    }
+    runId = payload?.run_id || '';
   } catch {}
+
+  if (!runId) {
+    return new Response(JSON.stringify({ error: 'Missing run_id' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const env = {
     CRON_SECRET: import.meta.env.CRON_SECRET,
     FASTAPI_URL: import.meta.env.FASTAPI_URL,
   };
-  return handleAdminTriggerRequest(env, mode, targetDate, force, skipHandbook);
+  return handleCancelRequest(env, runId);
 };

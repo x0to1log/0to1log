@@ -148,6 +148,24 @@ try {
   notifications = (notifsRes.data ?? []) as Notification[];
 } catch {}
 
+// Detect stuck pipeline runs (>30 minutes)
+const STUCK_TIMEOUT_MS = 30 * 60 * 1000;
+const isStuck = lastRun?.status === 'running' &&
+  lastRun?.started_at &&
+  (Date.now() - new Date(lastRun.started_at).getTime()) > STUCK_TIMEOUT_MS;
+
+if (isStuck && lastRun) {
+  try {
+    await sb.from('pipeline_runs').update({
+      status: 'failed',
+      finished_at: new Date().toISOString(),
+      last_error: 'Pipeline timed out (>30 minutes)',
+    }).eq('id', lastRun.id).eq('status', 'running');
+    lastRun.status = 'failed';
+    lastRunError = 'Pipeline timed out (>30 minutes)';
+  } catch {}
+}
+
 // Show Retry Handbook when:
 // 1. Last handbook-extract run failed or stuck running, OR
 // 2. News run exists but no handbook-extract run for that batch
@@ -292,6 +310,12 @@ function relativeTime(dateStr: string): string {
                      max={new Date().toISOString().slice(0,10)}
                      title="Leave empty for today" />
               <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              {lastRun?.status === 'running' && (
+                <button type="button" class="admin-btn-danger" id="cancel-pipeline-btn"
+                        data-run-id={lastRun.id}>
+                  Cancel
+                </button>
+              )}
               {showRetryHandbook && (
                 <button type="button" class="admin-btn" id="retry-handbook-btn"
                         data-batch-id={retryBatchId}
@@ -300,6 +324,10 @@ function relativeTime(dateStr: string): string {
                 </button>
               )}
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
+              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook
+              </label>
               <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
@@ -320,6 +348,10 @@ function relativeTime(dateStr: string): string {
                 </button>
               )}
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
+              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook
+              </label>
               <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
@@ -851,6 +883,8 @@ function relativeTime(dateStr: string): string {
     };
     const dateInput = document.getElementById('pipeline-target-date') as HTMLInputElement | null;
 
+    const handbookCheckbox = document.getElementById('include-handbook') as HTMLInputElement | null;
+
     async function firePipelineRequest(
       mode: string,
       targetDate: string | null,
@@ -859,6 +893,7 @@ function relativeTime(dateStr: string): string {
       const reqBody: Record<string, unknown> = { mode };
       if (targetDate) reqBody.target_date = targetDate;
       if (force) reqBody.force = true;
+      if (handbookCheckbox && !handbookCheckbox.checked) reqBody.skip_handbook = true;
       const res = await fetch('/api/admin/run-pipeline', {
         method: 'POST',
         credentials: 'same-origin',
@@ -965,6 +1000,30 @@ function relativeTime(dateStr: string): string {
           const message = error instanceof Error ? error.message : 'Failed to retry handbook';
           setPipelineFeedback(message, 'error');
           setTimeout(() => { retryHandbookBtn.textContent = 'Retry Handbook'; }, 3000);
+        }
+      });
+    }
+
+    // Cancel pipeline button handler
+    const cancelBtn = document.getElementById('cancel-pipeline-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', async () => {
+        const runId = (cancelBtn as HTMLElement).dataset.runId;
+        if (!runId) return;
+        cancelBtn.textContent = 'Cancelling...';
+        cancelBtn.setAttribute('disabled', 'true');
+        try {
+          await fetch('/api/admin/pipeline-cancel', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ run_id: runId }),
+          });
+          setPipelineFeedback('Pipeline cancelled.', 'success');
+          setTimeout(() => window.location.reload(), 1500);
+        } catch {
+          cancelBtn.textContent = 'Failed';
+          setTimeout(() => { cancelBtn.textContent = 'Cancel'; }, 2000);
         }
       });
     }

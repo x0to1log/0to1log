@@ -18,7 +18,7 @@ function getPipelineConfig(env) {
   return { cronSecret, backendUrl };
 }
 
-async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false) {
+async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false) {
   const config = getPipelineConfig(env);
   if (!config) {
     return jsonResponse({ error: 'Missing configuration' }, 500);
@@ -55,6 +55,7 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
     const payload = { mode };
     if (targetDate) payload.target_date = targetDate;
     if (force) payload.force = true;
+    if (skipHandbook) payload.skip_handbook = true;
 
     const response = await fetch(`${config.backendUrl}/api/cron/news-pipeline`, {
       method: 'POST',
@@ -101,6 +102,26 @@ export async function handleCronTriggerRequest(request, env) {
   return forwardPipelineTrigger(env, 'resume');
 }
 
-export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null, force = false) {
-  return forwardPipelineTrigger(env, mode, targetDate, force);
+export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false) {
+  return forwardPipelineTrigger(env, mode, targetDate, force, skipHandbook);
+}
+
+export async function handleCancelRequest(env, runId) {
+  const config = getPipelineConfig(env);
+  if (!config) {
+    return jsonResponse({ error: 'Missing configuration' }, 500);
+  }
+  try {
+    const response = await fetch(`${config.backendUrl}/api/cron/pipeline-cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-cron-secret': config.cronSecret },
+      body: JSON.stringify({ run_id: runId }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await response.json();
+    return jsonResponse({ ok: response.ok, data }, response.ok ? 200 : 502);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return jsonResponse({ error: 'Cancel request failed', message }, 502);
+  }
 }
