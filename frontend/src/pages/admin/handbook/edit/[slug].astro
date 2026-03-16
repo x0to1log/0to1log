@@ -776,12 +776,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     function setAiLoading(loading: boolean, action = '') {
       if (aiLoadingEl) aiLoadingEl.hidden = !loading;
       if (loading) {
-        if (aiLoadingText) aiLoadingText.textContent = `${action}... (0s)`;
+        if (aiLoadingText) aiLoadingText.textContent = `Running ${action}... (0s)`;
         let elapsed = 0;
         if (aiTimerInterval) clearInterval(aiTimerInterval);
         aiTimerInterval = setInterval(() => {
           elapsed++;
-          if (aiLoadingText) aiLoadingText.textContent = `${action}... (${elapsed}s)`;
+          if (aiLoadingText) aiLoadingText.textContent = `Running ${action}... (${elapsed}s)`;
         }, 1000);
       } else {
         if (aiTimerInterval) { clearInterval(aiTimerInterval); aiTimerInterval = null; }
