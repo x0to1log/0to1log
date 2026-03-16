@@ -3,12 +3,15 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { getProductDetailData } from '../../../lib/pageData/productsPage';
+import { getProductDetailData, fetchAlternatives } from '../../../lib/pageData/productsPage';
 import ProductDetail from '../../../components/products/ProductDetail.astro';
 
 const locale = 'ko';
 const { slug } = Astro.params;
 const { product, htmlDescription, error } = await getProductDetailData(slug ?? '', locale);
+const alternatives = product
+  ? await fetchAlternatives(product.primary_category, slug ?? '', locale)
+  : [];
 
 if (!product && !error) {
   Astro.response.status = 404;
@@ -22,7 +25,7 @@ if (!product && !error) {
   altSlug={product?.slug}
 >
   {product ? (
-    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} />
+    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} />
   ) : (
     <div class="products-page">
       <p class="products-not-found">
