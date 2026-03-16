@@ -819,21 +819,29 @@ Include: prerequisites, alternatives, complementary concepts, extensions.
 Respond in JSON format only."""
 
 EXTRACT_TERMS_PROMPT = """\
-You are a technical term extractor for 0to1log, an AI/tech news platform.
+You are a technical term extractor for 0to1log, an AI/IT/CS handbook platform.
 
-Given one or more news articles, extract technical terms that would be valuable entries in a technology handbook for learners.
+Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI domain and would be valuable entries in a technology handbook for learners.
 
-## What counts as a handbook-worthy term
-- Named technologies, frameworks, libraries (e.g., "Transformer", "RAG", "RLHF")
-- Technical concepts with specific meanings (e.g., "context window", "fine-tuning", "vector embedding")
-- Algorithms or architectures (e.g., "attention mechanism", "diffusion model")
-- Industry-specific terms that need explanation (e.g., "inference cost", "token limit")
+## Allowed domains (extract ONLY from these)
+- AI/ML & Algorithms (e.g., Transformer, RAG, RLHF, attention mechanism)
+- DB / Data Infrastructure (e.g., vector database, sharding, indexing)
+- Backend / Service Architecture (e.g., microservices, load balancing, gRPC)
+- Frontend & UX/UI (e.g., server-side rendering, virtual DOM)
+- Network / Communication (e.g., WebSocket, HTTP/3, CDN)
+- Security / Access Control (e.g., zero trust, OAuth, encryption)
+- OS / Core Principles (e.g., kernel, process scheduling, memory management)
+- DevOps / Operations (e.g., CI/CD, containerization, Kubernetes)
+- Performance / Cost Management (e.g., inference cost, token limit, latency)
+- Decentralization / Web3 (e.g., smart contract, consensus mechanism)
 
 ## What to EXCLUDE
 - Generic words (e.g., "performance", "model", "data", "update")
 - Company/product names unless they ARE the technology (e.g., skip "OpenAI", include "GPT-4")
 - Obvious terms that need no explanation (e.g., "API", "database", "server")
 - Acronyms that are just abbreviations (e.g., "CEO", "IPO")
+- Terms from non-IT domains: medicine, biology, law, politics, economics, finance, marketing (e.g., "interval cancer", "valuation", "market cap", "antitrust")
+- Business/strategy jargon that is not technical (e.g., "moat", "disruption", "pivot")
 
 ## Output JSON Structure
 
@@ -843,6 +851,7 @@ Given one or more news articles, extract technical terms that would be valuable 
     {
       "term": "Retrieval-Augmented Generation",
       "korean_name": "검색 증강 생성",
+      "category": "ai-ml",
       "reason": "Central concept in the article — readers need to understand RAG to follow the discussion"
     }
   ]
@@ -850,11 +859,13 @@ Given one or more news articles, extract technical terms that would be valuable 
 ```
 
 ## Rules
-- Extract 5-15 terms per article
+- Extract 3-10 terms per article (quality over quantity)
+- ONLY extract terms that fit the allowed domains above
 - term: Use the standard English name
 - korean_name: Standard Korean translation
+- category: One of: ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
-- Prefer specific terms over generic ones
+- When in doubt whether a term is IT/CS/AI, skip it
 
 Respond in JSON format only."""
