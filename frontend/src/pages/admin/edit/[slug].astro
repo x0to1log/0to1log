@@ -54,14 +54,14 @@ if (!isNew) {
   }
 }
 
-// Content setup: business posts use 3 persona editors, research uses single editor
-const isBusinessPost = post?.post_type === 'business';
+// Content setup: posts with persona content use 3 editors, others use single editor
 const contentBeginner = post?.content_beginner || '';
 const contentLearner = post?.content_learner || '';
 const contentExpert = post?.content_expert || '';
-const editableContent = isBusinessPost
+const hasPersonaContent = !!(contentBeginner || contentLearner || contentExpert);
+const editableContent = hasPersonaContent
   ? ''
-  : (post?.content_original || post?.content_beginner || post?.content_learner || post?.content_expert || '');
+  : (post?.content_original || '');
 
 const categories = getDefaultCategories();
 
@@ -80,7 +80,7 @@ const initialEditionLabel = editionMap[initialCategory] || 'Daily Dispatch';
 const initialFocusItems = getArticleFocusItems('en', initialCategory);
 const initialTitle = post?.title || '';
 const initialTags = post?.tags || [];
-const previewContent = isBusinessPost ? (contentBeginner || contentLearner || contentExpert) : editableContent;
+const previewContent = hasPersonaContent ? (contentBeginner || contentLearner || contentExpert) : editableContent;
 const initialHtmlContent = post ? await renderMarkdown(previewContent) : '';
 const initialWordCount = post ? previewContent.split(/\s+/).length : 0;
 const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
@@ -209,7 +209,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             </div>
           </details>
 
-          {isBusinessPost ? (
+          {hasPersonaContent ? (
             <>
               <div class="admin-lang-tabs">
                 <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="beginner">Beginner</button>
