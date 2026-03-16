@@ -1,0 +1,169 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import { t } from '../../../../i18n/index';
+import { getHandbookCategoryPageData } from '../../../../lib/pageData/handbookPage';
+import { getHandbookCategoryLabel, getHandbookCategories, getHandbookCategoryDescription } from '../../../../lib/handbookCategories';
+import { getHandbookCategoryIcon } from '../../../../lib/handbookCategoryIcons';
+import { createClient } from '@supabase/supabase-js';
+
+const locale = 'en';
+const slug = Astro.params.slug!;
+const categories = getHandbookCategories();
+
+// Validate slug
+const categoryLabel = getHandbookCategoryLabel(locale, slug);
+if (!categoryLabel) {
+  return Astro.redirect(`/${locale}/handbook/`);
+}
+
+const categoryDesc = getHandbookCategoryDescription(locale, slug);
+const { terms, totalTerms, error } = await getHandbookCategoryPageData(locale, slug);
+
+// User bookmarks
+const bookmarkedTermIds = new Set<string>();
+const readTermIds = new Set<string>();
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (user && accessToken) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const [histRes, bmRes] = await Promise.all([
+    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'term'),
+    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'term'),
+  ]);
+  (histRes.data ?? []).forEach((r: any) => readTermIds.add(r.item_id));
+  (bmRes.data ?? []).forEach((r: any) => bookmarkedTermIds.add(r.item_id));
+}
+---
+
+<MainLayout title={`${categoryLabel} — ${t[locale]['handbook.title']}`} locale={locale}>
+  <div class="handbook-category-page">
+    <!-- Back link -->
+    <a href={`/${locale}/handbook/`} class="handbook-category-back">
+      &larr; Glossary
+    </a>
+
+    <!-- Category header -->
+    <div class="handbook-category-header">
+      <span class="handbook-category-header-icon" set:html={getHandbookCategoryIcon(slug)} />
+      <div>
+        <h1 class="handbook-category-header-title">{categoryLabel}</h1>
+        {categoryDesc && <p class="handbook-category-header-desc">{categoryDesc}</p>}
+        <p class="handbook-category-header-count">{totalTerms} terms</p>
+      </div>
+    </div>
+
+    <!-- Search within category -->
+    <div class="handbook-search-sticky">
+      <input
+        type="text"
+        id="handbook-search"
+        aria-label="Search in this category"
+        placeholder="Search in this category..."
+        class="handbook-search-input"
+      />
+    </div>
+
+    <!-- Term list -->
+    {error ? (
+      <p class="products-error">Failed to load terms.</p>
+    ) : terms.length === 0 ? (
+      <p class="products-empty">No terms in this category.</p>
+    ) : (
+      <div id="handbook-list">
+        {terms.map((term) => {
+          const def = term.definition_en;
+          const isRead = readTermIds.has(term.id);
+          const isBm = bookmarkedTermIds.has(term.id);
+          return (
+            <a
+              href={`/${locale}/handbook/${term.slug}/`}
+              class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
+              data-term={term.term}
+              data-korean={term.korean_name || ''}
+              data-def={def || ''}
+            >
+              <div class="handbook-card-meta">
+                {(term.categories || []).map((c: string) => (
+                  <span class="handbook-cat-pill">
+                    {getHandbookCategoryLabel(locale, c)}
+                  </span>
+                ))}
+              </div>
+              <div class="handbook-card-title-row">
+                <div class="handbook-card-title">{term.term}</div>
+                <button
+                  class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
+                  data-item-id={term.id}
+                  data-item-type="term"
+                  data-bookmarked={isBm ? 'true' : 'false'}
+                  aria-label={isBm ? 'Remove bookmark' : 'Add bookmark'}
+                >
+                  <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                </button>
+              </div>
+              {term.korean_name && <div class="handbook-card-korean">{term.korean_name}</div>}
+              {def && <div class="handbook-card-def">{def.length > 120 ? def.slice(0, 120) + '\u2026' : def}</div>}
+            </a>
+          );
+        })}
+      </div>
+    )}
+
+    <div id="handbook-no-results" style="display: none;">
+      <p style="text-align: center; color: var(--color-text-muted); padding: 2rem;">No results found.</p>
+    </div>
+
+    <!-- Other categories -->
+    <nav class="handbook-category-nav-list" aria-label="Other categories">
+      <h3 class="handbook-category-nav-heading">Other categories</h3>
+      {categories.filter(c => c !== slug).map((cat) => (
+        <a href={`/${locale}/handbook/category/${cat}/`} class="handbook-category-nav-item">
+          <span set:html={getHandbookCategoryIcon(cat)} />
+          {getHandbookCategoryLabel(locale, cat)}
+        </a>
+      ))}
+    </nav>
+  </div>
+</MainLayout>
+
+<script>
+  import '../../../../scripts/bookmark';
+</script>
+
+<script>
+  // Simple search within category
+  function initCategorySearch(): void {
+    const search = document.getElementById('handbook-search') as HTMLInputElement | null;
+    const list = document.getElementById('handbook-list');
+    const noResults = document.getElementById('handbook-no-results');
+    if (!search || !list) return;
+
+    search.addEventListener('input', () => {
+      const query = search.value.toLowerCase().trim();
+      const cards = list.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const term = (card.dataset.term || '').toLowerCase();
+        const korean = (card.dataset.korean || '').toLowerCase();
+        const def = (card.dataset.def || '').toLowerCase();
+        const show = !query || term.includes(query) || korean.includes(query) || def.includes(query);
+        card.style.display = show ? 'block' : 'none';
+        if (show) visible++;
+      });
+
+      if (noResults) noResults.style.display = visible === 0 && query ? 'block' : 'none';
+    });
+  }
+
+  document.addEventListener('astro:page-load', initCategorySearch);
+  initCategorySearch();
+</script>
