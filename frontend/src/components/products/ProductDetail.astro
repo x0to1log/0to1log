@@ -22,16 +22,8 @@ const pricingLabel: Record<string, string> = {
 };
 
 const platformLabels: Record<string, string> = {
-  web: 'Web',
-  ios: 'iOS',
-  android: 'Android',
-  api: 'API',
-  desktop: 'Desktop',
+  web: 'Web', ios: 'iOS', android: 'Android', api: 'API', desktop: 'Desktop',
 };
-
-const releasedYear = product.released_at
-  ? new Date(product.released_at).getFullYear()
-  : null;
 
 const features = locale === 'ko' && product.features_ko.length > 0
   ? product.features_ko : product.features;
@@ -40,28 +32,32 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
 ---
 
 <article class="product-detail" id="products-top">
-  <!-- Header -->
-  <header class="product-detail-header">
-    <div class="product-detail-header-left">
+  <!-- 1. Media Gallery (풀폭, Hero 역할) -->
+  {product.demo_media.length > 0 && (
+    <MediaGallery media={product.demo_media} />
+  )}
+
+  <!-- 2. Hero -->
+  <header class="product-detail-hero">
+    <div class="product-detail-hero-left">
       {product.logo_url && (
         <img
           src={product.logo_url}
           alt={product.name}
           class="product-detail-logo"
-          width="64"
-          height="64"
+          width="80"
+          height="80"
           loading="eager"
         />
       )}
-      <div class="product-detail-title-group">
+      <div class="product-detail-hero-text">
         <h1 class="product-detail-name">{product.name}</h1>
         {product.tagline && (
           <p class="product-detail-tagline">{product.tagline}</p>
         )}
       </div>
     </div>
-
-    <div class="product-detail-header-right">
+    <div class="product-detail-hero-actions">
       {product.pricing && (
         <span class="product-pricing-badge" data-pricing={product.pricing}>
           {pricingLabel[product.pricing] ?? product.pricing}
@@ -78,100 +74,75 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
     </div>
   </header>
 
-  <div class="product-detail-body">
-    <!-- Main content -->
-    <div class="product-detail-main">
-      {product.demo_media.length > 0 && (
-        <MediaGallery media={product.demo_media} />
-      )}
+  <!-- 3. Meta Chips -->
+  <div class="product-detail-chips">
+    {product.primary_category && (
+      <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
+        {product.primary_category}
+      </a>
+    )}
+    {product.platform && product.platform.length > 0 && product.platform.map((p) => (
+      <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
+    ))}
+    {product.korean_support && (
+      <span class="product-detail-chip product-detail-chip--accent">
+        {locale === 'ko' ? '한국어' : 'Korean'} ✓
+      </span>
+    )}
+    {product.tags && product.tags.length > 0 && product.tags.map((tag) => (
+      <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
+    ))}
+    <span class="product-detail-chip product-detail-chip--stat">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      {product.view_count.toLocaleString()}
+    </span>
+    <span class="product-detail-chip product-detail-chip--stat">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      {product.like_count.toLocaleString()}
+    </span>
+  </div>
 
-      {htmlDescription && (
+  <!-- 4. Key Features -->
+  <div class="product-detail-content">
+    {features.length > 0 && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '주요 기능' : 'Key Features'}
+        </h2>
+        <ul class="product-detail-feature-list">
+          {features.map((f) => <li>{f}</li>)}
+        </ul>
+      </section>
+    )}
+
+    <!-- 5. Description -->
+    {htmlDescription && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '소개' : 'About'}
+        </h2>
         <div class="product-detail-description prose">
           <Fragment set:html={htmlDescription} />
         </div>
-      )}
+      </section>
+    )}
 
-      {features.length > 0 && (
-        <section class="product-detail-features">
-          <h2 class="product-detail-section-title">
-            {locale === 'ko' ? '주요 기능' : 'Key Features'}
-          </h2>
-          <ul class="product-detail-feature-list">
-            {features.map((f) => <li>{f}</li>)}
-          </ul>
-        </section>
-      )}
-
-      {useCases.length > 0 && (
-        <section class="product-detail-usecases">
-          <h2 class="product-detail-section-title">
-            {locale === 'ko' ? '이런 상황에 추천' : 'Use Cases'}
-          </h2>
-          <ul class="product-detail-usecase-list">
-            {useCases.map((u) => <li>{u}</li>)}
-          </ul>
-        </section>
-      )}
-    </div>
-
-    <!-- Sidebar -->
-    <aside class="product-detail-sidebar">
-      {product.pricing && (
-        <div class="product-detail-sidebar-section">
-          <h3 class="product-detail-sidebar-label">{tr['products.pricing']}</h3>
-          <span class="product-pricing-badge" data-pricing={product.pricing}>
-            {pricingLabel[product.pricing] ?? product.pricing}
-          </span>
-          {product.pricing_note && (
-            <p class="product-detail-pricing-note">{product.pricing_note}</p>
-          )}
-        </div>
-      )}
-
-      {product.platform && product.platform.length > 0 && (
-        <div class="product-detail-sidebar-section">
-          <h3 class="product-detail-sidebar-label">{tr['products.platforms']}</h3>
-          <div class="product-platform-list">
-            {product.platform.map((p) => (
-              <span class="product-platform-item">{platformLabels[p] ?? p}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {releasedYear && (
-        <div class="product-detail-sidebar-section">
-          <h3 class="product-detail-sidebar-label">{tr['products.releasedAt']}</h3>
-          <span class="product-detail-sidebar-value">{releasedYear}</span>
-        </div>
-      )}
-
-      {product.korean_support && (
-        <div class="product-detail-sidebar-section">
-          <span class="product-korean-badge">{tr['products.koreanSupport']} ✓</span>
-        </div>
-      )}
-
-      {product.tags && product.tags.length > 0 && (
-        <div class="product-detail-sidebar-section">
-          <h3 class="product-detail-sidebar-label">{tr['products.tags']}</h3>
-          <div class="product-tags-list">
-            {product.tags.map((tag) => (
-              <span class="product-tag">{tag}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div class="product-detail-stats">
-        <span class="product-detail-stat">👁 {product.view_count.toLocaleString()}</span>
-        <span class="product-detail-stat">♡ {product.like_count.toLocaleString()}</span>
-      </div>
-    </aside>
+    <!-- 6. Use Cases -->
+    {useCases.length > 0 && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '이런 상황에 추천' : 'Use Cases'}
+        </h2>
+        <ul class="product-detail-usecase-list">
+          {useCases.map((u) => <li>{u}</li>)}
+        </ul>
+      </section>
+    )}
   </div>
 
+  <!-- 7. Similar Tools -->
   {alternatives.length > 0 && (
-    <section class="product-detail-alternatives">
+    <section class="product-detail-section product-detail-alternatives">
       <h2 class="product-detail-section-title">
         {locale === 'ko' ? '비슷한 도구' : 'Similar Tools'}
       </h2>
@@ -199,7 +170,8 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
     </section>
   )}
 
-  <section class="product-detail-faq">
+  <!-- 8. FAQ -->
+  <section class="product-detail-section product-detail-faq">
     <h2 class="product-detail-section-title">FAQ</h2>
 
     {product.pricing && (
@@ -216,7 +188,7 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
               ? (locale === 'ko' ? '무료 플랜과 유료 플랜이 있습니다.' : 'It offers both free and paid plans.')
               : product.pricing === 'paid'
                 ? (locale === 'ko' ? '유료 서비스입니다.' : 'It is a paid service.')
-                : (locale === 'ko' ? '기업용 요금제입니다. 영업팀에 문의하세요.' : 'Enterprise pricing. Contact sales for details.')}
+                : (locale === 'ko' ? '기업용 요금제입니다.' : 'Enterprise pricing. Contact sales.')}
           {product.pricing_note && ` ${product.pricing_note}`}
         </p>
       </details>
@@ -226,7 +198,7 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
       <details class="product-faq-item">
         <summary>
           {locale === 'ko'
-            ? `${product.name}은(는) 어떤 플랫폼에서 사용할 수 있나요?`
+            ? `어떤 플랫폼에서 사용할 수 있나요?`
             : `What platforms is ${product.name} available on?`}
         </summary>
         <p>
@@ -240,7 +212,7 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
     <details class="product-faq-item">
       <summary>
         {locale === 'ko'
-          ? `${product.name}이(가) 한국어를 지원하나요?`
+          ? `한국어를 지원하나요?`
           : `Does ${product.name} support Korean?`}
       </summary>
       <p>
@@ -250,4 +222,16 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
       </p>
     </details>
   </section>
+
+  <!-- 9. Bottom CTA -->
+  <div class="product-detail-bottom-cta">
+    <a
+      href={product.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="product-visit-btn product-visit-btn--large"
+    >
+      {product.name} {tr['products.visitSite']} ↗
+    </a>
+  </div>
 </article>
