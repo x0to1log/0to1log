@@ -102,6 +102,30 @@ const runs = Array.from(runMap.values()).sort(
   (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
 );
 
+// Group runs by date for chart display
+type DateGroup = {
+  date: string;
+  stages: AnalyticsLog[];
+  totalCost: number;
+  totalTokens: number;
+};
+
+const dateMap = new Map<string, DateGroup>();
+for (const run of runs) {
+  const dateKey = run.startedAt.slice(0, 10); // YYYY-MM-DD
+  if (!dateMap.has(dateKey)) {
+    dateMap.set(dateKey, { date: dateKey, stages: [], totalCost: 0, totalTokens: 0 });
+  }
+  const group = dateMap.get(dateKey)!;
+  group.stages.push(...run.stages);
+  group.totalCost += run.totalCost;
+  group.totalTokens += run.totalTokens;
+}
+
+const dateGroups = Array.from(dateMap.values()).sort(
+  (a, b) => a.date.localeCompare(b.date),
+);
+
 type QualityEntry = { runKey: string; startedAt: string; type: string; score: number };
 const qualityEntries: QualityEntry[] = [];
 for (const q of (qualityLogs ?? []) as AnalyticsLog[]) {
@@ -135,13 +159,13 @@ const stageLabels: Record<string, string> = {
 type StackedCostData = { label: string; costs: number[]; tokens: number[] };
 const stackedData: StackedCostData[] = stageNames.map((stage) => ({
   label: stageLabels[stage] || stage,
-  costs: runs.map((run) => {
-    const stageLog = run.stages.find((s) => s.pipeline_type === stage);
-    return stageLog ? parseCost(stageLog.cost_usd) : 0;
+  costs: dateGroups.map((dg) => {
+    const stageLogs = dg.stages.filter((s) => s.pipeline_type === stage);
+    return stageLogs.reduce((sum, s) => sum + parseCost(s.cost_usd), 0);
   }),
-  tokens: runs.map((run) => {
-    const stageLog = run.stages.find((s) => s.pipeline_type === stage);
-    return stageLog?.tokens_used ?? 0;
+  tokens: dateGroups.map((dg) => {
+    const stageLogs = dg.stages.filter((s) => s.pipeline_type === stage);
+    return stageLogs.reduce((sum, s) => sum + (s.tokens_used ?? 0), 0);
   }),
 }));
 
@@ -154,11 +178,11 @@ const avgQuality = qualityEntries.length > 0
   : null;
 
 const chartData = {
-  runLabels: runs.map((r) => {
-    const d = new Date(r.startedAt);
+  runLabels: dateGroups.map((dg) => {
+    const d = new Date(dg.date);
     return `${d.getMonth() + 1}/${d.getDate()}`;
   }),
-  totalCosts: runs.map((r) => Number(r.totalCost.toFixed(4))),
+  totalCosts: dateGroups.map((dg) => Number(dg.totalCost.toFixed(4))),
   stacked: stackedData.map((s) => ({
     label: s.label,
     costs: s.costs.map((c) => Number(c.toFixed(6))),
