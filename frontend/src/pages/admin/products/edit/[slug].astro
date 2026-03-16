@@ -172,6 +172,42 @@ const isFeatured = product?.featured ?? false;
           </div>
         </div>
 
+        <!-- Preview tabs -->
+        <div class="product-preview-section">
+          <div class="product-preview-tabs">
+            <button class="product-preview-tab product-preview-tab--active" data-preview="card" type="button">📇 Card</button>
+            <button class="product-preview-tab" data-preview="detail" type="button">📄 Detail</button>
+          </div>
+          <div class="product-preview-area" id="preview-card">
+            <div class="product-preview-card" id="preview-card-inner">
+              <div class="product-card-thumbnail" id="preview-thumb"></div>
+              <div class="product-card-body">
+                <div class="product-card-header">
+                  <img id="preview-card-logo" class="product-card-logo" src="" alt="" width="24" height="24" style="display:none" />
+                  <span class="product-card-name" id="preview-card-name">Product Name</span>
+                </div>
+                <p class="product-card-tagline" id="preview-card-tagline"></p>
+                <div class="product-card-meta">
+                  <span class="product-pricing-badge" id="preview-card-pricing" hidden></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="product-preview-area" id="preview-detail" hidden>
+            <div class="product-preview-detail-inner">
+              <div class="product-preview-detail-header">
+                <img id="preview-detail-logo" src="" alt="" style="width:48px;height:48px;object-fit:contain;border-radius:8px;display:none" />
+                <div>
+                  <h3 id="preview-detail-name" style="margin:0;font-size:1.2rem;">Product Name</h3>
+                  <p id="preview-detail-tagline" style="margin:0.25rem 0 0;color:var(--color-text-secondary);font-size:0.9rem;"></p>
+                </div>
+              </div>
+              <div id="preview-detail-description" style="margin-top:1rem;font-size:0.88rem;line-height:1.7;color:var(--color-text-secondary);"></div>
+              <div id="preview-detail-meta" style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- More fields (collapsed) -->
         <details class="admin-editor-meta" style="margin-top: 1.5rem;">
           <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--color-text-muted);padding:0.5rem 0;user-select:none;">
@@ -372,6 +408,129 @@ const isFeatured = product?.featured ?? false;
     preview.src = url;
     preview.style.display = url ? '' : 'none';
   });
+
+  // ── Preview tabs ─────────────────────────────────────
+  const categoryGradients = {
+    assistant: 'linear-gradient(135deg, #C3A370, #8B6D3F)',
+    image: 'linear-gradient(135deg, #7C3AED, #4338CA)',
+    video: 'linear-gradient(135deg, #EF4444, #DC2626)',
+    audio: 'linear-gradient(135deg, #10B981, #059669)',
+    coding: 'linear-gradient(135deg, #06B6D4, #0891B2)',
+    workflow: 'linear-gradient(135deg, #F59E0B, #D97706)',
+    builder: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+    platform: 'linear-gradient(135deg, #64748B, #475569)',
+    research: 'linear-gradient(135deg, #14B8A6, #0D9488)',
+    community: 'linear-gradient(135deg, #F43F5E, #E11D48)',
+  };
+
+  function updatePreview() {
+    const name = document.getElementById('field-name')?.value || 'Product Name';
+    const tagline = document.getElementById('field-tagline')?.value || '';
+    const taglineKo = document.getElementById('field-tagline-ko')?.value || '';
+    const desc = document.getElementById('field-description')?.value || '';
+    const logoUrl = document.getElementById('field-logo-url')?.value?.trim() || '';
+    const thumbUrl = document.getElementById('field-thumbnail-url')?.value?.trim() || '';
+    const pricing = document.getElementById('field-pricing')?.value || '';
+    const platform = document.getElementById('field-platform')?.value || '';
+    const tags = document.getElementById('field-tags')?.value || '';
+    const koreanSupport = document.getElementById('field-korean-support')?.checked;
+    const category = document.getElementById('field-category')?.value || '';
+
+    // First demo_media image
+    const firstMediaUrl = document.querySelector('.demo-media-url')?.value?.trim() || '';
+    const firstMediaType = document.querySelector('.demo-media-type')?.value || 'image';
+    const imageUrl = (firstMediaType === 'image' && firstMediaUrl) ? firstMediaUrl : thumbUrl;
+
+    // Card preview
+    const thumb = document.getElementById('preview-thumb');
+    if (thumb) {
+      if (imageUrl) {
+        thumb.innerHTML = `<img src="${imageUrl}" alt="${name}" class="product-card-thumb-img" />`;
+      } else {
+        const gradient = categoryGradients[category] || 'linear-gradient(135deg, #64748B, #475569)';
+        const initial = name.charAt(0) || '?';
+        thumb.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:${gradient}"><span style="font-size:2rem;font-weight:700;color:#fff">${initial}</span></div>`;
+      }
+    }
+
+    const cardLogo = document.getElementById('preview-card-logo');
+    if (cardLogo) {
+      if (logoUrl && imageUrl) { cardLogo.src = logoUrl; cardLogo.style.display = ''; }
+      else { cardLogo.style.display = 'none'; }
+    }
+
+    const cardName = document.getElementById('preview-card-name');
+    if (cardName) cardName.textContent = name;
+
+    const cardTagline = document.getElementById('preview-card-tagline');
+    if (cardTagline) cardTagline.textContent = tagline || taglineKo;
+
+    const cardPricing = document.getElementById('preview-card-pricing');
+    if (cardPricing) {
+      if (pricing) {
+        cardPricing.textContent = pricing;
+        cardPricing.dataset.pricing = pricing;
+        cardPricing.hidden = false;
+      } else {
+        cardPricing.hidden = true;
+      }
+    }
+
+    // Detail preview
+    const detailLogo = document.getElementById('preview-detail-logo');
+    if (detailLogo) {
+      if (logoUrl) { detailLogo.src = logoUrl; detailLogo.style.display = ''; }
+      else { detailLogo.style.display = 'none'; }
+    }
+
+    const detailName = document.getElementById('preview-detail-name');
+    if (detailName) detailName.textContent = name;
+
+    const detailTagline = document.getElementById('preview-detail-tagline');
+    if (detailTagline) detailTagline.textContent = tagline || taglineKo;
+
+    const detailDesc = document.getElementById('preview-detail-description');
+    if (detailDesc) detailDesc.textContent = desc || '(no description)';
+
+    const detailMeta = document.getElementById('preview-detail-meta');
+    if (detailMeta) {
+      let html = '';
+      if (pricing) html += `<span class="product-pricing-badge" data-pricing="${pricing}">${pricing}</span>`;
+      if (platform) html += platform.split(',').map(p => `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-bg-tertiary);border-radius:3px;color:var(--color-text-muted)">${p.trim()}</span>`).join('');
+      if (koreanSupport) html += `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-accent-subtle);border-radius:3px;color:var(--color-accent)">Korean</span>`;
+      if (tags) html += tags.split(',').map(t => `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-bg-secondary);border-radius:3px;color:var(--color-text-muted)">#${t.trim()}</span>`).join('');
+      detailMeta.innerHTML = html;
+    }
+  }
+
+  // Tab switching
+  document.querySelectorAll('.product-preview-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.product-preview-tab').forEach(t => t.classList.remove('product-preview-tab--active'));
+      tab.classList.add('product-preview-tab--active');
+      const target = tab.dataset.preview;
+      document.getElementById('preview-card').hidden = target !== 'card';
+      document.getElementById('preview-detail').hidden = target !== 'detail';
+    });
+  });
+
+  // Live update on field changes
+  ['field-name', 'field-tagline', 'field-tagline-ko', 'field-description',
+   'field-logo-url', 'field-thumbnail-url', 'field-pricing', 'field-platform',
+   'field-tags', 'field-korean-support', 'field-category'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', updatePreview);
+      el.addEventListener('change', updatePreview);
+    }
+  });
+
+  // Also update when demo_media changes
+  const mediaObserver = new MutationObserver(updatePreview);
+  if (mediaList) mediaObserver.observe(mediaList, { childList: true, subtree: true });
+
+  // Initial render
+  updatePreview();
 
   // ── Demo Media editor ────────────────────────────────
   const mediaList = document.getElementById('demo-media-list');
@@ -647,27 +806,48 @@ const isFeatured = product?.featured ?? false;
     const resultText = document.getElementById('ai-result-text')?.textContent || '';
 
     if (aiCurrentAction === 'generate_from_url') {
-      // Try to parse structured result {tagline, description} or {tagline_en, description_en}
       try {
         const parsed = JSON.parse(resultText);
-        if (parsed.tagline || parsed.tagline_en) {
-          const el = document.getElementById('field-tagline');
-          if (el) el.value = parsed.tagline || parsed.tagline_en;
+        // Text fields
+        const textMap = {
+          tagline: 'field-tagline', tagline_en: 'field-tagline',
+          tagline_ko: 'field-tagline-ko',
+          description_en: 'field-description', description: 'field-description',
+          description_ko: 'field-description-ko',
+          logo_url: 'field-logo-url',
+        };
+        for (const [key, fieldId] of Object.entries(textMap)) {
+          if (parsed[key]) {
+            const el = document.getElementById(fieldId);
+            if (el) el.value = parsed[key];
+          }
         }
-        if (parsed.description || parsed.description_en) {
-          const el = document.getElementById('field-description');
-          if (el) el.value = parsed.description || parsed.description_en;
+        // Logo preview
+        if (parsed.logo_url) {
+          const preview = document.getElementById('logo-preview');
+          if (preview) { preview.src = parsed.logo_url; preview.style.display = ''; }
         }
-        if (parsed.tagline_ko) {
-          const el = document.getElementById('field-tagline-ko');
-          if (el) el.value = parsed.tagline_ko;
+        // Pricing select
+        if (parsed.pricing) {
+          const el = document.getElementById('field-pricing');
+          if (el) el.value = parsed.pricing;
         }
-        if (parsed.description_ko) {
-          const el = document.getElementById('field-description-ko');
-          if (el) el.value = parsed.description_ko;
+        // Platform
+        if (Array.isArray(parsed.platform) && parsed.platform.length > 0) {
+          const el = document.getElementById('field-platform');
+          if (el) el.value = parsed.platform.join(', ');
+        }
+        // Korean support
+        if (typeof parsed.korean_support === 'boolean') {
+          const el = document.getElementById('field-korean-support');
+          if (el) el.checked = parsed.korean_support;
+        }
+        // Tags
+        if (Array.isArray(parsed.tags) && parsed.tags.length > 0) {
+          const el = document.getElementById('field-tags');
+          if (el) el.value = parsed.tags.join(', ');
         }
       } catch {
-        // Plain text fallback — apply to tagline
         const el = document.getElementById('field-tagline');
         if (el) el.value = resultText;
       }
@@ -704,6 +884,81 @@ const isFeatured = product?.featured ?? false;
   /* Label width: accommodate longer labels (Description EN, Featured Order…) */
   .admin-editor-meta-row .admin-field-label {
     min-width: 120px;
+  }
+
+  /* Preview section */
+  .product-preview-section {
+    margin-top: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .product-preview-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+  }
+
+  .product-preview-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+    font-family: var(--font-ui);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .product-preview-tab:hover {
+    color: var(--color-text-primary);
+  }
+
+  .product-preview-tab--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+
+  .product-preview-area {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .product-preview-card {
+    width: 280px;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--color-bg-primary);
+  }
+
+  .product-preview-card .product-card-thumbnail {
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+  }
+
+  .product-preview-card .product-card-body {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .product-preview-detail-inner {
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .product-preview-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
   }
 
   /* Demo Media editor rows */
