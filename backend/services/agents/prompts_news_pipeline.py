@@ -200,7 +200,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 4. English and Korean cover the same news items but with natural expression for each language
 5. Do NOT include an H1 title — start directly with the first section
 6. Group news items by their subcategory under the category headers
-7. Each news item should be 1-2 paragraphs at the depth specified by the persona guide
+7. Each news item should be 2-3 paragraphs at the depth specified by the persona guide. Include context for numbers (compare to industry averages or competitors).
 8. These news items were collected TODAY — write in present tense for events, do not reference them as past events from weeks ago.
 9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
 10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". See the section definitions for both versions.
@@ -261,29 +261,31 @@ RESEARCH_BEGINNER_GUIDE = """Beginner-level: Write for curious non-engineers (PM
 # --- Business Digest Sections (연결 분석 + 액션 아이템) ---
 
 BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
-- **## Big Tech (ko: ## 빅테크)** — Major announcements from OpenAI, Google, Microsoft, Meta, etc. Include market implications.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Startup funding, acquisitions, partnerships, regulatory changes. Include deal sizes.
-- **## New Tools (ko: ## 새로운 도구)** — New AI products/services launched. Include pricing, target users, competitive positioning.
-- **## Connecting the Dots (ko: ## 연결 분석)** — How today's news items relate to each other. What trend or pattern emerges. What strategic moves are being made. 2-3 paragraphs.
-- **## Action Items (ko: ## 그래서 나는?)** — Specific, actionable recommendations for senior engineers and tech leads. What to evaluate, migrate, or prepare for."""
+- **## Big Tech (ko: ## 빅테크)** — Major announcements from OpenAI, Google, Microsoft, Meta, etc. Each item: 2-3 paragraphs covering what happened, market implications, and competitive positioning.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Startup funding, acquisitions, partnerships, regulatory changes. Each item: 2-3 paragraphs with deal sizes AND context (how this compares to industry averages or competitors).
+- **## New Tools (ko: ## 새로운 도구)** — New AI products/services launched. Each item: 2-3 paragraphs with pricing, target users, competitive comparison to existing alternatives.
+- **## Connecting the Dots (ko: ## 연결 분석)** — Do NOT just list what happened. Analyze causation and patterns: WHY are these things happening at the same time? What strategic chess moves are being made? What does this signal for the next 3-6 months? 3-4 paragraphs.
+- **## Action Items (ko: ## 그래서 나는?)** — Bullet points with SPECIFIC actions. Include tool names, URLs, API docs to check, migration steps. NOT vague advice like "evaluate" or "explore"."""
 
-BUSINESS_EXPERT_GUIDE = """Expert-level: Write for CTOs, senior engineers, and tech leads.
-- Include specific numbers: funding amounts, pricing, market share
-- Analyze competitive dynamics and strategic positioning
-- Provide concrete action items with technical specificity
-- Reference industry reports and analyst insights where applicable"""
+BUSINESS_EXPERT_GUIDE = """Expert-level: Write like a CTO briefing their leadership team. NOT like a textbook.
+- Tone: Direct, opinionated, practical. "DealFlowAgent's API is worth checking — M&A automation could affect our deal flow."
+- Every number needs CONTEXT: "$13M Series A — 2.6x the sector average for AI city management"
+- Each news item: 2-3 paragraphs minimum (what + why it matters + competitive angle)
+- Connecting the Dots: find REAL connections between news items, not just "A shows B, C shows D"
+- Action Items: bullet points with specific tool names, URLs, concrete next steps"""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
-- **## Big Tech (ko: ## 빅테크)** — What the big companies announced and why it matters for the industry.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Who got funded, who partnered with whom, what regulations changed.
-- **## New Tools (ko: ## 새로운 도구)** — New tools worth knowing about: what they do and who they're for.
-- **## Connecting the Dots (ko: ## 연결 분석)** — The bigger picture: what pattern do you see across today's news? 2-3 paragraphs.
-- **## Action Items (ko: ## 그래서 나는?)** — Practical suggestions for developers and PMs. What to try, learn, or watch."""
+- **## Big Tech (ko: ## 빅테크)** — What the big companies announced and why it matters for the industry. 2-3 paragraphs per item.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Who got funded, who partnered with whom, what regulations changed. 2-3 paragraphs per item with context on why the deal size matters.
+- **## New Tools (ko: ## 새로운 도구)** — New tools worth knowing about: what they do, who they're for, and how they compare to existing options. 2-3 paragraphs per item.
+- **## Connecting the Dots (ko: ## 연결 분석)** — The bigger picture: what pattern emerges from today's news? How do these events relate to each other? 3-4 paragraphs.
+- **## Action Items (ko: ## 그래서 나는?)** — Bullet points: specific tools to try (with links), skills to learn, things to watch. NOT vague suggestions."""
 
 BUSINESS_LEARNER_GUIDE = """Learner-level: Write for developers and PMs who want to stay informed.
-- Explain business context (why a $500M round matters)
-- Connect news to practical developer impact
-- Suggest concrete next steps: tools to try, skills to learn
+- Each news item: 2-3 paragraphs (what happened + why it matters for developers + practical impact)
+- Explain business context: why a $13M round matters (compare to similar companies or sector average)
+- Connect news to practical developer impact with concrete examples
+- Suggest specific next steps: "Try DealFlowAgent's demo at [URL]", "Read the Ratepayer Pledge at [URL]"
 - Balance business insight with technical relevance"""
 
 BUSINESS_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
