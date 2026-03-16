@@ -10,7 +10,8 @@ export type HandbookCategorySlug =
   | 'os-core'
   | 'devops'
   | 'performance'
-  | 'web3';
+  | 'web3'
+  | 'ai-business';
 
 const HANDBOOK_CATEGORY_LABELS: Record<HandbookCategorySlug, Record<Locale, string>> = {
   web3: {
@@ -52,6 +53,10 @@ const HANDBOOK_CATEGORY_LABELS: Record<HandbookCategorySlug, Record<Locale, stri
   'os-core': {
     en: 'OS / Core Principles',
     ko: 'OS / 핵심 원리',
+  },
+  'ai-business': {
+    en: 'AI Industry & Business',
+    ko: 'AI 산업 & 비즈니스',
   },
 };
 

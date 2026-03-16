@@ -245,6 +245,7 @@ async def _extract_and_create_handbook_terms(
     VALID_CATEGORIES = {
         "ai-ml", "db-data", "backend", "frontend-ux", "network",
         "security", "os-core", "devops", "performance", "web3",
+        "ai-business",
     }
 
     for term_info in extracted:

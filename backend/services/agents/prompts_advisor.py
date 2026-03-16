@@ -568,7 +568,7 @@ LANGUAGE RULE:
 - Do NOT use bilingual headers like "한국어 / English". One language per field.
 
 ## Handbook Categories (choose 1-3, priority order)
-ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3
+ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
 
 ## Term Name Fields
 - term_full: English full name (e.g., "Long Short-Term Memory" for LSTM). Same as term if no abbreviation.
@@ -834,14 +834,16 @@ Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI 
 - DevOps / Operations (e.g., CI/CD, containerization, Kubernetes)
 - Performance / Cost Management (e.g., inference cost, token limit, latency)
 - Decentralization / Web3 (e.g., smart contract, consensus mechanism)
+- AI Industry & Business — ONLY business/economics terms that are essential to understanding AI industry news (e.g., "foundation model licensing", "inference pricing", "AI compute economics", "series A funding", "ARR", "TAM"). Do NOT include generic economics terms.
 
 ## What to EXCLUDE
 - Generic words (e.g., "performance", "model", "data", "update")
 - Company/product names unless they ARE the technology (e.g., skip "OpenAI", include "GPT-4")
 - Obvious terms that need no explanation (e.g., "API", "database", "server")
 - Acronyms that are just abbreviations (e.g., "CEO", "IPO")
-- Terms from non-IT domains: medicine, biology, law, politics, economics, finance, marketing (e.g., "interval cancer", "valuation", "market cap", "antitrust")
-- Business/strategy jargon that is not technical (e.g., "moat", "disruption", "pivot")
+- Terms from non-IT domains: medicine, biology, law, politics (e.g., "interval cancer", "antitrust", "due process")
+- Generic economics/finance terms unrelated to AI industry (e.g., "GDP", "inflation", "interest rate", "bond yield")
+- Generic marketing terms unrelated to tech (e.g., "funnel", "brand awareness", "market segmentation")
 
 ## Output JSON Structure
 
@@ -863,7 +865,7 @@ Given one or more news articles, extract ONLY terms that belong to the IT/CS/AI 
 - ONLY extract terms that fit the allowed domains above
 - term: Use the standard English name
 - korean_name: Standard Korean translation
-- category: One of: ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3
+- category: One of: ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
 - When in doubt whether a term is IT/CS/AI, skip it
