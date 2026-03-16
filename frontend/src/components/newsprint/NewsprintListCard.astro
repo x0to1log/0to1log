@@ -38,7 +38,7 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
   href={href}
   class={cardClasses}
   data-category={normalizedCategory || 'uncategorized'}
-  data-post-type={postType || undefined}
+  data-post-type={postType || 'business'}
   data-search-text={searchText}
 >
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
