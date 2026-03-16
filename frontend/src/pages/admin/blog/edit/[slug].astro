@@ -861,6 +861,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const aiLoadingText = document.getElementById('ai-loading-text');
     const aiResultEl = document.getElementById('ai-result');
     const aiActionsContainer = document.getElementById('ai-actions-container');
+    let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
     const COMMON_ACTIONS: { action: string; label: string; model: string; wide?: boolean }[] = [
       { action: 'outline', label: 'Outline', model: 'gpt-4o' },
@@ -950,8 +951,19 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     });
 
     function setAiLoading(loading: boolean, action?: string) {
+      if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
       if (aiLoadingEl) aiLoadingEl.hidden = !loading;
-      if (aiLoadingText) aiLoadingText.textContent = loading ? `Running ${action || ''}...` : '';
+      if (loading) {
+        const actionName = action || '';
+        let elapsed = 0;
+        if (aiLoadingText) aiLoadingText.textContent = `Running ${actionName}...`;
+        elapsedTimer = setInterval(() => {
+          elapsed++;
+          if (aiLoadingText) aiLoadingText.textContent = `Running ${actionName}... (${elapsed}s)`;
+        }, 1000);
+      } else {
+        if (aiLoadingText) aiLoadingText.textContent = '';
+      }
       if (aiResultEl && loading) aiResultEl.innerHTML = '';
       currentAiButtons.forEach(btn => {
         btn.disabled = loading;
