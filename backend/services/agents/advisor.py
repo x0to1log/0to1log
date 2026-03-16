@@ -541,6 +541,80 @@ def _fetch_handbook_term_map() -> dict[str, str]:
         return {}
 
 
+async def _validate_ref_urls(content: str) -> str:
+    """HEAD-check markdown link URLs in content. Remove broken links, keep text.
+
+    Converts ``[Display Name](URL) — description`` to ``Display Name — description``
+    when the URL returns 4xx/5xx or times out.
+    """
+    link_pattern = re.compile(r'\[([^\]]+)\]\((https?://[^\s)]+)\)')
+    matches = list(link_pattern.finditer(content))
+    if not matches:
+        return content
+
+    # Collect unique URLs to check (deduplicate)
+    urls_to_check: dict[str, bool] = {}
+    for m in matches:
+        url = m.group(2)
+        if url not in urls_to_check:
+            urls_to_check[url] = True  # assume valid until checked
+
+    # HEAD check all URLs concurrently with timeout
+    async def _head_check(url: str) -> tuple[str, bool]:
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                resp = await client.head(url)
+                return url, resp.status_code < 400
+        except (httpx.TimeoutException, httpx.RequestError):
+            return url, False
+
+    results = await asyncio.gather(
+        *[_head_check(u) for u in urls_to_check],
+        return_exceptions=True,
+    )
+    for result in results:
+        if isinstance(result, tuple):
+            url, is_valid = result
+            urls_to_check[url] = is_valid
+
+    # Replace broken links: [text](url) → text
+    broken_count = 0
+    for m in reversed(matches):  # reverse to preserve positions
+        url = m.group(2)
+        if not urls_to_check.get(url, False):
+            display_text = m.group(1)
+            content = content[:m.start()] + display_text + content[m.end():]
+            broken_count += 1
+
+    if broken_count:
+        logger.info("Removed %d broken reference links", broken_count)
+    return content
+
+
+def _link_related_terms(content: str, handbook_map: dict[str, str]) -> str:
+    """Link **BoldTerm** patterns in related-terms sections to handbook pages.
+
+    Converts ``**TermName**`` to ``[**TermName**](/handbook/slug/)``
+    when the term exists in our handbook.
+    """
+    # Build case-insensitive lookup: lowercase → (original_term, slug)
+    term_lookup: dict[str, tuple[str, str]] = {}
+    for term, slug in handbook_map.items():
+        term_lookup[term.lower()] = (term, slug)
+
+    def _replace_bold_term(m: re.Match) -> str:
+        bold_text = m.group(1)
+        lookup = term_lookup.get(bold_text.lower())
+        if lookup:
+            _, slug = lookup
+            return f'[**{bold_text}**](/handbook/{slug}/)'
+        return m.group(0)  # no match, return as-is
+
+    # Match **BoldText** that is NOT already inside a markdown link [...]
+    bold_pattern = re.compile(r'(?<!\[)\*\*([^*]+)\*\*(?!\])')
+    return bold_pattern.sub(_replace_bold_term, content)
+
+
 def _auto_link_handbook_terms(content: str, handbook_map: dict[str, str]) -> str:
     """Replace first occurrence of each handbook term with a markdown link.
 
@@ -822,8 +896,19 @@ async def _run_generate_term(
         if adv_content and adv_content.count("## ") < 9:
             warnings.append(f"body_advanced_{lang}: only {adv_content.count('## ')}/9 sections")
 
-    # Auto-link handbook terms in generated content
+    # Post-processing step 1: Validate reference URLs in advanced sections
+    for field in ("body_advanced_ko", "body_advanced_en"):
+        if data.get(field):
+            data[field] = await _validate_ref_urls(data[field])
+
+    # Post-processing step 2: Link related terms to handbook pages
     handbook_map = _fetch_handbook_term_map()
+    if handbook_map:
+        for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
+            if data.get(field):
+                data[field] = _link_related_terms(data[field], handbook_map)
+
+    # Post-processing step 3: Auto-link first occurrence of handbook terms in body
     if handbook_map:
         for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
             if data.get(field):
