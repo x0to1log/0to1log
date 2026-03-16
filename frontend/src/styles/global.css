@@ -46,14 +46,14 @@
    DARK THEME (Default)
    =========================== */
 [data-theme="dark"] {
-  --color-bg-primary: #1F1A17;
-  --color-bg-secondary: #191512;
-  --color-bg-tertiary: #25201C;
-  --color-input-surface: #2A2420;
+  --color-bg-primary: #18140F;
+  --color-bg-secondary: #120F0C;
+  --color-bg-tertiary: #1F1A15;
+  --color-input-surface: #221D18;
   --color-text-primary: #E0D8C3;
   --color-text-secondary: #A39D8E;
   --color-text-muted: #948C7E;
-  --color-border: #433B32;
+  --color-border: #3D3529;
   --color-accent: #C3A370;
   --color-accent-hover: #D4B882;
   --color-accent-glow: rgba(195, 163, 112, 0.15);
@@ -84,43 +84,43 @@
 }
 
 /* ===========================
-   MIDNIGHT THEME (temp preview — stitch_black palette, improved)
+   MIDNIGHT THEME — Cool Ink
    =========================== */
 [data-theme="midnight"] {
-  --color-bg-primary: #000000;
-  --color-bg-secondary: #111111;
-  --color-bg-tertiary: #1C1C1C;
-  --color-input-surface: #0D0D0D;
-  --color-text-primary: #D1C7B7;
-  --color-text-secondary: #B8AEA0;
-  --color-text-muted: #A0968A;
-  --color-border: #5A5348;
-  --color-accent: #C3A370;
-  --color-accent-hover: #D4B882;
-  --color-accent-glow: rgba(195, 163, 112, 0.15);
-  --color-accent-subtle: rgba(195, 163, 112, 0.08);
-  --color-success: #52875A;
-  --color-warning: #C99B38;
-  --color-error: #A04842;
+  --color-bg-primary: #08090E;
+  --color-bg-secondary: #101218;
+  --color-bg-tertiary: #1A1C25;
+  --color-input-surface: #0C0D14;
+  --color-text-primary: #C8CDD8;
+  --color-text-secondary: #A0A6B4;
+  --color-text-muted: #7E8596;
+  --color-border: #2E3242;
+  --color-accent: #C4B07A;
+  --color-accent-hover: #D4C08A;
+  --color-accent-glow: rgba(196, 176, 122, 0.15);
+  --color-accent-subtle: rgba(196, 176, 122, 0.08);
+  --color-success: #4E9A6B;
+  --color-warning: #C9A044;
+  --color-error: #B85450;
   --color-shadow: rgba(0, 0, 0, 0.6);
   --noise-opacity: 0.025;
 
-  /* Category Colors — same as dark */
-  --color-cat-ainews: #D46A58;
-  --color-cat-study: #7A8B78;
-  --color-cat-career: #A09080;
-  --color-cat-project: #8888A0;
-  --color-cat-work-note: #6E8C92;
-  --color-cat-daily: #A97C68;
+  /* Category Colors — cool shift */
+  --color-cat-ainews: #D06858;
+  --color-cat-study: #6E9682;
+  --color-cat-career: #8C94AA;
+  --color-cat-project: #8282AF;
+  --color-cat-work-note: #6496AA;
+  --color-cat-daily: #AA8282;
 
-  /* Shiki — stitch_black ink */
-  --shiki-token-keyword: #D4A87C;
-  --shiki-token-string: #8FAE7E;
-  --shiki-token-function: #B8A9D4;
-  --shiki-token-comment: #A0968A;
-  --shiki-token-constant: #C3A370;
-  --shiki-token-punctuation: #D1C7B7;
-  --shiki-color-text: #D1C7B7;
+  /* Shiki — Cool Ink */
+  --shiki-token-keyword: #D4C08A;
+  --shiki-token-string: #6E9682;
+  --shiki-token-function: #8282AF;
+  --shiki-token-comment: #7E8596;
+  --shiki-token-constant: #C4B07A;
+  --shiki-token-punctuation: #C8CDD8;
+  --shiki-color-text: #C8CDD8;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
@@ -129,17 +129,17 @@
    =========================== */
 [data-theme="light"] {
   --color-bg-primary: #F4F1EA;
-  --color-bg-secondary: #E9E4D9;
-  --color-bg-tertiary: #DDD8CC;
-  --color-input-surface: #E9E4D9;
+  --color-bg-secondary: #E3DCCC;
+  --color-bg-tertiary: #D3CCB8;
+  --color-input-surface: #EAE5D5;
   --color-text-primary: #333333;
   --color-text-secondary: #555555;
   --color-text-muted: #736B63;
-  --color-border: #B5AA9C;
-  --color-accent: #8B5F3C;
-  --color-accent-hover: #A0724D;
-  --color-accent-glow: rgba(139, 95, 60, 0.15);
-  --color-accent-subtle: rgba(139, 95, 60, 0.08);
+  --color-border: #ADA192;
+  --color-accent: #6B4226;
+  --color-accent-hover: #7E5030;
+  --color-accent-glow: rgba(107, 66, 38, 0.15);
+  --color-accent-subtle: rgba(107, 66, 38, 0.08);
   --color-success: #2E6F57;
   --color-warning: #B8860B;
   --color-error: #8B3A3A;
@@ -147,19 +147,19 @@
   --noise-opacity: 0.04;
 
   /* Category Colors */
-  --color-cat-ainews: #993D30;
-  --color-cat-study: #4D5E4B;
-  --color-cat-career: #6B5B4B;
-  --color-cat-project: #585870;
-  --color-cat-work-note: #45626A;
-  --color-cat-daily: #7B5648;
+  --color-cat-ainews: #B03E2E;
+  --color-cat-study: #3A7348;
+  --color-cat-career: #6B5B90;
+  --color-cat-project: #3E6088;
+  --color-cat-work-note: #2D7478;
+  --color-cat-daily: #B07030;
 
   /* Shiki — Newspaper */
   --shiki-token-keyword: #8B3A3A;
   --shiki-token-string: #2E6F57;
   --shiki-token-function: #5B4A8A;
   --shiki-token-comment: #888888;
-  --shiki-token-constant: #8B5F3C;
+  --shiki-token-constant: #6B4226;
   --shiki-token-punctuation: #333333;
   --shiki-color-text: #333333;
   --shiki-color-background: var(--color-bg-tertiary);

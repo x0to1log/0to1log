@@ -298,7 +298,7 @@ const navItems = [
 <script>
   const themes = ['dark', 'light', 'pink', 'midnight'] as const;
   type Theme = typeof themes[number];
-  const themeColors = { dark: '#1F1A17', light: '#F4F1EA', pink: '#FFF0F3', midnight: '#1A1A1A' };
+  const themeColors = { dark: '#18140F', light: '#F4F1EA', pink: '#FFF0F3', midnight: '#08090E' };
 
   function getTheme(): Theme {
     const stored = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
