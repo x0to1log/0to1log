@@ -3,6 +3,7 @@ import Head from '../components/Head.astro';
 import Navigation from '../components/Navigation.astro';
 import Footer from '../components/Footer.astro';
 import AuthPromptSheet from '../components/auth/AuthPromptSheet.astro';
+import CookieConsent from '../components/CookieConsent.astro';
 import { ViewTransitions } from 'astro:transitions';
 import '../styles/global.css';
 
@@ -71,27 +72,34 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     data-preview-mode={previewMode ? 'true' : 'false'}
     style={`min-height: ${previewMode ? 'auto' : '100vh'}; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}
   >
-    {gaId && (
-      <>
-        <script is:inline nonce={nonce} src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} async></script>
-        <script is:inline nonce={nonce} define:vars={{ gaId }}>
+    <!-- Analytics: consent-gated (GDPR opt-in) -->
+    <script is:inline nonce={nonce} define:vars={{ gaId, clarityId }}>
+      (function() {
+        if (localStorage.getItem('cookieConsent') !== 'accepted') return;
+
+        // GA4 — skip if already loaded (ViewTransitions re-execution guard)
+        if (gaId && !window.gtag) {
+          var gs = document.createElement('script');
+          gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+          gs.async = true;
+          document.head.appendChild(gs);
           window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
+          function gtag(){window.dataLayer.push(arguments);}
+          window.gtag = gtag;
           gtag('js', new Date());
           gtag('config', gaId);
-        </script>
-      </>
-    )}
+        }
 
-    {clarityId && (
-      <script is:inline nonce={nonce} define:vars={{ clarityId }}>
-        (function(c,l,a,r,i,t,y){
-          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window,document,"clarity","script",clarityId);
-      </script>
-    )}
+        // Clarity — skip if already loaded
+        if (clarityId && !window.clarity) {
+          (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window,document,'clarity','script',clarityId);
+        }
+      })();
+    </script>
 
     <!-- Skip Navigation -->
     <a href="#main-content" class="skip-link">
@@ -105,6 +113,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     </main>
 
     {!isAdmin && <Footer locale={locale} pathname={Astro.url.pathname} />}
+    {!isAdmin && <CookieConsent locale={locale} />}
     {!isAdmin && <AuthPromptSheet locale={locale} />}
   </body>
 </html>
