@@ -54,12 +54,19 @@ flowchart TD
   HB2 -.-> P3I
 
   NP2 -.-> AIP[AI Products]
+  AIP -.-> AFF[Affiliate]
+  AFF -.-> ADS[AdSense]
   P3I --> P4[Phase 4 Community]
+  P4 --> PREM[Premium 구독]
+  PREM --> P5[Phase 5 Native App]
+
+  LEGAL[Legal & Privacy ⚠️] -.-> AFF
 
   style NP2 fill:#fff3cd,stroke:#ffc107
   style P3I fill:#e8f5e9,stroke:#4caf50
   style HB2 fill:#e8f5e9,stroke:#4caf50
   style AIP fill:#e8f5e9,stroke:#4caf50
+  style LEGAL fill:#ffcdd2,stroke:#e53935
 ```
 
 ### Current Status
