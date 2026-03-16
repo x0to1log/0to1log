@@ -60,6 +60,11 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
         <div class="admin-list-toolbar-row">
           <div class="admin-list-toolbar-left">
             <a href="/admin/products/edit/new" class="admin-btn admin-btn-primary">New Product</a>
+            {draftCount > 0 && (
+              <button class="admin-btn admin-btn-success" id="batch-publish-btn" type="button">
+                Publish All Drafts ({draftCount})
+              </button>
+            )}
             <div class="admin-filter-tabs">
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({draftCount})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({publishedCount})</button>
@@ -319,6 +324,27 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
     el.hidden = false;
     setTimeout(() => { el.hidden = true; }, 3500);
   }
+
+  // ── Batch publish all drafts ──────────────────────────
+  document.getElementById('batch-publish-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('batch-publish-btn');
+    if (!confirm('Publish all draft products?')) return;
+    btn.disabled = true;
+    btn.textContent = 'Publishing...';
+    try {
+      const res = await fetch('/api/admin/products/batch-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'publish', filter: 'all_drafts' }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showFeedback(data.error || 'Failed', true); return; }
+      showFeedback(`${data.updated} products published. Refreshing...`);
+      setTimeout(() => location.reload(), 1000);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   // ── Product status toggle ─────────────────────────────
   document.querySelectorAll('.admin-product-status-btn').forEach((btn) => {
