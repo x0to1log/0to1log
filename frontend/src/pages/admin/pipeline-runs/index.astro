@@ -40,6 +40,15 @@ type RunCard = PipelineRun & {
 
 const runs: RunCard[] = [];
 
+// Pipeline Status box data
+let lastRun: PipelineRun | null = null;
+let lastRunError = '';
+let pipelineCost = 0;
+let pipelineTokens = 0;
+let candidatesTotal = 0;
+let candidatesSelected = 0;
+let lastHandbookRun: { id: string; run_key: string; status: string; started_at: string; last_error: string | null } | null = null;
+
 function statusTone(status: string | null | undefined): RunCard['statusTone'] {
   if (status === 'success') return 'success';
   if (status === 'failed') return 'failed';
@@ -138,7 +147,63 @@ try {
       statusTone: statusTone(run.status),
     });
   }
+
+  // Pipeline Status box: derive from first run
+  if (pipelineRuns.length > 0) {
+    lastRun = pipelineRuns[0];
+    lastRunError = formatPipelineError(lastRun.last_error);
+    const statusMetric = totals.get(lastRun.id);
+    pipelineCost = statusMetric?.totalCost ?? 0;
+    pipelineTokens = statusMetric?.totalTokens ?? 0;
+
+    const { data: cands } = await sb
+      .from('news_candidates')
+      .select('status')
+      .eq('batch_id', lastRun.run_key);
+    const candidates = cands ?? [];
+    candidatesTotal = candidates.length;
+    candidatesSelected = candidates.filter((c: any) => c.status === 'selected' || c.status === 'published').length;
+  }
+
+  // Last handbook run for Retry Handbook button
+  const { data: hbRunData } = await sb
+    .from('pipeline_runs')
+    .select('id, run_key, status, started_at, last_error')
+    .like('run_key', 'handbook-extract-%')
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  lastHandbookRun = hbRunData ?? null;
 } catch {}
+
+// Detect stuck pipeline runs (>30 minutes)
+const STUCK_TIMEOUT_MS = 30 * 60 * 1000;
+const isStuck = lastRun?.status === 'running' &&
+  lastRun?.started_at &&
+  (Date.now() - new Date(lastRun.started_at).getTime()) > STUCK_TIMEOUT_MS;
+
+if (isStuck && lastRun) {
+  try {
+    await sb.from('pipeline_runs').update({
+      status: 'failed',
+      finished_at: new Date().toISOString(),
+      last_error: 'Pipeline timed out (>30 minutes)',
+    }).eq('id', lastRun.id).eq('status', 'running');
+    lastRun.status = 'failed';
+    lastRunError = 'Pipeline timed out (>30 minutes)';
+  } catch {}
+}
+
+// Show Retry Handbook when:
+// 1. Last handbook-extract run failed or stuck running, OR
+// 2. News run exists but no handbook-extract run for that batch
+const lastNewsBatchId = lastRun?.run_key?.replace('news-v2-', '') ?? '';
+const handbookNeedsRetry = lastHandbookRun?.status === 'failed' || lastHandbookRun?.status === 'running';
+const newsExistsNoHandbook = !!lastNewsBatchId && !lastHandbookRun;
+const showRetryHandbook = handbookNeedsRetry || newsExistsNoHandbook;
+const retryBatchId = handbookNeedsRetry
+  ? (lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '')
+  : lastNewsBatchId;
 
 const newsRuns = runs.filter((r) => r.run_key?.startsWith('news-v2-'));
 const handbookRuns = runs.filter((r) => r.run_key?.startsWith('handbook-extract-'));
@@ -184,6 +249,82 @@ const handbookSummary = buildSummary(handbookRuns);
           </div>
         </div>
       </div>
+
+      <section class="dashboard-section" style="margin-bottom:1.25rem">
+        <h2 class="dashboard-section-title">Pipeline Status</h2>
+        {lastRun ? (
+          <div class={`dashboard-pipeline dashboard-pipeline--${lastRun.status}`}>
+            <div class="dashboard-pipeline-header">
+              <span class="dashboard-pipeline-status">
+                {lastRun.status === 'success' ? '✓' : lastRun.status === 'failed' ? '✗' : '●'} {lastRun.status}
+              </span>
+              <span class="dashboard-pipeline-time">{relativeTime(lastRun.started_at)}</span>
+            </div>
+            <div class="dashboard-pipeline-details">
+              {lastRun.finished_at && (
+                <span>Duration: {Math.round((new Date(lastRun.finished_at).getTime() - new Date(lastRun.started_at).getTime()) / 1000)}s</span>
+              )}
+              {candidatesTotal > 0 && (
+                <span>Candidates: {candidatesTotal} collected → {candidatesSelected} selected</span>
+              )}
+              {pipelineCost > 0 && (
+                <span>Cost: ${pipelineCost.toFixed(2)} · {pipelineTokens.toLocaleString()} tokens</span>
+              )}
+            </div>
+            {lastRun.status === 'failed' && lastRunError && (
+              <div class="dashboard-pipeline-error">{lastRunError}</div>
+            )}
+            <div class="dashboard-pipeline-actions">
+              <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
+                     max={new Date().toISOString().slice(0,10)}
+                     title="Leave empty for today" />
+              <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              {lastRun?.status === 'running' && (
+                <button type="button" class="admin-btn-danger" id="cancel-pipeline-btn"
+                        data-run-id={lastRun.id}>
+                  Cancel
+                </button>
+              )}
+              {showRetryHandbook && (
+                <button type="button" class="admin-btn" id="retry-handbook-btn"
+                        data-batch-id={retryBatchId}
+                        title={`Retry handbook extraction for ${retryBatchId}`}>
+                  Retry Handbook
+                </button>
+              )}
+              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook
+              </label>
+              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
+              <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+            </div>
+          </div>
+        ) : (
+          <div class="dashboard-pipeline dashboard-pipeline--none">
+            <p class="dashboard-empty">No pipeline runs yet.</p>
+            <div class="dashboard-pipeline-actions">
+              <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
+                     max={new Date().toISOString().slice(0,10)}
+                     title="Leave empty for today" />
+              <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+              {showRetryHandbook && (
+                <button type="button" class="admin-btn" id="retry-handbook-btn"
+                        data-batch-id={retryBatchId}
+                        title={`Retry handbook extraction for ${retryBatchId}`}>
+                  Retry Handbook
+                </button>
+              )}
+              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook
+              </label>
+              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
+              <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+            </div>
+          </div>
+        )}
+      </section>
 
       <div class="pcosts-tabs">
         <button class="pcosts-tab pcosts-tab--active" data-tab="news" type="button">News</button>
@@ -749,6 +890,111 @@ const handbookSummary = buildSummary(handbookRuns);
       padding: 0.85rem;
     }
   }
+
+  /* Pipeline Status box (copied from dashboard) */
+  .dashboard-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .dashboard-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    padding: 1rem 0;
+  }
+
+  .dashboard-pipeline {
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    padding: 1rem;
+  }
+
+  .dashboard-pipeline--success {
+    border-left-color: var(--color-success);
+  }
+
+  .dashboard-pipeline--failed {
+    border-left-color: var(--color-error, #c44);
+  }
+
+  .dashboard-pipeline--running {
+    border-left-color: var(--color-accent, #e90);
+  }
+
+  .dashboard-pipeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-pipeline-status {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: capitalize;
+  }
+
+  .dashboard-pipeline-time {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+  }
+
+  .dashboard-pipeline-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .dashboard-pipeline-error {
+    font-size: 0.8rem;
+    color: var(--color-error, #c44);
+    background: var(--color-bg);
+    padding: 0.5rem;
+    border: 1px solid var(--color-error, #c44);
+    margin-bottom: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .dashboard-pipeline-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-pipeline-feedback {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+
+  .dashboard-pipeline-feedback[data-state='error'] {
+    color: #b42318;
+  }
+
+  .dashboard-pipeline-helper {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  .admin-input--date {
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
 </style>
 
 <script is:inline nonce={Astro.locals.cspNonce || ''}>
@@ -768,5 +1014,157 @@ const handbookSummary = buildSummary(handbookRuns);
         });
       });
     });
+  })();
+</script>
+
+<script is:inline nonce={Astro.locals.cspNonce || ''}>
+  (function() {
+    var pipelineBtn = document.getElementById('run-pipeline-btn');
+    var pipelineFeedback = document.getElementById('run-pipeline-feedback');
+    var dateInput = document.getElementById('pipeline-target-date');
+    var handbookCheckbox = document.getElementById('include-handbook');
+
+    function setPipelineFeedback(message, state) {
+      if (!pipelineFeedback) return;
+      pipelineFeedback.textContent = message;
+      if (state) {
+        pipelineFeedback.dataset.state = state;
+      } else {
+        delete pipelineFeedback.dataset.state;
+      }
+    }
+
+    function firePipelineRequest(mode, targetDate, force) {
+      var reqBody = { mode: mode };
+      if (targetDate) reqBody.target_date = targetDate;
+      if (force) reqBody.force = true;
+      if (handbookCheckbox && !handbookCheckbox.checked) reqBody.skip_handbook = true;
+      return fetch('/api/admin/run-pipeline', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqBody),
+      }).then(function(res) {
+        return res.json().catch(function() { return null; }).then(function(payload) {
+          return { res: res, payload: payload };
+        });
+      });
+    }
+
+    if (pipelineBtn && !pipelineBtn.dataset.init) {
+      pipelineBtn.dataset.init = '1';
+      pipelineBtn.addEventListener('click', function() {
+        pipelineBtn.setAttribute('disabled', 'true');
+        pipelineBtn.textContent = 'Running...';
+        setPipelineFeedback('');
+        var targetDate = dateInput ? dateInput.value || null : null;
+
+        firePipelineRequest('resume', targetDate, false).then(function(result) {
+          var res = result.res;
+          var payload = result.payload;
+
+          // Handle duplicate batch
+          if (res.status === 409) {
+            var detail = (payload && payload.data && payload.data.detail) || (payload && payload.detail) || payload;
+            var existing = (detail && detail.existing) || {};
+            var msg = (detail && detail.batch_id || targetDate || 'today') + ' already has data:\n'
+              + (existing.post_count != null ? existing.post_count : '?') + ' posts, '
+              + (existing.run_count != null ? existing.run_count : '?') + ' pipeline runs.\n\n'
+              + 'Overwrite existing data?';
+            if (!window.confirm(msg)) {
+              pipelineBtn.textContent = 'Run Pipeline';
+              pipelineBtn.removeAttribute('disabled');
+              setPipelineFeedback('Cancelled — existing data kept.', 'error');
+              return;
+            }
+            return firePipelineRequest('resume', targetDate, true).then(function(r2) {
+              return handleResponse(r2.res, r2.payload);
+            });
+          }
+
+          return handleResponse(res, payload);
+        }).catch(function(error) {
+          pipelineBtn.textContent = 'Failed';
+          var message = error instanceof Error ? error.message : 'Failed to trigger pipeline';
+          setPipelineFeedback(message, 'error');
+          setTimeout(function() { pipelineBtn.textContent = 'Run Pipeline'; }, 3000);
+          pipelineBtn.removeAttribute('disabled');
+        });
+
+        function handleResponse(res, payload) {
+          if (res.status === 422) {
+            var detail = (payload && payload.data && payload.data.detail) || (payload && payload.detail) || payload;
+            throw new Error((detail && detail.message) || 'Cannot overwrite: published posts exist.');
+          }
+          if (!res.ok) {
+            var message = (payload && payload.error) || 'HTTP ' + res.status;
+            if (res.status === 401) message = (payload && payload.error) || 'Unauthorized';
+            else if (res.status === 403) message = (payload && payload.error) || 'Admin access required';
+            else if (res.status === 500) message = 'Missing pipeline configuration';
+            else if (res.status === 503) message = (payload && (payload.message || payload.error)) || 'Admin verification unavailable';
+            else if (res.status === 502) message = (payload && (payload.message || (payload.data && payload.data.message))) || 'Backend trigger failed';
+            throw new Error(message);
+          }
+          pipelineBtn.textContent = 'Started';
+          var dateLabel = (dateInput && dateInput.value) || 'today';
+          setPipelineFeedback((payload && payload.data && payload.data.message) || 'Pipeline queued for ' + dateLabel + '.', 'success');
+          setTimeout(function() { window.location.reload(); }, 2000);
+        }
+      });
+    }
+
+    // Retry Handbook button handler
+    var retryHandbookBtn = document.getElementById('retry-handbook-btn');
+    if (retryHandbookBtn) {
+      retryHandbookBtn.addEventListener('click', function() {
+        var batchId = retryHandbookBtn.dataset.batchId;
+        if (!batchId) return;
+        retryHandbookBtn.textContent = 'Retrying...';
+        retryHandbookBtn.setAttribute('disabled', 'true');
+        fetch('/api/admin/run-pipeline', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'handbook-extract', target_date: batchId }),
+        }).then(function(res) {
+          if (!res.ok) {
+            return res.json().catch(function() { return null; }).then(function(payload) {
+              throw new Error((payload && payload.error) || 'HTTP ' + res.status);
+            });
+          }
+          retryHandbookBtn.textContent = 'Started';
+          setPipelineFeedback('Handbook extraction retrying for ' + batchId, 'success');
+          setTimeout(function() { window.location.reload(); }, 2000);
+        }).catch(function(error) {
+          retryHandbookBtn.textContent = 'Failed';
+          var message = error instanceof Error ? error.message : 'Failed to retry handbook';
+          setPipelineFeedback(message, 'error');
+          setTimeout(function() { retryHandbookBtn.textContent = 'Retry Handbook'; }, 3000);
+        });
+      });
+    }
+
+    // Cancel pipeline button handler
+    var cancelBtn = document.getElementById('cancel-pipeline-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function() {
+        var runId = cancelBtn.dataset.runId;
+        if (!runId) return;
+        cancelBtn.textContent = 'Cancelling...';
+        cancelBtn.setAttribute('disabled', 'true');
+        fetch('/api/admin/pipeline-cancel', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ run_id: runId }),
+        }).then(function() {
+          setPipelineFeedback('Pipeline cancelled.', 'success');
+          setTimeout(function() { window.location.reload(); }, 1500);
+        }).catch(function() {
+          cancelBtn.textContent = 'Failed';
+          setTimeout(function() { cancelBtn.textContent = 'Cancel'; }, 2000);
+        });
+      });
+    }
   })();
 </script>
