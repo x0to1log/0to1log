@@ -1,0 +1,106 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+---
+
+<MainLayout
+  title="Terms of Service"
+  description="Terms of Service for 0to1log — usage conditions and policies."
+  locale="en"
+  slug="terms/"
+  headerAlwaysVisible={true}
+>
+  <div class="legal-page">
+    <h1 class="legal-title">Terms of Service</h1>
+    <p class="legal-updated">Last updated: March 2026</p>
+
+    <section class="legal-section">
+      <h2>1. Acceptance</h2>
+      <p>By accessing or using <strong>0to1log.com</strong>, you agree to be bound by these Terms of Service. If you do not agree, please do not use the site.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>2. AI-Generated Content</h2>
+      <p>Some content on this site is produced with AI assistance. While we strive for accuracy and quality, we make no guarantee that any content is complete, current, or error-free. Content is provided for informational purposes only and should not be relied upon as professional, legal, or financial advice.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>3. Service Availability</h2>
+      <p>0to1log is a solo-operated project. We do not guarantee uninterrupted access to the site. The service may be temporarily unavailable due to maintenance, updates, or circumstances beyond our control. We reserve the right to modify or discontinue any part of the service at any time without notice.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>4. Intellectual Property</h2>
+      <p>All original content on this site — including articles, glossary entries, and design — is the property of 0to1log. Unauthorized reproduction, redistribution, or commercial use of this content without explicit permission is prohibited. You may share brief excerpts with proper attribution and a link back to the original.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>5. User-Generated Content</h2>
+      <p>Future community features may allow users to submit comments or other content. By submitting content, you grant 0to1log a non-exclusive license to display and distribute that content on the platform. You are solely responsible for any content you submit and agree not to post content that is unlawful, harmful, or misleading.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>6. Limitation of Liability</h2>
+      <p>The site and its content are provided "as is" without warranties of any kind, express or implied. To the fullest extent permitted by law, 0to1log shall not be liable for any indirect, incidental, or consequential damages arising from your use of the site or reliance on its content.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>7. Changes to Terms</h2>
+      <p>We may update these Terms of Service from time to time. Changes will be indicated by the "Last updated" date at the top of this page. Your continued use of the site after any changes constitutes your acceptance of the revised terms.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>8. Contact</h2>
+      <p>For questions about these Terms, contact us at <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>.</p>
+    </section>
+  </div>
+</MainLayout>
+
+<style>
+  .legal-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+  .legal-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .legal-updated {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+  }
+  .legal-section {
+    margin-bottom: 2rem;
+  }
+  .legal-section h2 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .legal-section p,
+  .legal-section li {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-text);
+  }
+  .legal-section ul {
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .legal-section li {
+    margin-bottom: 0.25rem;
+  }
+  .legal-section a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+</style>

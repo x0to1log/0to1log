@@ -1,0 +1,135 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+---
+
+<MainLayout
+  title="Privacy Policy"
+  description="Privacy Policy for 0to1log — how we collect and use your data."
+  locale="en"
+  slug="privacy/"
+  headerAlwaysVisible={true}
+>
+  <div class="legal-page">
+    <h1 class="legal-title">Privacy Policy</h1>
+    <p class="legal-updated">Last updated: March 2026</p>
+
+    <section class="legal-section">
+      <h2>1. Introduction</h2>
+      <p>0to1log ("we", "us", "our") operates the website <strong>0to1log.com</strong>. This Privacy Policy explains what data we collect, how we use it, and your rights regarding your personal information.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>2. Data We Collect</h2>
+      <h3>Analytics</h3>
+      <p>With your consent, we use <strong>Google Analytics 4</strong> (page views, traffic sources, engagement) and <strong>Microsoft Clarity</strong> (heatmaps, session replays) to understand how visitors use the site and improve the experience. These tools use cookies that are only loaded after you consent.</p>
+      <h3>Authentication</h3>
+      <p>If you sign in, <strong>Supabase Auth</strong> stores your email and OAuth profile (Google/GitHub) for authentication and access control.</p>
+      <h3>Performance</h3>
+      <p><strong>Vercel Analytics</strong> collects Web Vitals and page performance metrics.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>3. How We Use Your Data</h2>
+      <ul>
+        <li>Analyze visitor behavior and measure engagement (AARRR metrics)</li>
+        <li>Improve user experience based on UX analytics</li>
+        <li>Authenticate users and manage access</li>
+        <li>Monitor site performance</li>
+      </ul>
+    </section>
+
+    <section class="legal-section">
+      <h2>4. Cookies</h2>
+      <p>We use the following categories of cookies:</p>
+      <ul>
+        <li><strong>Essential:</strong> Supabase Auth session tokens — required for authentication, no consent needed.</li>
+        <li><strong>Analytics:</strong> GA4 (<code>_ga</code>, <code>_gid</code>) and Clarity cookies — loaded only with your consent.</li>
+      </ul>
+      <p>You can manage your cookie preferences via the consent banner shown when you first visit the site.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>5. Your Rights</h2>
+      <p>Under the <strong>EU General Data Protection Regulation (GDPR)</strong> and the <strong>Korean Personal Information Protection Act (KPIPA)</strong>, you have the right to:</p>
+      <ul>
+        <li>Access the personal data we hold about you</li>
+        <li>Request correction or deletion of your data</li>
+        <li>Withdraw consent for analytics cookies at any time</li>
+        <li>Object to processing of your data</li>
+      </ul>
+    </section>
+
+    <section class="legal-section">
+      <h2>6. Data Retention</h2>
+      <p>Analytics data is retained according to Google Analytics and Microsoft Clarity default retention policies. Authentication data is retained while your account is active.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>7. Contact</h2>
+      <p>For questions about this Privacy Policy or to exercise your rights, contact us at <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>.</p>
+    </section>
+  </div>
+</MainLayout>
+
+<style>
+  .legal-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+  .legal-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .legal-updated {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+  }
+  .legal-section {
+    margin-bottom: 2rem;
+  }
+  .legal-section h2 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .legal-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    margin-top: 1rem;
+  }
+  .legal-section p,
+  .legal-section li {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-text);
+  }
+  .legal-section ul {
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .legal-section li {
+    margin-bottom: 0.25rem;
+  }
+  .legal-section a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .legal-section code {
+    font-size: 0.9em;
+    background: var(--color-bg-secondary);
+    padding: 0.1rem 0.3rem;
+    border-radius: 2px;
+  }
+</style>

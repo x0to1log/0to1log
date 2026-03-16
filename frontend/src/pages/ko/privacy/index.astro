@@ -1,0 +1,135 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+---
+
+<MainLayout
+  title="개인정보처리방침"
+  description="0to1log 개인정보처리방침 — 수집하는 데이터와 이용 방법을 안내합니다."
+  locale="ko"
+  slug="privacy/"
+  headerAlwaysVisible={true}
+>
+  <div class="legal-page">
+    <h1 class="legal-title">개인정보처리방침</h1>
+    <p class="legal-updated">최종 수정: 2026년 3월</p>
+
+    <section class="legal-section">
+      <h2>1. 소개</h2>
+      <p>0to1log("당사")는 <strong>0to1log.com</strong> 웹사이트를 운영합니다. 본 개인정보처리방침은 당사가 수집하는 데이터, 이용 방법, 그리고 귀하의 개인정보에 관한 권리를 설명합니다.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>2. 수집하는 데이터</h2>
+      <h3>분석</h3>
+      <p>귀하의 동의 하에 <strong>Google Analytics 4</strong>(페이지 조회, 트래픽 소스, 참여도)와 <strong>Microsoft Clarity</strong>(히트맵, 세션 리플레이)를 사용하여 방문자의 사이트 이용 방식을 파악하고 경험을 개선합니다. 이러한 도구는 귀하의 동의 후에만 로드되는 쿠키를 사용합니다.</p>
+      <h3>인증</h3>
+      <p>로그인 시 <strong>Supabase Auth</strong>가 인증 및 접근 제어를 위해 귀하의 이메일과 OAuth 프로필(Google/GitHub)을 저장합니다.</p>
+      <h3>성능</h3>
+      <p><strong>Vercel Analytics</strong>는 Web Vitals 및 페이지 성능 지표를 수집합니다.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>3. 데이터 이용 목적</h2>
+      <ul>
+        <li>방문자 행동 분석 및 참여도 측정(AARRR 지표)</li>
+        <li>UX 분석을 기반으로 한 사용자 경험 개선</li>
+        <li>사용자 인증 및 접근 관리</li>
+        <li>사이트 성능 모니터링</li>
+      </ul>
+    </section>
+
+    <section class="legal-section">
+      <h2>4. 쿠키</h2>
+      <p>당사는 다음 유형의 쿠키를 사용합니다:</p>
+      <ul>
+        <li><strong>필수:</strong> Supabase Auth 세션 토큰 — 인증에 필요하며 동의 없이 사용됩니다.</li>
+        <li><strong>분석:</strong> GA4(<code>_ga</code>, <code>_gid</code>) 및 Clarity 쿠키 — 귀하의 동의 후에만 로드됩니다.</li>
+      </ul>
+      <p>사이트 첫 방문 시 표시되는 동의 배너를 통해 쿠키 설정을 관리할 수 있습니다.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>5. 귀하의 권리</h2>
+      <p><strong>EU 일반 데이터 보호 규정(GDPR)</strong> 및 <strong>개인정보 보호법(KPIPA)</strong>에 따라 귀하는 다음 권리를 보유합니다:</p>
+      <ul>
+        <li>당사가 보유한 개인정보 열람 요청</li>
+        <li>개인정보 정정 또는 삭제 요청</li>
+        <li>언제든지 분석 쿠키에 대한 동의 철회</li>
+        <li>개인정보 처리에 대한 이의 제기</li>
+      </ul>
+    </section>
+
+    <section class="legal-section">
+      <h2>6. 보유 기간</h2>
+      <p>분석 데이터는 Google Analytics 및 Microsoft Clarity의 기본 보유 정책에 따라 보관됩니다. 인증 데이터는 계정이 활성 상태인 동안 보관됩니다.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>7. 연락처</h2>
+      <p>본 개인정보처리방침에 관한 문의 또는 권리 행사를 원하시면 <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>으로 연락해 주십시오.</p>
+    </section>
+  </div>
+</MainLayout>
+
+<style>
+  .legal-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+  .legal-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .legal-updated {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+  }
+  .legal-section {
+    margin-bottom: 2rem;
+  }
+  .legal-section h2 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .legal-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    margin-top: 1rem;
+  }
+  .legal-section p,
+  .legal-section li {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-text);
+  }
+  .legal-section ul {
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .legal-section li {
+    margin-bottom: 0.25rem;
+  }
+  .legal-section a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .legal-section code {
+    font-size: 0.9em;
+    background: var(--color-bg-secondary);
+    padding: 0.1rem 0.3rem;
+    border-radius: 2px;
+  }
+</style>
