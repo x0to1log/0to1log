@@ -32,6 +32,7 @@ export interface ProductCardData {
   demo_media: Array<{ type: string; url: string }> | null;
   view_count: number;
   sort_order: number | null;
+  tags: string[] | null;
 }
 
 export interface ProductDetailData {
@@ -95,7 +96,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order';
+  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {

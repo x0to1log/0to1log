@@ -13,13 +13,21 @@ const locale = 'en';
 const PREVIEW_COUNT = 4;
 const { categories, spotlightProduct, allProducts, productsByCategory, totalProducts, error } = await getProductsPageData(locale);
 
+const pricingKo: Record<string, string> = { free: '무료', freemium: '무료 프리미엄', paid: '유료', enterprise: '기업용' };
+const categoryKo: Record<string, string> = { assistant: '어시스턴트 챗봇', image: '이미지 디자인', video: '영상 비디오', audio: '오디오 음악 음성', coding: '코딩 개발 IDE', workflow: '자동화 워크플로우', builder: '앱빌더 노코드', platform: '플랫폼 API', research: '리서치 논문', community: '커뮤니티' };
+
 const buildSearchText = (product: typeof allProducts[0]) =>
   [
     product.name,
+    (product as any).name_ko,
     product.tagline,
+    (product as any).tagline_ko,
     product.pricing,
+    product.pricing ? pricingKo[product.pricing] : null,
     product.primary_category,
+    categoryKo[product.primary_category],
     ...(product.platform ?? []),
+    ...(product.tags ?? []),
   ].filter(Boolean).join(' ').toLowerCase();
 
 const getFirstImageUrl = (product: typeof allProducts[0]) => {
