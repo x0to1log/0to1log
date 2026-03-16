@@ -8426,6 +8426,9 @@ pre:hover .blog-code-copy {
   .product-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+  .product-grid--preview {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 767px) {
