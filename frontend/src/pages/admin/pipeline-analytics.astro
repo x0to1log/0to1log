@@ -28,8 +28,12 @@ type AnalyticsLog = {
   };
 };
 
+// ─── Date Filter ────────────────────────────────────────────
+const daysParam = Astro.url.searchParams.get('days');
+const filterDays = daysParam ? parseInt(daysParam, 10) : 14;
+const filterDate = new Date(Date.now() - filterDays * 24 * 60 * 60 * 1000).toISOString();
+
 // ─── Queries ─────────────────────────────────────────────────
-const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
 const excludeStages = [
   'pipeline', 'research.novelty_gate', 'candidates.save',
@@ -40,18 +44,18 @@ const excludeStages = [
 const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }] = await Promise.all([
   sb.from('pipeline_logs')
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
-    .gte('pipeline_runs.started_at', thirtyDaysAgo)
+    .gte('pipeline_runs.started_at', filterDate)
     .not('pipeline_type', 'in', `(${excludeStages.map((s) => `"${s}"`).join(',')})`)
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
     .select('debug_meta, pipeline_type, pipeline_runs!inner(id, run_key, started_at)')
-    .gte('pipeline_runs.started_at', thirtyDaysAgo)
+    .gte('pipeline_runs.started_at', filterDate)
     .in('pipeline_type', ['quality.research', 'quality.business'])
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .like('pipeline_type', 'handbook.%')
-    .gte('pipeline_runs.started_at', thirtyDaysAgo)
+    .gte('pipeline_runs.started_at', filterDate)
     .order('created_at', { ascending: true }),
 ]);
 
@@ -396,7 +400,7 @@ const nonce = Astro.locals.cspNonce || '';
             <p class="pcosts-eyebrow">AI Pipeline</p>
             <h1 class="admin-main-title">Pipeline Costs</h1>
             <p class="pcosts-subtitle">
-              Token usage, API costs, and quality trends across pipelines (last 30 days).
+              Token usage, API costs, and quality trends across pipelines.
             </p>
           </div>
         </div>
@@ -415,7 +419,7 @@ const nonce = Astro.locals.cspNonce || '';
       <!-- Summary Stats -->
       <section class="pcosts-summary-grid">
         <div class="pipeline-run-stat">
-          <span class="pipeline-run-stat__label">Runs (30d)</span>
+          <span class="pipeline-run-stat__label">Runs ({filterDays}d)</span>
           <strong class="pipeline-run-stat__value">{totalRunCount}</strong>
           <span class="pipeline-run-stat__detail">Pipeline executions in window</span>
         </div>
@@ -442,25 +446,34 @@ const nonce = Astro.locals.cspNonce || '';
       </section>
 
       {runs.length === 0 ? (
-        <p class="dashboard-empty">No pipeline runs found in the last 30 days.</p>
+        <p class="dashboard-empty">No pipeline runs found in the last {filterDays} days.</p>
       ) : (
         <>
+          <div class="pcosts-date-filter">
+            <label class="pcosts-date-filter__label">Date Range</label>
+            <select id="date-range-select" class="admin-select" style="width:auto">
+              <option value="7" selected={filterDays === 7}>Last 7 days</option>
+              <option value="14" selected={filterDays === 14}>Last 14 days</option>
+              <option value="30" selected={filterDays === 30}>Last 30 days</option>
+            </select>
+          </div>
+
           <section class="pcosts-charts">
             <div class="pcosts-chart-card">
               <h3 class="pcosts-chart-title">Total Cost per Run</h3>
               <canvas id="chart-total-cost" width="600" height="280"></canvas>
             </div>
             <div class="pcosts-chart-card">
+              <h3 class="pcosts-chart-title">Quality Score Trend</h3>
+              <canvas id="chart-quality" width="600" height="280"></canvas>
+            </div>
+            <div class="pcosts-chart-card pcosts-chart--full">
               <h3 class="pcosts-chart-title">Cost by Stage (Stacked)</h3>
               <canvas id="chart-stacked-cost" width="600" height="280"></canvas>
             </div>
-            <div class="pcosts-chart-card">
+            <div class="pcosts-chart-card pcosts-chart--full">
               <h3 class="pcosts-chart-title">Tokens by Stage</h3>
               <canvas id="chart-tokens" width="600" height="280"></canvas>
-            </div>
-            <div class="pcosts-chart-card">
-              <h3 class="pcosts-chart-title">Quality Score Trend</h3>
-              <canvas id="chart-quality" width="600" height="280"></canvas>
             </div>
           </section>
 
@@ -507,7 +520,7 @@ const nonce = Astro.locals.cspNonce || '';
       <div id="tab-handbook" style="display:none">
         <section class="pcosts-summary-grid">
           <div class="pipeline-run-stat">
-            <span class="pipeline-run-stat__label">Runs (30d)</span>
+            <span class="pipeline-run-stat__label">Runs ({filterDays}d)</span>
             <strong class="pipeline-run-stat__value">{hbTotalRuns}</strong>
             <span class="pipeline-run-stat__detail">Pipeline runs with handbook stages</span>
           </div>
@@ -580,7 +593,7 @@ const nonce = Astro.locals.cspNonce || '';
         </div>
 
         {hbRuns.length === 0 ? (
-          <p class="dashboard-empty">No handbook pipeline data found in the last 30 days.</p>
+          <p class="dashboard-empty">No handbook pipeline data found in the last {filterDays} days.</p>
         ) : (
           <>
             <section class="pcosts-charts">
@@ -690,7 +703,7 @@ const nonce = Astro.locals.cspNonce || '';
 </MainLayout>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
-<script is:inline nonce={nonce} define:vars={{ chartData, hbChartData }}>
+<script is:inline nonce={nonce} define:vars={{ chartData, hbChartData, filterDays }}>
   (function () {
     if (typeof Chart === 'undefined') return;
     var canvases = document.querySelectorAll('canvas');
@@ -908,6 +921,20 @@ const nonce = Astro.locals.cspNonce || '';
         });
       });
     });
+
+    // Date range filter
+    var dateSelect = document.getElementById('date-range-select');
+    if (dateSelect) {
+      var params = new URLSearchParams(window.location.search);
+      var days = params.get('days');
+      if (days) dateSelect.value = days;
+
+      dateSelect.addEventListener('change', function() {
+        var url = new URL(window.location.href);
+        url.searchParams.set('days', dateSelect.value);
+        window.location.href = url.toString();
+      });
+    }
   })();
 </script>
 
@@ -1025,6 +1052,21 @@ const nonce = Astro.locals.cspNonce || '';
     line-height: 1.5;
   }
 
+  /* ─── Date Filter ────────────────────────────── */
+  .pcosts-date-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .pcosts-date-filter__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+  }
+
   /* ─── Charts ────────────────────────────────── */
   .pcosts-charts {
     display: grid;
@@ -1032,6 +1074,10 @@ const nonce = Astro.locals.cspNonce || '';
     gap: 0.75rem;
     margin-bottom: 1.25rem;
     animation: pcostsSlideUp 0.4s ease 0.1s both;
+  }
+
+  .pcosts-chart--full {
+    grid-column: 1 / -1;
   }
 
   .pcosts-chart-card {
