@@ -334,17 +334,28 @@ const isFeatured = product?.featured ?? false;
         <div class="admin-ai-actions">
           <button class="admin-ai-action-btn admin-ai-action-btn--wide" data-action="generate_from_url" type="button">
             Generate from URL
+            <span class="ai-btn-model">gpt-4o</span>
           </button>
-          <button class="admin-ai-action-btn" data-action="tagline_en" type="button">Tagline EN</button>
-          <button class="admin-ai-action-btn" data-action="tagline_ko" type="button">Tagline KO</button>
-          <button class="admin-ai-action-btn" data-action="description_en" type="button">Description EN</button>
-          <button class="admin-ai-action-btn" data-action="description_ko" type="button">Description KO</button>
+          <button class="admin-ai-action-btn" data-action="tagline_en" type="button">
+            Tagline EN
+            <span class="ai-btn-model">gpt-4o-mini</span>
+          </button>
+          <button class="admin-ai-action-btn" data-action="tagline_ko" type="button">
+            Tagline KO
+            <span class="ai-btn-model">gpt-4o-mini</span>
+          </button>
+          <button class="admin-ai-action-btn" data-action="description_en" type="button">
+            Description EN
+            <span class="ai-btn-model">gpt-4o-mini</span>
+          </button>
+          <button class="admin-ai-action-btn" data-action="description_ko" type="button">
+            Description KO
+            <span class="ai-btn-model">gpt-4o-mini</span>
+          </button>
         </div>
-        <div class="admin-ai-loading" id="ai-loading" hidden>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="spin">
-            <path d="M8 2a6 6 0 1 0 6 6" />
-          </svg>
-          Generating…
+        <div id="ai-loading" class="admin-ai-loading" hidden>
+          <span class="ai-spinner"></span>
+          <span id="ai-loading-text">Generating…</span>
         </div>
         <div id="ai-result-area" hidden>
           <div id="ai-result-label" style="font-size:0.75rem;color:var(--color-text-muted);margin-bottom:0.4rem;"></div>
@@ -830,9 +841,27 @@ const isFeatured = product?.featured ?? false;
       }
 
       aiCurrentAction = action;
+
+      // Dynamic loading text
+      const actionLabels = {
+        generate_from_url: 'Generate from URL',
+        tagline_en: 'Tagline EN',
+        tagline_ko: 'Tagline KO',
+        description_en: 'Description EN',
+        description_ko: 'Description KO',
+      };
+      const loadingText = document.getElementById('ai-loading-text');
+      if (loadingText) loadingText.textContent = `Running ${actionLabels[action] || action}...`;
+
       document.getElementById('ai-loading').hidden = false;
       document.getElementById('ai-result-area').hidden = true;
+
+      // Disable all + add spinner to active button
       document.querySelectorAll('.admin-ai-action-btn').forEach((b) => b.disabled = true);
+      btn.classList.add('admin-ai-action-btn--loading');
+      const spinner = document.createElement('span');
+      spinner.className = 'ai-btn-spinner';
+      btn.prepend(spinner);
 
       try {
         const res = await fetch('/api/admin/products/ai/generate', {
@@ -865,7 +894,11 @@ const isFeatured = product?.featured ?? false;
         document.getElementById('ai-apply-btn').hidden = !aiResultTarget && action !== 'generate_from_url';
       } finally {
         document.getElementById('ai-loading').hidden = true;
-        document.querySelectorAll('.admin-ai-action-btn').forEach((b) => b.disabled = false);
+        document.querySelectorAll('.admin-ai-action-btn').forEach((b) => {
+          b.disabled = false;
+          b.classList.remove('admin-ai-action-btn--loading');
+          b.querySelector('.ai-btn-spinner')?.remove();
+        });
       }
     });
   });
