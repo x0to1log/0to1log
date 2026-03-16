@@ -1,0 +1,58 @@
+---
+import type { ProductCardData } from '../../lib/pageData/productsPage';
+
+interface Props {
+  product: ProductCardData | null;
+  locale: 'en' | 'ko';
+}
+
+const { product, locale } = Astro.props;
+if (!product) return;
+
+const pricingLabel: Record<string, string> = {
+  free: locale === 'ko' ? '무료' : 'Free',
+  freemium: 'Freemium',
+  paid: locale === 'ko' ? '유료' : 'Paid',
+  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
+};
+
+// 이미지 우선순위: demo_media[0] (image) > thumbnail_url > null
+const firstImage = product.demo_media?.find((m) => m.type === 'image');
+const imageUrl = firstImage?.url ?? product.thumbnail_url;
+const ctaLabel = locale === 'ko' ? '자세히 보기' : 'View Details';
+---
+
+<section class="product-spotlight">
+  <a href={`/${locale}/products/${product.slug}/`} class="product-spotlight-link">
+    <div class="product-spotlight-image-wrap">
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={product.name}
+          class="product-spotlight-image"
+          loading="eager"
+        />
+      ) : (
+        <div class="product-spotlight-image-fallback" data-category={product.primary_category}>
+          {product.logo_url ? (
+            <img src={product.logo_url} alt="" class="product-spotlight-fallback-logo" />
+          ) : (
+            <span class="product-spotlight-fallback-initial">{product.name.charAt(0)}</span>
+          )}
+        </div>
+      )}
+    </div>
+    <div class="product-spotlight-info">
+      <h2 class="product-spotlight-name">{product.name}</h2>
+      {product.tagline && <p class="product-spotlight-tagline">{product.tagline}</p>}
+      <div class="product-spotlight-meta">
+        {product.pricing && (
+          <span class="product-pricing-badge" data-pricing={product.pricing}>
+            {pricingLabel[product.pricing] ?? product.pricing}
+          </span>
+        )}
+        <span class="product-spotlight-cta">{ctaLabel} &rarr;</span>
+      </div>
+    </div>
+  </a>
+</section>
