@@ -1,15 +1,17 @@
 ---
-import type { ProductDetailData } from '../../lib/pageData/productsPage';
+import type { ProductDetailData, ProductCardData } from '../../lib/pageData/productsPage';
 import { t } from '../../i18n/index';
 import MediaGallery from './MediaGallery.astro';
+import ProductCard from './ProductCard.astro';
 
 interface Props {
   product: ProductDetailData;
   htmlDescription: string;
   locale: 'en' | 'ko';
+  alternatives: ProductCardData[];
 }
 
-const { product, htmlDescription, locale } = Astro.props;
+const { product, htmlDescription, locale, alternatives } = Astro.props;
 const tr = t[locale];
 
 const pricingLabel: Record<string, string> = {
@@ -30,6 +32,11 @@ const platformLabels: Record<string, string> = {
 const releasedYear = product.released_at
   ? new Date(product.released_at).getFullYear()
   : null;
+
+const features = locale === 'ko' && product.features_ko.length > 0
+  ? product.features_ko : product.features;
+const useCases = locale === 'ko' && product.use_cases_ko.length > 0
+  ? product.use_cases_ko : product.use_cases;
 ---
 
 <article class="product-detail" id="products-top">
@@ -82,6 +89,28 @@ const releasedYear = product.released_at
         <div class="product-detail-description prose">
           <Fragment set:html={htmlDescription} />
         </div>
+      )}
+
+      {features.length > 0 && (
+        <section class="product-detail-features">
+          <h2 class="product-detail-section-title">
+            {locale === 'ko' ? '주요 기능' : 'Key Features'}
+          </h2>
+          <ul class="product-detail-feature-list">
+            {features.map((f) => <li>{f}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {useCases.length > 0 && (
+        <section class="product-detail-usecases">
+          <h2 class="product-detail-section-title">
+            {locale === 'ko' ? '이런 상황에 추천' : 'Use Cases'}
+          </h2>
+          <ul class="product-detail-usecase-list">
+            {useCases.map((u) => <li>{u}</li>)}
+          </ul>
+        </section>
       )}
     </div>
 
@@ -140,4 +169,85 @@ const releasedYear = product.released_at
       </div>
     </aside>
   </div>
+
+  {alternatives.length > 0 && (
+    <section class="product-detail-alternatives">
+      <h2 class="product-detail-section-title">
+        {locale === 'ko' ? '비슷한 도구' : 'Similar Tools'}
+      </h2>
+      <div class="product-grid product-grid--preview">
+        {alternatives.map((alt) => {
+          const firstImg = alt.demo_media?.find((m) => m.type === 'image');
+          return (
+            <ProductCard
+              href={`/${locale}/products/${alt.slug}/`}
+              name={alt.name}
+              tagline={alt.tagline}
+              logoUrl={alt.logo_url}
+              thumbnailUrl={alt.thumbnail_url}
+              demoMediaFirst={firstImg?.url ?? null}
+              pricing={alt.pricing}
+              platform={alt.platform}
+              koreanSupport={alt.korean_support}
+              locale={locale}
+              categoryId={alt.primary_category}
+              viewCount={alt.view_count}
+            />
+          );
+        })}
+      </div>
+    </section>
+  )}
+
+  <section class="product-detail-faq">
+    <h2 class="product-detail-section-title">FAQ</h2>
+
+    {product.pricing && (
+      <details class="product-faq-item">
+        <summary>
+          {locale === 'ko'
+            ? `${product.name}은(는) 무료인가요?`
+            : `Is ${product.name} free?`}
+        </summary>
+        <p>
+          {product.pricing === 'free'
+            ? (locale === 'ko' ? '네, 무료로 사용할 수 있습니다.' : 'Yes, it is completely free to use.')
+            : product.pricing === 'freemium'
+              ? (locale === 'ko' ? '무료 플랜과 유료 플랜이 있습니다.' : 'It offers both free and paid plans.')
+              : product.pricing === 'paid'
+                ? (locale === 'ko' ? '유료 서비스입니다.' : 'It is a paid service.')
+                : (locale === 'ko' ? '기업용 요금제입니다. 영업팀에 문의하세요.' : 'Enterprise pricing. Contact sales for details.')}
+          {product.pricing_note && ` ${product.pricing_note}`}
+        </p>
+      </details>
+    )}
+
+    {product.platform && product.platform.length > 0 && (
+      <details class="product-faq-item">
+        <summary>
+          {locale === 'ko'
+            ? `${product.name}은(는) 어떤 플랫폼에서 사용할 수 있나요?`
+            : `What platforms is ${product.name} available on?`}
+        </summary>
+        <p>
+          {locale === 'ko'
+            ? `${product.platform.map(p => platformLabels[p] ?? p).join(', ')}에서 사용 가능합니다.`
+            : `Available on ${product.platform.map(p => platformLabels[p] ?? p).join(', ')}.`}
+        </p>
+      </details>
+    )}
+
+    <details class="product-faq-item">
+      <summary>
+        {locale === 'ko'
+          ? `${product.name}이(가) 한국어를 지원하나요?`
+          : `Does ${product.name} support Korean?`}
+      </summary>
+      <p>
+        {product.korean_support
+          ? (locale === 'ko' ? '네, 한국어 UI를 지원합니다.' : 'Yes, it supports Korean language.')
+          : (locale === 'ko' ? '현재 한국어는 지원하지 않습니다.' : 'Korean is not currently supported.')}
+      </p>
+    </details>
+  </section>
 </article>
