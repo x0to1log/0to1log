@@ -10,6 +10,8 @@ const showPortfolio = pathname.includes('/blog/');
 
 const links = [
   { en: 'About', ko: 'About', href: '/en/about/', koHref: '/ko/about/' },
+  { en: 'Privacy', ko: 'Privacy', href: '/en/privacy/', koHref: '/ko/privacy/' },
+  { en: 'Terms', ko: 'Terms', href: '/en/terms/', koHref: '/ko/terms/' },
   ...(showPortfolio ? [{ en: 'Portfolio', ko: 'Portfolio', href: '/portfolio/' }] : []),
   { en: 'RSS', ko: 'RSS', href: '/rss.xml' },
 ];
