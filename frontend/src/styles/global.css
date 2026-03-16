@@ -5898,6 +5898,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
 .handbook-difficulty-btn {
   padding: 0.3rem 0.75rem;
   border: 1px solid var(--color-border);
+  border-radius: 9999px;
   background: var(--color-bg-primary);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -8834,6 +8835,106 @@ pre:hover .blog-code-copy {
   padding: 0.2rem 0.5rem;
   border-radius: 3px;
   border: 1px solid var(--color-border);
+}
+
+/* --- Product Detail: Features & Use Cases --- */
+.product-detail-section-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 2rem 0 1rem;
+}
+
+.product-detail-features,
+.product-detail-usecases {
+  margin-top: 1.5rem;
+}
+
+.product-detail-feature-list,
+.product-detail-usecase-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.product-detail-feature-list li,
+.product-detail-usecase-list li {
+  position: relative;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.product-detail-feature-list li::before {
+  content: '\2726';
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+}
+
+.product-detail-usecase-list li::before {
+  content: '\2192';
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+}
+
+/* --- Product Detail: Alternatives --- */
+.product-detail-alternatives {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* --- Product Detail: FAQ --- */
+.product-detail-faq {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.product-faq-item {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.product-faq-item summary {
+  padding: 1rem 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.product-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.product-faq-item summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1.25rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.product-faq-item[open] summary::before {
+  content: '\2212';
+}
+
+.product-faq-item p {
+  padding: 0 0 1rem 1.25rem;
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
 }
 
 /* --- Media gallery --- */
