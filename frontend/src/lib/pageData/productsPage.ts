@@ -29,6 +29,8 @@ export interface ProductCardData {
   primary_category: string;
   featured: boolean;
   featured_order: number | null;
+  demo_media: Array<{ type: string; url: string }> | null;
+  view_count: number;
 }
 
 export interface ProductDetailData {
@@ -58,8 +60,8 @@ export interface ProductDetailData {
 
 export interface ProductsPageData {
   categories: ProductCategory[];
-  featuredProducts: ProductCardData[];
-  productsByCategory: Record<string, ProductCardData[]>;
+  spotlightProduct: ProductCardData | null;
+  allProducts: ProductCardData[];
   totalProducts: number;
   error: string | null;
 }
@@ -87,11 +89,11 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order';
+  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
-    return { categories: [], featuredProducts: [], productsByCategory: {}, totalProducts: 0, error: null };
+    return { categories: [], spotlightProduct: null, allProducts: [], totalProducts: 0, error: null };
   }
 
   const [categoriesRes, productsRes] = await Promise.all([
@@ -105,30 +107,24 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
   ]);
 
   if (categoriesRes.error) {
-    return { categories: [], featuredProducts: [], productsByCategory: {}, totalProducts: 0, error: categoriesRes.error.message };
+    return { categories: [], spotlightProduct: null, allProducts: [], totalProducts: 0, error: categoriesRes.error.message };
   }
 
   const categories = (categoriesRes.data ?? []) as ProductCategory[];
   const allProducts = (productsRes.data ?? []) as ProductCardData[];
 
-  // Apply locale fallback for name/tagline
   const resolvedProducts = allProducts.map((p) => ({
     ...p,
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
   }));
 
-  const featuredProducts = resolvedProducts
+  // Spotlight: 가장 높은 featured_order를 가진 featured 제품 1개
+  const spotlightProduct = resolvedProducts
     .filter((p) => p.featured)
-    .sort((a, b) => (a.featured_order ?? 99) - (b.featured_order ?? 99))
-    .slice(0, 5);
+    .sort((a, b) => (a.featured_order ?? 99) - (b.featured_order ?? 99))[0] ?? null;
 
-  const productsByCategory: Record<string, ProductCardData[]> = {};
-  for (const cat of categories) {
-    productsByCategory[cat.id] = resolvedProducts.filter((p) => p.primary_category === cat.id);
-  }
-
-  return { categories, featuredProducts, productsByCategory, totalProducts: resolvedProducts.length, error: null };
+  return { categories, spotlightProduct, allProducts: resolvedProducts, totalProducts: resolvedProducts.length, error: null };
 }
 
 // =============================================================================
