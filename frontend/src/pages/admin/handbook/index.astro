@@ -117,6 +117,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       <div class="handbook-bulk-bar" id="bulk-bar" hidden>
         <label class="handbook-bulk-count" id="bulk-count">0 selected</label>
         <button class="admin-btn admin-btn-primary admin-btn-sm" id="bulk-publish">Publish</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-unpublish">Unpublish</button>
         <button class="admin-btn admin-btn-sm" id="bulk-archive">Archive</button>
         <button class="admin-btn admin-btn-sm" id="bulk-deselect">Deselect All</button>
       </div>
@@ -328,10 +329,11 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.75rem;
-    background: var(--admin-surface-alt, #f0f4ff);
-    border: 1px solid var(--admin-border, #d1d5db);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     font-size: 0.82rem;
+    color: var(--color-text-primary);
   }
 
   .handbook-bulk-count {
@@ -348,11 +350,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     flex-shrink: 0;
     width: 16px;
     height: 16px;
-    margin-right: 0.5rem;
     cursor: pointer;
     accent-color: var(--admin-primary, #3b82f6);
-    align-self: flex-start;
-    margin-top: 0.35rem;
+    align-self: center;
   }
 
   .handbook-meta-row {
@@ -394,9 +394,22 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
   }
 
   .handbook-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.5rem 1rem;
     cursor: pointer;
     transition: background 150ms ease, box-shadow 150ms ease;
     border-radius: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .handbook-card {
+      grid-template-columns: auto 1fr;
+    }
+    .handbook-card .admin-list-actions {
+      grid-column: 1 / -1;
+    }
   }
 
   .handbook-card:hover {
@@ -482,20 +495,6 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       align-items: stretch;
     }
 
-    .admin-list-item {
-      flex-wrap: wrap;
-    }
-
-    .admin-list-info {
-      flex: 1 1 100%;
-      min-width: 0;
-    }
-
-    .admin-list-actions {
-      flex: 1 1 100%;
-      justify-content: flex-end;
-      margin-top: 0.5rem;
-    }
 
     .handbook-bulk-check {
       margin-top: 0.2rem;
@@ -688,6 +687,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     }
 
     document.getElementById('bulk-publish')?.addEventListener('click', () => bulkAction('publish'));
+    document.getElementById('bulk-unpublish')?.addEventListener('click', () => bulkAction('unpublish'));
     document.getElementById('bulk-archive')?.addEventListener('click', () => bulkAction('archive'));
   }
 

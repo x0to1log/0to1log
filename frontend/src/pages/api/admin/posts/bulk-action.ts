@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { action, ids } = await request.json();
 
-  if (!['publish', 'unpublish', 'archive'].includes(action) || !Array.isArray(ids) || ids.length === 0) {
+  if (!['publish', 'unpublish'].includes(action) || !Array.isArray(ids) || ids.length === 0) {
     return new Response(JSON.stringify({ error: 'Invalid action or ids' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
@@ -40,52 +40,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let failed = 0;
   const errors: { id: string; reason: string }[] = [];
 
+  const now = new Date().toISOString();
+
   if (action === 'publish') {
-    // Fetch all terms to validate publish gate
-    const { data: terms } = await supabase
-      .from('handbook_terms')
-      .select('id, term, slug, definition_ko, categories, body_basic_ko, body_advanced_ko')
-      .in('id', ids);
-
-    const termsById = new Map((terms ?? []).map((t: any) => [t.id, t]));
-
-    for (const id of ids) {
-      const term = termsById.get(id);
-      if (!term) {
-        failed++;
-        errors.push({ id, reason: 'Not found' });
-        continue;
-      }
-
-      const missing = [];
-      if (!term.term) missing.push('term');
-      if (!term.slug) missing.push('slug');
-      if (!term.definition_ko) missing.push('definition_ko');
-      if (!Array.isArray(term.categories) || term.categories.length === 0) missing.push('categories');
-      if (!term.body_basic_ko && !term.body_advanced_ko) missing.push('body');
-
-      if (missing.length > 0) {
-        failed++;
-        errors.push({ id, reason: `Missing: ${missing.join(', ')}` });
-        continue;
-      }
-
-      const { error } = await supabase
-        .from('handbook_terms')
-        .update({ status: 'published', published_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) {
-        failed++;
-        errors.push({ id, reason: error.message });
-      } else {
-        success++;
-      }
-    }
-  } else if (action === 'unpublish') {
+    const updateData: Record<string, any> = { status: 'published', published_at: now, updated_at: now };
     const { error } = await supabase
-      .from('handbook_terms')
-      .update({ status: 'draft', updated_at: new Date().toISOString() })
+      .from('news_posts')
+      .update(updateData)
       .in('id', ids);
 
     if (error) {
@@ -94,10 +55,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else {
       success = ids.length;
     }
-  } else if (action === 'archive') {
+  } else if (action === 'unpublish') {
     const { error } = await supabase
-      .from('handbook_terms')
-      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .from('news_posts')
+      .update({ status: 'draft', updated_at: now })
       .in('id', ids);
 
     if (error) {
