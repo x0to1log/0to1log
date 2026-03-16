@@ -8483,6 +8483,97 @@ pre:hover .blog-code-copy {
   opacity: 0.7;
 }
 
+/* --- Handbook category preview --- */
+.handbook-category-preview {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.handbook-category-preview:last-child {
+  border-bottom: none;
+}
+
+.handbook-category-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.handbook-category-preview-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.handbook-category-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.handbook-category-preview-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.handbook-category-preview-count {
+  font-size: 0.8rem;
+  font-family: var(--font-ui);
+  color: var(--color-text-muted);
+}
+
+.handbook-category-see-all {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.handbook-category-see-all:hover {
+  text-decoration: underline;
+}
+
+.handbook-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .handbook-preview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --- Handbook hero stats --- */
+.handbook-hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.handbook-hero-stats strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.handbook-hero-stats-sep {
+  color: var(--color-border);
+}
+
 /* --- Product Grid --- */
 .product-grid {
   display: grid;

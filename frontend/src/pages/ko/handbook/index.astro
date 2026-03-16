@@ -3,34 +3,21 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { getHandbookCategoryLabel, getHandbookCategories } from '../../../lib/handbookCategories';
+import { getHandbookCategoryLabel, getHandbookCategories, getHandbookCategoryDescription } from '../../../lib/handbookCategories';
 import { getHandbookCategoryIcon } from '../../../lib/handbookCategoryIcons';
 import { localField } from '../../../lib/handbookUtils';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import HandbookListRail from '../../../components/newsprint/HandbookListRail.astro';
 import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
+import { getHandbookPageData } from '../../../lib/pageData/handbookPage';
+import { supabase } from '../../../lib/supabase';
 
 const locale = 'ko';
-let terms: any[] = [];
-let fetchError: string | null = null;
+const PREVIEW_COUNT = 4;
 
-if (supabase) {
-  const { data, error } = await supabase
-    .from('handbook_terms')
-    .select('id, term, slug, korean_name, definition_ko, definition_en, categories, is_favourite')
-    .eq('status', 'published')
-    .order('term', { ascending: true });
-
-  if (error) {
-    console.error('[handbook-list-ko] Supabase error:', error.message);
-    fetchError = error.message;
-  } else {
-    terms = data ?? [];
-  }
-}
+const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
 
 // User reading history & bookmarks
 const readTermIds = new Set<string>();
@@ -80,6 +67,12 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
     subkicker={hbSubkicker}
     volumeLabel={sc.volume_issue || undefined}
   >
+    <p class="handbook-hero-stats">
+      <span><strong>{totalTerms}+</strong> 용어</span>
+      <span class="handbook-hero-stats-sep" aria-hidden="true">&middot;</span>
+      <span><strong>{categories.length}</strong> 카테고리</span>
+    </p>
+
     <div class="handbook-search-sticky">
       <input
         type="text"
@@ -112,58 +105,134 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         linkHref={`/${locale}/handbook/`}
         linkLabel={t[locale]['handbook.back']}
       />
-    ) : terms.length === 0 ? (
+    ) : allTerms.length === 0 ? (
       <NewsprintNotice variant="empty" message={t[locale]['handbook.empty']} />
     ) : (
-      <div id="handbook-list">
-        {terms.map((term) => {
-          const def = localField(term, 'definition', locale);
-          const isRead = readTermIds.has(term.id);
-          const isBm = bookmarkedTermIds.has(term.id);
-          return (
-            <a
-              href={`/${locale}/handbook/${term.slug}/`}
-              class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
-              data-categories={JSON.stringify(term.categories || [])}
-              data-term={term.term}
-              data-korean={term.korean_name || ''}
-              data-def={def}
-            >
-              <div class="handbook-card-meta">
-                {(term.categories || []).map((cat: string) => (
-                  <span class="handbook-cat-pill">
-                    {getHandbookCategoryLabel(locale, cat)}
-                  </span>
-                ))}
-              </div>
-              <div class="handbook-card-title-row">
-                <div class="handbook-card-title">
-                  {term.term}
+      <>
+        <div id="category-preview">
+          {categories.map((cat) => {
+            const terms = termsByCategory[cat] ?? [];
+            if (terms.length === 0) return null;
+            const preview = terms.slice(0, PREVIEW_COUNT);
+            const hasMore = terms.length > PREVIEW_COUNT;
+            return (
+              <section class="handbook-category-preview" id={`handbook-cat-${cat}`}>
+                <div class="handbook-category-preview-header">
+                  <div class="handbook-category-preview-title-group">
+                    <span class="handbook-category-preview-icon" set:html={getHandbookCategoryIcon(cat)} />
+                    <h2 class="handbook-category-preview-title">{getHandbookCategoryLabel(locale, cat)}</h2>
+                    <span class="handbook-category-preview-count">{terms.length}</span>
+                  </div>
+                  {hasMore && (
+                    <a href={`/${locale}/handbook/category/${cat}/`} class="handbook-category-see-all">
+                      모두 보기 &rarr;
+                    </a>
+                  )}
                 </div>
-                <button
-                  class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
-                  data-item-id={term.id}
-                  data-item-type="term"
-                  data-bookmarked={isBm ? 'true' : 'false'}
-                  aria-label={isBm ? '북마크 제거' : '북마크 추가'}
-                >
-                  <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                  </svg>
-                </button>
-              </div>
-              {term.korean_name && (
-                <div class="handbook-card-korean">{term.korean_name}</div>
-              )}
-              {def && (
-                <div class="handbook-card-def">
-                  {def.length > 120 ? def.slice(0, 120) + '\u2026' : def}
+                <div class="handbook-preview-grid">
+                  {preview.map((term) => {
+                    const def = locale === 'ko' ? term.definition_ko : term.definition_en;
+                    const isRead = readTermIds.has(term.id);
+                    const isBm = bookmarkedTermIds.has(term.id);
+                    return (
+                      <a
+                        href={`/${locale}/handbook/${term.slug}/`}
+                        class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
+                        data-categories={JSON.stringify(term.categories || [])}
+                        data-term={term.term}
+                        data-korean={term.korean_name || ''}
+                        data-def={def || ''}
+                      >
+                        <div class="handbook-card-meta">
+                          {(term.categories || []).map((c: string) => (
+                            <span class="handbook-cat-pill">
+                              {getHandbookCategoryLabel(locale, c)}
+                            </span>
+                          ))}
+                        </div>
+                        <div class="handbook-card-title-row">
+                          <div class="handbook-card-title">
+                            {term.term}
+                          </div>
+                          <button
+                            class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
+                            data-item-id={term.id}
+                            data-item-type="term"
+                            data-bookmarked={isBm ? 'true' : 'false'}
+                            aria-label={isBm ? '북마크 제거' : '북마크 추가'}
+                          >
+                            <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                        {term.korean_name && (
+                          <div class="handbook-card-korean">{term.korean_name}</div>
+                        )}
+                        {def && (
+                          <div class="handbook-card-def">
+                            {def.length > 120 ? def.slice(0, 120) + '\u2026' : def}
+                          </div>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
-              )}
-            </a>
-          );
-        })}
-      </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <div id="search-results" style="display: none;">
+          {allTerms.map((term) => {
+            const def = localField(term, 'definition', locale);
+            const isRead = readTermIds.has(term.id);
+            const isBm = bookmarkedTermIds.has(term.id);
+            return (
+              <a
+                href={`/${locale}/handbook/${term.slug}/`}
+                class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
+                data-categories={JSON.stringify(term.categories || [])}
+                data-term={term.term}
+                data-korean={term.korean_name || ''}
+                data-def={def}
+              >
+                <div class="handbook-card-meta">
+                  {(term.categories || []).map((cat: string) => (
+                    <span class="handbook-cat-pill">
+                      {getHandbookCategoryLabel(locale, cat)}
+                    </span>
+                  ))}
+                </div>
+                <div class="handbook-card-title-row">
+                  <div class="handbook-card-title">
+                    {term.term}
+                  </div>
+                  <button
+                    class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
+                    data-item-id={term.id}
+                    data-item-type="term"
+                    data-bookmarked={isBm ? 'true' : 'false'}
+                    aria-label={isBm ? '북마크 제거' : '북마크 추가'}
+                  >
+                    <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </button>
+                </div>
+                {term.korean_name && (
+                  <div class="handbook-card-korean">{term.korean_name}</div>
+                )}
+                {def && (
+                  <div class="handbook-card-def">
+                    {def.length > 120 ? def.slice(0, 120) + '\u2026' : def}
+                  </div>
+                )}
+              </a>
+            );
+          })}
+        </div>
+      </>
     )}
 
     <div id="handbook-no-results" style="display: none;">
@@ -187,17 +256,42 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
 <script>
   function initHandbookFilters(): void {
     const search = document.getElementById('handbook-search') as HTMLInputElement | null;
-    const list = document.getElementById('handbook-list');
+    const categoryPreview = document.getElementById('category-preview');
+    const searchResults = document.getElementById('search-results');
     const noResults = document.getElementById('handbook-no-results');
     const countEl = document.getElementById('handbook-result-count');
     const filterBtns = document.querySelectorAll('.handbook-filter-btn');
-    if (!search || !list) return;
+    if (!search || !searchResults) return;
 
     let activeCategory = 'all';
 
+    function showSearchMode(): void {
+      if (categoryPreview) categoryPreview.style.display = 'none';
+      if (searchResults) searchResults.style.display = 'block';
+    }
+
+    function showCategoryMode(): void {
+      if (categoryPreview) categoryPreview.style.display = 'block';
+      if (searchResults) searchResults.style.display = 'none';
+      if (noResults) noResults.style.display = 'none';
+      if (countEl) {
+        countEl.textContent = '';
+        countEl.style.display = 'none';
+      }
+    }
+
     function filter(): void {
       const query = search!.value.toLowerCase().trim();
-      const cards = list!.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
+
+      // If no search query and no category filter, show category preview mode
+      if (!query && activeCategory === 'all') {
+        showCategoryMode();
+        return;
+      }
+
+      showSearchMode();
+
+      const cards = searchResults!.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
       let visible = 0;
 
       cards.forEach((card) => {
@@ -215,7 +309,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
       });
 
       if (noResults) {
-        noResults.style.display = visible === 0 && (query || activeCategory !== 'all') ? 'block' : 'none';
+        noResults.style.display = visible === 0 ? 'block' : 'none';
       }
       if (countEl) {
         const total = cards.length;
@@ -236,6 +330,18 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
         (btn as HTMLElement).classList.add('active');
         (btn as HTMLElement).setAttribute('aria-pressed', 'true');
         activeCategory = (btn as HTMLElement).dataset.filter || 'all';
+
+        // If clicking a category pill in category-preview mode, scroll to the section
+        const query = search!.value.toLowerCase().trim();
+        if (!query && activeCategory !== 'all') {
+          const section = document.getElementById(`handbook-cat-${activeCategory}`);
+          if (section) {
+            showCategoryMode();
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+          }
+        }
+
         filter();
       });
     });
