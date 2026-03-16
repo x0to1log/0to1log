@@ -423,6 +423,88 @@ async def _extract_and_create_handbook_terms(
     return terms_created, errors
 
 
+QUALITY_CHECK_PROMPT_RESEARCH = """You are a strict quality reviewer for an AI tech news digest.
+
+Score this Research digest on 4 criteria (0-25 each, total 0-100):
+
+1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, LLM & Models, Open Source, Papers, Technical Outlook)? Are any sections empty or too short?
+2. **Source Citations** (25): Does each news item cite a source URL? Are benchmark numbers attributed?
+3. **Technical Accuracy** (25): Are parameter counts, benchmarks, and technical details specific (not vague)? Are comparisons to prior work included?
+4. **Language Quality** (25): Is the content natural in the target language (not translation-sounding)? Is the length adequate (min 500 chars per section)?
+
+Return JSON:
+{"score": 0-100, "sections": 0-25, "sources": 0-25, "accuracy": 0-25, "language": 0-25, "issues": ["issue1", "issue2"]}"""
+
+QUALITY_CHECK_PROMPT_BUSINESS = """You are a strict quality reviewer for an AI business news digest.
+
+Score this Business digest on 4 criteria (0-25 each, total 0-100):
+
+1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Action Items)? Are any sections empty?
+2. **Source Citations** (25): Does each news item cite a source URL? Are funding amounts and dates attributed?
+3. **Analysis Quality** (25): Does "Connecting the Dots" actually connect news items into a trend? Are "Action Items" specific and actionable (not generic advice)?
+4. **Language Quality** (25): Is the content natural in the target language? Is the length adequate?
+
+Return JSON:
+{"score": 0-100, "sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25, "issues": ["issue1", "issue2"]}"""
+
+
+async def _check_digest_quality(
+    personas: dict[str, PersonaOutput],
+    digest_type: str,
+    classified: list,
+    supabase,
+    run_id: str,
+    cumulative_usage: dict[str, Any],
+) -> int:
+    """Score the quality of a generated digest. Returns score 0-100."""
+    t0 = time.monotonic()
+
+    # Use expert persona EN content for quality check (most detailed)
+    expert = personas.get("expert")
+    if not expert or not expert.en:
+        return 0
+
+    prompt = QUALITY_CHECK_PROMPT_RESEARCH if digest_type == "research" else QUALITY_CHECK_PROMPT_BUSINESS
+
+    try:
+        client = get_openai_client()
+        response = await client.chat.completions.create(
+            model=settings.openai_model_light,
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": expert.en[:4000]},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.1,
+            max_tokens=512,
+        )
+        data = parse_ai_json(response.choices[0].message.content, f"Quality-{digest_type}")
+        usage = extract_usage_metrics(response, settings.openai_model_light)
+        score = int(data.get("score", 0))
+
+        await _log_stage(
+            supabase, run_id, f"quality:{digest_type}", "success", t0,
+            output_summary=f"score={score}/100",
+            usage=usage,
+            post_type=digest_type,
+            debug_meta={
+                "score": score,
+                "breakdown": {k: v for k, v in data.items() if k != "score"},
+                "news_count": len(classified),
+            },
+        )
+
+        logger.info("Quality check %s: score=%d/100", digest_type, score)
+        return score
+    except Exception as e:
+        logger.warning("Quality check failed for %s: %s", digest_type, e)
+        await _log_stage(
+            supabase, run_id, f"quality:{digest_type}", "failed", t0,
+            error_message=str(e), post_type=digest_type,
+        )
+        return 0
+
+
 async def _generate_digest(
     classified: list[ClassifiedCandidate],
     digest_type: str,
@@ -522,6 +604,11 @@ async def _generate_digest(
     if not personas:
         return 0, errors, cumulative_usage
 
+    # Quality check — score the generated digest
+    quality_score = await _check_digest_quality(
+        personas, digest_type, classified, supabase, run_id, cumulative_usage,
+    )
+
     # Save EN + KO rows
     t_save = time.monotonic()
     translation_group_id = str(uuid.uuid4())
@@ -562,7 +649,7 @@ async def _generate_digest(
             "content_beginner": personas.get("beginner", PersonaOutput()).en if locale == "en"
                 else personas.get("beginner", PersonaOutput()).ko,
             "source_urls": source_urls,
-            "fact_pack": digest_meta,
+            "fact_pack": {**digest_meta, "quality_score": quality_score},
             "pipeline_batch_id": batch_id,
             "published_at": f"{batch_id}T09:00:00Z",
             "pipeline_model": settings.openai_model_main,
