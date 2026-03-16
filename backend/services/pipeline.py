@@ -1,4 +1,5 @@
-"""AI News Pipeline v2 orchestrator."""
+"""AI News Pipeline v3 orchestrator."""
+import json
 import logging
 import time
 import uuid
@@ -199,6 +200,56 @@ def cleanup_existing_batch(batch_id: str) -> dict[str, int]:
     return {"deleted_runs": len(run_ids), "deleted_logs": deleted_logs, "deleted_posts": deleted_posts}
 
 
+async def _filter_terms_with_llm(terms: list[dict]) -> list[dict]:
+    """2nd-pass LLM filter: verify extracted terms are real IT/CS/AI terms.
+
+    Uses gpt-4o-mini for low cost (~$0.01). Returns filtered list.
+    """
+    if not terms:
+        return []
+
+    term_names = [t.get("term", "") for t in terms if t.get("term")]
+    if not term_names:
+        return []
+
+    prompt = (
+        "You are a technical glossary editor. Given a list of terms extracted from AI news, "
+        "filter out terms that are NOT specific IT/CS/AI technical terms.\n\n"
+        "REMOVE:\n"
+        "- Adjectives or modifiers (AI-powered, AI-driven, data-driven)\n"
+        "- General concepts (data collection, AI guidelines, content accuracy)\n"
+        "- Overly broad categories (deep learning architecture, machine learning model)\n"
+        "- Non-technical terms (vulnerability without qualifier, early warning systems)\n\n"
+        "KEEP:\n"
+        "- Specific techniques (Transformer, RAG, RLHF, fine-tuning)\n"
+        "- Specific metrics (AUC, F1 score, perplexity)\n"
+        "- Specific tools/frameworks (PyTorch, LangChain, vLLM)\n"
+        "- Specific architectures (CNN, GAN, diffusion model)\n\n"
+        f"Terms to filter:\n{json.dumps(term_names)}\n\n"
+        "Return JSON: {\"approved\": [\"term1\", \"term2\", ...]}"
+    )
+
+    try:
+        client = get_openai_client()
+        response = await client.chat.completions.create(
+            model=settings.openai_model_light,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.1,
+            max_tokens=1024,
+        )
+        data = parse_ai_json(response.choices[0].message.content, "TermFilter")
+        approved = set(data.get("approved", []))
+        logger.info(
+            "LLM term filter: %d → %d (removed %d)",
+            len(terms), len(approved), len(terms) - len(approved),
+        )
+        return [t for t in terms if t.get("term") in approved]
+    except Exception as e:
+        logger.warning("LLM term filter failed, keeping all terms: %s", e)
+        return terms
+
+
 async def _extract_and_create_handbook_terms(
     article_texts: list[str],
     supabase,
@@ -237,6 +288,13 @@ async def _extract_and_create_handbook_terms(
             "terms": [t.get("term", "") for t in extracted],
         },
     )
+
+    if not extracted:
+        return 0, []
+
+    # Step 1.5: LLM 2nd-pass filter — verify extracted terms are real tech terms
+    extracted = await _filter_terms_with_llm(extracted)
+    logger.info("After LLM filter: %d terms remain", len(extracted))
 
     if not extracted:
         return 0, []
