@@ -4,25 +4,25 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { getProductsPageData } from '../../../lib/pageData/productsPage';
-import ProductHero from '../../../components/products/ProductHero.astro';
-import CategoryNav from '../../../components/products/CategoryNav.astro';
-import CategorySection from '../../../components/products/CategorySection.astro';
-import { getCategoryIcon } from '../../../lib/productCategoryIcons';
+import ProductSpotlight from '../../../components/products/ProductSpotlight.astro';
+import ProductFilterBar from '../../../components/products/ProductFilterBar.astro';
+import ProductCard from '../../../components/products/ProductCard.astro';
 
 const locale = 'ko';
-const { categories, featuredProducts, productsByCategory, totalProducts, error } = await getProductsPageData(locale);
+const { categories, spotlightProduct, allProducts, totalProducts, error } = await getProductsPageData(locale);
 
-const showcaseCards: Record<string, { tags: string; desc: string }> = {
-  assistant: { tags: 'ChatGPT · Claude · Gemini · Perplexity', desc: '질문 하나로 글쓰기·요약·번역·분석까지. 복잡한 작업도 대화하듯 풀어보세요.' },
-  image:     { tags: 'Midjourney · DALL-E · Stable Diffusion', desc: '텍스트 한 줄이면 이미지 완성. 일러스트부터 사진 스타일까지 원하는 결과를 바로 만들어 보세요.' },
-  video:     { tags: 'Synthesia · HeyGen · Opus Clip', desc: '대본만 쓰면 AI가 영상을 만들어 줍니다. 아바타 발표, 자막 편집, 숏폼 클립까지 한번에.' },
-  audio:     { tags: 'Suno · ElevenLabs · Udio', desc: '목소리 복제, 나레이션, 작곡까지. 녹음 장비 없이도 원하는 소리를 AI로 만들어 보세요.' },
-  coding:    { tags: 'Cursor · Copilot · Claude Code', desc: '코드 작성부터 디버깅, 리팩토링까지 AI가 옆에서 함께 짜줍니다. 개발 속도가 달라집니다.' },
-  workflow:  { tags: 'Zapier · Make · n8n · Pipedream', desc: '반복 업무를 자동화하세요. 이메일 분류, Notion 저장, Slack 알림까지 코딩 없이. AI가 중간 판단까지 맡아줍니다.' },
-  builder:   { tags: 'Bolt.new · v0 · Dify · Flowise', desc: '코드 한 줄 없이 AI 앱과 워크플로우를 조립하세요. 아이디어를 바로 프로토타입으로.' },
-  platform:  { tags: 'PortKey · LangFuse · Helicone', desc: 'API 키 관리, 비용 추적, 속도 제한까지. 팀 전체의 AI 운영 인프라를 한 곳에서.' },
-  research:  { tags: 'arXiv · Semantic Scholar', desc: 'AI 최신 논문과 연구 흐름을 한눈에 따라가세요. AI 요약으로 PDF 없이도 핵심만 빠르게.' },
-  community: { tags: 'Reddit · Hacker News · Discord', desc: '연구자·개발자들이 나누는 실시간 토론을 팔로우하세요. 새 발견이 나오는 순간 바로 확인.' },
+const buildSearchText = (product: typeof allProducts[0]) =>
+  [
+    product.name,
+    product.tagline,
+    product.pricing,
+    product.primary_category,
+    ...(product.platform ?? []),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+const getFirstImageUrl = (product: typeof allProducts[0]) => {
+  const first = product.demo_media?.find((m) => m.type === 'image');
+  return first?.url ?? null;
 };
 ---
 
@@ -34,70 +34,41 @@ const showcaseCards: Record<string, { tags: string; desc: string }> = {
   <div class="products-page" id="products-top">
     {error && <p class="products-error">{t.ko['products.error']}</p>}
 
-    <ProductHero categories={categories} totalProducts={totalProducts} locale={locale} />
+    <ProductSpotlight product={spotlightProduct} locale={locale} />
 
-    <div class="product-sticky-toolbar">
-      <div class="product-search-bar">
-        <input
-          type="search"
-          id="product-search"
-          class="handbook-search-input"
-          placeholder={t.ko['products.searchPlaceholder']}
-          aria-label={t.ko['products.searchPlaceholder']}
-          autocomplete="off"
-          data-placeholder-hints={JSON.stringify([
-            'ChatGPT, Claude, Gemini...',
-            '이미지 생성 도구는?',
-            '무료로 쓸 수 있는 AI는?',
-            '코딩 도구 찾기',
-            '영상 만드는 AI는?',
-            '한국어 지원 AI 도구',
-          ])}
+    <ProductFilterBar categories={categories} locale={locale} />
+
+    <div class="product-grid">
+      {allProducts.map((product) => (
+        <ProductCard
+          href={`/${locale}/products/${product.slug}/`}
+          name={product.name}
+          tagline={product.tagline}
+          logoUrl={product.logo_url}
+          thumbnailUrl={product.thumbnail_url}
+          demoMediaFirst={getFirstImageUrl(product)}
+          pricing={product.pricing}
+          platform={product.platform}
+          koreanSupport={product.korean_support}
+          locale={locale}
+          searchText={buildSearchText(product)}
+          categoryId={product.primary_category}
+          viewCount={product.view_count}
         />
-      </div>
-      <CategoryNav categories={categories} locale={locale} />
+      ))}
     </div>
-
-    {categories.length > 0 && (
-      <section class="product-category-showcase">
-        <div class="product-category-showcase-grid">
-          {categories.map((cat) => {
-            const card = showcaseCards[cat.id];
-            return (
-              <a href={`#category-${cat.id}`} class="product-category-showcase-card">
-                <div class="product-category-showcase-card-header">
-                  <span class="product-category-showcase-icon" set:html={getCategoryIcon(cat.id)} />
-                  <strong class="product-category-showcase-name">{cat.label_ko}</strong>
-                </div>
-                {card && <p class="product-category-showcase-tags">{card.tags}</p>}
-                {card && <p class="product-category-showcase-desc">{card.desc}</p>}
-              </a>
-            );
-          })}
-        </div>
-      </section>
-    )}
-
-    {categories.map((cat) => (
-      <CategorySection
-        category={cat}
-        products={productsByCategory[cat.id] ?? []}
-        locale={locale}
-      />
-    ))}
 
     <p id="product-search-no-results" class="products-search-no-results" hidden>
       {t.ko['products.searchNoResults']}
     </p>
 
-    {categories.length === 0 && !error && (
+    {allProducts.length === 0 && !error && (
       <p class="products-empty">{t.ko['products.empty']}</p>
     )}
 
     <section class="product-outro">
       <h2 class="product-outro-title">{t.ko['products.outroTitle']}</h2>
       <p class="product-outro-body">{t.ko['products.outroBody']}</p>
-      <p class="product-outro-cta">{t.ko['products.outroCta']}</p>
     </section>
   </div>
 </MainLayout>
@@ -110,46 +81,54 @@ const showcaseCards: Record<string, { tags: string; desc: string }> = {
     if (!input) return;
     const noResults = document.getElementById('product-search-no-results');
     const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card'));
-    const sections = Array.from(document.querySelectorAll<HTMLElement>('.product-category-section'));
 
-    function applyFilter(query: string) {
-      const q = query.trim().toLowerCase();
+    let currentCategory = 'all';
+    let currentQuery = '';
 
-      if (!q) {
-        cards.forEach((c) => c.removeAttribute('hidden'));
-        sections.forEach((s) => s.removeAttribute('hidden'));
-        if (noResults) noResults.setAttribute('hidden', '');
-        return;
-      }
-
+    function applyFilters() {
+      const q = currentQuery.trim().toLowerCase();
       let totalVisible = 0;
-      sections.forEach((section) => {
-        const sectionCards = section.querySelectorAll<HTMLElement>('.product-card');
-        let visible = 0;
-        sectionCards.forEach((card) => {
-          const text = card.dataset.searchText ?? '';
-          const matched = text.includes(q);
-          if (matched) { card.removeAttribute('hidden'); visible++; totalVisible++; }
-          else card.setAttribute('hidden', '');
-        });
-        if (visible === 0) section.setAttribute('hidden', '');
-        else section.removeAttribute('hidden');
+
+      cards.forEach((card) => {
+        const text = card.dataset.searchText ?? '';
+        const cat = card.dataset.category ?? '';
+
+        const matchesCategory = currentCategory === 'all' || cat === currentCategory;
+        const matchesSearch = !q || text.includes(q);
+        const visible = matchesCategory && matchesSearch;
+
+        if (visible) { card.removeAttribute('hidden'); totalVisible++; }
+        else card.setAttribute('hidden', '');
       });
 
       if (noResults) {
-        if (totalVisible === 0) noResults.removeAttribute('hidden');
+        if (totalVisible === 0 && (q || currentCategory !== 'all')) noResults.removeAttribute('hidden');
         else noResults.setAttribute('hidden', '');
       }
     }
 
+    // Search input
     input.addEventListener('input', () => {
-      const q = input.value;
-      history.replaceState(null, '', q ? `?q=${encodeURIComponent(q)}` : location.pathname);
-      applyFilter(q);
+      currentQuery = input.value;
+      const url = new URL(window.location.href);
+      if (currentQuery) url.searchParams.set('q', currentQuery);
+      else url.searchParams.delete('q');
+      history.replaceState(null, '', url.toString());
+      applyFilters();
     });
 
+    // Category filter (from ProductFilterBar)
+    document.addEventListener('product-filter', ((e: CustomEvent) => {
+      currentCategory = e.detail.category;
+      applyFilters();
+    }) as EventListener);
+
     // Initialize from URL
-    const urlQ = new URLSearchParams(location.search).get('q') ?? '';
-    if (urlQ) { input.value = urlQ; applyFilter(urlQ); }
+    const params = new URLSearchParams(location.search);
+    const urlQ = params.get('q') ?? '';
+    const urlCat = params.get('cat') ?? 'all';
+    if (urlQ) { input.value = urlQ; currentQuery = urlQ; }
+    if (urlCat !== 'all') currentCategory = urlCat;
+    if (urlQ || urlCat !== 'all') applyFilters();
   });
 </script>

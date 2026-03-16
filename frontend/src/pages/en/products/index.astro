@@ -4,25 +4,25 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { getProductsPageData } from '../../../lib/pageData/productsPage';
-import ProductHero from '../../../components/products/ProductHero.astro';
-import CategoryNav from '../../../components/products/CategoryNav.astro';
-import CategorySection from '../../../components/products/CategorySection.astro';
-import { getCategoryIcon } from '../../../lib/productCategoryIcons';
+import ProductSpotlight from '../../../components/products/ProductSpotlight.astro';
+import ProductFilterBar from '../../../components/products/ProductFilterBar.astro';
+import ProductCard from '../../../components/products/ProductCard.astro';
 
 const locale = 'en';
-const { categories, featuredProducts, productsByCategory, totalProducts, error } = await getProductsPageData(locale);
+const { categories, spotlightProduct, allProducts, totalProducts, error } = await getProductsPageData(locale);
 
-const showcaseCards: Record<string, { tags: string; desc: string }> = {
-  assistant: { tags: 'ChatGPT · Claude · Gemini · Perplexity', desc: 'Write, summarize, translate, and analyze — all through a single conversation. Try asking one question to start.' },
-  image:     { tags: 'Midjourney · DALL-E · Stable Diffusion', desc: 'One line of text, one finished image. From illustrations to photo-realistic styles, visualize ideas instantly.' },
-  video:     { tags: 'Synthesia · HeyGen · Opus Clip', desc: 'Write a script and AI produces the video. Avatar presentations, subtitle editing, short-form clips — all in one.' },
-  audio:     { tags: 'Suno · ElevenLabs · Udio', desc: 'Voice cloning, narration, music composition. Create any sound with AI — no recording equipment needed.' },
-  coding:    { tags: 'Cursor · Copilot · Claude Code', desc: 'From writing code to debugging and refactoring, AI codes alongside you. Your development speed will never be the same.' },
-  workflow:  { tags: 'Zapier · Make · n8n · Pipedream', desc: 'Automate repetitive tasks — sort emails, save to Notion, notify Slack — no code needed. AI handles the decisions in between.' },
-  builder:   { tags: 'Bolt.new · v0 · Dify · Flowise', desc: 'Build AI apps and workflows without writing a single line of code. Go from idea to prototype in minutes.' },
-  platform:  { tags: 'PortKey · LangFuse · Helicone', desc: 'API key management, cost tracking, rate limiting. Run your entire team\'s AI ops infrastructure from one place.' },
-  research:  { tags: 'arXiv · Semantic Scholar', desc: 'Keep up with the latest AI papers and research trends at a glance. AI summaries let you skip the PDFs.' },
-  community: { tags: 'Reddit · Hacker News · Discord', desc: 'Follow real-time discussions among researchers and developers. Catch new breakthroughs the moment they drop.' },
+const buildSearchText = (product: typeof allProducts[0]) =>
+  [
+    product.name,
+    product.tagline,
+    product.pricing,
+    product.primary_category,
+    ...(product.platform ?? []),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+const getFirstImageUrl = (product: typeof allProducts[0]) => {
+  const first = product.demo_media?.find((m) => m.type === 'image');
+  return first?.url ?? null;
 };
 ---
 
@@ -34,70 +34,41 @@ const showcaseCards: Record<string, { tags: string; desc: string }> = {
   <div class="products-page" id="products-top">
     {error && <p class="products-error">{t.en['products.error']}</p>}
 
-    <ProductHero categories={categories} totalProducts={totalProducts} locale={locale} />
+    <ProductSpotlight product={spotlightProduct} locale={locale} />
 
-    <div class="product-sticky-toolbar">
-      <div class="product-search-bar">
-        <input
-          type="search"
-          id="product-search"
-          class="handbook-search-input"
-          placeholder={t.en['products.searchPlaceholder']}
-          aria-label={t.en['products.searchPlaceholder']}
-          autocomplete="off"
-          data-placeholder-hints={JSON.stringify([
-            'ChatGPT, Claude, Gemini...',
-            'Image generation tools',
-            'Free AI tools',
-            'Find coding assistants',
-            'Video creation AI',
-            'Korean language support',
-          ])}
+    <ProductFilterBar categories={categories} locale={locale} />
+
+    <div class="product-grid">
+      {allProducts.map((product) => (
+        <ProductCard
+          href={`/${locale}/products/${product.slug}/`}
+          name={product.name}
+          tagline={product.tagline}
+          logoUrl={product.logo_url}
+          thumbnailUrl={product.thumbnail_url}
+          demoMediaFirst={getFirstImageUrl(product)}
+          pricing={product.pricing}
+          platform={product.platform}
+          koreanSupport={product.korean_support}
+          locale={locale}
+          searchText={buildSearchText(product)}
+          categoryId={product.primary_category}
+          viewCount={product.view_count}
         />
-      </div>
-      <CategoryNav categories={categories} locale={locale} />
+      ))}
     </div>
-
-    {categories.length > 0 && (
-      <section class="product-category-showcase">
-        <div class="product-category-showcase-grid">
-          {categories.map((cat) => {
-            const card = showcaseCards[cat.id];
-            return (
-              <a href={`#category-${cat.id}`} class="product-category-showcase-card">
-                <div class="product-category-showcase-card-header">
-                  <span class="product-category-showcase-icon" set:html={getCategoryIcon(cat.id)} />
-                  <strong class="product-category-showcase-name">{cat.label_en}</strong>
-                </div>
-                {card && <p class="product-category-showcase-tags">{card.tags}</p>}
-                {card && <p class="product-category-showcase-desc">{card.desc}</p>}
-              </a>
-            );
-          })}
-        </div>
-      </section>
-    )}
-
-    {categories.map((cat) => (
-      <CategorySection
-        category={cat}
-        products={productsByCategory[cat.id] ?? []}
-        locale={locale}
-      />
-    ))}
 
     <p id="product-search-no-results" class="products-search-no-results" hidden>
       {t.en['products.searchNoResults']}
     </p>
 
-    {categories.length === 0 && !error && (
+    {allProducts.length === 0 && !error && (
       <p class="products-empty">{t.en['products.empty']}</p>
     )}
 
     <section class="product-outro">
       <h2 class="product-outro-title">{t.en['products.outroTitle']}</h2>
       <p class="product-outro-body">{t.en['products.outroBody']}</p>
-      <p class="product-outro-cta">{t.en['products.outroCta']}</p>
     </section>
   </div>
 </MainLayout>
@@ -110,46 +81,54 @@ const showcaseCards: Record<string, { tags: string; desc: string }> = {
     if (!input) return;
     const noResults = document.getElementById('product-search-no-results');
     const cards = Array.from(document.querySelectorAll<HTMLElement>('.product-card'));
-    const sections = Array.from(document.querySelectorAll<HTMLElement>('.product-category-section'));
 
-    function applyFilter(query: string) {
-      const q = query.trim().toLowerCase();
+    let currentCategory = 'all';
+    let currentQuery = '';
 
-      if (!q) {
-        cards.forEach((c) => c.removeAttribute('hidden'));
-        sections.forEach((s) => s.removeAttribute('hidden'));
-        if (noResults) noResults.setAttribute('hidden', '');
-        return;
-      }
-
+    function applyFilters() {
+      const q = currentQuery.trim().toLowerCase();
       let totalVisible = 0;
-      sections.forEach((section) => {
-        const sectionCards = section.querySelectorAll<HTMLElement>('.product-card');
-        let visible = 0;
-        sectionCards.forEach((card) => {
-          const text = card.dataset.searchText ?? '';
-          const matched = text.includes(q);
-          if (matched) { card.removeAttribute('hidden'); visible++; totalVisible++; }
-          else card.setAttribute('hidden', '');
-        });
-        if (visible === 0) section.setAttribute('hidden', '');
-        else section.removeAttribute('hidden');
+
+      cards.forEach((card) => {
+        const text = card.dataset.searchText ?? '';
+        const cat = card.dataset.category ?? '';
+
+        const matchesCategory = currentCategory === 'all' || cat === currentCategory;
+        const matchesSearch = !q || text.includes(q);
+        const visible = matchesCategory && matchesSearch;
+
+        if (visible) { card.removeAttribute('hidden'); totalVisible++; }
+        else card.setAttribute('hidden', '');
       });
 
       if (noResults) {
-        if (totalVisible === 0) noResults.removeAttribute('hidden');
+        if (totalVisible === 0 && (q || currentCategory !== 'all')) noResults.removeAttribute('hidden');
         else noResults.setAttribute('hidden', '');
       }
     }
 
+    // Search input
     input.addEventListener('input', () => {
-      const q = input.value;
-      history.replaceState(null, '', q ? `?q=${encodeURIComponent(q)}` : location.pathname);
-      applyFilter(q);
+      currentQuery = input.value;
+      const url = new URL(window.location.href);
+      if (currentQuery) url.searchParams.set('q', currentQuery);
+      else url.searchParams.delete('q');
+      history.replaceState(null, '', url.toString());
+      applyFilters();
     });
 
+    // Category filter (from ProductFilterBar)
+    document.addEventListener('product-filter', ((e: CustomEvent) => {
+      currentCategory = e.detail.category;
+      applyFilters();
+    }) as EventListener);
+
     // Initialize from URL
-    const urlQ = new URLSearchParams(location.search).get('q') ?? '';
-    if (urlQ) { input.value = urlQ; applyFilter(urlQ); }
+    const params = new URLSearchParams(location.search);
+    const urlQ = params.get('q') ?? '';
+    const urlCat = params.get('cat') ?? 'all';
+    if (urlQ) { input.value = urlQ; currentQuery = urlQ; }
+    if (urlCat !== 'all') currentCategory = urlCat;
+    if (urlQ || urlCat !== 'all') applyFilters();
   });
 </script>
