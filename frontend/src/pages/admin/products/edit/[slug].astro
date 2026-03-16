@@ -342,8 +342,8 @@ const isFeatured = product?.featured ?? false;
       <!-- AI Panel -->
       <div class="admin-ai-panel" id="ai-panel">
         <div class="admin-ai-panel-header">
-          <span class="admin-ai-panel-title">AI Product Advisor</span>
-          <button class="admin-ai-panel-toggle" id="ai-panel-close" type="button">✕</button>
+          <span class="admin-ai-panel-title">AI Advisor</span>
+          <button class="admin-ai-panel-toggle" id="ai-panel-close" type="button">&times;</button>
         </div>
         <div class="admin-ai-actions">
           <button class="admin-ai-action-btn admin-ai-action-btn--wide" data-action="generate_from_url" type="button">
@@ -882,7 +882,13 @@ const isFeatured = product?.featured ?? false;
         description_ko: 'Description KO',
       };
       const loadingText = document.getElementById('ai-loading-text');
-      if (loadingText) loadingText.textContent = `Running ${actionLabels[action] || action}...`;
+      const label = actionLabels[action] || action;
+      let elapsed = 0;
+      if (loadingText) loadingText.textContent = `Running ${label}...`;
+      const elapsedTimer = setInterval(() => {
+        elapsed++;
+        if (loadingText) loadingText.textContent = `Running ${label}... (${elapsed}s)`;
+      }, 1000);
 
       document.getElementById('ai-loading').hidden = false;
       document.getElementById('ai-result-area').hidden = true;
@@ -924,6 +930,7 @@ const isFeatured = product?.featured ?? false;
         aiResultTarget = targetMap[action] || null;
         document.getElementById('ai-apply-btn').hidden = !aiResultTarget && action !== 'generate_from_url';
       } finally {
+        clearInterval(elapsedTimer);
         document.getElementById('ai-loading').hidden = true;
         document.querySelectorAll('.admin-ai-action-btn').forEach((b) => {
           b.disabled = false;
