@@ -1,0 +1,111 @@
+---
+import { t } from '../i18n/index';
+import type { Locale } from '../i18n/index';
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = 'en' } = Astro.props;
+const nonce = Astro.locals.cspNonce || '';
+const gaId = import.meta.env.PUBLIC_GA4_ID || '';
+const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
+const privacyHref = locale === 'ko' ? '/ko/privacy/' : '/en/privacy/';
+---
+
+<div
+  id="cookie-consent"
+  data-ga-id={gaId}
+  data-clarity-id={clarityId}
+  style="display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; background-color: var(--color-bg-secondary); border-top: 1px solid var(--color-border); padding: 1rem 1.5rem;"
+>
+  <div style="max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+    <p style="font-family: var(--font-body); font-size: 0.9rem; color: var(--color-text); margin: 0; flex: 1; min-width: 200px;">
+      {t[locale]['cookie.message']}
+      <a href={privacyHref} style="color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; margin-left: 0.25rem;">
+        {t[locale]['cookie.learnMore']}
+      </a>
+    </p>
+    <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+      <button
+        id="cookie-essential"
+        type="button"
+        style="font-family: var(--font-ui); font-size: 0.85rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--color-border); color: var(--color-text-muted); cursor: pointer; border-radius: 2px;"
+      >
+        {t[locale]['cookie.onlyEssential']}
+      </button>
+      <button
+        id="cookie-accept"
+        type="button"
+        style="font-family: var(--font-ui); font-size: 0.85rem; padding: 0.5rem 1rem; background: var(--color-text-primary); color: var(--color-bg-primary); border: none; cursor: pointer; border-radius: 2px; font-weight: 600;"
+      >
+        {t[locale]['cookie.acceptAll']}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script is:inline nonce={nonce}>
+  (function initCookieConsent() {
+    function run() {
+      var banner = document.getElementById('cookie-consent');
+      if (!banner) return;
+
+      var consent = localStorage.getItem('cookieConsent');
+      if (consent) return;
+
+      banner.style.display = 'block';
+
+      var acceptBtn = document.getElementById('cookie-accept');
+      var essentialBtn = document.getElementById('cookie-essential');
+
+      if (acceptBtn) {
+        acceptBtn.onclick = function() {
+          localStorage.setItem('cookieConsent', 'accepted');
+          banner.style.display = 'none';
+          loadAnalytics();
+        };
+      }
+
+      if (essentialBtn) {
+        essentialBtn.onclick = function() {
+          localStorage.setItem('cookieConsent', 'declined');
+          banner.style.display = 'none';
+        };
+      }
+    }
+
+    function loadAnalytics() {
+      var banner = document.getElementById('cookie-consent');
+      if (!banner) return;
+
+      var gaId = banner.getAttribute('data-ga-id');
+      var clarityId = banner.getAttribute('data-clarity-id');
+
+      if (gaId && !window.gtag) {
+        var gs = document.createElement('script');
+        gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+        gs.async = true;
+        document.head.appendChild(gs);
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){window.dataLayer.push(arguments);}
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', gaId);
+      }
+
+      if (clarityId && !window.clarity) {
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window,document,'clarity','script',clarityId);
+      }
+    }
+
+    if (!window.__cookieConsentInit) {
+      window.__cookieConsentInit = true;
+      document.addEventListener('astro:page-load', run);
+    }
+  })();
+</script>
