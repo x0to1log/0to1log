@@ -464,9 +464,15 @@ async def _generate_digest(
         ],
     }
 
+    top_title = classified[0].title if classified else ""
+    type_label = "Research" if digest_type == "research" else "Business"
+
     for locale in ("en", "ko"):
         slug = slug_base if locale == "en" else f"{slug_base}-ko"
-        title = f"AI {'Research' if digest_type == 'research' else 'Business'} Daily — {batch_id}"
+        if locale == "ko":
+            title = f"{top_title} — AI {type_label} 데일리" if top_title else f"AI {type_label} 데일리 — {batch_id}"
+        else:
+            title = f"{top_title} — AI {type_label} Daily" if top_title else f"AI {type_label} Daily — {batch_id}"
 
         row = {
             "title": title,

@@ -39,6 +39,7 @@ from services.agents.prompts_advisor import (
     RELATED_TERMS_PROMPT,
     TRANSLATE_PROMPT,
     GENERATE_BASIC_PROMPT,
+    GENERATE_BASIC_EN_PROMPT,
     GENERATE_ADVANCED_PROMPT,
     EXTRACT_TERMS_PROMPT,
 )
@@ -659,10 +660,11 @@ async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str,
     source: str = "manual",
 ) -> tuple[dict, dict, list[str]]:
-    """Auto-generate all empty fields for a handbook term via 2 LLM calls.
+    """Auto-generate all empty fields for a handbook term via 3 LLM calls.
 
-    Call 1: meta + Basic (term_full, korean_full, categories, definition, body_basic)
-    Call 2: Advanced (body_advanced, with definition as context)
+    Call 1: meta + KO Basic (term_full, korean_full, categories, definition, body_basic_ko)
+    Call 2: EN Basic (body_basic_en, with KO definition as context)
+    Call 3: Advanced (body_advanced, with definition as context)
 
     Args:
         source: "manual" (admin editor) or "pipeline" (auto-extraction)
@@ -695,7 +697,7 @@ async def _run_generate_term(
         except Exception as e:
             logger.warning("Failed to log handbook %s stage: %s", stage, e)
 
-    # --- Call 1: Meta + Basic ---
+    # --- Call 1: Meta + KO Basic ---
     resp1 = await client.chat.completions.create(
         model=model,
         messages=[
@@ -710,13 +712,40 @@ async def _run_generate_term(
     usage1 = extract_usage_metrics(resp1, model)
 
     logger.info(
-        "Handbook generate call 1 (basic) for '%s': %d tokens",
+        "Handbook generate call 1 (basic KO) for '%s': %d tokens",
         req.term, usage1.get("tokens_used", 0),
     )
     _log_handbook_stage("handbook.generate.basic", usage1)
 
-    # --- Call 2: Advanced (with definition as context) ---
-    definition_context = basic_data.get("definition_en", "") or req.definition_en
+    # --- Call 2: EN Basic (with KO definition as context) ---
+    en_basic_prompt = (
+        f"{user_prompt}\n\n"
+        f"--- Context from Call 1 ---\n"
+        f"Definition (KO): {basic_data.get('definition_ko', '')}\n"
+        f"Definition (EN): {basic_data.get('definition_en', '')}"
+    )
+
+    resp2 = await client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": GENERATE_BASIC_EN_PROMPT},
+            {"role": "user", "content": en_basic_prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+        max_tokens=16000,
+    )
+    en_basic_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-basic-en")
+    usage2 = extract_usage_metrics(resp2, model)
+
+    logger.info(
+        "Handbook generate call 2 (basic EN) for '%s': %d tokens",
+        req.term, usage2.get("tokens_used", 0),
+    )
+    _log_handbook_stage("handbook.generate.basic.en", usage2)
+
+    # --- Call 3: Advanced (with definition as context) ---
+    definition_context = basic_data.get("definition_en", "") or en_basic_data.get("definition_en", "") or req.definition_en
     definition_ko_context = basic_data.get("definition_ko", "") or req.definition_ko
     advanced_prompt = (
         f"{user_prompt}\n\n"
@@ -725,7 +754,7 @@ async def _run_generate_term(
         f"Definition (KO): {definition_ko_context}"
     )
 
-    resp2 = await client.chat.completions.create(
+    resp3 = await client.chat.completions.create(
         model=model,
         messages=[
             {"role": "system", "content": GENERATE_ADVANCED_PROMPT},
@@ -735,18 +764,18 @@ async def _run_generate_term(
         temperature=0.3,
         max_tokens=16000,
     )
-    advanced_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-advanced")
-    usage2 = extract_usage_metrics(resp2, model)
+    advanced_data = parse_ai_json(resp3.choices[0].message.content, "Handbook-generate-advanced")
+    usage3 = extract_usage_metrics(resp3, model)
 
     logger.info(
-        "Handbook generate call 2 (advanced) for '%s': %d tokens",
-        req.term, usage2.get("tokens_used", 0),
+        "Handbook generate call 3 (advanced) for '%s': %d tokens",
+        req.term, usage3.get("tokens_used", 0),
     )
-    _log_handbook_stage("handbook.generate.advanced", usage2)
+    _log_handbook_stage("handbook.generate.advanced", usage3)
 
     # --- Merge results ---
-    raw_data = {**basic_data, **advanced_data}
-    merged_usage = merge_usage_metrics(usage1, usage2)
+    raw_data = {**basic_data, **en_basic_data, **advanced_data}
+    merged_usage = merge_usage_metrics(merge_usage_metrics(usage1, usage2), usage3)
 
     # --- Assemble section keys into markdown ---
     data = _assemble_all_sections(raw_data)

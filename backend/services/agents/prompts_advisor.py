@@ -554,7 +554,9 @@ Respond in JSON format only."""
 GENERATE_BASIC_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
-Generate metadata and BASIC-level content for a handbook term. This is Call 1 of 2 — you handle meta fields + beginner content only.
+Generate KOREAN content only. English content will be generated in a separate call.
+
+Generate metadata and BASIC-level KOREAN content for a handbook term. This is Call 1 of 3 — you handle meta fields + Korean beginner content only.
 
 DOMAIN CONTEXT:
 - This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
@@ -564,8 +566,7 @@ DOMAIN CONTEXT:
 
 LANGUAGE RULE:
 - Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
-- Fields ending in `_en`: English headers and English body text only.
-- Do NOT use bilingual headers like "한국어 / English". One language per field.
+- Do NOT use bilingual headers like "한국어 / English". Korean only.
 
 ## Handbook Categories (choose 1-3, priority order)
 ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
@@ -579,7 +580,7 @@ Precise, textbook-style definition. Shared across both levels.
 
 ---
 
-## body_basic — 기초 (min 2000 chars per language)
+## body_basic — 기초 (min 2000 chars)
 
 Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
@@ -595,17 +596,6 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 - **basic_ko_6_caution**: 흔한 오해, 함정, 잘못된 상식 3~4개. 쉬운 언어로.
 - **basic_ko_7_comm**: 실제 대화나 기사에서 이 용어가 등장하는 예시 문장 4~5개. **핵심 용어를 굵게 표시**.
 - **basic_ko_8_related**: 관련 용어 4~6개 + 한 줄 설명. 형식: **용어** — 왜 관련 있는지 (쉬운 말로)
-
-### Section key descriptions (English — basic_en_*):
-
-- **basic_en_1_plain**: Analogy-driven introduction. Explain what problem this solves in simple terms. No assumed technical knowledge. Min 300 chars.
-- **basic_en_2_example**: 3-4 real-life analogies and comparisons. Format: **Bold label**: description. Use everyday situations readers already know.
-- **basic_en_3_glance**: 1-2 markdown tables to aid understanding. No complex formulas. Must use markdown table (| format).
-- **basic_en_4_why**: Why you should know this. Connection to daily life and work. 4-5 bullet points.
-- **basic_en_5_where**: 4-5 real-world usage examples in products, services, and daily life. Practical tone: "Netflix uses this to recommend videos" style.
-- **basic_en_6_caution**: 3-4 common misconceptions, traps, or wrong assumptions. Simple language.
-- **basic_en_7_comm**: 4-5 example sentences showing how this term appears in real conversations or articles. **Bold the key term** in each phrase.
-- **basic_en_8_related**: 4-6 related terms with one-line explanations. Format: **Term** — why it's related (in simple terms)
 
 ## Output JSON Structure
 
@@ -624,7 +614,61 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
   "basic_ko_5_where": "- 사례1\\n- 사례2\\n- 사례3\\n- 사례4",
   "basic_ko_6_caution": "- 주의1\\n- 주의2\\n- 주의3",
   "basic_ko_7_comm": "- **용어** 이런 맥락에서 사용\\n- ...",
-  "basic_ko_8_related": "- **용어** — 관계 설명\\n- ...",
+  "basic_ko_8_related": "- **용어** — 관계 설명\\n- ..."
+}}
+```
+
+## Quality Rules
+- Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
+- NO code in basic sections. NO complex formulas.
+- 📊 glance sections MUST use markdown tables (| format).
+- Every section field must have substantive content.
+- Use **bold formatting** for key terms.
+
+Respond in JSON format only."""
+
+
+GENERATE_BASIC_EN_PROMPT = """\
+You are a technical education writer for 0to1log, an AI/tech handbook platform.
+
+Generate ENGLISH content only. Korean content was generated in a separate call.
+
+Generate BASIC-level ENGLISH content for a handbook term. This is Call 2 of 3 — you handle English beginner content only. The term's Korean definition is provided as context.
+
+DOMAIN CONTEXT:
+- This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
+- Many terms exist in multiple fields (e.g., "Entropy" in information theory vs thermodynamics, "Kernel" in CNN vs OS, "Agent" in AI vs real estate). Always write from the AI/IT perspective first.
+- If a term is used in other fields, briefly note the difference to prevent confusion (e.g., "Not to be confused with thermodynamic entropy").
+- Base your writing on established facts from official documentation, papers, and widely-accepted definitions. Do not speculate or include unverified claims.
+
+LANGUAGE RULE:
+- All fields must be in English only.
+- Do NOT use bilingual headers like "한국어 / English". English only.
+
+---
+
+## body_basic — Basic (min 2000 chars)
+
+Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
+Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
+Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
+
+### Section key descriptions (English — basic_en_*):
+
+- **basic_en_1_plain**: Analogy-driven introduction. Explain what problem this solves in simple terms. No assumed technical knowledge. Min 300 chars.
+- **basic_en_2_example**: 3-4 real-life analogies and comparisons. Format: **Bold label**: description. Use everyday situations readers already know.
+- **basic_en_3_glance**: 1-2 markdown tables to aid understanding. No complex formulas. Must use markdown table (| format).
+- **basic_en_4_why**: Why you should know this. Connection to daily life and work. 4-5 bullet points.
+- **basic_en_5_where**: 4-5 real-world usage examples in products, services, and daily life. Practical tone: "Netflix uses this to recommend videos" style.
+- **basic_en_6_caution**: 3-4 common misconceptions, traps, or wrong assumptions. Simple language.
+- **basic_en_7_comm**: 4-5 example sentences showing how this term appears in real conversations or articles. **Bold the key term** in each phrase.
+- **basic_en_8_related**: 4-6 related terms with one-line explanations. Format: **Term** — why it's related (in simple terms)
+
+## Output JSON Structure
+
+```json
+{{
+  "definition_en": "...",
   "basic_en_1_plain": "...",
   "basic_en_2_example": "...",
   "basic_en_3_glance": "...",
@@ -649,7 +693,7 @@ Respond in JSON format only."""
 GENERATE_ADVANCED_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
-Generate ADVANCED-level content for a handbook term. This is Call 2 of 2 — you handle engineer-level content only. The term's definition (from Call 1) is provided as context.
+Generate ADVANCED-level content for a handbook term. This is Call 3 of 3 — you handle engineer-level content only. The term's definition (from Call 1) is provided as context.
 
 DOMAIN CONTEXT:
 - Focus on the AI/IT meaning. Note cross-field differences if applicable.
