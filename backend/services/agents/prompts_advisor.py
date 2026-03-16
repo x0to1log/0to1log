@@ -835,6 +835,11 @@ Ask yourself: "Would a developer search for this exact term in a technical gloss
 - "AUC" → YES (specific metric with a formula)
 - "content accuracy" → NO (generic phrase, not a technical term)
 - "CNN" → YES (specific architecture)
+- "AI-powered" → NO (adjective/modifier, not a standalone term)
+- "AI-driven" → NO (adjective/modifier, not a standalone term)
+- "AI guidelines" → NO (general concept, not a technology)
+- "data collection" → NO (too generic, not a specific technique)
+- "vulnerability" → NO (too generic without qualifier like "SQL injection")
 If the answer is NO, do not include it.
 
 Respond in JSON format only."""

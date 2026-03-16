@@ -259,6 +259,12 @@ async def _extract_and_create_handbook_terms(
             logger.info("Skipping '%s' — too many words (likely a category, not a term)", term_name)
             continue
 
+        # Skip adjective/modifier patterns (not standalone terms)
+        lower = term_name.lower()
+        if lower.endswith(("-powered", "-driven", "-based", "-enabled", "-oriented")):
+            logger.info("Skipping '%s' — adjective/modifier, not a standalone term", term_name)
+            continue
+
         # Skip terms with invalid/missing category (non-IT domain)
         category = term_info.get("category", "")
         if category not in VALID_CATEGORIES:
@@ -396,6 +402,8 @@ async def _generate_digest(
     client = get_openai_client()
     model = settings.openai_model_main
     personas: dict[str, PersonaOutput] = {}
+    digest_headline = ""
+    digest_headline_ko = ""
 
     for persona_name in ("expert", "learner", "beginner"):
         t_p = time.monotonic()
@@ -419,6 +427,12 @@ async def _generate_digest(
                 en=data.get("en", ""),
                 ko=data.get("ko", ""),
             )
+
+            # Capture headline from first persona (expert)
+            if not digest_headline and data.get("headline"):
+                digest_headline = data["headline"]
+            if not digest_headline_ko and data.get("headline_ko"):
+                digest_headline_ko = data["headline_ko"]
             usage = extract_usage_metrics(response, model)
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
             personas[persona_name] = persona_output
@@ -464,15 +478,17 @@ async def _generate_digest(
         ],
     }
 
-    top_title = classified[0].title if classified else ""
+    fallback_title = classified[0].title if classified else ""
     type_label = "Research" if digest_type == "research" else "Business"
 
     for locale in ("en", "ko"):
         slug = slug_base if locale == "en" else f"{slug_base}-ko"
         if locale == "ko":
-            title = f"{top_title} — AI {type_label} 데일리" if top_title else f"AI {type_label} 데일리 — {batch_id}"
+            ko_title = digest_headline_ko or fallback_title
+            title = f"{ko_title} — AI {type_label} 데일리" if ko_title else f"AI {type_label} 데일리 — {batch_id}"
         else:
-            title = f"{top_title} — AI {type_label} Daily" if top_title else f"AI {type_label} Daily — {batch_id}"
+            en_title = digest_headline or fallback_title
+            title = f"{en_title} — AI {type_label} Daily" if en_title else f"AI {type_label} Daily — {batch_id}"
 
         row = {
             "title": title,

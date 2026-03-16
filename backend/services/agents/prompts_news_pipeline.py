@@ -210,6 +210,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ## Output JSON format
 ```json
 {{{{
+  "headline": "Attention-grabbing English title summarizing today's top story",
+  "headline_ko": "오늘의 핵심 뉴스를 요약하는 임팩트 있는 한국어 제목",
   "en": "## One-Line Summary\\n...\\n\\n## LLM & SOTA Models\\n...",
   "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA 모델\\n..."
 }}}}
