@@ -121,3 +121,43 @@ async def test_rank_candidates_all_retries_fail_returns_empty():
     assert result.business is None
     assert usage == {}
     assert mock_client.chat.completions.create.call_count == 3
+
+
+CLASSIFICATION_LLM_RESPONSE = {
+    "research": [
+        {"url": "https://c.com/3", "subcategory": "papers", "reason": "Novel architecture", "score": 0.92},
+        {"url": "https://a.com/1", "subcategory": "llm_models", "reason": "Major release", "score": 0.88},
+    ],
+    "business": [
+        {"url": "https://b.com/2", "subcategory": "industry", "reason": "Major funding", "score": 0.90},
+        {"url": "https://a.com/1", "subcategory": "big_tech", "reason": "GPT-5 market impact", "score": 0.85},
+    ],
+}
+
+
+@pytest.mark.asyncio
+async def test_classify_candidates_returns_multiple():
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
+
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
+         patch("services.agents.ranking.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        from services.agents.ranking import classify_candidates
+        result, usage = await classify_candidates(SAMPLE_CANDIDATES)
+
+    assert len(result.research) == 2
+    assert len(result.business) == 2
+    assert result.research[0].subcategory == "papers"
+    assert result.business[0].subcategory == "industry"
+    assert any(c.url == "https://a.com/1" for c in result.research)
+    assert any(c.url == "https://a.com/1" for c in result.business)
+
+
+@pytest.mark.asyncio
+async def test_classify_candidates_empty_list():
+    from services.agents.ranking import classify_candidates
+    result, usage = await classify_candidates([])
+    assert result.research == []
+    assert result.business == []

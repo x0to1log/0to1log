@@ -29,6 +29,24 @@ class RankingResult(BaseModel):
     business: Optional[RankedCandidate] = None
 
 
+class ClassifiedCandidate(BaseModel):
+    """News candidate classified into a category and subcategory."""
+    title: str
+    url: str
+    snippet: str = ""
+    source: str = "tavily"
+    category: str  # "research" or "business"
+    subcategory: str  # e.g., "llm_models", "open_source", "papers", "big_tech", "industry", "new_tools"
+    relevance_score: float = 0.0
+    reason: str = ""
+
+
+class ClassificationResult(BaseModel):
+    """LLM classification output — multiple candidates per category."""
+    research: list[ClassifiedCandidate] = []
+    business: list[ClassifiedCandidate] = []
+
+
 class FactClaim(BaseModel):
     id: str
     claim: str
