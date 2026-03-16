@@ -1,14 +1,13 @@
 """Tests for the pipeline orchestrator."""
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from models.news_pipeline import (
-    FactPack,
+    ClassifiedCandidate,
+    ClassificationResult,
     NewsCandidate,
-    PersonaOutput,
-    RankedCandidate,
-    RankingResult,
 )
 
 
@@ -25,26 +24,20 @@ SAMPLE_COLLECT_META = {
     "unique_candidates": 2,
 }
 
-SAMPLE_RANKING = RankingResult(
-    research=RankedCandidate(
-        title="GPT-5", url="https://a.com/1", snippet="Model release",
-        source="tavily", assigned_type="research", relevance_score=0.9, ranking_reason="Major release",
-    ),
-    business=RankedCandidate(
-        title="AI Fund", url="https://b.com/2", snippet="$500M raised",
-        source="tavily", assigned_type="business", relevance_score=0.85, ranking_reason="Big funding",
-    ),
+SAMPLE_CLASSIFICATION = ClassificationResult(
+    research=[
+        ClassifiedCandidate(
+            title="GPT-5", url="https://a.com/1", snippet="Model release",
+            category="research", subcategory="llm_models", relevance_score=0.9, reason="Major",
+        ),
+    ],
+    business=[
+        ClassifiedCandidate(
+            title="AI Fund", url="https://b.com/2", snippet="$500M raised",
+            category="business", subcategory="industry", relevance_score=0.85, reason="Big funding",
+        ),
+    ],
 )
-
-SAMPLE_FACT_PACK = FactPack.model_validate({
-    "headline": "GPT-5 Released",
-    "key_facts": [{"id": "f1", "claim": "Test", "why_it_matters": "Test", "source_ids": ["s1"], "confidence": "high"}],
-    "numbers": [], "entities": [],
-    "sources": [{"id": "s1", "title": "Test", "publisher": "test.com", "url": "https://test.com", "published_at": "2026-03-15"}],
-    "community_summary": "Positive reactions.",
-})
-
-SAMPLE_PERSONA = PersonaOutput(en="Expert EN content " + "x" * 3000, ko="Expert KO content " + "가" * 3000)
 
 EMPTY_USAGE = {"model_used": "gpt-4o", "input_tokens": 0, "output_tokens": 0, "tokens_used": 0, "cost_usd": 0.0}
 
@@ -58,44 +51,60 @@ def _mock_supabase():
     mock.table.return_value.insert.return_value.execute.return_value = MagicMock(data=[{"id": "run-id"}])
     mock.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
     mock.table.return_value.upsert.return_value.execute.return_value = MagicMock(data=[{"id": "post-id"}])
+    mock.table.return_value.delete.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
     return mock
+
+
+def _mock_openai_digest_response():
+    """Mock OpenAI response for digest generation."""
+    mock_resp = MagicMock()
+    mock_resp.choices = [MagicMock()]
+    mock_resp.choices[0].message.content = json.dumps({
+        "en": "## One-Line Summary\nTest digest EN content " + "x" * 500,
+        "ko": "## 한 줄 요약\nTest digest KO content " + "가" * 500,
+    })
+    mock_resp.usage = MagicMock()
+    mock_resp.usage.prompt_tokens = 2000
+    mock_resp.usage.completion_tokens = 1000
+    mock_resp.usage.total_tokens = 3000
+    return mock_resp
 
 
 @pytest.mark.asyncio
 async def test_run_daily_pipeline_happy_path():
-    """Full pipeline creates 4 post rows (2 types x 2 locales)."""
+    """Full v3 pipeline creates 4 digest rows (2 types x 2 locales)."""
     mock_sb = _mock_supabase()
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create.return_value = _mock_openai_digest_response()
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
-         patch("services.pipeline.rank_candidates", new_callable=AsyncMock, return_value=(SAMPLE_RANKING, EMPTY_USAGE)), \
-         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="Reactions text"), \
-         patch("services.pipeline.extract_facts", new_callable=AsyncMock, return_value=(SAMPLE_FACT_PACK, EMPTY_USAGE)), \
-         patch("services.pipeline.write_persona", new_callable=AsyncMock, return_value=(SAMPLE_PERSONA, EMPTY_USAGE)):
+         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(SAMPLE_CLASSIFICATION, EMPTY_USAGE)), \
+         patch("services.pipeline.get_openai_client", return_value=mock_client):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
 
     assert result.posts_created == 4  # research EN/KO + business EN/KO
     assert result.errors == []
-    assert result.batch_id  # non-empty
+    assert result.batch_id
 
 
 @pytest.mark.asyncio
 async def test_pipeline_no_research_creates_2_posts():
-    """When ranking returns no research, only business posts are created."""
-    ranking_no_research = RankingResult(
-        research=None,
-        business=SAMPLE_RANKING.business,
+    """When classification returns no research, only business digest is created."""
+    classification_no_research = ClassificationResult(
+        research=[],
+        business=SAMPLE_CLASSIFICATION.business,
     )
     mock_sb = _mock_supabase()
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create.return_value = _mock_openai_digest_response()
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
-         patch("services.pipeline.rank_candidates", new_callable=AsyncMock, return_value=(ranking_no_research, EMPTY_USAGE)), \
-         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="Reactions"), \
-         patch("services.pipeline.extract_facts", new_callable=AsyncMock, return_value=(SAMPLE_FACT_PACK, EMPTY_USAGE)), \
-         patch("services.pipeline.write_persona", new_callable=AsyncMock, return_value=(SAMPLE_PERSONA, EMPTY_USAGE)):
+         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(classification_no_research, EMPTY_USAGE)), \
+         patch("services.pipeline.get_openai_client", return_value=mock_client):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
@@ -116,35 +125,36 @@ async def test_pipeline_no_candidates_returns_zero_posts():
 
     assert result.posts_created == 0
     assert result.errors == []
-    # pipeline_runs should be updated to "success", not left "running"
     mock_sb.table.return_value.update.assert_called()
 
 
 @pytest.mark.asyncio
-async def test_pipeline_fact_extraction_failure_continues():
-    """Fact extraction failure for one post type doesn't stop the other."""
+async def test_pipeline_digest_failure_continues():
+    """Digest generation failure for one type doesn't stop the other."""
     mock_sb = _mock_supabase()
+    mock_client = AsyncMock()
 
-    call_count = {"extract": 0}
+    call_count = {"calls": 0}
 
-    async def _mock_extract(*args, **kwargs):
-        call_count["extract"] += 1
-        if call_count["extract"] == 1:
+    async def _mock_create(**kwargs):
+        call_count["calls"] += 1
+        # First 3 calls (research expert/learner/beginner) fail
+        if call_count["calls"] <= 3:
             raise Exception("API timeout")
-        return SAMPLE_FACT_PACK, EMPTY_USAGE
+        return _mock_openai_digest_response()
+
+    mock_client.chat.completions.create.side_effect = _mock_create
 
     with patch("services.pipeline.get_supabase", return_value=mock_sb), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
-         patch("services.pipeline.rank_candidates", new_callable=AsyncMock, return_value=(SAMPLE_RANKING, EMPTY_USAGE)), \
-         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="Reactions"), \
-         patch("services.pipeline.extract_facts", side_effect=_mock_extract), \
-         patch("services.pipeline.write_persona", new_callable=AsyncMock, return_value=(SAMPLE_PERSONA, EMPTY_USAGE)):
+         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(SAMPLE_CLASSIFICATION, EMPTY_USAGE)), \
+         patch("services.pipeline.get_openai_client", return_value=mock_client):
 
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
 
-    assert result.posts_created == 2  # only one post type (EN + KO)
-    assert len(result.errors) == 1
+    assert result.posts_created == 2  # only business succeeded (EN + KO)
+    assert len(result.errors) == 3  # 3 research persona failures
 
 
 @pytest.mark.asyncio
