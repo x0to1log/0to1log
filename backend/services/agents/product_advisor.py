@@ -60,7 +60,25 @@ Do NOT output this analysis — use it to inform your JSON.
    - e.g. ["llm", "chatbot", "productivity", "code-generation"]
    - Empty array [] if cannot determine
 
-9. **features** (EN, array of 3-5 strings):
+9. **primary_category** (one of: "assistant", "image", "video", "audio", "coding", "workflow", "builder", "platform", "research", "community"):
+   - The single best-fit category for this product
+   - assistant = chatbots, LLMs, search AI
+   - image = image generation, design tools
+   - video = video generation/editing
+   - audio = TTS, music, voice
+   - coding = IDEs, code generation, dev tools
+   - workflow = automation, analytics, project management
+   - builder = app builders, no-code, LLM frameworks
+   - platform = API management, DevOps, model hosting
+   - research = papers, academic tools
+   - community = forums, newsletters, directories
+
+10. **secondary_categories** (array of 0-2 strings from the same set above):
+    - Additional categories if the product spans multiple areas
+    - Empty array [] if it clearly fits only one category
+    - e.g. a coding tool with workflow features: primary="coding", secondary=["workflow"]
+
+11. **features** (EN, array of 3-5 strings):
    - Each: one specific capability in one sentence
    - Start with a verb: "Generates...", "Supports...", "Connects..."
    - BAD: "Advanced AI technology" (vague benefit)
@@ -91,6 +109,8 @@ Do NOT output this analysis — use it to inform your JSON.
   "platform": ["web", "ios", "android", "api", "desktop"],
   "korean_support": true,
   "tags": ["llm", "chatbot", "productivity", "code-assistant", "writing"],
+  "primary_category": "assistant",
+  "secondary_categories": ["coding"],
   "features": ["Multi-modal input: text, images, files, and voice in one conversation", "Web browsing and real-time information retrieval", "Code Interpreter for data analysis and chart generation", "Image generation with DALL-E integration", "Custom GPTs for specialized workflows"],
   "features_ko": ["텍스트, 이미지, 파일, 음성을 하나의 대화에서 멀티모달 입력", "웹 브라우징과 실시간 정보 검색", "Code Interpreter로 데이터 분석과 차트 생성", "DALL-E 통합 이미지 생성", "맞춤형 GPTs로 전문 워크플로우 구성"],
   "use_cases": ["Knowledge workers drafting and refining documents with AI feedback", "Developers debugging code and generating boilerplate in conversation", "Students researching topics with cited sources and summaries"],
@@ -109,6 +129,8 @@ Do NOT output this analysis — use it to inform your JSON.
   "platform": ["desktop"],
   "korean_support": false,
   "tags": ["ide", "code-generation", "refactoring", "developer-tools"],
+  "primary_category": "coding",
+  "secondary_categories": [],
   "features": ["Inline code generation from natural language comments", "Multi-file refactoring with project-wide context", "Chat with your codebase using @-mentions for files and symbols", "Supports Claude, GPT-4o, and custom model endpoints", "Built on VS Code with full extension compatibility"],
   "features_ko": ["자연어 주석에서 인라인 코드 생성", "프로젝트 전체 컨텍스트를 활용한 멀티파일 리팩토링", "@멘션으로 파일과 심볼을 지정해 코드베이스와 대화", "Claude, GPT-4o, 커스텀 모델 엔드포인트 지원", "VS Code 기반으로 모든 확장 프로그램 호환"],
   "use_cases": ["Developers refactoring legacy codebases across multiple files", "Teams prototyping new features with AI-assisted code generation", "Solo developers who want IDE-level AI without switching editors"],
@@ -127,6 +149,8 @@ Do NOT output this analysis — use it to inform your JSON.
   "platform": ["web"],
   "korean_support": false,
   "tags": ["image-generation", "art", "design", "text-to-image"],
+  "primary_category": "image",
+  "secondary_categories": [],
   "features": ["Text-to-image generation with industry-leading aesthetic quality", "Style tuning with --style, --stylize, and reference images", "Upscaling and variations from generated results", "Pan and zoom for extending image compositions", "Describe command to reverse-engineer prompts from images"],
   "features_ko": ["업계 최고 수준의 미적 품질로 텍스트→이미지 생성", "--style, --stylize, 참조 이미지로 스타일 튜닝", "생성된 결과물에서 업스케일링과 변형 생성", "팬/줌으로 이미지 구도 확장", "Describe 명령어로 이미지에서 프롬프트 역추출"],
   "use_cases": ["Designers creating concept art and mood boards for client pitches", "Content creators generating unique visuals for social media and blogs", "Game developers prototyping character and environment art"],
@@ -145,6 +169,8 @@ Do NOT output this analysis — use it to inform your JSON.
   "platform": ["web", "api", "desktop"],
   "korean_support": false,
   "tags": ["automation", "workflow", "no-code", "open-source", "integrations"],
+  "primary_category": "workflow",
+  "secondary_categories": ["builder"],
   "features": ["Visual workflow builder with 400+ pre-built app integrations", "JavaScript/Python code nodes for custom logic", "Self-hostable with Docker or native installation", "AI agent nodes for LLM-powered decision making", "Webhook triggers and cron scheduling for event-driven automation"],
   "features_ko": ["400개 이상의 앱 연동이 내장된 비주얼 워크플로우 빌더", "커스텀 로직을 위한 JavaScript/Python 코드 노드", "Docker 또는 네이티브 설치로 셀프호스트 가능", "LLM 기반 의사결정을 위한 AI 에이전트 노드", "이벤트 기반 자동화를 위한 웹훅 트리거와 크론 스케줄링"],
   "use_cases": ["DevOps teams automating deployment pipelines and monitoring alerts", "Marketers connecting CRM, email, and analytics tools without engineering help", "AI builders chaining LLM calls with data sources and external APIs"],
@@ -174,6 +200,8 @@ Respond with JSON only:
   "platform": ["web", "api"],
   "korean_support": false,
   "tags": ["llm", "chatbot"],
+  "primary_category": "assistant",
+  "secondary_categories": ["coding"],
   "features": ["...", "..."],
   "features_ko": ["...", "..."],
   "use_cases": ["...", "..."],

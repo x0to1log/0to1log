@@ -979,6 +979,17 @@ const isFeatured = product?.featured ?? false;
           const el = document.getElementById('field-tags');
           if (el) el.value = parsed.tags.join(', ');
         }
+        // Primary category
+        if (parsed.primary_category) {
+          const el = document.getElementById('field-category');
+          if (el) el.value = parsed.primary_category;
+        }
+        // Secondary categories
+        if (Array.isArray(parsed.secondary_categories)) {
+          document.querySelectorAll('.product-secondary-cat').forEach((cb) => {
+            cb.checked = parsed.secondary_categories.includes(cb.value);
+          });
+        }
         // Features & Use Cases — clear existing rows and add new ones
         const listConfigs = [
           { key: 'features', listId: 'features-list', addBtnId: 'add-feature-btn' },
