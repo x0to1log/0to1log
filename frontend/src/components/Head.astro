@@ -72,13 +72,13 @@ const jsonLd = article ? JSON.stringify({
   <meta property="og:url" content={canonicalUrl} />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
-  {article?.image && <meta property="og:image" content={article.image} />}
+  <meta property="og:image" content={article?.image || `${siteUrl}/og-default.png`} />
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content={article?.image ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={`${title} | 0to1log`} />
   <meta name="twitter:description" content={description} />
-  {article?.image && <meta name="twitter:image" content={article.image} />}
+  <meta name="twitter:image" content={article?.image || `${siteUrl}/og-default.png`} />
 
   <!-- RSS Autodiscovery -->
   <link rel="alternate" type="application/rss+xml" title="0to1log RSS" href="/rss.xml" />
