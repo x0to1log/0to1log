@@ -170,39 +170,59 @@
 - **원인:** `_log_stage()`에서 `attempt=None`, `debug_meta=None`을 명시적으로 전달 → NOT NULL DEFAULT 컬럼에 NULL insert 시도 → PostgREST 거부 → try/except에서 조용히 무시
 - **해결:** None인 필드를 INSERT dict에서 제외하여 DB DEFAULT 사용
 
+### 19. Supabase 마이그레이션 실행 `[DB-MIGRATE-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** term_full, korean_full 컬럼 + RLS 정책 추가
+- **실행:** Supabase 대시보드 SQL Editor에서 수동 실행 완료
+
 ### 20. Pipeline Runs 페이지 News/Handbook 탭 분리 `[RUNS-TAB-01]`
-- **체크:** [ ]
-- **상태:** todo
-- **목적:** Pipeline Runs 페이지에서 뉴스 run과 핸드북 run을 탭으로 구분
+- **체크:** [x]
+- **상태:** done
 - **산출물:** `pipeline-runs/index.astro` — News/Handbook 탭 + run_key prefix 필터링
 
-### 19. Supabase 마이그레이션 실행 `[DB-MIGRATE-01]`
+### 21. Pipeline Controls 강화 `[PIPE-CTRL-01]`
+- **체크:** [x]
+- **상태:** done
+- **산출물:** Cancel 버튼, Stuck 타임아웃 (30분), Include Handbook 체크박스, cancel API
+- **설계 참조:** [[2026-03-16-pipeline-controls-design]]
+
+### 22. Daily Digest 재설계 Phase 1: 랭킹 → 분류 `[DIGEST-01]`
 - **체크:** [ ]
 - **상태:** todo
-- **목적:** term_full, korean_full 컬럼을 프로덕션 DB에 추가
-- **SQL:** `ALTER TABLE handbook_terms ADD COLUMN IF NOT EXISTS term_full text, ADD COLUMN IF NOT EXISTS korean_full text;`
-- **실행 위치:** Supabase 대시보드 SQL Editor
+- **목적:** `rank_candidates()` 수정 — 1건 선정 → 카테고리별 3~5건 분류
+- **카테고리:** Research(LLM & Models / Open Source / Papers), Business(Big Tech / Industry & Biz / New Tools)
+- **설계 참조:** [[2026-03-16-daily-digest-design]]
+
+### 23. Daily Digest 재설계 Phase 2: 다이제스트 프롬프트 `[DIGEST-02]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 3 페르소나 프롬프트를 다이제스트 형태로 재작성 (같은 뉴스 목록, 깊이만 다르게)
+- **의존성:** DIGEST-01
+
+### 24. Daily Digest 재설계 Phase 3: 파이프라인 오케스트레이터 `[DIGEST-03]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** `_generate_post()` → `_generate_digest()`로 전환, 저장 방식 변경
+- **의존성:** DIGEST-02
+
+### 25. Daily Digest 재설계 Phase 4: 프론트엔드 표시 `[DIGEST-04]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 뉴스 상세 페이지가 다이제스트 형태에 맞게 렌더링
+- **의존성:** DIGEST-03
 
 ---
 
 ## 의존성 순서
 
 ```
-[News Pipeline v2]
-NP2-MODEL-01 ─┬─→ NP2-FACTS-01 ──→ NP2-PERSONA-01 ─┐
-               │                                       │
-NP2-COLLECT-01 → NP2-RANK-01 → NP2-REACT-01 ─────────┤
-                                                       ↓
-                                              NP2-PIPE-01 → NP2-CRON-01 → NP2-E2E-01 → NP2-DEPLOY-01
+[News Pipeline v2] — 모두 ✅ 완료
+[Handbook Quality] — 모두 ✅ 완료
+[Pipeline Infra] — 모두 ✅ 완료 (PIPE-SPLIT, BUG-LOGS, RUNS-TAB, PIPE-CTRL, DB-MIGRATE)
 
-[Handbook Quality]
-HB-SPLIT-01 ✅ → HB-COST-01 ✅ → HB-ANALYTICS-01 ✅
-HB-MODEL-01 ✅
-
-[Pipeline Split & Fixes]
-PIPE-SPLIT-01 ✅
-BUG-LOGS-01 (미해결)
-DB-MIGRATE-01 (수동 실행 필요)
+[Daily Digest 재설계] — 다음 작업
+DIGEST-01 → DIGEST-02 → DIGEST-03 → DIGEST-04
 ```
 
 ---
