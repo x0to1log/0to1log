@@ -696,7 +696,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
 /* Floating persona switcher — appears when original tabs scroll out of view */
 .persona-float {
   position: fixed;
-  bottom: calc(5.75rem + env(safe-area-inset-bottom) + 0.75rem);
+  bottom: calc(5.75rem + env(safe-area-inset-bottom) + 0.25rem);
   left: 50%;
   transform: translateX(-50%) translateY(12px);
   z-index: 89;
