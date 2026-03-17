@@ -18,7 +18,7 @@ let fetchError: string | null = null;
 const [{ data: products, error: productsError }, { data: categories }] = await Promise.all([
   supabase
     .from('ai_products')
-    .select('id, slug, name, name_ko, logo_url, primary_category, is_published, featured, pricing, korean_support, updated_at')
+    .select('id, slug, name, name_ko, logo_url, primary_category, is_published, featured, pricing, korean_support, sort_order, updated_at')
     .order('updated_at', { ascending: false }),
   supabase
     .from('ai_product_categories')
@@ -138,6 +138,9 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
                     {product.featured && (
                       <span class="admin-featured-badge">featured</span>
                     )}
+                    {(product.sort_order ?? 0) < 0 && (
+                      <span class="admin-pinned-badge">pinned</span>
+                    )}
                     {cat && <span>{cat.icon} {cat.label_en}</span>}
                     <span>Updated {new Date(product.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
                   </div>
@@ -150,6 +153,13 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
                     data-action={product.is_published ? 'unpublish' : 'publish'}
                   >
                     {product.is_published ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button
+                    class="admin-btn admin-btn--small admin-product-pin-btn"
+                    data-id={product.id}
+                    data-pinned={(product.sort_order ?? 0) < 0 ? 'true' : 'false'}
+                  >
+                    {(product.sort_order ?? 0) < 0 ? 'Unpin' : 'Pin'}
                   </button>
                   <button
                     class="admin-btn admin-btn-danger admin-btn--small admin-product-delete-btn"
@@ -377,6 +387,40 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
         }
         showFeedback(`${action === 'publish' ? 'Published' : 'Unpublished'} successfully`);
         applyFilters();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // ── Product pin/unpin ────────────────────────────────
+  document.querySelectorAll('.admin-product-pin-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const isPinned = btn.dataset.pinned === 'true';
+      const newSortOrder = isPinned ? 0 : -1;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/admin/products/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, sort_order: newSortOrder }),
+        });
+        if (!res.ok) { showFeedback('Failed to update', true); return; }
+
+        if (isPinned) {
+          btn.textContent = 'Pin';
+          btn.dataset.pinned = 'false';
+          btn.closest('.admin-list-item')?.querySelector('.admin-pinned-badge')?.remove();
+        } else {
+          btn.textContent = 'Unpin';
+          btn.dataset.pinned = 'true';
+          const badge = document.createElement('span');
+          badge.className = 'admin-pinned-badge';
+          badge.textContent = 'pinned';
+          btn.closest('.admin-list-item')?.querySelector('.admin-list-meta')?.appendChild(badge);
+        }
+        showFeedback(isPinned ? 'Unpinned' : 'Pinned to category preview');
       } finally {
         btn.disabled = false;
       }

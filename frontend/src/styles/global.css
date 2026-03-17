@@ -10341,3 +10341,15 @@ pre:hover .blog-code-copy {
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+
+.admin-pinned-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
