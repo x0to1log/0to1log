@@ -150,33 +150,42 @@
 - **목적:** 뉴스 본문의 핸드북 링크를 페르소나에 따라 기초/심화 레벨로 연결
 
 ### 40. Pipeline v4 — 2 페르소나 전환 `[V4-01]`
+- **체크:** [x]
+- **상태:** done
+- **수정:** 프롬프트 재설계, 파이프라인 3→2, 프론트엔드 2탭, Beginner 완전 삭제, auto-fill(excerpt/tags/focus_items/reading_time)
+- **설계 참조:** [[2026-03-17-news-pipeline-v4-design]]
+
+### 41. 뉴스 본문 핸드북 용어 인라인 팝업 `[INLINE-POPUP-01]`
 - **체크:** [ ]
 - **상태:** doing
-- **목적:** 3 페르소나(Expert/Learner/Beginner) → 2 페르소나(Expert 현직자 / Learner 학습자) 전환
-- **이유:** Learner/Beginner 출력이 사실상 동일. LLM이 차별화 못 함. 데이터 기반 결정.
-- **설계 참조:** [[2026-03-17-news-pipeline-v4-design]]
-- **구현 범위:**
-  - Phase 1: Beginner 프롬프트 삭제 + Learner 프롬프트에 Beginner 요소 통합
-  - Phase 2: 파이프라인 코드 — 페르소나 루프 3→2, 완전성 체크 2개
-  - Phase 3: 프론트엔드 — 탭 2개, 기존 3-탭 포스트 backward compatible
-  - Phase 4: 검증 — 파이프라인 실행 + 출력 비교
+- **목적:** 본문에서 핸드북 용어가 처음 등장할 때 클릭 → 팝업으로 정의 확인 (페이지 이동 대신)
+- **현재:** rehypeHandbookTerms + handbook-popup.ts 구현 완료이나 한국어 매칭 안 됨 (\b word boundary 문제)
+- **수정 범위:** `rehypeHandbookTerms.ts` — regex `\b` → 한국어 지원 lookbehind/lookahead
+
+### 42. 핸드북 퀄리티 개선 `[HANDBOOK-QUALITY-01]`
+- **체크:** [ ]
+- **상태:** doing
+- **목적:** 핸드북 콘텐츠 퀄리티 점검 및 개선
 
 ---
 
 ## 의존성 순서
 
 ```
-[완료] Pipeline v2 → v3 → Infra → Handbook → Quality
+[완료] Pipeline v2 → v3 → v4
        → OPT-01~04 → OBSERVE-02 → QUALITY-07 → RECOVERY-01
-       → PERSONA-REDESIGN-01
+       → PERSONA-REDESIGN-01 → V4-01
 
 [진행 중]
-V4-01 (2 페르소나 전환)
+INLINE-POPUP-01 (한국어 매칭 수정)
+HANDBOOK-QUALITY-01 (핸드북 퀄리티)
 
 [다음]
-V4-01 → DIGEST-04 (검증)
-HANDBOOK-LEVEL-LINK-01 (v4 안정화 후)
+HANDBOOK-LEVEL-LINK-01 (핸드북 레벨 연결)
 COMMUNITY-01 (커뮤니티 반응 수집)
+WEEKLY-01 (주간 다이제스트)
+AUTOPUB-01 (자동 발행)
+```
 WEEKLY-01 (주간 다이제스트)
 AUTOPUB-01 (자동 발행)
 ```
