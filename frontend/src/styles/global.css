@@ -920,7 +920,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   color: var(--color-text-muted);
 }
 
-.newsprint-prose p:first-of-type::first-letter {
+.newsprint-prose > p:first-child::first-letter {
   float: left;
   font-family: var(--font-display);
   font-weight: 700;
@@ -1056,6 +1056,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
 }
 
 .newsprint-prose hr {
+  display: none;
   border: none;
   border-top: 1px solid var(--color-border);
   margin: 2rem 0;
@@ -1103,7 +1104,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   font-family: var(--font-blog-heading);
 }
 
-.blog-shell .newsprint-prose p:first-of-type::first-letter {
+.blog-shell .newsprint-prose > p:first-child::first-letter {
   font-family: var(--font-blog-heading);
 }
 
