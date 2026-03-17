@@ -11,9 +11,10 @@ interface Props {
   locale?: 'en' | 'ko';
   slug?: string;
   article?: ArticleData;
+  needsKatex?: boolean;
 }
 
-const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '', article } = Astro.props;
+const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '', article, needsKatex = false } = Astro.props;
 const isBlogPage = Astro.url.pathname.includes('/blog/');
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
 const canonicalUrl = `${siteUrl}/${locale}/${slug}`.replace(/\/+$/, '/');
@@ -44,13 +45,11 @@ const jsonLd = article ? JSON.stringify({
   <link rel="dns-prefetch" href="https://luwipptjfyjsleqouasj.supabase.co" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,700&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap"
-    rel="stylesheet"
-  />
-  <link href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css" rel="stylesheet" />
+  <script is:inline nonce={Astro.locals.cspNonce || ''}>
+    (function(){var f=['https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Space+Grotesk:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap','https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css'];f.forEach(function(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l)})})();
+  </script>
 
-  <link rel="stylesheet" href="/katex/katex.min.css" />
+  {needsKatex && <link rel="stylesheet" href="/katex/katex.min.css" />}
 
   <title>{title} | 0to1log</title>
   <meta name="description" content={description} />
