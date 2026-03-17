@@ -63,9 +63,7 @@ const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || 
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
 const pageTitle = post ? post.title : 'Not Found';
-const altSlugValue = pairedSlug
-  ? `/ko/news/${pairedSlug}/${previewMode ? '?preview=1' : ''}`
-  : undefined;
+const altSlugValue = pairedSlug || undefined;
 ---
 
 <MainLayout title={pageTitle} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode}>
