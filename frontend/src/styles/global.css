@@ -25,19 +25,19 @@
    - code: code and technical meta
 */
 @theme {
-  --font-sans: Lora, 'NanumSquare', Georgia, serif;
-  --font-display: Newsreader, 'NanumSquare', Georgia, serif;
-  --font-body: Lora, 'NanumSquare', Georgia, serif;
-  --font-masthead: 'Playfair Display', 'NanumSquareExtraBold', Georgia, serif;
-  --font-heading: Newsreader, 'NanumSquare', Georgia, serif;
-  --font-article-heading: Newsreader, 'NanumSquare', Georgia, serif;
-  --font-article-deck: Newsreader, 'NanumSquare', Georgia, serif;
-  --font-ui: Lora, 'NanumSquare', Georgia, serif;
+  --font-sans: 'Jost', 'NanumSquare', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
+  --font-body: 'Jost', 'NanumSquare', system-ui, sans-serif;
+  --font-masthead: 'Space Grotesk', 'NanumSquareExtraBold', system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
+  --font-article-heading: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
+  --font-article-deck: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
+  --font-ui: 'Jost', 'NanumSquare', system-ui, sans-serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
-  --font-blog-masthead: Newsreader, 'NanumSquare', Georgia, serif;
-  --font-blog-heading: Lora, 'NanumSquare', Georgia, serif;
-  --font-blog-body: Lora, 'NanumSquare', Georgia, serif;
-  --font-blog-ui: Lora, 'NanumSquare', Georgia, serif;
+  --font-blog-masthead: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
+  --font-blog-heading: 'Jost', 'NanumSquare', system-ui, sans-serif;
+  --font-blog-body: 'Jost', 'NanumSquare', system-ui, sans-serif;
+  --font-blog-ui: 'Jost', 'NanumSquare', system-ui, sans-serif;
 
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 768px;
@@ -1765,7 +1765,7 @@ a, button {
 }
 
 .site-brand-link {
-  font-family: var(--font-display);
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-accent);
@@ -2116,7 +2116,7 @@ pre {
 }
 
 .admin-sidebar-logo {
-  font-family: var(--font-masthead);
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-accent);
@@ -8210,7 +8210,7 @@ pre:hover .blog-code-copy {
 }
 
 .home-masthead-brand {
-  font-family: var(--font-display);
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: clamp(2.5rem, 6vw, 4rem);
   font-weight: 700;
   color: var(--color-accent);
