@@ -7775,7 +7775,7 @@ pre:hover .blog-code-copy {
 
 .confetti-particle {
   position: absolute;
-  right: 0;
+  left: var(--cleft, 50%);
   top: 50%;
   width: 6px;
   height: 6px;

@@ -43,10 +43,11 @@ interface Props {
         'color-mix(in srgb, var(--color-accent) 50%, white)',
         'var(--color-text-primary)',
       ];
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 22; i++) {
         const dot = document.createElement('span');
         dot.className = 'confetti-particle';
-        dot.style.setProperty('--cx', (Math.random() * 40 - 20) + 'px');
+        dot.style.setProperty('--cleft', (Math.random() * 100) + '%');
+        dot.style.setProperty('--cx', (Math.random() * 20 - 10) + 'px');
         dot.style.setProperty('--cy', -(Math.random() * 40 + 15) + 'px');
         dot.style.setProperty('--cr', (Math.random() * 360) + 'deg');
         dot.style.setProperty('--cd', (Math.random() * 0.4 + 0.8) + 's');
