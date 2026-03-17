@@ -228,13 +228,19 @@ RESEARCH_EXPERT_GUIDE = """READER: Senior ML engineer or researcher who reads pa
 READER'S GOAL: Make technical decisions — adopt a new model, change architecture, allocate engineering resources.
 AFTER READING: The reader decides whether to evaluate, migrate, or wait.
 
+Tone — ASSERTIVE, not hedging:
+- NEVER write: "~할 수 있습니다", "~를 시사합니다", "~를 고려하십시오", "may", "could potentially", "suggests"
+- INSTEAD write: "~이다", "~를 의미한다", "~해야 한다", "is", "means", "should"
+- BAD: "This model could potentially reduce inference costs for some use cases."
+- GOOD: "This model cuts inference cost by 40% for batch workloads. If you're running GPT-4o for classification, switch to this — it's cheaper and 3% more accurate on MMLU."
+
 Writing rules:
 - Write like a peer engineer sharing analysis at a technical review meeting, not like a reporter
 - Include specific benchmarks, parameter counts, FLOPs, latency, and memory requirements
 - Reference paper IDs (arXiv:XXXX.XXXXX) and code repositories
-- Compare with prior SOTA: concrete numbers, not "significantly better"
+- ALWAYS compare numbers to a baseline: "260B parameters — 1.8x Llama 3's 70B", "$0.002/1K tokens — half of GPT-4o's pricing"
 - Assess production-readiness: "inference cost makes this viable for batch processing, not real-time"
-- The final section must contain DECISIONS, not observations: "If you're running X, evaluate migrating to Y because Z"
+- The final section must contain DECISIONS with timelines and risks: "If you're running X, start evaluating Y this week — the risk of waiting is Z"
 - Each news item: 3-4 paragraphs (what happened + technical deep-dive + production implications + decision recommendation)"""
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
@@ -250,13 +256,12 @@ AFTER READING: The reader understands today's news, tries a new tool, and learne
 
 Writing rules:
 - Write like a senior colleague explaining things over coffee — approachable but substantive
-- Use analogies from everyday life to explain complex concepts: "MoE is like a hospital with specialist doctors — each expert handles what they're best at"
-- Keep technical terms but ALWAYS add brief inline explanations: "MoE (Mixture of Experts — a way to make models more efficient by using specialized sub-networks)"
-- Link AI terms to the Handbook: [MoE](/handbook/mixture-of-experts/) — readers want to learn these terms, not have them hidden
+- EVERY news item MUST include at least one analogy: "MoE is like a hospital with specialist doctors — each expert handles what they're best at"
+- Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE: "MoE (Mixture of Experts — a way to make models more efficient by using specialized sub-networks)"
 - For each item: explain what it does, who benefits, and HOW to start (link to docs, tutorials, quickstarts)
 - Connect concepts to daily life: "This is why ChatGPT responses are getting faster and cheaper"
 - Focus on practical applicability: "If you're building a chatbot, this reduces your inference cost by 40%"
-- The "What To Try" section must contain SPECIFIC actions with links
+- The "What To Try" section must contain SPECIFIC actions with real URLs: "Clone [repo-name](https://github.com/...) and run the demo"
 - The "Learn More" section must list today's key terms with Handbook links as a learning path
 - Each news item: 2-3 paragraphs (what + why it matters + how to get started or what it means for daily life)"""
 
@@ -275,13 +280,20 @@ BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy
 READER'S GOAL: Make strategic decisions — allocate budget, choose partners, adjust product roadmap, respond to competitive moves.
 AFTER READING: The reader adjusts their strategy, brings insights to their leadership meeting, or initiates a competitive response.
 
+Tone — ASSERTIVE, not hedging:
+- NEVER write: "~할 수 있습니다", "~를 시사합니다", "~를 고려하십시오", "may", "could potentially", "suggests"
+- INSTEAD write: "~이다", "~를 의미한다", "~해야 한다", "is", "means", "should"
+- BAD: "This investment could signal a shift toward open-source AI models."
+- GOOD: "This is the end of the proprietary-only era. Nvidia just bet $26B that open-weight wins. If you're paying for closed APIs, your cost structure is about to be disrupted."
+
 Writing rules:
 - Write like a trusted strategic advisor in a private briefing, not a news reporter
-- Tone: Direct, opinionated, analytical. Take positions: "This acquisition signals X, which means Y for companies in Z space"
-- Every number needs STRATEGIC CONTEXT: "$13M Series A — 2.6x sector average, suggesting VCs see AI city management as a breakout category"
-- Analyze competitive dynamics: "Meta's move pressures Google to accelerate X, which creates an opening for startups doing Y"
-- Connecting the Dots must reveal CAUSATION, not just correlation: "A happened BECAUSE of B, which will lead to C"
-- Strategic Decisions must be conditional and specific: "If you're in the enterprise AI space, start evaluating [tool] as a potential channel partner — this funding round gives them 18 months of runway to build market share"
+- ALWAYS compare numbers to competitors or industry benchmarks: "$260B — 4x Meta's AI capex, signaling Nvidia sees model development as its next growth engine"
+- Analyze competitive dynamics with causal chains: "Meta's delay → Google gains 3-month window → Anthropic's enterprise push faces less resistance"
+- Connecting the Dots must reveal CAUSATION, not correlation: "A happened BECAUSE of B, which will force C to respond with D within 3-6 months"
+- Strategic Decisions must include: specific scenario + concrete action + timeline + risk of inaction
+- BAD action item: "Consider evaluating Nvidia's models for potential integration opportunities."
+- GOOD action item: "If you're spending >$10K/month on OpenAI APIs, pilot Nvidia's open-weight alternative this quarter. Risk of waiting: competitors lock in cost advantages first."
 - Each news item: 3-4 paragraphs (what happened + strategic rationale + competitive dynamics + decision recommendation)"""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
@@ -299,11 +311,11 @@ AFTER READING: The reader understands today's business news, takes a specific ac
 Writing rules:
 - Write like a knowledgeable colleague explaining what matters over lunch — approachable, not lecturing
 - Before discussing a company's strategy, briefly explain what the company does: "Meta (the company behind Facebook and Instagram) is..."
-- Keep business/AI terms but ALWAYS explain inline: "Series A (the first major investment round a startup receives)"
-- Link terms to the Handbook: [Series A](/handbook/series-a/) — readers want to learn these terms
+- EVERY news item MUST include at least one analogy or comparison to everyday life: "Think of open-weight models like a recipe anyone can use — you don't have to buy the restaurant's meal"
+- Keep business/AI terms but ALWAYS explain inline ON FIRST USE: "Series A (the first major investment round a startup receives)"
 - Connect every item to practical impact: "If your marketing team runs paid ads, Meta's new AI tools could change your workflow because..."
 - Connect to daily life too: "This matters because the ads you see on Instagram will get smarter"
-- Action Items must be concrete: "Draft a one-page proposal for [tool]", "Book a demo at [URL]", "Add [trend] to next team meeting"
+- Action Items must include real URLs where possible: "Book a demo at [company.com/demo](URL)", "Read the announcement at [Source](URL)"
 - The "Learn More" section must list today's key terms with Handbook links as a learning path
 - Each news item: 2-3 paragraphs (what happened + how it affects you + what to do about it)
 - Make it interesting and accessible, not dumbed down"""
