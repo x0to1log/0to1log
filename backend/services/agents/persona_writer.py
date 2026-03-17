@@ -137,13 +137,13 @@ async def write_all_personas(
     handbook_slugs: list[str],
     post_type: str = "business",
 ) -> tuple[dict[str, PersonaOutput], dict[str, Any]]:
-    """Write all 3 personas concurrently.
+    """Write all personas concurrently.
 
-    Returns ({"expert": PersonaOutput, "learner": ..., "beginner": ...}, merged_usage).
+    Returns ({"expert": PersonaOutput, "learner": ...}, merged_usage).
     """
     tasks = {
         persona: write_persona(persona, fact_pack, handbook_slugs, post_type)
-        for persona in ("expert", "learner", "beginner")
+        for persona in ("expert", "learner")
     }
 
     results_raw = await asyncio.gather(

@@ -37,8 +37,7 @@ class PostDraftDetail(BaseModel):
     no_news_notice: Optional[str] = None
     recent_fallback: Optional[str] = None
 
-    # Business persona fields
-    content_beginner: Optional[str] = None
+    # Persona fields (v4: Expert + Learner)
     content_learner: Optional[str] = None
     content_expert: Optional[str] = None
 
@@ -65,7 +64,6 @@ class PostUpdateRequest(BaseModel):
     """PATCH /admin/posts/{id}/update request body."""
     title: Optional[str] = None
     content_original: Optional[str] = None
-    content_beginner: Optional[str] = None
     content_learner: Optional[str] = None
     content_expert: Optional[str] = None
     guide_items: Optional[PromptGuideItems] = None

@@ -240,8 +240,6 @@ export async function getNewsDetailPageData({
       const contentMap: Record<string, string> = {
         learner: post.content_learner || '',
         expert: post.content_expert || '',
-        // Backward compat: include beginner if exists (old v3 posts)
-        ...(post.content_beginner ? { beginner: post.content_beginner } : {}),
       };
       rawContent = contentMap[personaKey] || post.content_learner || '';
       activePersona = contentMap[personaKey] ? personaKey : 'learner';

@@ -119,8 +119,8 @@ const resolvedQuizAnswer = (() => {
 })();
 
 const personaLabels: Record<string, Record<string, string>> = {
-  en: { learner: 'Learner', expert: 'Expert', beginner: 'Beginner' },
-  ko: { learner: '학습자', expert: '현직자', beginner: '입문자' },
+  en: { learner: 'Learner', expert: 'Expert' },
+  ko: { learner: '학습자', expert: '현직자' },
 };
 const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
@@ -274,7 +274,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     <>
       <h2 class="newsprint-section-title">{sectionCopy.personaInsights}</h2>
       <div class="persona-switcher">
-        {(['learner', 'expert', 'beginner'] as const).filter(p => personaHtmlMap![p]).map(p => (
+        {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
           <button
             type="button"
             class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
@@ -290,7 +290,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
   {showPersonaSwitcher && (
     <div class="persona-float" id="persona-float" aria-hidden="true">
-      {(['learner', 'expert', 'beginner'] as const).filter(p => personaHtmlMap![p]).map(p => (
+      {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
         <button
           type="button"
           class={`persona-float-btn ${p === activePersona ? 'persona-float-btn--active' : ''}`}

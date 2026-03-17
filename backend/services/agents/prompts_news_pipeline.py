@@ -326,7 +326,7 @@ def get_digest_prompt(
 
     Args:
         digest_type: "research" or "business"
-        persona: "expert", "learner", or "beginner"
+        persona: "expert" or "learner"
         handbook_slugs: list of handbook term slugs for linking
     """
     sections, guide = DIGEST_PROMPT_MAP.get(

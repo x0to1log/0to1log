@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 export const prerender = false;
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9-]{1,18}[a-z0-9]$/;
-const VALID_PERSONAS = ['beginner', 'learner', 'expert'];
+const VALID_PERSONAS = ['learner', 'expert'];
 const VALID_LOCALES = ['en', 'ko'];
 const USERNAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

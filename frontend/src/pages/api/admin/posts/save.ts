@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { id, title, slug, category, tags, content_original, content_beginner, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url } = body;
+  const { id, title, slug, category, tags, content_original, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url } = body;
 
   if (!title?.trim()) {
     return new Response(JSON.stringify({ error: 'title is required' }), {
@@ -55,7 +55,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (locale !== undefined) row.locale = locale || 'en';
   if (focus_items !== undefined) row.focus_items = Array.isArray(focus_items) ? focus_items : [];
   if (og_image_url !== undefined) row.og_image_url = og_image_url || null;
-  if (content_beginner !== undefined) row.content_beginner = content_beginner || null;
   if (content_learner !== undefined) row.content_learner = content_learner || null;
   if (content_expert !== undefined) row.content_expert = content_expert || null;
 
