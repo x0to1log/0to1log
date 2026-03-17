@@ -146,24 +146,36 @@
 
 ### 39. 핸드북 링크 레벨 연결 `[HANDBOOK-LEVEL-LINK-01]`
 - **체크:** [ ]
-- **상태:** todo
+- **상태:** todo (v4 안정화 후 재검토)
 - **목적:** 뉴스 본문의 핸드북 링크를 페르소나에 따라 기초/심화 레벨로 연결
-- **아이디어:** Beginner → `?level=basic`, Expert → `?level=advanced` (기초/심화 연결은 추후 재검토)
-- **수정 범위:** `_auto_link_handbook_terms()`, `_link_related_terms()`, `handbook-popup.ts`, `[slug].astro`
-- **의존성:** PERSONA-REDESIGN-01 검증 후
+
+### 40. Pipeline v4 — 2 페르소나 전환 `[V4-01]`
+- **체크:** [ ]
+- **상태:** doing
+- **목적:** 3 페르소나(Expert/Learner/Beginner) → 2 페르소나(Expert 현직자 / Learner 학습자) 전환
+- **이유:** Learner/Beginner 출력이 사실상 동일. LLM이 차별화 못 함. 데이터 기반 결정.
+- **설계 참조:** [[2026-03-17-news-pipeline-v4-design]]
+- **구현 범위:**
+  - Phase 1: Beginner 프롬프트 삭제 + Learner 프롬프트에 Beginner 요소 통합
+  - Phase 2: 파이프라인 코드 — 페르소나 루프 3→2, 완전성 체크 2개
+  - Phase 3: 프론트엔드 — 탭 2개, 기존 3-탭 포스트 backward compatible
+  - Phase 4: 검증 — 파이프라인 실행 + 출력 비교
 
 ---
 
 ## 의존성 순서
 
 ```
-[완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality
-       → BUG-PERSONA-01 → OPT-01~04 → OBSERVE-02 → QUALITY-07
-       → RECOVERY-01 → PERSONA-REDESIGN-01
+[완료] Pipeline v2 → v3 → Infra → Handbook → Quality
+       → OPT-01~04 → OBSERVE-02 → QUALITY-07 → RECOVERY-01
+       → PERSONA-REDESIGN-01
+
+[진행 중]
+V4-01 (2 페르소나 전환)
 
 [다음]
-DIGEST-04 (프론트엔드 검증 — 페르소나 재설계 결과 확인)
-HANDBOOK-LEVEL-LINK-01 (핸드북 레벨 연결 — 검증 후)
+V4-01 → DIGEST-04 (검증)
+HANDBOOK-LEVEL-LINK-01 (v4 안정화 후)
 COMMUNITY-01 (커뮤니티 반응 수집)
 WEEKLY-01 (주간 다이제스트)
 AUTOPUB-01 (자동 발행)
