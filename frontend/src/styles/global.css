@@ -9480,20 +9480,39 @@ pre:hover .blog-code-copy {
   flex: 1;
 }
 
-.product-card-header {
+.product-card-body-inner {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.product-card-logo-slot {
+  flex-shrink: 0;
 }
 
 .product-card-logo {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 6px;
   flex-shrink: 0;
   background: #fff;
   padding: 2px;
+}
+
+.product-card-logo-empty {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--color-bg-tertiary);
+}
+
+.product-card-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .product-card-name {

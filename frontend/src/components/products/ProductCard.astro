@@ -53,11 +53,19 @@ const formatViews = (n: number) => {
   </div>
 
   <div class="product-card-body">
-    <div class="product-card-header">
-      <span class="product-card-name">{name}</span>
+    <div class="product-card-body-inner">
+      <div class="product-card-logo-slot">
+        {logoUrl ? (
+          <img src={logoUrl} alt="" class="product-card-logo" width="32" height="32" loading="lazy" />
+        ) : (
+          <div class="product-card-logo-empty"></div>
+        )}
+      </div>
+      <div class="product-card-text">
+        <span class="product-card-name">{name}</span>
+        {tagline && <p class="product-card-tagline">{tagline}</p>}
+      </div>
     </div>
-
-    {tagline && <p class="product-card-tagline">{tagline}</p>}
 
     <div class="product-card-meta">
       {pricing && (
