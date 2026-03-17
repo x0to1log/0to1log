@@ -773,23 +773,38 @@ async def _run_generate_term(
         except Exception as e:
             logger.warning("Failed to log handbook %s stage: %s", stage, e)
 
-    # --- Call 1: Meta + KO Basic ---
-    resp1 = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": GENERATE_BASIC_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_tokens=16000,
-    )
-    basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
-    usage1 = extract_usage_metrics(resp1, model)
+    # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
+    for _call1_attempt in range(2):
+        resp1 = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": GENERATE_BASIC_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=16000,
+        )
+        basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
+        usage1_attempt = extract_usage_metrics(resp1, model)
+        if _call1_attempt == 0:
+            usage1 = usage1_attempt
+        else:
+            usage1 = merge_usage_metrics(usage1, usage1_attempt)
+
+        # Check if KO basic sections were generated
+        has_ko_basic = bool(basic_data.get("basic_ko_1_plain", "").strip())
+        if has_ko_basic:
+            break
+        if _call1_attempt == 0:
+            logger.warning(
+                "Handbook Call 1 for '%s': KO basic missing, retrying (attempt 2)",
+                req.term,
+            )
 
     logger.info(
-        "Handbook generate call 1 (basic KO) for '%s': %d tokens",
-        req.term, usage1.get("tokens_used", 0),
+        "Handbook generate call 1 (basic KO) for '%s': %d tokens, ko_present=%s",
+        req.term, usage1.get("tokens_used", 0), has_ko_basic,
     )
     _log_handbook_stage("handbook.generate.basic", usage1)
 
@@ -888,13 +903,17 @@ async def _run_generate_term(
             warnings.append(f"{field}: {err['msg']}")
         logger.warning("Handbook generate validation: %s", warnings)
 
-    # Check section completeness
+    # Check section completeness (including empty detection)
     for lang in ("ko", "en"):
         basic_content = data.get(f"body_basic_{lang}", "")
-        if basic_content and basic_content.count("## ") < 8:
+        if not basic_content.strip():
+            warnings.append(f"body_basic_{lang}: EMPTY — content generation failed")
+        elif basic_content.count("## ") < 8:
             warnings.append(f"body_basic_{lang}: only {basic_content.count('## ')}/8 sections")
         adv_content = data.get(f"body_advanced_{lang}", "")
-        if adv_content and adv_content.count("## ") < 9:
+        if not adv_content.strip():
+            warnings.append(f"body_advanced_{lang}: EMPTY — content generation failed")
+        elif adv_content.count("## ") < 9:
             warnings.append(f"body_advanced_{lang}: only {adv_content.count('## ')}/9 sections")
 
     # Post-processing step 1: Validate reference URLs in advanced sections
