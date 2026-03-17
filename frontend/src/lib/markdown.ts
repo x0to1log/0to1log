@@ -82,22 +82,28 @@ export async function renderMarkdown(md: string): Promise<string> {
 
 export { type TermsMap } from './rehypeHandbookTerms';
 
+const termsProcessorCache = new WeakMap<TermsMap, ReturnType<typeof unified>>();
+
 export async function renderMarkdownWithTerms(
   md: string,
   termsMap: TermsMap,
 ): Promise<string> {
-  const termsProcessor = unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-    .use(remarkMath)
-    .use(remarkRehype, { allowDangerousHtml: true })
-    .use(rehypeRaw)
-    .use(rehypeKatex)
-    .use(rehypeHandbookTerms(termsMap))
-    .use(rehypeSanitize, sanitizeSchemaWithTerms)
-    .use(rehypeShiki, shikiOptions)
-    .use(rehypeCodeWindow)
-    .use(rehypeStringify);
+  let termsProcessor = termsProcessorCache.get(termsMap);
+  if (!termsProcessor) {
+    termsProcessor = unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkMath)
+      .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeRaw)
+      .use(rehypeKatex)
+      .use(rehypeHandbookTerms(termsMap))
+      .use(rehypeSanitize, sanitizeSchemaWithTerms)
+      .use(rehypeShiki, shikiOptions)
+      .use(rehypeCodeWindow)
+      .use(rehypeStringify);
+    termsProcessorCache.set(termsMap, termsProcessor);
+  }
 
   const result = await termsProcessor.process(md);
   return String(result);

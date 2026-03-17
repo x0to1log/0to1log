@@ -66,7 +66,7 @@ const pageTitle = post ? post.title : 'Not Found';
 const altSlugValue = pairedSlug || undefined;
 ---
 
-<MainLayout title={pageTitle} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode}>
+<MainLayout title={pageTitle} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
   <NewsprintShell
     locale="en"
     masthead={masthead}

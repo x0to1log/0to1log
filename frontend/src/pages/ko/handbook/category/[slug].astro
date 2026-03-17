@@ -146,21 +146,25 @@ if (user && accessToken) {
     const noResults = document.getElementById('handbook-no-results');
     if (!search || !list) return;
 
+    let searchTimer: ReturnType<typeof setTimeout>;
     search.addEventListener('input', () => {
-      const query = search.value.toLowerCase().trim();
-      const cards = list.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
-      let visible = 0;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const query = search.value.toLowerCase().trim();
+        const cards = list.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
+        let visible = 0;
 
-      cards.forEach((card) => {
-        const term = (card.dataset.term || '').toLowerCase();
-        const korean = (card.dataset.korean || '').toLowerCase();
-        const def = (card.dataset.def || '').toLowerCase();
-        const show = !query || term.includes(query) || korean.includes(query) || def.includes(query);
-        card.style.display = show ? 'block' : 'none';
-        if (show) visible++;
-      });
+        cards.forEach((card) => {
+          const term = (card.dataset.term || '').toLowerCase();
+          const korean = (card.dataset.korean || '').toLowerCase();
+          const def = (card.dataset.def || '').toLowerCase();
+          const show = !query || term.includes(query) || korean.includes(query) || def.includes(query);
+          card.style.display = show ? 'block' : 'none';
+          if (show) visible++;
+        });
 
-      if (noResults) noResults.style.display = visible === 0 && query ? 'block' : 'none';
+        if (noResults) noResults.style.display = visible === 0 && query ? 'block' : 'none';
+      }, 150);
     });
   }
 

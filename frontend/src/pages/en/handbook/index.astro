@@ -218,55 +218,16 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
           })}
         </div>
 
-        <div id="search-results" style="display: none;">
-          {allTerms.map((term) => {
-            const def = localField(term, 'definition', locale);
-            const isRead = readTermIds.has(term.id);
-            const isBm = bookmarkedTermIds.has(term.id);
-            return (
-              <a
-                href={`/${locale}/handbook/${term.slug}/`}
-                class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
-                data-categories={JSON.stringify(term.categories || [])}
-                data-term={term.term}
-                data-korean={term.korean_name || ''}
-                data-def={def}
-              >
-                <div class="handbook-card-meta">
-                  {(term.categories || []).map((cat: string) => (
-                    <span class="handbook-cat-pill">
-                      {getHandbookCategoryLabel(locale, cat)}
-                    </span>
-                  ))}
-                </div>
-                <div class="handbook-card-title-row">
-                  <div class="handbook-card-title">
-                    {term.term}
-                  </div>
-                  <button
-                    class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
-                    data-item-id={term.id}
-                    data-item-type="term"
-                    data-bookmarked={isBm ? 'true' : 'false'}
-                    aria-label={isBm ? 'Remove bookmark' : 'Add bookmark'}
-                  >
-                    <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </button>
-                </div>
-                {term.korean_name && (
-                  <div class="handbook-card-korean">{term.korean_name}</div>
-                )}
-                {def && (
-                  <div class="handbook-card-def">
-                    {def.length > 120 ? def.slice(0, 120) + '\u2026' : def}
-                  </div>
-                )}
-              </a>
-            );
-          })}
-        </div>
+        <script type="application/json" id="handbook-terms-data" set:html={JSON.stringify(allTerms.map(t => {
+          const def = localField(t, 'definition', locale) || '';
+          return {
+            s: t.slug, t: t.term, k: t.korean_name || '', c: t.categories || [],
+            cl: (t.categories || []).map((cat: string) => getHandbookCategoryLabel(locale, cat) || cat),
+            d: def.length > 120 ? def.slice(0, 120) + '\u2026' : def,
+            id: t.id, r: readTermIds.has(t.id), b: bookmarkedTermIds.has(t.id),
+          };
+        }))} />
+        <div id="search-results" style="display: none;"></div>
       </>
     )}
 
@@ -300,6 +261,45 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
 
     let activeCategory = 'all';
 
+    // Parse JSON term data and build DOM cards lazily on first search
+    const termsDataEl = document.getElementById('handbook-terms-data');
+    type TermEntry = { s: string; t: string; k: string; c: string[]; cl: string[]; d: string; id: string; r: boolean; b: boolean };
+    let termsData: TermEntry[] | null = null;
+    let cardsBuilt = false;
+
+    function ensureCards(): void {
+      if (cardsBuilt) return;
+      cardsBuilt = true;
+      if (!termsDataEl || !searchResults) return;
+      termsData = JSON.parse(termsDataEl.textContent || '[]');
+      const locale = document.documentElement.lang || 'en';
+      const frag = document.createDocumentFragment();
+      for (const t of termsData!) {
+        const a = document.createElement('a');
+        a.href = `/${locale}/handbook/${t.s}/`;
+        a.className = 'handbook-card' + (t.r ? ' newsprint-card--read' : '');
+        a.dataset.categories = JSON.stringify(t.c);
+        a.dataset.term = t.t;
+        a.dataset.korean = t.k;
+        a.dataset.def = t.d;
+        let html = '<div class="handbook-card-meta">';
+        for (let i = 0; i < t.c.length; i++) {
+          html += `<span class="handbook-cat-pill">${t.cl[i]}</span>`;
+        }
+        html += '</div><div class="handbook-card-title-row"><div class="handbook-card-title">' +
+          t.t + '</div><button class="newsprint-bookmark-icon' + (t.b ? ' newsprint-bookmark-icon--active' : '') +
+          '" data-item-id="' + t.id + '" data-item-type="term" data-bookmarked="' + (t.b ? 'true' : 'false') +
+          '" aria-label="' + (t.b ? 'Remove bookmark' : 'Add bookmark') + '">' +
+          '<svg viewBox="0 0 24 24" fill="' + (t.b ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2">' +
+          '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg></button></div>';
+        if (t.k) html += '<div class="handbook-card-korean">' + t.k + '</div>';
+        if (t.d) html += '<div class="handbook-card-def">' + t.d + '</div>';
+        a.innerHTML = html;
+        frag.appendChild(a);
+      }
+      searchResults.appendChild(frag);
+    }
+
     function showSearchMode(): void {
       if (categoryPreview) categoryPreview.style.display = 'none';
       if (searchResults) searchResults.style.display = 'block';
@@ -315,6 +315,11 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       }
     }
 
+    function debounce(fn: () => void, ms: number): () => void {
+      let timer: ReturnType<typeof setTimeout>;
+      return () => { clearTimeout(timer); timer = setTimeout(fn, ms); };
+    }
+
     function filter(): void {
       const query = search!.value.toLowerCase().trim();
 
@@ -324,13 +329,14 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
         return;
       }
 
+      ensureCards();
       showSearchMode();
 
       const cards = searchResults!.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
       let visible = 0;
 
       cards.forEach((card) => {
-        const cats: string[] = JSON.parse(card.dataset.categories || '[]');
+        const cats: string[] = (card as any).__cats ??= JSON.parse(card.dataset.categories || '[]');
         const term = (card.dataset.term || '').toLowerCase();
         const korean = (card.dataset.korean || '').toLowerCase();
         const def = (card.dataset.def || '').toLowerCase();
@@ -354,7 +360,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       }
     }
 
-    search.addEventListener('input', filter);
+    search.addEventListener('input', debounce(filter, 150));
 
     filterBtns.forEach((btn) => {
       btn.addEventListener('click', () => {

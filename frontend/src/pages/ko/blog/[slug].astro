@@ -47,7 +47,7 @@ const pageTitle = post ? post.title : '찾을 수 없음';
 const altSlugValue = pairedSlug || undefined;
 ---
 
-<MainLayout title={pageTitle} locale="ko" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode}>
+<MainLayout title={pageTitle} locale="ko" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
   <BlogShell
     locale="ko"
     sidebarPosts={sidebarPosts}

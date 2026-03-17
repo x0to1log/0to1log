@@ -64,7 +64,8 @@ export async function getHandbookPageData(
     .from('handbook_terms')
     .select(TERM_CARD_COLUMNS)
     .eq('status', 'published')
-    .order('term');
+    .order('term')
+    .limit(500);
 
   if (error) {
     return { allTerms: [], termsByCategory: {}, totalTerms: 0, error: error.message };
@@ -108,7 +109,8 @@ export async function getHandbookCategoryPageData(
     .select(TERM_CARD_COLUMNS)
     .eq('status', 'published')
     .contains('categories', [categorySlug])
-    .order('term');
+    .order('term')
+    .limit(200);
 
   if (error) {
     return { terms: [], totalTerms: 0, error: error.message };

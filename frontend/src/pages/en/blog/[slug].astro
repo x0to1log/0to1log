@@ -54,7 +54,7 @@ const pageTitle = post ? post.title : 'Not Found';
 const altSlugValue = pairedSlug || undefined;
 ---
 
-<MainLayout title={pageTitle} locale="en" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode}>
+<MainLayout title={pageTitle} locale="en" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
   <BlogShell
     locale="en"
     sidebarPosts={sidebarPosts}
