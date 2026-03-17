@@ -6,7 +6,7 @@ const isSecure = import.meta.env.PROD;
 function buildCspHeader(nonce: string): string {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://*.clarity.ms`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.googletagmanager.com https://*.clarity.ms`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: https://*.google-analytics.com https://*.clarity.ms",
     "font-src 'self' https://fonts.gstatic.com",
