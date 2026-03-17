@@ -148,18 +148,25 @@ const categoryOptions = Array.from(
           <ul class="admin-list" id="post-list">
             {allPosts.map((post) => (
               <li
-                class="admin-list-item"
+                class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
                 data-status={post.status}
                 data-title={post.title.toLowerCase()}
                 data-locale={post.locale || ''}
                 data-category={post.category || ''}
                 data-updated={post.updated_at || ''}
                 data-published={post.published_at || ''}
+                data-site-url={post.status === 'published' ? `/${post.locale ?? 'ko'}/news/${post.slug}/` : ''}
               >
                 <input type="checkbox" class="news-bulk-check" data-bulk-id={post.id} />
                 <div class="admin-list-info">
                   <div class="admin-list-title">
-                    <a href={`/admin/edit/${post.slug}`}>{post.title}</a>
+                    <a
+                      href={post.status === 'published'
+                        ? `/${post.locale ?? 'ko'}/news/${post.slug}/`
+                        : `/admin/edit/${post.slug}`}
+                      target={post.status === 'published' ? '_blank' : undefined}
+                      rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
+                    >{post.title}</a>
                   </div>
                   <div class="admin-list-meta">
                     <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
@@ -386,6 +393,17 @@ const categoryOptions = Array.from(
     localeFilter?.addEventListener('change', applyFilter);
     categoryFilter?.addEventListener('change', applyFilter);
     sortSelect?.addEventListener('change', applyFilter);
+
+    // Row click (outside actions/links): open published site in new tab
+    list.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const item = target.closest('.admin-list-item--published');
+      if (!item) return;
+      if (target.closest('.admin-list-actions') || target.closest('a') || target.closest('input')) return;
+      const siteUrl = item.dataset.siteUrl;
+      if (siteUrl) window.open(siteUrl, '_blank', 'noopener,noreferrer');
+    });
 
     document.querySelectorAll('[data-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {

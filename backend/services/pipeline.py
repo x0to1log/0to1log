@@ -305,7 +305,7 @@ async def _extract_and_create_handbook_terms(
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "failed", t_gen,
                     error_message=error_msg,
-                    debug_meta={"term": term_name},
+                    debug_meta={"term": term_name, "source": "pipeline"},
                 )
                 return 0, [error_msg]
 
@@ -333,7 +333,7 @@ async def _extract_and_create_handbook_terms(
                     await _log_stage(
                         supabase, run_id, "handbook.auto_generate", "failed", t_gen,
                         error_message=error_msg, usage=gen_usage,
-                        debug_meta={"term": term_name, "slug": slug},
+                        debug_meta={"term": term_name, "slug": slug, "source": "pipeline"},
                     )
                     return 0, [error_msg]
 
@@ -342,7 +342,7 @@ async def _extract_and_create_handbook_terms(
                     supabase, run_id, "handbook.auto_generate", "success", t_gen,
                     output_summary=f"term={term_name}, slug={slug}",
                     usage=gen_usage,
-                    debug_meta={"term": term_name, "slug": slug},
+                    debug_meta={"term": term_name, "slug": slug, "source": "pipeline"},
                 )
                 return 1, []
             except Exception as e:
@@ -351,7 +351,7 @@ async def _extract_and_create_handbook_terms(
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "failed", t_gen,
                     error_message=error_msg, usage=gen_usage,
-                    debug_meta={"term": term_name, "slug": slug},
+                    debug_meta={"term": term_name, "slug": slug, "source": "pipeline"},
                 )
                 return 0, [error_msg]
 

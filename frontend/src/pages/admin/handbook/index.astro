@@ -140,17 +140,24 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
           <ul class="admin-list" id="term-list">
             {allTerms.map((term) => (
               <li
-                class="admin-list-item handbook-card"
+                class={`admin-list-item handbook-card${term.status === 'published' ? ' admin-list-item--published' : ''}`}
                 data-status={term.status}
                 data-title={`${term.term} ${term.korean_name || ''}`.toLowerCase()}
                 data-categories={(term.categories || []).join(',')}
                 data-source={term.source || 'manual'}
                 data-id={term.id}
+                data-site-url={term.status === 'published' ? `/ko/handbook/${term.slug}/` : ''}
               >
                 <input type="checkbox" class="handbook-bulk-check" data-bulk-id={term.id} />
                 <div class="admin-list-info">
                   <div class="admin-list-title">
-                    <a href={`/admin/handbook/edit/${term.slug}`}>{term.term}</a>
+                    <a
+                      href={term.status === 'published'
+                        ? `/ko/handbook/${term.slug}/`
+                        : `/admin/handbook/edit/${term.slug}`}
+                      target={term.status === 'published' ? '_blank' : undefined}
+                      rel={term.status === 'published' ? 'noopener noreferrer' : undefined}
+                    >{term.term}</a>
                     {term.korean_name && <span class="admin-list-subtitle"> · {term.korean_name}</span>}
                   </div>
                   <div class="handbook-meta-row">
@@ -632,13 +639,18 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       });
     });
 
-    // Card row click → navigate to edit (unless clicking a button, link, or checkbox)
+    // Card row click: published → open site in new tab, draft → navigate to edit
     list.querySelectorAll('.handbook-card').forEach((card) => {
       card.addEventListener('click', (e) => {
         const target = e.target;
         if (target.closest('a') || target.closest('button') || target.closest('input')) return;
-        const link = card.querySelector('.admin-list-title a');
-        if (link) window.location.href = link.href;
+        const siteUrl = card.dataset.siteUrl;
+        if (siteUrl) {
+          window.open(siteUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          const link = card.querySelector('.admin-list-title a');
+          if (link) window.location.href = link.href;
+        }
       });
     });
 

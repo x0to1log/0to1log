@@ -1734,8 +1734,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       body: JSON.stringify({ id: saved.id, action: 'publish' }),
     });
     if (pubRes.ok) {
-      showFeedback('Published successfully.');
-      setTimeout(() => window.location.reload(), 1000);
+      showFeedback('Published! Redirecting...');
+      const slug = slugInput?.value || '';
+      setTimeout(() => { window.location.href = `/ko/handbook/${slug}/`; }, 1500);
       return true;
     }
 
