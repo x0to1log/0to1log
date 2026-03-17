@@ -138,6 +138,20 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           <template id="level-data" data-map={JSON.stringify(levelHtmlMap)}></template>
         )}
 
+        {showLevelSwitcher && (
+          <div class="persona-float" id="level-float" aria-hidden="true">
+            {(['basic', 'advanced'] as const).filter((level) => levelHtmlMap[level]).map((level) => (
+              <button
+                type="button"
+                class={`persona-float-btn ${level === activeLevel ? 'persona-float-btn--active' : ''}`}
+                data-level={level}
+              >
+                {levelLabels[locale]?.[level] || level}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div class="reading-actions-layout">
           <div class="reading-actions-layout__body">
             {htmlContent && (
@@ -303,26 +317,64 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     });
   }
 
+  let _levelObserver: IntersectionObserver | null = null;
+
   function initLevelSwitcher(): void {
+    if (_levelObserver) { _levelObserver.disconnect(); _levelObserver = null; }
+
     const template = document.getElementById('level-data') as HTMLTemplateElement | null;
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
     const prose = document.getElementById('handbook-body');
-    const btns = document.querySelectorAll<HTMLButtonElement>('.handbook-level-btn');
-    if (!prose || btns.length === 0) return;
+    const switcher = document.querySelector<HTMLElement>('.handbook-level-switcher');
+    const floatEl = document.getElementById('level-float');
+    if (!prose || !switcher) return;
 
-    btns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const level = btn.dataset.level!;
-        if (!map[level]) return;
-        prose.innerHTML = map[level];
-        btns.forEach((item) => item.classList.remove('handbook-level-btn--active'));
-        btn.classList.add('handbook-level-btn--active');
-      });
+    function setActiveLevel(level: string) {
+      if (!map[level]) return;
+      prose!.innerHTML = map[level];
+      switcher!.querySelectorAll('.handbook-level-btn').forEach(b =>
+        b.classList.toggle('handbook-level-btn--active',
+          (b as HTMLElement).dataset.level === level));
+      floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
+        b.classList.toggle('persona-float-btn--active',
+          (b as HTMLElement).dataset.level === level));
+    }
+
+    switcher.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.handbook-level-btn');
+      if (btn) setActiveLevel(btn.dataset.level!);
     });
+
+    if (floatEl) {
+      floatEl.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-float-btn');
+        if (btn) setActiveLevel(btn.dataset.level!);
+      });
+
+      let hasShownOnce = false;
+      _levelObserver = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) {
+          floatEl.classList.add('persona-float--visible');
+          floatEl.removeAttribute('aria-hidden');
+          if (!hasShownOnce) {
+            hasShownOnce = true;
+            floatEl.classList.add('persona-float--pulse');
+            floatEl.addEventListener('animationend', () =>
+              floatEl.classList.remove('persona-float--pulse'), { once: true });
+          }
+        } else {
+          floatEl.classList.remove('persona-float--visible');
+          floatEl.setAttribute('aria-hidden', 'true');
+        }
+      }, { threshold: 0.1 });
+
+      _levelObserver.observe(switcher);
+    }
   }
 
   document.addEventListener('astro:page-load', initHandbookUserFeatures);
   document.addEventListener('astro:page-load', initAdminActions);
   document.addEventListener('astro:page-load', initLevelSwitcher);
+  initLevelSwitcher();
 </script>
