@@ -7,9 +7,9 @@ function buildCspHeader(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.googletagmanager.com https://*.clarity.ms`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://hangeul.pstatic.net",
     "img-src 'self' data: https: https://*.google-analytics.com https://*.clarity.ms",
-    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
+    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://hangeul.pstatic.net",
     "connect-src 'self' *.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms",
   ].join('; ');
 }
