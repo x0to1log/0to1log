@@ -11,6 +11,27 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-display: swap;
+}
+
 
 
 
@@ -25,19 +46,19 @@
    - code: code and technical meta
 */
 @theme {
-  --font-sans: 'Jost', 'NanumSquare', system-ui, sans-serif;
-  --font-display: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
-  --font-body: 'Jost', 'NanumSquare', system-ui, sans-serif;
-  --font-masthead: 'Space Grotesk', 'NanumSquareExtraBold', system-ui, sans-serif;
-  --font-heading: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
-  --font-article-heading: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
-  --font-article-deck: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
-  --font-ui: 'Jost', 'NanumSquare', system-ui, sans-serif;
+  --font-sans: Lora, 'Pretendard', Georgia, serif;
+  --font-display: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-body: Lora, 'Pretendard', Georgia, serif;
+  --font-masthead: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-heading: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-article-heading: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-article-deck: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-ui: Lora, 'Pretendard', Georgia, serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
-  --font-blog-masthead: 'Space Grotesk', 'NanumSquare', system-ui, sans-serif;
-  --font-blog-heading: 'Jost', 'NanumSquare', system-ui, sans-serif;
-  --font-blog-body: 'Jost', 'NanumSquare', system-ui, sans-serif;
-  --font-blog-ui: 'Jost', 'NanumSquare', system-ui, sans-serif;
+  --font-blog-masthead: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-blog-heading: Lora, 'Pretendard', Georgia, serif;
+  --font-blog-body: Lora, 'Pretendard', Georgia, serif;
+  --font-blog-ui: Lora, 'Pretendard', Georgia, serif;
 
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 768px;
