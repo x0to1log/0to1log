@@ -288,6 +288,20 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </>
   )}
 
+  {showPersonaSwitcher && (
+    <div class="persona-float" id="persona-float" aria-hidden="true">
+      {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+        <button
+          type="button"
+          class={`persona-float-btn ${p === activePersona ? 'persona-float-btn--active' : ''}`}
+          data-persona={p}
+        >
+          {personaLabels[locale]?.[p] || p}
+        </button>
+      ))}
+    </div>
+  )}
+
   <div class={`reading-actions-layout ${showStickyActions ? 'reading-actions-layout--article' : ''}`.trim()}>
     {showStickyActions && (
       <StickyReadingActions
@@ -477,29 +491,63 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 </script>
 
 <script>
+  let _personaObserver: IntersectionObserver | null = null;
+
   function initPersonaSwitcher() {
+    if (_personaObserver) { _personaObserver.disconnect(); _personaObserver = null; }
+
     const template = document.getElementById('persona-data') as HTMLTemplateElement | null;
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
     const prose = document.querySelector('.newsprint-prose');
-    const switcher = document.querySelector('.persona-switcher');
+    const switcher = document.querySelector<HTMLElement>('.persona-switcher');
+    const floatEl = document.getElementById('persona-float');
     if (!prose || !switcher) return;
+
+    function setActivePersona(p: string) {
+      if (!map[p]) return;
+      prose!.innerHTML = map[p];
+      switcher!.querySelectorAll('.persona-switcher-btn').forEach(b =>
+        b.classList.toggle('persona-switcher-btn--active',
+          (b as HTMLElement).dataset.persona === p));
+      floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
+        b.classList.toggle('persona-float-btn--active',
+          (b as HTMLElement).dataset.persona === p));
+      document.dispatchEvent(new CustomEvent('newsprint:article-content-updated', {
+        detail: { root: prose, persona: p },
+      }));
+    }
 
     switcher.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-switcher-btn');
-      if (!btn) return;
-      const p = btn.dataset.persona!;
-      if (!map[p]) return;
-      prose.innerHTML = map[p];
-      switcher.querySelectorAll('.persona-switcher-btn').forEach(b =>
-        b.classList.remove('persona-switcher-btn--active'));
-      btn.classList.add('persona-switcher-btn--active');
-      document.dispatchEvent(
-        new CustomEvent('newsprint:article-content-updated', {
-          detail: { root: prose, persona: p },
-        }),
-      );
+      if (btn) setActivePersona(btn.dataset.persona!);
     });
+
+    if (floatEl) {
+      floatEl.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-float-btn');
+        if (btn) setActivePersona(btn.dataset.persona!);
+      });
+
+      let hasShownOnce = false;
+      _personaObserver = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) {
+          floatEl.classList.add('persona-float--visible');
+          floatEl.removeAttribute('aria-hidden');
+          if (!hasShownOnce) {
+            hasShownOnce = true;
+            floatEl.classList.add('persona-float--pulse');
+            floatEl.addEventListener('animationend', () =>
+              floatEl.classList.remove('persona-float--pulse'), { once: true });
+          }
+        } else {
+          floatEl.classList.remove('persona-float--visible');
+          floatEl.setAttribute('aria-hidden', 'true');
+        }
+      }, { threshold: 0.1 });
+
+      _personaObserver.observe(switcher);
+    }
   }
 
   function initQuiz() {
@@ -531,4 +579,5 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
   document.addEventListener('astro:page-load', initPersonaSwitcher);
   document.addEventListener('astro:page-load', initQuiz);
+  initPersonaSwitcher();
 </script>
