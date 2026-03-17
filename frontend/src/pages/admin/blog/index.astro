@@ -384,9 +384,11 @@ const categoryOptions = Array.from(
     sortSelect?.addEventListener('change', applyFilter);
 
     list.addEventListener('click', (e) => {
-      const item = e.target.closest('.admin-list-item--published');
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const item = target.closest('.admin-list-item--published');
       if (!item) return;
-      if (e.target.closest('.admin-list-actions') || e.target.closest('a')) return;
+      if (target.closest('.admin-list-actions') || target.closest('a')) return;
       const siteUrl = item.dataset.siteUrl;
       if (siteUrl) window.open(siteUrl, '_blank', 'noopener,noreferrer');
     });
