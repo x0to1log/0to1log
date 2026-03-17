@@ -573,6 +573,7 @@ ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, perfor
 
 ## Term Name Fields
 - term_full: English full name (e.g., "Long Short-Term Memory" for LSTM). Same as term if no abbreviation.
+- korean_name: Korean translation or commonly used Korean name. MUST be in Korean, NOT English. BAD: "EDA". GOOD: "탐색적 데이터 분석". If no standard Korean translation exists, use Korean phonetic transcription (e.g., "트랜스포머" for Transformer).
 - korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
 
 ## definition (1-2 sentences, min 80 chars per language)
@@ -623,11 +624,20 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas.
-- 📊 glance sections MUST be comparison/contrast tables, NOT simple definition tables.
-- Every section field must have substantive content.
-- Use **bold formatting** for key terms.
-- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure whether a product uses this technology, do NOT claim it does.
-- NO REPETITION across sections: each section must add NEW information. Do not reuse analogies, examples, or points from other sections.
+- FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
+- NO REPETITION across sections: each section must add NEW information.
+
+## Markdown Formatting (within each section value)
+- Use `###` sub-headings to break long sections into scannable parts
+- Use **bold** for key terms and important concepts
+- Use bullet points (`-`) for lists instead of cramming items into one sentence
+- BAD: "EDA의 주요 방법은 1) 시각화 2) 요약 통계 3) 이상치 탐지이다."
+- GOOD: "### EDA의 주요 방법\n- **시각화**: 그래프로 패턴 파악\n- **요약 통계**: 평균, 중간값 등\n- **이상치 탐지**: 비정상 데이터 식별"
+
+## Table Rules (glance sections)
+- MUST be comparison/contrast tables that ADD VALUE — NOT simple definition tables
+- BAD table: "| 항목 | 설명 |\n| EDA | 데이터 초기 분석 |" (just restating the definition)
+- GOOD table: "| | EDA | 통계 분석 | 데이터 마이닝 |\n| 목적 | 탐색/이해 | 검증/추론 | 패턴 발견 |\n| 시점 | 분석 초기 | 가설 검증 | 분석 후반 |"
 
 Respond in JSON format only."""
 
@@ -689,11 +699,20 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas.
-- 📊 glance sections MUST be comparison/contrast tables, NOT simple definition tables.
-- Every section field must have substantive content.
-- Use **bold formatting** for key terms.
-- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure whether a product uses this technology, do NOT claim it does.
-- NO REPETITION across sections: each section must add NEW information. Do not reuse analogies, examples, or points from other sections.
+- FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
+- NO REPETITION across sections: each section must add NEW information.
+
+## Markdown Formatting (within each section value)
+- Use `###` sub-headings to break long sections into scannable parts
+- Use **bold** for key terms and important concepts
+- Use bullet points (`-`) for lists instead of cramming items into one sentence
+- BAD: "EDA의 주요 방법은 1) 시각화 2) 요약 통계 3) 이상치 탐지이다."
+- GOOD: "### EDA의 주요 방법\n- **시각화**: 그래프로 패턴 파악\n- **요약 통계**: 평균, 중간값 등\n- **이상치 탐지**: 비정상 데이터 식별"
+
+## Table Rules (glance sections)
+- MUST be comparison/contrast tables that ADD VALUE — NOT simple definition tables
+- BAD table: "| 항목 | 설명 |\n| EDA | 데이터 초기 분석 |" (just restating the definition)
+- GOOD table: "| | EDA | 통계 분석 | 데이터 마이닝 |\n| 목적 | 탐색/이해 | 검증/추론 | 패턴 발견 |\n| 시점 | 분석 초기 | 가설 검증 | 분석 후반 |"
 
 Respond in JSON format only."""
 
@@ -754,13 +773,20 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - Include code snippets, formulas, and architecture details.
-- 📐 formulas/table sections MUST use comparison/contrast tables, NOT simple definition tables.
-- Every section field must have substantive content.
-- Use **bold formatting** for key terms.
 - Reference links in refs fields must be real URLs to well-known resources.
 - Do NOT repeat content from the basic version.
-- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure, do NOT claim it.
+- FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
+
+## Markdown Formatting (within each section value)
+- Use `###` sub-headings to break long sections into scannable parts
+- Use **bold** for key terms
+- Use bullet points for lists, NOT inline numbering like "1) 2) 3)"
+- Use code blocks with language tags for code examples
+
+## Table Rules (formulas/table sections)
+- MUST be comparison/contrast tables or technical spec tables — NOT simple definitions
+- Include actual numbers, formulas, or architectural comparisons
 
 Respond in JSON format only."""
 
@@ -821,13 +847,20 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - Include code snippets, formulas, and architecture details.
-- 📐 formulas/table sections MUST use comparison/contrast tables, NOT simple definition tables.
-- Every section field must have substantive content.
-- Use **bold formatting** for key terms.
 - Reference links in refs fields must be real URLs to well-known resources.
 - Do NOT repeat content from the basic version.
-- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure, do NOT claim it.
+- FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
+
+## Markdown Formatting (within each section value)
+- Use `###` sub-headings to break long sections into scannable parts
+- Use **bold** for key terms
+- Use bullet points for lists, NOT inline numbering like "1) 2) 3)"
+- Use code blocks with language tags for code examples
+
+## Table Rules (formulas/table sections)
+- MUST be comparison/contrast tables or technical spec tables — NOT simple definitions
+- Include actual numbers, formulas, or architectural comparisons
 
 Respond in JSON format only."""
 
