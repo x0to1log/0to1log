@@ -9695,10 +9695,9 @@ pre:hover .blog-code-copy {
   line-height: 1.2;
 }
 
-.product-detail-name-original {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  font-family: var(--font-ui);
+.product-detail-name-ko {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
   font-weight: 400;
 }
 
