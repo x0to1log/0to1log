@@ -1078,7 +1078,13 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   border-radius: 6px;
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
+
+.newsprint-prose pre:not(.code-window pre)::-webkit-scrollbar { height: 6px; }
+.newsprint-prose pre:not(.code-window pre)::-webkit-scrollbar-track { background: transparent; }
+.newsprint-prose pre:not(.code-window pre)::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
 .newsprint-prose code {
   font-family: var(--font-code);
@@ -2489,7 +2495,13 @@ pre {
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
+
+.admin-editor-content::-webkit-scrollbar { width: 6px; }
+.admin-editor-content::-webkit-scrollbar-track { background: transparent; }
+.admin-editor-content::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
 .admin-editor-meta {
   display: flex;
@@ -2535,7 +2547,13 @@ pre {
   top: 1rem;
   align-self: start;
   max-height: calc(100vh - 2rem);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
+
+.admin-ai-panel::-webkit-scrollbar { width: 6px; }
+.admin-ai-panel::-webkit-scrollbar-track { background: transparent; }
+.admin-ai-panel::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
 .admin-editor-layout--collapsed .admin-ai-panel {
   padding: 0;
@@ -3465,7 +3483,13 @@ pre {
   background: var(--color-bg-secondary);
   max-height: 400px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
+
+.admin-md-preview::-webkit-scrollbar { width: 6px; }
+.admin-md-preview::-webkit-scrollbar-track { background: transparent; }
+.admin-md-preview::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 
 /* Editor Wrapper — minimal, distraction-free */
 .admin-editor-wrapper {
