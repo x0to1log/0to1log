@@ -200,7 +200,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 4. English and Korean cover the same news items but with natural expression for each language
 5. Do NOT include an H1 title — start directly with the first section
 6. Group news items by their subcategory under the category headers
-7. Each news item should be 2-3 paragraphs at the depth specified by the persona guide. Include context for numbers (compare to industry averages or competitors).
+7. Each news item's paragraph count follows the persona guide (Expert: 3-4, Learner: 2-3, Beginner: 1-2). Include context for numbers (compare to industry averages or competitors).
 8. These news items were collected TODAY — write in present tense for events, do not reference them as past events from weeks ago.
 9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
 10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". See the section definitions for both versions.
@@ -238,7 +238,7 @@ Writing rules:
 - Compare with prior SOTA: concrete numbers, not "significantly better"
 - Assess production-readiness: "inference cost makes this viable for batch processing, not real-time"
 - The final section must contain DECISIONS, not observations: "If you're running X, evaluate migrating to Y because Z"
-- Each news item: 2-3 paragraphs (what + technical analysis + decision implications)"""
+- Each news item: 3-4 paragraphs (what happened + technical deep-dive + production implications + decision recommendation)"""
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
 - **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters, and how to start using them. Include getting-started links.
@@ -300,7 +300,7 @@ Writing rules:
 - Analyze competitive dynamics: "Meta's move pressures Google to accelerate X, which creates an opening for startups doing Y"
 - Connecting the Dots must reveal CAUSATION, not just correlation: "A happened BECAUSE of B, which will lead to C"
 - Strategic Decisions must be conditional and specific: "If you're in the enterprise AI space, start evaluating [tool] as a potential channel partner — this funding round gives them 18 months of runway to build market share"
-- Each news item: 2-3 paragraphs (what + strategic analysis + implications for decision-makers)"""
+- Each news item: 3-4 paragraphs (what happened + strategic rationale + competitive dynamics + decision recommendation)"""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
 - **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your industry. 2-3 paragraphs per item.
