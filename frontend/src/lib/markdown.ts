@@ -6,6 +6,8 @@ import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import rehypeShiki from '@shikijs/rehype';
+import { createCssVariablesTheme } from 'shiki';
 import rehypeStringify from 'rehype-stringify';
 import rehypeHandbookTerms, { type TermsMap } from './rehypeHandbookTerms';
 
@@ -36,6 +38,30 @@ const sanitizeSchemaWithTerms = {
   },
 };
 
+const cssVarTheme = createCssVariablesTheme({
+  name: 'css-variables',
+  variablePrefix: '--shiki-',
+  variableDefaults: {},
+  fontStyle: true,
+});
+
+/** Shiki config — matches Astro's shikiConfig in astro.config.mjs */
+const shikiOptions = {
+  theme: cssVarTheme,
+  transformers: [
+    {
+      name: 'language-label',
+      pre(this: any, node: any) {
+        const lang = this?.options?.lang;
+        if (lang) {
+          node.properties ??= {};
+          node.properties['data-language'] = lang;
+        }
+      },
+    },
+  ],
+};
+
 const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
@@ -44,6 +70,7 @@ const processor = unified()
   .use(rehypeRaw)
   .use(rehypeKatex)
   .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeShiki, shikiOptions)
   .use(rehypeStringify);
 
 export async function renderMarkdown(md: string): Promise<string> {
@@ -66,6 +93,7 @@ export async function renderMarkdownWithTerms(
     .use(rehypeKatex)
     .use(rehypeHandbookTerms(termsMap))
     .use(rehypeSanitize, sanitizeSchemaWithTerms)
+    .use(rehypeShiki, shikiOptions)
     .use(rehypeStringify);
 
   const result = await termsProcessor.process(md);
