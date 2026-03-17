@@ -73,10 +73,11 @@ Do NOT output this analysis — use it to inform your JSON.
    - research = papers, academic tools
    - community = forums, newsletters, directories
 
-10. **secondary_categories** (array of 0-2 strings from the same set above):
-    - Additional categories if the product spans multiple areas
-    - Empty array [] if it clearly fits only one category
-    - e.g. a coding tool with workflow features: primary="coding", secondary=["workflow"]
+10. **secondary_categories** (array of strings from the same set above):
+    - ALL additional categories that apply — do not limit the count
+    - Empty array [] only if it truly fits just one category
+    - Be generous: if a product touches coding AND workflow AND builder, include all three
+    - e.g. n8n: primary="workflow", secondary=["builder", "platform"]
 
 11. **features** (EN, array of 3-5 strings):
    - Each: one specific capability in one sentence
