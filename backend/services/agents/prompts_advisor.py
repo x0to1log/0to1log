@@ -621,6 +621,13 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 }}
 ```
 
+## Self-Check (verify before responding)
+✓ No two sections share the same analogy, example, or point
+✓ Table compares 2+ concepts (not just defines one term)
+✓ korean_name is in Korean (not English)
+✓ Every product/service example is factually correct
+✓ Each section adds information the reader didn't get from previous sections
+
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas.
@@ -696,6 +703,13 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 }}
 ```
 
+## Self-Check (verify before responding)
+✓ No two sections share the same analogy, example, or point
+✓ Table compares 2+ concepts (not just defines one term)
+✓ korean_name is in Korean (not English)
+✓ Every product/service example is factually correct
+✓ Each section adds information the reader didn't get from previous sections
+
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas.
@@ -770,6 +784,13 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 }}
 ```
 
+## Self-Check (verify before responding)
+✓ No section repeats content from the basic version or from other advanced sections
+✓ Table/formula section contains actual comparisons or technical specs
+✓ Code examples are syntactically correct and runnable
+✓ Reference URLs point to real, well-known resources
+✓ Each section adds depth the reader didn't get from the basic version
+
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - Include code snippets, formulas, and architecture details.
@@ -843,6 +864,13 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_en_9_related": "..."
 }}
 ```
+
+## Self-Check (verify before responding)
+✓ No section repeats content from the basic version or from other advanced sections
+✓ Table/formula section contains actual comparisons or technical specs
+✓ Code examples are syntactically correct and runnable
+✓ Reference URLs point to real, well-known resources
+✓ Each section adds depth the reader didn't get from the basic version
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
