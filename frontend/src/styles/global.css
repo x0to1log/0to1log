@@ -65,7 +65,7 @@
   --noise-opacity: 0.025;
 
   /* Category Colors */
-  --color-cat-ainews: #D46A58;
+  --color-cat-ainews: #C3A372;
   --color-cat-study: #7A8B78;
   --color-cat-career: #A09080;
   --color-cat-project: #8888A0;
@@ -96,7 +96,7 @@
   --color-text-muted: #7E8596;
   --color-border: #2E3242;
   --color-accent: #C4B07A;
-  --color-accent-hover: #D0C8A0;
+  --color-accent-hover: #D4A8A0;
   --color-accent-glow: rgba(196, 176, 122, 0.15);
   --color-accent-subtle: rgba(196, 176, 122, 0.08);
   --color-success: #4E9A6B;
@@ -106,7 +106,7 @@
   --noise-opacity: 0.025;
 
   /* Category Colors — cool shift */
-  --color-cat-ainews: #D06858;
+  --color-cat-ainews: #B0A090;
   --color-cat-study: #6E9682;
   --color-cat-career: #8C94AA;
   --color-cat-project: #8282AF;
@@ -147,7 +147,7 @@
   --noise-opacity: 0.04;
 
   /* Category Colors */
-  --color-cat-ainews: #B03E2E;
+  --color-cat-ainews: #8B6B4A;
   --color-cat-study: #3A7348;
   --color-cat-career: #6B5B90;
   --color-cat-project: #3E6088;
@@ -187,7 +187,7 @@
   --color-shadow: rgba(60, 20, 30, 0.15);
 
   /* Category Colors */
-  --color-cat-ainews: #A34535;
+  --color-cat-ainews: #9B7060;
   --color-cat-study: #556653;
   --color-cat-career: #756350;
   --color-cat-project: #606075;
@@ -580,33 +580,33 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
 }
 
 .newsprint-type-badge--research {
-  background: #1e3a5f;
-  color: #7db8e8;
+  background: rgba(100, 140, 180, 0.15);
+  color: #8bb0d0;
 }
 
 .newsprint-type-badge--business {
-  background: #3d2e1e;
-  color: #d4a76a;
+  background: rgba(180, 150, 100, 0.15);
+  color: #c4a878;
 }
 
 [data-theme="light"] .newsprint-type-badge--research {
-  background: #dbeafe;
-  color: #1e40af;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }
 
 [data-theme="light"] .newsprint-type-badge--business {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(180, 130, 60, 0.1);
+  color: #b4823c;
 }
 
 [data-theme="pink"] .newsprint-type-badge--research {
-  background: #fce4ec;
-  color: #880e4f;
+  background: rgba(180, 100, 140, 0.12);
+  color: #b4648c;
 }
 
 [data-theme="pink"] .newsprint-type-badge--business {
-  background: #fff3e0;
-  color: #e65100;
+  background: rgba(180, 130, 80, 0.12);
+  color: #b48250;
 }
 
 .newsprint-empty {
