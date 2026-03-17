@@ -11,12 +11,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'RIDIBatang';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff') format('woff');
-  font-weight: normal;
-  font-display: swap;
-}
 
 
 
@@ -31,19 +25,19 @@
    - code: code and technical meta
 */
 @theme {
-  --font-sans: Lora, 'RIDIBatang', Georgia, serif;
-  --font-display: Newsreader, 'RIDIBatang', Georgia, serif;
-  --font-body: Lora, 'RIDIBatang', Georgia, serif;
-  --font-masthead: 'Playfair Display', 'RIDIBatang', Georgia, serif;
-  --font-heading: Newsreader, 'RIDIBatang', Georgia, serif;
-  --font-article-heading: Newsreader, 'RIDIBatang', Georgia, serif;
-  --font-article-deck: Newsreader, 'RIDIBatang', Georgia, serif;
-  --font-ui: Lora, 'RIDIBatang', Georgia, serif;
+  --font-sans: Lora, 'NanumSquare', Georgia, serif;
+  --font-display: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-body: Lora, 'NanumSquare', Georgia, serif;
+  --font-masthead: 'Playfair Display', 'NanumSquareExtraBold', Georgia, serif;
+  --font-heading: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-article-heading: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-article-deck: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-ui: Lora, 'NanumSquare', Georgia, serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
-  --font-blog-masthead: Newsreader, 'RIDIBatang', Georgia, serif;
-  --font-blog-heading: Lora, 'RIDIBatang', Georgia, serif;
-  --font-blog-body: Lora, 'RIDIBatang', Georgia, serif;
-  --font-blog-ui: Lora, 'RIDIBatang', Georgia, serif;
+  --font-blog-masthead: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-blog-heading: Lora, 'NanumSquare', Georgia, serif;
+  --font-blog-body: Lora, 'NanumSquare', Georgia, serif;
+  --font-blog-ui: Lora, 'NanumSquare', Georgia, serif;
 
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 768px;
