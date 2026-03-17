@@ -39,12 +39,6 @@ LEARNER_OUTPUT = {
     "ko": "## 무슨 일이 있었나\nOpenAI가 GPT-5를 출시. " + "나" * 3000,
 }
 
-BEGINNER_OUTPUT = {
-    "en": "## One-Line Summary\nOpenAI made a smarter AI. " + "z" * 3000,
-    "ko": "## 한 줄 요약\nOpenAI가 더 똑똑한 AI를 만들었다. " + "다" * 3000,
-}
-
-
 @pytest.mark.asyncio
 async def test_write_persona_expert():
     """Expert persona returns EN+KO content."""
@@ -69,11 +63,10 @@ async def test_write_persona_expert():
 
 @pytest.mark.asyncio
 async def test_write_all_personas_parallel():
-    """write_all_personas runs 3 personas concurrently."""
+    """write_all_personas runs 2 personas (expert + learner) concurrently."""
     persona_outputs = {
         "expert": PersonaOutput(**EXPERT_OUTPUT),
         "learner": PersonaOutput(**LEARNER_OUTPUT),
-        "beginner": PersonaOutput(**BEGINNER_OUTPUT),
     }
 
     async def fake_write_persona(persona, fact_pack, handbook_slugs, post_type="business"):
@@ -88,10 +81,9 @@ async def test_write_all_personas_parallel():
 
     assert "expert" in results
     assert "learner" in results
-    assert "beginner" in results
+    assert "beginner" not in results
     assert "Executive Summary" in results["expert"].en
     assert "무슨 일이 있었나" in results["learner"].ko
-    assert "한 줄 요약" in results["beginner"].ko
 
 
 @pytest.mark.asyncio

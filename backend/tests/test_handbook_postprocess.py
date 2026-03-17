@@ -3,8 +3,6 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 from services.agents.advisor import _link_related_terms, _validate_ref_urls
 
 

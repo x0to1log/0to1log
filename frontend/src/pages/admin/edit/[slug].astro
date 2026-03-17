@@ -54,11 +54,10 @@ if (!isNew) {
   }
 }
 
-// Content setup: posts with persona content use 3 editors, others use single editor
-const contentBeginner = post?.content_beginner || '';
+// Content setup: posts with persona content use 2 editors (v4), others use single editor
 const contentLearner = post?.content_learner || '';
 const contentExpert = post?.content_expert || '';
-const hasPersonaContent = !!(contentBeginner || contentLearner || contentExpert);
+const hasPersonaContent = !!(contentLearner || contentExpert);
 const editableContent = hasPersonaContent
   ? ''
   : (post?.content_original || '');
@@ -80,7 +79,7 @@ const initialEditionLabel = editionMap[initialCategory] || 'Daily Dispatch';
 const initialFocusItems = getArticleFocusItems('en', initialCategory);
 const initialTitle = post?.title || '';
 const initialTags = post?.tags || [];
-const previewContent = hasPersonaContent ? (contentBeginner || contentLearner || contentExpert) : editableContent;
+const previewContent = hasPersonaContent ? (contentLearner || contentExpert) : editableContent;
 const initialHtmlContent = post ? await renderMarkdown(previewContent) : '';
 const initialWordCount = post ? previewContent.split(/\s+/).length : 0;
 const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
@@ -212,12 +211,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           {hasPersonaContent ? (
             <>
               <div class="admin-lang-tabs">
-                <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="beginner">Beginner</button>
-                <button type="button" class="admin-lang-tab" data-persona-tab="learner">Learner</button>
+                <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="learner">Learner</button>
                 <button type="button" class="admin-lang-tab" data-persona-tab="expert">Expert</button>
               </div>
-              <div id="persona-beginner" class="admin-editor-wrapper" data-content={contentBeginner}></div>
-              <div id="persona-learner" class="admin-editor-wrapper" style="display:none;" data-content={contentLearner}></div>
+              <div id="persona-learner" class="admin-editor-wrapper" data-content={contentLearner}></div>
               <div id="persona-expert" class="admin-editor-wrapper" style="display:none;" data-content={contentExpert}></div>
             </>
           ) : (
@@ -319,8 +316,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
   let crepe: Crepe | null = null;
   let feedbackTimer = 0;
-  const personaEditors: Record<string, Crepe | null> = { beginner: null, learner: null, expert: null };
-  let activePersonaTab = 'beginner';
+  const personaEditors: Record<string, Crepe | null> = { learner: null, expert: null };
+  let activePersonaTab = 'learner';
 
   document.addEventListener('DOMContentLoaded', () => {
     // Cleanup previous editor instance(s) (View Transitions re-entry)
@@ -654,7 +651,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           const p = btn.dataset.personaTab!;
           personaTabs.forEach(b => b.classList.remove('admin-lang-tab--active'));
           btn.classList.add('admin-lang-tab--active');
-          (['beginner', 'learner', 'expert'] as const).forEach(k => {
+          (['learner', 'expert'] as const).forEach(k => {
             const el = document.getElementById(`persona-${k}`);
             if (el) el.style.display = k === p ? '' : 'none';
           });
@@ -724,7 +721,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       };
 
       if (isBusinessEditor) {
-        saveBody.content_beginner = personaEditors.beginner?.getMarkdown() || '';
         saveBody.content_learner = personaEditors.learner?.getMarkdown() || '';
         saveBody.content_expert = personaEditors.expert?.getMarkdown() || '';
       } else {
@@ -1434,7 +1430,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     // Init editor(s)
     if (isBusinessEditor) {
       setupPersonaTabs();
-      initPersonaEditor('beginner'); // init first tab immediately
+      initPersonaEditor('learner'); // init first tab immediately
     } else {
       initEditor();
     }

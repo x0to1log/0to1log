@@ -138,8 +138,8 @@ async def test_pipeline_digest_failure_continues():
 
     async def _mock_create(**kwargs):
         call_count["calls"] += 1
-        # First 6 calls fail (research: 3 personas × 2 attempts each with retry)
-        if call_count["calls"] <= 6:
+        # First 4 calls fail (research: 2 personas × 2 attempts each with retry)
+        if call_count["calls"] <= 4:
             raise Exception("API timeout")
         return _mock_openai_digest_response()
 
@@ -153,10 +153,10 @@ async def test_pipeline_digest_failure_continues():
         from services.pipeline import run_daily_pipeline
         result = await run_daily_pipeline()
 
-    # Research digest: all 3 personas failed → not saved (requires all 3)
-    # Business digest: all 3 personas succeeded → saved (EN + KO)
+    # Research digest: both personas failed → not saved (requires both)
+    # Business digest: both personas succeeded → saved (EN + KO)
     assert result.posts_created == 2  # only business succeeded (EN + KO)
-    assert len(result.errors) >= 3  # 3 research persona failures + incomplete error
+    assert len(result.errors) >= 2  # 2 research persona failures + incomplete error
 
 
 @pytest.mark.asyncio

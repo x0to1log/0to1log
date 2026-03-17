@@ -460,7 +460,7 @@ async def _generate_digest(
 ) -> tuple[int, list[str], dict[str, Any]]:
     """Generate a daily digest post for one category (research or business).
 
-    Creates 3 persona versions (expert/learner/beginner) × 2 locales (en/ko).
+    Creates 2 persona versions (expert/learner) × 2 locales (en/ko).
     Returns (posts_created, errors, usage).
     """
     errors: list[str] = []
@@ -491,7 +491,7 @@ async def _generate_digest(
 
     MAX_DIGEST_RETRIES = 1  # 1 retry = 2 total attempts
 
-    for persona_name in ("expert", "learner", "beginner"):
+    for persona_name in ("expert", "learner"):
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
 
@@ -604,7 +604,7 @@ async def _generate_digest(
 
     # Validate: all 3 personas must exist AND have non-empty content
     incomplete = []
-    for pname in ("expert", "learner", "beginner"):
+    for pname in ("expert", "learner"):
         p = personas.get(pname)
         if not p:
             incomplete.append(f"{pname} (missing)")
@@ -622,7 +622,7 @@ async def _generate_digest(
     )
 
     # Save EN + KO rows
-    missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
+    missing = [p for p in ("expert", "learner") if p not in personas]
     if missing:
         logger.warning("Missing personas for %s digest: %s", digest_type, missing)
 
@@ -660,7 +660,6 @@ async def _generate_digest(
             "status": "draft",
             "content_expert": (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else None,
             "content_learner": (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else None,
-            "content_beginner": (personas["beginner"].en if locale == "en" else personas["beginner"].ko) if "beginner" in personas else None,
             "source_urls": source_urls,
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,

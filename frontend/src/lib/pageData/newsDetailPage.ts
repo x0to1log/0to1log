@@ -234,16 +234,17 @@ export async function getNewsDetailPageData({
   let rawContent = '';
 
   if (post) {
-    const hasPersonaContent = post.content_beginner || post.content_learner || post.content_expert;
+    const hasPersonaContent = post.content_learner || post.content_expert;
     if (hasPersonaContent) {
       const personaKey = previewMode ? (previewPersona || 'learner') : (userPersona || 'learner');
       const contentMap: Record<string, string> = {
-        beginner: post.content_beginner || '',
         learner: post.content_learner || '',
         expert: post.content_expert || '',
+        // Backward compat: include beginner if exists (old v3 posts)
+        ...(post.content_beginner ? { beginner: post.content_beginner } : {}),
       };
-      rawContent = contentMap[personaKey] || post.content_learner || post.content_beginner || '';
-      activePersona = contentMap[personaKey] ? personaKey : (post.content_learner ? 'learner' : 'beginner');
+      rawContent = contentMap[personaKey] || post.content_learner || '';
+      activePersona = contentMap[personaKey] ? personaKey : 'learner';
 
       for (const [key, md] of Object.entries(contentMap)) {
         if (md) personaHtmlMap[key] = applySourceCitations(await renderMd(md));

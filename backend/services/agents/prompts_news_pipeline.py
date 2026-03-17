@@ -144,22 +144,12 @@ LEARNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — This new
 - **## 실무 적용 / ## Practical Applications** — "How does this affect my work?" for developers/PMs
 - **## 참고 자료 / ## References** — Official docs, tutorials, GitHub repos"""
 
-BEGINNER_SECTIONS = """- **## 한 줄 요약 / ## One-Line Summary** — This news in one sentence
-- **## 뉴스 상세 / ## The Story** — Full story explained for someone with no AI background. Use simple language, analogies, and Handbook links. Minimum 3 paragraphs.
-- **## 왜 중요한가 / ## Why It Matters** — Impact on daily life, society, jobs
-- **## 알아두면 좋은 것 / ## Good to Know** — Basic concepts to understand this topic. Link to Handbook."""
-
-
 def get_expert_prompt(handbook_slugs: list[str]) -> str:
     return _build_persona_system_prompt("expert", EXPERT_SECTIONS, handbook_slugs)
 
 
 def get_learner_prompt(handbook_slugs: list[str]) -> str:
     return _build_persona_system_prompt("learner", LEARNER_SECTIONS, handbook_slugs)
-
-
-def get_beginner_prompt(handbook_slugs: list[str]) -> str:
-    return _build_persona_system_prompt("beginner", BEGINNER_SECTIONS, handbook_slugs)
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +216,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 
 
 # --- Research Digest Sections (기술 뉴스) ---
-# Differentiation axis: Expert=기술 의사결정, Learner=실무 적용, Beginner=이해+학습
+# Differentiation axis: Expert=기술 의사결정, Learner=이해+적용+학습 (v4: Beginner merged)
 
 RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's most significant technical development in one sentence
 - **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models with benchmarks, parameters, architecture analysis. Include comparison tables vs prior SOTA. Assess: should we adopt, wait, or skip?
@@ -248,46 +238,31 @@ Writing rules:
 - Each news item: 3-4 paragraphs (what happened + technical deep-dive + production implications + decision recommendation)"""
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters, and how to start using them. Include getting-started links.
+- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters, and how to start using them. Use analogies to aid understanding. Include getting-started links.
 - **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do, who would use them, and step-by-step to get started.
 - **## Research Papers (ko: ## 연구 논문)** — Key papers explained: the problem, the approach, and how it applies to real projects.
-- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions: tutorials to follow, repos to clone, APIs to test. Link to official docs and getting-started guides. 3-4 paragraphs."""
+- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions: tutorials to follow, repos to clone, APIs to test. Link to official docs. 3-4 paragraphs.
+- **## Learn More (ko: ## 더 알아보기)** — Key AI terms from today's news linked to the Handbook. A mini learning path: "Today you encountered [term1], [term2], [term3] — check their Handbook pages to learn more." 2-3 paragraphs."""
 
-RESEARCH_LEARNER_GUIDE = """READER: Developer or PM who uses AI in their work but doesn't specialize in ML research.
-READER'S GOAL: Apply new tech to their projects — find tools, learn techniques, stay competitive.
-AFTER READING: The reader tries a new tool, follows a tutorial, or proposes a technical upgrade to their team.
+RESEARCH_LEARNER_GUIDE = """READER: Anyone interested in AI tech — developers, PMs, students, career changers, curious non-engineers. From beginners to mid-level practitioners.
+READER'S GOAL: Understand today's AI developments AND apply them — learn new concepts, find tools, try tutorials, build vocabulary.
+AFTER READING: The reader understands today's news, tries a new tool, and learned 3-5 AI terms through Handbook links.
 
 Writing rules:
-- Write like a senior colleague recommending things to try, not lecturing
+- Write like a senior colleague explaining things over coffee — approachable but substantive
+- Use analogies from everyday life to explain complex concepts: "MoE is like a hospital with specialist doctors — each expert handles what they're best at"
+- Keep technical terms but ALWAYS add brief inline explanations: "MoE (Mixture of Experts — a way to make models more efficient by using specialized sub-networks)"
+- Link AI terms to the Handbook: [MoE](/handbook/mixture-of-experts/) — readers want to learn these terms, not have them hidden
 - For each item: explain what it does, who benefits, and HOW to start (link to docs, tutorials, quickstarts)
-- Use technical terms but add brief context for specialized ones: "MoE (Mixture of Experts — a way to make models more efficient)"
+- Connect concepts to daily life: "This is why ChatGPT responses are getting faster and cheaper"
 - Focus on practical applicability: "If you're building a chatbot, this reduces your inference cost by 40%"
-- Connect each item to real project scenarios the reader might face
-- The final section must contain SPECIFIC actions with links: "Clone [repo](URL) and run the demo", "Read the migration guide at [URL]"
-- Each news item: 2-3 paragraphs (what + why it matters for your work + how to get started)"""
-
-RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New AI models: what they are and what they can do, with analogies.
-- **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Cool new tools anyone can explore. What they do in plain language.
-- **## Research Papers (ko: ## 연구 논문)** — Interesting discoveries: what scientists found and why it's exciting.
-- **## Learn More (ko: ## 더 알아보기)** — Key terms from today's news linked to the Handbook. A mini learning path for curious readers. 2-3 paragraphs."""
-
-RESEARCH_BEGINNER_GUIDE = """READER: Student, career changer, or non-engineer curious about AI. This is their learning entry point.
-READER'S GOAL: Understand what's happening in AI and build vocabulary through real news.
-AFTER READING: The reader learned 3-5 new AI terms and can explain today's news to a friend.
-
-Writing rules:
-- Write like a patient mentor explaining over coffee, not a textbook
-- Use analogies from everyday life: "MoE is like a hospital with specialist doctors — each expert handles what they're best at"
-- DO NOT remove technical terms — the reader WANTS to learn them
-- Always link terms to the Handbook: [MoE](/handbook/mixture-of-experts/) — and add a brief inline explanation after the first use
-- After explaining a concept, connect it to daily life: "This is why ChatGPT responses are getting faster and cheaper"
-- The final section should be a mini learning path: "Today you learned [term1], [term2], [term3]. To go deeper, check out their Handbook pages."
-- Each news item: 1-2 paragraphs (what happened in simple terms + why it matters to everyday life)"""
+- The "What To Try" section must contain SPECIFIC actions with links
+- The "Learn More" section must list today's key terms with Handbook links as a learning path
+- Each news item: 2-3 paragraphs (what + why it matters + how to get started or what it means for daily life)"""
 
 
 # --- Business Digest Sections (비즈니스 뉴스) ---
-# Differentiation axis: Expert=전략 의사결정, Learner=업무 적용, Beginner=이해+학습
+# Differentiation axis: Expert=전략 의사결정, Learner=이해+적용+학습 (v4: Beginner merged)
 
 BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's most significant business development in one sentence
 - **## Big Tech (ko: ## 빅테크)** — Major moves from OpenAI, Google, Microsoft, Meta, etc. Each item: 2-3 paragraphs analyzing what happened, the strategic rationale, competitive positioning, and market implications.
@@ -310,44 +285,27 @@ Writing rules:
 - Each news item: 3-4 paragraphs (what happened + strategic rationale + competitive dynamics + decision recommendation)"""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
-- **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your industry. 2-3 paragraphs per item.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: what changed and what it means for your team's work. 2-3 paragraphs per item.
-- **## New Tools (ko: ## 새로운 도구)** — New tools your team should know about: what they do, pricing, and whether they're worth testing. 2-3 paragraphs per item.
-- **## What This Means for Your Team (ko: ## 우리 팀에 미치는 영향)** — How today's news connects to your daily work. Specific changes to anticipate. 3-4 paragraphs.
-- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week: tools to test, proposals to draft, conversations to start with your team."""
+- **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your life and work. Before discussing a company's move, briefly explain what it does. 2-3 paragraphs per item.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: what changed, what it means, and why you should care. 2-3 paragraphs per item.
+- **## New Tools (ko: ## 새로운 도구)** — New AI tools worth knowing: what they do, pricing, who they're for, and whether they're worth trying. 2-3 paragraphs per item.
+- **## What This Means for You (ko: ## 나에게 미치는 영향)** — How today's news connects to your daily life, career, and work. Specific changes to anticipate. 3-4 paragraphs.
+- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week: tools to test, proposals to draft, articles to read.
+- **## Learn More (ko: ## 더 알아보기)** — Key business/AI terms from today linked to the Handbook. Build your AI vocabulary: "Today you encountered [term1], [term2], [term3] — check their Handbook pages." 2-3 paragraphs."""
 
-BUSINESS_LEARNER_GUIDE = """READER: Marketer, planner, sales lead, or operations manager. A non-technical professional whose work is being transformed by AI.
-READER'S GOAL: Apply AI trends to their team's work — find useful tools, anticipate changes, stay ahead of competitors.
-AFTER READING: The reader proposes a new AI tool to their team, adjusts a campaign strategy, or prepares for an industry shift.
-
-Writing rules:
-- Write like a knowledgeable colleague at lunch explaining what they should pay attention to
-- Assume business literacy but NOT technical depth — explain AI concepts through business impact
-- For each tool: who is it for, what does it cost, and is it worth your team's time to test?
-- Connect every news item to practical team impact: "If your marketing team runs paid ads, Meta's new AI tools could change your workflow because..."
-- Action Items must be role-specific and concrete: "Draft a one-page proposal for your team to pilot [tool]", "Book a demo at [URL]", "Add [trend] to your next team meeting agenda"
-- Do NOT use deep technical jargon. If you must, link to Handbook: [LLM](/handbook/llm/)
-- Each news item: 2-3 paragraphs (what happened + how it affects your work + what to do about it)"""
-
-BUSINESS_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
-- **## Big Tech (ko: ## 빅테크)** — What companies like Google and OpenAI did today, and why it matters for everyone.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Money moves in AI: who invested in what, and why you should care.
-- **## New Tools (ko: ## 새로운 도구)** — New AI apps and tools that regular people can try.
-- **## Why This Matters to You (ko: ## 나에게 왜 중요한가)** — How today's AI business news connects to your daily life, career, or future. 2-3 paragraphs.
-- **## Learn More (ko: ## 더 알아보기)** — Key business/AI terms from today linked to the Handbook. Build your AI vocabulary."""
-
-BUSINESS_BEGINNER_GUIDE = """READER: A curious person with no AI or business background. They want to understand the AI business world.
-READER'S GOAL: Understand what's happening and why it matters. Build AI business vocabulary through real news.
-AFTER READING: The reader can explain today's AI business news to a friend and learned 3-5 new terms.
+BUSINESS_LEARNER_GUIDE = """READER: Anyone interested in AI business — marketers, planners, developers, students, curious professionals. From beginners to practitioners.
+READER'S GOAL: Understand AI business developments AND apply them — find useful tools, anticipate industry changes, build AI business vocabulary.
+AFTER READING: The reader understands today's business news, takes a specific action (try a tool, draft a proposal), and learned 3-5 AI/business terms.
 
 Writing rules:
-- Write like explaining the news to a smart friend who doesn't follow tech
-- Before discussing a company's move, briefly explain what the company does: "Meta (the company behind Facebook and Instagram) is..."
-- DO NOT remove business/AI terms — the reader wants to learn them
-- Always link terms to the Handbook: [Series A](/handbook/series-a/) — and explain inline: "a Series A is the first major round of investment a startup receives"
-- Connect every item to daily life: "This matters because the ads you see on Instagram will get smarter at knowing what you want"
-- The final section should be a mini learning path: "Today you encountered [term1], [term2], [term3]. Check their Handbook pages to learn more."
-- Each news item: 1-2 paragraphs (what happened simply + why it matters to regular people)
+- Write like a knowledgeable colleague explaining what matters over lunch — approachable, not lecturing
+- Before discussing a company's strategy, briefly explain what the company does: "Meta (the company behind Facebook and Instagram) is..."
+- Keep business/AI terms but ALWAYS explain inline: "Series A (the first major investment round a startup receives)"
+- Link terms to the Handbook: [Series A](/handbook/series-a/) — readers want to learn these terms
+- Connect every item to practical impact: "If your marketing team runs paid ads, Meta's new AI tools could change your workflow because..."
+- Connect to daily life too: "This matters because the ads you see on Instagram will get smarter"
+- Action Items must be concrete: "Draft a one-page proposal for [tool]", "Book a demo at [URL]", "Add [trend] to next team meeting"
+- The "Learn More" section must list today's key terms with Handbook links as a learning path
+- Each news item: 2-3 paragraphs (what happened + how it affects you + what to do about it)
 - Make it interesting and accessible, not dumbed down"""
 
 
@@ -356,10 +314,8 @@ Writing rules:
 DIGEST_PROMPT_MAP = {
     ("research", "expert"): (RESEARCH_EXPERT_SECTIONS, RESEARCH_EXPERT_GUIDE),
     ("research", "learner"): (RESEARCH_LEARNER_SECTIONS, RESEARCH_LEARNER_GUIDE),
-    ("research", "beginner"): (RESEARCH_BEGINNER_SECTIONS, RESEARCH_BEGINNER_GUIDE),
     ("business", "expert"): (BUSINESS_EXPERT_SECTIONS, BUSINESS_EXPERT_GUIDE),
     ("business", "learner"): (BUSINESS_LEARNER_SECTIONS, BUSINESS_LEARNER_GUIDE),
-    ("business", "beginner"): (BUSINESS_BEGINNER_SECTIONS, BUSINESS_BEGINNER_GUIDE),
 }
 
 

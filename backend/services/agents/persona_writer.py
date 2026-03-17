@@ -12,7 +12,6 @@ from services.agents.client import (
     parse_ai_json,
 )
 from services.agents.prompts_news_pipeline import (
-    get_beginner_prompt,
     get_expert_prompt,
     get_learner_prompt,
 )
@@ -25,7 +24,6 @@ BUSINESS_MIN_EN_CHARS = 3000
 PERSONA_PROMPT_MAP = {
     "expert": get_expert_prompt,
     "learner": get_learner_prompt,
-    "beginner": get_beginner_prompt,
 }
 
 
