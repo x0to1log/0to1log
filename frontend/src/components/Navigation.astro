@@ -266,12 +266,14 @@ const navItems = [
 
             {user ? (
               <form method="POST" action={`/api/auth/logout?redirectTo=${encodeURIComponent(currentPath)}`} style="margin: 0;">
-                <button type="submit" class="user-dropdown-item user-dropdown-item--button user-dropdown-item--danger" style="border-top: 1px solid var(--color-border);">
+                <div class="user-dropdown-divider"></div>
+                <button type="submit" class="user-dropdown-item user-dropdown-item--button user-dropdown-item--danger">
                   <span>{copy.signOut}</span>
                 </button>
               </form>
             ) : (
-              <a href={`/login?redirectTo=${encodeURIComponent(currentPath)}`} class="user-dropdown-item" style="border-top: 1px solid var(--color-border);">
+              <div class="user-dropdown-divider"></div>
+              <a href={`/login?redirectTo=${encodeURIComponent(currentPath)}`} class="user-dropdown-item">
                 {copy.signIn}
               </a>
             )}

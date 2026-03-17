@@ -213,8 +213,8 @@ const currentPath = Astro.url.pathname;
       });
     });
 
-    const themeList = ['dark', 'light', 'pink'];
-    const themeColors = { dark: '#18140F', light: '#F4F1EA', pink: '#FFF0F3' };
+    const themeList = ['dark', 'midnight', 'light', 'pink'];
+    const themeColors = { dark: '#18140F', midnight: '#08090E', light: '#F4F1EA', pink: '#FFF0F3' };
 
     function getSidebarTheme() {
       const stored = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
