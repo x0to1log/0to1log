@@ -8286,6 +8286,43 @@ pre:hover .blog-code-copy {
   color: var(--color-text-secondary);
 }
 
+@media (max-width: 639px) {
+  .home-masthead {
+    padding: 1rem 0 1rem;
+  }
+
+  .home-masthead-top {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .home-masthead-kicker-left,
+  .home-masthead-kicker-right {
+    font-size: 0.65rem;
+    text-align: center;
+    flex: none;
+  }
+
+  .home-masthead-kicker-left {
+    order: 1;
+  }
+
+  .home-masthead-brand {
+    order: 0;
+  }
+
+  .home-masthead-kicker-right {
+    order: 2;
+    text-align: center;
+  }
+
+  .home-masthead-pillars {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    margin-top: 0.15rem;
+  }
+}
+
 /* Hero card */
 .home-hero-card {
   display: block;
