@@ -127,22 +127,26 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
                     {product.name_ko && <span class="admin-list-subtitle"> · {product.name_ko}</span>}
                   </div>
                   <div class="admin-list-meta">
-                    <span class={`admin-status-badge admin-status-badge--${product.is_published ? 'published' : 'draft'}`}>
-                      {product.is_published ? 'published' : 'draft'}
-                    </span>
-                    {product.pricing && (
-                      <span class={`admin-product-pricing-badge admin-product-pricing-badge--${product.pricing}`}>
-                        {product.pricing}
+                    <div class="admin-list-meta-badges">
+                      <span class={`admin-status-badge admin-status-badge--${product.is_published ? 'published' : 'draft'}`}>
+                        {product.is_published ? 'published' : 'draft'}
                       </span>
-                    )}
-                    {product.featured && (
-                      <span class="admin-featured-badge">featured</span>
-                    )}
-                    {(product.sort_order ?? 0) < 0 && (
-                      <span class="admin-pinned-badge">pinned</span>
-                    )}
-                    {cat && <span>{cat.icon} {cat.label_en}</span>}
-                    <span>Updated {new Date(product.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
+                      {product.pricing && (
+                        <span class={`admin-product-pricing-badge admin-product-pricing-badge--${product.pricing}`}>
+                          {product.pricing}
+                        </span>
+                      )}
+                      {product.featured && (
+                        <span class="admin-featured-badge">featured</span>
+                      )}
+                      {(product.sort_order ?? 0) < 0 && (
+                        <span class="admin-pinned-badge">pinned</span>
+                      )}
+                    </div>
+                    <div class="admin-list-meta-info">
+                      {cat && <span>{cat.icon} {cat.label_en}</span>}
+                      <span class="admin-list-date">{new Date(product.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    </div>
                   </div>
                 </div>
                 <div class="admin-list-actions">

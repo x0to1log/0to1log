@@ -2378,13 +2378,30 @@ pre {
 
 .admin-list-meta {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.3rem;
   margin-top: 0.25rem;
   font-size: 0.8rem;
   color: var(--color-text-muted);
   font-family: var(--font-ui);
+}
+
+.admin-list-meta-badges {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-list-meta-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.admin-list-date {
+  opacity: 0.7;
 }
 
 .admin-lang-badge {
