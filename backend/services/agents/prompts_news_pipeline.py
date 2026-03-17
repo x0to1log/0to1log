@@ -242,11 +242,13 @@ RESEARCH_EXPERT_GUIDE = """READER: Senior ML engineer or researcher who reads pa
 READER'S GOAL: Make technical decisions — adopt a new model, change architecture, allocate engineering resources.
 AFTER READING: The reader decides whether to evaluate, migrate, or wait.
 
-Tone — ASSERTIVE, not hedging:
-- NEVER write: "~할 수 있습니다", "~를 시사합니다", "~를 고려하십시오", "may", "could potentially", "suggests"
-- INSTEAD write: "~이다", "~를 의미한다", "~해야 한다", "is", "means", "should"
-- BAD: "This model could potentially reduce inference costs for some use cases."
-- GOOD: "This model cuts inference cost by 40% for batch workloads. If you're running GPT-4o for classification, switch to this — it's cheaper and 3% more accurate on MMLU."
+Tone — ASSERTIVE, not hedging (applies to BOTH English AND Korean):
+- NEVER: "~할 수 있습니다", "~를 시사합니다", "~를 고려하십시오", "~할 가능성이 있다", "may", "could potentially", "suggests"
+- INSTEAD: "~이다", "~를 의미한다", "~해야 한다", "is", "means", "should"
+- BAD (EN): "This model could potentially reduce inference costs for some use cases."
+- GOOD (EN): "This model cuts inference cost by 40% for batch workloads. If you're running GPT-4o for classification, switch to this."
+- BAD (KO): "이 투자는 경쟁 구도를 재편할 가능성을 시사한다."
+- GOOD (KO): "이 투자는 경쟁 구도를 재편한다. Nvidia의 독점적 지위가 흔들리기 시작했다."
 
 Writing rules:
 - Write like a peer engineer sharing analysis at a technical review meeting, not like a reporter
@@ -255,10 +257,10 @@ Writing rules:
 - ALWAYS compare numbers to a baseline: "260B parameters — 1.8x Llama 3's 70B", "$0.002/1K tokens — half of GPT-4o's pricing"
 - Assess production-readiness: "inference cost makes this viable for batch processing, not real-time"
 - The final section must contain DECISIONS with timelines and risks: "If you're running X, start evaluating Y this week — the risk of waiting is Z"
-- Each news item: 3-4 paragraphs (what happened + technical deep-dive + production implications + decision recommendation)"""
+- MINIMUM LENGTH: Each news item MUST be 3-4 paragraphs. If you wrote fewer than 3 paragraphs for any news item, go back and expand with deeper analysis."""
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters. Start each item with an everyday analogy, then explain. Include getting-started links.
+- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters. Use an analogy for complex concepts. Include getting-started links.
 - **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do (with analogy), who would use them, and step-by-step to get started.
 - **## Research Papers (ko: ## 연구 논문)** — Key papers explained with analogy: the problem, the approach, and how it applies to real projects.
 - **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions with links to the source articles from above. Use the URLs already cited in the news items. 3-4 paragraphs."""
@@ -269,7 +271,7 @@ AFTER READING: The reader understands today's news, tries a new tool, and learne
 
 Writing rules:
 - Write like a senior colleague explaining things over coffee — approachable but substantive
-- EVERY news item MUST START with an everyday analogy before diving into details
+- Use an everyday analogy when explaining complex technical or business concepts — but NOT for every single news item. If the news is straightforward (e.g., "Company X raised $Y"), skip the analogy and get to the point
 - BAD: "엔비디아가 오픈웨이트 AI 모델에 260억 달러를 투자합니다."
 - GOOD: "여러분이 요리할 때 레시피를 공유하면 더 많은 사람이 맛있는 요리를 만들 수 있듯이, 엔비디아가 AI 모델의 '레시피'를 누구나 쓸 수 있게 공개하면서 260억 달러를 투자합니다."
 - Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE
@@ -295,25 +297,27 @@ BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy
 READER'S GOAL: Make strategic decisions — allocate budget, choose partners, adjust product roadmap, respond to competitive moves.
 AFTER READING: The reader adjusts their strategy, brings insights to their leadership meeting, or initiates a competitive response.
 
-Tone — ASSERTIVE, not hedging:
-- NEVER write: "~할 수 있습니다", "~를 시사합니다", "~를 고려하십시오", "may", "could potentially", "suggests"
-- INSTEAD write: "~이다", "~를 의미한다", "~해야 한다", "is", "means", "should"
-- BAD: "This investment could signal a shift toward open-source AI models."
-- GOOD: "This is the end of the proprietary-only era. Nvidia just bet $26B that open-weight wins. If you're paying for closed APIs, your cost structure is about to be disrupted."
+Tone — ASSERTIVE, not hedging (applies to BOTH English AND Korean):
+- NEVER: "~할 수 있습니다", "~를 시사합니다", "~를 고려하십시오", "~할 가능성이 있다", "may", "could potentially", "suggests"
+- INSTEAD: "~이다", "~를 의미한다", "~해야 한다", "is", "means", "should"
+- BAD (EN): "This investment could signal a shift toward open-source AI models."
+- GOOD (EN): "This is the end of the proprietary-only era. Nvidia just bet $26B that open-weight wins."
+- BAD (KO): "Nscale의 전략적 위치는 경쟁 구도를 재편할 가능성을 시사한다."
+- GOOD (KO): "Nscale의 20억 달러 조달은 Nvidia 독점 체제의 균열이다. 146억 달러 평가는 AWS AI 인프라 부문 가치의 1/3 수준으로, 2년 내 직접 경쟁이 가능한 규모다."
+- BAD action (KO): "파트너십을 고려하십시오."
+- GOOD action (KO): "이번 분기 내 Nscale의 GPU 클러스터 가격을 AWS/GCP와 비교 견적을 받아라. 지금 움직이지 않으면 경쟁사가 인프라 비용 우위를 선점한다."
 
 Writing rules:
 - Write like a trusted strategic advisor in a private briefing, not a news reporter
-- ALWAYS compare numbers to competitors or industry benchmarks: "$260B — 4x Meta's AI capex, signaling Nvidia sees model development as its next growth engine"
+- ALWAYS compare numbers to competitors or industry benchmarks: "$2B raise at $14.6B valuation — roughly 1/3 of CoreWeave's $35B valuation, signaling a serious challenger"
 - Analyze competitive dynamics with causal chains: "Meta's delay → Google gains 3-month window → Anthropic's enterprise push faces less resistance"
 - Connecting the Dots must reveal CAUSATION, not correlation: "A happened BECAUSE of B, which will force C to respond with D within 3-6 months"
 - Strategic Decisions must include: specific scenario + concrete action + timeline + risk of inaction
-- BAD action item: "Consider evaluating Nvidia's models for potential integration opportunities."
-- GOOD action item: "If you're spending >$10K/month on OpenAI APIs, pilot Nvidia's open-weight alternative this quarter. Risk of waiting: competitors lock in cost advantages first."
-- Each news item: 3-4 paragraphs (what happened + strategic rationale + competitive dynamics + decision recommendation)"""
+- MINIMUM LENGTH: Each news item MUST be 3-4 paragraphs. If you wrote fewer than 3, go back and expand with competitive analysis, number comparisons, and strategic implications."""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
-- **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your life and work. Start each item with an everyday analogy, then explain. Before discussing a company's move, briefly explain what it does. 2-3 paragraphs per item.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: start with analogy, then what changed, what it means, and why you should care. 2-3 paragraphs per item.
+- **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your life and work. Use an analogy for complex concepts. Before discussing a company's move, briefly explain what it does. 2-3 paragraphs per item.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: what changed, what it means, and why you should care. Use analogy for complex deals. 2-3 paragraphs per item.
 - **## New Tools (ko: ## 새로운 도구)** — New AI tools worth knowing: what they do (with analogy), pricing, who they're for, and whether they're worth trying. 2-3 paragraphs per item.
 - **## What This Means for You (ko: ## 나에게 미치는 영향)** — How today's news connects to your daily life, career, and work. Specific changes to anticipate. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week. Link to the source article URLs from the news items above for each action."""
@@ -325,7 +329,7 @@ AFTER READING: The reader understands today's business news, takes a specific ac
 Writing rules:
 - Write like a knowledgeable colleague explaining what matters over lunch — approachable, not lecturing
 - Before discussing a company's strategy, briefly explain what the company does: "Meta (the company behind Facebook and Instagram) is..."
-- EVERY news item MUST START with an everyday analogy before diving into details
+- Use an everyday analogy when explaining complex technical or business concepts — but NOT for every single news item. If the news is straightforward (e.g., "Company X raised $Y"), skip the analogy and get to the point
 - BAD: "Yann LeCun의 스타트업 AMI가 10억 달러를 유치했습니다."
 - GOOD: "자동차가 스스로 운전하려면 단순히 도로를 '보는' 것만으로는 부족하듯이, AI도 단순히 텍스트를 예측하는 것을 넘어서야 합니다. Yann LeCun의 스타트업 AMI가 바로 이 '넘어서는 AI'를 만들기 위해 10억 달러를 유치했습니다."
 - Keep business/AI terms but ALWAYS explain inline ON FIRST USE: "Series A (the first major investment round a startup receives)"
