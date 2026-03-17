@@ -54,19 +54,23 @@ interface Props {
     function getTarget() {
       const rect = article.getBoundingClientRect();
       if (rect.height === 0) return -1; // 레이아웃 미완료 신호
-      const scrolled = window.scrollY + window.innerHeight;
       const articleTop = rect.top + window.scrollY;
+
+      // 스크롤 시작점: article 상단이 뷰포트 상단에 닿은 시점부터 0%
+      const scrollPos = window.scrollY - articleTop;
+      if (scrollPos <= 0) return 0;
 
       // [data-reading-end] 마커가 있으면 그 지점을 100% 기준으로 사용
       const endEl = document.querySelector('[data-reading-end]');
-      if (endEl) {
-        const endTop = endEl.getBoundingClientRect().top + window.scrollY;
-        const range = endTop - articleTop;
-        if (range <= 0) return 100;
-        return Math.min(100, Math.max(0, ((scrolled - articleTop) / range) * 100));
-      }
+      const endTop = endEl
+        ? endEl.getBoundingClientRect().top + window.scrollY
+        : articleTop + rect.height;
 
-      return Math.min(100, Math.max(0, ((scrolled - articleTop) / rect.height) * 100));
+      // 100% 도달 지점: end 마커에서 뷰포트 높이를 뺀 위치
+      const range = endTop - articleTop - window.innerHeight;
+      if (range <= 0) return scrollPos > 0 ? 100 : 0;
+
+      return Math.min(100, Math.max(0, (scrollPos / range) * 100));
     }
 
     function animate() {

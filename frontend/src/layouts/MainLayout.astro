@@ -115,5 +115,8 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     {!isAdmin && <Footer locale={locale} pathname={Astro.url.pathname} />}
     {!isAdmin && <CookieConsent locale={locale} />}
     {!isAdmin && <AuthPromptSheet locale={locale} />}
+  <script>
+    import '../scripts/codeBlocks';
+  </script>
   </body>
 </html>

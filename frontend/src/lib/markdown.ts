@@ -10,6 +10,7 @@ import rehypeShiki from '@shikijs/rehype';
 import { createCssVariablesTheme } from 'shiki';
 import rehypeStringify from 'rehype-stringify';
 import rehypeHandbookTerms, { type TermsMap } from './rehypeHandbookTerms';
+import rehypeCodeWindow from './rehypeCodeWindow';
 
 const katexTagNames = [
   'math', 'semantics', 'annotation', 'mrow', 'mi', 'mo', 'mn',
@@ -71,6 +72,7 @@ const processor = unified()
   .use(rehypeKatex)
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeShiki, shikiOptions)
+  .use(rehypeCodeWindow)
   .use(rehypeStringify);
 
 export async function renderMarkdown(md: string): Promise<string> {
@@ -94,6 +96,7 @@ export async function renderMarkdownWithTerms(
     .use(rehypeHandbookTerms(termsMap))
     .use(rehypeSanitize, sanitizeSchemaWithTerms)
     .use(rehypeShiki, shikiOptions)
+    .use(rehypeCodeWindow)
     .use(rehypeStringify);
 
   const result = await termsProcessor.process(md);

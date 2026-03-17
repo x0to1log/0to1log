@@ -61,7 +61,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'publish') {
     update.status = 'published';
-    update.published_at = new Date().toISOString();
+    // Only set published_at if not already set (pipeline sets it to batch_id date)
+    const { data: existing } = await supabase.from('news_posts').select('published_at').eq('id', id).single();
+    if (!existing?.published_at) {
+      update.published_at = new Date().toISOString();
+    }
   } else if (action === 'unpublish') {
     update.status = 'draft';
   }
