@@ -293,11 +293,15 @@ async def _extract_and_create_handbook_terms(
     async def _create_single_term(term_name: str, korean_name: str, slug: str) -> tuple[int, list[str]]:
         """Generate and save a single handbook term. Returns (created_count, errors)."""
         async with sem:
+            # Filter to articles that mention this specific term
+            relevant = [a for a in article_texts if term_name.lower() in a.lower()]
+            term_context = "\n\n---\n\n".join(relevant)[:4000] if relevant else combined[:4000]
+
             t_gen = time.monotonic()
             try:
                 content_data, gen_usage = await generate_term_content(
                     term_name, korean_name,
-                    article_context=combined,
+                    article_context=term_context,
                 )
             except Exception as e:
                 error_msg = f"Handbook generate failed for '{term_name}': {e}"
