@@ -221,11 +221,12 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 
 ## Field rules
 - **excerpt/excerpt_ko**: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body. Tease the "so what" — why should I care?
-- **tags**: 4-6 keyword tags relevant to today's news. Include: news category (e.g., "AI 뉴스"), company names (e.g., "Nvidia"), key technologies (e.g., "오픈소스 AI"). Mix English and Korean naturally.
+- **tags**: 4-6 keyword tags relevant to today's news. Include: company names (e.g., "Nvidia"), key technologies (e.g., "오픈소스 AI"), industry terms. Do NOT include generic tags like "AI 뉴스" — that's already shown as the category label.
 - **focus_items/focus_items_ko**: Exactly 3 bullet points summarizing this specific digest (NOT generic questions). Each must be a concrete statement about TODAY's news:
   1. What specifically changed today (concrete fact, not a question)
   2. Why this matters right now (specific impact, not generic importance)
-  3. What to watch for next (upcoming event, decision, or milestone)"""
+  3. What to watch for next (upcoming event, decision, or milestone)
+- **Handbook links in "Learn More"**: Use the term's display name as link text, NOT the slug. BAD: `[ai-startup-fundraising](/handbook/ai-startup-fundraising)`. GOOD: `[AI 스타트업 자금 조달](/handbook/ai-startup-fundraising)`."""
 
 
 # --- Research Digest Sections (기술 뉴스) ---
