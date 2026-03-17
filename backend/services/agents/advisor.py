@@ -591,7 +591,7 @@ async def _validate_ref_urls(content: str) -> str:
     return content
 
 
-def _link_related_terms(content: str, handbook_map: dict[str, str]) -> str:
+def _link_related_terms(content: str, handbook_map: dict[str, str], exclude_slug: str = "") -> str:
     """Link **BoldTerm** patterns in related-terms sections to handbook pages.
 
     Converts ``**TermName**`` to ``[**TermName**](/handbook/slug/)``
@@ -607,6 +607,8 @@ def _link_related_terms(content: str, handbook_map: dict[str, str]) -> str:
         lookup = term_lookup.get(bold_text.lower())
         if lookup:
             _, slug = lookup
+            if slug == exclude_slug:
+                return m.group(0)  # don't self-link
             return f'[**{bold_text}**](/handbook/{slug}/)'
         return m.group(0)  # no match, return as-is
 
@@ -615,13 +617,19 @@ def _link_related_terms(content: str, handbook_map: dict[str, str]) -> str:
     return bold_pattern.sub(_replace_bold_term, content)
 
 
-def _auto_link_handbook_terms(content: str, handbook_map: dict[str, str]) -> str:
+def _auto_link_handbook_terms(
+    content: str, handbook_map: dict[str, str], exclude_slug: str = "",
+) -> str:
     """Replace first occurrence of each handbook term with a markdown link.
 
     Longer terms are matched first to avoid partial matches.
     Already-linked terms (inside [...]) are skipped.
+    Args:
+        exclude_slug: skip this slug (used to prevent self-linking on handbook pages).
     """
     linked: set[str] = set()
+    if exclude_slug:
+        linked.add(exclude_slug)
     for term, slug in sorted(handbook_map.items(), key=lambda x: -len(x[0])):
         if slug in linked:
             continue
@@ -921,18 +929,19 @@ async def _run_generate_term(
         if data.get(field):
             data[field] = await _validate_ref_urls(data[field])
 
-    # Post-processing step 2: Link related terms to handbook pages
+    # Post-processing: Link related terms and auto-link handbook terms
+    # Exclude self-slug to prevent the term linking to itself
     handbook_map = _fetch_handbook_term_map()
+    self_slug = handbook_map.get(req.term, "")
     if handbook_map:
         for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
             if data.get(field):
-                data[field] = _link_related_terms(data[field], handbook_map)
+                data[field] = _link_related_terms(data[field], handbook_map, exclude_slug=self_slug)
 
-    # Post-processing step 3: Auto-link first occurrence of handbook terms in body
     if handbook_map:
         for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
             if data.get(field):
-                data[field] = _auto_link_handbook_terms(data[field], handbook_map)
+                data[field] = _auto_link_handbook_terms(data[field], handbook_map, exclude_slug=self_slug)
 
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",

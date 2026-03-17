@@ -633,6 +633,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - NO code in basic sections. NO complex formulas.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
+- Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
 
 ## Markdown Formatting (within each section value)
 - Use `###` sub-headings to break long sections into scannable parts
@@ -715,6 +716,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - NO code in basic sections. NO complex formulas.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
+- Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
 
 ## Markdown Formatting (within each section value)
 - Use `###` sub-headings to break long sections into scannable parts
