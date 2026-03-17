@@ -205,6 +205,13 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
 10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". See the section definitions for both versions.
 11. If a section has no news items for the day, OMIT the section entirely. Do NOT include an empty header or placeholder text. Focus the output on sections that have actual news — this gives more depth to what matters.
+12. **Markdown formatting for readability**: Use markdown actively to make content scannable.
+    - Use `###` sub-headings within each section to separate individual news items by name
+    - Use **bold** for key terms, company names, and important numbers
+    - Use bullet points (`-`) for lists: action items, key takeaways, comparisons
+    - Use `>` blockquotes for notable quotes from sources
+    - Use markdown tables (`|`) when comparing numbers, features, or options
+    - Break long analysis into sub-sections with clear headings — never write a wall of text
 {handbook_section}
 
 ## Output JSON format

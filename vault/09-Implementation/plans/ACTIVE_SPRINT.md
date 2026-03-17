@@ -139,11 +139,18 @@
 - **수정:** `pipeline.py` — 다이제스트 EN 있고 KO 없으면 KO만 재호출. `advisor.py` — 핸드북 Call 1 KO basic 없으면 재시도.
 
 ### 38. 페르소나 정체성 재설계 `[PERSONA-REDESIGN-01]`
-- **체크:** [ ]
-- **상태:** doing
-- **목적:** 6개 페르소나 가이드를 "읽은 후 행동"(의사결정/적용/학습) 축으로 재작성
+- **체크:** [x]
+- **상태:** done
+- **수정:** `prompts_news_pipeline.py` — 6개 GUIDE + SECTIONS를 "읽은 후 행동" 축으로 재작성. Expert 3-4단락, Learner 2-3단락, Beginner 1-2단락.
 - **설계 참조:** [[2026-03-17-persona-identity-redesign]]
-- **수정 파일:** `backend/services/agents/prompts_news_pipeline.py` — 6개 GUIDE + SECTIONS 재작성
+
+### 39. 핸드북 링크 레벨 연결 `[HANDBOOK-LEVEL-LINK-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 뉴스 본문의 핸드북 링크를 페르소나에 따라 기초/심화 레벨로 연결
+- **아이디어:** Beginner → `?level=basic`, Expert → `?level=advanced` (기초/심화 연결은 추후 재검토)
+- **수정 범위:** `_auto_link_handbook_terms()`, `_link_related_terms()`, `handbook-popup.ts`, `[slug].astro`
+- **의존성:** PERSONA-REDESIGN-01 검증 후
 
 ---
 
@@ -151,13 +158,12 @@
 
 ```
 [완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality
-       → BUG-PERSONA-01 → OPT-01~04 → OBSERVE-02 → QUALITY-07 → RECOVERY-01
-
-[진행 중]
-PERSONA-REDESIGN-01 (페르소나 프롬프트 재작성)
+       → BUG-PERSONA-01 → OPT-01~04 → OBSERVE-02 → QUALITY-07
+       → RECOVERY-01 → PERSONA-REDESIGN-01
 
 [다음]
-PERSONA-REDESIGN-01 → DIGEST-04 (프론트엔드 검증)
+DIGEST-04 (프론트엔드 검증 — 페르소나 재설계 결과 확인)
+HANDBOOK-LEVEL-LINK-01 (핸드북 레벨 연결 — 검증 후)
 COMMUNITY-01 (커뮤니티 반응 수집)
 WEEKLY-01 (주간 다이제스트)
 AUTOPUB-01 (자동 발행)
