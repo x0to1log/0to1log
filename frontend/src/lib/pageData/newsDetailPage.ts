@@ -112,6 +112,15 @@ export async function getNewsDetailPageData({
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
     const definitionField = getDefinitionField(locale);
 
+    // Fire FastAPI call early — don't await, collect result later during markdown rendering
+    const similarPostsPromise = (import.meta.env.FASTAPI_URL && post.id)
+      ? fetch(
+          `${import.meta.env.FASTAPI_URL}/api/recommendations/similar?post_id=${post.id}&locale=${locale}`,
+          { signal: AbortSignal.timeout(1500) },
+        ).then(res => res.ok ? res.json() : []).catch(() => [])
+      : Promise.resolve([]);
+
+    // Pre-fetch backfill candidates alongside DB queries (avoids sequential query later)
     const [
       nextRes,
       pairedRes,
@@ -120,6 +129,7 @@ export async function getNewsDetailPageData({
       bookmarkRes,
       likeRes,
       hbTermsRes,
+      backfillRes,
     ] = await Promise.all([
       post.published_at
         ? publicSupabase
@@ -170,6 +180,16 @@ export async function getNewsDetailPageData({
         .select(`term, slug, korean_name, categories, ${definitionField}`)
         .eq('status', 'published')
         .limit(200),
+      post.category
+        ? publicSupabase
+            .from('news_posts')
+            .select('id, slug, title, category')
+            .eq('status', 'published')
+            .eq('category', post.category)
+            .neq('id', post.id)
+            .order('published_at', { ascending: false })
+            .limit(3)
+        : Promise.resolve({ data: null }),
     ]);
 
     nextPost = nextRes.data ?? null;
@@ -182,37 +202,6 @@ export async function getNewsDetailPageData({
     focusItems = (post.focus_items && post.focus_items.length > 0)
       ? post.focus_items
       : getArticleFocusItems(locale, post.category);
-
-    if (import.meta.env.FASTAPI_URL && post.id) {
-      try {
-        const res = await fetch(
-          `${import.meta.env.FASTAPI_URL}/api/recommendations/similar?post_id=${post.id}&locale=${locale}`,
-          { signal: AbortSignal.timeout(3000) },
-        );
-        if (res.ok) {
-          similarPosts = await res.json();
-        }
-      } catch {
-        similarPosts = [];
-      }
-    }
-
-    // Backfill: FastAPI가 비어있으면 같은 카테고리 최근 글로 대체
-    if (similarPosts.length === 0 && post.category && publicSupabase) {
-      try {
-        const { data } = await publicSupabase
-          .from('news_posts')
-          .select('id, slug, title, category')
-          .eq('status', 'published')
-          .eq('category', post.category)
-          .neq('id', post.id)
-          .order('published_at', { ascending: false })
-          .limit(3);
-        if (data && data.length > 0) {
-          similarPosts = data.map((p) => ({ post_id: p.id, slug: p.slug, title: p.title, category: p.category }));
-        }
-      } catch { /* ignore */ }
-    }
 
     const hbTerms = hbTermsRes.data ?? [];
     for (const entry of hbTerms) {
@@ -233,6 +222,12 @@ export async function getNewsDetailPageData({
 
     factPack = Array.isArray(post.fact_pack) ? post.fact_pack : [];
     sourceCards = normalizeSourceCards(post);
+
+    // Collect FastAPI result (was running in parallel with DB queries + termsMap build)
+    similarPosts = await similarPostsPromise;
+    if (similarPosts.length === 0 && backfillRes.data?.length) {
+      similarPosts = backfillRes.data.map((p: any) => ({ post_id: p.id, slug: p.slug, title: p.title, category: p.category }));
+    }
   }
 
   const hasTerms = handbookTermsMap.size > 0;

@@ -45,18 +45,6 @@ export async function getHandbookDetailPageData({
   const bodyAdvanced = term ? localField(term, 'body_advanced', locale) : '';
 
   const levelHtmlMap: Record<string, string> = {};
-  const [basicHtml, advancedHtml] = await Promise.all([
-    bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
-    bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
-  ]);
-  if (basicHtml) levelHtmlMap.basic = basicHtml;
-  if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
-
-  const preferredLevel = previewMode ? (previewLevel || 'basic') : (locals.profile?.handbook_level || 'basic');
-  const activeLevel = levelHtmlMap[preferredLevel] ? preferredLevel : (levelHtmlMap.basic ? 'basic' : 'advanced');
-  const htmlContent = levelHtmlMap[activeLevel] || '';
-  const showLevelSwitcher = Object.keys(levelHtmlMap).length > 1;
-
   let relatedArticles: any[] = [];
   let relatedTerms: any[] = [];
   let sameCategoryTerms: any[] = [];
@@ -69,12 +57,22 @@ export async function getHandbookDetailPageData({
       ? getAuthorizedSupabase(locals.accessToken)
       : null;
 
-    const [articlesRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
+    // Run markdown rendering and DB queries in parallel — they don't depend on each other
+    const [basicHtml, advancedHtml, articlesRes, recentNewsRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
+      bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
+      bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
       publicSupabase
         .from('news_posts')
         .select('title, slug, category, published_at')
         .eq('status', 'published')
         .contains('tags', [term.term.toLowerCase()])
+        .limit(3),
+      // Pre-fetch recent news for backfill (avoids sequential query later)
+      publicSupabase
+        .from('news_posts')
+        .select('title, slug, category, published_at')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
         .limit(3),
       term.related_term_slugs?.length
         ? publicSupabase
@@ -111,27 +109,31 @@ export async function getHandbookDetailPageData({
         : Promise.resolve({ data: null }),
     ]);
 
-    relatedArticles = articlesRes.data ?? [];
+    if (basicHtml) levelHtmlMap.basic = basicHtml;
+    if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
 
-    // Backfill: 태그 매칭 결과가 없으면 최근 뉴스로 대체
-    if (relatedArticles.length === 0 && publicSupabase) {
-      try {
-        const { data } = await publicSupabase
-          .from('news_posts')
-          .select('title, slug, category, published_at')
-          .eq('status', 'published')
-          .order('published_at', { ascending: false })
-          .limit(3);
-        relatedArticles = data ?? [];
-      } catch { /* ignore */ }
-    }
+    // Use tag-matched articles, fall back to recent news
+    relatedArticles = (articlesRes.data?.length ? articlesRes.data : recentNewsRes.data) ?? [];
 
     relatedTerms = relatedRes.data ?? [];
     sameCategoryTerms = sameCatRes.data ?? [];
     isBookmarked = !!bmRes.data;
     learningStatus = lpRes.data?.status ?? null;
     learningProgressId = lpRes.data?.id ?? null;
+  } else {
+    // No term found — still render markdown if bodies exist
+    const [basicHtml, advancedHtml] = await Promise.all([
+      bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
+      bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
+    ]);
+    if (basicHtml) levelHtmlMap.basic = basicHtml;
+    if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
   }
+
+  const preferredLevel = previewMode ? (previewLevel || 'basic') : (locals.profile?.handbook_level || 'basic');
+  const activeLevel = levelHtmlMap[preferredLevel] ? preferredLevel : (levelHtmlMap.basic ? 'basic' : 'advanced');
+  const htmlContent = levelHtmlMap[activeLevel] || '';
+  const showLevelSwitcher = Object.keys(levelHtmlMap).length > 1;
 
   return {
     term,
