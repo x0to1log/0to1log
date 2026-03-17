@@ -124,20 +124,26 @@
 - **수정:** `_generate_digest()` — `len(personas) < 3` 시 포스트 저장 안 함
 
 ### 35. Retry attempt 횟수 pipeline_logs 기록 `[OBSERVE-02]`
-- **체크:** [ ]
-- **상태:** doing
-- **목적:** 다이제스트 페르소나 생성에 retry 추가 + 모든 retry에서 attempt 횟수를 pipeline_logs에 체계적 기록
-- **수정 파일:** `pipeline.py` — 다이제스트 페르소나 루프에 retry + attempt 기록
+- **체크:** [x]
+- **상태:** done
+- **수정:** `pipeline.py` — 다이제스트 페르소나 루프에 MAX_DIGEST_RETRIES=1 + attempt 기록
 
 ### 36. 퀄리티 점수 Phase 2 완성 `[QUALITY-07]`
+- **체크:** [x]
+- **상태:** done
+- **수정:** `pipeline.py` quality_score 독립 컬럼 저장, `index.astro` 배지 표시, `pipeline-analytics.astro` 차트 호환
+
+### 37. KO 누락 자동 복구 `[RECOVERY-01]`
+- **체크:** [x]
+- **상태:** done
+- **수정:** `pipeline.py` — 다이제스트 EN 있고 KO 없으면 KO만 재호출. `advisor.py` — 핸드북 Call 1 KO basic 없으면 재시도.
+
+### 38. 페르소나 정체성 재설계 `[PERSONA-REDESIGN-01]`
 - **체크:** [ ]
 - **상태:** doing
-- **목적:** quality_score를 news_posts 독립 컬럼으로 분리 + 어드민 배지 + Analytics 차트 연동
-- **산출물:**
-  - DB: `news_posts.quality_score` 컬럼 추가
-  - Backend: 다이제스트 저장 시 quality_score 컬럼에 기록
-  - Frontend: 어드민 뉴스 리스트에 점수 배지, Analytics Quality Score Trend 차트 데이터 연동
-- **설계 참조:** [[2026-03-16-auto-publish-roadmap]] Phase 2
+- **목적:** 6개 페르소나 가이드를 "읽은 후 행동"(의사결정/적용/학습) 축으로 재작성
+- **설계 참조:** [[2026-03-17-persona-identity-redesign]]
+- **수정 파일:** `backend/services/agents/prompts_news_pipeline.py` — 6개 GUIDE + SECTIONS 재작성
 
 ---
 
@@ -145,18 +151,16 @@
 
 ```
 [완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality
-       → BUG-PERSONA-01 → OPT-01~04 (병렬화 + 데드코드)
+       → BUG-PERSONA-01 → OPT-01~04 → OBSERVE-02 → QUALITY-07 → RECOVERY-01
 
 [진행 중]
-OBSERVE-02 (retry 기록)
-QUALITY-07 (퀄리티 점수 Phase 2)
+PERSONA-REDESIGN-01 (페르소나 프롬프트 재작성)
 
 [다음]
-COMMUNITY-01 → DIGEST-04 (검증)
-                  ↓
-             WEEKLY-01 (주간 다이제스트)
-                  ↓
-             AUTOPUB-01 (자동 발행 — QUALITY-07 선행)
+PERSONA-REDESIGN-01 → DIGEST-04 (프론트엔드 검증)
+COMMUNITY-01 (커뮤니티 반응 수집)
+WEEKLY-01 (주간 다이제스트)
+AUTOPUB-01 (자동 발행)
 ```
 
 ---
