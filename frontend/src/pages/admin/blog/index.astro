@@ -162,13 +162,16 @@ const categoryOptions = Array.from(
                 data-source={post.source || 'manual'}
                 data-updated={post.updated_at || ''}
                 data-published={post.published_at || ''}
-                data-site-url={post.status === 'published' && post.locale ? `/${post.locale}/blog/${post.slug}/` : ''}
+                data-site-url={post.status === 'published' ? `/${post.locale ?? 'ko'}/blog/${post.slug}/` : ''}
               >
                 <div class="admin-list-info">
                   <div class="admin-list-title">
                     <a
-                      href={`/admin/blog/edit/${post.slug}`}
-                      data-site-url={post.status === 'published' ? `/${post.locale ?? 'ko'}/blog/${post.slug}/` : ''}
+                      href={post.status === 'published'
+                        ? `/${post.locale ?? 'ko'}/blog/${post.slug}/`
+                        : `/admin/blog/edit/${post.slug}`}
+                      target={post.status === 'published' ? '_blank' : undefined}
+                      rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
                     >{post.title}</a>
                   </div>
                   <div class="admin-list-meta">
@@ -381,16 +384,6 @@ const categoryOptions = Array.from(
     categoryFilter?.addEventListener('change', applyFilter);
     sourceFilter?.addEventListener('change', applyFilter);
     sortSelect?.addEventListener('change', applyFilter);
-
-    // Title click: open published site in new tab
-    list.querySelectorAll('a[data-site-url]').forEach((link) => {
-      const siteUrl = link.dataset.siteUrl;
-      if (!siteUrl) return;
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.open(siteUrl, '_blank', 'noopener,noreferrer');
-      });
-    });
 
     // Row click (outside actions/links): open published site in new tab
     list.addEventListener('click', (e) => {
