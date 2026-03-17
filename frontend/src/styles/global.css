@@ -7440,6 +7440,7 @@ pre:hover .blog-code-copy {
   width: 0%;
   height: 100%;
   background: var(--color-accent);
+  transition: width 600ms ease-out;
   transition: width 80ms ease-out;
   border-radius: 2px;
 }
