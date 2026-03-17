@@ -482,12 +482,17 @@ async def _generate_digest(
         )
     user_prompt = "\n\n---\n\n".join(news_items)
 
-    # Generate 3 personas
+    # Generate personas
     client = get_openai_client()
     model = settings.openai_model_main
     personas: dict[str, PersonaOutput] = {}
     digest_headline = ""
     digest_headline_ko = ""
+    digest_excerpt = ""
+    digest_excerpt_ko = ""
+    digest_tags: list[str] = []
+    digest_focus_items: list[str] = []
+    digest_focus_items_ko: list[str] = []
 
     MAX_DIGEST_RETRIES = 1  # 1 retry = 2 total attempts
 
@@ -516,11 +521,21 @@ async def _generate_digest(
                     ko=data.get("ko", ""),
                 )
 
-                # Capture headline from first persona (expert)
+                # Capture metadata from first persona (expert)
                 if not digest_headline and data.get("headline"):
                     digest_headline = data["headline"]
                 if not digest_headline_ko and data.get("headline_ko"):
                     digest_headline_ko = data["headline_ko"]
+                if not digest_excerpt and data.get("excerpt"):
+                    digest_excerpt = data["excerpt"]
+                if not digest_excerpt_ko and data.get("excerpt_ko"):
+                    digest_excerpt_ko = data["excerpt_ko"]
+                if not digest_tags and data.get("tags"):
+                    digest_tags = data["tags"]
+                if not digest_focus_items and data.get("focus_items"):
+                    digest_focus_items = data["focus_items"]
+                if not digest_focus_items_ko and data.get("focus_items_ko"):
+                    digest_focus_items_ko = data["focus_items_ko"]
                 usage = extract_usage_metrics(response, model)
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
@@ -651,6 +666,16 @@ async def _generate_digest(
             en_title = digest_headline or fallback_title
             title = f"{en_title} — AI {type_label} Daily" if en_title else f"AI {type_label} Daily — {batch_id}"
 
+        # Calculate reading time from expert content (longest persona)
+        expert_content = (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else ""
+        learner_content = (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else ""
+        word_count = len((expert_content or learner_content or "").split())
+        reading_time = max(1, round(word_count / 200))
+
+        # Select locale-appropriate excerpt and focus_items
+        excerpt = (digest_excerpt if locale == "en" else digest_excerpt_ko) or digest_excerpt or ""
+        focus_items = (digest_focus_items if locale == "en" else digest_focus_items_ko) or digest_focus_items or []
+
         row = {
             "title": title,
             "slug": slug,
@@ -658,8 +683,12 @@ async def _generate_digest(
             "category": "ai-news",
             "post_type": digest_type,
             "status": "draft",
-            "content_expert": (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else None,
-            "content_learner": (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else None,
+            "content_expert": expert_content or None,
+            "content_learner": learner_content or None,
+            "excerpt": excerpt or None,
+            "tags": digest_tags or [],
+            "focus_items": focus_items or [],
+            "reading_time_min": reading_time,
             "source_urls": source_urls,
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,

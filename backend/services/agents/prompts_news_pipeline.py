@@ -209,10 +209,23 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {{{{
   "headline": "Attention-grabbing English title summarizing today's top story",
   "headline_ko": "오늘의 핵심 뉴스를 요약하는 임팩트 있는 한국어 제목",
+  "excerpt": "1-2 sentence teaser that makes readers want to click — MUST be different from headline AND one-line summary",
+  "excerpt_ko": "클릭을 유도하는 1-2문장 미리보기 — 제목, 한 줄 요약과 반드시 다르게",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "focus_items": ["What changed today", "Why it matters now", "What to watch next"],
+  "focus_items_ko": ["오늘 무엇이 달라졌는가", "지금 왜 중요한가", "다음에 무엇을 지켜볼 것인가"],
   "en": "## One-Line Summary\\n...\\n\\n## LLM & SOTA Models\\n...",
   "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA 모델\\n..."
 }}}}
-```"""
+```
+
+## Field rules
+- **excerpt/excerpt_ko**: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body. Tease the "so what" — why should I care?
+- **tags**: 4-6 keyword tags relevant to today's news. Include: news category (e.g., "AI 뉴스"), company names (e.g., "Nvidia"), key technologies (e.g., "오픈소스 AI"). Mix English and Korean naturally.
+- **focus_items/focus_items_ko**: Exactly 3 bullet points summarizing this specific digest (NOT generic questions). Each must be a concrete statement about TODAY's news:
+  1. What specifically changed today (concrete fact, not a question)
+  2. Why this matters right now (specific impact, not generic importance)
+  3. What to watch for next (upcoming event, decision, or milestone)"""
 
 
 # --- Research Digest Sections (기술 뉴스) ---
