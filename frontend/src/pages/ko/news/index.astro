@@ -24,7 +24,7 @@ if (supabase) {
     .eq('status', 'published')
     .eq('locale', 'ko')
     .eq('category', 'ai-news')
-    .order('created_at', { ascending: false });
+    .order('published_at', { ascending: false });
 
   if (error) {
     console.error('[log-list-ko] Supabase error:', error.message);

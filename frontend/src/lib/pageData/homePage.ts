@@ -56,7 +56,7 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
       .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
       .eq('status', 'published')
       .eq('locale', locale)
-      .order('created_at', { ascending: false })
+      .order('published_at', { ascending: false })
       .limit(4),
 
     supabase
