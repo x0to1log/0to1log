@@ -793,7 +793,8 @@ async def _run_generate_term(
     )
     _log_handbook_stage("handbook.generate.basic", usage1)
 
-    # --- Call 2: EN Basic (with KO definition as context) ---
+    # --- Call 2 (EN Basic) + Call 3 (KO Advanced) — PARALLEL ---
+    # Both depend only on Call 1 output, so they can run concurrently.
     en_basic_prompt = (
         f"{user_prompt}\n\n"
         f"--- Context from Call 1 ---\n"
@@ -801,27 +802,7 @@ async def _run_generate_term(
         f"Definition (EN): {basic_data.get('definition_en', '')}"
     )
 
-    resp2 = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": GENERATE_BASIC_EN_PROMPT},
-            {"role": "user", "content": en_basic_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_tokens=16000,
-    )
-    en_basic_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-basic-en")
-    usage2 = extract_usage_metrics(resp2, model)
-
-    logger.info(
-        "Handbook generate call 2 (basic EN) for '%s': %d tokens",
-        req.term, usage2.get("tokens_used", 0),
-    )
-    _log_handbook_stage("handbook.generate.basic.en", usage2)
-
-    # --- Call 3: KO Advanced (with definition as context) ---
-    definition_context = basic_data.get("definition_en", "") or en_basic_data.get("definition_en", "") or req.definition_en
+    definition_context = basic_data.get("definition_en", "") or req.definition_en
     definition_ko_context = basic_data.get("definition_ko", "") or req.definition_ko
     advanced_prompt = (
         f"{user_prompt}\n\n"
@@ -830,26 +811,46 @@ async def _run_generate_term(
         f"Definition (KO): {definition_ko_context}"
     )
 
-    resp3 = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": GENERATE_ADVANCED_PROMPT},
-            {"role": "user", "content": advanced_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_tokens=16000,
+    resp2, resp3 = await asyncio.gather(
+        client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": GENERATE_BASIC_EN_PROMPT},
+                {"role": "user", "content": en_basic_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=16000,
+        ),
+        client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": GENERATE_ADVANCED_PROMPT},
+                {"role": "user", "content": advanced_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=16000,
+        ),
     )
+
+    en_basic_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-basic-en")
+    usage2 = extract_usage_metrics(resp2, model)
+    logger.info(
+        "Handbook generate call 2 (basic EN) for '%s': %d tokens",
+        req.term, usage2.get("tokens_used", 0),
+    )
+    _log_handbook_stage("handbook.generate.basic.en", usage2)
+
     advanced_ko_data = parse_ai_json(resp3.choices[0].message.content, "Handbook-generate-advanced-ko")
     usage3 = extract_usage_metrics(resp3, model)
-
     logger.info(
         "Handbook generate call 3 (advanced KO) for '%s': %d tokens",
         req.term, usage3.get("tokens_used", 0),
     )
     _log_handbook_stage("handbook.generate.advanced.ko", usage3)
 
-    # --- Call 4: EN Advanced (with definition as context) ---
+    # --- Call 4: EN Advanced (after Call 3 completes) ---
     resp4 = await client.chat.completions.create(
         model=model,
         messages=[

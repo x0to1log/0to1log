@@ -98,14 +98,45 @@
 - **상태:** todo (선행: 퀄리티 점수 데이터 축적)
 - **설계 참조:** [[2026-03-16-auto-publish-roadmap]]
 
+### 30. 파이프라인 최적화: 다이제스트 병렬화 `[OPT-01]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** Research + Business 다이제스트를 `asyncio.gather`로 동시 생성 (~25s 절감)
+- **설계 참조:** [[2026-03-17-pipeline-optimization]]
+
+### 31. 파이프라인 최적화: 핸드북 call 병렬화 `[OPT-02]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 핸드북 4-call 중 Call 2(EN Basic) + Call 3(KO Advanced) 병렬 실행 (용어당 ~5s 절감)
+- **의존성:** OPT-01
+
+### 32. 파이프라인 최적화: 핸드북 용어 동시 생성 `[OPT-03]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** 핸드북 용어 2개씩 동시 생성 (세마포어 제한, ~30s 절감)
+- **의존성:** OPT-02
+
+### 33. 데드 코드 정리 `[OPT-04]`
+- **체크:** [ ]
+- **상태:** todo
+- **목적:** `_generate_post()`, `_filter_terms_with_llm()` 제거
+- **의존성:** OPT-03
+
+### 34. 페르소나 완전성 강제 `[BUG-PERSONA-01]`
+- **체크:** [x]
+- **상태:** done
+- **목적:** 3개 페르소나 모두 성공해야만 포스트 저장 (부분 실패 시 저장 안 함)
+- **수정:** `_generate_digest()`, `_generate_post()` — `len(personas) < 3` 체크
+
 ---
 
 ## 의존성 순서
 
 ```
-[완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality
+[완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality → BUG-PERSONA-01
 
 [다음]
+OPT-01 → OPT-02 → OPT-03 → OPT-04 (파이프라인 최적화)
 COMMUNITY-01 → DIGEST-04 (검증)
                   ↓
              WEEKLY-01 (주간 다이제스트)
@@ -127,3 +158,4 @@ COMMUNITY-01 → DIGEST-04 (검증)
 - [[2026-03-16-auto-publish-roadmap|자동 발행 로드맵]]
 - [[2026-03-15-handbook-quality-design|Handbook 퀄리티 시스템 설계]]
 - [[Handbook-Prompt-Redesign|Handbook 프롬프트 재설계]]
+- [[2026-03-17-pipeline-optimization|파이프라인 최적화 계획]]

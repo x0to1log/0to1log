@@ -1,5 +1,5 @@
 """AI News Pipeline v3 orchestrator."""
-import json
+import asyncio
 import logging
 import time
 import uuid
@@ -12,15 +12,12 @@ from models.news_pipeline import (
     ClassifiedCandidate,
     PersonaOutput,
     PipelineResult,
-    RankedCandidate,
 )
 from services.agents.advisor import extract_terms_from_content, generate_term_content
 from services.agents.client import extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
-from services.agents.fact_extractor import extract_facts
-from services.agents.persona_writer import write_persona
 from services.agents.prompts_news_pipeline import get_digest_prompt
 from services.agents.ranking import classify_candidates
-from services.news_collection import collect_community_reactions, collect_news
+from services.news_collection import collect_news
 
 logger = logging.getLogger(__name__)
 
@@ -200,55 +197,6 @@ def cleanup_existing_batch(batch_id: str) -> dict[str, int]:
     return {"deleted_runs": len(run_ids), "deleted_logs": deleted_logs, "deleted_posts": deleted_posts}
 
 
-async def _filter_terms_with_llm(terms: list[dict]) -> list[dict]:
-    """2nd-pass LLM filter: verify extracted terms are real IT/CS/AI terms.
-
-    Uses gpt-4o-mini for low cost (~$0.01). Returns filtered list.
-    """
-    if not terms:
-        return []
-
-    term_names = [t.get("term", "") for t in terms if t.get("term")]
-    if not term_names:
-        return []
-
-    prompt = (
-        "You are a technical glossary editor. Given a list of terms extracted from AI news, "
-        "filter out terms that are NOT specific IT/CS/AI technical terms.\n\n"
-        "REMOVE:\n"
-        "- Adjectives or modifiers (AI-powered, AI-driven, data-driven)\n"
-        "- General concepts (data collection, AI guidelines, content accuracy)\n"
-        "- Overly broad categories (deep learning architecture, machine learning model)\n"
-        "- Non-technical terms (vulnerability without qualifier, early warning systems)\n\n"
-        "KEEP:\n"
-        "- Specific techniques (Transformer, RAG, RLHF, fine-tuning)\n"
-        "- Specific metrics (AUC, F1 score, perplexity)\n"
-        "- Specific tools/frameworks (PyTorch, LangChain, vLLM)\n"
-        "- Specific architectures (CNN, GAN, diffusion model)\n\n"
-        f"Terms to filter:\n{json.dumps(term_names)}\n\n"
-        "Return JSON: {\"approved\": [\"term1\", \"term2\", ...]}"
-    )
-
-    try:
-        client = get_openai_client()
-        response = await client.chat.completions.create(
-            model=settings.openai_model_light,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            temperature=0.1,
-            max_tokens=1024,
-        )
-        data = parse_ai_json(response.choices[0].message.content, "TermFilter")
-        approved = set(data.get("approved", []))
-        logger.info(
-            "LLM term filter: %d → %d (removed %d)",
-            len(terms), len(approved), len(terms) - len(approved),
-        )
-        return [t for t in terms if t.get("term") in approved]
-    except Exception as e:
-        logger.warning("LLM term filter failed, keeping all terms: %s", e)
-        return terms
-
 
 async def _extract_and_create_handbook_terms(
     article_texts: list[str],
@@ -292,36 +240,31 @@ async def _extract_and_create_handbook_terms(
     if not extracted:
         return 0, []
 
-    # Step 2: Check duplicates and generate content for new terms
+    # Step 2: Filter, dedup, and generate content for new terms (2 at a time)
     VALID_CATEGORIES = {
         "ai-ml", "db-data", "backend", "frontend-ux", "network",
         "security", "os-core", "devops", "performance", "web3",
         "ai-business",
     }
 
+    # Pre-filter terms before generation
+    valid_terms: list[tuple[str, str, str]] = []  # (term_name, korean_name, slug)
     for term_info in extracted:
         term_name = term_info.get("term", "").strip()
         korean_name = term_info.get("korean_name", "").strip()
         if not term_name:
             continue
-
-        # Skip overly broad terms (3+ words are usually categories, not specific terms)
         if len(term_name.split()) > 3:
-            logger.info("Skipping '%s' — too many words (likely a category, not a term)", term_name)
+            logger.info("Skipping '%s' — too many words", term_name)
             continue
-
-        # Skip adjective/modifier patterns (not standalone terms)
         lower = term_name.lower()
         if lower.endswith(("-powered", "-driven", "-based", "-enabled", "-oriented")):
-            logger.info("Skipping '%s' — adjective/modifier, not a standalone term", term_name)
+            logger.info("Skipping '%s' — adjective/modifier", term_name)
             continue
-
-        # Skip terms with invalid/missing category (non-IT domain)
         category = term_info.get("category", "")
         if category not in VALID_CATEGORIES:
             logger.info("Skipping '%s' — invalid category '%s'", term_name, category)
             continue
-
         slug = _slugify(term_name)
         if not slug:
             continue
@@ -342,75 +285,82 @@ async def _extract_and_create_handbook_terms(
             logger.warning("Duplicate check failed for '%s': %s", term_name, e)
             continue
 
-        # Generate content (2 LLM calls)
-        t_gen = time.monotonic()
-        try:
-            content_data, gen_usage = await generate_term_content(
-                term_name, korean_name,
-            )
-        except Exception as e:
-            error_msg = f"Handbook generate failed for '{term_name}': {e}"
-            logger.warning(error_msg)
-            errors.append(error_msg)
-            await _log_stage(
-                supabase, run_id, "handbook.auto_generate", "failed", t_gen,
-                error_message=error_msg,
-                debug_meta={"term": term_name},
-            )
-            continue
+        valid_terms.append((term_name, korean_name, slug))
 
-        # Insert as draft
-        try:
-            row = {
-                "term": term_name,
-                "slug": slug,
-                "korean_name": content_data.get("korean_name", korean_name),
-                "term_full": content_data.get("term_full", ""),
-                "korean_full": content_data.get("korean_full", ""),
-                "categories": content_data.get("categories", []),
-                "definition_ko": content_data.get("definition_ko", ""),
-                "definition_en": content_data.get("definition_en", ""),
-                "body_basic_ko": content_data.get("body_basic_ko", ""),
-                "body_basic_en": content_data.get("body_basic_en", ""),
-                "body_advanced_ko": content_data.get("body_advanced_ko", ""),
-                "body_advanced_en": content_data.get("body_advanced_en", ""),
-                "status": "draft",
-                "source": "pipeline",
-            }
-            result = supabase.table("handbook_terms").insert(row).execute()
-            if not result.data:
-                error_msg = f"Insert returned empty for '{term_name}' — row not persisted"
-                logger.error(error_msg)
-                errors.append(error_msg)
+    # Generate terms concurrently (max 2 at a time)
+    sem = asyncio.Semaphore(2)
+
+    async def _create_single_term(term_name: str, korean_name: str, slug: str) -> tuple[int, list[str]]:
+        """Generate and save a single handbook term. Returns (created_count, errors)."""
+        async with sem:
+            t_gen = time.monotonic()
+            try:
+                content_data, gen_usage = await generate_term_content(
+                    term_name, korean_name,
+                )
+            except Exception as e:
+                error_msg = f"Handbook generate failed for '{term_name}': {e}"
+                logger.warning(error_msg)
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "failed", t_gen,
                     error_message=error_msg,
+                    debug_meta={"term": term_name},
+                )
+                return 0, [error_msg]
+
+            try:
+                row = {
+                    "term": term_name,
+                    "slug": slug,
+                    "korean_name": content_data.get("korean_name", korean_name),
+                    "term_full": content_data.get("term_full", ""),
+                    "korean_full": content_data.get("korean_full", ""),
+                    "categories": content_data.get("categories", []),
+                    "definition_ko": content_data.get("definition_ko", ""),
+                    "definition_en": content_data.get("definition_en", ""),
+                    "body_basic_ko": content_data.get("body_basic_ko", ""),
+                    "body_basic_en": content_data.get("body_basic_en", ""),
+                    "body_advanced_ko": content_data.get("body_advanced_ko", ""),
+                    "body_advanced_en": content_data.get("body_advanced_en", ""),
+                    "status": "draft",
+                    "source": "pipeline",
+                }
+                result = supabase.table("handbook_terms").insert(row).execute()
+                if not result.data:
+                    error_msg = f"Insert returned empty for '{term_name}'"
+                    logger.error(error_msg)
+                    await _log_stage(
+                        supabase, run_id, "handbook.auto_generate", "failed", t_gen,
+                        error_message=error_msg, usage=gen_usage,
+                        debug_meta={"term": term_name, "slug": slug},
+                    )
+                    return 0, [error_msg]
+
+                logger.info("Created handbook draft: %s (%s)", term_name, slug)
+                await _log_stage(
+                    supabase, run_id, "handbook.auto_generate", "success", t_gen,
+                    output_summary=f"term={term_name}, slug={slug}",
                     usage=gen_usage,
                     debug_meta={"term": term_name, "slug": slug},
                 )
-                continue
-            terms_created += 1
-            logger.info("Created handbook draft: %s (%s)", term_name, slug)
+                return 1, []
+            except Exception as e:
+                error_msg = f"Failed to save handbook term '{term_name}': {e}"
+                logger.error(error_msg)
+                await _log_stage(
+                    supabase, run_id, "handbook.auto_generate", "failed", t_gen,
+                    error_message=error_msg, usage=gen_usage,
+                    debug_meta={"term": term_name, "slug": slug},
+                )
+                return 0, [error_msg]
 
-            await _log_stage(
-                supabase, run_id, "handbook.auto_generate", "success", t_gen,
-                output_summary=f"term={term_name}, slug={slug}",
-                usage=gen_usage,
-                debug_meta={
-                    "term": term_name,
-                    "slug": slug,
-                },
-            )
-        except Exception as e:
-            error_msg = f"Failed to save handbook term '{term_name}': {e}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-            await _log_stage(
-                supabase, run_id, "handbook.auto_generate", "failed", t_gen,
-                error_message=error_msg,
-                usage=gen_usage,
-                debug_meta={"term": term_name, "slug": slug},
-            )
+    if valid_terms:
+        term_results = await asyncio.gather(
+            *[_create_single_term(tn, kn, sl) for tn, kn, sl in valid_terms],
+        )
+        for created, term_errors in term_results:
+            terms_created += created
+            errors.extend(term_errors)
 
     logger.info("Handbook auto-extraction: %d terms created, %d errors", terms_created, len(errors))
     return terms_created, errors
@@ -594,7 +544,11 @@ async def _generate_digest(
                 error_message=error_msg, post_type=digest_type,
             )
 
-    if not personas:
+    if len(personas) < 3:
+        missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
+        error_msg = f"{digest_type} digest incomplete — missing personas: {missing}"
+        logger.error(error_msg)
+        errors.append(error_msg)
         return 0, errors, cumulative_usage
 
     # Quality check — score the generated digest
@@ -670,178 +624,6 @@ async def _generate_digest(
 
     return posts_created, errors, cumulative_usage
 
-
-async def _generate_post(
-    candidate: RankedCandidate,
-    post_type: str,
-    batch_id: str,
-    handbook_slugs: list[str],
-    supabase,
-    run_id: str,
-    raw_content: str = "",
-) -> tuple[int, list[str], dict[str, Any]]:
-    """Generate a single post (fact extraction + 3 personas + save EN/KO).
-
-    Returns (posts_created, errors, usage).
-    """
-    errors: list[str] = []
-    cumulative_usage: dict[str, Any] = {}
-    posts_created = 0
-
-    # Step 1: Collect community reactions
-    try:
-        reactions = await collect_community_reactions(candidate.title, candidate.url)
-    except Exception as e:
-        logger.warning("Community reactions failed for %s: %s", candidate.title, e)
-        reactions = ""
-
-    # Step 2: Extract facts
-    t0 = time.monotonic()
-    try:
-        MAX_ARTICLE_CHARS = 8000
-        article_body = (raw_content or candidate.snippet)[:MAX_ARTICLE_CHARS]
-        news_text = f"Title: {candidate.title}\nURL: {candidate.url}\n\n{article_body}"
-        fact_pack, fact_usage = await extract_facts(
-            news_text=news_text,
-            context_text=candidate.snippet,
-            community_text=reactions,
-        )
-        cumulative_usage = merge_usage_metrics(cumulative_usage, fact_usage)
-        fact_pack_json = fact_pack.model_dump()
-
-        await _log_stage(
-            supabase, run_id, f"facts:{post_type}", "success", t0,
-            input_summary=_trim(news_text),
-            output_summary=f"headline: {fact_pack.headline}, {len(fact_pack.key_facts)} facts",
-            usage=fact_usage,
-            post_type=post_type,
-            attempt=fact_usage.get("attempts"),
-            debug_meta={
-                "llm_input": _trim(news_text),
-                "llm_output": fact_pack_json,
-                "attempts": fact_usage.get("attempts"),
-            },
-        )
-    except Exception as e:
-        error_msg = f"{post_type} fact extraction failed: {e}"
-        logger.error(error_msg)
-        errors.append(error_msg)
-        await _log_stage(
-            supabase, run_id, f"facts:{post_type}", "failed", t0,
-            error_message=error_msg, post_type=post_type,
-        )
-        return 0, errors, cumulative_usage
-
-    # Step 3: Write all 3 personas (log each individually)
-    personas: dict[str, PersonaOutput] = {}
-    for persona_name in ("expert", "learner", "beginner"):
-        t_p = time.monotonic()
-        try:
-            persona_output, persona_usage = await write_persona(
-                persona=persona_name,
-                fact_pack=fact_pack,
-                handbook_slugs=handbook_slugs,
-                post_type=post_type,
-            )
-            cumulative_usage = merge_usage_metrics(cumulative_usage, persona_usage)
-
-            await _log_stage(
-                supabase, run_id,
-                f"persona:{post_type}:{persona_name}", "success", t_p,
-                output_summary=f"en={len(persona_output.en)}chars, ko={len(persona_output.ko)}chars",
-                usage=persona_usage,
-                post_type=post_type,
-                attempt=persona_usage.get("attempts"),
-                debug_meta={
-                    "attempts": persona_usage.get("attempts"),
-                    "en_length": len(persona_output.en),
-                    "ko_length": len(persona_output.ko),
-                    "en_preview": _trim(persona_output.en, 500),
-                    "ko_preview": _trim(persona_output.ko, 500),
-                },
-            )
-
-            personas[persona_name] = persona_output
-
-        except Exception as e:
-            error_msg = f"{post_type} {persona_name} writing failed: {e}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-            await _log_stage(
-                supabase, run_id,
-                f"persona:{post_type}:{persona_name}", "failed", t_p,
-                error_message=error_msg, post_type=post_type,
-            )
-
-    if not personas:
-        return 0, errors, cumulative_usage
-
-    # Step 4: Save EN + KO rows
-    missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
-    if missing:
-        logger.warning("Missing personas for %s %s: %s", post_type, candidate.title, missing)
-
-    t_save = time.monotonic()
-    translation_group_id = str(uuid.uuid4())
-    base_slug = _slugify(fact_pack.headline or candidate.title)
-
-    source_cards = [s.model_dump() for s in fact_pack.sources]
-    source_urls = [s.url for s in fact_pack.sources if s.url]
-
-    for locale in ("en", "ko"):
-        slug_suffix = "" if locale == "en" else "-ko"
-        slug = f"{batch_id}-{base_slug}{slug_suffix}"
-
-        title = (fact_pack.headline_ko or fact_pack.headline or candidate.title) if locale == "ko" \
-            else (fact_pack.headline or candidate.title)
-        row = {
-            "title": title,
-            "slug": slug,
-            "locale": locale,
-            "category": "ai-news",
-            "post_type": post_type,
-            "status": "draft",
-            "content_expert": (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else None,
-            "content_learner": (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else None,
-            "content_beginner": (personas["beginner"].en if locale == "en" else personas["beginner"].ko) if "beginner" in personas else None,
-            "fact_pack": fact_pack_json,
-            "source_cards": source_cards,
-            "source_urls": source_urls,
-            "pipeline_batch_id": batch_id,
-            "published_at": f"{batch_id}T09:00:00Z",
-            "pipeline_model": settings.openai_model_main,
-            "pipeline_tokens": cumulative_usage.get("tokens_used") if locale == "en" else None,
-            "pipeline_cost": cumulative_usage.get("cost_usd") if locale == "en" else None,
-            "translation_group_id": translation_group_id,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-        try:
-            result = supabase.table("news_posts").upsert(row).execute()
-            if not result.data:
-                error_msg = f"Upsert returned empty for {post_type} {locale}: {slug}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-            else:
-                posts_created += 1
-                logger.info("Saved %s %s draft: %s", post_type, locale, slug)
-        except Exception as e:
-            error_msg = f"Failed to save {post_type} {locale}: {e}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-
-    save_status = "success" if posts_created > 0 else "failed"
-    await _log_stage(
-        supabase, run_id, f"save:{post_type}", save_status, t_save,
-        output_summary=f"{posts_created} rows saved",
-        post_type=post_type,
-        debug_meta={
-            "slug_base": f"{batch_id}-{base_slug}",
-            "locales": ["en", "ko"],
-        },
-    )
-
-    return posts_created, errors, cumulative_usage
 
 
 async def run_daily_pipeline(
@@ -947,24 +729,36 @@ async def run_daily_pipeline(
         handbook_slugs = _fetch_handbook_slugs(supabase)
         raw_content_map = {c.url: c.raw_content for c in candidates if c.raw_content}
 
+        # Generate research + business digests in parallel
+        digest_tasks = []
         for digest_type, classified_items in [
             ("research", classification.research),
             ("business", classification.business),
         ]:
             if not classified_items:
                 continue
-            posts, errors, usage = await _generate_digest(
-                classified=classified_items,
-                digest_type=digest_type,
-                batch_id=batch_id,
-                handbook_slugs=handbook_slugs,
-                raw_content_map=raw_content_map,
-                supabase=supabase,
-                run_id=run_id,
+            digest_tasks.append(
+                _generate_digest(
+                    classified=classified_items,
+                    digest_type=digest_type,
+                    batch_id=batch_id,
+                    handbook_slugs=handbook_slugs,
+                    raw_content_map=raw_content_map,
+                    supabase=supabase,
+                    run_id=run_id,
+                )
             )
-            total_posts += posts
-            all_errors.extend(errors)
-            cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+
+        digest_results = await asyncio.gather(*digest_tasks, return_exceptions=True)
+        for result in digest_results:
+            if isinstance(result, Exception):
+                all_errors.append(f"Digest generation failed: {result}")
+                logger.error("Digest generation exception: %s", result)
+            else:
+                posts, errors, usage = result
+                total_posts += posts
+                all_errors.extend(errors)
+                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
         # Stage: summary (news only — handbook runs separately)
         t_summary = time.monotonic()
