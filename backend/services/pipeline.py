@@ -523,6 +523,47 @@ async def _generate_digest(
                     digest_headline_ko = data["headline_ko"]
                 usage = extract_usage_metrics(response, model)
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+
+                # Recover missing locale: if EN exists but KO is empty, re-generate KO only
+                ko_recovered = False
+                if persona_output.en.strip() and not persona_output.ko.strip():
+                    logger.warning(
+                        "Digest %s %s: EN ok (%d chars) but KO empty — re-generating KO only",
+                        digest_type, persona_name, len(persona_output.en),
+                    )
+                    try:
+                        ko_system = (
+                            f"{system_prompt}\n\n"
+                            "IMPORTANT: Generate ONLY the Korean (ko) content. "
+                            "The English version already exists. Return JSON: {{\"ko\": \"...\"}}"
+                        )
+                        ko_resp = await client.chat.completions.create(
+                            model=model,
+                            messages=[
+                                {"role": "system", "content": ko_system},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.4,
+                            max_tokens=8000,
+                        )
+                        ko_data = parse_ai_json(
+                            ko_resp.choices[0].message.content,
+                            f"Digest-{digest_type}-{persona_name}-ko-recovery",
+                        )
+                        ko_usage = extract_usage_metrics(ko_resp, model)
+                        cumulative_usage = merge_usage_metrics(cumulative_usage, ko_usage)
+                        recovered_ko = ko_data.get("ko", "")
+                        if recovered_ko.strip():
+                            persona_output = PersonaOutput(en=persona_output.en, ko=recovered_ko)
+                            ko_recovered = True
+                            logger.info(
+                                "KO recovery succeeded for %s %s: %d chars",
+                                digest_type, persona_name, len(recovered_ko),
+                            )
+                    except Exception as ko_err:
+                        logger.warning("KO recovery failed for %s %s: %s", digest_type, persona_name, ko_err)
+
                 personas[persona_name] = persona_output
 
                 await _log_stage(
@@ -534,6 +575,7 @@ async def _generate_digest(
                     attempt=attempt + 1,
                     debug_meta={
                         "attempt": attempt + 1, "attempts": attempt + 1,
+                        "ko_recovered": ko_recovered,
                         "en_length": len(persona_output.en),
                         "ko_length": len(persona_output.ko),
                         "en_preview": _trim(persona_output.en, 500),
