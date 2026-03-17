@@ -1059,6 +1059,15 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   background: transparent;
   overflow-x: auto;
   max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.newsprint-prose .code-window pre::-webkit-scrollbar { height: 6px; }
+.newsprint-prose .code-window pre::-webkit-scrollbar-track { background: transparent; }
+.newsprint-prose .code-window pre::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
 }
 
 /* Standalone pre (no Shiki / no language) */
@@ -1811,6 +1820,7 @@ html {
     width: 100%;
     padding: 0.5rem 0.15rem;
     font-size: 0.82rem;
+    min-height: 2.75rem; /* 44px 탭 타깃 확보 */
   }
 
   .site-brand-link {
@@ -1823,6 +1833,10 @@ html {
 
   .site-page-label--link {
     display: flex;
+    min-height: 2.75rem; /* 44px 탭 타깃 확보 */
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem; /* padding 보정 */
   }
 
   .site-utility-btn {
