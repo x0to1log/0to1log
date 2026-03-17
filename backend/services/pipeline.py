@@ -533,7 +533,7 @@ async def _generate_digest(
                     post_type=digest_type,
                     attempt=attempt + 1,
                     debug_meta={
-                        "attempt": attempt + 1,
+                        "attempt": attempt + 1, "attempts": attempt + 1,
                         "en_length": len(persona_output.en),
                         "ko_length": len(persona_output.ko),
                         "en_preview": _trim(persona_output.en, 500),
