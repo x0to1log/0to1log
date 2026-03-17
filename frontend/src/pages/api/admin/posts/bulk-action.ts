@@ -43,10 +43,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const now = new Date().toISOString();
 
   if (action === 'publish') {
-    const updateData: Record<string, any> = { status: 'published', published_at: now, updated_at: now };
+    // Set published_at only for posts that don't already have it (pipeline pre-sets batch date)
+    const { error: setDateErr } = await supabase
+      .from('news_posts')
+      .update({ published_at: now })
+      .in('id', ids)
+      .is('published_at', null);
+    if (setDateErr) {
+      errors.push({ id: 'bulk-date', reason: setDateErr.message });
+    }
+
     const { error } = await supabase
       .from('news_posts')
-      .update(updateData)
+      .update({ status: 'published', updated_at: now })
       .in('id', ids);
 
     if (error) {
