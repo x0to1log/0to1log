@@ -56,7 +56,8 @@ async def blog_translate(request: Request, body: BlogTranslateRequest, _user=Dep
         logger.error("Blog translate error: %s", e)
         raise HTTPException(status_code=502, detail="AI service unavailable")
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        logger.error("Blog translate runtime error: %s", e)
+        raise HTTPException(status_code=503, detail="Translation service error")
     except Exception as e:
         logger.error("Blog translate unexpected error: %s", e)
         raise HTTPException(status_code=500, detail="Translation failed")

@@ -254,7 +254,7 @@ async def get_ga4_analytics(
 
     except Exception as exc:
         logger.error("GA4 API error: %s", exc)
-        raise HTTPException(status_code=502, detail=f"GA4 API error: {exc}")
+        raise HTTPException(status_code=502, detail="Analytics service error")
 
     return GA4Response(
         period_start=start_date.isoformat(),

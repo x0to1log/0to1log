@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.rate_limit import limiter
@@ -24,8 +24,8 @@ class RecommendedPost(BaseModel):
 @limiter.limit("30/minute")
 async def similar_posts(
     request: Request,
-    post_id: str,
-    locale: str = "en",
+    post_id: str = Query(..., min_length=1, max_length=256),
+    locale: str = Query(default="en", pattern=r"^(en|ko)$"),
 ):
     """Return similar posts to the given post_id using vector similarity."""
     # No auth required — public endpoint
@@ -41,12 +41,10 @@ async def similar_posts(
 @limiter.limit("20/minute")
 async def for_you(
     request: Request,
-    locale: str = "en",
-    user_id: str = "",
+    locale: str = Query(default="en", pattern=r"^(en|ko)$"),
+    user_id: str = Query(..., min_length=1, max_length=256),
 ):
     """Return personalized recommendations. user_id passed as query param from SSR."""
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
 
     client = get_supabase()
     if not client:

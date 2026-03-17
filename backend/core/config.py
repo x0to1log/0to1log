@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     max_auto_terms_per_run: int = 5
     ga4_property_id: str = ""
     ga4_credentials_json: str = ""
+    cors_origins: str = '["https://0to1log.com"]'
 
 
 settings = Settings()

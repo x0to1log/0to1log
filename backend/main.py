@@ -1,3 +1,4 @@
+import json
 import logging
 
 from fastapi import FastAPI
@@ -7,6 +8,7 @@ from datetime import datetime, timezone
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from core.config import settings
 from core.rate_limit import limiter
 from routers import admin_ai, admin_blog_ai, admin_ga4, admin_product_ai, cron
 from routers.recommendations import router as recommendations_router
@@ -20,10 +22,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://0to1log.com", "http://localhost:4321"],
+    allow_origins=json.loads(settings.cors_origins),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type", "x-cron-secret"],
 )
 
 app.include_router(admin_ai.router, prefix="/api")
