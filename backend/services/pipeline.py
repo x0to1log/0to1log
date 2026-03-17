@@ -432,6 +432,7 @@ async def _check_digest_quality(
             post_type=digest_type,
             debug_meta={
                 "score": score,
+                "quality_score": score,
                 "breakdown": {k: v for k, v in data.items() if k != "score"},
                 "news_count": len(classified),
             },
@@ -488,61 +489,76 @@ async def _generate_digest(
     digest_headline = ""
     digest_headline_ko = ""
 
+    MAX_DIGEST_RETRIES = 1  # 1 retry = 2 total attempts
+
     for persona_name in ("expert", "learner", "beginner"):
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
-        try:
-            response = await client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.4,
-                max_tokens=16000,
-            )
-            data = parse_ai_json(
-                response.choices[0].message.content,
-                f"Digest-{digest_type}-{persona_name}",
-            )
-            persona_output = PersonaOutput(
-                en=data.get("en", ""),
-                ko=data.get("ko", ""),
-            )
 
-            # Capture headline from first persona (expert)
-            if not digest_headline and data.get("headline"):
-                digest_headline = data["headline"]
-            if not digest_headline_ko and data.get("headline_ko"):
-                digest_headline_ko = data["headline_ko"]
-            usage = extract_usage_metrics(response, model)
-            cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
-            personas[persona_name] = persona_output
+        for attempt in range(MAX_DIGEST_RETRIES + 1):
+            try:
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.4,
+                    max_tokens=16000,
+                )
+                data = parse_ai_json(
+                    response.choices[0].message.content,
+                    f"Digest-{digest_type}-{persona_name}",
+                )
+                persona_output = PersonaOutput(
+                    en=data.get("en", ""),
+                    ko=data.get("ko", ""),
+                )
 
-            await _log_stage(
-                supabase, run_id,
-                f"digest:{digest_type}:{persona_name}", "success", t_p,
-                output_summary=f"en={len(persona_output.en)}chars, ko={len(persona_output.ko)}chars",
-                usage=usage,
-                post_type=digest_type,
-                debug_meta={
-                    "en_length": len(persona_output.en),
-                    "ko_length": len(persona_output.ko),
-                    "en_preview": _trim(persona_output.en, 500),
-                    "ko_preview": _trim(persona_output.ko, 500),
-                    "news_count": len(classified),
-                },
-            )
-        except Exception as e:
-            error_msg = f"{digest_type} {persona_name} digest failed: {e}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-            await _log_stage(
-                supabase, run_id,
-                f"digest:{digest_type}:{persona_name}", "failed", t_p,
-                error_message=error_msg, post_type=digest_type,
-            )
+                # Capture headline from first persona (expert)
+                if not digest_headline and data.get("headline"):
+                    digest_headline = data["headline"]
+                if not digest_headline_ko and data.get("headline_ko"):
+                    digest_headline_ko = data["headline_ko"]
+                usage = extract_usage_metrics(response, model)
+                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+                personas[persona_name] = persona_output
+
+                await _log_stage(
+                    supabase, run_id,
+                    f"digest:{digest_type}:{persona_name}", "success", t_p,
+                    output_summary=f"en={len(persona_output.en)}chars, ko={len(persona_output.ko)}chars",
+                    usage=usage,
+                    post_type=digest_type,
+                    attempt=attempt + 1,
+                    debug_meta={
+                        "attempt": attempt + 1,
+                        "en_length": len(persona_output.en),
+                        "ko_length": len(persona_output.ko),
+                        "en_preview": _trim(persona_output.en, 500),
+                        "ko_preview": _trim(persona_output.ko, 500),
+                        "news_count": len(classified),
+                    },
+                )
+                break  # success — no more retries
+
+            except Exception as e:
+                logger.warning(
+                    "Digest %s %s attempt %d failed: %s",
+                    digest_type, persona_name, attempt + 1, e,
+                )
+                if attempt == MAX_DIGEST_RETRIES:
+                    error_msg = f"{digest_type} {persona_name} digest failed after {attempt + 1} attempts: {e}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    await _log_stage(
+                        supabase, run_id,
+                        f"digest:{digest_type}:{persona_name}", "failed", t_p,
+                        error_message=error_msg, post_type=digest_type,
+                        attempt=attempt + 1,
+                        debug_meta={"attempt": attempt + 1},
+                    )
 
     if len(personas) < 3:
         missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
@@ -598,6 +614,7 @@ async def _generate_digest(
             "content_beginner": (personas["beginner"].en if locale == "en" else personas["beginner"].ko) if "beginner" in personas else None,
             "source_urls": source_urls,
             "fact_pack": {**digest_meta, "quality_score": quality_score},
+            "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
             "published_at": f"{batch_id}T09:00:00Z",
             "pipeline_model": settings.openai_model_main,

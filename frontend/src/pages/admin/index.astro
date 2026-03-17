@@ -67,7 +67,7 @@ let staleDrafts: ActivityItem[] = [];
 try {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes, blogRes, monthlyLogsRes, handbookRunRes] = await Promise.all([
-    sb.from('news_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }),
+    sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
     sb.from('news_likes').select('id', { count: 'exact', head: true }),
@@ -105,7 +105,7 @@ try {
     .map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at, source: t.source }));
 
   const allItems: ActivityItem[] = [
-    ...posts.map((p) => ({ title: p.title, slug: p.slug, type: 'post' as const, status: p.status, updated_at: p.updated_at })),
+    ...posts.filter((p) => p.locale !== 'ko').map((p) => ({ title: p.title, slug: p.slug, type: 'post' as const, status: p.status, updated_at: p.updated_at, quality_score: p.quality_score })),
     ...terms.map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at, source: t.source })),
   ];
   allItems.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
@@ -415,6 +415,11 @@ function relativeTime(dateStr: string): string {
                   <span class="dashboard-activity-type">{item.type === 'post' ? 'Post' : 'Term'}</span>
                   <span class="dashboard-activity-title">{item.title}</span>
                   <span class={`admin-status-badge admin-status-badge--${item.status}`}>{item.status}</span>
+                  {item.quality_score != null && (
+                    <span class={`admin-quality-badge ${item.quality_score >= 80 ? 'admin-quality-badge--high' : item.quality_score >= 60 ? 'admin-quality-badge--mid' : 'admin-quality-badge--low'}`}>
+                      Q{item.quality_score}
+                    </span>
+                  )}
                   {item.source && item.source !== 'manual' && (
                     <span class={`admin-source-badge admin-source-badge--${item.source}`}>
                       {item.source === 'pipeline' ? 'Pipeline' : 'AI'}

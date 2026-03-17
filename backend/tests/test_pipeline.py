@@ -138,8 +138,8 @@ async def test_pipeline_digest_failure_continues():
 
     async def _mock_create(**kwargs):
         call_count["calls"] += 1
-        # First 3 calls (research expert/learner/beginner) fail
-        if call_count["calls"] <= 3:
+        # First 6 calls fail (research: 3 personas × 2 attempts each with retry)
+        if call_count["calls"] <= 6:
             raise Exception("API timeout")
         return _mock_openai_digest_response()
 

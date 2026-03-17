@@ -99,49 +99,64 @@
 - **설계 참조:** [[2026-03-16-auto-publish-roadmap]]
 
 ### 30. 파이프라인 최적화: 다이제스트 병렬화 `[OPT-01]`
-- **체크:** [ ]
-- **상태:** todo
-- **목적:** Research + Business 다이제스트를 `asyncio.gather`로 동시 생성 (~25s 절감)
-- **설계 참조:** [[2026-03-17-pipeline-optimization]]
+- **체크:** [x]
+- **상태:** done
+- **수정:** `pipeline.py` — `asyncio.gather`로 Research + Business 동시 생성
 
 ### 31. 파이프라인 최적화: 핸드북 call 병렬화 `[OPT-02]`
-- **체크:** [ ]
-- **상태:** todo
-- **목적:** 핸드북 4-call 중 Call 2(EN Basic) + Call 3(KO Advanced) 병렬 실행 (용어당 ~5s 절감)
-- **의존성:** OPT-01
+- **체크:** [x]
+- **상태:** done
+- **수정:** `advisor.py` — Call 2(EN Basic) + Call 3(KO Advanced) `asyncio.gather` 병렬
 
 ### 32. 파이프라인 최적화: 핸드북 용어 동시 생성 `[OPT-03]`
-- **체크:** [ ]
-- **상태:** todo
-- **목적:** 핸드북 용어 2개씩 동시 생성 (세마포어 제한, ~30s 절감)
-- **의존성:** OPT-02
+- **체크:** [x]
+- **상태:** done
+- **수정:** `pipeline.py` — `Semaphore(2)` + `asyncio.gather`
 
 ### 33. 데드 코드 정리 `[OPT-04]`
-- **체크:** [ ]
-- **상태:** todo
-- **목적:** `_generate_post()`, `_filter_terms_with_llm()` 제거
-- **의존성:** OPT-03
+- **체크:** [x]
+- **상태:** done
+- **수정:** `_generate_post()`, `_filter_terms_with_llm()` 삭제, 미사용 import 정리
 
 ### 34. 페르소나 완전성 강제 `[BUG-PERSONA-01]`
 - **체크:** [x]
 - **상태:** done
-- **목적:** 3개 페르소나 모두 성공해야만 포스트 저장 (부분 실패 시 저장 안 함)
-- **수정:** `_generate_digest()`, `_generate_post()` — `len(personas) < 3` 체크
+- **수정:** `_generate_digest()` — `len(personas) < 3` 시 포스트 저장 안 함
+
+### 35. Retry attempt 횟수 pipeline_logs 기록 `[OBSERVE-02]`
+- **체크:** [ ]
+- **상태:** doing
+- **목적:** 다이제스트 페르소나 생성에 retry 추가 + 모든 retry에서 attempt 횟수를 pipeline_logs에 체계적 기록
+- **수정 파일:** `pipeline.py` — 다이제스트 페르소나 루프에 retry + attempt 기록
+
+### 36. 퀄리티 점수 Phase 2 완성 `[QUALITY-07]`
+- **체크:** [ ]
+- **상태:** doing
+- **목적:** quality_score를 news_posts 독립 컬럼으로 분리 + 어드민 배지 + Analytics 차트 연동
+- **산출물:**
+  - DB: `news_posts.quality_score` 컬럼 추가
+  - Backend: 다이제스트 저장 시 quality_score 컬럼에 기록
+  - Frontend: 어드민 뉴스 리스트에 점수 배지, Analytics Quality Score Trend 차트 데이터 연동
+- **설계 참조:** [[2026-03-16-auto-publish-roadmap]] Phase 2
 
 ---
 
 ## 의존성 순서
 
 ```
-[완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality → BUG-PERSONA-01
+[완료] Pipeline v2 → Infra → Handbook → Digest v3 → Quality
+       → BUG-PERSONA-01 → OPT-01~04 (병렬화 + 데드코드)
+
+[진행 중]
+OBSERVE-02 (retry 기록)
+QUALITY-07 (퀄리티 점수 Phase 2)
 
 [다음]
-OPT-01 → OPT-02 → OPT-03 → OPT-04 (파이프라인 최적화)
 COMMUNITY-01 → DIGEST-04 (검증)
                   ↓
              WEEKLY-01 (주간 다이제스트)
                   ↓
-             AUTOPUB-01 (자동 발행)
+             AUTOPUB-01 (자동 발행 — QUALITY-07 선행)
 ```
 
 ---

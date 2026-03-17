@@ -2097,6 +2097,44 @@ pre {
   color: var(--color-accent);
 }
 
+.admin-quality-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.admin-quality-badge--high {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.admin-quality-badge--mid {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.admin-quality-badge--low {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .admin-quality-badge--high {
+  background: #14532d;
+  color: #86efac;
+}
+
+[data-theme="dark"] .admin-quality-badge--mid {
+  background: #713f12;
+  color: #fde047;
+}
+
+[data-theme="dark"] .admin-quality-badge--low {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
 .admin-source-badge--ai-suggested {
   background: #f0e6ff;
   color: #7c3aed;

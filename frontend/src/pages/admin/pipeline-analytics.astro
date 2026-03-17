@@ -136,12 +136,13 @@ type QualityEntry = { runKey: string; startedAt: string; type: string; score: nu
 const qualityEntries: QualityEntry[] = [];
 for (const q of (qualityLogs ?? []) as AnalyticsLog[]) {
   const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
-  if (typeof meta.quality_score === 'number') {
+  const score = (typeof meta.quality_score === 'number' ? meta.quality_score : typeof meta.score === 'number' ? meta.score : null) as number | null;
+  if (score !== null) {
     qualityEntries.push({
       runKey: q.pipeline_runs.run_key,
       startedAt: q.pipeline_runs.started_at,
-      type: q.pipeline_type.replace('quality.', ''),
-      score: meta.quality_score as number,
+      type: q.pipeline_type.replace('quality:', '').replace('quality.', ''),
+      score,
     });
   }
 }
