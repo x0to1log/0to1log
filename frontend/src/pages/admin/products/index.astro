@@ -401,10 +401,10 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
       const newSortOrder = isPinned ? 0 : -1;
       btn.disabled = true;
       try {
-        const res = await fetch('/api/admin/products/save', {
+        const res = await fetch('/api/admin/products/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, sort_order: newSortOrder }),
+          body: JSON.stringify({ id, action: isPinned ? 'unpin' : 'pin' }),
         });
         if (!res.ok) { showFeedback('Failed to update', true); return; }
 
