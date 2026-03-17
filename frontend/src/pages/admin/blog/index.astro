@@ -154,7 +154,7 @@ const categoryOptions = Array.from(
           <ul class="admin-list" id="post-list">
             {allPosts.map((post) => (
               <li
-                class="admin-list-item"
+                class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
                 data-status={post.status}
                 data-title={post.title.toLowerCase()}
                 data-locale={post.locale || ''}
@@ -162,10 +162,15 @@ const categoryOptions = Array.from(
                 data-source={post.source || 'manual'}
                 data-updated={post.updated_at || ''}
                 data-published={post.published_at || ''}
+                data-site-url={post.status === 'published' && post.locale ? `/${post.locale}/blog/${post.slug}/` : ''}
               >
                 <div class="admin-list-info">
                   <div class="admin-list-title">
-                    <a href={`/admin/blog/edit/${post.slug}`}>{post.title}</a>
+                    {post.status === 'published' && post.locale ? (
+                      <a href={`/${post.locale}/blog/${post.slug}/`} target="_blank" rel="noopener noreferrer">{post.title}</a>
+                    ) : (
+                      <a href={`/admin/blog/edit/${post.slug}`}>{post.title}</a>
+                    )}
                   </div>
                   <div class="admin-list-meta">
                     <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
@@ -265,6 +270,10 @@ const categoryOptions = Array.from(
 
   .admin-list-toolbar-filters .admin-select {
     width: auto;
+  }
+
+  .admin-list-item--published {
+    cursor: pointer;
   }
 
   @media (max-width: 640px) {
@@ -373,6 +382,14 @@ const categoryOptions = Array.from(
     categoryFilter?.addEventListener('change', applyFilter);
     sourceFilter?.addEventListener('change', applyFilter);
     sortSelect?.addEventListener('change', applyFilter);
+
+    list.addEventListener('click', (e) => {
+      const item = e.target.closest('.admin-list-item--published');
+      if (!item) return;
+      if (e.target.closest('.admin-list-actions') || e.target.closest('a')) return;
+      const siteUrl = item.dataset.siteUrl;
+      if (siteUrl) window.open(siteUrl, '_blank', 'noopener,noreferrer');
+    });
 
     document.querySelectorAll('[data-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {
