@@ -19,17 +19,17 @@ const pricingLabel: Record<string, string> = {
 ---
 
 <a href={href} class="home-product-card">
-  {logoUrl
-    ? <img src={logoUrl} alt={name} class="home-product-card-logo" width="36" height="36" loading="lazy" />
-    : <div class="home-product-card-logo-placeholder">{name.charAt(0)}</div>
-  }
-  <div class="home-product-card-text">
+  <div class="home-product-card-top">
+    {logoUrl
+      ? <img src={logoUrl} alt={name} class="home-product-card-logo" width="36" height="36" loading="lazy" />
+      : <div class="home-product-card-logo-placeholder">{name.charAt(0)}</div>
+    }
     <span class="home-product-card-name">{name}</span>
-    {tagline && <p class="home-product-card-tagline">{tagline}</p>}
+    {pricing && (
+      <span class="product-pricing-badge home-product-card-badge" data-pricing={pricing}>
+        {pricingLabel[pricing] ?? pricing}
+      </span>
+    )}
   </div>
-  {pricing && (
-    <span class="product-pricing-badge" data-pricing={pricing} style="margin-left:auto;flex-shrink:0">
-      {pricingLabel[pricing] ?? pricing}
-    </span>
-  )}
+  {tagline && <p class="home-product-card-tagline">{tagline}</p>}
 </a>

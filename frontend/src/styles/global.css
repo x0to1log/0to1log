@@ -10177,11 +10177,11 @@ pre:hover .blog-code-copy {
 
 .home-product-card {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.4rem;
   padding: 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: 6px;
   text-decoration: none;
   color: inherit;
   background-color: var(--color-bg-primary);
@@ -10196,12 +10196,17 @@ pre:hover .blog-code-copy {
 .home-product-card:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-  border-radius: 4px;
+}
+
+.home-product-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .home-product-card-logo {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   border-radius: 6px;
   background: #fff;
@@ -10210,8 +10215,8 @@ pre:hover .blog-code-copy {
 }
 
 .home-product-card-logo-placeholder {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   background-color: var(--color-accent-subtle);
   color: var(--color-accent);
@@ -10219,39 +10224,41 @@ pre:hover .blog-code-copy {
   align-items: center;
   justify-content: center;
   font-family: var(--font-ui);
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
-.home-product-card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
 .home-product-card-name {
   font-family: var(--font-ui);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-product-card-badge {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .home-product-card-tagline {
   font-size: 0.78rem;
   color: var(--color-text-secondary);
   margin: 0;
-  white-space: nowrap;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* --- Products responsive --- */
-@media (min-width: 640px) {
+@media (min-width: 480px) {
   .home-product-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -10264,6 +10271,12 @@ pre:hover .blog-code-copy {
 
   .home-product-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-product-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
