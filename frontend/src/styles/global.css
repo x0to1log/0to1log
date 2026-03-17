@@ -9491,20 +9491,29 @@ pre:hover .blog-code-copy {
 }
 
 .product-card-logo {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 10px;
   flex-shrink: 0;
   background: #fff;
-  padding: 2px;
+  padding: 3px;
 }
 
 .product-card-logo-empty {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   background: var(--color-bg-tertiary);
+}
+
+@media (max-width: 767px) {
+  .product-card-logo,
+  .product-card-logo-empty {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+  }
 }
 
 .product-card-text {
