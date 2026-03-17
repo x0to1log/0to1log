@@ -39,6 +39,7 @@ export interface ProductDetailData {
   id: string;
   slug: string;
   name: string;
+  name_original: string;
   name_ko: string | null;
   url: string;
   tagline: string | null;
@@ -100,7 +101,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, tagline, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
@@ -193,6 +194,7 @@ export async function getProductDetailData(
     id: raw.id,
     slug: raw.slug,
     name: (locale === 'ko' ? raw.name_ko || raw.name : raw.name) as string,
+    name_original: raw.name as string,
     name_ko: raw.name_ko,
     url: raw.url,
     tagline: (locale === 'ko' ? raw.tagline_ko || raw.tagline : raw.tagline) as string | null,

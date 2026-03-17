@@ -57,6 +57,9 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
       )}
       <div class="product-detail-hero-text">
         <h1 class="product-detail-name">{product.name}</h1>
+        {locale === 'ko' && product.name_original !== product.name && (
+          <span class="product-detail-name-original">{product.name_original}</span>
+        )}
         {product.tagline && (
           <p class="product-detail-tagline">{product.tagline}</p>
         )}
