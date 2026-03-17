@@ -28,24 +28,41 @@ function getLocale(): string {
 
 function buildPopupHtml(data: TermData, slug: string): string {
   const locale = getLocale();
-  const catLabels = (data.categories || []).join(' · ');
-  const learnMoreText = locale === 'ko' ? '자세히 보기' : 'Learn more';
+  const catLabel = (data.categories && data.categories.length > 0)
+    ? data.categories[0].replace(/-/g, ' ').toUpperCase()
+    : (locale === 'ko' ? '용어집' : 'GLOSSARY');
+  const learnMoreText = locale === 'ko' ? '전체 항목 보기 →' : 'Full entry →';
 
   let html = `<div class="handbook-popup" role="dialog" aria-describedby="handbook-popup-desc">`;
+
   html += `<div class="handbook-popup-header">`;
+  html += `<span class="handbook-popup-cat">${esc(catLabel)}</span>`;
+  html += `<button class="handbook-popup-close" type="button" aria-label="Close">`;
+  html += `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">`;
+  html += `<line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>`;
+  html += `</svg>`;
+  html += `</button>`;
+  html += `</div>`;
+
+  html += `<div class="handbook-popup-title-row">`;
   html += `<span class="handbook-popup-term">${esc(data.term)}</span>`;
   if (data.korean_name) {
-    html += ` <span class="handbook-popup-korean">${esc(data.korean_name)}</span>`;
+    html += `<span class="handbook-popup-korean">${esc(data.korean_name)}</span>`;
   }
-  html += `<button class="handbook-popup-close" type="button" aria-label="Close">&times;</button>`;
   html += `</div>`;
-  html += `<div class="handbook-popup-content" id="handbook-popup-desc">`;
-  if (data.definition) html += `<p>${esc(data.definition)}</p>`;
-  html += `</div>`;
+
+  html += `<div class="handbook-popup-rule"></div>`;
+
+  if (data.definition) {
+    html += `<div class="handbook-popup-content" id="handbook-popup-desc">`;
+    html += `<p>${esc(data.definition)}</p>`;
+    html += `</div>`;
+  }
+
   html += `<div class="handbook-popup-footer">`;
-  if (catLabels) html += `<span class="handbook-popup-categories">${esc(catLabels)}</span>`;
   html += `<a href="/${locale}/handbook/${slug}/" class="handbook-popup-link">${learnMoreText}</a>`;
   html += `</div>`;
+
   html += `</div>`;
   return html;
 }
