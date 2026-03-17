@@ -588,14 +588,16 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 ### Section key descriptions (Korean — basic_ko_*):
 
-- **basic_ko_1_plain**: 비유와 일상 예시로 설명. 기술 용어 최소화. 이 개념이 해결하는 문제를 쉬운 말로. 최소 300자.
-- **basic_ko_2_example**: 실생활 비유 3~4개. 형식: **굵은 제목**: 설명. 일상에서 접할 수 있는 상황에 빗대어 설명.
-- **basic_ko_3_glance**: 이해를 돕는 마크다운 표 1~2개. 수식 없이 쉬운 언어로. 예: 비교표, 단계표, 설명표. 반드시 마크다운 테이블(| 형식) 사용.
-- **basic_ko_4_why**: 왜 알아야 하는지. 실생활/업무와의 연관성. 4~5개 bullet point.
-- **basic_ko_5_where**: 제품, 서비스, 일상에서의 사용 사례 4~5개. 현장 말투로: "넷플릭스가 추천 영상을 골라주는 데 이 기술이 쓰여요" 스타일.
-- **basic_ko_6_caution**: 흔한 오해, 함정, 잘못된 상식 3~4개. 쉬운 언어로.
-- **basic_ko_7_comm**: 실제 대화나 기사에서 이 용어가 등장하는 예시 문장 4~5개. **핵심 용어를 굵게 표시**.
-- **basic_ko_8_related**: 관련 용어 4~6개 + 한 줄 설명. 형식: **용어** — 왜 관련 있는지 (쉬운 말로)
+Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
+
+- **basic_ko_1_plain**: 이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조. 최소 300자.
+- **basic_ko_2_example**: 이 개념이 실제로 적용되는 **구체적 시나리오** 3~4개. 1_plain의 비유와 겹치면 안 됨. 형식: **시나리오 제목**: 구체적 상황 설명. 예: "번역기가 문장을 한 단어씩 생성할 때" (O) / "날씨 예측" (X — 너무 일반적).
+- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 단순 용어 설명표가 아님. 예: "AR vs MA vs ARIMA 비교" 또는 "단계별 동작 과정". 반드시 마크다운 테이블(| 형식) 사용.
+- **basic_ko_4_why**: **구체적인 영향** — 이 개념이 없으면 어떤 문제가 생기는지, 있으면 뭐가 달라지는지. "알면 좋다" 수준이 아니라 "모르면 이런 실수를 한다" 수준으로. 4~5개 bullet point.
+- **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마.
+- **basic_ko_6_caution**: 이 개념에 대한 **흔한 오해**와 **실제 사실**을 대비. 형식: "❌ 오해: ~라고 생각하기 쉽다 → ✅ 실제: ~이다". 3~4개.
+- **basic_ko_7_comm**: 실제 **기술 기사, 회의, 면접**에서 이 용어가 등장하는 예시 문장 4~5개. 자연스러운 문맥에서 사용되는 모습. **핵심 용어를 굵게 표시**.
+- **basic_ko_8_related**: 관련 용어 4~6개. **이 용어와의 관계**를 명확히. 형식: **용어** — "X의 확장 버전" / "X와 반대 개념" / "X를 이해하려면 먼저 알아야 하는 개념"
 
 ## Output JSON Structure
 
@@ -621,9 +623,11 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas.
-- 📊 glance sections MUST use markdown tables (| format).
+- 📊 glance sections MUST be comparison/contrast tables, NOT simple definition tables.
 - Every section field must have substantive content.
 - Use **bold formatting** for key terms.
+- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure whether a product uses this technology, do NOT claim it does.
+- NO REPETITION across sections: each section must add NEW information. Do not reuse analogies, examples, or points from other sections.
 
 Respond in JSON format only."""
 
@@ -655,14 +659,16 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 ### Section key descriptions (English — basic_en_*):
 
-- **basic_en_1_plain**: Analogy-driven introduction. Explain what problem this solves in simple terms. No assumed technical knowledge. Min 300 chars.
-- **basic_en_2_example**: 3-4 real-life analogies and comparisons. Format: **Bold label**: description. Use everyday situations readers already know.
-- **basic_en_3_glance**: 1-2 markdown tables to aid understanding. No complex formulas. Must use markdown table (| format).
-- **basic_en_4_why**: Why you should know this. Connection to daily life and work. 4-5 bullet points.
-- **basic_en_5_where**: 4-5 real-world usage examples in products, services, and daily life. Practical tone: "Netflix uses this to recommend videos" style.
-- **basic_en_6_caution**: 3-4 common misconceptions, traps, or wrong assumptions. Simple language.
-- **basic_en_7_comm**: 4-5 example sentences showing how this term appears in real conversations or articles. **Bold the key term** in each phrase.
-- **basic_en_8_related**: 4-6 related terms with one-line explanations. Format: **Term** — why it's related (in simple terms)
+Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
+
+- **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." Min 300 chars.
+- **basic_en_2_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation. E.g., "When a translation model generates words one at a time" (O) / "Weather prediction" (X — too generic).
+- **basic_en_3_glance**: A **comparison table** between this concept and similar ones. NOT a glossary table. E.g., "AR vs MA vs ARIMA" or "Step-by-step process". Must use markdown table (| format).
+- **basic_en_4_why**: **Concrete impact** — what goes wrong without this concept, what improves with it. Not "good to know" level but "you'll make this mistake if you don't know" level. 4-5 bullet points.
+- **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it.
+- **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
+- **basic_en_7_comm**: 4-5 example sentences from real **tech articles, meetings, or interviews**. Natural context usage. **Bold the key term**.
+- **basic_en_8_related**: 4-6 related terms with **relationship type**. Format: **Term** — "extension of X" / "opposite of X" / "prerequisite for understanding X"
 
 ## Output JSON Structure
 
@@ -683,9 +689,11 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas.
-- 📊 glance sections MUST use markdown tables (| format).
+- 📊 glance sections MUST be comparison/contrast tables, NOT simple definition tables.
 - Every section field must have substantive content.
 - Use **bold formatting** for key terms.
+- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure whether a product uses this technology, do NOT claim it does.
+- NO REPETITION across sections: each section must add NEW information. Do not reuse analogies, examples, or points from other sections.
 
 Respond in JSON format only."""
 
@@ -746,11 +754,13 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - Include code snippets, formulas, and architecture details.
-- 📐 formulas/table sections MUST use markdown tables (| format).
+- 📐 formulas/table sections MUST use comparison/contrast tables, NOT simple definition tables.
 - Every section field must have substantive content.
 - Use **bold formatting** for key terms.
 - Reference links in refs fields must be real URLs to well-known resources.
 - Do NOT repeat content from the basic version.
+- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure, do NOT claim it.
+- NO REPETITION across sections: each section must add NEW information.
 
 Respond in JSON format only."""
 
@@ -811,11 +821,13 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - Include code snippets, formulas, and architecture details.
-- 📐 formulas/table sections MUST use markdown tables (| format).
+- 📐 formulas/table sections MUST use comparison/contrast tables, NOT simple definition tables.
 - Every section field must have substantive content.
 - Use **bold formatting** for key terms.
 - Reference links in refs fields must be real URLs to well-known resources.
 - Do NOT repeat content from the basic version.
+- FACTUAL ACCURACY: Only include examples and use cases you are confident about. If unsure, do NOT claim it.
+- NO REPETITION across sections: each section must add NEW information.
 
 Respond in JSON format only."""
 
