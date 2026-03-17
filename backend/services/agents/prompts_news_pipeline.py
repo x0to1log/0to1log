@@ -244,10 +244,10 @@ Writing rules:
 - Each news item: 3-4 paragraphs (what happened + technical deep-dive + production implications + decision recommendation)"""
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
-- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters, and how to start using them. Use analogies to aid understanding. Include getting-started links.
-- **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do, who would use them, and step-by-step to get started.
-- **## Research Papers (ko: ## 연구 논문)** — Key papers explained: the problem, the approach, and how it applies to real projects.
-- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions: tutorials to follow, repos to clone, APIs to test. Link to official docs. 3-4 paragraphs.
+- **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters. Start each item with an everyday analogy, then explain. Include getting-started links.
+- **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do (with analogy), who would use them, and step-by-step to get started.
+- **## Research Papers (ko: ## 연구 논문)** — Key papers explained with analogy: the problem, the approach, and how it applies to real projects.
+- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions with links to the source articles from above. Use the URLs already cited in the news items. 3-4 paragraphs.
 - **## Learn More (ko: ## 더 알아보기)** — Key AI terms from today's news linked to the Handbook. A mini learning path: "Today you encountered [term1], [term2], [term3] — check their Handbook pages to learn more." 2-3 paragraphs."""
 
 RESEARCH_LEARNER_GUIDE = """READER: Anyone interested in AI tech — developers, PMs, students, career changers, curious non-engineers. From beginners to mid-level practitioners.
@@ -256,14 +256,16 @@ AFTER READING: The reader understands today's news, tries a new tool, and learne
 
 Writing rules:
 - Write like a senior colleague explaining things over coffee — approachable but substantive
-- EVERY news item MUST include at least one analogy: "MoE is like a hospital with specialist doctors — each expert handles what they're best at"
-- Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE: "MoE (Mixture of Experts — a way to make models more efficient by using specialized sub-networks)"
-- For each item: explain what it does, who benefits, and HOW to start (link to docs, tutorials, quickstarts)
+- EVERY news item MUST START with an everyday analogy before diving into details
+- BAD: "엔비디아가 오픈웨이트 AI 모델에 260억 달러를 투자합니다."
+- GOOD: "여러분이 요리할 때 레시피를 공유하면 더 많은 사람이 맛있는 요리를 만들 수 있듯이, 엔비디아가 AI 모델의 '레시피'를 누구나 쓸 수 있게 공개하면서 260억 달러를 투자합니다."
+- Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE
+- For each item: explain what it does, who benefits, and HOW to start
 - Connect concepts to daily life: "This is why ChatGPT responses are getting faster and cheaper"
 - Focus on practical applicability: "If you're building a chatbot, this reduces your inference cost by 40%"
-- The "What To Try" section must contain SPECIFIC actions with real URLs: "Clone [repo-name](https://github.com/...) and run the demo"
+- The "What To Try" section: link to the SOURCE ARTICLE URLs from the news items above — do NOT invent product URLs you don't know
 - The "Learn More" section must list today's key terms with Handbook links as a learning path
-- Each news item: 2-3 paragraphs (what + why it matters + how to get started or what it means for daily life)"""
+- Each news item: 2-3 paragraphs (analogy first + why it matters + how to get started or what it means for daily life)"""
 
 
 # --- Business Digest Sections (비즈니스 뉴스) ---
@@ -297,11 +299,11 @@ Writing rules:
 - Each news item: 3-4 paragraphs (what happened + strategic rationale + competitive dynamics + decision recommendation)"""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
-- **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your life and work. Before discussing a company's move, briefly explain what it does. 2-3 paragraphs per item.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: what changed, what it means, and why you should care. 2-3 paragraphs per item.
-- **## New Tools (ko: ## 새로운 도구)** — New AI tools worth knowing: what they do, pricing, who they're for, and whether they're worth trying. 2-3 paragraphs per item.
+- **## Big Tech (ko: ## 빅테크)** — What the big companies did and how it affects your life and work. Start each item with an everyday analogy, then explain. Before discussing a company's move, briefly explain what it does. 2-3 paragraphs per item.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: start with analogy, then what changed, what it means, and why you should care. 2-3 paragraphs per item.
+- **## New Tools (ko: ## 새로운 도구)** — New AI tools worth knowing: what they do (with analogy), pricing, who they're for, and whether they're worth trying. 2-3 paragraphs per item.
 - **## What This Means for You (ko: ## 나에게 미치는 영향)** — How today's news connects to your daily life, career, and work. Specific changes to anticipate. 3-4 paragraphs.
-- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week: tools to test, proposals to draft, articles to read.
+- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week. Link to the source article URLs from the news items above for each action.
 - **## Learn More (ko: ## 더 알아보기)** — Key business/AI terms from today linked to the Handbook. Build your AI vocabulary: "Today you encountered [term1], [term2], [term3] — check their Handbook pages." 2-3 paragraphs."""
 
 BUSINESS_LEARNER_GUIDE = """READER: Anyone interested in AI business — marketers, planners, developers, students, curious professionals. From beginners to practitioners.
@@ -311,13 +313,15 @@ AFTER READING: The reader understands today's business news, takes a specific ac
 Writing rules:
 - Write like a knowledgeable colleague explaining what matters over lunch — approachable, not lecturing
 - Before discussing a company's strategy, briefly explain what the company does: "Meta (the company behind Facebook and Instagram) is..."
-- EVERY news item MUST include at least one analogy or comparison to everyday life: "Think of open-weight models like a recipe anyone can use — you don't have to buy the restaurant's meal"
+- EVERY news item MUST START with an everyday analogy before diving into details
+- BAD: "Yann LeCun의 스타트업 AMI가 10억 달러를 유치했습니다."
+- GOOD: "자동차가 스스로 운전하려면 단순히 도로를 '보는' 것만으로는 부족하듯이, AI도 단순히 텍스트를 예측하는 것을 넘어서야 합니다. Yann LeCun의 스타트업 AMI가 바로 이 '넘어서는 AI'를 만들기 위해 10억 달러를 유치했습니다."
 - Keep business/AI terms but ALWAYS explain inline ON FIRST USE: "Series A (the first major investment round a startup receives)"
 - Connect every item to practical impact: "If your marketing team runs paid ads, Meta's new AI tools could change your workflow because..."
 - Connect to daily life too: "This matters because the ads you see on Instagram will get smarter"
-- Action Items must include real URLs where possible: "Book a demo at [company.com/demo](URL)", "Read the announcement at [Source](URL)"
+- Action Items: link to the SOURCE ARTICLE URLs from the news items — do NOT invent product URLs. Format: "자세한 내용은 [Source Name](URL)에서 확인하세요"
 - The "Learn More" section must list today's key terms with Handbook links as a learning path
-- Each news item: 2-3 paragraphs (what happened + how it affects you + what to do about it)
+- Each news item: 2-3 paragraphs (analogy first + how it affects you + what to do about it)
 - Make it interesting and accessible, not dumbed down"""
 
 
