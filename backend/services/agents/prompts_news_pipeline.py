@@ -226,7 +226,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   1. What specifically changed today (concrete fact, not a question)
   2. Why this matters right now (specific impact, not generic importance)
   3. What to watch for next (upcoming event, decision, or milestone)
-- **Handbook links in "Learn More"**: Use the term's display name as link text, NOT the slug. BAD: `[ai-startup-fundraising](/handbook/ai-startup-fundraising)`. GOOD: `[AI 스타트업 자금 조달](/handbook/ai-startup-fundraising)`."""
+- **Handbook links**: When mentioning AI/tech terms in the body, use the term's display name as link text, NOT the slug. BAD: `[ai-startup-fundraising](/handbook/ai-startup-fundraising)`. GOOD: `[AI 스타트업 자금 조달](/handbook/ai-startup-fundraising)`."""
 
 
 # --- Research Digest Sections (기술 뉴스) ---
@@ -261,8 +261,7 @@ RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters. Start each item with an everyday analogy, then explain. Include getting-started links.
 - **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do (with analogy), who would use them, and step-by-step to get started.
 - **## Research Papers (ko: ## 연구 논문)** — Key papers explained with analogy: the problem, the approach, and how it applies to real projects.
-- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions with links to the source articles from above. Use the URLs already cited in the news items. 3-4 paragraphs.
-- **## Learn More (ko: ## 더 알아보기)** — Key AI terms from today's news linked to the Handbook. A mini learning path: "Today you encountered [term1], [term2], [term3] — check their Handbook pages to learn more." 2-3 paragraphs."""
+- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions with links to the source articles from above. Use the URLs already cited in the news items. 3-4 paragraphs."""
 
 RESEARCH_LEARNER_GUIDE = """READER: Anyone interested in AI tech — developers, PMs, students, career changers, curious non-engineers. From beginners to mid-level practitioners.
 READER'S GOAL: Understand today's AI developments AND apply them — learn new concepts, find tools, try tutorials, build vocabulary.
@@ -278,7 +277,7 @@ Writing rules:
 - Connect concepts to daily life: "This is why ChatGPT responses are getting faster and cheaper"
 - Focus on practical applicability: "If you're building a chatbot, this reduces your inference cost by 40%"
 - The "What To Try" section: link to the SOURCE ARTICLE URLs from the news items above — do NOT invent product URLs you don't know
-- The "Learn More" section must list today's key terms with Handbook links as a learning path
+- Technical/business terms should be linked to Handbook in the BODY TEXT where they first appear — readers learn in context, not in a separate section
 - Each news item: 2-3 paragraphs (analogy first + why it matters + how to get started or what it means for daily life)"""
 
 
@@ -317,8 +316,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: start with analogy, then what changed, what it means, and why you should care. 2-3 paragraphs per item.
 - **## New Tools (ko: ## 새로운 도구)** — New AI tools worth knowing: what they do (with analogy), pricing, who they're for, and whether they're worth trying. 2-3 paragraphs per item.
 - **## What This Means for You (ko: ## 나에게 미치는 영향)** — How today's news connects to your daily life, career, and work. Specific changes to anticipate. 3-4 paragraphs.
-- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week. Link to the source article URLs from the news items above for each action.
-- **## Learn More (ko: ## 더 알아보기)** — Key business/AI terms from today linked to the Handbook. Build your AI vocabulary: "Today you encountered [term1], [term2], [term3] — check their Handbook pages." 2-3 paragraphs."""
+- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week. Link to the source article URLs from the news items above for each action."""
 
 BUSINESS_LEARNER_GUIDE = """READER: Anyone interested in AI business — marketers, planners, developers, students, curious professionals. From beginners to practitioners.
 READER'S GOAL: Understand AI business developments AND apply them — find useful tools, anticipate industry changes, build AI business vocabulary.
@@ -334,7 +332,7 @@ Writing rules:
 - Connect every item to practical impact: "If your marketing team runs paid ads, Meta's new AI tools could change your workflow because..."
 - Connect to daily life too: "This matters because the ads you see on Instagram will get smarter"
 - Action Items: link to the SOURCE ARTICLE URLs from the news items — do NOT invent product URLs. Format: "자세한 내용은 [Source Name](URL)에서 확인하세요"
-- The "Learn More" section must list today's key terms with Handbook links as a learning path
+- Technical/business terms should be linked to Handbook in the BODY TEXT where they first appear — readers learn in context, not in a separate section
 - Each news item: 2-3 paragraphs (analogy first + how it affects you + what to do about it)
 - Make it interesting and accessible, not dumbed down"""
 
