@@ -13,6 +13,7 @@
 
 
 
+
 /* ===========================
    TAILWIND v4 THEME
    =========================== */
@@ -24,19 +25,19 @@
    - code: code and technical meta
 */
 @theme {
-  --font-sans: Lora, 'NanumSquareRound', Georgia, serif;
-  --font-display: Newsreader, 'NanumSquareRound', Georgia, serif;
-  --font-body: Lora, 'NanumSquareRound', Georgia, serif;
-  --font-masthead: 'Playfair Display', 'NanumSquareRoundEB', Georgia, serif;
-  --font-heading: Newsreader, 'NanumSquareRound', Georgia, serif;
-  --font-article-heading: Newsreader, 'NanumSquareRound', Georgia, serif;
-  --font-article-deck: Newsreader, 'NanumSquareRound', Georgia, serif;
-  --font-ui: Lora, 'NanumSquareRound', Georgia, serif;
+  --font-sans: Lora, 'NanumSquare', Georgia, serif;
+  --font-display: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-body: Lora, 'NanumSquare', Georgia, serif;
+  --font-masthead: 'Playfair Display', 'NanumSquareExtraBold', Georgia, serif;
+  --font-heading: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-article-heading: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-article-deck: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-ui: Lora, 'NanumSquare', Georgia, serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
-  --font-blog-masthead: Newsreader, 'NanumSquareRound', Georgia, serif;
-  --font-blog-heading: Lora, 'NanumSquareRound', Georgia, serif;
-  --font-blog-body: Lora, 'NanumSquareRound', Georgia, serif;
-  --font-blog-ui: Lora, 'NanumSquareRound', Georgia, serif;
+  --font-blog-masthead: Newsreader, 'NanumSquare', Georgia, serif;
+  --font-blog-heading: Lora, 'NanumSquare', Georgia, serif;
+  --font-blog-body: Lora, 'NanumSquare', Georgia, serif;
+  --font-blog-ui: Lora, 'NanumSquare', Georgia, serif;
 
   --breakpoint-mobile: 640px;
   --breakpoint-tablet: 768px;
