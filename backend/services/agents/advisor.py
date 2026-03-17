@@ -742,6 +742,7 @@ def _assemble_all_sections(raw_data: dict) -> dict:
 async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str,
     source: str = "manual",
+    article_context: str = "",
 ) -> tuple[dict, dict, list[str]]:
     """Auto-generate all empty fields for a handbook term via 4 LLM calls.
 
@@ -752,10 +753,18 @@ async def _run_generate_term(
 
     Args:
         source: "manual" (admin editor) or "pipeline" (auto-extraction)
+        article_context: source news article for grounding (pipeline only)
 
     Returns (merged_data, merged_usage, warnings).
     """
     user_prompt = _build_handbook_user_prompt(req)
+    if article_context:
+        user_prompt += (
+            "\n\n--- Source Article (use as factual reference) ---\n"
+            "Base your content on the facts in this article. "
+            "Write the handbook entry in reference style, not news style.\n\n"
+            f"{article_context[:4000]}"
+        )
     warnings: list[str] = []
     supabase = get_supabase()
 
@@ -990,11 +999,13 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
 
 async def generate_term_content(
     term_name: str, korean_name: str = "", source: str = "pipeline",
+    article_context: str = "",
 ) -> tuple[dict, dict]:
     """Generate full content for a handbook term. Used by pipeline auto-creation.
 
     Args:
         source: "pipeline" (auto-extraction) or "manual" (admin editor)
+        article_context: source news article text for grounding (prevents hallucination)
 
     Returns (content_data, usage_metrics_dict).
     """
@@ -1006,5 +1017,7 @@ async def generate_term_content(
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
-    data, usage, _warnings = await _run_generate_term(req, client, model, source=source)
+    data, usage, _warnings = await _run_generate_term(
+        req, client, model, source=source, article_context=article_context,
+    )
     return data, usage

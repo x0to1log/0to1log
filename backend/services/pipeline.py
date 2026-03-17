@@ -297,6 +297,7 @@ async def _extract_and_create_handbook_terms(
             try:
                 content_data, gen_usage = await generate_term_content(
                     term_name, korean_name,
+                    article_context=combined,
                 )
             except Exception as e:
                 error_msg = f"Handbook generate failed for '{term_name}': {e}"
