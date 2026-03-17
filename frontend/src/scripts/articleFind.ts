@@ -142,7 +142,11 @@ function initArticleFind(): void {
     }
   }
 
-  input.addEventListener('input', () => applyFind({ syncUrl: true, scroll: true }));
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => applyFind({ syncUrl: true, scroll: true }), 200);
+  });
 
   document.addEventListener('newsprint:article-content-updated', () => {
     applyFind({ syncUrl: false, scroll: false });

@@ -73,7 +73,11 @@ function initNewsListSearch(): void {
     }
   }
 
-  search.addEventListener('input', () => applySearch(true));
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  search.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => applySearch(true), 150);
+  });
   window.addEventListener('newsprint:filter-change', () => applySearch(false));
 
   requestAnimationFrame(() => applySearch(false));

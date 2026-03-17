@@ -22,9 +22,10 @@ interface Props {
   article?: ArticleData;
   headerAlwaysVisible?: boolean;
   previewMode?: boolean;
+  needsKatex?: boolean;
 }
 
-const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false, previewMode = false } = Astro.props;
+const { title, description, locale = 'en', slug, altSlug, article, headerAlwaysVisible = false, previewMode = false, needsKatex = false } = Astro.props;
 const isAdmin = Astro.url.pathname.startsWith('/admin');
 const nonce = Astro.locals.cspNonce || '';
 
@@ -34,7 +35,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 
 <!doctype html>
 <html lang={locale} data-theme="light">
-  <Head title={title} description={description} locale={locale} slug={slug} article={article} />
+  <Head title={title} description={description} locale={locale} slug={slug} article={article} needsKatex={needsKatex} />
 
   <!-- FOUC Prevention: must run before paint -->
   <script is:inline nonce={nonce}>

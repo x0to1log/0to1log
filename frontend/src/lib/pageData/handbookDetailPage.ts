@@ -45,8 +45,12 @@ export async function getHandbookDetailPageData({
   const bodyAdvanced = term ? localField(term, 'body_advanced', locale) : '';
 
   const levelHtmlMap: Record<string, string> = {};
-  if (bodyBasic) levelHtmlMap.basic = await renderMarkdown(bodyBasic);
-  if (bodyAdvanced) levelHtmlMap.advanced = await renderMarkdown(bodyAdvanced);
+  const [basicHtml, advancedHtml] = await Promise.all([
+    bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
+    bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
+  ]);
+  if (basicHtml) levelHtmlMap.basic = basicHtml;
+  if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
 
   const preferredLevel = previewMode ? (previewLevel || 'basic') : (locals.profile?.handbook_level || 'basic');
   const activeLevel = levelHtmlMap[preferredLevel] ? preferredLevel : (levelHtmlMap.basic ? 'basic' : 'advanced');

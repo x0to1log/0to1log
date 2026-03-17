@@ -168,7 +168,8 @@ export async function getNewsDetailPageData({
       publicSupabase
         .from('handbook_terms')
         .select(`term, slug, korean_name, categories, ${definitionField}`)
-        .eq('status', 'published'),
+        .eq('status', 'published')
+        .limit(200),
     ]);
 
     nextPost = nextRes.data ?? null;
@@ -261,16 +262,26 @@ export async function getNewsDetailPageData({
       rawContent = contentMap[personaKey] || post.content_learner || '';
       activePersona = contentMap[personaKey] ? personaKey : 'learner';
 
-      for (const [key, md] of Object.entries(contentMap)) {
-        if (md) personaHtmlMap[key] = applySourceCitations(await renderMd(md));
+      // Render all persona content + analysis in parallel
+      const renderEntries = Object.entries(contentMap).filter(([, md]) => md);
+      if (post.content_analysis) renderEntries.push(['__analysis', post.content_analysis]);
+
+      const rendered = await Promise.all(
+        renderEntries.map(async ([key, md]) => [key, applySourceCitations(await renderMd(md))] as const),
+      );
+      for (const [key, html] of rendered) {
+        if (key === '__analysis') analysisHtml = html;
+        else personaHtmlMap[key] = html;
       }
-      analysisHtml = post.content_analysis ? applySourceCitations(await renderMd(post.content_analysis)) : '';
     } else {
       rawContent = post.content_original || '';
     }
   }
 
-  const htmlContent = rawContent ? applySourceCitations(await renderMd(rawContent)) : '';
+  // Reuse already-rendered persona HTML instead of re-rendering the same markdown
+  const htmlContent = activePersona
+    ? personaHtmlMap[activePersona] || ''
+    : (rawContent ? applySourceCitations(await renderMd(rawContent)) : '');
   const hasPersonaSwitcher = Object.keys(personaHtmlMap).length > 1;
 
   return {

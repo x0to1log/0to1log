@@ -59,6 +59,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   locale={locale}
   slug={`handbook/${pageSlug}/`}
   previewMode={previewMode}
+  needsKatex={true}
 >
   <NewsprintShell locale={locale} masthead="AI 용어집" editionLabel="CS · AI · Infra" subkicker={['용어 사전', '레퍼런스', '학습']}>
     <form class="handbook-detail-search handbook-search-sticky handbook-search-sticky--detail" action={`/${locale}/handbook/`} method="get">
