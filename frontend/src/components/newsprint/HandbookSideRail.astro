@@ -64,7 +64,7 @@ const hasRelated = relatedTerms.length > 0;
       <div style="margin-top: 1.5rem;"></div>
     )}
     <section>
-      <h3 class="newsprint-section-title">{isKo ? '관련 글' : 'Related Articles'}</h3>
+      <h3 class="newsprint-section-title">{isKo ? '관련 뉴스 읽어보기' : 'Related News'}</h3>
       <div class="newsprint-stack">
         {relatedArticles.map((article) => (
           <a class="newsprint-card" href={`/${locale}/news/${article.slug}/`}>

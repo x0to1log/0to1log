@@ -23,6 +23,13 @@ interface Props {
     });
     fills.forEach((f) => { f.style.width = '0%'; });
 
+    // 초기화 시 article/end 위치를 한 번만 캐싱 (스크롤 중 레이아웃 시프트 방지)
+    const articleTop = article.getBoundingClientRect().top + window.scrollY;
+    const endEl = document.querySelector('[data-reading-end]');
+    const endTop = endEl
+      ? endEl.getBoundingClientRect().top + window.scrollY
+      : articleTop + article.getBoundingClientRect().height;
+
     let hasCompleted = false;
     let targetProgress = 0;
     let currentProgress = 0;
@@ -52,21 +59,9 @@ interface Props {
     }
 
     function getTarget() {
-      const rect = article.getBoundingClientRect();
-      if (rect.height === 0) return -1; // 레이아웃 미완료 신호
-      const articleTop = rect.top + window.scrollY;
-
-      // 스크롤 시작점: article 상단이 뷰포트 상단에 닿은 시점부터 0%
       const scrollPos = window.scrollY - articleTop;
       if (scrollPos <= 0) return 0;
 
-      // [data-reading-end] 마커가 있으면 그 지점을 100% 기준으로 사용
-      const endEl = document.querySelector('[data-reading-end]');
-      const endTop = endEl
-        ? endEl.getBoundingClientRect().top + window.scrollY
-        : articleTop + rect.height;
-
-      // 100% 도달 지점: end 마커에서 뷰포트 높이를 뺀 위치
       const range = endTop - articleTop - window.innerHeight;
       if (range <= 0) return scrollPos > 0 ? 100 : 0;
 
@@ -74,8 +69,10 @@ interface Props {
     }
 
     function animate() {
-      // lerp: currentProgress가 targetProgress를 천천히 따라옴
-      currentProgress += (targetProgress - currentProgress) * 0.06;
+      // 증가(아래 스크롤)는 부드럽게, 감소(위 스크롤)는 빠르게
+      const diff = targetProgress - currentProgress;
+      const speed = diff < 0 ? 0.15 : 0.06;
+      currentProgress += diff * speed;
       fills.forEach((f) => { f.style.width = currentProgress + '%'; });
 
       if (currentProgress >= 99.5 && !hasCompleted) {

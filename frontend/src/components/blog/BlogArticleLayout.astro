@@ -131,6 +131,13 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
   )}
 
+  <div class="persona-float persona-float--back">
+    <a href={`${resolvedBasePath}/`} class="persona-float-btn persona-float-btn--link">
+      {backLabel}
+      <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+    </a>
+  </div>
+
   <div class={`reading-actions-layout ${showStickyActions ? 'reading-actions-layout--article' : ''}`.trim()}>
     {showStickyActions && (
       <StickyReadingActions

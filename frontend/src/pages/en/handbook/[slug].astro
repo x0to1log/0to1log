@@ -138,8 +138,12 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           <template id="level-data" data-map={JSON.stringify(levelHtmlMap)}></template>
         )}
 
-        {showLevelSwitcher && (
+        {showLevelSwitcher ? (
           <div class="persona-float" id="level-float" aria-hidden="true">
+            <a href={`/${locale}/handbook/`} class="persona-float-btn persona-float-btn--link">
+              {t[locale]['handbook.back']}
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+            </a>
             {(['basic', 'advanced'] as const).filter((level) => levelHtmlMap[level]).map((level) => (
               <button
                 type="button"
@@ -149,6 +153,13 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
                 {levelLabels[locale]?.[level] || level}
               </button>
             ))}
+          </div>
+        ) : (
+          <div class="persona-float persona-float--back" aria-label={t[locale]['handbook.back']}>
+            <a href={`/${locale}/handbook/`} class="persona-float-btn persona-float-btn--link">
+              {t[locale]['handbook.back']}
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+            </a>
           </div>
         )}
 

@@ -196,6 +196,23 @@ export async function getNewsDetailPageData({
       }
     }
 
+    // Backfill: FastAPI가 비어있으면 같은 카테고리 최근 글로 대체
+    if (similarPosts.length === 0 && post.category && publicSupabase) {
+      try {
+        const { data } = await publicSupabase
+          .from('news_posts')
+          .select('id, slug, title, category')
+          .eq('status', 'published')
+          .eq('category', post.category)
+          .neq('id', post.id)
+          .order('published_at', { ascending: false })
+          .limit(3);
+        if (data && data.length > 0) {
+          similarPosts = data.map((p) => ({ post_id: p.id, slug: p.slug, title: p.title, category: p.category }));
+        }
+      } catch { /* ignore */ }
+    }
+
     const hbTerms = hbTermsRes.data ?? [];
     for (const entry of hbTerms) {
       const termEntry = { slug: entry.slug, term: entry.term };

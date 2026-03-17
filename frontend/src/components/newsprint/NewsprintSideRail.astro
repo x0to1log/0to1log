@@ -61,9 +61,9 @@ const isKo = locale === 'ko';
   <>
     <div style="margin-top: 1.5rem;"></div>
     <section>
-      <h3 class="newsprint-section-title">{isKo ? '비슷한 뉴스 더 보기' : 'More Like This'}</h3>
+      <h3 class="newsprint-section-title">{isKo ? '다음 읽어볼 글' : 'Read Next'}</h3>
       <div class="newsprint-stack">
-        {similarPosts.map((p) => (
+        {similarPosts.slice(0, 3).map((p) => (
           <a class="newsprint-card" href={`${resolvedBasePath}/${p.slug}/`}>
             <strong class="newsprint-rail-link">{p.title}</strong>
             {getCategoryLabel(locale, p.category) && (

@@ -71,7 +71,7 @@ export async function getHandbookDetailPageData({
         .select('title, slug, category, published_at')
         .eq('status', 'published')
         .contains('tags', [term.term.toLowerCase()])
-        .limit(5),
+        .limit(3),
       term.related_term_slugs?.length
         ? publicSupabase
             .from('handbook_terms')
@@ -108,6 +108,20 @@ export async function getHandbookDetailPageData({
     ]);
 
     relatedArticles = articlesRes.data ?? [];
+
+    // Backfill: 태그 매칭 결과가 없으면 최근 뉴스로 대체
+    if (relatedArticles.length === 0 && publicSupabase) {
+      try {
+        const { data } = await publicSupabase
+          .from('news_posts')
+          .select('title, slug, category, published_at')
+          .eq('status', 'published')
+          .order('published_at', { ascending: false })
+          .limit(3);
+        relatedArticles = data ?? [];
+      } catch { /* ignore */ }
+    }
+
     relatedTerms = relatedRes.data ?? [];
     sameCategoryTerms = sameCatRes.data ?? [];
     isBookmarked = !!bmRes.data;

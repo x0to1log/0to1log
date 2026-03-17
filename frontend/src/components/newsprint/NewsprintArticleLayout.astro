@@ -288,8 +288,12 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </>
   )}
 
-  {showPersonaSwitcher && (
+  {showPersonaSwitcher ? (
     <div class="persona-float" id="persona-float" aria-hidden="true">
+      <a href={basePath ?? `/${locale}/news/`} class="persona-float-btn persona-float-btn--link">
+        {backLabel}
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+      </a>
       {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
         <button
           type="button"
@@ -299,6 +303,13 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
           {personaLabels[locale]?.[p] || p}
         </button>
       ))}
+    </div>
+  ) : (
+    <div class="persona-float persona-float--back">
+      <a href={basePath ?? `/${locale}/news/`} class="persona-float-btn persona-float-btn--link">
+        {backLabel}
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+      </a>
     </div>
   )}
 
@@ -463,23 +474,6 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </div>
   </section>
 
-  <nav class="newsprint-article-nav" aria-label={locale === 'ko' ? '글 탐색' : 'Article navigation'}>
-    <div class="newsprint-article-nav-row">
-      <a class="newsprint-nav-back" href={`${resolvedBasePath}/`}>
-        <span class="newsprint-nav-back-arrow">&larr;</span>
-        <span>{backLabel}</span>
-      </a>
-      {nextPost && (
-        <a class="newsprint-nav-next" href={`${resolvedBasePath}/${nextPost.slug}/`}>
-          <span class="newsprint-nav-next-arrow">&rarr;</span>
-          <div class="newsprint-nav-next-title">{nextPost.title}</div>
-          {nextCategoryLabel && (
-            <div class="newsprint-nav-next-meta">{nextCategoryLabel}</div>
-          )}
-        </a>
-      )}
-    </div>
-      </nav>
     </div>
   </div>
 </article>
