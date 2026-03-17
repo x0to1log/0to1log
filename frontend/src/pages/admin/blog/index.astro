@@ -166,11 +166,10 @@ const categoryOptions = Array.from(
               >
                 <div class="admin-list-info">
                   <div class="admin-list-title">
-                    {post.status === 'published' && post.locale ? (
-                      <a href={`/${post.locale}/blog/${post.slug}/`} target="_blank" rel="noopener noreferrer">{post.title}</a>
-                    ) : (
-                      <a href={`/admin/blog/edit/${post.slug}`}>{post.title}</a>
-                    )}
+                    <a
+                      href={`/admin/blog/edit/${post.slug}`}
+                      data-site-url={post.status === 'published' ? `/${post.locale ?? 'ko'}/blog/${post.slug}/` : ''}
+                    >{post.title}</a>
                   </div>
                   <div class="admin-list-meta">
                     <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
@@ -383,6 +382,17 @@ const categoryOptions = Array.from(
     sourceFilter?.addEventListener('change', applyFilter);
     sortSelect?.addEventListener('change', applyFilter);
 
+    // Title click: open published site in new tab
+    list.querySelectorAll('a[data-site-url]').forEach((link) => {
+      const siteUrl = link.dataset.siteUrl;
+      if (!siteUrl) return;
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open(siteUrl, '_blank', 'noopener,noreferrer');
+      });
+    });
+
+    // Row click (outside actions/links): open published site in new tab
     list.addEventListener('click', (e) => {
       const target = e.target;
       if (!(target instanceof Element)) return;
