@@ -560,9 +560,16 @@ async def _generate_digest(
                         debug_meta={"attempt": attempt + 1},
                     )
 
-    if len(personas) < 3:
-        missing = [p for p in ("expert", "learner", "beginner") if p not in personas]
-        error_msg = f"{digest_type} digest incomplete — missing personas: {missing}"
+    # Validate: all 3 personas must exist AND have non-empty content
+    incomplete = []
+    for pname in ("expert", "learner", "beginner"):
+        p = personas.get(pname)
+        if not p:
+            incomplete.append(f"{pname} (missing)")
+        elif not p.en.strip() or not p.ko.strip():
+            incomplete.append(f"{pname} (empty content: en={len(p.en)}chars, ko={len(p.ko)}chars)")
+    if incomplete:
+        error_msg = f"{digest_type} digest incomplete — {', '.join(incomplete)}"
         logger.error(error_msg)
         errors.append(error_msg)
         return 0, errors, cumulative_usage
