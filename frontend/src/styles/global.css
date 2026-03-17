@@ -97,8 +97,8 @@
   --color-border: #2E3242;
   --color-accent: #C4B07A;
   --color-accent-hover: #D4C08A;
-  --color-accent-glow: rgba(160, 170, 200, 0.20);
-  --color-accent-subtle: rgba(160, 170, 200, 0.10);
+  --color-accent-glow: rgba(100, 150, 255, 0.12);
+  --color-accent-subtle: rgba(100, 150, 255, 0.06);
   --color-success: #4E9A6B;
   --color-warning: #C9A044;
   --color-error: #B85450;
@@ -556,18 +556,19 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
 }
 
 .newsprint-tag {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+  background: var(--color-accent-subtle);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.newsprint-tag:hover {
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.newsprint-tag::before {
-  content: '[';
-}
-
-.newsprint-tag::after {
-  content: ']';
+  background: var(--color-accent-glow);
 }
 
 .newsprint-type-badge {
