@@ -48,6 +48,11 @@ const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
   <div class="newsprint-headline-bottom">
     <div class="newsprint-card-bottom" style="flex: 1;">
       {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
+      {postType && (
+        <span class={`newsprint-type-badge newsprint-type-badge--${postType}`}>
+          {postType === 'research' ? (locale === 'ko' ? 'Research' : 'Research') : (locale === 'ko' ? 'Business' : 'Business')}
+        </span>
+      )}
       {tags && tags.length > 0 && (
         <span class="newsprint-tags-inline">
           {tags.slice(0, 5).map((tag: string) => (

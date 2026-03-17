@@ -60,6 +60,11 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
   {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
   <div class="newsprint-card-bottom">
     {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
+    {postType && (
+      <span class={`newsprint-type-badge newsprint-type-badge--${postType}`}>
+        {postType === 'research' ? 'Research' : 'Business'}
+      </span>
+    )}
     {tags && tags.length > 0 && (
       <span class="newsprint-tags-inline">
         {tags.slice(0, 4).map((tag) => (

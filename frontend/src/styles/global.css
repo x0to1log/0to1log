@@ -96,7 +96,7 @@
   --color-text-muted: #7E8596;
   --color-border: #2E3242;
   --color-accent: #C4B07A;
-  --color-accent-hover: #D4C08A;
+  --color-accent-hover: #D0C8A0;
   --color-accent-glow: rgba(196, 176, 122, 0.15);
   --color-accent-subtle: rgba(196, 176, 122, 0.08);
   --color-success: #4E9A6B;
@@ -568,6 +568,45 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
 
 .newsprint-tag::after {
   content: ']';
+}
+
+.newsprint-type-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.newsprint-type-badge--research {
+  background: #1e3a5f;
+  color: #7db8e8;
+}
+
+.newsprint-type-badge--business {
+  background: #3d2e1e;
+  color: #d4a76a;
+}
+
+[data-theme="light"] .newsprint-type-badge--research {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+[data-theme="light"] .newsprint-type-badge--business {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+[data-theme="pink"] .newsprint-type-badge--research {
+  background: #fce4ec;
+  color: #880e4f;
+}
+
+[data-theme="pink"] .newsprint-type-badge--business {
+  background: #fff3e0;
+  color: #e65100;
 }
 
 .newsprint-empty {
@@ -1561,6 +1600,24 @@ html {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.03"/%3E%3C/svg%3E');
+}
+
+/* 모바일 탭 딜레이 제거: 더블탭 zoom 감지를 비활성화해 즉각 반응 */
+a, button {
+  touch-action: manipulation;
+}
+
+/* 모바일 탭 즉각 시각 피드백 (hover 미작동 환경 대응) */
+.newsprint-engage-btn:active,
+.reading-actions__button:active,
+.site-nav-pill:active,
+.persona-float-btn:active,
+.persona-switcher-btn:active,
+.handbook-level-btn:active,
+.site-page-label--link:active,
+.site-theme-toggle:active,
+.site-lang-toggle:active {
+  opacity: 0.6;
 }
 
 /* SideRail link styling (replaces inline styles) */
