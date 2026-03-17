@@ -65,7 +65,7 @@
   --noise-opacity: 0.025;
 
   /* Category Colors */
-  --color-cat-ainews: #C3A372;
+  --color-cat-ainews: #C3A370;
   --color-cat-study: #7A8B78;
   --color-cat-career: #A09080;
   --color-cat-project: #8888A0;
@@ -96,9 +96,9 @@
   --color-text-muted: #7E8596;
   --color-border: #2E3242;
   --color-accent: #C4B07A;
-  --color-accent-hover: #D4A8A0;
-  --color-accent-glow: rgba(196, 176, 122, 0.15);
-  --color-accent-subtle: rgba(196, 176, 122, 0.08);
+  --color-accent-hover: #D4C08A;
+  --color-accent-glow: rgba(160, 170, 200, 0.20);
+  --color-accent-subtle: rgba(160, 170, 200, 0.10);
   --color-success: #4E9A6B;
   --color-warning: #C9A044;
   --color-error: #B85450;
@@ -106,7 +106,7 @@
   --noise-opacity: 0.025;
 
   /* Category Colors — cool shift */
-  --color-cat-ainews: #B0A090;
+  --color-cat-ainews: #9AA8B8;
   --color-cat-study: #6E9682;
   --color-cat-career: #8C94AA;
   --color-cat-project: #8282AF;
@@ -147,7 +147,7 @@
   --noise-opacity: 0.04;
 
   /* Category Colors */
-  --color-cat-ainews: #8B6B4A;
+  --color-cat-ainews: #6B4226;
   --color-cat-study: #3A7348;
   --color-cat-career: #6B5B90;
   --color-cat-project: #3E6088;
@@ -187,7 +187,7 @@
   --color-shadow: rgba(60, 20, 30, 0.15);
 
   /* Category Colors */
-  --color-cat-ainews: #9B7060;
+  --color-cat-ainews: #A0606E;
   --color-cat-study: #556653;
   --color-cat-career: #756350;
   --color-cat-project: #606075;
