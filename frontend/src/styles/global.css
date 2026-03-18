@@ -7079,54 +7079,88 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 
 /* ═══════════════ Handbook Inline Term Popup ═══════════════ */
 
-/* Handbook Learn More collapsible */
+/* ── Handbook Learn More — collapsible curiosity block ── */
 .handbook-learn-more {
-  margin-top: 2rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 0.5rem;
+  margin-top: 2.5rem;
+  position: relative;
+}
+.handbook-learn-more::before {
+  content: '';
+  display: block;
+  width: 3rem;
+  height: 1px;
+  background: var(--color-accent);
+  opacity: 0.4;
+  margin-bottom: 1.5rem;
 }
 .handbook-learn-more > summary {
   cursor: pointer;
-  font-family: var(--font-ui);
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--color-text-secondary);
-  padding: 0.75rem 0;
   list-style: none;
+  display: block;
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+  border-radius: 10px;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.handbook-learn-more > summary:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-secondary));
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.handbook-learn-more > summary::-webkit-details-marker { display: none; }
+
+/* Summary header row */
+.handbook-learn-more > summary .learn-more-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-accent);
+  letter-spacing: 0.01em;
 }
-.handbook-learn-more > summary::before {
-  content: '▶';
-  font-size: 0.7em;
-  transition: transform 0.2s ease;
+.handbook-learn-more > summary .learn-more-chevron {
+  font-size: 0.65em;
+  transition: transform 0.25s ease;
+  opacity: 0.7;
 }
-.handbook-learn-more[open] > summary::before {
+.handbook-learn-more[open] > summary .learn-more-chevron {
   transform: rotate(90deg);
 }
-.handbook-learn-more > summary::-webkit-details-marker {
-  display: none;
-}
+
+/* Question pills — always visible in summary */
 .learn-more-questions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem 0;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
 }
 .learn-more-question {
   font-family: var(--font-ui);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--color-text-secondary);
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
-  border-radius: 6px;
-  padding: 0.4rem 0.75rem;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  line-height: 1.4;
 }
-.learn-more-question:hover {
-  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+.handbook-learn-more > summary:hover .learn-more-question {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  color: var(--color-text-primary);
+}
+
+/* Expanded content area */
+.handbook-learn-more[open] > summary {
+  border-radius: 10px 10px 0 0;
+  border-bottom-color: transparent;
+}
+.handbook-learn-more > :not(summary) {
+  padding: 0 0.5rem;
 }
 
 .handbook-term {

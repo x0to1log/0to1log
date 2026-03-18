@@ -2,9 +2,24 @@ import { localField } from '../handbookUtils';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
+// Question-style labels for collapsed sections — maps emoji prefix to curiosity question
+const QUESTION_MAP_KO: Record<string, string> = {
+  '🔧': '실제로 어디서 쓰여요?',
+  '⚠️': '자주 하는 실수가 뭐예요?',
+  '💬': '회의에서 어떻게 말해요?',
+  '🔗': '다음에 뭘 공부하면 좋아요?',
+};
+const QUESTION_MAP_EN: Record<string, string> = {
+  '🔧': 'Where is it actually used?',
+  '⚠️': 'What mistakes do people make?',
+  '💬': 'How do you talk about it?',
+  '🔗': 'What should I learn next?',
+};
+
 /**
- * Wrap handbook basic HTML sections 5-8 in a collapsible "더 알아보기" block.
+ * Wrap handbook basic HTML sections 5-8 in a collapsible block.
  * Splits at the 5th <h2> tag — first 4 sections stay visible, rest go into <details>.
+ * Collapsed sections show question-style labels to drive curiosity clicks.
  */
 function wrapLearnMore(html: string, locale: string): string {
   if (!html) return html;
@@ -19,18 +34,26 @@ function wrapLearnMore(html: string, locale: string): string {
   const splitIndex = matches[4]; // 5th h2 (0-indexed: 4)
   const corePart = html.slice(0, splitIndex);
   const learnMorePart = html.slice(splitIndex);
-  const summaryLabel = locale === 'ko' ? '더 알아보기' : 'Learn More';
-  // Extract section titles from learn-more h2s for preview
+
+  const questionMap = locale === 'ko' ? QUESTION_MAP_KO : QUESTION_MAP_EN;
+  const summaryLabel = locale === 'ko' ? '💭 이런 것도 궁금하지 않으세요?' : '💭 Curious about more?';
+
+  // Extract section titles and convert to question-style labels
   const titlePattern = /<h2[^>]*>(.*?)<\/h2>/gi;
-  const titles: string[] = [];
+  const questions: string[] = [];
   let tm: RegExpExecArray | null;
   while ((tm = titlePattern.exec(learnMorePart)) !== null) {
-    titles.push(tm[1].replace(/<[^>]+>/g, '').trim());
+    const rawTitle = tm[1].replace(/<[^>]+>/g, '').trim();
+    // Find matching emoji and use question version
+    const emoji = Object.keys(questionMap).find(e => rawTitle.includes(e));
+    questions.push(emoji ? `${emoji} ${questionMap[emoji]}` : rawTitle);
   }
-  const titlePreview = titles.length > 0
-    ? `<span class="learn-more-preview">${titles.join(' · ')}</span>`
+
+  const questionsHtml = questions.length > 0
+    ? `<div class="learn-more-questions">${questions.map(q => `<span class="learn-more-question">${q}</span>`).join('')}</div>`
     : '';
-  return `${corePart}<details class="handbook-learn-more"><summary>${summaryLabel}${titlePreview}</summary>${learnMorePart}</details>`;
+
+  return `${corePart}<details class="handbook-learn-more"><summary><div class="learn-more-header"><span class="learn-more-chevron">▶</span> ${summaryLabel}</div>${questionsHtml}</summary>${learnMorePart}</details>`;
 }
 
 interface HandbookDetailPageContext extends DetailPageContext {
