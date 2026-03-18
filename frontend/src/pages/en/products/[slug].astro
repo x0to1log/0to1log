@@ -31,8 +31,7 @@ const user = Astro.locals.user;
   altSlug={product?.slug}
 >
   {product ? (
-    <>
-      <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} relatedNews={relatedNews} />
+    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} relatedNews={relatedNews}>
       <ContentFeedback
         sourceType="product"
         sourceId={product.id}
@@ -40,7 +39,7 @@ const user = Astro.locals.user;
         isAuthenticated={!!user}
         loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
       />
-    </>
+    </ProductDetail>
   ) : (
     <div class="products-page">
       <p class="products-not-found">
