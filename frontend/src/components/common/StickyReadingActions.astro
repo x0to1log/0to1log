@@ -15,7 +15,6 @@ interface Props {
   likeCount?: number;
   commentCount?: number;
   isLiked?: boolean;
-  termId?: string;
 }
 
 const {
@@ -34,7 +33,6 @@ const {
   likeCount = 0,
   commentCount = 0,
   isLiked = false,
-  termId,
 } = Astro.props;
 
 const copy = locale === 'ko'
@@ -43,11 +41,6 @@ const copy = locale === 'ko'
       comments: '댓글',
       bookmark: '북마크',
       share: '공유',
-      helpful: '유용해요',
-      confusing: '헷갈려요',
-      thanksHelpful: '피드백 감사합니다.',
-      thanksConfusing: '이해했어요. 헷갈리는 표현으로 기록했습니다.',
-      error: '피드백 저장에 실패했습니다.',
       nativeShare: '공유',
       copyUrl: 'URL 복사',
       copied: '복사됨',
@@ -57,11 +50,6 @@ const copy = locale === 'ko'
       comments: 'Comments',
       bookmark: 'Bookmark',
       share: 'Share',
-      helpful: 'Helpful',
-      confusing: 'Confusing',
-      thanksHelpful: 'Thanks for the feedback.',
-      thanksConfusing: 'Got it. We recorded that this felt unclear.',
-      error: 'Failed to save feedback.',
       nativeShare: 'Share',
       copyUrl: 'Copy URL',
       copied: 'Copied',
@@ -74,47 +62,10 @@ const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' 
   <aside
     class={`reading-actions reading-actions--term reading-actions--article ${placementClass}`.trim()}
     aria-label={locale === 'ko' ? '용어 액션' : 'Term actions'}
-    data-handbook-feedback
-    data-preview-mode={previewMode ? 'true' : 'false'}
-    data-term-id={termId}
     data-locale={locale}
-    data-authenticated={isAuthenticated ? 'true' : 'false'}
-    data-auth-action="feedback"
-    data-auth-redirect={articleRedirect}
-    data-thanks-helpful={copy.thanksHelpful}
-    data-thanks-confusing={copy.thanksConfusing}
-    data-error={copy.error}
   >
     <div class="reading-progress-bar" aria-hidden="true"><div class="reading-progress__fill"></div></div>
     <div class="reading-actions__items reading-actions__items--article reading-actions__items--term">
-      <div class="reading-actions__group reading-actions__group--primary">
-        <button
-          type="button"
-          class="newsprint-engage-btn reading-actions__button reading-actions__button--icon-only reading-actions__button--helpful"
-          data-reading-action="helpful"
-          data-reaction="helpful"
-          aria-label={copy.helpful}
-          aria-pressed="false"
-          aria-disabled={previewMode ? 'true' : undefined}
-          tabindex={previewMode ? '-1' : undefined}
-          disabled={previewMode}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-1 4-3 4v10h11a2 2 0 0 0 2-2l1-7a2 2 0 0 0-2-2z"/><path d="M7 10H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3"/></svg>
-        </button>
-        <button
-          type="button"
-          class="newsprint-engage-btn reading-actions__button reading-actions__button--icon-only reading-actions__button--confusing"
-          data-reading-action="confusing"
-          data-reaction="confusing"
-          aria-label={copy.confusing}
-          aria-pressed="false"
-          aria-disabled={previewMode ? 'true' : undefined}
-          tabindex={previewMode ? '-1' : undefined}
-          disabled={previewMode}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.75-2.5 2-2.5 4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
-        </button>
-      </div>
       <div class="reading-actions__group reading-actions__group--secondary">
         {itemId && (
           <button
@@ -170,7 +121,6 @@ const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' 
         </div>
       </div>
     </div>
-    <p class="reading-actions__status" data-feedback-status aria-live="polite" hidden></p>
   </aside>
 ) : (
   <aside class={`reading-actions reading-actions--article ${placementClass}`.trim()} aria-label={locale === 'ko' ? '글 액션' : 'Reading actions'}>
