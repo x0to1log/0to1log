@@ -151,21 +151,29 @@ try {
   notifications = (notifsRes.data ?? []) as Notification[];
 } catch {}
 
-// Detect stuck pipeline runs (>30 minutes)
-const STUCK_TIMEOUT_MS = 30 * 60 * 1000;
-const isStuck = lastRun?.status === 'running' &&
-  lastRun?.started_at &&
-  (Date.now() - new Date(lastRun.started_at).getTime()) > STUCK_TIMEOUT_MS;
+// Detect stuck pipeline runs — news: 30min, handbook: 60min
+const NEWS_TIMEOUT_MS = 30 * 60 * 1000;
+const HANDBOOK_TIMEOUT_MS = 60 * 60 * 1000;
 
+function checkStuck(run: any) {
+  if (run?.status !== 'running' || !run?.started_at) return false;
+  const elapsed = Date.now() - new Date(run.started_at).getTime();
+  const isHandbook = run.run_key?.startsWith('handbook-');
+  return elapsed > (isHandbook ? HANDBOOK_TIMEOUT_MS : NEWS_TIMEOUT_MS);
+}
+
+const isStuck = checkStuck(lastRun);
 if (isStuck && lastRun) {
+  const isHandbook = lastRun.run_key?.startsWith('handbook-');
+  const timeoutMin = isHandbook ? 60 : 30;
   try {
     await sb.from('pipeline_runs').update({
       status: 'failed',
       finished_at: new Date().toISOString(),
-      last_error: 'Pipeline timed out (>30 minutes)',
+      last_error: `Pipeline timed out (>${timeoutMin} minutes)`,
     }).eq('id', lastRun.id).eq('status', 'running');
     lastRun.status = 'failed';
-    lastRunError = 'Pipeline timed out (>30 minutes)';
+    lastRunError = `Pipeline timed out (>${timeoutMin} minutes)`;
   } catch {}
 }
 
