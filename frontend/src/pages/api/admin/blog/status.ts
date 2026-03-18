@@ -74,7 +74,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('blog_posts status error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to update blog post status' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

@@ -45,7 +45,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .select('id');
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('ai_products batch-status error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to batch update products' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

@@ -96,7 +96,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .single();
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error('ai_products update error:', error.message);
+      return new Response(JSON.stringify({ error: 'Failed to save product' }), {
         status: 500, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -114,7 +115,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('ai_products insert error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to create product' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

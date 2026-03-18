@@ -4,10 +4,11 @@ import re
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from core.database import get_supabase
+from core.rate_limit import limiter
 from core.security import verify_cron_secret
 from services.pipeline import check_existing_batch, cleanup_existing_batch, run_daily_pipeline, run_handbook_extraction
 
@@ -30,7 +31,9 @@ class PipelineCancelBody(BaseModel):
 
 
 @router.post("/news-pipeline", status_code=202)
+@limiter.limit("2/minute")
 async def trigger_news_pipeline(
+    request: Request,
     background_tasks: BackgroundTasks,
     body: PipelineTriggerBody | None = None,
     _secret=Depends(verify_cron_secret),
@@ -109,7 +112,9 @@ class HandbookExtractBody(BaseModel):
 
 
 @router.post("/handbook-extract", status_code=202)
+@limiter.limit("2/minute")
 async def trigger_handbook_extraction(
+    request: Request,
     background_tasks: BackgroundTasks,
     body: HandbookExtractBody,
     _secret=Depends(verify_cron_secret),
@@ -137,7 +142,9 @@ async def trigger_handbook_extraction(
 
 
 @router.post("/pipeline-cancel", status_code=200)
+@limiter.limit("5/minute")
 async def cancel_pipeline_run(
+    request: Request,
     body: PipelineCancelBody,
     _secret=Depends(verify_cron_secret),
 ):
@@ -152,7 +159,8 @@ async def cancel_pipeline_run(
             "last_error": "Cancelled by admin",
         }).eq("id", body.run_id).eq("status", "running").execute()
     except Exception as e:
-        raise HTTPException(500, str(e))
+        logger.error("Pipeline cancel error: %s", e)
+        raise HTTPException(500, "Failed to cancel pipeline")
     return {"status": "cancelled", "run_id": body.run_id}
 
 

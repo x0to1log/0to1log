@@ -16,7 +16,8 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const { data, error } = await sb.from('site_content').select('key, value_ko, value_en');
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('site_content read error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to load site content' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -53,7 +54,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .upsert({ key, value_ko: value_ko || '', value_en: value_en || '', updated_at: new Date().toISOString() });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('site_content save error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to save site content' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

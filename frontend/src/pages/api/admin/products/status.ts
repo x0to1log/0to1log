@@ -82,7 +82,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('ai_products status error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to update product status' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

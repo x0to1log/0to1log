@@ -3,30 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
-// Rate limit: max 5 attempts per 15 minutes per user
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000;
-
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user || !locals.accessToken || !locals.isAdmin) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });
-  }
-
-  const userId = locals.user.id;
-  const now = Date.now();
-  const entry = attempts.get(userId);
-  if (entry && now < entry.resetAt) {
-    if (entry.count >= MAX_ATTEMPTS) {
-      return new Response(JSON.stringify({ error: 'Too many attempts. Try again later.' }), {
-        status: 429, headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    entry.count++;
-  } else {
-    attempts.set(userId, { count: 1, resetAt: now + WINDOW_MS });
   }
 
   const body = await request.json();
@@ -47,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-  // Verify current password by attempting sign-in
+  // Verify current password — Supabase Auth applies its own rate limiting
   const verifySb = createClient(supabaseUrl, supabaseAnonKey);
   const { error: verifyError } = await verifySb.auth.signInWithPassword({
     email: locals.user.email!,
@@ -68,7 +49,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { error: updateError } = await authSb.auth.updateUser({ password: newPassword });
 
   if (updateError) {
-    return new Response(JSON.stringify({ error: updateError.message }), {
+    console.error('password update error:', updateError.message);
+    return new Response(JSON.stringify({ error: 'Failed to update password' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

@@ -74,7 +74,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .single();
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error('news_posts update error:', error.message);
+      return new Response(JSON.stringify({ error: 'Failed to save post' }), {
         status: 500, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -93,7 +94,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('news_posts insert error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to create post' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

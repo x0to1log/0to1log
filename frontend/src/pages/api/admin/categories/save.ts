@@ -48,7 +48,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('category save error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to save category' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

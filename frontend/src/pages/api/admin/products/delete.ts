@@ -36,7 +36,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .eq('id', id);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('ai_products delete error:', error.message);
+    return new Response(JSON.stringify({ error: 'Failed to delete product' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

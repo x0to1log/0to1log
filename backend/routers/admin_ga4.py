@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.config import settings
@@ -104,7 +104,7 @@ def _build_ga4_client():
 @limiter.limit("10/minute")
 async def get_ga4_analytics(
     request: Request,
-    days: int = 30,
+    days: int = Query(default=30, ge=1, le=365),
     _user=Depends(require_admin),
 ):
     """Fetch GA4 analytics data for the admin dashboard."""

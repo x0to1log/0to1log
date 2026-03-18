@@ -77,7 +77,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (error) {
         failed++;
-        errors.push({ id, reason: error.message });
+        console.error('handbook bulk publish error:', error.message);
+        errors.push({ id, reason: 'Failed to publish' });
       } else {
         success++;
       }
@@ -90,7 +91,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (error) {
       failed = ids.length;
-      errors.push({ id: 'bulk', reason: error.message });
+      console.error('handbook bulk unpublish error:', error.message);
+      errors.push({ id: 'bulk', reason: 'Failed to unpublish' });
     } else {
       success = ids.length;
     }
@@ -102,7 +104,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (error) {
       failed = ids.length;
-      errors.push({ id: 'bulk', reason: error.message });
+      console.error('handbook bulk archive error:', error.message);
+      errors.push({ id: 'bulk', reason: 'Failed to archive' });
     } else {
       success = ids.length;
     }

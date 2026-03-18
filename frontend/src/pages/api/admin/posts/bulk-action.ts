@@ -50,7 +50,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .in('id', ids)
       .is('published_at', null);
     if (setDateErr) {
-      errors.push({ id: 'bulk-date', reason: setDateErr.message });
+      console.error('news bulk-action date error:', setDateErr.message);
+      errors.push({ id: 'bulk-date', reason: 'Failed to set publish date' });
     }
 
     const { error } = await supabase
@@ -60,7 +61,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (error) {
       failed = ids.length;
-      errors.push({ id: 'bulk', reason: error.message });
+      console.error('news bulk publish error:', error.message);
+      errors.push({ id: 'bulk', reason: 'Failed to publish posts' });
     } else {
       success = ids.length;
     }
@@ -72,7 +74,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (error) {
       failed = ids.length;
-      errors.push({ id: 'bulk', reason: error.message });
+      console.error('news bulk unpublish error:', error.message);
+      errors.push({ id: 'bulk', reason: 'Failed to unpublish posts' });
     } else {
       success = ids.length;
     }
