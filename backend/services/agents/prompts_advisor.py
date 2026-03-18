@@ -763,7 +763,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_ko_1_technical**: 기술적 정의 + 핵심 구성요소와 흐름. 논문/공식 문서 수준의 정확도. 최소 400자.
 - **adv_ko_2_formulas**: 해당 개념의 수학 공식, 구조도, 기술 비교표. 마크다운 표와 수식 활용. 해당 없는 개념은 비교표/구조표만 포함.
 - **adv_ko_3_howworks**: 내부 아키텍처, 알고리즘, 메커니즘 상세 설명. 데이터 흐름, 핵심 알고리즘 (복잡도 포함), 구현 단계 (번호 리스트). 최소 500자.
-- **adv_ko_4_code**: 실제 코드 스니펫 또는 구현 패턴. Python/JavaScript 우선. 코드 블록에 언어 태그 필수 (```python).
+- **adv_ko_4_code**: 실제 코드 스니펫. Python/JavaScript 우선. 코드 블록에 언어 태그 필수 (```python). 최소 15줄 (빈줄, 주석, 단독 괄호 제외). 에러 핸들링, 타입 힌트 포함. 표준 라이브러리 + 널리 사용되는 패키지만 (torch, sklearn, pandas, numpy, requests).
 - **adv_ko_5_practical**: 실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개. 현장 톤.
 - **adv_ko_6_why**: 기술/조직/비즈니스에 미치는 영향 4~5개. 성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
 - **adv_ko_7_comm**: PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
@@ -844,7 +844,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_en_1_technical**: Technical definition + core components and flow. Paper/official-doc level accuracy. Min 400 chars.
 - **adv_en_2_formulas**: Mathematical formulas, architecture diagrams, technical comparison tables. Use markdown tables and formulas. If no formulas apply, include comparison/structure tables only.
 - **adv_en_3_howworks**: Deep technical explanation: internal architecture and data flow, key algorithms or protocols (with complexity if relevant), implementation steps (numbered list). Min 500 chars.
-- **adv_en_4_code**: Real code snippets or implementation patterns. Python/JavaScript preferred. Language tag required in code blocks (```python).
+- **adv_en_4_code**: Real code snippets. Python/JavaScript preferred. Language tag required (```python). Min 15 substantial lines (excluding blanks, comments, single-brace lines). Include error handling, type hints. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
 - **adv_en_5_practical**: 4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes). Practical tone.
 - **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
 - **adv_en_7_comm**: 6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews. **Bold key terms**. Ready-to-use professional tone.
