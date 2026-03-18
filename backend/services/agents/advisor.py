@@ -872,13 +872,26 @@ async def _run_generate_term(
 
     Returns (merged_data, merged_usage, warnings).
     """
+    # Tavily search runs first — results are used by ALL calls (basic + advanced)
+    tavily_context = await _search_term_context(req.term)
+
     user_prompt = _build_handbook_user_prompt(req)
+    # Combine article_context (pipeline) + Tavily results
+    combined_ref = ""
     if article_context:
-        user_prompt += (
-            "\n\n--- Source Article (use as factual reference) ---\n"
+        combined_ref += (
+            "--- Source Article (use as factual reference) ---\n"
             "Base your content on the facts in this article. "
             "Write the handbook entry in reference style, not news style.\n\n"
-            f"{article_context[:4000]}"
+            f"{article_context[:4000]}\n\n"
+        )
+    if tavily_context:
+        combined_ref += f"{tavily_context}\n\n"
+    if combined_ref:
+        user_prompt += (
+            "\n\n" + combined_ref +
+            "Use the above reference materials as factual sources. "
+            "Cite specific numbers, dates, and URLs from them.\n"
         )
     warnings: list[str] = []
     supabase = get_supabase()
@@ -943,26 +956,19 @@ async def _run_generate_term(
     )
     _log_handbook_stage("handbook.generate.basic", usage1)
 
-    # --- Parallel: Tavily search + type classification (for advanced prompts) ---
+    # --- Type classification (for advanced depth guide) ---
     from services.agents.prompts_handbook_types import get_type_depth_guide
 
-    tavily_context, term_type = await asyncio.gather(
-        _search_term_context(req.term),
-        _classify_term_type(
-            req.term, req.categories or basic_data.get("categories", []),
-            client, settings.openai_model_light,
-        ),
+    term_type = await _classify_term_type(
+        req.term, req.categories or basic_data.get("categories", []),
+        client, settings.openai_model_light,
     )
     logger.info("Term '%s' classified as type: %s, tavily_chars: %d",
                 req.term, term_type, len(tavily_context))
 
-    # Merge article_context with Tavily results for advanced prompts
-    combined_context = article_context
-    if tavily_context:
-        combined_context = f"{article_context}\n\n{tavily_context}" if article_context else tavily_context
-
     # --- Call 2 (EN Basic) + Call 3 (KO Advanced) — PARALLEL ---
     # Both depend only on Call 1 output, so they can run concurrently.
+    # user_prompt already includes Tavily + article context (applied to all calls)
     en_basic_prompt = (
         f"{user_prompt}\n\n"
         f"--- Context from Call 1 ---\n"
@@ -979,12 +985,6 @@ async def _run_generate_term(
         f"Definition (KO): {definition_ko_context}\n"
         f"Term Type: {term_type}"
     )
-    if combined_context:
-        advanced_prompt += (
-            f"\n\n---\n{combined_context[:6000]}\n---\n"
-            "Use the above reference materials as factual sources. "
-            "Cite specific numbers and URLs from them.\n"
-        )
 
     # Inject type-specific depth guide into advanced system prompts
     type_guide = get_type_depth_guide(term_type)
