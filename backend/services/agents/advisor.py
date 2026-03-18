@@ -582,6 +582,68 @@ async def _classify_term_type(term: str, categories: list[str], client, model_li
         return "concept_theory"
 
 
+async def _self_critique_advanced(
+    term: str, term_type: str, advanced_content: str,
+    client, model: str,
+) -> tuple[bool, str, int, dict]:
+    """Self-critique advanced content. Returns (needs_improvement, feedback, score, usage)."""
+    from services.agents.prompts_handbook_types import SELF_CRITIQUE_PROMPT
+
+    system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
+    try:
+        resp = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": advanced_content[:8000]},
+            ],
+            max_tokens=2000,
+            temperature=0.2,
+            response_format={"type": "json_object"},
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "self-critique")
+        needs = data.get("needs_improvement", False)
+        score = data.get("score", 50)
+        feedback = ""
+        if needs and data.get("improvements"):
+            feedback = "\n".join(
+                f"- {imp['section']}: {imp['suggestion']}"
+                for imp in data["improvements"]
+            )
+        usage = extract_usage_metrics(resp, model)
+        return needs, feedback, score, usage
+    except Exception as e:
+        logger.warning("Self-critique failed for '%s': %s", term, e)
+        return False, "", 50, {}
+
+
+async def _check_handbook_quality(
+    term: str, term_type: str, advanced_content: str, client,
+) -> tuple[int, dict, dict]:
+    """Score handbook advanced quality. Returns (score, breakdown, usage)."""
+    from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
+
+    system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
+    try:
+        resp = await client.chat.completions.create(
+            model=settings.openai_model_light,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": advanced_content[:6000]},
+            ],
+            max_tokens=500,
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "handbook-quality")
+        score = data.get("score", 50)
+        usage = extract_usage_metrics(resp, settings.openai_model_light)
+        return score, data, usage
+    except Exception as e:
+        logger.warning("Handbook quality check failed for '%s': %s", term, e)
+        return 50, {}, {}
+
+
 def _fetch_handbook_term_map() -> dict[str, str]:
     """Fetch {term_name: slug} map of published handbook terms."""
     supabase = get_supabase()
@@ -821,11 +883,19 @@ async def _run_generate_term(
     warnings: list[str] = []
     supabase = get_supabase()
 
-    def _log_handbook_stage(stage: str, usage: dict) -> None:
+    def _log_handbook_stage(stage: str, usage: dict, extra_meta: dict | None = None) -> None:
         """Log a handbook generate stage to pipeline_logs. Never raises."""
         if not supabase:
             return
         try:
+            meta = {
+                "term": req.term,
+                "source": source,
+                "input_tokens": usage.get("input_tokens"),
+                "output_tokens": usage.get("output_tokens"),
+            }
+            if extra_meta:
+                meta.update(extra_meta)
             supabase.table("pipeline_logs").insert({
                 "pipeline_type": stage,
                 "status": "success",
@@ -833,12 +903,7 @@ async def _run_generate_term(
                 "model_used": usage.get("model_used"),
                 "tokens_used": usage.get("tokens_used"),
                 "cost_usd": usage.get("cost_usd"),
-                "debug_meta": {
-                    "term": req.term,
-                    "source": source,
-                    "input_tokens": usage.get("input_tokens"),
-                    "output_tokens": usage.get("output_tokens"),
-                },
+                "debug_meta": meta,
             }).execute()
         except Exception as e:
             logger.warning("Failed to log handbook %s stage: %s", stage, e)
@@ -985,12 +1050,47 @@ async def _run_generate_term(
     )
     _log_handbook_stage("handbook.generate.advanced.en", usage4)
 
+    # --- Self-critique advanced KO content ---
+    adv_ko_preview = "\n\n".join(
+        f"## {k}: {v[:300]}" for k, v in advanced_ko_data.items() if k.startswith("adv_ko_")
+    )
+    needs_improvement, critique_feedback, critique_score, critique_usage = (
+        await _self_critique_advanced(req.term, term_type, adv_ko_preview, client, model)
+    )
+    logger.info(
+        "Self-critique for '%s': score=%d, needs_improvement=%s",
+        req.term, critique_score, needs_improvement,
+    )
+
+    # If needs improvement, regenerate advanced KO with feedback
+    if needs_improvement and critique_feedback:
+        logger.info("Regenerating advanced KO for '%s' with critique feedback", req.term)
+        improved_system = f"{adv_ko_system}\n\n## Reviewer Feedback (MUST address these):\n{critique_feedback}"
+        resp3b = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": improved_system},
+                {"role": "user", "content": advanced_prompt},
+            ],
+            max_tokens=16000, temperature=0.35,
+            response_format={"type": "json_object"},
+        )
+        advanced_ko_data = parse_ai_json(resp3b.choices[0].message.content, "Handbook-adv-ko-improved")
+        usage3b = extract_usage_metrics(resp3b, model)
+        critique_usage = merge_usage_metrics(critique_usage, usage3b)
+        _log_handbook_stage("handbook.generate.advanced.ko.improved", usage3b)
+
+    if critique_usage:
+        _log_handbook_stage("handbook.self_critique", critique_usage)
+
     # --- Merge results ---
     raw_data = {**basic_data, **en_basic_data, **advanced_ko_data, **advanced_en_data}
     merged_usage = merge_usage_metrics(
         merge_usage_metrics(usage1, usage2),
         merge_usage_metrics(usage3, usage4),
     )
+    if critique_usage:
+        merged_usage = merge_usage_metrics(merged_usage, critique_usage)
 
     # --- Assemble section keys into markdown ---
     data = _assemble_all_sections(raw_data)
@@ -1034,6 +1134,24 @@ async def _run_generate_term(
         for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
             if data.get(field):
                 data[field] = _auto_link_handbook_terms(data[field], handbook_map, exclude_slug=self_slug)
+
+    # Quality check on assembled advanced content
+    adv_combined = f"{data.get('body_advanced_ko', '')}\n\n{data.get('body_advanced_en', '')}"
+    quality_score = None
+    if adv_combined.strip():
+        quality_score, quality_breakdown, quality_usage = await _check_handbook_quality(
+            req.term, term_type, adv_combined, client,
+        )
+        if quality_usage:
+            merged_usage = merge_usage_metrics(merged_usage, quality_usage)
+        data["quality_score"] = quality_score
+        data["quality_breakdown"] = quality_breakdown
+        data["term_type"] = term_type
+        if quality_score < 60:
+            warnings.append(f"Advanced quality score: {quality_score}/100 — review recommended")
+        logger.info("Handbook quality for '%s': %d/100 (type=%s)", req.term, quality_score, term_type)
+        _log_handbook_stage("handbook.quality_check", quality_usage or {},
+                            extra_meta={"quality_score": quality_score, "term_type": term_type})
 
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",

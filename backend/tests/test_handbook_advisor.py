@@ -112,9 +112,10 @@ async def test_generate_term_returns_all_fields():
     assert result["categories"] == ["ai-ml"]
     assert len(result["body_basic_ko"]) >= 2000
     assert len(result["body_advanced_ko"]) >= 3000
-    # Validation warnings may include section/link checks from mock data
-    # (mock content doesn't have real H2 sections or handbook links)
-    pydantic_warnings = [w for w in warnings if "section" not in w and "handbook" not in w]
+    # Validation warnings may include section/link checks, quality scores from mock data
+    # (mock content doesn't have real H2 sections, handbook links, or high quality scores)
+    pydantic_warnings = [w for w in warnings
+                         if "section" not in w and "handbook" not in w and "quality score" not in w.lower()]
     assert pydantic_warnings == []
 
 
