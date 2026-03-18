@@ -99,7 +99,14 @@ function extractSlugFromHref(href: string): string {
   return match ? match[1] : '';
 }
 
+let _popupAbort: AbortController | null = null;
+
 function initHandbookPopup(): void {
+  // Tear down previous listeners to prevent duplicates on SPA navigation
+  if (_popupAbort) _popupAbort.abort();
+  _popupAbort = new AbortController();
+  const { signal } = _popupAbort;
+
   const dataEl = document.getElementById('handbook-terms-data');
   if (!dataEl) return;
 
@@ -148,7 +155,7 @@ function initHandbookPopup(): void {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePopup();
-  });
+  }, { signal });
 
   // Single delegated click handler — works for dynamically swapped content
   document.addEventListener('click', (e) => {
@@ -180,7 +187,7 @@ function initHandbookPopup(): void {
     if (activePopup && !activePopup.contains(target)) {
       closePopup();
     }
-  });
+  }, { signal });
 }
 
 document.addEventListener('astro:page-load', initHandbookPopup);
