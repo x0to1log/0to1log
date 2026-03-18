@@ -43,7 +43,7 @@ const ctaLabel = locale === 'ko' ? '자세히 보기' : 'View Details';
       )}
     </div>
     <div class="product-spotlight-info">
-      <h2 class="product-spotlight-name">{product.name}</h2>
+      <h2 class="product-spotlight-name">{product.name_original ?? product.name}</h2>
       {product.tagline && <p class="product-spotlight-tagline">{product.tagline}</p>}
       <div class="product-spotlight-meta">
         {product.pricing && (

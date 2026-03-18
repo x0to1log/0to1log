@@ -20,6 +20,7 @@ export interface ProductCardData {
   id: string;
   slug: string;
   name: string;
+  name_original: string;
   tagline: string | null;
   logo_url: string | null;
   thumbnail_url: string | null;
@@ -132,6 +133,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
   const resolvedProducts = allProducts.map((p) => ({
     ...p,
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
+    name_original: p.name as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
   }));
 

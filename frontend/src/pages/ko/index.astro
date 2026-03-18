@@ -147,7 +147,7 @@ const homeIntro = siteContent.home_intro ||
           {featuredProducts.map((product) => (
             <HomeProductCard
               href={`/ko/products/${product.slug}/`}
-              name={product.name_ko || product.name}
+              name={product.name}
               tagline={product.tagline_ko || product.tagline}
               logoUrl={product.logo_url}
               pricing={product.pricing}

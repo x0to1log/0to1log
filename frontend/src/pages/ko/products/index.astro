@@ -74,7 +74,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
               {preview.map((product) => (
                 <ProductCard
                   href={`/${locale}/products/${product.slug}/`}
-                  name={product.name}
+                  name={product.name_original}
                   tagline={product.tagline}
                   logoUrl={product.logo_url}
                   thumbnailUrl={product.thumbnail_url}
