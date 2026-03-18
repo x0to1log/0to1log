@@ -87,6 +87,55 @@
 - `fetchUserExtras()` 직접 호출 → `getOrFetchUserExtras()` (기존 5분 캐시 재활용)
 - `validateToken()`은 여전히 매 요청 실행 → 인증 보안 유지
 
+### Phase 4 — 마크다운 렌더링 최적화
+
+#### 4.1 렌더 결과 인메모리 캐시
+- **파일:** `markdown.ts`
+- `Map<contentHash, html>` (최대 150개, FIFO 퇴출)
+- `renderMarkdown`, `renderMarkdownWithTerms` 모두 적용
+- termsMap fingerprint = slug 목록 해시로 캐시 키 생성
+- Vercel warm 상태(~15분) 동안 동일 콘텐츠 재요청 시 전체 파이프라인(9개 플러그인) 스킵 → 렌더링 0ms
+
+#### 4.2 블로그 상세 병렬화
+- **파일:** `blogDetailPage.ts`
+- terms 쿼리 + termsMap 빌드 + 마크다운 렌더를 하나의 async 체인(renderTrack)으로 묶어 나머지 7개 쿼리와 병렬 실행
+- 기존: 8개 쿼리 완료 → termsMap 빌드 → 렌더 (순차)
+- 변경: renderTrack(terms + 렌더) ∥ 나머지 7개 쿼리
+- 첫 방문(캐시 미스) 시 ~50-150ms 절감
+
+#### 4.3 Shiki 언어 제한
+- **파일:** `markdown.ts`
+- 332개 bundled 언어 → 24개 주요 언어(JS, TS, Python, Bash 등)로 제한
+- 콜드 스타트 시 ~200-400ms 절감. 미지원 언어는 plain text fallback.
+
+### Phase 5 — 어드민 무한 스크롤
+
+#### 5.1 IntersectionObserver 기반 progressive rendering
+- **파일:** `admin/handbook/index.astro`, `admin/posts/index.astro`, `admin/blog/index.astro`, `admin/products/index.astro`
+- 초기 50개만 표시, 스크롤 시 50개씩 자동 추가 (BATCH_SIZE=50, rootMargin=300px)
+- 검색/필터 활성 시 전체 매칭 결과 표시 (lazy limit 무시)
+- 탭 전환 시 maxVisible 리셋
+- DOM 기반: 서버에서 전부 렌더링하되 JS로 점진적 노출 → 검색/필터 즉시 동작
+
+### Phase 6 — 제품 페이지 최적화
+
+#### 6.1 Vercel CDN 캐시: products 추가
+- **파일:** `vercel.json`
+- 기존 캐시 규칙에 `products` 추가: `/(en|ko)/(news|blog|handbook|products)/(.*)`
+- 60초 edge 캐시 + 5분 stale-while-revalidate
+
+#### 6.2 제품 상세: 순차 쿼리 → 병렬화
+- **파일:** `ko/products/[slug].astro`, `en/products/[slug].astro`
+- 기존: product(100ms) → alternatives(80ms) → relatedNews(80ms) = ~260ms
+- 변경: product 후 `Promise.all([alternatives, relatedNews])` = ~180ms
+
+#### 6.3 fetchRelatedNews locale 버그 수정
+- **파일:** `productsPage.ts`
+- `.eq('locale', 'en')` 하드코딩 → locale 파라미터 사용
+
+#### 6.4 제품 목록 .limit(200) 안전 장치
+- **파일:** `productsPage.ts`
+
 ---
 
 ## 수정 파일 목록
@@ -94,17 +143,22 @@
 | 파일 | 변경 |
 |------|------|
 | `frontend/src/components/Navigation.astro` | viewport prefetch |
-| `frontend/vercel.json` | 홈페이지 캐시 헤더 |
+| `frontend/vercel.json` | 홈페이지 + products 캐시 헤더 |
 | `frontend/src/middleware.ts` | Zone 3 토큰 캐싱 + Zone 1 extras 캐싱 |
 | `frontend/src/pages/ko/news/index.astro` | 쿼리 병렬화 |
 | `frontend/src/pages/en/news/index.astro` | 쿼리 병렬화 |
 | `frontend/src/lib/pageData/homePage.ts` | backfill 병렬화 |
+| `frontend/src/lib/markdown.ts` | 렌더 캐시 + Shiki 언어 제한 |
+| `frontend/src/lib/pageData/blogDetailPage.ts` | 렌더 트랙 병렬화 |
 | `frontend/src/pages/admin/index.astro` | count 쿼리 + 워터폴 제거 |
-| `frontend/src/pages/admin/handbook/index.astro` | body 컬럼 제거 + limit(500) |
-| `frontend/src/pages/admin/posts/index.astro` | limit(500) |
-| `frontend/src/pages/admin/blog/index.astro` | limit(500) |
-| `frontend/src/pages/admin/products/index.astro` | limit(500) |
+| `frontend/src/pages/admin/handbook/index.astro` | body 컬럼 + limit + 무한 스크롤 |
+| `frontend/src/pages/admin/posts/index.astro` | limit + 무한 스크롤 |
+| `frontend/src/pages/admin/blog/index.astro` | limit + 무한 스크롤 |
+| `frontend/src/pages/admin/products/index.astro` | limit + 무한 스크롤 |
 | `frontend/src/pages/admin/handbook/edit/[slug].astro` | 중복 클라이언트 제거 |
+| `frontend/src/pages/ko/products/[slug].astro` | alternatives + relatedNews 병렬화 |
+| `frontend/src/pages/en/products/[slug].astro` | 동일 |
+| `frontend/src/lib/pageData/productsPage.ts` | locale 수정 + limit(200) |
 
 ---
 
