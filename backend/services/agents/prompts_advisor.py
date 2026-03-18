@@ -595,7 +595,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_ko_2_example**: 이 개념이 실제로 적용되는 **구체적 시나리오** 3~4개. 1_plain의 비유와 겹치면 안 됨. 형식: **시나리오 제목**: 구체적 상황 설명. 예: "번역기가 문장을 한 단어씩 생성할 때" (O) / "날씨 예측" (X — 너무 일반적).
 - **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 단순 용어 설명표가 아님. 예: "AR vs MA vs ARIMA 비교" 또는 "단계별 동작 과정". 반드시 마크다운 테이블(| 형식) 사용.
 - **basic_ko_4_why**: **구체적인 영향** — 이 개념이 없으면 어떤 문제가 생기는지, 있으면 뭐가 달라지는지. "알면 좋다" 수준이 아니라 "모르면 이런 실수를 한다" 수준으로. 4~5개 bullet point.
-- **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마.
+- **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마. 제품-기술 매핑은 Reference Materials에서 확인된 것만 사용. 추측으로 "X가 Y를 사용한다"고 쓰지 마. 불확실하면 "~에 활용될 수 있다" 표현 사용.
 - **basic_ko_6_caution**: 이 개념에 대한 **흔한 오해**와 **실제 사실**을 대비. 형식: "❌ 오해: ~라고 생각하기 쉽다 → ✅ 실제: ~이다". 3~4개.
 - **basic_ko_7_comm**: 실제 **기술 기사, 회의, 면접**에서 이 용어가 등장하는 예시 문장 4~5개. 자연스러운 문맥에서 사용되는 모습. **핵심 용어를 굵게 표시**.
 - **basic_ko_8_related**: 관련 용어 4~6개. **이 용어와의 관계**를 명확히. 형식: **용어** — "X의 확장 버전" / "X와 반대 개념" / "X를 이해하려면 먼저 알아야 하는 개념"
@@ -683,7 +683,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_en_2_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation. E.g., "When a translation model generates words one at a time" (O) / "Weather prediction" (X — too generic).
 - **basic_en_3_glance**: A **comparison table** between this concept and similar ones. NOT a glossary table. E.g., "AR vs MA vs ARIMA" or "Step-by-step process". Must use markdown table (| format).
 - **basic_en_4_why**: **Concrete impact** — what goes wrong without this concept, what improves with it. Not "good to know" level but "you'll make this mistake if you don't know" level. 4-5 bullet points.
-- **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it.
+- **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it. Only state product-technology mappings confirmed in Reference Materials. Do NOT guess "X uses Y". If uncertain, write "may be used in ~" instead.
 - **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
 - **basic_en_7_comm**: 4-5 example sentences from real **tech articles, meetings, or interviews**. Natural context usage. **Bold the key term**.
 - **basic_en_8_related**: 4-6 related terms with **relationship type**. Format: **Term** — "extension of X" / "opposite of X" / "prerequisite for understanding X"
@@ -767,7 +767,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_ko_5_practical**: 실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개. 현장 톤.
 - **adv_ko_6_why**: 기술/조직/비즈니스에 미치는 영향 4~5개. 성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
 - **adv_ko_7_comm**: PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
-- **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. **불릿 리스트 형식 필수.** 형식: `- [표시명](URL) — 한 줄 설명`. 실제로 존재하는 URL만 포함.
+- **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. **불릿 리스트 형식 필수.** 형식: `- [표시명](URL) — 한 줄 설명`. 실제로 존재하는 URL만 포함. URL을 만들어내지 마. Reference Materials에서 제공된 URL을 우선 사용. 확인할 수 없는 URL은 생략.
 - **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. **불릿 리스트 형식 필수.** 형식: `- **용어** — 이 용어와의 기술적 관계`. 선행 개념, 대안, 보완 개념, 확장 개념 포함.
 
 ## Output JSON Structure
@@ -848,7 +848,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_en_5_practical**: 4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes). Practical tone.
 - **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
 - **adv_en_7_comm**: 6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews. **Bold key terms**. Ready-to-use professional tone.
-- **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Only include URLs you are confident exist.
+- **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Do NOT fabricate URLs. Prefer URLs from the Reference Materials provided above. If you cannot verify a URL exists, OMIT it entirely.
 - **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** — technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions.
 
 ## Output JSON Structure
