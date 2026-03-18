@@ -679,8 +679,14 @@ async def _generate_digest(
         # Calculate reading time from expert content (longest persona)
         expert_content = (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else ""
         learner_content = (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else ""
-        word_count = len((expert_content or learner_content or "").split())
-        reading_time = max(1, round(word_count / 200))
+        text = expert_content or learner_content or ""
+        if locale == "ko":
+            # Korean: count characters (excluding spaces/punctuation), ~500 chars/min
+            char_count = len([c for c in text if c.strip() and c not in '.,!?;:()[]{}"\'-—·…#*_~`|/>'])
+            reading_time = max(1, round(char_count / 500))
+        else:
+            # English: count words, ~200 words/min
+            reading_time = max(1, round(len(text.split()) / 200))
 
         # Auto-link handbook terms in digest content (first occurrence only)
         handbook_map = _fetch_handbook_term_map()
