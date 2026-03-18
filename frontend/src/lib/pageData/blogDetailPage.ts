@@ -43,6 +43,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
   let commentCount = 0;
   let handbookTermsMap: TermsMap = new Map();
   let handbookTermsJson: Record<string, any> = {};
+  let htmlContent = '';
 
   if (post && publicSupabase) {
     const authSupabase = !previewMode && locals.user && locals.accessToken
@@ -51,6 +52,39 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
     const definitionField = getDefinitionField(locale);
 
+    const rawContent = post.content || '';
+
+    // Track 1: terms fetch → termsMap build → markdown render (chained)
+    // Runs in parallel with Track 2 DB queries so render time overlaps with I/O.
+    const renderTrack = (async () => {
+      const hbTermsRes = await publicSupabase
+        .from('handbook_terms')
+        .select(`term, slug, korean_name, categories, ${definitionField}`)
+        .eq('status', 'published')
+        .limit(200);
+
+      const tMap: TermsMap = new Map();
+      const tJson: Record<string, any> = {};
+      for (const entry of hbTermsRes.data ?? []) {
+        const termEntry = { slug: entry.slug, term: entry.term };
+        tMap.set(entry.term.toLowerCase(), termEntry);
+        if (entry.korean_name) tMap.set(entry.korean_name.toLowerCase(), termEntry);
+        tJson[entry.slug] = {
+          term: entry.term,
+          korean_name: entry.korean_name || '',
+          categories: entry.categories || [],
+          definition: entry[definitionField] || '',
+        };
+      }
+
+      const renderFn = tMap.size > 0
+        ? (md: string) => renderMarkdownWithTerms(md, tMap)
+        : (md: string) => renderMarkdown(md);
+      const html = rawContent ? await renderFn(rawContent) : '';
+      return { termsMap: tMap, termsJson: tJson, html };
+    })();
+
+    // Track 2: remaining DB queries (unchanged, all parallel)
     const [
       sidebarRes,
       nextRes,
@@ -59,7 +93,6 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
       commentCountRes,
       bookmarkRes,
       likeRes,
-      hbTermsRes,
     ] = await Promise.all([
       publicSupabase
         .from('blog_posts')
@@ -114,11 +147,13 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
             .eq('post_id', post.id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
-      publicSupabase
-        .from('handbook_terms')
-        .select(`term, slug, korean_name, categories, ${definitionField}`)
-        .eq('status', 'published'),
     ]);
+
+    // Await render track (likely already done by now)
+    const renderResult = await renderTrack;
+    handbookTermsMap = renderResult.termsMap;
+    handbookTermsJson = renderResult.termsJson;
+    htmlContent = renderResult.html;
 
     sidebarRows = sidebarRes.data ?? [];
     nextPost = nextRes.data ?? null;
@@ -128,30 +163,12 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     isBookmarked = !!bookmarkRes.data;
     isLiked = !!likeRes.data;
 
-    const hbTerms = hbTermsRes.data ?? [];
-    for (const entry of hbTerms) {
-      const termEntry = { slug: entry.slug, term: entry.term };
-      handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
-      if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
-      handbookTermsJson[entry.slug] = {
-        term: entry.term,
-        korean_name: entry.korean_name || '',
-        categories: entry.categories || [],
-        definition: entry[definitionField] || '',
-      };
-    }
-
     articleData = post.published_at
       ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
       : undefined;
   }
 
   const hasTerms = handbookTermsMap.size > 0;
-  const renderMd = hasTerms
-    ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
-    : (md: string) => renderMarkdown(md);
-  const rawContent = post ? (post.content || '') : '';
-  const htmlContent = rawContent ? await renderMd(rawContent) : '';
   const sidebarPosts = buildBlogSidebarDataset(
     sidebarRows.map((item) => toSidebarPost(item)),
     post

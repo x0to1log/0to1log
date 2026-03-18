@@ -25,7 +25,7 @@
       ]
     },
     {
-      "source": "/(en|ko)/(news|blog|handbook)/(.*)",
+      "source": "/(en|ko)/(news|blog|handbook|products)/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

@@ -178,6 +178,7 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
             );
           })}
         </ul>
+        <div id="lazy-sentinel" class="lazy-sentinel" style="display:none;"></div>
         <p id="admin-no-results" class="admin-no-results" hidden>No matching products.</p>
         </>
       )}
@@ -257,6 +258,11 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
     width: 160px;
   }
 
+  .lazy-sentinel {
+    height: 1px;
+    margin-bottom: 1rem;
+  }
+
   @media (max-width: 640px) {
     .admin-list-toolbar-row {
       flex-direction: column;
@@ -285,15 +291,21 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
 
   // ── Filter logic ─────────────────────────────────────
   let currentFilter = 'draft';
+  const BATCH_SIZE = 50;
+  let maxVisible = BATCH_SIZE;
+  const productList = document.getElementById('product-list');
+  const allItems = productList ? Array.from(productList.querySelectorAll('.admin-list-item')) : [];
+  const sentinel = document.getElementById('lazy-sentinel');
 
   function applyFilters() {
     const search = document.getElementById('admin-search')?.value.toLowerCase() || '';
     const category = document.getElementById('admin-category-filter')?.value || '';
-    const items = document.querySelectorAll('#product-list .admin-list-item');
     const noResults = document.getElementById('admin-no-results');
+    const hasActiveSearch = !!(search || category);
     let visibleCount = 0;
+    let matchCount = 0;
 
-    items.forEach((item) => {
+    allItems.forEach((item) => {
       const published = item.dataset.published === 'true';
       const featured = item.dataset.featured === 'true';
       const title = item.dataset.title || '';
@@ -308,12 +320,24 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
       const matchesSearch = !search || title.includes(search);
       const matchesCategory = !category || cat === category;
 
-      const visible = matchesFilter && matchesSearch && matchesCategory;
-      item.hidden = !visible;
-      if (visible) visibleCount += 1;
+      const matches = matchesFilter && matchesSearch && matchesCategory;
+
+      if (matches) {
+        matchCount++;
+        const withinLimit = hasActiveSearch || matchCount <= maxVisible;
+        item.style.display = withinLimit ? '' : 'none';
+        item.hidden = false;
+        if (withinLimit) visibleCount++;
+      } else {
+        item.style.display = 'none';
+        item.hidden = true;
+      }
     });
 
     if (noResults) noResults.hidden = visibleCount > 0;
+    if (sentinel) {
+      sentinel.style.display = (!hasActiveSearch && matchCount > maxVisible) ? '' : 'none';
+    }
   }
 
   document.querySelectorAll('.admin-filter-btn').forEach((btn) => {
@@ -321,12 +345,23 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
       document.querySelectorAll('.admin-filter-btn').forEach((b) => b.classList.remove('admin-filter-btn--active'));
       btn.classList.add('admin-filter-btn--active');
       currentFilter = btn.dataset.filter;
+      maxVisible = BATCH_SIZE;
       applyFilters();
     });
   });
 
   document.getElementById('admin-search')?.addEventListener('input', applyFilters);
   document.getElementById('admin-category-filter')?.addEventListener('change', applyFilters);
+
+  if (sentinel) {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        maxVisible += BATCH_SIZE;
+        applyFilters();
+      }
+    }, { rootMargin: '300px' });
+    observer.observe(sentinel);
+  }
 
   applyFilters();
 

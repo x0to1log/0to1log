@@ -115,7 +115,8 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
       .select(CARD_COLUMNS)
       .eq('is_published', true)
       .order('sort_order')
-      .order('name'),
+      .order('name')
+      .limit(200),
   ]);
 
   if (categoriesRes.error) {
@@ -274,6 +275,7 @@ export interface RelatedNewsItem {
 export async function fetchRelatedNews(
   productName: string,
   productUrl: string,
+  locale: 'en' | 'ko' = 'en',
   limit = 5,
 ): Promise<RelatedNewsItem[]> {
   const db = getPublicSupabase();
@@ -284,7 +286,7 @@ export async function fetchRelatedNews(
     .from('news_posts')
     .select('slug, title, published_at')
     .eq('status', 'published')
-    .eq('locale', 'en')
+    .eq('locale', locale)
     .ilike('title', `%${productName}%`)
     .order('published_at', { ascending: false })
     .limit(limit);

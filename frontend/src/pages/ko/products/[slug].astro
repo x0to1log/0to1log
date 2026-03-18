@@ -9,10 +9,12 @@ import ProductDetail from '../../../components/products/ProductDetail.astro';
 const locale = 'ko';
 const { slug } = Astro.params;
 const { product, htmlDescription, error } = await getProductDetailData(slug ?? '', locale);
-const alternatives = product
-  ? await fetchAlternatives(product.primary_category, slug ?? '', locale)
-  : [];
-const relatedNews = product ? await fetchRelatedNews(product.name, product.url) : [];
+const [alternatives, relatedNews] = product
+  ? await Promise.all([
+      fetchAlternatives(product.primary_category, slug ?? '', locale),
+      fetchRelatedNews(product.name, product.url, locale),
+    ])
+  : [[], []];
 
 if (!product && !error) {
   Astro.response.status = 404;

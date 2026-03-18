@@ -41,7 +41,7 @@ const isKo = locale === 'ko';
 
 {relatedTerms.length > 0 && (
   <>
-    <div style="margin-top: 1.5rem;"></div>
+    <hr class="newsprint-rail-divider" />
     <section>
       <h3 class="newsprint-section-title">{isKo ? '이 글의 키워드' : 'Keywords in This Article'}</h3>
       <div class="newsprint-stack">
@@ -59,7 +59,7 @@ const isKo = locale === 'ko';
 
 {similarPosts.length > 0 && (
   <>
-    <div style="margin-top: 1.5rem;"></div>
+    <hr class="newsprint-rail-divider" />
     <section>
       <h3 class="newsprint-section-title">{isKo ? '다음 읽어볼 글' : 'Read Next'}</h3>
       <div class="newsprint-stack">
