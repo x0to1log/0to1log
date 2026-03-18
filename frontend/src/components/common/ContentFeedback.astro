@@ -20,22 +20,20 @@ const {
 const copy =
   locale === 'ko'
     ? {
-        title: '이 콘텐츠가 도움이 되었나요?',
-        body: '피드백은 콘텐츠 개선에 활용됩니다.',
+        title: '도움이 되었나요?',
         positive: '도움이 됐어요',
-        negative: '별로에요',
-        thanks: '감사합니다! 피드백이 기록되었습니다.',
+        negative: '아쉬워요',
+        thanks: '피드백 감사합니다.',
         error: '피드백 저장에 실패했습니다.',
-        previewNote: 'Preview mode · feedback is read-only.',
+        previewNote: 'Preview mode',
       }
     : {
-        title: 'Was this content helpful?',
-        body: 'Your feedback helps us improve.',
-        positive: 'Helpful',
-        negative: 'Not great',
-        thanks: 'Thanks! Your feedback has been recorded.',
+        title: 'Helpful?',
+        positive: 'Yes',
+        negative: 'Not really',
+        thanks: 'Thanks for your feedback.',
         error: 'Failed to save feedback.',
-        previewNote: 'Preview mode · feedback is read-only.',
+        previewNote: 'Preview mode',
       };
 ---
 
@@ -53,40 +51,36 @@ const copy =
   data-thanks={copy.thanks}
   data-error={copy.error}
 >
-  <div class="content-feedback-inner">
-    <div class="content-feedback-copy">
-      <h3 class="content-feedback-title">{copy.title}</h3>
-      <p class="content-feedback-body">{copy.body}</p>
-      {previewMode && <p class="content-feedback-preview-note">{copy.previewNote}</p>}
-      <p class="content-feedback-status" data-feedback-status aria-live="polite" hidden></p>
-    </div>
-    <div class="content-feedback-actions">
-      <button
-        type="button"
-        class="content-feedback-btn content-feedback-btn--positive"
-        aria-label={copy.positive}
-        aria-pressed="false"
-        data-reaction="positive"
-        data-auth-action="feedback"
-        aria-disabled={previewMode ? 'true' : undefined}
-        tabindex={previewMode ? '-1' : undefined}
-        disabled={previewMode}
-      >
-        {copy.positive}
-      </button>
-      <button
-        type="button"
-        class="content-feedback-btn content-feedback-btn--negative"
-        aria-label={copy.negative}
-        aria-pressed="false"
-        data-reaction="negative"
-        data-auth-action="feedback"
-        aria-disabled={previewMode ? 'true' : undefined}
-        tabindex={previewMode ? '-1' : undefined}
-        disabled={previewMode}
-      >
-        {copy.negative}
-      </button>
-    </div>
+  <span class="content-feedback-label">{copy.title}</span>
+  <div class="content-feedback-actions">
+    <button
+      type="button"
+      class="content-feedback-btn content-feedback-btn--positive"
+      aria-label={copy.positive}
+      aria-pressed="false"
+      data-reaction="positive"
+      data-auth-action="feedback"
+      aria-disabled={previewMode ? 'true' : undefined}
+      tabindex={previewMode ? '-1' : undefined}
+      disabled={previewMode}
+      title={copy.positive}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+    </button>
+    <button
+      type="button"
+      class="content-feedback-btn content-feedback-btn--negative"
+      aria-label={copy.negative}
+      aria-pressed="false"
+      data-reaction="negative"
+      data-auth-action="feedback"
+      aria-disabled={previewMode ? 'true' : undefined}
+      tabindex={previewMode ? '-1' : undefined}
+      disabled={previewMode}
+      title={copy.negative}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+    </button>
   </div>
+  <span class="content-feedback-status" data-feedback-status aria-live="polite" hidden></span>
 </section>
