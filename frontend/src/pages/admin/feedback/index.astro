@@ -1,0 +1,552 @@
+---
+export const prerender = false;
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (!user || !accessToken) return Astro.redirect('/admin/login');
+
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+const { data: adminCheck } = await supabase
+  .from('admin_users')
+  .select('user_id')
+  .eq('user_id', user.id)
+  .maybeSingle();
+if (!adminCheck) return Astro.redirect('/admin/login');
+
+// Fetch all feedback
+const { data: feedbackRows } = await supabase
+  .from('content_feedback')
+  .select('*')
+  .order('updated_at', { ascending: false });
+
+// Batch fetch content titles per type
+const newsIds = feedbackRows?.filter(r => r.source_type === 'news').map(r => r.source_id) ?? [];
+const handbookIds = feedbackRows?.filter(r => r.source_type === 'handbook').map(r => r.source_id) ?? [];
+const blogIds = feedbackRows?.filter(r => r.source_type === 'blog').map(r => r.source_id) ?? [];
+const productIds = feedbackRows?.filter(r => r.source_type === 'product').map(r => r.source_id) ?? [];
+
+const [newsRes, handbookRes, blogRes, productRes] = await Promise.all([
+  newsIds.length ? supabase.from('news_posts').select('id, title, slug').in('id', newsIds) : { data: [] },
+  handbookIds.length ? supabase.from('handbook_terms').select('id, term, slug').in('id', handbookIds) : { data: [] },
+  blogIds.length ? supabase.from('blog_posts').select('id, title, slug').in('id', blogIds) : { data: [] },
+  productIds.length ? supabase.from('ai_products').select('id, name, slug').in('id', productIds) : { data: [] },
+]);
+
+// Build title/slug lookup maps
+const titleMap = new Map();
+for (const r of newsRes.data ?? []) titleMap.set(r.id, { title: r.title, slug: r.slug });
+for (const r of handbookRes.data ?? []) titleMap.set(r.id, { title: r.term, slug: r.slug });
+for (const r of blogRes.data ?? []) titleMap.set(r.id, { title: r.title, slug: r.slug });
+for (const r of productRes.data ?? []) titleMap.set(r.id, { title: r.name, slug: r.slug });
+
+// Enrich feedback rows
+interface FeedbackItem {
+  id: string;
+  source_type: string;
+  source_id: string;
+  reaction: string;
+  reason: string | null;
+  message: string | null;
+  locale: string;
+  archived: boolean;
+  updatedAt: string;
+  content_title: string;
+  content_slug: string | null;
+  userName: string;
+}
+
+const items: FeedbackItem[] = (feedbackRows ?? []).map((row: any) => ({
+  id: row.id,
+  source_type: row.source_type,
+  source_id: row.source_id,
+  reaction: row.reaction,
+  reason: row.reason ?? null,
+  message: row.message ?? null,
+  locale: row.locale ?? '',
+  archived: row.archived ?? false,
+  updatedAt: row.updated_at,
+  content_title: titleMap.get(row.source_id)?.title ?? '(삭제된 콘텐츠)',
+  content_slug: titleMap.get(row.source_id)?.slug ?? null,
+  userName: 'User',
+}));
+
+const activeItems = items.filter((i) => !i.archived);
+const archivedItems = items.filter((i) => i.archived);
+const positiveCount = activeItems.filter((i) => i.reaction === 'positive').length;
+const negativeCount = activeItems.filter((i) => i.reaction === 'negative').length;
+const messageCount = activeItems.filter((i) => i.message).length;
+
+// Source type counts
+const newsCount = items.filter((i) => i.source_type === 'news').length;
+const handbookCount = items.filter((i) => i.source_type === 'handbook').length;
+const blogCount = items.filter((i) => i.source_type === 'blog').length;
+const productCount = items.filter((i) => i.source_type === 'product').length;
+
+function getSourceLabel(sourceType: string): string {
+  switch (sourceType) {
+    case 'news': return '뉴스';
+    case 'handbook': return '용어집';
+    case 'blog': return '블로그';
+    case 'product': return '제품';
+    default: return sourceType;
+  }
+}
+
+function getEditorUrl(sourceType: string, slug: string | null): string {
+  if (!slug) return '#';
+  switch (sourceType) {
+    case 'news': return `/admin/posts/edit/${slug}`;
+    case 'handbook': return `/admin/handbook/edit/${slug}`;
+    case 'blog': return `/admin/blog/edit/${slug}`;
+    case 'product': return `/admin/products/edit/${slug}`;
+    default: return '#';
+  }
+}
+---
+
+<MainLayout title="Feedback — Admin" locale="en" slug="admin/feedback/">
+  <AdminSidebar activeSection="feedback" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">Feedback</h1>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source tabs -->
+      <div class="admin-list-toolbar">
+        <div class="admin-list-toolbar-row">
+          <div class="admin-list-toolbar-left">
+            <div class="admin-filter-tabs">
+              <button class="admin-filter-btn admin-filter-btn--active" data-source="all">All ({items.length})</button>
+              <button class="admin-filter-btn" data-source="news">News ({newsCount})</button>
+              <button class="admin-filter-btn" data-source="handbook">Handbook ({handbookCount})</button>
+              <button class="admin-filter-btn" data-source="blog">Blog ({blogCount})</button>
+              <button class="admin-filter-btn" data-source="product">Product ({productCount})</button>
+            </div>
+          </div>
+          <div class="admin-list-toolbar-right">
+            <div class="admin-search-wrapper">
+              <input
+                type="search"
+                class="admin-input admin-search-input"
+                id="feedback-search"
+                placeholder="Search content or messages..."
+                aria-label="Search feedback"
+              />
+              <button class="admin-search-clear" id="search-clear" type="button" hidden aria-label="Clear search">x</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status + reaction filters */}
+      {items.length > 0 && (
+        <div class="handbook-results-bar">
+          <div class="admin-filter-tabs">
+            <button class="admin-filter-btn admin-filter-btn--active" data-filter="active">Active ({activeItems.length})</button>
+            <button class="admin-filter-btn" data-filter="positive">Positive ({positiveCount})</button>
+            <button class="admin-filter-btn" data-filter="negative">Negative ({negativeCount})</button>
+            {messageCount > 0 && (
+              <button class="admin-filter-btn" data-filter="with-message">With Message ({messageCount})</button>
+            )}
+            {archivedItems.length > 0 && (
+              <button class="admin-filter-btn" data-filter="archived">Archived ({archivedItems.length})</button>
+            )}
+          </div>
+          <span class="handbook-results-count" id="results-count">{activeItems.length} feedback</span>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div class="feedback-empty-state">
+          <svg class="feedback-empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <path d="M8 10h.01M12 10h.01M16 10h.01" />
+          </svg>
+          <p class="feedback-empty-title">No feedback yet</p>
+          <p class="feedback-empty-desc">
+            Feedback from users on all content types will appear here.<br />
+            Users can send feedback via the reaction buttons on content pages.
+          </p>
+        </div>
+      ) : (
+        <ul class="admin-list" id="feedback-list">
+          {items.map((item) => (
+            <li
+              class={`admin-feedback-item${item.archived ? ' admin-feedback-item--archived' : ''}`}
+              data-id={item.id}
+              data-reaction={item.reaction}
+              data-source-type={item.source_type}
+              data-archived={item.archived ? 'true' : 'false'}
+              data-has-message={item.message ? 'true' : 'false'}
+              data-title={item.content_title.toLowerCase()}
+              data-message={(item.message || '').toLowerCase()}
+            >
+              <div class="admin-feedback-item-body">
+                <div class="admin-feedback-item-header">
+                  <a href={getEditorUrl(item.source_type, item.content_slug)} class="admin-feedback-term-link">
+                    {item.content_title}
+                  </a>
+                  <span class={`admin-source-badge admin-source-badge--${item.source_type}`}>
+                    {getSourceLabel(item.source_type)}
+                  </span>
+                </div>
+                <div class="admin-list-meta">
+                  {item.reaction === 'positive' ? (
+                    <span class="admin-status-badge admin-status-badge--published">
+                      👍 positive
+                    </span>
+                  ) : (
+                    <span class="admin-status-badge admin-status-badge--draft">
+                      👎 negative
+                    </span>
+                  )}
+                  {item.reaction === 'negative' && item.reason && (
+                    <span class="admin-reason-tag">{item.reason}</span>
+                  )}
+                  {item.locale && (
+                    <span class="admin-lang-badge admin-lang-badge--ready">{item.locale.toUpperCase()}</span>
+                  )}
+                  <span class="admin-meta-sep">&middot;</span>
+                  <span class="admin-meta-date">{new Date(item.updatedAt).toLocaleDateString('ko-KR')}</span>
+                </div>
+                {item.message && (
+                  <p class="admin-feedback-message">"{item.message}"</p>
+                )}
+              </div>
+              <div class="admin-feedback-item-actions">
+                <button
+                  type="button"
+                  class="admin-btn admin-btn--sm feedback-archive-btn"
+                  data-feedback-id={item.id}
+                  data-current-archived={item.archived ? 'true' : 'false'}
+                >
+                  {item.archived ? 'Restore' : 'Archive'}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .admin-list-toolbar {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-list-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-list-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-list-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .admin-search-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .admin-search-wrapper .admin-search-input {
+    width: 220px;
+    padding-right: 1.8rem;
+  }
+
+  .admin-search-clear {
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: var(--font-ui);
+    padding: 0.15rem 0.3rem;
+    border-radius: var(--radius-sm);
+    line-height: 1;
+  }
+
+  .admin-search-clear:hover {
+    color: var(--color-text-primary);
+    background: var(--color-accent-subtle);
+  }
+
+  .admin-feedback-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .admin-feedback-item-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .admin-feedback-item--archived {
+    opacity: 0.5;
+  }
+
+  .admin-feedback-item-actions {
+    flex-shrink: 0;
+    padding-top: 0.15rem;
+  }
+
+  .admin-feedback-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-source-badge {
+    display: inline-block;
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-sm);
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .admin-source-badge--news {
+    background: var(--color-accent-subtle, #e0f2fe);
+    color: var(--color-accent, #0369a1);
+  }
+
+  .admin-source-badge--handbook {
+    background: #f0fdf4;
+    color: #15803d;
+  }
+
+  .admin-source-badge--blog {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .admin-source-badge--product {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+
+  .admin-reason-tag {
+    display: inline-block;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: #fef2f2;
+    color: #b91c1c;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 640px) {
+    .admin-list-toolbar-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-list-toolbar-right {
+      margin-left: 0;
+    }
+
+    .admin-search-wrapper .admin-search-input {
+      width: 100%;
+    }
+  }
+
+  .feedback-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    margin-top: 1rem;
+  }
+
+  .feedback-empty-icon {
+    color: var(--color-text-muted);
+    opacity: 0.4;
+    margin-bottom: 1rem;
+  }
+
+  .feedback-empty-title {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.5rem;
+  }
+
+  .feedback-empty-desc {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 28rem;
+  }
+</style>
+
+<script>
+  function initFeedbackAdmin() {
+    const list = document.getElementById('feedback-list');
+    if (!list || list.dataset.init === '1') return;
+    list.dataset.init = '1';
+
+    let activeFilter = 'active';
+    let activeSource = 'all';
+    const searchInput = document.getElementById('feedback-search') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('search-clear') as HTMLButtonElement | null;
+    const countEl = document.getElementById('results-count');
+
+    // Source tabs
+    document.querySelectorAll<HTMLElement>('[data-source]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('[data-source]').forEach((t) => t.classList.remove('admin-filter-btn--active'));
+        tab.classList.add('admin-filter-btn--active');
+        activeSource = tab.dataset.source || 'all';
+        applyFilters();
+      });
+    });
+
+    // Filter tabs
+    document.querySelectorAll<HTMLElement>('[data-filter]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('[data-filter]').forEach((t) => t.classList.remove('admin-filter-btn--active'));
+        tab.classList.add('admin-filter-btn--active');
+        activeFilter = tab.dataset.filter || 'active';
+        applyFilters();
+      });
+    });
+
+    // Search
+    let searchTimeout: ReturnType<typeof setTimeout>;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyFilters, 200);
+      if (clearBtn) clearBtn.hidden = !searchInput.value;
+    });
+    clearBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (clearBtn) clearBtn.hidden = true;
+      applyFilters();
+    });
+
+    // Archive/Restore buttons
+    list.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest('.feedback-archive-btn') as HTMLButtonElement | null;
+      if (!btn) return;
+
+      const feedbackId = btn.dataset.feedbackId;
+      const isArchived = btn.dataset.currentArchived === 'true';
+      const newArchived = !isArchived;
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="btn-spinner"></span>${newArchived ? 'Archiving...' : 'Restoring...'}`;
+
+      try {
+        const res = await fetch('/api/admin/feedback/archive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: feedbackId, archived: newArchived }),
+        });
+
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = isArchived ? 'Restore' : 'Archive';
+          return;
+        }
+
+        // Update DOM
+        const item = btn.closest('.admin-feedback-item') as HTMLElement;
+        item.dataset.archived = newArchived ? 'true' : 'false';
+        item.classList.toggle('admin-feedback-item--archived', newArchived);
+        btn.dataset.currentArchived = newArchived ? 'true' : 'false';
+        btn.textContent = newArchived ? 'Restore' : 'Archive';
+        btn.disabled = false;
+
+        applyFilters();
+      } catch {
+        btn.disabled = false;
+        btn.textContent = isArchived ? 'Restore' : 'Archive';
+      }
+    });
+
+    function applyFilters() {
+      const query = (searchInput?.value || '').toLowerCase();
+      let visible = 0;
+      list!.querySelectorAll<HTMLElement>('.admin-feedback-item').forEach((el) => {
+        const isArchived = el.dataset.archived === 'true';
+        const reaction = el.dataset.reaction;
+        const sourceType = el.dataset.sourceType;
+
+        // Source tab filter
+        const matchSource = activeSource === 'all' || sourceType === activeSource;
+
+        // Reaction/status filter
+        let matchFilter = false;
+        if (activeFilter === 'active') matchFilter = !isArchived;
+        else if (activeFilter === 'archived') matchFilter = isArchived;
+        else if (activeFilter === 'positive') matchFilter = !isArchived && reaction === 'positive';
+        else if (activeFilter === 'negative') matchFilter = !isArchived && reaction === 'negative';
+        else if (activeFilter === 'with-message') matchFilter = !isArchived && el.dataset.hasMessage === 'true';
+
+        const matchSearch = !query || (el.dataset.title || '').includes(query) || (el.dataset.message || '').includes(query);
+        const show = matchSource && matchFilter && matchSearch;
+        el.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      if (countEl) countEl.textContent = `${visible} feedback`;
+    }
+
+    // Initial filter: show active only
+    applyFilters();
+  }
+
+  document.addEventListener('DOMContentLoaded', initFeedbackAdmin);
+</script>
