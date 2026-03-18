@@ -1,5 +1,5 @@
 import { localField } from '../handbookUtils';
-import { renderMarkdown } from '../markdown';
+import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
 interface HandbookDetailPageContext extends DetailPageContext {
@@ -57,10 +57,30 @@ export async function getHandbookDetailPageData({
       ? getAuthorizedSupabase(locals.accessToken)
       : null;
 
+    // Build handbook terms map for inline linking (exclude self to prevent self-link)
+    const definitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
+    const hbTermsRes = await publicSupabase
+      .from('handbook_terms')
+      .select(`term, slug, korean_name, categories, ${definitionField}`)
+      .eq('status', 'published')
+      .neq('slug', pageSlug)  // exclude self
+      .limit(200);
+
+    const handbookTermsMap: TermsMap = new Map();
+    for (const entry of hbTermsRes.data ?? []) {
+      const termEntry = { slug: entry.slug, term: entry.term };
+      handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
+      if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
+    }
+    const hasTerms = handbookTermsMap.size > 0;
+    const renderMd = hasTerms
+      ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
+      : (md: string) => renderMarkdown(md);
+
     // Run markdown rendering and DB queries in parallel — they don't depend on each other
     const [basicHtml, advancedHtml, articlesRes, recentNewsRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
-      bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
-      bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
+      bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
+      bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
       publicSupabase
         .from('news_posts')
         .select('title, slug, category, published_at')
