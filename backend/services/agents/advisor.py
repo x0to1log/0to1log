@@ -790,50 +790,50 @@ def _auto_link_handbook_terms(
 
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_KO = [
-    ("basic_ko_1_plain", "## 💡 쉽게 이해하기"),
-    ("basic_ko_2_example", "## 🍎 예시와 비유"),
-    ("basic_ko_3_glance", "## 📊 한눈에 보기"),
-    ("basic_ko_4_why", "## ❓ 왜 중요한가"),
-    ("basic_ko_5_where", "## 🔧 실제로 어디서 쓰이나"),
-    ("basic_ko_6_caution", "## ⚠️ 주의할 점"),
-    ("basic_ko_7_comm", "## 💬 대화에서는 이렇게"),
-    ("basic_ko_8_related", "## 🔗 함께 알면 좋은 용어"),
+    ("basic_ko_1_plain", "## 쉽게 이해하기"),
+    ("basic_ko_2_example", "## 예시와 비유"),
+    ("basic_ko_3_glance", "## 한눈에 보기"),
+    ("basic_ko_4_why", "## 왜 중요한가"),
+    ("basic_ko_5_where", "## 실제로 어디서 쓰이나"),
+    ("basic_ko_6_caution", "## 주의할 점"),
+    ("basic_ko_7_comm", "## 대화에서는 이렇게"),
+    ("basic_ko_8_related", "## 함께 알면 좋은 용어"),
 ]
 
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_EN = [
-    ("basic_en_1_plain", "## 💡 Plain Explanation"),
-    ("basic_en_2_example", "## 🍎 Example & Analogy"),
-    ("basic_en_3_glance", "## 📊 At a Glance"),
-    ("basic_en_4_why", "## ❓ Why It Matters"),
-    ("basic_en_5_where", "## 🔧 Where It's Used"),
-    ("basic_en_6_caution", "## ⚠️ Precautions"),
-    ("basic_en_7_comm", "## 💬 Communication"),
-    ("basic_en_8_related", "## 🔗 Related Terms"),
+    ("basic_en_1_plain", "## Plain Explanation"),
+    ("basic_en_2_example", "## Example & Analogy"),
+    ("basic_en_3_glance", "## At a Glance"),
+    ("basic_en_4_why", "## Why It Matters"),
+    ("basic_en_5_where", "## Where It's Used"),
+    ("basic_en_6_caution", "## Precautions"),
+    ("basic_en_7_comm", "## Communication"),
+    ("basic_en_8_related", "## Related Terms"),
 ]
 
 ADVANCED_SECTIONS_KO = [
-    ("adv_ko_1_technical", "## 💡 기술적 설명"),
-    ("adv_ko_2_formulas", "## 📐 핵심 수식 & 도표"),
-    ("adv_ko_3_howworks", "## 🏗️ 동작 원리"),
-    ("adv_ko_4_code", "## 💻 코드 예시"),
-    ("adv_ko_5_practical", "## ✅ 실무 활용 & 주의점"),
-    ("adv_ko_6_why", "## ❓ 왜 중요한가"),
-    ("adv_ko_7_comm", "## 💬 업계 대화 맥락"),
-    ("adv_ko_8_refs", "## 📚 참조 링크"),
-    ("adv_ko_9_related", "## 🔗 관련 기술 & 비교"),
+    ("adv_ko_1_technical", "## 기술적 설명"),
+    ("adv_ko_2_formulas", "## 핵심 수식 & 도표"),
+    ("adv_ko_3_howworks", "## 동작 원리"),
+    ("adv_ko_4_code", "## 코드 예시"),
+    ("adv_ko_5_practical", "## 실무 활용 & 주의점"),
+    ("adv_ko_6_why", "## 왜 중요한가"),
+    ("adv_ko_7_comm", "## 업계 대화 맥락"),
+    ("adv_ko_8_refs", "## 참조 링크"),
+    ("adv_ko_9_related", "## 관련 기술 & 비교"),
 ]
 
 ADVANCED_SECTIONS_EN = [
-    ("adv_en_1_technical", "## 💡 Technical Description"),
-    ("adv_en_2_formulas", "## 📐 Key Formulas & Diagrams"),
-    ("adv_en_3_howworks", "## 🏗️ How It Works"),
-    ("adv_en_4_code", "## 💻 Code Example"),
-    ("adv_en_5_practical", "## ✅ Practical Use & Precautions"),
-    ("adv_en_6_why", "## ❓ Why It Matters"),
-    ("adv_en_7_comm", "## 💬 Industry Communication"),
-    ("adv_en_8_refs", "## 📚 Reference Links"),
-    ("adv_en_9_related", "## 🔗 Related & Comparison"),
+    ("adv_en_1_technical", "## Technical Description"),
+    ("adv_en_2_formulas", "## Key Formulas & Diagrams"),
+    ("adv_en_3_howworks", "## How It Works"),
+    ("adv_en_4_code", "## Code Example"),
+    ("adv_en_5_practical", "## Practical Use & Precautions"),
+    ("adv_en_6_why", "## Why It Matters"),
+    ("adv_en_7_comm", "## Industry Communication"),
+    ("adv_en_8_refs", "## Reference Links"),
+    ("adv_en_9_related", "## Related & Comparison"),
 ]
 
 

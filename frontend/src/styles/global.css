@@ -7028,6 +7028,15 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 
 /* ═══════════════ Handbook Inline Term Popup ═══════════════ */
 
+/* ── Handbook body h2 — accent left bar ── */
+#handbook-body h2 {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 0.75rem;
+}
+#handbook-body > h2:first-child {
+  margin-top: 0;
+}
+
 /* ── Handbook Learn More — collapsible curiosity block ── */
 .handbook-learn-more {
   margin-top: 2.5rem;

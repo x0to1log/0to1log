@@ -2,18 +2,18 @@ import { localField } from '../handbookUtils';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
-// Question-style labels for collapsed sections — maps emoji prefix to curiosity question
+// Question-style labels for collapsed sections — maps section keyword to curiosity question
 const QUESTION_MAP_KO: Record<string, string> = {
-  '🔧': '실제로 어디서 쓰여요?',
-  '⚠️': '자주 하는 실수가 뭐예요?',
-  '💬': '회의에서 어떻게 말해요?',
-  '🔗': '다음에 뭘 공부하면 좋아요?',
+  '어디서': '실제로 어디서 쓰여요?',
+  '주의': '자주 하는 실수가 뭐예요?',
+  '대화': '회의에서 어떻게 말해요?',
+  '함께': '다음에 뭘 공부하면 좋아요?',
 };
 const QUESTION_MAP_EN: Record<string, string> = {
-  '🔧': 'Where is it actually used?',
-  '⚠️': 'What mistakes do people make?',
-  '💬': 'How do you talk about it?',
-  '🔗': 'What should I learn next?',
+  'where': 'Where is it actually used?',
+  'precaution': 'What mistakes do people make?',
+  'communication': 'How do you talk about it?',
+  'related': 'What should I learn next?',
 };
 
 /**
@@ -36,7 +36,7 @@ function wrapLearnMore(html: string, locale: string): string {
   const learnMorePart = html.slice(splitIndex);
 
   const questionMap = locale === 'ko' ? QUESTION_MAP_KO : QUESTION_MAP_EN;
-  const summaryLabel = locale === 'ko' ? '💭 이런 것도 궁금하지 않으세요?' : '💭 Curious about more?';
+  const summaryLabel = locale === 'ko' ? '이런 것도 궁금하지 않으세요? 💭' : 'Curious about more? 💭';
 
   // Extract section titles and convert to question-style labels
   const titlePattern = /<h2[^>]*>(.*?)<\/h2>/gi;
@@ -44,9 +44,10 @@ function wrapLearnMore(html: string, locale: string): string {
   let tm: RegExpExecArray | null;
   while ((tm = titlePattern.exec(learnMorePart)) !== null) {
     const rawTitle = tm[1].replace(/<[^>]+>/g, '').trim();
-    // Find matching emoji and use question version
-    const emoji = Object.keys(questionMap).find(e => rawTitle.includes(e));
-    questions.push(emoji ? `${emoji} ${questionMap[emoji]}` : rawTitle);
+    // Find matching keyword and use question version
+    const titleLower = rawTitle.toLowerCase();
+    const keyword = Object.keys(questionMap).find(k => titleLower.includes(k));
+    questions.push(keyword ? questionMap[keyword] : rawTitle);
   }
 
   const questionsHtml = questions.length > 0
