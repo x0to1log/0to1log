@@ -52,16 +52,29 @@ if (user && accessToken) {
   (bmRes.data ?? []).forEach((r: any) => bookmarkedTermIds.add(r.item_id));
 }
 
-let railTerms: any[] = [];
+// Popular terms (view_count based, fallback to latest published)
+let popularTerms: any[] = [];
 if (supabase) {
   const { data } = await supabase
     .from('handbook_terms')
-    .select('term, slug')
+    .select('term, slug, view_count')
     .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(5);
-  railTerms = data ?? [];
+    .order('view_count', { ascending: false })
+    .limit(10);
+  popularTerms = data ?? [];
 }
+if (popularTerms.length === 0 || popularTerms.every((t: any) => !t.view_count)) {
+  if (supabase) {
+    const { data } = await supabase
+      .from('handbook_terms')
+      .select('term, slug')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(10);
+    popularTerms = data ?? [];
+  }
+}
+const railTerms = popularTerms.slice(0, 5);
 
 const categories = getHandbookCategories();
 
@@ -97,6 +110,24 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
         class="handbook-search-input"
       />
     </div>
+
+    {/* Trending Terms */}
+    {popularTerms.length > 0 && (
+      <section class="handbook-trending">
+        <h3 class="handbook-trending-title">Trending Terms</h3>
+        <ol class="handbook-trending-list">
+          {popularTerms.map((pt: any, i: number) => (
+            <li>
+              <a href={`/${locale}/handbook/${pt.slug}/`} class="handbook-trending-link">
+                <span class="handbook-trending-rank">{i + 1}</span>
+                <span>{pt.term}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )}
+
     <!-- Category showcase cards -->
     <section class="product-category-showcase" id="handbook-showcase">
       <div class="product-category-showcase-grid">
