@@ -47,15 +47,15 @@
 */
 @theme {
   --font-sans: Lora, 'Pretendard', Georgia, serif;
-  --font-display: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-display: Lora, 'Pretendard', Georgia, serif;
   --font-body: Lora, 'Pretendard', Georgia, serif;
-  --font-masthead: 'Playfair Display', 'Pretendard', Georgia, serif;
-  --font-heading: 'Playfair Display', 'Pretendard', Georgia, serif;
-  --font-article-heading: 'Playfair Display', 'Pretendard', Georgia, serif;
-  --font-article-deck: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-masthead: 'Playfair Display', 'Noto Serif KR', 'Pretendard', Georgia, serif;
+  --font-heading: Lora, 'Pretendard', Georgia, serif;
+  --font-article-heading: Lora, 'Pretendard', Georgia, serif;
+  --font-article-deck: Lora, 'Pretendard', Georgia, serif;
   --font-ui: Lora, 'Pretendard', Georgia, serif;
   --font-code: 'JetBrains Mono', 'D2Coding', monospace;
-  --font-blog-masthead: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-blog-masthead: 'Gowun Batang', Lora, 'Pretendard', Georgia, serif;
   --font-blog-heading: Lora, 'Pretendard', Georgia, serif;
   --font-blog-body: Lora, 'Pretendard', Georgia, serif;
   --font-blog-ui: Lora, 'Pretendard', Georgia, serif;
@@ -278,6 +278,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
+  font-family: var(--font-masthead);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -290,6 +291,7 @@
   margin-bottom: 0.75rem;
   font-family: var(--font-masthead);
   font-weight: 900;
+  -webkit-text-stroke: 0.2px currentColor;
   font-size: clamp(2.2rem, 8vw, 4.5rem);
   line-height: 1.08;
   letter-spacing: -0.02em;
@@ -508,6 +510,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
+  font-family: var(--font-masthead);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -7774,7 +7777,7 @@ pre:hover .blog-code-copy {
 }
 
 .blog-masthead-title {
-  font-family: var(--font-blog-masthead);
+  font-family: 'Gowun Batang', Lora, 'Pretendard', Georgia, serif;
   font-weight: 400;
   font-size: clamp(2rem, 5vw, 3.5rem);
   line-height: 1.1;
@@ -8266,7 +8269,7 @@ pre:hover .blog-code-copy {
 
 .home-masthead-kicker-left,
 .home-masthead-kicker-right {
-  font-family: var(--font-ui);
+  font-family: var(--font-masthead);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -8290,7 +8293,7 @@ pre:hover .blog-code-copy {
 }
 
 .home-masthead-pillars {
-  font-family: var(--font-ui);
+  font-family: var(--font-masthead);
   font-size: 0.8rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
