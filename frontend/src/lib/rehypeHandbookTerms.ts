@@ -35,15 +35,32 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
 
     const matched = new Set<string>(); // track slugs already matched
 
+    // Build parent map for ancestor chain lookup
+    const parentMap = new Map<any, Element>();
+    visit(tree, 'element', (node: Element) => {
+      for (const child of (node.children || [])) {
+        parentMap.set(child, node);
+      }
+    });
+
+    function hasSkipAncestor(node: any): boolean {
+      let current = node;
+      while (current) {
+        const p = parentMap.get(current);
+        if (!p) break;
+        if (p.tagName && SKIP_TAGS.has(p.tagName)) return true;
+        current = p;
+      }
+      return false;
+    }
+
     visit(tree, 'text', (node: Text, index, parent) => {
       if (!parent || index === null || index === undefined) return;
       const parentEl = parent as Element;
 
-      // Skip text inside headings, links, code
+      // Skip text inside headings, links, code (check full ancestor chain)
       if (parentEl.tagName && SKIP_TAGS.has(parentEl.tagName)) return;
-
-      // Check ancestor chain for skip tags
-      // (visit doesn't give full ancestry, but parent check covers most cases)
+      if (hasSkipAncestor(node)) return;
 
       const text = node.value;
       const parts: (Text | Element)[] = [];
