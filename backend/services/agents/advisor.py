@@ -645,13 +645,21 @@ async def _check_handbook_quality(
 
 
 def _fetch_handbook_term_map() -> dict[str, str]:
-    """Fetch {term_name: slug} map of published handbook terms."""
+    """Fetch {term_name: slug} map of published handbook terms.
+
+    Includes both English term names and Korean names for matching.
+    """
     supabase = get_supabase()
     if not supabase:
         return {}
     try:
-        result = supabase.table("handbook_terms").select("term, slug").eq("status", "published").execute()
-        return {t["term"]: t["slug"] for t in (result.data or [])}
+        result = supabase.table("handbook_terms").select("term, slug, korean_name").eq("status", "published").execute()
+        term_map: dict[str, str] = {}
+        for t in result.data or []:
+            term_map[t["term"]] = t["slug"]
+            if t.get("korean_name"):
+                term_map[t["korean_name"]] = t["slug"]
+        return term_map
     except Exception:
         return {}
 
@@ -739,19 +747,42 @@ def _auto_link_handbook_terms(
 
     Longer terms are matched first to avoid partial matches.
     Already-linked terms (inside [...]) are skipped.
+    Terms inside markdown headings (## ...) are skipped.
     Args:
         exclude_slug: skip this slug (used to prevent self-linking on handbook pages).
     """
     linked: set[str] = set()
     if exclude_slug:
         linked.add(exclude_slug)
+
+    # Split content into heading lines and body lines to skip headings
+    lines = content.split('\n')
+    heading_line_indices = {i for i, line in enumerate(lines) if line.strip().startswith('#')}
+
     for term, slug in sorted(handbook_map.items(), key=lambda x: -len(x[0])):
         if slug in linked:
             continue
         pattern = re.compile(r'(?<!\[)(' + re.escape(term) + r')(?!\])', re.IGNORECASE)
-        if pattern.search(content):
-            content = pattern.sub(f'[\\1](/handbook/{slug}/)', content, count=1)
-            linked.add(slug)
+        # Find first match that's NOT in a heading line
+        for i, line in enumerate(lines):
+            if i in heading_line_indices:
+                continue
+            if pattern.search(line):
+                lines[i] = pattern.sub(f'[\\1](/handbook/{slug}/)', line, count=1)
+                linked.add(slug)
+                break
+    content = '\n'.join(lines)
+
+    # Remove LLM-fabricated handbook links with invalid slugs
+    valid_slugs = set(handbook_map.values())
+    invalid_link_pattern = re.compile(r'\[([^\]]+)\]\(/handbook/([^/]+)/\)')
+    def _fix_invalid_link(m: re.Match) -> str:
+        slug = m.group(2)
+        if slug in valid_slugs:
+            return m.group(0)  # valid — keep
+        return m.group(1)  # invalid — remove link, keep text
+    content = invalid_link_pattern.sub(_fix_invalid_link, content)
+
     return content
 
 
