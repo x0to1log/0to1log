@@ -239,6 +239,21 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   import '../../../scripts/handbookFeedback';
   import '../../../scripts/share';
 
+  // 조회수 증가 (모든 방문자 — 로그인 불필요)
+  (function trackView() {
+    if (document.body.dataset.previewMode === 'true') return;
+    const tid = document.querySelector('[data-term-id]')?.getAttribute('data-term-id');
+    if (!tid) return;
+    const url = import.meta.env.PUBLIC_SUPABASE_URL;
+    const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return;
+    fetch(`${url}/rest/v1/rpc/increment_handbook_view_count`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ term_id: tid }),
+    }).catch(() => {});
+  })();
+
   function initHandbookUserFeatures(): void {
     if (document.body.dataset.previewMode === 'true') return;
     const termId = document.querySelector('[data-term-id]')?.getAttribute('data-term-id');
@@ -347,6 +362,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.level === level));
+      document.querySelector('.handbook-detail-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     switcher.addEventListener('click', (e) => {

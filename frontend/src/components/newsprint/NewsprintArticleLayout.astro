@@ -510,6 +510,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.persona === p));
+      document.querySelector('.newsprint-lead-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       document.dispatchEvent(new CustomEvent('newsprint:article-content-updated', {
         detail: { root: prose, persona: p },
       }));
