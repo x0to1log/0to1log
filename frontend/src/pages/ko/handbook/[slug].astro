@@ -31,6 +31,7 @@ const {
   relatedArticles,
   relatedTerms,
   sameCategoryTerms,
+  handbookTermsJson,
   isBookmarked,
   learningStatus,
   learningProgressId,
@@ -232,12 +233,16 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       </ReadingActionsRail>
     </Fragment>
   </NewsprintShell>
+  {Object.keys(handbookTermsJson).length > 0 && (
+    <script type="application/json" id="handbook-terms-data" set:html={JSON.stringify(handbookTermsJson)} />
+  )}
 </MainLayout>
 
 <script>
   import '../../../scripts/bookmark';
   import '../../../scripts/handbookFeedback';
   import '../../../scripts/share';
+  import '../../../scripts/handbook-popup';
 
   // 조회수 증가 (모든 방문자 — 로그인 불필요)
   (function trackView() {

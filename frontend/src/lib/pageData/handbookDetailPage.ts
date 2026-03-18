@@ -51,6 +51,7 @@ export async function getHandbookDetailPageData({
   let isBookmarked = false;
   let learningStatus: string | null = null;
   let learningProgressId: string | null = null;
+  let handbookTermsJson: Record<string, { term: string; korean_name: string; categories: string[]; definition: string }> = {};
 
   if (publicSupabase && term) {
     const authSupabase = !previewMode && locals.user && locals.accessToken
@@ -71,6 +72,12 @@ export async function getHandbookDetailPageData({
       const termEntry = { slug: entry.slug, term: entry.term };
       handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
       if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
+      handbookTermsJson[entry.slug] = {
+        term: entry.term,
+        korean_name: entry.korean_name || '',
+        categories: entry.categories || [],
+        definition: (entry as any)[definitionField] || '',
+      };
     }
     const hasTerms = handbookTermsMap.size > 0;
     const renderMd = hasTerms
@@ -163,6 +170,7 @@ export async function getHandbookDetailPageData({
     activeLevel,
     htmlContent,
     showLevelSwitcher,
+    handbookTermsJson,
     relatedArticles,
     relatedTerms,
     sameCategoryTerms,
