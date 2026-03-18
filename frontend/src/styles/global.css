@@ -275,7 +275,7 @@
 
 @media (max-width: 767px) {
   .main-public {
-    padding: 1rem 0.5rem;
+    padding: 1rem 0.75rem;
   }
 }
 
@@ -7033,34 +7033,24 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   margin-top: 2.5rem;
   position: relative;
 }
-.handbook-learn-more::before {
-  content: '';
-  display: block;
-  width: 3rem;
-  height: 1px;
-  background: var(--color-accent);
-  opacity: 0.4;
-  margin-bottom: 1.5rem;
-}
 .handbook-learn-more > summary {
   cursor: pointer;
   list-style: none;
   display: block;
   padding: 1.25rem 1.5rem;
-  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-bg-secondary));
-  border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
   border-radius: 10px;
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 .handbook-learn-more > summary:hover {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-secondary));
-  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-secondary));
+  border-color: color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 .handbook-learn-more > summary::-webkit-details-marker { display: none; }
 
 /* Summary header row */
-.handbook-learn-more > summary .learn-more-header {
+.learn-more-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -7070,37 +7060,32 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   color: var(--color-accent);
   letter-spacing: 0.01em;
 }
-.handbook-learn-more > summary .learn-more-chevron {
+.learn-more-chevron {
   font-size: 0.65em;
   transition: transform 0.25s ease;
   opacity: 0.7;
 }
-.handbook-learn-more[open] > summary .learn-more-chevron {
+.handbook-learn-more[open] .learn-more-chevron {
   transform: rotate(90deg);
 }
 
-/* Question pills — always visible in summary */
+/* Question list — editorial style, always visible in summary */
 .learn-more-questions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.85rem;
+  padding-left: 0.15rem;
 }
 .learn-more-question {
-  font-family: var(--font-ui);
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 12%, transparent);
-  border-radius: 20px;
-  padding: 0.35rem 0.85rem;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  line-height: 1.4;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  transition: color 0.15s ease;
 }
 .handbook-learn-more > summary:hover .learn-more-question {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 25%, transparent);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
 }
 
 /* Expanded content area */
@@ -9190,9 +9175,9 @@ pre:hover .blog-code-copy {
 
 /* --- Page container --- */
 .products-page {
-  max-width: var(--breakpoint-wide);
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 0.75rem;
 }
 
 /* ================================================================
@@ -9922,8 +9907,8 @@ pre:hover .blog-code-copy {
 /* --- Product Grid --- */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
   padding: 1.5rem 0;
 }
 
@@ -9931,18 +9916,8 @@ pre:hover .blog-code-copy {
   padding: 0 0 0.75rem;
 }
 
-@media (max-width: 1279px) {
-  .product-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .product-grid--preview {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 767px) {
   .product-grid {
-    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
   }
 }
@@ -10213,9 +10188,15 @@ pre:hover .blog-code-copy {
 
 /* --- Detail page (single column, visual-first) --- */
 .product-detail {
-  padding: 1rem 0 2rem;
-  max-width: 800px;
+  padding: 1rem 0.75rem 2rem;
+  max-width: 1080px;
   margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .product-detail {
+    padding: 1rem 1.5rem 2rem;
+  }
 }
 
 /* Hero */
@@ -10790,7 +10771,7 @@ pre:hover .blog-code-copy {
 
 @media (min-width: 768px) {
   .products-page {
-    padding: 0 2rem;
+    padding: 0 2.5rem;
   }
 
   .home-product-grid {
