@@ -66,6 +66,17 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     });
   </script>
 
+  <!-- Fall back to full reload on back/forward (SSR pages can't reliably swap) -->
+  <script is:inline nonce={nonce}>
+    document.addEventListener('astro:before-preparation', function(e) {
+      if (e.navigationType === 'traverse') {
+        e.loader = function() {
+          return new Promise(function() { window.location.reload(); });
+        };
+      }
+    });
+  </script>
+
   {!isAdmin && <ViewTransitions />}
 
   <body
