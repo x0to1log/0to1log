@@ -12,6 +12,7 @@ import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.ast
 import PreviewReadonlyBanner from '../../../components/common/PreviewReadonlyBanner.astro';
 import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
 import ReadingProgressBar from '../../../components/common/ReadingProgressBar.astro';
+import ContentFeedback from '../../../components/common/ContentFeedback.astro';
 
 const locale = 'ko';
 const { slug } = Astro.params;
@@ -182,6 +183,15 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         )}
 
 
+        <ContentFeedback
+          sourceType="handbook"
+          sourceId={term.id}
+          locale={locale}
+          isAuthenticated={!!user}
+          loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
+          previewMode={previewMode}
+        />
+
         {Astro.locals.isAdmin && !previewMode && (
           <div class="newsprint-admin-actions" data-toolbar-id={term.id} data-toolbar-api="/api/admin/handbook/status">
             <a href={`/admin/handbook/edit/${pageSlug}`} class="newsprint-admin-action-btn">Edit</a>
@@ -222,7 +232,6 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         previewMode={previewMode}
         isAuthenticated={!!user}
         articleRedirect={`/${locale}/handbook/${pageSlug}/`}
-        termId={term.id}
       >
         <HandbookSideRail
           locale={locale}
@@ -243,6 +252,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   import '../../../scripts/handbookFeedback';
   import '../../../scripts/share';
   import '../../../scripts/handbook-popup';
+  import '../../../scripts/contentFeedback';
 
   // 조회수 증가 (모든 방문자 — 로그인 불필요)
   (function trackView() {
