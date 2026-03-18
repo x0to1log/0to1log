@@ -25,7 +25,13 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
     // Build regex from all term keys (sorted by length desc for greedy match)
     const keys = Array.from(termsMap.keys()).sort((a, b) => b.length - a.length);
     const escaped = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+    // Use Unicode-aware boundaries instead of \b (which doesn't work for Korean/CJK).
+    // Lookbehind: not preceded by Latin or Korean letter (prevents partial word match).
+    // Lookahead: not followed by Latin letter (Korean particles like 을/의/에서 are allowed).
+    const pattern = new RegExp(
+      `(?<![a-zA-Z\\uAC00-\\uD7AF])(${escaped.join('|')})(?![a-zA-Z])`,
+      'gi',
+    );
 
     const matched = new Set<string>(); // track slugs already matched
 
