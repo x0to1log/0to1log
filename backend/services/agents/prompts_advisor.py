@@ -767,8 +767,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_ko_5_practical**: 실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개. 현장 톤.
 - **adv_ko_6_why**: 기술/조직/비즈니스에 미치는 영향 4~5개. 성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
 - **adv_ko_7_comm**: PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
-- **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. 형식: [표시명](URL) — 한 줄 설명. 실제로 존재하는 URL만 포함.
-- **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. 형식: **용어** — 이 용어와의 기술적 관계. 선행 개념, 대안, 보완 개념, 확장 개념 포함.
+- **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. **불릿 리스트 형식 필수.** 형식: `- [표시명](URL) — 한 줄 설명`. 실제로 존재하는 URL만 포함.
+- **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. **불릿 리스트 형식 필수.** 형식: `- **용어** — 이 용어와의 기술적 관계`. 선행 개념, 대안, 보완 개념, 확장 개념 포함.
 
 ## Output JSON Structure
 
@@ -781,8 +781,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_ko_5_practical": "실무 활용 + 주의점...",
   "adv_ko_6_why": "왜 중요한가...",
   "adv_ko_7_comm": "업계 대화 맥락...",
-  "adv_ko_8_refs": "[링크](URL) — 설명",
-  "adv_ko_9_related": "**용어** — 관계..."
+  "adv_ko_8_refs": "- [링크](URL) — 설명\\n- [링크2](URL2) — 설명2",
+  "adv_ko_9_related": "- **용어** — 관계 설명\\n- **용어2** — 관계 설명2"
 }}
 ```
 
@@ -848,8 +848,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_en_5_practical**: 4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes). Practical tone.
 - **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
 - **adv_en_7_comm**: 6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews. **Bold key terms**. Ready-to-use professional tone.
-- **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). Format: [Display Name](URL) — 1-sentence annotation. Only include URLs you are confident exist.
-- **adv_en_9_related**: 4-6 related technologies with difference analysis. Format: **Term** — technical relationship to current term. Include: prerequisites, alternatives, complementary concepts, extensions.
+- **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Only include URLs you are confident exist.
+- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** — technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions.
 
 ## Output JSON Structure
 
@@ -862,8 +862,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_en_5_practical": "...",
   "adv_en_6_why": "...",
   "adv_en_7_comm": "...",
-  "adv_en_8_refs": "...",
-  "adv_en_9_related": "..."
+  "adv_en_8_refs": "- [Link](URL) — annotation\\n- [Link2](URL2) — annotation2",
+  "adv_en_9_related": "- **Term** — relationship\\n- **Term2** — relationship2"
 }}
 ```
 
