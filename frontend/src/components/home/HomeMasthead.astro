@@ -18,7 +18,7 @@ const dateLabel = isKo
   : now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
 const editionLabel = t[locale]['home.edition'];
-const volLabel = volumeLabel ?? (isKo ? 'AI 뉴스 & 용어집 & 블로그' : 'AI News · AI Glossary · IT Blog');
+const volLabel = volumeLabel ?? (isKo ? 'AI 뉴스 · 용어집 · 블로그' : 'AI News · AI Glossary · IT Blog');
 ---
 
 <header class="home-masthead">
