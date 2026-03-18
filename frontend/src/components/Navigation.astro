@@ -164,6 +164,7 @@ const navItems = [
             href={item.href}
             class={`site-nav-pill${item.active ? ' site-nav-pill--active' : ''}`}
             aria-current={item.active ? 'page' : undefined}
+            data-astro-prefetch="viewport"
           >
             {item.label}
           </a>
@@ -288,6 +289,7 @@ const navItems = [
           href={item.href}
           class={`site-nav-pill${item.active ? ' site-nav-pill--active' : ''}`}
           aria-current={item.active ? 'page' : undefined}
+          data-astro-prefetch="viewport"
         >
           {item.label}
         </a>

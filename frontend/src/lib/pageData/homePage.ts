@@ -50,7 +50,7 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
     return { news: [], terms: [], blog: [], siteContent: {}, featuredProducts: [] };
   }
 
-  const [newsRes, termsRes, blogRes, sc, featuredProducts] = await Promise.all([
+  const [newsRes, termsRes, blogRes, sc, featuredProducts, fallbackRes] = await Promise.all([
     supabase
       .from('news_posts')
       .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
@@ -76,27 +76,25 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
 
     getSiteContents(['home_title', 'home_subtitle', 'home_intro'], locale),
     fetchHomeFeaturedProducts(),
+
+    // Eagerly fetch fallback terms in parallel (used if fewer than 6 favourites)
+    supabase
+      .from('handbook_terms')
+      .select('id, term, slug, korean_name, definition_en, definition_ko, categories, is_favourite')
+      .eq('status', 'published')
+      .eq('is_favourite', false)
+      .order('published_at', { ascending: false })
+      .limit(6),
   ]);
 
   let terms: HomeHandbookTerm[] = (termsRes.data ?? []) as HomeHandbookTerm[];
 
-  // Fill with recent terms if we have fewer than 6 favourites
+  // Fill with recent non-favourite terms if we have fewer than 6 favourites
   if (terms.length < 6) {
-    const existingIds = terms.map((t) => t.id);
-    const needed = 6 - terms.length;
-    const fallbackQuery = supabase
-      .from('handbook_terms')
-      .select('id, term, slug, korean_name, definition_en, definition_ko, categories, is_favourite')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(needed);
-
-    if (existingIds.length > 0) {
-      fallbackQuery.not('id', 'in', `(${existingIds.join(',')})`);
-    }
-
-    const fallbackRes = await fallbackQuery;
-    terms = [...terms, ...((fallbackRes.data ?? []) as HomeHandbookTerm[])];
+    const existingIds = new Set(terms.map((t) => t.id));
+    const fallbacks = ((fallbackRes.data ?? []) as HomeHandbookTerm[])
+      .filter((t) => !existingIds.has(t.id));
+    terms = [...terms, ...fallbacks.slice(0, 6 - terms.length)];
   }
 
   return {

@@ -19,7 +19,8 @@ const [{ data: products, error: productsError }, { data: categories }] = await P
   supabase
     .from('ai_products')
     .select('id, slug, name, name_ko, logo_url, primary_category, is_published, featured, pricing, korean_support, sort_order, updated_at')
-    .order('updated_at', { ascending: false }),
+    .order('updated_at', { ascending: false })
+    .limit(500),
   supabase
     .from('ai_product_categories')
     .select('*')

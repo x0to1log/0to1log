@@ -18,8 +18,9 @@ let fetchError: string | null = null;
 
 const { data: terms, error } = await supabase
   .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, body_basic_ko, body_basic_en, body_advanced_ko, body_advanced_en, updated_at, published_at, source')
-  .order('updated_at', { ascending: false });
+  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, updated_at, published_at, source')
+  .order('updated_at', { ascending: false })
+  .limit(500);
 
 if (error) {
   fetchError = error.message;
@@ -105,11 +106,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       <div class="handbook-results-bar">
         <span class="handbook-results-count" id="results-count">{allTerms.length} terms</span>
         <span class="handbook-legend">
-          <span class="handbook-legend-label">Completeness:</span>
-          <span class="handbook-dot handbook-dot--ok"></span> KO Basic
-          <span class="handbook-dot handbook-dot--ok"></span> KO Adv
-          <span class="handbook-dot handbook-dot--ok"></span> EN Basic
-          <span class="handbook-dot handbook-dot--ok"></span> EN Adv
+          <span class="handbook-legend-label">Definition:</span>
+          <span class="handbook-dot handbook-dot--ok"></span> KO
+          <span class="handbook-dot handbook-dot--ok"></span> EN
         </span>
       </div>
 
@@ -162,11 +161,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
                   </div>
                   <div class="handbook-meta-row">
                     <span class={`admin-status-badge admin-status-badge--${term.status}`}>{term.status}</span>
-                    <span class="handbook-completeness" title="KO Basic / KO Adv / EN Basic / EN Adv">
-                      <span class={`handbook-dot ${term.body_basic_ko ? 'handbook-dot--ok' : ''}`}></span>
-                      <span class={`handbook-dot ${term.body_advanced_ko ? 'handbook-dot--ok' : ''}`}></span>
-                      <span class={`handbook-dot ${term.body_basic_en ? 'handbook-dot--ok' : ''}`}></span>
-                      <span class={`handbook-dot ${term.body_advanced_en ? 'handbook-dot--ok' : ''}`}></span>
+                    <span class="handbook-completeness" title="Definition KO / Definition EN">
+                      <span class={`handbook-dot ${term.definition_ko ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.definition_en ? 'handbook-dot--ok' : ''}`}></span>
                     </span>
                     {term.source && term.source !== 'manual' && (
                       <span class={`admin-source-badge admin-source-badge--${term.source}`}>

@@ -16,43 +16,51 @@ import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
 
 let posts: any[] = [];
 let fetchError: string | null = null;
-
-if (supabase) {
-  const { data, error } = await supabase
-    .from('news_posts')
-    .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, excerpt')
-    .eq('status', 'published')
-    .eq('locale', 'ko')
-    .eq('category', 'ai-news')
-    .order('published_at', { ascending: false })
-    .limit(50);
-
-  if (error) {
-    console.error('[log-list-ko] Supabase error:', error.message);
-    fetchError = error.message;
-  } else {
-    posts = data ?? [];
-  }
-}
-
-// User reading history & bookmarks
 const readPostIds = new Set<string>();
 const bookmarkedPostIds = new Set<string>();
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
-if (user && accessToken) {
-  const authSb = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const [histRes, bmRes] = await Promise.all([
-    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'news'),
-    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'news'),
-  ]);
-  (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
-  (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
+
+const authSb = (user && accessToken)
+  ? createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+    )
+  : null;
+
+// Parallel fetch: posts + user data + site content
+const [postsResult, histRes, bmRes, sc] = await Promise.all([
+  supabase
+    ? supabase
+        .from('news_posts')
+        .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, excerpt')
+        .eq('status', 'published')
+        .eq('locale', 'ko')
+        .eq('category', 'ai-news')
+        .order('published_at', { ascending: false })
+        .limit(50)
+    : Promise.resolve({ data: null, error: null }),
+  authSb
+    ? authSb.from('reading_history').select('item_id').eq('user_id', user!.id).eq('item_type', 'news')
+    : Promise.resolve({ data: null }),
+  authSb
+    ? authSb.from('user_bookmarks').select('item_id').eq('user_id', user!.id).eq('item_type', 'news')
+    : Promise.resolve({ data: null }),
+  getSiteContents(
+    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
+    'ko',
+  ),
+]);
+
+if (postsResult.error) {
+  console.error('[log-list-ko] Supabase error:', postsResult.error.message);
+  fetchError = postsResult.error.message;
+} else {
+  posts = postsResult.data ?? [];
 }
+(histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
+(bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
 
 const headline = posts.find(p => p.post_type === 'business') ?? null;
 const rest = posts.filter(p => p !== headline);
@@ -61,12 +69,6 @@ const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('ko', 'business') },
   { value: 'research', label: getPostTypeLabel('ko', 'research') },
 ];
-
-// Site content from DB (fallback to hardcoded values)
-const sc = await getSiteContents(
-  ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
-  'ko',
-);
 const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · 논문 · 프로젝트', '데일리 큐레이션', '공개 열람']);
 const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
 const searchPlaceholder = 'AI 뉴스 검색';

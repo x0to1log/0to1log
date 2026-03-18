@@ -34,7 +34,8 @@ try {
   const { data, error } = await sb
     .from('news_posts')
     .select('id, title, slug, category, locale, status, updated_at, published_at')
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .limit(500);
 
   if (error) {
     fetchError = error.message;

@@ -66,14 +66,19 @@ let staleDrafts: ActivityItem[] = [];
 
 try {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes, blogRes, monthlyLogsRes, handbookRunRes] = await Promise.all([
+  // All queries in a single parallel batch (eliminates waterfall)
+  const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
+         blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
+         pipelineLogsRes, candidatesRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
     sb.from('news_likes').select('id', { count: 'exact', head: true }),
     sb.from('pipeline_runs').select('*').order('started_at', { ascending: false }).limit(1),
     sb.from('admin_notifications').select('id, type, title, message, created_at').eq('is_read', false).order('created_at', { ascending: false }).limit(5),
-    sb.from('blog_posts').select('id, status'),
+    // Blog: count queries instead of full fetch
+    sb.from('blog_posts').select('id', { count: 'exact', head: true }),
+    sb.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
     sb.from('pipeline_logs').select('cost_usd, tokens_used').gte('created_at', thirtyDaysAgo),
     sb.from('pipeline_runs')
       .select('id, run_key, status, started_at, last_error')
@@ -81,6 +86,9 @@ try {
       .order('started_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Pipeline detail: eagerly fetch (filter client-side by run_id)
+    sb.from('pipeline_logs').select('cost_usd, tokens_used, run_id').order('created_at', { ascending: false }).limit(100),
+    sb.from('news_candidates').select('status, batch_id').order('created_at', { ascending: false }).limit(200),
   ]);
 
   const posts = postsRes.data ?? [];
@@ -116,9 +124,8 @@ try {
 
   totalUsers = profilesRes.count ?? 0;
   totalLikes = likesRes.count ?? 0;
-  const blogs = blogRes.data ?? [];
-  totalBlogPosts = blogs.length;
-  blogDrafts = blogs.filter((b: any) => b.status === 'draft').length;
+  totalBlogPosts = blogTotalRes.count ?? 0;
+  blogDrafts = blogDraftRes.count ?? 0;
 
   const monthlyLogs = monthlyLogsRes.data ?? [];
   monthlyCost = monthlyLogs.reduce((sum: number, l: any) => sum + (parseFloat(l.cost_usd) || 0), 0);
@@ -127,19 +134,15 @@ try {
   // Handbook retry
   lastHandbookRun = handbookRunRes.data ?? null;
 
-  // Pipeline
+  // Pipeline: filter eagerly-fetched data by run_id
   const runData = pipelineRes.data?.[0] ?? null;
   if (runData) {
     lastRun = runData as PipelineRun;
     lastRunError = formatPipelineError(lastRun.last_error);
-    const [logsRes, candidatesRes] = await Promise.all([
-      sb.from('pipeline_logs').select('cost_usd, tokens_used').eq('run_id', lastRun.id),
-      sb.from('news_candidates').select('status').eq('batch_id', lastRun.run_key),
-    ]);
-    const logs = logsRes.data ?? [];
+    const logs = (pipelineLogsRes.data ?? []).filter((l: any) => l.run_id === lastRun!.id);
     pipelineCost = logs.reduce((sum: number, l: any) => sum + (parseFloat(l.cost_usd) || 0), 0);
     pipelineTokens = logs.reduce((sum: number, l: any) => sum + (l.tokens_used || 0), 0);
-    const cands = candidatesRes.data ?? [];
+    const cands = (candidatesRes.data ?? []).filter((c: any) => c.batch_id === lastRun!.run_key);
     candidatesTotal = cands.length;
     candidatesSelected = cands.filter((c: any) => c.status === 'selected' || c.status === 'published').length;
   }

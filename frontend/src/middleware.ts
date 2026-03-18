@@ -204,10 +204,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect('/admin/login');
     }
 
-    // Admin routes always fetch fresh (no cache) for security
+    // Admin routes: use cached extras when available (validateToken still runs fresh)
     let extras: { isAdmin: boolean; profile: App.Locals['profile'] };
     try {
-      extras = await fetchUserExtras(supabaseUrl, supabaseAnonKey, result.user, result.accessToken);
+      extras = await getOrFetchUserExtras(context.cookies, supabaseUrl, supabaseAnonKey, result.user, result.accessToken, isSecure);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Admin lookup failed';
       if (isApiRoute) {
@@ -264,7 +264,28 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Silently try to extract user for optional features (read history, bookmark state)
   const accessToken = context.cookies.get('sb-access-token')?.value;
   if (accessToken) {
-    const result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
+    // Check if we've recently validated this exact token (2-min cache)
+    let result: { user: any; accessToken: string } | null = null;
+    const cachedAuth = context.cookies.get('auth-validated')?.value;
+    if (cachedAuth) {
+      try {
+        const parsed = JSON.parse(cachedAuth);
+        if (parsed.token === accessToken) {
+          result = { user: parsed.user, accessToken };
+        }
+      } catch {}
+    }
+
+    if (!result) {
+      result = await validateToken(context.cookies, supabaseUrl, supabaseAnonKey);
+      if (result) {
+        context.cookies.set('auth-validated', JSON.stringify({
+          token: accessToken,
+          user: result.user,
+        }), { path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: 120 });
+      }
+    }
+
     if (result) {
       const extras = await getOrFetchUserExtras(context.cookies, supabaseUrl, supabaseAnonKey, result.user, result.accessToken, isSecure);
       context.locals.user = result.user;
