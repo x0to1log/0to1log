@@ -18,7 +18,7 @@ let fetchError: string | null = null;
 
 const { data: terms, error } = await supabase
   .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, updated_at, published_at, source')
+  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, body_basic_ko, body_basic_en, body_advanced_ko, body_advanced_en, updated_at, published_at, source')
   .order('updated_at', { ascending: false })
   .limit(500);
 
@@ -106,9 +106,11 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       <div class="handbook-results-bar">
         <span class="handbook-results-count" id="results-count">{allTerms.length} terms</span>
         <span class="handbook-legend">
-          <span class="handbook-legend-label">Definition:</span>
-          <span class="handbook-dot handbook-dot--ok"></span> KO
-          <span class="handbook-dot handbook-dot--ok"></span> EN
+          <span class="handbook-legend-label">Body:</span>
+          <span class="handbook-dot handbook-dot--ok"></span> KO Basic
+          <span class="handbook-dot handbook-dot--ok"></span> KO Adv
+          <span class="handbook-dot handbook-dot--ok"></span> EN Basic
+          <span class="handbook-dot handbook-dot--ok"></span> EN Adv
         </span>
       </div>
 
@@ -161,9 +163,11 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
                   </div>
                   <div class="handbook-meta-row">
                     <span class={`admin-status-badge admin-status-badge--${term.status}`}>{term.status}</span>
-                    <span class="handbook-completeness" title="Definition KO / Definition EN">
-                      <span class={`handbook-dot ${term.definition_ko ? 'handbook-dot--ok' : ''}`}></span>
-                      <span class={`handbook-dot ${term.definition_en ? 'handbook-dot--ok' : ''}`}></span>
+                    <span class="handbook-completeness" title="KO Basic / KO Advanced / EN Basic / EN Advanced">
+                      <span class={`handbook-dot ${term.body_basic_ko ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.body_advanced_ko ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.body_basic_en ? 'handbook-dot--ok' : ''}`}></span>
+                      <span class={`handbook-dot ${term.body_advanced_en ? 'handbook-dot--ok' : ''}`}></span>
                     </span>
                     {term.source && term.source !== 'manual' && (
                       <span class={`admin-source-badge admin-source-badge--${term.source}`}>
@@ -193,6 +197,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
               </li>
             ))}
           </ul>
+          <div id="lazy-sentinel" class="lazy-sentinel" style="display:none;"></div>
           <p id="admin-no-results" class="admin-no-results" hidden>No matching terms found. Try adjusting your search or filters.</p>
         </>
       )}
@@ -425,6 +430,12 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     background: var(--color-accent-subtle);
   }
 
+  /* Lazy scroll sentinel */
+  .lazy-sentinel {
+    height: 1px;
+    margin-bottom: 1rem;
+  }
+
   /* Empty state */
   .handbook-empty-state {
     display: flex;
@@ -521,6 +532,8 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     list.dataset.init = '1';
 
     let currentFilter = 'draft';
+    const BATCH_SIZE = 50;
+    let maxVisible = BATCH_SIZE;
     const searchInput = document.getElementById('admin-search');
     const searchClear = document.getElementById('search-clear');
     const categoryFilter = document.getElementById('admin-category-filter');
@@ -529,7 +542,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     const resultsCount = document.getElementById('results-count');
     const filtersToggle = document.getElementById('filters-toggle');
     const filtersPanel = document.getElementById('filters-panel');
-    const totalCount = list ? list.querySelectorAll('.admin-list-item').length : 0;
+    const sentinel = document.getElementById('lazy-sentinel');
+    const allItems = list ? Array.from(list.querySelectorAll('.admin-list-item')) : [];
+    const totalCount = allItems.length;
 
     filtersToggle?.addEventListener('click', () => {
       const open = filtersPanel?.hidden === false;
@@ -555,25 +570,39 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       const query = (searchInput?.value || '').toLowerCase().trim();
       const category = categoryFilter?.value || '';
       const source = sourceFilter?.value || '';
+      const hasActiveSearch = !!(query || category || source);
       let visibleCount = 0;
+      let matchCount = 0;
 
-      Array.from(list.querySelectorAll('.admin-list-item')).forEach((item) => {
+      allItems.forEach((item) => {
         const matchesStatus = currentFilter === 'all' || item.dataset.status === currentFilter;
         const matchesQuery = !query || (item.dataset.title || '').includes(query);
         const matchesCategory = !category || (item.dataset.categories || '').split(',').includes(category);
         const matchesSource = !source || (item.dataset.source || 'manual') === source;
-        const visible = matchesStatus && matchesQuery && matchesCategory && matchesSource;
-        item.style.display = visible ? '' : 'none';
-        if (visible) visibleCount += 1;
+        const matches = matchesStatus && matchesQuery && matchesCategory && matchesSource;
+
+        if (matches) {
+          matchCount++;
+          // When searching/filtering, show all matches. Otherwise, respect lazy limit.
+          const withinLimit = hasActiveSearch || matchCount <= maxVisible;
+          item.style.display = withinLimit ? '' : 'none';
+          if (withinLimit) visibleCount++;
+        } else {
+          item.style.display = 'none';
+        }
       });
 
       if (noResults) noResults.hidden = visibleCount > 0;
 
+      // Show/hide sentinel (only when lazy loading has more items to show)
+      if (sentinel) {
+        sentinel.style.display = (!hasActiveSearch && matchCount > maxVisible) ? '' : 'none';
+      }
+
       // Update result count
       if (resultsCount) {
-        const isFiltered = query || category || source || currentFilter !== 'all';
-        if (isFiltered && visibleCount !== totalCount) {
-          resultsCount.textContent = `Showing ${visibleCount} of ${totalCount} terms`;
+        if (visibleCount < matchCount) {
+          resultsCount.textContent = `Showing ${visibleCount} of ${matchCount} terms`;
         } else {
           resultsCount.textContent = `${visibleCount} term${visibleCount !== 1 ? 's' : ''}`;
         }
@@ -585,6 +614,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     document.querySelectorAll('[data-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         currentFilter = btn.dataset.filter || 'draft';
+        maxVisible = BATCH_SIZE;
         document.querySelectorAll('[data-filter]').forEach((target) => target.classList.remove('admin-filter-btn--active'));
         btn.classList.add('admin-filter-btn--active');
         applyFilter();
@@ -650,6 +680,17 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
         }
       });
     });
+
+    // Lazy scroll: load more items when sentinel enters viewport
+    if (sentinel) {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          maxVisible += BATCH_SIZE;
+          applyFilter();
+        }
+      }, { rootMargin: '300px' });
+      observer.observe(sentinel);
+    }
 
     applyFilter();
 
