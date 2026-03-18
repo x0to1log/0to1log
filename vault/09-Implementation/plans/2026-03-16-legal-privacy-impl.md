@@ -183,7 +183,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 
     <section class="legal-section">
       <h2>7. Contact</h2>
-      <p>For questions about this Privacy Policy or to exercise your rights, contact us at <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>.</p>
+      <p>For questions about this Privacy Policy or to exercise your rights, contact us at <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
     </section>
   </div>
 </MainLayout>
@@ -325,7 +325,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 
     <section class="legal-section">
       <h2>7. 연락처</h2>
-      <p>본 개인정보처리방침에 대한 문의 또는 권리 행사를 원하시면 <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>으로 연락해 주세요.</p>
+      <p>본 개인정보처리방침에 대한 문의 또는 권리 행사를 원하시면 <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>으로 연락해 주세요.</p>
     </section>
   </div>
 </MainLayout>
@@ -471,7 +471,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 
     <section class="legal-section">
       <h2>8. Contact</h2>
-      <p>For questions about these Terms, contact us at <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>.</p>
+      <p>For questions about these Terms, contact us at <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
     </section>
   </div>
 </MainLayout>
@@ -577,7 +577,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 
     <section class="legal-section">
       <h2>8. 연락처</h2>
-      <p>본 이용약관에 대한 문의는 <a href="mailto:ming2tofu33@gmail.com">ming2tofu33@gmail.com</a>으로 연락해 주세요.</p>
+      <p>본 이용약관에 대한 문의는 <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>으로 연락해 주세요.</p>
     </section>
   </div>
 </MainLayout>

@@ -4,10 +4,11 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { getSiteContents } from '../../../lib/siteContent';
 
+const contactEmail = import.meta.env.PUBLIC_CONTACT_EMAIL || '';
 const links = [
   { label: 'GitHub', href: 'https://github.com/ming2tofu33' },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/in/ming2tofu33/' },
-  { label: 'Email', href: 'mailto:ming2tofu33@gmail.com' },
+  { label: 'Email', href: `mailto:${contactEmail}` },
 ];
 
 const steps = [

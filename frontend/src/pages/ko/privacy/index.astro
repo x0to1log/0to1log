@@ -2,6 +2,8 @@
 export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
+
+const businessEmail = import.meta.env.PUBLIC_BUSINESS_EMAIL || '';
 ---
 
 <MainLayout
@@ -68,7 +70,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 
     <section class="legal-section">
       <h2>7. 연락처</h2>
-      <p>본 개인정보처리방침에 관한 문의 또는 권리 행사를 원하시면 <a href="mailto:x0to1log@gmail.com">x0to1log@gmail.com</a>으로 연락해 주십시오.</p>
+      <p>본 개인정보처리방침에 관한 문의 또는 권리 행사를 원하시면 <a href={`mailto:${businessEmail}`}>{businessEmail}</a>으로 연락해 주십시오.</p>
     </section>
   </div>
 </MainLayout>
