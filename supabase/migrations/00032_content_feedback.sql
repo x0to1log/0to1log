@@ -44,6 +44,6 @@ INSERT INTO content_feedback (user_id, source_type, source_id, locale, reaction,
 SELECT user_id, 'handbook', term_id, locale,
   CASE reaction WHEN 'helpful' THEN 'positive' WHEN 'confusing' THEN 'negative' ELSE 'positive' END,
   CASE reaction WHEN 'confusing' THEN 'confusing' ELSE NULL END,
-  message, COALESCE(term_feedback.archived, FALSE), created_at, updated_at
+  message, FALSE, created_at, updated_at
 FROM term_feedback
 WHERE reaction IN ('helpful', 'confusing');
