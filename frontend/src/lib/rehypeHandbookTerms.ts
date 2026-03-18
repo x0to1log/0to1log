@@ -72,8 +72,8 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
           tagName: 'span',
           properties: {
             className: ['handbook-term'],
-            'data-slug': entry.slug,
-            'data-term': entry.term,
+            dataSlug: entry.slug,
+            dataTerm: entry.term,
           },
           children: [{ type: 'text', value: matchedText }],
         } as Element);

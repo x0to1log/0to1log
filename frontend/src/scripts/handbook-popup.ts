@@ -150,37 +150,36 @@ function initHandbookPopup(): void {
     if (e.key === 'Escape') closePopup();
   });
 
+  // Single delegated click handler — works for dynamically swapped content
   document.addEventListener('click', (e) => {
-    if (!activePopup) return;
     const target = e.target as HTMLElement;
-    if (
-      activePopup.contains(target) ||
-      target.closest('.handbook-term') ||
-      target.closest('a[href*="/handbook/"]')
-    ) return;
-    closePopup();
-  });
 
-  // Source 1: .handbook-term spans
-  document.querySelectorAll<HTMLElement>('.handbook-term').forEach(el => {
-    el.addEventListener('click', (e) => {
+    // Source 1: .handbook-term spans
+    const termSpan = target.closest<HTMLElement>('.handbook-term');
+    if (termSpan) {
       e.preventDefault();
       e.stopPropagation();
-      const slug = el.dataset.slug || '';
-      showPopup(slug, el);
-    });
-  });
+      const slug = termSpan.dataset.slug || '';
+      showPopup(slug, termSpan);
+      return;
+    }
 
-  // Source 2: <a href="/handbook/*"> links inside prose content
-  document.querySelectorAll<HTMLAnchorElement>('.newsprint-prose a[href*="/handbook/"]').forEach(link => {
-    const slug = extractSlugFromHref(link.getAttribute('href') || '');
-    if (!slug || !termsData[slug]) return; // no popup data → let it navigate normally
+    // Source 2: <a href="/handbook/*"> links inside prose content
+    const termLink = target.closest<HTMLAnchorElement>('.newsprint-prose a[href*="/handbook/"]');
+    if (termLink) {
+      const slug = extractSlugFromHref(termLink.getAttribute('href') || '');
+      if (slug && termsData[slug]) {
+        e.preventDefault();
+        e.stopPropagation();
+        showPopup(slug, termLink);
+        return;
+      }
+    }
 
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showPopup(slug, link);
-    });
+    // Click outside — close popup
+    if (activePopup && !activePopup.contains(target)) {
+      closePopup();
+    }
   });
 }
 

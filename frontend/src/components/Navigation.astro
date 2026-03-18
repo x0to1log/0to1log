@@ -359,11 +359,37 @@ const navItems = [
     freshToggle.addEventListener('click', (event) => {
       event.stopPropagation();
       const isOpen = dropdown.getAttribute('data-open') === 'true';
-      dropdown.setAttribute('data-open', isOpen ? 'false' : 'true');
+      const opening = !isOpen;
+      dropdown.setAttribute('data-open', opening ? 'true' : 'false');
+      freshToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+      if (opening) {
+        requestAnimationFrame(() => {
+          const first = dropdown.querySelector('.user-dropdown-item') as HTMLElement | null;
+          first?.focus();
+        });
+      }
     });
 
     dropdown.addEventListener('click', (event) => {
       event.stopPropagation();
+    });
+
+    // Keyboard navigation: Arrow keys + Escape
+    dropdown.addEventListener('keydown', (e) => {
+      const items = [...dropdown.querySelectorAll('.user-dropdown-item:not([disabled])')] as HTMLElement[];
+      const idx = items.indexOf(document.activeElement as HTMLElement);
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        items[(idx + 1) % items.length]?.focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        items[(idx - 1 + items.length) % items.length]?.focus();
+      } else if (e.key === 'Escape') {
+        dropdown.setAttribute('data-open', 'false');
+        freshToggle.setAttribute('aria-expanded', 'false');
+        freshToggle.focus();
+      }
     });
 
     document.removeEventListener('click', closeUserDropdown);

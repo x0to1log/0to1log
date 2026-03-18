@@ -553,7 +553,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     }
 
     function setButtonLabel(button: HTMLButtonElement | null, label: string) {
-      if (button) button.textContent = label;
+      if (!button) return;
+      if (label.includes('...') || label.includes('…')) {
+        button.innerHTML = `<span class="btn-spinner"></span>${label}`;
+      } else {
+        button.textContent = label;
+      }
     }
 
     function beginAction(button: HTMLButtonElement | null, label: string) {

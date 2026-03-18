@@ -164,6 +164,7 @@ const startHereDefaults = [
                   minlength="8"
                   autocomplete="new-password"
                 />
+                <span id="pw-match-indicator" class="admin-pw-match" style="display:none;"></span>
               </div>
 
               <div class="admin-settings-actions">
@@ -334,6 +335,19 @@ const startHereDefaults = [
     color: var(--color-text-muted);
   }
 
+  .admin-pw-match {
+    font-size: 0.78rem;
+    margin-top: 0.25rem;
+  }
+
+  .admin-pw-match--ok {
+    color: var(--color-success);
+  }
+
+  .admin-pw-match--no {
+    color: var(--color-error);
+  }
+
   .admin-settings-actions {
     margin-top: 0.25rem;
   }
@@ -488,6 +502,23 @@ const startHereDefaults = [
     const form = document.getElementById('change-password-form');
     if (!form || form.dataset.init === '1') return;
     form.dataset.init = '1';
+
+    // Inline password match indicator
+    const newPwInput = form.querySelector('#new-password') as HTMLInputElement | null;
+    const confirmPwInput = form.querySelector('#confirm-password') as HTMLInputElement | null;
+    const matchIndicator = document.getElementById('pw-match-indicator');
+    function checkPwMatch() {
+      if (!newPwInput || !confirmPwInput || !matchIndicator) return;
+      const newVal = newPwInput.value;
+      const confirmVal = confirmPwInput.value;
+      if (!confirmVal) { matchIndicator.style.display = 'none'; return; }
+      matchIndicator.style.display = '';
+      const match = newVal === confirmVal;
+      matchIndicator.textContent = match ? '✓ Passwords match' : '✗ Passwords do not match';
+      matchIndicator.className = `admin-pw-match ${match ? 'admin-pw-match--ok' : 'admin-pw-match--no'}`;
+    }
+    newPwInput?.addEventListener('input', checkPwMatch);
+    confirmPwInput?.addEventListener('input', checkPwMatch);
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -705,7 +736,7 @@ const startHereDefaults = [
       const button = document.querySelector(`[data-save-group="${group}"]`);
       const originalText = button.textContent;
       button.disabled = true;
-      button.textContent = 'Saving...';
+      button.innerHTML = '<span class="btn-spinner"></span>Saving...';
       feedback.style.display = 'none';
 
       const updates = {};
