@@ -6,6 +6,7 @@ export const prerender = false;
 const USERNAME_RE = /^[a-z0-9][a-z0-9-]{1,18}[a-z0-9]$/;
 const VALID_PERSONAS = ['learner', 'expert'];
 const VALID_LOCALES = ['en', 'ko'];
+const VALID_HANDBOOK_LEVELS = ['basic', 'advanced'];
 const USERNAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 function jsonResponse(body: unknown, status = 200) {
@@ -65,11 +66,16 @@ export const PUT: APIRoute = async ({ request, locals, cookies }) => {
   }
 
   const body = await request.json();
-  const { display_name, username, bio, persona, preferred_locale, is_public, onboarding_completed } = body;
+  const { display_name, username, bio, persona, preferred_locale, is_public, onboarding_completed, handbook_level } = body;
 
   // Validate persona
   if (persona && !VALID_PERSONAS.includes(persona)) {
     return jsonResponse({ error: 'Invalid persona' }, 400);
+  }
+
+  // Validate handbook_level
+  if (handbook_level && !VALID_HANDBOOK_LEVELS.includes(handbook_level)) {
+    return jsonResponse({ error: 'Invalid handbook_level' }, 400);
   }
 
   // Validate preferred_locale
@@ -126,6 +132,7 @@ export const PUT: APIRoute = async ({ request, locals, cookies }) => {
   }
   if (bio !== undefined) upsertData.bio = bio || null;
   if (persona !== undefined) upsertData.persona = persona || null;
+  if (handbook_level !== undefined) upsertData.handbook_level = handbook_level || 'basic';
   if (preferred_locale !== undefined) upsertData.preferred_locale = preferred_locale;
   if (is_public !== undefined) upsertData.is_public = !!is_public;
   if (onboarding_completed !== undefined) upsertData.onboarding_completed = !!onboarding_completed;

@@ -38,6 +38,10 @@ const copy = locale === 'ko'
       personaLearner: '학습자',
       personaExpert: '현직자',
       personaNone: '미설정',
+      handbookLevel: '용어집 수준',
+      handbookLevelHint: 'AI 용어집(핸드북) 기본 설명 수준',
+      handbookLevelBasic: '기초',
+      handbookLevelAdvanced: '심화',
       preferredLocale: '기본 언어',
       visibilitySection: '공개 설정',
       isPublic: '프로필 공개',
@@ -76,6 +80,10 @@ const copy = locale === 'ko'
       personaLearner: 'Learner',
       personaExpert: 'Expert',
       personaNone: 'Not set',
+      handbookLevel: 'Glossary Level',
+      handbookLevelHint: 'Default explanation level for AI Glossary (Handbook)',
+      handbookLevelBasic: 'Basic',
+      handbookLevelAdvanced: 'Advanced',
       preferredLocale: 'Default Language',
       visibilitySection: 'Visibility',
       isPublic: 'Public Profile',
@@ -112,6 +120,7 @@ const emailPrefix = (user.email || '')
 const usernamePlaceholder = asciiName || emailPrefix || 'jane-doe';
 const bio = profile?.bio || '';
 const persona = profile?.persona || '';
+const handbookLevel = profile?.handbook_level || 'basic';
 const preferredLocale = profile?.preferred_locale || browserLocale;
 const isPublic = profile?.is_public || false;
 
@@ -229,6 +238,21 @@ const userIdUnlockDate = usernameChangedAt
             </label>
           </div>
           <p class="settings-hint">{copy.personaHint}</p>
+        </div>
+
+        <div class="admin-field">
+          <label>{copy.handbookLevel}</label>
+          <div class="settings-radio-group">
+            <label class="settings-radio-item">
+              <input type="radio" name="handbook_level" value="basic" checked={handbookLevel === 'basic'} />
+              <span>{copy.handbookLevelBasic}</span>
+            </label>
+            <label class="settings-radio-item">
+              <input type="radio" name="handbook_level" value="advanced" checked={handbookLevel === 'advanced'} />
+              <span>{copy.handbookLevelAdvanced}</span>
+            </label>
+          </div>
+          <p class="settings-hint">{copy.handbookLevelHint}</p>
         </div>
 
         <div class="admin-field">
@@ -581,6 +605,7 @@ const userIdUnlockDate = usernameChangedAt
         username: formData.get('username') || null,
         bio: formData.get('bio') || null,
         persona: formData.get('persona') || null,
+        handbook_level: formData.get('handbook_level') || 'basic',
         preferred_locale: formData.get('preferred_locale') || 'ko',
         is_public: formData.has('is_public'),
       };
