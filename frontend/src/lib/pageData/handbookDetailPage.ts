@@ -36,7 +36,10 @@ function wrapLearnMore(html: string, locale: string): string {
   const learnMorePart = html.slice(splitIndex);
 
   const questionMap = locale === 'ko' ? QUESTION_MAP_KO : QUESTION_MAP_EN;
-  const summaryLabel = locale === 'ko' ? '이런 것도 궁금하지 않으세요? 💭' : 'Curious about more? 💭';
+  const bulbIcon = '<svg class="learn-more-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
+  const summaryLabel = locale === 'ko'
+    ? `이런 것도 궁금하지 않으세요? ${bulbIcon}`
+    : `Curious about more? ${bulbIcon}`;
 
   // Extract section titles and convert to question-style labels
   const titlePattern = /<h2[^>]*>(.*?)<\/h2>/gi;
@@ -51,7 +54,7 @@ function wrapLearnMore(html: string, locale: string): string {
   }
 
   const questionsHtml = questions.length > 0
-    ? `<div class="learn-more-questions">${questions.map(q => `<span class="learn-more-question">${q}</span>`).join('')}</div>`
+    ? `<ul class="learn-more-questions">${questions.map(q => `<li class="learn-more-question">${q}</li>`).join('')}</ul>`
     : '';
 
   return `${corePart}<details class="handbook-learn-more"><summary><div class="learn-more-header"><span class="learn-more-chevron">▶</span> ${summaryLabel}</div>${questionsHtml}</summary>${learnMorePart}</details>`;
