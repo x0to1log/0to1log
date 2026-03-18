@@ -556,6 +556,32 @@ async def _search_term_context(term: str) -> str:
         return ""
 
 
+async def _classify_term_type(term: str, categories: list[str], client, model_light: str) -> str:
+    """Classify term into one of 10 types using gpt-4o-mini."""
+    from services.agents.prompts_handbook_types import CLASSIFY_TERM_PROMPT, TERM_TYPES
+
+    user_msg = f"Term: {term}\nCategories: {', '.join(categories)}"
+    try:
+        resp = await client.chat.completions.create(
+            model=model_light,
+            messages=[
+                {"role": "system", "content": CLASSIFY_TERM_PROMPT},
+                {"role": "user", "content": user_msg},
+            ],
+            max_tokens=100,
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "term-classify")
+        term_type = data.get("type", "concept_theory")
+        if term_type not in TERM_TYPES:
+            term_type = "concept_theory"
+        return term_type
+    except Exception as e:
+        logger.warning("Term classification failed for '%s': %s", term, e)
+        return "concept_theory"
+
+
 def _fetch_handbook_term_map() -> dict[str, str]:
     """Fetch {term_name: slug} map of published handbook terms."""
     supabase = get_supabase()
