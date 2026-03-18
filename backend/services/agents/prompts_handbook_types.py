@@ -69,7 +69,8 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 - adv_*_2_formulas: Full mathematical formulation with derivation steps, not just final formula. Include loss function, gradient update rules.
 - adv_*_3_howworks: Data flow diagram description. Input → layers/steps → output. Include tensor shapes if applicable.
 - adv_*_4_code: Production-grade code (NOT hello world). Include error handling, type hints, real library usage (torch, sklearn). Min 15 lines.
-- adv_*_5_practical: Include benchmark comparisons (accuracy, latency, memory) with specific numbers from reference materials.""",
+- adv_*_5_practical: Include benchmark comparisons (accuracy, latency, memory) with specific numbers from reference materials. If no benchmarks are available in references, state "Public benchmarks not yet available" rather than inventing numbers.
+- CRITICAL: Do NOT fabricate paper titles, arXiv IDs, author names, or publication venues. Only cite papers from the Reference Materials provided. If no paper reference is available, write "See official documentation" instead.""",
 
     "infrastructure_tool": """## Type-Specific Depth: Infrastructure/Tool
 - adv_*_1_technical: Architecture diagram description (components, data flow, control plane vs data plane).
@@ -90,14 +91,15 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 - adv_*_2_formulas: Mathematical formulation with step-by-step derivation and intuitive interpretation of each term.
 - adv_*_3_howworks: Visual/geometric interpretation. "Imagine a 2D plot where..."
 - adv_*_4_code: Demonstration code showing the concept in action (visualization, simulation). Min 15 lines.
-- adv_*_5_practical: Where this concept causes real bugs/failures in production. Anti-patterns.""",
+- adv_*_5_practical: Where this concept causes real bugs/failures in production. Anti-patterns.
+- CRITICAL: Do NOT fabricate paper citations or textbook references. Only cite sources from Reference Materials. If unavailable, omit the citation.""",
 
     "product_brand": """## Type-Specific Depth: Product/Brand
 - adv_*_1_technical: Product capabilities, supported features, API surface area.
 - adv_*_2_formulas: Competitive comparison table — this product vs 3-4 alternatives. Columns: pricing, performance benchmarks, key differentiators, limitations.
 - adv_*_3_howworks: Architecture overview — how the product works internally (if known). API request flow.
 - adv_*_4_code: API usage examples — authentication, common operations, error handling. Use REAL API endpoints from reference materials.
-- adv_*_5_practical: Version history highlights. Migration notes. Known limitations and workarounds.""",
+- adv_*_5_practical: Version history highlights. Migration notes. Known limitations and workarounds. If benchmarks are unavailable in references, state so rather than inventing numbers.""",
 
     "metric_measure": """## Type-Specific Depth: Metric/Measure
 - adv_*_1_technical: Formal mathematical definition. What does this metric actually measure?
@@ -136,9 +138,18 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 }
 
 
+_SECTION_MINIMUM = """
+## Section Quality Minimums
+- Each advanced section: minimum 200 characters of substantive content
+- adv_*_1_technical: minimum 400 characters (most important section)
+- adv_*_4_code: minimum 15 lines of substantial code (if code applies to this type)
+- Empty or placeholder sections ("TBD", "N/A") are NOT acceptable — omit the section key entirely if not applicable"""
+
+
 def get_type_depth_guide(term_type: str) -> str:
     """Return type-specific depth instructions for advanced prompt injection."""
-    return TYPE_DEPTH_GUIDES.get(term_type, TYPE_DEPTH_GUIDES["concept_theory"])
+    guide = TYPE_DEPTH_GUIDES.get(term_type, TYPE_DEPTH_GUIDES["concept_theory"])
+    return f"{guide}\n\n{_SECTION_MINIMUM}"
 
 
 SELF_CRITIQUE_PROMPT = """You are a senior ML engineer reviewing a handbook advanced section.
@@ -192,16 +203,35 @@ Rate the advanced content (0-100) based on this term's type:
 - 40-59: Blog-post level. Needs significant depth improvement.
 - <40: Insufficient. Major revision needed.
 
-## Scoring Examples
-- depth 22 (excellent): Production code with error handling, benchmark comparison with real numbers
-- depth 12 (mediocre): Blog-post explanations, hello-world code
-- depth 5 (poor): Wikipedia-level definitions only
-- accuracy 23: All claims cite reference materials, no fabricated product mappings
-- accuracy 10: Fabricated URLs, wrong product-technology claims
-- uniqueness 22: Zero overlap with basic content, advanced-only insights
-- uniqueness 10: Essentially rephrased basic content
-- completeness 22: All 9 sections substantive (min 200 chars each)
-- completeness 5: Multiple empty or thin sections
+## Scoring Rubric (5 tiers per criterion)
+
+### Depth
+- 23-25: Production code + architecture diagrams + math proofs + benchmark comparisons with cited sources
+- 18-22: Production code + detailed explanations + some benchmarks
+- 13-17: Working code + adequate explanations but lacking depth/benchmarks
+- 8-12: Partial code or simplified explanations, blog-post level
+- 0-7: Conceptual only, no implementation examples, Wikipedia-level
+
+### Accuracy
+- 23-25: All claims cite reference materials, verifiable numbers, no fabricated mappings
+- 18-22: Most claims sourced, minor uncited statements
+- 13-17: Mix of sourced and unsourced claims
+- 8-12: Vague "widely used" statements, some fabricated product claims
+- 0-7: Fabricated URLs, wrong product-technology mappings
+
+### Uniqueness
+- 23-25: Zero overlap with basic content, advanced-only insights and code
+- 18-22: Minimal overlap, mostly new content
+- 13-17: Some repeated analogies or examples from basic
+- 8-12: Significant overlap, rephrased basic content
+- 0-7: Essentially the same content as basic
+
+### Completeness
+- 23-25: All 9 sections substantive (min 200 chars each), no thin sections
+- 18-22: 8-9 sections substantive, 1 thin
+- 13-17: 6-7 sections substantive, 2-3 thin
+- 8-12: 4-5 sections substantive, rest thin or empty
+- 0-7: Multiple empty sections, incomplete coverage
 
 ## Output JSON
 {{
