@@ -2,6 +2,37 @@ import { localField } from '../handbookUtils';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
+/**
+ * Wrap handbook basic HTML sections 5-8 in a collapsible "더 알아보기" block.
+ * Splits at the 5th <h2> tag — first 4 sections stay visible, rest go into <details>.
+ */
+function wrapLearnMore(html: string, locale: string): string {
+  if (!html) return html;
+  const h2Pattern = /<h2[\s>]/gi;
+  const matches: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = h2Pattern.exec(html)) !== null) {
+    matches.push(m.index);
+  }
+  // Need at least 5 h2s to split (4 core + 1+ learn more)
+  if (matches.length < 5) return html;
+  const splitIndex = matches[4]; // 5th h2 (0-indexed: 4)
+  const corePart = html.slice(0, splitIndex);
+  const learnMorePart = html.slice(splitIndex);
+  const summaryLabel = locale === 'ko' ? '더 알아보기' : 'Learn More';
+  // Extract section titles from learn-more h2s for preview
+  const titlePattern = /<h2[^>]*>(.*?)<\/h2>/gi;
+  const titles: string[] = [];
+  let tm: RegExpExecArray | null;
+  while ((tm = titlePattern.exec(learnMorePart)) !== null) {
+    titles.push(tm[1].replace(/<[^>]+>/g, '').trim());
+  }
+  const titlePreview = titles.length > 0
+    ? `<span class="learn-more-preview">${titles.join(' · ')}</span>`
+    : '';
+  return `${corePart}<details class="handbook-learn-more"><summary>${summaryLabel}${titlePreview}</summary>${learnMorePart}</details>`;
+}
+
 interface HandbookDetailPageContext extends DetailPageContext {
   previewLevel?: string | null;
 }
@@ -136,7 +167,7 @@ export async function getHandbookDetailPageData({
         : Promise.resolve({ data: null }),
     ]);
 
-    if (basicHtml) levelHtmlMap.basic = basicHtml;
+    if (basicHtml) levelHtmlMap.basic = wrapLearnMore(basicHtml, locale);
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
 
     // Use tag-matched articles, fall back to recent news
@@ -153,7 +184,7 @@ export async function getHandbookDetailPageData({
       bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
       bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
     ]);
-    if (basicHtml) levelHtmlMap.basic = basicHtml;
+    if (basicHtml) levelHtmlMap.basic = wrapLearnMore(basicHtml, locale);
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
   }
 
