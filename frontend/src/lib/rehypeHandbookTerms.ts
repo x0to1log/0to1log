@@ -4,6 +4,7 @@
  * for inline popup functionality.
  *
  * Only marks the first occurrence of each term. Skips headings, links, and code.
+ * Exception: "관련 용어 / Related Terms" sections link ALL occurrences.
  */
 import { visit } from 'unist-util-visit';
 import type { Root, Element, Text } from 'hast';
@@ -18,6 +19,9 @@ export type TermsMap = Map<string, TermEntry>;
 
 const SKIP_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'code', 'pre']);
 
+// Section headers where ALL term occurrences should be linked (not just first)
+const ALWAYS_LINK_KEYWORDS = ['관련', 'related'];
+
 export default function rehypeHandbookTerms(termsMap: TermsMap) {
   return () => (tree: Root) => {
     if (!termsMap || termsMap.size === 0) return;
@@ -25,9 +29,6 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
     // Build regex from all term keys (sorted by length desc for greedy match)
     const keys = Array.from(termsMap.keys()).sort((a, b) => b.length - a.length);
     const escaped = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    // Use Unicode-aware boundaries instead of \b (which doesn't work for Korean/CJK).
-    // Lookbehind: not preceded by Latin or Korean letter (prevents partial word match).
-    // Lookahead: not followed by Latin letter (Korean particles like 을/의/에서 are allowed).
     const pattern = new RegExp(
       `(?<![a-zA-Z\\uAC00-\\uD7AF])(${escaped.join('|')})(?![a-zA-Z])`,
       'gi',
@@ -54,6 +55,22 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       return false;
     }
 
+    function isInRelatedSection(parent: Element, idx: number): boolean {
+      const sibs = parent.children;
+      for (let i = idx - 1; i >= 0; i--) {
+        const sib = sibs[i] as Element;
+        if (sib.type === 'element' && sib.tagName === 'h2') {
+          const hText = (sib.children || [])
+            .filter((c: any) => c.type === 'text')
+            .map((c: any) => c.value)
+            .join('')
+            .toLowerCase();
+          return ALWAYS_LINK_KEYWORDS.some(kw => hText.includes(kw));
+        }
+      }
+      return false;
+    }
+
     visit(tree, 'text', (node: Text, index, parent) => {
       if (!parent || index === null || index === undefined) return;
       const parentEl = parent as Element;
@@ -61,6 +78,8 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       // Skip text inside headings, links, code (check full ancestor chain)
       if (parentEl.tagName && SKIP_TAGS.has(parentEl.tagName)) return;
       if (hasSkipAncestor(node)) return;
+
+      const inRelated = isInRelatedSection(parentEl, index);
 
       const text = node.value;
       const parts: (Text | Element)[] = [];
@@ -74,8 +93,8 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
         const entry = termsMap.get(matchedText.toLowerCase());
         if (!entry) continue;
 
-        // Only first occurrence per term
-        if (matched.has(entry.slug)) continue;
+        // In "related terms" section: always link. Elsewhere: first occurrence only.
+        if (!inRelated && matched.has(entry.slug)) continue;
         matched.add(entry.slug);
 
         // Text before the match
