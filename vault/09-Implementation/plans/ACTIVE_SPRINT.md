@@ -168,15 +168,21 @@
 - **수정:** 프롬프트 강화 (마크다운 포맷, 불릿 리스트, BAD/GOOD 예시, 반복 방지), article_context 전달, 자기 링크 방지
 
 ### 43. 핸드북 심화 퀄리티 시스템 `[HANDBOOK-ADV-01]`
+- **체크:** [x]
+- **상태:** done
+- **수정:** Tavily 검색 + gpt-4o-mini 유형 분류 (10 types) + 유형별 심화 프롬프트 + Self-critique + 퀄리티 체크 (점수 매기기). Tavily context를 기초+심화 모든 Call에 적용.
+- **설계 참조:** [[2026-03-18-handbook-advanced-quality-design]]
+
+### 44. 프롬프트 감사 수정 `[PROMPT-AUDIT-01]`
 - **체크:** [ ]
 - **상태:** todo
-- **목적:** 심화 콘텐츠를 "미드~시니어 엔지니어 레퍼런스 수준"으로 끌어올리기
-- **설계 참조:** [[2026-03-18-handbook-advanced-quality-design]]
+- **목적:** 전체 프롬프트 감사 결과 52개 이슈 수정 (신뢰도/일관성/토큰 효율)
+- **설계 참조:** [[2026-03-18-prompt-audit-fixes]]
 - **구현 범위:**
-  - Phase 1: Tavily 검색 + gpt-4o-mini 유형 분류 (10 types)
-  - Phase 2: 유형별 전용 심화 프롬프트 (prompts_handbook_types.py)
-  - Phase 3: Self-critique + 퀄리티 체크 (점수 매기기)
-- **추가 비용:** +$0.07/용어 (22% 증가), 월 +$10.50
+  - P0 (CRITICAL): URL hallucination 방지, citation-소스 매핑, 사실 오류 방지
+  - P1 (HIGH): 토큰 비효율 제거, few-shot 예시 추가, score 해석 정의, 유형 분류 모호성 해소
+  - P2 (MEDIUM): 일관성 개선, 코드 기준 명확화, 구조 정리, 반복 제거 리팩토링
+- **대상 파일:** `prompts_advisor.py`, `prompts_news_pipeline.py`, `prompts_handbook_types.py`
 
 ---
 
@@ -191,8 +197,11 @@
 INLINE-POPUP-01 (한국어 매칭 수정 + 조상 체인 체크)
 HANDBOOK-QUALITY-01 (핸드북 프롬프트 강화)
 
-[다음]
+[완료]
 HANDBOOK-ADV-01 (심화 퀄리티 시스템 — Tavily+유형분류+Self-critique)
+
+[다음]
+PROMPT-AUDIT-01 (프롬프트 감사 52개 이슈 수정)
 HANDBOOK-LEVEL-LINK-01 (핸드북 레벨 연결)
 COMMUNITY-01 (커뮤니티 반응 수집)
 WEEKLY-01 (주간 다이제스트)
@@ -218,3 +227,4 @@ AUTOPUB-01 (자동 발행)
 - [[Handbook-Prompt-Redesign|Handbook 프롬프트 재설계]]
 - [[2026-03-17-pipeline-optimization|파이프라인 최적화 계획]]
 - [[2026-03-18-handbook-advanced-quality-design|Handbook 심화 퀄리티 시스템]]
+- [[2026-03-18-prompt-audit-fixes|프롬프트 감사 52개 이슈 수정]]
