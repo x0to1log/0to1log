@@ -791,9 +791,9 @@ def _auto_link_handbook_terms(
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_KO = [
     ("basic_ko_1_plain", "## 💡 쉽게 이해하기"),
-    ("basic_ko_2_glance", "## 📊 한눈에 보기"),
-    ("basic_ko_3_why", "## ❓ 왜 중요한가"),
-    ("basic_ko_4_example", "## 🍎 예시와 비유"),
+    ("basic_ko_2_example", "## 🍎 예시와 비유"),
+    ("basic_ko_3_glance", "## 📊 한눈에 보기"),
+    ("basic_ko_4_why", "## ❓ 왜 중요한가"),
     ("basic_ko_5_where", "## 🔧 실제로 어디서 쓰이나"),
     ("basic_ko_6_caution", "## ⚠️ 주의할 점"),
     ("basic_ko_7_comm", "## 💬 대화에서는 이렇게"),
@@ -803,9 +803,9 @@ BASIC_SECTIONS_KO = [
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_EN = [
     ("basic_en_1_plain", "## 💡 Plain Explanation"),
-    ("basic_en_2_glance", "## 📊 At a Glance"),
-    ("basic_en_3_why", "## ❓ Why It Matters"),
-    ("basic_en_4_example", "## 🍎 Example & Analogy"),
+    ("basic_en_2_example", "## 🍎 Example & Analogy"),
+    ("basic_en_3_glance", "## 📊 At a Glance"),
+    ("basic_en_4_why", "## ❓ Why It Matters"),
     ("basic_en_5_where", "## 🔧 Where It's Used"),
     ("basic_en_6_caution", "## ⚠️ Precautions"),
     ("basic_en_7_comm", "## 💬 Communication"),

@@ -592,9 +592,9 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
 - **basic_ko_1_plain**: 이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조. 최소 300자.
-- **basic_ko_2_glance**: 이 개념과 **유사 개념을 비교하는 표**. 단순 용어 설명표가 아님. 예: "AR vs MA vs ARIMA 비교" 또는 "단계별 동작 과정". 반드시 마크다운 테이블(| 형식) 사용.
-- **basic_ko_3_why**: **구체적인 영향** — 이 개념이 없으면 어떤 문제가 생기는지, 있으면 뭐가 달라지는지. "알면 좋다" 수준이 아니라 "모르면 이런 실수를 한다" 수준으로. 4~5개 bullet point.
-- **basic_ko_4_example**: 이 개념이 실제로 적용되는 **구체적 시나리오** 3~4개. 1_plain의 비유와 겹치면 안 됨. 형식: **시나리오 제목**: 구체적 상황 설명. 예: "번역기가 문장을 한 단어씩 생성할 때" (O) / "날씨 예측" (X — 너무 일반적).
+- **basic_ko_2_example**: 이 개념이 실제로 적용되는 **구체적 시나리오** 3~4개. 1_plain의 비유와 겹치면 안 됨. 형식: **시나리오 제목**: 구체적 상황 설명. "번역기가 문장을 한 단어씩 생성할 때" (O) / "날씨 예측" (X — 너무 일반적).
+- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 단순 용어 설명표가 아님. 예: "AR vs MA vs ARIMA 비교" 또는 "단계별 동작 과정". 반드시 마크다운 테이블(| 형식) 사용.
+- **basic_ko_4_why**: **구체적인 영향** — 이 개념이 없으면 어떤 문제가 생기는지, 있으면 뭐가 달라지는지. "알면 좋다" 수준이 아니라 "모르면 이런 실수를 한다" 수준으로. 4~5개 bullet point.
 - **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마. 제품-기술 매핑은 Reference Materials에서 확인된 것만 사용. 추측으로 "X가 Y를 사용한다"고 쓰지 마. 불확실하면 "~에 활용될 수 있다" 표현 사용.
 - **basic_ko_6_caution**: 이 개념에 대한 **흔한 오해**와 **실제 사실**을 대비. 형식: "❌ 오해: ~라고 생각하기 쉽다 → ✅ 실제: ~이다". 3~4개.
 - **basic_ko_7_comm**: 실제 **기술 기사, 회의, 면접**에서 이 용어가 등장하는 예시 문장 4~5개. 자연스러운 문맥에서 사용되는 모습. **핵심 용어를 굵게 표시**.
@@ -611,9 +611,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "definition_ko": "...",
   "definition_en": "...",
   "basic_ko_1_plain": "비유와 일상 예시로 설명. 최소 300자.",
-  "basic_ko_2_glance": "| 항목 | 설명 |\\n|---|---|\\n| ... | ... |",
-  "basic_ko_3_why": "- 이유1\\n- 이유2\\n- 이유3\\n- 이유4",
-  "basic_ko_4_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
+  "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
+  "basic_ko_3_glance": "| 항목 | 설명 |\\n|---|---|\\n| ... | ... |",
+  "basic_ko_4_why": "- 이유1\\n- 이유2\\n- 이유3\\n- 이유4",
   "basic_ko_5_where": "- 사례1\\n- 사례2\\n- 사례3\\n- 사례4",
   "basic_ko_6_caution": "- 주의1\\n- 주의2\\n- 주의3",
   "basic_ko_7_comm": "- **용어** 이런 맥락에서 사용\\n- ...",
@@ -680,9 +680,9 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
 - **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." Min 300 chars.
-- **basic_en_2_glance**: A **comparison table** between this concept and similar ones. NOT a glossary table. E.g., "AR vs MA vs ARIMA" or "Step-by-step process". Must use markdown table (| format).
-- **basic_en_3_why**: **Concrete impact** — what goes wrong without this concept, what improves with it. Not "good to know" level but "you'll make this mistake if you don't know" level. 4-5 bullet points.
-- **basic_en_4_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation. E.g., "When a translation model generates words one at a time" (O) / "Weather prediction" (X — too generic).
+- **basic_en_2_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation. E.g., "When a translation model generates words one at a time" (O) / "Weather prediction" (X — too generic).
+- **basic_en_3_glance**: A **comparison table** between this concept and similar ones. NOT a glossary table. E.g., "AR vs MA vs ARIMA" or "Step-by-step process". Must use markdown table (| format).
+- **basic_en_4_why**: **Concrete impact** — what goes wrong without this concept, what improves with it. Not "good to know" level but "you'll make this mistake if you don't know" level. 4-5 bullet points.
 - **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it. Only state product-technology mappings confirmed in Reference Materials. Do NOT guess "X uses Y". If uncertain, OMIT the example entirely rather than hedging.
 - **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
 - **basic_en_7_comm**: 4-5 example sentences from real **tech articles, meetings, or interviews**. Natural context usage. **Bold the key term**.
@@ -694,9 +694,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 {{
   "definition_en": "...",
   "basic_en_1_plain": "...",
-  "basic_en_2_glance": "...",
-  "basic_en_3_why": "...",
-  "basic_en_4_example": "...",
+  "basic_en_2_example": "...",
+  "basic_en_3_glance": "...",
+  "basic_en_4_why": "...",
   "basic_en_5_where": "...",
   "basic_en_6_caution": "...",
   "basic_en_7_comm": "...",
