@@ -117,7 +117,7 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 {sections_description}
 
 ## Writing Rules
-1. Cite sources at the END of each paragraph, not after every sentence. Group all sources used in that paragraph: ([Source1](URL1), [Source2](URL2)). This rule applies to BOTH English AND Korean content — Korean paragraphs must also end with source links.
+1. Cite sources Perplexity-style: place small linked numbers at the end of the paragraph, like "...문장 끝. [1](URL1) [2](URL2)". Do NOT write "자세한 내용은 ~에서 확인하세요" or "Read more at ~". Just the numbered links, nothing else. This applies to BOTH English AND Korean content.
 2. Use concrete numbers and data — no vague statements
 3. Korean content must be naturally written (not translated from English)
 4. English and Korean cover the same facts but with natural expression for each language
@@ -184,7 +184,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. Cite sources at the END of each paragraph, not after every sentence. Group all sources used in that paragraph: ([Source1](URL1), [Source2](URL2)). This rule applies to BOTH English AND Korean content — Korean paragraphs must also end with source links.
+1. Cite sources Perplexity-style: place small linked numbers at the end of the paragraph, like "...문장 끝. [1](URL1) [2](URL2)". Do NOT write "자세한 내용은 ~에서 확인하세요" or "Read more at ~". Just the numbered links, nothing else. This applies to BOTH English AND Korean content.
 2. Use concrete numbers and data — no vague statements
 3. Korean content must be naturally written (not translated from English)
 4. English and Korean cover the same news items but with natural expression for each language
