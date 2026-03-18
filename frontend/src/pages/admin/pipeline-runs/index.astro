@@ -205,7 +205,7 @@ if (isStuck && lastRun) {
 // Show Retry Handbook when:
 // 1. Last handbook-extract run failed or stuck running, OR
 // 2. News run exists but no handbook-extract run for that batch
-const lastNewsBatchId = lastRun?.run_key?.replace('news-v2-', '') ?? '';
+const lastNewsBatchId = lastRun?.run_key?.replace('news-', '') ?? '';
 const handbookNeedsRetry = lastHandbookRun?.status === 'failed' || lastHandbookRun?.status === 'running';
 const newsExistsNoHandbook = !!lastNewsBatchId && !lastHandbookRun;
 const showRetryHandbook = handbookNeedsRetry || newsExistsNoHandbook;
@@ -213,7 +213,7 @@ const retryBatchId = handbookNeedsRetry
   ? (lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '')
   : lastNewsBatchId;
 
-const newsRuns = runs.filter((r) => r.run_key?.startsWith('news-v2-'));
+const newsRuns = runs.filter((r) => r.run_key?.startsWith('news-'));
 const handbookRuns = runs.filter((r) => r.run_key?.startsWith('handbook-extract-'));
 
 function buildSummary(subset: RunCard[]) {

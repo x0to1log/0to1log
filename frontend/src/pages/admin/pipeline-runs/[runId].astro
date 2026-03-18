@@ -191,7 +191,7 @@ const dateKwargs = (() => {
 })();
 const uniqueCandidates = String(firstTruthyDebugValue(logs, 'unique_candidates') ?? '—');
 
-const batchId = run?.run_key?.replace('news-v2-', '') ?? '';
+const batchId = run?.run_key?.replace('news-', '') ?? '';
 let createdPosts: Array<{id: string; title: string; slug: string; locale: string; post_type: string; status: string}> = [];
 if (batchId) {
   const { data } = await sb

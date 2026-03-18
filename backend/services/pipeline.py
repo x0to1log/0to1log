@@ -130,7 +130,7 @@ def check_existing_batch(batch_id: str) -> dict[str, Any] | None:
     if not supabase:
         return None
 
-    run_key = f"news-v2-{batch_id}"
+    run_key = f"news-{batch_id}"
     runs = supabase.table("pipeline_runs").select("id, status, started_at").eq("run_key", run_key).execute()
     posts = supabase.table("news_posts").select("id, status").eq("pipeline_batch_id", batch_id).execute()
 
@@ -162,7 +162,7 @@ def cleanup_existing_batch(batch_id: str) -> dict[str, int]:
     if not supabase:
         return {"deleted_runs": 0, "deleted_logs": 0, "deleted_posts": 0}
 
-    run_key = f"news-v2-{batch_id}"
+    run_key = f"news-{batch_id}"
 
     # Check for published posts first
     published = (
@@ -772,7 +772,7 @@ async def run_daily_pipeline(
     try:
         supabase.table("pipeline_runs").insert({
             "id": run_id,
-            "run_key": f"news-v2-{batch_id}",
+            "run_key": f"news-{batch_id}",
             "status": "running",
         }).execute()
     except Exception as e:

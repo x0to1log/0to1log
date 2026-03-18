@@ -180,7 +180,7 @@ if (isStuck && lastRun) {
 // Show Retry Handbook when:
 // 1. Last handbook-extract run failed or stuck running, OR
 // 2. News run exists but no handbook-extract run for that batch
-const lastNewsBatchId = lastRun?.run_key?.replace('news-v2-', '') ?? '';
+const lastNewsBatchId = lastRun?.run_key?.replace('news-', '') ?? '';
 const handbookNeedsRetry = lastHandbookRun?.status === 'failed' || lastHandbookRun?.status === 'running';
 const newsExistsNoHandbook = !!lastNewsBatchId && !lastHandbookRun;
 const showRetryHandbook = handbookNeedsRetry || newsExistsNoHandbook;
