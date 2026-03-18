@@ -190,8 +190,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 4. English and Korean cover the same news items but with natural expression for each language
 5. Do NOT include an H1 title — start directly with the first section
 6. Group news items by their subcategory under the category headers
-7. Each news item's paragraph count follows the persona guide (Expert: 3-4, Learner: 2-3, Beginner: 1-2). Include context for numbers (compare to industry averages or competitors).
-8. These news items were collected TODAY — write in present tense for events, do not reference them as past events from weeks ago.
+7. Each news item's paragraph count follows the persona guide (Expert: 3-4, Learner: 2-3). Do NOT exceed 4 paragraphs per item. Include context for numbers (compare to industry averages or competitors).
+8. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago. Avoid past framing ("Last week...", "A few days ago...").
 9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
 10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". Do NOT include "(ko: ...)" in actual output — that notation is only for your reference.
 11. If a section has no news items for the day, OMIT the section entirely. Do NOT include an empty header or placeholder text. Focus the output on sections that have actual news — this gives more depth to what matters.
@@ -212,8 +212,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "excerpt": "Marketing teaser that raises curiosity (different from headline AND one-line summary). The excerpt sells the click, the summary delivers the answer.",
   "excerpt_ko": "호기심을 유발하는 마케팅 티저 (제목, 한 줄 요약과 반드시 다르게). excerpt는 클릭을 유도, 요약은 답을 전달.",
   "tags": ["company-name", "technology", "topic", "tool-name", "concept"],
-  "focus_items": ["1 sentence, 5-12 words: what changed", "1 sentence: why it matters", "1 sentence: what to watch"],
-  "focus_items_ko": ["1문장 15-40자: 오늘 무엇이 달라졌는가", "1문장: 지금 왜 중요한가", "1문장: 다음에 무엇을 지켜볼 것인가"],
+  "focus_items": ["OpenAI releases real-time voice API for developers", "Inference costs drop 60%, enabling new use cases", "Watch for Google and Meta's competitive response this month"],
+  "focus_items_ko": ["OpenAI, 개발자용 실시간 음성 API 출시", "추론 비용 60% 하락으로 새로운 활용 가능", "이번 달 Google·Meta의 경쟁 대응 주목"],
   "en": "## One-Line Summary\\n...\\n\\n## LLM & SOTA Models\\n...",
   "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA 모델\\n..."
 }}}}
