@@ -47,6 +47,17 @@ CLASSIFY_TERM_PROMPT = """You are a technical term classifier. Given a term name
 10. **architecture_pattern** — System design patterns, architectural blueprints
     Examples: Microservices, Event Sourcing, CQRS, RAG, MapReduce, Pub/Sub
 
+## Disambiguation Rules
+- Tool vs Product: free/open-source = infrastructure_tool, commercial/paid = product_brand
+  - PyTorch = infrastructure_tool (free framework)
+  - GitHub Copilot = product_brand (paid commercial service)
+  - TensorFlow = infrastructure_tool (free framework)
+  - AWS SageMaker = product_brand (paid cloud service)
+- Algorithm vs Technique: algorithm has formal math specification, technique is a repeatable practice
+  - Gradient Descent = algorithm_model (has convergence proof)
+  - Data Augmentation = technique_method (family of practices, no single algorithm)
+- Hybrid terms: choose the PRIMARY use case the reader would look up
+
 ## Output
 Return JSON: {{"type": "one_of_the_10_types"}}
 Only the type field. Nothing else."""
@@ -151,7 +162,15 @@ Review the advanced content below and identify:
   "score": 0-100
 }}
 
-If score >= 75, set needs_improvement to false."""
+If score >= 75, set needs_improvement to false.
+
+## Examples
+
+### Pass (score=82)
+{{"needs_improvement": false, "weak_sections": [], "improvements": [], "score": 82}}
+
+### Fail (score=55)
+{{"needs_improvement": true, "weak_sections": ["adv_ko_4_code", "adv_ko_5_practical"], "improvements": [{{"section": "adv_ko_4_code", "issue": "Only 5 lines, no error handling", "suggestion": "Add production example with type hints, try/except, real library usage (15+ lines)"}}, {{"section": "adv_ko_5_practical", "issue": "No benchmark numbers", "suggestion": "Add specific performance comparison: latency, memory, accuracy vs alternatives"}}], "score": 55}}"""
 
 
 HANDBOOK_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's advanced section quality.
@@ -165,6 +184,24 @@ Rate the advanced content (0-100) based on this term's type:
 - Accuracy: Are claims specific and verifiable? (0-25)
 - Uniqueness: Does advanced content differ from basic? (0-25)
 - Completeness: Are all 9 sections substantive? (0-25)
+
+## Score Interpretation
+- score = depth + accuracy + uniqueness + completeness (each 0-25, sum = 0-100)
+- 80+: Senior-engineer reference quality. Ready for publication.
+- 60-79: Acceptable with minor improvements. Review recommended.
+- 40-59: Blog-post level. Needs significant depth improvement.
+- <40: Insufficient. Major revision needed.
+
+## Scoring Examples
+- depth 22 (excellent): Production code with error handling, benchmark comparison with real numbers
+- depth 12 (mediocre): Blog-post explanations, hello-world code
+- depth 5 (poor): Wikipedia-level definitions only
+- accuracy 23: All claims cite reference materials, no fabricated product mappings
+- accuracy 10: Fabricated URLs, wrong product-technology claims
+- uniqueness 22: Zero overlap with basic content, advanced-only insights
+- uniqueness 10: Essentially rephrased basic content
+- completeness 22: All 9 sections substantive (min 200 chars each)
+- completeness 5: Multiple empty or thin sections
 
 ## Output JSON
 {{
