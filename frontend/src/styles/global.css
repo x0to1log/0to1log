@@ -3752,7 +3752,7 @@ pre {
   --crepe-color-on-secondary: var(--color-text-primary) !important;
   --crepe-shadow-1: none !important;
   --crepe-shadow-2: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-family: var(--font-body) !important;
   padding: 0;
 }
 
