@@ -34,5 +34,42 @@
 - **수정**: 명시적 GRANT 추가
 
 ## 검증
-- [ ] `cd frontend && npm run build` 통과
-- [ ] 백엔드 import 에러 없음
+- [x] `cd frontend && npm run build` 통과
+- [x] 백엔드 import 에러 없음
+
+## 구현 결과
+
+**커밋**: `c5fd410` (2026-03-18)
+**변경**: 26개 파일, +131 / -256 (순 125줄 감소)
+
+### 수정된 파일 목록
+
+#### 1. Supabase 에러 메시지 노출 제거 (15개 라우트)
+모든 `error.message` → `console.error()` 서버 로그 + generic 클라이언트 메시지로 교체.
+
+- `frontend/src/pages/api/admin/site-content.ts`
+- `frontend/src/pages/api/admin/posts/save.ts`, `status.ts`, `delete.ts`, `bulk-action.ts`
+- `frontend/src/pages/api/admin/blog/save.ts`, `status.ts`, `delete.ts`
+- `frontend/src/pages/api/admin/handbook/save.ts`, `status.ts`, `delete.ts`, `bulk-action.ts`
+- `frontend/src/pages/api/admin/products/save.ts`, `status.ts`, `delete.ts`, `batch-status.ts`
+- `frontend/src/pages/api/admin/categories/save.ts`, `delete.ts`
+
+#### 2. Change Password
+- `frontend/src/pages/api/admin/change-password.ts`: 인메모리 `Map` rate limit 제거 (Vercel serverless에서 무효), `updateError.message` 노출도 제거
+
+#### 3. GA4 파라미터
+- `backend/routers/admin_ga4.py`: `days: int = 30` → `days: int = Query(default=30, ge=1, le=365)`, `Query` import 추가
+
+#### 4. Cron Rate Limiting
+- `backend/routers/cron.py`: `Request` + `limiter` import 추가, 3개 엔드포인트에 `@limiter.limit()` 적용 (news-pipeline 2/min, handbook-extract 2/min, pipeline-cancel 5/min), cancel 에러 메시지도 generic으로 교체
+
+#### 5. 중복 인증 로직 제거
+- `frontend/src/pages/api/admin/run-pipeline.ts`: 80줄 `requireAdminFromCookies()` 제거 → `locals.accessToken` + `locals.isAdmin` 패턴 통일 (134줄 → 45줄)
+- `frontend/src/pages/api/admin/pipeline-cancel.ts`: 동일하게 제거 (127줄 → 39줄)
+- `frontend/src/middleware.ts`: `isSelfHandledAdminApiRoute` 변수 제거, 모든 `/api/admin/*`이 미들웨어 보호를 받도록 통합
+
+#### 6. RPC GRANT
+- `supabase/migrations/00027_rpc_grant_view_count.sql`: `increment_product_view_count(uuid)`에 `anon`, `authenticated` 명시적 GRANT
+
+### 이전 보안 커밋 (같은 날)
+- `8f8c0f2`: backend CORS 하드코딩 제거 → config 기반, 에러 메시지 generic화 (admin_blog_ai, admin_ga4), recommendations 쿼리 파라미터 validation 추가
