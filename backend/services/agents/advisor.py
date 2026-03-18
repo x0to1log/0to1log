@@ -878,6 +878,24 @@ async def _run_generate_term(
     )
     _log_handbook_stage("handbook.generate.basic", usage1)
 
+    # --- Parallel: Tavily search + type classification (for advanced prompts) ---
+    from services.agents.prompts_handbook_types import get_type_depth_guide
+
+    tavily_context, term_type = await asyncio.gather(
+        _search_term_context(req.term),
+        _classify_term_type(
+            req.term, req.categories or basic_data.get("categories", []),
+            client, settings.openai_model_light,
+        ),
+    )
+    logger.info("Term '%s' classified as type: %s, tavily_chars: %d",
+                req.term, term_type, len(tavily_context))
+
+    # Merge article_context with Tavily results for advanced prompts
+    combined_context = article_context
+    if tavily_context:
+        combined_context = f"{article_context}\n\n{tavily_context}" if article_context else tavily_context
+
     # --- Call 2 (EN Basic) + Call 3 (KO Advanced) — PARALLEL ---
     # Both depend only on Call 1 output, so they can run concurrently.
     en_basic_prompt = (
@@ -893,8 +911,20 @@ async def _run_generate_term(
         f"{user_prompt}\n\n"
         f"--- Context from Call 1 ---\n"
         f"Definition (EN): {definition_context}\n"
-        f"Definition (KO): {definition_ko_context}"
+        f"Definition (KO): {definition_ko_context}\n"
+        f"Term Type: {term_type}"
     )
+    if combined_context:
+        advanced_prompt += (
+            f"\n\n---\n{combined_context[:6000]}\n---\n"
+            "Use the above reference materials as factual sources. "
+            "Cite specific numbers and URLs from them.\n"
+        )
+
+    # Inject type-specific depth guide into advanced system prompts
+    type_guide = get_type_depth_guide(term_type)
+    adv_ko_system = f"{GENERATE_ADVANCED_PROMPT}\n\n{type_guide}"
+    adv_en_system = f"{GENERATE_ADVANCED_EN_PROMPT}\n\n{type_guide}"
 
     resp2, resp3 = await asyncio.gather(
         client.chat.completions.create(
@@ -910,7 +940,7 @@ async def _run_generate_term(
         client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": GENERATE_ADVANCED_PROMPT},
+                {"role": "system", "content": adv_ko_system},
                 {"role": "user", "content": advanced_prompt},
             ],
             response_format={"type": "json_object"},
@@ -939,7 +969,7 @@ async def _run_generate_term(
     resp4 = await client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": GENERATE_ADVANCED_EN_PROMPT},
+            {"role": "system", "content": adv_en_system},
             {"role": "user", "content": advanced_prompt},
         ],
         response_format={"type": "json_object"},
