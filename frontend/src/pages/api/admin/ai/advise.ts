@@ -35,6 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000), // 120s for deep verify / factcheck
     });
 
     const data = await res.json();
@@ -42,9 +43,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch {
-    return new Response(JSON.stringify({ error: 'Backend unreachable' }), {
-      status: 502,
+  } catch (e) {
+    const isTimeout = e instanceof DOMException && e.name === 'TimeoutError';
+    return new Response(JSON.stringify({ error: isTimeout ? 'Request timed out (120s)' : 'Backend unreachable' }), {
+      status: isTimeout ? 504 : 502,
       headers: { 'Content-Type': 'application/json' },
     });
   }

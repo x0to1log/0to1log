@@ -21,12 +21,13 @@ if (!accessToken) {
   return Astro.redirect('/admin/login');
 }
 
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
 if (!isNew) {
-  const supabase = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
   const { data, error } = await supabase
     .from('handbook_terms')
     .select('*')
@@ -43,12 +44,7 @@ if (!isNew) {
 // Resolve related_term_slugs to {slug, term} pairs for chip display
 let resolvedRelatedTerms: { slug: string; term: string }[] = [];
 if (term?.related_term_slugs?.length) {
-  const supabase2 = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const { data: relData } = await supabase2
+  const { data: relData } = await supabase
     .from('handbook_terms')
     .select('slug, term')
     .in('slug', term.related_term_slugs);
@@ -948,7 +944,14 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
         const data = await res.json();
         setAiLoading(false);
-        if (data.result) {
+
+        // Check for error responses
+        if (data.error) {
+          showFeedback(`AI error: ${data.error}`, true);
+          return;
+        }
+
+        if (data.result && Object.keys(data.result).length > 0) {
           if (action === 'related_terms') renderRelatedTerms(data.result);
           else if (action === 'translate') renderTranslate(data.result);
           else if (action === 'generate') renderGenerate(data.result);
@@ -960,9 +963,15 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
               `<div class="admin-ai-meta-footer">${esc(data.model_used || '')}${data.tokens_used ? ` · ${data.tokens_used} tokens` : ''}</div>`
             );
           }
+          // Show warnings if any
+          if (data.validation_warnings?.length) {
+            showFeedback(`Warnings: ${data.validation_warnings.join(', ')}`, false);
+          }
+        } else {
+          showFeedback('AI returned empty result. Try again or check backend logs.', true);
         }
       } catch {
-        showFeedback('Network error.', true);
+        showFeedback('Network error or request timed out. Try again.', true);
         setAiLoading(false);
       }
     }
