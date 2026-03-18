@@ -6,6 +6,7 @@ import re
 
 import httpx
 from pydantic import ValidationError
+from tavily import TavilyClient
 
 from core.config import settings
 from models.advisor import (
@@ -527,6 +528,32 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
         logger.warning("Handbook translate validation soft-fail: %s", e)
 
     return data, model, tokens
+
+
+async def _search_term_context(term: str) -> str:
+    """Search web for term context using Tavily. Returns formatted reference text."""
+    if not settings.tavily_api_key:
+        return ""
+    try:
+        tavily = TavilyClient(api_key=settings.tavily_api_key)
+        results = tavily.search(
+            query=f"{term} AI technology explained",
+            search_depth="advanced",
+            max_results=5,
+            include_raw_content=False,
+        )
+        if not results.get("results"):
+            return ""
+        parts = []
+        for i, r in enumerate(results["results"], 1):
+            title = r.get("title", "")
+            url = r.get("url", "")
+            content = r.get("content", "")[:600]
+            parts.append(f"### [{i}] {title}\nURL: {url}\n{content}")
+        return "## Reference Materials (from web search)\n\n" + "\n\n".join(parts)
+    except Exception as e:
+        logger.warning("Tavily search failed for '%s': %s", term, e)
+        return ""
 
 
 def _fetch_handbook_term_map() -> dict[str, str]:
