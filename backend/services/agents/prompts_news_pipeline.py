@@ -192,13 +192,11 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 6. Group news items by their subcategory under the category headers
 7. Each news item's paragraph count follows the persona guide (Expert: 3-4, Learner: 2-3). Do NOT exceed 4 paragraphs per item. Include context for numbers (compare to industry averages or competitors).
 8. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago. Avoid past framing ("Last week...", "A few days ago...").
-9. If you are running low on output space, prioritize: One-Line Summary > category sections > closing analysis. Never skip the summary.
-10. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". Do NOT include "(ko: ...)" in actual output — that notation is only for your reference.
-11. If a section has no news items for the day, OMIT the section entirely. Do NOT include an empty header or placeholder text. Focus the output on sections that have actual news — this gives more depth to what matters.
-12. **Markdown formatting for readability**: Use markdown actively to make content scannable.
+9. **Section headers MUST use the correct language**: English headers for "en", Korean headers for "ko". Do NOT include "(ko: ...)" in actual output — that notation is only for your reference.
+10. If a section has no news items for the day, OMIT the section entirely. Do NOT include an empty header or placeholder text. Focus the output on sections that have actual news — this gives more depth to what matters.
+11. **Markdown formatting for readability**: Use markdown actively to make content scannable.
     - Use `###` sub-headings within each section to separate individual news items by name
     - Use **bold** for key terms, company names, and important numbers
-    - Use bullet points (`-`) for lists: action items, key takeaways, comparisons
     - Use `>` blockquotes for notable quotes from sources
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings — never write a wall of text
@@ -236,7 +234,10 @@ RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models with benchmarks, parameters, architecture analysis. Include comparison tables vs prior SOTA. Assess: should we adopt, wait, or skip?
 - **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases with GitHub/HuggingFace links. Evaluate: production-readiness, scaling characteristics, integration complexity.
 - **## Research Papers (ko: ## 연구 논문)** — Significant papers with arXiv links. Core contribution, key results, limitations, and what it means for existing architectures.
-- **## Technical Decision Points (ko: ## 기술 의사결정 포인트)** — Based on today's developments: what architectural decisions should senior engineers revisit? What migrations or evaluations should start now? Be specific and opinionated. 3-4 paragraphs."""
+- **## Technical Decision Points (ko: ## 기술 의사결정 포인트)** — Write 3-5 concrete decisions as bullet points. Each MUST follow this exact format:
+  `- **[Decision]**: [specific action + timeline] — Risk of inaction: [consequence]`
+  Example: `- **Switch batch classification from GPT-4o to Gemini 2.5**: Run a 1-week A/B test before next sprint — Risk: staying costs $0.012/1K vs $0.004/1K, a 3x cost disadvantage that compounds monthly.`
+  NO prose paragraphs in this section. Bullets only."""
 
 RESEARCH_EXPERT_GUIDE = """READER: Senior ML engineer or researcher who reads papers and runs models in production.
 READER'S GOAL: Make technical decisions — adopt a new model, change architecture, allocate engineering resources.
@@ -256,14 +257,16 @@ Writing rules:
 - Reference paper IDs (arXiv:XXXX.XXXXX) and code repositories
 - ALWAYS compare numbers to a baseline: "260B parameters — 1.8x Llama 3's 70B", "$0.002/1K tokens — half of GPT-4o's pricing"
 - Assess production-readiness: "inference cost makes this viable for batch processing, not real-time"
-- The final section must contain DECISIONS with timelines and risks: "If you're running X, start evaluating Y this week — the risk of waiting is Z"
 - MINIMUM LENGTH: Each news item MUST be 3-4 paragraphs. If you wrote fewer than 3 paragraphs for any news item, go back and expand with deeper analysis."""
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI tech scene in one sentence
 - **## LLM & SOTA Models (ko: ## LLM & SOTA 모델)** — New models: what changed, why it matters. Use an analogy for complex concepts. Include getting-started links.
 - **## Open Source & Repos (ko: ## 오픈 소스 및 저장소)** — Notable releases: what they do (with analogy), who would use them, and step-by-step to get started.
 - **## Research Papers (ko: ## 연구 논문)** — Key papers explained with analogy: the problem, the approach, and how it applies to real projects.
-- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — Concrete actions the reader can take this week. Focus on the action itself, NOT source links. Do NOT write "자세한 내용은 ~에서 확인하세요". 3-4 paragraphs."""
+- **## What To Try This Week (ko: ## 이번 주에 해볼 것)** — 3-5 numbered, concrete actions. Each MUST follow this format:
+  `1. **[Tool/Action]**: [what to do in 1-2 sentences — specific enough to start today]`
+  Example: `1. **Gemini 2.5 Flash 테스트**: Google AI Studio에서 무료 계정으로 오늘 바로 시작. 기존에 GPT-4o로 돌리던 분류 작업을 동일 프롬프트로 비교해보자.`
+  Focus on the action itself. Do NOT write source links or "자세한 내용은 ~에서 확인하세요". NO prose paragraphs in this section."""
 
 RESEARCH_LEARNER_GUIDE = """READER: Anyone interested in AI tech — developers, PMs, students, career changers, curious non-engineers. From beginners to mid-level practitioners.
 READER'S GOAL: Understand today's AI developments AND apply them — learn new concepts, find tools, try tutorials, build vocabulary.
@@ -278,7 +281,6 @@ Writing rules:
 - For each item: explain what it does, who benefits, and HOW to start
 - Connect concepts to daily life: "This is why ChatGPT responses are getting faster and cheaper"
 - Focus on practical applicability: "If you're building a chatbot, this reduces your inference cost by 40%"
-- The "What To Try" section: focus on concrete actions, NOT source links. Do NOT write "확인하세요" or "Read more at"
 - Technical/business terms should be linked to Handbook in the BODY TEXT where they first appear — readers learn in context, not in a separate section
 - Each news item: 2-3 paragraphs (analogy first + why it matters + how to get started or what it means for daily life)"""
 
@@ -287,11 +289,14 @@ Writing rules:
 # Differentiation axis: Expert=전략 의사결정, Learner=이해+적용+학습 (v4: Beginner merged)
 
 BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's most significant business development in one sentence
-- **## Big Tech (ko: ## 빅테크)** — Major moves from OpenAI, Google, Microsoft, Meta, etc. Each item: 2-3 paragraphs analyzing what happened, the strategic rationale, competitive positioning, and market implications.
-- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, acquisitions, partnerships, regulatory changes. Each item: 2-3 paragraphs with deal sizes in context (vs sector averages, competitor rounds), and what the deal signals strategically.
-- **## New Tools (ko: ## 새로운 도구)** — New AI products/services. Each item: 2-3 paragraphs with pricing model, target market, competitive moat analysis, and threat/opportunity assessment.
+- **## Big Tech (ko: ## 빅테크)** — Major moves from OpenAI, Google, Microsoft, Meta, etc. Each item: 3-4 paragraphs analyzing what happened, the strategic rationale, competitive positioning, and market implications.
+- **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, acquisitions, partnerships, regulatory changes. Each item: 3-4 paragraphs with deal sizes in context (vs sector averages, competitor rounds), and what the deal signals strategically.
+- **## New Tools (ko: ## 새로운 도구)** — New AI products/services. Each item: 3-4 paragraphs with pricing model, target market, competitive moat analysis, and threat/opportunity assessment.
 - **## Connecting the Dots (ko: ## 연결 분석)** — Strategic pattern analysis: WHY are these things happening simultaneously? What market forces are driving them? What does this signal for the next 3-6 months? Be opinionated — take a position. 3-4 paragraphs.
-- **## Strategic Decisions (ko: ## 전략적 판단)** — Concrete decisions an AI leader should consider based on today's news. NOT vague advice. Format: "If [your situation], then [specific action] because [reasoning from today's news]"."""
+- **## Strategic Decisions (ko: ## 전략적 판단)** — Write 3-5 concrete decisions as bullet points. Each MUST follow this exact format:
+  `- **If [your situation]**: [specific action] by [date/timeframe] — because [reasoning from today's news]. Risk of inaction: [consequence]`
+  Example: `- **If you're currently on AWS for AI infra**: Get a Nscale pricing quote this quarter — Nscale's $2B raise means they can undercut by 30-40%. Risk: competitors lock in cheaper infra before you do.`
+  NO prose paragraphs in this section. Bullets only."""
 
 BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy lead. An AI-era business decision-maker.
 READER'S GOAL: Make strategic decisions — allocate budget, choose partners, adjust product roadmap, respond to competitive moves.
@@ -312,7 +317,6 @@ Writing rules:
 - ALWAYS compare numbers to competitors or industry benchmarks: "$2B raise at $14.6B valuation — roughly 1/3 of CoreWeave's $35B valuation, signaling a serious challenger"
 - Analyze competitive dynamics with causal chains: "Meta's delay → Google gains 3-month window → Anthropic's enterprise push faces less resistance"
 - Connecting the Dots must reveal CAUSATION, not correlation: "A happened BECAUSE of B, which will force C to respond with D within 3-6 months"
-- Strategic Decisions must include: specific scenario + concrete action + timeline + risk of inaction
 - MINIMUM LENGTH: Each news item MUST be 3-4 paragraphs. If you wrote fewer than 3, go back and expand with competitive analysis, number comparisons, and strategic implications."""
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** — Today's AI business scene in one sentence
@@ -320,7 +324,10 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Industry & Biz (ko: ## 산업 & 비즈니스)** — Funding, partnerships, regulations: what changed, what it means, and why you should care. Use analogy for complex deals. 2-3 paragraphs per item.
 - **## New Tools (ko: ## 새로운 도구)** — New AI tools worth knowing: what they do (with analogy), pricing, who they're for, and whether they're worth trying. 2-3 paragraphs per item.
 - **## What This Means for You (ko: ## 나에게 미치는 영향)** — How today's news connects to your daily life, career, and work. Specific changes to anticipate. 3-4 paragraphs.
-- **## Action Items (ko: ## 지금 할 수 있는 것)** — Specific things to do this week. Focus on the action itself, NOT source links. Do NOT write "자세한 내용은 ~에서 확인하세요"."""
+- **## Action Items (ko: ## 지금 할 수 있는 것)** — 3-5 numbered, concrete things to do this week. Each MUST follow this format:
+  `1. **[Action]**: [specific step in 1-2 sentences — specific enough to start today]`
+  Example: `1. **ChatGPT 무료 플랜 업그레이드 확인**: OpenAI 사이트에서 무료 사용자에게 새 기능이 열렸는지 직접 확인. 유료 플랜 대비 어떤 차이인지 비교해보자.`
+  Focus on the action itself. Do NOT write source links or "자세한 내용은 ~에서 확인하세요". NO prose paragraphs in this section."""
 
 BUSINESS_LEARNER_GUIDE = """READER: Anyone interested in AI business — marketers, planners, developers, students, curious professionals. From beginners to practitioners.
 READER'S GOAL: Understand AI business developments AND apply them — find useful tools, anticipate industry changes, build AI business vocabulary.
@@ -335,7 +342,6 @@ Writing rules:
 - Keep business/AI terms but ALWAYS explain inline ON FIRST USE: "Series A (the first major investment round a startup receives)"
 - Connect every item to practical impact: "If your marketing team runs paid ads, Meta's new AI tools could change your workflow because..."
 - Connect to daily life too: "This matters because the ads you see on Instagram will get smarter"
-- Action Items: focus on concrete actions, NOT source links. Do NOT write "자세한 내용은 ~에서 확인하세요" or "Read more at"
 - Technical/business terms should be linked to Handbook in the BODY TEXT where they first appear — readers learn in context, not in a separate section
 - Each news item: 2-3 paragraphs (analogy first + how it affects you + what to do about it)
 - Make it interesting and accessible, not dumbed down"""
