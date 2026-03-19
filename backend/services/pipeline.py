@@ -16,8 +16,6 @@ from models.news_pipeline import (
 from services.agents.advisor import (
     extract_terms_from_content,
     generate_term_content,
-    _auto_link_handbook_terms,
-    _fetch_handbook_term_map,
 )
 from services.agents.client import extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
@@ -687,14 +685,6 @@ async def _generate_digest(
         else:
             # English: count words, ~200 words/min
             reading_time = max(1, round(len(text.split()) / 200))
-
-        # Auto-link handbook terms in digest content (first occurrence only)
-        handbook_map = _fetch_handbook_term_map()
-        if handbook_map:
-            if expert_content:
-                expert_content = _auto_link_handbook_terms(expert_content, handbook_map)
-            if learner_content:
-                learner_content = _auto_link_handbook_terms(learner_content, handbook_map)
 
         # Select locale-appropriate excerpt and focus_items
         excerpt = (digest_excerpt if locale == "en" else digest_excerpt_ko) or digest_excerpt or ""
