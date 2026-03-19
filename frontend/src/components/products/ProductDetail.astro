@@ -37,24 +37,11 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
 ---
 
 <article class="product-detail" id="products-top">
-  <!-- 1. Media Gallery (풀폭, Hero 역할) -->
-  {product.demo_media.length > 0 && (
-    <MediaGallery media={product.demo_media} />
-  )}
 
-  <!-- 2. Hero -->
+  <!-- ① Hero: 2컬럼 C-1 -->
   <header class="product-detail-hero">
+    <!-- Left: name + tagline + CTA -->
     <div class="product-detail-hero-left">
-      {product.logo_url && (
-        <img
-          src={product.logo_url}
-          alt={product.name}
-          class="product-detail-logo"
-          width="80"
-          height="80"
-          loading="eager"
-        />
-      )}
       <div class="product-detail-hero-text">
         <h1 class="product-detail-name">{product.name_original}</h1>
         {locale === 'ko' && product.name_ko && product.name_ko !== product.name_original && (
@@ -64,83 +51,91 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
           <p class="product-detail-tagline">{product.tagline}</p>
         )}
       </div>
+      <div class="product-detail-hero-actions">
+        {product.pricing && (
+          <span class="product-pricing-badge" data-pricing={product.pricing}>
+            {pricingLabel[product.pricing] ?? product.pricing}
+          </span>
+        )}
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="product-visit-btn"
+        >
+          {tr['products.visitSite']} ↗
+        </a>
+      </div>
     </div>
-    <div class="product-detail-hero-actions">
-      {product.pricing && (
-        <span class="product-pricing-badge" data-pricing={product.pricing}>
-          {pricingLabel[product.pricing] ?? product.pricing}
-        </span>
+
+    <!-- Right: logo + platform + korean + stats -->
+    <div class="product-detail-hero-right">
+      {product.logo_url ? (
+        <img
+          src={product.logo_url}
+          alt={product.name_original}
+          class="product-detail-logo"
+          width="72"
+          height="72"
+          loading="eager"
+        />
+      ) : (
+        <div class="product-detail-logo-fallback">
+          {product.name_original.charAt(0)}
+        </div>
       )}
-      <a
-        href={product.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="product-visit-btn"
-      >
-        {tr['products.visitSite']} ↗
-      </a>
+      <div class="product-detail-hero-meta">
+        {(product.platform && product.platform.length > 0) && (
+          <div class="product-detail-hero-platforms">
+            {product.korean_support && (
+              <span class="product-detail-chip product-detail-chip--accent">
+                ✓ {locale === 'ko' ? '한국어' : 'Korean'}
+              </span>
+            )}
+            {product.platform.map((p) => (
+              <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
+            ))}
+          </div>
+        )}
+        <div class="product-detail-hero-stats">
+          <span class="product-detail-hero-stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {product.view_count.toLocaleString()}
+          </span>
+          {product.like_count > 0 && (
+            <span class="product-detail-hero-stat">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {product.like_count.toLocaleString()}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- 3. Meta Chips -->
-  <div class="product-detail-meta">
-    {(product.platform && product.platform.length > 0) && (
-      <div class="product-detail-meta-row">
-        <span class={`product-detail-chip ${product.korean_support ? 'product-detail-chip--accent' : 'product-detail-chip--muted'}`}>
-          {product.korean_support ? '✓' : '✗'} {locale === 'ko' ? '한국어' : 'Korean'}
-        </span>
-        {product.platform.map((p) => (
-          <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
-        ))}
-      </div>
-    )}
-    {product.tags && product.tags.length > 0 && (
-      <div class="product-detail-meta-row">
-        {product.tags.map((tag) => (
-          <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
-        ))}
-      </div>
-    )}
-    <div class="product-detail-meta-row">
+  <!-- ② Tags 행: category + tags -->
+  {(product.primary_category || (product.tags && product.tags.length > 0)) && (
+    <div class="product-detail-tags-row">
       {product.primary_category && (
         <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
           {product.primary_category}
         </a>
       )}
-      <span class="product-detail-chip product-detail-chip--stat">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        {product.view_count.toLocaleString()}
-      </span>
-      <span class="product-detail-chip product-detail-chip--stat">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        {product.like_count.toLocaleString()}
-      </span>
+      {product.tags && product.tags.map((tag) => (
+        <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
+      ))}
     </div>
-  </div>
+  )}
 
-  <!-- 4. Key Features -->
+  <!-- ③ Media Gallery (Hero 아래, 있을 때만) -->
+  {product.demo_media.length > 0 && (
+    <MediaGallery media={product.demo_media} />
+  )}
+
+  <!-- ④–⑧ Main content sections -->
   <div class="product-detail-content">
-    {features.length > 0 && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '주요 기능' : 'Key Features'}
-        </h2>
-        <ul class="product-detail-feature-list">
-          {features.map((f) => <li>{f}</li>)}
-        </ul>
-      </section>
-    )}
 
-    {pricingDetailMd && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '가격 정보' : 'Pricing'}
-        </h2>
-        <div class="product-detail-pricing-table" set:html={pricingDetailMd} />
-      </section>
-    )}
-
-    <!-- 5. Description -->
+    <!-- ④ About -->
     {htmlDescription && (
       <section class="product-detail-section">
         <h2 class="product-detail-section-title">
@@ -152,6 +147,31 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
       </section>
     )}
 
+    <!-- ⑤ Key Features -->
+    {features.length > 0 && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '주요 기능' : 'Key Features'}
+        </h2>
+        <ul class="product-detail-feature-list">
+          {features.map((f) => <li>{f}</li>)}
+        </ul>
+      </section>
+    )}
+
+    <!-- ⑥ Use Cases -->
+    {useCases.length > 0 && (
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">
+          {locale === 'ko' ? '이런 상황에 추천' : 'Use Cases'}
+        </h2>
+        <ul class="product-detail-usecase-list">
+          {useCases.map((u) => <li>{u}</li>)}
+        </ul>
+      </section>
+    )}
+
+    <!-- ⑦ Getting Started -->
     {gettingStarted.length > 0 && (
       <section class="product-detail-section">
         <h2 class="product-detail-section-title">
@@ -168,19 +188,19 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
       </section>
     )}
 
-    <!-- 6. Use Cases -->
-    {useCases.length > 0 && (
+    <!-- ⑧ Pricing 상세 -->
+    {pricingDetailMd && (
       <section class="product-detail-section">
         <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '이런 상황에 추천' : 'Use Cases'}
+          {locale === 'ko' ? '가격 정보' : 'Pricing'}
         </h2>
-        <ul class="product-detail-usecase-list">
-          {useCases.map((u) => <li>{u}</li>)}
-        </ul>
+        <div class="product-detail-pricing-table" set:html={pricingDetailMd} />
       </section>
     )}
+
   </div>
 
+  <!-- ⑨ Related News -->
   {relatedNews.length > 0 && (
     <section class="product-detail-section">
       <h2 class="product-detail-section-title">
@@ -196,7 +216,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
     </section>
   )}
 
-  <!-- 7. Similar Tools -->
+  <!-- ⑩ Similar Tools -->
   {alternatives.length > 0 && (
     <section class="product-detail-section product-detail-alternatives">
       <h2 class="product-detail-section-title">
@@ -208,7 +228,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
           return (
             <ProductCard
               href={`/${locale}/products/${alt.slug}/`}
-              name={alt.name}
+              name={alt.name_original ?? alt.name}
               tagline={alt.tagline}
               logoUrl={alt.logo_url}
               thumbnailUrl={alt.thumbnail_url}
@@ -226,7 +246,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
     </section>
   )}
 
-  <!-- 8. FAQ -->
+  <!-- ⑪ FAQ -->
   <section class="product-detail-section product-detail-faq">
     <h2 class="product-detail-section-title">FAQ</h2>
 
@@ -234,8 +254,8 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
       <details class="product-faq-item">
         <summary>
           {locale === 'ko'
-            ? `${product.name}은(는) 무료인가요?`
-            : `Is ${product.name} free?`}
+            ? `${product.name_original}은(는) 무료인가요?`
+            : `Is ${product.name_original} free?`}
         </summary>
         <p>
           {product.pricing === 'free'
@@ -255,7 +275,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
         <summary>
           {locale === 'ko'
             ? `어떤 플랫폼에서 사용할 수 있나요?`
-            : `What platforms is ${product.name} available on?`}
+            : `What platforms is ${product.name_original} available on?`}
         </summary>
         <p>
           {locale === 'ko'
@@ -269,7 +289,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
       <summary>
         {locale === 'ko'
           ? `한국어를 지원하나요?`
-          : `Does ${product.name} support Korean?`}
+          : `Does ${product.name_original} support Korean?`}
       </summary>
       <p>
         {product.korean_support
@@ -279,7 +299,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
     </details>
   </section>
 
-  <!-- 9. Bottom CTA -->
+  <!-- ⑫ Bottom CTA -->
   <div class="product-detail-bottom-cta">
     <a
       href={product.url}
@@ -287,7 +307,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
       rel="noopener noreferrer"
       class="product-visit-btn product-visit-btn--large"
     >
-      {product.name} {tr['products.visitSite']} ↗
+      {product.name_original} {tr['products.visitSite']} ↗
     </a>
   </div>
 
