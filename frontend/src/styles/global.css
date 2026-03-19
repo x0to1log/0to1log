@@ -8680,7 +8680,7 @@ pre:hover .blog-code-copy {
 
 /* Split Hero */
 .home-split-hero {
-  background: linear-gradient(145deg, #080c1a 0%, #131628 55%, #0e1235 100%);
+  background: linear-gradient(160deg, #0d0f1a 0%, #151924 60%, #111422 100%);
   color: #fff;
   padding: 2rem 1.5rem 2.5rem;
 }
@@ -8787,18 +8787,18 @@ pre:hover .blog-code-copy {
 
 .home-split-hero-today-label {
   font-family: var(--font-ui);
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  color: #8888a8;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: #a0a0c0;
   margin-bottom: 0.5rem;
 }
 
 .home-split-hero-news {
-  background: #1a1c3a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #1e2240;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 6px;
-  padding: 0.65rem;
-  margin-bottom: 0.6rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
   text-decoration: none;
   display: block;
   cursor: pointer;
@@ -8806,8 +8806,8 @@ pre:hover .blog-code-copy {
 }
 
 .home-split-hero-news:hover {
-  background: #22265a;
-  border-color: rgba(255, 255, 255, 0.18);
+  background: #252b52;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .home-split-hero-news:focus-visible {
@@ -8817,54 +8817,55 @@ pre:hover .blog-code-copy {
 
 .home-split-hero-news-kicker {
   font-family: var(--font-ui);
-  font-size: 0.6rem;
-  color: #8888cc;
-  margin-bottom: 0.3rem;
+  font-size: 0.65rem;
+  color: #9898d8;
+  margin-bottom: 0.35rem;
 }
 
 .home-split-hero-news-title {
   font-family: var(--font-display);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  line-height: 1.4;
-  color: #eee;
+  line-height: 1.45;
+  color: #ffffff;
 }
 
 .home-split-hero-trending-label {
   font-family: var(--font-ui);
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  color: #8888a8;
-  margin-bottom: 0.4rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: #a0a0c0;
+  margin-bottom: 0.5rem;
 }
 
 .home-split-hero-terms {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .home-split-hero-term {
-  background: #1a1c3a;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #1e2240;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  padding: 0.5rem;
+  padding: 0.65rem;
 }
 
 .home-split-hero-term-name {
   font-family: var(--font-display);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: #eee;
+  color: #ffffff;
   display: block;
+  margin-bottom: 0.2rem;
 }
 
 .home-split-hero-term-def {
   font-family: var(--font-body);
-  font-size: 0.6875rem;
-  color: #9090aa;
-  line-height: 1.5;
-  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: #a8a8c8;
+  line-height: 1.55;
+  margin-top: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
