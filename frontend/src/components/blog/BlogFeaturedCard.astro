@@ -34,7 +34,7 @@ const readingLabel = readingTimeMin
   : null;
 ---
 
-<a href={href} class="blog-featured-card">
+<article class="blog-featured-card">
   <div class="blog-featured-card-top">
     <div>
       <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
@@ -50,7 +50,7 @@ const readingLabel = readingTimeMin
           <span class="blog-list-item-reading-time">{readingLabel}</span>
         )}
       </div>
-      <h3 class="blog-featured-card-title">{title}</h3>
+      <h3 class="blog-featured-card-title"><a href={href} class="newsprint-card-stretched-link">{title}</a></h3>
     </div>
     <div class="blog-featured-card-actions">
       {itemId && (
@@ -85,4 +85,4 @@ const readingLabel = readingTimeMin
       ))}
     </div>
   )}
-</a>
+</article>

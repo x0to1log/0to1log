@@ -38,12 +38,12 @@ const readingLabel = readingTimeMin
   : null;
 ---
 
-<a href={href} class:list={['blog-list-item', { 'blog-list-item--read': isRead }]}>
+<article class:list={['blog-list-item', { 'blog-list-item--read': isRead }]}>
   <div class="blog-list-item-left">
     <svg class="blog-list-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M4 4h16v16H4zM8 8h8M8 12h5" />
     </svg>
-    <span class="blog-list-item-title">{title}</span>
+    <a href={href} class="blog-list-item-title newsprint-card-stretched-link">{title}</a>
   </div>
   <div class="blog-list-item-meta">
     {catLabel && (
@@ -68,4 +68,4 @@ const readingLabel = readingTimeMin
       </button>
     )}
   </div>
-</a>
+</article>

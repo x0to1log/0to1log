@@ -49,7 +49,7 @@
   --font-sans: Lora, 'Pretendard', Georgia, serif;
   --font-display: Lora, 'Pretendard', Georgia, serif;
   --font-body: Lora, 'Pretendard', Georgia, serif;
-  --font-masthead: 'Playfair Display', 'Pretendard', Georgia, serif;
+  --font-masthead: Lora, 'Pretendard', Georgia, serif;
   --font-heading: Lora, 'Pretendard', Georgia, serif;
   --font-article-heading: Lora, 'Pretendard', Georgia, serif;
   --font-article-deck: Lora, 'Pretendard', Georgia, serif;
@@ -603,6 +603,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   text-decoration: none;
   color: inherit;
   transition: background-color 150ms ease;
+  position: relative;
 }
 
 .newsprint-card:hover {
@@ -1528,6 +1529,7 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   text-decoration: none;
   color: inherit;
   transition: background 150ms ease;
+  position: relative;
 }
 
 .newsprint-headline:hover {
@@ -4839,6 +4841,17 @@ pre {
   opacity: 0.85;
 }
 
+/* Stretched link: makes entire card clickable via ::after overlay */
+.newsprint-card-stretched-link {
+  color: inherit;
+  text-decoration: none;
+}
+.newsprint-card-stretched-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
 /* Bookmark icon */
 .newsprint-bookmark-icon {
   display: inline-flex;
@@ -4852,6 +4865,8 @@ pre {
   color: var(--color-text-muted);
   transition: color 150ms ease;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .newsprint-bookmark-icon:hover {
@@ -7852,6 +7867,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   color: inherit;
   transition: background-color 150ms ease;
   gap: 0.75rem;
+  position: relative;
 }
 
 .blog-list-item:hover {

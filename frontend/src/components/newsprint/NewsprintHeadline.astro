@@ -32,8 +32,7 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
 const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
 ---
 
-<a
-  href={href}
+<article
   class="newsprint-headline newsprint-card"
   data-category={normalizedCategory || 'uncategorized'}
   data-post-type={postType || 'business'}
@@ -43,7 +42,7 @@ const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
     <span>{kickerLabel}</span>
     {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
   </div>
-  <h2 class="newsprint-headline-title">{title}</h2>
+  <h2 class="newsprint-headline-title"><a href={href} class="newsprint-card-stretched-link">{title}</a></h2>
   {excerpt && <p class="newsprint-headline-deck">{excerpt}</p>}
   <div class="newsprint-headline-bottom">
     <div class="newsprint-card-bottom" style="flex: 1;">
@@ -76,4 +75,4 @@ const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
       </button>
     )}
   </div>
-</a>
+</article>

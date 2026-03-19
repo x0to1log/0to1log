@@ -34,15 +34,14 @@ const cardClasses = ['newsprint-card', isRead && 'newsprint-card--read'].filter(
 const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
 ---
 
-<a
-  href={href}
+<article
   class={cardClasses}
   data-category={normalizedCategory || 'uncategorized'}
   data-post-type={postType || 'business'}
   data-search-text={searchText}
 >
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-    <h2 class="newsprint-card-title" style="flex: 1;">{title}</h2>
+    <h2 class="newsprint-card-title" style="flex: 1;"><a href={href} class="newsprint-card-stretched-link">{title}</a></h2>
     {itemId && (
       <button
         class={`newsprint-bookmark-icon ${isBookmarked ? 'newsprint-bookmark-icon--active' : ''}`}
@@ -77,4 +76,4 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
       {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
     </span>
   </div>
-</a>
+</article>
