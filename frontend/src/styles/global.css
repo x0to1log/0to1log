@@ -8680,9 +8680,9 @@ pre:hover .blog-code-copy {
 
 /* Split Hero */
 .home-split-hero {
-  background: #1a1a2e; /* fixed dark — intentionally theme-independent */
+  background: linear-gradient(145deg, #080c1a 0%, #131628 55%, #0e1235 100%);
   color: #fff;
-  padding: 1.5rem 1.5rem 2rem;
+  padding: 2rem 1.5rem 2.5rem;
 }
 
 .home-split-hero-wordmark {
@@ -8719,18 +8719,19 @@ pre:hover .blog-code-copy {
 
 .home-split-hero-headline {
   font-family: var(--font-display);
-  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
   font-weight: 800;
-  line-height: 1.3;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: #fff;
   margin-bottom: 0.5rem;
 }
 
 .home-split-hero-sub {
   font-family: var(--font-body);
-  font-size: 0.7rem;
-  color: #bbb;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  color: #c0c0d8;
+  line-height: 1.7;
   margin-bottom: 1rem;
 }
 
@@ -8744,54 +8745,74 @@ pre:hover .blog-code-copy {
   background: #fff;
   color: #111;
   font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 0.4rem 0.9rem;
+  padding: 0.55rem 1.1rem;
   border-radius: 4px;
   text-decoration: none;
-  transition: opacity 0.15s;
+  cursor: pointer;
+  transition: opacity 0.18s, box-shadow 0.18s;
 }
 
 .home-split-hero-cta-primary:hover {
-  opacity: 0.85;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.15);
+}
+
+.home-split-hero-cta-primary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
 }
 
 .home-split-hero-cta-secondary {
-  border: 1px solid #666;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: #ccc;
   font-family: var(--font-ui);
-  font-size: 0.7rem;
-  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  padding: 0.55rem 1.1rem;
   border-radius: 4px;
   text-decoration: none;
-  transition: border-color 0.15s, color 0.15s;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
 }
 
 .home-split-hero-cta-secondary:hover {
-  border-color: #aaa;
+  border-color: rgba(255, 255, 255, 0.6);
   color: #fff;
+}
+
+.home-split-hero-cta-secondary:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 3px;
 }
 
 .home-split-hero-today-label {
   font-family: var(--font-ui);
   font-size: 0.6rem;
   letter-spacing: 0.1em;
-  color: #666;
+  color: #8888a8;
   margin-bottom: 0.5rem;
 }
 
 .home-split-hero-news {
-  background: #252540;
+  background: #1a1c3a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 0.65rem;
   margin-bottom: 0.6rem;
   text-decoration: none;
   display: block;
-  transition: opacity 0.15s;
+  cursor: pointer;
+  transition: background-color 0.18s, border-color 0.18s;
 }
 
 .home-split-hero-news:hover {
-  opacity: 0.85;
+  background: #22265a;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.home-split-hero-news:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
 }
 
 .home-split-hero-news-kicker {
@@ -8813,7 +8834,7 @@ pre:hover .blog-code-copy {
   font-family: var(--font-ui);
   font-size: 0.6rem;
   letter-spacing: 0.1em;
-  color: #666;
+  color: #8888a8;
   margin-bottom: 0.4rem;
 }
 
@@ -8824,14 +8845,15 @@ pre:hover .blog-code-copy {
 }
 
 .home-split-hero-term {
-  background: #252540;
+  background: #1a1c3a;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 4px;
   padding: 0.5rem;
 }
 
 .home-split-hero-term-name {
   font-family: var(--font-display);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #eee;
   display: block;
@@ -8839,9 +8861,18 @@ pre:hover .blog-code-copy {
 
 .home-split-hero-term-def {
   font-family: var(--font-body);
-  font-size: 0.6rem;
-  color: #888;
+  font-size: 0.6875rem;
+  color: #9090aa;
+  line-height: 1.5;
   margin-top: 0.15rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-split-hero-cta-primary,
+  .home-split-hero-cta-secondary,
+  .home-split-hero-news {
+    transition: none;
+  }
 }
 
 @media (max-width: 639px) {
