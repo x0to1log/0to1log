@@ -511,6 +511,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
   import { esc, showFeedback, createButtonManager } from '../../../../scripts/adminEditorUtils';
+  import { createPreviewManager } from '../../../../scripts/adminEditorPreview';
 
   let crepeBasicKo: Crepe | null = null;
   let crepeBasicEn: Crepe | null = null;
@@ -543,136 +544,18 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       [btnSave, btnPreview, btnPublish, btnPublishPreview, btnEditBack, btnDelete]
         .filter((b): b is HTMLButtonElement => b instanceof HTMLButtonElement),
     );
-    let previewEnteredFromEditor = false;
-    let previewResizeObserver: ResizeObserver | null = null;
-    let previewWindowResizeCleanup: (() => void) | null = null;
-    let announcePreviewReady = false;
-
-    function setPreviewShellLoading(loading: boolean, message = 'Loading live preview...') {
-      previewShell?.classList.toggle('admin-preview-frame-shell--loading', loading);
-      if (previewLoading) previewLoading.hidden = !loading;
-      if (previewLoadingText) previewLoadingText.textContent = message;
-      if (previewFrame) previewFrame.setAttribute('aria-busy', loading ? 'true' : 'false');
-    }
-
-    function isPreviewLocation() {
-      return new URL(window.location.href).searchParams.get('mode') === 'preview';
-    }
-
-    function getEditorUrl(mode: 'draft' | 'preview', slugOverride = slugInput?.value || '') {
-      const url = new URL(window.location.href);
-      if (slugOverride) {
-        url.pathname = `/admin/handbook/edit/${slugOverride}`;
-      }
-      if (mode === 'preview') {
-        url.searchParams.set('mode', 'preview');
-      } else {
-        url.searchParams.delete('mode');
-      }
-      return `${url.pathname}${url.search}${url.hash}`;
-    }
-
-    function disconnectPreviewResize() {
-      previewResizeObserver?.disconnect();
-      previewResizeObserver = null;
-      if (previewWindowResizeCleanup) {
-        previewWindowResizeCleanup();
-        previewWindowResizeCleanup = null;
-      }
-    }
-
-    function syncPreviewFrameHeight() {
-      if (!previewFrame?.contentDocument) return;
-      const doc = previewFrame.contentDocument;
-      const body = doc.body;
-      const root = doc.documentElement;
-      const nextHeight = Math.max(
-        body?.scrollHeight || 0,
-        body?.offsetHeight || 0,
-        root?.scrollHeight || 0,
-        root?.offsetHeight || 0,
-      );
-      if (nextHeight > 0) {
-        // Prevent micro-oscillations
-        const currentHeight = parseInt(previewFrame.style.height || '0');
-        if (Math.abs(nextHeight - currentHeight) > 4) {
-          previewFrame.style.height = `${Math.max(nextHeight, 720)}px`;
-        }
-      }
-    }
-
-    function attachPreviewAutoResize() {
-      if (!previewFrame?.contentDocument) return;
-      disconnectPreviewResize();
-      const doc = previewFrame.contentDocument;
-      const win = previewFrame.contentWindow;
-      const scheduleResize = () => window.requestAnimationFrame(() => syncPreviewFrameHeight());
-
-      previewResizeObserver = new ResizeObserver(() => scheduleResize());
-      if (doc.body) previewResizeObserver.observe(doc.body);
-      if (doc.documentElement) previewResizeObserver.observe(doc.documentElement);
-      doc.querySelectorAll('img').forEach((image) => {
-        if (!image.complete) {
-          image.addEventListener('load', scheduleResize, { once: true });
-        }
-      });
-      if (win) {
-        const handleResize = () => scheduleResize();
-        win.addEventListener('resize', handleResize);
-        previewWindowResizeCleanup = () => win.removeEventListener('resize', handleResize);
-      }
-
-      scheduleResize();
-      window.setTimeout(scheduleResize, 120);
-      window.setTimeout(scheduleResize, 420);
-      window.setTimeout(scheduleResize, 1200);
-    }
-
-    function showPreviewMode(pushHistory = false) {
-      if (draftMode) draftMode.style.display = 'none';
-      if (previewMode) previewMode.style.display = 'block';
-      if (pushHistory && !isPreviewLocation()) {
-        history.pushState({ mode: 'preview' }, '', getEditorUrl('preview'));
-        previewEnteredFromEditor = true;
-      }
-    }
-
-    function showDraftMode(replaceHistory = false) {
-      if (draftMode) draftMode.style.display = '';
-      if (previewMode) previewMode.style.display = 'none';
-      if (replaceHistory && isPreviewLocation()) {
-        history.replaceState({ mode: 'draft' }, '', getEditorUrl('draft'));
-      }
-      previewEnteredFromEditor = false;
-      setPreviewShellLoading(false);
-      btnManager.restore();
-    }
-
-    function loadPreviewFrame(previewUrl: string, options: { announce?: boolean; pushHistory?: boolean } = {}) {
-      if (!previewFrame) return;
-      announcePreviewReady = options.announce === true;
-      setPreviewShellLoading(true, 'Loading live preview...');
-      showPreviewMode(options.pushHistory === true);
-      previewFrame.src = previewUrl;
-    }
-
-    function syncModeFromLocation() {
-      if (!isPreviewLocation()) {
-        showDraftMode(false);
-        return;
-      }
-
-      const previewUrl = buildPreviewUrl();
-      if (!previewUrl) {
-        showDraftMode(true);
-        return;
-      }
-
-      showPreviewMode(false);
-      if (!previewFrame?.src || previewFrame.src !== new URL(previewUrl, window.location.origin).toString()) {
-        loadPreviewFrame(previewUrl, { announce: false, pushHistory: false });
-      }
-    }
+    const preview = createPreviewManager({
+      editorPath: '/admin/handbook/edit/',
+      getSlug: () => slugInput?.value || '',
+      buildPreviewUrl,
+      btnManager,
+      draftModeEl: draftMode,
+      previewModeEl: previewMode,
+      previewShell,
+      previewLoading,
+      previewLoadingText,
+      previewFrame,
+    });
 
     // Auto-open details on desktop
     if (window.innerWidth >= 768) {
@@ -1641,7 +1524,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       slugInput.value = saved.slug;
     }
     if (saved.slug) {
-      window.history.replaceState(window.history.state, '', getEditorUrl(isPreviewLocation() ? 'preview' : 'draft', saved.slug));
+      window.history.replaceState(window.history.state, '', preview.getEditorUrl(preview.isPreviewLocation() ? 'preview' : 'draft', saved.slug));
     }
   }
 
@@ -1724,16 +1607,16 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
   // ===== Draft <-> Preview toggle =====
   previewFrame?.addEventListener('load', () => {
-    attachPreviewAutoResize();
-    setPreviewShellLoading(false);
+    preview.attachAutoResize();
+    preview.setShellLoading(false);
     btnManager.restore();
-    if (announcePreviewReady) {
+    if (preview.announceReady) {
       showFeedback('Preview updated.');
-      announcePreviewReady = false;
+      preview.announceReady = false;
     }
   });
 
-  window.addEventListener('popstate', syncModeFromLocation);
+  window.addEventListener('popstate', () => preview.syncFromLocation());
 
   btnPreview?.addEventListener('click', async () => {
     if (btnManager.isPending) return;
@@ -1751,16 +1634,16 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       return;
     }
     btnManager.setLabel(btnPreview, 'Loading preview...');
-    loadPreviewFrame(previewUrl, { announce: true, pushHistory: true });
+    preview.loadFrame(previewUrl, { announce: true, pushHistory: true });
   });
 
   btnEditBack?.addEventListener('click', () => {
     if (btnManager.isPending) return;
-    if (isPreviewLocation() && previewEnteredFromEditor) {
+    if (preview.isPreviewLocation() && preview.enteredFromEditor) {
       history.back();
       return;
     }
-    showDraftMode(true);
+    preview.showDraft(true);
   });
 
   btnPublishPreview?.addEventListener('click', async () => {
@@ -1806,6 +1689,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     }
   });
 
-  syncModeFromLocation();
+  preview.syncFromLocation();
   }); // end DOMContentLoaded
 </script>
