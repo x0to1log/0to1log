@@ -1,15 +1,10 @@
 ---
-import type { HomeNewsPost, HomeHandbookTerm } from '../../lib/pageData/homePage';
-
 interface Props {
   locale: 'en' | 'ko';
-  heroNews: HomeNewsPost | null;
-  trendingTerms: HomeHandbookTerm[];
-  newsHref: string;
   homeIntro?: string;
 }
 
-const { locale, heroNews, trendingTerms, newsHref, homeIntro } = Astro.props;
+const { locale, homeIntro } = Astro.props;
 const isKo = locale === 'ko';
 
 const kicker = isKo
@@ -28,61 +23,17 @@ const subCopy = homeIntro || defaultIntro;
 
 const ctaPrimary = { label: isKo ? 'AI 뉴스 읽기 →' : 'Read AI News →', href: `/${locale}/news/` };
 const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', href: `/${locale}/handbook/` };
-
-const readingLabel = heroNews?.reading_time_min
-  ? isKo ? `약 ${heroNews.reading_time_min}분` : `${heroNews.reading_time_min} min read`
-  : null;
 ---
 
 <div class="home-split-hero">
   <div class="home-split-hero-wordmark" aria-hidden="true">0TO1LOG</div>
-  <div class="home-split-hero-inner">
-
-    <!-- Left: Value proposition -->
-    <div class="home-split-hero-left">
-      <p class="home-split-hero-kicker">{kicker}</p>
-      <h1 class="home-split-hero-headline">
-        {headline.map((line) => <>{line}<br /></>)}
-      </h1>
-      <p class="home-split-hero-sub">{subCopy}</p>
-      <div class="home-split-hero-cta">
-        <a href={ctaPrimary.href} class="home-split-hero-cta-primary">{ctaPrimary.label}</a>
-        <a href={ctaSecondary.href} class="home-split-hero-cta-secondary">{ctaSecondary.label}</a>
-      </div>
-    </div>
-
-    <!-- Right: Today's snapshot -->
-    <div class="home-split-hero-right">
-      {heroNews && (
-        <>
-          <p class="home-split-hero-today-label">TODAY</p>
-          <a href={newsHref} class="home-split-hero-news">
-            {readingLabel && (
-              <p class="home-split-hero-news-kicker"><span aria-hidden="true">◆</span> AI · {readingLabel}</p>
-            )}
-            <p class="home-split-hero-news-title">{heroNews.title}</p>
-          </a>
-        </>
-      )}
-
-      {trendingTerms.length > 0 && (
-        <>
-          <p class="home-split-hero-trending-label">TRENDING TERMS</p>
-          <div class="home-split-hero-terms">
-            {trendingTerms.slice(0, 2).map((term) => (
-              <div class="home-split-hero-term">
-                <span class="home-split-hero-term-name">{term.term}</span>
-                {(isKo ? term.definition_ko : term.definition_en) && (
-                  <p class="home-split-hero-term-def">
-                    {(isKo ? term.definition_ko : term.definition_en)?.slice(0, 60)}…
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-
+  <p class="home-split-hero-kicker">{kicker}</p>
+  <h1 class="home-split-hero-headline">
+    {headline.map((line) => <>{line}<br /></>)}
+  </h1>
+  <p class="home-split-hero-sub">{subCopy}</p>
+  <div class="home-split-hero-cta">
+    <a href={ctaPrimary.href} class="home-split-hero-cta-primary">{ctaPrimary.label}</a>
+    <a href={ctaSecondary.href} class="home-split-hero-cta-secondary">{ctaSecondary.label}</a>
   </div>
 </div>

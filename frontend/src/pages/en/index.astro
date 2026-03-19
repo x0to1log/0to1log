@@ -28,53 +28,45 @@ const homeIntro = siteContent.home_intro ||
 <MainLayout title={homeTitle} locale={locale} headerAlwaysVisible={true}>
   <div class="home-page">
 
-    <!-- Section A: Split Hero -->
-    <HomeSplitHero
-      locale={locale}
-      heroNews={heroNews}
-      trendingTerms={terms.slice(0, 2)}
-      newsHref={heroNews ? `/en/news/${heroNews.slug}` : '/en/news/'}
-      homeIntro={homeIntro}
-    />
+    <!-- Section A: Hero -->
+    <HomeSplitHero locale={locale} homeIntro={homeIntro} />
 
     <!-- Section B: Latest AI News -->
-    {(heroNews || moreNews.length > 0) && (
+    {news.length > 0 && (
       <section class="home-section">
         <HomeSectionHeader
           title={t.en['home.latestNews']}
           viewAllHref="/en/news/"
           viewAllLabel={t.en['home.viewAll']}
         />
-        {heroNews && (
-          <HomeHeroCard
-            href={`/en/news/${heroNews.slug}`}
-            title={heroNews.title}
-            excerpt={heroNews.excerpt}
-            category="ai-news"
-            publishedAt={heroNews.published_at}
-            readingTimeMin={heroNews.reading_time_min}
-            tags={heroNews.tags}
-            locale={locale}
-            postType={heroNews.post_type}
-          />
-        )}
-        {moreNews.length > 0 && (
-          <div class="home-news-grid">
-            {moreNews.map((post) => (
-              <HomeNewsCard
-                href={`/en/news/${post.slug}`}
-                title={post.title}
-                excerpt={post.excerpt}
-                category="ai-news"
-                publishedAt={post.published_at}
-                readingTimeMin={post.reading_time_min}
-                tags={post.tags}
-                locale={locale}
-                postType={post.post_type}
-              />
-            ))}
-          </div>
-        )}
+        <div class="home-news-featured">
+          {heroNews && (
+            <HomeHeroCard
+              href={`/en/news/${heroNews.slug}`}
+              title={heroNews.title}
+              excerpt={heroNews.excerpt}
+              category="ai-news"
+              publishedAt={heroNews.published_at}
+              readingTimeMin={heroNews.reading_time_min}
+              tags={heroNews.tags}
+              locale={locale}
+              postType={heroNews.post_type}
+            />
+          )}
+          {moreNews.slice(0, 2).map((post) => (
+            <HomeNewsCard
+              href={`/en/news/${post.slug}`}
+              title={post.title}
+              excerpt={post.excerpt}
+              category="ai-news"
+              publishedAt={post.published_at}
+              readingTimeMin={post.reading_time_min}
+              tags={post.tags}
+              locale={locale}
+              postType={post.post_type}
+            />
+          ))}
+        </div>
       </section>
     )}
 
