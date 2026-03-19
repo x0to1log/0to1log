@@ -3626,6 +3626,16 @@ pre {
   margin-bottom: 0.15rem;
 }
 
+/* Tag count badge — 어드민 리스트 메타 영역 */
+.admin-tag-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  opacity: 0.75;
+}
+
 /* Status Badge */
 .admin-status-badge {
   font-family: var(--font-ui);
@@ -6836,7 +6846,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 .handbook-filter-row {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;

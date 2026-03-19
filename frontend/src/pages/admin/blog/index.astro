@@ -40,7 +40,7 @@ let blogTotal = 0;
 try {
   const { data, error } = await sb
     .from('blog_posts')
-    .select('id, title, slug, category, locale, status, source, updated_at, published_at')
+    .select('id, title, slug, category, locale, status, source, tags, updated_at, published_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
@@ -187,6 +187,12 @@ const categoryOptions = Array.from(
                       <>
                         <span class="admin-meta-sep">·</span>
                         <span>{post.category}</span>
+                      </>
+                    )}
+                    {post.tags && post.tags.length > 0 && (
+                      <>
+                        <span class="admin-meta-sep">·</span>
+                        <span class="admin-tag-count">🏷 {post.tags.length}</span>
                       </>
                     )}
                     <span class="admin-meta-sep">·</span>
