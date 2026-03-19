@@ -3601,6 +3601,29 @@ pre {
   background: rgba(168, 82, 75, 0.1);
 }
 
+/* Danger Zone — 에디터 하단 삭제 구역 */
+.admin-danger-zone {
+  margin-top: 3rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(168, 82, 75, 0.25);
+  border-radius: 6px;
+  background: rgba(168, 82, 75, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.admin-danger-zone__label {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+.admin-danger-zone__label strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.15rem;
+}
+
 /* Status Badge */
 .admin-status-badge {
   font-family: var(--font-ui);

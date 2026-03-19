@@ -147,7 +147,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
-            {!isNew && <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>}
           </div>
         </div>
 
@@ -220,6 +219,16 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <div id="blog-editor-en" class="admin-editor-wrapper" data-content={enPost?.content || ''}></div>
             <div class="admin-char-count" id="char-count-en"></div>
           </div>
+
+          {!isNew && (
+            <div class="admin-danger-zone">
+              <div class="admin-danger-zone__label">
+                <strong>Danger Zone</strong>
+                이 글을 영구 삭제합니다. 복구할 수 없습니다.
+              </div>
+              <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>
+            </div>
+          )}
         </div>
 
         <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
