@@ -716,7 +716,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
       const category = categorySelect?.value || 'study';
       const tagsRaw = tagsInput?.value || '';
-      const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+      const tags = [...new Set(tagsRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean))];
       const slug = slugInput?.value || '';
       const excerpt = excerptInput?.value || '';
       const activeLang = getActiveLang();
@@ -1048,7 +1048,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             title,
             content,
             category: categorySelect?.value || '',
-            tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            tags: [...new Set((tagsInput?.value || '').split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean))],
             excerpt: excerptInput?.value || '',
             slug: slugInput?.value || '',
             locale: getActiveLang(),
@@ -1263,7 +1263,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             title,
             content,
             excerpt: excerptInput?.value || '',
-            tags: (tagsInput?.value || '').split(',').map((t: string) => t.trim()).filter(Boolean),
+            tags: [...new Set((tagsInput?.value || '').split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean))],
             category: categorySelect?.value || '',
             locale: getActiveLang(),
             source_post_id: postId || '',
