@@ -40,7 +40,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
 
   <!-- ① Hero: 2컬럼 C-1 -->
   <header class="product-detail-hero">
-    <!-- Left: name + tagline + CTA -->
+    <!-- Left: name + tagline + pricing badge -->
     <div class="product-detail-hero-left">
       <div class="product-detail-hero-text">
         <h1 class="product-detail-name">{product.name_original}</h1>
@@ -51,24 +51,16 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
           <p class="product-detail-tagline">{product.tagline}</p>
         )}
       </div>
-      <div class="product-detail-hero-actions">
-        {product.pricing && (
+      {product.pricing && (
+        <div class="product-detail-hero-actions">
           <span class="product-pricing-badge" data-pricing={product.pricing}>
             {pricingLabel[product.pricing] ?? product.pricing}
           </span>
-        )}
-        <a
-          href={product.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="product-visit-btn"
-        >
-          {tr['products.visitSite']} ↗
-        </a>
-      </div>
+        </div>
+      )}
     </div>
 
-    <!-- Right: logo + platform + korean + stats -->
+    <!-- Right: logo + platform + korean + stats + Visit Site -->
     <div class="product-detail-hero-right">
       {product.logo_url ? (
         <img
@@ -109,6 +101,14 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
             </span>
           )}
         </div>
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="product-visit-btn product-visit-btn--full"
+        >
+          {tr['products.visitSite']} ↗
+        </a>
       </div>
     </div>
   </header>
