@@ -46,14 +46,14 @@ flowchart TD
   P2D --> P3U[Phase 3-USER ✅]
   P3U --> P3SEC[Phase 3A-SEC ✅]
   P3SEC --> P3SHARE[Phase 3B-SHARE ✅]
-  P3SHARE --> NP2[News Pipeline v2 🔄]
-  NP2 --> P3I[Phase 3-Intelligence]
+  P3SHARE --> NP4[News Pipeline v2→v4 🔄]
+  NP4 --> P3I[Phase 3-Intelligence]
 
   H1[Handbook H1 ✅] -.-> HQ[HB Quality ✅]
-  HQ -.-> HB2[HB 2-Call Split]
+  HQ -.-> HB2[HB 2-Call Split ✅]
   HB2 -.-> P3I
 
-  NP2 -.-> AIP[AI Products]
+  NP4 -.-> AIP[AI Products]
   AIP -.-> AFF[Affiliate]
   AFF -.-> ADS[AdSense]
   P3I --> P4[Phase 4 Community]
@@ -62,21 +62,23 @@ flowchart TD
 
   LEGAL[Legal & Privacy ⚠️] -.-> AFF
 
-  style NP2 fill:#fff3cd,stroke:#ffc107
+  style NP4 fill:#fff3cd,stroke:#ffc107
   style P3I fill:#e8f5e9,stroke:#4caf50
-  style HB2 fill:#e8f5e9,stroke:#4caf50
+  style HB2 fill:#d4edda,stroke:#28a745
   style AIP fill:#e8f5e9,stroke:#4caf50
   style LEGAL fill:#ffcdd2,stroke:#e53935
 ```
 
 ### Current Status
 
-> [!important] 현재 스프린트: ==News Pipeline v2== (NP2)
+> [!important] 현재 스프린트: ==News Pipeline v2→v4== (NP4)
 
 - **완료:** 1a → 1b → 2B → 2C → 2D → 3-USER → 3A-SEC → 3B-SHARE
-- **진행 중:** NP2 스프린트 (16태스크, 11-12 완료) — [[ACTIVE_SPRINT]]
-- **병렬 완료:** Handbook H1 + 품질 강화 (검증 게이트, bulk ops, soft delete, batch dedup)
-- **다음:** HB 2-Call Split → Phase 3-Intelligence
+- **병렬 완료:** Handbook H1 + 품질 강화 + 2-Call Split + Daily Digest v3 전환 + v4 2-페르소나 전환
+- **진행 중:** NP v4 스프린트 (40+ 태스크 중 ~37 완료) — [[ACTIVE_SPRINT]]
+  - 완료: v2 기반 구현, 파이프라인 인프라, HB Quality, Daily Digest v3, v4 2-페르소나, 퀄리티 스코어링, 인라인 팝업, 핸드북 심화 품질, 에디터 Danger Zone
+  - 남은 것: `PROMPT-AUDIT-01` (프롬프트 감사 52건), `COMMUNITY-01` (커뮤니티 반응), `DIGEST-04` (프론트 검증)
+- **다음:** Phase 3-Intelligence
 
 ### Product Language Boundary
 

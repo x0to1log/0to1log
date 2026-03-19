@@ -168,34 +168,65 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 
 ---
 
-## News Pipeline v2 🔄 (진행 중)
+## News Pipeline v2→v4 🔄 (진행 중)
 
 > 현재 스프린트. 상세 → [[ACTIVE_SPRINT]]
 
-**목표:** AI News Pipeline v2 백엔드 구현 (수집 → 팩트 추출 → 3 페르소나 생성 → 저장)
+**스프린트 기간:** 2026-03-15 ~ (진행 중)
+**진행률:** 40+ 태스크 중 ~37 완료
 
-**주요 모듈:**
-- 뉴스 수집 (Tavily API) → LLM 랭킹 → 커뮤니티 반응 수집
-- 팩트 추출 (LLM Call 1) → 페르소나 생성 (LLM Call 2~4)
-- 파이프라인 오케스트레이터 → Cron 엔드포인트
-- 백필 지원 ✅ + 스테이지별 로깅 ✅
+### 구현된 주요 모듈
+
+| 모듈 | 파일 | 설명 |
+|------|------|------|
+| 뉴스 수집 | `news_collection.py` | Tavily API, 3개 쿼리 |
+| LLM 랭킹/분류 | `pipeline.py` | 카테고리별 Research 3~5건 + Business 3~5건 선별 |
+| 다이제스트 생성 | `pipeline.py` | Expert + Learner 2-페르소나 × EN+KO = 4개 포스트/일 |
+| 핸드북 용어 추출 | `pipeline.py` | 뉴스 → 핸드북 용어 자동 추출 + Semaphore 병렬 처리 |
+| 파이프라인 오케스트레이터 | `pipeline.py` | News Run / Handbook Run 분리, asyncio.gather 병렬 |
+| Cron 엔드포인트 | `cron.py` | Vercel Cron → Railway FastAPI, 인증 헤더 검증 |
+| 관측성 | `admin.py` | Pipeline Runs UI (News/Handbook 탭), Cancel/Stuck 타임아웃 |
+| 퀄리티 스코어링 | `quality.py` | Research/Business 기준 분리, LLM 2차 용어 필터, 배지 표시 |
+| KO 자동 복구 | `pipeline.py` | EN 있고 KO 없을 때 KO만 재호출 |
+
+### 아키텍처 참조
+
+- v1 설계 (3-페르소나, 모놀리식): [[AI-News-Pipeline-Design]], [[AI-News-Pipeline-Operations]]
+- v4 설계 (2-페르소나, 모듈화): [[2026-03-17-news-pipeline-v4-design]]
+- v1 삭제 포스트모템: [[2026-03-15-news-pipeline-v1-postmortem]]
+
+### 파이프라인 버전 진화 히스토리
+
+| 버전 | 시기 | 주요 변경 | 상태 |
+|------|------|-----------|------|
+| **v1** | 2025-12 | 3-페르소나(Expert/Learner/Beginner), `pipeline.py` 모놀리식 (~979줄) | 삭제됨 |
+| **v2** | 2026-01 | 모듈 분리 재설계, Pydantic 모델 정의, Tavily 수집, 백필 지원 | 완료 ✅ |
+| **v3** | 2026-03-15 | Daily Digest 형태 전환, 다이제스트 프롬프트(6 페르소나×R/B), 퀄리티 스코어링 | 완료 ✅ |
+| **v4** | 2026-03-17 | 2-페르소나(Expert/Learner), Beginner 삭제, 비용 최적화 (-33%), 프론트 2탭 | 진행 중 🔄 |
+
+### 남은 태스크
+
+- `PROMPT-AUDIT-01`: 프롬프트 감사 52개 이슈 수정 (P0~P2)
+- `COMMUNITY-01`: Reddit/HN/X 커뮤니티 반응 수집 → 다이제스트 반영
+- `DIGEST-04`: Daily Digest 프론트엔드 최종 검증
+- *(선택)* `WEEKLY-01`: Weekly Digest, `AUTOPUB-01`: 자동 발행
 
 **Gate**
-- [ ] 파이프라인 1회 실행 → research + business 포스트 draft 저장 성공
-- [ ] 3 페르소나 × 2 언어(EN+KO) 본문이 news_posts에 저장됨
-- [ ] `ruff check .` + `pytest tests/ -v` 통과
-- [ ] Railway 배포 후 cron 트리거로 실제 실행 확인
+- [x] 파이프라인 1회 실행 → research + business 포스트 draft 저장 성공
+- [x] 2 페르소나 × 2 언어(EN+KO) 본문이 news_posts에 저장됨
+- [x] Railway 배포 후 cron 트리거로 실제 실행 확인
+- [ ] `ruff check .` + `pytest tests/ -v` 통과 (PROMPT-AUDIT-01 완료 후)
 
 ---
 
-## 다음: Handbook 2-Call Split
+## Handbook 2-Call Split ✅
 
-> NP2 완료 후 착수. [[ACTIVE_SPRINT]] 태스크 13~16.
+> NP2와 병렬 진행. 완료.
 
-- HB-SPLIT-01: Generate 액션을 2회 LLM 호출(메타+Basic / Advanced)로 분리
-- HB-MODEL-01: `term_full`, `korean_full` 컬럼 추가
-- HB-COST-01: Handbook AI 호출 토큰/비용을 pipeline_logs에 기록
-- HB-ANALYTICS-01: Pipeline Analytics에 Handbook 탭 추가
+- `HB-SPLIT-01`: Generate 액션을 4회 LLM 호출 분리 (KO Basic / EN Basic / KO Advanced / EN Advanced)
+- `HB-MODEL-01`: `term_full`, `korean_full` 컬럼 추가
+- `HB-COST-01`: Handbook AI 호출 토큰/비용을 pipeline_logs에 기록
+- `HB-ANALYTICS-01`: Pipeline Analytics에 Handbook 탭 추가
 
 ---
 
@@ -219,10 +250,12 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 
 AI 도구/서비스 큐레이션 매거진 페이지. NP2 완료 후 독립 착수 가능.
 
+**7개 카테고리:** LLM, Image Gen, Video Gen, Coding, Productivity, Research, Voice
+
 **범위:**
 - 프론트엔드: `/en/products/`, `/ko/products/` 목록 + `[slug]` 상세 (SSR)
 - 컴포넌트: ProductHero, CategoryNav (sticky 탭), CategorySection, ProductCard, ProductDetail, MediaGallery
-- DB: `ai_products` 테이블 (Supabase) — 7개 카테고리, 다국어 필드, featured 플래그
+- DB: `ai_products` 테이블 (Supabase) — 다국어 필드, featured 플래그, affiliate_url, is_sponsored
 - Admin: 제품 추가/수정 에디터
 - 홈 연동: featured 5개를 메인 페이지 "주목할 AI 도구" 섹션에 노출
 - Nav: 헤더에 "AI Products" / "AI 제품군" 추가
