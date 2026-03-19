@@ -6,6 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 import { localField } from '../../lib/handbookUtils';
 import { getHandbookCategoryLabel } from '../../lib/handbookCategories';
 import { getSiteContents } from '../../lib/siteContent';
+import { fetchLikedProducts } from '../../lib/pageData/productsPage';
+import ProductCard from '../../components/products/ProductCard.astro';
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
 const isAuthenticated = !!user && !!accessToken;
@@ -53,6 +55,9 @@ const copy = locale === 'ko'
       tabRead: '읽은 글',
       tabProgress: '나의 학습 현황',
       tabRecommended: '추천 읽기',
+      tabLikedTools: '찜한 AI 도구',
+      emptyLikedTools: '아직 찜한 AI 도구가 없습니다',
+      browseLikedTools: 'AI 도구 탐색하기 →',
       emptyRead: siteContent.library_empty_read || '아직 읽은 글이 없어요\n흥미로운 글을 찾아 읽어보세요',
       emptySaved: siteContent.library_empty_saved || '아직 저장한 글이 없어요\n관심 가는 글에서 🔖 버튼을 눌러보세요\n이곳에 차곡차곡 쌓여갈 거예요',
       subArticles: '글',
@@ -102,6 +107,9 @@ const copy = locale === 'ko'
       tabRead: 'Read',
       tabProgress: 'My Progress',
       tabRecommended: 'For You',
+      tabLikedTools: 'Liked Tools',
+      emptyLikedTools: 'No liked AI tools yet',
+      browseLikedTools: 'Browse AI tools →',
       emptyRead: siteContent.library_empty_read || 'No reading history yet\nExplore articles and start reading',
       emptySaved: siteContent.library_empty_saved || 'Your shelf is empty\nTap 🔖 on articles you\'d like to keep\nThey\'ll be waiting for you here',
       subArticles: 'Posts',
@@ -152,6 +160,7 @@ let historyItems: any[] = [];
 let bookmarkItems: any[] = [];
 let progressItems: any[] = [];
 let likedItems: any[] = [];
+let likedProducts: Awaited<ReturnType<typeof fetchLikedProducts>> = [];
 let recommendedPosts: { post_id: string; slug: string; title: string; category: string }[] = [];
 
 if (isAuthenticated) {
@@ -161,17 +170,19 @@ if (isAuthenticated) {
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
 
-  const [historyRes, bookmarksRes, progressRes, likesRes] = await Promise.all([
+  const [historyRes, bookmarksRes, progressRes, likesRes, likedProductsData] = await Promise.all([
     authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
     authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
     authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
     authSb.from('news_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+    fetchLikedProducts(accessToken, locale as 'en' | 'ko'),
   ]);
 
   historyItems = historyRes.data ?? [];
   bookmarkItems = bookmarksRes.data ?? [];
   progressItems = progressRes.data ?? [];
   likedItems = likesRes.data ?? [];
+  likedProducts = likedProductsData;
 
   const postIds = new Set<string>();
   const termIds = new Set<string>();
@@ -243,6 +254,7 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((item) => `${item.item_type}
         <div class="library-tabs">
           <button class="library-tab library-tab--active" data-tab="saved">{copy.tabSaved}</button>
           <button class="library-tab" data-tab="read">{copy.tabRead}</button>
+          <button class="library-tab" data-tab="liked-tools">{copy.tabLikedTools}</button>
           <button class="library-tab" data-tab="progress">{copy.tabProgress}</button>
           <button class="library-tab" data-tab="recommended">{copy.tabRecommended}</button>
         </div>
@@ -406,6 +418,38 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((item) => `${item.item_type}
           )}
         </div>
 
+        <div data-tab-content="liked-tools" style="display: none;">
+          {likedProducts.length === 0 ? (
+            <div class="library-liked-empty">
+              <p class="library-empty">{copy.emptyLikedTools}</p>
+              <a href={`/${locale}/products/`} class="library-liked-browse-link">{copy.browseLikedTools}</a>
+            </div>
+          ) : (
+            <div class="product-grid library-liked-grid">
+              {likedProducts.map((product) => {
+                const firstImg = product.demo_media?.find((m) => m.type === 'image');
+                return (
+                  <ProductCard
+                    href={`/${locale}/products/${product.slug}/`}
+                    name={product.name_original}
+                    tagline={product.tagline}
+                    logoUrl={product.logo_url}
+                    thumbnailUrl={product.thumbnail_url}
+                    demoMediaFirst={firstImg?.url ?? null}
+                    pricing={product.pricing}
+                    platform={product.platform}
+                    koreanSupport={product.korean_support}
+                    locale={locale as 'en' | 'ko'}
+                    categoryId={product.primary_category}
+                    viewCount={product.view_count}
+                    productId={product.id}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <div data-tab-content="recommended" style="display: none;">
           {recommendedPosts.length === 0 ? (
             <p class="library-empty">{copy.emptyRecommended}</p>
@@ -525,6 +569,7 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((item) => `${item.item_type}
 
 <script>
   import { openAuthPrompt } from '../../scripts/auth-prompt';
+  import '../../scripts/productLike';
 
   function initLibrary(): void {
     // Tab switching

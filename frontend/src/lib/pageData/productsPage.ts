@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { getPublicSupabase } from './shared';
 import { renderMarkdown } from '../markdown';
@@ -294,6 +295,67 @@ export async function fetchRelatedNews(
     .limit(limit);
 
   return (data ?? []) as RelatedNewsItem[];
+}
+
+// =============================================================================
+// Homepage featured
+// =============================================================================
+
+// =============================================================================
+// Library page: liked products
+// =============================================================================
+
+export async function fetchLikedProducts(
+  accessToken: string,
+  locale: 'en' | 'ko',
+): Promise<ProductCardData[]> {
+  const db = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+
+  const { data, error } = await db
+    .from('ai_product_likes')
+    .select(`
+      product_id,
+      ai_products (
+        id, slug, name, name_ko, tagline, tagline_ko,
+        logo_url, thumbnail_url, demo_media,
+        pricing, platform, korean_support,
+        primary_category, featured, featured_order,
+        view_count, sort_order, tags
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data
+    .map((row: any) => {
+      const p = row.ai_products;
+      if (!p) return null;
+      return {
+        id: p.id,
+        slug: p.slug,
+        name: (locale === 'ko' ? p.name_ko || p.name : p.name) as string,
+        name_original: p.name as string,
+        tagline: (locale === 'ko' ? p.tagline_ko || p.tagline : p.tagline) as string | null,
+        logo_url: p.logo_url,
+        thumbnail_url: p.thumbnail_url,
+        pricing: p.pricing,
+        platform: p.platform,
+        korean_support: p.korean_support ?? false,
+        primary_category: p.primary_category,
+        featured: p.featured ?? false,
+        featured_order: p.featured_order,
+        demo_media: p.demo_media ?? [],
+        view_count: p.view_count ?? 0,
+        sort_order: p.sort_order ?? null,
+        tags: p.tags ?? null,
+      } as ProductCardData;
+    })
+    .filter((p): p is ProductCardData => p !== null);
 }
 
 // =============================================================================

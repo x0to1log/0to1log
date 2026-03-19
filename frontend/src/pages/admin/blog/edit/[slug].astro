@@ -231,9 +231,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           )}
         </div>
 
-        <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden>
-          <span id="admin-feedback-msg"></span>
-        </div>
+        <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden></div>
 
         <div class="admin-ai-backdrop" id="ai-backdrop"></div>
         <div class="admin-ai-panel" id="ai-panel">
@@ -327,7 +325,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
   import { Crepe } from '@milkdown/crepe';
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
-
   let crepeKo: Crepe | null = null;
   let crepeEn: Crepe | null = null;
 
@@ -345,12 +342,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const activeCrepe = getActiveCrepe();
     if (activeCrepe) activeCrepe.editor.action(replaceAll(md));
   }
-  let feedbackTimer = 0;
+
 
   document.addEventListener('DOMContentLoaded', () => {
     if (crepeKo) { crepeKo.destroy(); crepeKo = null; }
     if (crepeEn) { crepeEn.destroy(); crepeEn = null; }
-    clearTimeout(feedbackTimer);
 
     const editorKoEl = document.getElementById('blog-editor-ko');
     const editorEnEl = document.getElementById('blog-editor-en');
@@ -380,43 +376,14 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     let isNewPost = adminData?.dataset.isNew === 'true';
     let currentSlug = slugInput?.value || adminData?.dataset.slug || '';
     const postLocale = adminData?.dataset.postLocale || 'en';
-    const managedButtons = [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit]
-      .filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
-    const defaultButtonLabels = new Map<HTMLButtonElement, string>();
-    managedButtons.forEach((button) => {
-      defaultButtonLabels.set(button, button.textContent || '');
-    });
+    const btnManager = createButtonManager(
+      [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit]
+        .filter((b): b is HTMLButtonElement => b instanceof HTMLButtonElement),
+    );
     let previewEnteredFromEditor = false;
     let previewResizeObserver: ResizeObserver | null = null;
     let previewWindowResizeCleanup: (() => void) | null = null;
     let announcePreviewReady = false;
-    let isActionPending = false;
-
-    function restoreActionButtons() {
-      managedButtons.forEach((button) => {
-        button.disabled = false;
-        button.textContent = defaultButtonLabels.get(button) || button.textContent || '';
-      });
-      isActionPending = false;
-    }
-
-    function setButtonLabel(button: HTMLButtonElement | null, label: string) {
-      if (!button) return;
-      if (label.includes('...') || label.includes('…')) {
-        button.innerHTML = `<span class="btn-spinner"></span>${label}`;
-      } else {
-        button.textContent = label;
-      }
-    }
-
-    function beginAction(button: HTMLButtonElement | null, label: string) {
-      managedButtons.forEach((item) => {
-        item.disabled = true;
-        item.textContent = defaultButtonLabels.get(item) || item.textContent || '';
-      });
-      setButtonLabel(button, label);
-      isActionPending = true;
-    }
 
     function setPreviewShellLoading(loading: boolean, message = 'Loading live preview...') {
       previewShell?.classList.toggle('admin-preview-frame-shell--loading', loading);
@@ -515,7 +482,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
       previewEnteredFromEditor = false;
       setPreviewShellLoading(false);
-      restoreActionButtons();
+      btnManager.restore();
     }
 
     function loadPreviewFrame(previewUrl: string, options: { announce?: boolean; pushHistory?: boolean } = {}) {
@@ -552,20 +519,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     titleInput?.addEventListener('input', autoResizeTitle);
     autoResizeTitle();
 
-    function showFeedback(type: 'success' | 'error', message: string) {
-      const el = document.getElementById('admin-feedback');
-      const msgEl = document.getElementById('admin-feedback-msg');
-      if (!el || !msgEl) return;
-      el.classList.remove('admin-feedback--success', 'admin-feedback--error');
-      el.classList.add(`admin-feedback--${type}`);
-      el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-      el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
-      el.setAttribute('aria-atomic', 'true');
-      msgEl.textContent = message;
-      el.hidden = false;
-      clearTimeout(feedbackTimer);
-      feedbackTimer = window.setTimeout(() => { el.hidden = true; }, 3000);
-    }
 
     const previousValues = new Map<string, string>();
 
@@ -611,9 +564,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           btn.textContent = 'Use';
           btn.classList.remove('admin-ai-undo-btn');
           btn.onclick = null;
-          showFeedback('success', `${field} reverted.`);
+          showFeedback(`${field} reverted.`);
         };
-        showFeedback('success', `${field} applied.`);
+        showFeedback(`${field} applied.`);
       });
 
       diffEl?.querySelector('.admin-ai-diff-cancel')?.addEventListener('click', () => {
@@ -711,7 +664,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const { showFeedback: shouldShowFeedback = true, redirectOnCreate = true } = options;
       const title = titleInput?.value || '';
       if (!title.trim()) {
-        if (shouldShowFeedback) showFeedback('error', 'Save failed: title is required.');
+        if (shouldShowFeedback) showFeedback('Save failed: title is required.', true);
         return null;
       }
       const category = categorySelect?.value || 'study';
@@ -752,7 +705,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         const saved = await res.json();
         syncSavedState(saved);
         if (shouldShowFeedback) {
-          showFeedback('success', res.status === 201 ? 'Post created.' : 'Draft saved.');
+          showFeedback(res.status === 201 ? 'Post created.' : 'Draft saved.');
         }
         updateLastSavedTime();
         if (res.status === 201 && redirectOnCreate && saved?.slug) {
@@ -761,33 +714,33 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         return saved;
       } catch (err) {
         if (shouldShowFeedback) {
-          showFeedback('error', `Save failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+          showFeedback(`Save failed: ${err instanceof Error ? err.message : 'unknown error'}`, true);
         }
         return null;
       }
     }
 
     async function switchToPreview() {
-      if (isActionPending) return;
-      beginAction(btnPreview, 'Saving...');
+      if (btnManager.isPending) return;
+      btnManager.begin(btnPreview, 'Saving...');
       const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
       if (!saved) {
-        restoreActionButtons();
-        showFeedback('error', 'Preview failed: save the draft first.');
+        btnManager.restore();
+        showFeedback('Preview failed: save the draft first.', true);
         return;
       }
       const previewUrl = buildPreviewUrl();
       if (!previewUrl) {
-        restoreActionButtons();
-        showFeedback('error', 'Preview failed: save a valid slug first.');
+        btnManager.restore();
+        showFeedback('Preview failed: save a valid slug first.', true);
         return;
       }
-      setButtonLabel(btnPreview, 'Loading preview...');
+      btnManager.setLabel(btnPreview,'Loading preview...');
       loadPreviewFrame(previewUrl, { announce: true, pushHistory: true });
     }
 
     function switchToDraft() {
-      if (isActionPending) return;
+      if (btnManager.isPending) return;
       if (isPreviewLocation() && previewEnteredFromEditor) {
         history.back();
         return;
@@ -798,7 +751,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     async function handlePublish() {
       const title = titleInput?.value || '';
       if (!title.trim()) {
-        showFeedback('error', 'Publish failed: title is required.');
+        showFeedback('Publish failed: title is required.', true);
         return false;
       }
       try {
@@ -811,13 +764,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           const err = await res.json();
           throw new Error(err.error || `${res.status}`);
         }
-        showFeedback('success', 'Published! Redirecting...');
+        showFeedback('Published! Redirecting...');
         const locale = getActiveLang();
         const slugEl = currentSlug || adminData?.dataset.slug || '';
         setTimeout(() => { window.location.href = `/${locale}/blog/${slugEl}/`; }, 1500);
         return true;
       } catch (err) {
-        showFeedback('error', `Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+        showFeedback(`Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`, true);
         return false;
       }
     }
@@ -835,10 +788,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           window.location.href = '/admin/blog/';
         } else {
           const err = await res.json();
-          showFeedback('error', `Delete failed: ${err.error}`);
+          showFeedback(`Delete failed: ${err.error}`, true);
         }
       } catch (err) {
-        showFeedback('error', `Delete failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+        showFeedback(`Delete failed: ${err instanceof Error ? err.message : 'unknown error'}`, true);
       }
     }
 
@@ -1021,18 +974,18 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const content = getActiveCrepe()?.getMarkdown() || '';
 
       if (action === 'outline' && !title.trim()) {
-        showFeedback('error', 'Add a title before generating an outline.');
+        showFeedback('Add a title before generating an outline.', true);
         return;
       }
       if (action === 'draft') {
         const hasHeadings = /^#{2,3}\s+/m.test(content);
         if (!hasHeadings) {
-          showFeedback('error', 'Draft needs an outline with H2/H3 headings first. Try Outline.');
+          showFeedback('Draft needs an outline with H2/H3 headings first. Try Outline.', true);
           return;
         }
       }
       if (!title.trim() && !content.trim()) {
-        showFeedback('error', 'Write some content before using AI Advisor.');
+        showFeedback('Write some content before using AI Advisor.', true);
         return;
       }
 
@@ -1059,10 +1012,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           const err = await res.json().catch(() => ({ detail: res.statusText }));
           const rawMsg = err.detail || err.error || `Error ${res.status}`;
           const msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg);
-          if (res.status === 429) showFeedback('error', 'Too many requests. Wait a minute.');
-          else if (res.status === 504) showFeedback('error', 'AI request timed out.');
-          else if (res.status === 502) showFeedback('error', 'AI service unavailable.');
-          else showFeedback('error', msg);
+          if (res.status === 429) showFeedback('Too many requests. Wait a minute.', true);
+          else if (res.status === 504) showFeedback('AI request timed out.', true);
+          else if (res.status === 502) showFeedback('AI service unavailable.', true);
+          else showFeedback(msg, true);
           setAiLoading(false);
           return;
         }
@@ -1072,7 +1025,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         renderAiResult(action, data.result);
       } catch (err) {
         setAiLoading(false);
-        showFeedback('error', 'AI request failed.');
+        showFeedback('AI request failed.', true);
       }
     }
 
@@ -1136,7 +1089,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         if (r.slug && slugInput) { previousValues.set('slug', slugInput.value); slugInput.value = r.slug; }
         if (r.tags?.length && tagsInput) { previousValues.set('tags', tagsInput.value); tagsInput.value = r.tags.join(', '); }
         if (r.focus_items?.length && focusItemsInput) { previousValues.set('focus_items', focusItemsInput.value); focusItemsInput.value = r.focus_items.join(', '); }
-        showFeedback('success', 'All fields applied.');
+        showFeedback('All fields applied.');
       });
     }
 
@@ -1168,7 +1121,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           }
         });
         setEditorContent(md.trim());
-        showFeedback('success', 'Outline applied to editor.');
+        showFeedback('Outline applied to editor.');
       });
     }
 
@@ -1185,7 +1138,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       document.getElementById('ai-apply-draft')?.addEventListener('click', () => {
         if (!getActiveCrepe() || !r.content) return;
         setEditorContent(r.content);
-        showFeedback('success', 'Draft applied to editor.');
+        showFeedback('Draft applied to editor.');
       });
     }
 
@@ -1218,9 +1171,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             setEditorContent(md.replace(change.before, change.after));
             btn.textContent = 'Applied';
             btn.disabled = true;
-            showFeedback('success', `Applied rewrite for "${change.section}".`);
+            showFeedback(`Applied rewrite for "${change.section}".`);
           } else {
-            showFeedback('error', 'Could not find the original text in editor.');
+            showFeedback('Could not find the original text in editor.', true);
           }
         });
       });
@@ -1249,7 +1202,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const title = titleInput?.value || '';
       const content = getActiveCrepe()?.getMarkdown() || '';
       if (!title.trim() || !content.trim()) {
-        showFeedback('error', 'Title and content are required for translation.');
+        showFeedback('Title and content are required for translation.', true);
         return;
       }
 
@@ -1274,8 +1227,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           const err = await res.json().catch(() => ({ detail: res.statusText }));
           const rawMsg = err.detail || err.error || `Error ${res.status}`;
           const msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg);
-          if (res.status === 429) showFeedback('error', 'Too many requests. Wait a minute.');
-          else showFeedback('error', msg);
+          if (res.status === 429) showFeedback('Too many requests. Wait a minute.', true);
+          else showFeedback(msg, true);
           setAiLoading(false);
           return;
         }
@@ -1291,12 +1244,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         }
 
         if (data.success && data.translated_slug) {
-          showFeedback('success', 'Translation created!');
+          showFeedback('Translation created!');
           window.location.href = `/admin/blog/edit/${data.translated_slug}`;
         }
       } catch (err) {
         setAiLoading(false);
-        showFeedback('error', 'Translation request failed.');
+        showFeedback('Translation request failed.', true);
       }
     }
 
@@ -1395,18 +1348,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       aiResultEl.innerHTML = html;
     }
 
-    function esc(s: string): string {
-      const d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML.replace(/"/g, '&quot;');
-    }
 
     previewFrame?.addEventListener('load', () => {
       attachPreviewAutoResize();
       setPreviewShellLoading(false);
-      restoreActionButtons();
+      btnManager.restore();
       if (announcePreviewReady) {
-        showFeedback('success', 'Preview updated.');
+        showFeedback('Preview updated.');
         announcePreviewReady = false;
       }
     });
@@ -1415,31 +1363,31 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     // Event listeners
     btnSave?.addEventListener('click', async () => {
-      if (isActionPending) return;
-      beginAction(btnSave, 'Saving...');
+      if (btnManager.isPending) return;
+      btnManager.begin(btnSave, 'Saving...');
       await handleSave();
-      restoreActionButtons();
+      btnManager.restore();
     });
     btnPreview?.addEventListener('click', switchToPreview);
     btnEdit?.addEventListener('click', switchToDraft);
     btnPublish?.addEventListener('click', async () => {
-      if (isActionPending) return;
-      beginAction(btnPublish, 'Publishing...');
+      if (btnManager.isPending) return;
+      btnManager.begin(btnPublish, 'Publishing...');
       const published = await handlePublish();
-      if (!published) restoreActionButtons();
+      if (!published) btnManager.restore();
     });
     btnDelete?.addEventListener('click', handleDelete);
     btnPublishDraft?.addEventListener('click', async () => {
-      if (isActionPending) return;
-      beginAction(btnPublishDraft, 'Publishing...');
+      if (btnManager.isPending) return;
+      btnManager.begin(btnPublishDraft, 'Publishing...');
       const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
       if (!saved) {
-        restoreActionButtons();
-        showFeedback('error', 'Publish failed: save the draft first.');
+        btnManager.restore();
+        showFeedback('Publish failed: save the draft first.', true);
         return;
       }
       const published = await handlePublish();
-      if (!published) restoreActionButtons();
+      if (!published) btnManager.restore();
     });
 
     // --- Character / word count ---

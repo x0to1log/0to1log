@@ -3,6 +3,7 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
+import { createClient } from '@supabase/supabase-js';
 import { getProductDetailData, fetchAlternatives, fetchRelatedNews } from '../../../lib/pageData/productsPage';
 import ProductDetail from '../../../components/products/ProductDetail.astro';
 import ContentFeedback from '../../../components/common/ContentFeedback.astro';
@@ -22,6 +23,21 @@ if (!product && !error) {
 }
 
 const user = Astro.locals.user;
+
+let isLiked = false;
+if (user && Astro.locals.accessToken && product) {
+  const sb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${Astro.locals.accessToken}` } } },
+  );
+  const { data } = await sb
+    .from('ai_product_likes')
+    .select('id')
+    .eq('product_id', product.id)
+    .maybeSingle();
+  isLiked = !!data;
+}
 ---
 
 <MainLayout
@@ -31,7 +47,7 @@ const user = Astro.locals.user;
   altSlug={product?.slug}
 >
   {product ? (
-    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} relatedNews={relatedNews}>
+    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isLiked={isLiked}>
       <ContentFeedback
         sourceType="product"
         sourceId={product.id}
@@ -52,4 +68,5 @@ const user = Astro.locals.user;
 
 <script>
   import '../../../scripts/contentFeedback';
+  import '../../../scripts/productLike';
 </script>

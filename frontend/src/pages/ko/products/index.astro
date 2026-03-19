@@ -86,6 +86,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
                   searchText={buildSearchText(product)}
                   categoryId={product.primary_category}
                   viewCount={product.view_count}
+                  productId={product.id}
                 />
               ))}
             </div>
@@ -111,6 +112,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
           searchText={buildSearchText(product)}
           categoryId={product.primary_category}
           viewCount={product.view_count}
+          productId={product.id}
         />
       ))}
     </div>
@@ -136,6 +138,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
 
 <script>
   import '../../../scripts/handbookSearchHints';
+  import '../../../scripts/productLike';
 
   document.addEventListener('astro:page-load', () => {
     const input = document.getElementById('product-search') as HTMLInputElement | null;

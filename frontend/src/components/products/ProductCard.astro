@@ -13,11 +13,12 @@ interface Props {
   searchText?: string;
   categoryId: string;
   viewCount: number;
+  productId?: string;
 }
 
 const {
   href, name, tagline, logoUrl, thumbnailUrl, demoMediaFirst,
-  pricing, platform, koreanSupport, locale, searchText, categoryId, viewCount,
+  pricing, platform, koreanSupport, locale, searchText, categoryId, viewCount, productId,
 } = Astro.props;
 
 const pricingLabel: Record<string, string> = {
@@ -49,6 +50,17 @@ const formatViews = (n: number) => {
           <span class="product-card-thumb-fallback-initial">{name.charAt(0)}</span>
         )}
       </div>
+    )}
+    {productId && (
+      <button
+        class="product-card-like"
+        data-product-id={productId}
+        data-liked="false"
+        aria-label={locale === 'ko' ? '찜하기' : 'Like'}
+        type="button"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
     )}
   </div>
 
