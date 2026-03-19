@@ -396,7 +396,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     )}
 
     {/* Toast feedback (fixed position, outside form flow) */}
-    <div id="feedback" class="admin-feedback admin-feedback--toast" hidden></div>
+    <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden></div>
 </MainLayout>
 
 <style>
@@ -510,12 +510,12 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   import { Crepe } from '@milkdown/crepe';
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
+  import { esc, showFeedback, createButtonManager } from '../../../../scripts/adminEditorUtils';
 
   let crepeBasicKo: Crepe | null = null;
   let crepeBasicEn: Crepe | null = null;
   let crepeAdvancedKo: Crepe | null = null;
   let crepeAdvancedEn: Crepe | null = null;
-  let feedbackTimer = 0;
 
   document.addEventListener('DOMContentLoaded', () => {
     // Clean up previous Crepe instances (View Transitions)
@@ -523,7 +523,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     if (crepeBasicEn) { crepeBasicEn.destroy(); crepeBasicEn = null; }
     if (crepeAdvancedKo) { crepeAdvancedKo.destroy(); crepeAdvancedKo = null; }
     if (crepeAdvancedEn) { crepeAdvancedEn.destroy(); crepeAdvancedEn = null; }
-    clearTimeout(feedbackTimer);
     const termForm = document.getElementById('term-form');
     if (!termForm) return; // Not the handbook editor page
     const draftMode = document.getElementById('draft-mode');
@@ -540,43 +539,14 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     const previewFrame = document.getElementById('preview-iframe') as HTMLIFrameElement | null;
     const idInput = document.querySelector('[name="id"]') as HTMLInputElement | null;
     const slugInput = document.querySelector('[name="slug"]') as HTMLInputElement | null;
-    const managedButtons = [btnSave, btnPreview, btnPublish, btnPublishPreview, btnEditBack, btnDelete]
-      .filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
-    const defaultButtonLabels = new Map<HTMLButtonElement, string>();
-    managedButtons.forEach((button) => {
-      defaultButtonLabels.set(button, button.textContent || '');
-    });
+    const btnManager = createButtonManager(
+      [btnSave, btnPreview, btnPublish, btnPublishPreview, btnEditBack, btnDelete]
+        .filter((b): b is HTMLButtonElement => b instanceof HTMLButtonElement),
+    );
     let previewEnteredFromEditor = false;
     let previewResizeObserver: ResizeObserver | null = null;
     let previewWindowResizeCleanup: (() => void) | null = null;
     let announcePreviewReady = false;
-    let isActionPending = false;
-
-    function restoreActionButtons() {
-      managedButtons.forEach((button) => {
-        button.disabled = false;
-        button.textContent = defaultButtonLabels.get(button) || button.textContent || '';
-      });
-      isActionPending = false;
-    }
-
-    function setButtonLabel(button: HTMLButtonElement | null, label: string) {
-      if (!button) return;
-      if (label.includes('...') || label.includes('…')) {
-        button.innerHTML = `<span class="btn-spinner"></span>${label}`;
-      } else {
-        button.textContent = label;
-      }
-    }
-
-    function beginAction(button: HTMLButtonElement | null, label: string) {
-      managedButtons.forEach((item) => {
-        item.disabled = true;
-        item.textContent = defaultButtonLabels.get(item) || item.textContent || '';
-      });
-      setButtonLabel(button, label);
-      isActionPending = true;
-    }
 
     function setPreviewShellLoading(loading: boolean, message = 'Loading live preview...') {
       previewShell?.classList.toggle('admin-preview-frame-shell--loading', loading);
@@ -675,7 +645,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       }
       previewEnteredFromEditor = false;
       setPreviewShellLoading(false);
-      restoreActionButtons();
+      btnManager.restore();
     }
 
     function loadPreviewFrame(previewUrl: string, options: { announce?: boolean; pushHistory?: boolean } = {}) {
@@ -823,11 +793,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       });
     }
 
-    function esc(s: string): string {
-      const d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML.replace(/"/g, '&quot;');
-    }
 
     // --- Diff / Undo helpers ---
     const previousValues = new Map<string, string>();
@@ -1625,17 +1590,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     document.querySelector<HTMLInputElement>('[name="term_full"]')?.addEventListener('input', updateMetaFilledCount);
     document.querySelector<HTMLInputElement>('[name="korean_full"]')?.addEventListener('input', updateMetaFilledCount);
 
-    function showFeedback(message: string, isError = false) {
-    const el = document.getElementById('feedback')!;
-    el.textContent = message;
-    el.className = `admin-feedback admin-feedback--toast admin-feedback--${isError ? 'error' : 'success'}`;
-    el.setAttribute('role', isError ? 'alert' : 'status');
-    el.setAttribute('aria-live', isError ? 'assertive' : 'polite');
-    el.setAttribute('aria-atomic', 'true');
-    el.hidden = false;
-    clearTimeout(feedbackTimer);
-    feedbackTimer = window.setTimeout(() => { el.hidden = true; }, 3000);
-  }
 
   function getFormData(): Record<string, any> {
     const form = document.getElementById('term-form') as HTMLFormElement;
@@ -1758,7 +1712,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     if (pubRes.ok) {
       showFeedback('Published! Redirecting...');
       const slug = slugInput?.value || '';
-      setTimeout(() => { window.location.href = `/ko/handbook/${slug}/`; }, 1500);
+      const lang = getActivePreviewLang();
+      setTimeout(() => { window.location.href = `/${lang}/handbook/${slug}/`; }, 1500);
       return true;
     }
 
@@ -1771,7 +1726,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   previewFrame?.addEventListener('load', () => {
     attachPreviewAutoResize();
     setPreviewShellLoading(false);
-    restoreActionButtons();
+    btnManager.restore();
     if (announcePreviewReady) {
       showFeedback('Preview updated.');
       announcePreviewReady = false;
@@ -1781,26 +1736,26 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   window.addEventListener('popstate', syncModeFromLocation);
 
   btnPreview?.addEventListener('click', async () => {
-    if (isActionPending) return;
-    beginAction(btnPreview, 'Saving...');
+    if (btnManager.isPending) return;
+    btnManager.begin(btnPreview, 'Saving...');
     const saved = await handleSave({ showFeedback: false });
     if (!saved) {
-      restoreActionButtons();
+      btnManager.restore();
       showFeedback('Preview failed: save the draft first.', true);
       return;
     }
     const previewUrl = buildPreviewUrl();
     if (!previewUrl) {
-      restoreActionButtons();
+      btnManager.restore();
       showFeedback('Preview failed: save a valid slug first.', true);
       return;
     }
-    setButtonLabel(btnPreview, 'Loading preview...');
+    btnManager.setLabel(btnPreview, 'Loading preview...');
     loadPreviewFrame(previewUrl, { announce: true, pushHistory: true });
   });
 
   btnEditBack?.addEventListener('click', () => {
-    if (isActionPending) return;
+    if (btnManager.isPending) return;
     if (isPreviewLocation() && previewEnteredFromEditor) {
       history.back();
       return;
@@ -1809,25 +1764,25 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
   });
 
   btnPublishPreview?.addEventListener('click', async () => {
-    if (isActionPending) return;
-    beginAction(btnPublishPreview, 'Publishing...');
+    if (btnManager.isPending) return;
+    btnManager.begin(btnPublishPreview, 'Publishing...');
     const published = await handlePublish();
-    if (!published) restoreActionButtons();
+    if (!published) btnManager.restore();
   });
 
   // ===== Save Draft =====
   btnSave?.addEventListener('click', async () => {
-    if (isActionPending) return;
-    beginAction(btnSave, 'Saving...');
+    if (btnManager.isPending) return;
+    btnManager.begin(btnSave, 'Saving...');
     await handleSave();
-    restoreActionButtons();
+    btnManager.restore();
   });
 
   btnPublish?.addEventListener('click', async () => {
-    if (isActionPending) return;
-    beginAction(btnPublish, 'Publishing...');
+    if (btnManager.isPending) return;
+    btnManager.begin(btnPublish, 'Publishing...');
     const published = await handlePublish();
-    if (!published) restoreActionButtons();
+    if (!published) btnManager.restore();
   });
 
   btnDelete?.addEventListener('click', async () => {

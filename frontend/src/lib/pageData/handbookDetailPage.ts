@@ -150,6 +150,7 @@ export async function getHandbookDetailPageData({
         .from('news_posts')
         .select('title, slug, category, published_at')
         .eq('status', 'published')
+        .eq('locale', locale)
         .contains('tags', [term.term.toLowerCase()])
         .limit(3),
       // Pre-fetch recent news for backfill (avoids sequential query later)
@@ -157,6 +158,7 @@ export async function getHandbookDetailPageData({
         .from('news_posts')
         .select('title, slug, category, published_at')
         .eq('status', 'published')
+        .eq('locale', locale)
         .order('published_at', { ascending: false })
         .limit(3),
       term.related_term_slugs?.length
