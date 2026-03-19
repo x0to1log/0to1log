@@ -158,6 +158,10 @@ function initHandbookPopup(): void {
   }, { signal });
 
   // Single delegated click handler — works for dynamically swapped content
+  // Use capture: true so this handler runs BEFORE Astro's View Transitions router,
+  // which also uses { capture: true } to intercept <a> link clicks for soft navigation.
+  // Without capture, VT navigates to /handbook/slug/ (no locale prefix → 404) before
+  // our popup handler gets a chance to preventDefault.
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
 
@@ -175,10 +179,15 @@ function initHandbookPopup(): void {
     const termLink = target.closest<HTMLAnchorElement>('.newsprint-prose a[href*="/handbook/"]');
     if (termLink) {
       const slug = extractSlugFromHref(termLink.getAttribute('href') || '');
-      if (slug && termsData[slug]) {
+      if (slug) {
         e.preventDefault();
         e.stopPropagation();
-        showPopup(slug, termLink);
+        if (termsData[slug]) {
+          showPopup(slug, termLink);
+        } else {
+          // Term not in local data — navigate to locale-prefixed handbook page
+          window.location.href = `/${getLocale()}/handbook/${slug}/`;
+        }
         return;
       }
     }
@@ -187,7 +196,7 @@ function initHandbookPopup(): void {
     if (activePopup && !activePopup.contains(target)) {
       closePopup();
     }
-  }, { signal });
+  }, { signal, capture: true });
 }
 
 document.addEventListener('astro:page-load', initHandbookPopup);
