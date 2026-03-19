@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { normalizeTags } from '../../../../lib/normalizeTags';
 
 export const prerender = false;
 
@@ -60,7 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     slug: finalSlug,
     korean_name: korean_name || null,
     korean_full: korean_full || null,
-    categories: Array.isArray(categories) ? categories : (categories ? [categories] : []),
+    categories: normalizeTags(Array.isArray(categories) ? categories : (categories ? [categories] : []), 4),
     related_term_slugs: related_term_slugs || [],
     is_favourite: is_favourite ?? false,
     definition_ko: definition_ko || null,
