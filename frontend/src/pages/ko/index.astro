@@ -151,7 +151,7 @@ const homeIntro = siteContent.home_intro ||
             <nav class="home-blog-list" aria-label="최근 블로그 글">
               {recentBlog.map((post) => {
                 const dateLabel = post.published_at
-                  ? new Date(post.published_at).toLocaleDateString('ko-KR')
+                  ? new Date(post.published_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
                   : null;
                 return (
                   <a href={`/ko/blog/${post.slug}`} class="home-blog-list-item">

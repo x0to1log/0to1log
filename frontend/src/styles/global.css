@@ -8723,6 +8723,7 @@ pre:hover .blog-code-copy {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  text-wrap: balance;
   color: #fff;
   margin-bottom: 0.5rem;
 }
@@ -8858,6 +8859,7 @@ pre:hover .blog-code-copy {
   color: #ffffff;
   display: block;
   margin-bottom: 0.2rem;
+  overflow-wrap: break-word;
 }
 
 .home-split-hero-term-def {

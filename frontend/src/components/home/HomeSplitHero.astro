@@ -35,7 +35,7 @@ const readingLabel = heroNews?.reading_time_min
 ---
 
 <div class="home-split-hero">
-  <div class="home-split-hero-wordmark">0TO1LOG</div>
+  <div class="home-split-hero-wordmark" aria-hidden="true">0TO1LOG</div>
   <div class="home-split-hero-inner">
 
     <!-- Left: Value proposition -->
@@ -58,7 +58,7 @@ const readingLabel = heroNews?.reading_time_min
           <p class="home-split-hero-today-label">TODAY</p>
           <a href={newsHref} class="home-split-hero-news">
             {readingLabel && (
-              <p class="home-split-hero-news-kicker">◆ AI · {readingLabel}</p>
+              <p class="home-split-hero-news-kicker"><span aria-hidden="true">◆</span> AI · {readingLabel}</p>
             )}
             <p class="home-split-hero-news-title">{heroNews.title}</p>
           </a>
