@@ -12,8 +12,11 @@ const hasLocaleSegment = currentPath.startsWith('/en/') || currentPath.startsWit
 // Determine which section the current page belongs to for altPath
 const isInBlog = currentPath.startsWith(`/${locale}/blog/`);
 const isInNews = currentPath.startsWith(`/${locale}/news/`);
+const isInProducts = currentPath.startsWith(`/${locale}/products/`);
+const isInHandbook = currentPath.startsWith(`/${locale}/handbook/`);
+const altSection = isInBlog ? 'blog' : isInProducts ? 'products' : isInHandbook ? 'handbook' : 'news';
 const altPath = altSlug
-  ? `/${altLocale}/${isInBlog ? 'blog' : 'news'}/${altSlug}/`
+  ? `/${altLocale}/${altSection}/${altSlug}/`
   : hasLocaleSegment
     ? currentPath.replace(`/${locale}/`, `/${altLocale}/`)
     : `${currentPath}?lang=${altLocale}`;

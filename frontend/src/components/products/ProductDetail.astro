@@ -86,14 +86,12 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
   <div class="product-detail-meta">
     {(product.platform && product.platform.length > 0) && (
       <div class="product-detail-meta-row">
+        <span class={`product-detail-chip ${product.korean_support ? 'product-detail-chip--accent' : 'product-detail-chip--muted'}`}>
+          {product.korean_support ? '✓' : '✗'} {locale === 'ko' ? '한국어' : 'Korean'}
+        </span>
         {product.platform.map((p) => (
           <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
         ))}
-        {product.korean_support && (
-          <span class="product-detail-chip product-detail-chip--accent">
-            {locale === 'ko' ? '한국어' : 'Korean'} ✓
-          </span>
-        )}
       </div>
     )}
     {product.tags && product.tags.length > 0 && (
