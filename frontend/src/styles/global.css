@@ -10445,6 +10445,14 @@ pre:hover .blog-code-copy {
   gap: 0.3rem;
 }
 
+.product-detail-hero-platform-text {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .product-detail-hero-stats {
   display: flex;
   gap: 0.5rem;
@@ -10458,12 +10466,6 @@ pre:hover .blog-code-copy {
   gap: 0.2rem;
   font-size: 0.75rem;
   color: var(--color-text-muted);
-}
-
-.product-visit-btn--full {
-  width: 100%;
-  justify-content: center;
-  margin-top: 0.25rem;
 }
 
 /* Tags row — category + tags, Hero 바로 아래 */

@@ -40,7 +40,7 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
 
   <!-- ① Hero: 2컬럼 C-1 -->
   <header class="product-detail-hero">
-    <!-- Left: name + tagline + pricing badge -->
+    <!-- Left: name + tagline + CTA -->
     <div class="product-detail-hero-left">
       <div class="product-detail-hero-text">
         <h1 class="product-detail-name">{product.name_original}</h1>
@@ -51,16 +51,24 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
           <p class="product-detail-tagline">{product.tagline}</p>
         )}
       </div>
-      {product.pricing && (
-        <div class="product-detail-hero-actions">
+      <div class="product-detail-hero-actions">
+        {product.pricing && (
           <span class="product-pricing-badge" data-pricing={product.pricing}>
             {pricingLabel[product.pricing] ?? product.pricing}
           </span>
-        </div>
-      )}
+        )}
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="product-visit-btn"
+        >
+          {tr['products.visitSite']} ↗
+        </a>
+      </div>
     </div>
 
-    <!-- Right: logo + platform + korean + stats + Visit Site -->
+    <!-- Right: logo + platform + korean + stats -->
     <div class="product-detail-hero-right">
       {product.logo_url ? (
         <img
@@ -77,17 +85,15 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
         </div>
       )}
       <div class="product-detail-hero-meta">
+        {product.korean_support && (
+          <span class="product-detail-chip product-detail-chip--accent">
+            ✓ {locale === 'ko' ? '한국어' : 'Korean'}
+          </span>
+        )}
         {(product.platform && product.platform.length > 0) && (
-          <div class="product-detail-hero-platforms">
-            {product.korean_support && (
-              <span class="product-detail-chip product-detail-chip--accent">
-                ✓ {locale === 'ko' ? '한국어' : 'Korean'}
-              </span>
-            )}
-            {product.platform.map((p) => (
-              <span class="product-detail-chip">{platformLabels[p] ?? p}</span>
-            ))}
-          </div>
+          <p class="product-detail-hero-platform-text">
+            {product.platform.map((p) => platformLabels[p] ?? p).join(' · ')}
+          </p>
         )}
         <div class="product-detail-hero-stats">
           <span class="product-detail-hero-stat">
@@ -101,14 +107,6 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
             </span>
           )}
         </div>
-        <a
-          href={product.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="product-visit-btn product-visit-btn--full"
-        >
-          {tr['products.visitSite']} ↗
-        </a>
       </div>
     </div>
   </header>
