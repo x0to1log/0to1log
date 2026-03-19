@@ -156,11 +156,9 @@
 - **설계 참조:** [[2026-03-17-news-pipeline-v4-design]]
 
 ### 41. 뉴스 본문 핸드북 용어 인라인 팝업 `[INLINE-POPUP-01]`
-- **체크:** [ ]
-- **상태:** doing
-- **목적:** 본문에서 핸드북 용어가 처음 등장할 때 클릭 → 팝업으로 정의 확인 (페이지 이동 대신)
-- **현재:** rehypeHandbookTerms + handbook-popup.ts 구현 완료이나 한국어 매칭 안 됨 (\b word boundary 문제)
-- **수정 범위:** `rehypeHandbookTerms.ts` — regex `\b` → 한국어 지원 lookbehind/lookahead
+- **체크:** [x]
+- **상태:** done
+- **수정:** `rehypeHandbookTerms.ts` — `\b` → lookbehind `(?<![a-zA-Z\uAC00-\uD7AF])` + lookahead `(?![a-zA-Z])` 적용 완료. Node.js regex 검증으로 한국어 용어(에이전트가, 딥러닝은 등) 및 English(AI) 매칭 확인.
 
 ### 42. 핸드북 퀄리티 개선 `[HANDBOOK-QUALITY-01]`
 - **체크:** [x]
@@ -172,6 +170,11 @@
 - **상태:** done
 - **수정:** Tavily 검색 + gpt-4o-mini 유형 분류 (10 types) + 유형별 심화 프롬프트 + Self-critique + 퀄리티 체크 (점수 매기기). Tavily context를 기초+심화 모든 Call에 적용.
 - **설계 참조:** [[2026-03-18-handbook-advanced-quality-design]]
+
+### 44a. 에디터 Delete 버튼 Danger Zone 분리 `[EDITOR-DANGER-01]`
+- **체크:** [x]
+- **상태:** done
+- **수정:** 3개 에디터(blog/news/handbook) topbar에서 Delete 버튼 제거 → 에디터 하단 `.admin-danger-zone` 섹션으로 이동. `global.css` danger zone 스타일 추가.
 
 ### 44. 프롬프트 감사 수정 `[PROMPT-AUDIT-01]`
 - **체크:** [ ]
