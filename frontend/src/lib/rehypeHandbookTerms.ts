@@ -20,7 +20,8 @@ export type TermsMap = Map<string, TermEntry>;
 const SKIP_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'code', 'pre']);
 
 // Section headers where ALL term occurrences should be linked (not just first)
-const ALWAYS_LINK_KEYWORDS = ['관련', 'related'];
+// '함께' covers "함께 알면 좋은 용어" (KO related-terms heading)
+const ALWAYS_LINK_KEYWORDS = ['관련', 'related', '함께'];
 
 export default function rehypeHandbookTerms(termsMap: TermsMap) {
   return () => (tree: Root) => {
@@ -36,11 +37,15 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
 
     const matched = new Set<string>(); // track slugs already matched
 
-    // Build parent map for ancestor chain lookup
-    const parentMap = new Map<any, Element>();
-    visit(tree, 'element', (node: Element) => {
-      for (const child of (node.children || [])) {
-        parentMap.set(child, node);
+    // Build parent map for ancestor chain lookup.
+    // Visit ALL node types (not just 'element') so root's children are included,
+    // enabling us to walk up to the document root and find h2 siblings there.
+    const parentMap = new Map<any, any>();
+    visit(tree, (node: any) => {
+      if (node.children) {
+        for (const child of node.children) {
+          parentMap.set(child, node);
+        }
       }
     });
 
@@ -55,18 +60,31 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       return false;
     }
 
-    function isInRelatedSection(parent: Element, idx: number): boolean {
-      const sibs = parent.children;
-      for (let i = idx - 1; i >= 0; i--) {
-        const sib = sibs[i] as Element;
-        if (sib.type === 'element' && sib.tagName === 'h2') {
-          const hText = (sib.children || [])
-            .filter((c: any) => c.type === 'text')
-            .map((c: any) => c.value)
-            .join('')
-            .toLowerCase();
-          return ALWAYS_LINK_KEYWORDS.some(kw => hText.includes(kw));
+    /**
+     * Walk up the ancestor chain from textParent, checking each ancestor's
+     * preceding siblings for an h2 that matches ALWAYS_LINK_KEYWORDS.
+     * This correctly handles text inside <p>, <li>, <strong>, etc.
+     * Returns true when the nearest enclosing h2 is a "related terms" heading.
+     */
+    function isInRelatedSection(textParent: Element): boolean {
+      let current: any = textParent;
+      while (current) {
+        const ancestor = parentMap.get(current);
+        if (!ancestor) break;
+        const siblings: any[] = ancestor.children || [];
+        const pos = siblings.indexOf(current);
+        for (let i = pos - 1; i >= 0; i--) {
+          const sib = siblings[i];
+          if (sib?.type === 'element' && sib.tagName === 'h2') {
+            const hText = (sib.children || [])
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.value as string)
+              .join('')
+              .toLowerCase();
+            return ALWAYS_LINK_KEYWORDS.some(kw => hText.includes(kw));
+          }
         }
+        current = ancestor;
       }
       return false;
     }
@@ -79,7 +97,7 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       if (parentEl.tagName && SKIP_TAGS.has(parentEl.tagName)) return;
       if (hasSkipAncestor(node)) return;
 
-      const inRelated = isInRelatedSection(parentEl, index);
+      const inRelated = isInRelatedSection(parentEl);
 
       const text = node.value;
       const parts: (Text | Element)[] = [];
