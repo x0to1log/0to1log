@@ -4,7 +4,7 @@ export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
 import { getHomePageData } from '../../lib/pageData/homePage';
-import HomeMasthead from '../../components/home/HomeMasthead.astro';
+import HomeSplitHero from '../../components/home/HomeSplitHero.astro';
 import HomeHeroCard from '../../components/home/HomeHeroCard.astro';
 import HomeNewsCard from '../../components/home/HomeNewsCard.astro';
 import HomeTermCard from '../../components/home/HomeTermCard.astro';
@@ -28,71 +28,102 @@ const homeIntro = siteContent.home_intro ||
 <MainLayout title={homeTitle} locale={locale} headerAlwaysVisible={true}>
   <div class="home-page">
 
-    <!-- Section A: Masthead -->
-    <HomeMasthead locale={locale} />
-
-    <!-- Hero Headline -->
-    {heroNews ? (
-      <HomeHeroCard
-        href={`/ko/news/${heroNews.slug}`}
-        title={heroNews.title}
-        excerpt={heroNews.excerpt}
-        category="ai-news"
-        publishedAt={heroNews.published_at}
-        readingTimeMin={heroNews.reading_time_min}
-        tags={heroNews.tags}
-        locale={locale}
-        postType={heroNews.post_type}
-      />
-    ) : (
-      <p class="home-coming-soon">{t.ko['home.comingSoon']}</p>
-    )}
+    <!-- Section A: Split Hero -->
+    <HomeSplitHero
+      locale={locale}
+      heroNews={heroNews}
+      trendingTerms={terms.slice(0, 2)}
+      newsHref={heroNews ? `/ko/news/${heroNews.slug}` : '/ko/news/'}
+      homeIntro={homeIntro}
+    />
 
     <!-- Section B: Latest AI News -->
-    {moreNews.length > 0 && (
+    {(heroNews || moreNews.length > 0) && (
       <section class="home-section">
         <HomeSectionHeader
           title={t.ko['home.latestNews']}
           viewAllHref="/ko/news/"
           viewAllLabel={t.ko['home.viewAll']}
         />
-        <div class="home-news-grid">
-          {moreNews.map((post) => (
-            <HomeNewsCard
-              href={`/ko/news/${post.slug}`}
-              title={post.title}
-              excerpt={post.excerpt}
-              category="ai-news"
-              publishedAt={post.published_at}
-              readingTimeMin={post.reading_time_min}
-              tags={post.tags}
-              locale={locale}
-              postType={post.post_type}
-            />
-          ))}
-        </div>
+        {heroNews && (
+          <HomeHeroCard
+            href={`/ko/news/${heroNews.slug}`}
+            title={heroNews.title}
+            excerpt={heroNews.excerpt}
+            category="ai-news"
+            publishedAt={heroNews.published_at}
+            readingTimeMin={heroNews.reading_time_min}
+            tags={heroNews.tags}
+            locale={locale}
+            postType={heroNews.post_type}
+          />
+        )}
+        {moreNews.length > 0 && (
+          <div class="home-news-grid">
+            {moreNews.map((post) => (
+              <HomeNewsCard
+                href={`/ko/news/${post.slug}`}
+                title={post.title}
+                excerpt={post.excerpt}
+                category="ai-news"
+                publishedAt={post.published_at}
+                readingTimeMin={post.reading_time_min}
+                tags={post.tags}
+                locale={locale}
+                postType={post.post_type}
+              />
+            ))}
+          </div>
+        )}
       </section>
     )}
 
-    <!-- Section C: Glossary Spotlight -->
-    {terms.length > 0 && (
+    <!-- Section C+E: Glossary + AI Products (2-col) -->
+    {(terms.length > 0 || featuredProducts.length > 0) && (
       <section class="home-section">
-        <HomeSectionHeader
-          title={t.ko['home.glossarySpotlight']}
-          viewAllHref="/ko/handbook/"
-          viewAllLabel={t.ko['home.viewAll']}
-        />
-        <div class="home-term-grid">
-          {terms.map((term) => (
-            <HomeTermCard
-              href={`/ko/handbook/${term.slug}`}
-              term={term.term}
-              koreanName={term.korean_name}
-              definition={term.definition_ko}
-              categories={term.categories}
-              locale={locale}
-            />
-          ))}
+        <div class="home-spotlight-grid">
+          {terms.length > 0 && (
+            <div class="home-spotlight-col">
+              <HomeSectionHeader
+                title={t.ko['home.glossarySpotlight']}
+                viewAllHref="/ko/handbook/"
+                viewAllLabel={t.ko['home.viewAll']}
+              />
+              <div class="home-term-grid">
+                {terms.slice(0, 3).map((term) => (
+                  <HomeTermCard
+                    href={`/ko/handbook/${term.slug}`}
+                    term={term.term}
+                    koreanName={term.korean_name}
+                    definition={term.definition_ko}
+                    categories={term.categories}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {featuredProducts.length > 0 && (
+            <div class="home-spotlight-col">
+              <HomeSectionHeader
+                title={t.ko['home.featuredProducts']}
+                viewAllHref="/ko/products/"
+                viewAllLabel={t.ko['home.viewAll']}
+              />
+              <div class="home-product-grid">
+                {featuredProducts.slice(0, 3).map((product) => (
+                  <HomeProductCard
+                    href={`/ko/products/${product.slug}/`}
+                    name={product.name}
+                    tagline={product.tagline_ko || product.tagline}
+                    logoUrl={product.logo_url}
+                    pricing={product.pricing}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     )}
@@ -134,56 +165,6 @@ const homeIntro = siteContent.home_intro ||
         </div>
       </section>
     )}
-
-    <!-- Section E: Featured AI Products -->
-    {featuredProducts.length > 0 && (
-      <section class="home-section">
-        <HomeSectionHeader
-          title={t.ko['home.featuredProducts']}
-          viewAllHref="/ko/products/"
-          viewAllLabel={t.ko['home.viewAll']}
-        />
-        <div class="home-product-grid">
-          {featuredProducts.map((product) => (
-            <HomeProductCard
-              href={`/ko/products/${product.slug}/`}
-              name={product.name}
-              tagline={product.tagline_ko || product.tagline}
-              logoUrl={product.logo_url}
-              pricing={product.pricing}
-              locale={locale}
-            />
-          ))}
-        </div>
-      </section>
-    )}
-
-    <!-- Section F: Start Here -->
-    <section class="home-section home-start-here">
-      <h2 class="home-start-here-title">처음 읽는 분께</h2>
-      <div class="home-start-here-grid">
-        <a href="/ko/news/" class="home-start-here-card">
-          <strong>AI 뉴스</strong>
-          <p>오늘 꼭 봐야 할 AI 변화부터 빠르게 읽습니다.</p>
-        </a>
-        <a href="/ko/handbook/" class="home-start-here-card">
-          <strong>AI 용어집</strong>
-          <p>읽다가 막히는 AI 용어를 바로 찾아 이해합니다.</p>
-        </a>
-        <a href="/ko/products/" class="home-start-here-card">
-          <strong>AI 제품군</strong>
-          <p>일과 창작에 바로 쓸 수 있는 AI 도구를 살펴봅니다.</p>
-        </a>
-        <a href="/library/" class="home-start-here-card">
-          <strong>나의 서재</strong>
-          <p>읽은 뉴스와 용어를 차곡차곡 모아둡니다.</p>
-        </a>
-        <a href="/ko/blog/" class="home-start-here-card">
-          <strong>IT 블로그</strong>
-          <p>빌드 과정과 기록을 찬찬히 풀어봅니다.</p>
-        </a>
-      </div>
-    </section>
 
   </div>
 </MainLayout>
