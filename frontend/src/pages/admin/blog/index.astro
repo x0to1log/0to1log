@@ -5,6 +5,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
+import { fetchCategories } from '../../../lib/pageData/blogCategories';
 
 type AdminBlogRow = {
   id: string;
@@ -65,9 +66,8 @@ allPosts = allPosts.sort((a, b) => {
 const localeOptions = Array.from(
   new Set(allPosts.map((post) => post.locale).filter((locale): locale is string => Boolean(locale))),
 ).sort();
-const categoryOptions = Array.from(
-  new Set(allPosts.map((post) => post.category).filter((category): category is string => Boolean(category))),
-).sort();
+const dbCategories = await fetchCategories(sb);
+const categoryOptions = dbCategories.map((c) => ({ slug: c.slug, label: c.label_en }));
 ---
 
 <MainLayout title="Admin Blog" locale="en">
@@ -122,8 +122,8 @@ const categoryOptions = Array.from(
           </select>
           <select id="admin-category-filter" class="admin-select">
             <option value="">All categories</option>
-            {categoryOptions.map((category) => (
-              <option value={category}>{category}</option>
+            {categoryOptions.map((cat) => (
+              <option value={cat.slug}>{cat.label}</option>
             ))}
           </select>
           <select id="admin-source-filter" class="admin-select">

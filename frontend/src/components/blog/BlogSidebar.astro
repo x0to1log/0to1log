@@ -1,9 +1,6 @@
 ---
 import { t } from '../../i18n/index';
 import {
-  getCategoryColorVar,
-} from '../../lib/categories';
-import {
   getBlogSidebarCategoryState,
   getBlogSidebarCurrentCategory,
   getBlogSidebarGroupExpanded,
@@ -121,33 +118,29 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
                 subCategorySlugs,
               );
               const categoryLabel = sidebarLabelMap.get(category) ?? category;
-              const colorVar = getCategoryColorVar(category);
+              const dbCat = dbCategories.find(c => c.slug === category);
+              const colorVar = dbCat?.color ?? 'var(--color-border)';
+
+              const iconSvg = CATEGORY_ICONS[category] ?? '';
 
               return (
                 <div class="blog-folder" style={`--folder-color: ${colorVar}`}>
-                  <button
-                    class="blog-folder-btn"
-                    type="button"
-                    aria-expanded={categoryExpanded ? 'true' : 'false'}
-                  >
-                    <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path d="M6 4l4 4-4 4" />
-                    </svg>
-                    <svg
-                      class="blog-folder-icon"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                      style={`color: ${colorVar}`}
-                      set:html={CATEGORY_ICONS[category] ?? ''}
-                    />
-                    <span>{categoryLabel}</span>
-                    <span class="blog-folder-count">({categoryPosts.length})</span>
-                  </button>
+                  <div class="blog-folder-header">
+                    <button class="blog-folder-arrow-btn" type="button" aria-expanded={categoryExpanded ? 'true' : 'false'}>
+                      <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M6 4l4 4-4 4" />
+                      </svg>
+                    </button>
+                    <a class="blog-folder-category-link" href={`/${locale}/blog/category/${category}/`}
+                       style={`--folder-color: ${colorVar}`}>
+                      <svg class="blog-folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                           aria-hidden="true" style={`color: ${colorVar}`}
+                           set:html={iconSvg} />
+                      <span>{categoryLabel}</span>
+                      <span class="blog-folder-count">({categoryPosts.length})</span>
+                    </a>
+                  </div>
 
                   <div class="blog-folder-children" {...(!categoryExpanded && { hidden: true })}>
                     {categoryPosts.length === 0 && <span class="blog-folder-empty">{comingSoonLabel}</span>}
@@ -235,11 +228,16 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
     if (sidebar.dataset.blogSidebarInit !== '1') {
       sidebar.dataset.blogSidebarInit = '1';
 
-      sidebar.querySelectorAll<HTMLButtonElement>('.blog-folder-btn').forEach((btn) => {
+      sidebar.querySelectorAll<HTMLButtonElement>('.blog-folder-btn, .blog-folder-arrow-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const expanded = btn.getAttribute('aria-expanded') === 'true';
           btn.setAttribute('aria-expanded', String(!expanded));
-          const children = btn.nextElementSibling as HTMLElement | null;
+          // For group buttons, children div is the next sibling of the button.
+          // For arrow buttons, children div is the next sibling of the parent .blog-folder-header.
+          const parent = btn.closest('.blog-folder-header');
+          const children = parent
+            ? (parent.nextElementSibling as HTMLElement | null)
+            : (btn.nextElementSibling as HTMLElement | null);
           if (children) {
             children.hidden = expanded;
           }

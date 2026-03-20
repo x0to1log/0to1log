@@ -7510,8 +7510,51 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   flex-shrink: 0;
 }
 
-.blog-folder-btn[aria-expanded="true"] .blog-folder-arrow {
+.blog-folder-btn[aria-expanded="true"] .blog-folder-arrow,
+.blog-folder-arrow-btn[aria-expanded="true"] .blog-folder-arrow {
   transform: rotate(90deg);
+}
+
+.blog-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.blog-folder-arrow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.25rem 0.4rem 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.blog-folder-arrow-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.blog-folder-category-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.5rem 0.4rem 0.25rem;
+  text-decoration: none;
+  color: var(--color-text-primary);
+  font-family: var(--font-blog-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background-color 150ms ease;
+  border-radius: 0.25rem;
+}
+
+.blog-folder-category-link:hover {
+  background: var(--color-accent-subtle);
 }
 
 .blog-folder-children {

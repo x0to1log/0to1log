@@ -6,6 +6,7 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { buildBlogSidebarDataset, toSidebarPost } from '../../../lib/pageData/blogSidebar';
+import { fetchCategories } from '../../../lib/pageData/blogCategories';
 import BlogShell from '../../../components/blog/BlogShell.astro';
 import BlogFeaturedCard from '../../../components/blog/BlogFeaturedCard.astro';
 import BlogListItem from '../../../components/blog/BlogListItem.astro';
@@ -64,6 +65,8 @@ const sidebarPosts = buildBlogSidebarDataset(
   ),
 );
 
+const dbCategories = supabase ? await fetchCategories(supabase) : [];
+
 // Split ALL posts into batches for infinite scroll in "All Posts" section
 const allPostBatches: any[][] = [];
 for (let i = 0; i < posts.length; i += BATCH_SIZE) {
@@ -106,6 +109,7 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
                   isBookmarked={bookmarkedPostIds.has(post.id)}
                   itemId={post.id}
                   itemType="blog"
+                  categories={dbCategories}
                 />
               ))}
             </div>
@@ -133,6 +137,7 @@ for (let i = 0; i < posts.length; i += BATCH_SIZE) {
                   isBookmarked={bookmarkedPostIds.has(post.id)}
                   itemId={post.id}
                   itemType="blog"
+                  categories={dbCategories}
                 />
               ))}
             </div>

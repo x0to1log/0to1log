@@ -3,7 +3,9 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
+import { supabase } from '../../../lib/supabase';
 import { getBlogDetailPageData } from '../../../lib/pageData/blogDetailPage';
+import { fetchCategories } from '../../../lib/pageData/blogCategories';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import BlogShell from '../../../components/blog/BlogShell.astro';
 import BlogArticleLayout from '../../../components/blog/BlogArticleLayout.astro';
@@ -38,6 +40,8 @@ const {
 if (!post && !postError) {
   Astro.response.status = 404;
 }
+
+const dbCategories = supabase ? await fetchCategories(supabase) : [];
 
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
@@ -94,6 +98,7 @@ const altSlugValue = pairedSlug || undefined;
         isLiked={isLiked}
         previewMode={previewMode}
         showStickyActions={false}
+        categories={dbCategories}
       />
     )}
 
