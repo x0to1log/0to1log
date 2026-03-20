@@ -8897,6 +8897,37 @@ pre:hover .blog-code-copy {
   }
 }
 
+/* Slot machine word animation */
+.home-slot-wrapper {
+  display: inline-block;
+  height: 1.2em;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.home-slot-inner {
+  display: block;
+  animation: home-slot-spin 7s steps(7, end) infinite;
+}
+
+.home-slot-word {
+  display: block;
+  height: 1.2em;
+  line-height: 1.2;
+  color: var(--color-accent);
+}
+
+@keyframes home-slot-spin {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-7 * 1.2em)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-slot-inner {
+    animation: none;
+  }
+}
+
 /* Glossary + Products 2-col spotlight */
 .home-spotlight-grid {
   display: grid;

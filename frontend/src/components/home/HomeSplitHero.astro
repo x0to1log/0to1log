@@ -15,6 +15,9 @@ const headline = isKo
   ? ['AI 뉴스를 읽고,', '개념을 쌓고,', '함께 해석하세요']
   : ['Read AI news,', 'build your understanding,', 'and make sense of it together'];
 
+// 마지막에 첫 단어 반복 → 6→1 루프가 자연스럽게 이어짐
+const koSlotWords = ['지식', '개념', '역량', '스킬', '관점', '내공', '지식'];
+
 const defaultIntro = isKo
   ? '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 생각을 나누는 공간입니다.'
   : 'Stay on top of AI as it changes fast, look up the terms you need right away, build your own library of news and concepts, and share how you make sense of it with others.';
@@ -29,7 +32,19 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
   <div class="home-split-hero-wordmark" aria-hidden="true">0to1log</div>
   <p class="home-split-hero-kicker">{kicker}</p>
   <h1 class="home-split-hero-headline">
-    {headline.map((line) => <>{line}<br /></>)}
+    {isKo ? (
+      <>
+        AI 뉴스를 읽고,<br />
+        <span class="home-slot-wrapper" aria-label="개념">
+          <span class="home-slot-inner" aria-hidden="true">
+            {koSlotWords.map((word) => <span class="home-slot-word">{word}</span>)}
+          </span>
+        </span>을 쌓고,<br />
+        함께 해석하세요
+      </>
+    ) : (
+      headline.map((line) => <>{line}<br /></>)
+    )}
   </h1>
   <p class="home-split-hero-sub">{subCopy}</p>
   <div class="home-split-hero-cta">
