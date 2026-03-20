@@ -16,7 +16,7 @@ const headline = isKo
   : ['Read AI news,', 'build your understanding,', 'and make sense of it together'];
 
 const koSlotWords = ['지식', '개념', '역량', '스킬', '관점', '내공'];
-const enSlotWords = ['knowledge', 'understanding', 'skills', 'fluency', 'perspective', 'depth'];
+const enSlotWords = ['knowledge', 'insight', 'skills', 'fluency', 'perspective', 'depth'];
 
 const defaultIntro = isKo
   ? '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 생각을 나누는 공간입니다.'
@@ -49,9 +49,9 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
         <span
           class="home-type-target"
           data-type-words={enSlotWords.join(',')}
-          aria-label="understanding"
-        >understanding</span><span class="home-type-cursor" aria-hidden="true"></span>,<br />
-        and make sense of it together
+          aria-label="knowledge"
+        >knowledge</span><span class="home-type-cursor" aria-hidden="true"></span>,<br />
+        and understand the future
       </>
     )}
   </h1>
