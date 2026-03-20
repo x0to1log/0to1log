@@ -332,6 +332,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
   import { Crepe } from '@milkdown/crepe';
   import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
+  import { esc, showFeedback, createButtonManager } from '../../../../scripts/adminEditorUtils';
+  import { createPreviewManager } from '../../../../scripts/adminEditorPreview';
   let crepeKo: Crepe | null = null;
   let crepeEn: Crepe | null = null;
 
