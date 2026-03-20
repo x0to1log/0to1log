@@ -1,0 +1,40 @@
+---
+import type { BlogCategory } from '../../lib/pageData/blogCategories';
+
+interface Props {
+  locale: 'en' | 'ko';
+  category: BlogCategory;
+  postCount: number;
+}
+
+const { locale, category, postCount } = Astro.props;
+const description = category[`description_${locale}` as keyof BlogCategory] as string | null;
+const label = category[`label_${locale}` as keyof BlogCategory] as string;
+const countLabel = locale === 'ko' ? `${postCount}개의 글` : `${postCount} posts`;
+---
+
+<header class="blog-category-header" style={`--category-color: ${category.color}`}>
+  {category.banner_url && (
+    <img class="blog-category-banner" src={category.banner_url} alt="" loading="lazy" />
+  )}
+  <div class="blog-category-header-content">
+    <div class="blog-category-title-row">
+      {category.icon && (
+        <svg
+          class="blog-category-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          set:html={category.icon}
+        />
+      )}
+      <h1 class="blog-category-title">{label}</h1>
+    </div>
+    {description && <p class="blog-category-description">{description}</p>}
+    <span class="blog-category-count">{countLabel}</span>
+  </div>
+</header>

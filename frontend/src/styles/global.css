@@ -8788,7 +8788,7 @@ pre:hover .blog-code-copy {
   justify-content: flex-start;
   text-align: center;
   min-height: calc(100svh - 3rem);
-  padding: 5rem 2rem 3.5rem;
+  padding: clamp(5rem, 18vh, 14rem) 2rem 3.5rem;
   max-width: 660px;
   margin: 0 auto;
 }
