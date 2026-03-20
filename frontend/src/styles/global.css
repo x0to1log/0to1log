@@ -11628,6 +11628,12 @@ pre:hover .blog-code-copy {
   font-size: 1.1rem;
   user-select: none;
 }
+.admin-categories-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .admin-categories-icon {
   width: 20px;
   height: 20px;

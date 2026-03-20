@@ -24,12 +24,22 @@ const [categories, groups] = await Promise.all([
 ---
 
 <MainLayout title="Categories" locale="en" slug="admin/blog/categories/">
-  <div class="admin-shell">
-    <AdminSidebar />
-    <main class="admin-main">
-      <div class="admin-toolbar">
-        <h1 class="admin-toolbar-title">Blog Categories</h1>
-        <button class="admin-btn admin-btn--primary" data-action="new-category">+ New Category</button>
+  <AdminSidebar activeSection="settings" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <a href="/admin/settings#site-content" style="font-size: 0.8rem; color: var(--color-text-muted); text-decoration: none;">&larr; Settings</a>
+            <h1 class="admin-main-title">Blog Categories</h1>
+          </div>
+        </div>
       </div>
 
       {groups.map(group => {
@@ -52,6 +62,7 @@ const [categories, groups] = await Promise.all([
                      data-banner-url={cat.banner_url || ''} data-guidelines={cat.guidelines || ''}
                      data-post-count={cat.post_count} data-sort-order={cat.sort_order}>
                   <span class="admin-categories-drag" title="Drag to reorder">&#9776;</span>
+                  <span class="admin-categories-color-dot" style={`background: ${cat.color}`} />
                   {cat.icon && (
                     <svg class="admin-categories-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style={`color: ${cat.color}`} set:html={cat.icon} />
                   )}
@@ -67,7 +78,10 @@ const [categories, groups] = await Promise.all([
         );
       })}
 
-      <button class="admin-btn admin-btn--ghost" data-action="new-group" style="margin-top: 1rem;">+ New Group</button>
+      <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+        <button class="admin-btn admin-btn--primary" data-action="new-category">+ New Category</button>
+        <button class="admin-btn admin-btn--ghost" data-action="new-group">+ New Group</button>
+      </div>
 
       <!-- Category Edit Modal -->
       <div class="admin-modal-overlay" data-modal="category-edit" hidden>
@@ -186,7 +200,7 @@ const [categories, groups] = await Promise.all([
           </div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </MainLayout>
 
