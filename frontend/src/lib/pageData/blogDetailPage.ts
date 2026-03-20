@@ -1,4 +1,3 @@
-import { BLOG_CATEGORIES } from '../categories';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { buildBlogSidebarDataset, toSidebarPost } from './blogSidebar';
 import { getAuthorizedSupabase, getDefinitionField, getPublicSupabase, type DetailPageContext } from './shared';
@@ -17,8 +16,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
       .from('blog_posts')
       .select('*')
       .eq('slug', pageSlug)
-      .eq('locale', locale)
-      .in('category', BLOG_CATEGORIES);
+      .eq('locale', locale);
 
     if (!previewMode) {
       query = query.eq('status', 'published');
@@ -99,7 +97,6 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
         .select('title, slug, category, published_at')
         .eq('status', 'published')
         .eq('locale', locale)
-        .in('category', BLOG_CATEGORIES)
         .order('published_at', { ascending: false })
         ,
       post.published_at
@@ -108,7 +105,6 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
             .select('title, slug, category')
             .eq('status', 'published')
             .eq('locale', locale)
-            .in('category', BLOG_CATEGORIES)
             .lt('published_at', post.published_at)
             .order('published_at', { ascending: false })
             .limit(1)

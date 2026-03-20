@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import { BLOG_CATEGORIES } from '../../../../lib/categories';
 import { normalizeTags } from '../../../../lib/normalizeTags';
 
 export const prerender = false;
@@ -34,12 +33,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (!title?.trim()) {
     return new Response(JSON.stringify({ error: 'title is required' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (!BLOG_CATEGORIES.some((item) => item === resolvedCategory)) {
-    return new Response(JSON.stringify({ error: 'invalid category' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
   }

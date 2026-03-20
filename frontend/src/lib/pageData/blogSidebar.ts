@@ -1,4 +1,4 @@
-import { BLOG_SUB_CATEGORIES, normalizeCategorySlug } from '../categories.ts';
+import { normalizeCategorySlug } from '../categories.ts';
 
 export interface SidebarPost {
   title: string;
@@ -111,11 +111,12 @@ export function getBlogSidebarCategoryState(
     currentCategory?: string;
     currentSlug?: string;
   },
+  subCategorySlugs: string[] = [],
 ) {
   const category = normalizeCategorySlug(options.category) ?? options.category;
   const currentCategory = normalizeCategorySlug(options.currentCategory) ?? undefined;
   const isActiveCategory = currentCategory === category;
-  const defaultVisibleLimit = BLOG_SUB_CATEGORIES.includes(category as any)
+  const defaultVisibleLimit = subCategorySlugs.includes(category)
     ? BLOG_SIDEBAR_SUB_VISIBLE_LIMIT
     : BLOG_SIDEBAR_VISIBLE_LIMIT;
   const visibleLimit =

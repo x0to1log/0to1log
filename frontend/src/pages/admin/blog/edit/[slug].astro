@@ -7,7 +7,8 @@ import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astr
 import NewsprintArticleLayout from '../../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintSideRail from '../../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintNotice from '../../../../components/newsprint/NewsprintNotice.astro';
-import { getCategoryLabel, normalizeCategorySlug, BLOG_CATEGORIES } from '../../../../lib/categories';
+import { getCategoryLabel, normalizeCategorySlug } from '../../../../lib/categories';
+import { fetchCategories } from '../../../../lib/pageData/blogCategories';
 import { getArticleFocusItems } from '../../../../lib/articleRail';
 import { renderMarkdown } from '../../../../lib/markdown';
 import { createClient } from '@supabase/supabase-js';
@@ -76,7 +77,13 @@ const koPost = post?.locale === 'ko' ? post : partnerPost;
 const enPost = post?.locale === 'en' ? post : partnerPost;
 
 const editableContent = post?.content || '';
-const categories = BLOG_CATEGORIES;
+const adminSupabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+const dbCategories = await fetchCategories(adminSupabase);
+const categories = dbCategories.map((c) => c.slug);
 
 const editionMap: Record<string, string> = {
   study: 'Study Notes',

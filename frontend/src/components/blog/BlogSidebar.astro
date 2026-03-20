@@ -1,10 +1,6 @@
 ---
 import { t } from '../../i18n/index';
 import {
-  BLOG_CATEGORIES,
-  BLOG_CATEGORY_GROUPS,
-  getBlogCategoryGroupLabel,
-  getBlogSidebarLabel,
   getCategoryColorVar,
 } from '../../lib/categories';
 import {
@@ -14,6 +10,8 @@ import {
   type BlogSidebarMode,
   type SidebarPost,
 } from '../../lib/pageData/blogSidebar';
+import { supabase } from '../../lib/supabase';
+import { fetchCategories, fetchCategoryGroups } from '../../lib/pageData/blogCategories';
 
 const CATEGORY_ICONS: Record<string, string> = {
   study:
@@ -46,7 +44,25 @@ const {
   mode = 'index',
 } = Astro.props as Props;
 
-const postsByCategory = BLOG_CATEGORIES.reduce((acc, category) => {
+// Fetch categories & groups from DB
+const dbCategories = supabase ? await fetchCategories(supabase) : [];
+const dbGroups = supabase ? await fetchCategoryGroups(supabase) : [];
+
+const allCategorySlugs = dbCategories.map((c) => c.slug);
+const subCategorySlugs = dbCategories.filter((c) => c.group_slug === 'sub').map((c) => c.slug);
+
+// Build category groups with their category slugs
+const categoryGroups = dbGroups.map((g) => ({
+  slug: g.slug,
+  label: locale === 'ko' ? g.label_ko : g.label_en,
+  categories: dbCategories.filter((c) => c.group_slug === g.slug).map((c) => c.slug),
+}));
+
+// Build label maps from DB
+const sidebarLabelMap = new Map(dbCategories.map((c) => [c.slug, locale === 'ko' ? c.label_ko : c.label_en]));
+const groupLabelMap = new Map(dbGroups.map((g) => [g.slug, locale === 'ko' ? g.label_ko : g.label_en]));
+
+const postsByCategory = allCategorySlugs.reduce((acc, category) => {
   acc[category] = posts.filter((post) => post.category === category);
   return acc;
 }, {} as Record<string, SidebarPost[]>);
@@ -67,7 +83,7 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
   </div>
 
   <nav class="blog-sidebar-nav">
-    {BLOG_CATEGORY_GROUPS.map((group) => {
+    {categoryGroups.map((group) => {
       const groupCount = group.categories.reduce((total, category) => {
         return total + (postsByCategory[category]?.length ?? 0);
       }, 0);
@@ -87,7 +103,7 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
             <svg class="blog-folder-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M6 4l4 4-4 4" />
             </svg>
-            <span class="blog-folder-group-label">{getBlogCategoryGroupLabel(locale, group.slug)}</span>
+            <span class="blog-folder-group-label">{groupLabelMap.get(group.slug) ?? group.slug}</span>
             <span class="blog-folder-group-count">({groupCount})</span>
           </button>
 
@@ -102,8 +118,9 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
                   currentCategory,
                   currentSlug,
                 },
+                subCategorySlugs,
               );
-              const categoryLabel = getBlogSidebarLabel(locale, category);
+              const categoryLabel = sidebarLabelMap.get(category) ?? category;
               const colorVar = getCategoryColorVar(category);
 
               return (
