@@ -1,0 +1,172 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import { t } from '../../../../i18n/index';
+import { supabase } from '../../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { buildBlogSidebarDataset, toSidebarPost } from '../../../../lib/pageData/blogSidebar';
+import { fetchCategories, fetchCategoryBySlug, fetchCategoryGroups } from '../../../../lib/pageData/blogCategories';
+import BlogShell from '../../../../components/blog/BlogShell.astro';
+import BlogCategoryHeader from '../../../../components/blog/BlogCategoryHeader.astro';
+import BlogListItem from '../../../../components/blog/BlogListItem.astro';
+
+const locale = 'en';
+const { slug } = Astro.params;
+
+if (!slug || !supabase) {
+  return Astro.redirect('/en/blog/');
+}
+
+const category = await fetchCategoryBySlug(supabase, slug);
+if (!category) {
+  return new Response(null, { status: 404 });
+}
+
+if (!category.is_visible && !Astro.locals.isAdmin) {
+  return new Response(null, { status: 404 });
+}
+
+// Parallel fetch
+const [postsRes, dbCategories, dbGroups] = await Promise.all([
+  supabase
+    .from('blog_posts')
+    .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
+    .eq('status', 'published')
+    .eq('locale', locale)
+    .eq('category', slug)
+    .order('created_at', { ascending: false }),
+  fetchCategories(supabase),
+  fetchCategoryGroups(supabase),
+]);
+
+const posts = postsRes.data ?? [];
+
+// User reading history & bookmarks
+const readPostIds = new Set<string>();
+const bookmarkedPostIds = new Set<string>();
+const user = Astro.locals.user;
+const accessToken = Astro.locals.accessToken;
+if (user && accessToken) {
+  const authSb = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+  );
+  const [histRes, bmRes] = await Promise.all([
+    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
+    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
+  ]);
+  (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
+  (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
+}
+
+const BATCH_SIZE = 10;
+const sidebarPosts = buildBlogSidebarDataset(
+  posts.map((post) => toSidebarPost({ title: post.title, slug: post.slug, category: post.category, published_at: post.published_at })),
+);
+
+const allPostBatches: any[][] = [];
+for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+  allPostBatches.push(posts.slice(i, i + BATCH_SIZE));
+}
+
+const categoryLabel = category.label_en;
+const pageTitle = `${categoryLabel} | ${t.en['blog.title']}`;
+const pageDescription = category.description_en || `Posts in the ${categoryLabel} category`;
+---
+
+<MainLayout
+  title={pageTitle}
+  locale="en"
+  slug={`blog/category/${slug}/`}
+  description={pageDescription}
+>
+  <BlogShell
+    locale="en"
+    sidebarPosts={sidebarPosts}
+    totalCount={posts.length}
+    mode="index"
+    currentCategory={slug}
+  >
+    <div class="blog-mobile-toolbar">
+      <button class="blog-mobile-toggle" data-sidebar-toggle aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 5h14M3 10h14M3 15h14" />
+        </svg>
+      </button>
+    </div>
+
+    <BlogCategoryHeader locale="en" category={category} postCount={posts.length} />
+
+    {posts.length > 0 ? (
+      <>
+        <div class="blog-list-section" data-blog-list>
+          {allPostBatches.map((batch, batchIdx) => (
+            <div
+              class="blog-list-batch"
+              data-blog-batch={batchIdx}
+              {...(batchIdx > 0 && { hidden: true })}
+            >
+              {batch.map(post => (
+                <BlogListItem
+                  href={`/en/blog/${post.slug}/`}
+                  title={post.title}
+                  category={post.category}
+                  publishedAt={post.published_at}
+                  readingTimeMin={post.reading_time_min}
+                  locale="en"
+                  isRead={readPostIds.has(post.id)}
+                  isBookmarked={bookmarkedPostIds.has(post.id)}
+                  itemId={post.id}
+                  itemType="blog"
+                  categories={dbCategories}
+                  hideCategoryBadge={true}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+        {allPostBatches.length > 1 && (
+          <div class="blog-scroll-sentinel" data-blog-sentinel></div>
+        )}
+      </>
+    ) : (
+      <div class="blog-empty-state">
+        <div class="blog-empty-icon">📝</div>
+        <h2>No posts yet</h2>
+        <p>New posts coming soon.</p>
+      </div>
+    )}
+  </BlogShell>
+</MainLayout>
+
+<script>
+  import '../../../../scripts/bookmark';
+
+  function initInfiniteScroll() {
+    const sentinel = document.querySelector('[data-blog-sentinel]');
+    if (!sentinel) return;
+
+    let currentBatch = 0;
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        currentBatch++;
+        const next = document.querySelector(`[data-blog-batch="${currentBatch}"]`) as HTMLElement | null;
+        if (next) next.hidden = false;
+        const afterNext = document.querySelector(`[data-blog-batch="${currentBatch + 1}"]`);
+        if (!afterNext) {
+          observer.disconnect();
+          sentinel.remove();
+        }
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(sentinel);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { initInfiniteScroll(); });
+  initInfiniteScroll();
+</script>
