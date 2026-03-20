@@ -1,6 +1,6 @@
 import type { Locale } from '../i18n/index';
 
-export type CategorySlug =
+type CategorySlug =
   | 'ai-news'
   | 'study'
   | 'career'
@@ -27,8 +27,6 @@ const CATEGORY_COLOR_VARS: Record<CategorySlug, string> = {
   'work-note': 'var(--color-cat-work-note)',
   daily: 'var(--color-cat-daily)',
 };
-
-export const NEWS_CATEGORY: CategorySlug = 'ai-news';
 
 const POST_TYPE_LABELS: Record<string, Record<Locale, string>> = {
   research: { en: 'Research', ko: '리서치' },
