@@ -205,61 +205,38 @@ const [categories, groups] = await Promise.all([
 </MainLayout>
 
 <script>
-  import Sortable from 'sortablejs';
-
+  // @ts-nocheck
   function initCategoryAdmin() {
-    // --- SortableJS ---
-    document.querySelectorAll<HTMLElement>('[data-sortable-group]').forEach(container => {
-      Sortable.create(container, {
-        group: 'categories',
-        animation: 150,
-        handle: '.admin-categories-drag',
-        onEnd: async () => {
-          const items: { id: string; sort_order: number; group_slug: string }[] = [];
-          document.querySelectorAll<HTMLElement>('[data-sortable-group]').forEach(group => {
-            const groupSlug = group.dataset.sortableGroup!;
-            group.querySelectorAll<HTMLElement>('.admin-categories-item').forEach((item, idx) => {
-              items.push({ id: item.dataset.id!, sort_order: idx, group_slug: groupSlug });
-            });
-          });
-          await fetch('/api/admin/blog/categories/reorder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items }),
-          });
-        },
-      });
-    });
+    const catModal = document.querySelector('[data-modal="category-edit"]');
+    if (!catModal) return;
 
-    // --- Category modal ---
-    const catModal = document.querySelector<HTMLElement>('[data-modal="category-edit"]')!;
     const catFields = {
-      id: catModal.querySelector<HTMLInputElement>('[data-field="id"]')!,
-      slug: catModal.querySelector<HTMLInputElement>('[data-field="slug"]')!,
-      label_ko: catModal.querySelector<HTMLInputElement>('[data-field="label_ko"]')!,
-      label_en: catModal.querySelector<HTMLInputElement>('[data-field="label_en"]')!,
-      description_ko: catModal.querySelector<HTMLTextAreaElement>('[data-field="description_ko"]')!,
-      description_en: catModal.querySelector<HTMLTextAreaElement>('[data-field="description_en"]')!,
-      color: catModal.querySelector<HTMLInputElement>('[data-field="color"]')!,
-      icon: catModal.querySelector<HTMLTextAreaElement>('[data-field="icon"]')!,
-      group_slug: catModal.querySelector<HTMLSelectElement>('[data-field="group_slug"]')!,
-      is_visible: catModal.querySelector<HTMLInputElement>('[data-field="is_visible"]')!,
-      write_mode: catModal.querySelector<HTMLSelectElement>('[data-field="write_mode"]')!,
-      banner_url: catModal.querySelector<HTMLInputElement>('[data-field="banner_url"]')!,
-      guidelines: catModal.querySelector<HTMLTextAreaElement>('[data-field="guidelines"]')!,
+      id: catModal.querySelector('[data-field="id"]'),
+      slug: catModal.querySelector('[data-field="slug"]'),
+      label_ko: catModal.querySelector('[data-field="label_ko"]'),
+      label_en: catModal.querySelector('[data-field="label_en"]'),
+      description_ko: catModal.querySelector('[data-field="description_ko"]'),
+      description_en: catModal.querySelector('[data-field="description_en"]'),
+      color: catModal.querySelector('[data-field="color"]'),
+      icon: catModal.querySelector('[data-field="icon"]'),
+      group_slug: catModal.querySelector('[data-field="group_slug"]'),
+      is_visible: catModal.querySelector('[data-field="is_visible"]'),
+      write_mode: catModal.querySelector('[data-field="write_mode"]'),
+      banner_url: catModal.querySelector('[data-field="banner_url"]'),
+      guidelines: catModal.querySelector('[data-field="guidelines"]'),
     };
-    const slugWarning = catModal.querySelector<HTMLElement>('[data-slug-warning]')!;
-    const warningCount = catModal.querySelector<HTMLElement>('[data-warning-count]')!;
-    const dangerZone = catModal.querySelector<HTMLElement>('[data-danger-zone]')!;
-    const dangerMsg = catModal.querySelector<HTMLElement>('[data-danger-message]')!;
-    const deleteBtn = catModal.querySelector<HTMLButtonElement>('[data-action="delete-category"]')!;
+    const slugWarning = catModal.querySelector('[data-slug-warning]');
+    const warningCount = catModal.querySelector('[data-warning-count]');
+    const dangerZone = catModal.querySelector('[data-danger-zone]');
+    const dangerMsg = catModal.querySelector('[data-danger-message]');
+    const deleteBtn = catModal.querySelector('[data-action="delete-category"]');
 
     let originalSlug = '';
     let postCount = 0;
 
-    function openCatModal(data?: Record<string, any>) {
+    function openCatModal(data) {
       if (data) {
-        catModal.querySelector<HTMLElement>('[data-modal-title]')!.textContent = 'Edit Category';
+        catModal.querySelector('[data-modal-title]').textContent = 'Edit Category';
         catFields.id.value = data.id || '';
         catFields.slug.value = data.slug || '';
         catFields.label_ko.value = data.labelKo || '';
@@ -284,7 +261,7 @@ const [categories, groups] = await Promise.all([
           deleteBtn.disabled = false;
         }
       } else {
-        catModal.querySelector<HTMLElement>('[data-modal-title]')!.textContent = 'New Category';
+        catModal.querySelector('[data-modal-title]').textContent = 'New Category';
         Object.values(catFields).forEach(f => { if (f instanceof HTMLInputElement && f.type === 'checkbox') f.checked = true; else if (f instanceof HTMLInputElement || f instanceof HTMLTextAreaElement || f instanceof HTMLSelectElement) f.value = ''; });
         catFields.color.value = '#888888';
         catFields.write_mode.value = 'admin_only';
@@ -308,25 +285,25 @@ const [categories, groups] = await Promise.all([
     });
 
     // Edit category buttons
-    document.querySelectorAll<HTMLElement>('[data-action="edit-category"]').forEach(btn => {
+    document.querySelectorAll('[data-action="edit-category"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const item = btn.closest<HTMLElement>('.admin-categories-item')!;
-        openCatModal(item.dataset);
+        const item = btn.closest('.admin-categories-item');
+        if (item) openCatModal(item.dataset);
       });
     });
 
     // New category
-    document.querySelector<HTMLElement>('[data-action="new-category"]')?.addEventListener('click', () => openCatModal());
+    document.querySelector('[data-action="new-category"]')?.addEventListener('click', () => openCatModal());
 
     // Close modal
-    catModal.querySelectorAll<HTMLElement>('[data-action="close-modal"]').forEach(btn => {
+    catModal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
       btn.addEventListener('click', () => { catModal.hidden = true; });
     });
     catModal.addEventListener('click', (e) => { if (e.target === catModal) catModal.hidden = true; });
 
     // Save category
-    catModal.querySelector<HTMLElement>('[data-action="save-category"]')?.addEventListener('click', async () => {
-      const body: Record<string, any> = {
+    catModal.querySelector('[data-action="save-category"]')?.addEventListener('click', async () => {
+      const body = {
         slug: catFields.slug.value,
         label_ko: catFields.label_ko.value,
         label_en: catFields.label_en.value,
@@ -370,46 +347,48 @@ const [categories, groups] = await Promise.all([
     });
 
     // --- Group modal ---
-    const groupModal = document.querySelector<HTMLElement>('[data-modal="group-edit"]')!;
+    const groupModal = document.querySelector('[data-modal="group-edit"]');
+    if (!groupModal) return;
+
     const groupFields = {
-      original_slug: groupModal.querySelector<HTMLInputElement>('[data-group-field="original_slug"]')!,
-      slug: groupModal.querySelector<HTMLInputElement>('[data-group-field="slug"]')!,
-      label_ko: groupModal.querySelector<HTMLInputElement>('[data-group-field="label_ko"]')!,
-      label_en: groupModal.querySelector<HTMLInputElement>('[data-group-field="label_en"]')!,
-      sort_order: groupModal.querySelector<HTMLInputElement>('[data-group-field="sort_order"]')!,
+      original_slug: groupModal.querySelector('[data-group-field="original_slug"]'),
+      slug: groupModal.querySelector('[data-group-field="slug"]'),
+      label_ko: groupModal.querySelector('[data-group-field="label_ko"]'),
+      label_en: groupModal.querySelector('[data-group-field="label_en"]'),
+      sort_order: groupModal.querySelector('[data-group-field="sort_order"]'),
     };
 
-    function openGroupModal(data?: Record<string, any>) {
+    function openGroupModal(data) {
       if (data) {
-        groupModal.querySelector<HTMLElement>('[data-group-modal-title]')!.textContent = 'Edit Group';
+        groupModal.querySelector('[data-group-modal-title]').textContent = 'Edit Group';
         groupFields.original_slug.value = data.groupSlug || data.slug || '';
         groupFields.slug.value = data.groupSlug || data.slug || '';
         groupFields.label_ko.value = data.labelKo || '';
         groupFields.label_en.value = data.labelEn || '';
         groupFields.sort_order.value = data.sortOrder || '0';
-        groupModal.querySelector<HTMLElement>('[data-group-danger-zone]')!.hidden = false;
+        groupModal.querySelector('[data-group-danger-zone]').hidden = false;
       } else {
-        groupModal.querySelector<HTMLElement>('[data-group-modal-title]')!.textContent = 'New Group';
+        groupModal.querySelector('[data-group-modal-title]').textContent = 'New Group';
         Object.values(groupFields).forEach(f => f.value = '');
         groupFields.sort_order.value = '99';
-        groupModal.querySelector<HTMLElement>('[data-group-danger-zone]')!.hidden = true;
+        groupModal.querySelector('[data-group-danger-zone]').hidden = true;
       }
       groupModal.hidden = false;
     }
 
-    document.querySelectorAll<HTMLElement>('[data-action="edit-group"]').forEach(btn => {
+    document.querySelectorAll('[data-action="edit-group"]').forEach(btn => {
       btn.addEventListener('click', () => openGroupModal(btn.dataset));
     });
 
-    document.querySelector<HTMLElement>('[data-action="new-group"]')?.addEventListener('click', () => openGroupModal());
+    document.querySelector('[data-action="new-group"]')?.addEventListener('click', () => openGroupModal());
 
-    groupModal.querySelectorAll<HTMLElement>('[data-action="close-group-modal"]').forEach(btn => {
+    groupModal.querySelectorAll('[data-action="close-group-modal"]').forEach(btn => {
       btn.addEventListener('click', () => { groupModal.hidden = true; });
     });
     groupModal.addEventListener('click', (e) => { if (e.target === groupModal) groupModal.hidden = true; });
 
-    groupModal.querySelector<HTMLElement>('[data-action="save-group"]')?.addEventListener('click', async () => {
-      const body: Record<string, any> = {
+    groupModal.querySelector('[data-action="save-group"]')?.addEventListener('click', async () => {
+      const body = {
         slug: groupFields.slug.value,
         label_ko: groupFields.label_ko.value,
         label_en: groupFields.label_en.value,
@@ -428,7 +407,7 @@ const [categories, groups] = await Promise.all([
       }
     });
 
-    groupModal.querySelector<HTMLElement>('[data-action="delete-group"]')?.addEventListener('click', async () => {
+    groupModal.querySelector('[data-action="delete-group"]')?.addEventListener('click', async () => {
       if (!confirm('Are you sure?')) return;
       const res = await fetch('/api/admin/blog/category-groups/delete', {
         method: 'POST',
@@ -441,6 +420,32 @@ const [categories, groups] = await Promise.all([
         alert(err.error || 'Delete failed');
       }
     });
+
+    // --- SortableJS (dynamic import — loaded last so buttons work even if this fails) ---
+    import('sortablejs').then(mod => {
+      const Sortable = mod.default;
+      document.querySelectorAll('[data-sortable-group]').forEach(container => {
+        Sortable.create(container, {
+          group: 'categories',
+          animation: 150,
+          handle: '.admin-categories-drag',
+          onEnd: async () => {
+            const items = [];
+            document.querySelectorAll('[data-sortable-group]').forEach(group => {
+              const groupSlug = group.dataset.sortableGroup;
+              group.querySelectorAll('.admin-categories-item').forEach((item, idx) => {
+                items.push({ id: item.dataset.id, sort_order: idx, group_slug: groupSlug });
+              });
+            });
+            await fetch('/api/admin/blog/categories/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items }),
+            });
+          },
+        });
+      });
+    }).catch(() => {});
   }
 
   document.addEventListener('DOMContentLoaded', initCategoryAdmin);
