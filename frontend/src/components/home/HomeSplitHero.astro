@@ -63,17 +63,20 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
 </div>
 
 <script>
-  const el = document.querySelector<HTMLElement>('[data-type-words]');
-  if (el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  function initTypewriter() {
+    const el = document.querySelector<HTMLElement>('[data-type-words]');
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
     const words = (el.dataset.typeWords ?? '').split(',');
     let wordIndex = 0;
     let charIndex = 0;
     let deleting = false;
+    let timer: ReturnType<typeof setTimeout>;
 
-    const TYPE_MS   = 90;   // 타이핑 속도 (글자당)
-    const DELETE_MS = 55;   // 지우기 속도 (글자당)
-    const HOLD_MS   = 2000; // 단어 완성 후 대기 (2초)
-    const PAUSE_MS  = 120;  // 다음 단어 시작 전 짧은 쉼
+    const TYPE_MS   = 90;
+    const DELETE_MS = 55;
+    const HOLD_MS   = 2000;
+    const PAUSE_MS  = 120;
 
     function tick() {
       const word = words[wordIndex];
@@ -82,9 +85,9 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
         el.textContent = word.slice(0, charIndex);
         if (charIndex === word.length) {
           deleting = true;
-          setTimeout(tick, HOLD_MS);
+          timer = setTimeout(tick, HOLD_MS);
         } else {
-          setTimeout(tick, TYPE_MS);
+          timer = setTimeout(tick, TYPE_MS);
         }
       } else {
         charIndex--;
@@ -92,15 +95,20 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
         if (charIndex === 0) {
           deleting = false;
           wordIndex = (wordIndex + 1) % words.length;
-          setTimeout(tick, PAUSE_MS);
+          timer = setTimeout(tick, PAUSE_MS);
         } else {
-          setTimeout(tick, DELETE_MS);
+          timer = setTimeout(tick, DELETE_MS);
         }
       }
     }
 
-    // SSR 텍스트 지우고 첫 단어부터 타이핑 시작
     el.textContent = '';
-    setTimeout(tick, 600);
+    timer = setTimeout(tick, 600);
+
+    // ViewTransitions 페이지 이동 시 진행 중인 타이머 정리
+    document.addEventListener('astro:before-preparation', () => clearTimeout(timer), { once: true });
   }
+
+  // 첫 로드 + ViewTransitions 이후 매번 실행
+  document.addEventListener('astro:page-load', initTypewriter);
 </script>
