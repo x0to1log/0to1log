@@ -8979,7 +8979,7 @@ pre:hover .blog-code-copy {
 /* Stack container: all cards are absolutely positioned within */
 .home-carousel-stack {
   position: relative;
-  min-height: 280px;
+  min-height: 420px;
   padding-bottom: 20px; /* room for deepest layer y-offset (18px + buffer) */
 }
 
@@ -8989,6 +8989,7 @@ pre:hover .blog-code-copy {
   top: 0;
   left: 0;
   width: calc(100% - 34px);
+  max-width: 360px;
   opacity: 0;
   pointer-events: none;
   z-index: 0;
@@ -9019,7 +9020,7 @@ pre:hover .blog-code-copy {
 }
 
 .home-carousel-card .home-news-card {
-  min-height: 260px;
+  min-height: 400px;
 }
 
 /* Hover: keep solid background — accent-subtle is near-transparent and bleeds through */
