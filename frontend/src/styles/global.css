@@ -8907,7 +8907,7 @@ pre:hover .blog-code-copy {
   width: 2px;
   height: 0.8em;
   background-color: var(--color-text-secondary);
-  vertical-align: text-bottom;
+  vertical-align: baseline;
   margin-left: 3px;
   animation: home-cursor-blink 1.4s step-end infinite;
 }
