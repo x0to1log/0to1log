@@ -331,7 +331,7 @@
 
 @media (max-width: 479px) {
   .newsprint-masthead {
-    font-size: clamp(1.8rem, 7vw, 3rem);
+    font-size: clamp(2.2rem, 9vw, 3.2rem);
   }
 }
 
@@ -531,6 +531,12 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   border-bottom: 3px double var(--color-border);
   padding: 0.45rem 0.15rem;
   margin-top: 0.25rem;
+  text-align: center;
+}
+
+.newsprint-kicker span,
+.newsprint-subkicker span {
+  flex: 1;
   text-align: center;
 }
 
@@ -1589,6 +1595,7 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
     font-size: 0.6rem;
     letter-spacing: 0.05em;
     gap: 0.25rem;
+    justify-content: center;
   }
 
   .newsprint-filter-tab {
@@ -11343,7 +11350,7 @@ pre:hover .blog-code-copy {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background: var(--color-bg);
+  background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -11475,7 +11482,7 @@ pre:hover .blog-code-copy {
 }
 
 .admin-category-form {
-  background: var(--color-bg);
+  background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 1rem;
@@ -11616,7 +11623,7 @@ pre:hover .blog-code-copy {
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-sm, 4px);
-  background: var(--color-bg);
+  background: var(--color-bg-primary);
   cursor: default;
 }
 .admin-categories-item:hover {
@@ -11660,7 +11667,7 @@ pre:hover .blog-code-copy {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--color-text-muted);
-  color: var(--color-bg);
+  color: var(--color-bg-primary);
 }
 
 /* ===========================
@@ -11677,7 +11684,7 @@ pre:hover .blog-code-copy {
   padding: 1rem;
 }
 .admin-modal {
-  background: var(--color-bg);
+  background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   width: 100%;
