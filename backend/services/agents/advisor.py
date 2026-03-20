@@ -1203,9 +1203,9 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
     client = get_openai_client()
     model = getattr(settings, "openai_model_light")
 
-    # Truncate to first 4000 chars for extraction (term spotting doesn't need full text)
-    preview = content[:4000]
-    if len(content) > 4000:
+    # Truncate to first 8000 chars for extraction
+    preview = content[:8000]
+    if len(content) > 8000:
         preview += "\n[... truncated]"
 
     resp = await client.chat.completions.create(

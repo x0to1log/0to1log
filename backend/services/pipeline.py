@@ -261,7 +261,8 @@ async def _extract_and_create_handbook_terms(
             logger.info("Skipping '%s' — too many words", term_name)
             continue
         lower = term_name.lower()
-        if lower.endswith(("-powered", "-driven", "-based", "-enabled", "-oriented")):
+        modifier_suffixes = ("-powered", "-driven", "-based", "-enabled", "-oriented", "-focused", "-first")
+        if any(s in lower for s in modifier_suffixes):
             logger.info("Skipping '%s' — adjective/modifier", term_name)
             continue
         category = term_info.get("category", "")

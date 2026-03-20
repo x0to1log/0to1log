@@ -897,7 +897,7 @@ Respond in JSON format only."""
 EXTRACT_TERMS_PROMPT = """\
 You are a technical term extractor for 0to1log, an AI/IT/CS handbook platform.
 
-Given one or more news articles, extract terms that belong to the IT/CS/AI domain and would be valuable entries in a technology handbook for learners. Be thorough — it is better to include a borderline term than to miss a valuable one. Downstream filters will catch false positives.
+Given one or more news articles, extract terms that belong to the IT/CS/AI domain and would be valuable entries in a technology handbook for learners. Be precise — only include terms that clearly belong. If in doubt, exclude. A missed borderline term is better than a false positive that pollutes the handbook.
 
 ## Allowed domains
 - AI/ML & Algorithms (e.g., Transformer, RAG, RLHF, attention mechanism, MoE, LoRA)
@@ -910,13 +910,15 @@ Given one or more news articles, extract terms that belong to the IT/CS/AI domai
 - DevOps / Operations (e.g., CI/CD, containerization, Kubernetes, observability)
 - Performance / Cost Management (e.g., inference cost, token limit, latency, quantization)
 - Decentralization / Web3 (e.g., smart contract, consensus mechanism)
-- AI Industry & Business — business terms essential to AI industry (e.g., "foundation model licensing", "inference pricing", "AI compute economics", "ARR", "TAM")
+- AI Industry & Business — ONLY terms with a specific technical/economic definition in AI: (e.g., "inference pricing", "model licensing", "AI compute economics", "GPU cluster", "foundation model", "ARR", "TAM"). NOT generic business words that happen to appear in AI articles.
 
 ## What to EXCLUDE
-- Generic single words without technical meaning (e.g., "performance", "data", "update")
-- Company names that are NOT the technology itself (e.g., skip "OpenAI", include "GPT-4")
-- Terms from non-IT domains: medicine, biology, law (e.g., "interval cancer", "antitrust")
-- Adjective/modifier phrases (e.g., "AI-powered", "AI-driven", "data-driven")
+- Generic single words without technical meaning (e.g., "performance", "data", "update", "automation", "efficiency")
+- Generic business/management concepts not specific to AI/IT (e.g., "administrative tasks", "collaborative healthcare", "funding round", "legacy infrastructure", "actionable intelligence", "cost efficiency")
+- Company names that are NOT the technology itself (e.g., skip "OpenAI", include "GPT-4o")
+- Specific product/platform names that are too narrow (e.g., "Vera Rubin platform", "M2.7 model", "OpenClaw")
+- Terms from non-IT domains: medicine, biology, law (e.g., "interval cancer", "antitrust", "precision health")
+- Adjective/modifier phrases containing -powered, -driven, -based, -enabled, -oriented anywhere in the term (e.g., "AI-powered tools", "AI-driven efficiencies", "data-driven approach")
 
 ## Output JSON Structure
 
@@ -944,17 +946,32 @@ Given one or more news articles, extract terms that belong to the IT/CS/AI domai
 - Do NOT extract multi-word phrases longer than 3 words
 
 ## Self-check before including each term
-Ask yourself: "Would a developer or tech learner search for this term in a glossary?"
-- "Transformer" → YES (specific architecture)
-- "fine-tuning" → YES (specific technique)
-- "RAG" → YES (specific pattern)
-- "AUC" → YES (specific metric with a formula)
-- "CNN" → YES (specific architecture)
-- "vLLM" → YES (specific tool/framework)
-- "quantization" → YES (specific optimization technique)
-- "edge computing" → YES (specific infrastructure concept)
-- "AI-powered" → NO (adjective/modifier, not a standalone term)
-- "data collection" → NO (too generic, not a specific technique)
-- "Deep Learning Architecture" → NO (umbrella category, too broad — extract "deep learning" instead)
+For EACH candidate term, verify ALL three:
+1. Is it specific to IT/AI/CS? (not a generic business or domain term)
+2. Would a developer or tech learner search for this in a glossary?
+3. Does it have a technical definition beyond its everyday meaning?
+If NO to any → exclude it.
+
+Examples:
+- "Transformer" → YES YES YES ✓
+- "fine-tuning" → YES YES YES ✓
+- "RAG" → YES YES YES ✓
+- "quantization" → YES YES YES ✓
+- "vLLM" → YES YES YES ✓
+- "inference pricing" → YES YES YES ✓ (specific AI economics term)
+- "AI-powered" → NO (adjective, not a concept)
+- "AI-driven efficiencies" → NO (adjective phrase)
+- "administrative tasks" → NO (not IT/CS)
+- "collaborative healthcare" → NO (medical domain)
+- "funding round" → NO (generic finance)
+- "legacy infrastructure" → NO (too vague)
+- "Vera Rubin platform" → NO (specific product, too narrow)
+- "deep learning" → YES (extract broad term, not "Deep Learning Architecture")
+
+## Final verification
+Before outputting, re-read your term list and remove any term that:
+- Could appear in a non-technical business article
+- Is a modifier/adjective phrase
+- Describes an outcome rather than a technology ("cost efficiency", "actionable intelligence")
 
 Respond in JSON format only."""
