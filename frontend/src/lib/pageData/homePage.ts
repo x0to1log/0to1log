@@ -50,14 +50,25 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
     return { news: [], terms: [], blog: [], siteContent: {}, featuredProducts: [] };
   }
 
-  const [newsRes, termsRes, blogRes, sc, featuredProducts, fallbackRes] = await Promise.all([
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [recentNewsRes, fallbackNewsRes, termsRes, blogRes, sc, featuredProducts, fallbackRes] = await Promise.all([
+    supabase
+      .from('news_posts')
+      .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
+      .eq('status', 'published')
+      .eq('locale', locale)
+      .gte('published_at', sevenDaysAgo)
+      .order('published_at', { ascending: false })
+      .limit(20),
+
     supabase
       .from('news_posts')
       .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
       .eq('status', 'published')
       .eq('locale', locale)
       .order('published_at', { ascending: false })
-      .limit(4),
+      .limit(10),
 
     supabase
       .from('handbook_terms')
@@ -97,8 +108,17 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
     terms = [...terms, ...fallbacks.slice(0, 6 - terms.length)];
   }
 
+  // 7일치 뉴스가 3개 미만이면 최근 뉴스로 채움
+  let news = (recentNewsRes.data ?? []) as HomeNewsPost[];
+  if (news.length < 3) {
+    const fallbackNews = (fallbackNewsRes.data ?? []) as HomeNewsPost[];
+    const existingIds = new Set(news.map((n) => n.id));
+    const extras = fallbackNews.filter((n) => !existingIds.has(n.id));
+    news = [...news, ...extras].slice(0, 10);
+  }
+
   return {
-    news: (newsRes.data ?? []) as HomeNewsPost[],
+    news,
     terms,
     blog: (blogRes.data ?? []) as HomeBlogPost[],
     siteContent: sc,

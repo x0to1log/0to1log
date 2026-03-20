@@ -1,0 +1,113 @@
+---
+import HomeNewsCard from './HomeNewsCard.astro';
+import type { HomeNewsPost } from '../../lib/pageData/homePage';
+
+interface Props {
+  news: HomeNewsPost[];
+  locale: 'en' | 'ko';
+  baseHref: string;
+}
+
+const { news, locale, baseHref } = Astro.props;
+const prevLabel = locale === 'ko' ? '이전' : 'Previous';
+const nextLabel = locale === 'ko' ? '다음' : 'Next';
+---
+
+<div class="home-carousel" data-carousel>
+  <div class="home-carousel-track" data-carousel-track>
+    {news.map((post) => (
+      <div class="home-carousel-slide">
+        <HomeNewsCard
+          href={`${baseHref}${post.slug}`}
+          title={post.title}
+          excerpt={post.excerpt}
+          category="ai-news"
+          publishedAt={post.published_at}
+          readingTimeMin={post.reading_time_min}
+          tags={post.tags}
+          locale={locale}
+          postType={post.post_type}
+        />
+      </div>
+    ))}
+  </div>
+
+  <div class="home-carousel-nav">
+    <button class="home-carousel-btn" data-carousel-prev aria-label={prevLabel}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="home-carousel-indicator" data-carousel-indicator></div>
+    <button class="home-carousel-btn" data-carousel-next aria-label={nextLabel}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-carousel]').forEach((carousel) => {
+    const track = carousel.querySelector<HTMLElement>('[data-carousel-track]')!;
+    const slides = Array.from(track.querySelectorAll<HTMLElement>('.home-carousel-slide'));
+    const prevBtn = carousel.querySelector<HTMLButtonElement>('[data-carousel-prev]');
+    const nextBtn = carousel.querySelector<HTMLButtonElement>('[data-carousel-next]');
+    const indicator = carousel.querySelector<HTMLElement>('[data-carousel-indicator]');
+
+    const total = slides.length;
+    if (total === 0) return;
+
+    let currentIndex = 0;
+    const MAX_DASHES = 10;
+    const dashCount = Math.min(total, MAX_DASHES);
+
+    // Build indicator dashes
+    if (indicator) {
+      for (let i = 0; i < dashCount; i++) {
+        const dash = document.createElement('span');
+        dash.className = 'home-carousel-dash' + (i === 0 ? ' home-carousel-dash--active' : '');
+        indicator.appendChild(dash);
+      }
+    }
+
+    function getSlideWidth(): number {
+      const gap = parseFloat(getComputedStyle(track).gap) || 16;
+      return slides[0].offsetWidth + gap;
+    }
+
+    function updateIndicator(index: number) {
+      if (!indicator) return;
+      const dashes = indicator.querySelectorAll<HTMLElement>('.home-carousel-dash');
+      const dashIndex = total > MAX_DASHES
+        ? Math.round((index / (total - 1)) * (MAX_DASHES - 1))
+        : index;
+      dashes.forEach((d, i) => {
+        d.classList.toggle('home-carousel-dash--active', i === dashIndex);
+      });
+    }
+
+    function scrollToIndex(index: number) {
+      // Wrap around for infinite loop
+      currentIndex = ((index % total) + total) % total;
+      track.scrollTo({ left: currentIndex * getSlideWidth(), behavior: 'smooth' });
+      updateIndicator(currentIndex);
+    }
+
+    prevBtn?.addEventListener('click', () => scrollToIndex(currentIndex - 1));
+    nextBtn?.addEventListener('click', () => scrollToIndex(currentIndex + 1));
+
+    // Sync currentIndex on manual scroll/swipe
+    let scrollTimer: ReturnType<typeof setTimeout>;
+    track.addEventListener('scroll', () => {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        const sw = getSlideWidth();
+        if (sw > 0) {
+          currentIndex = Math.round(track.scrollLeft / sw);
+          updateIndicator(currentIndex);
+        }
+      }, 50);
+    }, { passive: true });
+  });
+</script>

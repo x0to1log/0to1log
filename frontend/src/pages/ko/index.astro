@@ -5,8 +5,7 @@ import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
 import { getHomePageData } from '../../lib/pageData/homePage';
 import HomeSplitHero from '../../components/home/HomeSplitHero.astro';
-import HomeHeroCard from '../../components/home/HomeHeroCard.astro';
-import HomeNewsCard from '../../components/home/HomeNewsCard.astro';
+import HomeNewsCarousel from '../../components/home/HomeNewsCarousel.astro';
 import HomeTermCard from '../../components/home/HomeTermCard.astro';
 import HomeSectionHeader from '../../components/home/HomeSectionHeader.astro';
 import BlogFeaturedCard from '../../components/blog/BlogFeaturedCard.astro';
@@ -15,8 +14,6 @@ import HomeProductCard from '../../components/home/HomeProductCard.astro';
 const locale = 'ko';
 const { news, terms, blog, siteContent, featuredProducts } = await getHomePageData(locale);
 
-const heroNews = news[0] ?? null;
-const moreNews = news.slice(1, 4);
 const featuredBlog = blog[0] ?? null;
 const recentBlog = blog.slice(1, 4);
 
@@ -39,34 +36,7 @@ const homeIntro = siteContent.home_intro ||
           viewAllHref="/ko/news/"
           viewAllLabel={t.ko['home.viewAll']}
         />
-        <div class="home-news-featured">
-          {heroNews && (
-            <HomeHeroCard
-              href={`/ko/news/${heroNews.slug}`}
-              title={heroNews.title}
-              excerpt={heroNews.excerpt}
-              category="ai-news"
-              publishedAt={heroNews.published_at}
-              readingTimeMin={heroNews.reading_time_min}
-              tags={heroNews.tags}
-              locale={locale}
-              postType={heroNews.post_type}
-            />
-          )}
-          {moreNews.slice(0, 2).map((post) => (
-            <HomeNewsCard
-              href={`/ko/news/${post.slug}`}
-              title={post.title}
-              excerpt={post.excerpt}
-              category="ai-news"
-              publishedAt={post.published_at}
-              readingTimeMin={post.reading_time_min}
-              tags={post.tags}
-              locale={locale}
-              postType={post.post_type}
-            />
-          ))}
-        </div>
+        <HomeNewsCarousel news={news} locale={locale} baseHref="/ko/news/" />
       </section>
     )}
 
