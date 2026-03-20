@@ -8974,17 +8974,17 @@ pre:hover .blog-code-copy {
 /* ── News Carousel ── */
 .home-carousel {
   position: relative;
+  overflow: hidden;
 }
 
 .home-carousel-track {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: 0.25rem;
+  padding-bottom: 0.875rem;
 }
 
 .home-carousel-track::-webkit-scrollbar {
@@ -8994,24 +8994,51 @@ pre:hover .blog-code-copy {
 .home-carousel-slide {
   flex-shrink: 0;
   scroll-snap-align: start;
-  width: calc(100% - 2.5rem);
+  width: 85%;
+  position: relative;
   display: flex;
+}
+
+/* Stacked deck effect: ghost card layers behind each slide */
+.home-carousel-slide::before,
+.home-carousel-slide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  pointer-events: none;
+}
+
+.home-carousel-slide::before {
+  transform: translate(9px, 6px);
+  opacity: 0.55;
+  z-index: 0;
+}
+
+.home-carousel-slide::after {
+  transform: translate(16px, 11px);
+  opacity: 0.28;
+  z-index: -1;
 }
 
 .home-carousel-slide .home-news-card {
   flex: 1;
-  min-height: 180px;
+  min-height: 240px;
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 640px) {
   .home-carousel-slide {
-    width: calc(50% - 0.5rem);
+    width: 76%;
   }
 }
 
 @media (min-width: 1024px) {
   .home-carousel-slide {
-    width: calc(33.333% - 0.75rem);
+    width: 63%;
   }
 }
 
