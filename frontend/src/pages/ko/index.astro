@@ -3,19 +3,11 @@ export const prerender = false;
 
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
-import { getHomePageData } from '../../lib/pageData/homePage';
+import { getSiteContents } from '../../lib/siteContent';
 import HomeSplitHero from '../../components/home/HomeSplitHero.astro';
-import HomeNewsCarousel from '../../components/home/HomeNewsCarousel.astro';
-import HomeTermCard from '../../components/home/HomeTermCard.astro';
-import HomeSectionHeader from '../../components/home/HomeSectionHeader.astro';
-import BlogFeaturedCard from '../../components/blog/BlogFeaturedCard.astro';
-import HomeProductCard from '../../components/home/HomeProductCard.astro';
 
 const locale = 'ko';
-const { news, terms, blog, siteContent, featuredProducts } = await getHomePageData(locale);
-
-const featuredBlog = blog[0] ?? null;
-const recentBlog = blog.slice(1, 4);
+const siteContent = await getSiteContents(['home_title', 'home_intro'], locale);
 
 const homeTitle = siteContent.home_title || t.ko['home.title'];
 const homeIntro = siteContent.home_intro ||
@@ -24,109 +16,6 @@ const homeIntro = siteContent.home_intro ||
 
 <MainLayout title={homeTitle} locale={locale} headerAlwaysVisible={true}>
   <div class="home-page">
-
-    <!-- Section A: Hero -->
     <HomeSplitHero locale={locale} homeIntro={homeIntro} />
-
-    <!-- Section B: Latest AI News -->
-    {news.length > 0 && (
-      <section class="home-section home-section--news">
-        <HomeSectionHeader
-          title={t.ko['home.latestNews']}
-          viewAllHref="/ko/news/"
-          viewAllLabel={t.ko['home.viewAll']}
-        />
-        <HomeNewsCarousel news={news} locale={locale} baseHref="/ko/news/" />
-      </section>
-    )}
-
-    <!-- Section C+E: Glossary + AI Products (2-col) -->
-    {(terms.length > 0 || featuredProducts.length > 0) && (
-      <section class="home-section">
-        <div class="home-spotlight-grid">
-          {terms.length > 0 && (
-            <div class="home-spotlight-col">
-              <HomeSectionHeader
-                title={t.ko['home.glossarySpotlight']}
-                viewAllHref="/ko/handbook/"
-                viewAllLabel={t.ko['home.viewAll']}
-              />
-              <div class="home-term-grid">
-                {terms.slice(0, 3).map((term) => (
-                  <HomeTermCard
-                    href={`/ko/handbook/${term.slug}`}
-                    term={term.term}
-                    koreanName={term.korean_name}
-                    definition={term.definition_ko}
-                    categories={term.categories}
-                    locale={locale}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {featuredProducts.length > 0 && (
-            <div class="home-spotlight-col">
-              <HomeSectionHeader
-                title={t.ko['home.featuredProducts']}
-                viewAllHref="/ko/products/"
-                viewAllLabel={t.ko['home.viewAll']}
-              />
-              <div class="home-product-grid">
-                {featuredProducts.slice(0, 3).map((product) => (
-                  <HomeProductCard
-                    href={`/ko/products/${product.slug}/`}
-                    name={product.name}
-                    tagline={product.tagline_ko || product.tagline}
-                    logoUrl={product.logo_url}
-                    pricing={product.pricing}
-                    locale={locale}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-    )}
-
-    <!-- Section D: From the Blog -->
-    {(featuredBlog || recentBlog.length > 0) && (
-      <section class="home-section">
-        <HomeSectionHeader
-          title={t.ko['home.fromBlog']}
-          viewAllHref="/ko/blog/"
-          viewAllLabel={t.ko['home.viewAll']}
-        />
-        <div class="home-blog-split">
-          {featuredBlog && (
-            <BlogFeaturedCard
-              href={`/ko/blog/${featuredBlog.slug}`}
-              title={featuredBlog.title}
-              excerpt={featuredBlog.excerpt}
-              category={featuredBlog.category}
-              tags={featuredBlog.tags}
-              locale={locale}
-            />
-          )}
-          {recentBlog.length > 0 && (
-            <nav class="home-blog-list" aria-label="최근 블로그 글">
-              {recentBlog.map((post) => {
-                const dateLabel = post.published_at
-                  ? new Date(post.published_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
-                  : null;
-                return (
-                  <a href={`/ko/blog/${post.slug}`} class="home-blog-list-item">
-                    <h3 class="home-blog-list-item-title">{post.title}</h3>
-                    {dateLabel && <time class="home-blog-list-item-meta" datetime={post.published_at ?? undefined}>{dateLabel}</time>}
-                  </a>
-                );
-              })}
-            </nav>
-          )}
-        </div>
-      </section>
-    )}
-
   </div>
 </MainLayout>

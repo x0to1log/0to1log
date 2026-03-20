@@ -1,15 +1,20 @@
 ---
-import { getCategoryLabel } from '../../lib/categories';
+import { normalizeCategorySlug } from '../../lib/categories';
 import { t } from '../../i18n/index';
+import type { BlogCategory } from '../../lib/pageData/blogCategories';
 
 interface Props {
   locale: 'en' | 'ko';
   category?: string | null;
   title: string;
+  categories?: BlogCategory[];
 }
 
-const { locale, category, title } = Astro.props;
-const catLabel = getCategoryLabel(locale, category);
+const { locale, category, title, categories = [] } = Astro.props;
+const normalizedCat = normalizeCategorySlug(category);
+const catLabel = normalizedCat
+  ? (categories.find(c => c.slug === normalizedCat)?.['label_' + locale] ?? normalizedCat)
+  : null;
 ---
 
 <nav class="blog-breadcrumb">
@@ -17,7 +22,7 @@ const catLabel = getCategoryLabel(locale, category);
   <span>/</span>
   {catLabel && (
     <>
-      <a href={`/${locale}/blog/?category=${category}`}>{catLabel}</a>
+      <a href={`/${locale}/blog/category/${normalizedCat}/`}>{catLabel}</a>
       <span>/</span>
     </>
   )}

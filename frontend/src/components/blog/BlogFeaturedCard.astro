@@ -1,5 +1,6 @@
 ---
-import { getCategoryLabel, getCategoryColorVar } from '../../lib/categories';
+import { normalizeCategorySlug } from '../../lib/categories';
+import type { BlogCategory } from '../../lib/pageData/blogCategories';
 
 interface Props {
   href: string;
@@ -12,6 +13,7 @@ interface Props {
   isBookmarked?: boolean;
   itemId?: string;
   itemType?: 'blog';
+  categories?: BlogCategory[];
 }
 
 const {
@@ -25,10 +27,12 @@ const {
   isBookmarked = false,
   itemId,
   itemType = 'blog',
+  categories = [],
 } = Astro.props;
 
-const catLabel = getCategoryLabel(locale, category);
-const catColor = getCategoryColorVar(category);
+const normalizedCat = normalizeCategorySlug(category);
+const catLabel = categories.find(c => c.slug === normalizedCat)?.['label_' + locale] ?? normalizedCat;
+const catColor = categories.find(c => c.slug === normalizedCat)?.color ?? 'var(--color-border)';
 const readingLabel = readingTimeMin
   ? locale === 'ko' ? `${readingTimeMin}분` : `${readingTimeMin} min`
   : null;
