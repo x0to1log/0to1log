@@ -8727,7 +8727,15 @@ pre:hover .blog-code-copy {
 
 /* Split Hero */
 .home-split-hero {
-  padding: 2rem 2.5rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: calc(100svh - 3rem);
+  padding: 2rem 2rem 3.5rem;
+  max-width: 660px;
+  margin: 0 auto;
 }
 
 .home-split-hero-wordmark {
@@ -8737,7 +8745,7 @@ pre:hover .blog-code-copy {
   letter-spacing: 0.08em;
   color: var(--color-accent);
   text-align: center;
-  margin-bottom: 4.5rem;
+  margin-bottom: 2.5rem;
   line-height: 1;
 }
 
@@ -8777,6 +8785,7 @@ pre:hover .blog-code-copy {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .home-split-hero-cta-primary {
