@@ -8793,6 +8793,12 @@ pre:hover .blog-code-copy {
   margin: 0 auto;
 }
 
+@media (max-width: 639px) {
+  .home-split-hero {
+    padding-top: 2.5rem;
+  }
+}
+
 .home-split-hero-wordmark {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 2.5rem;
