@@ -8684,7 +8684,7 @@ pre:hover .blog-code-copy {
 
 /* Split Hero */
 .home-split-hero {
-  padding: 2rem 1.5rem 2.5rem;
+  padding: 2rem 2.5rem 3.5rem;
 }
 
 .home-split-hero-wordmark {
@@ -8694,8 +8694,14 @@ pre:hover .blog-code-copy {
   letter-spacing: 0.08em;
   color: var(--color-accent);
   text-align: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 4.5rem;
   line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .home-split-hero-wordmark {
+    font-size: 3.75rem;
+  }
 }
 
 .home-split-hero-kicker {
@@ -8926,7 +8932,7 @@ pre:hover .blog-code-copy {
 }
 
 .home-section--news {
-  padding-top: 4rem;
+  padding-top: 7rem;
   padding-bottom: 3.5rem;
 }
 
