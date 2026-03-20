@@ -15,8 +15,7 @@ const headline = isKo
   ? ['AI 뉴스를 읽고,', '개념을 쌓고,', '함께 해석하세요']
   : ['Read AI news,', 'build your understanding,', 'and make sense of it together'];
 
-// 마지막에 첫 단어 반복 → 6→1 루프가 자연스럽게 이어짐
-const koSlotWords = ['지식', '개념', '역량', '스킬', '관점', '내공', '지식'];
+const koSlotWords = ['지식', '개념', '역량', '스킬', '관점', '내공'];
 
 const defaultIntro = isKo
   ? '가장 빠르게 AI 변화를 읽고, 필요한 용어를 바로 찾고, 읽은 뉴스와 용어를 쌓아가며, 서로의 생각을 나누는 공간입니다.'
@@ -35,11 +34,11 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
     {isKo ? (
       <>
         AI 뉴스를 읽고,<br />
-        <span class="home-slot-wrapper" aria-label="개념">
-          <span class="home-slot-inner" aria-hidden="true">
-            {koSlotWords.map((word) => <span class="home-slot-word">{word}</span>)}
-          </span>
-        </span>을 쌓고,<br />
+        <span
+          class="home-type-target"
+          data-type-words={koSlotWords.join(',')}
+          aria-label="개념"
+        >개념</span><span class="home-type-cursor" aria-hidden="true">|</span>을 쌓고,<br />
         함께 해석하세요
       </>
     ) : (
@@ -52,3 +51,46 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
     <a href={ctaSecondary.href} class="home-split-hero-cta-secondary">{ctaSecondary.label}</a>
   </div>
 </div>
+
+<script>
+  const el = document.querySelector<HTMLElement>('[data-type-words]');
+  if (el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const words = (el.dataset.typeWords ?? '').split(',');
+    let wordIndex = 0;
+    let charIndex = 0;
+    let deleting = false;
+
+    const TYPE_MS   = 90;   // 타이핑 속도 (글자당)
+    const DELETE_MS = 55;   // 지우기 속도 (글자당)
+    const HOLD_MS   = 2000; // 단어 완성 후 대기 (2초)
+    const PAUSE_MS  = 120;  // 다음 단어 시작 전 짧은 쉼
+
+    function tick() {
+      const word = words[wordIndex];
+      if (!deleting) {
+        charIndex++;
+        el.textContent = word.slice(0, charIndex);
+        if (charIndex === word.length) {
+          deleting = true;
+          setTimeout(tick, HOLD_MS);
+        } else {
+          setTimeout(tick, TYPE_MS);
+        }
+      } else {
+        charIndex--;
+        el.textContent = word.slice(0, charIndex);
+        if (charIndex === 0) {
+          deleting = false;
+          wordIndex = (wordIndex + 1) % words.length;
+          setTimeout(tick, PAUSE_MS);
+        } else {
+          setTimeout(tick, DELETE_MS);
+        }
+      }
+    }
+
+    // SSR 텍스트 지우고 첫 단어부터 타이핑 시작
+    el.textContent = '';
+    setTimeout(tick, 600);
+  }
+</script>

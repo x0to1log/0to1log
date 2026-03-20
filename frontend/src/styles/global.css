@@ -8897,35 +8897,20 @@ pre:hover .blog-code-copy {
   }
 }
 
-/* Slot machine word animation */
-.home-slot-wrapper {
-  display: inline-block;
-  height: 1.2em;
-  overflow: hidden;
-  vertical-align: bottom;
-}
-
-.home-slot-inner {
-  display: block;
-  animation: home-slot-spin 7s steps(7, end) infinite;
-}
-
-.home-slot-word {
-  display: block;
-  height: 1.2em;
-  line-height: 1.2;
+/* Typewriter word animation */
+.home-type-target {
   color: var(--color-accent);
 }
 
-@keyframes home-slot-spin {
-  from { transform: translateY(0); }
-  to   { transform: translateY(calc(-7 * 1.2em)); }
+.home-type-cursor {
+  color: var(--color-accent);
+  animation: home-cursor-blink 0.9s step-end infinite;
+  margin-left: 1px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-slot-inner {
-    animation: none;
-  }
+@keyframes home-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 /* Glossary + Products 2-col spotlight */
