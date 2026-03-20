@@ -49,7 +49,7 @@ const [categories, groups] = await Promise.all([
           <div class="admin-categories-group" data-group-slug={group.slug}>
             <div class="admin-categories-group-header">
               <span class="admin-categories-group-label">{group.label_en} ({groupPostCount})</span>
-              <button class="admin-btn admin-btn--sm" data-action="edit-group" data-group-slug={group.slug} data-label-ko={group.label_ko} data-label-en={group.label_en} data-sort-order={group.sort_order}>Edit Group</button>
+              <button class="admin-btn admin-btn-success admin-btn--sm" data-action="edit-group" data-group-slug={group.slug} data-label-ko={group.label_ko} data-label-en={group.label_en} data-sort-order={group.sort_order}>Edit Group</button>
             </div>
             <div class="admin-categories-list" data-sortable-group={group.slug}>
               {groupCategories.map(cat => (
@@ -70,7 +70,7 @@ const [categories, groups] = await Promise.all([
                   <span class="admin-categories-slug">{cat.slug}</span>
                   <span class="admin-categories-count">{cat.post_count} posts</span>
                   {!cat.is_visible && <span class="admin-categories-hidden">Hidden</span>}
-                  <button class="admin-btn admin-btn--sm" data-action="edit-category">Edit</button>
+                  <button class="admin-btn admin-btn-success admin-btn--sm" data-action="edit-category">Edit</button>
                 </div>
               ))}
             </div>
