@@ -49,7 +49,7 @@ const [categories, groups] = await Promise.all([
           <div class="admin-categories-group" data-group-slug={group.slug}>
             <div class="admin-categories-group-header">
               <span class="admin-categories-group-label">{group.label_en} ({groupPostCount})</span>
-              <button class="admin-btn admin-btn--ghost admin-btn--sm" data-action="edit-group" data-group-slug={group.slug} data-label-ko={group.label_ko} data-label-en={group.label_en} data-sort-order={group.sort_order}>Edit Group</button>
+              <button class="admin-btn admin-btn--sm" data-action="edit-group" data-group-slug={group.slug} data-label-ko={group.label_ko} data-label-en={group.label_en} data-sort-order={group.sort_order}>Edit Group</button>
             </div>
             <div class="admin-categories-list" data-sortable-group={group.slug}>
               {groupCategories.map(cat => (
@@ -70,7 +70,7 @@ const [categories, groups] = await Promise.all([
                   <span class="admin-categories-slug">{cat.slug}</span>
                   <span class="admin-categories-count">{cat.post_count} posts</span>
                   {!cat.is_visible && <span class="admin-categories-hidden">Hidden</span>}
-                  <button class="admin-btn admin-btn--ghost admin-btn--sm" data-action="edit-category">Edit</button>
+                  <button class="admin-btn admin-btn--sm" data-action="edit-category">Edit</button>
                 </div>
               ))}
             </div>
@@ -79,8 +79,8 @@ const [categories, groups] = await Promise.all([
       })}
 
       <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-        <button class="admin-btn admin-btn--primary" data-action="new-category">+ New Category</button>
-        <button class="admin-btn admin-btn--ghost" data-action="new-group">+ New Group</button>
+        <button class="admin-btn admin-btn-primary" data-action="new-category">+ New Category</button>
+        <button class="admin-btn" data-action="new-group">+ New Group</button>
       </div>
 
       <!-- Category Edit Modal -->
@@ -157,12 +157,12 @@ const [categories, groups] = await Promise.all([
             <textarea class="admin-input admin-textarea" data-field="guidelines" rows="3"></textarea>
           </div>
           <div class="admin-modal-footer">
-            <button class="admin-btn admin-btn--primary" data-action="save-category">Save</button>
-            <button class="admin-btn admin-btn--ghost" data-action="close-modal">Cancel</button>
+            <button class="admin-btn admin-btn-primary" data-action="save-category">Save</button>
+            <button class="admin-btn" data-action="close-modal">Cancel</button>
           </div>
           <div class="admin-modal-danger" data-danger-zone>
             <p data-danger-message></p>
-            <button class="admin-btn admin-btn--danger" data-action="delete-category" disabled>Delete Category</button>
+            <button class="admin-btn admin-btn-danger" data-action="delete-category" disabled>Delete Category</button>
           </div>
         </div>
       </div>
@@ -192,11 +192,11 @@ const [categories, groups] = await Promise.all([
             <input class="admin-input" type="number" data-group-field="sort_order" />
           </div>
           <div class="admin-modal-footer">
-            <button class="admin-btn admin-btn--primary" data-action="save-group">Save</button>
-            <button class="admin-btn admin-btn--ghost" data-action="close-group-modal">Cancel</button>
+            <button class="admin-btn admin-btn-primary" data-action="save-group">Save</button>
+            <button class="admin-btn" data-action="close-group-modal">Cancel</button>
           </div>
           <div class="admin-modal-danger" data-group-danger-zone hidden>
-            <button class="admin-btn admin-btn--danger" data-action="delete-group">Delete Group</button>
+            <button class="admin-btn admin-btn-danger" data-action="delete-group">Delete Group</button>
           </div>
         </div>
       </div>

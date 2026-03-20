@@ -540,6 +540,16 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   text-align: center;
 }
 
+.newsprint-kicker span:first-child,
+.newsprint-subkicker span:first-child {
+  text-align: left;
+}
+
+.newsprint-kicker span:last-child,
+.newsprint-subkicker span:last-child {
+  text-align: right;
+}
+
 .newsprint-section-title {
   font-family: var(--font-display);
   font-weight: 700;
@@ -1595,7 +1605,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
     font-size: 0.6rem;
     letter-spacing: 0.05em;
     gap: 0.25rem;
-    justify-content: center;
   }
 
   .newsprint-filter-tab {
@@ -3600,6 +3609,11 @@ pre {
 
 .admin-btn-danger:hover {
   background: rgba(168, 82, 75, 0.1);
+}
+
+.admin-btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Danger Zone — 에디터 하단 삭제 구역 */
@@ -11545,42 +11559,6 @@ pre:hover .blog-code-copy {
   color: #60a5fa;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-}
-
-/* ===========================
-   ADMIN — BEM-style button variants
-   =========================== */
-.admin-btn--primary {
-  background: var(--color-accent);
-  color: var(--color-bg-primary);
-  border-color: var(--color-accent);
-  font-weight: 600;
-}
-.admin-btn--primary:hover {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
-}
-.admin-btn--ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--color-text-secondary);
-}
-.admin-btn--ghost:hover {
-  background: var(--color-accent-subtle);
-  color: var(--color-text-primary);
-}
-.admin-btn--danger {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.75rem;
-  border-radius: var(--radius-sm, 4px);
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-.admin-btn--danger:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* ===========================
