@@ -1,0 +1,434 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+import { fetchCategoriesWithPostCount, fetchCategoryGroups } from '../../../../lib/pageData/blogCategories';
+
+const accessToken = Astro.locals.accessToken;
+if (!accessToken || !Astro.locals.isAdmin) {
+  return Astro.redirect('/admin/');
+}
+
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+const [categories, groups] = await Promise.all([
+  fetchCategoriesWithPostCount(sb),
+  fetchCategoryGroups(sb),
+]);
+---
+
+<MainLayout title="Categories" locale="en" slug="admin/blog/categories/">
+  <div class="admin-shell">
+    <AdminSidebar />
+    <main class="admin-main">
+      <div class="admin-toolbar">
+        <h1 class="admin-toolbar-title">Blog Categories</h1>
+        <button class="admin-btn admin-btn--primary" data-action="new-category">+ New Category</button>
+      </div>
+
+      {groups.map(group => {
+        const groupCategories = categories.filter(c => c.group_slug === group.slug);
+        const groupPostCount = groupCategories.reduce((sum, c) => sum + c.post_count, 0);
+        return (
+          <div class="admin-categories-group" data-group-slug={group.slug}>
+            <div class="admin-categories-group-header">
+              <span class="admin-categories-group-label">{group.label_en} ({groupPostCount})</span>
+              <button class="admin-btn admin-btn--ghost admin-btn--sm" data-action="edit-group" data-group-slug={group.slug} data-label-ko={group.label_ko} data-label-en={group.label_en} data-sort-order={group.sort_order}>Edit Group</button>
+            </div>
+            <div class="admin-categories-list" data-sortable-group={group.slug}>
+              {groupCategories.map(cat => (
+                <div class="admin-categories-item"
+                     data-id={cat.id} data-slug={cat.slug} data-group={cat.group_slug}
+                     data-label-ko={cat.label_ko} data-label-en={cat.label_en}
+                     data-description-ko={cat.description_ko || ''} data-description-en={cat.description_en || ''}
+                     data-color={cat.color} data-icon={cat.icon || ''}
+                     data-is-visible={cat.is_visible} data-write-mode={cat.write_mode}
+                     data-banner-url={cat.banner_url || ''} data-guidelines={cat.guidelines || ''}
+                     data-post-count={cat.post_count} data-sort-order={cat.sort_order}>
+                  <span class="admin-categories-drag" title="Drag to reorder">&#9776;</span>
+                  {cat.icon && (
+                    <svg class="admin-categories-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style={`color: ${cat.color}`} set:html={cat.icon} />
+                  )}
+                  <span class="admin-categories-label">{cat.label_en}</span>
+                  <span class="admin-categories-slug">{cat.slug}</span>
+                  <span class="admin-categories-count">{cat.post_count} posts</span>
+                  {!cat.is_visible && <span class="admin-categories-hidden">Hidden</span>}
+                  <button class="admin-btn admin-btn--ghost admin-btn--sm" data-action="edit-category">Edit</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      <button class="admin-btn admin-btn--ghost" data-action="new-group" style="margin-top: 1rem;">+ New Group</button>
+
+      <!-- Category Edit Modal -->
+      <div class="admin-modal-overlay" data-modal="category-edit" hidden>
+        <div class="admin-modal">
+          <div class="admin-modal-header">
+            <h2 class="admin-modal-title" data-modal-title>Edit Category</h2>
+            <button class="admin-modal-close" data-action="close-modal">&times;</button>
+          </div>
+          <div class="admin-modal-body">
+            <input type="hidden" data-field="id" />
+
+            <label class="admin-field-label">Slug</label>
+            <input class="admin-input" data-field="slug" placeholder="category-slug" />
+            <div class="admin-field-warning" data-slug-warning hidden>
+              This will update the category field on <span data-warning-count></span> posts.
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label class="admin-field-label">Label (KO)</label>
+                <input class="admin-input" data-field="label_ko" />
+              </div>
+              <div>
+                <label class="admin-field-label">Label (EN)</label>
+                <input class="admin-input" data-field="label_en" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label class="admin-field-label">Description (KO)</label>
+                <textarea class="admin-input admin-textarea" data-field="description_ko" rows="2"></textarea>
+              </div>
+              <div>
+                <label class="admin-field-label">Description (EN)</label>
+                <textarea class="admin-input admin-textarea" data-field="description_en" rows="2"></textarea>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label class="admin-field-label">Color</label>
+                <input class="admin-input" type="color" data-field="color" />
+              </div>
+              <div>
+                <label class="admin-field-label">Group</label>
+                <select class="admin-input" data-field="group_slug">
+                  {groups.map(g => <option value={g.slug}>{g.label_en}</option>)}
+                </select>
+              </div>
+              <div>
+                <label class="admin-field-label">Write Mode</label>
+                <select class="admin-input" data-field="write_mode">
+                  <option value="admin_only">Admin Only</option>
+                  <option value="members">Members</option>
+                  <option value="approved_only">Approved Only</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="admin-field-label" style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="checkbox" data-field="is_visible" />
+              Visible
+            </label>
+
+            <label class="admin-field-label">Icon (SVG path)</label>
+            <textarea class="admin-input admin-textarea" data-field="icon" rows="2" placeholder="<path d=... />"></textarea>
+
+            <label class="admin-field-label">Banner URL</label>
+            <input class="admin-input" data-field="banner_url" placeholder="https://..." />
+
+            <label class="admin-field-label">Guidelines</label>
+            <textarea class="admin-input admin-textarea" data-field="guidelines" rows="3"></textarea>
+          </div>
+          <div class="admin-modal-footer">
+            <button class="admin-btn admin-btn--primary" data-action="save-category">Save</button>
+            <button class="admin-btn admin-btn--ghost" data-action="close-modal">Cancel</button>
+          </div>
+          <div class="admin-modal-danger" data-danger-zone>
+            <p data-danger-message></p>
+            <button class="admin-btn admin-btn--danger" data-action="delete-category" disabled>Delete Category</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group Edit Modal (simpler) -->
+      <div class="admin-modal-overlay" data-modal="group-edit" hidden>
+        <div class="admin-modal admin-modal--sm">
+          <div class="admin-modal-header">
+            <h2 class="admin-modal-title" data-group-modal-title>Edit Group</h2>
+            <button class="admin-modal-close" data-action="close-group-modal">&times;</button>
+          </div>
+          <div class="admin-modal-body">
+            <input type="hidden" data-group-field="original_slug" />
+            <label class="admin-field-label">Slug</label>
+            <input class="admin-input" data-group-field="slug" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label class="admin-field-label">Label (KO)</label>
+                <input class="admin-input" data-group-field="label_ko" />
+              </div>
+              <div>
+                <label class="admin-field-label">Label (EN)</label>
+                <input class="admin-input" data-group-field="label_en" />
+              </div>
+            </div>
+            <label class="admin-field-label">Sort Order</label>
+            <input class="admin-input" type="number" data-group-field="sort_order" />
+          </div>
+          <div class="admin-modal-footer">
+            <button class="admin-btn admin-btn--primary" data-action="save-group">Save</button>
+            <button class="admin-btn admin-btn--ghost" data-action="close-group-modal">Cancel</button>
+          </div>
+          <div class="admin-modal-danger" data-group-danger-zone hidden>
+            <button class="admin-btn admin-btn--danger" data-action="delete-group">Delete Group</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</MainLayout>
+
+<script>
+  import Sortable from 'sortablejs';
+
+  function initCategoryAdmin() {
+    // --- SortableJS ---
+    document.querySelectorAll<HTMLElement>('[data-sortable-group]').forEach(container => {
+      Sortable.create(container, {
+        group: 'categories',
+        animation: 150,
+        handle: '.admin-categories-drag',
+        onEnd: async () => {
+          const items: { id: string; sort_order: number; group_slug: string }[] = [];
+          document.querySelectorAll<HTMLElement>('[data-sortable-group]').forEach(group => {
+            const groupSlug = group.dataset.sortableGroup!;
+            group.querySelectorAll<HTMLElement>('.admin-categories-item').forEach((item, idx) => {
+              items.push({ id: item.dataset.id!, sort_order: idx, group_slug: groupSlug });
+            });
+          });
+          await fetch('/api/admin/blog/categories/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items }),
+          });
+        },
+      });
+    });
+
+    // --- Category modal ---
+    const catModal = document.querySelector<HTMLElement>('[data-modal="category-edit"]')!;
+    const catFields = {
+      id: catModal.querySelector<HTMLInputElement>('[data-field="id"]')!,
+      slug: catModal.querySelector<HTMLInputElement>('[data-field="slug"]')!,
+      label_ko: catModal.querySelector<HTMLInputElement>('[data-field="label_ko"]')!,
+      label_en: catModal.querySelector<HTMLInputElement>('[data-field="label_en"]')!,
+      description_ko: catModal.querySelector<HTMLTextAreaElement>('[data-field="description_ko"]')!,
+      description_en: catModal.querySelector<HTMLTextAreaElement>('[data-field="description_en"]')!,
+      color: catModal.querySelector<HTMLInputElement>('[data-field="color"]')!,
+      icon: catModal.querySelector<HTMLTextAreaElement>('[data-field="icon"]')!,
+      group_slug: catModal.querySelector<HTMLSelectElement>('[data-field="group_slug"]')!,
+      is_visible: catModal.querySelector<HTMLInputElement>('[data-field="is_visible"]')!,
+      write_mode: catModal.querySelector<HTMLSelectElement>('[data-field="write_mode"]')!,
+      banner_url: catModal.querySelector<HTMLInputElement>('[data-field="banner_url"]')!,
+      guidelines: catModal.querySelector<HTMLTextAreaElement>('[data-field="guidelines"]')!,
+    };
+    const slugWarning = catModal.querySelector<HTMLElement>('[data-slug-warning]')!;
+    const warningCount = catModal.querySelector<HTMLElement>('[data-warning-count]')!;
+    const dangerZone = catModal.querySelector<HTMLElement>('[data-danger-zone]')!;
+    const dangerMsg = catModal.querySelector<HTMLElement>('[data-danger-message]')!;
+    const deleteBtn = catModal.querySelector<HTMLButtonElement>('[data-action="delete-category"]')!;
+
+    let originalSlug = '';
+    let postCount = 0;
+
+    function openCatModal(data?: Record<string, any>) {
+      if (data) {
+        catModal.querySelector<HTMLElement>('[data-modal-title]')!.textContent = 'Edit Category';
+        catFields.id.value = data.id || '';
+        catFields.slug.value = data.slug || '';
+        catFields.label_ko.value = data.labelKo || '';
+        catFields.label_en.value = data.labelEn || '';
+        catFields.description_ko.value = data.descriptionKo || '';
+        catFields.description_en.value = data.descriptionEn || '';
+        catFields.color.value = data.color || '#000000';
+        catFields.icon.value = data.icon || '';
+        catFields.group_slug.value = data.group || '';
+        catFields.is_visible.checked = data.isVisible !== 'false';
+        catFields.write_mode.value = data.writeMode || 'admin_only';
+        catFields.banner_url.value = data.bannerUrl || '';
+        catFields.guidelines.value = data.guidelines || '';
+        originalSlug = data.slug || '';
+        postCount = parseInt(data.postCount || '0', 10);
+        dangerZone.hidden = false;
+        if (postCount > 0) {
+          dangerMsg.textContent = `This category has ${postCount} posts. Move them to another category before deleting.`;
+          deleteBtn.disabled = true;
+        } else {
+          dangerMsg.textContent = 'No posts in this category.';
+          deleteBtn.disabled = false;
+        }
+      } else {
+        catModal.querySelector<HTMLElement>('[data-modal-title]')!.textContent = 'New Category';
+        Object.values(catFields).forEach(f => { if (f instanceof HTMLInputElement && f.type === 'checkbox') f.checked = true; else if (f instanceof HTMLInputElement || f instanceof HTMLTextAreaElement || f instanceof HTMLSelectElement) f.value = ''; });
+        catFields.color.value = '#888888';
+        catFields.write_mode.value = 'admin_only';
+        catFields.is_visible.checked = true;
+        originalSlug = '';
+        postCount = 0;
+        dangerZone.hidden = true;
+      }
+      slugWarning.hidden = true;
+      catModal.hidden = false;
+    }
+
+    // Slug change warning
+    catFields.slug.addEventListener('input', () => {
+      if (originalSlug && catFields.slug.value !== originalSlug && postCount > 0) {
+        warningCount.textContent = String(postCount);
+        slugWarning.hidden = false;
+      } else {
+        slugWarning.hidden = true;
+      }
+    });
+
+    // Edit category buttons
+    document.querySelectorAll<HTMLElement>('[data-action="edit-category"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.closest<HTMLElement>('.admin-categories-item')!;
+        openCatModal(item.dataset);
+      });
+    });
+
+    // New category
+    document.querySelector<HTMLElement>('[data-action="new-category"]')?.addEventListener('click', () => openCatModal());
+
+    // Close modal
+    catModal.querySelectorAll<HTMLElement>('[data-action="close-modal"]').forEach(btn => {
+      btn.addEventListener('click', () => { catModal.hidden = true; });
+    });
+    catModal.addEventListener('click', (e) => { if (e.target === catModal) catModal.hidden = true; });
+
+    // Save category
+    catModal.querySelector<HTMLElement>('[data-action="save-category"]')?.addEventListener('click', async () => {
+      const body: Record<string, any> = {
+        slug: catFields.slug.value,
+        label_ko: catFields.label_ko.value,
+        label_en: catFields.label_en.value,
+        description_ko: catFields.description_ko.value || null,
+        description_en: catFields.description_en.value || null,
+        color: catFields.color.value,
+        icon: catFields.icon.value || null,
+        group_slug: catFields.group_slug.value,
+        sort_order: 0,
+        is_visible: catFields.is_visible.checked,
+        write_mode: catFields.write_mode.value,
+        banner_url: catFields.banner_url.value || null,
+        guidelines: catFields.guidelines.value || null,
+      };
+      if (catFields.id.value) body.id = catFields.id.value;
+      const res = await fetch('/api/admin/blog/categories/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) location.reload();
+      else {
+        const err = await res.json();
+        alert(err.error || 'Save failed');
+      }
+    });
+
+    // Delete category
+    deleteBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to delete this category?')) return;
+      const res = await fetch('/api/admin/blog/categories/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: catFields.id.value }),
+      });
+      if (res.ok) location.reload();
+      else {
+        const err = await res.json();
+        alert(err.error || 'Delete failed');
+      }
+    });
+
+    // --- Group modal ---
+    const groupModal = document.querySelector<HTMLElement>('[data-modal="group-edit"]')!;
+    const groupFields = {
+      original_slug: groupModal.querySelector<HTMLInputElement>('[data-group-field="original_slug"]')!,
+      slug: groupModal.querySelector<HTMLInputElement>('[data-group-field="slug"]')!,
+      label_ko: groupModal.querySelector<HTMLInputElement>('[data-group-field="label_ko"]')!,
+      label_en: groupModal.querySelector<HTMLInputElement>('[data-group-field="label_en"]')!,
+      sort_order: groupModal.querySelector<HTMLInputElement>('[data-group-field="sort_order"]')!,
+    };
+
+    function openGroupModal(data?: Record<string, any>) {
+      if (data) {
+        groupModal.querySelector<HTMLElement>('[data-group-modal-title]')!.textContent = 'Edit Group';
+        groupFields.original_slug.value = data.groupSlug || data.slug || '';
+        groupFields.slug.value = data.groupSlug || data.slug || '';
+        groupFields.label_ko.value = data.labelKo || '';
+        groupFields.label_en.value = data.labelEn || '';
+        groupFields.sort_order.value = data.sortOrder || '0';
+        groupModal.querySelector<HTMLElement>('[data-group-danger-zone]')!.hidden = false;
+      } else {
+        groupModal.querySelector<HTMLElement>('[data-group-modal-title]')!.textContent = 'New Group';
+        Object.values(groupFields).forEach(f => f.value = '');
+        groupFields.sort_order.value = '99';
+        groupModal.querySelector<HTMLElement>('[data-group-danger-zone]')!.hidden = true;
+      }
+      groupModal.hidden = false;
+    }
+
+    document.querySelectorAll<HTMLElement>('[data-action="edit-group"]').forEach(btn => {
+      btn.addEventListener('click', () => openGroupModal(btn.dataset));
+    });
+
+    document.querySelector<HTMLElement>('[data-action="new-group"]')?.addEventListener('click', () => openGroupModal());
+
+    groupModal.querySelectorAll<HTMLElement>('[data-action="close-group-modal"]').forEach(btn => {
+      btn.addEventListener('click', () => { groupModal.hidden = true; });
+    });
+    groupModal.addEventListener('click', (e) => { if (e.target === groupModal) groupModal.hidden = true; });
+
+    groupModal.querySelector<HTMLElement>('[data-action="save-group"]')?.addEventListener('click', async () => {
+      const body: Record<string, any> = {
+        slug: groupFields.slug.value,
+        label_ko: groupFields.label_ko.value,
+        label_en: groupFields.label_en.value,
+        sort_order: parseInt(groupFields.sort_order.value || '0', 10),
+      };
+      if (groupFields.original_slug.value) body.original_slug = groupFields.original_slug.value;
+      const res = await fetch('/api/admin/blog/category-groups/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) location.reload();
+      else {
+        const err = await res.json();
+        alert(err.error || 'Save failed');
+      }
+    });
+
+    groupModal.querySelector<HTMLElement>('[data-action="delete-group"]')?.addEventListener('click', async () => {
+      if (!confirm('Are you sure?')) return;
+      const res = await fetch('/api/admin/blog/category-groups/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: groupFields.original_slug.value }),
+      });
+      if (res.ok) location.reload();
+      else {
+        const err = await res.json();
+        alert(err.error || 'Delete failed');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initCategoryAdmin);
+  initCategoryAdmin();
+</script>
