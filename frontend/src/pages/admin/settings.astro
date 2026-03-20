@@ -37,6 +37,13 @@ const scTabs = [
     ],
   },
   {
+    id: 'blog',
+    label: 'Blog',
+    description: 'Blog category and group management.',
+    keys: [],
+    fields: [],
+  },
+  {
     id: 'library',
     label: 'Library',
     description: 'Empty states and helper copy for the signed-in library view.',
@@ -242,6 +249,18 @@ const startHereDefaults = [
                 </div>
               ))}
             </div>
+
+            {tab.id === 'blog' && (
+              <div class="sc-field-block">
+                <div class="sc-field-header">
+                  <h3 class="sc-field-title">Blog Categories</h3>
+                  <p class="sc-field-hint">Add, edit, reorder, or remove blog categories and groups.</p>
+                </div>
+                <a href="/admin/blog/categories/" class="admin-btn admin-btn-primary" style="display: inline-block; text-decoration: none;">
+                  Manage Categories
+                </a>
+              </div>
+            )}
 
             {tab.id === 'news' && (
               <div class="sc-field-block">
