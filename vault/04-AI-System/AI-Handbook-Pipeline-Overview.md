@@ -29,11 +29,14 @@ graph TD
     BACKEND --> DISPATCH{"action 분기"}
 
     %% ── Action 1: Generate ──
-    subgraph GEN ["Generate — 전체 필드 자동 생성"]
+    subgraph GEN ["Generate — 4-Call LLM 분리"]
         direction TB
-        GEN_CALL["_run_generate_term()<br/>gpt-4o · max 16,000 tokens"]
-        GEN_CALL -->|"JSON mode"| GEN_OUT["GenerateTermResult"]
-        GEN_OUT --> GEN_FIELDS["korean_name · categories<br/>definition_ko · definition_en<br/>body_basic_ko · body_basic_en<br/>body_advanced_ko · body_advanced_en"]
+        GEN_C1["Call 1: 메타 + Basic KO<br/>term_full · korean_full · categories<br/>definition_ko/en · body_basic_ko"]
+        GEN_C2["Call 2: Basic EN<br/>body_basic_en"]
+        GEN_C3["Call 3: Advanced KO<br/>Tavily 검색 + 유형분류 → 심화 프롬프트<br/>Self-critique → 재생성 가능<br/>Quality scoring"]
+        GEN_C4["Call 4: Advanced EN<br/>동일 컨텍스트 사용"]
+        GEN_C1 --> GEN_C2 --> GEN_C3 --> GEN_C4
+        GEN_C4 --> GEN_OUT["GenerateTermResult"]
     end
 
     %% ── Action 2: Related Terms ──
@@ -94,7 +97,7 @@ graph TD
 graph LR
     subgraph TERM ["handbook_terms 테이블"]
         direction TB
-        META["term · slug · korean_name<br/>categories · status · source"]
+        META["term · term_full · slug<br/>korean_name · korean_full<br/>categories · status · source<br/>quality_score"]
         DEF["definition_ko · definition_en<br/>1~2문장 공유 정의"]
         BASIC["body_basic_ko · body_basic_en<br/>입문자용 · 비유 활용 · 2,000자+"]
         ADV["body_advanced_ko · body_advanced_en<br/>현직자용 · 기술 깊이 · 3,000자+"]
@@ -139,23 +142,70 @@ graph LR
     class L_BASIC,L_ADV level
 ```
 
-## Action 1: Generate — 전체 필드 자동 생성
+## Action 1: Generate — 4-Call LLM 분리 생성
 
-`_run_generate_term()` · `GENERATE_TERM_PROMPT`
+`_run_generate_term()` · `GENERATE_BASIC_PROMPT` / `GENERATE_ADVANCED_PROMPT`
 
-| 항목 | 값 |
-|---|---|
-| **모델** | gpt-4o |
-| **max_tokens** | 16,000 |
-| **temperature** | 0.3 |
-| **입력** | term + korean_name + categories + 기존 content (비어있지 않은 필드) |
-| **출력** | `GenerateTermResult` — 8개 필드 (definition/body × ko/en) + korean_name + categories |
-| **검증** | `GenerateTermResult.model_validate()` (soft-fail: 경고만 기록) |
+KO/EN 누락 버그 해결을 위해 4회 LLM 호출로 분리 구현됨. Advanced는 Tavily 검색 + 유형 분류 기반 심화 프롬프트 사용.
+
+| Call | 모델 | 생성 필드 | 특이사항 |
+|---|---|---|---|
+| **Call 1** | gpt-4o | `term_full`, `korean_full`, `categories`, `definition_ko/en`, `body_basic_ko` | 메타 + KO Basic |
+| **Call 2** | gpt-4o | `body_basic_en` | EN Basic (Call 1 definition 컨텍스트 전달) |
+| **Call 3** | gpt-4o | `body_advanced_ko` | Tavily + 유형분류 + 유형별 심화 프롬프트 + Self-critique |
+| **Call 4** | gpt-4o | `body_advanced_en` | Call 3와 동일 컨텍스트 사용 |
 
 - ==비어있는 필드만 생성==, 기존 콘텐츠가 있으면 해당 필드는 그대로 유지
 - body_basic: 비유 중심, 일상 언어, 2,000자 이상
 - body_advanced: 기술적 깊이, 아키텍처·알고리즘·복잡도 분석, 3,000자 이상
 - 10개 카테고리: `ai-ml`, `db-data`, `backend`, `frontend-ux`, `network`, `security`, `os-core`, `devops`, `performance`, `web3`
+- term_full: 영문 풀네임 (예: "Long Short-Term Memory") / korean_full: 한국어 풀네임 (예: "장단기 기억 네트워크")
+
+## Advanced Quality System
+
+`HANDBOOK-ADV-01` (2026-03-18) 구현. Advanced 콘텐츠를 시니어 개발자 레퍼런스 수준으로 끌어올리는 4단계 파이프라인.
+
+### 흐름 (Call 3-4 전처리)
+
+```
+Tavily 검색 (5건) ─┐
+                    ├─ 병렬 실행 ─→ combined_context → Advanced 프롬프트 주입
+gpt-4o-mini 유형분류 ─┘
+         ↓
+유형별 심화 프롬프트 (10가지 TYPE_DEPTH_GUIDES 중 1개 선택)
+         ↓
+Call 3 (KO Advanced) 생성
+         ↓
+Self-critique (score < 75 시 약점 피드백 + 재생성)
+         ↓
+Quality scoring (0~100, gpt-4o-mini) → DB 저장
+```
+
+### 10가지 용어 유형 분류
+
+| 유형 | 예시 |
+|---|---|
+| `algorithm_model` | BERT, Transformer, GAN, Gradient Descent |
+| `infrastructure_tool` | Docker, Kubernetes, CUDA, TensorFlow |
+| `business_industry` | Funding Round, SaaS, Product-Market Fit |
+| `concept_theory` | Overfitting, Bias-Variance Tradeoff, CAP Theorem |
+| `product_brand` | GPT-4o, Claude, Midjourney, GitHub Copilot |
+| `metric_measure` | AUC, F1 Score, BLEU, Perplexity |
+| `technique_method` | Data Augmentation, Prompt Engineering, A/B Testing |
+| `data_structure_format` | Parquet, B-Tree, Protocol Buffers, ONNX |
+| `protocol_standard` | OAuth 2.0, HTTP/3, gRPC, WebSocket |
+| `architecture_pattern` | Microservices, Event Sourcing, CQRS, RAG |
+
+### 비용 영향
+
+- 추가 비용: ~$0.07/용어 (22% 증가, $0.32 → $0.39)
+- Tavily 검색: ~5 API 호출/용어
+- Self-critique: 조건부 (score < 75인 경우만 재생성)
+
+**핵심 파일:**
+- `backend/services/agents/prompts_handbook_types.py` — 유형 분류 프롬프트 + 10가지 심화 가이드 + Self-critique 프롬프트
+
+---
 
 ## Action 2: Related Terms — 연관 용어 탐색
 
@@ -231,13 +281,17 @@ graph LR
 
 ## 에이전트 함수 명세
 
-| 함수 | 모델 | max_tokens | temperature | 입력 | 출력 스키마 |
-|---|---|---|---|---|---|
-| `_run_generate_term()` | gpt-4o | 16,000 | 0.3 | term + 기존 content | `GenerateTermResult` |
-| `_run_related_terms()` | gpt-4o | 2,048 | 0.3 | term + definition | `RelatedTermsResult` |
-| `_run_translate()` | gpt-4o | 4,096 | 0.2 | source content + direction | `TranslateResult` |
-| `extract_terms_from_content()` | gpt-4o-mini | 2,048 | 0.2 | 기사 본문 (4,000자) | `ExtractTermsResult` |
-| `generate_term_content()` | gpt-4o | 16,000 | 0.3 | term_name + korean_name | `GenerateTermResult` |
+| 함수 | 모델 | max_tokens | temperature | 역할 |
+|---|---|---|---|---|
+| `_run_generate_term()` | gpt-4o | 16,000×4 | 0.3 | 4-call 생성 오케스트레이터 |
+| `_run_related_terms()` | gpt-4o | 2,048 | 0.3 | 연관 용어 탐색 (LLM + Exa + DB) |
+| `_run_translate()` | gpt-4o | 4,096 | 0.2 | KO↔EN 번역 |
+| `extract_terms_from_content()` | gpt-4o-mini | 2,048 | 0.2 | 뉴스 기사에서 기술 용어 추출 |
+| `generate_term_content()` | gpt-4o | 16,000 | 0.3 | 파이프라인 자동 추출용 생성 |
+| `_search_term_context()` | Tavily API | — | — | Advanced 전처리 — 웹 검색 5건 |
+| `_classify_term_type()` | gpt-4o-mini | 100 | 0 | Advanced 전처리 — 10유형 분류 |
+| `_self_critique_advanced()` | gpt-4o | 2,000 | 0.2 | Advanced 검토 + 재생성 판단 |
+| `_check_handbook_quality()` | gpt-4o-mini | 500 | 0 | 0~100 품질 점수 산정 |
 
 ## 품질 검증
 
