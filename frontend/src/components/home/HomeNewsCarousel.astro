@@ -14,9 +14,9 @@ const nextLabel = locale === 'ko' ? '다음' : 'Next';
 ---
 
 <div class="home-carousel" data-carousel>
-  <div class="home-carousel-track" data-carousel-track>
-    {news.map((post) => (
-      <div class="home-carousel-slide">
+  <div class="home-carousel-stack" data-carousel-stack>
+    {news.map((post, i) => (
+      <div class="home-carousel-card" data-carousel-card data-index={i}>
         <HomeNewsCard
           href={`${baseHref}${post.slug}`}
           title={post.title}
@@ -49,31 +49,25 @@ const nextLabel = locale === 'ko' ? '다음' : 'Next';
 
 <script>
   document.querySelectorAll<HTMLElement>('[data-carousel]').forEach((carousel) => {
-    const track = carousel.querySelector<HTMLElement>('[data-carousel-track]')!;
-    const slides = Array.from(track.querySelectorAll<HTMLElement>('.home-carousel-slide'));
+    const stack = carousel.querySelector<HTMLElement>('[data-carousel-stack]')!;
+    const cards = Array.from(stack.querySelectorAll<HTMLElement>('[data-carousel-card]'));
     const prevBtn = carousel.querySelector<HTMLButtonElement>('[data-carousel-prev]');
     const nextBtn = carousel.querySelector<HTMLButtonElement>('[data-carousel-next]');
     const indicator = carousel.querySelector<HTMLElement>('[data-carousel-indicator]');
 
-    const total = slides.length;
+    const total = cards.length;
     if (total === 0) return;
 
     let currentIndex = 0;
     const MAX_DASHES = 10;
     const dashCount = Math.min(total, MAX_DASHES);
 
-    // Build indicator dashes
     if (indicator) {
       for (let i = 0; i < dashCount; i++) {
         const dash = document.createElement('span');
         dash.className = 'home-carousel-dash' + (i === 0 ? ' home-carousel-dash--active' : '');
         indicator.appendChild(dash);
       }
-    }
-
-    function getSlideWidth(): number {
-      const gap = parseFloat(getComputedStyle(track).gap) || 16;
-      return slides[0].offsetWidth + gap;
     }
 
     function updateIndicator(index: number) {
@@ -87,27 +81,33 @@ const nextLabel = locale === 'ko' ? '다음' : 'Next';
       });
     }
 
-    function scrollToIndex(index: number) {
-      // Wrap around for infinite loop
+    function updateLayers(index: number) {
+      cards.forEach((card, i) => {
+        const offset = ((i - index) + total) % total;
+        if (offset === 0) card.dataset.layer = '0';
+        else if (offset === 1) card.dataset.layer = '1';
+        else if (offset === 2) card.dataset.layer = '2';
+        else card.dataset.layer = 'hidden';
+      });
+    }
+
+    function goTo(index: number) {
       currentIndex = ((index % total) + total) % total;
-      track.scrollTo({ left: currentIndex * getSlideWidth(), behavior: 'smooth' });
+      updateLayers(currentIndex);
       updateIndicator(currentIndex);
     }
 
-    prevBtn?.addEventListener('click', () => scrollToIndex(currentIndex - 1));
-    nextBtn?.addEventListener('click', () => scrollToIndex(currentIndex + 1));
+    prevBtn?.addEventListener('click', () => goTo(currentIndex - 1));
+    nextBtn?.addEventListener('click', () => goTo(currentIndex + 1));
 
-    // Sync currentIndex on manual scroll/swipe
-    let scrollTimer: ReturnType<typeof setTimeout>;
-    track.addEventListener('scroll', () => {
-      clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(() => {
-        const sw = getSlideWidth();
-        if (sw > 0) {
-          currentIndex = Math.round(track.scrollLeft / sw);
-          updateIndicator(currentIndex);
-        }
-      }, 50);
-    }, { passive: true });
+    // Init
+    updateLayers(0);
+    updateIndicator(0);
+
+    // Set stack height to active card height after layout
+    requestAnimationFrame(() => {
+      const h = cards[0]?.offsetHeight ?? 0;
+      if (h > 0) stack.style.minHeight = (h + 14) + 'px';
+    });
   });
 </script>

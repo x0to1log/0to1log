@@ -8974,72 +8974,52 @@ pre:hover .blog-code-copy {
 /* ── News Carousel ── */
 .home-carousel {
   position: relative;
-  overflow: hidden;
 }
 
-.home-carousel-track {
-  display: flex;
-  gap: 1.5rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 0.875rem;
-}
-
-.home-carousel-track::-webkit-scrollbar {
-  display: none;
-}
-
-.home-carousel-slide {
-  flex-shrink: 0;
-  scroll-snap-align: start;
-  width: 85%;
+/* Stack container: all cards are absolutely positioned within */
+.home-carousel-stack {
   position: relative;
-  display: flex;
+  min-height: 280px;
+  padding-bottom: 14px; /* room for deepest layer y-offset */
 }
 
-/* Stacked deck effect: ghost card layers behind each slide */
-.home-carousel-slide::before,
-.home-carousel-slide::after {
-  content: '';
+/* All cards default to hidden at the back position */
+.home-carousel-card {
   position: absolute;
-  inset: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-card);
+  top: 0;
+  left: 0;
+  width: calc(100% - 18px);
+  opacity: 0;
   pointer-events: none;
-}
-
-.home-carousel-slide::before {
-  transform: translate(9px, 6px);
-  opacity: 0.55;
   z-index: 0;
+  transform: translate(18px, 12px);
+  transition: transform 380ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 300ms ease;
 }
 
-.home-carousel-slide::after {
-  transform: translate(16px, 11px);
-  opacity: 0.28;
-  z-index: -1;
-}
-
-.home-carousel-slide .home-news-card {
-  flex: 1;
-  min-height: 240px;
-  position: relative;
+/* Layer 2 — furthest back */
+.home-carousel-card[data-layer="2"] {
+  opacity: 0.6;
+  transform: translate(18px, 12px);
   z-index: 1;
 }
 
-@media (min-width: 640px) {
-  .home-carousel-slide {
-    width: 76%;
-  }
+/* Layer 1 — middle */
+.home-carousel-card[data-layer="1"] {
+  opacity: 0.85;
+  transform: translate(10px, 7px);
+  z-index: 2;
 }
 
-@media (min-width: 1024px) {
-  .home-carousel-slide {
-    width: 63%;
-  }
+/* Layer 0 — front (active card) */
+.home-carousel-card[data-layer="0"] {
+  opacity: 1;
+  transform: translate(0, 0);
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.home-carousel-card .home-news-card {
+  min-height: 260px;
 }
 
 .home-carousel-nav {
