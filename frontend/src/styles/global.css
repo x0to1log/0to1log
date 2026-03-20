@@ -8021,6 +8021,61 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   color: var(--color-text-muted);
 }
 
+/* ── Category Header ── */
+.blog-category-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.blog-category-banner {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-md, 8px);
+  margin-bottom: 1rem;
+}
+
+.blog-category-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.blog-category-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.blog-category-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--category-color);
+}
+
+.blog-category-title {
+  font-family: var(--font-blog-heading, Lora, serif);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.blog-category-description {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.blog-category-count {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font-blog-ui, Lora, serif);
+}
+
 /* ── Breadcrumb ── */
 .blog-breadcrumb {
   display: flex;
@@ -8730,10 +8785,10 @@ pre:hover .blog-code-copy {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
   min-height: calc(100svh - 3rem);
-  padding: 2rem 2rem 3.5rem;
+  padding: 5rem 2rem 3.5rem;
   max-width: 660px;
   margin: 0 auto;
 }
