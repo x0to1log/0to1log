@@ -175,80 +175,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       <NewsprintNotice variant="empty" message={t[locale]['handbook.empty']} />
     ) : (
       <>
-        <div id="category-preview">
-          {categories.map((cat) => {
-            const terms = termsByCategory[cat] ?? [];
-            if (terms.length === 0) return null;
-            const preview = terms.slice(0, PREVIEW_COUNT);
-            const hasMore = terms.length > PREVIEW_COUNT;
-            return (
-              <section class="handbook-category-preview" id={`handbook-cat-${cat}`}>
-                <div class="handbook-category-preview-header">
-                  <div class="handbook-category-preview-title-group">
-                    <span class="handbook-category-preview-icon" set:html={getHandbookCategoryIcon(cat)} />
-                    <h2 class="handbook-category-preview-title">{getHandbookCategoryLabel(locale, cat)}</h2>
-                    <span class="handbook-category-preview-count">{terms.length}</span>
-                  </div>
-                  {hasMore && (
-                    <a href={`/${locale}/handbook/category/${cat}/`} class="handbook-category-see-all">
-                      See all &rarr;
-                    </a>
-                  )}
-                </div>
-                <div class="handbook-preview-grid">
-                  {preview.map((term) => {
-                    const def = locale === 'en' ? term.definition_en : term.definition_ko;
-                    const isRead = readTermIds.has(term.id);
-                    const isBm = bookmarkedTermIds.has(term.id);
-                    return (
-                      <a
-                        href={`/${locale}/handbook/${term.slug}/`}
-                        class={`handbook-card ${isRead ? 'newsprint-card--read' : ''}`}
-                        data-categories={JSON.stringify(term.categories || [])}
-                        data-term={term.term}
-                        data-korean={term.korean_name || ''}
-                        data-def={def || ''}
-                      >
-                        <div class="handbook-card-meta">
-                          {(term.categories || []).map((c: string) => (
-                            <span class="handbook-cat-pill">
-                              {getHandbookCategoryLabel(locale, c)}
-                            </span>
-                          ))}
-                        </div>
-                        <div class="handbook-card-title-row">
-                          <div class="handbook-card-title">
-                            {term.term}
-                          </div>
-                          <button
-                            class={`newsprint-bookmark-icon ${isBm ? 'newsprint-bookmark-icon--active' : ''}`}
-                            data-item-id={term.id}
-                            data-item-type="term"
-                            data-bookmarked={isBm ? 'true' : 'false'}
-                            aria-label={isBm ? 'Remove bookmark' : 'Add bookmark'}
-                          >
-                            <svg viewBox="0 0 24 24" fill={isBm ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
-                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                            </svg>
-                          </button>
-                        </div>
-                        {term.korean_name && (
-                          <div class="handbook-card-korean">{term.korean_name}</div>
-                        )}
-                        {def && (
-                          <div class="handbook-card-def">
-                            {def.length > 120 ? def.slice(0, 120) + '\u2026' : def}
-                          </div>
-                        )}
-                      </a>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-
         <script type="application/json" id="handbook-terms-data" set:html={JSON.stringify(allTerms.map(t => {
           const def = localField(t, 'definition', locale) || '';
           return {
@@ -283,7 +209,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
 <script>
   function initHandbookFilters(): void {
     const search = document.getElementById('handbook-search') as HTMLInputElement | null;
-    const categoryPreview = document.getElementById('category-preview');
     const searchResults = document.getElementById('search-results');
     const noResults = document.getElementById('handbook-no-results');
     const countEl = document.getElementById('handbook-result-count');
@@ -298,11 +223,18 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     let termsData: TermEntry[] | null = null;
     let cardsBuilt = false;
 
+    const BATCH_SIZE = 20;
+    let batchOffset = 0;
+    let isDefaultMode = false;
+    let sortedCards: HTMLElement[] = [];
+    let sentinel: HTMLDivElement | null = null;
+
     function ensureCards(): void {
       if (cardsBuilt) return;
       cardsBuilt = true;
       if (!termsDataEl || !searchResults) return;
       termsData = JSON.parse(termsDataEl.textContent || '[]');
+      termsData.sort((a, b) => a.t.localeCompare(b.t, undefined, { sensitivity: 'base' }));
       const locale = document.documentElement.lang || 'en';
       const frag = document.createDocumentFragment();
       for (const t of termsData!) {
@@ -332,18 +264,40 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     }
 
     function showSearchMode(): void {
-      if (categoryPreview) categoryPreview.style.display = 'none';
+      isDefaultMode = false;
+      if (sentinel) sentinel.style.display = 'none';
       if (searchResults) searchResults.style.display = 'block';
     }
 
-    function showCategoryMode(): void {
-      if (categoryPreview) categoryPreview.style.display = 'block';
-      if (searchResults) searchResults.style.display = 'none';
+    function showNextBatch(): void {
+      const end = Math.min(batchOffset + BATCH_SIZE, sortedCards.length);
+      for (let i = batchOffset; i < end; i++) sortedCards[i].style.display = 'block';
+      batchOffset = end;
+      if (sentinel) sentinel.style.display = batchOffset < sortedCards.length ? 'block' : 'none';
+    }
+
+    function ensureSentinel(): void {
+      if (sentinel) { sentinel.style.display = batchOffset < sortedCards.length ? 'block' : 'none'; return; }
+      sentinel = document.createElement('div');
+      sentinel.style.height = '1px';
+      searchResults!.insertAdjacentElement('afterend', sentinel);
+      new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && isDefaultMode) showNextBatch();
+      }, { rootMargin: '200px' }).observe(sentinel);
+    }
+
+    function enterDefaultMode(): void {
+      isDefaultMode = true;
+      ensureCards();
+      if (!searchResults) return;
+      sortedCards = Array.from(searchResults.querySelectorAll<HTMLElement>('.handbook-card'));
+      sortedCards.forEach(c => c.style.display = 'none');
+      batchOffset = 0;
+      searchResults.style.display = 'block';
       if (noResults) noResults.style.display = 'none';
-      if (countEl) {
-        countEl.textContent = '';
-        countEl.style.display = 'none';
-      }
+      if (countEl) { countEl.textContent = ''; countEl.style.display = 'none'; }
+      showNextBatch();
+      ensureSentinel();
     }
 
     function debounce(fn: () => void, ms: number): () => void {
@@ -354,9 +308,8 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     function filter(): void {
       const query = search!.value.toLowerCase().trim();
 
-      // If no search query and no category filter, show category preview mode
       if (!query && activeCategory === 'all') {
-        showCategoryMode();
+        enterDefaultMode();
         return;
       }
 
@@ -402,18 +355,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
         (btn as HTMLElement).classList.add('active');
         (btn as HTMLElement).setAttribute('aria-pressed', 'true');
         activeCategory = (btn as HTMLElement).dataset.filter || 'all';
-
-        // If clicking a category pill in category-preview mode, scroll to the section
-        const query = search!.value.toLowerCase().trim();
-        if (!query && activeCategory !== 'all') {
-          const section = document.getElementById(`handbook-cat-${activeCategory}`);
-          if (section) {
-            showCategoryMode();
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-          }
-        }
-
         filter();
       });
     });
@@ -441,40 +382,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       filter();
     }
 
-    // IntersectionObserver: auto-activate pill on scroll
-    const previewSections = categoryPreview?.querySelectorAll<HTMLElement>('.handbook-category-preview');
-    if (previewSections && previewSections.length > 0) {
-      const setActiveByScroll = (catSlug: string) => {
-        filterBtns.forEach((b) => {
-          const el = b as HTMLElement;
-          const isMatch = el.dataset.filter === catSlug;
-          el.classList.toggle('active', isMatch);
-          el.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
-          if (isMatch) {
-            const row = el.closest('.handbook-filter-row') as HTMLElement | null;
-            if (row) {
-              const left = el.offsetLeft - row.offsetWidth / 2 + el.offsetWidth / 2;
-              row.scrollTo({ left, behavior: 'smooth' });
-            }
-          }
-        });
-      };
-
-      const sectionObserver = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) {
-              const id = (entry.target as HTMLElement).id;
-              const slug = id.replace('handbook-cat-', '');
-              if (slug) setActiveByScroll(slug);
-            }
-          }
-        },
-        { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
-      );
-
-      previewSections.forEach((section) => sectionObserver.observe(section));
-    }
   }
 
   document.addEventListener('astro:page-load', initHandbookFilters);
