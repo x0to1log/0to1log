@@ -11,6 +11,7 @@ interface RailPost {
   title: string;
   slug: string;
   category?: string | null;
+  published_at?: string | null;
 }
 
 interface Props {
@@ -74,16 +75,21 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
     <p class="newsprint-empty">{isKo ? '아직 표시할 글이 없습니다.' : 'No items yet.'}</p>
   ) : (
     <div class="newsprint-stack">
-      {posts.map((post) => (
-        <a class="newsprint-card" href={`${resolvedBasePath}/${post.slug}/`}>
-          <strong class="newsprint-rail-link">{post.title}</strong>
-          {getCategoryLabel(locale, post.category) && (
-            <span class="newsprint-category newsprint-rail-category">
-              {getCategoryLabel(locale, post.category)}
-            </span>
-          )}
-        </a>
-      ))}
+      {posts.map((post) => {
+        const dateLabel = post.published_at
+          ? (() => { const d = new Date(post.published_at!); return `${d.getMonth() + 1}/${d.getDate()}`; })()
+          : null;
+        return (
+          <a class="newsprint-card" href={`${resolvedBasePath}/${post.slug}/`}>
+            <strong class="newsprint-rail-link">{post.title}</strong>
+            {dateLabel && (
+              <span class="newsprint-category newsprint-rail-category">
+                {dateLabel}
+              </span>
+            )}
+          </a>
+        );
+      })}
     </div>
   )}
 </section>
