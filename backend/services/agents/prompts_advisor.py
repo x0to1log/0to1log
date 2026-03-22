@@ -968,6 +968,14 @@ Examples:
 - "Vera Rubin platform" → NO (specific product, too narrow)
 - "deep learning" → YES (extract broad term, not "Deep Learning Architecture")
 
+## Disambiguation
+Use the specific canonical name when a short form is ambiguous across domains.
+- "vector embedding" NOT "embedding" (could mean embedded systems)
+- "attention mechanism" NOT "attention"
+- "fine-tuning" NOT "tuning"
+- "AI agent" NOT "agent"
+If the meaning is clear from context (e.g., ML paper discussing "embeddings"), keep as-is.
+
 ## Final verification
 Before outputting, re-read your term list and remove any term that:
 - Could appear in a non-technical business article
