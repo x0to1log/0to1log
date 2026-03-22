@@ -644,26 +644,6 @@ async def _check_handbook_quality(
         return 50, {}, {}
 
 
-def _fetch_handbook_term_map() -> dict[str, str]:
-    """Fetch {term_name: slug} map of published handbook terms.
-
-    Includes both English term names and Korean names for matching.
-    """
-    supabase = get_supabase()
-    if not supabase:
-        return {}
-    try:
-        result = supabase.table("handbook_terms").select("term, slug, korean_name").eq("status", "published").execute()
-        term_map: dict[str, str] = {}
-        for t in result.data or []:
-            term_map[t["term"]] = t["slug"]
-            if t.get("korean_name"):
-                term_map[t["korean_name"]] = t["slug"]
-        return term_map
-    except Exception:
-        return {}
-
-
 async def _validate_ref_urls(content: str) -> str:
     """HEAD-check markdown link URLs in content. Remove broken links, keep text.
 
@@ -714,76 +694,6 @@ async def _validate_ref_urls(content: str) -> str:
     return content
 
 
-def _link_related_terms(content: str, handbook_map: dict[str, str], exclude_slug: str = "") -> str:
-    """Link **BoldTerm** patterns in related-terms sections to handbook pages.
-
-    Converts ``**TermName**`` to ``[**TermName**](/handbook/slug/)``
-    when the term exists in our handbook.
-    """
-    # Build case-insensitive lookup: lowercase → (original_term, slug)
-    term_lookup: dict[str, tuple[str, str]] = {}
-    for term, slug in handbook_map.items():
-        term_lookup[term.lower()] = (term, slug)
-
-    def _replace_bold_term(m: re.Match) -> str:
-        bold_text = m.group(1)
-        lookup = term_lookup.get(bold_text.lower())
-        if lookup:
-            _, slug = lookup
-            if slug == exclude_slug:
-                return m.group(0)  # don't self-link
-            return f'[**{bold_text}**](/handbook/{slug}/)'
-        return m.group(0)  # no match, return as-is
-
-    # Match **BoldText** that is NOT already inside a markdown link [...]
-    bold_pattern = re.compile(r'(?<!\[)\*\*([^*]+)\*\*(?!\])')
-    return bold_pattern.sub(_replace_bold_term, content)
-
-
-def _auto_link_handbook_terms(
-    content: str, handbook_map: dict[str, str], exclude_slug: str = "",
-) -> str:
-    """Replace first occurrence of each handbook term with a markdown link.
-
-    Longer terms are matched first to avoid partial matches.
-    Already-linked terms (inside [...]) are skipped.
-    Terms inside markdown headings (## ...) are skipped.
-    Args:
-        exclude_slug: skip this slug (used to prevent self-linking on handbook pages).
-    """
-    linked: set[str] = set()
-    if exclude_slug:
-        linked.add(exclude_slug)
-
-    # Split content into heading lines and body lines to skip headings
-    lines = content.split('\n')
-    heading_line_indices = {i for i, line in enumerate(lines) if line.strip().startswith('#')}
-
-    for term, slug in sorted(handbook_map.items(), key=lambda x: -len(x[0])):
-        if slug in linked:
-            continue
-        pattern = re.compile(r'(?<!\[)(' + re.escape(term) + r')(?!\])', re.IGNORECASE)
-        # Find first match that's NOT in a heading line
-        for i, line in enumerate(lines):
-            if i in heading_line_indices:
-                continue
-            if pattern.search(line):
-                lines[i] = pattern.sub(f'[\\1](/handbook/{slug}/)', line, count=1)
-                linked.add(slug)
-                break
-    content = '\n'.join(lines)
-
-    # Remove LLM-fabricated handbook links with invalid slugs
-    valid_slugs = set(handbook_map.values())
-    invalid_link_pattern = re.compile(r'\[([^\]]+)\]\(/handbook/([^/]+)/\)')
-    def _fix_invalid_link(m: re.Match) -> str:
-        slug = m.group(2)
-        if slug in valid_slugs:
-            return m.group(0)  # valid — keep
-        return m.group(1)  # invalid — remove link, keep text
-    content = invalid_link_pattern.sub(_fix_invalid_link, content)
-
-    return content
 
 
 # --- Section assembly: JSON keys → markdown ---
@@ -1153,20 +1063,6 @@ async def _run_generate_term(
     for field in ("body_advanced_ko", "body_advanced_en"):
         if data.get(field):
             data[field] = await _validate_ref_urls(data[field])
-
-    # Post-processing: Link related terms and auto-link handbook terms
-    # Exclude self-slug to prevent the term linking to itself
-    handbook_map = _fetch_handbook_term_map()
-    self_slug = handbook_map.get(req.term, "")
-    if handbook_map:
-        for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
-            if data.get(field):
-                data[field] = _link_related_terms(data[field], handbook_map, exclude_slug=self_slug)
-
-    if handbook_map:
-        for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
-            if data.get(field):
-                data[field] = _auto_link_handbook_terms(data[field], handbook_map, exclude_slug=self_slug)
 
     # Quality check on assembled advanced content
     adv_combined = f"{data.get('body_advanced_ko', '')}\n\n{data.get('body_advanced_en', '')}"
