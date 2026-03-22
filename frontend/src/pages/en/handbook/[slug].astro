@@ -382,6 +382,8 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.level === level));
       document.querySelector('.handbook-detail-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // 본문 높이 변경 → 프로그레스바 재계산
+      requestAnimationFrame(() => window.dispatchEvent(new Event('reading-content-changed')));
     }
 
     switcher.addEventListener('click', (e) => {

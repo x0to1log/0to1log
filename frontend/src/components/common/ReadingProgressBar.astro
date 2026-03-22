@@ -104,5 +104,6 @@ interface Props {
   }
 
   document.addEventListener('astro:page-load', initProgress);
+  window.addEventListener('reading-content-changed', initProgress);
   initProgress();
 </script>
