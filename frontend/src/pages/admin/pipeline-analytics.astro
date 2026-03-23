@@ -52,7 +52,7 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }] = await
   sb.from('pipeline_logs')
     .select('debug_meta, pipeline_type, pipeline_runs!inner(id, run_key, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
-    .in('pipeline_type', ['quality.research', 'quality.business'])
+    .in('pipeline_type', ['quality:research', 'quality:business'])
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')

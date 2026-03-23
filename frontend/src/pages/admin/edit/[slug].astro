@@ -131,6 +131,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           <div class="admin-editor-topbar-right">
             <span id="last-saved-time" class="admin-last-saved"></span>
             <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
+            <button id="btn-clear" class="admin-btn" type="button">Clear</button>
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish-draft" class="admin-btn admin-btn-primary" type="button">Publish</button>
@@ -319,6 +320,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
 <script>
   import { Crepe } from '@milkdown/crepe';
+  import { replaceAll } from '@milkdown/utils';
   import '@milkdown/crepe/theme/common/style.css';
   import { esc, showFeedback, createButtonManager } from '../../../scripts/adminEditorUtils';
   import { createPreviewManager } from '../../../scripts/adminEditorPreview';
@@ -387,6 +389,23 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       previewLoading,
       previewLoadingText,
       previewFrame,
+    });
+
+    // Clear all fields except title and slug
+    document.getElementById('btn-clear')?.addEventListener('click', () => {
+      if (!confirm('제목을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
+      if (categorySelect) categorySelect.selectedIndex = 0;
+      if (tagsInput) tagsInput.value = '';
+      if (localeSelect) localeSelect.selectedIndex = 0;
+      if (postTypeSelect) postTypeSelect.selectedIndex = 0;
+      if (excerptInput) excerptInput.value = '';
+      if (focusItemsInput) focusItemsInput.value = '';
+      if (ogImageInput) ogImageInput.value = '';
+      if (crepe) crepe.editor.action(replaceAll(''));
+      for (const key of Object.keys(personaEditors)) {
+        personaEditors[key]?.editor.action(replaceAll(''));
+      }
+      showFeedback('모든 필드를 비웠습니다.');
     });
 
     // Auto-resize title textarea

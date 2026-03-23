@@ -100,6 +100,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           <div class="admin-editor-topbar-right">
             <span class="hb-action-bar__saved-time" id="last-saved-time" style="font-size:0.72rem;color:var(--color-text-muted)"></span>
             <button id="btn-ai-toggle" class="admin-ai-panel-toggle" type="button">AI</button>
+            <button id="btn-clear" class="admin-btn" type="button">Clear</button>
             <button id="btn-save" class="admin-btn" type="button">Save</button>
             <button id="btn-preview" class="admin-btn" type="button">Preview</button>
             <button id="btn-publish" class="admin-btn admin-btn-primary" type="button">Publish</button>
@@ -555,6 +556,33 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       previewLoading,
       previewLoadingText,
       previewFrame,
+    });
+
+    // Clear all fields except term name and slug
+    document.getElementById('btn-clear')?.addEventListener('click', () => {
+      if (!confirm('제목을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
+      const form = termForm as HTMLFormElement;
+      const koreanName = form.querySelector<HTMLInputElement>('[name="korean_name"]');
+      const termFull = form.querySelector<HTMLInputElement>('[name="term_full"]');
+      const koreanFull = form.querySelector<HTMLInputElement>('[name="korean_full"]');
+      const defKo = form.querySelector<HTMLTextAreaElement>('[name="definition_ko"]');
+      const defEn = form.querySelector<HTMLTextAreaElement>('[name="definition_en"]');
+      const favCheckbox = form.querySelector<HTMLInputElement>('[name="is_favourite"]');
+      if (koreanName) koreanName.value = '';
+      if (termFull) termFull.value = '';
+      if (koreanFull) koreanFull.value = '';
+      if (defKo) defKo.value = '';
+      if (defEn) defEn.value = '';
+      if (favCheckbox) favCheckbox.checked = false;
+      form.querySelectorAll<HTMLInputElement>('[name="categories"]').forEach(cb => cb.checked = false);
+      if (hiddenSlugsInput) hiddenSlugsInput.value = '[]';
+      if (chipsContainer) chipsContainer.innerHTML = '';
+      crepeBasicKo?.editor.action(replaceAll(''));
+      crepeBasicEn?.editor.action(replaceAll(''));
+      crepeAdvancedKo?.editor.action(replaceAll(''));
+      crepeAdvancedEn?.editor.action(replaceAll(''));
+      updateAllIndicators();
+      showFeedback('모든 필드를 비웠습니다.');
     });
 
     // Auto-open details on desktop

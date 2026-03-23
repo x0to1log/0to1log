@@ -77,6 +77,7 @@ const isFeatured = product?.featured ?? false;
         </div>
         <div class="admin-editor-topbar-right">
           <button class="admin-btn" id="ai-panel-toggle" type="button">AI</button>
+          <button class="admin-btn" id="clear-btn" type="button">Clear</button>
           <button class="admin-btn" id="save-btn" type="button">Save</button>
           {product && (
             <>
@@ -750,6 +751,35 @@ const isFeatured = product?.featured ?? false;
   const getUseCasesKo = setupStringListEditor('usecases-ko-list', 'add-usecase-ko-btn', 'product-use-cases-ko');
   const getGettingStarted = setupStringListEditor('getting-started-list', 'add-getting-started-btn', 'product-getting-started');
   const getGettingStartedKo = setupStringListEditor('getting-started-ko-list', 'add-getting-started-ko-btn', 'product-getting-started-ko');
+
+  // ── Clear ──────────────────────────────────────────────
+  document.getElementById('clear-btn')?.addEventListener('click', () => {
+    if (!confirm('이름을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
+    const ids = ['field-name-ko','field-url','field-tagline','field-tagline-ko','field-description','field-description-ko',
+      'field-logo-url','field-thumbnail-url','field-pricing-note','field-pricing-detail','field-pricing-detail-ko',
+      'field-platform','field-tags','field-released-at','field-featured-order','field-sort-order'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) (el as HTMLInputElement | HTMLTextAreaElement).value = ''; });
+    const catSel = document.getElementById('field-category') as HTMLSelectElement | null;
+    const pricingSel = document.getElementById('field-pricing') as HTMLSelectElement | null;
+    if (catSel) catSel.selectedIndex = 0;
+    if (pricingSel) pricingSel.selectedIndex = 0;
+    document.querySelectorAll<HTMLInputElement>('.product-secondary-cat').forEach(cb => cb.checked = false);
+    const ksEl = document.getElementById('field-korean-support') as HTMLInputElement | null;
+    const featEl = document.getElementById('field-featured') as HTMLInputElement | null;
+    if (ksEl) ksEl.checked = false;
+    if (featEl) featEl.checked = false;
+    // Clear image previews
+    ['logo-preview','thumbnail-preview'].forEach(id => {
+      const img = document.getElementById(id) as HTMLImageElement | null;
+      if (img) { img.src = ''; img.hidden = true; }
+    });
+    // Clear dynamic lists
+    ['demo-media-list','features-list','features-ko-list','usecases-list','usecases-ko-list','getting-started-list','getting-started-ko-list'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+    showFeedback('모든 필드를 비웠습니다.');
+  });
 
   // ── Save ──────────────────────────────────────────────
   document.getElementById('save-btn')?.addEventListener('click', async () => {
