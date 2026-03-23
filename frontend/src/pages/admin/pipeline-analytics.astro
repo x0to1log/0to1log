@@ -461,7 +461,7 @@ const nonce = Astro.locals.cspNonce || '';
         </div>
         <div class="pipeline-run-stat">
           <span class="pipeline-run-stat__label">Avg Quality</span>
-          <strong class="pipeline-run-stat__value">{avgQuality !== null ? `${avgQuality.toFixed(1)}/4` : '—'}</strong>
+          <strong class="pipeline-run-stat__value">{avgQuality !== null ? `${avgQuality.toFixed(0)}/100` : '—'}</strong>
           <span class="pipeline-run-stat__detail">Mean quality score</span>
         </div>
       </section>
@@ -864,7 +864,7 @@ const nonce = Astro.locals.cspNonce || '';
         plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
         scales: {
           ...commonScales,
-          y: { min: 0, max: 4, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
+          y: { min: 0, max: 100, ticks: { color: textColor, stepSize: 20 }, grid: { color: gridColor } },
         },
       },
     });
