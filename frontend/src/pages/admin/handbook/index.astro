@@ -26,12 +26,15 @@ if (error) {
   fetchError = error.message;
 }
 
+const STATUS_PRIORITY: Record<string, number> = { queued: 0, draft: 1, published: 2, archived: 3 };
 const allTerms = (terms ?? []).sort((a, b) => {
-  if (a.status === 'draft' && b.status !== 'draft') return -1;
-  if (a.status !== 'draft' && b.status === 'draft') return 1;
+  const pa = STATUS_PRIORITY[a.status] ?? 9;
+  const pb = STATUS_PRIORITY[b.status] ?? 9;
+  if (pa !== pb) return pa - pb;
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 });
 
+const queuedCount = allTerms.filter((term) => term.status === 'queued').length;
 const draftCount = allTerms.filter((term) => term.status === 'draft').length;
 const publishedCount = allTerms.filter((term) => term.status === 'published').length;
 const archivedCount = allTerms.filter((term) => term.status === 'archived').length;
@@ -61,6 +64,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
           <div class="admin-list-toolbar-left">
             <a href="/admin/handbook/edit/new" class="admin-btn admin-btn-primary">New Term</a>
             <div class="admin-filter-tabs">
+              {queuedCount > 0 && <button class="admin-filter-btn" data-filter="queued">Queued ({queuedCount})</button>}
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({draftCount})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({publishedCount})</button>
               {archivedCount > 0 && <button class="admin-filter-btn" data-filter="archived">Archived ({archivedCount})</button>}
@@ -187,7 +191,9 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
                 <div class="admin-list-actions">
                   <a href={`/admin/handbook/edit/${term.slug}`} class="admin-btn admin-btn-success">Edit</a>
                   <a href={`/admin/handbook/edit/${term.slug}?mode=preview`} class="admin-btn">Preview</a>
-                  {term.status === 'draft' ? (
+                  {term.status === 'queued' ? (
+                    <button class="admin-btn admin-btn-primary" data-action="approve" data-id={term.id} data-slug={term.slug}>Approve</button>
+                  ) : term.status === 'draft' ? (
                     <button class="admin-btn admin-btn-primary" data-action="publish" data-id={term.id}>Publish</button>
                   ) : term.status === 'published' ? (
                     <button class="admin-btn" data-action="unpublish" data-id={term.id}>Unpublish</button>
@@ -635,6 +641,22 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
         const action = btn.dataset.action;
         const id = btn.dataset.id;
         if (!action || !id) return;
+
+        if (action === 'approve') {
+          const slug = btn.dataset.slug;
+          const res = await fetch('/api/admin/handbook/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, action: 'approve' }),
+          });
+          if (res.ok) {
+            window.location.href = `/admin/handbook/edit/${slug}`;
+            return;
+          }
+          const data = await res.json();
+          window.alert(`Approve failed: ${data.error || 'Unknown error'}`);
+          return;
+        }
 
         if (action === 'delete') {
           const title = btn.dataset.title || 'this term';

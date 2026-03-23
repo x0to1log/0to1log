@@ -252,6 +252,7 @@ async def _extract_and_create_handbook_terms(
 
     # Pre-filter terms before generation
     valid_terms: list[tuple[str, str, str]] = []  # (term_name, korean_name, slug)
+    queued_terms: list[tuple[str, str, str, str]] = []  # (term_name, korean_name, slug, category)
     for term_info in extracted:
         term_name = term_info.get("term", "").strip()
         korean_name = term_info.get("korean_name", "").strip()
@@ -289,7 +290,12 @@ async def _extract_and_create_handbook_terms(
             logger.warning("Duplicate check failed for '%s': %s", term_name, e)
             continue
 
-        valid_terms.append((term_name, korean_name, slug))
+        confidence = term_info.get("confidence", "high")
+        if confidence == "low":
+            queued_terms.append((term_name, korean_name, slug, category))
+            logger.info("Queuing low-confidence term '%s' for manual review", term_name)
+        else:
+            valid_terms.append((term_name, korean_name, slug))
 
     # Generate terms concurrently (max 2 at a time)
     sem = asyncio.Semaphore(2)
@@ -371,7 +377,27 @@ async def _extract_and_create_handbook_terms(
             terms_created += created
             errors.extend(term_errors)
 
-    logger.info("Handbook auto-extraction: %d terms created, %d errors", terms_created, len(errors))
+    # Save low-confidence terms as queued (title only, no LLM generation)
+    queued_count = 0
+    for term_name, korean_name, slug, category in queued_terms:
+        try:
+            supabase.table("handbook_terms").insert({
+                "term": term_name,
+                "slug": slug,
+                "korean_name": korean_name,
+                "categories": [category],
+                "status": "queued",
+                "source": "pipeline",
+            }).execute()
+            queued_count += 1
+            logger.info("Queued handbook term for review: %s (%s)", term_name, slug)
+        except Exception as e:
+            logger.warning("Failed to queue term '%s': %s", term_name, e)
+
+    logger.info(
+        "Handbook auto-extraction: %d created, %d queued for review, %d errors",
+        terms_created, queued_count, len(errors),
+    )
     return terms_created, errors
 
 

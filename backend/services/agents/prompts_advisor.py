@@ -929,6 +929,7 @@ Given one or more news articles, extract terms that belong to the IT/CS/AI domai
       "term": "Retrieval-Augmented Generation",
       "korean_name": "검색 증강 생성",
       "category": "ai-ml",
+      "confidence": "high",
       "reason": "Central concept in the article — readers need to understand RAG to follow the discussion"
     }
   ]
@@ -940,6 +941,7 @@ Given one or more news articles, extract terms that belong to the IT/CS/AI domai
 - term: Use the standard English name
 - korean_name: Standard Korean translation
 - category: One of: ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
+- confidence: "high" (clearly an IT/AI/CS term, no doubt) or "low" (probably relevant but borderline — e.g., could be too generic, too niche, or domain-ambiguous)
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
 - When in doubt, INCLUDE the term — a borderline technical term is more valuable than a missed one

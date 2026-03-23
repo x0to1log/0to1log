@@ -3660,6 +3660,10 @@ pre {
   letter-spacing: 0.04em;
 }
 
+.admin-status-badge--queued {
+  background: #fef3c7;
+  color: #92400e;
+}
 .admin-status-badge--draft {
   background: var(--color-accent-subtle);
   color: var(--color-text-muted);

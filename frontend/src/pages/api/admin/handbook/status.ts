@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { id, action } = await request.json();
 
-  if (!id || !['publish', 'unpublish', 'archive'].includes(action)) {
+  if (!id || !['publish', 'unpublish', 'archive', 'approve'].includes(action)) {
     return new Response(JSON.stringify({ error: 'Invalid id or action' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
@@ -69,6 +69,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     update.status = 'draft';
   } else if (action === 'archive') {
     update.status = 'archived';
+  } else if (action === 'approve') {
+    update.status = 'draft';
   }
 
   const { data, error } = await supabase

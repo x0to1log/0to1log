@@ -589,10 +589,11 @@ async def _self_critique_advanced(
     """Self-critique advanced content. Returns (needs_improvement, feedback, score, usage)."""
     from services.agents.prompts_handbook_types import SELF_CRITIQUE_PROMPT
 
+    model_light = settings.openai_model_light
     system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     try:
         resp = await client.chat.completions.create(
-            model=model,
+            model=model_light,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": advanced_content[:8000]},
@@ -610,7 +611,7 @@ async def _self_critique_advanced(
                 f"- {imp['section']}: {imp['suggestion']}"
                 for imp in data["improvements"]
             )
-        usage = extract_usage_metrics(resp, model)
+        usage = extract_usage_metrics(resp, model_light)
         return needs, feedback, score, usage
     except Exception as e:
         logger.warning("Self-critique failed for '%s': %s", term, e)
