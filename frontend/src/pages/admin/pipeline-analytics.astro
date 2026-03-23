@@ -709,40 +709,46 @@ const nonce = Astro.locals.cspNonce || '';
             </div>
           </section>
         )}
-        {hbQualityEntries.length > 0 && (
-          <section class="pcosts-section">
-            <h3 class="pcosts-chart-title">Handbook Quality Score Trend</h3>
-            <div class="pcosts-chart-wrap">
-              <canvas id="hb-quality-chart" height="260"></canvas>
-            </div>
-            <div class="pcosts-table-wrap" style="margin-top:1rem;">
-              <table class="pipeline-cost-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Term</th>
-                    <th>Type</th>
-                    <th>Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hbQualityEntries.map((e) => (
+        <section class="pcosts-section">
+          <h3 class="pcosts-chart-title">Handbook Quality Score Trend</h3>
+          {hbQualityEntries.length > 0 ? (
+            <>
+              <div class="pcosts-chart-wrap">
+                <canvas id="hb-quality-chart" height="260"></canvas>
+              </div>
+              <div class="pcosts-table-wrap" style="margin-top:1rem;">
+                <table class="pipeline-cost-table">
+                  <thead>
                     <tr>
-                      <td>{e.date}</td>
-                      <td class="pipeline-cost-table__stage">{e.term}</td>
-                      <td>{e.termType}</td>
-                      <td>
-                        <span class={`admin-quality-badge ${e.score >= 80 ? 'admin-quality-badge--high' : e.score >= 60 ? 'admin-quality-badge--mid' : 'admin-quality-badge--low'}`}>
-                          {e.score}
-                        </span>
-                      </td>
+                      <th>Date</th>
+                      <th>Term</th>
+                      <th>Type</th>
+                      <th>Score</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {hbQualityEntries.map((e) => (
+                      <tr>
+                        <td>{e.date}</td>
+                        <td class="pipeline-cost-table__stage">{e.term}</td>
+                        <td>{e.termType}</td>
+                        <td>
+                          <span class={`admin-quality-badge ${e.score >= 80 ? 'admin-quality-badge--high' : e.score >= 60 ? 'admin-quality-badge--mid' : 'admin-quality-badge--low'}`}>
+                            {e.score}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div style="padding:1.5rem;text-align:center;color:var(--color-text-muted);font-size:0.85rem">
+              No quality data yet. Scores will appear after the next pipeline run with handbook term generation.
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
       </div><!-- /tab-handbook -->
 
