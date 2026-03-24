@@ -7809,18 +7809,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 
   .blog-mobile-toolbar {
     display: flex;
-    position: absolute;
-    top: 1.5rem;
-    left: 1rem;
-    z-index: 10;
-  }
-
-  .blog-breadcrumb {
-    padding-left: 4rem; /* 44px 토글 버튼 + 20px 여백 */
-  }
-
-  .blog-category-header {
-    padding-top: 3.5rem; /* 햄버거 버튼과 겹침 방지 */
+    margin-bottom: 0.75rem;
   }
 
 }
@@ -8073,8 +8062,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 
   .blog-list-item-meta {
     width: 100%;
-    padding-left: 1.6rem;
-    margin-top: 0.2rem;
+    justify-content: flex-end;
+    margin-top: 0.1rem;
   }
 }
 
