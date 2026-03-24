@@ -121,16 +121,16 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
         }
 
         // The wrapped term
-        parts.push({
-          type: 'element',
-          tagName: 'span',
-          properties: {
-            className: ['handbook-term'],
-            dataSlug: entry.slug,
-            dataTerm: entry.term,
-          },
-          children: [{ type: 'text', value: matchedText }],
-        } as Element);
+         parts.push({
+           type: 'element',
+           tagName: 'span',
+           properties: {
+             className: ['handbook-term'],
+             'data-slug': entry.slug,
+             'data-term': entry.term,
+           },
+           children: [{ type: 'text', value: matchedText }],
+         } as Element);
 
         lastIndex = match.index + matchedText.length;
       }

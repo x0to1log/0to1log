@@ -1,6 +1,6 @@
 import { initOAuthButtons } from './auth-oauth';
 
-type AuthAction = 'library' | 'bookmark' | 'like' | 'feedback' | 'comment';
+type AuthAction = 'library' | 'bookmark' | 'like' | 'product_like' | 'feedback' | 'comment';
 
 interface AuthPromptDetail {
   action?: AuthAction;

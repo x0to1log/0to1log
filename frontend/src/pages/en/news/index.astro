@@ -69,7 +69,7 @@ const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('en', 'business') },
   { value: 'research', label: getPostTypeLabel('en', 'research') },
 ];
-const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers · Projects', 'Daily Curation', 'Open Access']);
+const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers', 'Daily Curation', 'Open Access']);
 const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
 const searchPlaceholder = 'Search AI news';
 const searchHints = [searchPlaceholder, 'OpenAI', 'Gemini', 'MCP'];
@@ -80,7 +80,7 @@ const searchEmptyMessage = 'No AI news matches that search.';
   <NewsprintShell
     locale="en"
     masthead={sc.news_masthead || 'Latest AI News'}
-    editionLabel={sc.news_edition_label || "Builder's Daily"}
+    editionLabel={sc.news_edition_label || 'Log Daily'}
     subkicker={subkicker}
     volumeLabel={sc.volume_issue || undefined}
   >

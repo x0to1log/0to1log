@@ -37,7 +37,7 @@ function initProductLikeBtn(): void {
     if (!productId) return;
 
     if (!isAuthenticatedUser()) {
-      openAuthPrompt({ action: 'like', redirectTo: resolveRedirect(btn) });
+      openAuthPrompt({ action: 'product_like', redirectTo: resolveRedirect(btn) });
       return;
     }
 
@@ -56,7 +56,7 @@ function initProductLikeBtn(): void {
 
       if (res.status === 401) {
         applyLikeState(btn, wasLiked); // rollback
-        openAuthPrompt({ action: 'like', redirectTo: resolveRedirect(btn) });
+        openAuthPrompt({ action: 'product_like', redirectTo: resolveRedirect(btn) });
         return;
       }
 
@@ -119,7 +119,7 @@ function initCardLikeButtons(): void {
       if (!productId) return;
 
       if (!isAuthenticatedUser()) {
-        openAuthPrompt({ action: 'like', redirectTo: resolveRedirect(btn) });
+        openAuthPrompt({ action: 'product_like', redirectTo: resolveRedirect(btn) });
         return;
       }
 
@@ -144,7 +144,7 @@ function initCardLikeButtons(): void {
           btn.dataset.liked = wasLiked ? 'true' : 'false';
           btn.classList.toggle('product-card-like--active', wasLiked);
           if (svgOpt) svgOpt.setAttribute('fill', wasLiked ? 'currentColor' : 'none');
-          openAuthPrompt({ action: 'like', redirectTo: resolveRedirect(btn) });
+          openAuthPrompt({ action: 'product_like', redirectTo: resolveRedirect(btn) });
           return;
         }
 

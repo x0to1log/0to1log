@@ -69,7 +69,7 @@ const nonce = Astro.locals.cspNonce || '';
 <MainLayout title="Newsprint Preview (Dark)" locale="en" slug="preview/newsprint-dark/">
   <script is:inline nonce={nonce}>document.documentElement.setAttribute('data-theme','dark');localStorage.setItem('theme','dark');</script>
   <NewsprintShell locale="en" masthead="Latest AI News" editionLabel="Preview / Dark"
-      subkicker={['AI · Papers · Projects', 'Preview Edition', 'Open Access']}>
+      subkicker={['AI · Papers', 'Preview Edition', 'Open Access']}>
 
       <NewsprintCategoryFilter locale="en" />
 
