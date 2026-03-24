@@ -59,6 +59,7 @@ type ActivityItem = {
   status: string;
   updated_at: string;
   source?: string;
+  quality_score?: number | null;
 };
 
 let recentActivity: ActivityItem[] = [];
@@ -1029,12 +1030,13 @@ function relativeTime(dateStr: string): string {
         cancelBtn.textContent = 'Cancelling...';
         cancelBtn.setAttribute('disabled', 'true');
         try {
-          await fetch('/api/admin/pipeline-cancel', {
+          const res = await fetch('/api/admin/pipeline-cancel', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ run_id: runId }),
           });
+          if (!res.ok) throw new Error('Cancel failed');
           setPipelineFeedback('Pipeline cancelled.', 'success');
           setTimeout(() => window.location.reload(), 1500);
         } catch {
@@ -1050,15 +1052,11 @@ function relativeTime(dateStr: string): string {
       markReadBtn.addEventListener('click', async () => {
         markReadBtn.textContent = 'Updating…';
         try {
-          const { createClient } = await import('@supabase/supabase-js');
-          const sb = createClient(
-            (import.meta as any).env.PUBLIC_SUPABASE_URL,
-            (import.meta as any).env.PUBLIC_SUPABASE_ANON_KEY,
-          );
-          const { data: { session } } = await sb.auth.getSession();
-          if (session) {
-            await sb.from('admin_notifications').update({ is_read: true }).eq('is_read', false);
-          }
+          const res = await fetch('/api/admin/notifications-read', {
+            method: 'POST',
+            credentials: 'same-origin',
+          });
+          if (!res.ok) throw new Error('Failed');
           markReadBtn.closest('.dashboard-section')?.remove();
         } catch {
           markReadBtn.textContent = 'Failed';

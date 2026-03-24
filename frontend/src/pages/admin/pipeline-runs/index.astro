@@ -1165,7 +1165,8 @@ const handbookSummary = buildSummary(handbookRuns);
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ run_id: runId }),
-        }).then(function() {
+        }).then(function(res) {
+          if (!res.ok) throw new Error('Cancel failed');
           setPipelineFeedback('Pipeline cancelled.', 'success');
           setTimeout(function() { window.location.reload(); }, 1500);
         }).catch(function() {

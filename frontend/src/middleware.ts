@@ -91,7 +91,7 @@ async function fetchUserExtras(
   const [adminResult, profileResult] = await Promise.all([
     sb.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle(),
     sb.from('profiles')
-      .select('display_name, username, username_changed_at, avatar_url, persona, preferred_locale, handbook_level, is_public, onboarding_completed')
+      .select('display_name, username, username_changed_at, avatar_url, bio, persona, preferred_locale, handbook_level, is_public, onboarding_completed')
       .eq('id', user.id)
       .maybeSingle(),
   ]);
@@ -105,6 +105,7 @@ async function fetchUserExtras(
     username: null,
     username_changed_at: null,
     avatar_url: user.user_metadata?.avatar_url || null,
+    bio: null,
     persona: null,
     preferred_locale: 'ko',
     handbook_level: 'basic',

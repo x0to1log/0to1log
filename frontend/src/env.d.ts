@@ -11,6 +11,7 @@ declare namespace App {
       username: string | null;
       username_changed_at: string | null;
       avatar_url: string | null;
+      bio: string | null;
       persona: string | null;
       preferred_locale: string;
       handbook_level: string;
