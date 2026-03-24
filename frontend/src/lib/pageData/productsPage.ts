@@ -149,11 +149,19 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
   }));
 
-  // Sort: category order → product sort_order → name
+  // Sort: category order → featured first (by featured_order) → sort_order → name
   resolvedProducts.sort((a, b) => {
     const catA = catOrder[a.primary_category] ?? 99;
     const catB = catOrder[b.primary_category] ?? 99;
     if (catA !== catB) return catA - catB;
+    const fa = a.featured ? 0 : 1;
+    const fb = b.featured ? 0 : 1;
+    if (fa !== fb) return fa - fb;
+    if (a.featured && b.featured) {
+      const oa = a.featured_order ?? 99;
+      const ob = b.featured_order ?? 99;
+      if (oa !== ob) return oa - ob;
+    }
     const sortA = a.sort_order ?? 99;
     const sortB = b.sort_order ?? 99;
     if (sortA !== sortB) return sortA - sortB;
