@@ -10,7 +10,7 @@ import ContentFeedback from '../../../components/common/ContentFeedback.astro';
 
 const locale = 'en';
 const { slug } = Astro.params;
-const { product, htmlDescription, error } = await getProductDetailData(slug ?? '', locale);
+const { product, htmlDescription, htmlPricingDetail, error } = await getProductDetailData(slug ?? '', locale);
 const [alternatives, relatedNews] = product
   ? await Promise.all([
       fetchAlternatives(product.primary_category, slug ?? '', locale),
@@ -47,7 +47,7 @@ if (user && Astro.locals.accessToken && product) {
   altSlug={product?.slug}
 >
   {product ? (
-    <ProductDetail product={product} htmlDescription={htmlDescription} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isLiked={isLiked}>
+    <ProductDetail product={product} htmlDescription={htmlDescription} htmlPricingDetail={htmlPricingDetail} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isLiked={isLiked} isAdmin={!!Astro.locals.isAdmin}>
       <ContentFeedback
         sourceType="product"
         sourceId={product.id}

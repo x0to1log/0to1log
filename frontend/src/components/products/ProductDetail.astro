@@ -7,13 +7,15 @@ import ProductCard from './ProductCard.astro';
 interface Props {
   product: ProductDetailData;
   htmlDescription: string;
+  htmlPricingDetail?: string;
   locale: 'en' | 'ko';
   alternatives: ProductCardData[];
   relatedNews: RelatedNewsItem[];
   isLiked?: boolean;
+  isAdmin?: boolean;
 }
 
-const { product, htmlDescription, locale, alternatives, relatedNews, isLiked = false } = Astro.props;
+const { product, htmlDescription, htmlPricingDetail = '', locale, alternatives, relatedNews, isLiked = false, isAdmin = false } = Astro.props;
 const tr = t[locale];
 
 const pricingLabel: Record<string, string> = {
@@ -33,8 +35,19 @@ const useCases = locale === 'ko' && product.use_cases_ko.length > 0
   ? product.use_cases_ko : product.use_cases;
 const gettingStarted = locale === 'ko' && product.getting_started_ko.length > 0
   ? product.getting_started_ko : product.getting_started;
-const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
-  ? product.pricing_detail_ko : product.pricing_detail;
+const editHref = `/admin/products/edit/${product.slug}`;
+const unpublishApi = '/api/admin/products/status';
+const adminActionCopy = locale === 'ko'
+  ? {
+      confirm: '이 제품을 비공개로 전환할까요?',
+      errorPrefix: '비공개 전환 실패',
+      networkError: '비공개 전환 실패: 네트워크 오류',
+    }
+  : {
+      confirm: 'Unpublish this product?',
+      errorPrefix: 'Unpublish failed',
+      networkError: 'Unpublish failed: network error',
+    };
 ---
 
 <article class="product-detail" id="products-top">
@@ -193,12 +206,12 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
     )}
 
     <!-- ⑧ Pricing 상세 -->
-    {pricingDetailMd && (
+    {htmlPricingDetail && (
       <section class="product-detail-section">
         <h2 class="product-detail-section-title">
           {locale === 'ko' ? '가격 정보' : 'Pricing'}
         </h2>
-        <div class="product-detail-pricing-table" set:html={pricingDetailMd} />
+        <div class="product-detail-pricing-table prose" set:html={htmlPricingDetail} />
       </section>
     )}
 
@@ -315,5 +328,62 @@ const pricingDetailMd = locale === 'ko' && product.pricing_detail_ko
     </a>
   </div>
 
+  {isAdmin && (
+    <div
+      class="newsprint-admin-actions"
+      data-toolbar-id={product.id}
+      data-toolbar-api={unpublishApi}
+      data-confirm-message={adminActionCopy.confirm}
+      data-error-prefix={adminActionCopy.errorPrefix}
+      data-error-network={adminActionCopy.networkError}
+    >
+      <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
+      <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
+    </div>
+  )}
+
   <slot />
 </article>
+
+<script>
+  function initProductAdminActions(): void {
+    const actions = document.querySelector<HTMLElement>('.newsprint-admin-actions');
+    if (!actions || actions.dataset.bound === 'true') return;
+
+    const btn = actions.querySelector<HTMLButtonElement>('.newsprint-admin-action-btn--unpublish');
+    if (!btn) return;
+
+    actions.dataset.bound = 'true';
+
+    btn.addEventListener('click', async () => {
+      const confirmMessage = actions.dataset.confirmMessage || 'Unpublish this product?';
+      if (!confirm(confirmMessage)) return;
+
+      const id = actions.dataset.toolbarId;
+      const api = actions.dataset.toolbarApi;
+      if (!id || !api) return;
+
+      try {
+        const res = await fetch(api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: 'unpublish' }),
+        });
+
+        if (res.ok) {
+          const editLink = actions.querySelector('a') as HTMLAnchorElement | null;
+          window.location.href = editLink?.href || '/admin/products';
+        } else {
+          const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+          const errorPrefix = actions.dataset.errorPrefix || 'Unpublish failed';
+          alert(`${errorPrefix}: ${err.error || err.detail || 'Unknown error'}`);
+        }
+      } catch {
+        alert(actions.dataset.errorNetwork || 'Unpublish failed: network error');
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initProductAdminActions);
+  initProductAdminActions();
+</script>

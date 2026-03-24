@@ -83,6 +83,7 @@ export interface ProductsPageData {
 export interface ProductDetailPageData {
   product: ProductDetailData | null;
   htmlDescription: string;
+  htmlPricingDetail: string;
   error: string | null;
 }
 
@@ -173,7 +174,7 @@ export async function getProductDetailData(
 ): Promise<ProductDetailPageData> {
   const db = getPublicSupabase();
   if (!db) {
-    return { product: null, htmlDescription: '', error: 'Database unavailable.' };
+    return { product: null, htmlDescription: '', htmlPricingDetail: '', error: 'Database unavailable.' };
   }
 
   const { data, error } = await db
@@ -186,9 +187,9 @@ export async function getProductDetailData(
   if (error) {
     // PGRST116 = no rows found
     if (error.code === 'PGRST116') {
-      return { product: null, htmlDescription: '', error: null };
+      return { product: null, htmlDescription: '', htmlPricingDetail: '', error: null };
     }
-    return { product: null, htmlDescription: '', error: error.message };
+    return { product: null, htmlDescription: '', htmlPricingDetail: '', error: error.message };
   }
 
   const raw = data as any;
@@ -233,7 +234,12 @@ export async function getProductDetailData(
 
   const htmlDescription = rawDescription ? await renderMarkdown(rawDescription) : '';
 
-  return { product, htmlDescription, error: null };
+  const rawPricing = locale === 'ko'
+    ? raw.pricing_detail_ko || raw.pricing_detail
+    : raw.pricing_detail;
+  const htmlPricingDetail = rawPricing ? await renderMarkdown(rawPricing) : '';
+
+  return { product, htmlDescription, htmlPricingDetail, error: null };
 }
 
 // =============================================================================
