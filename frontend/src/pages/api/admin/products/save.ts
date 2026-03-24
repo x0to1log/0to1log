@@ -39,6 +39,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     featured, featured_order, sort_order,
     features, features_ko, use_cases, use_cases_ko,
     getting_started, getting_started_ko, pricing_detail, pricing_detail_ko,
+    scenarios, scenarios_ko, pros_cons, pros_cons_ko,
+    difficulty, editor_note, editor_note_ko,
+    official_resources, verified_at, korean_quality_note,
   } = body;
 
   if (!name?.trim()) {
@@ -81,6 +84,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (getting_started_ko !== undefined) row.getting_started_ko = Array.isArray(getting_started_ko) ? getting_started_ko : [];
   if (pricing_detail !== undefined) row.pricing_detail = pricing_detail || null;
   if (pricing_detail_ko !== undefined) row.pricing_detail_ko = pricing_detail_ko || null;
+  if (scenarios !== undefined) row.scenarios = Array.isArray(scenarios) ? scenarios : [];
+  if (scenarios_ko !== undefined) row.scenarios_ko = Array.isArray(scenarios_ko) ? scenarios_ko : [];
+  if (pros_cons !== undefined) row.pros_cons = pros_cons || null;
+  if (pros_cons_ko !== undefined) row.pros_cons_ko = pros_cons_ko || null;
+  if (difficulty !== undefined) row.difficulty = ['beginner', 'intermediate', 'advanced'].includes(difficulty) ? difficulty : null;
+  if (editor_note !== undefined) row.editor_note = editor_note || null;
+  if (editor_note_ko !== undefined) row.editor_note_ko = editor_note_ko || null;
+  if (official_resources !== undefined) row.official_resources = Array.isArray(official_resources) ? official_resources : [];
+  if (verified_at !== undefined) row.verified_at = verified_at || null;
+  if (korean_quality_note !== undefined) row.korean_quality_note = korean_quality_note || null;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,

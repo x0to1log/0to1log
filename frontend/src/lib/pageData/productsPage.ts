@@ -69,6 +69,16 @@ export interface ProductDetailData {
   getting_started_ko: string[];
   pricing_detail: string | null;
   pricing_detail_ko: string | null;
+  scenarios: Array<{ title: string; steps: string }>;
+  scenarios_ko: Array<{ title: string; steps: string }>;
+  pros_cons: { pros: string[]; cons: string[] } | null;
+  pros_cons_ko: { pros: string[]; cons: string[] } | null;
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
+  editor_note: string | null;
+  editor_note_ko: string | null;
+  official_resources: Array<{ label: string; url: string }>;
+  verified_at: string | null;
+  korean_quality_note: string | null;
 }
 
 export interface ProductsPageData {
@@ -104,7 +114,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags, difficulty';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {

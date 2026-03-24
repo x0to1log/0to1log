@@ -113,6 +113,11 @@ const isFeatured = product?.featured ?? false;
         <input type="hidden" id="product-use-cases-ko" value={JSON.stringify(product?.use_cases_ko ?? [])} />
         <input type="hidden" id="product-getting-started" value={JSON.stringify(product?.getting_started ?? [])} />
         <input type="hidden" id="product-getting-started-ko" value={JSON.stringify(product?.getting_started_ko ?? [])} />
+        <input type="hidden" id="product-scenarios" value={JSON.stringify(product?.scenarios ?? [])} />
+        <input type="hidden" id="product-scenarios-ko" value={JSON.stringify(product?.scenarios_ko ?? [])} />
+        <input type="hidden" id="product-pros-cons" value={JSON.stringify(product?.pros_cons ?? null)} />
+        <input type="hidden" id="product-pros-cons-ko" value={JSON.stringify(product?.pros_cons_ko ?? null)} />
+        <input type="hidden" id="product-official-resources" value={JSON.stringify(product?.official_resources ?? [])} />
 
         <div class="admin-editor-meta">
           <div class="admin-editor-meta-row">
@@ -300,7 +305,95 @@ const isFeatured = product?.featured ?? false;
           </div>
         </details>
 
-        <!-- Metadata -->
+        <!-- Scenarios & Evaluation -->
+        <details class="admin-editor-section">
+          <summary class="admin-editor-section-summary">Scenarios & Evaluation</summary>
+          <div class="admin-editor-section-body">
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Scenarios EN</label>
+              <div style="flex:1;">
+                <div id="scenarios-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-scenario-btn" type="button" style="margin-top:0.4rem;">+ Add Scenario</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Scenarios KO</label>
+              <div style="flex:1;">
+                <div id="scenarios-ko-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-scenario-ko-btn" type="button" style="margin-top:0.4rem;">+ Add Scenario KO</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Pros EN</label>
+              <div style="flex:1;">
+                <div id="pros-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-pro-btn" type="button" style="margin-top:0.4rem;">+ Add Pro</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Cons EN</label>
+              <div style="flex:1;">
+                <div id="cons-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-con-btn" type="button" style="margin-top:0.4rem;">+ Add Con</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Pros KO</label>
+              <div style="flex:1;">
+                <div id="pros-ko-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-pro-ko-btn" type="button" style="margin-top:0.4rem;">+ Add Pro KO</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Cons KO</label>
+              <div style="flex:1;">
+                <div id="cons-ko-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-con-ko-btn" type="button" style="margin-top:0.4rem;">+ Add Con KO</button>
+              </div>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-difficulty">Difficulty</label>
+              <select class="admin-input" id="field-difficulty" style="max-width:180px">
+                <option value="">— None —</option>
+                <option value="beginner" selected={product?.difficulty === 'beginner'}>Beginner</option>
+                <option value="intermediate" selected={product?.difficulty === 'intermediate'}>Intermediate</option>
+                <option value="advanced" selected={product?.difficulty === 'advanced'}>Advanced</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- Editorial -->
+        <details class="admin-editor-section">
+          <summary class="admin-editor-section-summary">Editorial</summary>
+          <div class="admin-editor-section-body">
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Editor Note EN</label>
+              <textarea class="admin-input" id="field-editor-note" rows="3" placeholder="Your personal take on this product...">{product?.editor_note || ''}</textarea>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Editor Note KO</label>
+              <textarea class="admin-input" id="field-editor-note-ko" rows="3" placeholder="이 제품에 대한 에디터의 한마디...">{product?.editor_note_ko || ''}</textarea>
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Korean Quality</label>
+              <textarea class="admin-input" id="field-korean-quality-note" rows="2" placeholder="한국어 지원 품질 메모...">{product?.korean_quality_note || ''}</textarea>
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-verified-at">Verified At</label>
+              <input class="admin-input" id="field-verified-at" type="date" value={product?.verified_at || ''} style="max-width:180px" />
+            </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Resources</label>
+              <div style="flex:1;">
+                <div id="resources-list"></div>
+                <button class="admin-btn admin-btn--small" id="add-resource-btn" type="button" style="margin-top:0.4rem;">+ Add Resource</button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+                <!-- Metadata -->
         <details class="admin-editor-section">
           <summary class="admin-editor-section-summary">Metadata</summary>
           <div class="admin-editor-section-body">
@@ -469,6 +562,16 @@ const isFeatured = product?.featured ?? false;
       featured: document.getElementById('field-featured')?.checked ?? false,
       featured_order: featuredOrderVal ? Number(featuredOrderVal) : null,
       sort_order: sortOrderVal ? Number(sortOrderVal) : 0,
+      scenarios: getScenarios(),
+      scenarios_ko: getScenariosKo(),
+      pros_cons: { pros: getPros(), cons: getCons() },
+      pros_cons_ko: { pros: getProsKo(), cons: getConsKo() },
+      difficulty: document.getElementById('field-difficulty')?.value || null,
+      editor_note: document.getElementById('field-editor-note')?.value || null,
+      editor_note_ko: document.getElementById('field-editor-note-ko')?.value || null,
+      official_resources: getResources(),
+      verified_at: document.getElementById('field-verified-at')?.value || null,
+      korean_quality_note: document.getElementById('field-korean-quality-note')?.value || null,
     };
   }
 
@@ -752,17 +855,148 @@ const isFeatured = product?.featured ?? false;
   const getGettingStarted = setupStringListEditor('getting-started-list', 'add-getting-started-btn', 'product-getting-started');
   const getGettingStartedKo = setupStringListEditor('getting-started-ko-list', 'add-getting-started-ko-btn', 'product-getting-started-ko');
 
+  // ── Scenario Editors (title + steps per row) ────────
+  function setupScenarioEditor(listId, addBtnId, hiddenInputId) {
+    const list = document.getElementById(listId);
+    if (!list) return () => [];
+    let initialData = [];
+    try { initialData = JSON.parse(document.getElementById(hiddenInputId)?.value || '[]'); } catch { /* empty */ }
+
+    function addRow(item = {title: '', steps: ''}) {
+      const row = document.createElement('div');
+      row.className = 'scenario-row';
+      row.style.cssText = 'display:flex;flex-direction:column;gap:0.3rem;padding:0.5rem;border:1px solid var(--admin-border, #ddd);border-radius:6px;margin-bottom:0.4rem;';
+      const titleInput = document.createElement('input');
+      titleInput.className = 'admin-input scenario-title';
+      titleInput.type = 'text';
+      titleInput.value = item.title || '';
+      titleInput.placeholder = 'Scenario title (e.g. Summarize a report in 1 minute)';
+      const stepsInput = document.createElement('textarea');
+      stepsInput.className = 'admin-input scenario-steps';
+      stepsInput.rows = 2;
+      stepsInput.value = item.steps || '';
+      stepsInput.placeholder = 'Steps: Upload PDF → ask to summarize → copy to Slack';
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small';
+      removeBtn.type = 'button';
+      removeBtn.textContent = '\u2715';
+      removeBtn.style.alignSelf = 'flex-end';
+      removeBtn.addEventListener('click', () => row.remove());
+      row.appendChild(titleInput);
+      row.appendChild(stepsInput);
+      row.appendChild(removeBtn);
+      list.appendChild(row);
+    }
+
+    if (Array.isArray(initialData)) initialData.forEach((item) => addRow(item));
+    document.getElementById(addBtnId)?.addEventListener('click', () => addRow());
+
+    return () => Array.from(list.querySelectorAll('.scenario-row')).map((row) => ({
+      title: row.querySelector('.scenario-title')?.value?.trim() || '',
+      steps: row.querySelector('.scenario-steps')?.value?.trim() || '',
+    })).filter((s) => s.title || s.steps);
+  }
+
+  const getScenarios = setupScenarioEditor('scenarios-list', 'add-scenario-btn', 'product-scenarios');
+  const getScenariosKo = setupScenarioEditor('scenarios-ko-list', 'add-scenario-ko-btn', 'product-scenarios-ko');
+
+  // ── Pros/Cons Editors ────────
+  const getPros = setupStringListEditor('pros-list', 'add-pro-btn', 'product-pros-cons');
+  const getCons = setupStringListEditor('cons-list', 'add-con-btn', 'product-pros-cons');
+  const getProsKo = setupStringListEditor('pros-ko-list', 'add-pro-ko-btn', 'product-pros-cons-ko');
+  const getConsKo = setupStringListEditor('cons-ko-list', 'add-con-ko-btn', 'product-pros-cons-ko');
+
+  // Initialize pros/cons from {pros:[...], cons:[...]} structure
+  (function initProsConsLists() {
+    function fillList(listId, items) {
+      const list = document.getElementById(listId);
+      if (!list || !Array.isArray(items)) return;
+      items.forEach((val) => {
+        const row = document.createElement('div');
+        row.className = 'string-list-row';
+        const input = document.createElement('input');
+        input.className = 'admin-input string-list-input';
+        input.type = 'text';
+        input.value = String(val);
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small string-list-remove';
+        removeBtn.type = 'button';
+        removeBtn.textContent = '\u2715';
+        removeBtn.addEventListener('click', () => row.remove());
+        row.appendChild(input);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+      });
+    }
+    try {
+      const pc = JSON.parse(document.getElementById('product-pros-cons')?.value || 'null');
+      if (pc) { fillList('pros-list', pc.pros); fillList('cons-list', pc.cons); }
+    } catch { /* empty */ }
+    try {
+      const pcKo = JSON.parse(document.getElementById('product-pros-cons-ko')?.value || 'null');
+      if (pcKo) { fillList('pros-ko-list', pcKo.pros); fillList('cons-ko-list', pcKo.cons); }
+    } catch { /* empty */ }
+  })();
+
+  // ── Resource Editor (label + url per row) ────────
+  function setupResourceEditor(listId, addBtnId, hiddenInputId) {
+    const list = document.getElementById(listId);
+    if (!list) return () => [];
+    let initialData = [];
+    try { initialData = JSON.parse(document.getElementById(hiddenInputId)?.value || '[]'); } catch { /* empty */ }
+
+    function addRow(item = {label: '', url: ''}) {
+      const row = document.createElement('div');
+      row.className = 'resource-row';
+      row.style.cssText = 'display:flex;gap:0.4rem;align-items:center;margin-bottom:0.3rem;';
+      const labelInput = document.createElement('input');
+      labelInput.className = 'admin-input resource-label';
+      labelInput.type = 'text';
+      labelInput.value = item.label || '';
+      labelInput.placeholder = 'Label (e.g. Official Docs)';
+      labelInput.style.flex = '1';
+      const urlInput = document.createElement('input');
+      urlInput.className = 'admin-input resource-url';
+      urlInput.type = 'url';
+      urlInput.value = item.url || '';
+      urlInput.placeholder = 'https://...';
+      urlInput.style.flex = '2';
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small';
+      removeBtn.type = 'button';
+      removeBtn.textContent = '\u2715';
+      removeBtn.addEventListener('click', () => row.remove());
+      row.appendChild(labelInput);
+      row.appendChild(urlInput);
+      row.appendChild(removeBtn);
+      list.appendChild(row);
+    }
+
+    if (Array.isArray(initialData)) initialData.forEach((item) => addRow(item));
+    document.getElementById(addBtnId)?.addEventListener('click', () => addRow());
+
+    return () => Array.from(list.querySelectorAll('.resource-row')).map((row) => ({
+      label: row.querySelector('.resource-label')?.value?.trim() || '',
+      url: row.querySelector('.resource-url')?.value?.trim() || '',
+    })).filter((r) => r.label || r.url);
+  }
+
+  const getResources = setupResourceEditor('resources-list', 'add-resource-btn', 'product-official-resources');
+
   // ── Clear ──────────────────────────────────────────────
   document.getElementById('clear-btn')?.addEventListener('click', () => {
     if (!confirm('이름을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
     const ids = ['field-name-ko','field-url','field-tagline','field-tagline-ko','field-description','field-description-ko',
       'field-logo-url','field-thumbnail-url','field-pricing-note','field-pricing-detail','field-pricing-detail-ko',
-      'field-platform','field-tags','field-released-at','field-featured-order','field-sort-order'];
+      'field-platform','field-tags','field-released-at','field-featured-order','field-sort-order',
+      'field-editor-note','field-editor-note-ko','field-korean-quality-note','field-verified-at'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) (el as HTMLInputElement | HTMLTextAreaElement).value = ''; });
     const catSel = document.getElementById('field-category') as HTMLSelectElement | null;
     const pricingSel = document.getElementById('field-pricing') as HTMLSelectElement | null;
     if (catSel) catSel.selectedIndex = 0;
     if (pricingSel) pricingSel.selectedIndex = 0;
+    const diffSel = document.getElementById('field-difficulty') as HTMLSelectElement | null;
+    if (diffSel) diffSel.selectedIndex = 0;
     document.querySelectorAll<HTMLInputElement>('.product-secondary-cat').forEach(cb => cb.checked = false);
     const ksEl = document.getElementById('field-korean-support') as HTMLInputElement | null;
     const featEl = document.getElementById('field-featured') as HTMLInputElement | null;
@@ -774,7 +1008,8 @@ const isFeatured = product?.featured ?? false;
       if (img) { img.src = ''; img.hidden = true; }
     });
     // Clear dynamic lists
-    ['demo-media-list','features-list','features-ko-list','usecases-list','usecases-ko-list','getting-started-list','getting-started-ko-list'].forEach(id => {
+    ['demo-media-list','features-list','features-ko-list','usecases-list','usecases-ko-list','getting-started-list','getting-started-ko-list',
+      'scenarios-list','scenarios-ko-list','pros-list','cons-list','pros-ko-list','cons-ko-list','resources-list'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '';
     });
@@ -1098,6 +1333,74 @@ const isFeatured = product?.featured ?? false;
         if (parsed.pricing_detail_ko) {
           const el = document.getElementById('field-pricing-detail-ko');
           if (el) el.value = parsed.pricing_detail_ko;
+        }
+        // Scenarios
+        for (const [key, listId] of [['scenarios', 'scenarios-list'], ['scenarios_ko', 'scenarios-ko-list']]) {
+          if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+            const list = document.getElementById(listId);
+            if (list) {
+              list.innerHTML = '';
+              parsed[key].forEach((item) => {
+                const row = document.createElement('div');
+                row.className = 'scenario-row';
+                row.style.cssText = 'display:flex;flex-direction:column;gap:0.3rem;padding:0.5rem;border:1px solid var(--admin-border, #ddd);border-radius:6px;margin-bottom:0.4rem;';
+                const titleInput = document.createElement('input');
+                titleInput.className = 'admin-input scenario-title';
+                titleInput.type = 'text';
+                titleInput.value = item.title || '';
+                const stepsInput = document.createElement('textarea');
+                stepsInput.className = 'admin-input scenario-steps';
+                stepsInput.rows = 2;
+                stepsInput.value = item.steps || '';
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small';
+                removeBtn.type = 'button';
+                removeBtn.textContent = '\u2715';
+                removeBtn.style.alignSelf = 'flex-end';
+                removeBtn.addEventListener('click', () => row.remove());
+                row.appendChild(titleInput);
+                row.appendChild(stepsInput);
+                row.appendChild(removeBtn);
+                list.appendChild(row);
+              });
+            }
+          }
+        }
+        // Pros & Cons
+        function fillStringList(listId, items) {
+          if (!Array.isArray(items) || items.length === 0) return;
+          const list = document.getElementById(listId);
+          if (!list) return;
+          list.innerHTML = '';
+          items.forEach((val) => {
+            const row = document.createElement('div');
+            row.className = 'string-list-row';
+            const input = document.createElement('input');
+            input.className = 'admin-input string-list-input';
+            input.type = 'text';
+            input.value = String(val);
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'admin-btn admin-btn-danger admin-btn--small string-list-remove';
+            removeBtn.type = 'button';
+            removeBtn.textContent = '\u2715';
+            removeBtn.addEventListener('click', () => row.remove());
+            row.appendChild(input);
+            row.appendChild(removeBtn);
+            list.appendChild(row);
+          });
+        }
+        if (parsed.pros_cons) {
+          fillStringList('pros-list', parsed.pros_cons.pros);
+          fillStringList('cons-list', parsed.pros_cons.cons);
+        }
+        if (parsed.pros_cons_ko) {
+          fillStringList('pros-ko-list', parsed.pros_cons_ko.pros);
+          fillStringList('cons-ko-list', parsed.pros_cons_ko.cons);
+        }
+        // Difficulty
+        if (parsed.difficulty) {
+          const el = document.getElementById('field-difficulty');
+          if (el) el.value = parsed.difficulty;
         }
       } catch {
         const el = document.getElementById('field-tagline');
