@@ -205,10 +205,10 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ## Output JSON format
 ```json
 {{{{
-  "headline": "Attention-grabbing English title summarizing today's top story",
-  "headline_ko": "오늘의 핵심 뉴스를 요약하는 임팩트 있는 한국어 제목",
-  "excerpt": "Marketing teaser that raises curiosity (different from headline AND one-line summary). The excerpt sells the click, the summary delivers the answer.",
-  "excerpt_ko": "호기심을 유발하는 마케팅 티저 (제목, 한 줄 요약과 반드시 다르게). excerpt는 클릭을 유도, 요약은 답을 전달.",
+  "headline": "(MUST be in English) Attention-grabbing English title summarizing today's top story",
+  "headline_ko": "(MUST be in Korean) 오늘의 핵심 뉴스를 요약하는 임팩트 있는 한국어 제목",
+  "excerpt": "(MUST be in English) Marketing teaser that raises curiosity (different from headline AND one-line summary). The excerpt sells the click, the summary delivers the answer.",
+  "excerpt_ko": "(MUST be in Korean) 호기심을 유발하는 마케팅 티저 (제목, 한 줄 요약과 반드시 다르게). excerpt는 클릭을 유도, 요약은 답을 전달.",
   "tags": ["company-name", "technology", "topic", "tool-name", "concept"],
   "focus_items": ["OpenAI releases real-time voice API for developers", "Inference costs drop 60%, enabling new use cases", "Watch for Google and Meta's competitive response this month"],
   "focus_items_ko": ["OpenAI, 개발자용 실시간 음성 API 출시", "추론 비용 60% 하락으로 새로운 활용 가능", "이번 달 Google·Meta의 경쟁 대응 주목"],

@@ -557,8 +557,15 @@ async def _generate_digest(
                 )
 
                 # Capture metadata from first persona (expert)
+                _has_ko = lambda s: any('\uAC00' <= c <= '\uD7AF' for c in s)
                 if not digest_headline and data.get("headline"):
-                    digest_headline = data["headline"]
+                    h = data["headline"]
+                    if _has_ko(h):
+                        logger.warning("headline contains Korean, swapping to headline_ko")
+                        if not digest_headline_ko:
+                            digest_headline_ko = h
+                    else:
+                        digest_headline = h
                 if not digest_headline_ko and data.get("headline_ko"):
                     digest_headline_ko = data["headline_ko"]
                 if not digest_excerpt and data.get("excerpt"):
