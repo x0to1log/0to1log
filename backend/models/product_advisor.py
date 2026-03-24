@@ -7,6 +7,7 @@ from typing import Literal
 class ProductGenerateRequest(BaseModel):
     action: Literal[
         "generate_from_url",
+        "generate_search_corpus",
         "tagline_en",
         "tagline_ko",
         "description_en",

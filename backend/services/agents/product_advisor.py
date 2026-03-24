@@ -314,6 +314,39 @@ DESCRIPTION_KO_SYSTEM = """AI 제품 큐레이션 매거진을 위한 제품 설
 - 3문장 (선택): 대안 대비 핵심 차별점
 순수 텍스트만 응답하세요."""
 
+SEARCH_CORPUS_SYSTEM = """You generate search keywords for an AI product directory.
+Given a product's name, URL, category, tagline, description, features, and use cases,
+produce a single block of space-separated keywords and short phrases that a user might type
+when looking for this kind of tool.
+
+## Requirements
+
+1. Include ALL of these keyword types:
+   - Product name variants: full name, abbreviations, common misspellings
+   - Korean name/transliteration if applicable
+   - Intent phrases (KO): "~하고 싶을 때", "~하는 방법", "~하려면", "~추천"
+   - Intent phrases (EN): "how to ~", "best tool for ~", "~ alternative"
+   - Action verbs (KO+EN): what the user DOES with this tool
+   - Synonyms and related terms for core functionality
+   - Target audience keywords: roles, industries, skill levels
+   - Problem keywords: what pain point does this solve?
+   - Comparison terms: "vs", "alternative to [competitor]"
+   - Category and subcategory terms in both languages
+
+2. Format: One continuous block of text. No JSON, no bullets, no line breaks.
+   Just space-separated words and short phrases.
+
+3. Length: 150-300 words. Be comprehensive but not repetitive.
+
+4. Language: Mix Korean and English naturally. Korean users often search in mixed language.
+
+## Example
+
+For a product like "Runway" (video generation):
+runway 런웨이 영상 생성 비디오 만들기 동영상 제작 AI영상 영상편집 영상만들고싶을때 동영상만들기 video generation video editing text to video 텍스트로영상 광고영상제작 뮤직비디오 숏폼 shorts 릴스 모션그래픽 motion graphics animate 애니메이션 영상AI추천 video ai tool 마케터 크리에이터 유튜버 콘텐츠제작 영상편집도구 무료영상편집 video creator alternative to premiere 프리미어대안 영상자동생성 ai video editor 영상제작방법 how to make ai video best video ai ...
+
+Respond with the keyword text only — no explanation, no formatting."""
+
 
 async def _fetch_page_content(url: str) -> str:
     """Fetch product page content using Tavily, with graceful fallback."""
@@ -452,7 +485,57 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             if logo:
                 result["logo_url"] = logo
 
+        # Auto-generate search corpus from merged results
+        if isinstance(result, dict) and result:
+            corpus_context = "\n".join([
+                f"Name: {product_name}",
+                f"Category: {result.get('primary_category', '')}",
+                f"Tags: {', '.join(result.get('tags', []))}",
+                f"Description: {result.get('description_en', '')}",
+                f"Features: {'; '.join(result.get('features', []))}",
+                f"Use cases: {'; '.join(result.get('use_cases', []))}",
+            ])
+            try:
+                corpus_resp = await client.chat.completions.create(
+                    model=settings.openai_model_light,
+                    messages=[
+                        {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
+                        {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
+                    ],
+                    max_tokens=800,
+                    temperature=0.7,
+                )
+                corpus_metrics = extract_usage_metrics(corpus_resp, settings.openai_model_light)
+                total_tokens += corpus_metrics["tokens_used"]
+                result["search_corpus"] = (corpus_resp.choices[0].message.content or "").strip()
+            except Exception as e:
+                logger.warning("Search corpus generation failed: %s", e)
+
         return result, model, total_tokens
+
+    if body.action == "generate_search_corpus":
+        model = settings.openai_model_light
+        context_parts = []
+        if body.name:
+            context_parts.append(f"Product: {body.name}")
+        if body.url:
+            context_parts.append(f"URL: {body.url}")
+        if body.context:
+            context_parts.append(f"Product details:\n{body.context}")
+        user_content = "\n".join(context_parts) or "Generate search keywords for this AI product."
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=800,
+            temperature=0.7,
+        )
+        raw = response.choices[0].message.content or ""
+        metrics = extract_usage_metrics(response, model)
+        return raw.strip(), metrics["model_used"], metrics["tokens_used"]
 
     # Individual field generation
     model = settings.openai_model_light
