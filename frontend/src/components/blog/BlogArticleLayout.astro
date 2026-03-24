@@ -79,11 +79,11 @@ const readingLabel = readingTimeMin
   : null;
 const normalizedCat = normalizeCategorySlug(category);
 const catMatch = normalizedCat ? categories.find(c => c.slug === normalizedCat) : null;
-const categoryLabel = catMatch ? catMatch['label_' + locale] : normalizedCat;
+const categoryLabel = catMatch ? (locale === 'ko' ? catMatch.label_ko : catMatch.label_en) : normalizedCat;
 const catColor = catMatch?.color ?? 'var(--color-border)';
 const nextNormCat = normalizeCategorySlug(nextPost?.category);
 const nextCategoryLabel = nextNormCat
-  ? (categories.find(c => c.slug === nextNormCat)?.['label_' + locale] ?? nextNormCat)
+  ? ((locale === 'ko' ? categories.find(c => c.slug === nextNormCat)?.label_ko : categories.find(c => c.slug === nextNormCat)?.label_en) ?? nextNormCat)
   : null;
 
 const resolvedBasePath = basePath || `/${locale}/blog`;

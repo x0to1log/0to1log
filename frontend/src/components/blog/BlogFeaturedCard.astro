@@ -31,7 +31,7 @@ const {
 } = Astro.props;
 
 const normalizedCat = normalizeCategorySlug(category);
-const catLabel = categories.find(c => c.slug === normalizedCat)?.['label_' + locale] ?? normalizedCat;
+const catLabel = (locale === 'ko' ? categories.find(c => c.slug === normalizedCat)?.label_ko : categories.find(c => c.slug === normalizedCat)?.label_en) ?? normalizedCat;
 const catColor = categories.find(c => c.slug === normalizedCat)?.color ?? 'var(--color-border)';
 const readingLabel = readingTimeMin
   ? locale === 'ko' ? `${readingTimeMin}분` : `${readingTimeMin} min`
