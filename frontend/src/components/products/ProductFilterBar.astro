@@ -2,6 +2,7 @@
 import type { ProductCategory } from '../../lib/pageData/productsPage';
 import { t } from '../../i18n/index';
 import { getCategoryIcon } from '../../lib/productCategoryIcons';
+import ProductSearchBar from './ProductSearchBar.astro';
 
 interface Props {
   categories: ProductCategory[];
@@ -13,21 +14,7 @@ const tr = t[locale];
 ---
 
 <div class="product-filter-bar">
-  <div class="product-filter-search">
-    <input
-      type="search"
-      id="product-search"
-      class="handbook-search-input"
-      placeholder={tr['products.searchPlaceholder']}
-      aria-label={tr['products.searchPlaceholder']}
-      autocomplete="off"
-      data-placeholder-hints={JSON.stringify(
-        locale === 'ko'
-          ? ['ChatGPT, Claude, Gemini...', '이미지 생성 도구는?', '무료로 쓸 수 있는 AI는?', '코딩 도구 찾기', '영상 만드는 AI는?', '한국어 지원 AI 도구']
-          : ['ChatGPT, Claude, Gemini...', 'Image generation tools', 'Free AI tools', 'Find coding assistants', 'Video creation AI', 'Korean language support']
-      )}
-    />
-  </div>
+  <ProductSearchBar locale={locale} />
   <nav class="product-filter-tabs" aria-label={tr['products.title']}>
     <button class="product-filter-tab active" data-category="all" type="button">
       {tr['products.categoryAll']}

@@ -5,6 +5,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { createClient } from '@supabase/supabase-js';
 import { getProductDetailData, fetchAlternatives, fetchRelatedNews } from '../../../lib/pageData/productsPage';
+import ProductSearchBar from '../../../components/products/ProductSearchBar.astro';
 import ProductDetail from '../../../components/products/ProductDetail.astro';
 import ContentFeedback from '../../../components/common/ContentFeedback.astro';
 
@@ -47,15 +48,18 @@ if (user && Astro.locals.accessToken && product) {
   altSlug={product?.slug}
 >
   {product ? (
-    <ProductDetail product={product} htmlDescription={htmlDescription} htmlPricingDetail={htmlPricingDetail} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isLiked={isLiked} isAdmin={!!Astro.locals.isAdmin}>
-      <ContentFeedback
-        sourceType="product"
-        sourceId={product.id}
-        locale={locale}
-        isAuthenticated={!!user}
-        loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
-      />
-    </ProductDetail>
+    <div class="product-detail-page">
+      <ProductSearchBar locale={locale} sticky={true} />
+      <ProductDetail product={product} htmlDescription={htmlDescription} htmlPricingDetail={htmlPricingDetail} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isLiked={isLiked} isAdmin={!!Astro.locals.isAdmin}>
+        <ContentFeedback
+          sourceType="product"
+          sourceId={product.id}
+          locale={locale}
+          isAuthenticated={!!user}
+          loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
+        />
+      </ProductDetail>
+    </div>
   ) : (
     <div class="products-page">
       <p class="products-not-found">
@@ -68,5 +72,6 @@ if (user && Astro.locals.accessToken && product) {
 
 <script>
   import '../../../scripts/contentFeedback';
+  import '../../../scripts/handbookSearchHints';
   import '../../../scripts/productLike';
 </script>

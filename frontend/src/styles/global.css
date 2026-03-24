@@ -9784,6 +9784,22 @@ pre:hover .blog-code-copy {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
+.product-detail-page {
+  padding-top: 0.5rem;
+}
+
+.product-detail-search {
+  max-width: 1080px;
+  margin: 0 auto 0.5rem;
+  padding: 0 0.75rem;
+  z-index: 25;
+}
+
+.product-detail-search .handbook-search-input {
+  background-color: color-mix(in srgb, var(--color-bg-primary) 92%, white 8%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
 @media (max-width: 767px) {
   .product-filter-tabs {
     flex-wrap: nowrap;
@@ -9806,11 +9822,23 @@ pre:hover .blog-code-copy {
     padding: 0 0.75rem;
   }
 
+  .product-detail-search {
+    max-width: 100%;
+    padding: 0 0.75rem;
+  }
+
   .product-filter-search .handbook-search-input {
     min-height: 2.5rem;
     font-size: 0.85rem;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
+  }
+
+  .product-detail-search .handbook-search-input {
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
   }
 }
 
