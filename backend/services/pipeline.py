@@ -581,8 +581,11 @@ async def _generate_digest(
                 usage = extract_usage_metrics(response, model)
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
-                # Recover missing locale: if EN exists but KO is empty, re-generate KO only
+                # Recover missing locale: re-generate missing side
                 ko_recovered = False
+                en_recovered = False
+
+                # EN exists but KO empty → recover KO
                 if persona_output.en.strip() and not persona_output.ko.strip():
                     logger.warning(
                         "Digest %s %s: EN ok (%d chars) but KO empty — re-generating KO only",
@@ -621,6 +624,45 @@ async def _generate_digest(
                     except Exception as ko_err:
                         logger.warning("KO recovery failed for %s %s: %s", digest_type, persona_name, ko_err)
 
+                # KO exists but EN empty → recover EN
+                if persona_output.ko.strip() and not persona_output.en.strip():
+                    logger.warning(
+                        "Digest %s %s: KO ok (%d chars) but EN empty — re-generating EN only",
+                        digest_type, persona_name, len(persona_output.ko),
+                    )
+                    try:
+                        en_system = (
+                            f"{system_prompt}\n\n"
+                            "IMPORTANT: Generate ONLY the English (en) content. "
+                            "The Korean version already exists. Return JSON: {{\"en\": \"...\"}}"
+                        )
+                        en_resp = await client.chat.completions.create(
+                            model=model,
+                            messages=[
+                                {"role": "system", "content": en_system},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.4,
+                            max_tokens=8000,
+                        )
+                        en_data = parse_ai_json(
+                            en_resp.choices[0].message.content,
+                            f"Digest-{digest_type}-{persona_name}-en-recovery",
+                        )
+                        en_usage = extract_usage_metrics(en_resp, model)
+                        cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
+                        recovered_en = en_data.get("en", "")
+                        if recovered_en.strip():
+                            persona_output = PersonaOutput(en=recovered_en, ko=persona_output.ko)
+                            en_recovered = True
+                            logger.info(
+                                "EN recovery succeeded for %s %s: %d chars",
+                                digest_type, persona_name, len(recovered_en),
+                            )
+                    except Exception as en_err:
+                        logger.warning("EN recovery failed for %s %s: %s", digest_type, persona_name, en_err)
+
                 personas[persona_name] = persona_output
 
                 await _log_stage(
@@ -632,7 +674,7 @@ async def _generate_digest(
                     attempt=attempt + 1,
                     debug_meta={
                         "attempt": attempt + 1, "attempts": attempt + 1,
-                        "ko_recovered": ko_recovered,
+                        "ko_recovered": ko_recovered, "en_recovered": en_recovered,
                         "en_length": len(persona_output.en),
                         "ko_length": len(persona_output.ko),
                         "en_preview": _trim(persona_output.en, 500),
