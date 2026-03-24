@@ -436,8 +436,10 @@ const navItems = [
 
     function onScroll() {
       if (ticking) return;
+      if (!header || !spacer) return;
       ticking = true;
       requestAnimationFrame(() => {
+        if (!header || !spacer) return;
         const currentY = window.scrollY;
 
         if (currentY <= headerH) {

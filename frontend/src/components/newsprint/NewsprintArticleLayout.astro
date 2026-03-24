@@ -162,7 +162,7 @@ const sectionCopy = {
   coreAnalysis: isKo ? '핵심 분석' : 'Core Analysis',
   personaInsights: isKo ? '페르소나 인사이트' : 'Persona Insights',
   sources: isKo ? '출처' : 'Sources',
-  sourceCount: isKo ? `${sourceCards.length}개 출처` : `${sourceCards.length} sources`,
+  sourceCount: isKo ? `${(sourceCards || []).length}개 출처` : `${(sourceCards || []).length} sources`,
   sourceDetails: isKo ? '출처 자세히 보기' : 'View source details',
 };
 

@@ -148,7 +148,7 @@ function initComments(): void {
 
         if (res.ok) {
           input.value = '';
-          charcount.textContent = '';
+          if (charcount) charcount.textContent = '';
           await loadComments();
         }
       } catch {

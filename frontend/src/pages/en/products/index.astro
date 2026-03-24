@@ -159,7 +159,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       applyFilters();
 
       // Update filter bar active tab
-      document.querySelectorAll('.product-filter-tab').forEach((t) =>
+      document.querySelectorAll<HTMLElement>('.product-filter-tab').forEach((t) =>
         t.classList.toggle('active', t.dataset.category === cat)
       );
     }
@@ -176,7 +176,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       history.replaceState(null, '', location.pathname);
 
       // Reset filter bar
-      document.querySelectorAll('.product-filter-tab').forEach((t) =>
+      document.querySelectorAll<HTMLElement>('.product-filter-tab').forEach((t) =>
         t.classList.toggle('active', t.dataset.category === 'all')
       );
     }

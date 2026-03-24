@@ -111,6 +111,7 @@ function initArticleFind(): void {
   }
 
   function updateCount(query: string, matches: number): void {
+    if (!countEl) return;
     if (!query) {
       countEl.textContent = '';
       return;

@@ -158,7 +158,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       if (filtered) filtered.hidden = false;
       applyFilters();
 
-      document.querySelectorAll('.product-filter-tab').forEach((t) =>
+      document.querySelectorAll<HTMLElement>('.product-filter-tab').forEach((t) =>
         t.classList.toggle('active', t.dataset.category === cat)
       );
     }
@@ -173,7 +173,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
 
       history.replaceState(null, '', location.pathname);
 
-      document.querySelectorAll('.product-filter-tab').forEach((t) =>
+      document.querySelectorAll<HTMLElement>('.product-filter-tab').forEach((t) =>
         t.classList.toggle('active', t.dataset.category === 'all')
       );
     }

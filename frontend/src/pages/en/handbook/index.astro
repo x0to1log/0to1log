@@ -234,7 +234,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       cardsBuilt = true;
       if (!termsDataEl || !searchResults) return;
       termsData = JSON.parse(termsDataEl.textContent || '[]');
-      termsData.sort((a, b) => a.t.localeCompare(b.t, undefined, { sensitivity: 'base' }));
+      if (termsData) termsData.sort((a, b) => a.t.localeCompare(b.t, undefined, { sensitivity: 'base' }));
       const locale = document.documentElement.lang || 'en';
       const frag = document.createDocumentFragment();
       for (const t of termsData!) {

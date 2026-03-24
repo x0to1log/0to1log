@@ -42,6 +42,7 @@ function initNewsListSearch(): void {
   }
 
   function applySearch(updateUrl = false): void {
+    if (!search) return;
     const query = search.value.trim().toLowerCase();
     const activeFilter = getActiveFilter();
     let visibleCount = 0;
