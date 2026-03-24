@@ -5956,37 +5956,70 @@ body.auth-prompt-open {
   }
 }
 
+.newsprint-guide-quiz {
+  border-bottom: none !important;
+  padding-top: 1rem;
+}
+
+.newsprint-guide-quiz .newsprint-guide-label {
+  color: var(--color-accent);
+  letter-spacing: 0.06em;
+}
+
 .newsprint-quiz-question {
-  font-weight: 500;
-  margin-bottom: 0.5rem !important;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 0.75rem !important;
+  color: var(--color-text);
 }
 
 .newsprint-quiz-options {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .newsprint-quiz-option {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   width: 100%;
   text-align: left;
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
   border: 1px solid var(--color-border);
+  border-radius: 6px;
   background: var(--color-bg-primary);
+  color: var(--color-text);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.newsprint-quiz-option::before {
+  content: '';
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-text-muted);
+  border-radius: 50%;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
 .newsprint-quiz-option:hover:not([disabled]) {
-  border-color: var(--color-text);
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.newsprint-quiz-option:hover:not([disabled])::before {
+  border-color: var(--color-accent);
 }
 
 .newsprint-quiz-option[disabled] {
   cursor: default;
-  opacity: 0.85;
 }
 
 .newsprint-quiz-option--correct {
@@ -5994,16 +6027,35 @@ body.auth-prompt-open {
   background: color-mix(in srgb, #16a34a 8%, var(--color-bg-primary));
 }
 
+.newsprint-quiz-option--correct::before {
+  border-color: #16a34a;
+  background: #16a34a;
+  box-shadow: inset 0 0 0 2px var(--color-bg-primary);
+}
+
 .newsprint-quiz-option--wrong {
   border-color: #dc2626;
-  background: color-mix(in srgb, #dc2626 8%, var(--color-bg-primary));
+  background: color-mix(in srgb, #dc2626 6%, var(--color-bg-primary));
+  opacity: 0.7;
+}
+
+.newsprint-quiz-option--wrong::before {
+  border-color: #dc2626;
+}
+
+.newsprint-quiz-option[disabled]:not(.newsprint-quiz-option--correct):not(.newsprint-quiz-option--wrong) {
+  opacity: 0.5;
 }
 
 .newsprint-quiz-explanation {
-  margin-top: 0.5rem !important;
+  margin-top: 0.75rem !important;
+  padding: 0.65rem 0.85rem;
   font-size: 0.85rem;
-  color: var(--color-muted);
-  font-style: italic;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  background: var(--color-accent-subtle);
+  border-left: 2px solid var(--color-accent);
+  border-radius: 0 4px 4px 0;
 }
 
 /* ── Related News (Rail) ── */
@@ -7743,8 +7795,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
     top: calc(var(--blog-shell-header-offset) + 0.5rem);
     left: 0.75rem;
     bottom: 0.75rem;
-    width: min(22rem, calc(100vw - 1.25rem));
-    max-width: calc(100vw - 1.25rem);
+    width: min(16rem, calc(100vw - 4rem));
+    max-width: calc(100vw - 4rem);
     z-index: 210;
     transform: translateX(calc(-100% - 1.25rem));
     transition: transform 250ms ease;
@@ -7765,6 +7817,10 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 
   .blog-breadcrumb {
     padding-left: 4rem; /* 44px 토글 버튼 + 20px 여백 */
+  }
+
+  .blog-category-header {
+    padding-top: 3.5rem; /* 햄버거 버튼과 겹침 방지 */
   }
 
 }
