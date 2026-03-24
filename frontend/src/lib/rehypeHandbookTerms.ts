@@ -147,7 +147,7 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       siblings.splice(index!, 1, ...parts);
 
       // Return SKIP to avoid revisiting newly inserted nodes
-      return [visit.SKIP, index! + parts.length];
+      return [visit.SKIP, index! + parts.length] as any;
     });
   };
 }

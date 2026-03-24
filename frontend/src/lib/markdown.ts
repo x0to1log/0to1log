@@ -51,7 +51,7 @@ const sanitizeSchemaWithTerms = {
   ...sanitizeSchema,
   attributes: {
     ...sanitizeSchema.attributes,
-    span: [...(sanitizeSchema.attributes?.span || []), 'dataSlug', 'dataTerm'],
+    span: [...(sanitizeSchema.attributes?.span || []), 'data-slug', 'data-term'],
   },
 };
 
@@ -125,7 +125,7 @@ const processor = unified()
   .use(rehypeStripDel)
   .use(rehypeKatex)
   .use(rehypeSanitize, sanitizeSchema)
-  .use(rehypeShiki, shikiOptions)
+  .use(rehypeShiki, shikiOptions as any)
   .use(rehypeCodeWindow)
   .use(rehypeStringify);
 
@@ -135,7 +135,7 @@ export async function renderMarkdown(md: string): Promise<string> {
 
 export { type TermsMap } from './rehypeHandbookTerms';
 
-const termsProcessorCache = new WeakMap<TermsMap, ReturnType<typeof unified>>();
+const termsProcessorCache = new WeakMap<TermsMap, any>();
 
 export async function renderMarkdownWithTerms(
   md: string,
@@ -158,7 +158,7 @@ export async function renderMarkdownWithTerms(
         .use(rehypeKatex)
         .use(rehypeHandbookTerms(termsMap))
         .use(rehypeSanitize, sanitizeSchemaWithTerms)
-        .use(rehypeShiki, shikiOptions)
+        .use(rehypeShiki, shikiOptions as any)
         .use(rehypeCodeWindow)
         .use(rehypeStringify);
       termsProcessorCache.set(termsMap, termsProcessor);
