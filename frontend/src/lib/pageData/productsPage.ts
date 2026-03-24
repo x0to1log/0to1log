@@ -114,7 +114,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags, difficulty';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags, difficulty, search_corpus';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {

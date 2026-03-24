@@ -28,6 +28,7 @@ const buildSearchText = (product: typeof allProducts[0]) =>
     categoryKo[product.primary_category],
     ...(product.platform ?? []),
     ...(product.tags ?? []),
+    (product as any).search_corpus,
   ].filter(Boolean).join(' ').toLowerCase();
 
 const getFirstImageUrl = (product: typeof allProducts[0]) => {
