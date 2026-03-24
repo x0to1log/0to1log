@@ -118,7 +118,7 @@ const emailPrefix = (user.email || '')
   .replace(/[^a-z0-9-]/g, '')
   .slice(0, 20);
 const usernamePlaceholder = asciiName || emailPrefix || 'jane-doe';
-const bio = profile?.bio || '';
+const bio = (profile as any)?.bio || '';
 const persona = profile?.persona || '';
 const handbookLevel = profile?.handbook_level || 'basic';
 const preferredLocale = profile?.preferred_locale || browserLocale;

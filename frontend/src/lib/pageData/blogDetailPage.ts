@@ -71,7 +71,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
           term: entry.term,
           korean_name: entry.korean_name || '',
           categories: entry.categories || [],
-          definition: entry[definitionField] || '',
+          definition: (entry as Record<string, any>)[definitionField] || '',
         };
       }
 

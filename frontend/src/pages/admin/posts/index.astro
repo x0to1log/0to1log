@@ -178,7 +178,7 @@ const categoryOptions = Array.from(
                         <span>{post.category}</span>
                       </>
                     )}
-                    {post.tags && post.tags.length > 0 && (
+                    {Array.isArray(post.tags) && post.tags.length > 0 && (
                       <>
                         <span class="admin-meta-sep">·</span>
                         <span class="admin-tag-count">🏷 {post.tags.length}</span>
