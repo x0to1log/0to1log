@@ -60,7 +60,9 @@ assert(
   'Product filter bar should not use a webkit blur on the page behind it',
 );
 
-const mobileStart = globalCss.indexOf('@media (max-width: 767px) {');
+const productTabsStart = globalCss.indexOf('.product-filter-tabs {');
+assert(productTabsStart !== -1, 'Missing base product filter tabs styles');
+const mobileStart = globalCss.indexOf('@media (max-width: 767px) {', productTabsStart);
 assert(mobileStart !== -1, 'Missing mobile media query for product filter bar');
 const mobileCss = globalCss.slice(mobileStart, globalCss.indexOf('/* --- Handbook trending terms --- */', mobileStart));
 const mobileTabsBlock = extractBlock(mobileCss, '.product-filter-tabs');
@@ -76,6 +78,14 @@ assert(
 assert(
   !mobileTabsBlock.includes('-webkit-mask-image: linear-gradient'),
   'Mobile product filter tabs should not rely on a webkit mask that makes the right overflow feel broken',
+);
+assert(
+  mobileTabsBlock.includes('min-width: 0;'),
+  'Mobile product filter tabs should be allowed to shrink inside the sticky flex column instead of widening the whole page',
+);
+assert(
+  mobileTabsBlock.includes('width: 100%;'),
+  'Mobile product filter tabs should stay bound to the viewport width while scrolling internally',
 );
 
 console.log('product-filter-bar-mobile-sticky.test.cjs passed');

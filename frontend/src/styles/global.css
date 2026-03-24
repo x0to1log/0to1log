@@ -9833,6 +9833,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
     flex-wrap: nowrap;
     justify-content: flex-start;
     overflow-x: auto;
+    width: 100%;
+    min-width: 0;
     scrollbar-width: none;
     overscroll-behavior-x: contain;
     scroll-padding-inline: 0.75rem;
