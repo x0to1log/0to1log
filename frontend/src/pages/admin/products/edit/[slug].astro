@@ -492,6 +492,10 @@ const isFeatured = product?.featured ?? false;
             Description KO
             <span class="ai-btn-model">gpt-4o-mini</span>
           </button>
+          <button class="admin-ai-action-btn" data-action="pricing_detail" type="button">
+            Pricing Detail
+            <span class="ai-btn-model">gpt-4o-mini</span>
+          </button>
           <button class="admin-ai-action-btn" data-action="generate_search_corpus" type="button">
             <span>Search Keywords</span>
           </button>
@@ -1187,6 +1191,7 @@ const isFeatured = product?.featured ?? false;
         tagline_ko: 'Tagline KO',
         description_en: 'Description EN',
         description_ko: 'Description KO',
+        pricing_detail: 'Pricing Detail',
         generate_search_corpus: 'Search Keywords',
       };
       const loadingText = document.getElementById('ai-loading-text');
@@ -1258,7 +1263,7 @@ const isFeatured = product?.featured ?? false;
           generate_search_corpus: 'field-search-corpus',
         };
         aiResultTarget = targetMap[action] || null;
-        document.getElementById('ai-apply-btn').hidden = !aiResultTarget && action !== 'generate_from_url';
+        document.getElementById('ai-apply-btn').hidden = !aiResultTarget && action !== 'generate_from_url' && action !== 'pricing_detail';
       } finally {
         clearInterval(elapsedTimer);
         document.getElementById('ai-loading').hidden = true;
@@ -1279,6 +1284,8 @@ const isFeatured = product?.featured ?? false;
         const parsed = JSON.parse(resultText);
         // Text fields
         const textMap = {
+          name: 'field-name',
+          name_ko: 'field-name-ko',
           tagline: 'field-tagline', tagline_en: 'field-tagline',
           tagline_ko: 'field-tagline-ko',
           description_en: 'field-description', description: 'field-description',
@@ -1290,6 +1297,11 @@ const isFeatured = product?.featured ?? false;
             const el = document.getElementById(fieldId);
             if (el) el.value = parsed[key];
           }
+        }
+        // Auto-generate slug from AI name if slug is empty
+        if (parsed.name) {
+          const slugEl = document.getElementById('field-slug');
+          if (slugEl && !slugEl.value) slugEl.value = slugify(parsed.name);
         }
         // Logo preview
         if (parsed.logo_url) {
@@ -1460,6 +1472,26 @@ const isFeatured = product?.featured ?? false;
         if (vEl && !vEl.value) vEl.value = new Date().toISOString().slice(0, 10);
       } catch {
         const el = document.getElementById('field-tagline');
+        if (el) el.value = resultText;
+      }
+    } else if (aiCurrentAction === 'pricing_detail') {
+      try {
+        const parsed = JSON.parse(resultText);
+        if (parsed.pricing) {
+          const el = document.getElementById('field-pricing');
+          if (el) el.value = parsed.pricing;
+        }
+        if (parsed.pricing_detail) {
+          const el = document.getElementById('field-pricing-detail');
+          if (el) el.value = parsed.pricing_detail;
+        }
+        if (parsed.pricing_detail_ko) {
+          const el = document.getElementById('field-pricing-detail-ko');
+          if (el) el.value = parsed.pricing_detail_ko;
+        }
+      } catch {
+        // Fallback: put raw text in EN field
+        const el = document.getElementById('field-pricing-detail');
         if (el) el.value = resultText;
       }
     } else if (aiResultTarget) {

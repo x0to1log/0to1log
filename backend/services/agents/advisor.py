@@ -25,7 +25,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.client import extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
+from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
     get_generate_prompt,
@@ -74,14 +74,14 @@ ACTION_CONFIG = {
         "validator": ReviewResult,
     },
     "factcheck": {
-        "model_attr": "openai_model_main",
+        "model_attr": "openai_model_reasoning",
         "prompt": FACTCHECK_SYSTEM_PROMPT,
         "max_tokens": 4096,
         "temperature": 0.2,
         "validator": FactcheckResult,
     },
     "conceptcheck": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.2,
@@ -155,16 +155,17 @@ async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
     else:
         system_prompt = config["prompt"]
 
-    response = await client.chat.completions.create(
+    completion_kwargs = build_completion_kwargs(
         model=model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        response_format={"type": "json_object"},
-        temperature=config["temperature"],
         max_tokens=config["max_tokens"],
+        temperature=config["temperature"],
+        response_format={"type": "json_object"},
     )
+    response = await client.chat.completions.create(**completion_kwargs)
 
     raw = response.choices[0].message.content
     data = parse_ai_json(raw, f"Advisor-{req.action}")
@@ -206,20 +207,22 @@ async def _check_url(url: str) -> dict | None:
 async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
     """2-step deep verification: extract claims → search → verify."""
     client = get_openai_client()
-    model = getattr(settings, "openai_model_main")
+    model = settings.openai_model_reasoning
     total_tokens = 0
 
     # Step 1: Extract claims
     user_prompt = _build_user_prompt(req)
     resp1 = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": DEEPVERIFY_CLAIM_EXTRACT_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.1,
-        max_tokens=2048,
+        **build_completion_kwargs(
+            model=model,
+            messages=[
+                {"role": "system", "content": DEEPVERIFY_CLAIM_EXTRACT_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=2048,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
     )
     claims_data = parse_ai_json(resp1.choices[0].message.content, "DeepVerify-extract")
     total_tokens += resp1.usage.completion_tokens if resp1.usage else 0
@@ -280,14 +283,16 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
     verify_prompt = "\n\n---\n\n".join(verify_input)
 
     resp2 = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": DEEPVERIFY_VERIFY_PROMPT},
-            {"role": "user", "content": verify_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.1,
-        max_tokens=4096,
+        **build_completion_kwargs(
+            model=model,
+            messages=[
+                {"role": "system", "content": DEEPVERIFY_VERIFY_PROMPT},
+                {"role": "user", "content": verify_prompt},
+            ],
+            max_tokens=4096,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
     )
     verify_data = parse_ai_json(resp2.choices[0].message.content, "DeepVerify-verify")
     total_tokens += resp2.usage.completion_tokens if resp2.usage else 0
@@ -589,18 +594,20 @@ async def _self_critique_advanced(
     """Self-critique advanced content. Returns (needs_improvement, feedback, score, usage)."""
     from services.agents.prompts_handbook_types import SELF_CRITIQUE_PROMPT
 
-    model_light = settings.openai_model_light
+    reasoning_model = settings.openai_model_reasoning
     system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     try:
         resp = await client.chat.completions.create(
-            model=model_light,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": advanced_content[:8000]},
-            ],
-            max_tokens=2000,
-            temperature=0.2,
-            response_format={"type": "json_object"},
+            **build_completion_kwargs(
+                model=reasoning_model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": advanced_content[:8000]},
+                ],
+                max_tokens=2000,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
         )
         data = parse_ai_json(resp.choices[0].message.content, "self-critique")
         needs = data.get("needs_improvement", False)
@@ -611,7 +618,7 @@ async def _self_critique_advanced(
                 f"- {imp['section']}: {imp['suggestion']}"
                 for imp in data["improvements"]
             )
-        usage = extract_usage_metrics(resp, model_light)
+        usage = extract_usage_metrics(resp, reasoning_model)
         return needs, feedback, score, usage
     except Exception as e:
         logger.warning("Self-critique failed for '%s': %s", term, e)
@@ -625,20 +632,23 @@ async def _check_handbook_quality(
     from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
 
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
+    reasoning_model = settings.openai_model_reasoning
     try:
         resp = await client.chat.completions.create(
-            model=settings.openai_model_light,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": advanced_content[:6000]},
-            ],
-            max_tokens=500,
-            temperature=0,
-            response_format={"type": "json_object"},
+            **build_completion_kwargs(
+                model=reasoning_model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": advanced_content[:6000]},
+                ],
+                max_tokens=500,
+                temperature=0,
+                response_format={"type": "json_object"},
+            )
         )
         data = parse_ai_json(resp.choices[0].message.content, "handbook-quality")
         score = data.get("score", 50)
-        usage = extract_usage_metrics(resp, settings.openai_model_light)
+        usage = extract_usage_metrics(resp, reasoning_model)
         return score, data, usage
     except Exception as e:
         logger.warning("Handbook quality check failed for '%s': %s", term, e)

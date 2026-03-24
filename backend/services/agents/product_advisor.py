@@ -25,7 +25,17 @@ Do NOT output this analysis — use it to inform your JSON.
 
 ## Field Definitions
 
-1. **tagline** (EN): A sharp, specific tagline (max 12 words).
+1. **name** (EN): The official product name as used on the product's own website.
+   - Use the exact casing from the official site (e.g. "ChatGPT", "n8n", "DALL-E 3")
+   - Do NOT add descriptors like "AI" or "Tool" unless it's part of the official name
+
+2. **name_ko** (KO, string or null):
+   - Korean name or transliteration ONLY if commonly used in Korean context
+   - null if the English name is used as-is in Korea (most AI tools)
+   - GOOD: "미드저니" (for Midjourney — Korean transliteration is common)
+   - GOOD: null (for ChatGPT — Koreans say "ChatGPT" not "챗지피티")
+
+3. **tagline** (EN): A sharp, specific tagline (max 12 words).
    - BAD: "AI-powered tool for developers" (vague, could be anything)
    - GOOD: "Turn any screenshot into production React code" (specific, shows value)
    - Lead with the core action/benefit, not the category
@@ -124,6 +134,8 @@ Do NOT output this analysis — use it to inform your JSON.
 ### ChatGPT (assistant)
 ```json
 {
+  "name": "ChatGPT",
+  "name_ko": null,
   "tagline": "Ask anything, get answers with sources and files",
   "tagline_ko": "뭐든 물어보면 답해주는 AI — 파일 분석부터 코딩까지 한 곳에서",
   "description_en": "Ask a question, upload a document, or paste code — get a thoughtful answer in seconds. Handles everything from drafting emails to analyzing spreadsheets to debugging code, all in a single conversation. The default starting point for anyone discovering what AI can do.",
@@ -148,6 +160,8 @@ Do NOT output this analysis — use it to inform your JSON.
 ### Cursor (coding)
 ```json
 {
+  "name": "Cursor",
+  "name_ko": null,
   "tagline": "AI-native code editor that writes, refactors, and debugs with you",
   "tagline_ko": "코드 작성·리팩토링·디버깅을 AI와 함께 — VS Code 기반 AI 코딩 에디터",
   "description_en": "Highlight code and ask a question, describe a function in plain English and watch it appear, or refactor an entire file with one prompt. Built on VS Code so all your extensions still work. Developers report finishing tasks in half the time.",
@@ -172,6 +186,8 @@ Do NOT output this analysis — use it to inform your JSON.
 ### Midjourney (image)
 ```json
 {
+  "name": "Midjourney",
+  "name_ko": "미드저니",
   "tagline": "Generate stunning visual art and designs from text prompts",
   "tagline_ko": "텍스트 프롬프트만으로 고퀄리티 아트·디자인 생성 — 스타일 표현력 최강",
   "description_en": "Describe what you want and get publication-quality images in seconds. Excels at artistic styles, concept art, and photorealistic renders. Operates through Discord with a simple /imagine command.",
@@ -196,6 +212,8 @@ Do NOT output this analysis — use it to inform your JSON.
 ### n8n (workflow)
 ```json
 {
+  "name": "n8n",
+  "name_ko": null,
   "tagline": "Open-source workflow automation with 400+ app integrations",
   "tagline_ko": "400개 이상 앱 연동 — 셀프호스트 가능한 오픈소스 워크플로우 자동화",
   "description_en": "Connect apps, APIs, and AI models in visual workflows — no code for simple automations, full JavaScript for complex logic. Self-hostable with fair-code license. A developer-friendly alternative to Zapier with complete data ownership.",
@@ -232,6 +250,8 @@ Before returning, verify your output:
 
 Respond with JSON only:
 {
+  "name": "ProductName",
+  "name_ko": null,
   "tagline": "...",
   "tagline_ko": "...",
   "description_en": "...",
@@ -512,16 +532,17 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                 {"role": "user", "content": call1_user},
             ],
             max_tokens=2000,
-            temperature=0.6,
+            temperature=0.4,
         )
+        enrichment_model = settings.openai_model_light
         call2_task = client.chat.completions.create(
-            model=model,
+            model=enrichment_model,
             messages=[
                 {"role": "system", "content": ENRICH_SYSTEM},
                 {"role": "user", "content": call2_user},
             ],
             max_tokens=2000,
-            temperature=0.6,
+            temperature=0.5,
         )
 
         resp1, resp2 = await asyncio.gather(call1_task, call2_task, return_exceptions=True)
@@ -544,7 +565,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         if isinstance(resp2, Exception):
             logger.error("Product enrichment generation failed: %s", resp2)
         else:
-            metrics2 = extract_usage_metrics(resp2, model)
+            metrics2 = extract_usage_metrics(resp2, enrichment_model)
             total_tokens += metrics2["tokens_used"]
             raw2 = resp2.choices[0].message.content or ""
             try:
@@ -587,6 +608,71 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                 logger.warning("Search corpus generation failed: %s", e)
 
         return result, model, total_tokens
+
+    if body.action == "pricing_detail":
+        model = settings.openai_model_light
+        product_name = body.name or body.url or ""
+        # Tavily search for pricing info
+        pricing_context = ""
+        if settings.tavily_api_key:
+            try:
+                from tavily import TavilyClient
+                tavily = TavilyClient(api_key=settings.tavily_api_key)
+                loop = asyncio.get_event_loop()
+                results = await loop.run_in_executor(
+                    None,
+                    lambda: tavily.search(
+                        f"{product_name} pricing plans cost",
+                        max_results=3,
+                        include_raw_content=True,
+                    ),
+                )
+                parts = []
+                for r in results.get("results", []):
+                    raw = r.get("raw_content") or r.get("content") or ""
+                    if raw:
+                        parts.append(raw[:2000])
+                pricing_context = "\n\n".join(parts)[:5000]
+            except Exception as e:
+                logger.warning("Tavily pricing search failed for %s: %s", product_name, e)
+
+        system = """You research and verify product pricing information.
+Given a product name and pricing page content, produce a JSON object with:
+1. **pricing** (one of: "free", "freemium", "paid", "enterprise", or null)
+2. **pricing_detail** (EN, markdown table): plan name, price, and key features per plan
+3. **pricing_detail_ko** (KO, markdown table): same info in Korean, keep $ prices as-is
+
+Rules:
+- ONLY include pricing info that is explicitly stated in the provided content
+- If pricing info is not available, set pricing_detail and pricing_detail_ko to null
+- Do NOT fabricate pricing tiers or prices
+- Use markdown table format: "| Plan | Price | Includes |\\n|---|---|---|\\n| ... |"
+
+Respond with JSON only."""
+
+        user_content = (
+            f"Product: {product_name}\nURL: {body.url}\n\n"
+            f"Pricing page content:\n{pricing_context or '(not available)'}"
+        )
+        if body.context:
+            user_content += f"\n\nExisting product info:\n{body.context}"
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=800,
+            temperature=0.3,
+        )
+        raw = response.choices[0].message.content or ""
+        metrics = extract_usage_metrics(response, model)
+        try:
+            result = parse_ai_json(raw, "product_pricing")
+        except Exception:
+            result = raw.strip()
+        return result, metrics["model_used"], metrics["tokens_used"]
 
     if body.action == "generate_search_corpus":
         model = settings.openai_model_light

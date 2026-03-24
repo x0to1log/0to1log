@@ -4,7 +4,7 @@ from typing import Any
 
 from core.config import settings
 from models.news_pipeline import ClassifiedCandidate, ClassificationResult, NewsCandidate, RankedCandidate, RankingResult
-from services.agents.client import extract_usage_metrics, get_openai_client, parse_ai_json
+from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
 from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, RANKING_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -28,20 +28,22 @@ async def rank_candidates(
     user_prompt = "\n\n".join(candidate_lines)
 
     client = get_openai_client()
-    model = settings.openai_model_main
+    model = settings.openai_model_reasoning
     usage: dict[str, Any] = {}
 
     for attempt in range(MAX_RETRIES + 1):
         try:
             response = await client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": RANKING_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2,
-                max_tokens=2048,
+                **build_completion_kwargs(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": RANKING_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=2048,
+                    temperature=0.2,
+                    response_format={"type": "json_object"},
+                )
             )
             raw = response.choices[0].message.content
             data = parse_ai_json(raw, "Ranking")
@@ -107,20 +109,22 @@ async def classify_candidates(
     user_prompt = "\n\n".join(candidate_lines)
 
     client = get_openai_client()
-    model = settings.openai_model_main
+    model = settings.openai_model_reasoning
     usage: dict[str, Any] = {}
 
     for attempt in range(MAX_RETRIES + 1):
         try:
             response = await client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": CLASSIFICATION_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2,
-                max_tokens=4096,
+                **build_completion_kwargs(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": CLASSIFICATION_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=4096,
+                    temperature=0.2,
+                    response_format={"type": "json_object"},
+                )
             )
             raw = response.choices[0].message.content
             data = parse_ai_json(raw, "Classification")

@@ -8,6 +8,7 @@ class ProductGenerateRequest(BaseModel):
     action: Literal[
         "generate_from_url",
         "generate_search_corpus",
+        "pricing_detail",
         "tagline_en",
         "tagline_ko",
         "description_en",

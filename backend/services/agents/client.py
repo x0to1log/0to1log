@@ -26,6 +26,30 @@ def get_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=settings.openai_api_key, timeout=120.0)
 
 
+def is_o_series(model: str) -> bool:
+    """Check if model is an o-series reasoning model (o1, o3, o4-mini, etc.)."""
+    return model.startswith("o1") or model.startswith("o3") or model.startswith("o4")
+
+
+def build_completion_kwargs(
+    model: str,
+    messages: list[dict],
+    max_tokens: int,
+    temperature: float = 0.3,
+    response_format: dict | None = None,
+) -> dict:
+    """Build kwargs for chat.completions.create, handling o-series differences."""
+    kwargs: dict[str, Any] = {"model": model, "messages": messages}
+    if is_o_series(model):
+        kwargs["max_completion_tokens"] = max_tokens
+    else:
+        kwargs["max_tokens"] = max_tokens
+        kwargs["temperature"] = temperature
+    if response_format and not is_o_series(model):
+        kwargs["response_format"] = response_format
+    return kwargs
+
+
 def _resolve_pricing_key(model_name: str | None) -> str | None:
     if not model_name:
         return None
