@@ -137,7 +137,7 @@ Do NOT output this analysis — use it to inform your JSON.
   "use_cases_ko": ["지식 노동자가 AI 피드백으로 문서를 작성·수정할 때", "개발자가 대화형으로 코드를 디버깅하고 보일러플레이트를 생성할 때", "학생이 출처가 달린 요약으로 주제를 리서치할 때"],
   "getting_started": ["Create a free account at chat.openai.com", "Ask your first question or upload a file to analyze", "Build a Custom GPT to automate your recurring workflow"],
   "getting_started_ko": ["chat.openai.com에서 무료 계정 생성", "첫 질문을 하거나 파일을 업로드해서 분석", "반복 작업을 자동화하는 Custom GPT 만들기"],
-  "pricing_detail": "| Plan | Price | Includes |\n|---|---|---|\n| Free | $0 | GPT-4o mini, 제한적 GPT-4o |\n| Plus | $20/mo | GPT-4o 무제한, DALL-E, Advanced Voice |\n| Team | $30/mo/seat | 협업, 더 긴 컨텍스트, 관리자 콘솔 |",
+  "pricing_detail": "| Plan | Price | Includes |\n|---|---|---|\n| Free | $0 | GPT-4o mini, limited GPT-4o |\n| Plus | $20/mo | Unlimited GPT-4o, DALL-E, Advanced Voice |\n| Team | $30/mo/seat | Collaboration, longer context, admin console |",
   "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\n|---|---|---|\n| Free | $0 | GPT-4o mini, 제한적 GPT-4o |\n| Plus | $20/월 | GPT-4o 무제한, DALL-E, Advanced Voice |\n| Team | $30/월/인 | 협업, 더 긴 컨텍스트, 관리자 콘솔 |"
 }
 ```
