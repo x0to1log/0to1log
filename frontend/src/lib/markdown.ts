@@ -12,6 +12,21 @@ import { createCssVariablesTheme } from 'shiki';
 import rehypeStringify from 'rehype-stringify';
 import rehypeHandbookTerms, { type TermsMap } from './rehypeHandbookTerms';
 import rehypeCodeWindow from './rehypeCodeWindow';
+import { visit } from 'unist-util-visit';
+
+/** Strip <del> tags — LLM uses ~~ for approximate values, not strikethrough. */
+function rehypeStripDel() {
+  return (tree: any) => {
+    visit(tree, 'element', (node: any, _index: any, parent: any) => {
+      if (node.tagName === 'del' && parent?.children) {
+        const idx = parent.children.indexOf(node);
+        if (idx !== -1) {
+          parent.children.splice(idx, 1, ...node.children);
+        }
+      }
+    });
+  };
+}
 
 const katexTagNames = [
   'math', 'semantics', 'annotation', 'mrow', 'mi', 'mo', 'mn',
@@ -103,10 +118,11 @@ function getCachedOrRender(
 
 const processor = unified()
   .use(remarkParse)
-  .use(remarkGfm, { singleTilde: false, strikethrough: false })
+  .use(remarkGfm, { singleTilde: false })
   .use(remarkMath, { singleDollarTextMath: false })
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
+  .use(rehypeStripDel)
   .use(rehypeKatex)
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeShiki, shikiOptions)
@@ -134,10 +150,11 @@ export async function renderMarkdownWithTerms(
     if (!termsProcessor) {
       termsProcessor = unified()
         .use(remarkParse)
-        .use(remarkGfm, { singleTilde: false, strikethrough: false })
+        .use(remarkGfm, { singleTilde: false })
         .use(remarkMath, { singleDollarTextMath: false })
         .use(remarkRehype, { allowDangerousHtml: true })
         .use(rehypeRaw)
+        .use(rehypeStripDel)
         .use(rehypeKatex)
         .use(rehypeHandbookTerms(termsMap))
         .use(rehypeSanitize, sanitizeSchemaWithTerms)
