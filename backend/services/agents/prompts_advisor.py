@@ -810,6 +810,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ## Table Rules (formulas/table sections)
 - MUST be comparison/contrast tables or technical spec tables — NOT simple definitions
 - Include actual numbers, formulas, or architectural comparisons
+- Math formulas MUST use double-dollar signs: $$E = mc^2$$ (NOT single $). This applies to both inline and block math. Single $ is reserved for currency.
 
 Respond in JSON format only."""
 
@@ -891,6 +892,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ## Table Rules (formulas/table sections)
 - MUST be comparison/contrast tables or technical spec tables — NOT simple definitions
 - Include actual numbers, formulas, or architectural comparisons
+- Math formulas MUST use double-dollar signs: $$E = mc^2$$ (NOT single $). This applies to both inline and block math. Single $ is reserved for currency.
 
 Respond in JSON format only."""
 
