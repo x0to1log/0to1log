@@ -207,7 +207,9 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "focus_items": ["OpenAI releases real-time voice API for developers", "Inference costs drop 60%, enabling new use cases", "Watch for Google and Meta's competitive response this month"],
   "focus_items_ko": ["OpenAI, 개발자용 실시간 음성 API 출시", "추론 비용 60% 하락으로 새로운 활용 가능", "이번 달 Google·Meta의 경쟁 대응 주목"],
   "en": "## One-Line Summary\\n...\\n\\n## LLM & SOTA Models\\n...",
-  "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA 모델\\n..."
+  "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA 모델\\n...",
+  "quiz_en": {{{{ "question": "What is the key strategic signal behind OpenAI doubling its workforce?", "options": ["Cost reduction", "Full commercial transition", "Regulatory response", "IPO preparation"], "answer": "Full commercial transition", "explanation": "Expansion across product, infra, and sales signals a shift beyond pure R&D." }}}},
+  "quiz_ko": {{{{ "question": "OpenAI 8,000명 증원이 시사하는 핵심 전략 변화는?", "options": ["비용 절감", "전사적 상업화 전환", "규제 대응", "IPO 준비"], "answer": "전사적 상업화 전환", "explanation": "제품, 인프라, 영업 전방위 확장으로 상업화 체제 전환 신호." }}}}
 }}}}
 ```
 
@@ -218,7 +220,14 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   1. What specifically changed today (concrete fact, not a question)
   2. Why this matters right now (specific impact, not generic importance)
   3. What to watch for next (upcoming event, decision, or milestone)
-- **Handbook links**: When mentioning AI/tech terms in the body, use the term's display name as link text, NOT the slug. BAD: `[ai-startup-fundraising](/handbook/ai-startup-fundraising)`. GOOD: `[AI 스타트업 자금 조달](/handbook/ai-startup-fundraising)`."""
+- **Handbook links**: When mentioning AI/tech terms in the body, use the term's display name as link text, NOT the slug. BAD: `[ai-startup-fundraising](/handbook/ai-startup-fundraising)`. GOOD: `[AI 스타트업 자금 조달](/handbook/ai-startup-fundraising)`.
+- **quiz_en/quiz_ko**: One 4-choice quiz question based on today's news. Rules:
+  - Expert persona: analytical/judgment question ("What does this signal for the industry?")
+  - Learner persona: factual recall question ("How many employees will OpenAI hire?")
+  - "answer" MUST be the exact text of the correct option
+  - "explanation" is 1-2 sentences explaining why the answer is correct
+  - All 4 options must be plausible — no obviously wrong choices
+  - EN quiz in English, KO quiz in Korean (not translated — naturally written)"""
 
 
 # --- Research Digest Sections (기술 뉴스) ---

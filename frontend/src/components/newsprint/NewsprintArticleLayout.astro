@@ -105,7 +105,16 @@ const {
 } = Astro.props;
 
 const isKo = locale === 'ko';
-const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || guideItems.quiz_poll?.question);
+// Resolve persona-specific quiz: try quiz_poll_{persona} first, fall back to quiz_poll
+const guideItemsAny = guideItems as Record<string, any> | undefined;
+const activeQuiz: QuizPoll | null = (() => {
+  if (!guideItemsAny) return null;
+  const personaKey = `quiz_poll_${activePersona || 'learner'}`;
+  const q = guideItemsAny[personaKey] || guideItemsAny.quiz_poll || null;
+  return q?.question ? q : null;
+})();
+const hasQuizData = !!(guideItemsAny?.quiz_poll_expert?.question || guideItemsAny?.quiz_poll_learner?.question || guideItemsAny?.quiz_poll?.question);
+const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || hasQuizData);
 const hasFactPack = !!factPack?.length;
 const hasAnalysis = !!analysisHtml;
 const hasSources = !!sourceCards?.length;
@@ -113,10 +122,9 @@ const sourcePublisherSummary = Array.from(new Set((sourceCards || []).map((card)
 
 // Resolve quiz answer: backend may store "A"/"B"/"C" index instead of the option text
 const resolvedQuizAnswer = (() => {
-  const qp = guideItems?.quiz_poll;
-  if (!qp) return '';
-  const idx = 'ABCD'.indexOf(qp.answer);
-  return idx >= 0 && idx < qp.options.length ? qp.options[idx] : qp.answer;
+  if (!activeQuiz) return '';
+  const idx = 'ABCD'.indexOf(activeQuiz.answer);
+  return idx >= 0 && idx < activeQuiz.options.length ? activeQuiz.options[idx] : activeQuiz.answer;
 })();
 
 const personaLabels: Record<string, Record<string, string>> = {
@@ -285,7 +293,10 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
           </button>
         ))}
       </div>
-      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
+      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-quizzes={JSON.stringify({
+        expert: guideItemsAny?.quiz_poll_expert || null,
+        learner: guideItemsAny?.quiz_poll_learner || null,
+      })}></template>
     </>
   )}
 
@@ -370,16 +381,16 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         </div>
       )}
 
-      {guideItems!.quiz_poll?.question && (
+      {activeQuiz && (
         <div class="newsprint-guide-block newsprint-guide-quiz" data-quiz-answer={resolvedQuizAnswer}>
           <span class="newsprint-guide-label">{isKo ? '오늘의 퀴즈' : "Today's Quiz"}</span>
-          <p class="newsprint-quiz-question">{guideItems!.quiz_poll.question}</p>
+          <p class="newsprint-quiz-question">{activeQuiz.question}</p>
           <div class="newsprint-quiz-options">
-            {guideItems!.quiz_poll.options.map((opt: string) => (
+            {activeQuiz.options.map((opt: string) => (
               <button type="button" class="newsprint-quiz-option" data-option={opt}>{opt}</button>
             ))}
           </div>
-          <p class="newsprint-quiz-explanation" style="display:none;">{guideItems!.quiz_poll.explanation}</p>
+          <p class="newsprint-quiz-explanation" style="display:none;">{activeQuiz.explanation}</p>
         </div>
       )}
     </aside>
@@ -506,10 +517,36 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     const template = document.getElementById('persona-data') as HTMLTemplateElement | null;
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
+    const quizMap: Record<string, any> = JSON.parse(template.dataset.quizzes || '{}');
     const prose = document.querySelector('.newsprint-prose');
     const switcher = document.querySelector<HTMLElement>('.persona-switcher');
     const floatEl = document.getElementById('persona-float');
     if (!prose || !switcher) return;
+
+    function updateQuiz(persona: string) {
+      const quizBlock = document.querySelector<HTMLElement>('.newsprint-guide-quiz');
+      if (!quizBlock) return;
+      const quiz = quizMap[persona];
+      if (!quiz?.question) {
+        quizBlock.style.display = 'none';
+        return;
+      }
+      quizBlock.style.display = '';
+      const idx = 'ABCD'.indexOf(quiz.answer);
+      const resolvedAnswer = idx >= 0 && idx < quiz.options.length ? quiz.options[idx] : quiz.answer;
+      quizBlock.dataset.quizAnswer = resolvedAnswer;
+      const qEl = quizBlock.querySelector('.newsprint-quiz-question');
+      if (qEl) qEl.textContent = quiz.question;
+      const expEl = quizBlock.querySelector<HTMLElement>('.newsprint-quiz-explanation');
+      if (expEl) { expEl.textContent = quiz.explanation; expEl.style.display = 'none'; }
+      const optContainer = quizBlock.querySelector('.newsprint-quiz-options');
+      if (optContainer) {
+        optContainer.innerHTML = quiz.options.map((opt: string) =>
+          `<button type="button" class="newsprint-quiz-option" data-option="${opt.replace(/"/g, '&quot;')}">${opt}</button>`
+        ).join('');
+      }
+      initQuiz();
+    }
 
     function setActivePersona(p: string) {
       if (!map[p]) return;
@@ -520,6 +557,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.persona === p));
+      updateQuiz(p);
       document.querySelector('.newsprint-lead-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       document.dispatchEvent(new CustomEvent('newsprint:article-content-updated', {
         detail: { root: prose, persona: p },

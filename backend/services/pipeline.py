@@ -528,6 +528,7 @@ async def _generate_digest(
     digest_tags: list[str] = []
     digest_focus_items: list[str] = []
     digest_focus_items_ko: list[str] = []
+    persona_quizzes: dict[str, dict] = {}  # {"expert": {"en": {...}, "ko": {...}}, "learner": {...}}
 
     MAX_DIGEST_RETRIES = 1  # 1 retry = 2 total attempts
 
@@ -578,6 +579,15 @@ async def _generate_digest(
                     digest_focus_items = data["focus_items"]
                 if not digest_focus_items_ko and data.get("focus_items_ko"):
                     digest_focus_items_ko = data["focus_items_ko"]
+                # Extract quiz data per persona
+                quiz_en = data.get("quiz_en")
+                quiz_ko = data.get("quiz_ko")
+                if quiz_en or quiz_ko:
+                    persona_quizzes[persona_name] = {}
+                    if isinstance(quiz_en, dict) and quiz_en.get("question"):
+                        persona_quizzes[persona_name]["en"] = quiz_en
+                    if isinstance(quiz_ko, dict) and quiz_ko.get("question"):
+                        persona_quizzes[persona_name]["ko"] = quiz_ko
                 usage = extract_usage_metrics(response, model)
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
@@ -794,6 +804,15 @@ async def _generate_digest(
             "translation_group_id": translation_group_id,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
+
+        # Build guide_items with persona-specific quizzes
+        guide_items: dict[str, Any] = {}
+        for pname in ("expert", "learner"):
+            quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
+            if quiz:
+                guide_items[f"quiz_poll_{pname}"] = quiz
+        if guide_items:
+            row["guide_items"] = guide_items
 
         try:
             supabase.table("news_posts").upsert(row).execute()
