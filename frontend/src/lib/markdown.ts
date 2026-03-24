@@ -103,7 +103,7 @@ function getCachedOrRender(
 
 const processor = unified()
   .use(remarkParse)
-  .use(remarkGfm)
+  .use(remarkGfm, { singleTilde: false, strikethrough: false })
   .use(remarkMath)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
@@ -134,7 +134,7 @@ export async function renderMarkdownWithTerms(
     if (!termsProcessor) {
       termsProcessor = unified()
         .use(remarkParse)
-        .use(remarkGfm)
+        .use(remarkGfm, { singleTilde: false, strikethrough: false })
         .use(remarkMath)
         .use(remarkRehype, { allowDangerousHtml: true })
         .use(rehypeRaw)
