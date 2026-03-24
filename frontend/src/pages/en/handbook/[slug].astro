@@ -119,7 +119,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         </header>
 
         {definition && (
-          <p class="handbook-definition">{definition}</p>
+          <p class="handbook-definition" set:html={definition.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')} />
         )}
 
         <div class="newsprint-divider"></div>

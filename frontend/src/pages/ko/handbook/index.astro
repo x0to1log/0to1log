@@ -256,7 +256,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
           '<svg viewBox="0 0 24 24" fill="' + (t.b ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2">' +
           '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg></button></div>';
         if (t.k) html += '<div class="handbook-card-korean">' + t.k + '</div>';
-        if (t.d) html += '<div class="handbook-card-def">' + t.d + '</div>';
+        if (t.d) html += '<div class="handbook-card-def">' + t.d.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</div>';
         a.innerHTML = html;
         frag.appendChild(a);
       }

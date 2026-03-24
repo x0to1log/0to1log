@@ -55,7 +55,7 @@ function buildPopupHtml(data: TermData, slug: string): string {
 
   if (data.definition) {
     html += `<div class="handbook-popup-content" id="handbook-popup-desc">`;
-    html += `<p>${esc(data.definition)}</p>`;
+    html += `<p>${esc(data.definition).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`;
     html += `</div>`;
   }
 
