@@ -32,17 +32,17 @@ function extractBlock(source, selector) {
   throw new Error(`Unclosed CSS block for ${selector}`);
 }
 
+const callbackPage = read('src/pages/auth/callback.astro');
+assert(
+  callbackPage.includes('font-size: clamp(1.75rem, 6vw, 2.1rem);'),
+  'Signing-in callback text should use a larger responsive font size',
+);
+
 const globalCss = read('src/styles/global.css');
-const productPageBlock = extractBlock(globalCss, '.product-detail-page');
-const productSearchBlock = extractBlock(globalCss, '.product-detail-search');
-
+const oauthButtonBlock = extractBlock(globalCss, '.login-oauth-btn');
 assert(
-  productPageBlock.includes('padding-top: 1.5rem;'),
-  'Product detail page should match the roomier top spacing used by other detail page search bars',
-);
-assert(
-  productSearchBlock.includes('margin: 0 auto 1rem;'),
-  'Product detail search should keep the same visual breathing room as other detail search bars',
+  oauthButtonBlock.includes('font-size: 1rem;'),
+  'OAuth buttons should use a larger base font size so the signing-in state remains readable',
 );
 
-console.log('product-detail-search-spacing.test.cjs passed');
+console.log('login-signing-in-fonts.test.cjs passed');

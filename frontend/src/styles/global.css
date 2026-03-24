@@ -5046,7 +5046,7 @@ pre {
   gap: 0.75rem;
   width: 100%;
   padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-family: var(--font-ui);
   font-weight: 600;
   color: var(--color-text-primary);
@@ -9706,7 +9706,7 @@ pre:hover .blog-code-copy {
 /* --- Filter Bar --- */
 .product-filter-bar {
   position: sticky;
-  top: var(--toolbar-top, 0px);
+  top: calc(var(--toolbar-top, 0px) + 0.25rem);
   z-index: 20;
   background: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
   backdrop-filter: blur(8px);
@@ -9785,12 +9785,12 @@ pre:hover .blog-code-copy {
 }
 
 .product-detail-page {
-  padding-top: 1rem;
+  padding-top: 1.5rem;
 }
 
 .product-detail-search {
   max-width: 1080px;
-  margin: 0 auto 0.75rem;
+  margin: 0 auto 1rem;
   padding: 0 0.75rem;
   z-index: 25;
 }
@@ -9806,9 +9806,9 @@ pre:hover .blog-code-copy {
     justify-content: flex-start;
     overflow-x: auto;
     scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
-    mask-image: linear-gradient(to right, #000 85%, transparent);
-    padding-right: 2.5rem;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 0.75rem;
+    padding: 0 0.75rem 0.5rem;
   }
   .product-filter-tabs::-webkit-scrollbar { display: none; }
 
