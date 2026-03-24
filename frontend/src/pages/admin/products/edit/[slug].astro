@@ -118,6 +118,7 @@ const isFeatured = product?.featured ?? false;
         <input type="hidden" id="product-pros-cons" value={JSON.stringify(product?.pros_cons ?? null)} />
         <input type="hidden" id="product-pros-cons-ko" value={JSON.stringify(product?.pros_cons_ko ?? null)} />
         <input type="hidden" id="product-official-resources" value={JSON.stringify(product?.official_resources ?? [])} />
+        <input type="hidden" id="product-search-corpus" value={product?.search_corpus || ''} />
 
         <div class="admin-editor-meta">
           <div class="admin-editor-meta-row">
@@ -379,6 +380,13 @@ const isFeatured = product?.featured ?? false;
               <label class="admin-field-label" style="padding-top: 6px;">Korean Quality</label>
               <textarea class="admin-input" id="field-korean-quality-note" rows="2" placeholder="한국어 지원 품질 메모...">{product?.korean_quality_note || ''}</textarea>
             </div>
+            <div class="admin-editor-meta-row" style="align-items: flex-start;">
+              <label class="admin-field-label" style="padding-top: 6px;">Search Keywords</label>
+              <textarea class="admin-input" id="field-search-corpus" rows="4"
+                placeholder="AI-generated search keywords (auto-filled)"
+                style="font-size: 0.8rem; color: var(--color-text-muted);"
+              >{product?.search_corpus || ''}</textarea>
+            </div>
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-verified-at">Verified At</label>
               <input class="admin-input" id="field-verified-at" type="date" value={product?.verified_at || ''} style="max-width:180px" />
@@ -484,6 +492,9 @@ const isFeatured = product?.featured ?? false;
             Description KO
             <span class="ai-btn-model">gpt-4o-mini</span>
           </button>
+          <button class="admin-ai-action-btn" data-action="generate_search_corpus" type="button">
+            <span>Search Keywords</span>
+          </button>
         </div>
         <div id="ai-loading" class="admin-ai-loading" hidden>
           <span class="ai-spinner"></span>
@@ -572,6 +583,7 @@ const isFeatured = product?.featured ?? false;
       official_resources: getResources(),
       verified_at: document.getElementById('field-verified-at')?.value || null,
       korean_quality_note: document.getElementById('field-korean-quality-note')?.value || null,
+      search_corpus: document.getElementById('field-search-corpus')?.value || null,
     };
   }
 
@@ -1175,6 +1187,7 @@ const isFeatured = product?.featured ?? false;
         tagline_ko: 'Tagline KO',
         description_en: 'Description EN',
         description_ko: 'Description KO',
+        generate_search_corpus: 'Search Keywords',
       };
       const loadingText = document.getElementById('ai-loading-text');
       const label = actionLabels[action] || action;
@@ -1199,7 +1212,28 @@ const isFeatured = product?.featured ?? false;
         const res = await fetch('/api/admin/products/ai/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, url, name }),
+          body: JSON.stringify((() => {
+            const fetchBody = { action, url, name };
+            if (action === 'generate_search_corpus') {
+              const parts = [
+                `Category: ${document.getElementById('field-category')?.value || ''}`,
+                `Tagline: ${document.getElementById('field-tagline')?.value || ''}`,
+                `Tagline KO: ${document.getElementById('field-tagline-ko')?.value || ''}`,
+                `Description: ${document.getElementById('field-description')?.value || ''}`,
+                `Description KO: ${document.getElementById('field-description-ko')?.value || ''}`,
+                `Tags: ${document.getElementById('field-tags')?.value || ''}`,
+                `Platform: ${document.getElementById('field-platform')?.value || ''}`,
+              ];
+              document.querySelectorAll('#features-list .string-list-input').forEach((el) => {
+                if (el.value) parts.push(`Feature: ${el.value}`);
+              });
+              document.querySelectorAll('#usecases-list .string-list-input').forEach((el) => {
+                if (el.value) parts.push(`Use case: ${el.value}`);
+              });
+              fetchBody.context = parts.join('\n');
+            }
+            return fetchBody;
+          })()),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -1221,6 +1255,7 @@ const isFeatured = product?.featured ?? false;
           tagline_ko: 'field-tagline-ko',
           description_en: 'field-description',
           description_ko: 'field-description-ko',
+          generate_search_corpus: 'field-search-corpus',
         };
         aiResultTarget = targetMap[action] || null;
         document.getElementById('ai-apply-btn').hidden = !aiResultTarget && action !== 'generate_from_url';
@@ -1333,6 +1368,11 @@ const isFeatured = product?.featured ?? false;
         if (parsed.pricing_detail_ko) {
           const el = document.getElementById('field-pricing-detail-ko');
           if (el) el.value = parsed.pricing_detail_ko;
+        }
+        // Search corpus
+        if (parsed.search_corpus) {
+          const el = document.getElementById('field-search-corpus');
+          if (el) el.value = parsed.search_corpus;
         }
         // Scenarios
         for (const [key, listId] of [['scenarios', 'scenarios-list'], ['scenarios_ko', 'scenarios-ko-list']]) {
