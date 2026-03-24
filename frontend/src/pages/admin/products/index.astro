@@ -140,9 +140,6 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
                       {product.featured && (
                         <span class="admin-featured-badge">featured</span>
                       )}
-                      {(product.sort_order ?? 0) < 0 && (
-                        <span class="admin-pinned-badge">pinned</span>
-                      )}
                     </div>
                     <div class="admin-list-meta-info">
                       {cat && <span>{cat.icon} {cat.label_en}</span>}
@@ -165,9 +162,9 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
                   <button
                     class="admin-btn admin-btn--small admin-product-pin-btn"
                     data-id={product.id}
-                    data-pinned={(product.sort_order ?? 0) < 0 ? 'true' : 'false'}
+                    data-pinned={product.featured ? 'true' : 'false'}
                   >
-                    {(product.sort_order ?? 0) < 0 ? 'Unpin' : 'Pin'}
+                    {product.featured ? '★' : '☆'}
                   </button>
                   <button
                     class="admin-btn admin-btn-danger admin-btn--small admin-product-delete-btn"
@@ -436,34 +433,33 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
     });
   });
 
-  // ── Product pin/unpin ────────────────────────────────
+  // ── Product feature toggle (★/☆) ────────────────────
   document.querySelectorAll('.admin-product-pin-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
-      const isPinned = btn.dataset.pinned === 'true';
-      const newSortOrder = isPinned ? 0 : -1;
+      const isFeatured = btn.dataset.pinned === 'true';
       btn.disabled = true;
       try {
         const res = await fetch('/api/admin/products/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, action: isPinned ? 'unpin' : 'pin' }),
+          body: JSON.stringify({ id, action: isFeatured ? 'unfeature' : 'feature' }),
         });
         if (!res.ok) { showFeedback('Failed to update', true); return; }
 
-        if (isPinned) {
-          btn.textContent = 'Pin';
+        if (isFeatured) {
+          btn.textContent = '☆';
           btn.dataset.pinned = 'false';
-          btn.closest('.admin-list-item')?.querySelector('.admin-pinned-badge')?.remove();
+          btn.closest('.admin-list-item')?.querySelector('.admin-featured-badge')?.remove();
         } else {
-          btn.textContent = 'Unpin';
+          btn.textContent = '★';
           btn.dataset.pinned = 'true';
           const badge = document.createElement('span');
-          badge.className = 'admin-pinned-badge';
-          badge.textContent = 'pinned';
+          badge.className = 'admin-featured-badge';
+          badge.textContent = 'featured';
           btn.closest('.admin-list-item')?.querySelector('.admin-list-meta')?.appendChild(badge);
         }
-        showFeedback(isPinned ? 'Unpinned' : 'Pinned to category preview');
+        showFeedback(isFeatured ? 'Unfeatured' : 'Featured — appears first in category preview');
       } finally {
         btn.disabled = false;
       }

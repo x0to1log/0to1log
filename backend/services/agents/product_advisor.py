@@ -169,6 +169,54 @@ Do NOT output this analysis — use it to inform your JSON.
 }
 ```
 
+### Midjourney (image)
+```json
+{
+  "tagline": "Generate stunning visual art and designs from text prompts",
+  "tagline_ko": "텍스트 프롬프트만으로 고퀄리티 아트·디자인 생성 — 스타일 표현력 최강",
+  "description_en": "Describe what you want and get publication-quality images in seconds. Excels at artistic styles, concept art, and photorealistic renders. Operates through Discord with a simple /imagine command.",
+  "description_ko": "원하는 이미지를 텍스트로 설명하면 출판 수준의 결과물을 수초 내에 생성합니다. 아트 스타일, 컨셉 아트, 포토리얼리스틱 렌더링에 특히 강합니다.",
+  "pricing": "paid",
+  "platform": ["web"],
+  "korean_support": false,
+  "tags": ["image-generation", "art", "design", "text-to-image"],
+  "primary_category": "image",
+  "secondary_categories": [],
+  "features": ["Describe a scene in words → get a publication-quality image in under 60 seconds", "Add --style or --stylize flags → fine-tune the aesthetic from photorealistic to abstract", "Click 'Upscale' on a result → get a print-ready high-resolution version", "Use pan and zoom → extend an image beyond its original frame", "Upload a reference image → generate variations that match its mood and composition"],
+  "features_ko": ["장면을 글로 설명 → 60초 이내에 출판 수준 이미지 생성", "--style, --stylize 플래그 → 포토리얼부터 추상화까지 스타일 미세 조정", "'Upscale' 클릭 → 인쇄 가능한 고해상도 버전 제공", "팬/줌 사용 → 원래 프레임 너머로 이미지 확장", "참조 이미지 업로드 → 분위기와 구도를 맞춘 변형 생성"],
+  "use_cases": ["A freelance designer creating 10 concept art variations for a client pitch in one afternoon", "A content creator generating unique blog header images without hiring an illustrator", "A game developer prototyping character designs by describing them in natural language"],
+  "use_cases_ko": ["하루 오후에 클라이언트 피칭용 컨셉 아트 변형 10개를 만드는 프리랜서 디자이너", "일러스트레이터 없이 블로그 헤더 이미지를 직접 생성하는 콘텐츠 크리에이터", "자연어로 캐릭터를 설명해서 디자인을 프로토타이핑하는 게임 개발자"],
+  "getting_started": ["Subscribe to a plan at midjourney.com", "Join the Discord server and type /imagine followed by your text prompt", "See your first AI-generated artwork appear in under a minute — experiment with styles from there"],
+  "getting_started_ko": ["midjourney.com에서 플랜 구독", "Discord 서버에 가입하고 /imagine 뒤에 프롬프트 입력", "1분 이내에 첫 AI 아트가 생성되는 걸 확인 — 거기서부터 스타일 실험 시작"],
+  "pricing_detail": "| Plan | Price | Includes |\\n|---|---|---|\\n| Basic | $10/mo | ~200 images/mo |\\n| Standard | $30/mo | 15h fast generation |\\n| Pro | $60/mo | 30h fast, stealth mode |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\\n|---|---|---|\\n| Basic | $10/월 | 약 200장/월 |\\n| Standard | $30/월 | 15시간 빠른 생성 |\\n| Pro | $60/월 | 30시간 빠른 생성, 스텔스 모드 |"
+}
+```
+
+### n8n (workflow)
+```json
+{
+  "tagline": "Open-source workflow automation with 400+ app integrations",
+  "tagline_ko": "400개 이상 앱 연동 — 셀프호스트 가능한 오픈소스 워크플로우 자동화",
+  "description_en": "Connect apps, APIs, and AI models in visual workflows — no code for simple automations, full JavaScript for complex logic. Self-hostable with fair-code license. A developer-friendly alternative to Zapier with complete data ownership.",
+  "description_ko": "앱, API, AI 모델을 비주얼 워크플로우로 연결합니다. 간단한 자동화는 노코드로, 복잡한 로직은 JavaScript로 처리합니다. 셀프호스트 가능하고 데이터를 직접 관리할 수 있어 Zapier의 개발자 친화적 대안입니다.",
+  "pricing": "freemium",
+  "platform": ["web", "api", "desktop"],
+  "korean_support": false,
+  "tags": ["automation", "workflow", "no-code", "open-source", "integrations"],
+  "primary_category": "workflow",
+  "secondary_categories": ["builder"],
+  "features": ["Drag two app nodes onto the canvas → connect them with a line → data flows automatically", "Add a JavaScript node → write custom logic for anything the built-in nodes can't handle", "Set a cron trigger → your workflow runs on schedule without you touching it", "Drop in an AI Agent node → let an LLM make decisions inside your automation", "Self-host with Docker → keep all your data on your own servers"],
+  "features_ko": ["두 앱 노드를 캔버스에 드래그 → 선으로 연결 → 데이터가 자동으로 흐름", "JavaScript 노드 추가 → 내장 노드로 안 되는 커스텀 로직 작성", "크론 트리거 설정 → 스케줄에 맞춰 워크플로우가 알아서 실행", "AI Agent 노드 추가 → LLM이 자동화 흐름 안에서 의사결정", "Docker로 셀프호스트 → 모든 데이터를 내 서버에 보관"],
+  "use_cases": ["A marketer connecting HubSpot leads to Slack notifications and Google Sheets tracking without writing code", "A DevOps engineer automating deployment alerts from GitHub to Discord with custom severity filtering", "An AI builder chaining GPT-4o calls with a database lookup and Slack notification in one workflow"],
+  "use_cases_ko": ["코드 없이 HubSpot 리드를 Slack 알림 + Google Sheets 기록으로 연결하는 마케터", "GitHub에서 Discord로 배포 알림을 자동화하며 심각도 필터링을 추가하는 DevOps 엔지니어", "하나의 워크플로우에서 GPT-4o 호출 + DB 조회 + Slack 알림을 체이닝하는 AI 빌더"],
+  "getting_started": ["Sign up at n8n.io or self-host with a single Docker command", "Create your first workflow by dragging a trigger and an action node onto the canvas", "Watch your first automation run end-to-end — data flowing between two apps without you writing a line of code"],
+  "getting_started_ko": ["n8n.io에서 가입하거나 Docker 명령어 하나로 셀프호스트", "트리거 노드와 액션 노드를 캔버스에 드래그해서 첫 워크플로우 생성", "코드 한 줄 없이 두 앱 사이에 데이터가 흐르는 첫 자동화를 확인"],
+  "pricing_detail": "| Plan | Price | Includes |\\n|---|---|---|\\n| Community | $0 | Self-host, unlimited workflows |\\n| Starter | $20/mo | Cloud, 2500 executions |\\n| Pro | $50/mo | 10K executions, advanced features |",
+  "pricing_detail_ko": "| 플랜 | 가격 | 포함 내용 |\\n|---|---|---|\\n| Community | $0 | 셀프호스트, 무제한 워크플로우 |\\n| Starter | $20/월 | 클라우드, 2500 실행 |\\n| Pro | $50/월 | 10K 실행, 고급 기능 |"
+}
+```
+
 ## Self-Verification Checklist
 
 Before returning, verify your output:
@@ -207,6 +255,10 @@ Respond with JSON only:
 ENRICH_SYSTEM = """You are an editorial reviewer for 0to1log, an AI product curation magazine.
 Given a product's basic info and real user reviews/articles, produce enrichment data that helps AI beginners understand HOW to use this tool in their daily life and make an informed decision.
 
+## Important
+
+If review data is not available or says "(not available)", base ALL fields on the product's own page content and observable features. Do NOT fabricate user opinions, quotes, or experiences.
+
 ## Field Definitions
 
 1. **scenarios** (EN, array of exactly 5 objects):
@@ -244,6 +296,24 @@ Given a product's basic info and real user reviews/articles, produce enrichment 
    - intermediate: some setup or learning curve, but no coding required (e.g., n8n cloud, Notion AI)
    - advanced: requires API keys, coding, or significant technical configuration (e.g., LangChain, self-hosted tools)
 
+6. **editor_note** (EN, 1-2 sentences):
+   - Draft a recommendation the editor will review and personalize
+   - Use "I" voice but keep claims factual — do NOT invent personal experiences with the product
+   - Tone: honest, conversational, like texting a friend who asked "should I try this?"
+   - Include WHEN to use it or WHO it's best for
+   - BAD: "This is a great AI tool" (generic)
+   - BAD: "I use this every day" (fabricated personal experience)
+   - GOOD: "My go-to when I need to draft anything fast — emails, blog posts, even code. Start here if you've never tried AI."
+
+7. **editor_note_ko** (KO, 1-2 sentences):
+   - Same note, naturally written in Korean — NOT a translation
+   - Tone: 친구에게 추천하듯 솔직하게
+
+8. **korean_quality_note** (string or null):
+   - If the product supports Korean: describe the actual quality of Korean support
+   - "Full Korean UI with natural translations" or "Korean UI exists but feels machine-translated" or "No Korean UI but understands Korean input well"
+   - null if the product has no Korean support at all
+
 ## Example
 
 For ChatGPT:
@@ -271,7 +341,10 @@ For ChatGPT:
     "pros": ["무료 플랜이 실사용 가능 — GPT-4o mini 일일 메시지 제한 없음", "텍스트, 이미지, 파일, 코드, 음성을 하나의 인터페이스에서 처리", "Custom GPT로 코딩 없이 전문 어시스턴트 제작 가능"],
     "cons": ["한국어 응답이 영어보다 자연스럽지 않은 편", "무료 플랜에서 최신 GPT-4o 모델 접근이 제한적", "웹 브라우징을 켜지 않으면 실시간 정보에 접근 불가"]
   },
-  "difficulty": "beginner"
+  "difficulty": "beginner",
+  "editor_note": "My go-to when I need to draft anything fast — emails, blog posts, even code. Start here if you've never tried AI.",
+  "editor_note_ko": "뭐든 빠르게 초안을 잡고 싶을 때 가장 먼저 여는 도구. AI를 처음 써본다면 여기서 시작하세요.",
+  "korean_quality_note": "Full Korean UI available. Responses in Korean are usable but noticeably less fluent than English."
 }
 ```
 
@@ -283,6 +356,8 @@ For ChatGPT:
 - pros_cons are factual observations, not marketing language
 - cons are honest but not hostile
 - difficulty accurately reflects the signup-to-first-use experience
+- editor_note sounds personal and conversational, not like marketing copy
+- korean_quality_note is null if no Korean support, otherwise describes actual quality
 
 ## Output Format
 
@@ -436,7 +511,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                 {"role": "system", "content": GENERATE_FROM_URL_SYSTEM},
                 {"role": "user", "content": call1_user},
             ],
-            max_tokens=1500,
+            max_tokens=2000,
             temperature=0.6,
         )
         call2_task = client.chat.completions.create(
@@ -445,7 +520,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                 {"role": "system", "content": ENRICH_SYSTEM},
                 {"role": "user", "content": call2_user},
             ],
-            max_tokens=1500,
+            max_tokens=2000,
             temperature=0.6,
         )
 

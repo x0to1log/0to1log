@@ -1442,6 +1442,22 @@ const isFeatured = product?.featured ?? false;
           const el = document.getElementById('field-difficulty');
           if (el) el.value = parsed.difficulty;
         }
+        // Editorial fields
+        if (parsed.editor_note) {
+          const el = document.getElementById('field-editor-note');
+          if (el) el.value = parsed.editor_note;
+        }
+        if (parsed.editor_note_ko) {
+          const el = document.getElementById('field-editor-note-ko');
+          if (el) el.value = parsed.editor_note_ko;
+        }
+        if (parsed.korean_quality_note) {
+          const el = document.getElementById('field-korean-quality-note');
+          if (el) el.value = parsed.korean_quality_note;
+        }
+        // Auto-set verified_at to today
+        const vEl = document.getElementById('field-verified-at');
+        if (vEl && !vEl.value) vEl.value = new Date().toISOString().slice(0, 10);
       } catch {
         const el = document.getElementById('field-tagline');
         if (el) el.value = resultText;
