@@ -6,7 +6,7 @@
  * Only marks the first occurrence of each term. Skips headings, links, and code.
  * Exception: "관련 용어 / Related Terms" sections link ALL occurrences.
  */
-import { visit } from 'unist-util-visit';
+import { visit, SKIP } from 'unist-util-visit';
 import type { Root, Element, Text } from 'hast';
 
 export interface TermEntry {
@@ -147,7 +147,7 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       siblings.splice(index!, 1, ...parts);
 
       // Return SKIP to avoid revisiting newly inserted nodes
-      return [visit.SKIP, index! + parts.length] as any;
+      return [SKIP, index! + parts.length] as any;
     });
   };
 }

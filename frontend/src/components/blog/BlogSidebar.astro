@@ -204,18 +204,21 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
     const mobileBreakpoint = window.matchMedia('(max-width: 1023px)');
 
     function closeSidebar(): void {
+      if (!sidebar) return;
       sidebar.classList.remove('blog-sidebar--open');
       overlay?.classList.remove('blog-sidebar-overlay--open');
       document.body.style.overflow = '';
     }
 
     function openSidebar(): void {
+      if (!sidebar) return;
       sidebar.classList.add('blog-sidebar--open');
       overlay?.classList.add('blog-sidebar-overlay--open');
       document.body.style.overflow = 'hidden';
     }
 
     function toggleSidebar(): void {
+      if (!sidebar) return;
       if (!mobileBreakpoint.matches) return;
       if (sidebar.classList.contains('blog-sidebar--open')) {
         closeSidebar();

@@ -136,8 +136,8 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: categoriesRes.error.message };
   }
 
-  const categories = (categoriesRes.data ?? []) as ProductCategory[];
-  const allProducts = (productsRes.data ?? []) as ProductCardData[];
+  const categories = (categoriesRes.data ?? []) as unknown as ProductCategory[];
+  const allProducts = (productsRes.data ?? []) as unknown as ProductCardData[];
 
   // Category sort order map for grouping products by category
   const catOrder = Object.fromEntries(categories.map((c) => [c.id, c.sort_order]));
@@ -245,6 +245,16 @@ export async function getProductDetailData(
     getting_started_ko: (raw.getting_started_ko as string[]) ?? [],
     pricing_detail: raw.pricing_detail ?? null,
     pricing_detail_ko: raw.pricing_detail_ko ?? null,
+    scenarios: (raw.scenarios as Array<{ title: string; steps: string }>) ?? [],
+    scenarios_ko: (raw.scenarios_ko as Array<{ title: string; steps: string }>) ?? [],
+    pros_cons: raw.pros_cons ?? null,
+    pros_cons_ko: raw.pros_cons_ko ?? null,
+    difficulty: raw.difficulty ?? null,
+    editor_note: raw.editor_note ?? null,
+    editor_note_ko: raw.editor_note_ko ?? null,
+    official_resources: (raw.official_resources as Array<{ label: string; url: string }>) ?? [],
+    verified_at: raw.verified_at ?? null,
+    korean_quality_note: raw.korean_quality_note ?? null,
   };
 
   const rawDescription =
@@ -282,7 +292,7 @@ export async function fetchAlternatives(
     .order('sort_order')
     .limit(limit);
   if (!data) return [];
-  return (data as ProductCardData[]).map((p) => ({
+  return (data as unknown as ProductCardData[]).map((p) => ({
     ...p,
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,

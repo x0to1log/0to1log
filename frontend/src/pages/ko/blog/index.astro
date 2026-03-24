@@ -14,41 +14,44 @@ import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro
 
 let posts: any[] = [];
 let fetchError: string | null = null;
-
-if (supabase) {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('id, title, slug, category, published_at, tags, reading_time_min, og_image_url, excerpt')
-    .eq('status', 'published')
-    .eq('locale', 'ko')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[blog-list-ko] Supabase error:', error.message);
-    fetchError = error.message;
-  } else {
-    posts = data ?? [];
-  }
-}
-
-// User reading history & bookmarks
 const readPostIds = new Set<string>();
 const bookmarkedPostIds = new Set<string>();
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
-if (user && accessToken) {
-  const authSb = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const [histRes, bmRes] = await Promise.all([
-    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
-    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
-  ]);
-  (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
-  (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
+
+// Parallel: posts + user data + categories (no dependencies between them)
+const authSb = (user && accessToken) ? createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+) : null;
+
+const [postsRes, histRes, bmRes, dbCategories] = await Promise.all([
+  supabase
+    ? supabase.from('blog_posts')
+        .select('id, title, slug, category, published_at, tags, reading_time_min, excerpt')
+        .eq('status', 'published')
+        .eq('locale', 'ko')
+        .order('created_at', { ascending: false })
+        .limit(100)
+    : Promise.resolve({ data: null, error: null }),
+  authSb
+    ? authSb.from('reading_history').select('item_id').eq('user_id', user?.id).eq('item_type', 'blog')
+    : Promise.resolve({ data: null }),
+  authSb
+    ? authSb.from('user_bookmarks').select('item_id').eq('user_id', user?.id).eq('item_type', 'blog')
+    : Promise.resolve({ data: null }),
+  supabase ? fetchCategories(supabase) : Promise.resolve([]),
+]);
+
+if (postsRes.error) {
+  console.error('[blog-list-ko] Supabase error:', postsRes.error.message);
+  fetchError = postsRes.error.message;
+} else {
+  posts = postsRes.data ?? [];
 }
+(histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
+(bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
 
 const FEATURED_COUNT = 4;
 const BATCH_SIZE = 10;
@@ -64,8 +67,6 @@ const sidebarPosts = buildBlogSidebarDataset(
     }),
   ),
 );
-
-const dbCategories = supabase ? await fetchCategories(supabase) : [];
 
 // Split ALL posts into batches for infinite scroll in "All Posts" section
 const allPostBatches: any[][] = [];

@@ -17,6 +17,7 @@ type AdminBlogRow = {
   source: string | null;
   updated_at: string;
   published_at: string | null;
+  tags?: string[];
 };
 
 const SOURCE_LABELS: Record<string, string> = {

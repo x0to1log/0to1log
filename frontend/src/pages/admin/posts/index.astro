@@ -15,6 +15,7 @@ type AdminPostRow = {
   status: 'draft' | 'published' | string;
   updated_at: string;
   published_at: string | null;
+  tags?: string[];
 };
 
 const accessToken = Astro.locals.accessToken;

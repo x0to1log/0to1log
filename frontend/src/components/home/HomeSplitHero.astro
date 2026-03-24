@@ -81,6 +81,7 @@ const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', hre
     const PAUSE_MS  = 120;
 
     function tick() {
+      if (!el) return;
       const word = words[wordIndex];
       if (!deleting) {
         charIndex++;

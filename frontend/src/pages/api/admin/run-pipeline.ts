@@ -40,5 +40,5 @@ export const POST: APIRoute = async ({ request, locals }) => {
     CRON_SECRET: import.meta.env.CRON_SECRET,
     FASTAPI_URL: import.meta.env.FASTAPI_URL,
   };
-  return handleAdminTriggerRequest(env, mode, targetDate, force, skipHandbook);
+  return handleAdminTriggerRequest(env, mode, targetDate as any, force, skipHandbook);
 };

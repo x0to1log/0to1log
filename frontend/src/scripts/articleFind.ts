@@ -127,6 +127,7 @@ function initArticleFind(): void {
   }
 
   function applyFind(options?: { syncUrl?: boolean; scroll?: boolean }): void {
+    if (!input || !root) return;
     const query = input.value.trim();
     const matches = highlightText(root, query);
 

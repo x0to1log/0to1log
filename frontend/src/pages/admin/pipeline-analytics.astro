@@ -69,7 +69,7 @@ function parseCost(value: number | string | null): number {
 }
 
 // ─── News Pipeline Data ──────────────────────────────────────
-const logs: AnalyticsLog[] = (rawLogs ?? []) as AnalyticsLog[];
+const logs: AnalyticsLog[] = (rawLogs ?? []) as unknown as AnalyticsLog[];
 
 type RunGroup = {
   runKey: string;
@@ -136,7 +136,7 @@ const dateGroups = Array.from(dateMap.values()).sort(
 
 type QualityEntry = { runKey: string; startedAt: string; type: string; score: number };
 const qualityEntries: QualityEntry[] = [];
-for (const q of (qualityLogs ?? []) as AnalyticsLog[]) {
+for (const q of (qualityLogs ?? []) as unknown as AnalyticsLog[]) {
   const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
   const score = (typeof meta.quality_score === 'number' ? meta.quality_score : typeof meta.score === 'number' ? meta.score : null) as number | null;
   if (score !== null) {
@@ -238,7 +238,7 @@ const stageStats: StageStats[] = Array.from(stageStatsMap.entries())
 // ─── Handbook Data ──────────────────────────────────────────
 type HandbookLog = AnalyticsLog;
 
-const hbLogs: HandbookLog[] = (handbookLogs ?? []) as HandbookLog[];
+const hbLogs: HandbookLog[] = (handbookLogs ?? []) as unknown as HandbookLog[];
 const hbTotalCalls = hbLogs.length;
 const hbTotalCost = hbLogs.reduce((sum, l) => sum + parseCost(l.cost_usd), 0);
 const hbTotalTokens = hbLogs.reduce((sum, l) => sum + (l.tokens_used ?? 0), 0);

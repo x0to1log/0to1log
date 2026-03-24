@@ -308,7 +308,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           </div>
 
           <Fragment slot="rail">
-            <NewsprintSideRail locale="en" posts={[]} focusItems={initialFocusItems} />
+            <NewsprintSideRail locale="en" focusItems={initialFocusItems} />
           </Fragment>
         </NewsprintShell>
         </div>
@@ -369,12 +369,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     const draftMode = document.getElementById('draft-mode');
     const previewMode = document.getElementById('preview-mode');
-    const btnPreview = document.getElementById('btn-preview');
-    const btnEdit = document.getElementById('btn-edit-back');
-    const btnPublish = document.getElementById('btn-publish-preview');
-    const btnSave = document.getElementById('btn-save');
-    const btnDelete = document.getElementById('btn-delete');
-    const btnPublishDraft = document.getElementById('btn-publish-draft');
+    const btnPreview = document.getElementById('btn-preview') as HTMLButtonElement | null;
+    const btnEdit = document.getElementById('btn-edit-back') as HTMLButtonElement | null;
+    const btnPublish = document.getElementById('btn-publish-preview') as HTMLButtonElement | null;
+    const btnSave = document.getElementById('btn-save') as HTMLButtonElement | null;
+    const btnDelete = document.getElementById('btn-delete') as HTMLButtonElement | null;
+    const btnPublishDraft = document.getElementById('btn-publish-draft') as HTMLButtonElement | null;
     const titleInput = document.getElementById('edit-title') as HTMLTextAreaElement;
     const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
     const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
