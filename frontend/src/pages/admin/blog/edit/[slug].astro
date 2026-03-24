@@ -208,6 +208,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 <input id="edit-og-image" class="admin-input" type="text" style="flex:1;"
                   value={post?.og_image_url || ''} placeholder="https://..." />
               </div>
+              <div class="admin-editor-meta-row">
+                <label class="admin-field-label" for="edit-published-at">Publish Date</label>
+                <input id="edit-published-at" class="admin-input" type="datetime-local" style="flex:1;"
+                  value={post?.published_at ? new Date(post.published_at).toISOString().slice(0, 16) : ''} />
+              </div>
             </div>
           </details>
 
@@ -663,7 +668,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         const res = await fetch('/api/admin/blog/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: postId, action: 'publish' }),
+          body: JSON.stringify({
+            id: postId,
+            action: 'publish',
+            published_at: (document.getElementById('edit-published-at') as HTMLInputElement)?.value
+              ? new Date((document.getElementById('edit-published-at') as HTMLInputElement).value).toISOString()
+              : undefined,
+          }),
         });
         if (!res.ok) {
           const err = await res.json();

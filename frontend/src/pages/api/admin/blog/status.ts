@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const { id, action } = await request.json();
+  const { id, action, published_at } = await request.json();
 
   if (!id || !['publish', 'unpublish'].includes(action)) {
     return new Response(JSON.stringify({ error: 'Invalid id or action' }), {
@@ -61,7 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'publish') {
     update.status = 'published';
-    update.published_at = new Date().toISOString();
+    update.published_at = published_at || new Date().toISOString();
   } else if (action === 'unpublish') {
     update.status = 'draft';
   }
