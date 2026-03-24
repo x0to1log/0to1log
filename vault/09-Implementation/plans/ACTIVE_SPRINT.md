@@ -203,16 +203,69 @@ HANDBOOK-QUALITY-01 (핸드북 프롬프트 강화)
 [완료]
 HANDBOOK-ADV-01 (심화 퀄리티 시스템 — Tavily+유형분류+Self-critique)
 
-[다음]
-PROMPT-AUDIT-01 (프롬프트 감사 52개 이슈 수정)
-HANDBOOK-LEVEL-LINK-01 (핸드북 레벨 연결)
+[완료 — 2026-03-24 세션]
+- 뉴스 파이프라인 백엔드 용어 링크 제거 (프론트엔드 전담)
+- gpt-4o → gpt-4.1 / gpt-4o-mini → gpt-4.1-mini 모델 전환
+- self-critique mini 전환 + confidence 기반 용어 큐 (비용 최적화)
+- Quality Score Trend 차트 스케일 수정 (/4 → /100)
+- 핸드북 Quality Score 차트 추가
+- strikethrough/dollar 마크다운 렌더링 버그 수정
+- 뉴스 퀴즈 기능 구현 (페르소나별 4지선다)
+- quiz_responses 테이블 생성 (포인트 시스템 대비)
+- headline/tags 언어 혼동 방지 + EN recovery 로직
+- upsert null 덮어쓰기 방지
+- definition bold 렌더링 수정
+- 수식 $$ 프롬프트 지시 + 표 안 수식 금지
+
+[다음 Phase]
+WEEKLY-01 (주간 다이제스트)
+PROMPT-AUDIT-01 (프롬프트 감사)
 COMMUNITY-01 (커뮤니티 반응 수집)
-WEEKLY-01 (주간 다이제스트)
 AUTOPUB-01 (자동 발행)
 ```
-WEEKLY-01 (주간 다이제스트)
-AUTOPUB-01 (자동 발행)
+
+---
+
+## 다음 Phase 계획 — Weekly Digest + 안정화
+
+> **예상 시작:** 현재 스프린트 게이트 통과 후
+> **목표:** Weekly Recap 탭 구현 + 프롬프트 품질 안정화 + 자동 발행 기반
+
+### Phase 목표
+1. **Weekly Digest** — 주간 요약 자동 생성 + 프론트엔드 탭
+2. **프롬프트 감사** — 52개 이슈 중 P0/P1 우선 수정
+3. **커뮤니티 반응** — Reddit/HN/X 반응 수집 (선택)
+4. **자동 발행** — quality_score 기반 auto-publish 기초
+
+### 태스크 순서
+
 ```
+Phase A: Weekly Digest (핵심)
+  WEEKLY-PROMPT-01 → 주간 프롬프트 (expert/learner)
+  WEEKLY-PIPE-01   → run_weekly_digest() 파이프라인
+  WEEKLY-CRON-01   → 일요일 cron + 어드민 수동 버튼
+  WEEKLY-FE-01     → 뉴스 리스트 Weekly 탭 + 배지
+  WEEKLY-TEST-01   → E2E 검증
+
+Phase B: 품질 안정화 (병행)
+  PROMPT-AUDIT-P0  → URL hallucination 방지, citation 정확도
+  PROMPT-AUDIT-P1  → 토큰 효율, few-shot 추가
+  MODEL-EVAL-01    → gpt-4.1 전환 후 품질 평가 (2주 데이터)
+
+Phase C: 확장 (선택)
+  COMMUNITY-01     → 커뮤니티 반응 수집
+  AUTOPUB-01       → quality_score ≥ 80 자동 발행
+```
+
+### 게이트 조건
+- [ ] Weekly Digest가 정상 생성 + 프론트엔드 표시
+- [ ] PROMPT-AUDIT P0 이슈 0건
+- [ ] gpt-4.1 전환 후 quality_score 평균 ≥ 75 유지
+- [ ] `ruff check .` + `pytest tests/ -v` 통과
+
+### 설계 참조
+- [[2026-03-16-weekly-digest-design]] — Weekly Digest 설계 (v4 업데이트 완료)
+- [[2026-03-18-prompt-audit-fixes]] — 프롬프트 감사 이슈 목록
 
 ---
 
