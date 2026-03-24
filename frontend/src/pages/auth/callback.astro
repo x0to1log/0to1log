@@ -55,7 +55,8 @@ const nonce = Astro.locals.cspNonce || '';
       import { createClient } from '@supabase/supabase-js';
 
       async function handleCallback() {
-        const redirectTo = sessionStorage.getItem('oauth_redirect') || '/';
+        const rawRedirect = sessionStorage.getItem('oauth_redirect') || '/';
+        const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/';
         sessionStorage.removeItem('oauth_redirect');
 
         const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -95,8 +96,7 @@ const nonce = Astro.locals.cspNonce || '';
                 const profileRes = await fetch('/api/user/profile');
                 if (profileRes.ok) {
                   const profile = await profileRes.json();
-                  if (!profile.onboarding_completed && !localStorage.getItem('onboarding_seen')) {
-                    localStorage.setItem('onboarding_seen', 'true');
+                  if (!profile.onboarding_completed) {
                     window.location.href = '/settings/?onboarding=true';
                     return;
                   }

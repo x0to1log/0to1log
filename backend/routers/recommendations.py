@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from core.rate_limit import limiter
@@ -42,13 +42,22 @@ async def similar_posts(
 async def for_you(
     request: Request,
     locale: str = Query(default="en", pattern=r"^(en|ko)$"),
-    user_id: str = Query(..., min_length=1, max_length=256),
+    authorization: str = Header(None),
 ):
-    """Return personalized recommendations. user_id passed as query param from SSR."""
+    """Return personalized recommendations. Requires Bearer token."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing authorization")
 
     client = get_supabase()
     if not client:
         raise HTTPException(status_code=503, detail="Database not configured")
+
+    token = authorization.removeprefix("Bearer ").strip()
+    try:
+        user_response = client.auth.get_user(token)
+        user_id = user_response.user.id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     # Get recent reading history IDs (last 10 news posts)
     history = client.table("reading_history").select("item_id") \

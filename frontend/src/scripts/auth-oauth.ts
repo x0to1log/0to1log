@@ -2,13 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 
 const COMING_SOON_PROVIDERS = new Set(['kakao']);
 
+function isSafeRedirect(url: string): boolean {
+  return url.startsWith('/') && !url.startsWith('//');
+}
+
 function resolveRedirectTarget(button: HTMLButtonElement, root: HTMLElement): string {
-  return (
+  const raw =
     button.dataset.redirectTo ||
     root.dataset.redirectTo ||
     new URLSearchParams(window.location.search).get('redirectTo') ||
-    '/'
-  );
+    '/';
+  return isSafeRedirect(raw) ? raw : '/';
 }
 
 function setButtonsDisabled(buttons: HTMLButtonElement[], disabled: boolean): void {

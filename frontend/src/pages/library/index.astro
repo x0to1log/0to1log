@@ -169,8 +169,11 @@ if (isAuthenticated) {
 
   // Fire recommendations API early (only needs user.id) + all DB queries + siteContent in parallel
   const fastapiUrl = import.meta.env.FASTAPI_URL;
-  const recsPromise = (fastapiUrl && user?.id)
-    ? fetch(`${fastapiUrl}/api/recommendations/for-you?user_id=${user.id}&locale=${locale}`, { signal: AbortSignal.timeout(2000) })
+  const recsPromise = (fastapiUrl && user?.id && accessToken)
+    ? fetch(`${fastapiUrl}/api/recommendations/for-you?locale=${locale}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(2000),
+      })
         .then((res) => res.ok ? res.json() : [])
         .catch(() => [])
     : Promise.resolve([]);

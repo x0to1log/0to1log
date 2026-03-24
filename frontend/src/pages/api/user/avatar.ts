@@ -77,7 +77,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return jsonResponse({ error: updateError.message }, 500);
   }
 
-  return jsonResponse({ avatar_url: avatarUrl });
+  const res = jsonResponse({ avatar_url: avatarUrl });
+  res.headers.append('Set-Cookie', 'user-extras-cache=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+  return res;
 };
 
 export const DELETE: APIRoute = async ({ locals }) => {
@@ -103,5 +105,7 @@ export const DELETE: APIRoute = async ({ locals }) => {
     return jsonResponse({ error: error.message }, 500);
   }
 
-  return jsonResponse({ avatar_url: oauthAvatar });
+  const res = jsonResponse({ avatar_url: oauthAvatar });
+  res.headers.append('Set-Cookie', 'user-extras-cache=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+  return res;
 };
