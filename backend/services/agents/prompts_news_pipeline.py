@@ -99,15 +99,9 @@ Extract a structured JSON "FactPack" that will be used by writers to create arti
 
 
 def _build_handbook_section(handbook_slugs: list[str]) -> str:
-    """Build handbook linking section for injection into prompts."""
-    if not handbook_slugs:
-        return ""
-    terms_list = ", ".join(handbook_slugs[:200])
-    return f"""
-## Handbook Linking
-When you mention any of these AI terms, link them using markdown: [term](/handbook/slug/)
-Available terms: {terms_list}
-Only link terms that appear naturally in context. Do not force links."""
+    """Handbook linking is now handled by the frontend rehypeHandbookTerms plugin.
+    This function is kept for API compatibility but always returns empty."""
+    return ""
 
 
 def _build_persona_system_prompt(
