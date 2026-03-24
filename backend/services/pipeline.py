@@ -766,15 +766,21 @@ async def _generate_digest(
         excerpt = (digest_excerpt if locale == "en" else digest_excerpt_ko) or digest_excerpt or ""
         focus_items = (digest_focus_items if locale == "en" else digest_focus_items_ko) or digest_focus_items or []
 
-        row = {
+        row: dict[str, Any] = {
             "title": title,
             "slug": slug,
             "locale": locale,
             "category": "ai-news",
             "post_type": digest_type,
             "status": "draft",
-            "content_expert": expert_content or None,
-            "content_learner": learner_content or None,
+        }
+        # Only include content fields when non-empty to avoid overwriting
+        # existing data with null on re-runs (upsert replaces entire row)
+        if expert_content:
+            row["content_expert"] = expert_content
+        if learner_content:
+            row["content_learner"] = learner_content
+        row.update({
             "excerpt": excerpt or None,
             "tags": digest_tags or [],
             "focus_items": focus_items or [],
@@ -787,7 +793,7 @@ async def _generate_digest(
             "pipeline_model": settings.openai_model_main,
             "translation_group_id": translation_group_id,
             "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
+        })
 
         try:
             supabase.table("news_posts").upsert(row).execute()
