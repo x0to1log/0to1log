@@ -63,7 +63,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .maybeSingle();
 
   if (existing) {
-    await supabase.from('ai_product_likes').delete().eq('id', existing.id);
+    const { error: deleteError } = await supabase.from('ai_product_likes').delete().eq('id', existing.id);
+    if (deleteError) {
+      return new Response(JSON.stringify({ error: deleteError.message }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
   } else {
     const { error } = await supabase.from('ai_product_likes').insert({
       user_id: locals.user.id,

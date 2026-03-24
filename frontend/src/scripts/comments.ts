@@ -62,7 +62,7 @@ function initComments(): void {
         <div class="newsprint-comment-header">
           <div class="newsprint-comment-avatar">${
             comment.user.avatar_url
-              ? `<img src="${comment.user.avatar_url}" alt="" width="28" height="28" style="border-radius:50%;">`
+              ? `<img src="${escapeHtml(comment.user.avatar_url)}" alt="" width="28" height="28" style="border-radius:50%;">`
               : `<span>${initial}</span>`
           }</div>
           <span class="newsprint-comment-author">${escapeHtml(comment.user.display_name || 'Anonymous')}</span>

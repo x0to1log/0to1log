@@ -22,11 +22,8 @@ const locale = (langParam === 'ko' || langParam === 'en') ? langParam
   : profile?.preferred_locale === 'en' ? 'en'
   : browserLocale;
 
-const siteContent = await getSiteContents([
-  'library_empty_saved',
-  'library_empty_read',
-  'library_empty_progress',
-], locale as 'en' | 'ko');
+// siteContent is fetched in parallel with user data below
+let siteContent: Record<string, string> = {};
 
 function relativeDate(dateStr: string, loc: string): string {
   const now = new Date();
@@ -170,13 +167,23 @@ if (isAuthenticated) {
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
 
-  const [historyRes, bookmarksRes, progressRes, likesRes, likedProductsData] = await Promise.all([
+  // Fire recommendations API early (only needs user.id) + all DB queries + siteContent in parallel
+  const fastapiUrl = import.meta.env.FASTAPI_URL;
+  const recsPromise = (fastapiUrl && user?.id)
+    ? fetch(`${fastapiUrl}/api/recommendations/for-you?user_id=${user.id}&locale=${locale}`, { signal: AbortSignal.timeout(2000) })
+        .then((res) => res.ok ? res.json() : [])
+        .catch(() => [])
+    : Promise.resolve([]);
+
+  const [historyRes, bookmarksRes, progressRes, likesRes, likedProductsData, sc] = await Promise.all([
     authSb.from('reading_history').select('id, item_type, item_id, read_at').eq('user_id', user.id).order('read_at', { ascending: false }),
     authSb.from('user_bookmarks').select('id, item_type, item_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
     authSb.from('learning_progress').select('id, term_id, status, read_at, learned_at').eq('user_id', user.id),
     authSb.from('news_likes').select('id, post_id, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
     fetchLikedProducts(accessToken, locale as 'en' | 'ko'),
+    getSiteContents(['library_empty_saved', 'library_empty_read', 'library_empty_progress'], locale as 'en' | 'ko'),
   ]);
+  siteContent = sc;
 
   historyItems = historyRes.data ?? [];
   bookmarkItems = bookmarksRes.data ?? [];
@@ -193,35 +200,28 @@ if (isAuthenticated) {
   likedItems.forEach((item) => postIds.add(item.post_id));
   progressItems.forEach((item) => termIds.add(item.term_id));
 
-  if (supabase && (postIds.size > 0 || termIds.size > 0)) {
-    const [newsPostRes, blogPostRes, termRes] = await Promise.all([
-      postIds.size > 0
-        ? supabase.from('news_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds])
-        : Promise.resolve({ data: null }),
-      postIds.size > 0
-        ? supabase.from('blog_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds])
-        : Promise.resolve({ data: null }),
-      termIds.size > 0
-        ? supabase.from('handbook_terms').select('id, term, slug, korean_name, category, difficulty').in('id', [...termIds])
-        : Promise.resolve({ data: null }),
-    ]);
-    (newsPostRes.data ?? []).forEach((post: any) => postMap.set(post.id, { ...post, type: 'news' }));
-    (blogPostRes.data ?? []).forEach((post: any) => postMap.set(post.id, { ...post, type: 'blog' }));
-    (termRes.data ?? []).forEach((term: any) => termMap.set(term.id, term));
-  }
+  // Second parallel batch: fetch actual post/term data + await recommendations
+  const [newsPostRes, blogPostRes, termRes, recsData] = await Promise.all([
+    (supabase && postIds.size > 0)
+      ? supabase.from('news_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds])
+      : Promise.resolve({ data: null }),
+    (supabase && postIds.size > 0)
+      ? supabase.from('blog_posts').select('id, title, slug, category, locale, reading_time_min').in('id', [...postIds])
+      : Promise.resolve({ data: null }),
+    (supabase && termIds.size > 0)
+      ? supabase.from('handbook_terms').select('id, term, slug, korean_name, category, difficulty').in('id', [...termIds])
+      : Promise.resolve({ data: null }),
+    recsPromise,
+  ]);
+  (newsPostRes.data ?? []).forEach((post: any) => postMap.set(post.id, { ...post, type: 'news' }));
+  (blogPostRes.data ?? []).forEach((post: any) => postMap.set(post.id, { ...post, type: 'blog' }));
+  (termRes.data ?? []).forEach((term: any) => termMap.set(term.id, term));
+  recommendedPosts = recsData;
+}
 
-  const fastapiUrl = import.meta.env.FASTAPI_URL;
-  if (fastapiUrl && user?.id) {
-    try {
-      const res = await fetch(
-        `${fastapiUrl}/api/recommendations/for-you?user_id=${user.id}&locale=${locale}`,
-        { signal: AbortSignal.timeout(4000) }
-      );
-      if (res.ok) recommendedPosts = await res.json();
-    } catch {
-      // Non-fatal
-    }
-  }
+// Fetch siteContent for unauthenticated visitors (authenticated path fetches it in parallel above)
+if (!isAuthenticated) {
+  siteContent = await getSiteContents(['library_empty_saved', 'library_empty_read', 'library_empty_progress'], locale as 'en' | 'ko');
 }
 
 const categoryProgress = new Map<string, { total: number; read: number; learned: number }>();
@@ -572,6 +572,10 @@ const bookmarkedItemIds = new Set(bookmarkItems.map((item) => `${item.item_type}
   import '../../scripts/productLike';
 
   function initLibrary(): void {
+    const libHeader = document.querySelector<HTMLElement>('.library-header');
+    if (!libHeader || libHeader.dataset.libInit === 'true') return;
+    libHeader.dataset.libInit = 'true';
+
     // Tab switching
     const tabs = document.querySelectorAll<HTMLButtonElement>('.library-tab');
     const contents = document.querySelectorAll<HTMLElement>('[data-tab-content]');

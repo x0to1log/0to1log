@@ -74,7 +74,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (existing) {
     // Remove
-    await supabase.from('user_bookmarks').delete().eq('id', existing.id);
+    const { error: deleteError } = await supabase.from('user_bookmarks').delete().eq('id', existing.id);
+    if (deleteError) {
+      return new Response(JSON.stringify({ error: deleteError.message }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
     return new Response(JSON.stringify({ bookmarked: false }), {
       status: 200, headers: { 'Content-Type': 'application/json' },
     });

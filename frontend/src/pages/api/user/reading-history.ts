@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const supabase = authSupabase(locals.accessToken);
 
-  // Upsert — ON CONFLICT DO NOTHING via upsert with ignoreDuplicates
+  // Upsert — ON CONFLICT DO UPDATE to refresh read_at on revisit
   const { error } = await supabase
     .from('reading_history')
     .upsert({
@@ -70,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       item_type,
       item_id,
       read_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,item_type,item_id', ignoreDuplicates: true });
+    }, { onConflict: 'user_id,item_type,item_id' });
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
