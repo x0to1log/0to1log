@@ -74,5 +74,13 @@ assert(
   globalCss.includes('.product-detail-search .handbook-search-input'),
   'Product detail search should reuse the shared handbook-style search input',
 );
+assert(
+  globalCss.includes('.product-detail-search.handbook-search-sticky {\n  top: 0.75rem;'),
+  'Product detail search should keep a visible top offset instead of sticking flush to the viewport',
+);
+assert(
+  globalCss.includes('body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.handbook-search-sticky {\n  top: calc(var(--header-h, 4rem) + 0.75rem);'),
+  'Product detail search should keep the same breathing room below the fixed header while scrolling',
+);
 
 console.log('product-detail-search-sticky.test.cjs passed');

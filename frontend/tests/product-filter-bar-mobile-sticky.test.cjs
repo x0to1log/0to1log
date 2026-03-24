@@ -43,6 +43,22 @@ assert(
   filterBarBlock.includes('top: calc(var(--toolbar-top, 0px) + 0.25rem);'),
   'Product filter bar should stay visible with a small offset below the header',
 );
+assert(
+  filterBarBlock.includes('padding: 0.35rem 0 0.75rem;'),
+  'Product filter bar should keep the search closer to the header instead of leaving a tall empty band',
+);
+assert(
+  filterBarBlock.includes('background: var(--color-bg-primary);'),
+  'Product filter bar should use an opaque surface so the header gap does not feel amplified by transparency',
+);
+assert(
+  !filterBarBlock.includes('backdrop-filter: blur'),
+  'Product filter bar should not blur the page behind it',
+);
+assert(
+  !filterBarBlock.includes('-webkit-backdrop-filter: blur'),
+  'Product filter bar should not use a webkit blur on the page behind it',
+);
 
 const mobileStart = globalCss.indexOf('@media (max-width: 767px) {');
 assert(mobileStart !== -1, 'Missing mobile media query for product filter bar');

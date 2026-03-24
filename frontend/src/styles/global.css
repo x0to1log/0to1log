@@ -1177,6 +1177,28 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 }
 
 /* Code Window — macOS style */
+#handbook-body table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  width: max-content;
+  min-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+#handbook-body table::-webkit-scrollbar { height: 6px; }
+
+#handbook-body table::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#handbook-body table::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
 .newsprint-prose .code-window {
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -9708,16 +9730,14 @@ pre:hover .blog-code-copy {
   position: sticky;
   top: calc(var(--toolbar-top, 0px) + 0.25rem);
   z-index: 20;
-  background: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   transition: top 300ms ease;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0.75rem 0;
+  padding: 0.35rem 0 0.75rem;
 }
 
 .product-filter-tabs {
@@ -9793,6 +9813,14 @@ pre:hover .blog-code-copy {
   margin: 0 auto 1rem;
   padding: 0 0.75rem;
   z-index: 25;
+}
+
+.product-detail-search.handbook-search-sticky {
+  top: 0.75rem;
+}
+
+body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.handbook-search-sticky {
+  top: calc(var(--header-h, 4rem) + 0.75rem);
 }
 
 .product-detail-search .handbook-search-input {
