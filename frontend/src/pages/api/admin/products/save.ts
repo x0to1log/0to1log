@@ -42,6 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     scenarios, scenarios_ko, pros_cons, pros_cons_ko,
     difficulty, editor_note, editor_note_ko,
     official_resources, verified_at, korean_quality_note,
+    search_corpus,
   } = body;
 
   if (!name?.trim()) {
@@ -94,6 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (official_resources !== undefined) row.official_resources = Array.isArray(official_resources) ? official_resources : [];
   if (verified_at !== undefined) row.verified_at = verified_at || null;
   if (korean_quality_note !== undefined) row.korean_quality_note = korean_quality_note || null;
+  if (search_corpus !== undefined) row.search_corpus = search_corpus || null;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
