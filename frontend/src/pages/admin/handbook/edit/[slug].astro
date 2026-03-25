@@ -866,7 +866,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         } else {
           showFeedback('AI returned empty result. Try again or check backend logs.', true);
         }
-      } catch {
+      } catch (err) {
+        console.error('[AI Advisor] fetch error:', err);
         showFeedback('Network error or request timed out. Try again.', true);
         setAiLoading(false);
       }

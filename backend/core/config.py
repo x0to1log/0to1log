@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     max_auto_terms_per_run: int = 5
     ga4_property_id: str = ""
     ga4_credentials_json: str = ""
-    cors_origins: str = '["https://0to1log.com"]'
+    cors_origins: str = '["https://0to1log.com","https://www.0to1log.com"]'
+    buttondown_api_key: str = ""
+    weekly_email_enabled: bool = False
 
 
 settings = Settings()
