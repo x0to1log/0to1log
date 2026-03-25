@@ -281,7 +281,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           locale="en"
           masthead="Latest AI News"
           editionLabel={initialEditionLabel}
-          subkicker={['AI · Papers · Projects', 'Daily Curation', 'Open Access']}
+          subkicker={['AI · Papers', 'Daily Curation', 'Open Access']}
         >
           <div id="preview-content">
             <NewsprintArticleLayout
@@ -743,29 +743,29 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     const CATEGORY_ACTIONS: Record<string, { action: string; label: string; model: string; wide?: boolean }[]> = {
       'ai-news': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'factcheck', label: 'Fact-check', model: 'gpt-4o' },
-        { action: 'deepverify', label: 'Deep Verify', model: 'gpt-4o + Tavily', wide: true },
+        { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4.1-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
+        { action: 'factcheck', label: 'Fact-check', model: 'o4-mini' },
+        { action: 'deepverify', label: 'Deep Verify', model: 'o4-mini + Tavily', wide: true },
       ],
       'study': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
+        { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4.1-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
+        { action: 'conceptcheck', label: 'Concept Check', model: 'o4-mini', wide: true },
       ],
       'career': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
+        { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4.1-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
+        { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4.1-mini', wide: true },
       ],
       'project': [
-        { action: 'generate', label: 'Generate', model: 'gpt-4o' },
-        { action: 'seo', label: 'SEO', model: 'gpt-4o-mini' },
-        { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-        { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
+        { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
+        { action: 'seo', label: 'SEO', model: 'gpt-4.1-mini' },
+        { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
+        { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4.1-mini', wide: true },
       ],
     };
 

@@ -747,23 +747,23 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
     const COMMON_ACTIONS: { action: string; label: string; model: string; wide?: boolean }[] = [
-      { action: 'outline', label: 'Outline', model: 'gpt-4o' },
-      { action: 'draft', label: 'Draft', model: 'gpt-4o' },
-      { action: 'rewrite', label: 'Rewrite', model: 'gpt-4o' },
-      { action: 'suggest', label: 'Suggest', model: 'gpt-4o-mini' },
-      { action: 'review', label: 'Review', model: 'gpt-4o-mini' },
-      { action: 'generate', label: 'Generate', model: 'gpt-4o' },
+      { action: 'outline', label: 'Outline', model: 'gpt-4.1' },
+      { action: 'draft', label: 'Draft', model: 'gpt-4.1' },
+      { action: 'rewrite', label: 'Rewrite', model: 'gpt-4.1' },
+      { action: 'suggest', label: 'Suggest', model: 'gpt-4.1-mini' },
+      { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
+      { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
     ];
 
     const CATEGORY_SPECIAL: Record<string, { action: string; label: string; model: string; wide?: boolean }> = {
-      'study': { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-4o-mini', wide: true },
-      'career': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
-      'project': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
-      'work-note': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4o-mini', wide: true },
-      'daily': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4o-mini', wide: true },
+      'study': { action: 'conceptcheck', label: 'Concept Check', model: 'o4-mini', wide: true },
+      'career': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4.1-mini', wide: true },
+      'project': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4.1-mini', wide: true },
+      'work-note': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-4.1-mini', wide: true },
+      'daily': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-4.1-mini', wide: true },
     };
 
-    const TRANSLATE_ACTION = { action: 'translate', label: 'Translate', model: 'gpt-4o', wide: true };
+    const TRANSLATE_ACTION = { action: 'translate', label: 'Translate', model: 'gpt-4.1', wide: true };
 
     function getActionsForCategory(category: string) {
       const special = CATEGORY_SPECIAL[category] || CATEGORY_SPECIAL['study'];
