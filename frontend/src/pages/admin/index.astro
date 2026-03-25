@@ -374,6 +374,7 @@ function relativeTime(dateStr: string): string {
                   Retry Handbook
                 </button>
               )}
+              <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled} title="Generate weekly recap for last week">Weekly Recap</button>
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
@@ -407,6 +408,7 @@ function relativeTime(dateStr: string): string {
                   Retry Handbook
                 </button>
               )}
+              <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled} title="Generate weekly recap for last week">Weekly Recap</button>
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
@@ -1233,6 +1235,34 @@ function relativeTime(dateStr: string): string {
         } catch {
           autoExtractCheckbox.checked = !enabled; // revert
           setPipelineFeedback('Failed to save setting.', 'error');
+        }
+      });
+    }
+
+    // Weekly Recap button
+    const weeklyBtn = document.getElementById('run-weekly-btn') as HTMLButtonElement | null;
+    if (weeklyBtn && !weeklyBtn.dataset.init) {
+      weeklyBtn.dataset.init = '1';
+      weeklyBtn.addEventListener('click', async () => {
+        if (!confirm('Generate weekly recap for last week?')) return;
+        weeklyBtn.disabled = true;
+        weeklyBtn.textContent = 'Generating...';
+        try {
+          const res = await fetch('/api/admin/run-pipeline', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'weekly' }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error || 'Failed');
+          weeklyBtn.textContent = 'Started';
+          setPipelineFeedback('Weekly recap pipeline started.', 'success');
+          setTimeout(() => window.location.reload(), 2000);
+        } catch (e) {
+          weeklyBtn.textContent = 'Failed';
+          setPipelineFeedback(e instanceof Error ? e.message : 'Failed', 'error');
+          setTimeout(() => { weeklyBtn.textContent = 'Weekly Recap'; weeklyBtn.disabled = false; }, 3000);
         }
       });
     }
