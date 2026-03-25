@@ -245,7 +245,7 @@ Evaluate the post across 4 categories and return a quality checklist.
 
 ## Rules
 - status: "pass" (good), "warn" (needs attention), "fail" (must fix)
-- score: 0-100, be honest and strict
+- score: 0-100, be honest and strict. Guide: ≥85 publication-ready, 70-84 minor edits needed, 50-69 significant revision, <50 rewrite recommended
 - message: specific and actionable, not vague
 - suggestion: for "pass" items leave empty string; for "warn"/"fail" items provide a concrete fix or example text
 - Check minimum 4 items (one per category), add more if issues found
@@ -634,6 +634,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
+- Do NOT fabricate URLs. If you are unsure a URL exists, OMIT it entirely. Never invent reference links.
 
 ## Markdown Formatting (within each section value)
 - Use `###` sub-headings to break long sections into scannable parts
@@ -717,6 +718,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
+- Do NOT fabricate URLs. If you are unsure a URL exists, OMIT it entirely. Never invent reference links.
 
 ## Markdown Formatting (within each section value)
 - Use `###` sub-headings to break long sections into scannable parts
