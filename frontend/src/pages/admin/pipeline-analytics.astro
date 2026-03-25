@@ -218,9 +218,12 @@ const durationData = pipelineRuns
   .filter((r) => r.finished_at && r.started_at)
   .map((r) => {
     const dur = Math.round((new Date(r.finished_at!).getTime() - new Date(r.started_at).getTime()) / 1000);
-    const d = new Date(r.started_at);
+    // Use batch date from run_key (target/publish date), not started_at (execution date)
+    const batchMatch = r.run_key.match(/\d{4}-\d{2}-\d{2}/);
+    const d = batchMatch ? new Date(batchMatch[0] + 'T00:00:00') : new Date(r.started_at);
     return { label: `${d.getMonth() + 1}/${d.getDate()}`, seconds: dur > 0 ? dur : 0 };
-  });
+  })
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 // Token totals per stage for donut chart
 const tokenTotals = stackedData
