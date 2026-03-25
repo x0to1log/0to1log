@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /preview/
+Disallow: /login
+Disallow: /settings
+Disallow: /library
 
 Sitemap: https://0to1log.com/sitemap-index.xml

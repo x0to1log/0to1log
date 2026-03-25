@@ -14,18 +14,21 @@ source: docs/05_Infrastructure.md
 
 ## Content Security Policy (CSP)
 
-Vercel `vercel.json`의 `headers` 섹션(`source: /(.*)`)에서 설정한다.
+Middleware(`frontend/src/middleware.ts`)에서 매 요청마다 동적으로 설정한다. `vercel.json`에는 CSP를 넣지 않는다 (nonce가 매번 바뀌므로).
 
-**CSP 헤더 값:**
+**CSP 헤더 (nonce 기반, Phase 3A-SEC에서 전환 완료):**
 
 ```
 default-src 'self';
-script-src 'self' 'unsafe-inline' googletagmanager.com clarity.ms pagead2.googlesyndication.com;
+script-src 'self' 'nonce-{per-request}' 'strict-dynamic' https://www.googletagmanager.com https://*.clarity.ms https://cdn.jsdelivr.net;
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: https:;
-font-src 'self';
-connect-src 'self' *.supabase.co *.railway.app google-analytics.com clarity.ms
+font-src 'self' https://fonts.gstatic.com;
+connect-src 'self' https://*.supabase.co https://*.railway.app https://*.google-analytics.com https://*.clarity.ms https://*.googleapis.com;
 ```
+
+- `script-src 'unsafe-inline'` 제거 완료. 모든 인라인 스크립트는 `nonce` 속성 필수.
+- `strict-dynamic`으로 nonce가 부여된 스크립트가 동적으로 생성하는 자식 스크립트도 허용.
 
 **허용 도메인 (Phase별):**
 
@@ -35,17 +38,16 @@ connect-src 'self' *.supabase.co *.railway.app google-analytics.com clarity.ms
 | 2 후반 | `pagead2.googlesyndication.com` | AdSense 신청 시 |
 | 4 | Polar 결제 도메인 | 구독 모델 결정 시 |
 
-> [!warning] `unsafe-inline` 리스크
-> `script-src 'unsafe-inline'`은 XSS 공격에 취약하다. Astro의 인라인 스크립트(테마 초기화, Clarity 스크립트 등)를 위해 현재 필요하지만, Phase 1부터 인라인 스크립트를 최소화하는 방향으로 개발하고, **Phase 3에서 nonce 기반 CSP로 전환**하여 `unsafe-inline`을 제거한다.
-
 **추가 보안 헤더:**
 
 | 헤더 | 값 |
 |---|---|
 | `X-Content-Type-Options` | `nosniff` |
-| `X-Frame-Options` | `DENY` |
+| `X-Frame-Options` | `SAMEORIGIN` |
 | `X-XSS-Protection` | `1; mode=block` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
 
 ## Authentication & Authorization
 
@@ -77,8 +79,8 @@ connect-src 'self' *.supabase.co *.railway.app google-analytics.com clarity.ms
 | 항목 | 값 |
 |---|---|
 | `allow_origins` | `https://0to1log.com`, `http://localhost:4321` |
-| `allow_methods` | `GET`, `POST`, `PATCH` |
-| `allow_headers` | `Authorization`, `Content-Type` |
+| `allow_methods` | `GET`, `POST` |
+| `allow_headers` | `Authorization`, `Content-Type`, `x-cron-secret` |
 | `allow_credentials` | `True` |
 
 **CRON_SECRET:** Cron 엔드포인트는 Bearer Token 인증(`CRON_SECRET`)으로 보호된다. Vercel Cron과 Railway 양쪽에 동일한 시크릿을 설정한다. fire-and-forget 패턴으로 202 즉시 반환 후 파이프라인은 백그라운드 실행.
