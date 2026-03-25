@@ -48,6 +48,7 @@ let pipelineTokens = 0;
 let candidatesTotal = 0;
 let candidatesSelected = 0;
 let lastHandbookRun: { id: string; run_key: string; status: string; started_at: string; last_error: string | null } | null = null;
+let handbookAutoExtract = true;
 
 function statusTone(status: string | null | undefined): RunCard['statusTone'] {
   if (status === 'success') return 'success';
@@ -174,6 +175,10 @@ try {
     .limit(1)
     .maybeSingle();
   lastHandbookRun = hbRunData ?? null;
+
+  const { data: settingsData } = await sb
+    .from('admin_settings').select('value').eq('key', 'handbook_auto_extract').maybeSingle();
+  if (settingsData) handbookAutoExtract = settingsData.value !== false;
 } catch {}
 
 // Detect stuck pipeline runs — news: 30min, handbook: 60min
@@ -300,12 +305,17 @@ const handbookSummary = buildSummary(handbookRuns);
                   Retry Handbook
                 </button>
               )}
-              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
-                <input type="checkbox" id="include-handbook" checked />
-                Include handbook
-              </label>
-              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+            </div>
+            <div class="dashboard-pipeline-settings">
+              <label class="dashboard-pipeline-toggle">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook (manual run)
+              </label>
+              <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
+                <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
+                Auto-extract terms (cron)
+              </label>
             </div>
           </div>
         ) : (
@@ -323,12 +333,17 @@ const handbookSummary = buildSummary(handbookRuns);
                   Retry Handbook
                 </button>
               )}
-              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
-                <input type="checkbox" id="include-handbook" checked />
-                Include handbook
-              </label>
-              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+            </div>
+            <div class="dashboard-pipeline-settings">
+              <label class="dashboard-pipeline-toggle">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook (manual run)
+              </label>
+              <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
+                <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
+                Auto-extract terms (cron)
+              </label>
             </div>
           </div>
         )}
@@ -987,6 +1002,27 @@ const handbookSummary = buildSummary(handbookRuns);
     flex-wrap: wrap;
   }
 
+  .dashboard-pipeline-settings {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .dashboard-pipeline-toggle {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+  }
+
+  .dashboard-pipeline-toggle:hover {
+    color: var(--color-text);
+  }
+
   .dashboard-pipeline-feedback {
     margin: 0;
     font-size: 0.82rem;
@@ -1180,6 +1216,27 @@ const handbookSummary = buildSummary(handbookRuns);
         }).catch(function() {
           cancelBtn.textContent = 'Failed';
           setTimeout(function() { cancelBtn.textContent = 'Cancel'; }, 2000);
+        });
+      });
+    }
+
+    // Handbook auto-extract toggle
+    var autoExtractCheckbox = document.getElementById('handbook-auto-extract');
+    if (autoExtractCheckbox && !autoExtractCheckbox.dataset.init) {
+      autoExtractCheckbox.dataset.init = '1';
+      autoExtractCheckbox.addEventListener('change', function() {
+        var enabled = autoExtractCheckbox.checked;
+        fetch('/api/admin/settings', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'handbook_auto_extract', value: enabled }),
+        }).then(function(res) {
+          if (!res.ok) throw new Error('Save failed');
+          setPipelineFeedback('Handbook auto-extract ' + (enabled ? 'enabled' : 'disabled') + ' for cron runs.', 'success');
+        }).catch(function() {
+          autoExtractCheckbox.checked = !enabled;
+          setPipelineFeedback('Failed to save setting.', 'error');
         });
       });
     }

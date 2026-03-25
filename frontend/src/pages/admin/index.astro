@@ -1199,27 +1199,28 @@ function relativeTime(dateStr: string): string {
         }
       });
     }
-  }
 
-  // Handbook auto-extract toggle — persists to admin_settings via Supabase REST API
-  const autoExtractCheckbox = document.getElementById('handbook-auto-extract') as HTMLInputElement | null;
-  if (autoExtractCheckbox) {
-    autoExtractCheckbox.addEventListener('change', async () => {
-      const enabled = autoExtractCheckbox.checked;
-      try {
-        const res = await fetch('/api/admin/settings', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'handbook_auto_extract', value: enabled }),
-        });
-        if (!res.ok) throw new Error('Save failed');
-        setPipelineFeedback(`Handbook auto-extract ${enabled ? 'enabled' : 'disabled'} for cron runs.`, 'success');
-      } catch {
-        autoExtractCheckbox.checked = !enabled; // revert
-        setPipelineFeedback('Failed to save setting.', 'error');
-      }
-    });
+    // Handbook auto-extract toggle — persists to admin_settings via Supabase REST API
+    const autoExtractCheckbox = document.getElementById('handbook-auto-extract') as HTMLInputElement | null;
+    if (autoExtractCheckbox && !autoExtractCheckbox.dataset.init) {
+      autoExtractCheckbox.dataset.init = '1';
+      autoExtractCheckbox.addEventListener('change', async () => {
+        const enabled = autoExtractCheckbox.checked;
+        try {
+          const res = await fetch('/api/admin/settings', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'handbook_auto_extract', value: enabled }),
+          });
+          if (!res.ok) throw new Error('Save failed');
+          setPipelineFeedback(`Handbook auto-extract ${enabled ? 'enabled' : 'disabled'} for cron runs.`, 'success');
+        } catch {
+          autoExtractCheckbox.checked = !enabled; // revert
+          setPipelineFeedback('Failed to save setting.', 'error');
+        }
+      });
+    }
   }
 
   document.addEventListener('astro:page-load', initDashboardActions);
