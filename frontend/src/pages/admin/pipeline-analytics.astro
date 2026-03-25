@@ -48,6 +48,7 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data:
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
     .not('pipeline_type', 'in', `(${excludeStages.map((s) => `"${s}"`).join(',')})`)
+    .not('pipeline_type', 'like', 'handbook.%')
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
     .select('debug_meta, pipeline_type, pipeline_runs!inner(id, run_key, started_at)')
@@ -170,6 +171,7 @@ const stageLabels: Record<string, string> = {
   // v2 legacy
   'rank': 'Rank', 'research.generate.en': 'Research EN', 'research.translate.ko': 'Research KO',
   'business.generate.en': 'Business EN', 'business.translate.ko': 'Business KO',
+  'quality.research': 'QC Research (legacy)', 'quality.business': 'QC Business (legacy)',
 };
 
 type StackedCostData = { label: string; costs: number[]; tokens: number[] };
@@ -489,10 +491,12 @@ const nonce = Astro.locals.cspNonce || '';
             <div class="pcosts-chart-card pcosts-chart--full">
               <h3 class="pcosts-chart-title">Cost by Stage (Stacked)</h3>
               <canvas id="chart-stacked-cost" width="600" height="280"></canvas>
+              <div class="pcosts-legend" id="legend-stacked-cost"></div>
             </div>
             <div class="pcosts-chart-card pcosts-chart--full">
               <h3 class="pcosts-chart-title">Tokens by Stage</h3>
               <canvas id="chart-tokens" width="600" height="280"></canvas>
+              <div class="pcosts-legend" id="legend-stacked-tokens"></div>
             </div>
           </section>
 
@@ -742,7 +746,38 @@ const nonce = Astro.locals.cspNonce || '';
     var textColor = style.getPropertyValue('--color-text-secondary').trim() || '#888';
     var gridColor = style.getPropertyValue('--color-border').trim() || '#e5e5e5';
 
-    var stageColors = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
+    // Color families: Infra=slate, Research=blue, Business=orange, Other=pink
+    var stageColorMap = {
+      'Collect':           '#94a3b8', // slate-400
+      'Classify':          '#64748b', // slate-500
+      'Research Expert':   '#2563eb', // blue-600
+      'Research Learner':  '#60a5fa', // blue-400
+      'Business Expert':   '#ea580c', // orange-600
+      'Business Learner':  '#fb923c', // orange-400
+      'Research Beginner (legacy)': '#93c5fd', // blue-300
+      'Business Beginner (legacy)': '#fdba74', // orange-300
+      'Rank':              '#ec4899', // pink-500
+      'QC Research':       '#67e8f9', // cyan-300
+      'QC Business':       '#22d3ee', // cyan-400
+      'QC Research (legacy)': '#a5f3fc', // cyan-200
+      'QC Business (legacy)': '#a5f3fc', // cyan-200
+      'Research EN':       '#1d4ed8', // blue-700
+      'Research KO':       '#3b82f6', // blue-500
+      'Business EN':       '#c2410c', // orange-700
+      'Business KO':       '#f97316', // orange-500
+    };
+    var stageColorFallback = '#cbd5e1';
+    // Group labels for legend dividers
+    var stageGroups = {
+      'Collect': 'Infra', 'Classify': 'Infra',
+      'Research Expert': 'Research', 'Research Learner': 'Research',
+      'Research Beginner (legacy)': 'Research', 'Research EN': 'Research', 'Research KO': 'Research',
+      'Business Expert': 'Business', 'Business Learner': 'Business',
+      'Business Beginner (legacy)': 'Business', 'Business EN': 'Business', 'Business KO': 'Business',
+      'Rank': 'Other',
+      'QC Research': 'Quality', 'QC Business': 'Quality',
+      'QC Research (legacy)': 'Quality', 'QC Business (legacy)': 'Quality',
+    };
     var commonScales = {
       x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } },
     };
@@ -773,14 +808,14 @@ const nonce = Astro.locals.cspNonce || '';
       type: 'bar',
       data: {
         labels: chartData.runLabels,
-        datasets: chartData.stacked.map(function(s, i) { return {
+        datasets: chartData.stacked.map(function(s) { return {
           label: s.label, data: s.costs,
-          backgroundColor: stageColors[i % stageColors.length],
+          backgroundColor: stageColorMap[s.label] || stageColorFallback,
         }; }),
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+        plugins: { legend: { display: false } },
         scales: {
           ...commonScales,
           x: { ...commonScales.x, stacked: true },
@@ -793,20 +828,53 @@ const nonce = Astro.locals.cspNonce || '';
       type: 'bar',
       data: {
         labels: chartData.runLabels,
-        datasets: chartData.stacked.map(function(s, i) { return {
+        datasets: chartData.stacked.map(function(s) { return {
           label: s.label, data: s.tokens,
-          backgroundColor: stageColors[i % stageColors.length],
+          backgroundColor: stageColorMap[s.label] || stageColorFallback,
         }; }),
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+        plugins: { legend: { display: false } },
         scales: {
           ...commonScales,
           y: { ticks: { color: textColor }, grid: { color: gridColor } },
         },
       },
     });
+
+    // Render grouped legend for stacked charts
+    var legendGroupStyle = 'display:inline-flex;align-items:center;gap:0.4rem;flex-wrap:wrap';
+    var legendLabelStyle = 'font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + textColor + ';margin-right:0.1rem';
+    var legendItemStyle = 'display:inline-flex;align-items:center;gap:0.25rem;font-size:0.72rem;color:' + textColor;
+    var legendDotBase = 'width:10px;height:10px;border-radius:2px;flex-shrink:0';
+
+    function renderGroupedLegend(containerId) {
+      var el = document.getElementById(containerId);
+      if (!el) return;
+      el.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.5rem 1.25rem;margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid ' + gridColor;
+      var groups = {};
+      var groupOrder = ['Infra', 'Research', 'Business', 'Quality', 'Other'];
+      chartData.stacked.forEach(function(s) {
+        var hasData = s.costs.some(function(v) { return v > 0; }) || s.tokens.some(function(v) { return v > 0; });
+        if (!hasData) return;
+        var group = stageGroups[s.label] || 'Other';
+        if (!groups[group]) groups[group] = [];
+        groups[group].push(s.label);
+      });
+      var html = '';
+      groupOrder.forEach(function(g) {
+        if (!groups[g]) return;
+        html += '<span style="' + legendGroupStyle + '"><span style="' + legendLabelStyle + '">' + g + '</span>';
+        groups[g].forEach(function(label) {
+          html += '<span style="' + legendItemStyle + '"><span style="' + legendDotBase + ';background:' + (stageColorMap[label] || stageColorFallback) + '"></span>' + label.replace(' (legacy)', '') + '</span>';
+        });
+        html += '</span>';
+      });
+      el.innerHTML = html;
+    }
+    renderGroupedLegend('legend-stacked-cost');
+    renderGroupedLegend('legend-stacked-tokens');
 
     var qualityDatasets = [];
     if (chartData.quality.research.length > 0) {
@@ -1318,6 +1386,7 @@ const nonce = Astro.locals.cspNonce || '';
   .hb-cost-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.25rem; vertical-align: middle; }
   .hb-cost-legend-dot--auto { background: var(--color-success, #5a8e5d); }
   .hb-cost-legend-dot--manual { background: var(--color-accent, #c9a96e); }
+
 
   /* ─── Responsive ────────────────────────────── */
   @media (max-width: 1080px) {
