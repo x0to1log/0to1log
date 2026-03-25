@@ -310,7 +310,6 @@ const handbookSummary = buildSummary(handbookRuns);
                   Retry Handbook
                 </button>
               )}
-              <button type="button" class="admin-btn" id="run-weekly-btn" title="Generate weekly recap for last week" disabled={!weeklyEnabled}>Weekly Recap</button>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
             <div class="dashboard-pipeline-settings">
@@ -321,10 +320,6 @@ const handbookSummary = buildSummary(handbookRuns);
               <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
                 <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
                 Auto-extract terms (cron)
-              </label>
-              <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
-                <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
-                Weekly Recap
               </label>
             </div>
           </div>
@@ -343,7 +338,6 @@ const handbookSummary = buildSummary(handbookRuns);
                   Retry Handbook
                 </button>
               )}
-              <button type="button" class="admin-btn" id="run-weekly-btn" title="Generate weekly recap for last week" disabled={!weeklyEnabled}>Weekly Recap</button>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
             <div class="dashboard-pipeline-settings">
@@ -355,13 +349,25 @@ const handbookSummary = buildSummary(handbookRuns);
                 <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
                 Auto-extract terms (cron)
               </label>
-              <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
-                <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
-                Weekly Recap
-              </label>
             </div>
           </div>
         )}
+      </section>
+
+      <section class="dashboard-section">
+        <div class="dashboard-pipeline-weekly">
+          <h3 class="dashboard-subsection-title">Weekly Recap</h3>
+          <div class="dashboard-pipeline-actions">
+            <input type="week" id="weekly-target-week" class="admin-input admin-input--date"
+                   title="Leave empty for last week" />
+            <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled}>Generate Weekly</button>
+            <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
+              <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
+              Enabled
+            </label>
+            <p class="dashboard-pipeline-feedback" id="weekly-pipeline-feedback" aria-live="polite"></p>
+          </div>
+        </div>
       </section>
 
       <div class="pcosts-tabs">
@@ -1213,16 +1219,26 @@ const handbookSummary = buildSummary(handbookRuns);
 
     // Weekly Recap button handler
     var weeklyBtn = document.getElementById('run-weekly-btn');
+    var weekInput = document.getElementById('weekly-target-week');
+    var weeklyFeedbackEl = document.getElementById('weekly-pipeline-feedback');
+    function setWeeklyFeedback(msg, tone) {
+      if (weeklyFeedbackEl) {
+        weeklyFeedbackEl.textContent = msg;
+        weeklyFeedbackEl.className = 'dashboard-pipeline-feedback dashboard-pipeline-feedback--' + tone;
+      }
+    }
     if (weeklyBtn) {
       weeklyBtn.addEventListener('click', function() {
-        if (!confirm('Generate weekly recap for last week?')) return;
+        var weekId = (weekInput && weekInput.value) || null;
+        var label = weekId || 'last week';
+        if (!confirm('Generate weekly recap for ' + label + '?')) return;
         weeklyBtn.setAttribute('disabled', 'true');
         weeklyBtn.textContent = 'Generating...';
         fetch('/api/admin/run-pipeline', {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'weekly' }),
+          body: JSON.stringify({ mode: 'weekly', week_id: weekId }),
         }).then(function(res) {
           if (!res.ok) {
             return res.json().catch(function() { return null; }).then(function(payload) {
@@ -1230,14 +1246,36 @@ const handbookSummary = buildSummary(handbookRuns);
             });
           }
           weeklyBtn.textContent = 'Started';
-          setPipelineFeedback('Weekly recap pipeline started.', 'success');
+          setWeeklyFeedback('Weekly recap started for ' + label + '.', 'success');
           setTimeout(function() { window.location.reload(); }, 2000);
         }).catch(function(error) {
           weeklyBtn.textContent = 'Failed';
           var message = error instanceof Error ? error.message : 'Failed to start weekly pipeline';
-          setPipelineFeedback(message, 'error');
-          setTimeout(function() { weeklyBtn.textContent = 'Weekly Recap'; }, 3000);
+          setWeeklyFeedback(message, 'error');
+          setTimeout(function() { weeklyBtn.textContent = 'Generate Weekly'; }, 3000);
           weeklyBtn.removeAttribute('disabled');
+        });
+      });
+    }
+
+    // Weekly Recap toggle handler
+    var weeklyCheckbox = document.getElementById('weekly-enabled');
+    if (weeklyCheckbox && !weeklyCheckbox.dataset.init) {
+      weeklyCheckbox.dataset.init = '1';
+      weeklyCheckbox.addEventListener('change', function() {
+        var enabled = weeklyCheckbox.checked;
+        fetch('/api/admin/settings', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'weekly_enabled', value: enabled }),
+        }).then(function(res) {
+          if (!res.ok) throw new Error('Save failed');
+          if (weeklyBtn) weeklyBtn.disabled = !enabled;
+          setWeeklyFeedback('Weekly Recap ' + (enabled ? 'enabled' : 'disabled') + '.', 'success');
+        }).catch(function() {
+          weeklyCheckbox.checked = !enabled;
+          setWeeklyFeedback('Failed to save setting.', 'error');
         });
       });
     }

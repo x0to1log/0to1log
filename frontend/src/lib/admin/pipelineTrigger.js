@@ -18,7 +18,7 @@ function getPipelineConfig(env) {
   return { cronSecret, backendUrl };
 }
 
-async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false) {
+async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null) {
   const config = getPipelineConfig(env);
   if (!config) {
     return jsonResponse({ error: 'Missing configuration' }, 500);
@@ -33,7 +33,7 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
           'Content-Type': 'application/json',
           'x-cron-secret': config.cronSecret,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(weekId ? { week_id: weekId } : {}),
         signal: AbortSignal.timeout(8000),
       });
 
@@ -129,8 +129,8 @@ export async function handleCronTriggerRequest(request, env) {
   return forwardPipelineTrigger(env, 'resume');
 }
 
-export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false) {
-  return forwardPipelineTrigger(env, mode, targetDate, force, skipHandbook);
+export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null) {
+  return forwardPipelineTrigger(env, mode, targetDate, force, skipHandbook, weekId);
 }
 
 export async function handleCancelRequest(env, runId) {

@@ -18,6 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   let mode = 'resume';
   let targetDate: string | null = null;
+  let weekId: string | null = null;
   let force = false;
   let skipHandbook = false;
   try {
@@ -27,6 +28,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     if (payload?.target_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.target_date)) {
       targetDate = payload.target_date;
+    }
+    if (payload?.week_id && /^\d{4}-W\d{2}$/.test(payload.week_id)) {
+      weekId = payload.week_id;
     }
     if (payload?.force === true) {
       force = true;
@@ -40,5 +44,5 @@ export const POST: APIRoute = async ({ request, locals }) => {
     CRON_SECRET: import.meta.env.CRON_SECRET,
     FASTAPI_URL: import.meta.env.FASTAPI_URL,
   };
-  return handleAdminTriggerRequest(env, mode, targetDate as any, force, skipHandbook);
+  return handleAdminTriggerRequest(env, mode, targetDate as any, force, skipHandbook, weekId);
 };
