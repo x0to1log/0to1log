@@ -20,7 +20,7 @@ from services.agents.advisor import (
 from services.agents.client import extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
 from services.agents.ranking import classify_candidates
-from services.news_collection import collect_news
+from services.news_collection import collect_community_reactions, collect_news
 
 logger = logging.getLogger(__name__)
 
@@ -494,6 +494,7 @@ async def _generate_digest(
     batch_id: str,
     handbook_slugs: list[str],
     raw_content_map: dict[str, str],
+    community_map: dict[str, str],
     supabase,
     run_id: str,
 ) -> tuple[int, list[str], dict[str, Any]]:
@@ -513,11 +514,13 @@ async def _generate_digest(
     news_items = []
     for item in classified:
         body = raw_content_map.get(item.url, item.snippet)[:4000]
+        community = community_map.get(item.url, "")
+        community_block = f"\n\nCommunity Reactions (Reddit/HN):\n{community[:1000]}" if community else ""
         news_items.append(
             f"### [{item.subcategory}] {item.title}\n"
             f"Source URL (MUST cite this): {item.url}\n"
             f"Relevance: {item.relevance_score}\n\n"
-            f"{body}"
+            f"{body}{community_block}"
         )
     user_prompt = "\n\n---\n\n".join(news_items)
 
@@ -943,6 +946,30 @@ async def run_daily_pipeline(
         handbook_slugs = _fetch_handbook_slugs(supabase)
         raw_content_map = {c.url: c.raw_content for c in candidates if c.raw_content}
 
+        # Stage: community reactions (top 3 items across both categories)
+        t0 = time.monotonic()
+        all_classified = sorted(
+            classification.research + classification.business,
+            key=lambda x: x.relevance_score, reverse=True,
+        )
+        top_items = all_classified[:3]
+        community_map: dict[str, str] = {}
+        if top_items:
+            community_tasks = [
+                collect_community_reactions(item.title, item.url)
+                for item in top_items
+            ]
+            community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
+            for item, result in zip(top_items, community_results):
+                if isinstance(result, str) and result.strip():
+                    community_map[item.url] = result
+
+        await _log_stage(
+            supabase, run_id, "community", "success", t0,
+            input_summary=f"{len(top_items)} items queried",
+            output_summary=f"{len(community_map)} reactions collected",
+        )
+
         # Generate research + business digests in parallel
         digest_tasks = []
         for digest_type, classified_items in [
@@ -958,6 +985,7 @@ async def run_daily_pipeline(
                     batch_id=batch_id,
                     handbook_slugs=handbook_slugs,
                     raw_content_map=raw_content_map,
+                    community_map=community_map,
                     supabase=supabase,
                     run_id=run_id,
                 )
