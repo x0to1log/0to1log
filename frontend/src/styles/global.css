@@ -12136,3 +12136,48 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: #d97706;
   padding: 0.25rem 0;
 }
+
+/* ── Weekly Recap bottom cards ── */
+.weekly-bottom-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+.weekly-card {
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+.weekly-card-heading {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.75rem;
+}
+.weekly-card-link {
+  display: block;
+  text-decoration: none;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+.weekly-card-link + .weekly-card-link {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+.weekly-card-link:hover strong {
+  color: var(--color-accent);
+}
+.weekly-card-def {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+@media (max-width: 640px) {
+  .weekly-bottom-cards { grid-template-columns: 1fr; }
+}

@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let skipHandbook = false;
   try {
     const payload = await request.json();
-    if (payload?.mode === 'force_refresh' || payload?.mode === 'resume' || payload?.mode === 'handbook-extract') {
+    if (payload?.mode === 'force_refresh' || payload?.mode === 'resume' || payload?.mode === 'handbook-extract' || payload?.mode === 'weekly') {
       mode = payload.mode;
     }
     if (payload?.target_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.target_date)) {

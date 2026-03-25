@@ -25,6 +25,33 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
   }
 
   try {
+    // Route weekly to its own backend endpoint
+    if (mode === 'weekly') {
+      const response = await fetch(`${config.backendUrl}/api/cron/weekly`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-cron-secret': config.cronSecret,
+        },
+        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      const data = await response.json();
+      const forwardStatus = response.ok ? 200
+        : [409, 422].includes(response.status) ? response.status
+        : 502;
+
+      return jsonResponse(
+        {
+          ok: response.ok,
+          status: response.status,
+          data,
+        },
+        forwardStatus,
+      );
+    }
+
     // Route handbook-extract to its own backend endpoint
     if (mode === 'handbook-extract' && targetDate) {
       const response = await fetch(`${config.backendUrl}/api/cron/handbook-extract`, {

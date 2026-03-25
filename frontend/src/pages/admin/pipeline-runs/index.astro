@@ -305,6 +305,7 @@ const handbookSummary = buildSummary(handbookRuns);
                   Retry Handbook
                 </button>
               )}
+              <button type="button" class="admin-btn" id="run-weekly-btn" title="Generate weekly recap for last week">Weekly Recap</button>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
             <div class="dashboard-pipeline-settings">
@@ -333,6 +334,7 @@ const handbookSummary = buildSummary(handbookRuns);
                   Retry Handbook
                 </button>
               )}
+              <button type="button" class="admin-btn" id="run-weekly-btn" title="Generate weekly recap for last week">Weekly Recap</button>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
             </div>
             <div class="dashboard-pipeline-settings">
@@ -1192,6 +1194,37 @@ const handbookSummary = buildSummary(handbookRuns);
           var message = error instanceof Error ? error.message : 'Failed to retry handbook';
           setPipelineFeedback(message, 'error');
           setTimeout(function() { retryHandbookBtn.textContent = 'Retry Handbook'; }, 3000);
+        });
+      });
+    }
+
+    // Weekly Recap button handler
+    var weeklyBtn = document.getElementById('run-weekly-btn');
+    if (weeklyBtn) {
+      weeklyBtn.addEventListener('click', function() {
+        if (!confirm('Generate weekly recap for last week?')) return;
+        weeklyBtn.setAttribute('disabled', 'true');
+        weeklyBtn.textContent = 'Generating...';
+        fetch('/api/admin/run-pipeline', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'weekly' }),
+        }).then(function(res) {
+          if (!res.ok) {
+            return res.json().catch(function() { return null; }).then(function(payload) {
+              throw new Error((payload && payload.error) || 'HTTP ' + res.status);
+            });
+          }
+          weeklyBtn.textContent = 'Started';
+          setPipelineFeedback('Weekly recap pipeline started.', 'success');
+          setTimeout(function() { window.location.reload(); }, 2000);
+        }).catch(function(error) {
+          weeklyBtn.textContent = 'Failed';
+          var message = error instanceof Error ? error.message : 'Failed to start weekly pipeline';
+          setPipelineFeedback(message, 'error');
+          setTimeout(function() { weeklyBtn.textContent = 'Weekly Recap'; }, 3000);
+          weeklyBtn.removeAttribute('disabled');
         });
       });
     }

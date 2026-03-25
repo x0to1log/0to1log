@@ -65,6 +65,9 @@ const accessToken = Astro.locals.accessToken;
 const pageTitle = post ? post.title : '찾을 수 없음';
 const pageDescription = post?.excerpt?.slice(0, 155) || undefined;
 const altSlugValue = pairedSlug || undefined;
+const isWeekly = post?.post_type === 'weekly';
+const weekTerms: Array<{slug: string; term: string; definition: string}> = isWeekly ? (post?.guide_items?.week_terms || []) : [];
+const weekTool: {name?: string; description?: string; url?: string} | null = isWeekly ? (post?.guide_items?.week_tool || null) : null;
 ---
 
 <MainLayout title={pageTitle} description={pageDescription} locale="ko" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
@@ -132,6 +135,29 @@ const altSlugValue = pairedSlug || undefined;
         showStickyActions={false}
         postType={post.post_type}
       />
+    )}
+
+    {isWeekly && (weekTerms.length > 0 || weekTool?.name) && (
+      <div class="weekly-bottom-cards">
+        {weekTerms.length > 0 && (
+          <div class="weekly-card">
+            <h3 class="weekly-card-heading">이번 주 용어</h3>
+            {weekTerms.map(t => (
+              <a href={`/ko/handbook/${t.slug}/`} class="weekly-card-link">
+                <strong>{t.term}</strong> <span class="weekly-card-def">{t.definition}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {weekTool?.name && (
+          <div class="weekly-card">
+            <h3 class="weekly-card-heading">이번 주 도구</h3>
+            <a href={weekTool.url} target="_blank" rel="noopener" class="weekly-card-link">
+              <strong>{weekTool.name}</strong> <span class="weekly-card-def">{weekTool.description}</span>
+            </a>
+          </div>
+        )}
+      </div>
     )}
 
     <Fragment slot="rail">
