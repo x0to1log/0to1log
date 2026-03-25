@@ -483,6 +483,15 @@ const nonce = Astro.locals.cspNonce || '';
         <button class="pcosts-tab" data-tab="blog" type="button">Blog</button>
       </div>
 
+      <div class="pcosts-date-filter">
+        <label class="pcosts-date-filter__label">Date Range</label>
+        <select id="date-range-select" class="admin-select" style="width:auto">
+          <option value="7" selected={filterDays === 7}>Last 7 days</option>
+          <option value="14" selected={filterDays === 14}>Last 14 days</option>
+          <option value="30" selected={filterDays === 30}>Last 30 days</option>
+        </select>
+      </div>
+
       <!-- ═══ News Tab ═══ -->
       <div id="tab-news">
 
@@ -529,15 +538,6 @@ const nonce = Astro.locals.cspNonce || '';
         <p class="dashboard-empty">No pipeline runs found in the last {filterDays} days.</p>
       ) : (
         <>
-          <div class="pcosts-date-filter">
-            <label class="pcosts-date-filter__label">Date Range</label>
-            <select id="date-range-select" class="admin-select" style="width:auto">
-              <option value="7" selected={filterDays === 7}>Last 7 days</option>
-              <option value="14" selected={filterDays === 14}>Last 14 days</option>
-              <option value="30" selected={filterDays === 30}>Last 30 days</option>
-            </select>
-          </div>
-
           <section class="pcosts-charts">
             <div class="pcosts-chart-card">
               <h3 class="pcosts-chart-title">Total Cost per Run</h3>
@@ -554,6 +554,10 @@ const nonce = Astro.locals.cspNonce || '';
             <div class="pcosts-chart-card">
               <h3 class="pcosts-chart-title">Token Distribution</h3>
               <div class="pcosts-chart-wrap"><canvas id="chart-token-donut"></canvas></div>
+            </div>
+            <div class="pcosts-chart-card">
+              <h3 class="pcosts-chart-title">Pipeline Duration</h3>
+              <div class="pcosts-chart-wrap"><canvas id="chart-duration"></canvas></div>
             </div>
           </section>
 
@@ -624,9 +628,6 @@ const nonce = Astro.locals.cspNonce || '';
             <strong class="pipeline-run-stat__value">{hbTotalTerms}</strong>
             <span class="pipeline-run-stat__detail">Total terms found across all runs</span>
           </div>
-        </section>
-
-        <div class="pcosts-summary-grid pcosts-summary-grid--4col" style="margin-top:0.75rem">
           <div class="pipeline-run-stat">
             <span class="pipeline-run-stat__label">Auto (Pipeline)</span>
             <strong class="pipeline-run-stat__value">${hbAutoCost.toFixed(4)}</strong>
@@ -637,7 +638,7 @@ const nonce = Astro.locals.cspNonce || '';
             <strong class="pipeline-run-stat__value">${hbManualCost.toFixed(4)}</strong>
             <span class="pipeline-run-stat__detail">{hbManualLogs.length} calls, {hbManualTokens.toLocaleString()} tokens</span>
           </div>
-        </div>
+        </section>
 
         <h3 class="pcosts-section-title" style="margin-top:1.5rem">Daily Cost (Auto vs Manual)</h3>
         <div class="hb-cost-chart">
@@ -677,13 +678,9 @@ const nonce = Astro.locals.cspNonce || '';
         ) : (
           <>
             <section class="pcosts-charts">
-              <div class="pcosts-chart-card pcosts-chart--full">
+              <div class="pcosts-chart-card">
                 <h3 class="pcosts-chart-title">Total Cost per Run</h3>
                 <div class="pcosts-chart-wrap"><canvas id="hb-chart-total-cost"></canvas></div>
-              </div>
-              <div class="pcosts-chart-card">
-                <h3 class="pcosts-chart-title">Terms Extracted per Run</h3>
-                <div class="pcosts-chart-wrap"><canvas id="hb-chart-terms"></canvas></div>
               </div>
               <div class="pcosts-chart-card">
                 <h3 class="pcosts-chart-title">Quality Score Trend</h3>
@@ -699,9 +696,13 @@ const nonce = Astro.locals.cspNonce || '';
                 <h3 class="pcosts-chart-title">Cost by Stage (Stacked)</h3>
                 <div class="pcosts-chart-wrap"><canvas id="hb-chart-stacked-cost"></canvas></div>
               </div>
-              <div class="pcosts-chart-card pcosts-chart--full">
-                <h3 class="pcosts-chart-title">Tokens by Stage</h3>
-                <div class="pcosts-chart-wrap"><canvas id="hb-chart-tokens"></canvas></div>
+              <div class="pcosts-chart-card">
+                <h3 class="pcosts-chart-title">Token Distribution</h3>
+                <div class="pcosts-chart-wrap"><canvas id="hb-chart-token-donut"></canvas></div>
+              </div>
+              <div class="pcosts-chart-card">
+                <h3 class="pcosts-chart-title">Terms Extracted per Run</h3>
+                <div class="pcosts-chart-wrap"><canvas id="hb-chart-terms"></canvas></div>
               </div>
             </section>
 
@@ -793,7 +794,7 @@ const nonce = Astro.locals.cspNonce || '';
 </MainLayout>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
-<script is:inline nonce={nonce} define:vars={{ chartData, hbChartData, hbQualityEntries, filterDays }}>
+<script is:inline nonce={nonce} define:vars={{ chartData, hbChartData, hbQualityEntries, filterDays, durationData }}>
   (function () {
     if (typeof Chart === 'undefined') return;
     var canvases = document.querySelectorAll('canvas');
@@ -913,6 +914,40 @@ const nonce = Astro.locals.cspNonce || '';
       });
     }
 
+    // Duration chart
+    var durationCanvas = document.getElementById('chart-duration');
+    if (durationCanvas && chartData.duration.labels.length > 0) {
+      new Chart(durationCanvas, {
+        type: 'line',
+        data: {
+          labels: chartData.duration.labels,
+          datasets: [{
+            label: 'Duration (s)',
+            data: chartData.duration.values,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true, tension: 0.3, pointRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } },
+            y: {
+              ticks: {
+                color: textColor,
+                callback: function(v) {
+                  return v >= 60 ? Math.floor(v / 60) + 'm' : v + 's';
+                },
+              },
+              grid: { color: gridColor },
+            },
+          },
+        },
+      });
+    }
+
     var qualityDatasets = [];
     if (chartData.quality.research.length > 0) {
       qualityDatasets.push({
@@ -1001,24 +1036,38 @@ const nonce = Astro.locals.cspNonce || '';
         },
       });
 
-      new Chart(document.getElementById('hb-chart-tokens'), {
-        type: 'bar',
-        data: {
-          labels: hbChartData.runLabels,
-          datasets: hbChartData.stacked.map(function(s, i) { return {
-            label: s.label, data: s.tokens,
-            backgroundColor: hbColors[i % hbColors.length],
-          }; }),
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
-          scales: {
-            ...commonScales,
-            y: { ticks: { color: textColor }, grid: { color: gridColor } },
+      // Handbook Token Distribution donut
+      var hbTokenTotals = hbChartData.stacked
+        .map(function(s) { return { label: s.label, total: s.tokens.reduce(function(a, b) { return a + b; }, 0) }; })
+        .filter(function(s) { return s.total > 0; })
+        .sort(function(a, b) { return b.total - a.total; });
+      var hbDonutCanvas = document.getElementById('hb-chart-token-donut');
+      if (hbDonutCanvas && hbTokenTotals.length > 0) {
+        var hbDonutLabels = hbTokenTotals.map(function(s) { return s.label; });
+        var hbDonutValues = hbTokenTotals.map(function(s) { return s.total; });
+        var hbDonutColors = hbDonutLabels.map(function(l, i) { return hbColors[i % hbColors.length]; });
+        var hbDonutTotal = hbDonutValues.reduce(function(a, b) { return a + b; }, 0);
+        new Chart(hbDonutCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: hbDonutLabels,
+            datasets: [{ data: hbDonutValues, backgroundColor: hbDonutColors, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }],
           },
-        },
-      });
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: {
+              legend: { position: 'right', labels: { color: textColor, boxWidth: 12, padding: 8, font: { size: 11 } } },
+              tooltip: { callbacks: {
+                label: function(ctx) {
+                  var pct = (ctx.parsed / hbDonutTotal * 100).toFixed(1);
+                  return ctx.label + ': ' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
+                },
+              }},
+            },
+          },
+        });
+      }
 
       new Chart(document.getElementById('hb-chart-terms'), {
         type: 'line',
@@ -1043,41 +1092,75 @@ const nonce = Astro.locals.cspNonce || '';
       });
     }
 
-    // Handbook Quality Score Trend chart
+    // Handbook Quality Score Trend — scatter + moving average
     var hbQualityCanvas = document.getElementById('hb-quality-chart');
     if (hbQualityCanvas && hbQualityEntries.length > 0) {
-      var hbQLabels = hbQualityEntries.map(function(e) { return e.term; });
       var hbQScores = hbQualityEntries.map(function(e) { return e.score; });
-      var hbQColors = hbQScores.map(function(s) {
-        return s >= 80 ? 'rgba(90, 142, 93, 0.8)' : s >= 60 ? 'rgba(180, 160, 80, 0.8)' : 'rgba(180, 80, 80, 0.8)';
+      var hbQDates = hbQualityEntries.map(function(e) {
+        var d = new Date(e.date); return (d.getMonth() + 1) + '/' + d.getDate();
+      });
+      var hbQPointColors = hbQScores.map(function(s) {
+        return s >= 80 ? 'rgba(90, 142, 93, 0.85)' : s >= 60 ? 'rgba(200, 170, 60, 0.85)' : 'rgba(200, 80, 80, 0.85)';
       });
 
+      var hbWindow = 5;
+      var hbMovingAvg = hbQScores.map(function(_, i) {
+        var start = Math.max(0, i - hbWindow + 1);
+        var slice = hbQScores.slice(start, i + 1);
+        return Math.round(slice.reduce(function(a, b) { return a + b; }, 0) / slice.length);
+      });
+
+      var hbMinScore = Math.max(0, Math.floor((Math.min.apply(null, hbQScores) - 10) / 10) * 10);
+
       new Chart(hbQualityCanvas, {
-        type: 'bar',
+        type: 'scatter',
         data: {
-          labels: hbQLabels,
-          datasets: [{
-            label: 'Quality Score',
-            data: hbQScores,
-            backgroundColor: hbQColors,
-            borderRadius: 4,
-          }],
+          labels: hbQDates,
+          datasets: [
+            {
+              label: 'Score',
+              data: hbQScores.map(function(s, i) { return { x: i, y: s }; }),
+              backgroundColor: hbQPointColors,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            },
+            {
+              label: 'Avg (5)',
+              data: hbMovingAvg.map(function(s, i) { return { x: i, y: s }; }),
+              type: 'line',
+              borderColor: 'rgba(99, 102, 241, 0.7)',
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.4,
+              fill: false,
+            },
+          ],
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { labels: { color: textColor, boxWidth: 10, font: { size: 11 } } },
+            tooltip: { callbacks: {
+              title: function(items) {
+                var idx = items[0].dataIndex;
+                return hbQualityEntries[idx] ? hbQualityEntries[idx].term : '';
+              },
+              label: function(ctx) {
+                return ctx.dataset.label + ': ' + ctx.parsed.y;
+              },
+            }},
+          },
           scales: {
             x: {
-              min: (function() {
-                var valid = hbQScores.filter(function(v) { return v > 0; });
-                return valid.length ? Math.max(0, Math.floor((Math.min.apply(null, valid) - 10) / 10) * 10) : 0;
-              })(),
-              max: 100,
-              ticks: { color: textColor },
+              type: 'linear', min: 0, max: hbQScores.length - 1,
+              ticks: {
+                color: textColor, font: { size: 10 },
+                callback: function(v) { return hbQDates[v] || ''; },
+                maxTicksLimit: 12,
+              },
               grid: { color: gridColor },
             },
-            y: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+            y: { min: hbMinScore, max: 100, ticks: { color: textColor, stepSize: 10 }, grid: { color: gridColor } },
           },
         },
       });
@@ -1182,7 +1265,7 @@ const nonce = Astro.locals.cspNonce || '';
   /* ─── Summary Stats Grid ────────────────────── */
   .pcosts-summary-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
     margin-bottom: 1.25rem;
     animation: pcostsSlideUp 0.4s ease both;
