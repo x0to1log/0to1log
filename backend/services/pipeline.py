@@ -421,9 +421,9 @@ QUALITY_CHECK_PROMPT_BUSINESS = """You are a strict quality reviewer for an AI b
 
 Score this Business digest on 4 criteria (0-25 each, total 0-100):
 
-1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Action Items)? Are any sections empty?
+1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions)? Are any sections empty?
 2. **Source Citations** (25): Does each news item cite a source URL? Are funding amounts and dates attributed?
-3. **Analysis Quality** (25): Does "Connecting the Dots" actually connect news items into a trend? Are "Action Items" specific and actionable (not generic advice)?
+3. **Analysis Quality** (25): Does "Connecting the Dots" actually connect news items into a trend? Are "Strategic Decisions" concrete and situation-specific (not generic advice)?
 4. **Language Quality** (25): Is the content natural in the target language? Is the length adequate?
 
 Return JSON:
