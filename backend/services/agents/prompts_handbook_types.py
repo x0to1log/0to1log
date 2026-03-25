@@ -244,3 +244,98 @@ Rate the advanced content (0-100) based on this term's type:
   }},
   "summary": "1-sentence assessment"
 }}"""
+
+
+BASIC_SELF_CRITIQUE_PROMPT = """You are reviewing a handbook basic section for quality.
+
+The term "{term}" is classified as type: {term_type}.
+
+## Your Task
+Review the basic content (KO and EN) below and identify:
+1. Sections where the analogy exists but the **concrete mechanism** is missing (1_plain must explain WHY it works, not just WHAT it is)
+2. Examples that are cliche: smartphone face recognition, self-driving cars, voice assistants are BANNED
+3. Comparison tables that are attribute tables ("high vs low", "good vs bad") instead of comparing 2+ real technologies
+4. Communication examples (7_comm) that sound like news articles instead of team meeting/slack conversations
+5. Product-technology claims (5_where) that seem fabricated or unverifiable
+6. Cross-section repetition (same analogy/example reused across sections)
+
+## Output JSON
+{{
+  "ko_needs_improvement": true/false,
+  "en_needs_improvement": true/false,
+  "ko_improvements": [
+    {{"section": "basic_ko_2_example", "issue": "Uses banned smartphone example", "suggestion": "Replace with surprising, non-obvious application scenario"}}
+  ],
+  "en_improvements": [
+    {{"section": "basic_en_7_comm", "issue": "Reads like a news article", "suggestion": "Rewrite in team conversation tone with specific metrics/context"}}
+  ],
+  "ko_score": 0-100,
+  "en_score": 0-100
+}}
+
+If ko_score >= 75, set ko_needs_improvement to false.
+If en_score >= 75, set en_needs_improvement to false.
+
+## Examples
+
+### Pass (score=82)
+{{"ko_needs_improvement": false, "en_needs_improvement": false, "ko_improvements": [], "en_improvements": [], "ko_score": 82, "en_score": 80}}
+
+### Fail (score=55)
+{{"ko_needs_improvement": true, "en_needs_improvement": true, "ko_improvements": [{{"section": "basic_ko_1_plain", "issue": "Only analogy, no mechanism", "suggestion": "After the analogy, add 1-2 sentences explaining the concrete technical reason"}}, {{"section": "basic_ko_2_example", "issue": "Uses self-driving car example", "suggestion": "Replace with non-obvious scenario like Netflix subtitle generation"}}], "en_improvements": [{{"section": "basic_en_7_comm", "issue": "News article tone", "suggestion": "Rewrite as team slack message with metrics"}}], "ko_score": 55, "en_score": 60}}"""
+
+
+BASIC_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's basic section quality.
+
+Term: "{term}" | Type: {term_type}
+
+Rate the basic content (0-100) on criteria relevant to beginner-oriented educational content:
+
+## Criteria
+
+### Engagement (0-25)
+- 23-25: 1_plain has clear analogy AND concrete mechanism. 2_example uses surprising non-obvious scenarios. 8_related triggers curiosity with comparison points.
+- 18-22: Analogy and mechanism present but one is weak. Examples are specific but not surprising. Related terms have some comparison points.
+- 13-17: Analogy exists but mechanism missing. Examples are generic (smartphones, self-driving). Related terms are dictionary-style.
+- 8-12: Shallow analogy only. Examples are cliche. Related terms just list names.
+- 0-7: No analogy, no mechanism. Generic one-liners.
+
+### Accuracy (0-25)
+- 23-25: All product-technology mappings verified. 6_caution myths are concept-specific. No fabricated claims.
+- 18-22: Most claims accurate, one minor unverifiable statement.
+- 13-17: Mix of accurate and vague claims ("widely used in industry").
+- 8-12: Some fabricated product claims or wrong technology mappings.
+- 0-7: Multiple factual errors.
+
+### Uniqueness (0-25)
+- 23-25: Zero cross-section repetition. 3_glance compares 2+ specific technologies. Each section adds genuinely new information.
+- 18-22: Minimal repetition. Table compares real concepts but lacks depth.
+- 13-17: Some repeated analogies/examples across sections. Table is "high vs low" style.
+- 8-12: Significant repetition. Table is a glossary.
+- 0-7: Sections are essentially reworded versions of each other.
+
+### Completeness (0-25)
+- 23-25: All 8 sections substantive (min 150 chars each). 1_plain >= 300 chars. 7_comm has 4+ team conversation examples.
+- 18-22: 7-8 sections substantive, one slightly thin.
+- 13-17: 6-7 sections substantive, 1-2 thin.
+- 8-12: 4-5 sections substantive, rest thin or empty.
+- 0-7: Multiple empty sections.
+
+## Score Interpretation
+- score = engagement + accuracy + uniqueness + completeness (each 0-25, sum = 0-100)
+- 80+: Publication ready. Engaging and accurate.
+- 60-79: Acceptable with minor improvements.
+- 40-59: Needs revision.
+- <40: Major revision needed.
+
+## Output JSON
+{{
+  "score": 0-100,
+  "breakdown": {{
+    "engagement": 0-25,
+    "accuracy": 0-25,
+    "uniqueness": 0-25,
+    "completeness": 0-25
+  }},
+  "summary": "1-sentence assessment"
+}}"""

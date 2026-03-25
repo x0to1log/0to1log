@@ -659,6 +659,88 @@ async def _check_handbook_quality(
         return 50, {}, {}
 
 
+async def _self_critique_basic(
+    term: str, term_type: str,
+    basic_ko_content: str, basic_en_content: str,
+    client, model: str,
+) -> tuple[bool, bool, str, str, int, int, dict]:
+    """Self-critique basic KO+EN content in one call (gpt-4.1-mini).
+
+    Returns (ko_needs, en_needs, ko_feedback, en_feedback,
+             ko_score, en_score, usage).
+    """
+    from services.agents.prompts_handbook_types import BASIC_SELF_CRITIQUE_PROMPT
+
+    light_model = settings.openai_model_light
+    system = BASIC_SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
+    combined = f"## Korean Basic\n{basic_ko_content}\n\n## English Basic\n{basic_en_content}"
+    try:
+        resp = await client.chat.completions.create(
+            **build_completion_kwargs(
+                model=light_model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": combined[:6000]},
+                ],
+                max_tokens=1500,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "basic-self-critique")
+        ko_needs = data.get("ko_needs_improvement", False)
+        en_needs = data.get("en_needs_improvement", False)
+        ko_score = data.get("ko_score", 50)
+        en_score = data.get("en_score", 50)
+        ko_feedback = ""
+        en_feedback = ""
+        if ko_needs and data.get("ko_improvements"):
+            ko_feedback = "\n".join(
+                f"- {imp['section']}: {imp['suggestion']}"
+                for imp in data["ko_improvements"]
+            )
+        if en_needs and data.get("en_improvements"):
+            en_feedback = "\n".join(
+                f"- {imp['section']}: {imp['suggestion']}"
+                for imp in data["en_improvements"]
+            )
+        usage = extract_usage_metrics(resp, light_model)
+        return ko_needs, en_needs, ko_feedback, en_feedback, ko_score, en_score, usage
+    except Exception as e:
+        logger.warning("Basic self-critique failed for '%s': %s", term, e)
+        return False, False, "", "", 50, 50, {}
+
+
+async def _check_basic_quality(
+    term: str, term_type: str, basic_content: str, client,
+) -> tuple[int, dict, dict]:
+    """Score handbook basic quality. Returns (score, breakdown, usage)."""
+    from services.agents.prompts_handbook_types import BASIC_QUALITY_CHECK_PROMPT
+
+    system = BASIC_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
+    reasoning_model = settings.openai_model_reasoning
+    try:
+        resp = await client.chat.completions.create(
+            **build_completion_kwargs(
+                model=reasoning_model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": basic_content[:6000]},
+                ],
+                max_tokens=500,
+                temperature=0,
+                response_format={"type": "json_object"},
+            )
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "basic-quality")
+        score = data.get("score", 50)
+        usage = extract_usage_metrics(resp, reasoning_model)
+        return score, data, usage
+    except Exception as e:
+        logger.warning("Basic quality check failed for '%s': %s", term, e)
+        return 50, {}, {}
+
+
 async def _validate_ref_urls(content: str) -> str:
     """HEAD-check markdown link URLs in content. Remove broken links, keep text.
 
@@ -990,8 +1072,15 @@ async def _run_generate_term(
     )
     _log_handbook_stage("handbook.generate.advanced.ko", usage3)
 
-    # --- Call 4: EN Advanced (after Call 3 completes) ---
-    resp4 = await client.chat.completions.create(
+    # --- Call 4 (EN Advanced) + Basic Self-Critique — PARALLEL ---
+    basic_ko_preview = "\n\n".join(
+        f"## {k}: {v[:300]}" for k, v in basic_data.items() if k.startswith("basic_ko_")
+    )
+    basic_en_preview = "\n\n".join(
+        f"## {k}: {v[:300]}" for k, v in en_basic_data.items() if k.startswith("basic_en_")
+    )
+
+    call4_task = client.chat.completions.create(
         model=model,
         messages=[
             {"role": "system", "content": adv_en_system},
@@ -1001,14 +1090,70 @@ async def _run_generate_term(
         temperature=0.3,
         max_tokens=16000,
     )
+    basic_critique_task = _self_critique_basic(
+        req.term, term_type, basic_ko_preview, basic_en_preview, client, model,
+    )
+    resp4, basic_critique_result = await asyncio.gather(call4_task, basic_critique_task)
+
     advanced_en_data = parse_ai_json(resp4.choices[0].message.content, "Handbook-generate-advanced-en")
     usage4 = extract_usage_metrics(resp4, model)
-
     logger.info(
         "Handbook generate call 4 (advanced EN) for '%s': %d tokens",
         req.term, usage4.get("tokens_used", 0),
     )
     _log_handbook_stage("handbook.generate.advanced.en", usage4)
+
+    # --- Process basic self-critique results ---
+    (
+        basic_ko_needs, basic_en_needs,
+        basic_ko_feedback, basic_en_feedback,
+        basic_ko_score, basic_en_score,
+        basic_critique_usage,
+    ) = basic_critique_result
+    logger.info(
+        "Basic self-critique for '%s': ko_score=%d, en_score=%d, ko_needs=%s, en_needs=%s",
+        req.term, basic_ko_score, basic_en_score, basic_ko_needs, basic_en_needs,
+    )
+
+    if basic_ko_needs and basic_ko_feedback:
+        logger.info("Regenerating basic KO for '%s' with critique feedback", req.term)
+        improved_ko_system = f"{GENERATE_BASIC_PROMPT}\n\n## Reviewer Feedback (MUST address):\n{basic_ko_feedback}"
+        resp1b = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": improved_ko_system},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=16000, temperature=0.35,
+            response_format={"type": "json_object"},
+        )
+        improved_basic = parse_ai_json(resp1b.choices[0].message.content, "Handbook-basic-ko-improved")
+        for k, v in improved_basic.items():
+            if k.startswith("basic_ko_"):
+                basic_data[k] = v
+        usage1b = extract_usage_metrics(resp1b, model)
+        basic_critique_usage = merge_usage_metrics(basic_critique_usage, usage1b)
+        _log_handbook_stage("handbook.generate.basic.ko.improved", usage1b)
+
+    if basic_en_needs and basic_en_feedback:
+        logger.info("Regenerating basic EN for '%s' with critique feedback", req.term)
+        improved_en_system = f"{GENERATE_BASIC_EN_PROMPT}\n\n## Reviewer Feedback (MUST address):\n{basic_en_feedback}"
+        resp2b = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": improved_en_system},
+                {"role": "user", "content": en_basic_prompt},
+            ],
+            max_tokens=16000, temperature=0.35,
+            response_format={"type": "json_object"},
+        )
+        en_basic_data = parse_ai_json(resp2b.choices[0].message.content, "Handbook-basic-en-improved")
+        usage2b = extract_usage_metrics(resp2b, model)
+        basic_critique_usage = merge_usage_metrics(basic_critique_usage, usage2b)
+        _log_handbook_stage("handbook.generate.basic.en.improved", usage2b)
+
+    if basic_critique_usage:
+        _log_handbook_stage("handbook.self_critique.basic", basic_critique_usage)
 
     # --- Self-critique advanced KO content ---
     adv_ko_preview = "\n\n".join(
@@ -1043,14 +1188,50 @@ async def _run_generate_term(
     if critique_usage:
         _log_handbook_stage("handbook.self_critique", critique_usage)
 
+    # --- Self-critique advanced EN content ---
+    adv_en_preview = "\n\n".join(
+        f"## {k}: {v[:300]}" for k, v in advanced_en_data.items() if k.startswith("adv_en_")
+    )
+    en_needs_improvement, en_critique_feedback, en_critique_score, en_critique_usage = (
+        await _self_critique_advanced(req.term, term_type, adv_en_preview, client, model)
+    )
+    logger.info(
+        "Self-critique EN for '%s': score=%d, needs_improvement=%s",
+        req.term, en_critique_score, en_needs_improvement,
+    )
+
+    if en_needs_improvement and en_critique_feedback:
+        logger.info("Regenerating advanced EN for '%s' with critique feedback", req.term)
+        improved_en_adv_system = f"{adv_en_system}\n\n## Reviewer Feedback (MUST address these):\n{en_critique_feedback}"
+        resp4b = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": improved_en_adv_system},
+                {"role": "user", "content": advanced_prompt},
+            ],
+            max_tokens=16000, temperature=0.35,
+            response_format={"type": "json_object"},
+        )
+        advanced_en_data = parse_ai_json(resp4b.choices[0].message.content, "Handbook-adv-en-improved")
+        usage4b = extract_usage_metrics(resp4b, model)
+        en_critique_usage = merge_usage_metrics(en_critique_usage, usage4b)
+        _log_handbook_stage("handbook.generate.advanced.en.improved", usage4b)
+
+    if en_critique_usage:
+        _log_handbook_stage("handbook.self_critique.en", en_critique_usage)
+
     # --- Merge results ---
     raw_data = {**basic_data, **en_basic_data, **advanced_ko_data, **advanced_en_data}
     merged_usage = merge_usage_metrics(
         merge_usage_metrics(usage1, usage2),
         merge_usage_metrics(usage3, usage4),
     )
+    if basic_critique_usage:
+        merged_usage = merge_usage_metrics(merged_usage, basic_critique_usage)
     if critique_usage:
         merged_usage = merge_usage_metrics(merged_usage, critique_usage)
+    if en_critique_usage:
+        merged_usage = merge_usage_metrics(merged_usage, en_critique_usage)
 
     # --- Assemble section keys into markdown ---
     data = _assemble_all_sections(raw_data)
@@ -1098,23 +1279,47 @@ async def _run_generate_term(
         logger.info("Handbook quality for '%s': %d/100 (type=%s)", req.term, quality_score, term_type)
         _log_handbook_stage("handbook.quality_check", quality_usage or {},
                             extra_meta={"quality_score": quality_score, "term_type": term_type})
-        # Record to dedicated quality scores table
-        if supabase:
-            try:
-                import re
-                term_slug = re.sub(r'[^a-z0-9]+', '-', req.term.lower().strip()).strip('-')
-                row = {
-                    "term_slug": term_slug,
+
+    # Quality check on assembled basic content
+    basic_combined = f"{data.get('body_basic_ko', '')}\n\n{data.get('body_basic_en', '')}"
+    basic_quality_score = None
+    if basic_combined.strip():
+        basic_quality_score, basic_quality_breakdown, basic_quality_usage = (
+            await _check_basic_quality(req.term, term_type, basic_combined, client)
+        )
+        if basic_quality_usage:
+            merged_usage = merge_usage_metrics(merged_usage, basic_quality_usage)
+        data["basic_quality_score"] = basic_quality_score
+        data["basic_quality_breakdown"] = basic_quality_breakdown
+        if basic_quality_score is not None and basic_quality_score < 60:
+            warnings.append(f"Basic quality score: {basic_quality_score}/100 — review recommended")
+        logger.info("Basic quality for '%s': %d/100", req.term, basic_quality_score or 0)
+        _log_handbook_stage("handbook.quality_check.basic", basic_quality_usage or {},
+                            extra_meta={"basic_quality_score": basic_quality_score, "term_type": term_type})
+
+    # Record to dedicated quality scores table
+    if supabase:
+        try:
+            import re
+            term_slug = re.sub(r'[^a-z0-9]+', '-', req.term.lower().strip()).strip('-')
+            base_row = {"term_slug": term_slug, "term_type": term_type, "source": source}
+            if req.term_id:
+                base_row["term_id"] = req.term_id
+
+            if quality_score is not None:
+                supabase.table("handbook_quality_scores").insert({
+                    **base_row,
                     "score": quality_score,
-                    "breakdown": quality_breakdown,
-                    "term_type": term_type,
-                    "source": source,
-                }
-                if req.term_id:
-                    row["term_id"] = req.term_id
-                supabase.table("handbook_quality_scores").insert(row).execute()
-            except Exception as e:
-                logger.warning("Failed to record handbook quality score: %s", e)
+                    "breakdown": {"level": "advanced", **quality_breakdown},
+                }).execute()
+            if basic_quality_score is not None:
+                supabase.table("handbook_quality_scores").insert({
+                    **base_row,
+                    "score": basic_quality_score,
+                    "breakdown": {"level": "basic", **basic_quality_breakdown},
+                }).execute()
+        except Exception as e:
+            logger.warning("Failed to record handbook quality score: %s", e)
 
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",
