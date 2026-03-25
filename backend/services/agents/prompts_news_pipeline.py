@@ -39,6 +39,9 @@ An article belongs here ONLY if its core story is a technical artifact or techni
   Must include at least one of: parameter count, benchmark score, architecture change, context window, or latency metric.
   Corporate announcements that only mention a model name without technical details belong in Business.
 - **open_source**: Project trending on GitHub or Hugging Face with a public repo URL or model card.
+  The project must involve AI/ML model training, inference, data processing, or research tooling.
+  General developer utilities that merely mention "AI" in the description are NOT open_source.
+  Curated lists (awesome-*) are NOT open_source unless they contain runnable code.
   Corporate product launches without public code are NOT open_source — assign to Business/new_tools.
 - **papers**: Research papers, technical reports, or detailed technical analyses from arXiv, conferences, or lab blogs.
   The article's MAIN subject must be a technical contribution (architecture, method, benchmark study, or training insight).
