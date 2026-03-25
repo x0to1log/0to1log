@@ -41,6 +41,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
   title={t.en['products.title']}
   description={t.en['products.heroSubtitle']}
   locale={locale}
+  slug="products/"
 >
   <div class="products-page" id="products-top">
     {error && <p class="products-error">{t.en['products.error']}</p>}

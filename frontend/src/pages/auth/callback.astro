@@ -6,6 +6,9 @@ const nonce = Astro.locals.cspNonce || '';
 <html lang="en" data-theme="light">
   <head>
     <title>Signing in...</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600&display=swap" rel="stylesheet" />
     <script is:inline nonce={nonce}>
       (function() {
         var stored = localStorage.getItem('theme');
@@ -27,7 +30,7 @@ const nonce = Astro.locals.cspNonce || '';
         justify-content: center;
         min-height: 100vh;
         margin: 0;
-        font-family: var(--font-body);
+        font-family: Lora, 'Pretendard', Georgia, serif;
         color: var(--fg);
         background: var(--bg);
         transition: background 0.2s, color 0.2s;

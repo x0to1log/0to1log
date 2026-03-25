@@ -86,7 +86,7 @@ const sc = await getSiteContents(
 const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사전', '레퍼런스', '학습']);
 ---
 
-<MainLayout title={t[locale]['handbook.title']} locale={locale} slug="handbook/">
+<MainLayout title={t[locale]['handbook.title']} description="AI·IT 용어를 쉬운 설명과 실제 예시로 정리한 용어집. 기초/심화 레벨로 나뉘어 있고, 매일 AI 뉴스와 연결됩니다." locale={locale} slug="handbook/">
   <NewsprintShell
     locale={locale}
     masthead={sc.handbook_masthead || 'AI 용어집'}

@@ -45,6 +45,7 @@ if (user && Astro.locals.accessToken && product) {
   title={product?.name ?? t.en['products.notfound']}
   description={product?.tagline ?? undefined}
   locale={locale}
+  slug={product ? `products/${product.slug}/` : ''}
   altSlug={product?.slug}
 >
   {product ? (

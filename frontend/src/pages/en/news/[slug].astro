@@ -63,10 +63,11 @@ const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || 
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
 const pageTitle = post ? post.title : 'Not Found';
+const pageDescription = post?.excerpt?.slice(0, 155) || undefined;
 const altSlugValue = pairedSlug || undefined;
 ---
 
-<MainLayout title={pageTitle} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
+<MainLayout title={pageTitle} description={pageDescription} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
   <NewsprintShell
     locale="en"
     masthead={masthead}

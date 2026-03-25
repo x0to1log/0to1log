@@ -47,11 +47,11 @@ const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
 
 const pageTitle = post ? post.title : '찾을 수 없음';
-
+const pageDescription = post?.excerpt?.slice(0, 155) || undefined;
 const altSlugValue = pairedSlug || undefined;
 ---
 
-<MainLayout title={pageTitle} locale="ko" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
+<MainLayout title={pageTitle} description={pageDescription} locale="ko" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
   <BlogShell
     locale="ko"
     sidebarPosts={sidebarPosts}
