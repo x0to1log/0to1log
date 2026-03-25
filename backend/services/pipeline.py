@@ -889,7 +889,7 @@ async def run_daily_pipeline(
         published_urls: set[str] = set()
         try:
             recent = supabase.table("news_posts").select("source_urls") \
-                .gte("created_at", (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()) \
+                .gte("created_at", (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()) \
                 .execute()
             for row in (recent.data or []):
                 for url in (row.get("source_urls") or []):
