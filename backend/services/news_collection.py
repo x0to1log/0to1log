@@ -115,11 +115,14 @@ async def _collect_tavily(
 # Source: HuggingFace Daily Papers
 # ---------------------------------------------------------------------------
 
-async def _collect_hf_papers() -> list[NewsCandidate]:
-    """Collect today's top papers from HuggingFace Daily Papers."""
+async def _collect_hf_papers(target_date: str | None = None) -> list[NewsCandidate]:
+    """Collect top papers from HuggingFace Daily Papers."""
     try:
+        params = {}
+        if target_date:
+            params["date"] = target_date
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get("https://huggingface.co/api/daily_papers")
+            resp = await client.get("https://huggingface.co/api/daily_papers", params=params)
             resp.raise_for_status()
             papers = resp.json()
 
@@ -152,11 +155,16 @@ async def _collect_hf_papers() -> list[NewsCandidate]:
 # Source: arXiv API (cs.AI, cs.CL, cs.LG)
 # ---------------------------------------------------------------------------
 
-async def _collect_arxiv() -> list[NewsCandidate]:
+async def _collect_arxiv(target_date: str | None = None) -> list[NewsCandidate]:
     """Collect recent papers from arXiv in AI categories (cs.AI, cs.CL, cs.LG)."""
     url = "https://export.arxiv.org/api/query"
+    base_query = "cat:cs.AI OR cat:cs.CL OR cat:cs.LG"
+    if target_date:
+        # arXiv date filter: submittedDate:[YYYYMMDD0000 TO YYYYMMDD2359]
+        d = target_date.replace("-", "")
+        base_query = f"({base_query}) AND submittedDate:[{d}0000 TO {d}2359]"
     params = {
-        "search_query": "cat:cs.AI OR cat:cs.CL OR cat:cs.LG",
+        "search_query": base_query,
         "sortBy": "submittedDate",
         "sortOrder": "descending",
         "max_results": "10",
@@ -214,9 +222,13 @@ async def _fetch_readme_excerpt(client: httpx.AsyncClient, full_name: str) -> st
     return ""
 
 
-async def _collect_github_trending() -> list[NewsCandidate]:
+async def _collect_github_trending(target_date: str | None = None) -> list[NewsCandidate]:
     """Collect trending AI/ML repositories from GitHub Search API."""
-    since_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    if target_date:
+        ref = datetime.strptime(target_date, "%Y-%m-%d")
+    else:
+        ref = datetime.now(timezone.utc)
+    since_date = (ref - timedelta(days=7)).strftime("%Y-%m-%d")
     url = "https://api.github.com/search/repositories"
     params = {
         "q": f"topic:machine-learning OR topic:deep-learning OR topic:llm OR topic:nlp OR topic:computer-vision created:>{since_date}",
@@ -290,9 +302,9 @@ async def collect_news(
     """
     # Run all collectors in parallel
     tavily_task = _collect_tavily(max_results_per_query, target_date)
-    hf_task = _collect_hf_papers()
-    arxiv_task = _collect_arxiv()
-    github_task = _collect_github_trending()
+    hf_task = _collect_hf_papers(target_date)
+    arxiv_task = _collect_arxiv(target_date)
+    github_task = _collect_github_trending(target_date)
 
     tavily_results, tavily_meta = await tavily_task
     hf_results, arxiv_results, github_results = await asyncio.gather(
