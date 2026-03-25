@@ -88,10 +88,17 @@
 - **목적:** 다이제스트가 기존 페르소나 탭 + 마크다운 렌더러로 정상 표시되는지 검증
 - **의존성:** COMMUNITY-01 (반영 후 검증)
 
-### 28. Weekly Digest 구현 `[WEEKLY-01]`
+### 28. Weekly Recap 파이프라인 + 뉴스레터 `[WEEKLY-01]` — NEXT SPRINT 최우선
 - **체크:** [ ]
-- **상태:** todo (선행: Daily Digest 안정화)
+- **상태:** todo — **다음 스프린트 1순위**
 - **설계 참조:** [[2026-03-16-weekly-digest-design]]
+- **변경 (2026-03-25):** 비즈니스 분석 결과 배포 채널 구축이 최우선. Weekly Recap은 웹사이트 콘텐츠 + 이메일 뉴스레터 + 커뮤니티 공유의 기반이 됨.
+- **범위 확장:**
+  - 7일간 뉴스 베스트 3-5개 요약
+  - 이번 주 핸드북 용어 1-2개 소개
+  - 뉴스 속 AI 도구 추천 1개
+  - 동일 콘텐츠를 웹(/weekly) + 이메일(Buttondown) 동시 발행
+- **참조:** [[2026-03-25-Business-Reality-Check]], [[2026-03-25-business-pivot-decision]]
 
 ### 29. 자동 발행 Phase 2: 퀄리티 기준 자동 발행 `[AUTOPUB-01]`
 - **체크:** [ ]
@@ -217,7 +224,12 @@ HANDBOOK-ADV-01 (심화 퀄리티 시스템 — Tavily+유형분류+Self-critiqu
 - definition bold 렌더링 수정
 - 수식 $$ 프롬프트 지시 + 표 안 수식 금지
 
-[완료 — 2026-03-25 세션] 뉴스 퀄리티 개선
+[완료 — 2026-03-25 세션 2] SEO + Admin Analytics 개선
+- SEO: 전체 페이지 meta description + OG tags + canonical + Twitter card 추가
+- Site Analytics: 탭 순서 Traffic→News→Handbook→Blog, News 탭 추가, Brief 3-column
+- GA4 Data API: 백엔드 라우터 + 프론트 proxy 작성 (배포 대기)
+
+[완료 — 2026-03-25 세션 1] 뉴스 퀄리티 개선
 - 수집: HuggingFace Daily Papers + arXiv API + GitHub Trending 3개 소스 추가
 - 수집: Tavily 쿼리에 research 지향 2개 추가, GitHub topic 태그 필터링
 - 수집: GitHub README excerpt 병렬 fetch (raw_content 보강)

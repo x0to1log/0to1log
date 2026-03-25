@@ -8,9 +8,15 @@ tags:
 source: docs/plans/2026-03-07-handbook-feature.md
 ---
 
-# AI Handbook Pipeline Overview
+# AI Handbook Pipeline Overview (v5)
 
 Handbook(AI 용어집) 콘텐츠의 AI 생성·번역·연관 용어 탐색 파이프라인. Admin 에디터에서 수동 트리거하는 ==어드바이저 모드==와, 뉴스 파이프라인에서 자동으로 용어를 추출하는 ==파이프라인 모드==로 구분된다.
+
+> [!note] v5 변경 (2026-03-23~25)
+> - 모델: gpt-4o → **gpt-4.1** (main), gpt-4o-mini → **gpt-4.1-mini** (light)
+> - Pipeline 추출: 상세 pre-filtering 추가 (긴 용어, modifier 접미사, 카테고리 검증)
+> - 신뢰도 기반 라우팅: High → 자동 생성, Low → queued (수동 리뷰)
+> - 동시성 제한: 세마포어 max 2 병렬 생성
 
 ## Handbook AI 전체 흐름
 
@@ -31,18 +37,18 @@ graph TD
     %% ── Action 1: Generate ──
     subgraph GEN ["Generate — 4-Call LLM 분리"]
         direction TB
+        GEN_CTX["Tavily 검색 (5건) + 유형 분류<br/>gpt-4.1-mini · 병렬 실행"]
         GEN_C1["Call 1: 메타 + Basic KO<br/>term_full · korean_full · categories<br/>definition_ko/en · body_basic_ko"]
-        GEN_C2["Call 2: Basic EN<br/>body_basic_en"]
-        GEN_C3["Call 3: Advanced KO<br/>Tavily 검색 + 유형분류 → 심화 프롬프트<br/>Self-critique → 재생성 가능<br/>Quality scoring"]
-        GEN_C4["Call 4: Advanced EN<br/>동일 컨텍스트 사용"]
-        GEN_C1 --> GEN_C2 --> GEN_C3 --> GEN_C4
-        GEN_C4 --> GEN_OUT["GenerateTermResult"]
+        GEN_C23["Call 2 + 3 (병렬)<br/>Call 2: Basic EN<br/>Call 3: Advanced KO (유형별 심화 프롬프트)"]
+        GEN_C4SC["Call 4 + Self-Critique (병렬)<br/>Call 4: Advanced EN<br/>Self-Critique: Basic 품질 검사"]
+        GEN_CTX --> GEN_C1 --> GEN_C23 --> GEN_C4SC
+        GEN_C4SC --> GEN_OUT["GenerateTermResult"]
     end
 
     %% ── Action 2: Related Terms ──
     subgraph REL ["Related Terms — 연관 용어 탐색"]
         direction TB
-        REL_LLM["Step 1 · LLM 제안<br/>gpt-4o · max 2,048 tokens"]
+        REL_LLM["Step 1 · LLM 제안<br/>gpt-4.1 · max 2,048 tokens"]
         REL_LLM -->|"10~15 용어 제안"| REL_EXA{"Exa API Key<br/>설정됨?"}
         REL_EXA -->|"있음"| REL_SEARCH["Step 2 · Exa 시맨틱 검색<br/>neural · 5건"]
         REL_EXA -->|"없음"| REL_DB
@@ -54,16 +60,16 @@ graph TD
     subgraph TRANS ["Translate — KO↔EN 양방향 번역"]
         direction TB
         TRANS_DETECT["소스 언어 자동 감지<br/>KO 콘텐츠 ≥ EN → KO 기준<br/>force_direction 오버라이드 가능"]
-        TRANS_DETECT --> TRANS_CALL["_run_translate()<br/>gpt-4o · max 4,096 tokens"]
+        TRANS_DETECT --> TRANS_CALL["_run_translate()<br/>gpt-4.1 · max 4,096 tokens"]
         TRANS_CALL -->|"JSON mode"| TRANS_OUT["TranslateResult<br/>definition · body_basic · body_advanced<br/>source_lang · target_lang"]
     end
 
-    DISPATCH -->|"generate"| GEN_CALL
+    DISPATCH -->|"generate"| GEN_CTX
     DISPATCH -->|"related_terms"| REL_LLM
     DISPATCH -->|"translate"| TRANS_DETECT
 
     %% ── 결과 → Admin UI ──
-    GEN_FIELDS --> UI_RESULT
+    GEN_OUT --> UI_RESULT
     REL_OUT --> UI_RESULT
     TRANS_OUT --> UI_RESULT
     UI_RESULT["Admin UI<br/>필드별 제안 카드 표시<br/>Use → Diff 미리보기 → Apply / Cancel<br/>Undo 지원"]
@@ -71,9 +77,15 @@ graph TD
     %% ── 파이프라인 자동 추출 경로 ──
     subgraph PIPE_FLOW ["Pipeline 자동 용어 추출"]
         direction TB
-        EXTRACT["extract_terms_from_content()<br/>gpt-4o-mini · max 2,048 tokens<br/>기사 첫 4,000자 입력"]
-        EXTRACT -->|"5~15 기술 용어"| GEN_AUTO["generate_term_content()<br/>gpt-4o · max 16,000 tokens"]
-        GEN_AUTO --> SAVE_TERM[("handbook_terms<br/>source = pipeline<br/>status = draft")]
+        EXTRACT["extract_terms_from_content()<br/>gpt-4.1-mini · max 2,048 tokens<br/>기사 Expert EN 컨텐츠 입력"]
+        FILTER["Pre-filtering<br/>· 3단어 초과 제거<br/>· modifier 접미사 제거 (-powered, -driven 등)<br/>· 유효 카테고리 검증 (12개)<br/>· DB 중복 체크 (slug + ILIKE)"]
+        ROUTE{"신뢰도\n라우팅"}
+        GEN_HIGH["High: generate_term_content()<br/>gpt-4.1 · 4-call 생성<br/>세마포어 max 2 동시"]
+        SAVE_DRAFT[("handbook_terms<br/>source = pipeline<br/>status = draft")]
+        SAVE_QUEUED[("handbook_terms<br/>source = pipeline<br/>status = queued")]
+        EXTRACT --> FILTER --> ROUTE
+        ROUTE -->|"High confidence"| GEN_HIGH --> SAVE_DRAFT
+        ROUTE -->|"Low confidence"| SAVE_QUEUED
     end
     PIPE -->|"뉴스 기사 본문"| EXTRACT
 
@@ -85,9 +97,9 @@ graph TD
     classDef ui fill:#f5eef8,stroke:#7d3c98,color:#333
 
     class ADMIN,PIPE entry
-    class GEN_CALL,REL_LLM,REL_SEARCH,TRANS_CALL,TRANS_DETECT,EXTRACT,GEN_AUTO ai
-    class SAVE_TERM storage
-    class DISPATCH,REL_EXA decision
+    class GEN_CTX,GEN_C1,GEN_C23,GEN_C4SC,REL_LLM,REL_SEARCH,TRANS_CALL,TRANS_DETECT,EXTRACT,GEN_HIGH ai
+    class SAVE_DRAFT,SAVE_QUEUED storage
+    class DISPATCH,REL_EXA,ROUTE decision
     class UI_RESULT ui
 ```
 
@@ -148,12 +160,14 @@ graph LR
 
 KO/EN 누락 버그 해결을 위해 4회 LLM 호출로 분리 구현됨. Advanced는 Tavily 검색 + 유형 분류 기반 심화 프롬프트 사용.
 
-| Call | 모델 | 생성 필드 | 특이사항 |
-|---|---|---|---|
-| **Call 1** | gpt-4o | `term_full`, `korean_full`, `categories`, `definition_ko/en`, `body_basic_ko` | 메타 + KO Basic |
-| **Call 2** | gpt-4o | `body_basic_en` | EN Basic (Call 1 definition 컨텍스트 전달) |
-| **Call 3** | gpt-4o | `body_advanced_ko` | Tavily + 유형분류 + 유형별 심화 프롬프트 + Self-critique |
-| **Call 4** | gpt-4o | `body_advanced_en` | Call 3와 동일 컨텍스트 사용 |
+| Call | 모델 | 생성 필드 | 병렬 | 특이사항 |
+|---|---|---|---|---|
+| **전처리** | Tavily + gpt-4.1-mini | 검색 컨텍스트 + 유형 분류 | 병렬 | Call 3-4에 주입 |
+| **Call 1** | gpt-4.1 | `term_full`, `korean_full`, `categories`, `definition_ko/en`, `body_basic_ko` | — | 메타 + KO Basic, KO 누락 시 재시도 |
+| **Call 2** | gpt-4.1 | `body_basic_en` | Call 2+3 병렬 | EN Basic (Call 1 definition 컨텍스트 전달) |
+| **Call 3** | gpt-4.1 | `body_advanced_ko` | Call 2+3 병렬 | Tavily + 유형분류 + 유형별 심화 프롬프트 |
+| **Call 4** | gpt-4.1 | `body_advanced_en` | Call 4+SC 병렬 | Call 3와 동일 컨텍스트 사용 |
+| **Self-Critique** | gpt-4.1 | 품질 경고 | Call 4+SC 병렬 | Basic 섹션 품질 검사, score < 70 시 경고 |
 
 - ==비어있는 필드만 생성==, 기존 콘텐츠가 있으면 해당 필드는 그대로 유지
 - body_basic: 비유 중심, 일상 언어, 2,000자 이상
@@ -170,7 +184,7 @@ KO/EN 누락 버그 해결을 위해 4회 LLM 호출로 분리 구현됨. Advanc
 ```
 Tavily 검색 (5건) ─┐
                     ├─ 병렬 실행 ─→ combined_context → Advanced 프롬프트 주입
-gpt-4o-mini 유형분류 ─┘
+gpt-4.1-mini 유형분류 ─┘
          ↓
 유형별 심화 프롬프트 (10가지 TYPE_DEPTH_GUIDES 중 1개 선택)
          ↓
@@ -178,7 +192,7 @@ Call 3 (KO Advanced) 생성
          ↓
 Self-critique (score < 75 시 약점 피드백 + 재생성)
          ↓
-Quality scoring (0~100, gpt-4o-mini) → DB 저장
+Quality scoring (0~100, gpt-4.1-mini) → DB 저장
 ```
 
 ### 10가지 용어 유형 분류
@@ -213,7 +227,7 @@ Quality scoring (0~100, gpt-4o-mini) → DB 저장
 
 3단계 파이프라인:
 
-1. **LLM 제안** (gpt-4o, 2,048 tokens) — 10~15개 연관 용어 + 이유
+1. **LLM 제안** (gpt-4.1, 2,048 tokens) — 10~15개 연관 용어 + 이유
 2. **Exa 시맨틱 검색** (선택, `exa_api_key` 설정 시) — neural 검색 5건, LLM 제안과 중복 제거 후 병합
 3. **DB 존재 확인** — 각 용어를 `handbook_terms`에서 ILIKE 조회 → `exists_in_db` + `slug` 반환
 
@@ -226,7 +240,7 @@ Quality scoring (0~100, gpt-4o-mini) → DB 저장
 
 | 항목 | 값 |
 |---|---|
-| **모델** | gpt-4o |
+| **모델** | gpt-4.1 |
 | **max_tokens** | 4,096 |
 | **temperature** | 0.2 |
 | **소스 언어 감지** | KO 콘텐츠 길이 ≥ EN → KO→EN, 그 반대면 EN→KO |
@@ -237,18 +251,27 @@ Quality scoring (0~100, gpt-4o-mini) → DB 저장
 - basic은 비유·일상 톤 유지, advanced는 기술적 정밀 톤 유지
 - 비어있는 필드는 번역하지 않음
 
-## Pipeline 자동 용어 추출
+## Pipeline 자동 용어 추출 (v5)
 
-뉴스 파이프라인 실행 중 기사 본문에서 기술 용어를 자동 추출하여 Handbook 초안을 생성한다.
+뉴스 파이프라인 실행 후 기사 본문에서 기술 용어를 자동 추출하여 Handbook 초안을 생성한다.
+
+### 추출 & 필터링
 
 | 단계 | 함수 | 모델 | 설명 |
 |---|---|---|---|
-| **Extract** | `extract_terms_from_content()` | gpt-4o-mini | 기사 첫 4,000자에서 5~15개 기술 용어 추출 |
-| **Generate** | `generate_term_content()` | gpt-4o | 추출된 용어별 전체 콘텐츠 자동 생성 |
-| **Save** | DB insert | — | `handbook_terms`에 `source='pipeline'`, `status='draft'`로 저장 |
+| **Extract** | `extract_terms_from_content()` | gpt-4.1-mini | Expert EN 다이제스트 콘텐츠에서 기술 용어 추출 |
+| **Filter** | Pre-filtering | — | 3단어 초과 제거, modifier 접미사 제거 (-powered, -driven, -based 등), 유효 카테고리 12개 검증 |
+| **Dedup** | DB batch check | — | slug + ILIKE 배치 쿼리로 기존 용어 스킵 |
+| **Route** | 신뢰도 기반 | — | High → 자동 생성, Low → `status=queued` (수동 리뷰) |
+| **Generate** | `generate_term_content()` | gpt-4.1 | 4-call 생성 (세마포어 max 2 동시) |
+| **Save** | DB insert | — | `source='pipeline'`, `status='draft'` 또는 `'queued'` |
 
 > [!note] 검수 필요
-> 파이프라인이 자동 생성한 용어는 항상 ==draft 상태==로 저장되어, Admin이 검토 후 수동 발행한다.
+> 파이프라인이 자동 생성한 용어는 항상 ==draft 또는 queued 상태==로 저장되어, Admin이 검토 후 수동 발행한다.
+
+### 유효 카테고리 (12개)
+
+`ai-ml`, `db-data`, `backend`, `frontend-ux`, `network`, `security`, `os-core`, `devops`, `performance`, `web3`, `product`, `business`
 
 ## Admin UI 인터랙션
 
@@ -283,15 +306,15 @@ graph LR
 
 | 함수 | 모델 | max_tokens | temperature | 역할 |
 |---|---|---|---|---|
-| `_run_generate_term()` | gpt-4o | 16,000×4 | 0.3 | 4-call 생성 오케스트레이터 |
-| `_run_related_terms()` | gpt-4o | 2,048 | 0.3 | 연관 용어 탐색 (LLM + Exa + DB) |
-| `_run_translate()` | gpt-4o | 4,096 | 0.2 | KO↔EN 번역 |
-| `extract_terms_from_content()` | gpt-4o-mini | 2,048 | 0.2 | 뉴스 기사에서 기술 용어 추출 |
-| `generate_term_content()` | gpt-4o | 16,000 | 0.3 | 파이프라인 자동 추출용 생성 |
+| `_run_generate_term()` | gpt-4.1 | 16,000×4 | 0.3 | 4-call 생성 오케스트레이터 |
+| `_run_related_terms()` | gpt-4.1 | 2,048 | 0.3 | 연관 용어 탐색 (LLM + Exa + DB) |
+| `_run_translate()` | gpt-4.1 | 4,096 | 0.2 | KO↔EN 번역 |
+| `extract_terms_from_content()` | gpt-4.1-mini | 2,048 | 0.2 | 뉴스 기사에서 기술 용어 추출 |
+| `generate_term_content()` | gpt-4.1 | 16,000 | 0.3 | 파이프라인 자동 추출용 생성 |
 | `_search_term_context()` | Tavily API | — | — | Advanced 전처리 — 웹 검색 5건 |
-| `_classify_term_type()` | gpt-4o-mini | 100 | 0 | Advanced 전처리 — 10유형 분류 |
-| `_self_critique_advanced()` | gpt-4o | 2,000 | 0.2 | Advanced 검토 + 재생성 판단 |
-| `_check_handbook_quality()` | gpt-4o-mini | 500 | 0 | 0~100 품질 점수 산정 |
+| `_classify_term_type()` | gpt-4.1-mini | 100 | 0 | Advanced 전처리 — 10유형 분류 |
+| `_self_critique_advanced()` | gpt-4.1 | 2,000 | 0.2 | Advanced 검토 + 재생성 판단 |
+| `_check_handbook_quality()` | gpt-4.1-mini | 500 | 0 | 0~100 품질 점수 산정 |
 
 ## 품질 검증
 
@@ -329,6 +352,7 @@ graph LR
 |---|---|
 | `backend/services/agents/advisor.py` | Handbook AI 함수 구현 |
 | `backend/services/agents/prompts_advisor.py` | 프롬프트 상수 |
+| `backend/services/agents/prompts_handbook_types.py` | 유형 분류 + 10가지 심화 가이드 |
 | `backend/models/advisor.py` | Request/Response Pydantic 스키마 |
 | `backend/routers/admin_ai.py` | `/admin/ai/handbook-advise` 엔드포인트 |
 | `backend/tests/test_handbook_advisor.py` | Handbook AI 테스트 (8개) |

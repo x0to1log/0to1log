@@ -9,9 +9,15 @@ source:
   - docs/07_Global_Local_Intelligence.md
 ---
 
-# Quality Gates & States
+# Quality Gates & States (v5)
 
 PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
+
+> [!note] v5 변경
+> - 2 페르소나 (Expert/Learner) 기준으로 스키마 및 스테이지 업데이트
+> - 모델: gpt-4.1, gpt-4.1-mini, o4-mini
+> - 다이제스트 품질 스코어링 (0~100) 추가
+> - 분류(Classification) 스테이지 반영
 
 ## PydanticAI 검증 스키마
 
@@ -23,22 +29,23 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 |---|---|
 | **QuizPoll** | 퀴즈 question/options/answer/explanation |
 | **PromptGuideItems** | 5블록: one_liner, action_item, critical_gotcha, rotating_item, quiz_poll |
-| **RelatedNews** | big_tech / industry_biz / new_tools (각 Optional) |
-| **NewsRankingResult** | research_pick + business_main_pick + related_picks |
+| **ClassifiedCandidate** | title, url, snippet, category, subcategory, relevance_score, reason |
+| **ClassificationResult** | research list + business list |
 
 ### 메인 출력 스키마
 
 | 스키마 | 에이전트 | 핵심 필드 |
 |---|---|---|
-| **ResearchPost** | Research Engineer | `has_news`, `content_original`, `no_news_notice`, `guide_items` |
-| **BusinessPost** | Business Analyst | `fact_pack`, `source_cards`, `content_analysis`, `content_beginner/learner/expert` (각 min 5,000자), `guide_items`, `related_news` |
+| **PersonaOutput** | Digest Generator | `content_expert`, `content_learner` (각 EN+KO), `headline`, `excerpt`, `tags`, `focus_items`, `quiz_en`, `quiz_ko` |
+| **ClassificationResult** | Classification (o4-mini) | `research: list[ClassifiedCandidate]`, `business: list[ClassifiedCandidate]` |
+| **GenerateTermResult** | Handbook Generate | `term_full`, `korean_full`, `definition_ko/en`, `body_basic_ko/en`, `body_advanced_ko/en` |
 | **EditorialFeedback** | Editorial | accuracy/readability/seo/tone (1~10), `overall_verdict` |
 
 ### 교차 검증 규칙
 
-- `ResearchPost`: `has_news=True` → `content_original` 필수
-- `ResearchPost`: `has_news=False` → `no_news_notice` 필수
-- `news_temperature`: 1~5 범위
+- `ClassificationResult`: 같은 URL이 research/business 양쪽에 등장 → 높은 점수 카테고리에만 유지
+- `PersonaOutput`: EN 또는 KO 누락 시 해당 로케일만 재생성 (recovery pass)
+- `GenerateTermResult`: `Field(min_length=...)` 적용 — definition 80자, basic 2,000자, advanced 3,000자
 
 ### Editorial 판정 기준
 
@@ -50,29 +57,27 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 
 ## 에러 핸들링 & 재시도
 
-### 파이프라인 체인별 정책
+### 파이프라인 스테이지별 정책 (v5)
 
-| 단계 | 실패 원인 | 재시도 | 실패 시 동작 |
+| 단계 | 모델 | 재시도 | 실패 시 동작 |
 |---|---|---|---|
-| **Tavily 수집** | API 타임아웃, 429 | 30초 후 1회 | 해당 쿼리 스킵 |
-| **Ranking (4o-mini)** | 타임아웃, 잘못된 JSON | 60초 후 1회 | 랭킹 없이 Admin 전달 |
-| **Research EN (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | "뉴스 없음" 대체 발행 |
-| **Business Expert (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | 스킵, 로그 기록 |
-| **Business Derive (4o)** | 타임아웃, JSON 오류 | 60초 후 2회 | 스킵, 로그 기록 |
-| **번역 (4o)** | 타임아웃, JSON 오류, KO 길이 미달 | 동적 threshold 기준 2회 | EN만 저장, KO 누락 로그 |
-| **Editorial (4o)** | 타임아웃, JSON 오류 | 60초 후 1회 | 검수 없이 draft, "수동 검수 필요" 태그 |
-| **PydanticAI 검증** | 스키마 불일치 | 없음 | 에러 포함 재생성 1회 |
-| **Supabase 저장** | 연결 실패, 중복 slug | 10초 후 2회 | 실패 로그 + Admin 알림 |
+| **뉴스 수집 (4개 소스)** | Tavily/HF/arXiv/GitHub API | 소스별 독립 | 해당 소스 스킵, 나머지 진행 |
+| **분류 (Classification)** | o4-mini | MAX_RETRIES=2 (총 3회) | 분류 없이 Admin 전달 |
+| **커뮤니티 반응** | Tavily API | 아이템별 독립 | 해당 아이템 반응 없이 진행 |
+| **다이제스트 Expert** | gpt-4.1 | 1회 재시도 (총 2회) | 스킵, 로그 기록 |
+| **다이제스트 Learner** | gpt-4.1 | 1회 재시도 (총 2회) | 스킵, 로그 기록 |
+| **로케일 복구** | gpt-4.1 | 1회 | EN 또는 KO만 재생성 |
+| **품질 스코어링** | o4-mini | 없음 | 스코어 없이 저장 |
+| **Handbook 추출** | gpt-4.1-mini | 없음 | 추출 없이 종료 |
+| **Handbook 생성** | gpt-4.1 | Call 1 KO 누락 시 재시도 | 생성 실패 시 스킵 |
+| **Supabase 저장** | — | 10초 후 2회 | 실패 로그 + Admin 알림 |
 
-> [!note] v4 변경
-> Business를 Expert/Derive 2행으로 분리, 번역 행 추가. 섹션별 재시도·recovery pass·partial artifact 제거 — 포스트 전체 단위 재시도로 단순화.
-
-> [!note] 번역 재시도 개선 (2026-03-14)
-> - 번역 threshold를 고정값에서 **동적 계산**으로 변경: `max(KO_MIN, int(en_len × 0.65))`
-> - 프롬프트에 실제 EN 필드 길이 명시 → 모델이 비례적 번역 생성
-> - 재시도 시 부족분(shortfall) 정확히 명시
-> - `finish_reason=length` 감지로 truncation 안전장치 추가
-> - `last_error` 미설정 버그 수정 → 에러 메시지에 구체적 필드명/길이 표시
+> [!note] v5 변경
+> - 3 페르소나 → 2 페르소나 (Expert/Learner 독립 생성)
+> - 팩트 추출(Fact Extract) 스테이지 제거
+> - Business Expert/Derive 2-call cascade → 독립 Expert/Learner 생성
+> - 번역 스테이지 제거 (EN+KO 동시 생성)
+> - 다이제스트 품질 스코어링 스테이지 추가
 
 ### 재시도 유틸리티
 
@@ -89,6 +94,18 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 
 `notify_admin_on_failure()`: 파이프라인 실패 시 `admin_notifications` 테이블에 저장. Phase 3에서 이메일 알림 업그레이드 가능.
 
+## 다이제스트 품질 스코어링 (v5 신규)
+
+다이제스트 생성 후 o4-mini로 0~100 품질 평가:
+
+| 카테고리 | 기준 (각 25점) |
+|---|---|
+| **Research** | Sections + Sources + Accuracy + Language |
+| **Business** | Sections + Sources + Analysis + Language |
+
+- `fact_pack.quality_score`에 저장
+- Admin Pipeline Runs 페이지에서 확인 가능
+
 ## 발행 품질 게이트 (Content Quality Gate)
 
 EN-KO 이중 언어 발행 시 콘텐츠 품질/동기화를 제어하는 게이트. PydanticAI 스키마 검증과는 별도로, 사실성·출처·언어 정합성을 판단한다.
@@ -102,13 +119,13 @@ EN-KO 이중 언어 발행 시 콘텐츠 품질/동기화를 제어하는 게이
 | 사실성 | 사실성 점수 기준 이상 | `hold` |
 | 맥락성 | "왜 중요한가"와 "한계/리스크" 포함 | `needs_review` |
 | 실행가능성 | 독자 행동으로 연결되는 인사이트 포함 | `needs_review` |
-| 언어 동기화 | KO는 EN 기준 `source_post_version` 참조 필수 | `needs_review` |
+| 언어 동기화 | KO는 EN과 `translation_group_id`로 연결 | `needs_review` |
 
 ### 게이트 상태값
 
 | 상태 | 의미 | 후속 동작 |
 |---|---|---|
-| `pass` | 발행/후속 로컬라이즈 가능 | publish 또는 KO draft 트리거 |
+| `pass` | 발행 가능 | publish |
 | `hold` | 근거/품질 부족 | 자동 발행 금지, 재수집/재분석 |
 | `needs_review` | 고위험/애매 항목 | 사람 검수 후 결정 |
 | `stale` | EN 원본 수정으로 KO 버전 불일치 | KO 재생성 큐 + 재검수 |
