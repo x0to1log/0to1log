@@ -43,7 +43,7 @@ const excludeStages = [
   'quality:research', 'quality:business',
 ];
 
-const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }] = await Promise.all([
+const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }, { data: runsRaw }] = await Promise.all([
   sb.from('pipeline_logs')
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
@@ -51,20 +51,25 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data:
     .not('pipeline_type', 'like', 'handbook.%')
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
-    .select('debug_meta, pipeline_type, pipeline_runs!inner(id, run_key, started_at)')
+    .select('debug_meta, pipeline_type, cost_usd, tokens_used, pipeline_runs!inner(id, run_key, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
     .in('pipeline_type', ['quality:research', 'quality:business'])
     .order('created_at', { ascending: true }),
   sb.from('pipeline_logs')
-    .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
+    .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, run_id')
     .like('pipeline_type', 'handbook.%')
-    .gte('pipeline_runs.started_at', filterDate)
+    .gte('created_at', filterDate)
     .order('created_at', { ascending: true }),
   sb.from('handbook_quality_scores')
     .select('term_slug, score, term_type, source, created_at')
     .gte('created_at', filterDate)
     .order('created_at', { ascending: false })
     .limit(50),
+  sb.from('pipeline_runs')
+    .select('run_key, status, started_at, finished_at')
+    .gte('started_at', filterDate)
+    .not('run_key', 'like', 'handbook-%')
+    .order('started_at', { ascending: true }),
 ]);
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -195,6 +200,34 @@ const avgQuality = qualityEntries.length > 0
   ? qualityEntries.reduce((sum, q) => sum + q.score, 0) / qualityEntries.length
   : null;
 
+// QC cost from quality logs
+const qcLogs = (qualityLogs ?? []) as unknown as { cost_usd: number | string | null; tokens_used: number | null }[];
+const qcTotalCost = qcLogs.reduce((sum, l) => sum + (Number.parseFloat(String(l.cost_usd ?? 0)) || 0), 0);
+const qcTotalTokens = qcLogs.reduce((sum, l) => sum + (l.tokens_used ?? 0), 0);
+const qcRunCount = qcLogs.length;
+
+// Pipeline runs: duration + success rate
+type PipelineRunEntry = { run_key: string; status: string; started_at: string; finished_at: string | null };
+const pipelineRuns = (runsRaw ?? []) as PipelineRunEntry[];
+const successCount = pipelineRuns.filter((r) => r.status === 'success').length;
+const failCount = pipelineRuns.filter((r) => r.status === 'failed').length;
+const totalPipelineRuns = pipelineRuns.length;
+const successRate = totalPipelineRuns > 0 ? Math.round((successCount / totalPipelineRuns) * 100) : null;
+
+const durationData = pipelineRuns
+  .filter((r) => r.finished_at && r.started_at)
+  .map((r) => {
+    const dur = Math.round((new Date(r.finished_at!).getTime() - new Date(r.started_at).getTime()) / 1000);
+    const d = new Date(r.started_at);
+    return { label: `${d.getMonth() + 1}/${d.getDate()}`, seconds: dur > 0 ? dur : 0 };
+  });
+
+// Token totals per stage for donut chart
+const tokenTotals = stackedData
+  .map((s) => ({ label: s.label, total: s.tokens.reduce((sum, t) => sum + t, 0) }))
+  .filter((s) => s.total > 0)
+  .sort((a, b) => b.total - a.total);
+
 const chartData = {
   runLabels: dateGroups.map((dg) => {
     const d = new Date(dg.date);
@@ -206,6 +239,10 @@ const chartData = {
     costs: s.costs.map((c) => Number(c.toFixed(6))),
     tokens: s.tokens,
   })),
+  tokenDonut: {
+    labels: tokenTotals.map((s) => s.label),
+    values: tokenTotals.map((s) => s.total),
+  },
   quality: {
     research: qualityEntries.filter((q) => q.type === 'research').map((q) => q.score),
     business: qualityEntries.filter((q) => q.type === 'business').map((q) => q.score),
@@ -215,6 +252,10 @@ const chartData = {
     businessLabels: qualityEntries.filter((q) => q.type === 'business').map((q) => {
       const d = new Date(q.startedAt); return `${d.getMonth() + 1}/${d.getDate()}`;
     }),
+  },
+  duration: {
+    labels: durationData.map((d) => d.label),
+    values: durationData.map((d) => d.seconds),
   },
 };
 
@@ -243,7 +284,15 @@ const stageStats: StageStats[] = Array.from(stageStatsMap.entries())
   .sort((a, b) => b.avgCost - a.avgCost);
 
 // ─── Handbook Data ──────────────────────────────────────────
-type HandbookLog = AnalyticsLog;
+type HandbookLog = {
+  pipeline_type: string;
+  status: string | null;
+  tokens_used: number | null;
+  cost_usd: number | string | null;
+  debug_meta: Record<string, unknown> | null;
+  created_at: string;
+  run_id: string | null;
+};
 
 const hbLogs: HandbookLog[] = (handbookLogs ?? []) as unknown as HandbookLog[];
 const hbTotalCalls = hbLogs.length;
@@ -280,7 +329,7 @@ const hbAutoDailyCost = groupByDate(hbAutoLogs);
 const hbManualDailyCost = groupByDate(hbManualLogs);
 const allDates = [...new Set([...Object.keys(hbAutoDailyCost), ...Object.keys(hbManualDailyCost)])].sort();
 
-// Group by run (same pattern as News)
+// Group by date (handbook logs don't have pipeline_runs)
 type HbRunGroup = {
   runKey: string;
   startedAt: string;
@@ -291,18 +340,18 @@ type HbRunGroup = {
 };
 const hbRunMap = new Map<string, HbRunGroup>();
 for (const log of hbLogs) {
-  const runId = log.pipeline_runs.id;
-  if (!hbRunMap.has(runId)) {
-    hbRunMap.set(runId, {
-      runKey: log.pipeline_runs.run_key,
-      startedAt: log.pipeline_runs.started_at,
+  const dateKey = log.created_at?.slice(0, 10) || 'unknown';
+  if (!hbRunMap.has(dateKey)) {
+    hbRunMap.set(dateKey, {
+      runKey: dateKey,
+      startedAt: log.created_at,
       stages: [],
       totalCost: 0,
       totalTokens: 0,
       termsExtracted: 0,
     });
   }
-  const group = hbRunMap.get(runId)!;
+  const group = hbRunMap.get(dateKey)!;
   group.stages.push(log);
   group.totalCost += parseCost(log.cost_usd);
   group.totalTokens += log.tokens_used ?? 0;
@@ -464,6 +513,16 @@ const nonce = Astro.locals.cspNonce || '';
           <strong class="pipeline-run-stat__value">{avgQuality !== null ? `${avgQuality.toFixed(0)}/100` : '—'}</strong>
           <span class="pipeline-run-stat__detail">Mean quality score</span>
         </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">QC Cost</span>
+          <strong class="pipeline-run-stat__value">${qcTotalCost.toFixed(3)}</strong>
+          <span class="pipeline-run-stat__detail">{qcRunCount} checks · {qcTotalTokens.toLocaleString()} tokens</span>
+        </div>
+        <div class="pipeline-run-stat">
+          <span class="pipeline-run-stat__label">Success Rate</span>
+          <strong class="pipeline-run-stat__value">{successRate !== null ? `${successRate}%` : '—'}</strong>
+          <span class="pipeline-run-stat__detail">{successCount}/{totalPipelineRuns} runs · {failCount} failed</span>
+        </div>
       </section>
 
       {runs.length === 0 ? (
@@ -482,21 +541,19 @@ const nonce = Astro.locals.cspNonce || '';
           <section class="pcosts-charts">
             <div class="pcosts-chart-card">
               <h3 class="pcosts-chart-title">Total Cost per Run</h3>
-              <canvas id="chart-total-cost" width="600" height="280"></canvas>
+              <div class="pcosts-chart-wrap"><canvas id="chart-total-cost"></canvas></div>
             </div>
             <div class="pcosts-chart-card">
               <h3 class="pcosts-chart-title">Quality Score Trend</h3>
-              <canvas id="chart-quality" width="600" height="280"></canvas>
+              <div class="pcosts-chart-wrap"><canvas id="chart-quality"></canvas></div>
             </div>
             <div class="pcosts-chart-card pcosts-chart--full">
               <h3 class="pcosts-chart-title">Cost by Stage (Stacked)</h3>
-              <canvas id="chart-stacked-cost" width="600" height="280"></canvas>
-              <div class="pcosts-legend" id="legend-stacked-cost"></div>
+              <div class="pcosts-chart-wrap"><canvas id="chart-stacked-cost"></canvas></div>
             </div>
-            <div class="pcosts-chart-card pcosts-chart--full">
-              <h3 class="pcosts-chart-title">Tokens by Stage</h3>
-              <canvas id="chart-tokens" width="600" height="280"></canvas>
-              <div class="pcosts-legend" id="legend-stacked-tokens"></div>
+            <div class="pcosts-chart-card">
+              <h3 class="pcosts-chart-title">Token Distribution</h3>
+              <div class="pcosts-chart-wrap"><canvas id="chart-token-donut"></canvas></div>
             </div>
           </section>
 
@@ -622,16 +679,16 @@ const nonce = Astro.locals.cspNonce || '';
             <section class="pcosts-charts">
               <div class="pcosts-chart-card pcosts-chart--full">
                 <h3 class="pcosts-chart-title">Total Cost per Run</h3>
-                <canvas id="hb-chart-total-cost" width="600" height="280"></canvas>
+                <div class="pcosts-chart-wrap"><canvas id="hb-chart-total-cost"></canvas></div>
               </div>
               <div class="pcosts-chart-card">
                 <h3 class="pcosts-chart-title">Terms Extracted per Run</h3>
-                <canvas id="hb-chart-terms" width="600" height="280"></canvas>
+                <div class="pcosts-chart-wrap"><canvas id="hb-chart-terms"></canvas></div>
               </div>
               <div class="pcosts-chart-card">
                 <h3 class="pcosts-chart-title">Quality Score Trend</h3>
                 {hbQualityEntries.length > 0 ? (
-                  <canvas id="hb-quality-chart" height="280"></canvas>
+                  <div class="pcosts-chart-wrap"><canvas id="hb-quality-chart"></canvas></div>
                 ) : (
                   <div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--color-text-muted);font-size:0.85rem">
                     No quality data yet
@@ -640,11 +697,11 @@ const nonce = Astro.locals.cspNonce || '';
               </div>
               <div class="pcosts-chart-card pcosts-chart--full">
                 <h3 class="pcosts-chart-title">Cost by Stage (Stacked)</h3>
-                <canvas id="hb-chart-stacked-cost" width="600" height="280"></canvas>
+                <div class="pcosts-chart-wrap"><canvas id="hb-chart-stacked-cost"></canvas></div>
               </div>
               <div class="pcosts-chart-card pcosts-chart--full">
                 <h3 class="pcosts-chart-title">Tokens by Stage</h3>
-                <canvas id="hb-chart-tokens" width="600" height="280"></canvas>
+                <div class="pcosts-chart-wrap"><canvas id="hb-chart-tokens"></canvas></div>
               </div>
             </section>
 
@@ -757,27 +814,12 @@ const nonce = Astro.locals.cspNonce || '';
       'Research Beginner (legacy)': '#93c5fd', // blue-300
       'Business Beginner (legacy)': '#fdba74', // orange-300
       'Rank':              '#ec4899', // pink-500
-      'QC Research':       '#67e8f9', // cyan-300
-      'QC Business':       '#22d3ee', // cyan-400
-      'QC Research (legacy)': '#a5f3fc', // cyan-200
-      'QC Business (legacy)': '#a5f3fc', // cyan-200
       'Research EN':       '#1d4ed8', // blue-700
       'Research KO':       '#3b82f6', // blue-500
       'Business EN':       '#c2410c', // orange-700
       'Business KO':       '#f97316', // orange-500
     };
     var stageColorFallback = '#cbd5e1';
-    // Group labels for legend dividers
-    var stageGroups = {
-      'Collect': 'Infra', 'Classify': 'Infra',
-      'Research Expert': 'Research', 'Research Learner': 'Research',
-      'Research Beginner (legacy)': 'Research', 'Research EN': 'Research', 'Research KO': 'Research',
-      'Business Expert': 'Business', 'Business Learner': 'Business',
-      'Business Beginner (legacy)': 'Business', 'Business EN': 'Business', 'Business KO': 'Business',
-      'Rank': 'Other',
-      'QC Research': 'Quality', 'QC Business': 'Quality',
-      'QC Research (legacy)': 'Quality', 'QC Business (legacy)': 'Quality',
-    };
     var commonScales = {
       x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } },
     };
@@ -808,14 +850,23 @@ const nonce = Astro.locals.cspNonce || '';
       type: 'bar',
       data: {
         labels: chartData.runLabels,
-        datasets: chartData.stacked.map(function(s) { return {
-          label: s.label, data: s.costs,
-          backgroundColor: stageColorMap[s.label] || stageColorFallback,
-        }; }),
+        datasets: chartData.stacked
+          .filter(function(s) { return s.costs.some(function(v) { return v > 0; }); })
+          .map(function(s) { return {
+            label: s.label, data: s.costs,
+            backgroundColor: stageColorMap[s.label] || stageColorFallback,
+          }; }),
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        interaction: { mode: 'point', intersect: true },
+        plugins: {
+          legend: { labels: { color: textColor, boxWidth: 12 } },
+          tooltip: { position: 'nearest', callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(4); },
+            filter: function(item) { return item.parsed.y > 0; },
+          }},
+        },
         scales: {
           ...commonScales,
           x: { ...commonScales.x, stacked: true },
@@ -824,57 +875,43 @@ const nonce = Astro.locals.cspNonce || '';
       },
     });
 
-    new Chart(document.getElementById('chart-tokens'), {
-      type: 'bar',
-      data: {
-        labels: chartData.runLabels,
-        datasets: chartData.stacked.map(function(s) { return {
-          label: s.label, data: s.tokens,
-          backgroundColor: stageColorMap[s.label] || stageColorFallback,
-        }; }),
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          ...commonScales,
-          y: { ticks: { color: textColor }, grid: { color: gridColor } },
+    var donutCanvas = document.getElementById('chart-token-donut');
+    if (donutCanvas && chartData.tokenDonut.labels.length > 0) {
+      var donutColors = chartData.tokenDonut.labels.map(function(label) {
+        return stageColorMap[label] || stageColorFallback;
+      });
+      var totalTokensDonut = chartData.tokenDonut.values.reduce(function(a, b) { return a + b; }, 0);
+      new Chart(donutCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: chartData.tokenDonut.labels,
+          datasets: [{
+            data: chartData.tokenDonut.values,
+            backgroundColor: donutColors,
+            borderWidth: 1,
+            borderColor: 'rgba(0,0,0,0.1)',
+          }],
         },
-      },
-    });
-
-    // Render grouped legend for stacked charts
-    var legendGroupStyle = 'display:inline-flex;align-items:center;gap:0.4rem;flex-wrap:wrap';
-    var legendLabelStyle = 'font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + textColor + ';margin-right:0.1rem';
-    var legendItemStyle = 'display:inline-flex;align-items:center;gap:0.25rem;font-size:0.72rem;color:' + textColor;
-    var legendDotBase = 'width:10px;height:10px;border-radius:2px;flex-shrink:0';
-
-    function renderGroupedLegend(containerId) {
-      var el = document.getElementById(containerId);
-      if (!el) return;
-      el.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.5rem 1.25rem;margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid ' + gridColor;
-      var groups = {};
-      var groupOrder = ['Infra', 'Research', 'Business', 'Quality', 'Other'];
-      chartData.stacked.forEach(function(s) {
-        var hasData = s.costs.some(function(v) { return v > 0; }) || s.tokens.some(function(v) { return v > 0; });
-        if (!hasData) return;
-        var group = stageGroups[s.label] || 'Other';
-        if (!groups[group]) groups[group] = [];
-        groups[group].push(s.label);
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '55%',
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { color: textColor, boxWidth: 12, padding: 8, font: { size: 11 } },
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  var pct = (ctx.parsed / totalTokensDonut * 100).toFixed(1);
+                  return ctx.label + ': ' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
+                },
+              },
+            },
+          },
+        },
       });
-      var html = '';
-      groupOrder.forEach(function(g) {
-        if (!groups[g]) return;
-        html += '<span style="' + legendGroupStyle + '"><span style="' + legendLabelStyle + '">' + g + '</span>';
-        groups[g].forEach(function(label) {
-          html += '<span style="' + legendItemStyle + '"><span style="' + legendDotBase + ';background:' + (stageColorMap[label] || stageColorFallback) + '"></span>' + label.replace(' (legacy)', '') + '</span>';
-        });
-        html += '</span>';
-      });
-      el.innerHTML = html;
     }
-    renderGroupedLegend('legend-stacked-cost');
-    renderGroupedLegend('legend-stacked-tokens');
 
     var qualityDatasets = [];
     if (chartData.quality.research.length > 0) {
@@ -1145,7 +1182,7 @@ const nonce = Astro.locals.cspNonce || '';
   /* ─── Summary Stats Grid ────────────────────── */
   .pcosts-summary-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.75rem;
     margin-bottom: 1.25rem;
     animation: pcostsSlideUp 0.4s ease both;
@@ -1238,9 +1275,9 @@ const nonce = Astro.locals.cspNonce || '';
     box-shadow: 0 2px 10px var(--color-shadow);
   }
 
-  .pcosts-chart-card canvas {
-    width: 100% !important;
-    height: 260px !important;
+  .pcosts-chart-card .pcosts-chart-wrap {
+    position: relative;
+    height: 260px;
   }
 
   .pcosts-chart-title {
