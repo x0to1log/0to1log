@@ -3,7 +3,7 @@ import asyncio
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from core.config import settings, today_kst
@@ -885,9 +885,24 @@ async def run_daily_pipeline(
         return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate run: {batch_id}")
 
     try:
+        # Fetch recently published source URLs to avoid repeating news
+        published_urls: set[str] = set()
+        try:
+            recent = supabase.table("news_posts").select("source_urls") \
+                .gte("created_at", (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()) \
+                .execute()
+            for row in (recent.data or []):
+                for url in (row.get("source_urls") or []):
+                    published_urls.add(url)
+        except Exception as e:
+            logger.warning("Failed to fetch published URLs: %s", e)
+
         # Stage: collect
         t0 = time.monotonic()
-        candidates, collect_meta = await collect_news(target_date=target_date)
+        candidates, collect_meta = await collect_news(
+            target_date=target_date,
+            published_urls=published_urls,
+        )
 
         await _log_stage(
             supabase, run_id, "collect", "success" if candidates else "no_news", t0,

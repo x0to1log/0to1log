@@ -228,7 +228,7 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
         ref = datetime.strptime(target_date, "%Y-%m-%d")
     else:
         ref = datetime.now(timezone.utc)
-    since_date = (ref - timedelta(days=7)).strftime("%Y-%m-%d")
+    since_date = (ref - timedelta(days=3)).strftime("%Y-%m-%d")
     url = "https://api.github.com/search/repositories"
     params = {
         "q": f"topic:machine-learning OR topic:deep-learning OR topic:llm OR topic:nlp OR topic:computer-vision created:>{since_date}",
@@ -295,9 +295,12 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 async def collect_news(
     max_results_per_query: int = 10,
     target_date: str | None = None,
+    published_urls: set[str] | None = None,
 ) -> tuple[list[NewsCandidate], dict[str, Any]]:
     """Collect AI news candidates from all sources in parallel.
 
+    Args:
+        published_urls: URLs already used in recent digests — excluded from results.
     Returns (deduplicated candidates list, collection metadata dict).
     """
     # Run all collectors in parallel
@@ -323,18 +326,24 @@ async def collect_news(
             all_candidates.extend(result)
             source_counts[name] = len(result)
 
-    # Deduplicate by URL
+    # Deduplicate by URL + exclude already-published URLs
+    already_used = published_urls or set()
     seen_urls: set[str] = set()
     unique: list[NewsCandidate] = []
+    excluded_count = 0
     for c in all_candidates:
+        if c.url in already_used:
+            excluded_count += 1
+            continue
         if c.url not in seen_urls:
             seen_urls.add(c.url)
             unique.append(c)
 
     logger.info(
-        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d)",
+        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, excluded_published=%d)",
         len(unique), source_counts["tavily"], source_counts.get("hf_papers", 0),
         source_counts.get("arxiv", 0), source_counts.get("github_trending", 0),
+        excluded_count,
     )
 
     is_backfill = False
