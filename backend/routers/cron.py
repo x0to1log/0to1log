@@ -88,6 +88,17 @@ async def trigger_news_pipeline(
     async def _run():
         try:
             skip_handbook = body.skip_handbook if body else False
+            # If not explicitly set by request, check admin_settings
+            if not skip_handbook:
+                try:
+                    sb = get_supabase()
+                    if sb:
+                        row = sb.table("admin_settings").select("value").eq("key", "handbook_auto_extract").single().execute()
+                        if row.data and row.data.get("value") is False:
+                            skip_handbook = True
+                            logger.info("Handbook extraction disabled via admin_settings")
+                except Exception:
+                    pass  # default to enabled if setting unavailable
             result = await run_daily_pipeline(
                 batch_id=batch_id, target_date=target_date,
                 skip_handbook=skip_handbook,
