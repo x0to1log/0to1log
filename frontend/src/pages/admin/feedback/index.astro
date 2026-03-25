@@ -167,6 +167,14 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
         </div>
       )}
 
+      <div class="feedback-bulk-bar" id="bulk-bar" hidden>
+        <label class="feedback-bulk-count" id="bulk-count">0 selected</label>
+        <button class="admin-btn admin-btn-sm" id="bulk-archive">Archive</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-restore">Restore</button>
+        <button class="admin-btn admin-btn-sm admin-btn-danger" id="bulk-delete">Delete</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-deselect">Deselect All</button>
+      </div>
+
       {items.length === 0 ? (
         <div class="feedback-empty-state">
           <svg class="feedback-empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -192,6 +200,7 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
               data-title={item.content_title.toLowerCase()}
               data-message={(item.message || '').toLowerCase()}
             >
+              <input type="checkbox" class="feedback-bulk-check" data-bulk-id={item.id} />
               <div class="admin-feedback-item-body">
                 <div class="admin-feedback-item-header">
                   <a href={getEditorUrl(item.source_type, item.content_slug)} class="admin-feedback-term-link">
@@ -233,6 +242,15 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
                 >
                   {item.archived ? 'Restore' : 'Archive'}
                 </button>
+                {item.archived && (
+                  <button
+                    type="button"
+                    class="admin-btn admin-btn--sm admin-btn-danger feedback-delete-btn"
+                    data-feedback-id={item.id}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </li>
           ))}
@@ -243,6 +261,40 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
 </MainLayout>
 
 <style>
+  .feedback-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md, 0.5rem);
+    background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-secondary));
+  }
+
+  .feedback-bulk-count {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-right: 0.5rem;
+  }
+
+  .feedback-bulk-check {
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--color-accent);
+  }
+
+  .admin-btn-danger {
+    color: var(--color-error, #c44);
+    border-color: var(--color-error, #c44);
+  }
+
+  .admin-btn-danger:hover {
+    background: var(--color-error, #c44);
+    color: #fff;
+  }
+
   .admin-list-toolbar {
     display: grid;
     gap: 0.5rem;
@@ -320,6 +372,8 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
   .admin-feedback-item-actions {
     flex-shrink: 0;
     padding-top: 0.15rem;
+    display: flex;
+    gap: 0.35rem;
   }
 
   .admin-feedback-item-header {
@@ -535,6 +589,72 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
       });
       if (countEl) countEl.textContent = `${visible} feedback`;
     }
+
+    // Delete single item
+    list.addEventListener('click', async (e) => {
+      const btn = (e.target as HTMLElement).closest('.feedback-delete-btn') as HTMLButtonElement | null;
+      if (!btn) return;
+      const feedbackId = btn.dataset.feedbackId;
+      if (!window.confirm('Delete this feedback permanently?')) return;
+      btn.disabled = true;
+      btn.textContent = 'Deleting...';
+      try {
+        const res = await fetch('/api/admin/feedback/bulk-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', ids: [feedbackId] }),
+        });
+        if (!res.ok) throw new Error();
+        btn.closest('.admin-feedback-item')?.remove();
+        applyFilters();
+      } catch {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      }
+    });
+
+    // Bulk selection
+    const bulkBar = document.getElementById('bulk-bar');
+    const bulkCount = document.getElementById('bulk-count');
+    const checkboxes = list.querySelectorAll('.feedback-bulk-check');
+
+    function updateBulkBar() {
+      const checked = list.querySelectorAll('.feedback-bulk-check:checked');
+      const count = checked.length;
+      if (bulkBar) bulkBar.hidden = count === 0;
+      if (bulkCount) bulkCount.textContent = `${count} selected`;
+    }
+
+    checkboxes.forEach((cb) => cb.addEventListener('change', updateBulkBar));
+
+    document.getElementById('bulk-deselect')?.addEventListener('click', () => {
+      checkboxes.forEach((cb) => { (cb as HTMLInputElement).checked = false; });
+      updateBulkBar();
+    });
+
+    async function bulkAction(action: string) {
+      const checked = list.querySelectorAll('.feedback-bulk-check:checked');
+      const ids = Array.from(checked).map((cb) => (cb as HTMLInputElement).dataset.bulkId);
+      if (ids.length === 0) return;
+
+      const labels: Record<string, string> = { archive: 'Archive', restore: 'Restore', delete: 'Delete' };
+      if (!window.confirm(`${labels[action] || action} ${ids.length} feedback item(s)?`)) return;
+
+      const res = await fetch('/api/admin/feedback/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids }),
+      });
+      const data = await res.json();
+      if (data.failed > 0) {
+        window.alert(`${data.success} succeeded, ${data.failed} failed.`);
+      }
+      window.location.reload();
+    }
+
+    document.getElementById('bulk-archive')?.addEventListener('click', () => bulkAction('archive'));
+    document.getElementById('bulk-restore')?.addEventListener('click', () => bulkAction('restore'));
+    document.getElementById('bulk-delete')?.addEventListener('click', () => bulkAction('delete'));
 
     // Initial filter: show active only
     applyFilters();
