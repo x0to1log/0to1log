@@ -359,7 +359,6 @@ async def _extract_and_create_handbook_terms(
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "success", t_gen,
                     output_summary=f"term={term_name}, slug={slug}",
-                    usage=gen_usage,
                     debug_meta={"term": term_name, "slug": slug, "source": "pipeline"},
                 )
                 return 1, []
@@ -368,7 +367,7 @@ async def _extract_and_create_handbook_terms(
                 logger.error(error_msg)
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "failed", t_gen,
-                    error_message=error_msg, usage=gen_usage,
+                    error_message=error_msg,
                     debug_meta={"term": term_name, "slug": slug, "source": "pipeline"},
                 )
                 return 0, [error_msg]
