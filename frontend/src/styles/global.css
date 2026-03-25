@@ -7912,6 +7912,63 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   }
 }
 
+/* ── Blog Category Showcase ── */
+.blog-category-showcase {
+  margin-bottom: 2rem;
+}
+
+.blog-category-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.blog-category-showcase-card {
+  display: block;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease, background-color 150ms ease;
+  border-left: 3px solid var(--cat-color, var(--color-accent));
+}
+
+.blog-category-showcase-card:hover {
+  border-color: var(--cat-color, var(--color-accent));
+  background: var(--color-accent-subtle);
+}
+
+.blog-category-showcase-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.blog-category-showcase-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--cat-color, var(--color-accent));
+}
+
+.blog-category-showcase-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.blog-category-showcase-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.blog-category-showcase-desc {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
 /* ── Section Headers (mono, uppercase) ── */
 .blog-section-header {
   font-family: var(--font-blog-heading);
