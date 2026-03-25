@@ -159,6 +159,20 @@ function initComments(): void {
     });
   }
 
+  // Intercept comment button clicks → scroll to input area, not section top
+  document.querySelectorAll<HTMLAnchorElement>('[data-reading-action="comments"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const scrollTarget = (form && form.style.display !== 'none') ? form
+        : (loginLink && loginLink.style.display !== 'none') ? loginLink
+        : section;
+      e.preventDefault();
+      scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (input && form && form.style.display !== 'none') {
+        setTimeout(() => input.focus(), 500);
+      }
+    });
+  });
+
   loadComments();
 }
 

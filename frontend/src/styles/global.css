@@ -8642,6 +8642,10 @@ pre:hover .blog-code-copy {
   fill: currentColor;
 }
 
+.reading-actions__items--term {
+  justify-content: flex-end;
+}
+
 .reading-actions--term .reading-actions__button.is-selected {
   color: var(--color-accent);
   border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
