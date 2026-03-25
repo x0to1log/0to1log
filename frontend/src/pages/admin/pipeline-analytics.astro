@@ -380,19 +380,22 @@ const hbQualityEntries: HbQualityEntry[] = (hbQualityRows ?? []).map((row: any) 
   date: row.created_at?.slice(0, 10) || '',
 }));
 
-// Chart data
-const hbStageNames = ['handbook.extract', 'handbook.auto_generate'];
-const hbStageLabels: Record<string, string> = {
-  'handbook.extract': 'Extract',
-  'handbook.auto_generate': 'Generate',
-};
-const hbStackedData = hbStageNames.map((stage) => ({
-  label: hbStageLabels[stage] || stage,
+// Chart data — group handbook stages by category
+const hbStageGroups: { label: string; match: (t: string) => boolean }[] = [
+  { label: 'Extract', match: (t) => t === 'handbook.extract' },
+  { label: 'Auto Generate', match: (t) => t === 'handbook.auto_generate' },
+  { label: 'Manual Generate', match: (t) => t.startsWith('handbook.generate.') },
+  { label: 'Classify', match: (t) => t === 'handbook.classify' },
+  { label: 'Quality Check', match: (t) => t === 'handbook.quality_check' },
+  { label: 'Self Critique', match: (t) => t === 'handbook.self_critique' },
+];
+const hbStackedData = hbStageGroups.map((group) => ({
+  label: group.label,
   costs: hbRuns.map((run) => {
-    return run.stages.filter((s) => s.pipeline_type === stage).reduce((sum, s) => sum + parseCost(s.cost_usd), 0);
+    return run.stages.filter((s) => group.match(s.pipeline_type)).reduce((sum, s) => sum + parseCost(s.cost_usd), 0);
   }),
   tokens: hbRuns.map((run) => {
-    return run.stages.filter((s) => s.pipeline_type === stage).reduce((sum, s) => sum + (s.tokens_used ?? 0), 0);
+    return run.stages.filter((s) => group.match(s.pipeline_type)).reduce((sum, s) => sum + (s.tokens_used ?? 0), 0);
   }),
 }));
 
