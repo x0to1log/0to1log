@@ -409,7 +409,7 @@ QUALITY_CHECK_PROMPT_RESEARCH = """You are a strict quality reviewer for an AI t
 
 Score this Research digest on 4 criteria (0-25 each, total 0-100):
 
-1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, LLM & Models, Open Source, Papers, Technical Outlook)? Are any sections empty or too short?
+1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters)? Are any sections empty or too short?
 2. **Source Citations** (25): Does each news item cite a source URL? Are benchmark numbers attributed?
 3. **Technical Accuracy** (25): Are parameter counts, benchmarks, and technical details specific (not vague)? Are comparisons to prior work included?
 4. **Language Quality** (25): Is the content natural in the target language (not translation-sounding)? Is the length adequate (min 500 chars per section)?

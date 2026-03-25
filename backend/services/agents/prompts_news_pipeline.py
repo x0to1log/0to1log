@@ -61,7 +61,7 @@ NOT Research (assign to Business instead):
 - **new_tools**: New AI products, services, or developer tools launched
 
 ## Rules
-1. Select 3-5 articles per category (research and business)
+1. Select 0-5 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
 2. The same article CAN appear in both categories if relevant to both
 3. Prefer breaking/exclusive news over incremental updates
 4. Prefer news with concrete data (benchmarks, dollar amounts, dates)
