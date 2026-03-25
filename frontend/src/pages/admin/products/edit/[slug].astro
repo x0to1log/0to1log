@@ -1247,6 +1247,7 @@ const isFeatured = product?.featured ?? false;
             }
             return fetchBody;
           })()),
+          signal: AbortSignal.timeout(180_000), // 3min
         });
         const data = await res.json();
         if (!res.ok) {

@@ -828,6 +828,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           method: 'POST',
           headers: _aiH,
           body: JSON.stringify(body),
+          signal: AbortSignal.timeout(300_000), // 5min — handbook generate has up to 10 LLM calls
         });
 
         if (!res.ok) {

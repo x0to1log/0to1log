@@ -929,6 +929,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             slug: slugInput?.value || '',
             locale: getActiveLang(),
           }),
+          signal: AbortSignal.timeout(180_000), // 3min
         });
 
         if (!res.ok) {
@@ -1149,6 +1150,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             locale: getActiveLang(),
             source_post_id: postId || '',
           }),
+          signal: AbortSignal.timeout(180_000), // 3min
         });
 
         if (!res.ok) {

@@ -891,6 +891,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             slug: slugInput?.value || '',
             post_type: postTypeSelect?.value || '',
           }),
+          signal: AbortSignal.timeout(180_000), // 3min
         });
 
         if (!res.ok) {
