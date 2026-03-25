@@ -8,4 +8,4 @@ Disallow: /login
 Disallow: /settings
 Disallow: /library
 
-Sitemap: https://0to1log.com/sitemap-index.xml
+Sitemap: https://0to1log.com/sitemap.xml
