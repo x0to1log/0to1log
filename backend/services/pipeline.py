@@ -323,6 +323,10 @@ async def _extract_and_create_handbook_terms(
                 )
                 return 0, [error_msg]
 
+            # Extract quality warnings propagated from advisor
+            warnings = content_data.pop("_warnings", [])
+            term_status = "queued" if any("quality score" in w.lower() for w in warnings) else "draft"
+
             try:
                 row = {
                     "term": term_name,
@@ -337,7 +341,7 @@ async def _extract_and_create_handbook_terms(
                     "body_basic_en": content_data.get("body_basic_en", ""),
                     "body_advanced_ko": content_data.get("body_advanced_ko", ""),
                     "body_advanced_en": content_data.get("body_advanced_en", ""),
-                    "status": "draft",
+                    "status": term_status,
                     "source": "pipeline",
                 }
                 result = supabase.table("handbook_terms").insert(row).execute()
@@ -815,7 +819,7 @@ async def _generate_digest(
             row["guide_items"] = guide_items
 
         try:
-            supabase.table("news_posts").upsert(row).execute()
+            supabase.table("news_posts").upsert(row, on_conflict="slug").execute()
             posts_created += 1
             logger.info("Saved %s %s digest draft: %s", digest_type, locale, slug)
         except Exception as e:
@@ -1067,10 +1071,19 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         logger.info("No article content for handbook extraction (batch %s)", batch_id)
         return PipelineResult(batch_id=batch_id)
 
-    # Create separate pipeline run (insert-as-lock — skip on duplicate)
+    # Create separate pipeline run with attempt numbering to preserve logs
     run_id = str(uuid.uuid4())
     run_key = f"handbook-extract-{batch_id}"
     all_errors: list[str] = []
+
+    # Check for existing runs to determine attempt number
+    try:
+        existing = supabase.table("pipeline_runs").select("id").like("run_key", f"handbook-extract-{batch_id}%").execute()
+        attempt = len(existing.data or []) + 1
+        if attempt > 1:
+            run_key = f"handbook-extract-{batch_id}-a{attempt}"
+    except Exception:
+        pass  # proceed with base run_key
 
     try:
         supabase.table("pipeline_runs").insert({

@@ -161,6 +161,21 @@ async def classify_candidates(
             ))
         setattr(result, category, classified[:5])
 
+    # Deduplicate: if same URL in both categories, keep in the one with higher score
+    if result.research and result.business:
+        research_urls = {c.url: c for c in result.research}
+        business_urls = {c.url: c for c in result.business}
+        overlap = set(research_urls.keys()) & set(business_urls.keys())
+        for url in overlap:
+            r_score = research_urls[url].relevance_score
+            b_score = business_urls[url].relevance_score
+            if r_score >= b_score:
+                result.business = [c for c in result.business if c.url != url]
+            else:
+                result.research = [c for c in result.research if c.url != url]
+        if overlap:
+            logger.info("Cross-category dedup removed %d duplicate URL(s)", len(overlap))
+
     logger.info(
         "Classification complete: %d research, %d business",
         len(result.research), len(result.business),

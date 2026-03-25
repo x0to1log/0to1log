@@ -541,11 +541,15 @@ async def _search_term_context(term: str) -> str:
         return ""
     try:
         tavily = TavilyClient(api_key=settings.tavily_api_key)
-        results = tavily.search(
-            query=f"{term} AI technology explained",
-            search_depth="advanced",
-            max_results=5,
-            include_raw_content=False,
+        loop = asyncio.get_running_loop()
+        results = await loop.run_in_executor(
+            None,
+            lambda: tavily.search(
+                query=f"{term} AI technology explained",
+                search_depth="advanced",
+                max_results=5,
+                include_raw_content=False,
+            ),
         )
         if not results.get("results"):
             return ""
@@ -678,6 +682,8 @@ async def _validate_ref_urls(content: str) -> str:
         try:
             async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
                 resp = await client.head(url)
+                if resp.status_code in (403, 405):
+                    resp = await client.get(url)
                 return url, resp.status_code < 400
         except (httpx.TimeoutException, httpx.RequestError):
             return url, False
@@ -1158,7 +1164,9 @@ async def generate_term_content(
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
-    data, usage, _warnings = await _run_generate_term(
+    data, usage, warnings = await _run_generate_term(
         req, client, model, source=source, article_context=article_context,
     )
+    if warnings:
+        data["_warnings"] = warnings
     return data, usage
