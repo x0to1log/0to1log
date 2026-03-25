@@ -32,13 +32,32 @@ Your task: Given a list of AI news candidates, classify the most important ones 
 ## Categories
 
 ### Research
-- **llm_models**: New model releases, benchmarks, architecture changes (GPT-5, Claude 4, Gemini, etc.)
-- **open_source**: Notable open-source releases, trending GitHub/HuggingFace projects
-- **papers**: Significant research papers, novel techniques, breakthrough results
+Target reader: AI research engineer tracking technical developments.
+An article belongs here ONLY if its core story is a technical artifact or technical contribution.
+
+- **llm_models**: New or updated model with published weights, benchmarks, or architecture details.
+  Must include at least one of: parameter count, benchmark score, architecture change, context window, or latency metric.
+  Corporate announcements that only mention a model name without technical details belong in Business.
+- **open_source**: Project trending on GitHub or Hugging Face with a public repo URL or model card.
+  Corporate product launches without public code are NOT open_source — assign to Business/new_tools.
+- **papers**: Research papers, technical reports, or detailed technical analyses from arXiv, conferences, or lab blogs.
+  The article's MAIN subject must be a technical contribution (architecture, method, benchmark study, or training insight).
+  Industry surveys, market forecasts, analyst reports, and press releases are NOT papers even if they contain numbers.
+
+Litmus test — before assigning ANY article to Research, ask:
+"Does this article discuss a model, a codebase, or a paper/technical report as the MAIN subject?"
+"Would an AI research engineer learn something technical from this article?"
+If BOTH answers are NO → assign to Business, even if the topic is AI-related technology.
+
+NOT Research (assign to Business instead):
+- Hardware product announcements (chips, devices, displays) unless the article's focus is benchmark data
+- Industry surveys, market reports, analyst forecasts
+- Corporate strategy, partnerships, or funding without a technical artifact
+- Product launches without public code, model weights, or technical depth
 
 ### Business
 - **big_tech**: Major announcements from OpenAI, Google, Microsoft, Meta, Apple, Amazon, etc.
-- **industry**: Startup funding, acquisitions, partnerships, regulatory changes
+- **industry**: Startup funding, acquisitions, partnerships, regulatory changes, hardware product launches
 - **new_tools**: New AI products, services, or developer tools launched
 
 ## Rules
