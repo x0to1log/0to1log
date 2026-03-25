@@ -997,7 +997,15 @@ const nonce = Astro.locals.cspNonce || '';
     });
 
     // ─── Handbook Charts ──────────────────────────
-    var hbColors = ['#8b5cf6', '#f59e0b'];
+    var hbColorMap = {
+      'Extract':        '#64748b', // slate — infra
+      'Auto Generate':  '#2563eb', // blue
+      'Manual Generate':'#60a5fa', // blue-light
+      'Classify':       '#94a3b8', // slate-light
+      'Quality Check':  '#22d3ee', // cyan
+      'Self Critique':  '#67e8f9', // cyan-light
+    };
+    var hbColorFallback = '#cbd5e1';
 
     if (document.getElementById('hb-chart-total-cost') && hbChartData.runLabels.length > 0) {
       new Chart(document.getElementById('hb-chart-total-cost'), {
@@ -1026,14 +1034,23 @@ const nonce = Astro.locals.cspNonce || '';
         type: 'bar',
         data: {
           labels: hbChartData.runLabels,
-          datasets: hbChartData.stacked.map(function(s, i) { return {
+          datasets: hbChartData.stacked
+            .filter(function(s) { return s.costs.some(function(v) { return v > 0; }); })
+            .map(function(s) { return {
             label: s.label, data: s.costs,
-            backgroundColor: hbColors[i % hbColors.length],
+            backgroundColor: hbColorMap[s.label] || hbColorFallback,
           }; }),
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+          interaction: { mode: 'point', intersect: true },
+          plugins: {
+            legend: { labels: { color: textColor, boxWidth: 12 } },
+            tooltip: { position: 'nearest', callbacks: {
+              label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(4); },
+              filter: function(item) { return item.parsed.y > 0; },
+            }},
+          },
           scales: {
             ...commonScales,
             x: { ...commonScales.x, stacked: true },
@@ -1051,7 +1068,7 @@ const nonce = Astro.locals.cspNonce || '';
       if (hbDonutCanvas && hbTokenTotals.length > 0) {
         var hbDonutLabels = hbTokenTotals.map(function(s) { return s.label; });
         var hbDonutValues = hbTokenTotals.map(function(s) { return s.total; });
-        var hbDonutColors = hbDonutLabels.map(function(l, i) { return hbColors[i % hbColors.length]; });
+        var hbDonutColors = hbDonutLabels.map(function(l) { return hbColorMap[l] || hbColorFallback; });
         var hbDonutTotal = hbDonutValues.reduce(function(a, b) { return a + b; }, 0);
         new Chart(hbDonutCanvas, {
           type: 'doughnut',
