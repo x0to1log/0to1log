@@ -66,6 +66,7 @@ type ActivityItem = {
 let recentActivity: ActivityItem[] = [];
 let staleDrafts: ActivityItem[] = [];
 let handbookAutoExtract = true;
+let weeklyEnabled = false;
 let newsQualityData: { label: string; score: number; type: string }[] = [];
 let hbQualityData: { term: string; score: number; label: string }[] = [];
 
@@ -74,7 +75,7 @@ try {
   // All queries in a single parallel batch (eliminates waterfall)
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
          blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
-         pipelineLogsRes, candidatesRes, settingsRes, productsRes,
+         pipelineLogsRes, candidatesRes, settingsRes, weeklySettingsRes, productsRes,
          newsQualityRes, hbQualityRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
@@ -96,6 +97,7 @@ try {
     sb.from('pipeline_logs').select('cost_usd, tokens_used, run_id').order('created_at', { ascending: false }).limit(100),
     sb.from('news_candidates').select('status, batch_id').order('created_at', { ascending: false }).limit(200),
     sb.from('admin_settings').select('value').eq('key', 'handbook_auto_extract').maybeSingle(),
+    sb.from('admin_settings').select('value').eq('key', 'weekly_enabled').maybeSingle(),
     sb.from('ai_products').select('id', { count: 'exact', head: true }),
     // Quality score data for dashboard charts
     sb.from('pipeline_logs')
@@ -136,6 +138,9 @@ try {
   // Admin settings
   if (settingsRes.data) {
     handbookAutoExtract = settingsRes.data.value !== false;
+  }
+  if (weeklySettingsRes.data) {
+    weeklyEnabled = weeklySettingsRes.data.value === true;
   }
 
   totalProducts = productsRes.count ?? 0;
@@ -381,6 +386,10 @@ function relativeTime(dateStr: string): string {
                 <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
                 Auto-extract terms (cron)
               </label>
+              <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
+                <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
+                Weekly Recap
+              </label>
             </div>
           </div>
         ) : (
@@ -409,6 +418,10 @@ function relativeTime(dateStr: string): string {
               <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
                 <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
                 Auto-extract terms (cron)
+              </label>
+              <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
+                <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
+                Weekly Recap
               </label>
             </div>
           </div>
@@ -1219,6 +1232,28 @@ function relativeTime(dateStr: string): string {
           setPipelineFeedback(`Handbook auto-extract ${enabled ? 'enabled' : 'disabled'} for cron runs.`, 'success');
         } catch {
           autoExtractCheckbox.checked = !enabled; // revert
+          setPipelineFeedback('Failed to save setting.', 'error');
+        }
+      });
+    }
+
+    // Weekly Recap toggle
+    const weeklyCheckbox = document.getElementById('weekly-enabled') as HTMLInputElement | null;
+    if (weeklyCheckbox && !weeklyCheckbox.dataset.init) {
+      weeklyCheckbox.dataset.init = '1';
+      weeklyCheckbox.addEventListener('change', async () => {
+        const enabled = weeklyCheckbox.checked;
+        try {
+          const res = await fetch('/api/admin/settings', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'weekly_enabled', value: enabled }),
+          });
+          if (!res.ok) throw new Error('Save failed');
+          setPipelineFeedback(`Weekly Recap ${enabled ? 'enabled' : 'disabled'}.`, 'success');
+        } catch {
+          weeklyCheckbox.checked = !enabled;
           setPipelineFeedback('Failed to save setting.', 'error');
         }
       });
