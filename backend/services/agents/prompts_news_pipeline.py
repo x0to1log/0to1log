@@ -252,7 +252,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ## Field rules
 - **excerpt/excerpt_ko**: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body.
 - **tags**: 4-6 keyword tags in English only. Include company names, key technologies, industry terms, and notable tools.
-- **focus_items/focus_items_ko**: Exactly 3 bullet points summarizing this specific digest:
+- **focus_items/focus_items_ko**: Exactly 3 bullet points summarizing this specific digest (EN: 5-12 words each, KO: 15-40 chars each):
   1. What specifically changed today
   2. Why this matters right now
   3. What to watch for next
