@@ -200,6 +200,20 @@ async def _collect_arxiv() -> list[NewsCandidate]:
 # Source: GitHub Trending (AI/ML)
 # ---------------------------------------------------------------------------
 
+async def _fetch_readme_excerpt(client: httpx.AsyncClient, full_name: str) -> str:
+    """Fetch the first 1000 chars of a repo's README."""
+    try:
+        resp = await client.get(
+            f"https://api.github.com/repos/{full_name}/readme",
+            headers={"Accept": "application/vnd.github.raw+json"},
+        )
+        if resp.status_code == 200:
+            return resp.text[:1000]
+    except Exception:
+        pass
+    return ""
+
+
 async def _collect_github_trending() -> list[NewsCandidate]:
     """Collect trending AI/ML repositories from GitHub Search API."""
     since_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -218,8 +232,18 @@ async def _collect_github_trending() -> list[NewsCandidate]:
             resp.raise_for_status()
             data = resp.json()
 
+        repos = data.get("items", [])[:10]
+
+        # Fetch README excerpts in parallel
+        async with httpx.AsyncClient(timeout=10.0) as readme_client:
+            readme_tasks = [
+                _fetch_readme_excerpt(readme_client, repo.get("full_name", ""))
+                for repo in repos
+            ]
+            readmes = await asyncio.gather(*readme_tasks, return_exceptions=True)
+
         candidates: list[NewsCandidate] = []
-        for repo in data.get("items", [])[:10]:
+        for repo, readme in zip(repos, readmes):
             full_name = repo.get("full_name", "")
             description = repo.get("description", "") or ""
             stars = repo.get("stargazers_count", 0)
@@ -234,12 +258,15 @@ async def _collect_github_trending() -> list[NewsCandidate]:
                 snippet_parts.append(f"Language: {language}")
             snippet = " | ".join(snippet_parts)
 
+            readme_text = readme if isinstance(readme, str) else ""
+            raw = f"{description}\n\n{readme_text}".strip() if readme_text else description
+
             candidates.append(NewsCandidate(
                 title=f"{full_name}: {description[:100]}" if description else full_name,
                 url=repo_url,
                 snippet=snippet[:300],
                 source="github_trending",
-                raw_content=description,
+                raw_content=raw,
             ))
 
         logger.info("Collected %d trending repos from GitHub", len(candidates))

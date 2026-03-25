@@ -515,7 +515,7 @@ async def _generate_digest(
         body = raw_content_map.get(item.url, item.snippet)[:4000]
         news_items.append(
             f"### [{item.subcategory}] {item.title}\n"
-            f"URL: {item.url}\n"
+            f"Source URL (MUST cite this): {item.url}\n"
             f"Relevance: {item.relevance_score}\n\n"
             f"{body}"
         )

@@ -152,7 +152,7 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 {sections_description}
 
 ## Writing Rules
-1. Cite sources Perplexity-style at the end of each paragraph: "... [1](URL1) [2](URL2)". Every citation must use a real URL from the provided sources.
+1. Cite the Source URL for each news item at the end of every paragraph: "... [Source Title](URL)". Even if a news item has only one source, you MUST cite it. For arXiv papers: "[arXiv](URL)". For GitHub repos: "[GitHub](URL)". Never omit citations.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
 4. English and Korean should cover the same facts with natural expression for each language.
@@ -214,7 +214,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. Cite sources Perplexity-style at the end of each paragraph: "... [1](URL1) [2](URL2)". Every citation must use a real URL from the provided sources.
+1. Cite the Source URL for each news item at the end of every paragraph: "... [Source Title](URL)". Even if a news item has only one source, you MUST cite it. For arXiv papers: "[arXiv](URL)". For GitHub repos: "[GitHub](URL)". Never omit citations.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
 4. English and Korean should cover the same news items with natural expression for each language.
