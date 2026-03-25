@@ -1,6 +1,7 @@
--- 00013_handbook_difficulty_levels.sql
+-- 00012_handbook_difficulty_levels.sql
 -- Handbook difficulty-level content system: basic (기초) / advanced (심화)
 -- Replaces single body_markdown + card fields with two content versions per language.
+-- Merged from: 00013 (add columns + migrate data) + 00015 (drop legacy columns)
 
 -- 1) Add new body columns for two difficulty levels
 ALTER TABLE handbook_terms
@@ -32,6 +33,16 @@ UPDATE handbook_terms SET
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS handbook_level TEXT DEFAULT 'basic';
 
--- Note: Old columns (plain_explanation_*, technical_description_*, example_analogy_*,
--- body_markdown_*, difficulty) will be dropped in a follow-up migration (00016)
--- after verifying the new system works correctly.
+-- 4) Drop legacy columns (verified in production)
+DROP INDEX IF EXISTS idx_handbook_difficulty;
+
+ALTER TABLE handbook_terms
+  DROP COLUMN IF EXISTS plain_explanation_ko,
+  DROP COLUMN IF EXISTS technical_description_ko,
+  DROP COLUMN IF EXISTS example_analogy_ko,
+  DROP COLUMN IF EXISTS body_markdown_ko,
+  DROP COLUMN IF EXISTS plain_explanation_en,
+  DROP COLUMN IF EXISTS technical_description_en,
+  DROP COLUMN IF EXISTS example_analogy_en,
+  DROP COLUMN IF EXISTS body_markdown_en,
+  DROP COLUMN IF EXISTS difficulty;

@@ -1,4 +1,4 @@
--- 00035_handbook_queued_status.sql
+-- 00028_handbook_queued_status.sql
 -- Add 'queued' status to handbook_terms for low-confidence pipeline extractions.
 -- Queued terms have title/slug only — no LLM-generated content until admin approves.
 

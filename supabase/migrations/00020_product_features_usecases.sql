@@ -1,4 +1,4 @@
--- 00024_product_features_usecases.sql
+-- 00020_product_features_usecases.sql
 -- Add features and use_cases columns for enriched product detail pages
 
 ALTER TABLE ai_products

@@ -1,4 +1,4 @@
--- 00021_ai_products.sql
+-- 00018_ai_products.sql
 -- AI Products feature: ai_product_categories and ai_products tables with RLS, indexes, and seed data
 
 -- =============================================================================

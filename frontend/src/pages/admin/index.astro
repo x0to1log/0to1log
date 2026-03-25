@@ -102,12 +102,14 @@ try {
       .select('debug_meta, pipeline_type, pipeline_runs!inner(run_key, started_at)')
       .gte('pipeline_runs.started_at', thirtyDaysAgo)
       .in('pipeline_type', ['quality:research', 'quality:business'])
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true })
+      .limit(100),
     sb.from('pipeline_logs')
       .select('debug_meta, pipeline_type, created_at')
       .eq('pipeline_type', 'handbook.quality_check')
       .gte('created_at', thirtyDaysAgo)
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true })
+      .limit(100),
   ]);
 
   const posts = postsRes.data ?? [];

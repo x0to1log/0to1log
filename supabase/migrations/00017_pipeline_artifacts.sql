@@ -1,4 +1,4 @@
--- 00020_pipeline_artifacts.sql
+-- 00017_pipeline_artifacts.sql
 -- pipeline_artifacts table for resume support (merged from 20260313)
 
 -- ============================================================

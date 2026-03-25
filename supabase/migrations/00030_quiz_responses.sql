@@ -1,4 +1,4 @@
--- 00037_quiz_responses.sql
+-- 00030_quiz_responses.sql
 -- Track user quiz responses for future points/streak system.
 -- One response per user per post per persona.
 

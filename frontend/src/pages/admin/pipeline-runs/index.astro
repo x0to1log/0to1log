@@ -97,7 +97,7 @@ function parseCost(value: number | string | null): number | null {
 try {
   const { data: runRows } = await sb
     .from('pipeline_runs')
-    .select('*')
+    .select('id, run_key, status, started_at, finished_at, last_error')
     .order('started_at', { ascending: false })
     .limit(30);
   const pipelineRuns = (runRows ?? []) as PipelineRun[];

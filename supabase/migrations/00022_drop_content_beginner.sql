@@ -1,4 +1,4 @@
--- 00026_drop_content_beginner.sql
+-- 00022_drop_content_beginner.sql
 -- v4: Remove content_beginner column from news_posts.
 -- Beginner persona merged into Learner. Existing beginner data is no longer used.
 -- Run manually: DO NOT apply automatically.

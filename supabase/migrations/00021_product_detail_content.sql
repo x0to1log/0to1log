@@ -1,4 +1,4 @@
--- 00025_product_detail_content.sql
+-- 00021_product_detail_content.sql
 -- Add getting_started and pricing_detail columns for enriched detail pages
 
 ALTER TABLE ai_products

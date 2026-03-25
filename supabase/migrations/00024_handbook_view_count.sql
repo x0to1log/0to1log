@@ -1,4 +1,4 @@
--- 00028_handbook_view_count.sql
+-- 00024_handbook_view_count.sql
 -- Add view_count to handbook_terms + RPC for anonymous increment
 -- Pattern: same as ai_products (00021) + grant (00027)
 

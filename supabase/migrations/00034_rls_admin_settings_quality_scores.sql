@@ -1,4 +1,4 @@
--- 00041_rls_admin_settings_quality_scores.sql
+-- 00034_rls_admin_settings_quality_scores.sql
 -- Enable RLS on admin_settings and handbook_quality_scores tables.
 -- Both were flagged as CRITICAL in Supabase security dashboard.
 

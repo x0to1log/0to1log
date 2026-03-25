@@ -62,41 +62,69 @@ type ProductRow = {
 
 // ─── Queries ─────────────────────────────────────────────────
 const [
+  // Handbook: distribution data (minimal columns) + counts
   { data: rawHandbook },
+  { count: handbookTotalCount },
+  { count: handbookPublishedCount },
+  { count: handbookDraftCount },
+  { data: recentHandbookRows },
+  // Blog: distribution data + counts
   { data: rawBlog },
+  { count: blogTotalCount },
+  { count: blogPublishedCount },
+  { count: blogDraftCount },
+  { data: recentBlogRows },
+  // News: distribution data + counts
   { data: rawNews },
+  { count: newsTotalCount },
+  { count: newsPublishedCount },
+  { count: newsDraftCount },
+  { data: recentNewsRows },
+  // Products (already specific columns)
   { data: rawProducts },
+  // User counts
   { count: userCount },
   { count: bookmarkCount },
   { count: readingCount },
   { count: learningCount },
   { count: activeUserCount },
 ] = await Promise.all([
-  sb.from('handbook_terms')
-    .select('id, term, slug, status, source, categories, is_favourite, updated_at')
-    .order('updated_at', { ascending: false }),
-  sb.from('blog_posts')
-    .select('id, title, slug, status, locale, category, source, updated_at')
-    .order('updated_at', { ascending: false }),
-  sb.from('news_posts')
-    .select('id, title, slug, category, locale, status, post_type, updated_at')
-    .order('updated_at', { ascending: false }),
+  // Handbook: only columns needed for source/category/favourite distribution
+  sb.from('handbook_terms').select('status, source, categories, is_favourite'),
+  sb.from('handbook_terms').select('id', { count: 'exact', head: true }),
+  sb.from('handbook_terms').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+  sb.from('handbook_terms').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+  sb.from('handbook_terms').select('term, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+  // Blog: only columns needed for locale/category/source distribution
+  sb.from('blog_posts').select('status, locale, category, source'),
+  sb.from('blog_posts').select('id', { count: 'exact', head: true }),
+  sb.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+  sb.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+  sb.from('blog_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+  // News: only columns needed for category/locale/post_type distribution
+  sb.from('news_posts').select('status, category, locale, post_type'),
+  sb.from('news_posts').select('id', { count: 'exact', head: true }),
+  sb.from('news_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+  sb.from('news_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+  sb.from('news_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+  // Products (already using specific columns)
   sb.from('ai_products')
     .select('id, name, slug, is_published, primary_category, pricing, featured, view_count, like_count')
     .order('view_count', { ascending: false }),
-  sb.from('profiles').select('*', { count: 'exact', head: true }),
-  sb.from('user_bookmarks').select('*', { count: 'exact', head: true }),
-  sb.from('reading_history').select('*', { count: 'exact', head: true }),
-  sb.from('learning_progress').select('*', { count: 'exact', head: true }),
-  sb.from('profiles').select('*', { count: 'exact', head: true })
+  // User engagement counts
+  sb.from('profiles').select('id', { count: 'exact', head: true }),
+  sb.from('user_bookmarks').select('id', { count: 'exact', head: true }),
+  sb.from('reading_history').select('id', { count: 'exact', head: true }),
+  sb.from('learning_progress').select('id', { count: 'exact', head: true }),
+  sb.from('profiles').select('id', { count: 'exact', head: true })
     .gte('updated_at', new Date(Date.now() - 7 * 86400000).toISOString()),
 ]);
 
 // ─── Handbook Data ───────────────────────────────────────────
 const handbookTerms = (rawHandbook ?? []) as HandbookRow[];
-const handbookTotal = handbookTerms.length;
-const handbookPublished = handbookTerms.filter((t) => t.status === 'published').length;
-const handbookDraft = handbookTerms.filter((t) => t.status === 'draft').length;
+const handbookTotal = handbookTotalCount ?? 0;
+const handbookPublished = handbookPublishedCount ?? 0;
+const handbookDraft = handbookDraftCount ?? 0;
 const handbookFavourites = handbookTerms.filter((t) => t.is_favourite).length;
 
 const handbookBySource: Record<string, number> = {};
@@ -114,13 +142,13 @@ for (const t of handbookTerms) {
 const handbookCategories = Array.from(handbookCategoryMap.entries())
   .sort((a, b) => b[1] - a[1]);
 
-const recentHandbook = handbookTerms.slice(0, 5);
+const recentHandbook = (recentHandbookRows ?? []) as { term: string; slug: string; status: string; updated_at: string }[];
 
 // ─── Blog Data ───────────────────────────────────────────────
 const blogPosts = (rawBlog ?? []) as BlogRow[];
-const blogTotal = blogPosts.length;
-const blogPublished = blogPosts.filter((p) => p.status === 'published').length;
-const blogDraft = blogPosts.filter((p) => p.status === 'draft').length;
+const blogTotal = blogTotalCount ?? 0;
+const blogPublished = blogPublishedCount ?? 0;
+const blogDraft = blogDraftCount ?? 0;
 
 const blogByLocale: Record<string, number> = {};
 for (const p of blogPosts) {
@@ -140,13 +168,13 @@ for (const p of blogPosts) {
   blogBySource[src] = (blogBySource[src] || 0) + 1;
 }
 
-const recentBlog = blogPosts.slice(0, 5);
+const recentBlog = (recentBlogRows ?? []) as { title: string; slug: string; status: string; updated_at: string }[];
 
 // ─── News Data ──────────────────────────────────────────────
 const newsPosts = (rawNews ?? []) as NewsRow[];
-const newsTotal = newsPosts.length;
-const newsPublished = newsPosts.filter((p) => p.status === 'published').length;
-const newsDraft = newsPosts.filter((p) => p.status === 'draft').length;
+const newsTotal = newsTotalCount ?? 0;
+const newsPublished = newsPublishedCount ?? 0;
+const newsDraft = newsDraftCount ?? 0;
 
 const newsByCategory: Record<string, number> = {};
 for (const p of newsPosts) {
@@ -166,7 +194,7 @@ for (const p of newsPosts) {
   newsByType[t] = (newsByType[t] || 0) + 1;
 }
 
-const recentNews = newsPosts.slice(0, 5);
+const recentNews = (recentNewsRows ?? []) as { title: string; slug: string; status: string; updated_at: string }[];
 
 // ─── Products Data ──────────────────────────────────────────
 const products = (rawProducts ?? []) as ProductRow[];

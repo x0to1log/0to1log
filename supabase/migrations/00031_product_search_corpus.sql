@@ -1,4 +1,4 @@
--- 00038_product_search_corpus.sql
+-- 00031_product_search_corpus.sql
 -- Add search_corpus column for AI-generated intent-based search keywords.
 
 ALTER TABLE ai_products

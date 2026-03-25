@@ -1,4 +1,4 @@
--- 00039_admin_settings.sql
+-- 00032_admin_settings.sql
 -- Key-value settings table for admin-configurable pipeline behavior.
 
 CREATE TABLE IF NOT EXISTS admin_settings (

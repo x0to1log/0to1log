@@ -1,4 +1,4 @@
--- 00040_handbook_quality_scores.sql
+-- 00033_handbook_quality_scores.sql
 -- Dedicated table for handbook term quality scores.
 -- Records from both pipeline and admin editor quality checks,
 -- preserving history across re-generations.

@@ -1,4 +1,4 @@
--- 00042_security_warnings_cleanup.sql
+-- 00035_security_warnings_cleanup.sql
 -- Fix Supabase security dashboard warnings:
 -- 1. Function Search Path Mutable on two functions
 -- 2. Extension in Public (moddatetime)

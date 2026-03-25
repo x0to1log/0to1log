@@ -1,4 +1,4 @@
--- 00036_product_enrichment.sql
+-- 00029_product_enrichment.sql
 -- Add enrichment columns for scenarios, pros/cons, editorial, and metadata fields.
 
 ALTER TABLE ai_products

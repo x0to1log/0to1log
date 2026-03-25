@@ -124,8 +124,12 @@ let logs: PipelineLog[] = [];
 
 try {
   const [{ data: runRow }, { data: logRows }] = await Promise.all([
-    sb.from('pipeline_runs').select('*').eq('id', runId).single(),
-    sb.from('pipeline_logs').select('*').eq('run_id', runId).order('created_at', { ascending: true }),
+    sb.from('pipeline_runs').select('id, run_key, status, started_at, finished_at, last_error').eq('id', runId).single(),
+    sb.from('pipeline_logs')
+      .select('id, pipeline_type, status, created_at, post_type, locale, attempt, tokens_used, cost_usd, error_message, debug_meta')
+      .eq('run_id', runId)
+      .order('created_at', { ascending: true })
+      .limit(500),
   ]);
   run = (runRow as PipelineRun | null) ?? null;
   logs = ((logRows ?? []) as PipelineLog[]).map((log) => ({

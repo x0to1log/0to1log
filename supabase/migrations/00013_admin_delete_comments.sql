@@ -1,4 +1,4 @@
--- 00016_admin_delete_comments.sql
+-- 00013_admin_delete_comments.sql
 -- Allow admins to delete any news/blog comment while preserving existing
 -- "users can delete own comment" policies.
 

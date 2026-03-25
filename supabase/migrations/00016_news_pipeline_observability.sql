@@ -1,4 +1,4 @@
--- 00019_news_pipeline_observability.sql
+-- 00016_news_pipeline_observability.sql
 -- Add content_analysis/fact_pack/source_cards to news_posts; add observability columns to pipeline_logs
 
 ALTER TABLE news_posts

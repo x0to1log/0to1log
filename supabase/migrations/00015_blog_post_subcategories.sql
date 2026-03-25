@@ -1,4 +1,4 @@
--- 00018_blog_post_subcategories.sql
+-- 00015_blog_post_subcategories.sql
 -- Expand blog_posts category CHECK to include work-note and daily subcategories
 
 ALTER TABLE blog_posts

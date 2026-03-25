@@ -1,4 +1,4 @@
--- 00032_content_feedback.sql
+-- 00025_content_feedback.sql
 -- Unified content feedback table (replaces term_feedback)
 
 -- 1. Create table
@@ -47,3 +47,7 @@ SELECT user_id, 'handbook', term_id, locale,
   message, FALSE, created_at, updated_at
 FROM term_feedback
 WHERE reaction IN ('helpful', 'confusing');
+
+-- 5. Admin can read all profiles (moved from deleted 00030_admin_read_feedback)
+CREATE POLICY "admin_read_all_profiles" ON profiles FOR SELECT
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));

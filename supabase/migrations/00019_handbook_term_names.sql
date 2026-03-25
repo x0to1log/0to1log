@@ -1,4 +1,4 @@
--- 00023_handbook_term_names.sql
+-- 00019_handbook_term_names.sql
 -- Add term_full and korean_full columns for expanded term naming
 
 ALTER TABLE handbook_terms
