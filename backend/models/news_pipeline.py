@@ -95,6 +95,8 @@ class PersonaOutput(BaseModel):
 class PipelineResult(BaseModel):
     """Final result of the daily pipeline run."""
     batch_id: str
+    status: str = "complete"
+    message: str = ""
     posts_created: int = 0
     errors: list[str] = []
     usage: dict = Field(default_factory=dict)

@@ -1,12 +1,13 @@
 """Cron-triggered pipeline endpoints."""
 import logging
 import re
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from core.config import today_kst
 from core.database import get_supabase
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
@@ -49,10 +50,10 @@ async def trigger_news_pipeline(
             td = datetime.strptime(target_date, "%Y-%m-%d").date()
         except ValueError:
             raise HTTPException(400, "Invalid date")
-        if td > date.today():
+        if td > datetime.strptime(today_kst(), "%Y-%m-%d").date():
             raise HTTPException(400, "target_date cannot be in the future")
 
-    batch_id = target_date or date.today().isoformat()
+    batch_id = target_date or today_kst()
 
     # Check for existing data
     existing = check_existing_batch(batch_id)

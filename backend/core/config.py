@@ -27,3 +27,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+from datetime import datetime, timezone, timedelta
+
+KST = timezone(timedelta(hours=9))
+
+
+def today_kst() -> str:
+    """Return today's date in KST as YYYY-MM-DD string."""
+    return datetime.now(KST).strftime("%Y-%m-%d")

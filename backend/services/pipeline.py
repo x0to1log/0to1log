@@ -3,10 +3,10 @@ import asyncio
 import logging
 import time
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
-from core.config import settings
+from core.config import settings, today_kst
 from core.database import get_supabase
 from models.news_pipeline import (
     ClassifiedCandidate,
@@ -845,12 +845,12 @@ async def run_daily_pipeline(
     Flow: collect → rank → (react + extract + personas) × 2 → save drafts.
     """
     if batch_id is None:
-        batch_id = target_date or date.today().isoformat()
+        batch_id = target_date or today_kst()
 
     is_backfill = False
     if target_date:
         try:
-            is_backfill = datetime.strptime(target_date, "%Y-%m-%d").date() < date.today()
+            is_backfill = datetime.strptime(target_date, "%Y-%m-%d").date() < datetime.strptime(today_kst(), "%Y-%m-%d").date()
         except ValueError:
             pass
 
@@ -873,7 +873,8 @@ async def run_daily_pipeline(
             "status": "running",
         }).execute()
     except Exception as e:
-        logger.warning("Failed to record pipeline run: %s", e)
+        logger.warning("Pipeline run already exists for %s, skipping: %s", batch_id, e)
+        return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate run: {batch_id}")
 
     try:
         # Stage: collect
@@ -1020,11 +1021,17 @@ async def run_daily_pipeline(
     logger.info("News pipeline complete: %d posts, %d errors", total_posts, len(all_errors))
 
     # Auto-trigger handbook extraction as a separate run (non-blocking)
-    if total_posts > 0 and not skip_handbook:
+    expected_posts = 4  # research(en,ko) + business(en,ko)
+    if total_posts >= expected_posts and not skip_handbook:
         try:
             await run_handbook_extraction(batch_id)
         except Exception as e:
             logger.warning("Handbook extraction auto-trigger failed: %s", e)
+    elif total_posts > 0 and not skip_handbook:
+        logger.warning(
+            "Skipping handbook extraction: only %d/%d posts created (errors: %s)",
+            total_posts, expected_posts, all_errors[:3],
+        )
 
     return result
 
@@ -1060,19 +1067,10 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         logger.info("No article content for handbook extraction (batch %s)", batch_id)
         return PipelineResult(batch_id=batch_id)
 
-    # Create separate pipeline run (delete existing if retry)
+    # Create separate pipeline run (insert-as-lock — skip on duplicate)
     run_id = str(uuid.uuid4())
     run_key = f"handbook-extract-{batch_id}"
     all_errors: list[str] = []
-
-    try:
-        # Clean up previous run if exists (for retry support)
-        old_runs = supabase.table("pipeline_runs").select("id").eq("run_key", run_key).execute()
-        for old_run in (old_runs.data or []):
-            supabase.table("pipeline_logs").delete().eq("run_id", old_run["id"]).execute()
-        supabase.table("pipeline_runs").delete().eq("run_key", run_key).execute()
-    except Exception as e:
-        logger.warning("Failed to clean up old handbook run: %s", e)
 
     try:
         supabase.table("pipeline_runs").insert({
@@ -1081,7 +1079,8 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
             "status": "running",
         }).execute()
     except Exception as e:
-        logger.warning("Failed to create handbook extraction run: %s", e)
+        logger.warning("Handbook extraction run already exists for %s, skipping: %s", batch_id, e)
+        return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate handbook run: {batch_id}")
 
     try:
         terms_created, errors = await _extract_and_create_handbook_terms(

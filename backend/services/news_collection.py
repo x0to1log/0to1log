@@ -1,12 +1,12 @@
 """Tavily-based news collection and community reaction gathering."""
 import asyncio
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from tavily import TavilyClient
 
-from core.config import settings
+from core.config import settings, today_kst
 from models.news_pipeline import NewsCandidate
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ async def collect_news(
     if target_date:
         try:
             td = datetime.strptime(target_date, "%Y-%m-%d").date()
-            is_backfill = td < date.today()
+            is_backfill = td < datetime.strptime(today_kst(), "%Y-%m-%d").date()
         except ValueError:
             logger.warning("Invalid target_date format: %s, falling back to today", target_date)
 
