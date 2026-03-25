@@ -57,7 +57,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     const renderTrack = (async () => {
       const hbTermsRes = await publicSupabase
         .from('handbook_terms')
-        .select(`term, slug, korean_name, categories, ${definitionField}`)
+        .select(`term, slug, korean_name, term_full, categories, ${definitionField}, body_basic_ko, body_basic_en`)
         .eq('status', 'published')
         .limit(200);
 
@@ -70,8 +70,12 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
         tJson[entry.slug] = {
           term: entry.term,
           korean_name: entry.korean_name || '',
+          term_full: (entry as Record<string, any>).term_full || '',
           categories: entry.categories || [],
           definition: (entry as Record<string, any>)[definitionField] || '',
+          basic_plain: locale === 'ko'
+            ? (entry as Record<string, any>).body_basic_ko || ''
+            : (entry as Record<string, any>).body_basic_en || '',
         };
       }
 

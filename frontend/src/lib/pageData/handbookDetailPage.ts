@@ -120,7 +120,7 @@ export async function getHandbookDetailPageData({
     const definitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
     const hbTermsRes = await publicSupabase
       .from('handbook_terms')
-      .select(`term, slug, korean_name, categories, ${definitionField}`)
+      .select(`term, slug, korean_name, term_full, categories, ${definitionField}, body_basic_ko, body_basic_en`)
       .eq('status', 'published')
       .neq('slug', pageSlug)  // exclude self
       .limit(200);
@@ -133,8 +133,12 @@ export async function getHandbookDetailPageData({
       handbookTermsJson[entry.slug] = {
         term: entry.term,
         korean_name: entry.korean_name || '',
+        term_full: (entry as any).term_full || '',
         categories: entry.categories || [],
         definition: (entry as any)[definitionField] || '',
+        basic_plain: locale === 'ko'
+          ? (entry as any).body_basic_ko || ''
+          : (entry as any).body_basic_en || '',
       };
     }
     const hasTerms = handbookTermsMap.size > 0;

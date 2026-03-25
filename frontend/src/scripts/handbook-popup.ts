@@ -12,8 +12,10 @@
 interface TermData {
   term: string;
   korean_name: string;
+  term_full: string;
   categories: string[];
   definition: string;
+  basic_plain: string;
 }
 
 function esc(s: string): string {
@@ -26,14 +28,79 @@ function getLocale(): string {
   return document.documentElement.lang || 'en';
 }
 
+function getActivePersona(): string {
+  // News/blog: data-persona on persona switcher
+  const personaBtn = document.querySelector('.persona-switcher-btn--active, .persona-float-btn--active[data-persona]');
+  if (personaBtn) return personaBtn.getAttribute('data-persona') || 'learner';
+
+  // Handbook: data-level on level switcher (basic→learner, advanced→expert)
+  const levelBtn = document.querySelector('.handbook-level-btn--active');
+  if (levelBtn) {
+    const level = levelBtn.getAttribute('data-level');
+    return level === 'advanced' ? 'expert' : 'learner';
+  }
+
+  return 'learner';
+}
+
+/** Extract first section content from basic body markdown (before second ##) */
+function extractFirstSection(md: string): string {
+  if (!md) return '';
+  const stripped = md.replace(/^##\s+[^\n]*\n+/, '');
+  const nextHeading = stripped.indexOf('\n##');
+  const section = nextHeading > 0 ? stripped.slice(0, nextHeading).trim() : stripped.trim();
+  return section;
+}
+
+/** Lightweight markdown → HTML for popup (handles ###, **, - lists) */
+function miniMd(md: string): string {
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (inList) { html += '</ul>'; inList = false; }
+      continue;
+    }
+
+    // Inline formatting: **bold**
+    const fmt = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // ### heading
+    if (line.startsWith('### ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<div class="handbook-popup-subhead">${fmt(line.slice(4))}</div>`;
+      continue;
+    }
+
+    // - bullet list
+    if (line.startsWith('- ')) {
+      if (!inList) { html += '<ul class="handbook-popup-list">'; inList = true; }
+      html += `<li>${fmt(line.slice(2))}</li>`;
+      continue;
+    }
+
+    // Regular paragraph
+    if (inList) { html += '</ul>'; inList = false; }
+    html += `<p>${fmt(line)}</p>`;
+  }
+
+  if (inList) html += '</ul>';
+  return html;
+}
+
 function buildPopupHtml(data: TermData, slug: string): string {
   const locale = getLocale();
+  const persona = getActivePersona();
+  const isLearner = persona === 'learner';
   const catLabel = (data.categories && data.categories.length > 0)
     ? data.categories[0].replace(/-/g, ' ').toUpperCase()
     : (locale === 'ko' ? '용어집' : 'GLOSSARY');
-  const learnMoreText = locale === 'ko' ? '전체 항목 보기 →' : 'Full entry →';
+  const learnMoreText = locale === 'ko' ? '자세히 보기 →' : 'Full entry →';
 
-  let html = `<div class="handbook-popup" role="dialog" aria-describedby="handbook-popup-desc">`;
+  let html = `<div class="handbook-popup${isLearner ? ' handbook-popup--learner' : ''}" role="dialog" aria-describedby="handbook-popup-desc">`;
 
   html += `<div class="handbook-popup-header">`;
   html += `<span class="handbook-popup-cat">${esc(catLabel)}</span>`;
@@ -44,20 +111,30 @@ function buildPopupHtml(data: TermData, slug: string): string {
   html += `</button>`;
   html += `</div>`;
 
+  // Title row: always show term, add korean_name only for KO locale
   html += `<div class="handbook-popup-title-row">`;
   html += `<span class="handbook-popup-term">${esc(data.term)}</span>`;
-  if (data.korean_name) {
+  if (locale === 'ko' && data.korean_name) {
     html += `<span class="handbook-popup-korean">${esc(data.korean_name)}</span>`;
   }
   html += `</div>`;
 
+  // term_full (shown for both personas)
+  if (data.term_full && data.term_full !== data.term) {
+    html += `<div class="handbook-popup-fullname">${esc(data.term_full)}</div>`;
+  }
+
   html += `<div class="handbook-popup-rule"></div>`;
 
-  if (data.definition) {
-    html += `<div class="handbook-popup-content" id="handbook-popup-desc">`;
+  // Body: learner gets basic_plain, expert gets definition
+  html += `<div class="handbook-popup-content" id="handbook-popup-desc">`;
+  if (isLearner && data.basic_plain) {
+    const section = extractFirstSection(data.basic_plain);
+    html += miniMd(section);
+  } else if (data.definition) {
     html += `<p>${esc(data.definition).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`;
-    html += `</div>`;
   }
+  html += `</div>`;
 
   html += `<div class="handbook-popup-footer">`;
   html += `<a href="/${locale}/handbook/${slug}/" class="handbook-popup-link">${learnMoreText}</a>`;

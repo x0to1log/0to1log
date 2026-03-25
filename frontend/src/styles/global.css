@@ -7446,6 +7446,15 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   letter-spacing: 0.01em;
 }
 
+.handbook-popup-fullname {
+  padding: 0 0.85rem 0.3rem;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
 .handbook-popup-rule {
   height: 1px;
   background: var(--color-border);
@@ -7457,11 +7466,44 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   padding: 0.55rem 0.85rem 0.35rem;
 }
 
+.handbook-popup--learner .handbook-popup-content {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .handbook-popup-content p {
-  margin: 0;
+  margin: 0 0 0.4em;
   color: var(--color-text-secondary);
   font-size: 0.82rem;
   line-height: 1.7;
+}
+
+.handbook-popup-content p:last-child {
+  margin-bottom: 0;
+}
+
+.handbook-popup-subhead {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0.5em 0 0.25em;
+}
+
+.handbook-popup-subhead:first-child {
+  margin-top: 0;
+}
+
+.handbook-popup-list {
+  margin: 0.25em 0 0.5em;
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+.handbook-popup-list li {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  margin-bottom: 0.15em;
 }
 
 .handbook-popup-footer {

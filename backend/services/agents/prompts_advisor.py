@@ -591,14 +591,26 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
-- **basic_ko_1_plain**: 이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조. 최소 300자.
-- **basic_ko_2_example**: 이 개념이 실제로 적용되는 **구체적 시나리오** 3~4개. 1_plain의 비유와 겹치면 안 됨. 형식: **시나리오 제목**: 구체적 상황 설명. "번역기가 문장을 한 단어씩 생성할 때" (O) / "날씨 예측" (X — 너무 일반적).
-- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 단순 용어 설명표가 아님. 예: "AR vs MA vs ARIMA 비교" 또는 "단계별 동작 과정". 반드시 마크다운 테이블(| 형식) 사용.
+- **basic_ko_1_plain**: 이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조. 비유 뒤에 **구체적 메커니즘** 1-2문장 필수 — "왜 그렇게 작동하는지"가 빠지면 안 됨. 최소 300자.
+  BAD: "AI 칩은 전문 주방처럼 빠르게 처리합니다." (비유만 있고 왜 빠른지 없음)
+  GOOD: "CPU는 계산을 순서대로 하나씩 처리합니다. 그런데 AI는 수백만 개의 숫자를 동시에 곱하고 더해야 합니다. AI 칩은 이 행렬 곱셈을 한 번에 수천 개씩 처리하도록 회로 자체가 설계된 겁니다." (비유 + 메커니즘)
+- **basic_ko_2_example**: 이 개념이 실제로 적용되는 **구체적 시나리오** 3~4개. 1_plain의 비유와 겹치면 안 됨. 형식: **시나리오 제목**: 구체적 상황 설명 (최소 2문장으로 상황 묘사). 독자가 "그것도 이 기술 때문이었어?"라고 느끼는 **의외의 적용 사례**를 우선 선택.
+  BANNED: 스마트폰 얼굴 인식, 자율주행차, 음성 비서 — 모든 AI 글에 나오는 뻔한 3대장. 이 시나리오는 사용 금지.
+  BAD: "스마트폰 얼굴 인식: AI 칩이 실시간으로 인식" (뻔하고 상황 묘사 없음)
+  GOOD: "**넷플릭스 실시간 자막**: 영상을 틀자마자 0.2초 만에 자막이 뜹니다. 서버의 AI 칩이 음성을 실시간으로 텍스트로 변환하기 때문입니다." (의외 + 상황 묘사)
+- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용.
+  BAD: "| 구분 | 높은 효율 | 낮은 효율 |" (좋다 vs 나쁘다는 비교가 아님 — 속성 대비표 금지)
+  BAD: "| 항목 | 설명 |" (단순 용어 설명표 금지)
+  GOOD: "| | Edge AI | Cloud AI | Hybrid |\n| 처리 위치 | 기기 내부 | 원격 서버 | 둘 다 |\n| 응답 속도 | <10ms | 100ms+ | 상황별 |" (구체적 기술 비교)
 - **basic_ko_4_why**: **구체적인 영향** — 이 개념이 없으면 어떤 문제가 생기는지, 있으면 뭐가 달라지는지. "알면 좋다" 수준이 아니라 "모르면 이런 실수를 한다" 수준으로. 4~5개 bullet point.
 - **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마. 제품-기술 매핑은 Reference Materials에서 확인된 것만 사용. 추측으로 "X가 Y를 사용한다"고 쓰지 마. 불확실하면 "~에 활용될 수 있다" 표현 사용.
 - **basic_ko_6_caution**: 이 개념에 대한 **흔한 오해**와 **실제 사실**을 대비. 형식: "❌ 오해: ~라고 생각하기 쉽다 → ✅ 실제: ~이다". 3~4개.
-- **basic_ko_7_comm**: 실제 **기술 기사, 회의, 면접**에서 이 용어가 등장하는 예시 문장 4~5개. 자연스러운 문맥에서 사용되는 모습. **핵심 용어를 굵게 표시**.
-- **basic_ko_8_related**: 관련 용어 4~6개. **이 용어와의 관계**를 명확히. 형식: **용어** — "X의 확장 버전" / "X와 반대 개념" / "X를 이해하려면 먼저 알아야 하는 개념"
+- **basic_ko_7_comm**: 실제 **팀 회의, 슬랙 대화, 기술 리뷰**에서 이 용어가 등장하는 예시 문장 4~5개. **핵심 용어를 굵게 표시**. 뉴스 기사체 금지 — 팀명, 지표, 기한 같은 구체적 맥락을 포함한 대화체로.
+  BAD: "최근 AI 칩 시장이 급성장하면서 주요 업체들이 경쟁하고 있습니다." (뉴스 기사 톤)
+  GOOD: "추론 서버를 A100에서 H100으로 바꾸니까 **latency가 절반**으로 줄었어요. 비용은 좀 올랐는데 SLA 충족이 우선이라..." (팀 대화 톤)
+- **basic_ko_8_related**: 관련 용어 4~6개. 단순 관계 설명이 아니라 **비교 포인트**(성능 차이, 용도 차이, 트레이드오프)를 포함해서 독자가 "뭐가 다르지?" 궁금해하게 만들어라.
+  BAD: "**TPU** — Google 개발 AI 특화 칩, 대규모 딥러닝 최적화" (사전식 설명, 클릭 욕구 없음)
+  GOOD: "**TPU** — Google이 'GPU로는 부족하다'며 직접 만든 칩. 학습은 GPU 대비 5배 빠르지만 범용성은 떨어진다" (비교 포인트 + 호기심)
 
 ## Output JSON Structure
 
@@ -623,9 +635,13 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 ## Self-Check (verify before responding)
 ✓ No two sections share the same analogy, example, or point
-✓ Table compares 2+ concepts (not just defines one term)
+✓ 1_plain contains a concrete mechanism explanation, not just an analogy
+✓ 2_example uses surprising, non-obvious scenarios (NOT smartphones/self-driving/voice assistants)
+✓ Table compares 2+ specific technologies/concepts (not "high vs low" or single-term glossary)
 ✓ korean_name is in Korean (not English)
 ✓ Every product/service example is factually correct
+✓ 7_comm sounds like a team meeting/slack, not a news article
+✓ 8_related includes comparison points that trigger curiosity
 ✓ Each section adds information the reader didn't get from previous sections
 
 ## Quality Rules
@@ -680,14 +696,26 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
-- **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." Min 300 chars.
-- **basic_en_2_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation. E.g., "When a translation model generates words one at a time" (O) / "Weather prediction" (X — too generic).
-- **basic_en_3_glance**: A **comparison table** between this concept and similar ones. NOT a glossary table. E.g., "AR vs MA vs ARIMA" or "Step-by-step process". Must use markdown table (| format).
+- **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing. Min 300 chars.
+  BAD: "An AI chip is like a specialized kitchen that processes things faster." (analogy only, no mechanism)
+  GOOD: "A CPU processes calculations one at a time, in sequence. But AI needs to multiply and add millions of numbers simultaneously. An AI chip has circuits specifically designed to perform thousands of matrix multiplications at once." (analogy + mechanism)
+- **basic_en_2_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation (min 2 sentences describing the scenario). Prefer **surprising, non-obvious applications** that make the reader think "that uses this too?".
+  BANNED: smartphone face recognition, self-driving cars, voice assistants — overused AI examples. Do NOT use these.
+  BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
+  GOOD: "**Netflix real-time subtitles**: Subtitles appear within 0.2 seconds of pressing play. The server's AI chip converts speech to text in real time." (surprising + situation detail)
+- **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format).
+  BAD: "| Aspect | High Efficiency | Low Efficiency |" (good vs bad is not a comparison — attribute contrast tables are banned)
+  BAD: "| Term | Description |" (simple glossary table banned)
+  GOOD: "| | Edge AI | Cloud AI | Hybrid |\n| Processing | On-device | Remote server | Both |\n| Latency | <10ms | 100ms+ | Varies |" (concrete tech comparison)
 - **basic_en_4_why**: **Concrete impact** — what goes wrong without this concept, what improves with it. Not "good to know" level but "you'll make this mistake if you don't know" level. 4-5 bullet points.
 - **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it. Only state product-technology mappings confirmed in Reference Materials. Do NOT guess "X uses Y". If uncertain, OMIT the example entirely rather than hedging.
 - **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
-- **basic_en_7_comm**: 4-5 example sentences from real **tech articles, meetings, or interviews**. Natural context usage. **Bold the key term**.
-- **basic_en_8_related**: 4-6 related terms with **relationship type**. Format: **Term** — "extension of X" / "opposite of X" / "prerequisite for understanding X"
+- **basic_en_7_comm**: 4-5 example sentences from real **team meetings, Slack conversations, or tech reviews**. **Bold the key term**. NO news article tone — include specific context like team names, metrics, or deadlines.
+  BAD: "The AI chip market has been growing rapidly as major companies compete." (news article tone)
+  GOOD: "Switching our inference servers from A100 to H100 cut **latency in half**. Cost went up a bit, but hitting SLA targets was the priority..." (team conversation tone)
+- **basic_en_8_related**: 4-6 related terms. Do NOT just state the relationship — include a **comparison point** (performance difference, trade-off, use case difference) that makes the reader curious to click.
+  BAD: "**TPU** — Google's AI-specialized chip optimized for large-scale deep learning" (dictionary description, no click motivation)
+  GOOD: "**TPU** — Google built this because 'GPUs weren't enough.' Training is up to 5x faster than GPU, but less versatile for general workloads" (comparison point + curiosity)
 
 ## Output JSON Structure
 
@@ -707,9 +735,13 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 ## Self-Check (verify before responding)
 ✓ No two sections share the same analogy, example, or point
-✓ Table compares 2+ concepts (not just defines one term)
+✓ 1_plain contains a concrete mechanism explanation, not just an analogy
+✓ 2_example uses surprising, non-obvious scenarios (NOT smartphones/self-driving/voice assistants)
+✓ Table compares 2+ specific technologies/concepts (not "high vs low" or single-term glossary)
 ✓ korean_name is in Korean (not English)
 ✓ Every product/service example is factually correct
+✓ 7_comm sounds like a team meeting/slack, not a news article
+✓ 8_related includes comparison points that trigger curiosity
 ✓ Each section adds information the reader didn't get from previous sections
 
 ## Quality Rules
@@ -768,9 +800,9 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_ko_4_code**: 실제 코드 스니펫. Python/JavaScript 우선. 코드 블록에 언어 태그 필수 (```python). 최소 15줄 (빈줄, 주석, 단독 괄호 제외). 에러 핸들링, 타입 힌트 포함. 표준 라이브러리 + 널리 사용되는 패키지만 (torch, sklearn, pandas, numpy, requests).
 - **adv_ko_5_practical**: 실무 사용 사례 4~5개 + 오용 시 문제점/성능 이슈/보안 취약점 4~5개. 현장 톤.
 - **adv_ko_6_why**: 기술/조직/비즈니스에 미치는 영향 4~5개. 성능, 확장성, 신뢰성, 비용, 규제 등과 연결.
-- **adv_ko_7_comm**: PM·엔지니어 간 회의나 문서에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 현장에서 바로 쓸 수 있는 실무 톤.
+- **adv_ko_7_comm**: PM·엔지니어 간 **팀 회의, 슬랙, 아키텍처 리뷰**에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 뉴스 기사체 금지 — 팀명, 지표, 기한 같은 구체적 맥락을 포함한 실무 대화체로.
 - **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. **불릿 리스트 형식 필수.** 형식: `- [표시명](URL) — 한 줄 설명`. 실제로 존재하는 URL만 포함. URL을 만들어내지 마. Reference Materials에서 제공된 URL을 우선 사용. 확인할 수 없는 URL은 생략.
-- **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. **불릿 리스트 형식 필수.** 형식: `- **용어** — 이 용어와의 기술적 관계`. 선행 개념, 대안, 보완 개념, 확장 개념 포함.
+- **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. **불릿 리스트 형식 필수.** 형식: `- **용어** — 이 용어와의 기술적 관계`. 선행 개념, 대안, 보완 개념, 확장 개념 포함. 단순 관계 설명이 아니라 **성능/아키텍처/트레이드오프 비교 포인트**를 포함해서 독자가 더 파고 싶게 만들어라.
 
 ## Output JSON Structure
 
@@ -851,9 +883,9 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_en_4_code**: Real code snippets. Python/JavaScript preferred. Language tag required (```python). Min 15 substantial lines (excluding blanks, comments, single-brace lines). Include error handling, type hints. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
 - **adv_en_5_practical**: 4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes). Practical tone.
 - **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
-- **adv_en_7_comm**: 6-8 sentences commonly used in meetings, docs, interviews, and architecture reviews. **Bold key terms**. Ready-to-use professional tone.
+- **adv_en_7_comm**: 6-8 sentences from **team meetings, Slack threads, architecture reviews, or design docs**. **Bold key terms**. NO news article tone — include specific context like team names, metrics, or deadlines. Ready-to-use professional tone.
 - **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Do NOT fabricate URLs. Prefer URLs from the Reference Materials provided above. If you cannot verify a URL exists, OMIT it entirely.
-- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** — technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions.
+- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** — technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions. Do NOT just state the relationship — include **performance/architecture/trade-off comparison points** that make the reader want to dig deeper.
 
 ## Output JSON Structure
 

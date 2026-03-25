@@ -409,24 +409,62 @@ QUALITY_CHECK_PROMPT_RESEARCH = """You are a strict quality reviewer for an AI t
 
 Score this Research digest on 4 criteria (0-25 each, total 0-100):
 
-1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters)? Are any sections empty or too short?
-2. **Source Citations** (25): Does each news item cite a source URL? Are benchmark numbers attributed?
-3. **Technical Accuracy** (25): Are parameter counts, benchmarks, and technical details specific (not vague)? Are comparisons to prior work included?
-4. **Language Quality** (25): Is the content natural in the target language (not translation-sounding)? Is the length adequate (min 500 chars per section)?
+1. **Section Completeness** (25):
+   - 25: All 5 sections present with substantial content (200+ chars each)
+   - 15: All sections present but some thin (<100 chars)
+   - 5: Missing 1+ sections
+   - 0: Missing 3+ sections
 
-Return JSON:
+2. **Source Citations** (25):
+   - 25: Every claim cites a source URL; benchmark numbers attributed
+   - 15: Most items cite sources; a few missing
+   - 5: Fewer than half cite sources
+   - 0: No source citations
+
+3. **Technical Accuracy** (25):
+   - 25: Specific numbers (params, benchmarks, dates); comparisons to prior work
+   - 15: Some specifics but also vague claims ("significantly better")
+   - 5: Mostly vague; no concrete metrics
+   - 0: Contains factual errors or hallucinated details
+
+4. **Language Quality** (25):
+   - 25: Natural, fluent; min 500 chars per section; no translation artifacts
+   - 15: Readable but some awkward phrasing; adequate length
+   - 5: Choppy or translation-sounding; some sections too short
+   - 0: Barely readable or extremely short
+
+Return JSON only:
 {"score": 0-100, "sections": 0-25, "sources": 0-25, "accuracy": 0-25, "language": 0-25, "issues": ["issue1", "issue2"]}"""
 
 QUALITY_CHECK_PROMPT_BUSINESS = """You are a strict quality reviewer for an AI business news digest.
 
 Score this Business digest on 4 criteria (0-25 each, total 0-100):
 
-1. **Section Completeness** (25): Does it have all required sections (One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions)? Are any sections empty?
-2. **Source Citations** (25): Does each news item cite a source URL? Are funding amounts and dates attributed?
-3. **Analysis Quality** (25): Does "Connecting the Dots" actually connect news items into a trend? Are "Strategic Decisions" concrete and situation-specific (not generic advice)?
-4. **Language Quality** (25): Is the content natural in the target language? Is the length adequate?
+1. **Section Completeness** (25):
+   - 25: All 6 sections present with substantial content (200+ chars each)
+   - 15: All sections present but some thin
+   - 5: Missing 1+ sections
+   - 0: Missing 3+ sections
 
-Return JSON:
+2. **Source Citations** (25):
+   - 25: Every claim cites a source URL; funding amounts/dates attributed
+   - 15: Most items cite sources
+   - 5: Fewer than half cite sources
+   - 0: No source citations
+
+3. **Analysis Quality** (25):
+   - 25: "Connecting the Dots" links 2+ news items into a coherent trend; "Strategic Decisions" are specific and actionable
+   - 15: Analysis exists but surface-level; decisions somewhat generic
+   - 5: Analysis is just restating news; decisions are platitudes
+   - 0: No analysis section or completely generic
+
+4. **Language Quality** (25):
+   - 25: Natural, fluent; adequate length; no translation artifacts
+   - 15: Readable but some awkward phrasing
+   - 5: Choppy or translation-sounding
+   - 0: Barely readable
+
+Return JSON only:
 {"score": 0-100, "sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25, "issues": ["issue1", "issue2"]}"""
 
 
@@ -444,6 +482,13 @@ async def _check_digest_quality(
     # Use expert persona EN content for quality check (most detailed)
     expert = personas.get("expert")
     if not expert or not expert.en:
+        logger.warning("Quality check skipped for %s: no expert content", digest_type)
+        await _log_stage(
+            supabase, run_id, f"quality:{digest_type}", "skipped", t0,
+            output_summary="No expert content available",
+            post_type=digest_type,
+            debug_meta={"quality_score": 0, "skipped": True},
+        )
         return 0
 
     prompt = QUALITY_CHECK_PROMPT_RESEARCH if digest_type == "research" else QUALITY_CHECK_PROMPT_BUSINESS
@@ -451,17 +496,16 @@ async def _check_digest_quality(
     try:
         client = get_openai_client()
         response = await client.chat.completions.create(
-            model=settings.openai_model_light,
+            model=settings.openai_model_reasoning,
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": expert.en[:4000]},
             ],
             response_format={"type": "json_object"},
-            temperature=0.1,
-            max_tokens=512,
+            max_completion_tokens=1024,
         )
         data = parse_ai_json(response.choices[0].message.content, f"Quality-{digest_type}")
-        usage = extract_usage_metrics(response, settings.openai_model_light)
+        usage = extract_usage_metrics(response, settings.openai_model_reasoning)
         score = int(data.get("score", 0))
 
         await _log_stage(
@@ -480,10 +524,11 @@ async def _check_digest_quality(
         logger.info("Quality check %s: score=%d/100", digest_type, score)
         return score
     except Exception as e:
-        logger.warning("Quality check failed for %s: %s", digest_type, e)
+        logger.warning("Quality check failed for %s: %s", digest_type, e, exc_info=True)
         await _log_stage(
             supabase, run_id, f"quality:{digest_type}", "failed", t0,
             error_message=str(e), post_type=digest_type,
+            debug_meta={"quality_score": 0, "error_type": type(e).__name__},
         )
         return 0
 
