@@ -148,11 +148,11 @@ async def test_classify_candidates_returns_multiple():
         result, usage = await classify_candidates(SAMPLE_CANDIDATES)
 
     assert len(result.research) == 2
-    assert len(result.business) == 2
+    # Dedup removes a.com/1 from business (research score 0.88 > business score 0.85)
+    assert len(result.business) == 1
     assert result.research[0].subcategory == "papers"
     assert result.business[0].subcategory == "industry"
     assert any(c.url == "https://a.com/1" for c in result.research)
-    assert any(c.url == "https://a.com/1" for c in result.business)
 
 
 @pytest.mark.asyncio

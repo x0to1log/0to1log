@@ -1,5 +1,5 @@
-"""Tests for Tavily news collection service."""
-from unittest.mock import MagicMock, patch
+"""Tests for multi-source news collection service."""
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -22,13 +22,24 @@ TAVILY_SEARCH_RESPONSE = {
 }
 
 
+def _patch_new_collectors():
+    """Patch HF, arXiv, GitHub collectors to return empty lists."""
+    return (
+        patch("services.news_collection._collect_hf_papers", new_callable=AsyncMock, return_value=[]),
+        patch("services.news_collection._collect_arxiv", new_callable=AsyncMock, return_value=[]),
+        patch("services.news_collection._collect_github_trending", new_callable=AsyncMock, return_value=[]),
+    )
+
+
 @pytest.mark.asyncio
 async def test_collect_news_returns_candidates():
     mock_tavily = MagicMock()
     mock_tavily.search.return_value = TAVILY_SEARCH_RESPONSE
 
+    p1, p2, p3 = _patch_new_collectors()
     with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
-         patch("services.news_collection.settings") as mock_settings:
+         patch("services.news_collection.settings") as mock_settings, \
+         p1, p2, p3:
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
@@ -38,7 +49,7 @@ async def test_collect_news_returns_candidates():
     assert candidates[0].title == "GPT-5 Released by OpenAI"
     assert candidates[0].url == "https://openai.com/blog/gpt-5"
     assert meta["is_backfill"] is False
-    assert meta["unique_candidates"] == 2
+    assert meta["total_candidates"] == 2
     mock_tavily.search.assert_called()
 
 
@@ -54,28 +65,31 @@ async def test_collect_news_deduplicates_urls():
     mock_tavily = MagicMock()
     mock_tavily.search.return_value = duped_response
 
+    p1, p2, p3 = _patch_new_collectors()
     with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
-         patch("services.news_collection.settings") as mock_settings:
+         patch("services.news_collection.settings") as mock_settings, \
+         p1, p2, p3:
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
         candidates, meta = await collect_news()
 
     assert len(candidates) == 2
-    assert meta["total_results"] == 9  # 3 results × 3 queries
-    assert meta["unique_candidates"] == 2
+    assert meta["total_candidates"] == 2
 
 
 @pytest.mark.asyncio
 async def test_collect_news_no_api_key_returns_empty():
-    with patch("services.news_collection.settings") as mock_settings:
+    p1, p2, p3 = _patch_new_collectors()
+    with patch("services.news_collection.settings") as mock_settings, \
+         p1, p2, p3:
         mock_settings.tavily_api_key = ""
 
         from services.news_collection import collect_news
         candidates, meta = await collect_news()
 
     assert candidates == []
-    assert meta == {}
+    assert meta["total_candidates"] == 0
 
 
 @pytest.mark.asyncio
@@ -83,15 +97,17 @@ async def test_collect_news_api_error_returns_empty():
     mock_tavily = MagicMock()
     mock_tavily.search.side_effect = Exception("API rate limit")
 
+    p1, p2, p3 = _patch_new_collectors()
     with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
-         patch("services.news_collection.settings") as mock_settings:
+         patch("services.news_collection.settings") as mock_settings, \
+         p1, p2, p3:
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
         candidates, meta = await collect_news()
 
     assert candidates == []
-    assert meta["unique_candidates"] == 0
+    assert meta["total_candidates"] == 0
 
 
 TAVILY_REACTION_RESPONSE = {

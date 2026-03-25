@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,8 +29,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-from datetime import datetime, timezone, timedelta
 
 KST = timezone(timedelta(hours=9))
 

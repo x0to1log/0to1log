@@ -154,7 +154,7 @@ async def _collect_hf_papers() -> list[NewsCandidate]:
 
 async def _collect_arxiv() -> list[NewsCandidate]:
     """Collect recent papers from arXiv in AI categories (cs.AI, cs.CL, cs.LG)."""
-    url = "http://export.arxiv.org/api/query"
+    url = "https://export.arxiv.org/api/query"
     params = {
         "search_query": "cat:cs.AI OR cat:cs.CL OR cat:cs.LG",
         "sortBy": "submittedDate",

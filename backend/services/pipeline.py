@@ -565,7 +565,8 @@ async def _generate_digest(
                 )
 
                 # Capture metadata from first persona (expert)
-                _has_ko = lambda s: any('\uAC00' <= c <= '\uD7AF' for c in s)
+                def _has_ko(s: str) -> bool:
+                    return any('\uAC00' <= c <= '\uD7AF' for c in s)
                 if not digest_headline and data.get("headline"):
                     h = data["headline"]
                     if _has_ko(h):
