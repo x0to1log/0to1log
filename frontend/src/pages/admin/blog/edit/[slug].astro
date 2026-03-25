@@ -3,6 +3,7 @@ export const prerender = false;
 
 import MainLayout from '../../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
+import AdminAiConfig from '../../../../components/admin/AdminAiConfig.astro';
 import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astro';
 import NewsprintArticleLayout from '../../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintSideRail from '../../../../components/newsprint/NewsprintSideRail.astro';
@@ -332,6 +333,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     data-slug={pageSlug}
     data-is-new={isNew ? 'true' : 'false'}
     data-post-locale={post?.locale || 'en'}></div>
+  <AdminAiConfig />
 </MainLayout>
 
 <script>
@@ -908,9 +910,14 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       setAiLoading(true, action);
 
       try {
-        const res = await fetch('/api/admin/blog/ai/advise', {
+        const _ac = (window as any).__adminAiConfig;
+        const _aiUrl = _ac?.fastApiUrl ? `${_ac.fastApiUrl}/api/admin/blog-ai/advise` : '/api/admin/blog/ai/advise';
+        const _aiH: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (_ac?.accessToken) _aiH['Authorization'] = `Bearer ${_ac.accessToken}`;
+
+        const res = await fetch(_aiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _aiH,
           body: JSON.stringify({
             action,
             post_id: postId || 'new',
@@ -1125,9 +1132,14 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       setAiLoading(true, 'translate');
 
       try {
-        const res = await fetch('/api/admin/blog/ai/translate', {
+        const _ac2 = (window as any).__adminAiConfig;
+        const _trUrl = _ac2?.fastApiUrl ? `${_ac2.fastApiUrl}/api/admin/blog-ai/translate` : '/api/admin/blog/ai/translate';
+        const _trH: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (_ac2?.accessToken) _trH['Authorization'] = `Bearer ${_ac2.accessToken}`;
+
+        const res = await fetch(_trUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _trH,
           body: JSON.stringify({
             title,
             content,

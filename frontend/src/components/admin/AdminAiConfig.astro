@@ -1,0 +1,10 @@
+---
+// AdminAiConfig.astro — injects AI backend config into browser script scope
+// Only rendered on admin editor pages (behind auth middleware)
+const fastApiUrl = import.meta.env.FASTAPI_URL || '';
+const accessToken = Astro.locals.accessToken || '';
+const nonce = Astro.locals.cspNonce || '';
+---
+<script is:inline nonce={nonce} define:vars={{ fastApiUrl, accessToken }}>
+  window.__adminAiConfig = { fastApiUrl, accessToken };
+</script>

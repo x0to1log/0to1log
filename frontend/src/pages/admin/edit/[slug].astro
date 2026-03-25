@@ -3,6 +3,7 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import AdminAiConfig from '../../../components/admin/AdminAiConfig.astro';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
@@ -316,6 +317,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     </div>
   )}
   <div id="admin-data" hidden data-post-id={post?.id || ''} data-slug={pageSlug} data-is-new={isNew ? 'true' : 'false'}></div>
+  <AdminAiConfig />
 </MainLayout>
 
 <script>
@@ -870,9 +872,14 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }, 1000);
 
       try {
-        const res = await fetch('/api/admin/ai/advise', {
+        const _ac = (window as any).__adminAiConfig;
+        const _aiUrl = _ac?.fastApiUrl ? `${_ac.fastApiUrl}/api/admin/ai/advise` : '/api/admin/ai/advise';
+        const _aiH: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (_ac?.accessToken) _aiH['Authorization'] = `Bearer ${_ac.accessToken}`;
+
+        const res = await fetch(_aiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _aiH,
           body: JSON.stringify({
             action,
             post_id: postId || 'new',

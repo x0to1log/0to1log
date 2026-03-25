@@ -2,6 +2,7 @@
 export const prerender = false;
 import MainLayout from '../../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
+import AdminAiConfig from '../../../../components/admin/AdminAiConfig.astro';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategories, getHandbookCategoryLabel } from '../../../../lib/handbookCategories';
 import { levelLabels } from '../../../../lib/handbookUtils';
@@ -398,6 +399,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     {/* Toast feedback (fixed position, outside form flow) */}
     <div id="admin-feedback" class="admin-feedback admin-feedback--toast" hidden></div>
+    <AdminAiConfig />
 </MainLayout>
 
 <style>
@@ -817,9 +819,14 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       }
 
       try {
-        const res = await fetch('/api/admin/ai/handbook-advise', {
+        const _ac = (window as any).__adminAiConfig;
+        const _aiUrl = _ac?.fastApiUrl ? `${_ac.fastApiUrl}/api/admin/ai/handbook-advise` : '/api/admin/ai/handbook-advise';
+        const _aiH: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (_ac?.accessToken) _aiH['Authorization'] = `Bearer ${_ac.accessToken}`;
+
+        const res = await fetch(_aiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _aiH,
           body: JSON.stringify(body),
         });
 

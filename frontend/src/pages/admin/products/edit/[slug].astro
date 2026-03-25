@@ -3,6 +3,7 @@ export const prerender = false;
 
 import MainLayout from '../../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
+import AdminAiConfig from '../../../../components/admin/AdminAiConfig.astro';
 import NewsprintNotice from '../../../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
 
@@ -514,6 +515,7 @@ const isFeatured = product?.featured ?? false;
       </div>
     </div>
   )}
+  <AdminAiConfig />
 </MainLayout>
 
 <script>
@@ -1215,9 +1217,14 @@ const isFeatured = product?.featured ?? false;
       btn.prepend(spinner);
 
       try {
-        const res = await fetch('/api/admin/products/ai/generate', {
+        const _ac = (window as any).__adminAiConfig;
+        const _aiUrl = _ac?.fastApiUrl ? `${_ac.fastApiUrl}/api/admin/product-ai/generate` : '/api/admin/products/ai/generate';
+        const _aiH: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (_ac?.accessToken) _aiH['Authorization'] = `Bearer ${_ac.accessToken}`;
+
+        const res = await fetch(_aiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _aiH,
           body: JSON.stringify((() => {
             const fetchBody = { action, url, name };
             if (action === 'generate_search_corpus') {
