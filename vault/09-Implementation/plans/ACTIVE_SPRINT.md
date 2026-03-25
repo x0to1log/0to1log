@@ -217,6 +217,19 @@ HANDBOOK-ADV-01 (심화 퀄리티 시스템 — Tavily+유형분류+Self-critiqu
 - definition bold 렌더링 수정
 - 수식 $$ 프롬프트 지시 + 표 안 수식 금지
 
+[완료 — 2026-03-25 세션] 뉴스 퀄리티 개선
+- 수집: HuggingFace Daily Papers + arXiv API + GitHub Trending 3개 소스 추가
+- 수집: Tavily 쿼리에 research 지향 2개 추가, GitHub topic 태그 필터링
+- 수집: GitHub README excerpt 병렬 fetch (raw_content 보강)
+- 분류: research 서브카테고리 강화 (litmus test, NOT-Research 리스트)
+- 분류: 3-5 → 0-5 룰 (빈 리스트 허용, 억지 채움 방지)
+- 분류: open_source 기준 강화 (AI/ML 필수, awesome-* 제외)
+- 글쓰기: 출처 인용 형식 변경 (Perplexity 번호 → Source URL 명시)
+- 품질체크: research 섹션명 싱크 (Technical Outlook → Why It Matters)
+- 품질체크: business 섹션명 싱크 (Action Items → Strategic Decisions)
+- 기타: prompt-audit 스킬 파일 경로 수정, focus_items 길이 가이드
+- PROMPT-AUDIT-01 P0 C2 (citation 매핑) 해결됨
+
 [다음 Phase]
 WEEKLY-01 (주간 다이제스트)
 PROMPT-AUDIT-01 (프롬프트 감사)
