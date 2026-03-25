@@ -762,11 +762,9 @@ async def _generate_digest(
     for locale in ("en", "ko"):
         slug = slug_base if locale == "en" else f"{slug_base}-ko"
         if locale == "ko":
-            ko_title = digest_headline_ko or fallback_title
-            title = f"{ko_title} — AI {type_label} 데일리" if ko_title else f"AI {type_label} 데일리 — {batch_id}"
+            title = digest_headline_ko or fallback_title
         else:
-            en_title = digest_headline or fallback_title
-            title = f"{en_title} — AI {type_label} Daily" if en_title else f"AI {type_label} Daily — {batch_id}"
+            title = digest_headline or fallback_title
 
         # Calculate reading time from expert content (longest persona)
         expert_content = (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else ""

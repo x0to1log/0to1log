@@ -223,7 +223,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       )}
     </div>
     <div class="newsprint-article-topline-right">
-      {readingLabel && <span>{readingLabel}</span>}
+      {readingLabel && <span class="newsprint-reading-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{readingLabel}</span>}
       {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
     </div>
   </div>
@@ -404,26 +404,17 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
   {hasSources && (
     <section class="newsprint-sources">
-      <h2 class="newsprint-section-title">{sectionCopy.sources}</h2>
-      <div class="newsprint-sources-summary">
-        <span>{sectionCopy.sourceCount}</span>
-        {sourcePublisherSummaryText && <span>{sourcePublisherSummaryText}</span>}
+      <h2 class="newsprint-section-title">{sectionCopy.sources} <span class="newsprint-sources-count">{(sourceCards || []).length}</span></h2>
+      <div class="newsprint-sources-list">
+        {sourceCards!.map((card, index) => (
+          <a class="source-card" id={`source-card-${index + 1}`} href={card.url} target="_blank" rel="noopener noreferrer">
+            <span class="source-card-index">[{index + 1}]</span>
+            <span class="source-card-publisher">{card.publisher}</span>
+            {card.title && card.title !== card.publisher && <span class="source-card-title">{card.title}</span>}
+            <svg class="source-card-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        ))}
       </div>
-      <details class="newsprint-sources-details">
-        <summary class="newsprint-sources-toggle">{sectionCopy.sourceDetails}</summary>
-        <div class="newsprint-sources-list">
-          {sourceCards!.map((card, index) => (
-            <article class="source-card" id={`source-card-${index + 1}`}>
-              <div class="source-card-index">[{index + 1}]</div>
-              <div class="source-card-body">
-                <a href={card.url} target="_blank" rel="noopener noreferrer">{card.title}</a>
-                <div class="source-card-meta">{card.publisher}{card.published_at ? ` · ${card.published_at}` : ''}</div>
-                {card.evidence_snippet && <p>{card.evidence_snippet}</p>}
-              </div>
-            </article>
-          ))}
-        </div>
-      </details>
     </section>
   )}
 

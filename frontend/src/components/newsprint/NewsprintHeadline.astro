@@ -56,7 +56,7 @@ const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
           ))}
         </span>
       )}
-      {readingLabel && <span class="newsprint-meta-inline"><span>{readingLabel}</span></span>}
+      {readingLabel && <span class="newsprint-meta-inline"><span class="newsprint-reading-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{readingLabel}</span></span>}
     </div>
     {itemId && (
       <button

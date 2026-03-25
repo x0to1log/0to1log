@@ -12,6 +12,7 @@ interface RailPost {
   slug: string;
   category?: string | null;
   published_at?: string | null;
+  post_type?: string | null;
 }
 
 interface Props {
@@ -82,11 +83,14 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
         return (
           <a class="newsprint-card" href={`${resolvedBasePath}/${post.slug}/`}>
             <strong class="newsprint-rail-link">{post.title}</strong>
-            {dateLabel && (
-              <span class="newsprint-category newsprint-rail-category">
-                {dateLabel}
-              </span>
-            )}
+            <span class="newsprint-rail-meta">
+              {post.post_type && (
+                <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${post.post_type}`}>
+                  {post.post_type === 'research' ? 'RESEARCH' : 'BUSINESS'}
+                </span>
+              )}
+              {dateLabel && <span class="newsprint-rail-date">{dateLabel}</span>}
+            </span>
           </a>
         );
       })}

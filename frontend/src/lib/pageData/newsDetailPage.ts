@@ -94,7 +94,7 @@ export async function getNewsDetailPageData({
   let articleData: any = undefined;
   let nextPost: { title: string; slug: string; category: string | null } | null = null;
   let pairedSlug: string | null = null;
-  let similarPosts: { post_id: string; slug: string; title: string; category: string }[] = [];
+  let similarPosts: { post_id: string; slug: string; title: string; category: string; post_type?: string | null }[] = [];
   let isBookmarked = false;
   let isLiked = false;
   let likeCount = 0;
@@ -183,8 +183,9 @@ export async function getNewsDetailPageData({
       post.category
         ? publicSupabase
             .from('news_posts')
-            .select('id, slug, title, category')
+            .select('id, slug, title, category, post_type')
             .eq('status', 'published')
+            .eq('locale', locale)
             .eq('category', post.category)
             .neq('id', post.id)
             .order('published_at', { ascending: false })
@@ -226,7 +227,7 @@ export async function getNewsDetailPageData({
     // Collect FastAPI result (was running in parallel with DB queries + termsMap build)
     similarPosts = await similarPostsPromise;
     if (similarPosts.length === 0 && backfillRes.data?.length) {
-      similarPosts = backfillRes.data.map((p: any) => ({ post_id: p.id, slug: p.slug, title: p.title, category: p.category }));
+      similarPosts = backfillRes.data.map((p: any) => ({ post_id: p.id, slug: p.slug, title: p.title, category: p.category, post_type: p.post_type }));
     }
   }
 

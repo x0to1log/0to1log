@@ -148,7 +148,7 @@ export async function getHandbookDetailPageData({
       bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
       publicSupabase
         .from('news_posts')
-        .select('title, slug, category, published_at')
+        .select('title, slug, category, published_at, post_type')
         .eq('status', 'published')
         .eq('locale', locale)
         .contains('tags', [term.term.toLowerCase()])
@@ -156,7 +156,7 @@ export async function getHandbookDetailPageData({
       // Pre-fetch recent news for backfill (avoids sequential query later)
       publicSupabase
         .from('news_posts')
-        .select('title, slug, category, published_at')
+        .select('title, slug, category, published_at, post_type')
         .eq('status', 'published')
         .eq('locale', locale)
         .order('published_at', { ascending: false })

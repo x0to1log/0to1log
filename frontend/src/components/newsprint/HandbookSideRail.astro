@@ -9,6 +9,7 @@ interface RailArticle {
   title: string;
   slug: string;
   published_at?: string | null;
+  post_type?: string | null;
 }
 
 interface Props {
@@ -69,6 +70,14 @@ const hasRelated = relatedTerms.length > 0;
         {relatedArticles.map((article) => (
           <a class="newsprint-card" href={`/${locale}/news/${article.slug}/`}>
             <strong class="newsprint-rail-link">{article.title}</strong>
+            <span class="newsprint-rail-meta">
+              {article.post_type && (
+                <span class="newsprint-card-kicker-type">
+                  {article.post_type === 'research' ? 'RESEARCH' : 'BUSINESS'}
+                </span>
+              )}
+              <span class="newsprint-rail-date">{isKo ? 'AI 뉴스' : 'AI News'}</span>
+            </span>
           </a>
         ))}
       </div>

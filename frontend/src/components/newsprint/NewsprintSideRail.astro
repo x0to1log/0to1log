@@ -6,6 +6,7 @@ interface SimilarPost {
   slug: string;
   title: string;
   category: string;
+  post_type?: string | null;
 }
 
 interface RelatedTerm {
@@ -66,11 +67,16 @@ const isKo = locale === 'ko';
         {similarPosts.slice(0, 3).map((p) => (
           <a class="newsprint-card" href={`${resolvedBasePath}/${p.slug}/`}>
             <strong class="newsprint-rail-link">{p.title}</strong>
-            {getCategoryLabel(locale, p.category) && (
-              <span class="newsprint-category newsprint-rail-category">
-                {getCategoryLabel(locale, p.category)}
-              </span>
-            )}
+            <span class="newsprint-rail-meta">
+              {p.post_type && (
+                <span class="newsprint-card-kicker-type">
+                  {p.post_type === 'research' ? 'RESEARCH' : 'BUSINESS'}
+                </span>
+              )}
+              {getCategoryLabel(locale, p.category) && (
+                <span class="newsprint-rail-date">{getCategoryLabel(locale, p.category)}</span>
+              )}
+            </span>
           </a>
         ))}
       </div>
