@@ -1098,6 +1098,23 @@ async def _run_generate_term(
         logger.info("Handbook quality for '%s': %d/100 (type=%s)", req.term, quality_score, term_type)
         _log_handbook_stage("handbook.quality_check", quality_usage or {},
                             extra_meta={"quality_score": quality_score, "term_type": term_type})
+        # Record to dedicated quality scores table
+        if supabase:
+            try:
+                import re
+                term_slug = re.sub(r'[^a-z0-9]+', '-', req.term.lower().strip()).strip('-')
+                row = {
+                    "term_slug": term_slug,
+                    "score": quality_score,
+                    "breakdown": quality_breakdown,
+                    "term_type": term_type,
+                    "source": source,
+                }
+                if req.term_id:
+                    row["term_id"] = req.term_id
+                supabase.table("handbook_quality_scores").insert(row).execute()
+            except Exception as e:
+                logger.warning("Failed to record handbook quality score: %s", e)
 
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",

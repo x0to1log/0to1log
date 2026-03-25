@@ -43,7 +43,7 @@ const excludeStages = [
   'quality:research', 'quality:business',
 ];
 
-const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }] = await Promise.all([
+const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }] = await Promise.all([
   sb.from('pipeline_logs')
     .select('pipeline_type, status, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
@@ -59,6 +59,11 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }] = await
     .like('pipeline_type', 'handbook.%')
     .gte('pipeline_runs.started_at', filterDate)
     .order('created_at', { ascending: true }),
+  sb.from('handbook_quality_scores')
+    .select('term_slug, score, term_type, source, created_at')
+    .gte('created_at', filterDate)
+    .order('created_at', { ascending: false })
+    .limit(50),
 ]);
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -312,21 +317,14 @@ const hbRuns = Array.from(hbRunMap.values()).sort(
 const hbTotalRuns = hbRuns.length;
 const hbTotalTerms = hbRuns.reduce((sum, r) => sum + r.termsExtracted, 0);
 
-// Handbook quality scores from handbook.quality_check logs
+// Handbook quality scores from dedicated table
 type HbQualityEntry = { term: string; score: number; termType: string; date: string };
-const hbQualityEntries: HbQualityEntry[] = [];
-for (const log of hbLogs) {
-  if (log.pipeline_type !== 'handbook.quality_check') continue;
-  const meta = (log.debug_meta ?? {}) as Record<string, unknown>;
-  const score = typeof meta.quality_score === 'number' ? meta.quality_score : null;
-  if (score === null) continue;
-  hbQualityEntries.push({
-    term: (meta.term as string) || 'unknown',
-    score,
-    termType: (meta.term_type as string) || '',
-    date: log.created_at?.slice(0, 10) || '',
-  });
-}
+const hbQualityEntries: HbQualityEntry[] = (hbQualityRows ?? []).map((row: any) => ({
+  term: row.term_slug,
+  score: row.score,
+  termType: row.term_type || '',
+  date: row.created_at?.slice(0, 10) || '',
+}));
 
 // Chart data
 const hbStageNames = ['handbook.extract', 'handbook.auto_generate'];
@@ -839,7 +837,15 @@ const nonce = Astro.locals.cspNonce || '';
         plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
         scales: {
           ...commonScales,
-          y: { min: 0, max: 100, ticks: { color: textColor, stepSize: 20 }, grid: { color: gridColor } },
+          y: {
+            min: (function() {
+              var all = [].concat(chartData.quality.research, chartData.quality.business).filter(function(v) { return v > 0; });
+              return all.length ? Math.max(0, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10) : 0;
+            })(),
+            max: 100,
+            ticks: { color: textColor, stepSize: 10 },
+            grid: { color: gridColor },
+          },
         },
       },
     });
@@ -957,7 +963,15 @@ const nonce = Astro.locals.cspNonce || '';
           indexAxis: 'y',
           plugins: { legend: { display: false } },
           scales: {
-            x: { min: 0, max: 100, ticks: { color: textColor }, grid: { color: gridColor } },
+            x: {
+              min: (function() {
+                var valid = hbQScores.filter(function(v) { return v > 0; });
+                return valid.length ? Math.max(0, Math.floor((Math.min.apply(null, valid) - 10) / 10) * 10) : 0;
+              })(),
+              max: 100,
+              ticks: { color: textColor },
+              grid: { color: gridColor },
+            },
             y: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
           },
         },
@@ -1079,6 +1093,7 @@ const nonce = Astro.locals.cspNonce || '';
     padding: 1rem 1.1rem;
     border: 1px solid var(--color-border);
     border-left: 3px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+    border-radius: var(--radius-md, 0.5rem);
     background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
     transition: border-color 0.15s, box-shadow 0.15s;
   }
@@ -1146,6 +1161,7 @@ const nonce = Astro.locals.cspNonce || '';
   .pcosts-chart-card {
     padding: 1.1rem 1.15rem;
     border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
     background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
     transition: box-shadow 0.15s;
   }
@@ -1171,6 +1187,7 @@ const nonce = Astro.locals.cspNonce || '';
     margin-bottom: 1rem;
     padding: 1.15rem 1.2rem;
     border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
     background: color-mix(in srgb, var(--color-bg-secondary) 74%, transparent);
     animation: pcostsSlideUp 0.4s ease 0.15s both;
   }
@@ -1247,6 +1264,7 @@ const nonce = Astro.locals.cspNonce || '';
     padding: 0.85rem 1rem;
     border: 1px solid var(--color-border);
     border-left: 3px solid color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+    border-radius: var(--radius-md, 0.5rem);
     background: color-mix(in srgb, var(--color-bg-secondary) 40%, transparent);
     color: var(--color-text-muted);
     font-size: 0.82rem;
@@ -1284,6 +1302,7 @@ const nonce = Astro.locals.cspNonce || '';
   .hb-cost-chart {
     padding: 1rem 1.15rem;
     border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
     background: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-primary));
     margin-bottom: 1.25rem;
   }
