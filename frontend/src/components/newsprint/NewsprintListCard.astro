@@ -40,6 +40,9 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
   data-post-type={postType || 'business'}
   data-search-text={searchText}
 >
+  {categoryLabel && (
+    <span class="newsprint-card-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}> · {postType === 'research' ? 'Research' : 'Business'}</span>}</span>
+  )}
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
     <h2 class="newsprint-card-title" style="flex: 1;"><a href={href} class="newsprint-card-stretched-link">{title}</a></h2>
     {itemId && (
@@ -58,12 +61,6 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
   </div>
   {excerpt && <p class="newsprint-excerpt">{excerpt}</p>}
   <div class="newsprint-card-bottom">
-    {categoryLabel && <span class="newsprint-category" style={`color: ${catColor};`}>{categoryLabel}</span>}
-    {postType && (
-      <span class={`newsprint-type-badge newsprint-type-badge--${postType}`}>
-        {postType === 'research' ? 'Research' : 'Business'}
-      </span>
-    )}
     {tags && tags.length > 0 && (
       <span class="newsprint-tags-inline">
         {tags.slice(0, 4).map((tag) => (

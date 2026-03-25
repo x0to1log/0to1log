@@ -263,10 +263,15 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
       searchResults.appendChild(frag);
     }
 
+    const trendingEl = document.querySelector<HTMLElement>('.handbook-trending');
+    const showcaseEl = document.getElementById('handbook-showcase');
+
     function showSearchMode(): void {
       isDefaultMode = false;
       if (sentinel) sentinel.style.display = 'none';
       if (searchResults) searchResults.style.display = 'block';
+      if (trendingEl) trendingEl.style.display = 'none';
+      if (showcaseEl) showcaseEl.style.display = 'none';
     }
 
     function showNextBatch(): void {
@@ -296,6 +301,8 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
       searchResults.style.display = 'block';
       if (noResults) noResults.style.display = 'none';
       if (countEl) { countEl.textContent = ''; countEl.style.display = 'none'; }
+      if (trendingEl) trendingEl.style.display = '';
+      if (showcaseEl) showcaseEl.style.display = '';
       showNextBatch();
       ensureSentinel();
     }

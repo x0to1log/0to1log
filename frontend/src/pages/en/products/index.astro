@@ -147,6 +147,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
     const noResults = document.getElementById('product-search-no-results');
     const preview = document.getElementById('category-preview');
     const filtered = document.getElementById('filtered-grid');
+    const spotlightEl = document.querySelector<HTMLElement>('.product-spotlight');
     const cards = filtered ? Array.from(filtered.querySelectorAll<HTMLElement>('.product-card')) : [];
 
     let currentCategory = 'all';
@@ -155,6 +156,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
     function switchToFiltered(cat: string) {
       currentCategory = cat;
       if (preview) preview.hidden = true;
+      if (spotlightEl) spotlightEl.hidden = true;
       if (filtered) filtered.hidden = false;
       applyFilters();
 
@@ -169,6 +171,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       currentQuery = '';
       if (input) input.value = '';
       if (preview) preview.hidden = false;
+      if (spotlightEl) spotlightEl.hidden = false;
       if (filtered) filtered.hidden = true;
       if (noResults) noResults.hidden = true;
 
@@ -212,6 +215,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
         url.searchParams.delete('cat');
         currentCategory = 'all';
         if (preview) preview.hidden = true;
+        if (spotlightEl) spotlightEl.hidden = true;
         if (filtered) filtered.hidden = false;
       } else if (currentCategory === 'all') {
         url.searchParams.delete('q');

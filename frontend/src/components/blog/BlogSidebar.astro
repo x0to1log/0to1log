@@ -73,11 +73,18 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
 
 <aside class="blog-sidebar" data-blog-sidebar>
   <div class="blog-sidebar-search">
-    <button class="blog-sidebar-search-btn" type="button" aria-label={searchLabel}>
-      <span>{t[locale]['blog.search']}</span>
-      <kbd class="blog-sidebar-search-kbd">/</kbd>
-    </button>
+    <input
+      type="text"
+      class="blog-sidebar-search-input"
+      id="blog-sidebar-search"
+      placeholder={searchLabel}
+      aria-label={searchLabel}
+    />
   </div>
+  <div class="blog-sidebar-search-results" id="blog-sidebar-results" hidden></div>
+  <script type="application/json" id="blog-sidebar-posts-data" set:html={JSON.stringify(posts.map(p => ({
+    s: p.slug, t: p.title, c: p.category,
+  })))} />
 
   <nav class="blog-sidebar-nav">
     {categoryGroups.map((group) => {
@@ -285,4 +292,53 @@ const searchLabel = locale === 'ko' ? '글 검색' : 'Search posts';
 
   document.addEventListener('astro:page-load', initBlogSidebar);
   initBlogSidebar();
+</script>
+
+<script>
+  function initBlogSidebarSearch(): void {
+    const input = document.getElementById('blog-sidebar-search') as HTMLInputElement | null;
+    const resultsEl = document.getElementById('blog-sidebar-results');
+    const nav = document.querySelector<HTMLElement>('.blog-sidebar-nav');
+    const footer = document.querySelector<HTMLElement>('.blog-sidebar-footer');
+    const dataEl = document.getElementById('blog-sidebar-posts-data');
+    if (!input || !resultsEl || !nav || !dataEl) return;
+
+    type PostEntry = { s: string; t: string; c: string };
+    const allPosts: PostEntry[] = JSON.parse(dataEl.textContent || '[]');
+    const locale = document.documentElement.lang || 'ko';
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const q = input.value.trim().toLowerCase();
+
+        if (!q) {
+          resultsEl.hidden = true;
+          resultsEl.innerHTML = '';
+          nav.style.display = '';
+          if (footer) footer.style.display = '';
+          return;
+        }
+
+        const matches = allPosts.filter(p => p.t.toLowerCase().includes(q));
+        nav.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+        resultsEl.hidden = false;
+
+        if (matches.length === 0) {
+          resultsEl.innerHTML = `<p class="blog-sidebar-no-results">${locale === 'ko' ? '검색 결과 없음' : 'No results'}</p>`;
+          return;
+        }
+
+        resultsEl.innerHTML = matches.map(p =>
+          `<a class="blog-sidebar-link" href="/${locale}/blog/${p.s}/"><span class="blog-sidebar-link__title">${p.t}</span></a>`
+        ).join('');
+      }, 150);
+    });
+  }
+
+  document.addEventListener('astro:page-load', initBlogSidebarSearch);
+  initBlogSidebarSearch();
 </script>

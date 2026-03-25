@@ -1,5 +1,5 @@
 ---
-import { getCategoryLabel } from '../../lib/categories';
+import { getCategoryLabel, getCategoryColorVar } from '../../lib/categories';
 import PreviewReadonlyBanner from '../common/PreviewReadonlyBanner.astro';
 import StickyReadingActions from '../common/StickyReadingActions.astro';
 import ReadingProgressBar from '../common/ReadingProgressBar.astro';
@@ -69,6 +69,7 @@ interface Props {
   initialFindQuery?: string;
   previewMode?: boolean;
   showStickyActions?: boolean;
+  postType?: string | null;
 }
 
 const {
@@ -102,6 +103,7 @@ const {
   initialFindQuery = '',
   previewMode = false,
   showStickyActions = true,
+  postType = null,
 } = Astro.props;
 
 const isKo = locale === 'ko';
@@ -142,6 +144,7 @@ const readingLabel = readingTimeMin
     : `${readingTimeMin} min read`
   : null;
 const categoryLabel = getCategoryLabel(locale, category);
+const catColor = getCategoryColorVar(category);
 const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost.category) : null;
 
 const editHref = itemType === 'term' ? `/admin/handbook/edit/${slug}` : `/admin/edit/${slug}`;
@@ -213,22 +216,25 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       <PreviewReadonlyBanner locale={locale} />
     </>
   )}
-  <div class="newsprint-article-header">
-    <div class="newsprint-article-header-left">
-      {categoryLabel && <span class="newsprint-category">{categoryLabel}</span>}
-      {tags && tags.length > 0 && (
-        <>
-          {tags.slice(0, 6).map((tag) => (
-            <span class="newsprint-tag">{tag}</span>
-          ))}
-        </>
+  <div class="newsprint-article-topline">
+    <div class="newsprint-article-topline-left">
+      {categoryLabel && (
+        <span class="newsprint-card-kicker newsprint-article-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}> · {postType === 'research' ? 'Research' : 'Business'}</span>}</span>
       )}
     </div>
-    <div class="newsprint-article-header-right">
+    <div class="newsprint-article-topline-right">
       {readingLabel && <span>{readingLabel}</span>}
       {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
     </div>
   </div>
+
+  {tags && tags.length > 0 && (
+    <div class="newsprint-article-tags">
+      {tags.slice(0, 6).map((tag) => (
+        <span class="newsprint-tag">{tag}</span>
+      ))}
+    </div>
+  )}
 
   <h1 class="newsprint-lead-title">{title}</h1>
   {excerpt && <p class="newsprint-deck">{excerpt}</p>}
