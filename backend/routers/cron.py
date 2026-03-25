@@ -153,6 +153,41 @@ async def trigger_handbook_extraction(
     }
 
 
+class WeeklyTriggerBody(BaseModel):
+    week_id: str | None = None
+
+
+@router.post("/weekly", status_code=202)
+@limiter.limit("2/minute")
+async def trigger_weekly_pipeline(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    body: WeeklyTriggerBody | None = None,
+    _secret=Depends(verify_cron_secret),
+):
+    """Trigger weekly recap generation. Returns 202 immediately."""
+    week_id = (body.week_id if body else None)
+
+    async def _run():
+        try:
+            from services.pipeline import run_weekly_pipeline
+            result = await run_weekly_pipeline(week_id=week_id)
+            logger.info(
+                "Weekly pipeline %s finished: %d posts, %d errors",
+                result.batch_id, result.posts_created, len(result.errors),
+            )
+        except Exception as e:
+            logger.error("Weekly pipeline crashed: %s", e)
+
+    background_tasks.add_task(_run)
+
+    return {
+        "status": "accepted",
+        "week_id": week_id or "auto (previous week)",
+        "message": "Weekly pipeline started in background",
+    }
+
+
 @router.post("/pipeline-cancel", status_code=200)
 @limiter.limit("5/minute")
 async def cancel_pipeline_run(

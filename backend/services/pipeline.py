@@ -1218,3 +1218,288 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         posts_created=0,
         errors=all_errors,
     )
+
+
+# ──────────────────────────────────────────────
+# WEEKLY RECAP PIPELINE
+# ──────────────────────────────────────────────
+
+def _iso_week_id(d=None) -> str:
+    """Return ISO week string like '2026-W13'."""
+    from datetime import date as _date
+    if d is None:
+        d = datetime.strptime(today_kst(), "%Y-%m-%d").date()
+    iso_year, iso_week, _ = d.isocalendar()
+    return f"{iso_year}-W{iso_week:02d}"
+
+
+async def _fetch_week_digests(supabase, week_id: str, locale: str) -> list[dict]:
+    """Fetch daily digests for the given ISO week and locale."""
+    iso_year, iso_week = week_id.split("-W")
+    monday = datetime.strptime(f"{iso_year}-W{int(iso_week)}-1", "%G-W%V-%u").date()
+    sunday = monday + timedelta(days=6)
+
+    result = (
+        supabase.table("news_posts")
+        .select("slug, title, post_type, content_expert, content_learner, published_at, guide_items")
+        .eq("locale", locale)
+        .eq("category", "ai-news")
+        .in_("post_type", ["research", "business"])
+        .gte("created_at", monday.isoformat())
+        .lte("created_at", sunday.isoformat() + "T23:59:59")
+        .order("created_at", desc=False)
+        .execute()
+    )
+    return result.data or []
+
+
+async def _fetch_week_handbook_terms(supabase, week_id: str, locale: str) -> list[dict]:
+    """Fetch handbook terms created/published this week for bottom card."""
+    iso_year, iso_week = week_id.split("-W")
+    monday = datetime.strptime(f"{iso_year}-W{int(iso_week)}-1", "%G-W%V-%u").date()
+    sunday = monday + timedelta(days=6)
+
+    result = (
+        supabase.table("handbook_terms")
+        .select("slug, term, korean_term, definition_en, definition_ko")
+        .eq("status", "published")
+        .gte("created_at", monday.isoformat())
+        .lte("created_at", sunday.isoformat() + "T23:59:59")
+        .limit(3)
+        .execute()
+    )
+    return result.data or []
+
+
+async def run_weekly_pipeline(
+    week_id: str | None = None,
+) -> PipelineResult:
+    """Generate weekly recap from Mon-Fri daily digests.
+
+    Flow: fetch week's dailies -> LLM weekly summary (expert/learner x EN/KO) -> save draft.
+    """
+    from services.agents.prompts_news_pipeline import get_weekly_prompt
+
+    if week_id is None:
+        last_week = datetime.strptime(today_kst(), "%Y-%m-%d").date() - timedelta(days=7)
+        week_id = _iso_week_id(last_week)
+
+    supabase = get_supabase()
+    if not supabase:
+        return PipelineResult(batch_id=week_id, errors=["Supabase not configured"])
+
+    run_id = str(uuid.uuid4())
+    try:
+        supabase.table("pipeline_runs").insert({
+            "id": run_id,
+            "run_key": f"weekly-{week_id}",
+            "status": "running",
+        }).execute()
+    except Exception as e:
+        logger.warning("Weekly run already exists for %s: %s", week_id, e)
+        return PipelineResult(batch_id=week_id, status="skipped", message=f"Duplicate: {week_id}")
+
+    all_errors: list[str] = []
+    cumulative_usage: dict[str, Any] = {}
+    total_posts = 0
+
+    try:
+        for locale in ("en", "ko"):
+            language = "English" if locale == "en" else "Korean"
+
+            # Fetch daily digests for the week
+            digests = await _fetch_week_digests(supabase, week_id, locale)
+            if not digests:
+                all_errors.append(f"No daily digests for {week_id} {locale}")
+                continue
+
+            # Build input text from all dailies
+            daily_text = ""
+            for d in digests:
+                daily_text += f"\n\n--- {d['post_type'].upper()} ({d.get('published_at', '')}) ---\n"
+                daily_text += f"# {d['title']}\n"
+                if d.get("content_expert"):
+                    daily_text += f"\n## Expert\n{d['content_expert']}\n"
+                if d.get("content_learner"):
+                    daily_text += f"\n## Learner\n{d['content_learner']}\n"
+
+            # Fetch handbook terms for bottom card
+            week_terms = await _fetch_week_handbook_terms(supabase, week_id, locale)
+
+            # Generate per persona (expert + learner)
+            personas: dict[str, dict] = {}
+            client = get_openai_client()
+
+            for persona in ("expert", "learner"):
+                t_p = time.monotonic()
+                system_prompt = get_weekly_prompt(persona, language)
+
+                try:
+                    response = await asyncio.wait_for(
+                        client.chat.completions.create(
+                            model=settings.openai_model_main,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": daily_text},
+                            ],
+                            temperature=0.5,
+                            max_tokens=6000,
+                        ),
+                        timeout=120,
+                    )
+
+                    raw = response.choices[0].message.content or ""
+                    usage = extract_usage_metrics(response)
+                    merge_usage_metrics(cumulative_usage, usage)
+
+                    # Parse JSON block from end of response
+                    json_data = {}
+                    if "```json" in raw:
+                        json_str = raw.split("```json")[-1].split("```")[0].strip()
+                        json_data = parse_ai_json(json_str, f"weekly-{persona}-{locale}")
+                        content = raw[:raw.rfind("```json")].strip()
+                    else:
+                        content = raw
+
+                    personas[persona] = {"content": content, "json_data": json_data}
+
+                    await _log_stage(
+                        supabase, run_id, f"weekly:{persona}:{locale}", "success", t_p,
+                        usage=usage, post_type="weekly", locale=locale,
+                    )
+
+                except Exception as e:
+                    logger.warning("Weekly %s %s %s failed: %s", week_id, persona, locale, e)
+                    all_errors.append(f"weekly {persona} {locale}: {e}")
+                    await _log_stage(
+                        supabase, run_id, f"weekly:{persona}:{locale}", "failed", t_p,
+                        error_message=str(e), post_type="weekly", locale=locale,
+                    )
+
+            if not personas:
+                continue
+
+            # Build row
+            expert_data = personas.get("expert", {})
+            learner_data = personas.get("learner", {})
+            expert_json = expert_data.get("json_data", {})
+            learner_json = learner_data.get("json_data", {})
+
+            headline = expert_json.get("headline") or learner_json.get("headline") or f"AI Weekly — {week_id}"
+
+            slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
+
+            # Reading time
+            text = expert_data.get("content", "") or learner_data.get("content", "")
+            if locale == "ko":
+                char_count = len([c for c in text if c.strip() and c not in '.,!?;:()[]{}"\'-\u2014\u2026#*_~`|/>'])
+                reading_time = max(1, round(char_count / 500))
+            else:
+                reading_time = max(1, round(len(text.split()) / 200))
+
+            guide_items = {
+                "week_numbers": expert_json.get("week_numbers", []),
+                "week_tool": expert_json.get("week_tool") or learner_json.get("week_tool", {}),
+                "week_terms": [
+                    {
+                        "slug": t["slug"],
+                        "term": t.get("korean_term" if locale == "ko" else "term") or t.get("term", ""),
+                        "definition": t.get(f"definition_{locale}", ""),
+                    }
+                    for t in week_terms[:2]
+                ],
+            }
+
+            row = {
+                "title": headline,
+                "slug": slug,
+                "locale": locale,
+                "category": "ai-news",
+                "post_type": "weekly",
+                "status": "draft",
+                "content_expert": expert_data.get("content", ""),
+                "content_learner": learner_data.get("content", ""),
+                "pipeline_batch_id": week_id,
+                "reading_time_min": reading_time,
+                "guide_items": guide_items,
+            }
+
+            try:
+                supabase.table("news_posts").upsert(
+                    row, on_conflict="slug,locale"
+                ).execute()
+                total_posts += 1
+                logger.info("Saved weekly %s draft: %s", locale, slug)
+            except Exception as e:
+                all_errors.append(f"Save weekly {locale}: {e}")
+
+        # Buttondown email (disabled by default)
+        if settings.weekly_email_enabled and total_posts > 0:
+            try:
+                await _send_weekly_email(supabase, week_id)
+            except Exception as e:
+                logger.warning("Weekly email failed: %s", e)
+                all_errors.append(f"Email: {e}")
+
+        status = "success" if total_posts > 0 and not all_errors else "partial" if total_posts > 0 else "failed"
+        supabase.table("pipeline_runs").update({
+            "status": status,
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {"total_posts": total_posts, "errors": all_errors},
+        }).eq("id", run_id).execute()
+
+        return PipelineResult(
+            batch_id=week_id,
+            status=status,
+            total_posts=total_posts,
+            errors=all_errors,
+            usage=cumulative_usage,
+        )
+
+    except Exception as e:
+        logger.error("Weekly pipeline failed: %s", e, exc_info=True)
+        try:
+            supabase.table("pipeline_runs").update({
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "summary": {"error": str(e)},
+            }).eq("id", run_id).execute()
+        except Exception:
+            pass
+        return PipelineResult(batch_id=week_id, status="failed", errors=[str(e)])
+
+
+async def _send_weekly_email(supabase, week_id: str) -> None:
+    """Send weekly recap via Buttondown API (draft only — Amy sends manually)."""
+    import httpx
+
+    if not settings.buttondown_api_key:
+        logger.info("Buttondown API key not set, skipping email")
+        return
+
+    slug = f"{week_id.lower()}-weekly-digest"
+    result = (
+        supabase.table("news_posts")
+        .select("title, content_expert")
+        .eq("slug", slug)
+        .eq("locale", "en")
+        .single()
+        .execute()
+    )
+
+    if not result.data:
+        logger.warning("No weekly post found for email: %s", slug)
+        return
+
+    async with httpx.AsyncClient() as http:
+        resp = await http.post(
+            "https://api.buttondown.com/v1/emails",
+            headers={"Authorization": f"Token {settings.buttondown_api_key}"},
+            json={
+                "subject": result.data["title"],
+                "body": result.data["content_expert"],
+                "status": "draft",
+            },
+        )
+        resp.raise_for_status()
+        logger.info("Weekly email draft created in Buttondown for %s", week_id)
