@@ -39,6 +39,7 @@ let candidatesTotal = 0;
 let candidatesSelected = 0;
 let totalBlogPosts = 0;
 let blogDrafts = 0;
+let totalProducts = 0;
 let monthlyCost = 0;
 let monthlyTokens = 0;
 let lastHandbookRun: { id: string; run_key: string; status: string; started_at: string; last_error: string | null } | null = null;
@@ -64,13 +65,17 @@ type ActivityItem = {
 
 let recentActivity: ActivityItem[] = [];
 let staleDrafts: ActivityItem[] = [];
+let handbookAutoExtract = true;
+let newsQualityData: { label: string; score: number; type: string }[] = [];
+let hbQualityData: { term: string; score: number; label: string }[] = [];
 
 try {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   // All queries in a single parallel batch (eliminates waterfall)
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
          blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
-         pipelineLogsRes, candidatesRes] = await Promise.all([
+         pipelineLogsRes, candidatesRes, settingsRes, productsRes,
+         newsQualityRes, hbQualityRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
@@ -90,6 +95,19 @@ try {
     // Pipeline detail: eagerly fetch (filter client-side by run_id)
     sb.from('pipeline_logs').select('cost_usd, tokens_used, run_id').order('created_at', { ascending: false }).limit(100),
     sb.from('news_candidates').select('status, batch_id').order('created_at', { ascending: false }).limit(200),
+    sb.from('admin_settings').select('value').eq('key', 'handbook_auto_extract').maybeSingle(),
+    sb.from('ai_products').select('id', { count: 'exact', head: true }),
+    // Quality score data for dashboard charts
+    sb.from('pipeline_logs')
+      .select('debug_meta, pipeline_type, pipeline_runs!inner(run_key, started_at)')
+      .gte('pipeline_runs.started_at', thirtyDaysAgo)
+      .in('pipeline_type', ['quality:research', 'quality:business'])
+      .order('created_at', { ascending: true }),
+    sb.from('pipeline_logs')
+      .select('debug_meta, pipeline_type, created_at')
+      .eq('pipeline_type', 'handbook.quality_check')
+      .gte('created_at', thirtyDaysAgo)
+      .order('created_at', { ascending: true }),
   ]);
 
   const posts = postsRes.data ?? [];
@@ -112,6 +130,39 @@ try {
     .filter((t) => t.source === 'ai-suggested' && t.status === 'draft')
     .slice(0, 5)
     .map((t) => ({ title: t.term, slug: t.slug, type: 'term' as const, status: t.status, updated_at: t.updated_at, source: t.source }));
+
+  // Admin settings
+  if (settingsRes.data) {
+    handbookAutoExtract = settingsRes.data.value !== false;
+  }
+
+  totalProducts = productsRes.count ?? 0;
+
+  // News quality chart data
+  for (const q of (newsQualityRes.data ?? []) as any[]) {
+    const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
+    const score = typeof meta.quality_score === 'number' ? meta.quality_score : typeof meta.score === 'number' ? meta.score : null;
+    if (score === null) continue;
+    const d = new Date(q.pipeline_runs.started_at);
+    newsQualityData.push({
+      label: `${d.getMonth() + 1}/${d.getDate()}`,
+      score,
+      type: q.pipeline_type.replace('quality:', ''),
+    });
+  }
+
+  // Handbook quality chart data
+  for (const q of (hbQualityRes.data ?? []) as any[]) {
+    const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
+    const score = typeof meta.quality_score === 'number' ? meta.quality_score : null;
+    if (score === null) continue;
+    const dt = new Date(q.created_at);
+    hbQualityData.push({
+      term: (meta.term as string) || 'unknown',
+      score,
+      label: `${dt.getMonth() + 1}/${dt.getDate()}`,
+    });
+  }
 
   const allItems: ActivityItem[] = [
     ...posts.filter((p) => p.locale !== 'ko').map((p) => ({ title: p.title, slug: p.slug, type: 'post' as const, status: p.status, updated_at: p.updated_at, quality_score: p.quality_score })),
@@ -151,6 +202,8 @@ try {
   // Notifications
   notifications = (notifsRes.data ?? []) as Notification[];
 } catch {}
+
+const nonce = Astro.locals.cspNonce || '';
 
 // Detect stuck pipeline runs — news: 30min, handbook: 60min
 const NEWS_TIMEOUT_MS = 30 * 60 * 1000;
@@ -225,8 +278,8 @@ function relativeTime(dateStr: string): string {
         </div>
       </div>
 
-      <!-- Zone A: 콘텐츠 현황 -->
-      <div class="dashboard-stats-zone-a">
+      <!-- Stats Grid: Content + Operations -->
+      <div class="dashboard-stats-grid">
         <a href="/admin/posts/" class="dashboard-stat-card">
           <div class="dashboard-stat-label">News</div>
           <div class="dashboard-stat-value">
@@ -248,58 +301,37 @@ function relativeTime(dateStr: string): string {
             {blogDrafts > 0 && <span class="dashboard-stat-draft">/ {blogDrafts}</span>}
           </div>
         </a>
-      </div>
-
-      <!-- Zone B: AI 운영 비용 -->
-      <a href="/admin/pipeline-analytics" class="dashboard-ai-cost-card">
-        <div class="dashboard-ai-cost-label">AI Cost (this month)</div>
-        <div class="dashboard-ai-cost-body">
-          <span class="dashboard-ai-cost-main">${monthlyCost.toFixed(2)}</span>
-          <span class="dashboard-ai-cost-tokens">{monthlyTokens.toLocaleString()} tokens</span>
-        </div>
-      </a>
-
-      <!-- Zone C: 사이트 성과 -->
-      <div class="dashboard-stats-zone-c">
+        <a href="/admin/products/" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Products</div>
+          <div class="dashboard-stat-value">{totalProducts}</div>
+        </a>
+        <a href="/admin/analytics#traffic" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Users</div>
+          <div class="dashboard-stat-value">{totalUsers}</div>
+        </a>
+        <a href="/admin/analytics#traffic" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">Likes</div>
+          <div class="dashboard-stat-value">{totalLikes}</div>
+        </a>
         <a href="/admin/handbook/" class="dashboard-stat-card dashboard-stat-card--highlight">
           <div class="dashboard-stat-label">AI Review</div>
           <div class="dashboard-stat-value">{aiPendingCount}</div>
         </a>
-        <a href="/admin/analytics#traffic" class="dashboard-stat-card dashboard-stat-card--link">
-          <div class="dashboard-stat-label">Users</div>
-          <div class="dashboard-stat-value">{totalUsers}</div>
-        </a>
-        <a href="/admin/analytics#traffic" class="dashboard-stat-card dashboard-stat-card--link">
-          <div class="dashboard-stat-label">Likes</div>
-          <div class="dashboard-stat-value">{totalLikes}</div>
+        <a href="/admin/pipeline-analytics" class="dashboard-stat-card">
+          <div class="dashboard-stat-label">AI Cost</div>
+          <div class="dashboard-stat-value">${monthlyCost.toFixed(2)}</div>
+          <div class="dashboard-stat-sub">{monthlyTokens.toLocaleString()} tokens</div>
         </a>
       </div>
 
-      <section class="dashboard-section">
-        <h2 class="dashboard-section-title">Site Analytics</h2>
-        <div class="dashboard-source-row">
-          <a href="/admin/handbook/" class="dashboard-source-chip">
-            <span class="dashboard-source-label">Manual</span>
-            <span class="dashboard-source-count">{termsBySource.manual}</span>
-          </a>
-          <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--pipeline">
-            <span class="dashboard-source-label">Pipeline</span>
-            <span class="dashboard-source-count">{termsBySource.pipeline}</span>
-          </a>
-          <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--ai">
-            <span class="dashboard-source-label">AI Suggested</span>
-            <span class="dashboard-source-count">{termsBySource['ai-suggested']}</span>
-          </a>
-        </div>
-      </section>
-
+      <!-- Pipeline Status (most actionable — check daily) -->
       <section class="dashboard-section">
         <h2 class="dashboard-section-title">Pipeline Status</h2>
         {lastRun ? (
           <div class={`dashboard-pipeline dashboard-pipeline--${lastRun.status}`}>
             <div class="dashboard-pipeline-header">
               <span class="dashboard-pipeline-status">
-                {lastRun.status === 'success' ? '✓' : lastRun.status === 'failed' ? '✗' : '●'} {lastRun.status}
+                <span class="dashboard-pipeline-dot"></span> {lastRun.status}
               </span>
               <span class="dashboard-pipeline-time">{relativeTime(lastRun.started_at)}</span>
             </div>
@@ -336,12 +368,17 @@ function relativeTime(dateStr: string): string {
                 </button>
               )}
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
-              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
-                <input type="checkbox" id="include-handbook" checked />
-                Include handbook
-              </label>
-              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+            </div>
+            <div class="dashboard-pipeline-settings">
+              <label class="dashboard-pipeline-toggle">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook (manual run)
+              </label>
+              <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
+                <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
+                Auto-extract terms (cron)
+              </label>
             </div>
           </div>
         ) : (
@@ -360,15 +397,79 @@ function relativeTime(dateStr: string): string {
                 </button>
               )}
               <a href="/admin/pipeline-runs" class="admin-btn">View pipeline runs</a>
-              <label style="font-size:0.78rem;color:var(--color-text-muted);display:inline-flex;align-items:center;gap:0.3rem;cursor:pointer">
-                <input type="checkbox" id="include-handbook" checked />
-                Include handbook
-              </label>
-              <span class="dashboard-pipeline-helper">Run Pipeline collects and generates AI news.</span>
               <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+            </div>
+            <div class="dashboard-pipeline-settings">
+              <label class="dashboard-pipeline-toggle">
+                <input type="checkbox" id="include-handbook" checked />
+                Include handbook (manual run)
+              </label>
+              <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
+                <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
+                Auto-extract terms (cron)
+              </label>
             </div>
           </div>
         )}
+      </section>
+
+      <!-- Quality Score Charts -->
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Quality Score Trend</h2>
+        <div class="dashboard-charts-row">
+          <div class="dashboard-chart-card">
+            <h3 class="dashboard-chart-label">News</h3>
+            <div class="dashboard-chart-wrap">
+              <canvas id="dash-chart-news-quality"></canvas>
+            </div>
+          </div>
+          <div class="dashboard-chart-card">
+            <h3 class="dashboard-chart-label">Handbook</h3>
+            <div class="dashboard-chart-wrap">
+              <canvas id="dash-chart-hb-quality"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {notifications.length > 0 && (
+        <section class="dashboard-section">
+          <div class="dashboard-section-header">
+            <h2 class="dashboard-section-title">Notifications</h2>
+            <button type="button" class="admin-btn-text" id="mark-all-read-btn">Mark all read</button>
+          </div>
+          <ul class="dashboard-activity-list">
+            {notifications.map((n) => (
+              <li class="dashboard-activity-item">
+                <div class="dashboard-notification">
+                  <span class={`dashboard-notification-badge dashboard-notification-badge--${n.type}`}>
+                    {n.type === 'error' ? 'ERR' : n.type === 'pipeline' ? 'SYS' : 'INFO'}
+                  </span>
+                  <span class="dashboard-notification-title">{n.title}</span>
+                  <span class="dashboard-activity-time">{relativeTime(n.created_at)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section class="dashboard-section">
+        <h2 class="dashboard-section-title">Handbook Sources</h2>
+        <div class="dashboard-source-row">
+          <a href="/admin/handbook/" class="dashboard-source-chip">
+            <span class="dashboard-source-label">Manual</span>
+            <span class="dashboard-source-count">{termsBySource.manual}</span>
+          </a>
+          <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--pipeline">
+            <span class="dashboard-source-label">Pipeline</span>
+            <span class="dashboard-source-count">{termsBySource.pipeline}</span>
+          </a>
+          <a href="/admin/handbook/" class="dashboard-source-chip dashboard-source-chip--ai">
+            <span class="dashboard-source-label">AI Suggested</span>
+            <span class="dashboard-source-count">{termsBySource['ai-suggested']}</span>
+          </a>
+        </div>
       </section>
 
       {aiSuggestedTerms.length > 0 && (
@@ -384,28 +485,6 @@ function relativeTime(dateStr: string): string {
                   <span class="admin-source-badge admin-source-badge--ai-suggested">AI</span>
                   <span class="dashboard-activity-time">{relativeTime(item.updated_at)}</span>
                 </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {notifications.length > 0 && (
-        <section class="dashboard-section">
-          <div class="dashboard-section-header">
-            <h2 class="dashboard-section-title">Notifications</h2>
-            <button type="button" class="admin-btn-text" id="mark-all-read-btn">Mark all read</button>
-          </div>
-          <ul class="dashboard-activity-list">
-            {notifications.map((n) => (
-              <li class="dashboard-activity-item">
-                <div class="dashboard-notification">
-                  <span class="dashboard-notification-icon">
-                    {n.type === 'error' ? '⚠' : n.type === 'pipeline' ? '⚙' : '🔔'}
-                  </span>
-                  <span class="dashboard-notification-title">{n.title}</span>
-                  <span class="dashboard-activity-time">{relativeTime(n.created_at)}</span>
-                </div>
               </li>
             ))}
           </ul>
@@ -476,98 +555,47 @@ function relativeTime(dateStr: string): string {
     gap: 0.5rem;
   }
 
-  /* Zone A — 콘텐츠 현황 */
-  .dashboard-stats-zone-a {
+  /* Stats Grid — unified 4-col, 2 rows */
+  .dashboard-stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
   }
 
-  .dashboard-stats-zone-a .dashboard-stat-card {
-    padding: 1.25rem 1rem;
-  }
-
-  .dashboard-stats-zone-a .dashboard-stat-value {
-    font-size: 2rem;
+  .dashboard-stats-grid .dashboard-stat-value {
+    font-size: 1.5rem;
     display: flex;
     align-items: baseline;
     gap: 0.3rem;
   }
 
   .dashboard-stat-draft {
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 400;
     color: var(--color-text-muted);
   }
 
-  /* Zone B — AI 운영 비용 */
-  .dashboard-ai-cost-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-secondary);
-    padding: 0.875rem 1rem;
-    text-decoration: none;
-    color: inherit;
-    margin-bottom: 0.75rem;
-    transition: border-color 0.15s;
-  }
-
-  .dashboard-ai-cost-card:hover {
-    border-color: var(--color-text-muted);
-  }
-
-  .dashboard-ai-cost-label {
-    font-size: 0.8rem;
+  .dashboard-stat-sub {
+    font-size: 0.75rem;
     color: var(--color-text-muted);
-  }
-
-  .dashboard-ai-cost-body {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-  }
-
-  .dashboard-ai-cost-main {
-    font-size: 1.25rem;
-    font-weight: 700;
-  }
-
-  .dashboard-ai-cost-tokens {
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
-  }
-
-  /* Zone C — 사이트 성과 */
-  .dashboard-stats-zone-c {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-top: 0.15rem;
   }
 
   .dashboard-stat-card {
     border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
     background: var(--color-bg-secondary);
     padding: 1rem;
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
   .dashboard-stat-card:hover {
-    border-color: var(--color-text-muted);
-  }
-
-  .dashboard-stat-card--link {
-    cursor: pointer;
-  }
-
-  .dashboard-stat-card--link:hover {
     border-color: var(--color-accent);
-    box-shadow: 0 1px 6px var(--color-shadow);
+    box-shadow: 0 2px 8px var(--color-shadow);
   }
 
   .dashboard-stat-card--highlight {
@@ -587,6 +615,31 @@ function relativeTime(dateStr: string): string {
 
   .dashboard-section {
     margin-bottom: 1.5rem;
+  }
+
+  .dashboard-charts-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .dashboard-chart-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-bg-secondary);
+    padding: 0.75rem;
+  }
+
+  .dashboard-chart-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-chart-wrap {
+    position: relative;
+    height: 250px;
   }
 
   .dashboard-section-title {
@@ -687,6 +740,7 @@ function relativeTime(dateStr: string): string {
   .dashboard-pipeline {
     border: 1px solid var(--color-border);
     border-left: 3px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
     background: var(--color-bg-secondary);
     padding: 1rem;
   }
@@ -714,6 +768,26 @@ function relativeTime(dateStr: string): string {
     font-weight: 600;
     font-size: 0.9rem;
     text-transform: capitalize;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .dashboard-pipeline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .dashboard-pipeline--success .dashboard-pipeline-dot { background: var(--color-success); }
+  .dashboard-pipeline--failed .dashboard-pipeline-dot { background: var(--color-error, #c44); }
+  .dashboard-pipeline--running .dashboard-pipeline-dot { background: var(--color-accent, #e90); animation: pulse-dot 1.5s infinite; }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
 
   .dashboard-pipeline-time {
@@ -734,8 +808,9 @@ function relativeTime(dateStr: string): string {
     font-size: 0.8rem;
     color: var(--color-error, #c44);
     background: var(--color-bg);
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-error, #c44);
+    border-radius: var(--radius-sm, 0.25rem);
     margin-bottom: 0.75rem;
     white-space: pre-wrap;
     word-break: break-word;
@@ -754,9 +829,25 @@ function relativeTime(dateStr: string): string {
     color: var(--color-text-muted);
   }
 
-  .dashboard-pipeline-helper {
-    font-size: 0.8rem;
+  .dashboard-pipeline-settings {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .dashboard-pipeline-toggle {
+    font-size: 0.78rem;
     color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+  }
+
+  .dashboard-pipeline-toggle:hover {
+    color: var(--color-text);
   }
 
   .admin-input--date {
@@ -779,9 +870,25 @@ function relativeTime(dateStr: string): string {
     padding: 0.6rem 0.25rem;
   }
 
-  .dashboard-notification-icon {
-    font-size: 0.9rem;
+  .dashboard-notification-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm, 0.25rem);
     flex-shrink: 0;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-muted);
+  }
+
+  .dashboard-notification-badge--error {
+    background: rgba(196, 68, 68, 0.12);
+    color: var(--color-error, #c44);
+  }
+
+  .dashboard-notification-badge--pipeline {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0ea5e9;
   }
 
   .dashboard-notification-title {
@@ -801,29 +908,39 @@ function relativeTime(dateStr: string): string {
     gap: 0.5rem;
     padding: 0.5rem 0.85rem;
     border: 1px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
     background: var(--color-bg-secondary);
     text-decoration: none;
     color: inherit;
     font-size: 0.85rem;
-    transition: border-color 0.15s;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
   .dashboard-source-chip:hover {
     border-color: var(--color-text-muted);
-  }
-
-  .dashboard-source-chip--pipeline {
-    border-left: 3px solid var(--color-accent, #0ea5e9);
-  }
-
-  .dashboard-source-chip--ai {
-    border-left: 3px solid #7c3aed;
+    box-shadow: 0 1px 4px var(--color-shadow);
   }
 
   .dashboard-source-label {
     color: var(--color-text-muted);
     font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
   }
+
+  .dashboard-source-label::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    flex-shrink: 0;
+  }
+
+  .dashboard-source-chip--pipeline .dashboard-source-label::before { background: #0ea5e9; }
+  .dashboard-source-chip--ai .dashboard-source-label::before { background: #7c3aed; }
 
   .dashboard-source-count {
     font-weight: 700;
@@ -831,18 +948,12 @@ function relativeTime(dateStr: string): string {
   }
 
   @media (max-width: 640px) {
-    .dashboard-stats-zone-a .dashboard-stat-card {
-      padding: 0.75rem 0.5rem;
+    .dashboard-stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .dashboard-stats-zone-a .dashboard-stat-value {
-      font-size: 1.5rem;
-    }
-
-    .dashboard-ai-cost-card {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.35rem;
+    .dashboard-stats-grid .dashboard-stat-value {
+      font-size: 1.25rem;
     }
 
     .admin-quick-actions {
@@ -881,6 +992,30 @@ function relativeTime(dateStr: string): string {
     .dashboard-activity-link .admin-status-badge {
       grid-row: 2;
       grid-column: 1;
+    }
+
+    .dashboard-pipeline-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .dashboard-pipeline-actions .admin-btn,
+    .dashboard-pipeline-actions .admin-btn-primary,
+    .dashboard-pipeline-actions .admin-btn-danger {
+      justify-content: center;
+    }
+
+    .dashboard-pipeline-settings {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .dashboard-source-row {
+      flex-direction: column;
+    }
+
+    .dashboard-source-chip {
+      justify-content: space-between;
     }
   }
 </style>
@@ -1066,6 +1201,160 @@ function relativeTime(dateStr: string): string {
     }
   }
 
+  // Handbook auto-extract toggle — persists to admin_settings via Supabase REST API
+  const autoExtractCheckbox = document.getElementById('handbook-auto-extract') as HTMLInputElement | null;
+  if (autoExtractCheckbox) {
+    autoExtractCheckbox.addEventListener('change', async () => {
+      const enabled = autoExtractCheckbox.checked;
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'handbook_auto_extract', value: enabled }),
+        });
+        if (!res.ok) throw new Error('Save failed');
+        setPipelineFeedback(`Handbook auto-extract ${enabled ? 'enabled' : 'disabled'} for cron runs.`, 'success');
+      } catch {
+        autoExtractCheckbox.checked = !enabled; // revert
+        setPipelineFeedback('Failed to save setting.', 'error');
+      }
+    });
+  }
+
   document.addEventListener('astro:page-load', initDashboardActions);
   initDashboardActions();
+</script>
+
+<script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
+<script is:inline nonce={nonce} define:vars={{ newsQualityData, hbQualityData }}>
+  (function() {
+    if (typeof Chart === 'undefined') return;
+
+    var rootStyle = getComputedStyle(document.documentElement);
+    var textColor = rootStyle.getPropertyValue('--color-text-muted').trim() || '#888';
+    var gridColor = rootStyle.getPropertyValue('--color-border').trim() || '#e5e5e5';
+
+    // ─── News Quality Line Chart ───
+    var newsCanvas = document.getElementById('dash-chart-news-quality');
+    if (newsCanvas) {
+      var research = newsQualityData.filter(function(d) { return d.type === 'research'; });
+      var business = newsQualityData.filter(function(d) { return d.type === 'business'; });
+
+      if (research.length === 0 && business.length === 0) {
+        newsCanvas.parentElement.innerHTML = '<p style="color:' + textColor + ';font-size:0.82rem;text-align:center;padding:2rem 0">No data yet</p>';
+      } else {
+        var datasets = [];
+        if (research.length > 0) {
+          datasets.push({
+            label: 'Research', data: research.map(function(d) { return d.score; }),
+            borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: false, tension: 0.3, pointRadius: 3,
+          });
+        }
+        if (business.length > 0) {
+          datasets.push({
+            label: 'Business', data: business.map(function(d) { return d.score; }),
+            borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            fill: false, tension: 0.3, pointRadius: 3,
+          });
+        }
+        var labels = (research.length >= business.length ? research : business).map(function(d) { return d.label; });
+        var allScores = research.map(function(d) { return d.score; }).concat(business.map(function(d) { return d.score; }));
+        var minScore = allScores.length ? Math.max(0, Math.floor((Math.min.apply(null, allScores) - 10) / 10) * 10) : 0;
+
+        new Chart(newsCanvas, {
+          type: 'line',
+          data: { labels: labels, datasets: datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: textColor, boxWidth: 10, font: { size: 11 } } } },
+            scales: {
+              x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+              y: { min: minScore, max: 100, ticks: { color: textColor, stepSize: 10 }, grid: { color: gridColor } },
+            },
+          },
+        });
+      }
+    }
+
+    // ─── Handbook Quality Bar Chart ───
+    var hbCanvas = document.getElementById('dash-chart-hb-quality');
+    if (hbCanvas) {
+      var hbData = hbQualityData.slice(-50);
+
+      if (hbData.length === 0) {
+        hbCanvas.parentElement.innerHTML = '<p style="color:' + textColor + ';font-size:0.82rem;text-align:center;padding:2rem 0">No data yet</p>';
+      } else {
+        var hbLabels = hbData.map(function(d) { return d.label; });
+        var hbScores = hbData.map(function(d) { return d.score; });
+        var hbPointColors = hbScores.map(function(s) {
+          return s >= 80 ? 'rgba(90, 142, 93, 0.85)' : s >= 60 ? 'rgba(200, 170, 60, 0.85)' : 'rgba(200, 80, 80, 0.85)';
+        });
+
+        // Moving average (window=5)
+        var window = 5;
+        var movingAvg = hbScores.map(function(_, i) {
+          var start = Math.max(0, i - window + 1);
+          var slice = hbScores.slice(start, i + 1);
+          return Math.round(slice.reduce(function(a, b) { return a + b; }, 0) / slice.length);
+        });
+
+        var minScore = Math.max(0, Math.floor((Math.min.apply(null, hbScores) - 10) / 10) * 10);
+
+        new Chart(hbCanvas, {
+          type: 'scatter',
+          data: {
+            labels: hbLabels,
+            datasets: [
+              {
+                label: 'Score',
+                data: hbScores.map(function(s, i) { return { x: i, y: s }; }),
+                backgroundColor: hbPointColors,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+              },
+              {
+                label: 'Avg (5)',
+                data: movingAvg.map(function(s, i) { return { x: i, y: s }; }),
+                type: 'line',
+                borderColor: 'rgba(99, 102, 241, 0.7)',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: textColor, boxWidth: 10, font: { size: 10 } } },
+              tooltip: { callbacks: {
+                title: function(items) {
+                  var idx = items[0].dataIndex;
+                  return hbData[idx] ? hbData[idx].term : '';
+                },
+                label: function(ctx) {
+                  return ctx.dataset.label + ': ' + ctx.parsed.y;
+                },
+              }},
+            },
+            scales: {
+              x: {
+                type: 'linear', min: 0, max: hbScores.length - 1,
+                ticks: {
+                  color: textColor, font: { size: 9 },
+                  callback: function(v) { return hbLabels[v] || ''; },
+                  maxTicksLimit: 10,
+                },
+                grid: { color: gridColor },
+              },
+              y: { min: minScore, max: 100, ticks: { color: textColor, stepSize: 10 }, grid: { color: gridColor } },
+            },
+          },
+        });
+      }
+    }
+  })();
 </script>
