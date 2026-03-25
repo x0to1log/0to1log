@@ -46,8 +46,8 @@ interface Props {
       for (let i = 0; i < 12; i++) {
         const dot = document.createElement('span');
         dot.className = 'confetti-particle';
-        dot.style.setProperty('--cx', (Math.random() * 40 - 20) + 'px');
-        dot.style.setProperty('--cy', -(Math.random() * 40 + 15) + 'px');
+        dot.style.setProperty('--cx', (Math.random() * 50 - 35) + 'px');
+        dot.style.setProperty('--cy', -(Math.random() * 45 + 10) + 'px');
         dot.style.setProperty('--cr', (Math.random() * 360) + 'deg');
         dot.style.setProperty('--cd', (Math.random() * 0.4 + 0.8) + 's');
         dot.style.background = colors[i % colors.length];

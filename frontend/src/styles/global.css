@@ -8462,7 +8462,7 @@ pre:hover .blog-code-copy {
 
 .confetti-particle {
   position: absolute;
-  left: var(--cleft, 50%);
+  right: 0;
   top: 50%;
   width: 6px;
   height: 6px;
