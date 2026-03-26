@@ -13,6 +13,7 @@ type AdminPostRow = {
   category: string | null;
   locale: string | null;
   status: 'draft' | 'published' | string;
+  post_type: string | null;
   updated_at: string;
   published_at: string | null;
   tags?: string[];
@@ -34,7 +35,7 @@ let logTotal = 0;
 try {
   const { data, error } = await sb
     .from('news_posts')
-    .select('id, title, slug, category, locale, status, tags, updated_at, published_at')
+    .select('id, title, slug, category, locale, status, post_type, tags, updated_at, published_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
@@ -172,6 +173,11 @@ const categoryOptions = Array.from(
                   </div>
                   <div class="admin-list-meta">
                     <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
+                    {post.post_type && (
+                      <span class={`admin-posttype-badge admin-posttype-badge--${post.post_type}`}>
+                        {post.post_type === 'research' ? 'R' : 'B'}
+                      </span>
+                    )}
                     {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
                     {post.category && (
                       <>

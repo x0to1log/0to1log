@@ -2638,6 +2638,24 @@ pre {
   color: var(--color-success);
 }
 
+.admin-posttype-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  letter-spacing: 0.03em;
+}
+
+.admin-posttype-badge--research {
+  background: color-mix(in srgb, #10b981 15%, transparent);
+  color: #10b981;
+}
+
+.admin-posttype-badge--business {
+  background: color-mix(in srgb, #6366f1 15%, transparent);
+  color: #6366f1;
+}
+
 .admin-lang-badge--missing {
   color: var(--color-text-muted);
   opacity: 0.6;
