@@ -1,6 +1,6 @@
 # 💰 0to1log — Business Strategy
 
-> **문서 버전:** v2.0
+> **문서 버전:** v2.0  
 > **최종 수정:** 2026-03-26  
 > **작성자:** Amy (Solo)  
 > **상태:** Planning
@@ -72,8 +72,8 @@ Phase 1~2          Phase 2 후반         Phase 3~4            Phase 5
 
 News Pipeline v5 기준 (3-tier 모델: gpt-4.1 + gpt-4.1-mini + o4-mini):
 
-- **일일 비용:** ~$0.32/일
-- **월 비용:** ~$9.6~10.5/월
+- **비용:** ~$0.32/일
+- **월 비용:** ~$9.6–10.5/월
 
 > **기준:** 일평균 API 호출 수 기준 계산. Editorial 에이전트 + Advisor 에이전트 + Quality Check 에이전트의 모델 조합 반영.
 
