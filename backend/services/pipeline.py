@@ -274,17 +274,15 @@ async def _extract_and_create_handbook_terms(
         if not slug:
             continue
 
-        # Check if term already exists
+        # Check if term already exists (separate queries to avoid injection via .or_())
         try:
-            existing = (
-                supabase.table("handbook_terms")
-                .select("id")
-                .or_(f"slug.eq.{slug},term.ilike.{term_name}")
-                .limit(1)
-                .execute()
-            )
-            if existing.data:
-                logger.info("Handbook term '%s' already exists, skipping", term_name)
+            exists_by_slug = supabase.table("handbook_terms").select("id").eq("slug", slug).limit(1).execute()
+            if exists_by_slug.data:
+                logger.info("Handbook term '%s' already exists (slug match), skipping", term_name)
+                continue
+            exists_by_term = supabase.table("handbook_terms").select("id").ilike("term", term_name).limit(1).execute()
+            if exists_by_term.data:
+                logger.info("Handbook term '%s' already exists (term match), skipping", term_name)
                 continue
         except Exception as e:
             logger.warning("Duplicate check failed for '%s': %s", term_name, e)
@@ -1172,7 +1170,7 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         )
         all_errors.extend(errors)
 
-        status = "success" if not errors else "failed"
+        status = "success" if not errors else ("partial" if terms_created > 0 else "failed")
         try:
             supabase.table("pipeline_runs").update({
                 "status": status,

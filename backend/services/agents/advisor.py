@@ -241,7 +241,7 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
     if settings.tavily_api_key:
         from tavily import TavilyClient
         tavily = TavilyClient(api_key=settings.tavily_api_key)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         async def search_claim(claim_text: str) -> list[dict]:
             try:
@@ -448,7 +448,7 @@ async def _run_related_terms(req: HandbookAdviseRequest, client, model: str) -> 
         try:
             from exa_py import Exa
             exa = Exa(api_key=settings.exa_api_key)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             # Build context-aware query using definition if available
             definition = req.definition_en or req.definition_ko or ""
             exa_query = f"{req.term}: {definition[:200]}" if definition else f"technical concepts related to {req.term} in AI and software engineering"
@@ -598,7 +598,7 @@ async def _self_critique_advanced(
     """Self-critique advanced content. Returns (needs_improvement, feedback, score, usage)."""
     from services.agents.prompts_handbook_types import SELF_CRITIQUE_PROMPT
 
-    reasoning_model = settings.openai_model_reasoning
+    reasoning_model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty)
     system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     try:
         resp = await client.chat.completions.create(
@@ -636,7 +636,7 @@ async def _check_handbook_quality(
     from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
 
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
-    reasoning_model = settings.openai_model_reasoning
+    reasoning_model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty)
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(
@@ -718,7 +718,7 @@ async def _check_basic_quality(
     from services.agents.prompts_handbook_types import BASIC_QUALITY_CHECK_PROMPT
 
     system = BASIC_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
-    reasoning_model = settings.openai_model_reasoning
+    reasoning_model = settings.openai_model_light  # gpt-4.1-mini (consistent with advanced quality check)
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(
@@ -762,13 +762,13 @@ async def _validate_ref_urls(content: str) -> str:
     # HEAD check all URLs concurrently with timeout
     async def _head_check(url: str) -> tuple[str, bool]:
         try:
-            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 resp = await client.head(url)
                 if resp.status_code in (403, 405):
                     resp = await client.get(url)
                 return url, resp.status_code < 400
         except (httpx.TimeoutException, httpx.RequestError):
-            return url, False
+            return url, True  # assume valid on timeout — don't strip on network error
 
     results = await asyncio.gather(
         *[_head_check(u) for u in urls_to_check],
@@ -1074,10 +1074,10 @@ async def _run_generate_term(
 
     # --- Call 4 (EN Advanced) + Basic Self-Critique — PARALLEL ---
     basic_ko_preview = "\n\n".join(
-        f"## {k}: {v[:300]}" for k, v in basic_data.items() if k.startswith("basic_ko_")
+        f"## {k}: {v[:1000]}" for k, v in basic_data.items() if k.startswith("basic_ko_")
     )
     basic_en_preview = "\n\n".join(
-        f"## {k}: {v[:300]}" for k, v in en_basic_data.items() if k.startswith("basic_en_")
+        f"## {k}: {v[:1000]}" for k, v in en_basic_data.items() if k.startswith("basic_en_")
     )
 
     call4_task = client.chat.completions.create(
@@ -1157,7 +1157,7 @@ async def _run_generate_term(
 
     # --- Self-critique advanced KO content ---
     adv_ko_preview = "\n\n".join(
-        f"## {k}: {v[:300]}" for k, v in advanced_ko_data.items() if k.startswith("adv_ko_")
+        f"## {k}: {v[:1000]}" for k, v in advanced_ko_data.items() if k.startswith("adv_ko_")
     )
     needs_improvement, critique_feedback, critique_score, critique_usage = (
         await _self_critique_advanced(req.term, term_type, adv_ko_preview, client, model)
@@ -1167,8 +1167,8 @@ async def _run_generate_term(
         req.term, critique_score, needs_improvement,
     )
 
-    # If needs improvement, regenerate advanced KO with feedback
-    if needs_improvement and critique_feedback:
+    # Only regenerate if score is below threshold (not just needs_improvement flag)
+    if needs_improvement and critique_feedback and critique_score < 75:
         logger.info("Regenerating advanced KO for '%s' with critique feedback", req.term)
         improved_system = f"{adv_ko_system}\n\n## Reviewer Feedback (MUST address these):\n{critique_feedback}"
         resp3b = await client.chat.completions.create(
@@ -1190,7 +1190,7 @@ async def _run_generate_term(
 
     # --- Self-critique advanced EN content ---
     adv_en_preview = "\n\n".join(
-        f"## {k}: {v[:300]}" for k, v in advanced_en_data.items() if k.startswith("adv_en_")
+        f"## {k}: {v[:1000]}" for k, v in advanced_en_data.items() if k.startswith("adv_en_")
     )
     en_needs_improvement, en_critique_feedback, en_critique_score, en_critique_usage = (
         await _self_critique_advanced(req.term, term_type, adv_en_preview, client, model)
@@ -1200,7 +1200,7 @@ async def _run_generate_term(
         req.term, en_critique_score, en_needs_improvement,
     )
 
-    if en_needs_improvement and en_critique_feedback:
+    if en_needs_improvement and en_critique_feedback and en_critique_score < 75:
         logger.info("Regenerating advanced EN for '%s' with critique feedback", req.term)
         improved_en_adv_system = f"{adv_en_system}\n\n## Reviewer Feedback (MUST address these):\n{en_critique_feedback}"
         resp4b = await client.chat.completions.create(

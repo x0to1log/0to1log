@@ -738,7 +738,6 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ 1_plain contains a concrete mechanism explanation, not just an analogy
 ✓ 2_example uses surprising, non-obvious scenarios (NOT smartphones/self-driving/voice assistants)
 ✓ Table compares 2+ specific technologies/concepts (not "high vs low" or single-term glossary)
-✓ korean_name is in Korean (not English)
 ✓ Every product/service example is factually correct
 ✓ 7_comm sounds like a team meeting/slack, not a news article
 ✓ 8_related includes comparison points that trigger curiosity
