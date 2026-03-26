@@ -226,17 +226,7 @@ export async function getNewsDetailPageData({
       : undefined;
 
     factPack = Array.isArray(post.fact_pack) ? post.fact_pack : [];
-    // Persona-specific sources from guide_items, fallback to source_cards
-    const gi = post.guide_items || {};
-    if (gi.sources_expert || gi.sources_learner) {
-      // Use persona-specific sources when available
-      sourceCards = normalizeSourceCards({
-        source_cards: gi[`sources_${activePersona || 'expert'}`] || gi.sources_expert || gi.sources_learner,
-        source_urls: post.source_urls,
-      });
-    } else {
-      sourceCards = normalizeSourceCards(post);
-    }
+    sourceCards = normalizeSourceCards(post);
 
     // Collect FastAPI result (was running in parallel with DB queries + termsMap build)
     similarPosts = await similarPostsPromise;
@@ -313,15 +303,19 @@ export async function getNewsDetailPageData({
 
   // Build persona-specific source cards map for tab switching
   const personaSourceCardsMap: Record<string, typeof sourceCards> = {};
-  const guideItems = post?.guide_items || {};
-  for (const pname of ['expert', 'learner']) {
-    const psrc = guideItems[`sources_${pname}`];
-    if (psrc) {
-      personaSourceCardsMap[pname] = normalizeSourceCards({
-        source_cards: psrc,
-        source_urls: post?.source_urls,
-      });
+  try {
+    const guideItems = post?.guide_items || {};
+    for (const pname of ['expert', 'learner']) {
+      const psrc = guideItems[`sources_${pname}`];
+      if (Array.isArray(psrc) && psrc.length > 0) {
+        personaSourceCardsMap[pname] = normalizeSourceCards({
+          source_cards: psrc,
+          source_urls: post?.source_urls,
+        });
+      }
     }
+  } catch {
+    // Fallback: persona sources unavailable, sourceCards (default) will be used
   }
 
   return {
