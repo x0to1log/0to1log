@@ -22,8 +22,13 @@ OPENAI_MODEL_PRICING_PER_1M = {
 
 
 def get_openai_client() -> AsyncOpenAI:
-    """Return a configured AsyncOpenAI client with 120s timeout."""
-    return AsyncOpenAI(api_key=settings.openai_api_key, timeout=120.0)
+    """Return a configured AsyncOpenAI client with 180s default timeout.
+
+    Individual callers can override with shorter timeouts where appropriate
+    (e.g., handbook quality checks). News digest calls need the full 180s
+    because they generate EN+KO simultaneously with 16K max_tokens.
+    """
+    return AsyncOpenAI(api_key=settings.openai_api_key, timeout=300.0)
 
 
 def is_o_series(model: str) -> bool:

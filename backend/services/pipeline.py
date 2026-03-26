@@ -297,9 +297,17 @@ async def _extract_and_create_handbook_terms(
 
     # Generate terms concurrently (max 2 at a time)
     sem = asyncio.Semaphore(2)
+    pipeline_start = time.monotonic()
+    PIPELINE_TIMEOUT_SEC = 30 * 60  # 30 minutes max for entire handbook pipeline
 
     async def _create_single_term(term_name: str, korean_name: str, slug: str) -> tuple[int, list[str]]:
         """Generate and save a single handbook term. Returns (created_count, errors)."""
+        # Check pipeline-level timeout before starting a new term
+        elapsed = time.monotonic() - pipeline_start
+        if elapsed > PIPELINE_TIMEOUT_SEC:
+            msg = f"Handbook pipeline timeout ({int(elapsed)}s) — skipping '{term_name}'"
+            logger.warning(msg)
+            return 0, [msg]
         async with sem:
             # Filter to articles that mention this specific term
             relevant = [a for a in article_texts if term_name.lower() in a.lower()]

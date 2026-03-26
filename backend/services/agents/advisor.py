@@ -542,14 +542,17 @@ async def _search_term_context(term: str) -> str:
     try:
         tavily = TavilyClient(api_key=settings.tavily_api_key)
         loop = asyncio.get_running_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda: tavily.search(
-                query=f"{term} AI technology explained",
-                search_depth="advanced",
-                max_results=5,
-                include_raw_content=False,
+        results = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: tavily.search(
+                    query=f"{term} AI technology explained",
+                    search_depth="advanced",
+                    max_results=5,
+                    include_raw_content=False,
+                ),
             ),
+            timeout=30,
         )
         if not results.get("results"):
             return ""
