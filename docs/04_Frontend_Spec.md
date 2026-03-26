@@ -1,7 +1,7 @@
 # 🎨 0to1log — Frontend Spec
 
-> **문서 버전:** v2.3  
-> **최종 수정:** 2026-03-05  
+> **문서 버전:** v2.4
+> **최종 수정:** 2026-03-26  
 > **작성자:** Amy (Solo)  
 > **상태:** Planning  
 > **상위 문서:** `01_Project_Overview.md`
@@ -20,7 +20,7 @@
 
 ## 1. 기술 스택
 
-> Naming boundary: public-facing `Log` copy is now `AI News`, internal/admin `Log` copy is now `Posts`, and route compatibility remains `/{locale}/log/`.
+> Naming boundary: public-facing `Log` copy is now `AI News`, internal/admin `Log` copy is now `Posts`, and route base is now `/{locale}/news/`. Legacy `/{locale}/log/` maintained as redirect target for backwards compatibility.
 > Navigation shell contract: Web = `[Brand] [Primary Nav] [Utilities]`; Mobile/App = `[Brand/Page] [Profile or Settings]` + primary nav exposed separately.
 
 | 기술 | 버전 | 역할 |
@@ -55,8 +55,8 @@ Astro `hybrid` 모드 사용: `output: 'hybrid'` + `adapter: vercel()`. 기본 S
 | 페이지 | 렌더링 모드 | 설정 | 이유 |
 |---|---|---|---|
 | **Home** (`/`) | SSR | `prerender = false` | Today's AI Pick이 매일 바뀜 |
-| **Log** (`/log`) | SSR | `prerender = false` | 매일 2개 자동 발행, 항상 최신 목록 필요 |
-| **Post Detail** (`/log/[slug]`) | SSG + on-demand revalidation | `prerender = true` (기본) | 발행 후 내용이 거의 안 바뀜. 파이프라인 발행 시 revalidate 호출 |
+| **News** (`/news`) | SSR | `prerender = false` | 매일 2개 자동 발행, 항상 최신 목록 필요 |
+| **Post Detail** (`/news/[slug]`) | SSG + on-demand revalidation | `prerender = true` (기본) | 발행 후 내용이 거의 안 바뀜. 파이프라인 발행 시 revalidate 호출 |
 | **Portfolio** (`/portfolio`) | SSG | `prerender = true` (기본) | 정적 콘텐츠, 수동 업데이트 시에만 재빌드 |
 | **Admin** (`/admin/*`) | SSR | `prerender = false` | 항상 최신 데이터 + 인증 체크 필요 |
 
@@ -412,7 +412,7 @@ Astro 설정: `shikiConfig: { theme: 'css-variables' }` — 인라인 스타일 
 - 우측 미니 챗봇 아이콘
 - Phase 3 전까지는 기본 키워드 검색으로 동작, Phase 3에서 시맨틱 검색으로 업그레이드
 
-### 3-2. Log ( `/log` )
+### 3-2. News ( `/news` )
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -446,7 +446,7 @@ Astro 설정: `shikiConfig: { theme: 'css-variables' }` — 인라인 스타일 
 - 태그, 읽기 시간, 발행 시간
 - 뉴스 온도 표시 (카드 좌측 얇은 컬러 바)
 
-### 3-3. Post Detail ( `/log/[slug]` )
+### 3-3. Post Detail ( `/news/[slug]` )
 
 #### Research 포스트 레이아웃
 
