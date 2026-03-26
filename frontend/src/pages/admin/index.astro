@@ -1368,7 +1368,7 @@ function relativeTime(dateStr: string): string {
         }
         var labels = (research.length >= business.length ? research : business).map(function(d) { return d.label; });
         var allScores = research.map(function(d) { return d.score; }).concat(business.map(function(d) { return d.score; }));
-        var minScore = allScores.length ? Math.max(0, Math.floor((Math.min.apply(null, allScores) - 10) / 10) * 10) : 0;
+        var minScore = allScores.length ? Math.max(50, Math.floor((Math.min.apply(null, allScores) - 10) / 10) * 10) : 50;
 
         new Chart(newsCanvas, {
           type: 'line',

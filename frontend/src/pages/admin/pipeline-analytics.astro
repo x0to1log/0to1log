@@ -999,7 +999,7 @@ const nonce = Astro.locals.cspNonce || '';
           y: {
             min: (function() {
               var all = [].concat(chartData.quality.research, chartData.quality.business).filter(function(v) { return v > 0; });
-              return all.length ? Math.max(0, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10) : 0;
+              return all.length ? Math.max(50, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10) : 50;
             })(),
             max: 100,
             ticks: { color: textColor, stepSize: 10 },
