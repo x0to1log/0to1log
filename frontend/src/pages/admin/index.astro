@@ -150,7 +150,10 @@ try {
     const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
     const score = typeof meta.quality_score === 'number' ? meta.quality_score : typeof meta.score === 'number' ? meta.score : null;
     if (score === null) continue;
-    const d = new Date(q.pipeline_runs.started_at);
+    // Use run_key date (news target date), not started_at (pipeline execution time)
+    const runKey = q.pipeline_runs.run_key || '';
+    const dateMatch = runKey.match(/(\d{4}-\d{2}-\d{2})/);
+    const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.pipeline_runs.started_at);
     newsQualityData.push({
       label: `${d.getMonth() + 1}/${d.getDate()}`,
       score,

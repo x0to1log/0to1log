@@ -254,10 +254,14 @@ const chartData = {
     research: qualityEntries.filter((q) => q.type === 'research').map((q) => q.score),
     business: qualityEntries.filter((q) => q.type === 'business').map((q) => q.score),
     researchLabels: qualityEntries.filter((q) => q.type === 'research').map((q) => {
-      const d = new Date(q.startedAt); return `${d.getMonth() + 1}/${d.getDate()}`;
+      const dateMatch = q.runKey.match(/(\d{4}-\d{2}-\d{2})/);
+      const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.startedAt);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
     }),
     businessLabels: qualityEntries.filter((q) => q.type === 'business').map((q) => {
-      const d = new Date(q.startedAt); return `${d.getMonth() + 1}/${d.getDate()}`;
+      const dateMatch = q.runKey.match(/(\d{4}-\d{2}-\d{2})/);
+      const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.startedAt);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
     }),
   },
   duration: {
