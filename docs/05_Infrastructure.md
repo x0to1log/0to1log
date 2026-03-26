@@ -1,7 +1,7 @@
 # 🏗 0to1log — Infrastructure
 
-> **문서 버전:** v2.3  
-> **최종 수정:** 2026-03-05  
+> **문서 버전:** v3.0
+> **최종 수정:** 2026-03-26  
 > **작성자:** Amy (Solo)  
 > **상태:** Planning  
 > **상위 문서:** `01_Project_Overview.md`
@@ -79,7 +79,7 @@
 | **Vercel** | Frontend 호스팅, CDN, Cron 트리거, Serverless Functions | Hobby (무료) | 월 100GB 대역폭, Serverless 10초 타임아웃, Cron 2개 |
 | **Railway** | FastAPI — 범용 API 백엔드 (파이프라인/검색/커뮤니티/권한) | Starter ($5/월 크레딧) → Stage B 시 Developer | 8GB RAM, vCPU 8코어 |
 | **Supabase** | PostgreSQL, Auth, RLS, 댓글 CRUD, Storage | Free | 500MB DB, 50K MAU, 5GB 대역폭 |
-| **OpenAI** | gpt-4o / gpt-4o-mini API | 종량제 | 일일 ~$0.15 (월 ~$4.5) |
+| **OpenAI** | gpt-4o / gpt-4o-mini API | 종량제 | 일일 ~$0.32 (월 ~$9.6~10.5) |
 | **Tavily** | 뉴스 수집 API | Free (1,000 calls/월) | 일일 ~7쿼리 × 30일 = ~210/월 |
 | **GitHub** | 소스 코드, CI/CD (Actions) | Free | Actions 2,000분/월 |
 | **GA4** | 트래픽 분석, 유저 흐름 | 무료 | — |
@@ -336,10 +336,10 @@ CNAME   www     cname.vercel-dns.com    300    (Vercel)
 - Vercel Cron과 Railway 양쪽에 동일한 시크릿 설정
 - fire-and-forget 패턴으로 202 즉시 반환 → 파이프라인은 백그라운드 실행
 
-**Revalidate ?? ?? ??**
+**Revalidate:**
 > **Contract:** `REVALIDATE_SECRET` is mandatory for `/api/revalidate`, and calls are server-side only.
-- 2? ?? ??: ???? ?? ?? ??, ?? ??? ????? secret ??
-- ?? ??? `pipeline_logs`/?? ??? ???? ?? ?? ? ?? ??
+- ISR 캐시 무효화: 뉴스 파이프라인 완료 후 static 페이지 갱신
+- 상세 구현: `03_Backend_AI_Spec.md` 또는 Railway 파이프라인 로그 참조
 
 **FastAPI CORS:** `CORSMiddleware` — `allow_origins: ["https://0to1log.com", "http://localhost:4321"]`, `allow_methods: ["GET","POST","PATCH"]`, `allow_headers: ["Authorization","Content-Type"]`, `allow_credentials: True`
 
@@ -408,9 +408,9 @@ Vercel에서 자동 적용되는 항목 외에 추가 설정 (vercel.json `heade
 | `X-Frame-Options` | `DENY` |
 | `X-XSS-Protection` | `1; mode=block` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline' googletagmanager.com clarity.ms pagead2.googlesyndication.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' *.supabase.co *.railway.app google-analytics.com clarity.ms` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'nonce-{random}' googletagmanager.com clarity.ms pagead2.googlesyndication.com; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' *.supabase.co *.railway.app google-analytics.com clarity.ms` |
 
-> **`unsafe-inline` 리스크 주의:** `script-src 'unsafe-inline'`은 XSS 공격에 취약하다. Astro의 인라인 스크립트(테마 초기화, Clarity 스크립트 등)를 위해 현재 필요하지만, Phase 1부터 인라인 스크립트를 최소화하는 방향으로 개발하고, **Phase 3에서 nonce 기반 CSP로 전환**하여 `unsafe-inline`을 제거한다.
+> **nonce 기반 CSP:** Phase 3A-SEC에서 `unsafe-inline`을 제거하고 nonce 기반 CSP로 전환했다. 모든 인라인 스크립트는 `<script nonce="{random}">`로 마킹되며, 동적으로 생성되는 스크립트도 동일하게 nonce를 적용한다.
 
 > **CSP 도메인 추가 목록 (Phase별):**
 > - Phase 1b: `googletagmanager.com`, `google-analytics.com`, `clarity.ms` (GA4 + Clarity)
