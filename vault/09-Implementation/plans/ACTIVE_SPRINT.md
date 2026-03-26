@@ -156,50 +156,75 @@
 
 ---
 
-## 게이트 기준 및 Phase 3-Intelligence 전환
+## NP4-Q 스프린트 게이트 (Phase-Flow 기준)
 
-### 스프린트 게이트 (NP4-Q 완료 조건)
+### 게이트 상태 (완료 조건)
 
-1. ✅ **Pipeline 안정화** — 48+/50 tasks complete (96%)
-2. 🔄 **프롬프트 감사 P0/P1** — 11/52 배포, 41개 rolling fix (2026-03-28 목표 70%)
-3. 🔄 **FastAPI Direct Calls** — Vercel timeout 회피, 3개 에디터 (2026-03-27)
-4. ⏳ **품질 체크 Expert/Learner** — 양쪽 평가로 점수 정확화 (2026-03-28)
-5. ⏳ **최종 검증** — `ruff check . ` + `pytest` pass
+| # | 게이트 | 상태 | 기한 | Phase-Flow |
+|---|--------|------|------|-----------|
+| 1 | News Pipeline v4 core (2 personas, skeleton-map) | ✅ | — | [[Phase-Flow#News Pipeline v4]] |
+| 2 | Weekly Recap 백엔드 | ✅ | — | 프론트 통합 대기 |
+| 3 | PROMPT-AUDIT 70% 배포 (41/52 이상) | 🔄 | 2026-03-28 | P0/P1 우선 |
+| 4 | FastAPI Direct Calls (FASTAPI-DIRECT-01) | 🔄 | 2026-03-27 | Admin timeout 회피 |
+| 5 | 품질 체크 Expert/Learner (QUALITY-CHECK-02) | 🔄 | 2026-03-28 | 양쪽 평가 |
+| 6 | `ruff check .` + `pytest tests/` 통과 | ⏳ | PROMPT-AUDIT 후 | 최종 검증 |
 
-### Phase 3-Intelligence 진입 기준 (2026-03-30 목표)
+### Phase 3-Intelligence 진입 기준
 
-- [x] News Pipeline v4 core (2 personas, skeleton-map) — **완료**
-- [ ] PROMPT-AUDIT-01 70% 배포 (41/52 이상) — **2026-03-28까지**
-- [x] Weekly Recap 백엔드 — **완료** (프론트 통합 대기)
-- [ ] FastAPI direct calls 4개 에디터 — **2026-03-27까지**
-- [ ] 품질 점수 안정화 (avg ≥75) — **데이터 축적 중**
+**목표 시작:** 2026-03-30
 
-### v4 구현 의존성 (완료 그래프)
+**선행 조건:**
+- [x] News Pipeline v4 완료 (2026-03-17) — [[Phase-Flow#파이프라인 진화]]
+- 🔄 PROMPT-AUDIT 70% 배포 (~2026-03-28)
+- 🔄 FastAPI direct + quality check (~2026-03-28)
+- ⏳ ruff + pytest 통과
 
+**진입 후 Wave별 계획:**
 ```
-[Core v4] v4-MODEL, v4-CLASSIFY, v4-PERSONA, v4-SKELETON
-    ↓
-[Infrastructure] v4-PIPE, v4-CRON, v4-E2E, v4-DEPLOY
-    ↓
-[Quality] QUALITY-01~07, PROMPT-AUDIT-01 (rolling)
-    ↓
-[FE Integration] 2-tab (Expert/Learner), Weekly-FE
-    ↓
-[Post-v4] COMMUNITY-01 (optional), AUTOPUB-01
+Wave 1 (2026-03-30~04-10): 개인화 기초
+├─ 개인 학습 프로필 (사용자 선호도)
+├─ 뉴스 추천 알고리즘
+└─ Weekly Recap 프론트엔드 통합
+
+Wave 2 (2026-04-10~04-20): 커뮤니티 기반
+├─ COMMUNITY-01: Reddit/HN/X 반응 수집
+├─ 사용자 피드백 수집 (퀴즈, 북마크)
+└─ 트렌드 분석 & 핫이슈
+
+Wave 3 (2026-04-20~05-01): 자동화
+├─ AUTOPUB-01: Quality ≥80 자동 발행
+├─ 스마트 발행 스케줄
+└─ A/B 테스트 자동화
 ```
+
+→ 상세: [[Phase-Flow#Phase 3-Intelligence]]
 
 ---
 
-## Phase 3-Intelligence 계획
+## Phase 3-Intelligence 다음 Phases
 
-> **예상 시작:** 2026-03-30 (NP4-Q 게이트 통과 + PROMPT-AUDIT 70% 배포 후)
-> **목표:** 지능형 학습 추천 시스템 + 개인화 피드 + 커뮤니티 기반 큐레이션
+### Phase 4 — Community (미래)
+**커뮤니티 기반 학습** — Semantic Search, 포인트 시스템, Prediction Game
+- AI Semantic Search (Cmd+K → pgvector)
+- Dynamic OG Image
+- Highlight to Share
+- 포인트 시스템 UI
+- Prediction Game UI
 
-### 진입 전제조건
-1. ✅ News Pipeline v4 완전 배포 + 안정화
-2. 🔄 PROMPT-AUDIT-01 70% (41/52) 배포
-3. ⏳ FastAPI Direct Calls 완료 (Vercel timeout 회피)
-4. 📊 품질 점수 데이터 충분 축적
+→ 상세: [[Phase-Flow#Phase 4]]
+
+### Phase 5 — Native App (미래)
+**PWA → iOS/Android** — 오프라인 지원, 푸시 알림, 원클릭 설치
+- PWA 검증 → 네이티브 전환
+- Go Gate: 설치율 4%+ (4주 연속) / 유지율 25%+
+
+→ 상세: [[Phase-Flow#Phase 5]]
+
+### 미래 기능 (설계 완료, 구현 대기)
+- **AI Products**: 7개 카테고리 (LLM, Image Gen, Video Gen 등) — [[Phase-Flow#AI Products]]
+- **Factcheck**: Quick Check + Deep Verify — [[Phase-Flow#Factcheck]]
+- **Legal & Compliance**: Privacy, Terms, Cookie Consent (⚠️ 시급)
+- **Monetization**: Affiliate → AdSense → Premium 구독
 
 ### Phase 3-Intelligence 핵심 태스크
 
