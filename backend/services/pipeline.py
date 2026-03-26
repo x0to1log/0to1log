@@ -827,7 +827,7 @@ async def _generate_digest(
             "focus_items": focus_items or [],
             "reading_time_min": reading_time,
             "source_urls": source_urls,
-            "source_cards": digest_sources or [],
+            "source_cards": [s for s in (digest_sources or []) if s.get("url")],
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
