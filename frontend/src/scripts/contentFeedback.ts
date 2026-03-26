@@ -242,6 +242,12 @@ function initContentFeedback(): void {
       }
     };
 
+    const deleteFeedback = async (): Promise<boolean> => {
+      const params = new URLSearchParams({ source_type: sourceType, source_id: sourceId, locale });
+      const res = await fetch(`/api/user/content-feedback?${params.toString()}`, { method: 'DELETE' });
+      return res.ok;
+    };
+
     buttons.forEach((button) => {
       button.addEventListener('click', async () => {
         const reaction = button.dataset.reaction;
@@ -249,6 +255,22 @@ function initContentFeedback(): void {
 
         if (!isAuthenticated) {
           openAuthPrompt({ action: 'feedback', redirectTo: resolveRedirect(root) });
+          return;
+        }
+
+        // Toggle off: clicking the already-selected reaction removes feedback
+        if (reaction === currentReaction) {
+          button.disabled = true;
+          try {
+            if (await deleteFeedback()) {
+              currentReason = null;
+              currentMessage = null;
+              setSelectedReaction(null);
+              setStatus('');
+            }
+          } catch { /* silent */ } finally {
+            button.disabled = false;
+          }
           return;
         }
 
