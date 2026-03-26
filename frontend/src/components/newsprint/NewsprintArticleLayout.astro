@@ -302,6 +302,9 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-quizzes={JSON.stringify({
         expert: guideItemsAny?.quiz_poll_expert || null,
         learner: guideItemsAny?.quiz_poll_learner || null,
+      })} data-sources={JSON.stringify({
+        expert: guideItemsAny?.sources_expert || null,
+        learner: guideItemsAny?.sources_learner || null,
       })}></template>
     </>
   )}
@@ -515,6 +518,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
     const quizMap: Record<string, any> = JSON.parse(template.dataset.quizzes || '{}');
+    const sourcesMap: Record<string, any[]> = JSON.parse(template.dataset.sources || '{}');
     const prose = document.querySelector('.newsprint-prose');
     const switcher = document.querySelector<HTMLElement>('.persona-switcher');
     const floatEl = document.getElementById('persona-float');
@@ -545,6 +549,26 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       initQuiz();
     }
 
+    function updateSources(persona: string) {
+      const sourcesList = document.querySelector('.newsprint-sources-list');
+      const sourcesCount = document.querySelector('.newsprint-sources-count');
+      if (!sourcesList) return;
+      const cards = sourcesMap[persona];
+      if (!Array.isArray(cards) || cards.length === 0) return;
+      const hostname = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'Source'; } };
+      sourcesList.innerHTML = cards.map((card: any, i: number) => {
+        const pub = card.publisher || hostname(card.url || '');
+        const title = card.title && card.title !== pub ? `<span class="source-card-title">${card.title}</span>` : '';
+        return `<a class="source-card" id="source-card-${i + 1}" href="${card.url || ''}" target="_blank" rel="noopener noreferrer">
+          <span class="source-card-index">[${i + 1}]</span>
+          <span class="source-card-publisher">${pub}</span>
+          ${title}
+          <svg class="source-card-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>`;
+      }).join('');
+      if (sourcesCount) sourcesCount.textContent = String(cards.length);
+    }
+
     function setActivePersona(p: string) {
       if (!map[p]) return;
       prose!.innerHTML = map[p];
@@ -555,6 +579,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.persona === p));
       updateQuiz(p);
+      updateSources(p);
       document.querySelector('.newsprint-lead-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       document.dispatchEvent(new CustomEvent('newsprint:article-content-updated', {
         detail: { root: prose, persona: p },
