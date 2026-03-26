@@ -67,7 +67,7 @@ let recentActivity: ActivityItem[] = [];
 let staleDrafts: ActivityItem[] = [];
 let handbookAutoExtract = true;
 let weeklyEnabled = false;
-let newsQualityData: { label: string; score: number; type: string }[] = [];
+let newsQualityData: { label: string; score: number; type: string; _sortKey: string }[] = [];
 let hbQualityData: { term: string; score: number; label: string }[] = [];
 
 try {
@@ -158,8 +158,10 @@ try {
       label: `${d.getMonth() + 1}/${d.getDate()}`,
       score,
       type: q.pipeline_type.replace('quality:', ''),
+      _sortKey: dateMatch ? dateMatch[1] : q.pipeline_runs.started_at,
     });
   }
+  newsQualityData.sort((a, b) => a._sortKey.localeCompare(b._sortKey));
 
   // Handbook quality chart data
   for (const q of (hbQualityRes.data ?? []) as any[]) {

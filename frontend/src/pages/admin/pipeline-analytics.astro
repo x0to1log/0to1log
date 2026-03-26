@@ -163,6 +163,11 @@ for (const q of (qualityLogs ?? []) as unknown as AnalyticsLog[]) {
     });
   }
 }
+qualityEntries.sort((a, b) => {
+  const aDate = a.runKey.match(/(\d{4}-\d{2}-\d{2})/)?.[1] || a.startedAt;
+  const bDate = b.runKey.match(/(\d{4}-\d{2}-\d{2})/)?.[1] || b.startedAt;
+  return aDate.localeCompare(bDate);
+});
 
 const stageNames = [
   'collect', 'classify',
