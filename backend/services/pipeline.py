@@ -551,7 +551,7 @@ async def _generate_digest(
     digest_headline_ko = ""
     digest_excerpt = ""
     digest_excerpt_ko = ""
-    digest_sources: list[dict] = []
+    persona_sources: dict[str, list[dict]] = {}  # {"expert": [...], "learner": [...]}
     digest_tags: list[str] = []
     digest_focus_items: list[str] = []
     digest_focus_items_ko: list[str] = []
@@ -607,8 +607,8 @@ async def _generate_digest(
                     digest_focus_items = data["focus_items"]
                 if not digest_focus_items_ko and data.get("focus_items_ko"):
                     digest_focus_items_ko = data["focus_items_ko"]
-                if not digest_sources and data.get("sources"):
-                    digest_sources = data["sources"]
+                if data.get("sources") and persona_name not in persona_sources:
+                    persona_sources[persona_name] = data["sources"]
                 # Extract quiz data per persona
                 quiz_en = data.get("quiz_en")
                 quiz_ko = data.get("quiz_ko")
@@ -827,7 +827,7 @@ async def _generate_digest(
             "focus_items": focus_items or [],
             "reading_time_min": reading_time,
             "source_urls": source_urls,
-            "source_cards": [s for s in (digest_sources or []) if s.get("url")],
+            "source_cards": [s for s in (persona_sources.get("expert") or persona_sources.get("learner") or []) if s.get("url")],
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
@@ -837,12 +837,15 @@ async def _generate_digest(
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
 
-        # Build guide_items with persona-specific quizzes
+        # Build guide_items with persona-specific quizzes and sources
         guide_items: dict[str, Any] = {}
         for pname in ("expert", "learner"):
             quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
             if quiz:
                 guide_items[f"quiz_poll_{pname}"] = quiz
+            psrc = persona_sources.get(pname)
+            if psrc:
+                guide_items[f"sources_{pname}"] = [s for s in psrc if s.get("url")]
         if guide_items:
             row["guide_items"] = guide_items
 
@@ -1208,7 +1211,6 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
 
 def _iso_week_id(d=None) -> str:
     """Return ISO week string like '2026-W13'."""
-    from datetime import date as _date
     if d is None:
         d = datetime.strptime(today_kst(), "%Y-%m-%d").date()
     iso_year, iso_week, _ = d.isocalendar()
@@ -1227,6 +1229,7 @@ async def _fetch_week_digests(supabase, week_id: str, locale: str) -> list[dict]
         .eq("locale", locale)
         .eq("category", "ai-news")
         .in_("post_type", ["research", "business"])
+        .eq("status", "published")
         .gte("created_at", monday.isoformat())
         .lte("created_at", sunday.isoformat() + "T23:59:59")
         .order("created_at", desc=False)
@@ -1308,14 +1311,13 @@ async def run_weekly_pipeline(
             # Fetch handbook terms for bottom card
             week_terms = await _fetch_week_handbook_terms(supabase, week_id, locale)
 
-            # Generate per persona (expert + learner)
+            # Generate per persona (expert + learner) in parallel
             personas: dict[str, dict] = {}
             client = get_openai_client()
 
-            for persona in ("expert", "learner"):
+            async def _gen_weekly_persona(persona: str) -> None:
                 t_p = time.monotonic()
                 system_prompt = get_weekly_prompt(persona, language)
-
                 try:
                     response = await asyncio.wait_for(
                         client.chat.completions.create(
@@ -1357,6 +1359,11 @@ async def run_weekly_pipeline(
                         supabase, run_id, f"weekly:{persona}:{locale}", "failed", t_p,
                         error_message=str(e), post_type="weekly", locale=locale,
                     )
+
+            await asyncio.gather(
+                _gen_weekly_persona("expert"),
+                _gen_weekly_persona("learner"),
+            )
 
             if not personas:
                 continue
