@@ -20,7 +20,7 @@ tags:
 
 1. API 스키마 변경은 프론트/백 동시 반영한다 (한쪽만 변경 금지).
 2. 각 태스크 완료 판정은 반드시 `검증 명령 + 통과 조건`으로 기록한다.
-3. [[ACTIVE_SPRINT]] 태스크 ID는 기존 번호대와 충돌하지 않도록 신규 번호대로 발급한다.
+3. [[plans/ACTIVE_SPRINT]] 태스크 ID는 기존 번호대와 충돌하지 않도록 신규 번호대로 발급한다.
 
 **DoD 최소 규칙**
 - `상태=done`이면 반드시 `체크=[x]` + 증거 링크(PR/로그/스크린샷 중 1개 이상)
@@ -71,14 +71,33 @@ flowchart TD
 
 ### Current Status
 
-> [!important] 현재 스프린트: ==News Pipeline v2→v4== (NP4)
+> [!important] 현재 스프린트: ==News Pipeline v4 Quality Stabilization== (NP4-Q)
+> **마지막 업데이트:** 2026-03-26 17:45 (+27 commits since 2026-03-19)
 
-- **완료:** 1a → 1b → 2B → 2C → 2D → 3-USER → 3A-SEC → 3B-SHARE
-- **병렬 완료:** Handbook H1 + 품질 강화 + 2-Call Split + Daily Digest v3 전환 + v4 2-페르소나 전환
-- **진행 중:** NP v4 스프린트 (40+ 태스크 중 ~37 완료) — [[ACTIVE_SPRINT]]
-  - 완료: v2 기반 구현, 파이프라인 인프라, HB Quality, Daily Digest v3, v4 2-페르소나, 퀄리티 스코어링, 인라인 팝업, 핸드북 심화 품질, 에디터 Danger Zone
-  - 남은 것: `PROMPT-AUDIT-01` (프롬프트 감사 52건), `COMMUNITY-01` (커뮤니티 반응), `DIGEST-04` (프론트 검증)
-- **다음:** Phase 3-Intelligence
+- **완료:** 1a → 1b → 2B → 2C → 2D → 3-USER → 3A-SEC → 3B-SHARE ✅
+- **병렬 완료:** Handbook H1 + 품질 강화 + 2-Call Split + Daily Digest v3 전환 + v4 2-페르소나 전환 ✅
+- **진행 중:** NP v4 Quality Stabilization (50+ 태스크 중 48+ 완료) — [[plans/ACTIVE_SPRINT]]
+
+  **완료된 주요 작업 (2026-03-20 이후):**
+  - [x] Per-persona skeleton refactor + Research Learner accessibility (fc517fa)
+  - [x] Prompt structural parity rules (412ec85)
+  - [x] Persona-specific source citations (3133567)
+  - [x] Weekly Recap backend 완성 + parallelize generation (ceb295c)
+  - [x] Quality score Y-axis scaling fix (63c7e9d)
+  - [x] Citation format 표준화 → Perplexity style (8af5625)
+  - [x] Analytics tab 확장 (quiz performance, feedback, traffic) (80f2560)
+  - [x] Handbook admin override 토글 (e14aa7d)
+  - [x] KaTeX math 렌더링 보안 개선 (24aa89a)
+  - [x] 총 11개 prompt quality fix + 16개 아키텍처/QA 개선
+
+  **남은 것:**
+  - [ ] `PROMPT-AUDIT-01`: 52개 이슈 중 11개 fix 배포됨, 41개 남음 (rolling fix 중)
+  - [ ] `COMMUNITY-01`: Reddit/HN/X 반응 수집 (계획서는 작성됨)
+  - [ ] `DIGEST-04`: Daily Digest 프론트엔드 최종 검증
+  - [ ] `WEEKLY-01`: Weekly Recap 프론트엔드 + integrate (backend done)
+  - [ ] ruff check + pytest 통과 (PROMPT-AUDIT 완료 후)
+
+- **다음:** Phase 3-Intelligence (기준: NP4 quality stabilization 완료 + PROMPT-AUDIT 70% 이상 완료 예상 2026-03-30)
 
 ### Product Language Boundary
 

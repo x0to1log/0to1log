@@ -168,12 +168,12 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 
 ---
 
-## News Pipeline v2→v4 🔄 (진행 중)
+## News Pipeline v4 Quality Stabilization 🔄 (진행 중)
 
-> 현재 스프린트. 상세 → [[ACTIVE_SPRINT]]
+> 현재 스프린트: NP v4 스프링 코드 안정화 + 품질 개선. 상세 → [[plans/ACTIVE_SPRINT]]
 
-**스프린트 기간:** 2026-03-15 ~ (진행 중)
-**진행률:** 40+ 태스크 중 ~37 완료
+**스프린트 기간:** 2026-03-15 ~ (진행 중, 예상 종료: 2026-03-30)
+**진행률:** 50+ 태스크 중 48+ 완료 (96%) | 마지막 업데이트: 2026-03-26 17:45
 
 ### 구현된 주요 모듈
 
@@ -202,14 +202,23 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 | **v1** | 2025-12 | 3-페르소나(Expert/Learner/Beginner), `pipeline.py` 모놀리식 (~979줄) | 삭제됨 |
 | **v2** | 2026-01 | 모듈 분리 재설계, Pydantic 모델 정의, Tavily 수집, 백필 지원 | 완료 ✅ |
 | **v3** | 2026-03-15 | Daily Digest 형태 전환, 다이제스트 프롬프트(6 페르소나×R/B), 퀄리티 스코어링 | 완료 ✅ |
-| **v4** | 2026-03-17 | 2-페르소나(Expert/Learner), Beginner 삭제, 비용 최적화 (-33%), 프론트 2탭 | 진행 중 🔄 |
+| **v4** | 2026-03-17 | 2-페르소나(Expert/Learner), Beginner 삭제, 비용 최적화 (-33%), 프론트 2탭 | 진행 중 🔄 (96% 완료, ~2026-03-30 완료 예상) |
+| **v4.1+** | 2026-03-26 | Per-persona skeletons, quality stabilization, citation format, analytics expansion | 배포 중 🚀 |
 
-### 남은 태스크
+### 남은 태스크 (블로킹 vs 선택)
 
-- `PROMPT-AUDIT-01`: 프롬프트 감사 52개 이슈 수정 (P0~P2)
+**Blocking:**
+- `PROMPT-AUDIT-01`: 프롬프트 감사 52개 이슈 (11개 fix 배포됨, 41개 남음, rolling fix 중)
+  - Status: 진행 중 (~50% 완료, P0~P1 대부분 배포됨)
+  - Completion gate: ruff + pytest 통과 (이 후 확정)
+
+**High Priority (NP4 완료 전):**
 - `COMMUNITY-01`: Reddit/HN/X 커뮤니티 반응 수집 → 다이제스트 반영
-- `DIGEST-04`: Daily Digest 프론트엔드 최종 검증
-- *(선택)* `WEEKLY-01`: Weekly Digest, `AUTOPUB-01`: 자동 발행
+- `DIGEST-04`: Daily Digest 프론트엔드 최종 검증 + Quality Score 대시보드
+- `WEEKLY-01`: Weekly Recap 프론트엔드 integration (backend done ✅)
+
+**선택:**
+- `AUTOPUB-01`: 자동 발행 (Phase 3 이후)
 
 **Gate**
 - [x] 파이프라인 1회 실행 → research + business 포스트 draft 저장 성공
@@ -230,9 +239,18 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 
 ---
 
-## 다음: Phase 3-Intelligence (Draft)
+## 다음: Phase 3-Intelligence (In Planning)
 
-> Handbook 2-Call 완료 후. AI 추천 + 학습 고도화.
+> NP4 Quality Stabilization 후. AI 추천 + 학습 고도화. 예상 시작: 2026-03-30
+
+**Phase 3-Intelligence 진입 기준:**
+- [x] News Pipeline v4 핵심 구현 완료
+- [ ] PROMPT-AUDIT-01 70% 이상 배포 (예상 2026-03-28)
+- [ ] COMMUNITY-01 설계 완료 (2026-03-26 ✅)
+- [ ] DIGEST-04 프론트엔드 검증 (예상 2026-03-29)
+- [ ] ruff check + pytest 통과
+
+**Phase 3-Intelligence 태스크:**
 
 | ID | 내용 | 설명 |
 | --- | --- | --- |
