@@ -234,6 +234,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use `>` blockquotes for notable quotes from sources
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
+14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
 {handbook_section}
 
 ## Output JSON format
