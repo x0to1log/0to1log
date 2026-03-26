@@ -68,7 +68,7 @@ const railPosts = headline ? rest.slice(0, 4) : posts.slice(0, 4);
 const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('en', 'business') },
   { value: 'research', label: getPostTypeLabel('en', 'research') },
-  { value: 'weekly', label: 'Weekly Recap' },
+  { value: 'weekly', label: 'Weekly' },
 ];
 const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers', 'Daily Curation', 'Open Access']);
 const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);

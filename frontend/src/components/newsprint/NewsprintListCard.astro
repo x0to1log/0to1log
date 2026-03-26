@@ -41,7 +41,7 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
   data-search-text={searchText}
 >
   {categoryLabel && (
-    <span class="newsprint-card-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}> · {postType === 'weekly' ? 'Weekly Recap' : postType === 'research' ? 'Research' : 'Business'}</span>}</span>
+    <span class="newsprint-card-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}> · {postType === 'weekly' ? 'Weekly' : postType === 'research' ? 'Research' : 'Business'}</span>}</span>
   )}
   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
     <h2 class="newsprint-card-title" style="flex: 1;"><a href={href} class="newsprint-card-stretched-link">{title}</a></h2>

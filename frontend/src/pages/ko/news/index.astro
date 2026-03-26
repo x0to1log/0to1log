@@ -68,7 +68,7 @@ const railPosts = headline ? rest.slice(0, 4) : posts.slice(0, 4);
 const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('ko', 'business') },
   { value: 'research', label: getPostTypeLabel('ko', 'research') },
-  { value: 'weekly', label: 'Weekly Recap' },
+  { value: 'weekly', label: '주간 정리' },
 ];
 const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · 논문', '데일리 큐레이션', '공개 열람']);
 const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
