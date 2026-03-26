@@ -22,6 +22,7 @@
 | v4 | 92 | 88 | 70 | 65 | **79** | Full KO skeleton + 80% length guard |
 | v5 | 93 | 88 | 70 | 65 | **79** | Structural parity (sections/items/paragraphs) |
 | v6 | 95 | 93 | 75 | 78 | **85** | Per-persona skeleton (4 separate skeletons) |
+| v6 (corrected) | 95 | 93 | 85 | 88 | **90** | KO citation was present (WebFetch mistranslation) |
 
 ---
 
@@ -74,7 +75,7 @@ This rule + skeleton example made Research Learner genuinely accessible. Verifie
 ## Remaining Issues
 
 ### High Priority
-- **KO citation missing**: EN has [N](URL) or bottom Sources, KO has neither. Persistent across all versions.
+- ~~**KO citation missing**~~: **RESOLVED** — DB 확인 결과 KO에도 15개 citation 정상 존재. WebFetch 도구가 한국어를 영어로 번역하면서 citation을 제거해서 잘못 평가한 것.
 - **Persona-specific source display**: Backend saves sources_expert/sources_learner separately, but frontend tab switching doesn't update source list yet (reverted due to 500 error).
 
 ### Low Priority
