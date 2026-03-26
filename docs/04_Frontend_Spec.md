@@ -16,11 +16,20 @@
 | `src/lib/api.ts` 정의 | 단순 FastAPI 호출 래퍼 | 검색/커뮤니티/권한/관리 API용 도메인 래퍼로 확장 | 범용 API 백엔드 전환 반영 |
 | 기능별 호출 경로 | 일부 기능만 암시 | Cmd+K/Admin AI/커뮤니티/구독 경로 명시 | 구현/테스트 기준 고정 |
 
+### v2.3→v2.4 변경 이력
+
+| 항목 | v2.3 | v2.4 | 이유 |
+|---|---|---|---|
+| 라우팅 경로 | `/{locale}/log/` | `/{locale}/news/` | 섹션 이름 변경 (Log → News) 반영 |
+| 섹션명 (공개) | "AI Log" | "AI News" | 콘텐츠 특성 명확화 (뉴스 큐레이션) |
+| 섹션명 (관리) | "Log" (내부) | "Posts" (내부) | 관리 인터페이스 용어 정리 |
+| 문서 버전 | v2.3 | v2.4 | 라우팅 및 섹션명 변경 반영 |
+
 ---
 
 ## 1. 기술 스택
 
-> Naming boundary: public-facing `Log` copy is now `AI News`, internal/admin `Log` copy is now `Posts`, and route base is now `/{locale}/news/`. Legacy `/{locale}/log/` maintained as redirect target for backwards compatibility.
+> Naming boundary: public-facing `Log` copy is now `AI News`, internal/admin `Log` copy is now `Posts`, and route has changed from `/{locale}/log/` to `/{locale}/news/`. Legacy `/{locale}/log/` maintained as redirect target for backwards compatibility.
 > Navigation shell contract: Web = `[Brand] [Primary Nav] [Utilities]`; Mobile/App = `[Brand/Page] [Profile or Settings]` + primary nav exposed separately.
 
 | 기술 | 버전 | 역할 |
@@ -55,7 +64,7 @@ Astro `hybrid` 모드 사용: `output: 'hybrid'` + `adapter: vercel()`. 기본 S
 | 페이지 | 렌더링 모드 | 설정 | 이유 |
 |---|---|---|---|
 | **Home** (`/`) | SSR | `prerender = false` | Today's AI Pick이 매일 바뀜 |
-| **News** (`/news`) | SSR | `prerender = false` | 매일 2개 자동 발행, 항상 최신 목록 필요 |
+| **News** (`/{locale}/news/`) | SSR | `prerender = false` | 매일 2개 자동 발행, 항상 최신 목록 필요 |
 | **Post Detail** (`/news/[slug]`) | SSG + on-demand revalidation | `prerender = true` (기본) | 발행 후 내용이 거의 안 바뀜. 파이프라인 발행 시 revalidate 호출 |
 | **Portfolio** (`/portfolio`) | SSG | `prerender = true` (기본) | 정적 콘텐츠, 수동 업데이트 시에만 재빌드 |
 | **Admin** (`/admin/*`) | SSR | `prerender = false` | 항상 최신 데이터 + 인증 체크 필요 |
@@ -452,7 +461,7 @@ Astro 설정: `shikiConfig: { theme: 'css-variables' }` — 인라인 스타일 
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  ← Back to Log                                   │
+│  ← Back to News                                  │
 │                                                  │
 │  [AI NEWS · Research]              2026-03-04    │
 │                                                  │
@@ -483,7 +492,7 @@ Astro 설정: `shikiConfig: { theme: 'css-variables' }` — 인라인 스타일 
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  ← Back to Log                                   │
+│  ← Back to News                                  │
 │                                                  │
 │  [AI NEWS · Business]              2026-03-04    │
 │                                                  │
