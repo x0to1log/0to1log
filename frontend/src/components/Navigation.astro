@@ -341,33 +341,33 @@ const navItems = [
   <button type="button" class="nl-env-overlay" data-nl-close aria-label="Close"></button>
   <div class="nl-env-stage" role="dialog" aria-modal="true" aria-labelledby="nl-env-title">
     <div class="nl-env-envelope">
-      <div class="nl-env-flap"></div>
-      <div class="nl-env-body">
-        <span class="nl-env-seal" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="2" y="4" width="20" height="16" rx="2" />
-            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-          </svg>
-        </span>
+      <div class="nl-env-envelope-back"></div>
+      <div class="nl-env-letter">
+        <button type="button" class="nl-env-close" data-nl-close aria-label="Close">&times;</button>
+        <p class="nl-env-brand" aria-hidden="true">0to1log</p>
+        <div class="nl-env-rule"></div>
+        <h2 id="nl-env-title" class="nl-env-title">{nlCopy.nlTitle}</h2>
+        <p class="nl-env-sub">{nlCopy.nlSubtitle}</p>
+        <form class="nl-env-form" data-nl-form
+          data-form-src="https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a729e0c14b"
+          data-submitting={nlCopy.nlSubmitting} data-success={nlCopy.nlSuccess}
+          data-error={nlCopy.nlError} data-button={nlCopy.nlButton}>
+          <label for="nl-env-email" class="sr-only">Email</label>
+          <input id="nl-env-email" type="email" required placeholder={nlCopy.nlPlaceholder}
+            class="nl-env-input" autocomplete="email" />
+          <button type="submit" class="nl-env-btn">{nlCopy.nlButton}</button>
+        </form>
+        <p class="nl-env-feedback" aria-live="polite"></p>
+        <div class="nl-env-rule"></div>
       </div>
-    </div>
-    <div class="nl-env-letter">
-      <button type="button" class="nl-env-close" data-nl-close aria-label="Close">&times;</button>
-      <p class="nl-env-brand" aria-hidden="true">0to1log</p>
-      <div class="nl-env-rule"></div>
-      <h2 id="nl-env-title" class="nl-env-title">{nlCopy.title}</h2>
-      <p class="nl-env-sub">{nlCopy.subtitle}</p>
-      <form class="nl-env-form" data-nl-form
-        data-form-src="https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a729e0c14b"
-        data-submitting={nlCopy.submitting} data-success={nlCopy.success}
-        data-error={nlCopy.error} data-button={nlCopy.button}>
-        <label for="nl-env-email" class="sr-only">Email</label>
-        <input id="nl-env-email" type="email" required placeholder={nlCopy.placeholder}
-          class="nl-env-input" autocomplete="email" />
-        <button type="submit" class="nl-env-btn">{nlCopy.button}</button>
-      </form>
-      <p class="nl-env-feedback" aria-live="polite"></p>
-      <div class="nl-env-rule"></div>
+      <div class="nl-env-envelope-front"></div>
+      <div class="nl-env-flap"></div>
+      <span class="nl-env-seal" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+        </svg>
+      </span>
     </div>
   </div>
 </div>
@@ -657,16 +657,18 @@ const navItems = [
 
   .nl-env-stage {
     position: relative;
-    width: min(100%, 320px);
+    width: min(100%, 420px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    transform: scale(0.9);
+    justify-content: center;
+    perspective: 1200px;
+    transform: translateY(-60px) scale(0.85);
     opacity: 0;
-    transition: transform 300ms ease, opacity 200ms ease;
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
   }
   .nl-env[data-open="true"] .nl-env-stage {
-    transform: scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 
@@ -674,72 +676,96 @@ const navItems = [
   .nl-env-envelope {
     position: relative;
     width: 100%;
-    perspective: 600px;
+    aspect-ratio: 1.66;
+    height: auto;
     z-index: 2;
+    margin-top: clamp(140px, 35vh, 220px); /* Space for the letter to pop up into */
+    transform-style: preserve-3d;
+    pointer-events: none; /* Make clicks pass through the envelope itself */
   }
 
-  .nl-env-flap {
-    position: relative;
-    width: 100%;
-    height: 70px;
-    background: linear-gradient(160deg,
-      color-mix(in srgb, var(--color-accent) 25%, var(--color-bg-tertiary, var(--color-bg-secondary))),
-      var(--color-bg-secondary)
-    );
-    clip-path: polygon(0 0, 50% 100%, 100% 0);
-    border: 1px solid var(--color-border);
-    transform-origin: top center;
-    transform: rotateX(0deg);
-    transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1) 200ms;
-    z-index: 3;
-  }
-  .nl-env[data-open="true"] .nl-env-flap {
-    transform: rotateX(-180deg);
-  }
-
-  .nl-env-body {
-    position: relative;
-    width: 100%;
-    height: 90px;
-    margin-top: -1px;
+  .nl-env-envelope-back {
+    position: absolute;
+    inset: 0;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
-    border-top: none;
-    border-radius: 0 0 12px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
     z-index: 1;
   }
 
-  .nl-env-seal {
-    color: var(--color-accent);
-    opacity: 0.6;
-    transition: opacity 300ms 200ms;
+  .nl-env-envelope-front {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(170deg, color-mix(in srgb, var(--color-bg-primary) 50%, transparent), var(--color-bg-secondary));
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    z-index: 3;
+    clip-path: polygon(0 0, 50% 45%, 100% 0, 100% 100%, 0 100%);
   }
-  .nl-env[data-open="true"] .nl-env-seal { opacity: 0; transition-delay: 0ms; }
+
+  .nl-env-flap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 58%;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent) 15%, var(--color-bg-secondary)), var(--color-bg-secondary));
+    clip-path: polygon(0 0, 50% 100%, 100% 0);
+    transform-origin: top center;
+    z-index: 4;
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), z-index 0s 0.8s;
+    transition-delay: 0s;
+  }
+  .nl-env[data-open="true"] .nl-env-flap {
+    transform: rotateX(180deg);
+    z-index: 1;
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s, z-index 0s 0.8s;
+  }
+
+  .nl-env-seal {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--color-accent);
+    background: var(--color-bg-primary);
+    border-radius: 50%;
+    padding: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    opacity: 0.9;
+    z-index: 5;
+    transition: opacity 0.3s 0.5s, transform 0.4s 0.5s;
+  }
+  .nl-env[data-open="true"] .nl-env-seal {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
 
   /* ── Letter ── */
   .nl-env-letter {
-    position: relative;
-    width: calc(100% - 24px);
-    margin-top: -80px;
-    padding: 1.4rem 1.2rem 1rem;
-    background: color-mix(in srgb, var(--color-bg-primary) 97%, white 3%);
-    border: 1px solid color-mix(in srgb, var(--color-border) 80%, white 10%);
-    border-radius: 4px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-    z-index: 0;
-    transform: translateY(60px);
+    position: absolute;
+    bottom: 6px;
+    left: 12px;
+    right: 12px;
+    padding: 1.8rem 1.6rem 1.4rem;
+    background: color-mix(in srgb, var(--color-bg-primary) 98%, white 2%);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+    z-index: 2;
+    transform: translateY(0);
     opacity: 0;
-    transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1) 450ms,
-                opacity 300ms ease 450ms;
     text-align: center;
+    pointer-events: auto; /* Let clicks work on the form */
+    transition: transform 1.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+    transition-delay: 0s;
   }
   .nl-env[data-open="true"] .nl-env-letter {
-    transform: translateY(-20px);
+    transform: translateY(-70%);
     opacity: 1;
+    transition-delay: 0.9s;
   }
 
   .nl-env-close {
@@ -781,17 +807,17 @@ const navItems = [
   .nl-env-rule:last-child { margin: 0.7rem auto 0; }
 
   .nl-env-title {
-    margin: 0 0 0.2rem;
+    margin: 0 0 0.3rem;
     font-family: var(--font-heading);
-    font-size: 1.05rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-text-primary);
   }
 
   .nl-env-sub {
-    margin: 0 0 0.9rem;
+    margin: 0 0 1.2rem;
     font-family: var(--font-ui);
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     color: var(--color-text-secondary);
     line-height: 1.5;
   }
