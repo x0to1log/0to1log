@@ -1,7 +1,7 @@
 # ⚙️ 0to1log — Backend & AI Spec
 
-> **문서 버전:** v4.0
-> **최종 수정:** 2026-03-14
+> **문서 버전:** v5.0
+> **최종 수정:** 2026-03-26
 > **작성자:** Amy (Solo)  
 > **상태:** Planning  
 > **상위 문서:** `01_Project_Overview.md`
@@ -25,6 +25,16 @@
 | Persona 분량 | beginner 300-500자, learner 500-800자, expert 800-1200자 | 모든 persona 동일 5,000-7,000자 | 길이 ≠ 이해도, 서술 방식으로만 차별화 |
 | 에러 핸들링 | 섹션별 재시도 + recovery pass + partial artifact | 단순 2회 재시도 루프 | 코드 복잡성 63% 감소 |
 | 비용 산정 | 번역 비용 미포함 ($0.14/일) | 번역 포함 전체 비용 ($0.32/일) | 실제 비용 반영 |
+
+### v5.0 변경 이력
+
+| 항목 | v4.0 | v5.0 | 이유 |
+|---|---|---|---|
+| LLM 모델 전략 | gpt-4o / gpt-4o-mini (2가지) | gpt-4.1 / gpt-4.1-mini / o4-mini (3-tier) | 생성(4.1) + 분류/추출(4.1-mini) + 품질스코어링(o4-mini) 역할 분리 |
+| Persona 개수 | Expert / Learner / Beginner (3개) | Expert / Learner (2개) | Beginner 페르소나 v4에서 제거 완료, 2개만 운영 |
+| 뉴스 수집 소스 | Tavily만 (5 쿼리) | 4개 병렬 소스 (Tavily + HF Papers + arXiv + GitHub) | 소스 다양성 강화 |
+| 스켈레톤 라우팅 | 단일 스켈레톤 | 페르소나×카테고리 조합 스켈레톤 (4개) | 페르소나별/카테고리별 프롬프트 최적화 |
+| 품질 스코어링 | 미포함 또는 최소 | o4-mini 기반 0~100점 (Research/Business 기준 분리) | 품질 검증 강화 |
 
 ---
 
@@ -687,7 +697,9 @@ Tavily 수집 결과 중 메인 뉴스 외의 기사를 카테고리별 한 줄 
 Respond in JSON format only.
 </prompt>
 
-#### Call 2: Learner + Beginner 파생
+#### Call 2: Learner 파생
+
+> **v5.0 변경:** Beginner 페르소나는 v4에서 제거되었습니다. 현재는 Expert + Learner 2개 페르소나만 운영합니다.
 
 변수명: `BUSINESS_DERIVE_PROMPT` / 출력 스키마: `BusinessDerivedOutput`
 
@@ -769,6 +781,54 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 반드시 JSON 형식으로만 응답하세요.
 </prompt>
 
+### 5-4. Quality Scoring Agent — o4-mini 기반 품질 평가
+
+변수명: `QUALITY_SCORING_PROMPT` / 출력 스키마: `QualityScore`
+
+> **v5.0 신규:** o4-mini(Reasoning 모델)를 활용하여 생성된 뉴스/포스트의 품질을 0~100점 범위로 평가합니다. Research와 Business 카테고리별로 기준을 분리합니다.
+
+**평가 기준 (0~100점, 25점씩 4개 항목):**
+
+| 항목 | Research 기준 (25점) | Business 기준 (25점) |
+|---|---|---|
+| **구조 & 명확성 (Sections)** | 섹션별 기술적 정의, SOTA 언급의 완성도 | fact_pack의 구조화 정도, 분석 프레임워크 명확도 |
+| **출처 & 검증 (Sources)** | 논문/공식 블로그 링크, 수치 근거, 미확인 표기 | 뉴스 원본 URL 포함, 인용 정확도, 팩트 검증 |
+| **정확도 & 깊이 (Accuracy)** | 기술 오류 없음, 벤치마크 정보 정확 | 비용/수익 분석 오류 없음, 경쟁사 정보 정확 |
+| **언어 & 톤 (Language)** | 기술 용어 통일, 일관된 수준 유지 | 페르소나(Expert/Learner)별 톤 구분, 가독성 |
+
+**평가 점수 매핑:**
+- 90~100: 모든 항목 우수, 발행 즉시 가능
+- 70~89: 일부 항목 미흡, 최소 수정 후 발행 가능
+- 50~69: 다수 항목 미흡, 유의미한 재작성 필요
+- 30~49: 구조적 문제, 전체 재검토 필요
+- 0~29: 발행 부적합, 폐기 또는 완전 재생성 필요
+
+<prompt>
+당신은 0to1log의 품질 평가자입니다. 생성된 뉴스/포스트의 품질을 종합적으로 평가합니다.
+
+## 평가 기준 (Research vs Business 분리)
+
+### Research 포스트 (25점 × 4 = 100점)
+1. **구조 & 명확성 (25점):** 기술 개념 정의가 명확한가? SOTA 달성 내용이 구체적인가?
+2. **출처 & 검증 (25점):** 논문/공식 링크가 포함되었는가? 수치에 근거가 있는가? 미확인 수치는 표기했는가?
+3. **정확도 & 깊이 (25점):** 기술 오류가 없는가? 벤치마크 정보가 정확한가? 실무 적용 가능성을 다루었는가?
+4. **언어 & 톤 (25점):** 전문 용어가 일관되게 사용되었는가? 독자의 수준(Expert/Learner)에 맞는가?
+
+### Business 포스트 (25점 × 4 = 100점)
+1. **구조 & 명확성 (25점):** fact_pack이 잘 구조화되었는가? 비즈니스 영향을 명확히 설명했는가?
+2. **출처 & 검증 (25점):** 원본 뉴스 URL이 포함되었는가? 인용이 정확한가? 추측으로 표기된 정보가 있는가?
+3. **정확도 & 깊이 (25점):** 비용/수익 분석이 정확한가? 경쟁 구도가 올바르게 파악되었는가? 시장 인사이트가 있는가?
+4. **언어 & 톤 (25점):** Expert와 Learner 버전이 명확히 구분되는가? 각 페르소나의 톤이 적절한가?
+
+## 최종 판정
+점수 90 이상: publish_ready
+점수 70~89: publish_with_minor_edits
+점수 50~69: needs_significant_revision
+점수 50 미만: not_recommended_for_publish
+
+반드시 JSON 형식으로만 응답하세요.
+</prompt>
+
 ---
 
 ## 6. AI 파이프라인
@@ -788,22 +848,27 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 [Vercel 종료]        [Step 1] Tavily 뉴스 수집 (15~20개)
   (10초 내)                 │
                             ▼
-                     [Step 2] Ranking Agent (gpt-4o-mini): 분류 + 랭킹
+                     [Step 2] Ranking Agent (gpt-4.1-mini): 분류 + 랭킹
                             │
                             ▼
-                     [Step 3-A] Research Engineer Agent (gpt-4o)
+                     [Step 3-A] Research Engineer Agent (gpt-4.1)
                             │  ├── 뉴스 있음 → 기술 심화 포스트 생성 → PydanticAI 검증 → 자동 발행
                             │  └── 뉴스 없음 → "없음" 공지 + 최근 동향 보충 → 자동 발행
                             │
-                     [Step 3-A-KO] Research 번역 (gpt-4o): EN → KO 전문 번역
+                     [Step 3-A-KO] Research 번역 (gpt-4.1): EN → KO 전문 번역
                             │
-                     [Step 3-B] Business Expert 생성 (gpt-4o, Call 1)
+                     [Step 3-B] Business Expert 생성 (gpt-4.1, Call 1)
                             │  └── fact_pack + source_cards + content_analysis + content_expert
                             │
-                     [Step 3-B-2] Business Learner + Beginner 파생 (gpt-4o, Call 2)
-                            │  └── expert 기반 → content_learner + content_beginner
+                     [Step 3-B-2] Business Learner 파생 (gpt-4.1, Call 2)
+                            │  └── expert 기반 → content_learner
                             │
-                     [Step 3-B-KO] Business 번역 (gpt-4o): EN → KO 전문 번역
+                     [Step 3-B-KO] Business 번역 (gpt-4.1): EN → KO 전문 번역
+                            │
+                            ▼
+                     [Step 3-B-QA] Quality Scoring (o4-mini): 품질 평가 0~100점
+                            │  ├── Research/Business 기준 분리
+                            │  └── 발행/수정/폐기 판정
                             │
                             ▼
                      [Step 4] PydanticAI 스키마 검증
@@ -814,7 +879,7 @@ Respond in JSON format only. Return the same JSON structure with all text fields
                             │  └── Business EN/KO → status: 'draft' (검수 대기)
                             │
                             ▼
-                     [Step 6] Business 포스트: Editorial Agent (gpt-4o) 검수
+                     [Step 6] Business 포스트: Editorial Agent (gpt-4.1) 검수
                             │  → Admin 대시보드에서 확인 후 수동 발행
                             │
                             ▼
@@ -822,29 +887,68 @@ Respond in JSON format only. Return the same JSON structure with all text fields
                             └── 실패 시 admin_notifications에 알림 저장
 ```
 
+### 6-1-A. Skeleton-map 라우팅 (v5.0 신규)
+
+> **목적:** 페르소나 × 카테고리(Research/Business) 조합에 따라 최적화된 프롬프트를 자동 선택하여, 각 페르소나의 특성을 정확히 반영한 콘텐츠를 생성합니다.
+
+**Skeleton-map 구조:**
+
+| 조합 | 페르소나 | 카테고리 | 스켈레톤 프롬프트 | 특징 |
+|---|---|---|---|---|
+| R-Expert | Expert | Research | `RESEARCH_EXPERT_SKELETON` | 기술 용어 O, 수학/코드 O, 산업 맥락 깊이 |
+| R-Learner | Learner | Research | `RESEARCH_LEARNER_SKELETON` | 핵심 용어 설명 O, 배경 맥락 보충 |
+| B-Expert | Expert | Business | `BUSINESS_EXPERT_SKELETON` | 비용/수익 분석, 경쟁 구도, 투자 관점 |
+| B-Learner | Learner | Business | `BUSINESS_LEARNER_SKELETON` | 시장 개요, 직업 영향, 실무 활용 사례 |
+
+**자동 선택 로직:**
+```python
+def get_skeleton_prompt(post_type: str, persona: str) -> str:
+    """post_type: 'research' | 'business', persona: 'expert' | 'learner'"""
+    key = f"{post_type[0]}-{persona.capitalize()}"  # e.g., "R-Expert"
+    return SKELETON_MAP[key]
+```
+
+**Optional 섹션 (페르소나 + 카테고리별):**
+- **Research-Expert:** SOTA 섹션 (latest benchmark, research paper links)
+- **Research-Learner:** LLM 기초 설명 (transformer 개념 재정의)
+- **Business-Expert:** 투자자 관점 (funding rounds, valuation)
+- **Business-Learner:** 직무 영향 (개발자, PM, 기획자별 체크리스트)
+
+---
+
 ### 6-2. Step 1: Multi-Source 뉴스 수집
 
 **함수:** `collect_news()` → `list[dict]` (각 항목: `{title, url, content, source}`)
 
-**수집 흐름:**
-1. **Tavily 검색** — 4개 쿼리 병렬 실행 (각 max 3건, search_depth=advanced, time_range=24h)
-2. **Hacker News** — Top 80개 중 AI 키워드 필터 (`ai|llm|gpt|openai|anthropic|gemini|claude`, 대소문자 무시)
-3. **GitHub Trending** — 어제 생성된 `topic:ai` 레포 중 Stars 상위 3개
-4. **URL 정규화 중복 제거** — `url.split("#")[0].split("?")[0].rstrip("/")` 기준
+**v5.0 4개 병렬 소스:**
+1. **Tavily Search API** — 5개 쿼리 병렬 실행 (각 max 3건, search_depth=advanced, time_range=24h, raw_content)
+2. **HuggingFace Daily Papers** — Top 10 논문 (최신 순)
+3. **arXiv API** — cs.AI / cs.CL / cs.LG 카테고리, 최근 24시간 (max 20건)
+4. **GitHub Trending** — 어제 생성된 `topic:ai` 레포 중 Stars 상위 5개
+
+**URL 정규화 중복 제거** — `url.split("#")[0].split("?")[0].rstrip("/")` 기준
 
 **수집 설정 (COLLECTION_CONFIG):**
 
-| 키 | 값 | 설명 |
+| 소스 | 설정 | 값 |
 |---|---|---|
-| queries | 4개 영어 쿼리 | "AI LLM new model release today" 등 |
-| max_results_per_query | 3 | |
-| search_depth | "advanced" | |
-| time_range | "24h" | |
-| http_timeout_sec | 10 | HN/GitHub API 타임아웃 |
-| hn_top_n | 80 | HN에서 가져올 상위 게시물 수 |
-| hn_concurrency | 12 | HN 병렬 요청 제한 |
+| **Tavily** | queries | 5개 영어 쿼리: "AI model release", "LLM breakthrough", "AI safety", "AI startup", "AI regulation" |
+| | max_results_per_query | 3 |
+| | search_depth | "advanced" |
+| | time_range | "24h" |
+| | raw_content | true |
+| **HuggingFace** | top_n | 10 |
+| | filters | "AI, NLP, LLMs" |
+| **arXiv** | categories | "cs.AI,cs.CL,cs.LG" |
+| | max_results | 20 |
+| | time_range | "24h" |
+| **GitHub** | topic | "ai" |
+| | max_repos | 5 |
+| | sort_by | "stars" |
+| **공통** | http_timeout_sec | 15 |
+| | deduplicate_by | "normalized_url" |
 
-**실패 처리:** Tavily 쿼리별 30초 후 1회 재시도, 실패 시 해당 쿼리 스킵. HN/GitHub 실패 시 빈 리스트 반환.
+**실패 처리:** 각 소스별 30초 후 1회 재시도, 실패 시 해당 소스 스킵. 부분 수집도 계속 진행.
 
 ### 6-3~6-6. 에이전트 함수 명세
 
@@ -852,13 +956,14 @@ Respond in JSON format only. Return the same JSON structure with all text fields
 
 | Step | 함수 | 모델 | 입력 | 출력 스키마 | 핵심 로직 |
 |---|---|---|---|---|---|
-| 2 | `rank_news()` | gpt-4o-mini | 수집된 후보 + batch_id | `NewsRankingResult` | JSON mode, RANKING_SYSTEM_PROMPT |
-| 3-A | `generate_research_post()` | gpt-4o | research_pick 후보 + 본문 | `ResearchPost` | 뉴스 유무에 따라 user_content 분기 |
-| 3-A-KO | `translate_post()` | gpt-4o | Research EN 전문 | Research KO 전문 | 전문 번역 (1회 호출) |
-| 3-B Call 1 | `generate_business_expert()` | gpt-4o | business_main 후보 + 본문 + related | `BusinessExpertOutput` | Expert-first: fact_pack + analysis + expert |
-| 3-B Call 2 | `derive_business_personas()` | gpt-4o | expert 전문 + analysis | `BusinessDerivedOutput` | Expert 기반 learner + beginner 파생 |
-| 3-B-KO | `translate_post()` | gpt-4o | Business EN 전문 | Business KO 전문 | 전문 번역 (1회 호출) |
-| 6 | `review_business_post()` | gpt-4o | Business 초안 JSON | `EditorialFeedback` | EDITORIAL_SYSTEM_PROMPT로 검수 |
+| 2 | `rank_news()` | gpt-4.1-mini | 수집된 후보 + batch_id | `NewsRankingResult` | JSON mode, RANKING_SYSTEM_PROMPT |
+| 3-A | `generate_research_post()` | gpt-4.1 | research_pick 후보 + 본문 | `ResearchPost` | skeleton-map으로 Expert/Learner 차별화, 뉴스 유무에 따라 분기 |
+| 3-A-KO | `translate_post()` | gpt-4.1 | Research EN 전문 | Research KO 전문 | 전문 번역 (1회 호출) |
+| 3-B Call 1 | `generate_business_expert()` | gpt-4.1 | business_main 후보 + 본문 + related | `BusinessExpertOutput` | Expert-first: fact_pack + source_cards + content_analysis + content_expert |
+| 3-B Call 2 | `derive_business_learner()` | gpt-4.1 | expert 전문 + analysis | `BusinessDerivedOutput` | Expert 기반 → content_learner만 파생 (Beginner 제거 in v5) |
+| 3-B-KO | `translate_post()` | gpt-4.1 | Business EN 전문 | Business KO 전문 | 전문 번역 (1회 호출) |
+| Quality Score | `score_post_quality()` | o4-mini | 최종 포스트 JSON | `QualityScore` (0~100) | Research/Business 기준 분리, Reasoning 모델 사용 |
+| 6 | `review_business_post()` | gpt-4.1 | Business 초안 JSON | `EditorialFeedback` | EDITORIAL_SYSTEM_PROMPT로 검수 |
 
 **user_content 구성 규칙:**
 - Research (뉴스 있음): 날짜 + 선별 뉴스 Title/URL/이유 + 기사 본문
@@ -1122,66 +1227,99 @@ async def notify_admin_on_failure(pipeline_type: str, error: str):
 
 ### 9-1. API 사용 비용 (OpenAI + Tavily)
 
-#### 모델별 사용 전략
+#### v5.0 3-Tier LLM 모델 전략
+
+> **모델 계층 구조:** Main (gpt-4.1) + Light (gpt-4.1-mini) + Reasoning (o4-mini)로 역할을 명확히 분리.
+
+**모델별 역할 및 사용 범위:**
+
+| 계층 | 모델 | 역할 | 용도 |
+|---|---|---|---|
+| **Main** | gpt-4.1 | 콘텐츠 생성 | 다이제스트 생성 (Research/Business), Handbook 생성, 포스트 번역, Editorial 검수 |
+| **Light** | gpt-4.1-mini | 분류/추출/점수 | 뉴스 분류 + 랭킹, 용어 추출, 태그/슬러그 생성, 빠른 임베딩 전처리 |
+| **Reasoning** | o4-mini | 추론/검증 | 뉴스 품질 스코어링 (0~100), Research/Business 기준 분리, 논증 강도 평가 |
+
+**작업별 모델 배치:**
 
 | 작업 | 모델 | 이유 |
 |---|---|---|
-| 뉴스 분류 + 랭킹 | gpt-4o-mini | 단순 분류, 비용 최소화 |
-| Research Engineer 초안 | gpt-4o | 기술 정확도 필요 |
-| Business Analyst 초안 | gpt-4o | 3페르소나 품질 필요 |
-| Editorial 검수 | gpt-4o | 정확한 평가 필요 |
-| 슬러그/태그 생성 | gpt-4o-mini | 단순 변환 |
+| **News Ranking (Step 2)** | gpt-4.1-mini | 단순 분류, 비용 최소화 |
+| **Research Post (Step 3-A)** | gpt-4.1 | 기술 정확도 필요 |
+| **Research Translation (Step 3-A-KO)** | gpt-4.1 | 전문 번역, 맥락 유지 |
+| **Business Expert (Step 3-B Call 1)** | gpt-4.1 | 다각적 분석 필요 |
+| **Business Learner (Step 3-B Call 2)** | gpt-4.1 | 파생 품질 필요 |
+| **Business Translation (Step 3-B-KO)** | gpt-4.1 | 전문 번역 |
+| **Quality Scoring (Step 3-B-QA)** | o4-mini | 추론 기반 평가 |
+| **Editorial Review (Step 6)** | gpt-4.1 | 최종 검증 정확도 |
+| 슬러그/태그 생성 | gpt-4.1-mini | 단순 변환 |
 | 시맨틱 검색 임베딩 (Phase 3) | text-embedding-3-small | pgvector 호환, 비용 효율 |
 
-> **모델 교체 유연성 (ADR):** 현재 gpt-4o/gpt-4o-mini를 기본으로 설계하되, 모델명을 환경 변수 또는 config로 관리하여 GPT-5.2 등 신규 모델로 교체가 용이하도록 한다. 2026년 3월 기준 GPT-5.2($1.75/$14.00)가 출시되었으나, 비용 대비 성능 검증 후 교체 결정. 현재 gpt-4o($2.50/$10.00)가 출력 토큰 단가가 더 저렴하므로 당장 교체할 이유 없음.
+> **모델 교체 유연성 (ADR):** 모델명을 환경 변수 또는 config로 관리하여 신규 모델로 교체가 용이하도록 한다. v5.0은 gpt-4.1 계열 안정화, o4-mini 품질 검증 후 long-context 모델(gpt-4.1-turbo 등)로의 점진적 마이그레이션을 계획 중.
 
 #### 일일 예상 비용 산정
 
-```
-[매일 뉴스 2건 기준 — gpt-4o 기준가, v4 Expert-First Cascade + 전문 번역 포함]
+> **v5.0 비용 구조:** gpt-4.1 (Main) + gpt-4.1-mini (Light) + o4-mini (Reasoning) 3-tier 모델 사용
 
-Step 2 — 랭킹 (gpt-4o-mini):
+```
+[매일 뉴스 2건 기준 — v5 3-Tier 모델 + 4-source 수집 + Quality Scoring 포함]
+
+Step 2 — 랭킹 (gpt-4.1-mini):
   Input: ~3,000 tokens × $0.15/1M = $0.00045
   Output: ~1,500 tokens × $0.60/1M = $0.0009
   소계: ~$0.001
 
-Step 3-A — Research EN (gpt-4o):
+Step 3-A — Research EN (gpt-4.1):
   Input: ~3,000 tokens × $2.50/1M = $0.0075
   Output: ~2,500 tokens × $10.00/1M = $0.025
   소계: ~$0.033
 
-Step 3-A-KO — Research 번역 (gpt-4o, 전문 번역):
+Step 3-A-KO — Research 번역 (gpt-4.1, 전문 번역):
   Input: ~3,500 tokens × $2.50/1M = $0.009
   Output: ~2,500 tokens × $10.00/1M = $0.025
   소계: ~$0.034
 
-Step 3-B Call 1 — Business Expert (gpt-4o):
+Step 3-B Call 1 — Business Expert (gpt-4.1):
   Input: ~5,000 tokens × $2.50/1M = $0.0125
   Output: ~5,000 tokens × $10.00/1M = $0.05
   소계: ~$0.063
 
-Step 3-B Call 2 — Business Derive (gpt-4o):
+Step 3-B Call 2 — Business Learner (gpt-4.1):
   Input: ~6,000 tokens × $2.50/1M = $0.015
   Output: ~4,000 tokens × $10.00/1M = $0.04
   소계: ~$0.055
 
-Step 3-B-KO — Business 번역 (gpt-4o, 전문 번역):
+Step 3-B-QA — Quality Scoring (o4-mini):
+  Input: ~4,000 tokens × $0.60/1M = $0.0024
+  Output: ~500 tokens × $2.40/1M = $0.0012
+  소계: ~$0.004
+
+Step 3-B-KO — Business 번역 (gpt-4.1, 전문 번역):
   Input: ~7,000 tokens × $2.50/1M = $0.018
   Output: ~5,000 tokens × $10.00/1M = $0.05
   소계: ~$0.068
 
-Step 6 — Editorial (gpt-4o):
+Step 6 — Editorial (gpt-4.1):
   Input: ~5,000 tokens × $2.50/1M = $0.013
   Output: ~1,000 tokens × $10.00/1M = $0.01
   소계: ~$0.023
 
-Tavily API: 기본 ~4 queries × $0.01 = $0.04
+Tavily API (5 쿼리): ~5 queries × $0.01 = $0.05
+HuggingFace API: ~$0 (free tier)
+arXiv API: ~$0 (public)
+GitHub API: ~$0 (public, authenticated: 60 req/hr)
 
-일일 예상 총 비용: ~$0.32 (번역 포함, 재시도 평균 포함 ~$0.35 내외)
-월간 예상 총 비용: ~$9.6~10.5
+소계 (API 호출):
+  gpt-4.1-mini (Step 2): ~$0.001
+  gpt-4.1 (Step 3-A, 3-B Call 1-2, 3-B-KO, 6): ~$0.285
+  o4-mini (Step 3-B-QA): ~$0.004
+  번역 포함 합계: ~$0.29
+  Tavily 수집: ~$0.05
 
-vs v3 실제 비용 (번역 포함): $0.22-0.31/일, $6.6-9.3/월
-→ v4는 호출 수 대폭 감소(17-36 → ~7), 안정성 향상. 비용은 persona당 분량 증가(3-5K자 → 5-7K자)로 인해 유사 또는 소폭 상승.
+일일 예상 총 비용: ~$0.34 (v5: 품질스코링 + 4-source 수집 포함)
+월간 예상 총 비용: ~$10.2
+
+vs v4 비용 ($0.32/일, $9.6/월)
+→ v5는 quality scoring(o4-mini) 추가로 +$0.02, multi-source 수집 자동화로 운영성 강화
 ```
 
 > **API 비용 모니터링:** 모든 API 호출의 토큰/비용을 pipeline_logs 테이블에 기록하여 Phase 3 AI Ops Dashboard에서 추적. 월 $10 초과 시 admin_notifications에 비용 경고 알림 생성.
@@ -1205,13 +1343,20 @@ SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_KEY=eyJ...
 
-# OpenAI API
+# OpenAI API — v5.0 3-Tier 모델
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL_MAIN=gpt-4o          # 메인 모델 (교체 용이)
-OPENAI_MODEL_LIGHT=gpt-4o-mini    # 경량 모델
+OPENAI_MODEL_MAIN=gpt-4.1         # Main: 콘텐츠 생성 (Research/Business 초안, 번역, Editorial)
+OPENAI_MODEL_LIGHT=gpt-4.1-mini   # Light: 분류/추출/점수 (News Ranking, 태그 생성)
+OPENAI_MODEL_REASONING=o4-mini    # Reasoning: 품질 스코어링 (Quality Evaluation)
 
-# Tavily API
+# Tavily API — v5.0 5 쿼리
 TAVILY_API_KEY=tvly-...
+
+# HuggingFace (Daily Papers)
+HUGGINGFACE_API_KEY=hf_...  # optional, for authenticated requests
+
+# arXiv (Public API, no auth needed)
+ARXIV_EMAIL=your-email@example.com  # courtesy header
 
 # Admin bootstrap (선택)
 ADMIN_EMAIL=admin@0to1log.com  # 최초 admin_users 시드 입력용
@@ -1223,7 +1368,8 @@ CRON_SECRET=your-random-secret-here
 FASTAPI_URL=https://your-app.railway.app
 ```
 
-> **모델명 환경 변수화:** `OPENAI_MODEL_MAIN`과 `OPENAI_MODEL_LIGHT`를 환경 변수로 분리하여, 코드 수정 없이 Railway 대시보드에서 모델을 교체할 수 있다.
+> **v5.0 3-Tier 모델 구조:** `OPENAI_MODEL_MAIN` (gpt-4.1), `OPENAI_MODEL_LIGHT` (gpt-4.1-mini), `OPENAI_MODEL_REASONING` (o4-mini)를 환경 변수로 분리하여 코드 수정 없이 Railway 대시보드에서 모델을 교체할 수 있다.
+> **Multi-Source 수집:** Tavily (5 쿼리) + HuggingFace + arXiv + GitHub API를 병렬 실행. 각 소스별 실패 해도 부분 수집 계속.
 > **Admin 권한 기준:** 런타임 권한 판별은 `admin_users` 테이블을 사용하며, `ADMIN_EMAIL`은 초기 시드 자동화를 위한 보조 변수로만 사용한다.
 
 ---
