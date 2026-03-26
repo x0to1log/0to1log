@@ -102,7 +102,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 
 - **백엔드 아키텍처**: [ARCHITECTURE_KR.md](./ARCHITECTURE_KR.md) — 파이프라인 상세 (Mermaid 다이어그램 포함)
 - **백엔드 설정**: [backend/CLAUDE_KR.md](./backend/CLAUDE_KR.md) — FastAPI + AI 파이프라인
-- **프론트엔드 설정**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS
+- **프론트엔드 설정**: [frontend/CLAUDE_KR.md](./frontend/CLAUDE_KR.md) — Astro v5 + Tailwind CSS
 - **설계 & 계획**: [vault/](./vault/) — 시스템 설계 & 의사결정 이력
 
 ## 함께하기 & 연락
