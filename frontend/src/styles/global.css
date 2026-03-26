@@ -454,10 +454,21 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   color: var(--color-text-secondary);
   display: grid;
   gap: 0.7rem;
+  list-style: none;
 }
 
 .newsprint-rail-list li {
   line-height: 1.6;
+  position: relative;
+  padding-left: 0.9rem;
+}
+
+.newsprint-rail-list li::before {
+  content: '▸';
+  position: absolute;
+  left: -0.2rem;
+  color: var(--color-accent);
+  font-size: 0.85em;
 }
 
 .newsprint-rail-nav {
