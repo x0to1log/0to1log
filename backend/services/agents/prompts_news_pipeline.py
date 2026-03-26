@@ -221,10 +221,12 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 5. Do NOT include an H1 title - start directly with the first section.
 6. Group news items by their subcategory under the category headers.
 7. Each news item's paragraph count follows the persona guide (Expert: 3-4, Learner: 2-3). Do NOT exceed 4 paragraphs per item. Include context for numbers.
-8. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
-9. Section headers must use the correct language for the target content.
-10. If a section has no news items for the day, omit the section entirely.
-11. Use markdown actively for readability:
+8. EQUAL COVERAGE: You MUST cover ALL provided news items with the paragraph count specified above. Do not spend 80% of output on one story and rush the rest. Every news item deserves its full analysis.
+9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
+10. Section headers must use the correct language for the target content.
+11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech) has no items, omit it. But ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
+12. EVERY section header listed in "Required Sections" above that is not omitted per rule 11 MUST appear in your output as a `##` heading. Do not merge, rename, or skip sections.
+13. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
     - Use **bold** for key terms, company names, and important numbers
     - Use `>` blockquotes for notable quotes from sources
@@ -250,6 +252,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ```
 
 ## Field rules
+- **headline**: MUST be in English. No Korean characters allowed.
+- **headline_ko**: MUST be in Korean. Must contain at least one Korean character (가-힣). This is NOT optional — every response MUST include a Korean headline.
 - **excerpt/excerpt_ko**: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body.
 - **tags**: 4-6 keyword tags in English only. Include company names, key technologies, industry terms, and notable tools.
 - **focus_items/focus_items_ko**: Exactly 3 bullet points summarizing this specific digest (EN: 5-12 words each, KO: 15-40 chars each):
@@ -336,7 +340,9 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Each item: 3-4 paragraphs with deal sizes in context and what the deal signals strategically.
 - **## New Tools (ko: ## New Tools)** - New AI products or services. Each item: 3-4 paragraphs with pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
-- **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. Format: `- **If [your situation]**: [specific action] by [date/timeframe] - because [reasoning]. Risk of inaction: [consequence]`"""
+- **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
+  `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence]`
+  Example: `- **If you rely on OpenAI APIs**: evaluate alternative providers this quarter — because vendor concentration risk is rising. Risk of inaction: 100% dependency on a single provider's pricing decisions.`"""
 
 
 BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy lead. An AI-era business decision-maker.
@@ -366,7 +372,10 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care. 2-3 paragraphs per item.
 - **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying. 2-3 paragraphs per item.
 - **## What This Means for You (ko: ## 나에게 주는 의미)** - How today's news connects to daily life, career, and work. 3-4 paragraphs.
-- **## Action Items (ko: ## 지금 할 일)** - Write 3-5 concrete things to do this week as numbered items."""
+- **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
+  `1. **[Action]**: [what to do in 1-2 sentences]`
+  Example: `1. **Try the new Claude Code CLI**: Install via npm and test it on a small project to see if it fits your workflow.`
+  Do NOT include source links in this section."""
 
 
 BUSINESS_LEARNER_GUIDE = """READER: Anyone interested in AI business - marketers, planners, developers, students, and curious professionals.

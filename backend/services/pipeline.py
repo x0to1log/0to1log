@@ -781,7 +781,10 @@ async def _generate_digest(
     for locale in ("en", "ko"):
         slug = slug_base if locale == "en" else f"{slug_base}-ko"
         if locale == "ko":
-            title = digest_headline_ko or fallback_title
+            title = digest_headline_ko or digest_headline or fallback_title
+            if title and not any('\uAC00' <= c <= '\uD7AF' for c in title):
+                logger.warning("KO title has no Korean characters, prefixing: %s", title[:50])
+                title = f"AI {type_label} 데일리 — {title}"
         else:
             title = digest_headline or fallback_title
 
