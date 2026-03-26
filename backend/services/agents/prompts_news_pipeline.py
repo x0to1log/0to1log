@@ -343,6 +343,7 @@ Writing rules:
 - Write like a senior colleague explaining things over coffee - approachable but substantive
 - Use analogy only when it helps. If the news is straightforward, get to the point.
 - Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE
+- When using ANY acronym or abbreviated name (MoE, HisPO, DPO, RLHF, etc.), ALWAYS write the full name first, then the acronym in parentheses. Example: "Hierarchical Importance Sampling Policy Optimization (HisPO)". Never use an acronym without expanding it first.
 - When explaining a technical method, lead with WHAT IT DOES in plain language BEFORE naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time -- a technique called parallel diffusion decoding"
 - Focus on understanding, not action plans
 - Do NOT include "What To Try This Week", tutorials, step-by-step experiments, or tool recommendations unless the repo itself is the story.
@@ -542,11 +543,20 @@ The clever part: each agent only sees part of the information, so they cannot ju
 ### WildWorld: A Video Game Dataset for AI Training
 [2-3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
 
+## Community Pulse
+The AI research community on Reddit and Hacker News is particularly excited about MinerU-Diffusion, with many noting its practical implications for document processing pipelines.
+
+> "Finally, OCR that doesn't choke on tables and formulas. This could save us hours of manual cleanup."
+> -- r/MachineLearning
+
+> "The 3.2x speedup is impressive, but I want to see how it handles handwritten notes."
+> -- Hacker News
+
 ## Why It Matters
 [1-2 paragraphs connecting developments to the bigger picture, accessible language]
 ```
 
-**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end. When explaining a technical method, lead with WHAT IT DOES in plain language before naming the technique.
+**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 커뮤니티 반응, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end. When explaining a technical method, lead with WHAT IT DOES in plain language before naming the technique.
 """
 
 # --- Digest prompt getters ---
