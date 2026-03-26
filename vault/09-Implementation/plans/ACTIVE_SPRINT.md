@@ -98,16 +98,31 @@
 | Task | 상태 | 목표 | 우선도 |
 |------|------|------|--------|
 | FASTAPI-DIRECT-01 | in_progress | Admin AI 호출 Vercel timeout 회피 | CRITICAL |
-| QUALITY-CHECK-02 | in_progress | 품질 체크 Expert/Learner 양쪽 평가 | CRITICAL |
 | PROMPT-AUDIT-01 | in_progress | P1/P2 이슈 배포 (40+ 남음) | HIGH |
+
+### 완료된 BLOCKING
+
+| Task | 완료일 | 결과 |
+|------|--------|------|
+| QUALITY-CHECK-02 | 2026-03-26 | 품질 체크 Expert/Learner 분리 평가, gpt-4.1-mini, 12000자 truncation |
 
 ### HIGH PRIORITY — 스프린트 게이트
 
 | Task | 상태 | 목표 | 의존성 |
 |------|------|------|--------|
 | WEEKLY-FE-01 | todo | Weekly 탭 프론트 통합 | 백엔드 완료 ✅ |
+| AUTOPUB-01 | monitoring | Quality ≥80 자동 발행 | 2~3일 점수 추이 모니터링 후 구현 |
 | COMMUNITY-01 | todo | Reddit/HN/X 반응 수집 (선택) | 선택사항 |
-| AUTOPUB-01 | todo | Quality ≥80 자동 발행 | PROMPT-AUDIT 70% |
+
+### 품질 점수 모니터링 (AUTOPUB-01 전제조건)
+
+| 날짜 | Business | Research | 비고 |
+|------|----------|----------|------|
+| 3/26 | 99 (E:100/L:98) | 95 (E:95/L:95) | 최신 프롬프트 v6 + 12000자 truncation |
+| 3/25 | 88 (E:88/L:88) | 69 (E:68/L:70) | 4000자 truncation 오탐 포함 |
+| 3/24 | 85 | 65 | o4-mini (변별력 부족) |
+
+목표: 3일 연속 Business ≥ 85, Research ≥ 80 → AUTOPUB-01 구현 착수.
 
 ### OPTIONAL — 다음 Phase
 

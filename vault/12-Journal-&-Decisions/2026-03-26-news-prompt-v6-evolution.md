@@ -27,6 +27,19 @@
 
 참고: v3~v5의 KO 점수는 WebFetch 번역 오류로 citation이 누락된 것처럼 보여 낮게 평가했었음. citation이 처음부터 정상이었으므로 소급 보정함.
 
+### Quality Score 트렌드 (자동 평가, gpt-4.1-mini)
+
+| 날짜 | Business | Research | Expert | Learner | 비고 |
+|------|----------|----------|--------|---------|------|
+| 3/26 | **99** | **95** | E:100/95 | L:98/95 | v6 프롬프트 + 12000자 truncation |
+| 3/25 | 88 | 69 | E:88/68 | L:88/70 | 4000자 truncation으로 뒷부분 섹션 오탐 |
+| 3/24 | 85 | 65 | ? | ? | o4-mini (변별력 부족, 거의 항상 85) |
+
+3/26 결과가 실제 콘텐츠 품질을 정확히 반영함을 확인:
+- Business Expert 100점: 모든 섹션 존재, citation 매 단락, Strategic Decisions bullet 형식 완벽
+- Research Learner 95점: "actor-critic paradigm, self-distillation 설명 부족" 감점 — 합리적
+- 자동 publish 기준 (≥80) 설정을 위해 2~3일 추가 모니터링 필요
+
 ---
 
 ## 핵심 의사결정 & 배운 점
@@ -121,10 +134,11 @@ v4부터 KO 커버리지가 EN과 동일해짐.
 
 ## 다음 단계
 
-1. 품질 점수 모니터링 (업데이트된 quality check 프롬프트로)
-2. 하이브리드 품질 체크 고려 (코드 기반 규칙 + LLM 평가)
-3. Vol.01 환각 메타데이터 제거
-4. Weekly Recap 활성화 (뉴스 품질 안정 확인 후)
+1. **품질 점수 모니터링 (2~3일)** — 3일 연속 Business ≥ 85, Research ≥ 80 확인
+2. **자동 publish 구현** — 점수 기준 충족 시 AUTOPUB-01 착수 (quality_score ≥ 80 → draft → published)
+3. Weekly Recap 활성화 (뉴스 품질 안정 확인 후)
+4. Vol.01 환각 메타데이터 제거
+5. 하이브리드 품질 체크 고려 (코드 기반 규칙 + LLM 평가)
 
 ---
 
