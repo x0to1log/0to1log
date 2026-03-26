@@ -654,18 +654,18 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters.
-   NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists for that day. Do NOT penalize intentional omissions.
-   - 25: All present sections have substantial content (200+ chars each). One-Line Summary is concise and accurate.
+   NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists for that day. Do NOT penalize intentional omissions. But Why It Matters and One-Line Summary are ALWAYS required.
+   - 25: All present sections have substantial content (200+ chars each) with ## headings. One-Line Summary is concise and accurate.
    - 18: Present sections are adequate but 1 is thin (<150 chars)
-   - 10: 1+ present section is very thin or poorly structured
+   - 10: 1+ present section is very thin or poorly structured or missing ## headings
    - 0: Content structure is broken or unrecognizable
 
 2. **Source Citations** (25):
-   Expected format: [Source Title](URL) inline citations, arXiv IDs (arXiv:XXXX.XXXXX), or GitHub/HuggingFace links.
-   - 25: Every technical claim cites a source; benchmark numbers are attributed; paper IDs and repo URLs are present
-   - 18: Most items cite sources; 1-2 claims missing attribution
-   - 10: Fewer than half of claims cite sources
-   - 0: No source citations or fabricated URLs
+   Expected format: numbered citations [N](URL) at the end of each paragraph (Perplexity style). Numbers should be sequential across the article.
+   - 25: Every paragraph ends with at least one [N](URL) citation; benchmark numbers are attributed
+   - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
+   - 10: Fewer than half of paragraphs have citations, or citations are grouped at the bottom instead of inline
+   - 0: No inline citations or fabricated URLs
 
 3. **Technical Depth** (25):
    - 25: Specific numbers (parameter counts, benchmark scores, FLOPs, latency); comparisons to baselines; architecture details
@@ -674,8 +674,8 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Contains factual errors or hallucinated benchmarks
 
 4. **Language Quality** (25):
-   - 25: Reads like a peer engineer's analysis; assertive tone; each news item is 3-4 paragraphs; natural and fluent
-   - 18: Readable and professional; adequate length but some hedging ("may", "could")
+   - 25: Reads like a peer engineer analysis; assertive tone; each news item is 3-4 paragraphs; natural and fluent
+   - 18: Readable and professional; adequate length but some hedging
    - 10: Choppy, translation-sounding, or some items are only 1 paragraph
    - 0: Barely readable or extremely short
 
@@ -689,10 +689,10 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters.
-   NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists. Do NOT penalize intentional omissions.
-   - 25: All present sections have substantial content. One-Line Summary is approachable.
+   NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists. But Why It Matters and One-Line Summary are ALWAYS required.
+   - 25: All present sections have substantial content with ## headings. One-Line Summary is approachable.
    - 18: Present sections adequate but 1 is thin
-   - 10: 1+ present section is very thin
+   - 10: 1+ present section is very thin or missing ## headings
    - 0: Broken structure
 
 2. **Accessibility** (25):
@@ -702,13 +702,14 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Written like an expert brief; inaccessible to beginners
 
 3. **Source Citations** (25):
-   - 25: Key claims cite sources; paper and repo links are present where relevant
-   - 18: Most items cite sources
-   - 10: Fewer than half cite sources
+   Expected format: numbered citations [N](URL) at the end of each paragraph.
+   - 25: Most paragraphs end with [N](URL) citations
+   - 18: Most items cite sources; a few paragraphs missing
+   - 10: Fewer than half cite sources, or citations grouped at bottom
    - 0: No citations
 
 4. **Language Quality** (25):
-   - 25: Conversational but substantive ("senior colleague over coffee"); each item 2-3 paragraphs; no tutorial/action-plan drift
+   - 25: Conversational but substantive; each item 2-3 paragraphs; no tutorial/action-plan drift
    - 18: Readable; mostly appropriate tone; adequate length
    - 10: Too formal, too casual, or too short
    - 0: Barely readable
@@ -723,25 +724,27 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions.
-   - 25: All 6 sections present with substantial content (200+ chars each)
+   NOTE: Big Tech, Industry & Biz, and New Tools may be omitted if no relevant news exists. But One-Line Summary, Connecting the Dots, and Strategic Decisions are ALWAYS required.
+   - 25: All present sections have substantial content (200+ chars each) with ## headings. Strategic Decisions uses bullet format.
    - 18: All present but 1 is thin
-   - 10: Missing 1 section or 2+ very thin
-   - 0: Missing 2+ sections
+   - 10: Missing a required section (Connecting the Dots or Strategic Decisions) or missing ## headings
+   - 0: Missing 2+ required sections
 
 2. **Source Citations** (25):
-   - 25: Every claim cites a source; funding amounts, dates, and deal terms attributed
-   - 18: Most items cite sources; 1-2 unattributed claims
-   - 10: Fewer than half cite sources
-   - 0: No citations
+   Expected format: numbered citations [N](URL) at the end of each paragraph (Perplexity style).
+   - 25: Every paragraph ends with [N](URL); funding amounts and deal terms attributed
+   - 18: Most paragraphs cite sources; 1-2 missing
+   - 10: Fewer than half cite sources, or citations grouped at bottom
+   - 0: No inline citations
 
 3. **Analysis Quality** (25):
-   - 25: "Connecting the Dots" reveals causation between 2+ news items with market forces analysis; "Strategic Decisions" are specific with situation/action/reasoning/risk format
+   - 25: Connecting the Dots reveals causation between 2+ stories; Strategic Decisions use "If [situation]: [action] -- because [reasoning]. Risk of inaction: [consequence]" format
    - 18: Analysis exists but surface-level; decisions somewhat generic
    - 10: Analysis just restates news; decisions are platitudes
    - 0: No analysis or completely generic
 
 4. **Language Quality** (25):
-   - 25: Reads like a strategic advisor's private briefing; assertive; each item 3-4 paragraphs; specific comparisons
+   - 25: Reads like a strategic advisor briefing; assertive; each item 3-4 paragraphs; specific comparisons
    - 18: Professional and readable; adequate length
    - 10: Choppy or too general; some items only 1 paragraph
    - 0: Barely readable
@@ -756,10 +759,11 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items.
-   - 25: All 6 sections present with substantial content
+   NOTE: Big Tech, Industry & Biz, and New Tools may be omitted if no news. But One-Line Summary, What This Means for You, and Action Items are ALWAYS required.
+   - 25: All present sections have substantial content with ## headings. Action Items uses numbered list format.
    - 18: All present but 1 is thin
-   - 10: Missing 1 section or 2+ very thin
-   - 0: Missing 2+ sections
+   - 10: Missing a required section or missing ## headings
+   - 0: Missing 2+ required sections
 
 2. **Accessibility** (25):
    - 25: Business concepts explained in relatable terms; industry jargon decoded; examples connect to daily life
@@ -768,13 +772,13 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Inaccessible to general audience
 
 3. **Actionability** (25):
-   - 25: "Action Items" are specific, concrete, and doable this week (not generic "learn AI"); "What This Means for You" connects news to real impact
+   - 25: Action Items are specific, concrete, numbered (not generic "learn AI"); What This Means for You connects news to real impact in 3-4 paragraphs
    - 18: Actions exist but some are vague; meaning section is decent
-   - 10: Actions are generic platitudes ("stay updated"); meaning section thin
+   - 10: Actions are generic platitudes; meaning section thin
    - 0: No actionable content or empty sections
 
 4. **Language Quality** (25):
-   - 25: Friendly but informative; each item 2-3 paragraphs; engaging tone
+   - 25: Friendly but informative; each item 2-3 paragraphs; engaging tone; [N](URL) citations present
    - 18: Readable; adequate length
    - 10: Too dry, too short, or condescending
    - 0: Barely readable
