@@ -66,7 +66,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 - [Supabase](https://supabase.com): PostgreSQL 기반, 내장 Auth & RLS
 
 **AI & 검색**
-- [OpenAI](https://openai.com): gpt-4o, gpt-4o-mini (뉴스 큐레이션, 용어 설명)
+- [OpenAI](https://openai.com): gpt-4.1, gpt-4.1-mini (뉴스 큐레이션, 용어 설명)
 - [Tavily API](https://tavily.com): 의미론적 뉴스 검색 (최신 소식 수집)
 
 **자동화**
