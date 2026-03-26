@@ -86,7 +86,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 
 **로드맵 보기:**
 - 현재 스프린트: [ACTIVE_SPRINT](./vault/09-Implementation/plans/ACTIVE_SPRINT.md)
-- 전체 Phase 계획: [Phase-Flow](./vault/09-Implementation/plans/Phase-Flow.md)
+- 전체 Phase 계획: [Phase-Flow](./vault/09-Implementation/Phase-Flow.md)
 
 ## 시작하기
 
