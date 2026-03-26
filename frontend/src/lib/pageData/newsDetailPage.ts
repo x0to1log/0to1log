@@ -236,12 +236,6 @@ export async function getNewsDetailPageData({
   }
 
   const hasTerms = handbookTermsMap.size > 0;
-  const relatedTerms = Object.entries(handbookTermsJson).slice(0, 3).map(([slug, data]) => ({
-    slug,
-    term: data.term as string,
-    koreanName: data.korean_name as string,
-    definition: data.definition as string,
-  }));
   const renderMd = hasTerms
     ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
     : (md: string) => renderMarkdown(md);
@@ -283,6 +277,29 @@ export async function getNewsDetailPageData({
     ? personaHtmlMap[activePersona] || ''
     : (rawContent ? applySourceCitations(await renderMd(rawContent)) : '');
   const hasPersonaSwitcher = Object.keys(personaHtmlMap).length > 1;
+
+  // Extract actually-matched term slugs from rendered HTML
+  const allRenderedHtml = [htmlContent, analysisHtml, ...Object.values(personaHtmlMap)].join('');
+  const matchedSlugs: string[] = [];
+  const slugRegex = /data-slug="([^"]+)"/g;
+  let slugMatch: RegExpExecArray | null;
+  const seenSlugs = new Set<string>();
+  while ((slugMatch = slugRegex.exec(allRenderedHtml)) !== null) {
+    const s = slugMatch[1];
+    if (!seenSlugs.has(s)) {
+      seenSlugs.add(s);
+      matchedSlugs.push(s);
+    }
+  }
+  const relatedTerms = matchedSlugs
+    .filter(s => handbookTermsJson[s])
+    .slice(0, 3)
+    .map(s => ({
+      slug: s,
+      term: handbookTermsJson[s].term as string,
+      koreanName: handbookTermsJson[s].korean_name as string,
+      definition: handbookTermsJson[s].definition as string,
+    }));
 
   return {
     post,
