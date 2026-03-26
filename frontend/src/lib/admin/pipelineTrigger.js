@@ -34,7 +34,7 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
           'x-cron-secret': config.cronSecret,
         },
         body: JSON.stringify(weekId ? { week_id: weekId } : {}),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(30000),
       });
 
       const data = await response.json();
@@ -61,7 +61,7 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
           'x-cron-secret': config.cronSecret,
         },
         body: JSON.stringify({ batch_id: targetDate }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(30000),
       });
 
       const data = await response.json();
