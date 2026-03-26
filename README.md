@@ -35,9 +35,10 @@ Only real important news, no spam.
 **Systematically explain core AI terminology.**
 Understand concepts from today's news in depth.
 
-- **Beginner level**: Simple explanations for newcomers
-- **Advanced level**: Technical depth for developers & practitioners
-- **Auto-linked**: Click terms in articles to jump to glossary
+- **Basic level**: Simple explanations with analogies and examples
+- **Advanced level**: Technical depth with benchmarks, architecture details, and references
+- **Auto-linked**: Click terms in news articles to see definitions via popup
+- **Quality pipeline**: Tavily search context + type classification + self-critique (score < 75 triggers regeneration) + quality scoring
 
 **Solves:** Confusing terminology + Fragmented learning
 
@@ -68,8 +69,8 @@ When new AI products launch, find them, understand differences, learn how to use
 - [Supabase](https://supabase.com): PostgreSQL-based, built-in Auth & RLS
 
 **AI & Search**
-- [OpenAI](https://openai.com): gpt-4.1, gpt-4.1-mini (news curation, glossary generation)
-- [Tavily API](https://tavily.com): Semantic news search (latest updates collection)
+- [OpenAI](https://openai.com): gpt-4.1 (content generation), gpt-4.1-mini (classification, quality checks, self-critique)
+- [Tavily API](https://tavily.com): Semantic news search + handbook term context enrichment
 
 **Automation**
 - Cron jobs: Daily news pipeline automation
