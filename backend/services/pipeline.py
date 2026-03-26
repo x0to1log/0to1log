@@ -300,6 +300,8 @@ async def _extract_and_create_handbook_terms(
     pipeline_start = time.monotonic()
     PIPELINE_TIMEOUT_SEC = 30 * 60  # 30 minutes max for entire handbook pipeline
 
+    TERM_TIMEOUT_SEC = 10 * 60  # 10 minutes max per single term generation
+
     async def _create_single_term(term_name: str, korean_name: str, slug: str) -> tuple[int, list[str]]:
         """Generate and save a single handbook term. Returns (created_count, errors)."""
         # Check pipeline-level timeout before starting a new term
@@ -315,10 +317,22 @@ async def _extract_and_create_handbook_terms(
 
             t_gen = time.monotonic()
             try:
-                content_data, gen_usage = await generate_term_content(
-                    term_name, korean_name,
-                    article_context=term_context,
+                content_data, gen_usage = await asyncio.wait_for(
+                    generate_term_content(
+                        term_name, korean_name,
+                        article_context=term_context,
+                    ),
+                    timeout=TERM_TIMEOUT_SEC,
                 )
+            except asyncio.TimeoutError:
+                error_msg = f"Handbook generate timed out for '{term_name}' ({TERM_TIMEOUT_SEC}s)"
+                logger.warning(error_msg)
+                await _log_stage(
+                    supabase, run_id, "handbook.auto_generate", "failed", t_gen,
+                    error_message=error_msg,
+                    debug_meta={"term": term_name, "source": "pipeline", "timeout": True},
+                )
+                return 0, [error_msg]
             except Exception as e:
                 error_msg = f"Handbook generate failed for '{term_name}': {e}"
                 logger.warning(error_msg)
