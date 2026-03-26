@@ -200,6 +200,7 @@ def _build_digest_prompt(
     digest_type: str,
     sections_description: str,
     handbook_slugs: list[str],
+    skeleton: str = "",
 ) -> str:
     handbook_section = _build_handbook_section(handbook_slugs)
 
@@ -259,81 +260,11 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ```
 
 ## CRITICAL: "en" and "ko" field structure example
-Your "en" and "ko" values MUST follow this EXACT section structure. This is a skeleton — replace content but keep ALL section headers and the citation/bullet format.
+Your "en" and "ko" values MUST follow the skeleton below. Replace content but keep ALL section headers and the citation/bullet format.
 
-**English ("en") skeleton for a business expert digest:**
-```
-## One-Line Summary
-OpenAI restructures priorities as enterprise AI competition intensifies across cloud, agents, and on-device deployment.
+{skeleton}
 
-## Big Tech
-### OpenAI Discontinues Sora, Pivots to Enterprise AI
-OpenAI announces the shutdown of Sora, its text-to-video platform, to redirect resources toward coding tools and agentic AI. The move aligns with the company's IPO preparation, prioritizing revenue-generating enterprise products over experimental consumer features. [1](https://example.com/openai-sora)
-
-This is a significant strategic signal. While competitors like Runway and Pika continue investing in video generation, OpenAI's retreat suggests the consumer AI video market does not yet justify the compute costs. The $10B+ in annual revenue OpenAI targets depends on enterprise contracts, not viral consumer demos. [1](https://example.com/openai-sora)
-
-OpenAI simultaneously announces plans to double its workforce from 4,500 to over 8,000, targeting research, engineering, and product roles. This hiring pace exceeds Google DeepMind (~1,000/year) and Anthropic (hundreds/year), signaling an intent to dominate not just models but the full-stack AI application layer. [2](https://example.com/openai-hiring)
-
-## Industry & Biz
-### Oracle Launches Fusion Agentic Applications
-[3-4 paragraphs with citations per paragraph...]
-
-## New Tools
-### Cloudflare Dynamic Workers
-[3-4 paragraphs with citations per paragraph...]
-
-## Connecting the Dots
-[2-3 paragraphs connecting the stories: why these things happened simultaneously, what forces drive them]
-
-## Strategic Decisions
-- **If you are building on OpenAI APIs**: Diversify to at least one alternative provider this quarter — because OpenAI's pivot to enterprise may change API pricing and priorities. Risk of inaction: 100% vendor lock-in with unpredictable cost changes.
-- **If your team evaluates AI video tools**: Pause Sora-dependent projects immediately — because the platform is shutting down. Risk of inaction: wasted development on a dead product.
-- **If you run AI workloads on traditional containers**: Benchmark Cloudflare Dynamic Workers against your current setup — because 100x cold-start improvement changes the cost equation. Risk of inaction: overpaying for AI inference infrastructure.
-```
-
-**Korean ("ko") skeleton for a business expert digest:**
-```
-## 한 줄 요약
-OpenAI가 Sora를 종료하고 기업용 AI로 전환하며, 클라우드·에이전트·온디바이스 전선에서 경쟁이 심화된다.
-
-## Big Tech
-### OpenAI, Sora 종료하고 기업용 AI에 집중
-OpenAI가 텍스트-투-비디오 플랫폼 Sora를 공식 종료하고, 코딩 도구와 에이전트형 AI에 자원을 재배치한다. IPO를 앞두고 수익성 높은 기업용 제품에 집중하려는 전략적 결정이다. [1](https://example.com/openai-sora)
-
-이 결정은 중요한 시장 신호다. Runway, Pika 등 경쟁사가 영상 생성에 계속 투자하는 가운데, OpenAI의 철수는 소비자 AI 영상 시장이 아직 컴퓨팅 비용을 정당화하지 못한다는 판단을 반영한다. OpenAI가 목표로 하는 연 $10B 이상 매출은 기업 계약에 달려 있다. [1](https://example.com/openai-sora)
-
-동시에 인력을 4,500명에서 8,000명 이상으로 2배 확대할 계획도 발표했다. Google DeepMind(연 ~1,000명), Anthropic(수백 명)을 크게 상회하는 채용 속도로, 모델뿐 아니라 풀스택 AI 애플리케이션 레이어까지 지배하겠다는 의도다. [2](https://example.com/openai-hiring)
-
-## Industry & Biz
-### 오라클, Fusion Agentic Applications 출시
-오라클이 Fusion Agentic Applications를 공개했다. 여러 AI 에이전트가 팀을 이뤄 실시간으로 비즈니스 결정을 내리고 실행하는 새로운 형태의 기업용 소프트웨어다. 기존 AI 어시스턴트와 달리 트랜잭션 시스템에 네이티브로 내장되어 보안과 거버넌스가 강점이다. [3](https://example.com/oracle-fusion)
-
-이 제품은 SAP, Salesforce 등 기존 ERP 업체들의 AI 전략과 정면으로 경쟁한다. 오라클은 데이터베이스 레이어를 직접 소유하고 있어 에이전트가 데이터에 접근할 때 추가 통합 없이 동작할 수 있다는 구조적 이점을 갖는다. [3](https://example.com/oracle-fusion)
-
-에이전트형 소프트웨어 시장은 2027년까지 연 40% 성장이 예상되며, 오라클의 진입은 이 시장이 실험 단계를 지나 상용 제품 단계에 진입했음을 의미한다. 기업 IT 의사결정자는 기존 ERP 벤더의 에이전트 통합 로드맵을 비교 평가해야 할 시점이다. [3](https://example.com/oracle-fusion)
-
-## New Tools
-### 클라우드플레어 Dynamic Workers
-클라우드플레어가 Dynamic Workers를 오픈 베타로 출시했다. 전통 컨테이너 대비 약 100배 빠른 콜드 스타트와 100배 낮은 메모리 사용량으로 AI 에이전트 코드를 실행할 수 있다. [4](https://example.com/cloudflare-workers)
-
-수백만 명이 동시에 각자의 AI 에이전트를 실행하는 시나리오에서 기존 Docker 컨테이너는 리소스 병목이 된다. Dynamic Workers는 V8 isolate 기반으로 밀리초 단위 시작이 가능해 이 문제를 근본적으로 해결한다. [4](https://example.com/cloudflare-workers)
-
-개발자 관점에서 이는 AI 기능 배포의 비용 구조를 바꾼다. 특히 에이전트가 사용자별로 코드를 생성하고 실행하는 패턴이 늘어나면서, 경량 런타임의 중요성은 더 커질 전망이다. [4](https://example.com/cloudflare-workers)
-
-## 흐름 연결
-이번 주 뉴스를 관통하는 핵심 흐름은 AI 산업이 소비자 엔터테인먼트에서 기업 인프라로 무게 중심을 옮기고 있다는 점이다. OpenAI의 Sora 종료, 오라클의 에이전트 앱, 클라우드플레어의 경량 런타임 모두 같은 방향을 가리킨다.
-
-동시에 AI 인재 전쟁이 격화되고 있다. OpenAI의 8,000명 채용 계획은 Google, Microsoft와의 인재 쟁탈전을 예고하며, 이는 AI 엔지니어 연봉 상승과 중소기업의 인재 확보 난이도 증가로 이어질 것이다.
-
-규제 환경도 변화 중이다. 각국 정부가 AI 정책 프레임워크를 내놓으면서, 기업은 혁신 속도와 규제 준수 사이에서 균형을 잡아야 하는 새로운 과제를 안게 되었다.
-
-## 전략 판단
-- **현재 OpenAI API 기반으로 개발 중이라면**: 이번 분기 내 대안 제공업체 최소 1곳과 병행 테스트하라 — OpenAI의 기업 전환으로 API 가격·우선순위가 바뀔 수 있다. 미대응 리스크: 예측 불가능한 비용 변동에 100% 종속.
-- **AI 영상 도구를 평가 중이라면**: Sora 의존 프로젝트를 즉시 중단하라 — 플랫폼이 종료된다. 미대응 리스크: 사라질 제품에 개발 리소스 낭비.
-- **전통 컨테이너에서 AI 워크로드를 운영 중이라면**: 클라우드플레어 Dynamic Workers를 벤치마크하라 — 콜드스타트 100배 개선은 비용 구조를 바꾼다. 미대응 리스크: AI 추론 인프라에 과다 지출.
-```
-
-IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count (3-4 per item), and bullet format in Strategic Decisions MUST match this structure exactly.
+IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
@@ -410,6 +341,7 @@ Writing rules:
 - Write like a senior colleague explaining things over coffee - approachable but substantive
 - Use analogy only when it helps. If the news is straightforward, get to the point.
 - Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE
+- When explaining a technical method, lead with WHAT IT DOES in plain language BEFORE naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time -- a technique called parallel diffusion decoding"
 - Focus on understanding, not action plans
 - Do NOT include "What To Try This Week", tutorials, step-by-step experiments, or tool recommendations unless the repo itself is the story.
 - Keep business strategy and market impact brief and secondary.
@@ -486,6 +418,131 @@ Writing rules:
 - Make it interesting and accessible, not dumbed down"""
 
 
+# --- Per-persona skeletons ---
+# Each skeleton shows the EXACT output structure for that persona+type combination.
+# LLM uses this as a template — keeps headers, citation format, paragraph count.
+
+BUSINESS_EXPERT_SKELETON = """
+**English ("en"):**
+```
+## One-Line Summary
+OpenAI restructures priorities as enterprise AI competition intensifies.
+
+## Big Tech
+### OpenAI Discontinues Sora, Pivots to Enterprise AI
+OpenAI announces the shutdown of Sora to redirect resources toward coding tools and agentic AI. The move aligns with IPO preparation, prioritizing revenue-generating enterprise products. [1](https://example.com/openai-sora)
+
+This is a significant strategic signal. Competitors like Runway and Pika continue investing in video generation, but OpenAI judges the consumer AI video market cannot yet justify compute costs. [1](https://example.com/openai-sora)
+
+OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. This hiring pace exceeds Google DeepMind and Anthropic, signaling intent to dominate the full-stack AI application layer. [2](https://example.com/openai-hiring)
+
+## Industry & Biz
+### Oracle Launches Fusion Agentic Applications
+[3 paragraphs, each ending with [N](URL)...]
+
+## New Tools
+### Cloudflare Dynamic Workers
+[3 paragraphs, each ending with [N](URL)...]
+
+## Connecting the Dots
+[2-3 paragraphs connecting the stories]
+
+## Strategic Decisions
+- **If you are building on OpenAI APIs**: Diversify to at least one alternative this quarter -- because pricing may change. Risk of inaction: 100% vendor lock-in.
+- **If you run AI on traditional containers**: Benchmark Dynamic Workers -- 100x cold-start improvement changes the cost equation. Risk of inaction: overpaying for inference.
+```
+
+**Korean ("ko"):** Same structure, Korean headings where specified (## 한 줄 요약, ## 흐름 연결, ## 전략 판단). Same number of sections, items, and paragraphs. Citations [N](URL) at every paragraph end.
+"""
+
+BUSINESS_LEARNER_SKELETON = """
+**English ("en"):**
+```
+## One-Line Summary
+OpenAI is hiring big, Cloudflare makes AI agents faster, and a new policy framework could reshape the industry.
+
+## Big Tech
+### OpenAI Plans to Double Its Workforce
+OpenAI, the company behind ChatGPT and DALL-E, plans to grow from 4,500 to over 8,000 employees. This means more people working on AI tools that could show up in apps you use every day. [1](https://example.com/openai)
+
+The expansion targets research, engineering, and product roles. As AI models get more complex, companies need experts in everything from deep learning to AI ethics. [1](https://example.com/openai)
+
+## Industry & Biz
+### U.S. National AI Policy Framework
+[2-3 paragraphs, plain language, each ending with [N](URL)...]
+
+## New Tools
+### Cloudflare Dynamic Workers: Faster AI for Everyone
+[2-3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
+
+## What This Means for You
+[3-4 paragraphs connecting news to daily life, career, and work]
+
+## Action Items
+1. **Explore OpenAI job listings**: If you have AI or engineering skills, check what roles match your experience.
+2. **Try Cloudflare Dynamic Workers**: Test the open beta to see if it speeds up your AI projects.
+3. **Monitor AI policy changes**: Track the new framework and assess how it affects your work.
+```
+
+**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 나에게 주는 의미, ## 지금 할 일). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
+"""
+
+RESEARCH_EXPERT_SKELETON = """
+**English ("en"):**
+```
+## One-Line Summary
+Diffusion-based decoding disrupts document OCR while multi-agent verification tackles LLM hallucination at scale.
+
+## Research Papers
+### MinerU-Diffusion: Document OCR via Diffusion Decoding
+MinerU-Diffusion reframes OCR as inverse rendering, replacing sequential autoregressive decoding with parallel block-wise diffusion. The model achieves 3.2x faster decoding while maintaining accuracy on complex layouts including tables and formulas. [1](https://arxiv.org/abs/example1)
+
+The block-wise diffusion decoder combined with uncertainty-driven curriculum learning enables stable training on long-form documents. On the Semantic Shuffle benchmark, MinerU-Diffusion shows reduced reliance on language priors, relying instead on visual cues. [1](https://arxiv.org/abs/example1)
+
+This architecture shift could reshape production OCR pipelines. The open-source implementation on Hugging Face enables immediate evaluation against existing autoregressive baselines. [1](https://arxiv.org/abs/example1)
+
+### MARCH: Multi-Agent Hallucination Detection
+[3 paragraphs with benchmarks and architecture details, each ending with [N](URL)...]
+
+## Open Source & Repos
+### WildWorld Dataset
+[3 paragraphs, each ending with [N](URL)...]
+
+## Why It Matters
+[1-2 paragraphs synthesizing what changed in AI research today]
+```
+
+**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
+"""
+
+RESEARCH_LEARNER_SKELETON = """
+**English ("en"):**
+```
+## One-Line Summary
+New AI research makes document scanning dramatically faster and helps AI systems avoid making things up.
+
+## Research Papers
+### MinerU-Diffusion: A Faster Way to Read Documents
+Traditional document scanners read text one character at a time, left to right -- like reading a book word by word. MinerU-Diffusion takes a completely different approach: it looks at the entire page at once and processes all the text in parallel. This technique, called diffusion-based decoding, makes it 3.2 times faster than traditional methods. [1](https://arxiv.org/abs/example1)
+
+The key innovation is treating document reading as "reverse rendering" -- essentially asking "what text would produce this image?" instead of sequentially decoding characters. This works especially well for complex documents with tables and math formulas, where traditional methods often make errors that cascade through the rest of the page. [1](https://arxiv.org/abs/example1)
+
+### MARCH: Teaching AI to Fact-Check Itself
+Large language models sometimes make up facts -- a problem called "hallucination." MARCH tackles this by using three separate AI agents that check each other's work, similar to how a newsroom has reporters, editors, and fact-checkers. [2](https://arxiv.org/abs/example2)
+
+The clever part: each agent only sees part of the information, so they cannot just agree with each other. The Solver writes the answer, the Proposer breaks it into claims, and the Checker verifies each claim against source documents -- without seeing the original answer. This approach helps even smaller AI models (8 billion parameters) match the accuracy of much larger systems. [2](https://arxiv.org/abs/example2)
+
+## Open Source & Repos
+### WildWorld: A Video Game Dataset for AI Training
+[2-3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
+
+## Why It Matters
+[1-2 paragraphs connecting developments to the bigger picture, accessible language]
+```
+
+**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end. When explaining a technical method, lead with WHAT IT DOES in plain language before naming the technique.
+"""
+
 # --- Digest prompt getters ---
 
 DIGEST_PROMPT_MAP = {
@@ -493,6 +550,13 @@ DIGEST_PROMPT_MAP = {
     ("research", "learner"): (RESEARCH_LEARNER_SECTIONS, RESEARCH_LEARNER_GUIDE),
     ("business", "expert"): (BUSINESS_EXPERT_SECTIONS, BUSINESS_EXPERT_GUIDE),
     ("business", "learner"): (BUSINESS_LEARNER_SECTIONS, BUSINESS_LEARNER_GUIDE),
+}
+
+SKELETON_MAP = {
+    ("research", "expert"): RESEARCH_EXPERT_SKELETON,
+    ("research", "learner"): RESEARCH_LEARNER_SKELETON,
+    ("business", "expert"): BUSINESS_EXPERT_SKELETON,
+    ("business", "learner"): BUSINESS_LEARNER_SKELETON,
 }
 
 
@@ -510,7 +574,11 @@ def get_digest_prompt(
         (digest_type, persona),
         (RESEARCH_LEARNER_SECTIONS, RESEARCH_LEARNER_GUIDE),
     )
-    return _build_digest_prompt(persona, guide, digest_type, sections, handbook_slugs)
+    skeleton = SKELETON_MAP.get(
+        (digest_type, persona),
+        RESEARCH_LEARNER_SKELETON,
+    )
+    return _build_digest_prompt(persona, guide, digest_type, sections, handbook_slugs, skeleton)
 
 
 # ──────────────────────────────────────────────
