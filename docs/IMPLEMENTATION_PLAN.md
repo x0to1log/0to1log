@@ -1,7 +1,7 @@
 ﻿# 0to1log Implementation Plan (Core Edition)
 
-> **문서 버전:** v2.5  
-> **최종 수정:** 2026-03-08  
+> **문서 버전:** v3.0
+> **최종 수정:** 2026-03-26  
 > **작성자:** Amy (Solo)  
 > **상태:** Active Planning  
 > **목적:** 바이브 코딩 속도는 유지하고, 재작업을 유발하는 핵심 리스크만 강제한다.
@@ -63,10 +63,10 @@ flowchart TD
 - Language and theme controls live in the utility drawer, not inline in the public header
 
 ### Current Status Snapshot
-- Mainline 구현 상태: **Phase 3A-SEC 완료** (main 브랜치 반영 완료)
-- **완료된 단계:** 2B-OPS, 2C-EXP, 2D-INT, 3-USER, 3A-SEC
-- **병렬 진행:** Handbook H1은 `docs/plans/ACTIVE_SPRINT_HANDBOOK.md` 기준으로 별도 운영한다.
-- **다음 메인라인 스프린트:** Phase 3-Intelligence (AI 추천 + 학습 고도화)
+- Mainline 구현 상태: **NP4-Q (News Pipeline v4 Quality Stabilization) 96% 완료** (2026-03-26)
+- **완료된 단계:** 2B-OPS, 2C-EXP, 2D-INT, 3-USER, 3A-SEC, 3B-SHARE (2026-03-13), Handbook Quality (2026-03-13~16)
+- **현재 진행 중:** NP4-Q — News Pipeline v4 Quality Stabilization (96% 완료, 48+/50 tasks)
+- **다음 메인라인 스프린트:** Phase 3-Intelligence (2026-03-30 예정, Wave 1: 2026-03-30~04-10)
 
 ### Phase 3-Intelligence (Draft Backlog)
 - `P3I-REC-01`: AI News 개인화 추천
