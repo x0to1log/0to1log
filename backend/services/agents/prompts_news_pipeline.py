@@ -152,7 +152,8 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 {sections_description}
 
 ## Writing Rules
-1. Cite the Source URL for each news item at the end of every paragraph: "... [Source Title](URL)". Even if a news item has only one source, you MUST cite it. For arXiv papers: "[arXiv](URL)". For GitHub repos: "[GitHub](URL)". Never omit citations.
+1. CITATION FORMAT: Use numbered citations at the END of each paragraph (Perplexity style). Format: `[1](URL)`. Number citations sequentially across the entire article (not per-section). Each paragraph MUST end with at least one citation. Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
+   Example: `...이는 AI 업계 최대 규모의 채용 계획이다. [1](https://example.com/article)`
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
 4. English and Korean should cover the same facts with natural expression for each language.
@@ -214,7 +215,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. Cite the Source URL for each news item at the end of every paragraph: "... [Source Title](URL)". Even if a news item has only one source, you MUST cite it. For arXiv papers: "[arXiv](URL)". For GitHub repos: "[GitHub](URL)". Never omit citations.
+1. CITATION FORMAT: Use numbered citations at the END of each paragraph (Perplexity style). Format: `[1](URL)`. Number citations sequentially across the entire article (not per-section). Each paragraph MUST end with at least one citation. Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
+   Example: `...이는 AI 업계 최대 규모의 채용 계획이다. [1](https://example.com/article)`
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
 4. English and Korean should cover the same news items with natural expression for each language.
