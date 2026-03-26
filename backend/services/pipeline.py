@@ -442,13 +442,13 @@ async def _check_digest_quality(
         learner_prompt = QUALITY_CHECK_BUSINESS_LEARNER
 
     client = get_openai_client()
-    reasoning_model = settings.openai_model_reasoning
+    quality_model = settings.openai_model_light  # gpt-4.1-mini — cheaper and more reliable for scoring
 
     async def _score(prompt: str, content: str, label: str) -> tuple[int, dict, dict]:
         try:
             resp = await client.chat.completions.create(
                 **build_completion_kwargs(
-                    model=reasoning_model,
+                    model=quality_model,
                     messages=[
                         {"role": "system", "content": prompt},
                         {"role": "user", "content": content[:4000]},
@@ -459,7 +459,7 @@ async def _check_digest_quality(
                 )
             )
             data = parse_ai_json(resp.choices[0].message.content, label)
-            usage = extract_usage_metrics(resp, reasoning_model)
+            usage = extract_usage_metrics(resp, quality_model)
             return int(data.get("score", 0)), data, usage
         except Exception as e:
             logger.warning("Quality check %s failed: %s", label, e)
