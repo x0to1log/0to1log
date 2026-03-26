@@ -1304,15 +1304,18 @@ async def run_weekly_pipeline(
                 all_errors.append(f"No daily digests for {week_id} {locale}")
                 continue
 
-            # Build input text from all dailies
-            daily_text = ""
-            for d in digests:
-                daily_text += f"\n\n--- {d['post_type'].upper()} ({d.get('published_at', '')}) ---\n"
-                daily_text += f"# {d['title']}\n"
-                if d.get("content_expert"):
-                    daily_text += f"\n## Expert\n{d['content_expert']}\n"
-                if d.get("content_learner"):
-                    daily_text += f"\n## Learner\n{d['content_learner']}\n"
+            # Build per-persona input text (avoid tone contamination + save tokens)
+            persona_daily_texts: dict[str, str] = {}
+            for persona in ("expert", "learner"):
+                content_key = f"content_{persona}"
+                text = ""
+                for d in digests:
+                    content = d.get(content_key, "")
+                    if not content:
+                        continue
+                    text += f"\n\n--- {d['post_type'].upper()} ({d.get('published_at', '')}) ---\n"
+                    text += f"# {d['title']}\n\n{content}\n"
+                persona_daily_texts[persona] = text
 
             # Fetch handbook terms for bottom card
             week_terms = await _fetch_week_handbook_terms(supabase, week_id, locale)
@@ -1322,6 +1325,9 @@ async def run_weekly_pipeline(
             client = get_openai_client()
 
             async def _gen_weekly_persona(persona: str) -> None:
+                daily_text = persona_daily_texts.get(persona, "")
+                if not daily_text:
+                    return
                 t_p = time.monotonic()
                 system_prompt = get_weekly_prompt(persona, language)
                 try:

@@ -686,7 +686,7 @@ After the markdown, output a fenced JSON block:
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
-- week_tool: pick the single most noteworthy AI tool mentioned this week.
+- week_tool: pick the single most noteworthy AI tool mentioned this week. The URL MUST appear in the provided daily digests. Do NOT fabricate or guess URLs.
 - If fewer than 3 daily digests are provided, note the limited coverage at the top."""
 
 WEEKLY_LEARNER_PROMPT = """You are the editor of a beginner-friendly AI weekly newsletter.
@@ -750,7 +750,7 @@ After the markdown, output a fenced JSON block:
 - Explain technical terms on first use.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
-- week_tool: pick one tool that a learner could actually try this week.
+- week_tool: pick one tool that a learner could actually try this week. The URL MUST appear in the provided daily digests. Do NOT fabricate or guess URLs.
 - If fewer than 3 daily digests are provided, note the limited coverage at the top."""
 
 
