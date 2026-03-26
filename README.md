@@ -106,6 +106,7 @@ To understand the code and architecture:
 - **Backend Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md) — Pipeline details with Mermaid diagrams
 - **Backend setup**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI pipeline
 - **Frontend setup**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS
+- **Korean docs**: [README_KR.md](./README_KR.md) — Korean version
 - **Design & Planning**: [vault/](./vault/) — System design & decision history
 
 ## Get In Touch

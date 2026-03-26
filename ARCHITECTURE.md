@@ -1,11 +1,11 @@
-# 0to1log Backend Architecture
+# Backend Architecture
 
-0to1log의 백엔드는 **3가지 주요 파이프라인**으로 구성됩니다:
-1. **Daily News Digest** — AI 뉴스 자동 큐레이션
-2. **AI Handbook** — 기술 용어 자동 생성
-3. **Blog & AI Products** — 블로그/제품 가이드 자동 생성
+0to1log's backend consists of **3 main pipelines**:
+1. **Daily News Digest** — Automatic AI news curation
+2. **AI Handbook** — Automated terminology generation
+3. **Blog & AI Products** — Automated blog/product guides
 
-각 파이프라인은 **API Layer → Service Layer → Core Layer** 구조로 작동합니다.
+Each pipeline follows an **API Layer → Service Layer → Core Layer** architecture.
 
 ---
 
@@ -14,16 +14,16 @@
 ```mermaid
 graph TB
     subgraph API["API Layer (routers/)"]
-        AdminAI["admin_ai.py<br/>뉴스 파이프라인"]
-        AdminBlog["admin_blog_ai.py<br/>블로그 파이프라인"]
-        AdminProd["admin_product_ai.py<br/>제품 파이프라인"]
-        Cron["cron.py<br/>자동화"]
-        Recommend["recommendations.py<br/>추천"]
+        AdminAI["admin_ai.py<br/>News Pipeline"]
+        AdminBlog["admin_blog_ai.py<br/>Blog Pipeline"]
+        AdminProd["admin_product_ai.py<br/>Product Pipeline"]
+        Cron["cron.py<br/>Automation"]
+        Recommend["recommendations.py<br/>Recommendations"]
     end
     
     subgraph Service["Service Layer (services/)"]
         Pipeline["pipeline.py<br/>(Orchestration)"]
-        NewsCol["news_collection.py<br/>(Tavily 수집)"]
+        NewsCol["news_collection.py<br/>(Tavily Collection)"]
         Agents["agents/<br/>(PydanticAI)"]
         Embed["embedding.py<br/>(Pinecone)"]
     end
@@ -56,36 +56,36 @@ graph TB
 ```
 routers/
 ├── admin_ai.py           POST /api/admin/news
-│   └─ pipeline.generate_news() 트리거
+│   └─ Trigger pipeline.generate_news()
 │
 ├── admin_blog_ai.py      POST /api/admin/blog
-│   └─ pipeline.generate_blog() 트리거
+│   └─ Trigger pipeline.generate_blog()
 │
 ├── admin_product_ai.py   POST /api/admin/products
-│   └─ pipeline.generate_products() 트리거
+│   └─ Trigger pipeline.generate_products()
 │
 ├── cron.py               POST /api/cron/news (Vercel Cron)
-│   └─ 매일 09:00 UTC 자동 실행
+│   └─ Auto-run daily at 09:00 UTC
 │
 └── recommendations.py    GET /api/recommendations?post_id=X
-    └─ 유사 기사 검색 (Pinecone)
+    └─ Find similar articles (Pinecone search)
 ```
 
 ---
 
 ## Service Layer (services/)
 
-### 파이프라인 오케스트레이션
+### Pipeline Orchestration
 
 ```mermaid
 graph LR
-    Start(["시작"]) --> Collect["1. 뉴스 수집<br/>news_collection.collect"]
-    Collect --> Rank["2. 랭킹<br/>advisor.rank_news"]
-    Rank --> WriteR["3. Research 작성<br/>persona_writer"]
-    WriteR --> WriteB["4. Business 작성<br/>persona_writer"]
-    WriteB --> Check["5. 품질 검증<br/>quality_check"]
-    Check --> Save["6. DB 저장<br/>database.save_posts"]
-    Save --> End(["완료"])
+    Start(["Start"]) --> Collect["1. Collect News<br/>news_collection.collect"]
+    Collect --> Rank["2. Rank<br/>advisor.rank_news"]
+    Rank --> WriteR["3. Write Research<br/>persona_writer"]
+    WriteR --> WriteB["4. Write Business<br/>persona_writer"]
+    WriteB --> Check["5. Quality Check<br/>quality_check"]
+    Check --> Save["6. Save to DB<br/>database.save_posts"]
+    Save --> End(["Done"])
     
     style Start fill:#90EE90
     style End fill:#FFB6C6
@@ -97,32 +97,32 @@ graph LR
     style Save fill:#87CEEB
 ```
 
-### 각 서비스 상세
+### Service Details
 
 **📰 news_collection.py**
 ```
 collect_news()
-  ├─ Tavily API → AI 뉴스 검색
-  ├─ 중복 제거 & 필터링
-  └─ 메타데이터 추출 (제목, URL, 요약)
+  ├─ Tavily API → Search AI news
+  ├─ Deduplication & filtering
+  └─ Extract metadata (title, URL, summary)
 ```
 
 **🤖 agents/ (PydanticAI)**
 ```
 agents/
-├── persona_writer.py         뉴스를 Research/Business별로 작성
-│   └─ gpt-4.1로 한국어 + 영어 생성
+├── persona_writer.py         Write news for Research/Business personas
+│   └─ gpt-4.1 generates Korean + English
 │
-├── advisor.py                뉴스 중요도 평가 & 랭킹
-│   └─ gpt-4.1로 큐레이션
+├── advisor.py                Evaluate news importance & rank
+│   └─ gpt-4.1 curates content
 │
-├── fact_extractor.py         주요 팩트 & 인용 추출
-│   └─ gpt-4.1로 구조화
+├── fact_extractor.py         Extract key facts & citations
+│   └─ gpt-4.1 structures data
 │
-├── blog_advisor.py           블로그 생성 제어
-├── product_advisor.py        제품 가이드 생성 제어
+├── blog_advisor.py           Control blog generation
+├── product_advisor.py        Control product guide generation
 │
-└── prompts_*.py              프롬프트 템플릿
+└── prompts_*.py              Prompt templates
     ├── prompts_news_pipeline.py
     ├── prompts_handbook_types.py
     └── prompts_blog_advisor.py
@@ -131,9 +131,9 @@ agents/
 **🔍 embedding.py**
 ```
 embed_and_search(query)
-  ├─ 쿼리 벡터화
-  ├─ Pinecone 검색
-  └─ 유사 기사 반환
+  ├─ Convert query to vector
+  ├─ Search Pinecone
+  └─ Return similar articles
 ```
 
 ---
@@ -162,22 +162,20 @@ sequenceDiagram
     DB-->>Web: display news
 ```
 
-**파일 위치:**
+**File Location:**
 ```
 backend/
-├── routers/admin_ai.py           → API 엔드포인트
-├── services/pipeline.py          → 오케스트레이션
-├── services/news_collection.py   → Tavily 수집
+├── routers/admin_ai.py           → API endpoint
+├── services/pipeline.py          → Orchestration
+├── services/news_collection.py   → Tavily collection
 ├── services/agents/
-│   ├── advisor.py                → 랭킹
-│   ├── persona_writer.py         → 페르소나 작성
-│   └── prompts_news_pipeline.py  → 프롬프트
+│   ├── advisor.py                → Ranking
+│   ├── persona_writer.py         → Persona writing
+│   └── prompts_news_pipeline.py  → Prompts
 └── core/
-    ├── database.py               → Supabase 연결
-    └── config.py                 → API 키 설정
+    ├── database.py               → Supabase connection
+    └── config.py                 → API keys config
 ```
-
-**상세:** [vault/09-Implementation/plans/](vault/09-Implementation/plans/)
 
 ---
 
@@ -185,18 +183,18 @@ backend/
 
 ```
 core/
-├── config.py           환경 변수 & 설정
+├── config.py           Environment variables & settings
 │   └─ OPENAI_MODEL_MAIN="gpt-4.1"
 │      TAVILY_API_KEY, PINECONE_API_KEY, ...
 │
-├── database.py         Supabase 연결 & 쿼리
-│   └─ PostgreSQL 래퍼 & RLS 적용
+├── database.py         Supabase connection & queries
+│   └─ PostgreSQL wrapper with RLS
 │
-├── security.py         인증 & 권한
-│   └─ JWT 검증, Admin 보호, CRON_SECRET
+├── security.py         Authentication & authorization
+│   └─ JWT validation, Admin protection, CRON_SECRET
 │
 └── rate_limit.py       API Rate Limiting (slowapi)
-    └─ DDoS 방지
+    └─ DDoS prevention
 ```
 
 ---
@@ -205,9 +203,9 @@ core/
 
 ```mermaid
 graph LR
-    subgraph Schedule["Cron 트리거"]
-        VercelCron["Vercel Cron<br/>(매일 09:00 UTC)"]
-        ManualTrigger["관리자 수동<br/>(admin UI)"]
+    subgraph Schedule["Cron Triggers"]
+        VercelCron["Vercel Cron<br/>(Daily 09:00 UTC)"]
+        ManualTrigger["Admin Manual<br/>(admin UI)"]
     end
     
     VercelCron --> CronRouter["routers/cron.py"]
@@ -227,34 +225,34 @@ graph LR
     style RecapGen fill:#FFB6C1
 ```
 
-**실행 패턴:**
+**Execution Patterns:**
 ```
-매일 09:00 UTC
+Daily at 09:00 UTC
   └─ Vercel Cron → POST /api/cron/news
      └─ pipeline.generate_news()
      
-매주 월요일 09:00 UTC
+Weekly Monday 09:00 UTC
   └─ Vercel Cron → POST /api/cron/weekly
      └─ pipeline.generate_weekly_recap()
      
-On-demand (관리자)
+On-demand (Admin)
   └─ Admin UI → POST /api/admin/news
      └─ pipeline.generate_news()
 ```
 
 ---
 
-## 기술 스택 선택 이유
+## Tech Stack Rationale
 
-| 컴포넌트 | 선택 | 이유 |
-|---------|------|------|
-| **FastAPI** | Python API | 높은 성능, 타입 안전, 자동 문서화 |
-| **PydanticAI** | AI 에이전트 | 타입 안전한 LLM 호출, 구조화된 출력 |
-| **OpenAI gpt-4.1** | 주요 모델 | 한국어 이해도, 뉴스 큐레이션 성능 |
-| **Tavily API** | 뉴스 검색 | 의미론적 검색, 실시간 업데이트 |
-| **Supabase** | 데이터베이스 | PostgreSQL + Auth + RLS 통합 |
-| **Pinecone** | 벡터 검색 | 고속 의미론적 검색, 추천 기능 |
-| **slowapi** | Rate Limiting | FastAPI 네이티브 지원 |
+| Component | Choice | Why |
+|-----------|--------|-----|
+| **FastAPI** | Python API | High performance, type-safe, auto-documentation |
+| **PydanticAI** | AI agents | Type-safe LLM calls, structured outputs |
+| **OpenAI gpt-4.1** | Main model | Korean understanding, news curation quality |
+| **Tavily API** | News search | Semantic search, real-time updates |
+| **Supabase** | Database | PostgreSQL + Auth + RLS integration |
+| **Pinecone** | Vector search | Fast semantic search, recommendation engine |
+| **slowapi** | Rate limiting | FastAPI-native support |
 
 ---
 
@@ -262,40 +260,40 @@ On-demand (관리자)
 
 ```
 models/
-├── posts.py              Post (뉴스)
-├── glossary.py           Term (용어)
-├── blog.py               BlogPost (블로그)
-└── products.py           Product (제품)
+├── posts.py              Post (news articles)
+├── glossary.py           Term (terminology)
+├── blog.py               BlogPost (blog articles)
+└── products.py           Product (AI products)
 ```
 
-**주요 테이블:**
+**Key Tables:**
 ```
-posts: 뉴스 기사
+posts: News articles
   ├─ id, title_en/ko, content_en/ko
   ├─ research_summary, business_summary
   └─ source_url, created_at, published_at
 
-glossary: AI 용어
+glossary: AI terminology
   ├─ id, term_en/ko
   ├─ beginner_explanation_en/ko
   ├─ advanced_explanation_en/ko
   └─ category
 
-blog_posts: 블로그 글
+blog_posts: Blog articles
   ├─ id, title_en/ko, content (MDX)
   └─ author, published_at
 
-ai_products: AI 제품
+ai_products: AI products
   ├─ id, name, url, category
   └─ description_en/ko, review_en/ko
 ```
 
 ---
 
-## 다음 단계
+## Next Steps
 
-더 깊은 정보는 vault 문서를 참조하세요:
+For detailed information, refer to vault documentation:
 
-- **파이프라인 상세:** [vault/09-Implementation/plans/](vault/09-Implementation/plans/)
-- **스프린트 현황:** [ACTIVE_SPRINT.md](vault/09-Implementation/plans/ACTIVE_SPRINT.md)
-- **개발 가이드:** [backend/CLAUDE.md](backend/CLAUDE.md)
+- **Pipeline Details:** [vault/09-Implementation/plans/](vault/09-Implementation/plans/)
+- **Current Sprint:** [ACTIVE_SPRINT.md](vault/09-Implementation/plans/ACTIVE_SPRINT.md)
+- **Development Guide:** [backend/CLAUDE.md](backend/CLAUDE.md)
