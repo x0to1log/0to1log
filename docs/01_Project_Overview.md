@@ -1,9 +1,9 @@
 # 📋 0to1log — Project Overview
 
-> **문서 버전:** v2.3  
-> **최종 수정:** 2026-03-05  
-> **작성자:** Amy (Solo)  
-> **상태:** Planning
+> **문서 버전:** v3.0
+> **최종 수정:** 2026-03-26
+> **작성자:** Amy (Solo)
+> **상태:** 운영 중
 
 ---
 
@@ -55,7 +55,7 @@
 | 기능 | 한 줄 설명 |
 |---|---|
 | **Daily Dual News** | 매일 2개 AI NEWS 발행: Research(기술 심화, 자동) + Business(시장 분석, 수동 검수) |
-| **Persona-Based RAG-Refine** | Business 포스트를 입문자/학습자/현직자 3가지 버전으로 자동 재가공 |
+| **Persona-Based RAG-Refine** | Business 포스트를 Expert/Learner 2 페르소나로 자동 재가공 |
 | **멀티 에이전트 시스템** | Ranking → Research/Business → Editorial 4단계 AI 파이프라인 |
 | **관리자 에디터** | 마크다운 편집 + AI 제안 패널 + 페르소나별 탭 전환 리뷰 |
 | **Pink Theme 디자인 시스템** | Dark/Light 적응형 테마, Neon Pink 액센트, 반응형 레이아웃 |
@@ -100,7 +100,7 @@
 | **Frontend** | Astro v5 + Tailwind v4 + MDX | 콘텐츠 중심 정적 사이트, 인터랙티브 컴포넌트 |
 | **Animation** | Motion One + View Transitions API | 페이지 전환, 마이크로 인터랙션 |
 | **AI Engine** | OpenAI API (gpt-4o/gpt-4o-mini) + PydanticAI | 콘텐츠 생성, 검수, 스키마 검증 |
-| **RAG** | Tavily API (semantic) | 실시간 뉴스 수집, 출처 자동화, 관련 용어 시맨틱 검색 |
+| **RAG** | Tavily API (뉴스 수집 전용) | 실시간 뉴스 수집, 출처 자동화. 시맨틱 검색은 pgvector 담당 (Phase 3) |
 | **Backend** | FastAPI (Python) on Railway | 범용 API 백엔드 (AI 파이프라인/검색/커뮤니티/관리 API) |
 | **Database** | Supabase (PostgreSQL + pgvector) | 콘텐츠 저장, 시맨틱 검색 임베딩 |
 | **Hosting** | Vercel (Frontend + Cron 트리거) + Railway (범용 API 백엔드) | 배포, 도메인 관리 |
@@ -174,7 +174,31 @@ AI 파이프라인을 통해 자동/반자동 발행되는 뉴스 콘텐츠. `po
 
 ## 8. 로드맵
 
-### Phase 1: Foundation (1~2개월)
+### 완료 ✅
+
+- **Phase 1a Foundation** (2025-11~12): 디자인 시스템, 앱 구조, Supabase 스키마, Auth, 마크다운 에디터, 도메인 연결, SEO/Analytics 기반 설계
+- **Phase 1b Data Connection** (2025-12): GA4 + MS Clarity 설치, 초기 데이터 수집
+- **Phase 2B OPS** (2026-01): Railway FastAPI, OpenAI API 연동, 멀티 에이전트 파이프라인, Daily Dual News, PydanticAI 검증
+- **Phase 2C EXP** (2026-01~02): Persona Switcher, Vercel Cron Jobs, Global-to-Local 전략 수립
+- **Phase 2D INT** (2026-02): 페르소나 구체화, 품질 개선
+- **Phase 3-USER** (2026-02): 사용자 관리 및 개인화 기능
+- **Phase 3A-SEC** (2026-03-09): 보안 강화
+- **Phase 3B-SHARE** (2026-03-13): 공유/소셜 기능
+- **Handbook H1** (2026-03-09~10): 핸드북 기본 콘텐츠 작성
+- **Handbook Quality** (2026-03-13~16): 핸드북 품질 개선
+
+### 진행 중 🔄
+
+- **News Pipeline v4 Quality Stabilization** (NP4-Q, 96% 완료, ~2026-03-28): 뉴스 파이프라인 품질 안정화
+
+### 예정 ⏳
+
+- **Phase 3-Intelligence** (2026-03-30 예정): AI Semantic Search (Cmd+K), Dynamic OG Image, AI Ops Dashboard, Highlight to Share, AARRR 지표 대시보드
+
+---
+
+### Phase 1: Foundation (1~2개월) ✅ 완료
+
 블로그 기본 골격 + 인증 + DB 연동 + 그로스 기반 설계
 
 - Astro + Tailwind + Motion One 기반 디자인 시스템
@@ -257,7 +281,7 @@ AI 파이프라인을 통해 자동/반자동 발행되는 뉴스 콘텐츠. `po
 |---|---|---|---|
 | 01 | **Project Overview** (본 문서) | 프로젝트 전체 그림, 로드맵, 스택 요약 | ✅ v2.3 |
 | 02 | `Content_Strategy.md` | 훅 포인트, 프롬프트 가이드, 포인트 시스템, 콘텐츠 운영 규칙 | ✅ v1.2 |
-| 03 | `Backend_AI_Spec.md` | AI 파이프라인, API 설계, DB 스키마, 인증, 크론 자동화 | ✅ v3.3 |
+| 03 | `Backend_AI_Spec.md` | AI 파이프라인, API 설계, DB 스키마, 인증, 크론 자동화 | ✅ v5.0 |
 | 04 | `Frontend_Spec.md` | 디자인 시스템, 컴포넌트 명세, 페이지별 UI/UX, 애니메이션 | ✅ v2.3 |
 | 05 | `Infrastructure.md` | 배포 구조, CI/CD, 환경 변수, 모니터링, 보안 | ✅ v2.3 |
 | 06 | `Business_Strategy.md` | 수익화, 데이터 분석, SEO/GEO, 그로스 전략, 앱 로드맵 (Stage B 임계치 + 유닛 이코노믹스 + GEO 정량 기준 반영) | ✅ v1.4 |
