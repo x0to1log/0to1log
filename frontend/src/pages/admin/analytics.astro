@@ -88,6 +88,15 @@ const [
   { count: readingCount },
   { count: learningCount },
   { count: activeUserCount },
+  // Popular content
+  { data: rawReadingItems },
+  { data: rawBookmarkItems },
+  // Quiz, Feedback, Likes
+  { data: rawQuizResponses },
+  { data: rawFeedback },
+  { count: newsLikeCount },
+  { count: blogLikeCount },
+  { count: productLikeCount },
 ] = await Promise.all([
   // Handbook: only columns needed for source/category/favourite distribution
   sb.from('handbook_terms').select('status, source, categories, is_favourite'),
@@ -118,6 +127,17 @@ const [
   sb.from('learning_progress').select('id', { count: 'exact', head: true }),
   sb.from('profiles').select('id', { count: 'exact', head: true })
     .gte('updated_at', new Date(Date.now() - 7 * 86400000).toISOString()),
+  // Popular content (reading_history aggregation)
+  sb.from('reading_history').select('item_type, item_id'),
+  sb.from('user_bookmarks').select('item_type, item_id'),
+  // Quiz analytics
+  sb.from('quiz_responses').select('is_correct, persona, created_at'),
+  // Content feedback
+  sb.from('content_feedback').select('reaction, source_type, created_at'),
+  // Likes
+  sb.from('news_likes').select('id', { count: 'exact', head: true }),
+  sb.from('blog_likes').select('id', { count: 'exact', head: true }),
+  sb.from('ai_product_likes').select('id', { count: 'exact', head: true }),
 ]);
 
 // ─── Handbook Data ───────────────────────────────────────────
@@ -216,6 +236,85 @@ for (const p of products) {
 }
 
 const topProducts = products.slice(0, 5);
+
+// ─── Quiz Analytics ─────────────────────────────────────────
+type QuizRow = { is_correct: boolean; persona: string | null; created_at: string };
+const quizResponses = (rawQuizResponses ?? []) as QuizRow[];
+const quizTotal = quizResponses.length;
+const quizCorrect = quizResponses.filter((q) => q.is_correct).length;
+const quizAccuracy = quizTotal > 0 ? Math.round((quizCorrect / quizTotal) * 100) : 0;
+
+const quizByPersona: Record<string, { total: number; correct: number }> = {};
+for (const q of quizResponses) {
+  const p = q.persona || 'unknown';
+  if (!quizByPersona[p]) quizByPersona[p] = { total: 0, correct: 0 };
+  quizByPersona[p].total += 1;
+  if (q.is_correct) quizByPersona[p].correct += 1;
+}
+
+const quizLast7d = quizResponses.filter(
+  (q) => new Date(q.created_at) >= new Date(Date.now() - 7 * 86400000),
+).length;
+
+// ─── Content Feedback ───────────────────────────────────────
+type FeedbackRow = { reaction: string | null; source_type: string | null; created_at: string };
+const feedbackRows = (rawFeedback ?? []) as FeedbackRow[];
+const feedbackTotal = feedbackRows.length;
+const feedbackPositive = feedbackRows.filter((f) => f.reaction === 'positive').length;
+const feedbackNegative = feedbackRows.filter((f) => f.reaction === 'negative').length;
+
+const feedbackBySource: Record<string, { positive: number; negative: number }> = {};
+for (const f of feedbackRows) {
+  const src = f.source_type || 'unknown';
+  if (!feedbackBySource[src]) feedbackBySource[src] = { positive: 0, negative: 0 };
+  if (f.reaction === 'positive') feedbackBySource[src].positive += 1;
+  else if (f.reaction === 'negative') feedbackBySource[src].negative += 1;
+}
+
+// ─── Likes Summary ──────────────────────────────────────────
+const totalLikes = (newsLikeCount ?? 0) + (blogLikeCount ?? 0) + (productLikeCount ?? 0);
+
+// ─── Popular Content ────────────────────────────────────────
+type PopItem = { item_type: string; item_id: string };
+const readingItems = (rawReadingItems ?? []) as PopItem[];
+const bookmarkItems = (rawBookmarkItems ?? []) as PopItem[];
+
+// Count reads + bookmarks per item (bookmarks count double as stronger signal)
+const popularityMap = new Map<string, { type: string; id: string; reads: number; bookmarks: number; score: number }>();
+for (const r of readingItems) {
+  const key = `${r.item_type}:${r.item_id}`;
+  if (!popularityMap.has(key)) popularityMap.set(key, { type: r.item_type, id: r.item_id, reads: 0, bookmarks: 0, score: 0 });
+  const entry = popularityMap.get(key)!;
+  entry.reads += 1;
+  entry.score += 1;
+}
+for (const b of bookmarkItems) {
+  const key = `${b.item_type}:${b.item_id}`;
+  if (!popularityMap.has(key)) popularityMap.set(key, { type: b.item_type, id: b.item_id, reads: 0, bookmarks: 0, score: 0 });
+  const entry = popularityMap.get(key)!;
+  entry.bookmarks += 1;
+  entry.score += 2;
+}
+
+const topPopular = Array.from(popularityMap.values()).sort((a, b) => b.score - a.score).slice(0, 5);
+
+// Resolve titles for popular items
+const titleMap = new Map<string, { title: string; slug: string }>();
+if (topPopular.length > 0) {
+  const postIds = topPopular.filter((p) => p.type === 'post').map((p) => p.id);
+  const termIds = topPopular.filter((p) => p.type === 'term').map((p) => p.id);
+
+  const [postsRes, termsRes] = await Promise.all([
+    postIds.length > 0 ? sb.from('news_posts').select('id, title, slug').in('id', postIds) : { data: [] },
+    termIds.length > 0 ? sb.from('handbook_terms').select('id, term, slug').in('id', termIds) : { data: [] },
+  ]);
+  for (const p of (postsRes.data ?? []) as { id: string; title: string; slug: string }[]) {
+    titleMap.set(`post:${p.id}`, { title: p.title, slug: `/admin/edit/${p.slug}` });
+  }
+  for (const t of (termsRes.data ?? []) as { id: string; term: string; slug: string }[]) {
+    titleMap.set(`term:${t.id}`, { title: t.term, slug: `/admin/handbook/edit/${t.slug}` });
+  }
+}
 
 const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 const ga4PropertyId = import.meta.env.GA4_PROPERTY_ID || '';
@@ -770,25 +869,24 @@ const nonce = Astro.locals.cspNonce || '';
           </section>
         </div>
 
-        <!-- User Engagement -->
+        <!-- ─── User Overview ─── -->
         <section class="sa-section">
-          <h2 class="sa-section__title">User Engagement</h2>
-          <p class="sa-section__hint">DB-sourced stats from registered user activity.</p>
+          <h2 class="sa-section__title">User Overview</h2>
           <div class="sa-stats-grid sa-stats-grid--5">
             <div class="sa-stat-card">
-              <span class="sa-stat-card__label">Registered Users</span>
+              <span class="sa-stat-card__label">Registered</span>
               <strong class="sa-stat-card__value">{userCount ?? 0}</strong>
               <span class="sa-stat-card__detail">Total accounts</span>
             </div>
             <div class="sa-stat-card">
               <span class="sa-stat-card__label">Active (7d)</span>
               <strong class="sa-stat-card__value">{activeUserCount ?? 0}</strong>
-              <span class="sa-stat-card__detail">Profile updated</span>
+              <span class="sa-stat-card__detail">Recent activity</span>
             </div>
             <div class="sa-stat-card">
               <span class="sa-stat-card__label">Bookmarks</span>
               <strong class="sa-stat-card__value">{bookmarkCount ?? 0}</strong>
-              <span class="sa-stat-card__detail">Saved articles</span>
+              <span class="sa-stat-card__detail">Saved items</span>
             </div>
             <div class="sa-stat-card">
               <span class="sa-stat-card__label">Reading History</span>
@@ -801,6 +899,145 @@ const nonce = Astro.locals.cspNonce || '';
               <span class="sa-stat-card__detail">Terms studied</span>
             </div>
           </div>
+        </section>
+
+        <!-- ─── Quiz Performance ─── -->
+        <section class="sa-section">
+          <h2 class="sa-section__title">Quiz Performance</h2>
+          {quizTotal === 0 ? (
+            <p class="sa-empty">No quiz responses yet.</p>
+          ) : (
+            <>
+              <div class="sa-stats-grid sa-stats-grid--4">
+                <div class="sa-stat-card">
+                  <span class="sa-stat-card__label">Total Responses</span>
+                  <strong class="sa-stat-card__value">{quizTotal}</strong>
+                  <span class="sa-stat-card__detail">All time</span>
+                </div>
+                <div class="sa-stat-card">
+                  <span class="sa-stat-card__label">Correct</span>
+                  <strong class="sa-stat-card__value sa-stat-card__value--success">{quizCorrect}</strong>
+                  <span class="sa-stat-card__detail">Right answers</span>
+                </div>
+                <div class="sa-stat-card">
+                  <span class="sa-stat-card__label">Accuracy</span>
+                  <strong class="sa-stat-card__value">{quizAccuracy}%</strong>
+                  <span class="sa-stat-card__detail">
+                    {quizAccuracy >= 70 ? 'Good' : quizAccuracy >= 50 ? 'Average' : 'Needs improvement'}
+                  </span>
+                </div>
+                <div class="sa-stat-card">
+                  <span class="sa-stat-card__label">Last 7 Days</span>
+                  <strong class="sa-stat-card__value">{quizLast7d}</strong>
+                  <span class="sa-stat-card__detail">Recent responses</span>
+                </div>
+              </div>
+
+              {Object.keys(quizByPersona).length > 0 && (
+                <div class="sa-subsection">
+                  <h3 class="sa-subsection__title">Accuracy by Persona</h3>
+                  <div class="sa-chips">
+                    {Object.entries(quizByPersona).map(([persona, { total, correct }]) => (
+                      <span class="sa-chip sa-chip--wide">
+                        <span class="sa-chip__label">{persona}</span>
+                        <strong class="sa-chip__value">{Math.round((correct / total) * 100)}%</strong>
+                        <span class="sa-chip__sub">({correct}/{total})</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        <!-- ─── Likes & Feedback ─── -->
+        <div class="sa-chart-row">
+          <section class="sa-section sa-section--half">
+            <h2 class="sa-section__title">Likes</h2>
+            <div class="sa-stats-grid sa-stats-grid--2">
+              <div class="sa-stat-card">
+                <span class="sa-stat-card__label">Total Likes</span>
+                <strong class="sa-stat-card__value">{totalLikes}</strong>
+              </div>
+              <div class="sa-stat-card">
+                <span class="sa-stat-card__label">Breakdown</span>
+                <div class="sa-stat-card__breakdown">
+                  <span>News <strong>{newsLikeCount ?? 0}</strong></span>
+                  <span>Blog <strong>{blogLikeCount ?? 0}</strong></span>
+                  <span>Products <strong>{productLikeCount ?? 0}</strong></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="sa-section sa-section--half">
+            <h2 class="sa-section__title">Content Feedback</h2>
+            {feedbackTotal === 0 ? (
+              <p class="sa-empty">No feedback yet.</p>
+            ) : (
+              <>
+                <div class="sa-stats-grid sa-stats-grid--2">
+                  <div class="sa-stat-card">
+                    <span class="sa-stat-card__label">Positive</span>
+                    <strong class="sa-stat-card__value sa-stat-card__value--success">{feedbackPositive}</strong>
+                  </div>
+                  <div class="sa-stat-card">
+                    <span class="sa-stat-card__label">Negative</span>
+                    <strong class="sa-stat-card__value sa-stat-card__value--danger">{feedbackNegative}</strong>
+                  </div>
+                </div>
+                {Object.keys(feedbackBySource).length > 0 && (
+                  <div class="sa-subsection">
+                    <h3 class="sa-subsection__title">By Content Type</h3>
+                    <div class="sa-chips">
+                      {Object.entries(feedbackBySource).map(([src, { positive, negative }]) => (
+                        <span class="sa-chip sa-chip--wide">
+                          <span class="sa-chip__label">{src}</span>
+                          <span class="sa-chip__value sa-chip__value--success">+{positive}</span>
+                          <span class="sa-chip__value sa-chip__value--danger">-{negative}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        </div>
+
+        <!-- ─── Popular Content ─── -->
+        <section class="sa-section">
+          <h2 class="sa-section__title">Popular Content</h2>
+          <p class="sa-section__hint">Ranked by reads + bookmarks (bookmarks weighted 2x).</p>
+          {topPopular.length === 0 ? (
+            <p class="sa-empty">No reading activity yet.</p>
+          ) : (
+            <ol class="sa-popular-list">
+              {topPopular.map((item, i) => {
+                const info = titleMap.get(`${item.type}:${item.id}`);
+                return (
+                  <li class="sa-popular-item">
+                    <span class="sa-popular-item__rank">{i + 1}</span>
+                    {info ? (
+                      <a href={info.slug} class="sa-popular-item__link">{info.title}</a>
+                    ) : (
+                      <span class="sa-popular-item__link sa-popular-item__link--unknown">{item.id}</span>
+                    )}
+                    <span class="sa-popular-item__meta">
+                      <span class={`sa-badge sa-badge--${item.type === 'post' ? 'locale' : 'source'}`}>
+                        {item.type === 'post' ? 'News' : 'Handbook'}
+                      </span>
+                      <span class="sa-popular-item__stats">
+                        {item.reads > 0 && <span>{item.reads} reads</span>}
+                        {item.bookmarks > 0 && <span>{item.bookmarks} bookmarks</span>}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </section>
 
         <!-- External Links -->
@@ -1266,6 +1503,39 @@ const nonce = Astro.locals.cspNonce || '';
     line-height: 1.5;
   }
 
+  .sa-stat-card__value--success { color: var(--color-success); }
+  .sa-stat-card__value--danger { color: var(--color-error, #ef4444); }
+
+  .sa-stat-card__breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+  }
+  .sa-stat-card__breakdown strong {
+    font-family: var(--font-code);
+    color: var(--color-text-primary);
+    margin-left: 0.3rem;
+  }
+
+  /* ─── Subsections ─────────────────────────────── */
+  .sa-subsection {
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  }
+  .sa-subsection__title {
+    margin: 0 0 0.6rem;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
   /* ─── Sections ──────────────────────────────── */
   .sa-section {
     margin-bottom: 1rem;
@@ -1312,6 +1582,10 @@ const nonce = Astro.locals.cspNonce || '';
 
   .sa-chip__label { color: var(--color-text-secondary); font-size: 0.78rem; }
   .sa-chip__value { font-family: var(--font-code); font-size: 0.82rem; color: var(--color-text-primary); }
+  .sa-chip__value--success { color: var(--color-success); }
+  .sa-chip__value--danger { color: var(--color-error, #ef4444); }
+  .sa-chip__sub { font-size: 0.72rem; color: var(--color-text-muted); }
+  .sa-chip--wide { gap: 0.55rem; }
 
   /* ─── Recent List ───────────────────────────── */
   .sa-recent-list { list-style: none; padding: 0; margin: 0; }
@@ -1434,6 +1708,70 @@ const nonce = Astro.locals.cspNonce || '';
     pointer-events: none;
   }
 
+  /* ─── Popular Content List ──────────────────── */
+  .sa-popular-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: popular;
+  }
+
+  .sa-popular-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+    transition: background 0.15s;
+  }
+  .sa-popular-item:last-child { border-bottom: none; }
+  .sa-popular-item:hover { background: color-mix(in srgb, var(--color-accent-subtle) 40%, transparent); }
+
+  .sa-popular-item__rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg-secondary));
+    border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+
+  .sa-popular-item__link {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.88rem;
+    color: var(--color-text-primary);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  a.sa-popular-item__link:hover { color: var(--color-accent); }
+  .sa-popular-item__link--unknown { color: var(--color-text-muted); font-style: italic; }
+
+  .sa-popular-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .sa-popular-item__stats {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-code);
+  }
+
   .sa-empty {
     padding: 2rem;
     text-align: center;
@@ -1466,6 +1804,7 @@ const nonce = Astro.locals.cspNonce || '';
   }
 
   /* ─── 5-col stats grid ───────────────────────── */
+  .sa-stats-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sa-stats-grid--5 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 
   /* ─── Charts ─────────────────────────────────── */
