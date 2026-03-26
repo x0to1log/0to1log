@@ -17,7 +17,7 @@ from services.agents.advisor import (
     extract_terms_from_content,
     generate_term_content,
 )
-from services.agents.client import extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
+from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
 from services.agents.ranking import classify_candidates
 from services.news_collection import collect_community_reactions, collect_news
@@ -404,69 +404,6 @@ async def _extract_and_create_handbook_terms(
     return terms_created, errors
 
 
-QUALITY_CHECK_PROMPT_RESEARCH = """You are a strict quality reviewer for an AI tech news digest.
-
-Score this Research digest on 4 criteria (0-25 each, total 0-100):
-
-1. **Section Completeness** (25):
-   - 25: All 5 sections present with substantial content (200+ chars each)
-   - 15: All sections present but some thin (<100 chars)
-   - 5: Missing 1+ sections
-   - 0: Missing 3+ sections
-
-2. **Source Citations** (25):
-   - 25: Every claim cites a source URL; benchmark numbers attributed
-   - 15: Most items cite sources; a few missing
-   - 5: Fewer than half cite sources
-   - 0: No source citations
-
-3. **Technical Accuracy** (25):
-   - 25: Specific numbers (params, benchmarks, dates); comparisons to prior work
-   - 15: Some specifics but also vague claims ("significantly better")
-   - 5: Mostly vague; no concrete metrics
-   - 0: Contains factual errors or hallucinated details
-
-4. **Language Quality** (25):
-   - 25: Natural, fluent; min 500 chars per section; no translation artifacts
-   - 15: Readable but some awkward phrasing; adequate length
-   - 5: Choppy or translation-sounding; some sections too short
-   - 0: Barely readable or extremely short
-
-Return JSON only:
-{"score": 0-100, "sections": 0-25, "sources": 0-25, "accuracy": 0-25, "language": 0-25, "issues": ["issue1", "issue2"]}"""
-
-QUALITY_CHECK_PROMPT_BUSINESS = """You are a strict quality reviewer for an AI business news digest.
-
-Score this Business digest on 4 criteria (0-25 each, total 0-100):
-
-1. **Section Completeness** (25):
-   - 25: All 6 sections present with substantial content (200+ chars each)
-   - 15: All sections present but some thin
-   - 5: Missing 1+ sections
-   - 0: Missing 3+ sections
-
-2. **Source Citations** (25):
-   - 25: Every claim cites a source URL; funding amounts/dates attributed
-   - 15: Most items cite sources
-   - 5: Fewer than half cite sources
-   - 0: No source citations
-
-3. **Analysis Quality** (25):
-   - 25: "Connecting the Dots" links 2+ news items into a coherent trend; "Strategic Decisions" are specific and actionable
-   - 15: Analysis exists but surface-level; decisions somewhat generic
-   - 5: Analysis is just restating news; decisions are platitudes
-   - 0: No analysis section or completely generic
-
-4. **Language Quality** (25):
-   - 25: Natural, fluent; adequate length; no translation artifacts
-   - 15: Readable but some awkward phrasing
-   - 5: Choppy or translation-sounding
-   - 0: Barely readable
-
-Return JSON only:
-{"score": 0-100, "sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25, "issues": ["issue1", "issue2"]}"""
-
-
 async def _check_digest_quality(
     personas: dict[str, PersonaOutput],
     digest_type: str,
@@ -475,11 +412,18 @@ async def _check_digest_quality(
     run_id: str,
     cumulative_usage: dict[str, Any],
 ) -> int:
-    """Score the quality of a generated digest. Returns score 0-100."""
-    t0 = time.monotonic()
+    """Score quality of generated digest. Expert + Learner evaluated separately.
 
-    # Use expert persona EN content for quality check (most detailed)
+    Returns combined score 0-100 (average of expert and learner scores).
+    """
+    t0 = time.monotonic()
+    from services.agents.prompts_news_pipeline import (
+        QUALITY_CHECK_RESEARCH_EXPERT, QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT, QUALITY_CHECK_BUSINESS_LEARNER,
+    )
+
     expert = personas.get("expert")
+    learner = personas.get("learner")
     if not expert or not expert.en:
         logger.warning("Quality check skipped for %s: no expert content", digest_type)
         await _log_stage(
@@ -490,46 +434,77 @@ async def _check_digest_quality(
         )
         return 0
 
-    prompt = QUALITY_CHECK_PROMPT_RESEARCH if digest_type == "research" else QUALITY_CHECK_PROMPT_BUSINESS
+    if digest_type == "research":
+        expert_prompt = QUALITY_CHECK_RESEARCH_EXPERT
+        learner_prompt = QUALITY_CHECK_RESEARCH_LEARNER
+    else:
+        expert_prompt = QUALITY_CHECK_BUSINESS_EXPERT
+        learner_prompt = QUALITY_CHECK_BUSINESS_LEARNER
 
-    try:
-        client = get_openai_client()
-        response = await client.chat.completions.create(
-            model=settings.openai_model_reasoning,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": expert.en[:4000]},
-            ],
-            response_format={"type": "json_object"},
-            max_completion_tokens=1024,
-        )
-        data = parse_ai_json(response.choices[0].message.content, f"Quality-{digest_type}")
-        usage = extract_usage_metrics(response, settings.openai_model_reasoning)
-        score = int(data.get("score", 0))
+    client = get_openai_client()
+    reasoning_model = settings.openai_model_reasoning
 
-        await _log_stage(
-            supabase, run_id, f"quality:{digest_type}", "success", t0,
-            output_summary=f"score={score}/100",
-            usage=usage,
-            post_type=digest_type,
-            debug_meta={
-                "score": score,
-                "quality_score": score,
-                "breakdown": {k: v for k, v in data.items() if k != "score"},
-                "news_count": len(classified),
-            },
-        )
+    async def _score(prompt: str, content: str, label: str) -> tuple[int, dict, dict]:
+        try:
+            resp = await client.chat.completions.create(
+                **build_completion_kwargs(
+                    model=reasoning_model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": content[:4000]},
+                    ],
+                    max_tokens=500,
+                    temperature=0,
+                    response_format={"type": "json_object"},
+                )
+            )
+            data = parse_ai_json(resp.choices[0].message.content, label)
+            usage = extract_usage_metrics(resp, reasoning_model)
+            return int(data.get("score", 0)), data, usage
+        except Exception as e:
+            logger.warning("Quality check %s failed: %s", label, e)
+            return 0, {}, {}
 
-        logger.info("Quality check %s: score=%d/100", digest_type, score)
-        return score
-    except Exception as e:
-        logger.warning("Quality check failed for %s: %s", digest_type, e, exc_info=True)
-        await _log_stage(
-            supabase, run_id, f"quality:{digest_type}", "failed", t0,
-            error_message=str(e), post_type=digest_type,
-            debug_meta={"quality_score": 0, "error_type": type(e).__name__},
-        )
-        return 0
+    # Run expert + learner quality checks in parallel
+    tasks = [_score(expert_prompt, expert.en, f"Quality-{digest_type}-expert")]
+    if learner and learner.en:
+        tasks.append(_score(learner_prompt, learner.en, f"Quality-{digest_type}-learner"))
+
+    results = await asyncio.gather(*tasks)
+
+    expert_score, expert_breakdown, expert_usage = results[0]
+    learner_score, learner_breakdown, learner_usage = (
+        results[1] if len(results) > 1 else (0, {}, {})
+    )
+
+    if learner and learner.en:
+        combined_score = (expert_score + learner_score) // 2
+    else:
+        combined_score = expert_score
+
+    merged_quality_usage = merge_usage_metrics(expert_usage, learner_usage) if learner_usage else expert_usage
+
+    await _log_stage(
+        supabase, run_id, f"quality:{digest_type}", "success", t0,
+        output_summary=f"score={combined_score}/100 (expert={expert_score}, learner={learner_score})",
+        usage=merged_quality_usage,
+        post_type=digest_type,
+        debug_meta={
+            "score": combined_score,
+            "quality_score": combined_score,
+            "expert_score": expert_score,
+            "learner_score": learner_score,
+            "expert_breakdown": {k: v for k, v in expert_breakdown.items() if k != "score"},
+            "learner_breakdown": {k: v for k, v in learner_breakdown.items() if k != "score"},
+            "news_count": len(classified),
+        },
+    )
+
+    logger.info(
+        "Quality check %s: combined=%d/100 (expert=%d, learner=%d)",
+        digest_type, combined_score, expert_score, learner_score,
+    )
+    return combined_score
 
 
 async def _generate_digest(
