@@ -246,12 +246,85 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "tags": ["company-name", "technology", "topic", "tool-name", "concept"],
   "focus_items": ["Concrete point 1", "Concrete point 2", "Concrete point 3"],
   "focus_items_ko": ["구체 포인트 1", "구체 포인트 2", "구체 포인트 3"],
-  "en": "## One-Line Summary\\n...\\n\\n## LLM & SOTA Models\\n...",
-  "ko": "## 한 줄 요약\\n...\\n\\n## LLM & SOTA Models\\n...",
+  "en": "<SEE EXAMPLE BELOW>",
+  "ko": "<SEE EXAMPLE BELOW>",
   "quiz_en": {{"question": "Question", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "Why A is correct."}},
   "quiz_ko": {{"question": "질문", "options": ["가", "나", "다", "라"], "answer": "가", "explanation": "정답 해설"}}
 }}
 ```
+
+## CRITICAL: "en" and "ko" field structure example
+Your "en" and "ko" values MUST follow this EXACT section structure. This is a skeleton — replace content but keep ALL section headers and the citation/bullet format.
+
+**English ("en") skeleton for a business expert digest:**
+```
+## One-Line Summary
+OpenAI restructures priorities as enterprise AI competition intensifies across cloud, agents, and on-device deployment.
+
+## Big Tech
+### OpenAI Discontinues Sora, Pivots to Enterprise AI
+OpenAI announces the shutdown of Sora, its text-to-video platform, to redirect resources toward coding tools and agentic AI. The move aligns with the company's IPO preparation, prioritizing revenue-generating enterprise products over experimental consumer features. [1](https://example.com/openai-sora)
+
+This is a significant strategic signal. While competitors like Runway and Pika continue investing in video generation, OpenAI's retreat suggests the consumer AI video market does not yet justify the compute costs. The $10B+ in annual revenue OpenAI targets depends on enterprise contracts, not viral consumer demos. [1](https://example.com/openai-sora)
+
+OpenAI simultaneously announces plans to double its workforce from 4,500 to over 8,000, targeting research, engineering, and product roles. This hiring pace exceeds Google DeepMind (~1,000/year) and Anthropic (hundreds/year), signaling an intent to dominate not just models but the full-stack AI application layer. [2](https://example.com/openai-hiring)
+
+## Industry & Biz
+### Oracle Launches Fusion Agentic Applications
+[3-4 paragraphs with citations per paragraph...]
+
+## New Tools
+### Cloudflare Dynamic Workers
+[3-4 paragraphs with citations per paragraph...]
+
+## Connecting the Dots
+[2-3 paragraphs connecting the stories: why these things happened simultaneously, what forces drive them]
+
+## Strategic Decisions
+- **If you are building on OpenAI APIs**: Diversify to at least one alternative provider this quarter — because OpenAI's pivot to enterprise may change API pricing and priorities. Risk of inaction: 100% vendor lock-in with unpredictable cost changes.
+- **If your team evaluates AI video tools**: Pause Sora-dependent projects immediately — because the platform is shutting down. Risk of inaction: wasted development on a dead product.
+- **If you run AI workloads on traditional containers**: Benchmark Cloudflare Dynamic Workers against your current setup — because 100x cold-start improvement changes the cost equation. Risk of inaction: overpaying for AI inference infrastructure.
+```
+
+**Korean ("ko") skeleton for a business expert digest:**
+```
+## 한 줄 요약
+OpenAI가 Sora를 종료하고 기업용 AI로 전환하며, 클라우드·에이전트·온디바이스 전선에서 경쟁이 심화된다.
+
+## Big Tech
+### OpenAI, Sora 종료하고 기업용 AI에 집중
+OpenAI가 텍스트-투-비디오 플랫폼 Sora를 공식 종료하고, 코딩 도구와 에이전트형 AI에 자원을 재배치한다. IPO를 앞두고 수익성 높은 기업용 제품에 집중하려는 전략적 결정이다. [1](https://example.com/openai-sora)
+
+이 결정은 중요한 시장 신호다. Runway, Pika 등 경쟁사가 영상 생성에 계속 투자하는 가운데, OpenAI의 철수는 소비자 AI 영상 시장이 아직 컴퓨팅 비용을 정당화하지 못한다는 판단을 반영한다. OpenAI가 목표로 하는 연 $10B 이상 매출은 기업 계약에 달려 있다. [1](https://example.com/openai-sora)
+
+동시에 인력을 4,500명에서 8,000명 이상으로 2배 확대할 계획도 발표했다. Google DeepMind(연 ~1,000명), Anthropic(수백 명)을 크게 상회하는 채용 속도로, 모델뿐 아니라 풀스택 AI 애플리케이션 레이어까지 지배하겠다는 의도다. [2](https://example.com/openai-hiring)
+
+## Industry & Biz
+### 오라클, Fusion Agentic Applications 출시
+[3-4 단락, 단락마다 citation...]
+
+## New Tools
+### 클라우드플레어 Dynamic Workers
+[3-4 단락, 단락마다 citation...]
+
+## 흐름 연결
+[2-3 단락: 왜 이것들이 동시에 일어났는지, 어떤 힘이 이를 추동하는지]
+
+## 전략 판단
+- **현재 OpenAI API 기반으로 개발 중이라면**: 이번 분기 내 대안 제공업체 최소 1곳과 병행 테스트하라 — OpenAI의 기업 전환으로 API 가격·우선순위가 바뀔 수 있다. 미대응 리스크: 예측 불가능한 비용 변동에 100% 종속.
+- **AI 영상 도구를 평가 중이라면**: Sora 의존 프로젝트를 즉시 중단하라 — 플랫폼이 종료된다. 미대응 리스크: 사라질 제품에 개발 리소스 낭비.
+- **전통 컨테이너에서 AI 워크로드를 운영 중이라면**: 클라우드플레어 Dynamic Workers를 벤치마크하라 — 콜드스타트 100배 개선은 비용 구조를 바꾼다. 미대응 리스크: AI 추론 인프라에 과다 지출.
+```
+
+IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count (3-4 per item), and bullet format in Strategic Decisions MUST match this structure exactly.
+
+## FINAL CHECKLIST (verify before responding)
+1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
+2. Are ALL required `##` section headers present? If any are missing, add them.
+3. Does each news item have 3-4 paragraphs (expert) or 2-3 paragraphs (learner)? If not, expand.
+4. Are "en" and "ko" covering the SAME news items? If ko is shorter, expand it.
+5. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
+6. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat."""
 
 ## Field rules
 - **headline**: MUST be in English. No Korean characters allowed.
