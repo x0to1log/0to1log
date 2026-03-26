@@ -12137,19 +12137,40 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   padding: 0.25rem 0;
 }
 
-/* ── Weekly Recap admin section ── */
-.dashboard-pipeline-weekly {
+/* ── Pipeline control groups (Daily + Weekly) ── */
+.pipeline-control-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
   margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
 }
-.dashboard-subsection-title {
-  font-size: 0.85rem;
+.pipeline-control-group {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+}
+.pipeline-control-label {
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--color-text-muted);
   margin: 0 0 0.75rem;
+}
+.pipeline-control-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pipeline-control-toggles {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 768px) {
+  .pipeline-control-groups { grid-template-columns: 1fr; }
 }
 
 /* ── Weekly Recap bottom cards ── */

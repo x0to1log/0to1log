@@ -356,85 +356,101 @@ function relativeTime(dateStr: string): string {
             {lastRun.status === 'failed' && lastRunError && (
               <div class="dashboard-pipeline-error">{lastRunError}</div>
             )}
-            <div class="dashboard-pipeline-actions">
-              <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
-                     max={new Date().toISOString().slice(0,10)}
-                     title="Leave empty for today" />
-              <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
-              {lastRun?.status === 'running' && (
-                <button type="button" class="admin-btn-danger" id="cancel-pipeline-btn"
-                        data-run-id={lastRun.id}>
-                  Cancel
-                </button>
-              )}
-              {showRetryHandbook && (
-                <button type="button" class="admin-btn" id="retry-handbook-btn"
-                        data-batch-id={retryBatchId}
-                        title={`Retry handbook extraction for ${retryBatchId}`}>
-                  Retry Handbook
-                </button>
-              )}
-              <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled} title="Generate weekly recap for last week">Weekly Recap</button>
-              <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
-            </div>
-            <div class="dashboard-pipeline-settings">
-              <label class="dashboard-pipeline-toggle">
-                <input type="checkbox" id="include-handbook" checked />
-                Include handbook (manual run)
-              </label>
-              <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
-                <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
-                Auto-extract terms (cron)
-              </label>
-              <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
-                <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
-                Weekly Recap
-              </label>
+            <div class="pipeline-control-groups">
+              <div class="pipeline-control-group">
+                <h4 class="pipeline-control-label">Daily Pipeline</h4>
+                <div class="pipeline-control-row">
+                  <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
+                         max={new Date().toISOString().slice(0,10)}
+                         title="Leave empty for today" />
+                  <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+                  {lastRun?.status === 'running' && (
+                    <button type="button" class="admin-btn-danger" id="cancel-pipeline-btn"
+                            data-run-id={lastRun.id}>
+                      Cancel
+                    </button>
+                  )}
+                  {showRetryHandbook && (
+                    <button type="button" class="admin-btn" id="retry-handbook-btn"
+                            data-batch-id={retryBatchId}
+                            title={`Retry handbook extraction for ${retryBatchId}`}>
+                      Retry Handbook
+                    </button>
+                  )}
+                </div>
+                <div class="pipeline-control-toggles">
+                  <label class="dashboard-pipeline-toggle">
+                    <input type="checkbox" id="include-handbook" checked />
+                    Include handbook
+                  </label>
+                  <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
+                    <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
+                    Auto-extract (cron)
+                  </label>
+                </div>
+                <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+              </div>
+
+              <div class="pipeline-control-group">
+                <h4 class="pipeline-control-label">Weekly Recap</h4>
+                <div class="pipeline-control-row">
+                  <input type="week" id="weekly-target-week" class="admin-input admin-input--date"
+                         title="Leave empty for last week" />
+                  <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled}>Generate Weekly</button>
+                </div>
+                <div class="pipeline-control-toggles">
+                  <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
+                    <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
+                    Enabled
+                  </label>
+                </div>
+                <p class="dashboard-pipeline-feedback" id="weekly-pipeline-feedback" aria-live="polite"></p>
+              </div>
             </div>
           </div>
         ) : (
           <div class="dashboard-pipeline dashboard-pipeline--none">
             <p class="dashboard-empty">No pipeline runs yet.</p>
-            <div class="dashboard-pipeline-actions">
-              <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
-                     max={new Date().toISOString().slice(0,10)}
-                     title="Leave empty for today" />
-              <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
-              {showRetryHandbook && (
-                <button type="button" class="admin-btn" id="retry-handbook-btn"
-                        data-batch-id={retryBatchId}
-                        title={`Retry handbook extraction for ${retryBatchId}`}>
-                  Retry Handbook
-                </button>
-              )}
-              <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
-            </div>
-            <div class="dashboard-pipeline-settings">
-              <label class="dashboard-pipeline-toggle">
-                <input type="checkbox" id="include-handbook" checked />
-                Include handbook (manual run)
-              </label>
-              <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
-                <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
-                Auto-extract terms (cron)
-              </label>
+            <div class="pipeline-control-groups">
+              <div class="pipeline-control-group">
+                <h4 class="pipeline-control-label">Daily Pipeline</h4>
+                <div class="pipeline-control-row">
+                  <input type="date" id="pipeline-target-date" class="admin-input admin-input--date"
+                         max={new Date().toISOString().slice(0,10)}
+                         title="Leave empty for today" />
+                  <button type="button" class="admin-btn admin-btn-primary" id="run-pipeline-btn">Run Pipeline</button>
+                </div>
+                <div class="pipeline-control-toggles">
+                  <label class="dashboard-pipeline-toggle">
+                    <input type="checkbox" id="include-handbook" checked />
+                    Include handbook
+                  </label>
+                  <label class="dashboard-pipeline-toggle" title="Controls whether the scheduled cron pipeline auto-extracts handbook terms">
+                    <input type="checkbox" id="handbook-auto-extract" checked={handbookAutoExtract} />
+                    Auto-extract (cron)
+                  </label>
+                </div>
+                <p class="dashboard-pipeline-feedback" id="run-pipeline-feedback" aria-live="polite"></p>
+              </div>
+
+              <div class="pipeline-control-group">
+                <h4 class="pipeline-control-label">Weekly Recap</h4>
+                <div class="pipeline-control-row">
+                  <input type="week" id="weekly-target-week" class="admin-input admin-input--date"
+                         title="Leave empty for last week" />
+                  <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled}>Generate Weekly</button>
+                </div>
+                <div class="pipeline-control-toggles">
+                  <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
+                    <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
+                    Enabled
+                  </label>
+                </div>
+                <p class="dashboard-pipeline-feedback" id="weekly-pipeline-feedback" aria-live="polite"></p>
+              </div>
             </div>
           </div>
         )}
-
-        <div class="dashboard-pipeline-weekly">
-          <h3 class="dashboard-subsection-title">Weekly Recap</h3>
-          <div class="dashboard-pipeline-actions">
-            <input type="week" id="weekly-target-week" class="admin-input admin-input--date"
-                   title="Leave empty for last week" />
-            <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled}>Generate Weekly</button>
-            <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
-              <input type="checkbox" id="weekly-enabled" checked={weeklyEnabled} />
-              Enabled
-            </label>
-            <p class="dashboard-pipeline-feedback" id="weekly-pipeline-feedback" aria-live="polite"></p>
-          </div>
-        </div>
       </section>
 
       <!-- Quality Score Charts -->
