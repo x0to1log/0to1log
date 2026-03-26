@@ -1,118 +1,115 @@
 # 0to1log
 
-**한국인을 위한 AI 뉴스 큐레이션 + 용어집 + IT 블로그 플랫폼**
+**AI news curation + AI glossary + IT blog platform for Korean readers**
 
-## 왜 만들었나?
+[한국어 버전 보기](./README_KR.md)
 
-AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하면 정보 격차가 커진다.
-그리고 네 가지 문제가 있다:
+## Why We Built This
 
-- **뉴스가 너무 많다** → 영어 소식 중 정말 중요한 건 무엇인가?
-- **영문 기술 용어가 어렵다** → "Agent", "RAG", "Fine-tuning"... 정확히 뭐고 왜 중요한가?
-- **뉴스와 학습이 분리돼 있다** → 오늘의 AI 뉴스 속 개념을 체계적으로 배우고 싶다면?
-- **배운 후 도구를 못 찾는다** → AI 제품이 너무 많은데, 어디서 찾고 어떤 게 나한테 맞는가?
+AI moves fastest in English, and English content is most diverse. But Korean readers face two problems: information gap and fragmentation.
 
-**0to1log는 이 네 가지를 한 곳에서 해결한다.**
-**뉴스, 학습, 도구 탐색이 분리되지 않는, 최초의 AI 학습 플랫폼.**
+### Four Core Problems
 
-## 0to1log의 세 기둥
+- **News overload** → Which English AI news truly matters?
+- **Technical terminology is confusing** → What are "Agent", "RAG", "Fine-tuning"? Why do they matter?
+- **News and learning are separated** → How do I systematically understand concepts from today's AI news?
+- **Can't find tools after learning** → So many AI products—where do I find them? Which fits me?
+
+**0to1log solves all four in one place.**
+
+## The Three Pillars of 0to1log
 
 ### 🔍 Daily News Digest
 
-영어 AI 뉴스를 **LLM으로 자동 큐레이션**한다.
-스팸이 아닌, 진짜 중요한 소식만.
+**Automatically curate English AI news with LLM curation.**
+Only real important news, no spam.
 
-- **Research 페르소나**: 논문·기술 트렌드 중심
-- **Business 페르소나**: 비즈니스·업계 영향 중심
-- **한국어 + 영어 동시 제공**
+- **Research persona**: Academic papers & technology trends
+- **Business persona**: Business impact & industry shifts
+- **Bilingual**: Korean + English simultaneous delivery
 
-**해결하는 것:** "뉴스가 너무 많다" + "영어 소식을 놓친다"
+**Solves:** News overload + Missing English updates
 
 ### 📚 AI Handbook
 
-**핵심 AI 용어를 체계적으로 설명**한다.
-뉴스 속 나온 개념을 깊이 있게 이해하고 싶을 때.
+**Systematically explain core AI terminology.**
+Understand concepts from today's news in depth.
 
-- **기초**: 입문자를 위한 쉬운 설명
-- **심화**: 개발자/실무자를 위한 기술적 깊이
-- **자동 인라인 연결**: 뉴스 속 용어를 클릭하면 용어집으로
+- **Beginner level**: Simple explanations for newcomers
+- **Advanced level**: Technical depth for developers & practitioners
+- **Auto-linked**: Click terms in articles to jump to glossary
 
-**해결하는 것:** "용어가 어렵다" + "뉴스와 학습의 분리"
+**Solves:** Confusing terminology + Fragmented learning
 
 ### ✍️ Blog & AI Product Guides
 
-**AI 도구 선택 가이드**와 **IT 인사이트 글**을 모은다.
-새로운 AI 제품이 나왔을 때, 어디서 찾고, 뭐가 다른지, 어떻게 쓰는지.
+**Curate AI tool selection guides and technical insights.**
+When new AI products launch, find them, understand differences, learn how to use them.
 
-- **제품 비교 가이드** (ChatGPT vs Claude vs Gemini...)
-- **사용 사례** (이 도구로 뭘 할 수 있나)
-- **심화 기술 블로그**
+- **Product comparisons** (ChatGPT vs Claude vs Gemini...)
+- **Use cases** (What can I do with this tool?)
+- **In-depth technical blog**
 
-**해결하는 것:** "배운 후 도구를 못 찾는다" + "실제 적용이 어렵다"
+**Solves:** Can't find tools after learning + Hard to apply knowledge
 
-## 기술 스택
+## Tech Stack
 
-**프론트엔드**
-- [Astro](https://astro.build) v5: 빠르고 가벼운 정적 사이트 생성
-- [Tailwind CSS](https://tailwindcss.com) v4: 현대적인 디자인 시스템
-- 배포: [Vercel](https://vercel.com)
+**Frontend**
+- [Astro](https://astro.build) v5: Fast, lightweight static site generation
+- [Tailwind CSS](https://tailwindcss.com) v4: Modern design system
+- Deploy: [Vercel](https://vercel.com)
 
-**백엔드**
-- [FastAPI](https://fastapi.tiangolo.com): 고성능 Python API 프레임워크
-- [PydanticAI](https://docs.pydantic.dev/latest/concepts/agents/): 타입 안전한 AI 에이전트 개발
-- 배포: [Railway](https://railway.app)
+**Backend**
+- [FastAPI](https://fastapi.tiangolo.com): High-performance Python API framework
+- [PydanticAI](https://ai.pydantic.dev/): Type-safe AI agent development
+- Deploy: [Railway](https://railway.app)
 
-**데이터베이스 & 인증**
-- [Supabase](https://supabase.com): PostgreSQL 기반, 내장 Auth & RLS
+**Database & Auth**
+- [Supabase](https://supabase.com): PostgreSQL-based, built-in Auth & RLS
 
-**AI & 검색**
-- [OpenAI](https://openai.com): gpt-4.1, gpt-4.1-mini (뉴스 큐레이션, 용어 설명)
-- [Tavily API](https://tavily.com): 의미론적 뉴스 검색 (최신 소식 수집)
+**AI & Search**
+- [OpenAI](https://openai.com): gpt-4.1, gpt-4.1-mini (news curation, glossary generation)
+- [Tavily API](https://tavily.com): Semantic news search (latest updates collection)
 
-**자동화**
-- Cron jobs: 매일 뉴스 파이프라인 자동 실행
-- GitHub Actions: 배포 자동화
+**Automation**
+- Cron jobs: Daily news pipeline automation
+- GitHub Actions: Deployment automation
 
-## 현재 상태 & 로드맵
+## Current Status & Roadmap
 
-### ✅ 안정적으로 작동 중
-- Daily News Digest (매일 자동 생성)
-- AI Handbook (1000+ 용어)
-- Blog (기술 글 발행)
+### ✅ Stable and Running
+- Daily News Digest (auto-generated daily)
+- AI Handbook (1000+ terms)
+- Blog (technical articles publishing)
 
-### 🔄 진행 중
-- 뉴스 퀄리티 개선 (프롬프트 감사 및 인용 형식 정규화)
-- AI Product Guides (초기 단계, 가이드 확대 중)
+### 🔄 In Progress
+- Weekly Recap (digest bundling, awaiting quality stabilization)
+- News quality improvements (prompt audit, citation format normalization)
+- AI Product Guides (expanding detailed guides)
 
-### 📋 다음 출시
-- Weekly Recap (최신 뉴스를 주간 요약으로 번들링, 다음 월 출시 예정)
+**View roadmap:**
+- Current sprint: [ACTIVE_SPRINT](./vault/09-Implementation/plans/ACTIVE_SPRINT.md)
+- Full phase plan: [Phase-Flow](./vault/09-Implementation/plans/Phase-Flow.md)
 
-**로드맵 보기:**
-- 현재 스프린트: [ACTIVE_SPRINT](./vault/09-Implementation/plans/ACTIVE_SPRINT.md)
-- 전체 Phase 계획: [Phase-Flow](./vault/09-Implementation/Phase-Flow.md)
+## Getting Started
 
-## 시작하기
+### 📖 As a User
 
-### 📖 사용자로서
-
-0to1log 웹사이트에서 뉴스, 용어, 블로그를 브라우징하세요.
+Browse news, terminology, and blog on the 0to1log website.
 
 → [0to1log.vercel.app](https://0to1log.vercel.app)
 
-### 👨‍💻 개발자로서
+### 👨‍💻 As a Developer
 
-코드와 아키텍처를 이해하고 싶다면:
+To understand the code and architecture:
 
-- **아키텍처 개요**: [vault/](./vault/) — 시스템 설계, 의사결정 이력, 스프린트 계획 (Obsidian 기반 지식 베이스)
-- **백엔드 설정**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI 파이프라인
-- **프론트엔드 설정**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS
+- **Architecture overview**: [vault/](./vault/) — System design & decision history
+- **Backend setup**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI pipeline
+- **Frontend setup**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS
 
-## 함께하기 & 연락
+## Get In Touch
 
-궁금하거나 함께하고 싶으신 분들은:
+Questions or interested in collaborating?
 
 - 📧 **Email**: [x0to1log@gmail.com](mailto:x0to1log@gmail.com)
 - 𝕏 **Twitter/X**: [@x0to1log](https://x.com/x0to1log)
-
-**배포 채널:**
-- 𝕏 X: 최신 소식 & 커뮤니티 논의
