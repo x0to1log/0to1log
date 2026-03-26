@@ -551,6 +551,7 @@ async def _generate_digest(
     digest_headline_ko = ""
     digest_excerpt = ""
     digest_excerpt_ko = ""
+    digest_sources: list[dict] = []
     digest_tags: list[str] = []
     digest_focus_items: list[str] = []
     digest_focus_items_ko: list[str] = []
@@ -606,6 +607,8 @@ async def _generate_digest(
                     digest_focus_items = data["focus_items"]
                 if not digest_focus_items_ko and data.get("focus_items_ko"):
                     digest_focus_items_ko = data["focus_items_ko"]
+                if not digest_sources and data.get("sources"):
+                    digest_sources = data["sources"]
                 # Extract quiz data per persona
                 quiz_en = data.get("quiz_en")
                 quiz_ko = data.get("quiz_ko")
@@ -824,6 +827,7 @@ async def _generate_digest(
             "focus_items": focus_items or [],
             "reading_time_min": reading_time,
             "source_urls": source_urls,
+            "source_cards": digest_sources or [],
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,

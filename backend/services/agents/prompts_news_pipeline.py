@@ -250,7 +250,11 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "en": "<SEE EXAMPLE BELOW>",
   "ko": "<SEE EXAMPLE BELOW>",
   "quiz_en": {{"question": "Question", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "Why A is correct."}},
-  "quiz_ko": {{"question": "질문", "options": ["가", "나", "다", "라"], "answer": "가", "explanation": "정답 해설"}}
+  "quiz_ko": {{"question": "질문", "options": ["가", "나", "다", "라"], "answer": "가", "explanation": "정답 해설"}},
+  "sources": [
+    {{"id": 1, "url": "https://...", "title": "Article or paper title as it appears in the original source"}},
+    {{"id": 2, "url": "https://...", "title": "..."}}
+  ]
 }}
 ```
 
@@ -348,7 +352,8 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 - tags: 4-6 keyword tags in English only. Include company names, key technologies, industry terms, and notable tools.
 - focus_items/focus_items_ko: Exactly 3 bullet points summarizing this specific digest (EN: 5-12 words each, KO: 15-40 chars each). Point 1 = what changed, Point 2 = why it matters, Point 3 = what to watch.
 - Handbook links: Use the display name of the term as link text, not the slug.
-- quiz_en/quiz_ko: One 4-choice quiz question based on today news. Expert = analytical question, Learner = factual question. answer MUST be the exact text of the correct option. All 4 options must be plausible. EN quiz in English, KO quiz in Korean."""
+- quiz_en/quiz_ko: One 4-choice quiz question based on today news. Expert = analytical question, Learner = factual question. answer MUST be the exact text of the correct option. All 4 options must be plausible. EN quiz in English, KO quiz in Korean.
+- sources: List ALL sources cited in the body as [N](URL). Each entry has id (matching the citation number), url (full URL), and title (original article or paper title). The number of sources MUST match the highest citation number in the body. Do NOT list fewer sources than citations."""
 
 
 # --- Research Digest Sections ---
