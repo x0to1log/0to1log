@@ -451,7 +451,7 @@ async def _check_digest_quality(
                     model=quality_model,
                     messages=[
                         {"role": "system", "content": prompt},
-                        {"role": "user", "content": content[:4000]},
+                        {"role": "user", "content": content[:12000]},
                     ],
                     max_tokens=500,
                     temperature=0,
