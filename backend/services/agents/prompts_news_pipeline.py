@@ -301,14 +301,26 @@ OpenAI가 텍스트-투-비디오 플랫폼 Sora를 공식 종료하고, 코딩 
 
 ## Industry & Biz
 ### 오라클, Fusion Agentic Applications 출시
-[3-4 단락, 단락마다 citation...]
+오라클이 Fusion Agentic Applications를 공개했다. 여러 AI 에이전트가 팀을 이뤄 실시간으로 비즈니스 결정을 내리고 실행하는 새로운 형태의 기업용 소프트웨어다. 기존 AI 어시스턴트와 달리 트랜잭션 시스템에 네이티브로 내장되어 보안과 거버넌스가 강점이다. [3](https://example.com/oracle-fusion)
+
+이 제품은 SAP, Salesforce 등 기존 ERP 업체들의 AI 전략과 정면으로 경쟁한다. 오라클은 데이터베이스 레이어를 직접 소유하고 있어 에이전트가 데이터에 접근할 때 추가 통합 없이 동작할 수 있다는 구조적 이점을 갖는다. [3](https://example.com/oracle-fusion)
+
+에이전트형 소프트웨어 시장은 2027년까지 연 40% 성장이 예상되며, 오라클의 진입은 이 시장이 실험 단계를 지나 상용 제품 단계에 진입했음을 의미한다. 기업 IT 의사결정자는 기존 ERP 벤더의 에이전트 통합 로드맵을 비교 평가해야 할 시점이다. [3](https://example.com/oracle-fusion)
 
 ## New Tools
 ### 클라우드플레어 Dynamic Workers
-[3-4 단락, 단락마다 citation...]
+클라우드플레어가 Dynamic Workers를 오픈 베타로 출시했다. 전통 컨테이너 대비 약 100배 빠른 콜드 스타트와 100배 낮은 메모리 사용량으로 AI 에이전트 코드를 실행할 수 있다. [4](https://example.com/cloudflare-workers)
+
+수백만 명이 동시에 각자의 AI 에이전트를 실행하는 시나리오에서 기존 Docker 컨테이너는 리소스 병목이 된다. Dynamic Workers는 V8 isolate 기반으로 밀리초 단위 시작이 가능해 이 문제를 근본적으로 해결한다. [4](https://example.com/cloudflare-workers)
+
+개발자 관점에서 이는 AI 기능 배포의 비용 구조를 바꾼다. 특히 에이전트가 사용자별로 코드를 생성하고 실행하는 패턴이 늘어나면서, 경량 런타임의 중요성은 더 커질 전망이다. [4](https://example.com/cloudflare-workers)
 
 ## 흐름 연결
-[2-3 단락: 왜 이것들이 동시에 일어났는지, 어떤 힘이 이를 추동하는지]
+이번 주 뉴스를 관통하는 핵심 흐름은 AI 산업이 소비자 엔터테인먼트에서 기업 인프라로 무게 중심을 옮기고 있다는 점이다. OpenAI의 Sora 종료, 오라클의 에이전트 앱, 클라우드플레어의 경량 런타임 모두 같은 방향을 가리킨다.
+
+동시에 AI 인재 전쟁이 격화되고 있다. OpenAI의 8,000명 채용 계획은 Google, Microsoft와의 인재 쟁탈전을 예고하며, 이는 AI 엔지니어 연봉 상승과 중소기업의 인재 확보 난이도 증가로 이어질 것이다.
+
+규제 환경도 변화 중이다. 각국 정부가 AI 정책 프레임워크를 내놓으면서, 기업은 혁신 속도와 규제 준수 사이에서 균형을 잡아야 하는 새로운 과제를 안게 되었다.
 
 ## 전략 판단
 - **현재 OpenAI API 기반으로 개발 중이라면**: 이번 분기 내 대안 제공업체 최소 1곳과 병행 테스트하라 — OpenAI의 기업 전환으로 API 가격·우선순위가 바뀔 수 있다. 미대응 리스크: 예측 불가능한 비용 변동에 100% 종속.
@@ -322,9 +334,11 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
 3. Does each news item have 3-4 paragraphs (expert) or 2-3 paragraphs (learner)? If not, expand.
-4. Are "en" and "ko" covering the SAME news items? If ko is shorter, expand it.
-5. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
-6. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
+4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs? If ko is shorter, expand it. The ko field MUST be at least 80% of the en field length.
+5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
+6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
+7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
+8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
