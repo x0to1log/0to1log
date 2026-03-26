@@ -489,6 +489,7 @@ The expansion targets research, engineering, and product roles. As AI models get
 
 RESEARCH_EXPERT_SKELETON = """
 **English ("en"):**
+(NOTE: This example shows Research Papers and Open Source sections. If LLM & SOTA Models news exists that day, include that section too with the same depth.)
 ```
 ## One-Line Summary
 Diffusion-based decoding disrupts document OCR while multi-agent verification tackles LLM hallucination at scale.
@@ -517,6 +518,7 @@ This architecture shift could reshape production OCR pipelines. The open-source 
 
 RESEARCH_LEARNER_SKELETON = """
 **English ("en"):**
+(NOTE: This example shows Research Papers and Open Source sections. If LLM & SOTA Models news exists that day, include that section too.)
 ```
 ## One-Line Summary
 New AI research makes document scanning dramatically faster and helps AI systems avoid making things up.
