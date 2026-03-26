@@ -339,7 +339,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
 3. Does each news item have 3-4 paragraphs (expert) or 2-3 paragraphs (learner)? If not, expand.
-4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs? If ko is shorter, expand it. The ko field MUST be at least 80% of the en field length.
+4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
