@@ -94,6 +94,26 @@ AI 콘텐츠 생성 시 활용하는 구조화된 항목 시스템. ==디폴트 
 - EN+KO 동시 JSON 생성 (별도 번역 불필요)
 - 퀴즈: `quiz_en` + `quiz_ko` 페르소나별 생성
 
+### Skeleton-Map 기반 프롬프트 라우팅 (v5.1+)
+
+v5에서 추가된 skeleton 시스템으로 각 포스트 타입(Research/Business) × 페르소나(Expert/Learner)에 최적화된 프롬프트 구조 제공:
+
+**4개 독립 Skeleton 상수:**
+- `SKELETON_RESEARCH_EXPERT` — 기술 심화, 벤치마크/성능 중심
+- `SKELETON_RESEARCH_LEARNER` — 기술 설명 포함, 배경 지식 보충
+- `SKELETON_BUSINESS_EXPERT` — 시장 분석, 투자 시각
+- `SKELETON_BUSINESS_LEARNER` — 실무 임팩트, 이사회 뉘앙스
+
+**라우팅 메커니즘:**
+- `SKELETON_MAP[post_type][persona]` 자동 선택
+- 각 skeleton은 구조, 문맥, 깊이가 서로 다름 (일반 프롬프트보다 정확한 출력)
+- 코드 위치: `backend/services/agents/prompts_news_pipeline.py`의 `SKELETON_MAP`
+
+**효과:**
+- Research 다이제스트: 논문/벤치마크 맥락 강조
+- Business 다이제스트: 시장/전략 맥락 강조
+- 페르소나별: Expert는 기술 용어 자유, Learner는 설명 포함
+
 ### Editorial Agent (`EDITORIAL_SYSTEM_PROMPT`)
 
 - 출력: `EditorialFeedback` / 모델: gpt-4.1

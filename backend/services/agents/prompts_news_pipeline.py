@@ -1,4 +1,4 @@
-"""System prompts for AI News Pipeline v4."""
+"""System prompts for AI News Pipeline v5."""
 
 # SELECTION: Pick ONE best article per category (v2 legacy, kept for compatibility)
 RANKING_SYSTEM_PROMPT = """You are an AI news editor for 0to1log, a Korean-English bilingual AI news platform.
@@ -191,7 +191,7 @@ def get_learner_prompt(handbook_slugs: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# v3 Daily Digest prompts
+# Daily Digest Persona Prompts (v5 — 2 personas × 2 locales)
 # ---------------------------------------------------------------------------
 
 def _build_digest_prompt(

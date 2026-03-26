@@ -12,11 +12,12 @@ source: docs/plans/2026-03-07-handbook-feature.md
 
 Handbook(AI 용어집) 콘텐츠의 AI 생성·번역·연관 용어 탐색 파이프라인. Admin 에디터에서 수동 트리거하는 ==어드바이저 모드==와, 뉴스 파이프라인에서 자동으로 용어를 추출하는 ==파이프라인 모드==로 구분된다.
 
-> [!note] v5 변경 (2026-03-23~25)
+> [!note] v5 변경 (2026-03-25~ 진행 중)
 > - 모델: gpt-4o → **gpt-4.1** (main), gpt-4o-mini → **gpt-4.1-mini** (light)
 > - Pipeline 추출: 상세 pre-filtering 추가 (긴 용어, modifier 접미사, 카테고리 검증)
 > - 신뢰도 기반 라우팅: High → 자동 생성, Low → queued (수동 리뷰)
 > - 동시성 제한: 세마포어 max 2 병렬 생성
+> - Advanced Quality: Tavily 검색 + 10유형 분류 + Self-critique + Quality 스코어링
 
 ## Handbook AI 전체 흐름
 

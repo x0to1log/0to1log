@@ -78,6 +78,27 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 > - Business Expert/Derive 2-call cascade → 독립 Expert/Learner 생성
 > - 번역 스테이지 제거 (EN+KO 동시 생성)
 > - 다이제스트 품질 스코어링 스테이지 추가
+> - Skeleton-map 기반 라우팅 추가 (v5.1+, 2026-03-26)
+
+### Skeleton-Map 라우팅 예외 처리 (v5.1+)
+
+Generate 에이전트가 `post_type` (research/business) × `persona` (expert/learner) 조합으로 skeleton 자동 선택:
+
+| 라우팅 조합 | Skeleton | 특징 |
+|-----------|----------|------|
+| research + expert | `SKELETON_RESEARCH_EXPERT` | 벤치마크/성능 중심 |
+| research + learner | `SKELETON_RESEARCH_LEARNER` | 기술 설명 포함 |
+| business + expert | `SKELETON_BUSINESS_EXPERT` | 시장 분석/투자 시각 |
+| business + learner | `SKELETON_BUSINESS_LEARNER` | 실무 임팩트 중심 |
+
+**예외 처리:**
+- Skeleton 타입 미스매치 시: 자동 재시도하지 않음 (각 skeleton은 독립적 설계)
+- 생성 실패 시: 낮은 점수(quality_score: 0)로 저장하거나 admin review 대기
+- 로케일 복구: EN 또는 KO 누락 시 **동일 skeleton으로** 해당 로케일만 재생성
+
+**코드 위치:**
+- `backend/services/agents/prompts_news_pipeline.py`의 `SKELETON_MAP` 매핑
+- Digest Generator 에이전트에서 호출: `get_digest_prompt(post_type, persona, skeleton=SKELETON_MAP[post_type][persona])`
 
 ### 재시도 유틸리티
 
