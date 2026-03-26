@@ -324,25 +324,16 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 3. Does each news item have 3-4 paragraphs (expert) or 2-3 paragraphs (learner)? If not, expand.
 4. Are "en" and "ko" covering the SAME news items? If ko is shorter, expand it.
 5. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
-6. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat."""
+6. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 
 ## Field rules
-- **headline**: MUST be in English. No Korean characters allowed.
-- **headline_ko**: MUST be in Korean. Must contain at least one Korean character (가-힣). This is NOT optional — every response MUST include a Korean headline.
-- **excerpt/excerpt_ko**: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body.
-- **tags**: 4-6 keyword tags in English only. Include company names, key technologies, industry terms, and notable tools.
-- **focus_items/focus_items_ko**: Exactly 3 bullet points summarizing this specific digest (EN: 5-12 words each, KO: 15-40 chars each):
-  1. What specifically changed today
-  2. Why this matters right now
-  3. What to watch for next
-- **Handbook links**: Use the term's display name as link text, not the slug.
-- **quiz_en/quiz_ko**: One 4-choice quiz question based on today's news.
-  - Expert persona: analytical or judgment question
-  - Learner persona: factual or understanding-check question
-  - "answer" MUST be the exact text of the correct option
-  - "explanation" is 1-2 sentences explaining why the answer is correct
-  - All 4 options must be plausible
-  - EN quiz in English, KO quiz in Korean"""
+- headline: MUST be in English. No Korean characters allowed.
+- headline_ko: MUST be in Korean. Must contain at least one Korean character. This is NOT optional. Every response MUST include a Korean headline.
+- excerpt/excerpt_ko: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body.
+- tags: 4-6 keyword tags in English only. Include company names, key technologies, industry terms, and notable tools.
+- focus_items/focus_items_ko: Exactly 3 bullet points summarizing this specific digest (EN: 5-12 words each, KO: 15-40 chars each). Point 1 = what changed, Point 2 = why it matters, Point 3 = what to watch.
+- Handbook links: Use the display name of the term as link text, not the slug.
+- quiz_en/quiz_ko: One 4-choice quiz question based on today news. Expert = analytical question, Learner = factual question. answer MUST be the exact text of the correct option. All 4 options must be plausible. EN quiz in English, KO quiz in Korean."""
 
 
 # --- Research Digest Sections ---
@@ -446,7 +437,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work. 2-3 paragraphs per item.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care. 2-3 paragraphs per item.
 - **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying. 2-3 paragraphs per item.
-- **## What This Means for You (ko: ## 나에게 주는 의미)** - How today's news connects to daily life, career, and work. 3-4 paragraphs.
+- **## What This Means for You (ko: ## 나에게 주는 의미)** - How today news connects to daily life, career, and work. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
   `1. **[Action]**: [what to do in 1-2 sentences]`
   Example: `1. **Try the new Claude Code CLI**: Install via npm and test it on a small project to see if it fits your workflow.`
