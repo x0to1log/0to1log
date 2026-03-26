@@ -294,7 +294,7 @@ RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Newly released or updated models. Cover benchmark deltas, architecture changes, context window, latency, and comparison vs prior baselines.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Notable GitHub or Hugging Face projects. Explain what the project does, why developers care, maturity level, and current limitations.
 - **## Research Papers (ko: ## Research Papers)** - Important new papers from arXiv or major labs. Explain the core idea, experimental result, what is genuinely new, and where the paper is weak or incomplete.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided in the input, write 1 paragraph summarizing the overall sentiment, then include 1-2 direct quotes from Reddit/HN as blockquotes. Attribute to community name only (e.g., "r/MachineLearning", "Hacker News"), NOT individual usernames. If no community data is provided, omit this section entirely.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided in the input, write 1 paragraph summarizing the overall sentiment, then include 1-2 direct quotes as blockquotes. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use the original English comment text. In KO, paraphrase in natural Korean but keep the same attribution. (3) Do NOT fabricate quotes -- only use reactions that appear in the provided community data. If no Reddit/HN reactions exist, omit this section entirely.
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short closing synthesis. 1-2 paragraphs only. Summarize what changed in today's AI technical landscape overall."""
 
 
@@ -327,7 +327,7 @@ RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Explain newly released models in plain language: what changed, what got better, and why people are paying attention.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Introduce notable projects from GitHub or Hugging Face. Explain what they do, who they are for, and why they are trending.
 - **## Research Papers (ko: ## Research Papers)** - Explain important papers simply: the problem, the idea, the result, and why this paper matters.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph in approachable language summarizing what people are saying, then 1-2 blockquote highlights. Attribute to community name only (NOT usernames). Omit if no community data.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph in approachable language summarizing what people are saying, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short reader-friendly wrap-up connecting today's technical developments to the bigger AI landscape."""
 
 
@@ -360,7 +360,7 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Big Tech (ko: ## Big Tech)** - Major moves from OpenAI, Google, Microsoft, Meta, etc. Each item: 3-4 paragraphs analyzing what happened, the strategic rationale, competitive positioning, and market implications.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Each item: 3-4 paragraphs with deal sizes in context and what the deal signals strategically.
 - **## New Tools (ko: ## New Tools)** - New AI products or services. Each item: 3-4 paragraphs with pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph analyzing the market sentiment from Reddit/HN, then 1-2 blockquote highlights. Attribute to community name only (NOT usernames). Omit if no community data.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph analyzing the market sentiment, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
   `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence]`
@@ -393,7 +393,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work. 2-3 paragraphs per item.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care. 2-3 paragraphs per item.
 - **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying. 2-3 paragraphs per item.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 friendly paragraph about what people online are saying, then 1-2 blockquote highlights. Attribute to community name only (NOT usernames). Omit if no community data.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 friendly paragraph about what people are saying, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
 - **## What This Means for You (ko: ## 나에게 주는 의미)** - How today news connects to daily life, career, and work. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
   `1. **[Action]**: [what to do in 1-2 sentences]`
@@ -449,6 +449,15 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 ### Cloudflare Dynamic Workers
 [3 paragraphs, each ending with [N](URL)...]
 
+## Community Pulse
+Industry professionals on Reddit see OpenAI's hiring push as a sign of accelerating consolidation, while Hacker News debates the impact on startup talent pools.
+
+> "If OpenAI hoovers up 3,500 more engineers, every Series A startup just lost their candidate pipeline."
+> -- Reddit
+
+> "The real story is the pivot away from consumer -- enterprise margins are where the IPO math works."
+> -- Hacker News
+
 ## Connecting the Dots
 [2-3 paragraphs connecting the stories]
 
@@ -457,7 +466,7 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 - **If you run AI on traditional containers**: Benchmark Dynamic Workers -- 100x cold-start improvement changes the cost equation. Risk of inaction: overpaying for inference.
 ```
 
-**Korean ("ko"):** Same structure, Korean headings where specified (## 한 줄 요약, ## 흐름 연결, ## 전략 판단). Same number of sections, items, and paragraphs. Citations [N](URL) at every paragraph end.
+**Korean ("ko"):** Same structure, Korean headings where specified (## 한 줄 요약, ## 커뮤니티 반응, ## 흐름 연결, ## 전략 판단). Same number of sections, items, and paragraphs. Citations [N](URL) at every paragraph end.
 """
 
 BUSINESS_LEARNER_SKELETON = """
@@ -480,6 +489,15 @@ The expansion targets research, engineering, and product roles. As AI models get
 ### Cloudflare Dynamic Workers: Faster AI for Everyone
 [2-3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
 
+## Community Pulse
+People online are buzzing about OpenAI's massive hiring plans, with many wondering what it means for smaller AI companies trying to compete for talent.
+
+> "If you're an AI engineer, this is great news -- more jobs, better pay. But if you're a startup founder, good luck hiring."
+> -- Reddit
+
+> "The real question is whether 8,000 people can ship faster than a focused team of 500."
+> -- Hacker News
+
 ## What This Means for You
 [3-4 paragraphs connecting news to daily life, career, and work]
 
@@ -489,7 +507,7 @@ The expansion targets research, engineering, and product roles. As AI models get
 3. **Monitor AI policy changes**: Track the new framework and assess how it affects your work.
 ```
 
-**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 나에게 주는 의미, ## 지금 할 일). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
+**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 커뮤니티 반응, ## 나에게 주는 의미, ## 지금 할 일). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
 """
 
 RESEARCH_EXPERT_SKELETON = """
@@ -514,11 +532,20 @@ This architecture shift could reshape production OCR pipelines. The open-source 
 ### WildWorld Dataset
 [3 paragraphs, each ending with [N](URL)...]
 
+## Community Pulse
+Engineers on Reddit and Hacker News are debating whether diffusion-based OCR can replace production autoregressive pipelines, with cautious optimism around the 3.2x speedup.
+
+> "The Semantic Shuffle benchmark is the real contribution here -- finally a way to test if OCR models actually read vs. guess from language priors."
+> -- Reddit
+
+> "3.2x faster is nice, but I need to see accuracy on handwritten medical forms before I swap anything."
+> -- Hacker News
+
 ## Why It Matters
 [1-2 paragraphs synthesizing what changed in AI research today]
 ```
 
-**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
+**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 커뮤니티 반응, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
 """
 
 RESEARCH_LEARNER_SKELETON = """
@@ -547,7 +574,7 @@ The clever part: each agent only sees part of the information, so they cannot ju
 The AI research community on Reddit and Hacker News is particularly excited about MinerU-Diffusion, with many noting its practical implications for document processing pipelines.
 
 > "Finally, OCR that doesn't choke on tables and formulas. This could save us hours of manual cleanup."
-> -- r/MachineLearning
+> -- Reddit
 
 > "The 3.2x speedup is impressive, but I want to see how it handles handwritten notes."
 > -- Hacker News
