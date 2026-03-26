@@ -13,6 +13,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 - **배운 후 도구를 못 찾는다** → AI 제품이 너무 많은데, 어디서 찾고 어떤 게 나한테 맞는가?
 
 **0to1log는 이 네 가지를 한 곳에서 해결한다.**
+**뉴스, 학습, 도구 탐색이 분리되지 않는, 최초의 AI 학습 플랫폼.**
 
 ## 0to1log의 세 기둥
 
@@ -65,7 +66,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 - [Supabase](https://supabase.com): PostgreSQL 기반, 내장 Auth & RLS
 
 **AI & 검색**
-- [OpenAI](https://openai.com): gpt-4.1, gpt-4.1-mini (뉴스 큐레이션, 용어 설명)
+- [OpenAI](https://openai.com): gpt-4o, gpt-4o-mini (뉴스 큐레이션, 용어 설명)
 - [Tavily API](https://tavily.com): 의미론적 뉴스 검색 (최신 소식 수집)
 
 **자동화**
@@ -80,9 +81,11 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 - Blog (기술 글 발행)
 
 ### 🔄 진행 중
-- Weekly Recap (주간 요약 파이프라인 완성, 뉴스 퀄리티 안정화 대기)
 - 뉴스 퀄리티 개선 (프롬프트 감사 및 인용 형식 정규화)
-- AI Product Guides (상세 가이드 확대)
+- AI Product Guides (초기 단계, 가이드 확대 중)
+
+### 📋 다음 출시
+- Weekly Recap (최신 뉴스를 주간 요약으로 번들링, 다음 월 출시 예정)
 
 **로드맵 보기:**
 - 현재 스프린트: [ACTIVE_SPRINT](./vault/09-Implementation/plans/ACTIVE_SPRINT.md)
@@ -100,7 +103,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 
 코드와 아키텍처를 이해하고 싶다면:
 
-- **아키텍처 개요**: [vault/](./vault/) — 시스템 설계 & 의사결정 이력
+- **아키텍처 개요**: [vault/](./vault/) — 시스템 설계, 의사결정 이력, 스프린트 계획 (Obsidian 기반 지식 베이스)
 - **백엔드 설정**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI 파이프라인
 - **프론트엔드 설정**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS
 
