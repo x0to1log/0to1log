@@ -104,6 +104,7 @@ Browse news, terminology, and blog on the 0to1log website.
 
 To understand the code and architecture:
 
+- **Development Journey**: [Pipeline Journey](./docs/portfolio/pipeline-journey.en.md) — How the AI pipelines evolved through 5 redesigns and 6 prompt iterations
 - **Backend Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md) — Pipeline details with Mermaid diagrams
 - **Backend setup**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI pipeline
 - **Frontend setup**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS

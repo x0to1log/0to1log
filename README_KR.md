@@ -101,6 +101,7 @@ AI 뉴스는 **영어가 제일 빠르고 다양**한데, 한국어로만 접하
 
 코드와 아키텍처를 이해하고 싶다면:
 
+- **개발 여정**: [Pipeline Journey](./docs/portfolio/pipeline-journey.ko.md) — AI 파이프라인 5번의 재설계와 6회 프롬프트 반복의 기록
 - **백엔드 아키텍처**: [ARCHITECTURE_KR.md](./ARCHITECTURE_KR.md) — 파이프라인 상세 (Mermaid 다이어그램 포함)
 - **백엔드 설정**: [backend/CLAUDE_KR.md](./backend/CLAUDE_KR.md) — FastAPI + AI 파이프라인
 - **프론트엔드 설정**: [frontend/CLAUDE_KR.md](./frontend/CLAUDE_KR.md) — Astro v5 + Tailwind CSS
