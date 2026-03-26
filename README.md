@@ -103,9 +103,10 @@ Browse news, terminology, and blog on the 0to1log website.
 
 To understand the code and architecture:
 
-- **Architecture overview**: [vault/](./vault/) — System design & decision history
+- **Backend Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md) — Pipeline details with Mermaid diagrams
 - **Backend setup**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI pipeline
 - **Frontend setup**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS
+- **Design & Planning**: [vault/](./vault/) — System design & decision history
 
 ## Get In Touch
 
