@@ -453,10 +453,10 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 Industry professionals on Reddit see OpenAI's hiring push as a sign of accelerating consolidation, while Hacker News debates the impact on startup talent pools.
 
 > "If OpenAI hoovers up 3,500 more engineers, every Series A startup just lost their candidate pipeline."
-> -- Reddit
+> — Reddit
 
 > "The real story is the pivot away from consumer -- enterprise margins are where the IPO math works."
-> -- Hacker News
+> — Hacker News
 
 ## Connecting the Dots
 [2-3 paragraphs connecting the stories]
@@ -493,10 +493,10 @@ The expansion targets research, engineering, and product roles. As AI models get
 People online are buzzing about OpenAI's massive hiring plans, with many wondering what it means for smaller AI companies trying to compete for talent.
 
 > "If you're an AI engineer, this is great news -- more jobs, better pay. But if you're a startup founder, good luck hiring."
-> -- Reddit
+> — Reddit
 
 > "The real question is whether 8,000 people can ship faster than a focused team of 500."
-> -- Hacker News
+> — Hacker News
 
 ## What This Means for You
 [3-4 paragraphs connecting news to daily life, career, and work]
@@ -536,10 +536,10 @@ This architecture shift could reshape production OCR pipelines. The open-source 
 Engineers on Reddit and Hacker News are debating whether diffusion-based OCR can replace production autoregressive pipelines, with cautious optimism around the 3.2x speedup.
 
 > "The Semantic Shuffle benchmark is the real contribution here -- finally a way to test if OCR models actually read vs. guess from language priors."
-> -- Reddit
+> — Reddit
 
 > "3.2x faster is nice, but I need to see accuracy on handwritten medical forms before I swap anything."
-> -- Hacker News
+> — Hacker News
 
 ## Why It Matters
 [1-2 paragraphs synthesizing what changed in AI research today]
@@ -574,10 +574,10 @@ The clever part: each agent only sees part of the information, so they cannot ju
 The AI research community on Reddit and Hacker News is particularly excited about MinerU-Diffusion, with many noting its practical implications for document processing pipelines.
 
 > "Finally, OCR that doesn't choke on tables and formulas. This could save us hours of manual cleanup."
-> -- Reddit
+> — Reddit
 
 > "The 3.2x speedup is impressive, but I want to see how it handles handwritten notes."
-> -- Hacker News
+> — Hacker News
 
 ## Why It Matters
 [1-2 paragraphs connecting developments to the bigger picture, accessible language]

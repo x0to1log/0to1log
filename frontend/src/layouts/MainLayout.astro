@@ -2,6 +2,7 @@
 import Head from '../components/Head.astro';
 import Navigation from '../components/Navigation.astro';
 import Footer from '../components/Footer.astro';
+import NewsletterSubscribe from '../components/NewsletterSubscribe.astro';
 import AuthPromptSheet from '../components/auth/AuthPromptSheet.astro';
 import CookieConsent from '../components/CookieConsent.astro';
 import { ViewTransitions } from 'astro:transitions';
@@ -123,6 +124,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
       <slot />
     </main>
 
+    {!isAdmin && !previewMode && <NewsletterSubscribe locale={locale} />}
     {!isAdmin && <Footer locale={locale} pathname={Astro.url.pathname} />}
     {!isAdmin && <CookieConsent locale={locale} />}
     {!isAdmin && <AuthPromptSheet locale={locale} />}

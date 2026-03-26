@@ -1,0 +1,269 @@
+---
+interface Props {
+  locale: 'en' | 'ko';
+}
+
+const { locale } = Astro.props;
+const isKo = locale === 'ko';
+
+const subtitle = isKo
+  ? '매주 AI 뉴스를 이메일로 받아보세요'
+  : 'Get weekly AI news in your inbox';
+const placeholder = isKo ? '이메일 입력' : 'Enter your email';
+const buttonText = isKo ? '구독하기' : 'Subscribe';
+const submittingText = isKo ? '구독 중...' : 'Subscribing...';
+const successText = isKo
+  ? '구독 완료! 이메일을 확인해주세요.'
+  : 'Success! Check your email to confirm.';
+const errorText = isKo
+  ? '구독에 실패했습니다. 다시 시도해주세요.'
+  : 'Something went wrong. Please try again.';
+const nonce = Astro.locals.cspNonce || '';
+
+const formSrc = 'https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a729e0c14b';
+---
+
+<section class="nl-strip" aria-label="Newsletter">
+  <div class="nl-strip__rule" aria-hidden="true"></div>
+  <div class="nl-strip__inner">
+    <div class="nl-strip__left">
+      <span class="nl-strip__icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+        </svg>
+      </span>
+      <span class="nl-strip__title">0to1log Weekly</span>
+      <span class="nl-strip__sep" aria-hidden="true">&mdash;</span>
+      <span class="nl-strip__subtitle">{subtitle}</span>
+    </div>
+    <form
+      class="nl-strip__form"
+      data-form-src={formSrc}
+      data-submitting={submittingText}
+      data-success={successText}
+      data-error={errorText}
+      data-button={buttonText}
+    >
+      <label for="nl-email" class="sr-only">Email</label>
+      <input
+        id="nl-email"
+        type="email"
+        required
+        placeholder={placeholder}
+        class="nl-strip__input"
+        autocomplete="email"
+      />
+      <button type="submit" class="nl-strip__button">
+        {buttonText}
+      </button>
+    </form>
+  </div>
+  <p class="nl-strip__feedback" aria-live="polite"></p>
+  <div class="nl-strip__rule" aria-hidden="true"></div>
+</section>
+
+<script is:inline nonce={nonce}>
+(function () {
+  document.querySelectorAll('.nl-strip__form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = form.querySelector('.nl-strip__input');
+      var btn = form.querySelector('.nl-strip__button');
+      var section = form.closest('.nl-strip');
+      var feedback = section.querySelector('.nl-strip__feedback');
+      var email = input.value.trim();
+      if (!email) return;
+
+      var submitting = form.dataset.submitting;
+      var success = form.dataset.success;
+      var error = form.dataset.error;
+      var buttonLabel = form.dataset.button;
+
+      btn.disabled = true;
+      btn.textContent = submitting;
+      feedback.textContent = '';
+      feedback.className = 'nl-strip__feedback';
+
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = form.dataset.formSrc + '?email=' + encodeURIComponent(email);
+      document.body.appendChild(iframe);
+
+      iframe.onload = function () {
+        feedback.textContent = success;
+        feedback.classList.add('nl-strip__feedback--success');
+        input.value = '';
+        btn.disabled = false;
+        btn.textContent = buttonLabel;
+        setTimeout(function () { document.body.removeChild(iframe); }, 2000);
+      };
+      iframe.onerror = function () {
+        feedback.textContent = error;
+        feedback.classList.add('nl-strip__feedback--error');
+        btn.disabled = false;
+        btn.textContent = buttonLabel;
+        setTimeout(function () { document.body.removeChild(iframe); }, 2000);
+      };
+    });
+  });
+})();
+</script>
+
+<style>
+  .nl-strip {
+    max-width: 720px;
+    margin: 2.5rem auto 1.5rem;
+    padding: 0 1rem;
+  }
+
+  .nl-strip__rule {
+    height: 1px;
+    background: var(--color-border);
+    margin: 0;
+  }
+
+  .nl-strip__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    padding: 1rem 0;
+  }
+
+  .nl-strip__left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .nl-strip__icon {
+    flex-shrink: 0;
+    color: var(--color-accent);
+    opacity: 0.7;
+    display: flex;
+  }
+
+  .nl-strip__title {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+  }
+
+  .nl-strip__sep {
+    color: var(--color-text-muted);
+    opacity: 0.4;
+    flex-shrink: 0;
+  }
+
+  .nl-strip__subtitle {
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nl-strip__form {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .nl-strip__input {
+    width: 180px;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--color-border);
+    border-bottom-width: 2px;
+    background: transparent;
+    color: var(--color-text-primary);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .nl-strip__input::placeholder {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  .nl-strip__input:focus {
+    border-bottom-color: var(--color-accent);
+  }
+
+  .nl-strip__button {
+    padding: 0.45rem 1rem;
+    border: none;
+    border-bottom: 2px solid color-mix(in srgb, var(--color-accent) 70%, #000);
+    background: var(--color-accent);
+    color: var(--color-bg-primary);
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+
+  .nl-strip__button:hover { opacity: 0.85; }
+  .nl-strip__button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .nl-strip__feedback {
+    text-align: center;
+    font-size: 0.76rem;
+    font-family: var(--font-ui);
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    color: var(--color-text-muted);
+    transition: min-height 0.2s;
+  }
+  .nl-strip__feedback:not(:empty) {
+    min-height: 1.4em;
+    padding: 0.3rem 0 0.1rem;
+  }
+  .nl-strip__feedback--success { color: var(--color-success); }
+  .nl-strip__feedback--error { color: var(--color-error, #ef4444); }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 680px) {
+    .nl-strip__inner {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.8rem;
+    }
+    .nl-strip__left {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .nl-strip__sep { display: none; }
+    .nl-strip__subtitle {
+      width: 100%;
+      text-align: center;
+      white-space: normal;
+    }
+    .nl-strip__form {
+      justify-content: center;
+    }
+    .nl-strip__input { flex: 1; width: auto; }
+  }
+</style>
