@@ -265,27 +265,40 @@ AUTOPUB-01 (자동 발행)
 ### 태스크 순서
 
 ```
-Phase A: Weekly Digest (핵심)
-  WEEKLY-PROMPT-01 → 주간 프롬프트 (expert/learner)
-  WEEKLY-PIPE-01   → run_weekly_digest() 파이프라인
-  WEEKLY-CRON-01   → 일요일 cron + 어드민 수동 버튼
-  WEEKLY-FE-01     → 뉴스 리스트 Weekly 탭 + 배지
-  WEEKLY-TEST-01   → E2E 검증
+Phase A: Weekly Digest (핵심) — 구현 완료, 비활성화 상태
+  [x] WEEKLY-PROMPT-01 → 주간 프롬프트 (expert/learner)
+  [x] WEEKLY-PIPE-01   → run_weekly_pipeline() 파이프라인
+  [x] WEEKLY-CRON-01   → 일요일 cron + 어드민 수동 버튼 + backfill (week picker)
+  [x] WEEKLY-FE-01     → 뉴스 리스트 Weekly 탭 + 배지 + 하단 카드 (용어+도구)
+  [x] WEEKLY-ADMIN-01  → 대시보드/Pipeline Runs 통합 UI (Daily+Weekly 카드 레이아웃)
+  [ ] WEEKLY-TEST-01   → E2E 검증 (뉴스 퀄리티 안정 후 활성화)
 
-Phase B: 품질 안정화 (병행)
-  PROMPT-AUDIT-P0  → URL hallucination 방지, citation 정확도
-  PROMPT-AUDIT-P1  → 토큰 효율, few-shot 추가
-  MODEL-EVAL-01    → gpt-4.1 전환 후 품질 평가 (2주 데이터)
+Phase B: 뉴스 퀄리티 안정화 (진행 중)
+  [x] PROMPT-FIX-01    → KO 제목 영어 문제 — fallback 체인 + prefix
+  [x] PROMPT-FIX-02    → 섹션 구조 미준수 — 분석 섹션 MANDATORY 규칙
+  [x] PROMPT-FIX-03    → 뉴스 분량 부족 — EQUAL COVERAGE 규칙
+  [x] PROMPT-FIX-04    → Bullet format 미적용 — 구체적 예시 포함
+  [x] PROMPT-FIX-05    → Citation 형식 — [N](URL) Perplexity 스타일
+  [x] PROMPT-FIX-06    → Few-shot skeleton (EN+KO full 예시)
+  [x] PROMPT-FIX-07    → KO 분량 가드레일 (80% 규칙 + KO 전용 skeleton)
+  [x] PROMPT-FIX-08    → 수식 $$ 강제 (KaTeX 렌더링 깨짐 방지)
+  [x] PROMPT-FIX-09    → sources 배열 (제목 포함) + 빈 URL 필터
+  [x] PROMPT-FIX-10    → Quality check 프롬프트를 현재 형식에 맞게 업데이트
+  [x] MODEL-EVAL-01    → gpt-4o vs gpt-4.1 A/B 테스트 → 프롬프트가 원인, 4.1 유지
+  [ ] PROMPT-FIX-11    → Citation이 본문 단락 끝이 아닌 하단에 묶이는 문제 (고질적)
+  [ ] PROMPT-FIX-12    → KO 섹션 헤더가 자유 형식으로 나오는 문제 (WebFetch 번역 가능성 확인 필요)
+  [ ] QUALITY-HYBRID-01 → 규칙 기반 체크(코드) + LLM 평가 하이브리드 품질 시스템
 
 Phase C: 확장 (선택)
-  COMMUNITY-01     → 커뮤니티 반응 수집
-  AUTOPUB-01       → quality_score ≥ 80 자동 발행
+  [ ] COMMUNITY-01     → 커뮤니티 반응 수집
+  [ ] AUTOPUB-01       → quality_score ≥ 80 자동 발행
 ```
 
 ### 게이트 조건
-- [ ] Weekly Digest가 정상 생성 + 프론트엔드 표시
-- [ ] PROMPT-AUDIT P0 이슈 0건
-- [ ] gpt-4.1 전환 후 quality_score 평균 ≥ 75 유지
+- [x] Weekly Digest 구현 완료 (비활성화 상태, 뉴스 퀄리티 안정 후 활성화)
+- [ ] 뉴스 quality_score 평균 ≥ 75 (현재 하락 추세 — 프롬프트 수정 효과 확인 필요)
+- [ ] Citation이 본문 단락 끝에 정상 삽입
+- [ ] KO/EN 커버리지 동등 + KO 섹션 헤더 정상
 - [ ] `ruff check .` + `pytest tests/ -v` 통과
 
 ### 설계 참조
