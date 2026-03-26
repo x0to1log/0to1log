@@ -111,7 +111,7 @@
 | Task | 상태 | 목표 | 의존성 |
 |------|------|------|--------|
 | WEEKLY-FE-01 | todo | Weekly 탭 프론트 통합 | 백엔드 완료 ✅ |
-| AUTOPUB-01 | monitoring | Quality ≥80 자동 발행 | 2~3일 점수 추이 모니터링 후 구현 |
+| AUTOPUB-01 | monitoring | Quality ≥80 자동 발행 + 어드민 토글 | 3일 연속 90+ 확인 후 구현 |
 | COMMUNITY-01 | todo | Reddit/HN/X 반응 수집 (선택) | 선택사항 |
 
 ### 품질 점수 모니터링 (AUTOPUB-01 전제조건)
@@ -121,6 +121,16 @@
 | 3/26 | 99 (E:100/L:98) | 95 (E:95/L:95) | 최신 프롬프트 v6 + 12000자 truncation |
 | 3/25 | 88 (E:88/L:88) | 69 (E:68/L:70) | 4000자 truncation 오탐 포함 |
 | 3/24 | 85 | 65 | o4-mini (변별력 부족) |
+| 3/24 (재생성) | 95 | 94 | 최종 파이프라인 |
+
+목표: 3일 연속 Business ≥ 85, Research ≥ 80 → AUTOPUB-01 구현 착수.
+현재: 3/24(95/94), 3/26(99/95) = 2일 달성. **3/27 결과 확인 후 구현 예정.**
+
+#### AUTOPUB-01 구현 범위
+- quality_score ≥ 설정값 → draft → published 자동 전환
+- 어드민 대시보드에 **자동 발행 토글** (Weekly Recap 토글과 동일 패턴)
+- 어드민에서 **기준 점수 설정** 가능 (기본값 80)
+- admin_settings에 `auto_publish_enabled` + `auto_publish_threshold` 저장
 
 목표: 3일 연속 Business ≥ 85, Research ≥ 80 → AUTOPUB-01 구현 착수.
 
