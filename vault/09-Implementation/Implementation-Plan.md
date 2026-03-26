@@ -131,7 +131,7 @@ flowchart TD
   8. 증거
   9. 참조
   10. 의존성
-- 같은 Phase 내 기본 참조는 ==[[ACTIVE_SPRINT]] 우선==
+- 같은 Phase 내 기본 참조는 ==[[plans/ACTIVE_SPRINT]] 우선==
 - Phase 전환 또는 게이트 판정 시에만 이 문서(Implementation Plan)를 재조회
 
 ---
@@ -147,7 +147,7 @@ flowchart TD
 
 ## Related
 
-- [[ACTIVE_SPRINT]] — 현재 스프린트 태스크
+- [[plans/ACTIVE_SPRINT]] — 현재 스프린트 태스크
 - [[Phase-Flow]] — Phase별 상세 범위 + 완료 기준
 - [[Checklists-&-DoD]] — 완료 기준 + 검증 체크리스트
 - [[Phases-Roadmap]] — 전체 로드맵
