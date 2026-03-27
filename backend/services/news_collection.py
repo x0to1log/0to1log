@@ -21,9 +21,10 @@ SEARCH_QUERIES = [
     "AI machine learning research paper arxiv breakthrough",
     "trending AI open source project GitHub HuggingFace",
     # Business
-    "AI startup funding investment acquisition",
+    "AI startup funding investment acquisition partnership",
     "big tech AI announcement OpenAI Google Microsoft Meta",
     "AI regulation policy enterprise adoption",
+    "new AI tool product feature release update",
 ]
 
 BACKFILL_QUERIES = [
@@ -34,9 +35,10 @@ BACKFILL_QUERIES = [
     "AI machine learning research paper arxiv",
     "trending AI open source GitHub HuggingFace",
     # Business
-    "AI startup funding investment acquisition",
+    "AI startup funding investment acquisition partnership",
     "big tech AI announcement OpenAI Google Microsoft",
     "AI enterprise regulation policy",
+    "new AI tool product feature release update",
 ]
 
 
