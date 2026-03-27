@@ -38,6 +38,7 @@ const {
   factPack,
   sourceCards,
   activePersona,
+  availablePersonas,
   personaHtmlMap,
   hasPersonaSwitcher,
 } = await getNewsDetailPageData({
@@ -133,6 +134,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         commentCount={commentCount}
         isLiked={isLiked}
         activePersona={activePersona}
+        availablePersonas={availablePersonas}
         personaHtmlMap={hasPersonaSwitcher ? personaHtmlMap : undefined}
         guideItems={post.guide_items}
         initialFindQuery={articleFindQuery}
