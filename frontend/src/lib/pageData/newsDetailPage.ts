@@ -270,7 +270,7 @@ export async function getNewsDetailPageData({
   const htmlContent = activePersona
     ? personaHtmlMap[activePersona] || ''
     : (rawContent ? applySourceCitations(await renderMd(rawContent)) : '');
-  const hasPersonaSwitcher = Object.keys(personaHtmlMap).length > 1;
+  const hasPersonaSwitcher = availablePersonas.length > 1;
 
   // Extract actually-matched term slugs from rendered HTML
   const allRenderedHtml = [htmlContent, analysisHtml, ...Object.values(personaHtmlMap)].join('');
