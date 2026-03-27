@@ -642,6 +642,10 @@ const userIdUnlockDate = usernameChangedAt
 
         showFeedback(saveBtn.dataset.successLabel || 'Profile saved.', 'success');
 
+        // Sync persona preference to cookie for CDN-cached pages
+        const savedPersona = formData.get('persona') || 'learner';
+        document.cookie = `persona=${savedPersona}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+
         // If onboarding, remove banner and clean URL
         if (isOnboarding) {
           const banner = document.getElementById('onboarding-banner');
