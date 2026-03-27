@@ -134,12 +134,28 @@
 
 목표: 3일 연속 Business ≥ 85, Research ≥ 80 → AUTOPUB-01 구현 착수.
 
+### HIGH PRIORITY — 핸드북 퀄리티
+
+| Task | 상태 | 목표 |
+|------|------|------|
+| HB-QUALITY-01 | todo | Advanced 콘텐츠 깊이 강화 — 벤치마크 수치 필수, 아키텍처 상세, 논문 참조 |
+| HB-QUALITY-02 | todo | 비교표 정확성 — "현재 경쟁 모델"과 비교 (2세대 전 모델 금지) |
+| HB-QUALITY-03 | todo | Exa deep context 트리거 검증 — 최신 용어에서 실제로 작동하는지 확인 |
+| HB-QUALITY-04 | todo | Basic/Advanced 깊이 차이 명확화 — Basic은 비유+사례, Advanced는 수치+코드+논문 |
+
+#### 발견된 문제 (3/27 gemini-31 기준)
+- 비교표: GPT-4o/Gemini 1.0 비교 (현재 경쟁 모델은 GPT-5.2/Claude Opus 4.6)
+- 벤치마크 수치 없음 — "빠르다/정확하다"만 표기
+- Advanced가 Basic과 깊이 차이 적음 — 아키텍처(MoE, attention) 상세 없음
+- 정보 최신성 — "2024 baseline" (현재 2026)
+
 ### OPTIONAL — 다음 Phase
 
 | Task | 상태 | 목표 |
 |------|------|------|
 | HANDBOOK-LEVEL-LINK-01 | todo | 페르소나별 핸드북 링크 깊이 |
 | QUALITY-HYBRID-01 | todo | 규칙 기반 + LLM 하이브리드 품질체크 |
+| PERF-TERMS-CACHE-01 | todo | 뉴스 상세 페이지 용어집 캐시 (현재 매 요청 200개 fetch → 서버 메모리 캐시). 용어 200개 초과 시 착수. 1000개+ 시 Aho-Corasick 다중 패턴 매칭 검토 |
 
 ### 44. 프롬프트 감사 수정 `[PROMPT-AUDIT-01]` (진행 중)
 - **체크:** [~] (11/52 배포됨)
