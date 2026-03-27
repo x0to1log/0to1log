@@ -101,7 +101,21 @@ const copy = isKo
     <div id="wh-feedback" class="admin-feedback admin-feedback--toast" hidden></div>
 
     <!-- Webhook List -->
-    <div id="wh-list"></div>
+    <div id="wh-list"
+      data-active={copy.active}
+      data-inactive={copy.inactive}
+      data-test={copy.test}
+      data-delete={copy.delete}
+      data-delete-confirm={copy.deleteConfirm}
+      data-last-fired={copy.lastFired}
+      data-failures={copy.failures}
+      data-enable={isKo ? '활성화' : 'Enable'}
+      data-disable={isKo ? '비활성화' : 'Disable'}
+      data-msg-added={isKo ? 'Webhook이 추가되었습니다.' : 'Webhook added!'}
+      data-msg-deleted={isKo ? '삭제되었습니다.' : 'Deleted.'}
+      data-msg-test-ok={copy.testOk}
+      data-msg-test-fail={copy.testFail}
+    ></div>
 
     <!-- Empty State -->
     <div id="wh-empty" class="wh-empty" hidden>
@@ -111,7 +125,10 @@ const copy = isKo
 
     <!-- Add Form -->
     <section class="wh-add-section">
-      <h2 class="wh-section-title">{copy.addTitle}</h2>
+      <div class="wh-section-header">
+        <h2 class="wh-section-title">{copy.addTitle}</h2>
+        <span id="wh-count" class="wh-count"></span>
+      </div>
       <form id="wh-add-form" class="wh-form">
         <div class="wh-form-row">
           <div class="admin-field" style="flex: 1;">
@@ -135,14 +152,18 @@ const copy = isKo
             </select>
           </div>
         </div>
-        <div class="wh-form-row">
-          <div class="admin-field" style="flex: 1;">
-            <label for="wh-url">{copy.url}</label>
+        <div class="admin-field">
+          <label for="wh-url">{copy.url}</label>
+          <div class="wh-url-row">
             <input type="url" id="wh-url" class="admin-input" placeholder={copy.urlPlaceholder} required />
+            <button type="submit" class="admin-btn admin-btn-primary wh-add-btn" id="wh-add-btn">{copy.add}</button>
           </div>
-          <button type="submit" class="admin-btn admin-btn-primary wh-add-btn" id="wh-add-btn">{copy.add}</button>
+          <p class="wh-guide" id="wh-guide"
+            data-discord={copy.guideDiscord}
+            data-slack={copy.guideSlack}
+            data-custom={copy.guideCustom}
+          >{copy.guideDiscord}</p>
         </div>
-        <p class="wh-guide" id="wh-guide">{copy.guideDiscord}</p>
         <p class="wh-max-msg" id="wh-max-msg" hidden>{copy.maxReached}</p>
       </form>
     </section>
@@ -156,9 +177,7 @@ const copy = isKo
     padding: 1rem 0 3rem;
   }
 
-  .wh-page-header {
-    margin-bottom: 2rem;
-  }
+  .wh-page-header { margin-bottom: 2rem; }
 
   .wh-back-link {
     font-family: var(--font-ui);
@@ -177,6 +196,13 @@ const copy = isKo
     margin-top: 0.5rem;
   }
 
+  .wh-section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
   .wh-section-title {
     font-family: var(--font-ui);
     font-size: 0.9rem;
@@ -184,12 +210,20 @@ const copy = isKo
     color: var(--color-text-primary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-bottom: 1rem;
+    margin: 0;
   }
 
+  .wh-count {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  /* Empty State */
   .wh-empty {
     text-align: center;
-    padding: 2rem 1rem;
+    padding: 2.5rem 1rem;
     border: 1px dashed var(--color-border);
     border-radius: 8px;
     margin-bottom: 2rem;
@@ -210,17 +244,31 @@ const copy = isKo
   /* Cards */
   .wh-card {
     border: 1px solid var(--color-border);
+    border-left-width: 3px;
     border-radius: 8px;
     padding: 1rem;
     margin-bottom: 0.75rem;
     background: var(--color-bg-card, var(--color-bg-secondary));
+    transition: opacity 0.2s;
   }
+  .wh-card--inactive { opacity: 0.5; }
+
   .wh-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
+  }
+  .wh-card-label-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .wh-card-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
   }
   .wh-card-label {
     font-family: var(--font-ui);
@@ -250,20 +298,21 @@ const copy = isKo
   }
   .wh-card-url {
     font-family: var(--font-ui);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--color-text-muted);
-    word-break: break-all;
     margin-bottom: 0.5rem;
+    letter-spacing: 0.01em;
   }
   .wh-card-meta {
     font-family: var(--font-ui);
     font-size: 0.7rem;
     color: var(--color-text-muted);
+    margin-bottom: 0.15rem;
   }
   .wh-card-actions {
     display: flex;
     gap: 0.4rem;
-    margin-top: 0.5rem;
+    margin-top: 0.6rem;
   }
   .wh-card-btn {
     font-family: var(--font-ui);
@@ -284,9 +333,7 @@ const copy = isKo
     border-color: var(--color-error);
     color: var(--color-error);
   }
-  .wh-card-btn--toggle {
-    min-width: 4rem;
-  }
+  .wh-card-btn--toggle { min-width: 4.5rem; }
 
   /* Add Form */
   .wh-add-section {
@@ -300,10 +347,13 @@ const copy = isKo
     align-items: flex-end;
     margin-bottom: 0.5rem;
   }
-  .wh-add-btn {
-    flex-shrink: 0;
-    height: fit-content;
+  .wh-url-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
   }
+  .wh-url-row .admin-input { flex: 1; }
+  .wh-add-btn { flex-shrink: 0; }
   .wh-guide {
     font-family: var(--font-ui);
     font-size: 0.72rem;
@@ -319,13 +369,7 @@ const copy = isKo
   }
 
   @media (max-width: 640px) {
-    .wh-form-row {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .wh-add-btn {
-      width: 100%;
-    }
+    .wh-form-row { flex-direction: column; align-items: stretch; }
   }
 </style>
 
@@ -338,14 +382,39 @@ const copy = isKo
     const feedback = document.getElementById('wh-feedback')!;
     const guide = document.getElementById('wh-guide')!;
     const maxMsg = document.getElementById('wh-max-msg')!;
+    const countEl = document.getElementById('wh-count')!;
     const platformSelect = document.getElementById('wh-platform') as HTMLSelectElement;
 
-    if (!form) return;
+    if (!form || !list) return;
 
-    const GUIDES: Record<string, string> = {
-      discord: guide.dataset.discord || guide.textContent || '',
-      slack: guide.dataset.slack || '',
-      custom: guide.dataset.custom || '',
+    // i18n from data attributes
+    const L = list.dataset;
+    const i18n = {
+      active: L.active || 'Active',
+      inactive: L.inactive || 'Inactive',
+      test: L.test || 'Test',
+      del: L.delete || 'Delete',
+      delConfirm: L.deleteConfirm || 'Delete this webhook?',
+      lastFired: L.lastFired || 'Last fired',
+      failures: L.failures || 'Failures',
+      enable: L.enable || 'Enable',
+      disable: L.disable || 'Disable',
+      msgAdded: L.msgAdded || 'Webhook added!',
+      msgDeleted: L.msgDeleted || 'Deleted.',
+      msgTestOk: L.msgTestOk || 'Test sent!',
+      msgTestFail: L.msgTestFail || 'Send failed',
+    };
+
+    const ICONS: Record<string, string> = {
+      discord: '<svg class="wh-card-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>',
+      slack: '<svg class="wh-card-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>',
+      custom: '<svg class="wh-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    };
+
+    const BORDER_COLORS: Record<string, string> = {
+      discord: '#5865F2',
+      slack: '#4A154B',
+      custom: 'var(--color-text-muted)',
     };
 
     let webhooks: any[] = [];
@@ -357,53 +426,49 @@ const copy = isKo
       setTimeout(() => { feedback.hidden = true; }, 3000);
     }
 
-    function render() {
-      empty.hidden = webhooks.length > 0;
-      maxMsg.hidden = webhooks.length < 5;
-      if (webhooks.length >= 5) {
-        (form.querySelector('button[type="submit"]') as HTMLButtonElement).disabled = true;
-      } else {
-        (form.querySelector('button[type="submit"]') as HTMLButtonElement).disabled = false;
-      }
-
-      list.innerHTML = webhooks.map(h => `
-        <div class="wh-card" data-id="${h.id}">
-          <div class="wh-card-header">
-            <span class="wh-card-label">${esc(h.label)}</span>
-            <div class="wh-card-badges">
-              <span class="wh-badge">${h.platform}</span>
-              <span class="wh-badge">${h.locale === 'all' ? 'ALL' : h.locale.toUpperCase()}</span>
-              <span class="wh-badge${h.is_active ? '' : ' wh-badge--inactive'}">${h.is_active ? '${isActive}' : '${isInactive}'}</span>
-            </div>
-          </div>
-          <div class="wh-card-url">${esc(h.url)}</div>
-          ${h.last_fired_at ? `<div class="wh-card-meta">${lastFiredLabel}: ${new Date(h.last_fired_at).toLocaleString()}</div>` : ''}
-          ${h.fail_count > 0 ? `<div class="wh-card-meta" style="color: var(--color-error);">${failLabel}: ${h.fail_count}${h.last_error ? ' — ' + esc(h.last_error) : ''}</div>` : ''}
-          <div class="wh-card-actions">
-            <button type="button" class="wh-card-btn wh-card-btn--toggle" data-action="toggle" data-id="${h.id}">${h.is_active ? '${deactivateLabel}' : '${activateLabel}'}</button>
-            <button type="button" class="wh-card-btn" data-action="test" data-id="${h.id}">${testLabel}</button>
-            <button type="button" class="wh-card-btn wh-card-btn--danger" data-action="delete" data-id="${h.id}">${deleteLabel}</button>
-          </div>
-        </div>
-      `.replace(/\$\{isActive\}/g, 'Active')
-        .replace(/\$\{isInactive\}/g, 'Inactive')
-        .replace(/\$\{deactivateLabel\}/g, 'Disable')
-        .replace(/\$\{activateLabel\}/g, 'Enable')
-        .replace(/\$\{testLabel\}/g, 'Test')
-        .replace(/\$\{deleteLabel\}/g, 'Delete')
-        .replace(/\$\{lastFiredLabel\}/g, 'Last fired')
-        .replace(/\$\{failLabel\}/g, 'Failures')
-      ).join('');
-
-      list.querySelectorAll('[data-action]').forEach(btn => {
-        btn.addEventListener('click', () => handleAction(btn as HTMLButtonElement));
-      });
-    }
-
     function esc(s: string) {
       const d = document.createElement('div');
       d.textContent = s;
       return d.innerHTML;
+    }
+
+    function maskUrl(url: string): string {
+      if (url.length <= 45) return url;
+      return url.slice(0, 30) + '...' + url.slice(-12);
+    }
+
+    function render() {
+      empty.hidden = webhooks.length > 0;
+      maxMsg.hidden = webhooks.length < 5;
+      countEl.textContent = `${webhooks.length} / 5`;
+      (form.querySelector('button[type="submit"]') as HTMLButtonElement).disabled = webhooks.length >= 5;
+
+      list.innerHTML = webhooks.map(h => `
+        <div class="wh-card${h.is_active ? '' : ' wh-card--inactive'}" data-id="${h.id}" style="border-left-color: ${BORDER_COLORS[h.platform] || 'var(--color-border)'}">
+          <div class="wh-card-header">
+            <div class="wh-card-label-row">
+              ${ICONS[h.platform] || ICONS.custom}
+              <span class="wh-card-label">${esc(h.label)}</span>
+            </div>
+            <div class="wh-card-badges">
+              <span class="wh-badge">${h.locale === 'all' ? 'ALL' : h.locale.toUpperCase()}</span>
+              <span class="wh-badge${h.is_active ? '' : ' wh-badge--inactive'}">${h.is_active ? i18n.active : i18n.inactive}</span>
+            </div>
+          </div>
+          <div class="wh-card-url">${esc(maskUrl(h.url))}</div>
+          ${h.last_fired_at ? `<div class="wh-card-meta">${i18n.lastFired}: ${new Date(h.last_fired_at).toLocaleString()}</div>` : ''}
+          ${h.fail_count > 0 ? `<div class="wh-card-meta" style="color: var(--color-error);">${i18n.failures}: ${h.fail_count}${h.last_error ? ' — ' + esc(h.last_error) : ''}</div>` : ''}
+          <div class="wh-card-actions">
+            <button type="button" class="wh-card-btn wh-card-btn--toggle" data-action="toggle" data-id="${h.id}">${h.is_active ? i18n.disable : i18n.enable}</button>
+            <button type="button" class="wh-card-btn" data-action="test" data-id="${h.id}">${i18n.test}</button>
+            <button type="button" class="wh-card-btn wh-card-btn--danger" data-action="delete" data-id="${h.id}">${i18n.del}</button>
+          </div>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => handleAction(btn as HTMLButtonElement));
+      });
     }
 
     async function load() {
@@ -416,14 +481,7 @@ const copy = isKo
 
     // Platform guide switch
     platformSelect.addEventListener('change', () => {
-      const hints: Record<string, string> = {};
-      guide.parentElement?.querySelectorAll('.wh-guide')?.forEach(el => {});
-      // Get guide texts from data attributes or defaults
-      guide.textContent = platformSelect.value === 'discord'
-        ? guide.dataset.discord || guide.textContent || ''
-        : platformSelect.value === 'slack'
-        ? guide.dataset.slack || ''
-        : guide.dataset.custom || '';
+      guide.textContent = guide.dataset[platformSelect.value] || '';
     });
 
     // Add webhook
@@ -446,8 +504,8 @@ const copy = isKo
         webhooks.push(data);
         render();
         form.reset();
-        flash('Webhook added!', 'success');
-      } catch { flash('Failed to add', 'error'); }
+        flash(i18n.msgAdded, 'success');
+      } catch { flash('Failed', 'error'); }
       finally { addBtn.disabled = false; }
     });
 
@@ -456,7 +514,7 @@ const copy = isKo
       const id = btn.dataset.id!;
 
       if (action === 'delete') {
-        if (!confirm('Delete this webhook?')) return;
+        if (!confirm(i18n.delConfirm)) return;
         const res = await fetch('/api/user/webhooks', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
@@ -465,7 +523,7 @@ const copy = isKo
         if (res.ok) {
           webhooks = webhooks.filter(h => h.id !== id);
           render();
-          flash('Deleted', 'success');
+          flash(i18n.msgDeleted, 'success');
         }
       } else if (action === 'toggle') {
         const hook = webhooks.find(h => h.id === id);
@@ -490,12 +548,12 @@ const copy = isKo
             body: JSON.stringify({ id }),
           });
           const data = await res.json();
-          flash(data.success ? 'Test sent!' : (data.error || 'Failed'), data.success ? 'success' : 'error');
+          flash(data.success ? i18n.msgTestOk : (data.error || i18n.msgTestFail), data.success ? 'success' : 'error');
           if (data.success) await load();
-        } catch { flash('Test failed', 'error'); }
+        } catch { flash(i18n.msgTestFail, 'error'); }
         finally {
           btn.disabled = false;
-          btn.textContent = 'Test';
+          btn.textContent = i18n.test;
         }
       }
     }
