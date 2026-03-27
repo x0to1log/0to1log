@@ -591,6 +591,10 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
+- **basic_ko_0_summary**: 30초 안에 이 용어의 핵심을 파악할 수 있는 요약. 형식: "한 줄 핵심 정의 + 핵심 포인트 3개 bullet + 한 줄 결론". 최대 150자 x 5줄.
+  예시 (모델): "Gemini 3.1은 구글의 멀티모달 AI 모델이다.\n- 텍스트+이미지+음성 동시 처리\n- 경쟁자 대비 강점: Agentic Vision\n- 약점: GPT-5.2 대비 가격이 높음\n-> 멀티모달이 필요하면 현재 최고 선택지 중 하나."
+  예시 (개념): "RAG는 검색+생성을 결합한 기법이다.\n- LLM의 환각을 외부 문서 검색으로 줄임\n- 강점: 학습 없이 최신 정보 반영 가능\n- 약점: 검색 품질이 낮으면 답도 틀림\n-> 사내 문서 기반 챗봇의 표준 아키텍처."
+  예시 (도구): "LangChain은 LLM 앱 개발 프레임워크다.\n- 프롬프트 체인, RAG, 에이전트를 빠르게 구축\n- 강점: 프로토타입 속도\n- 약점: 프로덕션 복잡도 높음\n-> PoC에는 최적, 프로덕션은 검토 필요."
 - **basic_ko_1_plain**: 이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조. 비유 뒤에 **구체적 메커니즘** 1-2문장 필수 — "왜 그렇게 작동하는지"가 빠지면 안 됨. 최소 300자.
   BAD: "AI 칩은 전문 주방처럼 빠르게 처리합니다." (비유만 있고 왜 빠른지 없음)
   GOOD: "CPU는 계산을 순서대로 하나씩 처리합니다. 그런데 AI는 수백만 개의 숫자를 동시에 곱하고 더해야 합니다. AI 칩은 이 행렬 곱셈을 한 번에 수천 개씩 처리하도록 회로 자체가 설계된 겁니다." (비유 + 메커니즘)
@@ -611,6 +615,12 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_ko_8_related**: 관련 용어 4~6개. 단순 관계 설명이 아니라 **비교 포인트**(성능 차이, 용도 차이, 트레이드오프)를 포함해서 독자가 "뭐가 다르지?" 궁금해하게 만들어라.
   BAD: "**TPU** — Google 개발 AI 특화 칩, 대규모 딥러닝 최적화" (사전식 설명, 클릭 욕구 없음)
   GOOD: "**TPU** — Google이 'GPU로는 부족하다'며 직접 만든 칩. 학습은 GPU 대비 5배 빠르지만 범용성은 떨어진다" (비교 포인트 + 호기심)
+- **basic_ko_9_roles**: 이 용어가 각 직군에게 왜 중요한지 + 구체적으로 뭘 해야 하는지. 3~4개 직군 (주니어 개발자, PM/기획자, 시니어/리드, 비개발직군 중 해당되는 것). 각 2~3문장.
+  예시 (개념): "**주니어 개발자**: RAG 파이프라인을 직접 구축해보세요. LangChain + ChromaDB 조합이 입문에 적합합니다.\n**PM/기획자**: 고객 문의 챗봇에 RAG를 제안할 수 있습니다. '기존 FAQ 문서를 활용한 자동 응답'으로 포지셔닝하세요.\n**시니어 엔지니어**: chunk 크기와 embedding 모델 선택이 성능을 좌우합니다. 프로덕션 투입 전 retrieval 정확도를 반드시 측정하세요."
+  예시 (도구): "**주니어 개발자**: 공식 튜토리얼로 간단한 챗봇을 만들어보세요. 면접에서 'LangChain vs LlamaIndex 차이'를 설명할 수 있으면 유리합니다.\n**PM/기획자**: 데모를 보고 우리 제품에 적용 가능한 시나리오를 정리하세요. 개발팀에 PoC 범위를 제안할 수 있습니다."
+- **basic_ko_10_learning_path**: 이 용어를 이해한 후 다음에 읽을 용어 3개를 학습 순서대로. 각 용어에 "왜 다음에 이걸 읽어야 하는지" 한 줄 이유. 형식: 번호 리스트.
+  예시 (모델): "1. **Transformer** -- Gemini의 핵심 아키텍처. 이걸 알아야 왜 멀티모달이 가능한지 이해됨\n2. **Attention Mechanism** -- Transformer 안에서 어디에 집중할지 결정하는 방법\n3. **MoE** -- Gemini가 여러 전문가 네트워크를 조합하는 방식"
+  예시 (개념): "1. **Embedding** -- RAG의 첫 단계. 문서를 벡터로 변환하는 원리\n2. **Vector Database** -- 변환된 벡터를 저장하고 검색하는 방법\n3. **Prompt Engineering** -- 검색 결과를 LLM에게 효과적으로 전달하는 기술"
 
 ## Output JSON Structure
 
@@ -622,6 +632,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "categories": ["ai-ml"],
   "definition_ko": "...",
   "definition_en": "...",
+  "basic_ko_0_summary": "한 줄 정의 + 3 bullets + 결론",
   "basic_ko_1_plain": "비유와 일상 예시로 설명. 최소 300자.",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
   "basic_ko_3_glance": "| 항목 | 설명 |\\n|---|---|\\n| ... | ... |",
@@ -629,7 +640,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_ko_5_where": "- 사례1\\n- 사례2\\n- 사례3\\n- 사례4",
   "basic_ko_6_caution": "- 주의1\\n- 주의2\\n- 주의3",
   "basic_ko_7_comm": "- **용어** 이런 맥락에서 사용\\n- ...",
-  "basic_ko_8_related": "- **용어** — 관계 설명\\n- ..."
+  "basic_ko_8_related": "- **용어** -- 관계 설명\\n- ...",
+  "basic_ko_9_roles": "**주니어 개발자**: ...\\n**PM/기획자**: ...\\n**시니어 엔지니어**: ...",
+  "basic_ko_10_learning_path": "1. **용어** -- 이유\\n2. **용어** -- 이유\\n3. **용어** -- 이유"
 }}
 ```
 
@@ -642,6 +655,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ Every product/service example is factually correct
 ✓ 7_comm sounds like a team meeting/slack, not a news article
 ✓ 8_related includes comparison points that trigger curiosity
+✓ 0_summary is max 5 lines: definition + 3 bullets (strength/weakness) + conclusion
+✓ 9_roles has 3+ job roles with specific actionable advice
+✓ 10_learning_path has 3 terms in logical learning order with reasons
 ✓ Each section adds information the reader didn't get from previous sections
 
 ## Quality Rules
@@ -696,6 +712,10 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
+- **basic_en_0_summary**: A quick-scan summary to grasp the essence in 30 seconds. Format: "One-line definition + 3 bullet points + one-line conclusion". Max 5 lines.
+  Example (model): "Gemini 3.1 is Google's multimodal AI model.\n- Processes text, image, and audio simultaneously\n- Strength: Agentic Vision, real-time video analysis\n- Weakness: Higher price than GPT-5.2\n-> Top choice when multimodal is required."
+  Example (concept): "RAG combines retrieval + generation.\n- Reduces LLM hallucination via external document search\n- Strength: No training needed for up-to-date info\n- Weakness: Answer quality depends on retrieval quality\n-> Standard architecture for internal document chatbots."
+  Example (tool): "LangChain is an LLM app development framework.\n- Build prompt chains, RAG, and agents quickly\n- Strength: Prototyping speed\n- Weakness: Production complexity\n-> Great for PoC, evaluate carefully for production."
 - **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing. Min 300 chars.
   BAD: "An AI chip is like a specialized kitchen that processes things faster." (analogy only, no mechanism)
   GOOD: "A CPU processes calculations one at a time, in sequence. But AI needs to multiply and add millions of numbers simultaneously. An AI chip has circuits specifically designed to perform thousands of matrix multiplications at once." (analogy + mechanism)
@@ -716,6 +736,11 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_en_8_related**: 4-6 related terms. Do NOT just state the relationship — include a **comparison point** (performance difference, trade-off, use case difference) that makes the reader curious to click.
   BAD: "**TPU** — Google's AI-specialized chip optimized for large-scale deep learning" (dictionary description, no click motivation)
   GOOD: "**TPU** — Google built this because 'GPUs weren't enough.' Training is up to 5x faster than GPU, but less versatile for general workloads" (comparison point + curiosity)
+- **basic_en_9_roles**: Why this term matters for each job role + what to do about it. 3-4 roles (junior developer, PM/planner, senior/lead, non-technical roles as applicable). 2-3 sentences each.
+  Example (concept): "**Junior Developer**: Build a RAG pipeline hands-on. LangChain + ChromaDB is a good starter combo.\n**PM/Planner**: Propose a RAG-powered FAQ chatbot using existing company documents.\n**Senior Engineer**: Chunk size and embedding model choice determine retrieval quality. Measure retrieval accuracy before production deployment."
+- **basic_en_10_learning_path**: 3 terms to read next, in learning order. Each with a one-line reason why it should come next.
+  Example (model): "1. **Transformer** -- Core architecture behind Gemini. Understanding this explains why multimodal is possible.\n2. **Attention Mechanism** -- How Transformer decides where to focus.\n3. **MoE** -- How Gemini combines multiple expert networks."
+  Example (concept): "1. **Embedding** -- First step of RAG. How documents become vectors.\n2. **Vector Database** -- How to store and search those vectors.\n3. **Prompt Engineering** -- How to feed retrieved results to the LLM effectively."
 
 ## Output JSON Structure
 
@@ -729,7 +754,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_en_5_where": "...",
   "basic_en_6_caution": "...",
   "basic_en_7_comm": "...",
-  "basic_en_8_related": "..."
+  "basic_en_8_related": "...",
+  "basic_en_9_roles": "**Junior Developer**: ...\\n**PM/Planner**: ...\\n**Senior Engineer**: ...",
+  "basic_en_10_learning_path": "1. **Term** -- reason\\n2. **Term** -- reason\\n3. **Term** -- reason"
 }}
 ```
 
@@ -741,6 +768,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ Every product/service example is factually correct
 ✓ 7_comm sounds like a team meeting/slack, not a news article
 ✓ 8_related includes comparison points that trigger curiosity
+✓ 0_summary is max 5 lines: definition + 3 bullets (strength/weakness) + conclusion
+✓ 9_roles has 3+ job roles with specific actionable advice
+✓ 10_learning_path has 3 terms in logical learning order with reasons
 ✓ Each section adds information the reader didn't get from previous sections
 
 ## Quality Rules
@@ -802,6 +832,12 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_ko_7_comm**: PM·엔지니어 간 **팀 회의, 슬랙, 아키텍처 리뷰**에서 자주 등장하는 문장 6~8개. **핵심 용어를 굵게 표시**. 뉴스 기사체 금지 — 팀명, 지표, 기한 같은 구체적 맥락을 포함한 실무 대화체로.
 - **adv_ko_8_refs**: 공식 문서, 논문, 기술 블로그, GitHub 3~6개. **불릿 리스트 형식 필수.** 형식: `- [표시명](URL) — 한 줄 설명`. 실제로 존재하는 URL만 포함. URL을 만들어내지 마. Reference Materials에서 제공된 URL을 우선 사용. 확인할 수 없는 URL은 생략.
 - **adv_ko_9_related**: 유사/경쟁 기술 차이점 + 관련 용어 4~6개. **불릿 리스트 형식 필수.** 형식: `- **용어** — 이 용어와의 기술적 관계`. 선행 개념, 대안, 보완 개념, 확장 개념 포함. 단순 관계 설명이 아니라 **성능/아키텍처/트레이드오프 비교 포인트**를 포함해서 독자가 더 파고 싶게 만들어라.
+- **adv_ko_10_when_to_use**: 실무에서 이 기술을 선택할지 판단하는 기준. 형식: 3~4개 + 3~4개. 각 항목에 대안 기술 명시.
+  예시 (모델): "이럴 때 적합: 이미지+텍스트 동시 분석이 필요한 고객 지원 챗봇 / 100페이지+ 문서에서 표와 그래프를 함께 해석해야 할 때\n이럴 때 부적합: 단순 텍스트 챗봇이면 GPT-5.2가 더 저렴하고 충분 / 실시간 음성 통화면 레이턴시 문제 (Whisper 추천)"
+  예시 (개념): "이럴 때 적합: 사내 문서 기반 Q&A 시스템 / 최신 정보가 중요한 도메인 (법률, 의료)\n이럴 때 부적합: 정형 데이터 분석이면 SQL이나 pandas가 더 적합 / 창의적 글쓰기면 검색 의존이 오히려 방해"
+- **adv_ko_11_pitfalls**: 이 기술을 도입할 때 실무자가 겪는 흔한 실수 3~4개. 각 실수에 해결책 포함.
+  예시 (모델): "실수: 모든 입력을 멀티모달로 보내면 비용이 10배 -> 해결: 텍스트만으로 충분한 요청은 text-only 모드로 라우팅\n실수: context window를 꽉 채우면 응답 품질 급락 -> 해결: 입력을 70% 이하로 유지, 나머지는 RAG로 분리"
+  예시 (개념): "실수: chunk 크기를 너무 크게 잡으면 관련 없는 정보가 섞임 -> 해결: 도메인에 맞는 chunk 크기 실험 (보통 500~1000토큰)\n실수: embedding 모델을 바꾸면 기존 벡터 DB 전체 재인덱싱 필요 -> 해결: 초기에 embedding 모델을 신중하게 선택"
 
 ## Output JSON Structure
 
@@ -814,8 +850,10 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_ko_5_practical": "실무 활용 + 주의점...",
   "adv_ko_6_why": "왜 중요한가...",
   "adv_ko_7_comm": "업계 대화 맥락...",
-  "adv_ko_8_refs": "- [링크](URL) — 설명\\n- [링크2](URL2) — 설명2",
-  "adv_ko_9_related": "- **용어** — 관계 설명\\n- **용어2** — 관계 설명2"
+  "adv_ko_8_refs": "- [링크](URL) -- 설명\\n- [링크2](URL2) -- 설명2",
+  "adv_ko_9_related": "- **용어** -- 관계 설명\\n- **용어2** -- 관계 설명2",
+  "adv_ko_10_when_to_use": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
+  "adv_ko_11_pitfalls": "실수: ... -> 해결: ...\\n실수: ... -> 해결: ..."
 }}
 ```
 
@@ -824,6 +862,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ✓ Table/formula section contains actual comparisons or technical specs
 ✓ Code examples are syntactically correct and runnable
 ✓ Reference URLs point to real, well-known resources
+✓ 10_when_to_use has 3+ suitable + 3+ unsuitable scenarios with alternative tech
+✓ 11_pitfalls has 3+ mistake-solution pairs from real engineering experience
 ✓ Each section adds depth the reader didn't get from the basic version
 
 ## Quality Rules
@@ -884,7 +924,13 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
 - **adv_en_7_comm**: 6-8 sentences from **team meetings, Slack threads, architecture reviews, or design docs**. **Bold key terms**. NO news article tone — include specific context like team names, metrics, or deadlines. Ready-to-use professional tone.
 - **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Do NOT fabricate URLs. Prefer URLs from the Reference Materials provided above. If you cannot verify a URL exists, OMIT it entirely.
-- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** — technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions. Do NOT just state the relationship — include **performance/architecture/trade-off comparison points** that make the reader want to dig deeper.
+- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** -- technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions. Do NOT just state the relationship -- include **performance/architecture/trade-off comparison points** that make the reader want to dig deeper.
+- **adv_en_10_when_to_use**: Decision framework for when to use (or not use) this technology. 3-4 suitable scenarios + 3-4 unsuitable scenarios. Name alternative technologies for each unsuitable case.
+  Example (model): "Suitable: Customer support chatbot needing image+text analysis / 100+ page documents with tables and charts\nUnsuitable: Simple text chatbot -- GPT-5.2 is cheaper and sufficient / Real-time voice calls -- latency is 200ms+ (use Whisper)"
+  Example (concept): "Suitable: Internal document Q&A system / Domains where recency matters (legal, medical)\nUnsuitable: Structured data analysis -- SQL or pandas is more appropriate / Creative writing -- retrieval dependency hurts creativity"
+- **adv_en_11_pitfalls**: 3-4 common engineering mistakes when adopting this technology. Each with a concrete solution.
+  Example (model): "Mistake: Sending all inputs as multimodal increases cost 10x -> Solution: Route text-only requests to text-only mode\nMistake: Filling context window to capacity degrades response quality -> Solution: Keep input under 70%, offload rest to RAG"
+  Example (concept): "Mistake: Oversized chunks mix irrelevant information -> Solution: Experiment with domain-specific chunk sizes (typically 500-1000 tokens)\nMistake: Changing embedding model requires full vector DB re-indexing -> Solution: Choose embedding model carefully at the start"
 
 ## Output JSON Structure
 
@@ -897,8 +943,10 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_en_5_practical": "...",
   "adv_en_6_why": "...",
   "adv_en_7_comm": "...",
-  "adv_en_8_refs": "- [Link](URL) — annotation\\n- [Link2](URL2) — annotation2",
-  "adv_en_9_related": "- **Term** — relationship\\n- **Term2** — relationship2"
+  "adv_en_8_refs": "- [Link](URL) -- annotation\\n- [Link2](URL2) -- annotation2",
+  "adv_en_9_related": "- **Term** -- relationship\\n- **Term2** -- relationship2",
+  "adv_en_10_when_to_use": "Suitable: ...\\nUnsuitable: ...",
+  "adv_en_11_pitfalls": "Mistake: ... -> Solution: ...\\nMistake: ... -> Solution: ..."
 }}
 ```
 
@@ -907,6 +955,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 ✓ Table/formula section contains actual comparisons or technical specs
 ✓ Code examples are syntactically correct and runnable
 ✓ Reference URLs point to real, well-known resources
+✓ 10_when_to_use has 3+ suitable + 3+ unsuitable scenarios with alternative tech named
+✓ 11_pitfalls has 3+ mistake-solution pairs from real engineering experience
 ✓ Each section adds depth the reader didn't get from the basic version
 
 ## Quality Rules
