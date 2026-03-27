@@ -20,6 +20,7 @@ const errorText = isKo
   : 'Something went wrong. Please try again.';
 const nonce = Astro.locals.cspNonce || '';
 
+const altLabel = isKo ? '다른 방법으로 받아보기:' : 'Other ways to follow:';
 const formSrc = 'https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a729e0c14b';
 ---
 
@@ -60,6 +61,9 @@ const formSrc = 'https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a
     </form>
   </div>
   <p class="nl-strip__feedback" aria-live="polite"></p>
+  <p class="nl-strip__alt">
+    {altLabel} <a href={`/${locale}/news/test/`}>Webhook</a> <span aria-hidden="true">&middot;</span> <a href="/rss.xml">RSS</a>
+  </p>
   <div class="nl-strip__rule" aria-hidden="true"></div>
 </section>
 
@@ -232,6 +236,25 @@ const formSrc = 'https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a
   }
   .nl-strip__feedback--success { color: var(--color-success); }
   .nl-strip__feedback--error { color: var(--color-error, #ef4444); }
+
+  .nl-strip__alt {
+    text-align: center;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    margin: 0.3rem 0 0;
+    padding: 0;
+  }
+
+  .nl-strip__alt a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+
+  .nl-strip__alt a:hover {
+    opacity: 0.7;
+  }
 
   .sr-only {
     position: absolute;

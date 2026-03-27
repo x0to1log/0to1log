@@ -38,6 +38,7 @@ const nlCopy = locale === 'ko'
       nlSubmitting: '구독 중...',
       nlSuccess: '구독 완료! 이메일을 확인해주세요.',
       nlError: '구독에 실패했습니다. 다시 시도해주세요.',
+      nlAlt: '다른 방법으로 받아보기:',
     }
   : {
       nlLabel: 'Subscribe to newsletter',
@@ -48,6 +49,7 @@ const nlCopy = locale === 'ko'
       nlSubmitting: 'Subscribing...',
       nlSuccess: 'Success! Check your email to confirm.',
       nlError: 'Something went wrong. Please try again.',
+      nlAlt: 'Other ways to follow:',
     };
 
 const copy = locale === 'ko'
@@ -358,6 +360,7 @@ const navItems = [
           <button type="submit" class="nl-env-btn">{nlCopy.nlButton}</button>
         </form>
         <p class="nl-env-feedback" aria-live="polite"></p>
+        <p class="nl-env-alt">{nlCopy.nlAlt} <a href={`/${locale}/news/test/`}>Webhook</a> <span aria-hidden="true">&middot;</span> <a href="/rss.xml">RSS</a></p>
         <div class="nl-env-rule"></div>
       </div>
       <div class="nl-env-envelope-front"></div>
@@ -870,6 +873,20 @@ const navItems = [
   .nl-env-feedback:not(:empty) { min-height: 1.2em; margin-top: 0.3rem; }
   .nl-env-feedback--success { color: var(--color-success); }
   .nl-env-feedback--error { color: var(--color-error, #ef4444); }
+
+  .nl-env-alt {
+    margin: 0.4rem 0 0;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+  .nl-env-alt a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .nl-env-alt a:hover { opacity: 0.7; }
 
   .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;

@@ -4,55 +4,53 @@ export const prerender = true;
 import MainLayout from '../../../layouts/MainLayout.astro';
 ---
 
-<MainLayout title="Webhook Connected" description="Your webhook is connected to 0to1log AI News." locale="en">
+<MainLayout title="You're Invited" description="Your webhook is connected to 0to1log AI News." locale="en">
   <div class="wh-test-page">
-    <div class="wh-test-card">
-      <div class="wh-test-badge">Webhook Connected</div>
-      <h1 class="wh-test-title">You're all set!</h1>
-      <p class="wh-test-sub">
-        Your channel is now connected to <strong>0to1log</strong>.<br />
-        AI news will be delivered automatically when published.
-      </p>
+    <div class="wh-ticket-wrapper">
+      <div class="wh-seal-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="seal-svg">
+          <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="0.8" fill="color-mix(in srgb, var(--color-accent) 8%, transparent)"/>
+          <path d="M8 12.5l3 3 5-6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" class="seal-check"/>
+        </svg>
+      </div>
 
-      <div class="wh-test-divider"></div>
+      <div class="wh-ticket-header">
+        <h1 class="wh-test-title">You're all set!</h1>
+        <p class="wh-test-sub">
+          Your channel is now connected to <strong>0to1log</strong>.<br />
+          AI news will be delivered automatically when published.
+        </p>
+      </div>
 
-      <h2 class="wh-test-section-title">What you'll receive</h2>
-      <ul class="wh-test-list">
-        <li><strong>Research Digest</strong> — Daily AI research news curated for technical depth</li>
-        <li><strong>Business Digest</strong> — Daily AI business news for strategic decisions</li>
-        <li><strong>Weekly Recap</strong> — Best stories of the week in one summary</li>
-      </ul>
+      <div class="wh-menu-list">
+        <div class="wh-menu-item">
+          <div class="wh-menu-item-info">
+            <strong>Research Digest</strong>
+            <span>Daily AI research news curated for technical depth</span>
+          </div>
+        </div>
+        <div class="wh-menu-item">
+          <div class="wh-menu-item-info">
+            <strong>Business Digest</strong>
+            <span>Daily AI business news for strategic decisions</span>
+          </div>
+        </div>
+        <div class="wh-menu-item">
+          <div class="wh-menu-item-info">
+            <strong>Weekly Recap</strong>
+            <span>Best stories of the week in one summary</span>
+          </div>
+        </div>
+      </div>
 
-      <div class="wh-test-divider"></div>
-
-      <h2 class="wh-test-section-title">Explore 0to1log</h2>
-      <div class="wh-test-links">
-        <a href="/en/news/" class="wh-test-link">
-          <span class="wh-test-link-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8 M15 18h-5 M10 6h8v4h-8V6Z" /></svg>
-          </span>
-          <span>
-            <strong>AI News</strong>
-            <small>Daily curated digests</small>
-          </span>
+      <div class="wh-ticket-actions">
+        <a href="/en/news/" class="wh-action-link">
+          <span>Browse AI News Digests</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
-        <a href="/en/handbook/" class="wh-test-link">
-          <span class="wh-test-link-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>
-          </span>
-          <span>
-            <strong>IT Glossary</strong>
-            <small>AI terms explained simply</small>
-          </span>
-        </a>
-        <a href="/rss.xml" class="wh-test-link">
-          <span class="wh-test-link-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" /></svg>
-          </span>
-          <span>
-            <strong>RSS Feed</strong>
-            <small>Subscribe in your reader</small>
-          </span>
+        <a href="/en/handbook/" class="wh-action-link">
+          <span>Explore IT Glossary</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
       </div>
     </div>
@@ -63,107 +61,144 @@ import MainLayout from '../../../layouts/MainLayout.astro';
   .wh-test-page {
     display: flex;
     justify-content: center;
-    padding: 3rem 1rem;
-    min-height: 60vh;
+    padding: 5rem 1rem;
+    min-height: 70vh;
   }
 
-  .wh-test-card {
-    max-width: 520px;
+  .wh-ticket-wrapper {
+    position: relative;
+    max-width: 460px;
     width: 100%;
+    margin: 0 auto;
+    padding: 4rem 3rem 3.5rem;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
     text-align: center;
   }
 
-  .wh-test-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    margin-bottom: 1rem;
-    font-family: var(--font-ui);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-success);
-    border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  .wh-ticket-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    border: 1px dashed var(--color-border);
+    border-radius: 2px;
+    pointer-events: none;
+    opacity: 0.5;
   }
 
+  .wh-seal-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    color: var(--color-accent);
+  }
+  .seal-check {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    animation: drawCheck 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.3s;
+  }
+  @keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .wh-ticket-header {
+    margin-bottom: 3rem;
+  }
   .wh-test-title {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.8rem;
     font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
     color: var(--color-text-primary);
   }
-
   .wh-test-sub {
-    margin: 0 0 1.5rem;
+    margin: 0;
     font-family: var(--font-ui);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: var(--color-text-secondary);
     line-height: 1.6;
   }
-
-  .wh-test-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
-    margin: 1.5rem auto;
-    width: 80%;
+  .wh-test-sub strong {
+    color: var(--color-text-primary);
+    font-weight: 600;
   }
 
-  .wh-test-section-title {
-    margin: 0 0 0.8rem;
-    font-family: var(--font-ui);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text-muted);
-  }
-
-  .wh-test-list {
+  .wh-menu-list {
     text-align: left;
-    margin: 0 auto 1.5rem;
-    padding-left: 1.2rem;
-    max-width: 400px;
-    font-family: var(--font-ui);
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-    line-height: 1.7;
+    margin: 0 0 3.5rem;
+    border-top: 1px solid var(--color-border);
   }
-  .wh-test-list strong { color: var(--color-text-primary); }
-
-  .wh-test-links {
+  .wh-menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.4rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .wh-menu-item-info {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-width: 320px;
-    margin: 0 auto;
+  }
+  .wh-menu-item-info strong {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+  }
+  .wh-menu-item-info span {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
   }
 
-  .wh-test-link {
+  .wh-ticket-actions {
     display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+  }
+  .wh-action-link {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.7rem;
-    padding: 0.65rem 0.8rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-secondary);
+    padding: 1rem 0.8rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 500;
     color: var(--color-text-primary);
     text-decoration: none;
-    transition: border-color 0.15s, background 0.15s;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s;
   }
-  .wh-test-link:hover {
-    border-color: var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 5%, var(--color-bg-secondary));
-  }
-  .wh-test-link span { display: flex; flex-direction: column; }
-  .wh-test-link strong { font-size: 0.85rem; }
-  .wh-test-link small { font-size: 0.72rem; color: var(--color-text-muted); }
-
-  .wh-test-link-icon {
-    flex-shrink: 0;
+  .wh-action-link:hover {
     color: var(--color-accent);
-    opacity: 0.7;
+    border-bottom-color: var(--color-accent);
+  }
+  .wh-action-link svg {
+    opacity: 0.5;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+  .wh-action-link:hover svg {
+    transform: translateX(4px);
+    opacity: 1;
+  }
+
+  @media (max-width: 640px) {
+    .wh-ticket-wrapper {
+      padding: 3rem 1.5rem 2.5rem;
+    }
+    .wh-test-title {
+      font-size: 1.8rem;
+    }
   }
 </style>
