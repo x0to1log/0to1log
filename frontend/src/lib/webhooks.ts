@@ -86,16 +86,35 @@ function formatPayload(platform: string, post: WebhookPost, postUrl: string) {
 
 export function formatTestPayload(platform: string, locale: string = 'en') {
   const isKo = locale === 'ko';
+  const testUrl = `https://0to1log.com/${locale}/news/test/`;
+
+  if (platform === 'discord') {
+    return {
+      username: BOT_NAME,
+      avatar_url: BOT_AVATAR,
+      embeds: [{
+        title: isKo ? '[Test] 0to1log VIP 초대장이 도착했습니다 ✉️' : "[Test] Your 0to1log VIP Invitation ✉️",
+        description: isKo
+          ? '성공적으로 웹훅이 연결되었습니다.\n본 알림은 정상 연동을 알리는 테스트 메시지이며, 앞으로 새로운 AI 뉴스가 발행되면 이곳으로 배달됩니다.\n\n👉 **나만의 초대장 열어보기**'
+          : 'Webhook successfully connected.\nThis is a test message. Future AI news will be correctly delivered to this channel.\n\n👉 **Open your invitation**',
+        url: testUrl,
+        color: 0xC4956A,
+        footer: { text: '0to1log AI News' },
+        timestamp: new Date().toISOString(),
+      }],
+    };
+  }
+
+  // Slack / custom fallback
   const testPost: WebhookPost = {
-    title: isKo ? '테스트 알림' : 'Test Notification',
+    title: isKo ? '[Test] 0to1log VIP 초대장이 도착했습니다 ✉️' : "[Test] Your 0to1log VIP Invitation ✉️",
     slug: 'test',
     locale,
     excerpt: isKo
-      ? '0to1log 웹훅 연결을 확인하는 테스트 메시지입니다.'
-      : 'This is a test message from 0to1log to verify your webhook is working correctly.',
+      ? '성공적으로 웹훅이 연결되었습니다! 초대장을 확인해주세요.'
+      : 'Webhook successfully connected! Open your invitation.',
     post_type: 'research',
   };
-  const testUrl = `https://0to1log.com/${locale}/news/test/`;
   return formatPayload(platform, testPost, testUrl);
 }
 

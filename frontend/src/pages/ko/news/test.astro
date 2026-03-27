@@ -53,6 +53,10 @@ import MainLayout from '../../../layouts/MainLayout.astro';
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
       </div>
+
+      <div class="wh-ticket-footer">
+        다른 플랫폼으로 받아보기: <a href="https://letters.0to1log.com" target="_blank">이메일 구독</a> &middot; <a href="/ko/rss.xml">RSS 피드</a>
+      </div>
     </div>
   </div>
 </MainLayout>
@@ -196,6 +200,27 @@ import MainLayout from '../../../layouts/MainLayout.astro';
   .wh-action-link:hover svg {
     transform: translateX(4px);
     opacity: 1;
+  }
+
+  /* Extra Footer */
+  .wh-ticket-footer {
+    margin-top: 1.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px dashed var(--color-border);
+    font-family: var(--font-ui);
+    font-size: 0.73rem;
+    color: var(--color-text-muted);
+  }
+  .wh-ticket-footer a {
+    color: var(--color-text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-border);
+    transition: all 0.2s;
+  }
+  .wh-ticket-footer a:hover {
+    color: var(--color-accent);
+    text-decoration-color: var(--color-accent);
   }
 
   @media (max-width: 640px) {
