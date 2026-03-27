@@ -1388,6 +1388,25 @@ async def _run_generate_term(
         except Exception as e:
             logger.warning("Failed to record handbook quality score: %s", e)
 
+    # Post-process: convert single-dollar math $...$ to double-dollar $$...$$
+    # Single $ conflicts with currency in the markdown renderer (singleDollarTextMath=false)
+    import re
+    _single_math_re = re.compile(
+        r'(?<!\$)\$(?!\$)'           # opening $ not preceded/followed by $
+        r'('
+        r'[^$]*?'                    # content
+        r'(?:\\[a-zA-Z]+|[_^{])'    # must contain LaTeX command or math syntax
+        r'[^$]*?'
+        r')'
+        r'\$(?!\$)',                  # closing $ not followed by $
+    )
+    for key, val in data.items():
+        if isinstance(val, str) and '$' in val and '$$' not in val:
+            converted = _single_math_re.sub(r'$$\1$$', val)
+            if converted != val:
+                logger.info("Converted single-dollar math to double-dollar in field '%s'", key)
+                data[key] = converted
+
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",
         req.term, merged_usage.get("tokens_used", 0), len(warnings),

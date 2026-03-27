@@ -111,8 +111,8 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
         const entry = termsMap.get(matchedText.toLowerCase());
         if (!entry) continue;
 
-        // In "related terms" section: always link. Elsewhere: first occurrence only.
-        if (!inRelated && matched.has(entry.slug)) continue;
+        // First occurrence only — even in "related" sections, skip if already matched
+        if (matched.has(entry.slug)) continue;
         matched.add(entry.slug);
 
         // Text before the match

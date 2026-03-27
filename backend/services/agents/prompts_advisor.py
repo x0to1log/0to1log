@@ -646,7 +646,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
-- NO code in basic sections. NO complex formulas.
+- NO code in basic sections. NO complex formulas. If a simple formula is unavoidable, use double-dollar signs: $$E = mc^2$$ (NOT single $).
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
@@ -745,7 +745,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
-- NO code in basic sections. NO complex formulas.
+- NO code in basic sections. NO complex formulas. If a simple formula is unavoidable, use double-dollar signs: $$E = mc^2$$ (NOT single $).
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
