@@ -112,8 +112,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
+    // Slug conflict: append locale suffix and retry once
+    if (error.code === '23505' && error.message?.includes('slug')) {
+      row.slug = `${row.slug}-${row.locale || 'en'}`;
+      const { data: retryData, error: retryError } = await supabase
+        .from('blog_posts')
+        .insert(row)
+        .select()
+        .single();
+      if (!retryError && retryData) {
+        return new Response(JSON.stringify(retryData), {
+          status: 201, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
     console.error('blog_posts insert error:', error.message);
-    return new Response(JSON.stringify({ error: 'Failed to create blog post' }), {
+    return new Response(JSON.stringify({ error: `Failed to create blog post: ${error.message}` }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
