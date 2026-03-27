@@ -28,7 +28,7 @@ async def rank_candidates(
     user_prompt = "\n\n".join(candidate_lines)
 
     client = get_openai_client()
-    model = settings.openai_model_reasoning
+    model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty)
     usage: dict[str, Any] = {}
 
     for attempt in range(MAX_RETRIES + 1):
@@ -109,7 +109,7 @@ async def classify_candidates(
     user_prompt = "\n\n".join(candidate_lines)
 
     client = get_openai_client()
-    model = settings.openai_model_reasoning
+    model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty responses for classification)
     usage: dict[str, Any] = {}
 
     for attempt in range(MAX_RETRIES + 1):

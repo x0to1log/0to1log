@@ -828,7 +828,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           method: 'POST',
           headers: _aiH,
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(300_000), // 5min — handbook generate has up to 10 LLM calls
+          signal: AbortSignal.timeout(30_000), // 30s — enough for 202 response
         });
 
         if (!res.ok) {
@@ -839,7 +839,42 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           return;
         }
 
-        const data = await res.json();
+        let data = await res.json();
+
+        // Background job polling for 'generate' action
+        if (data.status === 'accepted' && data.job_id) {
+          showFeedback('Generating... this takes 2-5 minutes.', false);
+          const jobUrl = _ac?.fastApiUrl
+            ? `${_ac.fastApiUrl}/api/admin/ai/handbook-job/${data.job_id}`
+            : `/api/admin/ai/handbook-job/${data.job_id}`;
+          const pollHeaders: Record<string, string> = {};
+          if (_ac?.accessToken) pollHeaders['Authorization'] = `Bearer ${_ac.accessToken}`;
+
+          for (let i = 0; i < 60; i++) { // poll up to 10 min (60 x 10s)
+            await new Promise(r => setTimeout(r, 10_000));
+            try {
+              const pollRes = await fetch(jobUrl, { headers: pollHeaders });
+              if (!pollRes.ok) continue;
+              const job = await pollRes.json();
+              if (job.status === 'completed' && job.result) {
+                data = job.result;
+                break;
+              } else if (job.status === 'failed') {
+                showFeedback(`Generation failed: ${job.error || 'Unknown error'}`, true);
+                setAiLoading(false);
+                return;
+              }
+              // still running — continue polling
+            } catch { /* network hiccup, keep polling */ }
+          }
+
+          if (data.status === 'accepted') {
+            showFeedback('Generation is still running. Check back later or refresh the page.', true);
+            setAiLoading(false);
+            return;
+          }
+        }
+
         setAiLoading(false);
 
         // Check for error responses

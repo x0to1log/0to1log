@@ -1,8 +1,10 @@
 """Admin AI Advisor router — post actions + deep verify + handbook."""
 
+import asyncio
 import logging
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from openai import APITimeoutError, APIError
 
 from core.rate_limit import limiter
@@ -18,6 +20,9 @@ from services.agents.advisor import run_advise, run_deep_verify, run_handbook_ad
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/ai", tags=["admin-ai"])
+
+# In-memory job store for async handbook generation
+_handbook_jobs: dict[str, dict] = {}
 
 
 @router.post("/advise", response_model=AiAdviseResponse)
@@ -47,10 +52,50 @@ async def advise(request: Request, body: AiAdviseRequest, _user=Depends(require_
     )
 
 
-@router.post("/handbook-advise", response_model=HandbookAdviseResponse)
+@router.post("/handbook-advise")
 @limiter.limit("5/minute")
-async def handbook_advise(request: Request, body: HandbookAdviseRequest, _user=Depends(require_admin)):
-    """Run an AI advisor action on a handbook term."""
+async def handbook_advise(
+    request: Request,
+    body: HandbookAdviseRequest,
+    background_tasks: BackgroundTasks,
+    _user=Depends(require_admin),
+):
+    """Run an AI advisor action on a handbook term.
+
+    For 'generate' action: returns 202 + job_id immediately, runs in background.
+    For other actions (seo, review, etc.): runs synchronously as before.
+    """
+    if body.action == "generate":
+        job_id = str(uuid.uuid4())
+        _handbook_jobs[job_id] = {"status": "running", "result": None, "error": None}
+
+        async def _run_generate():
+            try:
+                result, model, tokens, warnings = await run_handbook_advise(body)
+                _handbook_jobs[job_id] = {
+                    "status": "completed",
+                    "result": {
+                        "action": body.action,
+                        "success": not warnings,
+                        "result": result,
+                        "model_used": model,
+                        "tokens_used": tokens,
+                        "validation_warnings": warnings,
+                    },
+                    "error": None,
+                }
+            except Exception as e:
+                logger.error("Handbook generate background failed: %s", e)
+                _handbook_jobs[job_id] = {
+                    "status": "failed",
+                    "result": None,
+                    "error": str(e),
+                }
+
+        background_tasks.add_task(_run_generate)
+        return {"status": "accepted", "job_id": job_id}
+
+    # Non-generate actions: run synchronously (fast enough)
     try:
         result, model, tokens, warnings = await run_handbook_advise(body)
     except APITimeoutError:
@@ -70,3 +115,12 @@ async def handbook_advise(request: Request, body: HandbookAdviseRequest, _user=D
         tokens_used=tokens,
         validation_warnings=warnings,
     )
+
+
+@router.get("/handbook-job/{job_id}")
+async def handbook_job_status(job_id: str, _user=Depends(require_admin)):
+    """Poll for handbook generate job status."""
+    job = _handbook_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return job
