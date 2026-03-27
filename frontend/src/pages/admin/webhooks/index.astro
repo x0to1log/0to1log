@@ -1,0 +1,247 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import { createClient } from '@supabase/supabase-js';
+
+const accessToken = Astro.locals.accessToken;
+if (!accessToken || !Astro.locals.isAdmin) {
+  return Astro.redirect('/admin/');
+}
+
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+const { data: webhooks } = await sb
+  .from('webhooks')
+  .select('*')
+  .order('created_at', { ascending: false });
+
+const hooks = webhooks ?? [];
+const nonce = Astro.locals.cspNonce || '';
+---
+
+<MainLayout title="Webhooks" locale="en">
+  <AdminSidebar activeSection="webhooks" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">Webhooks</h1>
+            <p style="color: var(--color-text-muted); font-size: 0.82rem; margin: 0.2rem 0 0;">
+              Notify Discord, Slack, or custom endpoints when news is published.
+            </p>
+          </div>
+          <button class="admin-btn admin-btn-primary" id="btn-add" type="button" style="margin-left: auto;">+ Add</button>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="admin-filter-tabs" style="margin-bottom: 1rem;">
+        <button class="admin-filter-btn admin-filter-btn--active" data-filter="all">All ({hooks.length})</button>
+        <button class="admin-filter-btn" data-filter="active">Active ({hooks.filter(h => h.is_active).length})</button>
+        <button class="admin-filter-btn" data-filter="inactive">Inactive ({hooks.filter(h => !h.is_active).length})</button>
+      </div>
+
+      <!-- List -->
+      {hooks.length === 0 ? (
+        <p style="color: var(--color-text-muted); text-align: center; padding: 3rem 0;">
+          No webhooks configured. Click "+ Add" to create one.
+        </p>
+      ) : (
+        <ul class="admin-list" id="webhook-list">
+          {hooks.map((h) => (
+            <li class="admin-list-item" data-id={h.id} data-active={h.is_active ? 'true' : 'false'}
+                data-label={h.label} data-url={h.url} data-platform={h.platform}>
+              <div class="admin-list-info">
+                <h3 class="admin-list-title">
+                  <span class={`admin-status-badge ${h.is_active ? 'admin-status-badge--published' : 'admin-status-badge--draft'}`}>
+                    {h.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  {h.label}
+                </h3>
+                <div class="admin-list-meta">
+                  <span class="admin-source-badge">{h.platform}</span>
+                  <span style="opacity: 0.6; font-size: 0.75rem; word-break: break-all;">{h.url.slice(0, 60)}{h.url.length > 60 ? '...' : ''}</span>
+                </div>
+                {h.fail_count > 0 && (
+                  <div class="admin-list-meta" style="margin-top: 0.2rem;">
+                    <span style="color: var(--color-error); font-size: 0.75rem;">
+                      {h.fail_count} failure{h.fail_count > 1 ? 's' : ''}
+                      {h.last_error ? ` — ${h.last_error.slice(0, 80)}` : ''}
+                    </span>
+                  </div>
+                )}
+                {h.last_fired_at && (
+                  <div class="admin-list-meta" style="margin-top: 0.15rem;">
+                    <span style="font-size: 0.72rem; opacity: 0.5;">Last fired: {new Date(h.last_fired_at).toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+              <div class="admin-list-actions" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                <button class="admin-btn admin-btn--sm admin-btn-success" data-action="test" data-id={h.id}>Test</button>
+                {!h.is_active && (
+                  <button class="admin-btn admin-btn--sm" data-action="enable" data-id={h.id}>Re-enable</button>
+                )}
+                <button class="admin-btn admin-btn--sm" data-action="edit" data-id={h.id}>Edit</button>
+                <button class="admin-btn admin-btn--sm admin-btn-danger" data-action="delete" data-id={h.id}>Delete</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="admin-modal-overlay" id="modal-overlay" hidden>
+    <div class="admin-modal admin-modal--sm">
+      <div class="admin-modal-header">
+        <h2 class="admin-modal-title" id="modal-title">Add Webhook</h2>
+        <button class="admin-modal-close" data-action="close-modal">&times;</button>
+      </div>
+      <div class="admin-modal-body">
+        <label class="admin-field-label">Label</label>
+        <input class="admin-input" id="field-label" placeholder="e.g. Discord #news" />
+
+        <label class="admin-field-label" style="margin-top: 0.6rem;">Platform</label>
+        <select class="admin-input" id="field-platform">
+          <option value="discord">Discord</option>
+          <option value="slack">Slack</option>
+          <option value="custom">Custom</option>
+        </select>
+
+        <label class="admin-field-label" style="margin-top: 0.6rem;">Webhook URL</label>
+        <input class="admin-input" id="field-url" placeholder="https://discord.com/api/webhooks/..." />
+      </div>
+      <div class="admin-modal-footer">
+        <button class="admin-btn" data-action="close-modal">Cancel</button>
+        <button class="admin-btn admin-btn-primary" id="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<script is:inline nonce={nonce}>
+(function () {
+  var overlay = document.getElementById('modal-overlay');
+  var editingId = null;
+
+  // Modal open/close
+  document.getElementById('btn-add')?.addEventListener('click', function () {
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'Add Webhook';
+    document.getElementById('field-label').value = '';
+    document.getElementById('field-platform').value = 'discord';
+    document.getElementById('field-url').value = '';
+    overlay.hidden = false;
+  });
+
+  document.querySelectorAll('[data-action="close-modal"]').forEach(function (btn) {
+    btn.addEventListener('click', function () { overlay.hidden = true; });
+  });
+
+  // Save
+  document.getElementById('btn-save')?.addEventListener('click', async function () {
+    var label = document.getElementById('field-label').value.trim();
+    var platform = document.getElementById('field-platform').value;
+    var url = document.getElementById('field-url').value.trim();
+    if (!label || !url) return alert('Label and URL are required.');
+
+    var body = { label: label, platform: platform, url: url };
+    if (editingId) body.id = editingId;
+
+    var res = await fetch('/api/admin/webhooks/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      location.reload();
+    } else {
+      var data = await res.json().catch(function () { return {}; });
+      alert(data.error || 'Failed to save webhook.');
+    }
+  });
+
+  // List actions (delegate)
+  document.getElementById('webhook-list')?.addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+
+    var action = btn.dataset.action;
+    var id = btn.dataset.id;
+    var item = btn.closest('.admin-list-item');
+
+    if (action === 'test') {
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      var res = await fetch('/api/admin/webhooks/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      btn.disabled = false;
+      btn.textContent = data.success ? 'Sent!' : 'Failed';
+      if (!data.success && data.error) alert('Test failed: ' + data.error);
+      setTimeout(function () { btn.textContent = 'Test'; }, 2000);
+    }
+
+    if (action === 'edit') {
+      editingId = id;
+      document.getElementById('modal-title').textContent = 'Edit Webhook';
+      document.getElementById('field-label').value = item.dataset.label || '';
+      document.getElementById('field-platform').value = item.dataset.platform || 'discord';
+      document.getElementById('field-url').value = item.dataset.url || '';
+      overlay.hidden = false;
+    }
+
+    if (action === 'delete') {
+      if (!confirm('Delete this webhook?')) return;
+      var res = await fetch('/api/admin/webhooks/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id }),
+      });
+      if (res.ok) location.reload();
+    }
+
+    if (action === 'enable') {
+      var res = await fetch('/api/admin/webhooks/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, label: item.dataset.label, url: item.dataset.url, platform: item.dataset.platform }),
+      });
+      if (res.ok) location.reload();
+    }
+  });
+
+  // Filters
+  document.querySelectorAll('[data-filter]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var filter = btn.dataset.filter;
+      document.querySelectorAll('[data-filter]').forEach(function (b) {
+        b.classList.toggle('admin-filter-btn--active', b === btn);
+      });
+      document.querySelectorAll('#webhook-list .admin-list-item').forEach(function (item) {
+        if (filter === 'all') { item.style.display = ''; return; }
+        var isActive = item.dataset.active === 'true';
+        item.style.display = (filter === 'active') === isActive ? '' : 'none';
+      });
+    });
+  });
+})();
+</script>

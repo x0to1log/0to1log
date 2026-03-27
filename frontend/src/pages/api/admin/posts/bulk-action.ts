@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { fireWebhooks } from '../../../../lib/webhooks';
 
 export const prerender = false;
 
@@ -66,16 +67,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else {
       success = ids.length;
 
-      // Warm CDN cache for published posts (fire-and-forget)
+      // Warm CDN cache + fire webhooks for published posts (fire-and-forget)
       const { data: posts } = await supabase
         .from('news_posts')
-        .select('slug, locale')
+        .select('title, slug, locale, excerpt, post_type')
         .in('id', ids);
       if (posts) {
         const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
         posts.forEach((p) => {
           if (p.slug && p.locale) {
             fetch(`${siteUrl}/${p.locale}/news/${p.slug}/`).catch(() => {});
+            fireWebhooks(supabase, p).catch(() => {});
           }
         });
       }
