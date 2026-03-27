@@ -1,0 +1,508 @@
+---
+export const prerender = false;
+import MainLayout from '../../layouts/MainLayout.astro';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect(`/login?redirectTo=/settings/webhooks/`);
+}
+
+const langParam = Astro.url.searchParams.get('lang');
+const cookieLocale = Astro.cookies.get('site-locale')?.value;
+const profile = Astro.locals.profile;
+const acceptLang = Astro.request.headers.get('accept-language') || '';
+const browserLocale = acceptLang.split(',').some(l => l.trim().startsWith('ko')) ? 'ko' : 'en';
+const locale = (langParam === 'ko' || langParam === 'en') ? langParam
+  : (cookieLocale === 'ko' || cookieLocale === 'en') ? cookieLocale
+  : profile?.preferred_locale === 'ko' ? 'ko'
+  : profile?.preferred_locale === 'en' ? 'en'
+  : browserLocale;
+
+const isKo = locale === 'ko';
+
+const copy = isKo
+  ? {
+      title: 'Webhook 알림 설정',
+      back: '프로필 설정',
+      empty: '등록된 webhook이 없습니다.',
+      emptyDesc: 'Discord, Slack 또는 커스텀 webhook으로 AI 뉴스 알림을 받아보세요.',
+      addTitle: 'Webhook 추가',
+      label: '이름',
+      labelPlaceholder: '예: 내 디스코드',
+      platform: '플랫폼',
+      locale: '언어',
+      localeAll: '전체',
+      url: 'Webhook URL',
+      urlPlaceholder: 'https://',
+      add: '추가',
+      adding: '추가 중...',
+      test: '테스트',
+      testing: '전송 중...',
+      testOk: '테스트 성공!',
+      testFail: '전송 실패',
+      edit: '수정',
+      delete: '삭제',
+      deleteConfirm: '정말 삭제할까요?',
+      save: '저장',
+      saving: '저장 중...',
+      cancel: '취소',
+      active: '활성',
+      inactive: '비활성',
+      lastFired: '마지막 발송',
+      failures: '연속 실패',
+      maxReached: '최대 5개까지 등록할 수 있습니다.',
+      guideDiscord: '서버 설정 → 연동 → 웹후크 → URL 복사',
+      guideSlack: '앱 관리 → Incoming Webhooks → URL 복사',
+      guideCustom: 'POST 요청을 받을 HTTPS 엔드포인트를 입력하세요',
+    }
+  : {
+      title: 'Webhook Notifications',
+      back: 'Profile Settings',
+      empty: 'No webhooks registered.',
+      emptyDesc: 'Get AI news notifications via Discord, Slack, or custom webhooks.',
+      addTitle: 'Add Webhook',
+      label: 'Label',
+      labelPlaceholder: 'e.g. My Discord',
+      platform: 'Platform',
+      locale: 'Language',
+      localeAll: 'All',
+      url: 'Webhook URL',
+      urlPlaceholder: 'https://',
+      add: 'Add',
+      adding: 'Adding...',
+      test: 'Test',
+      testing: 'Sending...',
+      testOk: 'Test sent!',
+      testFail: 'Send failed',
+      edit: 'Edit',
+      delete: 'Delete',
+      deleteConfirm: 'Are you sure you want to delete this webhook?',
+      save: 'Save',
+      saving: 'Saving...',
+      cancel: 'Cancel',
+      active: 'Active',
+      inactive: 'Inactive',
+      lastFired: 'Last fired',
+      failures: 'Consecutive failures',
+      maxReached: 'Maximum 5 webhooks allowed.',
+      guideDiscord: 'Server Settings → Integrations → Webhooks → Copy URL',
+      guideSlack: 'App Management → Incoming Webhooks → Copy URL',
+      guideCustom: 'Enter an HTTPS endpoint that accepts POST requests',
+    };
+---
+
+<MainLayout title={copy.title} locale={locale as 'en' | 'ko'} headerAlwaysVisible={true}>
+  <div class="wh-page">
+    <div class="wh-page-header">
+      <a href="/settings/" class="wh-back-link">&larr; {copy.back}</a>
+      <h1 class="wh-page-title">{copy.title}</h1>
+    </div>
+
+    <div id="wh-feedback" class="admin-feedback admin-feedback--toast" hidden></div>
+
+    <!-- Webhook List -->
+    <div id="wh-list"></div>
+
+    <!-- Empty State -->
+    <div id="wh-empty" class="wh-empty" hidden>
+      <p class="wh-empty-title">{copy.empty}</p>
+      <p class="wh-empty-desc">{copy.emptyDesc}</p>
+    </div>
+
+    <!-- Add Form -->
+    <section class="wh-add-section">
+      <h2 class="wh-section-title">{copy.addTitle}</h2>
+      <form id="wh-add-form" class="wh-form">
+        <div class="wh-form-row">
+          <div class="admin-field" style="flex: 1;">
+            <label for="wh-label">{copy.label}</label>
+            <input type="text" id="wh-label" class="admin-input" placeholder={copy.labelPlaceholder} required maxlength="50" />
+          </div>
+          <div class="admin-field">
+            <label for="wh-platform">{copy.platform}</label>
+            <select id="wh-platform" class="admin-select">
+              <option value="discord">Discord</option>
+              <option value="slack">Slack</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="admin-field">
+            <label for="wh-locale">{copy.locale}</label>
+            <select id="wh-locale" class="admin-select">
+              <option value="all">{copy.localeAll}</option>
+              <option value="en">English</option>
+              <option value="ko">한국어</option>
+            </select>
+          </div>
+        </div>
+        <div class="wh-form-row">
+          <div class="admin-field" style="flex: 1;">
+            <label for="wh-url">{copy.url}</label>
+            <input type="url" id="wh-url" class="admin-input" placeholder={copy.urlPlaceholder} required />
+          </div>
+          <button type="submit" class="admin-btn admin-btn-primary wh-add-btn" id="wh-add-btn">{copy.add}</button>
+        </div>
+        <p class="wh-guide" id="wh-guide">{copy.guideDiscord}</p>
+        <p class="wh-max-msg" id="wh-max-msg" hidden>{copy.maxReached}</p>
+      </form>
+    </section>
+  </div>
+</MainLayout>
+
+<style>
+  .wh-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 1rem 0 3rem;
+  }
+
+  .wh-page-header {
+    margin-bottom: 2rem;
+  }
+
+  .wh-back-link {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .wh-back-link:hover { color: var(--color-accent); }
+
+  .wh-page-title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-top: 0.5rem;
+  }
+
+  .wh-section-title {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 1rem;
+  }
+
+  .wh-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+  .wh-empty-title {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin: 0 0 0.25rem;
+  }
+  .wh-empty-desc {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  /* Cards */
+  .wh-card {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: var(--color-bg-card, var(--color-bg-secondary));
+  }
+  .wh-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .wh-card-label {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+  }
+  .wh-card-badges {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .wh-badge {
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: var(--color-accent-subtle);
+    color: var(--color-accent);
+  }
+  .wh-badge--inactive {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    color: var(--color-error);
+  }
+  .wh-card-url {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    word-break: break-all;
+    margin-bottom: 0.5rem;
+  }
+  .wh-card-meta {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+  }
+  .wh-card-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+  .wh-card-btn {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .wh-card-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .wh-card-btn--danger:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+  }
+  .wh-card-btn--toggle {
+    min-width: 4rem;
+  }
+
+  /* Add Form */
+  .wh-add-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+  .wh-form-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+  }
+  .wh-add-btn {
+    flex-shrink: 0;
+    height: fit-content;
+  }
+  .wh-guide {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin: 0.25rem 0 0;
+  }
+  .wh-max-msg {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--color-error);
+    margin: 0.5rem 0 0;
+  }
+
+  @media (max-width: 640px) {
+    .wh-form-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .wh-add-btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  function initWebhooks() {
+    const list = document.getElementById('wh-list')!;
+    const empty = document.getElementById('wh-empty')!;
+    const form = document.getElementById('wh-add-form') as HTMLFormElement;
+    const addBtn = document.getElementById('wh-add-btn') as HTMLButtonElement;
+    const feedback = document.getElementById('wh-feedback')!;
+    const guide = document.getElementById('wh-guide')!;
+    const maxMsg = document.getElementById('wh-max-msg')!;
+    const platformSelect = document.getElementById('wh-platform') as HTMLSelectElement;
+
+    if (!form) return;
+
+    const GUIDES: Record<string, string> = {
+      discord: guide.dataset.discord || guide.textContent || '',
+      slack: guide.dataset.slack || '',
+      custom: guide.dataset.custom || '',
+    };
+
+    let webhooks: any[] = [];
+
+    function flash(msg: string, type: 'success' | 'error') {
+      feedback.textContent = msg;
+      feedback.className = `admin-feedback admin-feedback--toast admin-feedback--${type}`;
+      feedback.hidden = false;
+      setTimeout(() => { feedback.hidden = true; }, 3000);
+    }
+
+    function render() {
+      empty.hidden = webhooks.length > 0;
+      maxMsg.hidden = webhooks.length < 5;
+      if (webhooks.length >= 5) {
+        (form.querySelector('button[type="submit"]') as HTMLButtonElement).disabled = true;
+      } else {
+        (form.querySelector('button[type="submit"]') as HTMLButtonElement).disabled = false;
+      }
+
+      list.innerHTML = webhooks.map(h => `
+        <div class="wh-card" data-id="${h.id}">
+          <div class="wh-card-header">
+            <span class="wh-card-label">${esc(h.label)}</span>
+            <div class="wh-card-badges">
+              <span class="wh-badge">${h.platform}</span>
+              <span class="wh-badge">${h.locale === 'all' ? 'ALL' : h.locale.toUpperCase()}</span>
+              <span class="wh-badge${h.is_active ? '' : ' wh-badge--inactive'}">${h.is_active ? '${isActive}' : '${isInactive}'}</span>
+            </div>
+          </div>
+          <div class="wh-card-url">${esc(h.url)}</div>
+          ${h.last_fired_at ? `<div class="wh-card-meta">${lastFiredLabel}: ${new Date(h.last_fired_at).toLocaleString()}</div>` : ''}
+          ${h.fail_count > 0 ? `<div class="wh-card-meta" style="color: var(--color-error);">${failLabel}: ${h.fail_count}${h.last_error ? ' — ' + esc(h.last_error) : ''}</div>` : ''}
+          <div class="wh-card-actions">
+            <button type="button" class="wh-card-btn wh-card-btn--toggle" data-action="toggle" data-id="${h.id}">${h.is_active ? '${deactivateLabel}' : '${activateLabel}'}</button>
+            <button type="button" class="wh-card-btn" data-action="test" data-id="${h.id}">${testLabel}</button>
+            <button type="button" class="wh-card-btn wh-card-btn--danger" data-action="delete" data-id="${h.id}">${deleteLabel}</button>
+          </div>
+        </div>
+      `.replace(/\$\{isActive\}/g, 'Active')
+        .replace(/\$\{isInactive\}/g, 'Inactive')
+        .replace(/\$\{deactivateLabel\}/g, 'Disable')
+        .replace(/\$\{activateLabel\}/g, 'Enable')
+        .replace(/\$\{testLabel\}/g, 'Test')
+        .replace(/\$\{deleteLabel\}/g, 'Delete')
+        .replace(/\$\{lastFiredLabel\}/g, 'Last fired')
+        .replace(/\$\{failLabel\}/g, 'Failures')
+      ).join('');
+
+      list.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => handleAction(btn as HTMLButtonElement));
+      });
+    }
+
+    function esc(s: string) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/user/webhooks');
+        if (res.ok) webhooks = await res.json();
+      } catch { /* silent */ }
+      render();
+    }
+
+    // Platform guide switch
+    platformSelect.addEventListener('change', () => {
+      const hints: Record<string, string> = {};
+      guide.parentElement?.querySelectorAll('.wh-guide')?.forEach(el => {});
+      // Get guide texts from data attributes or defaults
+      guide.textContent = platformSelect.value === 'discord'
+        ? guide.dataset.discord || guide.textContent || ''
+        : platformSelect.value === 'slack'
+        ? guide.dataset.slack || ''
+        : guide.dataset.custom || '';
+    });
+
+    // Add webhook
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const label = (document.getElementById('wh-label') as HTMLInputElement).value.trim();
+      const url = (document.getElementById('wh-url') as HTMLInputElement).value.trim();
+      const platform = platformSelect.value;
+      const locale = (document.getElementById('wh-locale') as HTMLSelectElement).value;
+
+      addBtn.disabled = true;
+      try {
+        const res = await fetch('/api/user/webhooks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label, url, platform, locale }),
+        });
+        const data = await res.json();
+        if (!res.ok) { flash(data.error || 'Failed', 'error'); return; }
+        webhooks.push(data);
+        render();
+        form.reset();
+        flash('Webhook added!', 'success');
+      } catch { flash('Failed to add', 'error'); }
+      finally { addBtn.disabled = false; }
+    });
+
+    async function handleAction(btn: HTMLButtonElement) {
+      const action = btn.dataset.action!;
+      const id = btn.dataset.id!;
+
+      if (action === 'delete') {
+        if (!confirm('Delete this webhook?')) return;
+        const res = await fetch('/api/user/webhooks', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        if (res.ok) {
+          webhooks = webhooks.filter(h => h.id !== id);
+          render();
+          flash('Deleted', 'success');
+        }
+      } else if (action === 'toggle') {
+        const hook = webhooks.find(h => h.id === id);
+        if (!hook) return;
+        const res = await fetch('/api/user/webhooks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, is_active: !hook.is_active }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          webhooks = webhooks.map(h => h.id === id ? updated : h);
+          render();
+        }
+      } else if (action === 'test') {
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          const res = await fetch('/api/user/webhooks-test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          const data = await res.json();
+          flash(data.success ? 'Test sent!' : (data.error || 'Failed'), data.success ? 'success' : 'error');
+          if (data.success) await load();
+        } catch { flash('Test failed', 'error'); }
+        finally {
+          btn.disabled = false;
+          btn.textContent = 'Test';
+        }
+      }
+    }
+
+    load();
+  }
+
+  document.addEventListener('astro:page-load', initWebhooks);
+  initWebhooks();
+</script>

@@ -128,22 +128,36 @@ export async function fireWebhooks(
     if (age > MAX_AGE_MS) return;
   }
 
-  const { data: hooks } = await supabase
-    .from('webhooks')
-    .select('id, url, platform, locale, is_active, fail_count')
-    .eq('is_active', true);
+  // Fetch admin webhooks and user webhooks in parallel
+  const [{ data: adminHooks }, { data: userHooks }] = await Promise.all([
+    supabase
+      .from('webhooks')
+      .select('id, url, platform, locale, is_active, fail_count')
+      .eq('is_active', true),
+    supabase
+      .from('user_webhooks')
+      .select('id, url, platform, locale, is_active, fail_count')
+      .eq('is_active', true),
+  ]);
 
-  if (!hooks?.length) return;
+  const allHooks: { hook: WebhookRow; table: 'webhooks' | 'user_webhooks' }[] = [];
+  for (const h of (adminHooks as WebhookRow[]) || []) {
+    if (h.locale === 'all' || h.locale === post.locale) {
+      allHooks.push({ hook: h, table: 'webhooks' });
+    }
+  }
+  for (const h of (userHooks as WebhookRow[]) || []) {
+    if (h.locale === 'all' || h.locale === post.locale) {
+      allHooks.push({ hook: h, table: 'user_webhooks' });
+    }
+  }
 
-  const filtered = (hooks as WebhookRow[]).filter(
-    (h) => h.locale === 'all' || h.locale === post.locale,
-  );
-  if (!filtered.length) return;
+  if (!allHooks.length) return;
 
   const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
   const postUrl = `${siteUrl}/${post.locale}/news/${post.slug}/`;
 
-  for (const hook of filtered) {
+  for (const { hook, table } of allHooks) {
     const payload = formatPayload(hook.platform, post, postUrl);
 
     fetch(hook.url, {
@@ -153,27 +167,27 @@ export async function fireWebhooks(
     })
       .then(async (res) => {
         if (res.ok) {
-          await supabase.from('webhooks').update({
+          await supabase.from(table).update({
             fail_count: 0,
             last_fired_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            ...(table === 'webhooks' ? { updated_at: new Date().toISOString() } : {}),
           }).eq('id', hook.id);
         } else {
-          await handleFailure(supabase, hook, `HTTP ${res.status}`);
+          await handleFailure(supabase, hook, `HTTP ${res.status}`, table);
         }
       })
       .catch(async (err) => {
-        await handleFailure(supabase, hook, String(err?.message || err));
+        await handleFailure(supabase, hook, String(err?.message || err), table);
       });
   }
 }
 
-async function handleFailure(supabase: SupabaseClient, hook: WebhookRow, error: string) {
+async function handleFailure(supabase: SupabaseClient, hook: WebhookRow, error: string, table: 'webhooks' | 'user_webhooks' = 'webhooks') {
   const newCount = hook.fail_count + 1;
-  await supabase.from('webhooks').update({
+  await supabase.from(table).update({
     fail_count: newCount,
     last_error: error,
     is_active: newCount < MAX_FAILURES,
-    updated_at: new Date().toISOString(),
+    ...(table === 'webhooks' ? { updated_at: new Date().toISOString() } : {}),
   }).eq('id', hook.id);
 }
