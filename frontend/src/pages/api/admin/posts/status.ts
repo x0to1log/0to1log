@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (action === 'publish') {
     const { data: postMeta } = await supabase
       .from('news_posts')
-      .select('title, slug, locale, excerpt, post_type')
+      .select('title, slug, locale, excerpt, post_type, published_at')
       .eq('id', id)
       .single();
     if (postMeta?.slug && postMeta?.locale) {

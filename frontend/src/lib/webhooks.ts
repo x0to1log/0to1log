@@ -6,7 +6,10 @@ interface WebhookPost {
   locale: string;
   excerpt?: string | null;
   post_type?: string | null;
+  published_at?: string | null;
 }
+
+const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface WebhookRow {
   id: string;
@@ -92,6 +95,12 @@ export async function fireWebhooks(
   supabase: SupabaseClient,
   post: WebhookPost,
 ): Promise<void> {
+  // Skip backfill: only notify for posts published within last 24h
+  if (post.published_at) {
+    const age = Date.now() - new Date(post.published_at).getTime();
+    if (age > MAX_AGE_MS) return;
+  }
+
   const { data: hooks } = await supabase
     .from('webhooks')
     .select('id, url, platform, is_active, fail_count')

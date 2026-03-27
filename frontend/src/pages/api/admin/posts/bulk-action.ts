@@ -70,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Warm CDN cache + fire webhooks for published posts (fire-and-forget)
       const { data: posts } = await supabase
         .from('news_posts')
-        .select('title, slug, locale, excerpt, post_type')
+        .select('title, slug, locale, excerpt, post_type, published_at')
         .in('id', ids);
       if (posts) {
         const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
