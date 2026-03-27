@@ -862,14 +862,13 @@ BASIC_SECTIONS_KO = [
     ("basic_ko_3_glance", "## 한눈에 보기"),
     ("basic_ko_4_why", "## 왜 중요한가"),
     ("basic_ko_5_where", "## 실제로 어디서 쓰이나"),
+    ("basic_ko_9_roles", "## 직군별 활용 포인트"),
     ("basic_ko_6_caution", "## 주의할 점"),
     ("basic_ko_7_comm", "## 대화에서는 이렇게"),
     ("basic_ko_8_related", "## 함께 알면 좋은 용어"),
-    ("basic_ko_9_roles", "## 직군별 활용 포인트"),
     ("basic_ko_10_learning_path", "## 다음에 읽을 것"),
 ]
 
-# Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_EN = [
     ("basic_en_0_summary", "## 30-Second Summary"),
     ("basic_en_1_plain", "## Plain Explanation"),
@@ -877,10 +876,10 @@ BASIC_SECTIONS_EN = [
     ("basic_en_3_glance", "## At a Glance"),
     ("basic_en_4_why", "## Why It Matters"),
     ("basic_en_5_where", "## Where It's Used"),
+    ("basic_en_9_roles", "## Role-Specific Insights"),
     ("basic_en_6_caution", "## Precautions"),
     ("basic_en_7_comm", "## Communication"),
     ("basic_en_8_related", "## Related Terms"),
-    ("basic_en_9_roles", "## Role-Specific Insights"),
     ("basic_en_10_learning_path", "## What to Read Next"),
 ]
 
@@ -890,12 +889,12 @@ ADVANCED_SECTIONS_KO = [
     ("adv_ko_3_howworks", "## 동작 원리"),
     ("adv_ko_4_code", "## 코드 예시"),
     ("adv_ko_5_practical", "## 실무 활용 & 주의점"),
+    ("adv_ko_10_when_to_use", "## 언제 써야 하나"),
+    ("adv_ko_11_pitfalls", "## 흔한 실수와 해결"),
     ("adv_ko_6_why", "## 왜 중요한가"),
     ("adv_ko_7_comm", "## 업계 대화 맥락"),
     ("adv_ko_8_refs", "## 참조 링크"),
     ("adv_ko_9_related", "## 관련 기술 & 비교"),
-    ("adv_ko_10_when_to_use", "## 언제 써야 하나"),
-    ("adv_ko_11_pitfalls", "## 흔한 실수와 해결"),
 ]
 
 ADVANCED_SECTIONS_EN = [
@@ -904,12 +903,12 @@ ADVANCED_SECTIONS_EN = [
     ("adv_en_3_howworks", "## How It Works"),
     ("adv_en_4_code", "## Code Example"),
     ("adv_en_5_practical", "## Practical Use & Precautions"),
+    ("adv_en_10_when_to_use", "## When to Use (and When Not To)"),
+    ("adv_en_11_pitfalls", "## Common Pitfalls & Solutions"),
     ("adv_en_6_why", "## Why It Matters"),
     ("adv_en_7_comm", "## Industry Communication"),
     ("adv_en_8_refs", "## Reference Links"),
     ("adv_en_9_related", "## Related & Comparison"),
-    ("adv_en_10_when_to_use", "## When to Use (and When Not To)"),
-    ("adv_en_11_pitfalls", "## Common Pitfalls & Solutions"),
 ]
 
 
@@ -1401,18 +1400,60 @@ async def _run_generate_term(
     # Post-process: convert single-dollar math $...$ to double-dollar $$...$$
     # Single $ conflicts with currency in the markdown renderer (singleDollarTextMath=false)
     import re
-    _single_math_re = re.compile(
-        r'(?<!\$)\$(?!\$)'           # opening $ not preceded/followed by $
-        r'('
-        r'[^$]*?'                    # content
-        r'(?:\\[a-zA-Z]+|[_^{])'    # must contain LaTeX command or math syntax
-        r'[^$]*?'
-        r')'
-        r'\$(?!\$)',                  # closing $ not followed by $
-    )
+    def _fix_single_dollar_math(text: str) -> str:
+        """Convert $...$ math to $$...$$ while preserving currency like $2."""
+        result = []
+        i = 0
+        while i < len(text):
+            if text[i] == '$' and (i + 1 < len(text)) and text[i + 1] != '$':
+                # Possible single-dollar math start
+                # Check if it looks like currency ($2, $15, $100M)
+                if i + 1 < len(text) and text[i + 1].isdigit():
+                    result.append(text[i])
+                    i += 1
+                    continue
+                # Find closing $
+                end = text.find('$', i + 1)
+                if end > i + 1:
+                    inner = text[i + 1:end]
+                    # Only convert if inner contains math-like characters
+                    has_math = any(c in inner for c in ('_', '^', '{', '\\'))
+                    if has_math and end + 1 < len(text) and text[end + 1] == '$':
+                        # Already $$, skip
+                        result.append(text[i])
+                        i += 1
+                    elif has_math:
+                        result.append('$$')
+                        result.append(inner)
+                        result.append('$$')
+                        i = end + 1
+                        continue
+                    else:
+                        result.append(text[i])
+                        i += 1
+                        continue
+                else:
+                    result.append(text[i])
+                    i += 1
+            elif text[i] == '$' and (i + 1 < len(text)) and text[i + 1] == '$':
+                # Already double dollar, skip both
+                result.append('$$')
+                i += 2
+                # Find closing $$
+                close = text.find('$$', i)
+                if close >= 0:
+                    result.append(text[i:close])
+                    result.append('$$')
+                    i = close + 2
+                continue
+            else:
+                result.append(text[i])
+                i += 1
+        return ''.join(result)
+
     for key, val in data.items():
-        if isinstance(val, str) and '$' in val and '$$' not in val:
-            converted = _single_math_re.sub(r'$$\1$$', val)
+        if isinstance(val, str) and '$' in val:
+            converted = _fix_single_dollar_math(val)
             if converted != val:
                 logger.info("Converted single-dollar math to double-dollar in field '%s'", key)
                 data[key] = converted
