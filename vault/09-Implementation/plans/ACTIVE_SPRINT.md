@@ -156,6 +156,8 @@
 | HANDBOOK-LEVEL-LINK-01 | todo | 페르소나별 핸드북 링크 깊이 |
 | QUALITY-HYBRID-01 | todo | 규칙 기반 + LLM 하이브리드 품질체크 |
 | PERF-TERMS-CACHE-01 | todo | 뉴스 상세 페이지 용어집 캐시 (현재 매 요청 200개 fetch → 서버 메모리 캐시). 용어 200개 초과 시 착수. 1000개+ 시 Aho-Corasick 다중 패턴 매칭 검토 |
+| PERF-HTML-SLIM-01 | done | 뉴스 상세 HTML 322KB → 306KB lazy load 축소. dom_complete 2.5초 → 1.9초 (d3fdb79) |
+| PERF-AUTH-CDN-01 | done | 로그인 유저도 CDN 캐시 적용 (admin 제외). 북마크/좋아요 hydration + 페르소나 쿠키 스왑 (dd21ded) |
 
 ### 44. 프롬프트 감사 수정 `[PROMPT-AUDIT-01]` (진행 중)
 - **체크:** [~] (11/52 배포됨)
