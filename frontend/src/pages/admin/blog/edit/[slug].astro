@@ -333,6 +333,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     data-slug={pageSlug}
     data-is-new={isNew ? 'true' : 'false'}
     data-post-locale={post?.locale || 'en'}
+    data-partner-title={partnerPost?.title || ''}
     data-partner-slug={partnerPost?.slug || ''}
     data-partner-excerpt={partnerPost?.excerpt || ''}
     data-partner-focus-items={(partnerPost?.focus_items || []).join(', ')}
@@ -524,16 +525,17 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     // Language tab switching — swap ALL meta fields per locale
     interface LocaleMeta {
-      slug: string; excerpt: string; focusItems: string;
+      title: string; slug: string; excerpt: string; focusItems: string;
       tags: string; category: string; ogImageUrl: string;
     }
     const metaStore: Record<string, LocaleMeta> = {
-      ko: { slug: '', excerpt: '', focusItems: '', tags: '', category: '', ogImageUrl: '' },
-      en: { slug: '', excerpt: '', focusItems: '', tags: '', category: '', ogImageUrl: '' },
+      ko: { title: '', slug: '', excerpt: '', focusItems: '', tags: '', category: '', ogImageUrl: '' },
+      en: { title: '', slug: '', excerpt: '', focusItems: '', tags: '', category: '', ogImageUrl: '' },
     };
 
     function readCurrentMeta(): LocaleMeta {
       return {
+        title: titleInput?.value || '',
         slug: slugInput?.value || '',
         excerpt: excerptInput?.value || '',
         focusItems: focusItemsInput?.value || '',
@@ -544,6 +546,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     }
 
     function applyMeta(m: LocaleMeta) {
+      if (titleInput) titleInput.value = m.title;
       if (slugInput) slugInput.value = m.slug;
       if (excerptInput) excerptInput.value = m.excerpt;
       if (focusItemsInput) focusItemsInput.value = m.focusItems;
@@ -563,6 +566,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const partnerLocale = initialLocale === 'en' ? 'ko' : 'en';
     metaStore[initialLocale] = readCurrentMeta();
     metaStore[partnerLocale] = {
+      title: adminData?.dataset.partnerTitle || '',
       slug: adminData?.dataset.partnerSlug || '',
       excerpt: adminData?.dataset.partnerExcerpt || '',
       focusItems: adminData?.dataset.partnerFocusItems || '',
