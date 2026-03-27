@@ -161,20 +161,15 @@ async def classify_candidates(
             ))
         setattr(result, category, classified[:5])
 
-    # Deduplicate: if same URL in both categories, keep in the one with higher score
+    # Allow same URL in both categories — Business and Research write from
+    # completely different perspectives (strategic vs technical), so overlap
+    # is valuable, not redundant. Log for visibility.
     if result.research and result.business:
-        research_urls = {c.url: c for c in result.research}
-        business_urls = {c.url: c for c in result.business}
-        overlap = set(research_urls.keys()) & set(business_urls.keys())
-        for url in overlap:
-            r_score = research_urls[url].relevance_score
-            b_score = business_urls[url].relevance_score
-            if r_score >= b_score:
-                result.business = [c for c in result.business if c.url != url]
-            else:
-                result.research = [c for c in result.research if c.url != url]
+        research_urls = {c.url for c in result.research}
+        business_urls = {c.url for c in result.business}
+        overlap = research_urls & business_urls
         if overlap:
-            logger.info("Cross-category dedup removed %d duplicate URL(s)", len(overlap))
+            logger.info("Cross-category overlap: %d URL(s) in both research and business (kept in both)", len(overlap))
 
     logger.info(
         "Classification complete: %d research, %d business",
