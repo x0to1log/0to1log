@@ -39,6 +39,7 @@
 | FASTAPI-DIRECT-01 | 직접 FastAPI AI 호출 (Vercel timeout 회피) | done | 2026-03-25 | 2026-03-27 |
 | README-01 | 프로젝트 README 작성 | in_progress | 2026-03-26 | 2026-03-27 |
 | UA-02~05 | User Analytics — Site Analytics 차트 추가 | in_progress | 2026-03-27 | 2026-03-28 |
+| WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | 2026-03-27 | 2026-03-29 |
 
 ---
 
@@ -164,6 +165,18 @@
 | UA-05 | todo | 댓글 활동량 — 일별 댓글 수 트렌드 (news_comments + blog_comments) | P1 |
 | UA-06 | todo | 퀴즈 정답률 by 포스트 — 어떤 콘텐츠가 이해하기 어려운지 | P2 |
 | UA-07 | todo | 가입→첫 활동 퍼널 (signup → read → bookmark → quiz) | P2 |
+
+### User Webhook Subscriptions (WEBHOOK-USER-01)
+
+> **설계:** [[plans/2026-03-27-user-webhook-subscriptions]]
+
+| Task | 상태 | 목표 |
+|------|------|------|
+| WEBHOOK-USER-01a | todo | DB: `user_webhooks` 테이블 + RLS (유저당 5개 상한) |
+| WEBHOOK-USER-01b | todo | API: `/api/user/webhooks` CRUD + test 엔드포인트 |
+| WEBHOOK-USER-01c | todo | 발송: `fireWebhooks()` 확장 — user_webhooks 동시 조회 |
+| WEBHOOK-USER-01d | todo | 페이지: `/settings/webhooks/` UI (목록 + 추가 폼 + 가이드) |
+| WEBHOOK-USER-01e | todo | 진입점: 편지지 모달 + 뉴스 스트립 Webhook 링크 연결 |
 
 ### OPTIONAL — 다음 Phase
 
@@ -336,6 +349,7 @@ Wave 3 (2026-04-20~05-01): 자동화
 ## Related Plans
 
 ### Current Phase (NP4-Q)
+- [[plans/2026-03-27-user-webhook-subscriptions|유저 Webhook 구독 셀프서비스]]
 - [[plans/2026-03-25-direct-fastapi-ai-calls|FastAPI Direct AI Calls]]
 - [[plans/2026-03-26-README-design|README 작성 계획]]
 - [[plans/2026-03-26-news-quality-check-overhaul|뉴스 품질 체크 전면 재작성]]
