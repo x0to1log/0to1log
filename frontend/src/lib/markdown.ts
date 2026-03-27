@@ -133,6 +133,25 @@ export async function renderMarkdown(md: string): Promise<string> {
   return getCachedOrRender(contentHash(md), async () => String(await processor.process(md)));
 }
 
+// Handbook-specific processor: allows single-dollar math ($...$)
+// News uses the default processor (singleDollarTextMath: false) to avoid $2 currency conflicts
+const handbookProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm, { singleTilde: false })
+  .use(remarkMath, { singleDollarTextMath: true })
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeRaw)
+  .use(rehypeStripDel)
+  .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeKatex)
+  .use(rehypeShiki, shikiOptions as any)
+  .use(rehypeCodeWindow)
+  .use(rehypeStringify);
+
+export async function renderHandbookMarkdown(md: string): Promise<string> {
+  return getCachedOrRender('hb:' + contentHash(md), async () => String(await handbookProcessor.process(md)));
+}
+
 export { type TermsMap } from './rehypeHandbookTerms';
 
 const termsProcessorCache = new WeakMap<TermsMap, any>();

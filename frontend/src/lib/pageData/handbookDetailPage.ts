@@ -1,5 +1,5 @@
 import { localField } from '../handbookUtils';
-import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
+import { renderMarkdown, renderMarkdownWithTerms, renderHandbookMarkdown, type TermsMap } from '../markdown';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
 // Question-style labels for collapsed sections — maps section keyword to curiosity question
@@ -148,9 +148,10 @@ export async function getHandbookDetailPageData({
       : (md: string) => renderMarkdown(md);
 
     // Run markdown rendering and DB queries in parallel — they don't depend on each other
+    // Advanced uses handbookProcessor (singleDollarTextMath: true) for math formulas
     const [basicHtml, advancedHtml, articlesRes, recentNewsRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
       bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
-      bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
+      bodyAdvanced ? renderHandbookMarkdown(bodyAdvanced) : Promise.resolve(''),
       publicSupabase
         .from('news_posts')
         .select('title, slug, category, published_at, post_type')
@@ -215,8 +216,8 @@ export async function getHandbookDetailPageData({
   } else {
     // No term found — still render markdown if bodies exist
     const [basicHtml, advancedHtml] = await Promise.all([
-      bodyBasic ? renderMarkdown(bodyBasic) : Promise.resolve(''),
-      bodyAdvanced ? renderMarkdown(bodyAdvanced) : Promise.resolve(''),
+      bodyBasic ? renderHandbookMarkdown(bodyBasic) : Promise.resolve(''),
+      bodyAdvanced ? renderHandbookMarkdown(bodyAdvanced) : Promise.resolve(''),
     ]);
     if (basicHtml) levelHtmlMap.basic = wrapLearnMore(basicHtml, locale);
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
