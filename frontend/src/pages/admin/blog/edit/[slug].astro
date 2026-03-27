@@ -675,12 +675,31 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         : (adminData?.dataset.enPostId || '');
       const isActiveNew = isNewPost || !activePostId;
 
+      // If creating a new locale post while the other locale exists, ensure linking
+      let groupId = adminData?.dataset.translationGroupId || '';
+      const otherLocaleId = activeLang === 'ko'
+        ? (adminData?.dataset.enPostId || '')
+        : (adminData?.dataset.koPostId || '');
+
+      if (isActiveNew && otherLocaleId && !groupId) {
+        // First cross-locale save: generate a translation_group_id and link both
+        groupId = crypto.randomUUID();
+        if (adminData) adminData.dataset.translationGroupId = groupId;
+        // Update the existing other-locale post with the new group ID
+        await fetch('/api/admin/blog/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: otherLocaleId, title: '', translation_group_id: groupId }),
+        }).catch(() => {}); // best-effort
+      }
+
       const saveBody: Record<string, any> = {
         id: isActiveNew ? undefined : activePostId,
         title, slug, category, tags,
         content: activeCrepe ? activeCrepe.getMarkdown() : '',
         excerpt, locale: activeLang, focus_items: focusItems, og_image_url: ogImageUrl,
-        translation_group_id: adminData?.dataset.translationGroupId || undefined,
+        translation_group_id: groupId || undefined,
+        source_post_id: isActiveNew && otherLocaleId ? otherLocaleId : undefined,
       };
 
       try {

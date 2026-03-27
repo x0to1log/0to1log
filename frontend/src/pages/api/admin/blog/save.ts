@@ -31,6 +31,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { id, title, slug, category, tags, content, excerpt, locale, focus_items, og_image_url, source, translation_group_id, source_post_id } = body;
   const resolvedCategory = category || 'study';
 
+  // Allow link-only updates (just translation_group_id) without title
+  if (id && !title?.trim() && translation_group_id) {
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+    );
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .update({ translation_group_id, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify(data), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   if (!title?.trim()) {
     return new Response(JSON.stringify({ error: 'title is required' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
