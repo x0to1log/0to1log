@@ -51,6 +51,7 @@ Current phase: see `vault/09-Implementation/plans/ACTIVE_SPRINT.md`.
 - Separate code implementation sessions from review sessions.
 - Group related changes into a single commit. E.g., 3 prompt tweaks for the same issue = 1 commit; a bug's root cause + fix = 1 commit.
 - Before committing, ask: "Do these changes share a single intent?" If not, split them.
+- Do NOT include `Co-Authored-By` in commit messages.
 
 ## Python venv policy
 
