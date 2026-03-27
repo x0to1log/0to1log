@@ -52,6 +52,11 @@ if (!post && !postError) {
   Astro.response.status = 404;
 }
 
+// CDN cache for non-authenticated visitors (skip for logged-in users, preview, 404)
+if (post && !previewMode && !Astro.locals.user) {
+  Astro.response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+}
+
 const masthead = 'Latest AI News';
 const editionMap: Record<string, string> = {
   'ai-news': 'Daily Dispatch',
