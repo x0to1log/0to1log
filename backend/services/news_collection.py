@@ -14,19 +14,29 @@ from models.news_pipeline import NewsCandidate
 logger = logging.getLogger(__name__)
 
 SEARCH_QUERIES = [
+    # Common
     "latest AI artificial intelligence news today",
-    "AI startup funding investment announcement",
+    # Research
     "new AI model release benchmark",
     "AI machine learning research paper arxiv breakthrough",
     "trending AI open source project GitHub HuggingFace",
+    # Business
+    "AI startup funding investment acquisition",
+    "big tech AI announcement OpenAI Google Microsoft Meta",
+    "AI regulation policy enterprise adoption",
 ]
 
 BACKFILL_QUERIES = [
+    # Common
     "AI artificial intelligence news",
-    "AI startup funding investment announcement",
+    # Research
     "new AI model release benchmark",
     "AI machine learning research paper arxiv",
     "trending AI open source GitHub HuggingFace",
+    # Business
+    "AI startup funding investment acquisition",
+    "big tech AI announcement OpenAI Google Microsoft",
+    "AI enterprise regulation policy",
 ]
 
 

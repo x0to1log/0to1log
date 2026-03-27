@@ -180,4 +180,8 @@ async def classify_candidates(
         "Classification complete: %d research, %d business",
         len(result.research), len(result.business),
     )
+    if not result.business:
+        logger.warning("No business articles classified — business digest will be skipped")
+    if not result.research:
+        logger.warning("No research articles classified — research digest will be skipped")
     return result, usage
