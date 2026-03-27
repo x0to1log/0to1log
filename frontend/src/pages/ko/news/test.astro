@@ -75,10 +75,10 @@ import MainLayout from '../../../layouts/MainLayout.astro';
     width: 100%;
     margin: 0 auto;
     padding: 4rem 3rem 3.5rem;
-    background: var(--color-bg-primary);
+    background: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
     border-radius: 4px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
     text-align: center;
   }
   
@@ -93,7 +93,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
     border: 1px dashed var(--color-border);
     border-radius: 2px;
     pointer-events: none;
-    opacity: 0.5;
+    opacity: 0.7;
   }
 
   /* The Seal */
@@ -107,7 +107,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
   .seal-check {
     stroke-dasharray: 20;
     stroke-dashoffset: 20;
-    animation: drawCheck 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.3s;
+    animation: drawCheck 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards 0.4s;
   }
   @keyframes drawCheck {
     to { stroke-dashoffset: 0; }
