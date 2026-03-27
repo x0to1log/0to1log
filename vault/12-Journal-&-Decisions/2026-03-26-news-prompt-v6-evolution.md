@@ -130,6 +130,30 @@ v4부터 KO 커버리지가 EN과 동일해짐.
 - A/B 테스트 후 gpt-4.1을 기본 모델로 복원
 - gpt-4.1-mini를 품질 체크 및 분류에 사용
 
+### v6 이후 추가 수정 (3/27)
+
+**뉴스 수집:**
+- Tavily 쿼리 리밸런싱: research 4 + business 1 → research 3 + business 4 + common 1 (총 8개)
+- New Tools 전용 쿼리 추가: "new AI tool product feature release update"
+- 3단 fallback: Tavily → Exa → Google News RSS (Tavily 할당량 초과 시)
+- Tavily 0건 시 wider date range 자동 재시도
+
+**뉴스 분류:**
+- 분류기 모델: o4-mini → gpt-4.1-mini (o4-mini 빈 응답 문제)
+- cross-category dedup 제거: 같은 기사가 research + business 양쪽에 나올 수 있도록
+- 분류 프롬프트: "Prefer ONE category" → "CAN and SHOULD appear in both" (기술+비즈니스 의미 모두 있는 뉴스)
+
+**커뮤니티 반응:**
+- 4개 페르소나에 Community Pulse 섹션 추가 (요약 1단락 + blockquote 인용 1~2개)
+- 출처는 Reddit/Hacker News만 허용 (뉴스 매체 금지)
+- 인용문 날조 금지, em dash 통일
+
+**타임아웃 보호:**
+- OpenAI SDK: 300초
+- Tavily 검색: asyncio.wait_for(30초)
+- 핸드북 용어 1개: 10분
+- 핸드북 파이프라인 전체: 30분
+
 ---
 
 ## 다음 단계
