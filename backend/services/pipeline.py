@@ -274,7 +274,7 @@ async def _extract_and_create_handbook_terms(
         if not slug:
             continue
 
-        # Check if term already exists (separate queries to avoid injection via .or_())
+        # Check if term already exists (3-layer dedup: slug, exact term, abbreviation)
         try:
             exists_by_slug = supabase.table("handbook_terms").select("id").eq("slug", slug).limit(1).execute()
             if exists_by_slug.data:
@@ -284,6 +284,14 @@ async def _extract_and_create_handbook_terms(
             if exists_by_term.data:
                 logger.info("Handbook term '%s' already exists (term match), skipping", term_name)
                 continue
+            # Abbreviation check: "RAG (Retrieval-Augmented Generation)" → check if "RAG" exists
+            short_name = term_name.split("(")[0].strip()
+            if short_name != term_name and len(short_name) >= 2:
+                exists_by_short = supabase.table("handbook_terms").select("id, term").ilike("term", f"{short_name}%").limit(5).execute()
+                if exists_by_short.data:
+                    existing = exists_by_short.data[0]["term"]
+                    logger.info("Handbook term '%s' already exists as '%s' (abbreviation match), skipping", term_name, existing)
+                    continue
         except Exception as e:
             logger.warning("Duplicate check failed for '%s': %s", term_name, e)
             continue
