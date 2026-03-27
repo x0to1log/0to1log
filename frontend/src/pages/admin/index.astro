@@ -18,6 +18,8 @@ let totalTerms = 0;
 let newsDrafts = 0;
 let handbookDrafts = 0;
 let totalUsers = 0;
+let dau = 0;
+let mau = 0;
 let totalLikes = 0;
 let aiPendingCount = 0;
 let termsBySource = { manual: 0, pipeline: 0, 'ai-suggested': 0 };
@@ -76,7 +78,7 @@ try {
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
          blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
          pipelineLogsRes, candidatesRes, settingsRes, weeklySettingsRes, productsRes,
-         newsQualityRes, hbQualityRes] = await Promise.all([
+         newsQualityRes, hbQualityRes, dauRes, mauRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
@@ -112,6 +114,11 @@ try {
       .gte('created_at', thirtyDaysAgo)
       .order('created_at', { ascending: true })
       .limit(100),
+    // DAU/MAU
+    sb.from('profiles').select('id', { count: 'exact', head: true })
+      .gte('last_seen_at', new Date(new Date().setUTCHours(0,0,0,0)).toISOString()),
+    sb.from('profiles').select('id', { count: 'exact', head: true })
+      .gte('last_seen_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
   ]);
 
   const posts = postsRes.data ?? [];
@@ -187,6 +194,8 @@ try {
   staleDrafts = allItems.filter((item) => item.status === 'draft' && item.updated_at < sevenDaysAgo).slice(0, 5);
 
   totalUsers = profilesRes.count ?? 0;
+  dau = dauRes.count ?? 0;
+  mau = mauRes.count ?? 0;
   totalLikes = likesRes.count ?? 0;
   totalBlogPosts = blogTotalRes.count ?? 0;
   blogDrafts = blogDraftRes.count ?? 0;
@@ -320,6 +329,7 @@ function relativeTime(dateStr: string): string {
         <a href="/admin/analytics#traffic" class="dashboard-stat-card">
           <div class="dashboard-stat-label">Users</div>
           <div class="dashboard-stat-value">{totalUsers}</div>
+          <div class="dashboard-stat-sub">DAU {dau} · MAU {mau}</div>
         </a>
         <a href="/admin/analytics#traffic" class="dashboard-stat-card">
           <div class="dashboard-stat-label">Likes</div>
@@ -999,6 +1009,12 @@ function relativeTime(dateStr: string): string {
 
     .dashboard-stats-grid .dashboard-stat-value {
       font-size: 1.25rem;
+    }
+
+    .dashboard-stat-sub {
+      font-size: 0.7rem;
+      color: var(--color-text-secondary);
+      margin-top: 0.15rem;
     }
 
     .admin-quick-actions {
