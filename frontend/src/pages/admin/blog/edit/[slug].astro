@@ -636,8 +636,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       return `/${locale}/blog/${slug}/?${params.toString()}`;
     }
 
-    async function handleSave(options: { showFeedback?: boolean; redirectOnCreate?: boolean } = {}) {
-      const { showFeedback: shouldShowFeedback = true, redirectOnCreate = true } = options;
+    async function handleSave(options: { showFeedback?: boolean } = {}) {
+      const { showFeedback: shouldShowFeedback = true } = options;
       const title = titleInput?.value || '';
       if (!title.trim()) {
         if (shouldShowFeedback) showFeedback('Save failed: title is required.', true);
@@ -685,8 +685,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           showFeedback(res.status === 201 ? 'Post created.' : 'Draft saved.');
         }
         updateLastSavedTime();
-        if (res.status === 201 && redirectOnCreate && saved?.slug) {
-          window.location.href = `/admin/blog/edit/${saved.slug}`;
+        if (res.status === 201 && saved?.slug) {
+          // Update URL without reload — avoids race condition where
+          // redirect fires before Supabase read replica has the new row
+          history.replaceState(null, '', `/admin/blog/edit/${saved.slug}`);
         }
         return saved;
       } catch (err) {
@@ -700,7 +702,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     async function switchToPreview() {
       if (btnManager.isPending) return;
       btnManager.begin(btnPreview, 'Saving...');
-      const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
+      const saved = await handleSave({ showFeedback: false });
       if (!saved) {
         btnManager.restore();
         showFeedback('Preview failed: save the draft first.', true);
@@ -779,7 +781,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     }
 
     async function handlePublishFromDraft() {
-      const saved = await handleSave({ redirectOnCreate: false });
+      const saved = await handleSave();
       if (!saved && !postId) return;
       await handlePublish();
     }
@@ -1500,7 +1502,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     btnPublishDraft?.addEventListener('click', async () => {
       if (btnManager.isPending) return;
       btnManager.begin(btnPublishDraft, 'Publishing...');
-      const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
+      const saved = await handleSave({ showFeedback: false });
       if (!saved) {
         btnManager.restore();
         showFeedback('Publish failed: save the draft first.', true);
