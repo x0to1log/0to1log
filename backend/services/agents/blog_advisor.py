@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 BLOG_ACTION_CONFIG = {
     # New blog-only actions
     "outline": {
-        "model_attr": "openai_model_main",
+        "model_attr": "openai_model_light",
         "prompt_fn": get_outline_prompt,
         "max_tokens": 2048,
         "temperature": 0.4,
@@ -78,7 +78,7 @@ BLOG_ACTION_CONFIG = {
     },
     # Enhanced generate (absorbs SEO)
     "generate": {
-        "model_attr": "openai_model_main",
+        "model_attr": "openai_model_light",
         "prompt_fn": get_blog_generate_prompt,
         "max_tokens": 2048,
         "temperature": 0.3,
@@ -201,25 +201,26 @@ async def run_blog_generate_bilingual(req: BlogAdviseRequest) -> tuple[dict, str
     source_lang = "English" if source_locale == "en" else "Korean"
     target_lang = "Korean" if target_locale == "ko" else "English"
 
-    model = getattr(settings, "openai_model_main")
+    model_light = getattr(settings, "openai_model_light")
+    model_main = getattr(settings, "openai_model_main")
     client = get_openai_client()
     user_prompt = _build_blog_user_prompt(req)
 
-    # Source prompt: existing generate (metadata extraction)
+    # Source prompt: existing generate (metadata extraction) — light model
     source_system = get_blog_generate_prompt(req.category)
     source_system += f"\n\nIMPORTANT: Respond entirely in {source_lang}."
 
-    # Target prompt: independent generation with content
+    # Target prompt: independent generation with content — main model
     target_system = get_blog_generate_target_prompt(req.category, source_lang, target_lang)
 
     logger.info(
-        "Blog generate_bilingual starting: %s→%s, model=%s",
-        source_locale, target_locale, model,
+        "Blog generate_bilingual starting: %s→%s, source=%s, target=%s",
+        source_locale, target_locale, model_light, model_main,
     )
 
     resp_source, resp_target = await asyncio.gather(
         client.chat.completions.create(
-            model=model,
+            model=model_light,
             messages=[
                 {"role": "system", "content": source_system},
                 {"role": "user", "content": user_prompt},
@@ -229,7 +230,7 @@ async def run_blog_generate_bilingual(req: BlogAdviseRequest) -> tuple[dict, str
             max_tokens=2048,
         ),
         client.chat.completions.create(
-            model=model,
+            model=model_main,
             messages=[
                 {"role": "system", "content": target_system},
                 {"role": "user", "content": user_prompt},
@@ -257,7 +258,7 @@ async def run_blog_generate_bilingual(req: BlogAdviseRequest) -> tuple[dict, str
         "target": target_data,
         "source_locale": source_locale,
         "target_locale": target_locale,
-    }, model, total_tokens
+    }, f"{model_light}+{model_main}", total_tokens
 
 
 # ---------------------------------------------------------------------------

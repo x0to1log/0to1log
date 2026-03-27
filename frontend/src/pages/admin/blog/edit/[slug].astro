@@ -332,7 +332,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     data-translation-group-id={post?.translation_group_id || ''}
     data-slug={pageSlug}
     data-is-new={isNew ? 'true' : 'false'}
-    data-post-locale={post?.locale || 'en'}></div>
+    data-post-locale={post?.locale || 'en'}
+    data-partner-slug={partnerPost?.slug || ''}
+    data-partner-excerpt={partnerPost?.excerpt || ''}
+    data-partner-focus-items={(partnerPost?.focus_items || []).join(', ')}
+    data-partner-tags={(partnerPost?.tags || []).join(', ')}></div>
   <AdminAiConfig />
 </MainLayout>
 
@@ -516,16 +520,57 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
     }
 
-    // Language tab switching
+    // Language tab switching — swap meta fields per locale
+    const metaStore: Record<string, { slug: string; excerpt: string; focusItems: string; tags: string }> = {
+      ko: { slug: '', excerpt: '', focusItems: '', tags: '' },
+      en: { slug: '', excerpt: '', focusItems: '', tags: '' },
+    };
+    // Initialize from current post + partner
+    const initialLocale = adminData?.dataset.postLocale || 'en';
+    const partnerLocale = initialLocale === 'en' ? 'ko' : 'en';
+    metaStore[initialLocale] = {
+      slug: slugInput?.value || '',
+      excerpt: excerptInput?.value || '',
+      focusItems: focusItemsInput?.value || '',
+      tags: tagsInput?.value || '',
+    };
+    metaStore[partnerLocale] = {
+      slug: adminData?.dataset.partnerSlug || '',
+      excerpt: adminData?.dataset.partnerExcerpt || '',
+      focusItems: adminData?.dataset.partnerFocusItems || '',
+      tags: adminData?.dataset.partnerTags || '',
+    };
+
     document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const lang = btn.dataset.lang!;
+        const prevLang = getActiveLang();
+
+        // Save current meta to store before switching
+        if (prevLang !== lang) {
+          metaStore[prevLang] = {
+            slug: slugInput?.value || '',
+            excerpt: excerptInput?.value || '',
+            focusItems: focusItemsInput?.value || '',
+            tags: tagsInput?.value || '',
+          };
+        }
+
         document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
           b.classList.remove('admin-lang-tab--active')
         );
         btn.classList.add('admin-lang-tab--active');
         document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
         document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
+
+        // Restore meta from store for new language
+        if (prevLang !== lang) {
+          const m = metaStore[lang];
+          if (slugInput) slugInput.value = m.slug;
+          if (excerptInput) excerptInput.value = m.excerpt;
+          if (focusItemsInput) focusItemsInput.value = m.focusItems;
+          if (tagsInput) tagsInput.value = m.tags;
+        }
       });
     });
 
@@ -749,13 +794,13 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
     const COMMON_ACTIONS: { action: string; label: string; model: string; wide?: boolean }[] = [
-      { action: 'outline', label: 'Outline', model: 'gpt-4.1' },
+      { action: 'outline', label: 'Outline', model: 'gpt-4.1-mini' },
       { action: 'draft', label: 'Draft', model: 'gpt-4.1' },
       { action: 'rewrite', label: 'Rewrite', model: 'gpt-4.1' },
       { action: 'suggest', label: 'Suggest', model: 'gpt-4.1-mini' },
       { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
-      { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
-      { action: 'generate_bilingual', label: 'Generate EN+KO', model: 'gpt-4.1', wide: true },
+      { action: 'generate', label: 'Generate', model: 'gpt-4.1-mini' },
+      { action: 'generate_bilingual', label: 'Generate EN+KO', model: 'gpt-4.1-mini + gpt-4.1', wide: true },
     ];
 
     const CATEGORY_SPECIAL: Record<string, { action: string; label: string; model: string; wide?: boolean }> = {
