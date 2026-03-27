@@ -586,9 +586,26 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   margin-bottom: 0.35rem;
 }
 
-.newsprint-card-kicker-type--research,
+.newsprint-card-kicker-type {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem 0.15rem 0.65rem;
+  margin-left: 0.4rem;
+  position: relative;
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+}
+
+.newsprint-card-kicker-type--research {
+  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
+  color: var(--color-text-secondary);
+}
+
 .newsprint-card-kicker-type--business {
-  color: inherit;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
 }
 
 .newsprint-lead-title {
@@ -1922,10 +1939,10 @@ button {
   color: var(--color-accent);
 }
 
-.newsprint-rail-meta .newsprint-card-kicker-type,
-.newsprint-rail-meta .newsprint-card-kicker-type--research,
-.newsprint-rail-meta .newsprint-card-kicker-type--business {
-  color: var(--color-accent);
+.newsprint-rail-meta .newsprint-card-kicker-type {
+  font-size: 0.55rem;
+  padding: 0.1rem 0.4rem 0.1rem 0.55rem;
+  margin-left: 0.25rem;
 }
 
 .newsprint-rail-subtitle {

@@ -41,7 +41,7 @@ const kickerLabel = locale === 'ko' ? '◆ 헤드라인' : '◆ HEADLINE';
   <div class="newsprint-headline-kicker">
     <span>{kickerLabel}</span>
     {categoryLabel && (
-      <span class="newsprint-card-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}> · {postType === 'research' ? 'Research' : 'Business'}</span>}</span>
+      <span class="newsprint-card-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}>{postType === 'research' ? 'Research' : 'Business'}</span>}</span>
     )}
     {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
   </div>

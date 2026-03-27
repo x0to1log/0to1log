@@ -219,7 +219,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
   <div class="newsprint-article-topline">
     <div class="newsprint-article-topline-left">
       {categoryLabel && (
-        <span class="newsprint-card-kicker newsprint-article-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}> · {postType === 'research' ? 'Research' : 'Business'}</span>}</span>
+        <span class="newsprint-card-kicker newsprint-article-kicker" style={`color: ${catColor};`}>{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}>{postType === 'research' ? 'Research' : 'Business'}</span>}</span>
       )}
     </div>
     <div class="newsprint-article-topline-right">
