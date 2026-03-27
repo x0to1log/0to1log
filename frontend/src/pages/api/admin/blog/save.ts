@@ -79,6 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   row.status = 'draft';
+  if (!row.source) row.source = 'manual';
   const { data, error } = await supabase
     .from('blog_posts')
     .insert(row)
