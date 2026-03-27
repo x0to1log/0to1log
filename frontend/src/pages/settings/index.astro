@@ -276,7 +276,9 @@ const userIdUnlockDate = usernameChangedAt
 
       <!-- Save -->
       <div class="settings-actions">
-        <button type="submit" class="admin-btn admin-btn-primary" id="save-btn">
+        <button type="submit" class="admin-btn admin-btn-primary" id="save-btn"
+          data-saving-label={copy.saving}
+          data-success-label={copy.successMsg}>
           {copy.save}
         </button>
       </div>
@@ -601,15 +603,20 @@ const userIdUnlockDate = usernameChangedAt
       saveBtn.textContent = saveBtn.dataset.savingLabel || 'Saving...';
 
       const formData = new FormData(form);
+      const usernameInput = document.getElementById('username') as HTMLInputElement | null;
+      const usernameDisabled = usernameInput?.disabled ?? false;
       const payload: Record<string, unknown> = {
         display_name: formData.get('display_name') || null,
-        username: formData.get('username') || null,
         bio: formData.get('bio') || null,
         persona: formData.get('persona') || null,
         handbook_level: formData.get('handbook_level') || 'basic',
         preferred_locale: formData.get('preferred_locale') || 'ko',
         is_public: formData.has('is_public'),
       };
+      // Only include username if the field is editable (not locked by cooldown)
+      if (!usernameDisabled) {
+        payload.username = formData.get('username') || null;
+      }
 
       if (isOnboarding) {
         payload.onboarding_completed = true;
