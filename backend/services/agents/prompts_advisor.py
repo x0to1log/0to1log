@@ -591,10 +591,12 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
-- **basic_ko_0_summary**: 30초 안에 이 용어의 핵심을 파악할 수 있는 요약. 형식: "한 줄 핵심 정의 + 핵심 포인트 3개 bullet + 한 줄 결론". 최대 150자 x 5줄.
-  예시 (모델): "Gemini 3.1은 구글의 멀티모달 AI 모델이다.\n- 텍스트+이미지+음성 동시 처리\n- 경쟁자 대비 강점: Agentic Vision\n- 약점: GPT-5.2 대비 가격이 높음\n-> 멀티모달이 필요하면 현재 최고 선택지 중 하나."
-  예시 (개념): "RAG는 검색+생성을 결합한 기법이다.\n- LLM의 환각을 외부 문서 검색으로 줄임\n- 강점: 학습 없이 최신 정보 반영 가능\n- 약점: 검색 품질이 낮으면 답도 틀림\n-> 사내 문서 기반 챗봇의 표준 아키텍처."
-  예시 (도구): "LangChain은 LLM 앱 개발 프레임워크다.\n- 프롬프트 체인, RAG, 에이전트를 빠르게 구축\n- 강점: 프로토타입 속도\n- 약점: 프로덕션 복잡도 높음\n-> PoC에는 최적, 프로덕션은 검토 필요."
+- **basic_ko_0_summary**: 뉴스에서 이 용어를 처음 본 사람이 5초 안에 이해할 수 있는 요약. 전문 용어 사용 절대 금지. 5줄 구조: (1~2줄) 왜 이게 필요한지 문제/상황 설명 -> (3줄) 비유로 뭔지 설명 -> (4줄) 한계나 맥락 한 줄 -> (5줄) "-> 결론" 왜 뉴스에 나오는지.
+  예시 (개념 - RAG): "AI에게 질문하면 가끔 틀린 답을 자신 있게 말한다. RAG는 이 문제를 해결하기 위해 AI가 답하기 전에 관련 자료를 먼저 검색해서 확인하는 기술이다. 시험 볼 때 교과서를 펴놓고 답을 쓰는 것과 비슷하다. 다만 검색이 잘못되면 답도 틀릴 수 있다.\n-> 요즘 출시되는 AI 챗봇 대부분이 이 방식을 쓴다."
+  예시 (개념 - Transformer): "번역기나 ChatGPT에게 긴 문장을 주면 앞부분을 까먹지 않고 전체를 이해해서 답한다. Transformer는 이걸 가능하게 만든 핵심 구조로, 문장의 모든 단어가 서로를 동시에 참고하는 방식이다. 이전에는 단어를 하나씩 순서대로 읽어야 했는데, 이 기술 덕분에 AI가 수백 배 빨라졌다.\n-> 지금 존재하는 거의 모든 AI 모델이 이 구조를 기반으로 만들어졌다."
+  예시 (모델 - GPT-5.4): "ChatGPT의 최신 두뇌에 해당하는 AI 모델이다. 이전 버전보다 더 길고 복잡한 질문을 이해하고, 코드 작성이나 문서 분석 같은 전문적인 작업도 처리한다. 다만 사용할수록 비용이 들기 때문에 기업들은 이 작업에 이 모델이 꼭 필요한가를 따져서 선택한다.\n-> AI 서비스 가격과 성능을 결정하는 핵심 요소다."
+  예시 (도구 - LangChain): "AI 앱을 만들려면 검색, 데이터 연결, 대화 흐름 등을 하나하나 직접 짜야 한다. LangChain은 이런 부품들을 레고 블록처럼 조립해서 빠르게 AI 앱을 만들 수 있게 해주는 도구다. 다만 프로토타입은 빠른데, 실제 서비스로 만들려면 복잡해진다는 평가도 있다.\n-> AI 앱 개발자들이 가장 먼저 배우는 프레임워크 중 하나다."
+  예시 (지표 - F1 Score): "AI 모델이 얼마나 정확한지 숫자 하나로 표현하는 방법이다. 맞춰야 할 것을 빠뜨리지 않았는가와 틀린 것을 맞다고 하지 않았는가 두 가지를 동시에 따져서 균형 잡힌 점수를 준다. 의사가 암 진단에서 놓치지 않으면서도 오진하지 않는 정확도를 재는 것과 같은 원리다.\n-> AI 모델 성능을 비교할 때 가장 많이 쓰이는 지표 중 하나다."
 - **basic_ko_1_plain**: 이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조. 비유 뒤에 **구체적 메커니즘** 1-2문장 필수 — "왜 그렇게 작동하는지"가 빠지면 안 됨. 최소 300자.
   BAD: "AI 칩은 전문 주방처럼 빠르게 처리합니다." (비유만 있고 왜 빠른지 없음)
   GOOD: "CPU는 계산을 순서대로 하나씩 처리합니다. 그런데 AI는 수백만 개의 숫자를 동시에 곱하고 더해야 합니다. AI 칩은 이 행렬 곱셈을 한 번에 수천 개씩 처리하도록 회로 자체가 설계된 겁니다." (비유 + 메커니즘)
@@ -655,7 +657,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ Every product/service example is factually correct
 ✓ 7_comm sounds like a team meeting/slack, not a news article
 ✓ 8_related includes comparison points that trigger curiosity
-✓ 0_summary is max 5 lines: definition + 3 bullets (strength/weakness) + conclusion
+✓ 0_summary uses NO jargon: problem/situation -> analogy -> limitation -> conclusion. A non-technical person can understand every word.
 ✓ 9_roles has 3+ job roles with specific actionable advice
 ✓ 10_learning_path has 3 terms in logical learning order with reasons
 ✓ Each section adds information the reader didn't get from previous sections
@@ -712,10 +714,11 @@ Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
 
-- **basic_en_0_summary**: A quick-scan summary to grasp the essence in 30 seconds. Format: "One-line definition + 3 bullet points + one-line conclusion". Max 5 lines.
-  Example (model): "Gemini 3.1 is Google's multimodal AI model.\n- Processes text, image, and audio simultaneously\n- Strength: Agentic Vision, real-time video analysis\n- Weakness: Higher price than GPT-5.2\n-> Top choice when multimodal is required."
-  Example (concept): "RAG combines retrieval + generation.\n- Reduces LLM hallucination via external document search\n- Strength: No training needed for up-to-date info\n- Weakness: Answer quality depends on retrieval quality\n-> Standard architecture for internal document chatbots."
-  Example (tool): "LangChain is an LLM app development framework.\n- Build prompt chains, RAG, and agents quickly\n- Strength: Prototyping speed\n- Weakness: Production complexity\n-> Great for PoC, evaluate carefully for production."
+- **basic_en_0_summary**: A summary for someone who just saw this term for the first time in a news article. NO jargon, NO technical terms. 5-line structure: (lines 1-2) Why this matters -- describe the problem or situation. (line 3) What it is -- explain with an analogy. (line 4) One limitation or context. (line 5) "-> conclusion" -- why this appears in the news.
+  Example (concept - RAG): "When you ask an AI a question, it sometimes confidently gives a wrong answer. RAG solves this by making the AI search for relevant documents before answering -- like taking an open-book exam instead of relying on memory. The catch: if the search finds the wrong documents, the answer is still wrong.\n-> Most AI chatbots released today use this approach."
+  Example (concept - Transformer): "When you give a translator or ChatGPT a long sentence, it understands the whole thing without forgetting the beginning. Transformer is the core architecture that made this possible -- every word in a sentence references every other word simultaneously. Before this, AI had to read words one by one in order, making it hundreds of times slower.\n-> Virtually every AI model that exists today is built on this structure."
+  Example (model - GPT-5.4): "GPT-5.4 is the latest brain behind ChatGPT. It understands longer and more complex questions than previous versions and handles professional tasks like coding and document analysis. However, it costs more to use, so companies carefully evaluate whether each task truly needs this model.\n-> This is what determines the price and capability of AI services."
+  Example (tool - LangChain): "Building an AI app requires wiring up search, data connections, and conversation flows from scratch. LangChain lets you snap these pieces together like LEGO blocks to build AI apps quickly. The tradeoff: prototyping is fast, but making it production-ready gets complicated.\n-> One of the first frameworks AI app developers learn."
 - **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing. Min 300 chars.
   BAD: "An AI chip is like a specialized kitchen that processes things faster." (analogy only, no mechanism)
   GOOD: "A CPU processes calculations one at a time, in sequence. But AI needs to multiply and add millions of numbers simultaneously. An AI chip has circuits specifically designed to perform thousands of matrix multiplications at once." (analogy + mechanism)
@@ -768,7 +771,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ Every product/service example is factually correct
 ✓ 7_comm sounds like a team meeting/slack, not a news article
 ✓ 8_related includes comparison points that trigger curiosity
-✓ 0_summary is max 5 lines: definition + 3 bullets (strength/weakness) + conclusion
+✓ 0_summary uses NO jargon: problem/situation -> analogy -> limitation -> conclusion. A non-technical person can understand every word.
 ✓ 9_roles has 3+ job roles with specific actionable advice
 ✓ 10_learning_path has 3 terms in logical learning order with reasons
 ✓ Each section adds information the reader didn't get from previous sections
