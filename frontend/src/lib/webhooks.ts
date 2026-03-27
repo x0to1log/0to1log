@@ -20,6 +20,8 @@ interface WebhookRow {
 }
 
 const MAX_FAILURES = 5;
+const BOT_NAME = '0to1log';
+const BOT_AVATAR = 'https://0to1log.com/og-default.png';
 
 function formatDiscordPayload(post: WebhookPost, postUrl: string) {
   const typeLabel = post.post_type === 'weekly' ? 'Weekly Recap'
@@ -27,11 +29,13 @@ function formatDiscordPayload(post: WebhookPost, postUrl: string) {
     : 'Research Digest';
 
   return {
+    username: BOT_NAME,
+    avatar_url: BOT_AVATAR,
     embeds: [{
       title: `${typeLabel} — ${post.title}`,
       description: (post.excerpt || '').slice(0, 200),
       url: postUrl,
-      color: 0xC4956A, // accent gold
+      color: 0xC4956A,
       footer: { text: '0to1log AI News' },
       timestamp: new Date().toISOString(),
     }],

@@ -47,6 +47,49 @@ const nonce = Astro.locals.cspNonce || '';
         </div>
       </div>
 
+      <!-- Setup Guide -->
+      <details class="wh-guide" id="webhook-guide">
+        <summary class="wh-guide-toggle">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+            <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          Setup Guide
+        </summary>
+        <div class="wh-guide-body">
+          <div class="wh-guide-section">
+            <h4 class="wh-guide-heading">Discord</h4>
+            <ol class="wh-guide-steps">
+              <li>Open the channel you want notifications in</li>
+              <li>Click the <strong>gear icon</strong> (Edit Channel)</li>
+              <li>Go to <strong>Integrations → Webhooks → New Webhook</strong></li>
+              <li>Set name to <code>0to1log</code> (optional)</li>
+              <li><strong>Copy Webhook URL</strong></li>
+              <li>Paste it here with Platform = <strong>Discord</strong></li>
+            </ol>
+          </div>
+          <div class="wh-guide-section">
+            <h4 class="wh-guide-heading">Slack</h4>
+            <ol class="wh-guide-steps">
+              <li>Go to <strong>api.slack.com/apps</strong> → Create New App</li>
+              <li>Enable <strong>Incoming Webhooks</strong></li>
+              <li>Click <strong>Add New Webhook to Workspace</strong></li>
+              <li>Select the channel → <strong>Allow</strong></li>
+              <li>Copy the <strong>Webhook URL</strong></li>
+              <li>Paste it here with Platform = <strong>Slack</strong></li>
+            </ol>
+          </div>
+          <div class="wh-guide-section">
+            <h4 class="wh-guide-heading">How it works</h4>
+            <ul class="wh-guide-steps" style="list-style: none; padding-left: 0;">
+              <li>When you <strong>publish</strong> a news post → all active webhooks receive a notification</li>
+              <li>Backfill posts (older than 24h) are <strong>skipped automatically</strong></li>
+              <li>After <strong>5 consecutive failures</strong>, a webhook is auto-deactivated</li>
+              <li>Use the <strong>Test</strong> button to verify your URL works before publishing</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
       <!-- Filter -->
       <div class="admin-filter-tabs" style="margin-bottom: 1rem;">
         <button class="admin-filter-btn admin-filter-btn--active" data-filter="all">All ({hooks.length})</button>
@@ -89,11 +132,14 @@ const nonce = Astro.locals.cspNonce || '';
                   </div>
                 )}
               </div>
-              <div class="admin-list-actions" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <div class="admin-list-actions" style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+                <button
+                  class={`admin-btn admin-btn--sm ${h.is_active ? '' : 'admin-btn-success'}`}
+                  data-action="toggle"
+                  data-id={h.id}
+                  title={h.is_active ? 'Deactivate this webhook' : 'Activate this webhook'}
+                >{h.is_active ? 'Deactivate' : 'Activate'}</button>
                 <button class="admin-btn admin-btn--sm admin-btn-success" data-action="test" data-id={h.id}>Test</button>
-                {!h.is_active && (
-                  <button class="admin-btn admin-btn--sm" data-action="enable" data-id={h.id}>Re-enable</button>
-                )}
                 <button class="admin-btn admin-btn--sm" data-action="edit" data-id={h.id}>Edit</button>
                 <button class="admin-btn admin-btn--sm admin-btn-danger" data-action="delete" data-id={h.id}>Delete</button>
               </div>
@@ -219,13 +265,17 @@ const nonce = Astro.locals.cspNonce || '';
       if (res.ok) location.reload();
     }
 
-    if (action === 'enable') {
+    if (action === 'toggle') {
+      var isActive = item.dataset.active === 'true';
+      btn.disabled = true;
+      btn.textContent = isActive ? 'Deactivating...' : 'Activating...';
       var res = await fetch('/api/admin/webhooks/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, label: item.dataset.label, url: item.dataset.url, platform: item.dataset.platform }),
+        body: JSON.stringify({ id: id, label: item.dataset.label, url: item.dataset.url, platform: item.dataset.platform, is_active: !isActive }),
       });
       if (res.ok) location.reload();
+      else { btn.disabled = false; btn.textContent = isActive ? 'Deactivate' : 'Activate'; }
     }
   });
 
@@ -245,3 +295,78 @@ const nonce = Astro.locals.cspNonce || '';
   });
 })();
 </script>
+
+<style>
+  .wh-guide {
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  }
+
+  .wh-guide-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 0.9rem;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    list-style: none;
+  }
+  .wh-guide-toggle::-webkit-details-marker { display: none; }
+  .wh-guide-toggle::after {
+    content: '▸';
+    margin-left: auto;
+    font-size: 0.7rem;
+    transition: transform 0.15s;
+  }
+  .wh-guide[open] .wh-guide-toggle::after { transform: rotate(90deg); }
+  .wh-guide-toggle:hover { color: var(--color-text-primary); }
+
+  .wh-guide-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 0 0.9rem 0.9rem;
+  }
+
+  .wh-guide-section {
+    padding: 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+    border-radius: var(--radius-md);
+  }
+
+  .wh-guide-heading {
+    margin: 0 0 0.45rem;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .wh-guide-steps {
+    margin: 0;
+    padding-left: 1.3rem;
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    line-height: 1.65;
+  }
+  .wh-guide-steps code {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.3rem;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+  }
+  .wh-guide-steps strong {
+    color: var(--color-text-primary);
+  }
+
+  @media (max-width: 768px) {
+    .wh-guide-body { grid-template-columns: 1fr; }
+  }
+</style>

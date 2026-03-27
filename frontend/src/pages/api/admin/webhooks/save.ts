@@ -17,7 +17,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { id, label, url, platform } = body;
+  const { id, label, url, platform, is_active } = body;
 
   if (!label || !url || !platform) {
     return new Response(JSON.stringify({ error: 'label, url, and platform are required' }), {
@@ -48,7 +48,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (id) {
     const { data, error } = await supabase
       .from('webhooks')
-      .update({ label, url, platform, updated_at: now })
+      .update({
+        label, url, platform, updated_at: now,
+        ...(typeof is_active === 'boolean' ? { is_active } : {}),
+        ...(is_active === true ? { fail_count: 0, last_error: null } : {}),
+      })
       .eq('id', id)
       .select()
       .single();
