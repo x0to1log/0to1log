@@ -74,7 +74,7 @@ const jsonLd = article ? JSON.stringify({
   <meta name="twitter:image" content={article?.image || `${siteUrl}/og-default.png`} />
 
   <!-- RSS Autodiscovery -->
-  <link rel="alternate" type="application/rss+xml" title="0to1log RSS" href="/rss.xml" />
+  <link rel="alternate" type="application/rss+xml" title="0to1log RSS" href={locale === 'ko' ? '/ko/rss.xml' : '/rss.xml'} />
 
   <!-- Theme Color -->
   <meta name="theme-color" content="#241F1C" />
