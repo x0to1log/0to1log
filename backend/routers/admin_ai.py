@@ -84,6 +84,18 @@ async def handbook_advise(
                     },
                     "error": None,
                 }
+                # Auto-save to DB so results survive polling failures
+                if body.term_id and result:
+                    try:
+                        from core.database import get_supabase
+                        sb = get_supabase()
+                        if sb:
+                            update_data = {k: v for k, v in result.items() if v and isinstance(v, str)}
+                            if update_data:
+                                sb.table("handbook_terms").update(update_data).eq("id", body.term_id).execute()
+                                logger.info("Auto-saved generate result to DB for term %s (%d fields)", body.term_id, len(update_data))
+                    except Exception as save_err:
+                        logger.warning("Auto-save to DB failed: %s", save_err)
             except Exception as e:
                 logger.error("Handbook generate background failed: %s", e)
                 _handbook_jobs[job_id] = {
