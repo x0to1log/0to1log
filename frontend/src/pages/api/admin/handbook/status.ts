@@ -87,6 +87,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
+  // Warm CDN cache for published terms (fire-and-forget, both locales)
+  if (action === 'publish') {
+    const { data: termMeta } = await supabase
+      .from('handbook_terms')
+      .select('slug')
+      .eq('id', id)
+      .single();
+    if (termMeta?.slug) {
+      const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
+      fetch(`${siteUrl}/ko/handbook/${termMeta.slug}/`).catch(() => {});
+      fetch(`${siteUrl}/en/handbook/${termMeta.slug}/`).catch(() => {});
+    }
+  }
+
   return new Response(JSON.stringify(data), {
     status: 200, headers: { 'Content-Type': 'application/json' },
   });

@@ -65,6 +65,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       errors.push({ id: 'bulk', reason: 'Failed to publish posts' });
     } else {
       success = ids.length;
+
+      // Warm CDN cache for published posts (fire-and-forget)
+      const { data: posts } = await supabase
+        .from('news_posts')
+        .select('slug, locale')
+        .in('id', ids);
+      if (posts) {
+        const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
+        posts.forEach((p) => {
+          if (p.slug && p.locale) {
+            fetch(`${siteUrl}/${p.locale}/news/${p.slug}/`).catch(() => {});
+          }
+        });
+      }
     }
   } else if (action === 'unpublish') {
     const { error } = await supabase
