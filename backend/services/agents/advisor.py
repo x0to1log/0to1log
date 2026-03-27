@@ -1417,7 +1417,7 @@ async def _run_generate_term(
                 if end > i + 1:
                     inner = text[i + 1:end]
                     # Only convert if inner contains math-like characters
-                    has_math = any(c in inner for c in ('_', '^', '{', '\\'))
+                    has_math = any(c in inner for c in ('_', '^', '{', '\\')) or re.search(r'[A-Z]\(|\\[a-z]|[=+<>]|\d[a-z]', inner)
                     if has_math and end + 1 < len(text) and text[end + 1] == '$':
                         # Already $$, skip
                         result.append(text[i])
