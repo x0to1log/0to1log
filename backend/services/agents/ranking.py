@@ -5,7 +5,7 @@ from typing import Any
 from core.config import settings
 from models.news_pipeline import ClassifiedCandidate, ClassificationResult, NewsCandidate, RankedCandidate, RankingResult
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
-from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, RANKING_SYSTEM_PROMPT
+from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, SELECTION_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ async def rank_candidates(
                 **build_completion_kwargs(
                     model=model,
                     messages=[
-                        {"role": "system", "content": RANKING_SYSTEM_PROMPT},
+                        {"role": "system", "content": SELECTION_SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt},
                     ],
                     max_tokens=2048,

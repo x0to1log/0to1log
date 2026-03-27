@@ -1,7 +1,7 @@
 """System prompts for AI News Pipeline v5."""
 
 # SELECTION: Pick ONE best article per category (v2 legacy, kept for compatibility)
-RANKING_SYSTEM_PROMPT = """You are an AI news editor for 0to1log, a Korean-English bilingual AI news platform.
+SELECTION_SYSTEM_PROMPT = """You are an AI news editor for 0to1log, a Korean-English bilingual AI news platform.
 
 Your task: Given a list of AI news candidates, select the BEST one for each category.
 
@@ -18,8 +18,8 @@ Your task: Given a list of AI news candidates, select the BEST one for each cate
 ## Output JSON format
 ```json
 {
-  "research": {"url": "...", "reason": "...", "score": 0.0-1.0} | null,
-  "business": {"url": "...", "reason": "...", "score": 0.0-1.0} | null
+  "research": {"url": "...", "reason": "...", "score": 0-100} | null,
+  "business": {"url": "...", "reason": "...", "score": 0-100} | null
 }
 ```"""
 
@@ -86,10 +86,10 @@ NOT Research (assign to Business instead):
 ```json
 {
   "research": [
-    {"url": "...", "subcategory": "llm_models|open_source|papers", "reason": "...", "score": 0.0-1.0}
+    {"url": "...", "subcategory": "llm_models|open_source|papers", "reason": "...", "score": 0-100}
   ],
   "business": [
-    {"url": "...", "subcategory": "big_tech|industry|new_tools", "reason": "...", "score": 0.0-1.0}
+    {"url": "...", "subcategory": "big_tech|industry|new_tools", "reason": "...", "score": 0-100}
   ]
 }
 ```"""
