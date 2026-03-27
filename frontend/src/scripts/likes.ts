@@ -50,27 +50,4 @@ function initLikes(): void {
   });
 }
 
-async function hydrateLikes(): Promise<void> {
-  const btn = document.querySelector<HTMLButtonElement>('[data-like-btn]');
-  if (!btn) return;
-  const postId = btn.dataset.postId;
-  const contentType = btn.dataset.contentType || 'news';
-  if (!postId) return;
-
-  try {
-    const res = await fetch(`/api/user/likes/status?post_id=${postId}&type=${contentType}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    btn.dataset.liked = data.liked ? 'true' : 'false';
-    btn.classList.toggle('newsprint-engage-btn--active', data.liked);
-    const svg = btn.querySelector('svg');
-    if (svg) svg.setAttribute('fill', data.liked ? 'currentColor' : 'none');
-    const countEl = btn.querySelector('[data-like-count]');
-    if (countEl && data.count != null) countEl.textContent = String(data.count);
-  } catch { /* silent */ }
-}
-
-document.addEventListener('astro:page-load', () => {
-  initLikes();
-  hydrateLikes();
-});
+document.addEventListener('astro:page-load', initLikes);

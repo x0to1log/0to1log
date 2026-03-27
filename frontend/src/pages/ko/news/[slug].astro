@@ -38,7 +38,6 @@ const {
   factPack,
   sourceCards,
   activePersona,
-  availablePersonas,
   personaHtmlMap,
   hasPersonaSwitcher,
 } = await getNewsDetailPageData({
@@ -53,8 +52,8 @@ if (!post && !postError) {
   Astro.response.status = 404;
 }
 
-// CDN cache for all non-admin users (bookmark/like status hydrated client-side)
-if (post && !previewMode && !Astro.locals.isAdmin) {
+// CDN cache for non-authenticated visitors (skip for logged-in users, preview, 404)
+if (post && !previewMode && !Astro.locals.user) {
   Astro.response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 }
 
@@ -134,8 +133,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         commentCount={commentCount}
         isLiked={isLiked}
         activePersona={activePersona}
-        availablePersonas={availablePersonas}
-        personaHtmlMap={personaHtmlMap}
+        personaHtmlMap={hasPersonaSwitcher ? personaHtmlMap : undefined}
         guideItems={post.guide_items}
         initialFindQuery={articleFindQuery}
         previewMode={previewMode}
@@ -273,21 +271,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
     observer.observe(articleFind);
   }
 
-  function syncPersonaFromCookie(): void {
-    const match = document.cookie.match(/(?:^|;\s*)persona=(\w+)/);
-    if (!match) return;
-    const preferred = match[1];
-    const activeBtn = document.querySelector('.persona-switcher-btn--active') as HTMLElement | null;
-    if (!activeBtn) return;
-    const current = activeBtn.dataset.persona;
-    if (current === preferred) return;
-    // Click the preferred persona tab to trigger the existing switch logic
-    const targetBtn = document.querySelector(`.persona-switcher-btn[data-persona="${preferred}"]`) as HTMLButtonElement | null;
-    if (targetBtn) targetBtn.click();
-  }
-
   document.addEventListener('astro:page-load', recordReadingHistory);
   document.addEventListener('astro:page-load', initAdminActions);
   document.addEventListener('astro:page-load', syncSearchBarVisibility);
-  document.addEventListener('astro:page-load', syncPersonaFromCookie);
 </script>

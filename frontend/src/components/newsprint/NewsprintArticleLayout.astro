@@ -64,7 +64,6 @@ interface Props {
   commentCount?: number;
   isLiked?: boolean;
   activePersona?: string | null;
-  availablePersonas?: string[];
   personaHtmlMap?: Record<string, string>;
   guideItems?: GuideItems | null;
   initialFindQuery?: string;
@@ -99,7 +98,6 @@ const {
   commentCount = 0,
   isLiked = false,
   activePersona = null,
-  availablePersonas = [],
   personaHtmlMap,
   guideItems = null,
   initialFindQuery = '',
@@ -135,7 +133,7 @@ const personaLabels: Record<string, Record<string, string>> = {
   en: { learner: 'Learner', expert: 'Expert' },
   ko: { learner: '학습자', expert: '현직자' },
 };
-const showPersonaSwitcher = availablePersonas.length > 1;
+const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
 const dateLabel = publishedAt
   ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
@@ -290,8 +288,8 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
   {showPersonaSwitcher && (
     <>
       <h2 class="newsprint-section-title">{sectionCopy.personaInsights}</h2>
-      <div class="persona-switcher" data-slug={slug} data-locale={locale}>
-        {(['learner', 'expert'] as const).filter(p => availablePersonas.includes(p)).map(p => (
+      <div class="persona-switcher">
+        {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
           <button
             type="button"
             class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
@@ -317,7 +315,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         {backLabel}
         <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
       </a>
-      {(['learner', 'expert'] as const).filter(p => availablePersonas.includes(p)).map(p => (
+      {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
         <button
           type="button"
           class={`persona-float-btn ${p === activePersona ? 'persona-float-btn--active' : ''}`}
@@ -571,25 +569,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       if (sourcesCount) sourcesCount.textContent = String(cards.length);
     }
 
-    async function setActivePersona(p: string) {
-      // If content is not in the map, fetch it from the API (lazy loading)
-      if (!map[p]) {
-        const switcherEl = document.querySelector('.persona-switcher') as HTMLElement | null;
-        const slug = switcherEl?.dataset.slug;
-        const locale = switcherEl?.dataset.locale;
-        if (!slug || !locale) return;
-
-        prose!.style.opacity = '0.5';
-        try {
-          const res = await fetch(`/api/news/persona-content?slug=${slug}&locale=${locale}&persona=${p}`);
-          if (res.ok) {
-            const data = await res.json();
-            map[p] = data.html;
-            if (data.sources) sourcesMap[p] = data.sources;
-          }
-        } catch { /* network error — button stays inactive */ }
-        prose!.style.opacity = '';
-      }
+    function setActivePersona(p: string) {
       if (!map[p]) return;
       prose!.innerHTML = map[p];
       switcher!.querySelectorAll('.persona-switcher-btn').forEach(b =>

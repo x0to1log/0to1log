@@ -102,11 +102,13 @@ export async function getNewsDetailPageData({
   let handbookTermsMap: TermsMap = new Map();
   let handbookTermsJson: Record<string, any> = {};
   let analysisHtml = '';
-  let availablePersonas: string[] = [];
   let factPack: Array<{ id: string; claim: string; why_it_matters: string; source_ids: string[]; confidence: string }> = [];
   let sourceCards: Array<{ id: string; title: string; publisher: string; url: string; published_at: string; evidence_snippet: string; claim_ids: string[] }> = [];
 
   if (post && publicSupabase) {
+    const authSupabase = !previewMode && locals.user && locals.accessToken
+      ? getAuthorizedSupabase(locals.accessToken)
+      : null;
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
     const definitionField = getDefinitionField(locale);
 
@@ -119,14 +121,13 @@ export async function getNewsDetailPageData({
       : Promise.resolve([]);
 
     // Pre-fetch backfill candidates alongside DB queries (avoids sequential query later)
-    // Bookmark/like status hydrated client-side (enables CDN caching for all users)
     const [
       nextRes,
       pairedRes,
       likeCountRes,
       commentCountRes,
-      _bookmarkRes,
-      _likeRes,
+      bookmarkRes,
+      likeRes,
       hbTermsRes,
       backfillRes,
     ] = await Promise.all([
@@ -157,8 +158,23 @@ export async function getNewsDetailPageData({
         .from('news_comments')
         .select('id', { count: 'exact', head: true })
         .eq('post_id', post.id),
-      Promise.resolve({ data: null }),
-      Promise.resolve({ data: null }),
+      authSupabase
+        ? authSupabase
+            .from('user_bookmarks')
+            .select('id')
+            .eq('user_id', locals.user.id)
+            .eq('item_type', 'news')
+            .eq('item_id', post.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      authSupabase
+        ? authSupabase
+            .from('news_likes')
+            .select('id')
+            .eq('user_id', locals.user.id)
+            .eq('post_id', post.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
       publicSupabase
         .from('handbook_terms')
         .select(`term, slug, korean_name, term_full, categories, ${definitionField}, body_basic_ko, body_basic_en`)
@@ -181,7 +197,8 @@ export async function getNewsDetailPageData({
     pairedSlug = pairedRes.data?.slug ?? null;
     likeCount = likeCountRes.count ?? 0;
     commentCount = commentCountRes.count ?? 0;
-    // isBookmarked and isLiked stay false — hydrated client-side
+    isBookmarked = !!bookmarkRes.data;
+    isLiked = !!likeRes.data;
 
     focusItems = (post.focus_items && post.focus_items.length > 0)
       ? post.focus_items
@@ -239,16 +256,8 @@ export async function getNewsDetailPageData({
       rawContent = contentMap[personaKey] || post.content_learner || '';
       activePersona = contentMap[personaKey] ? personaKey : 'learner';
 
-      // Render only active persona + analysis (inactive loads on demand via API)
-      // In preview mode, render all personas so admin can see both tabs
-      const renderEntries: [string, string][] = [];
-      if (previewMode) {
-        for (const [key, md] of Object.entries(contentMap)) {
-          if (md) renderEntries.push([key, md]);
-        }
-      } else if (contentMap[personaKey]) {
-        renderEntries.push([personaKey, contentMap[personaKey]]);
-      }
+      // Render all persona content + analysis in parallel
+      const renderEntries = Object.entries(contentMap).filter(([, md]) => md);
       if (post.content_analysis) renderEntries.push(['__analysis', post.content_analysis]);
 
       const rendered = await Promise.all(
@@ -258,9 +267,6 @@ export async function getNewsDetailPageData({
         if (key === '__analysis') analysisHtml = html;
         else personaHtmlMap[key] = html;
       }
-
-      // Track which personas are available (for tab button rendering)
-      availablePersonas = Object.keys(contentMap).filter(k => contentMap[k]);
     } else {
       rawContent = post.content_original || '';
     }
@@ -270,7 +276,7 @@ export async function getNewsDetailPageData({
   const htmlContent = activePersona
     ? personaHtmlMap[activePersona] || ''
     : (rawContent ? applySourceCitations(await renderMd(rawContent)) : '');
-  const hasPersonaSwitcher = availablePersonas.length > 1;
+  const hasPersonaSwitcher = Object.keys(personaHtmlMap).length > 1;
 
   // Extract actually-matched term slugs from rendered HTML
   const allRenderedHtml = [htmlContent, analysisHtml, ...Object.values(personaHtmlMap)].join('');
@@ -332,7 +338,6 @@ export async function getNewsDetailPageData({
     factPack,
     sourceCards,
     activePersona,
-    availablePersonas,
     personaHtmlMap,
     personaSourceCardsMap,
     hasPersonaSwitcher,
