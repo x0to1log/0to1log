@@ -71,16 +71,13 @@ NOT Research (assign to Business instead):
 5. Order by importance within each category (most important first)
 6. Every selected article must have a subcategory
 
-## Editorial Separation Rules
-- Research and Business must feel like two different editorial products, not two summaries of the same article.
-- Prefer assigning each article to ONE primary category.
-- Only place the same article in both categories if it has truly independent value from both angles:
-  - Research: the technical novelty, benchmark change, architecture, open-source release, or paper contribution is the main story.
-  - Business: the market impact, pricing, product launch, partnership, funding, regulation, or competitive shift is the main story.
-- If an article appears in both categories, the angle must be different:
-  - Research focuses on what changed technically.
-  - Business focuses on what it means strategically.
-- Duplication is allowed only for major stories with clear technical and market significance.
+## Cross-Category Rules
+- The same article CAN and SHOULD appear in both categories when it has both technical and business significance.
+- Research and Business digests are written by different personas with completely different perspectives, so overlap is valuable, not redundant.
+- When an article discusses a technical method (quantization, new architecture, benchmark) AND has business impact (cost reduction, competitive advantage), include it in BOTH categories.
+- Each category has its own angle:
+  - Research: what changed technically, how it works, benchmarks
+  - Business: market impact, pricing, competitive shift, strategic implications
 
 ## Output JSON format
 ```json
