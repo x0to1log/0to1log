@@ -336,7 +336,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     data-partner-slug={partnerPost?.slug || ''}
     data-partner-excerpt={partnerPost?.excerpt || ''}
     data-partner-focus-items={(partnerPost?.focus_items || []).join(', ')}
-    data-partner-tags={(partnerPost?.tags || []).join(', ')}></div>
+    data-partner-tags={(partnerPost?.tags || []).join(', ')}
+    data-partner-category={partnerPost?.category || ''}
+    data-partner-og-image-url={partnerPost?.og_image_url || ''}></div>
   <AdminAiConfig />
 </MainLayout>
 
@@ -520,25 +522,53 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
     }
 
-    // Language tab switching — swap meta fields per locale
-    const metaStore: Record<string, { slug: string; excerpt: string; focusItems: string; tags: string }> = {
-      ko: { slug: '', excerpt: '', focusItems: '', tags: '' },
-      en: { slug: '', excerpt: '', focusItems: '', tags: '' },
+    // Language tab switching — swap ALL meta fields per locale
+    interface LocaleMeta {
+      slug: string; excerpt: string; focusItems: string;
+      tags: string; category: string; ogImageUrl: string;
+    }
+    const metaStore: Record<string, LocaleMeta> = {
+      ko: { slug: '', excerpt: '', focusItems: '', tags: '', category: '', ogImageUrl: '' },
+      en: { slug: '', excerpt: '', focusItems: '', tags: '', category: '', ogImageUrl: '' },
     };
+
+    function readCurrentMeta(): LocaleMeta {
+      return {
+        slug: slugInput?.value || '',
+        excerpt: excerptInput?.value || '',
+        focusItems: focusItemsInput?.value || '',
+        tags: tagsInput?.value || '',
+        category: categorySelect?.value || '',
+        ogImageUrl: ogImageInput?.value || '',
+      };
+    }
+
+    function applyMeta(m: LocaleMeta) {
+      if (slugInput) slugInput.value = m.slug;
+      if (excerptInput) excerptInput.value = m.excerpt;
+      if (focusItemsInput) focusItemsInput.value = m.focusItems;
+      if (tagsInput) tagsInput.value = m.tags;
+      if (categorySelect) categorySelect.value = m.category || categorySelect.value;
+      if (ogImageInput) ogImageInput.value = m.ogImageUrl;
+    }
+
+    // Update metaStore for current language (call after save)
+    function syncMetaStore(lang?: string) {
+      const l = lang || getActiveLang();
+      metaStore[l] = readCurrentMeta();
+    }
+
     // Initialize from current post + partner
     const initialLocale = adminData?.dataset.postLocale || 'en';
     const partnerLocale = initialLocale === 'en' ? 'ko' : 'en';
-    metaStore[initialLocale] = {
-      slug: slugInput?.value || '',
-      excerpt: excerptInput?.value || '',
-      focusItems: focusItemsInput?.value || '',
-      tags: tagsInput?.value || '',
-    };
+    metaStore[initialLocale] = readCurrentMeta();
     metaStore[partnerLocale] = {
       slug: adminData?.dataset.partnerSlug || '',
       excerpt: adminData?.dataset.partnerExcerpt || '',
       focusItems: adminData?.dataset.partnerFocusItems || '',
       tags: adminData?.dataset.partnerTags || '',
+      category: adminData?.dataset.partnerCategory || categorySelect?.value || '',
+      ogImageUrl: adminData?.dataset.partnerOgImageUrl || '',
     };
 
     document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((btn) => {
@@ -546,14 +576,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         const lang = btn.dataset.lang!;
         const prevLang = getActiveLang();
 
-        // Save current meta to store before switching
         if (prevLang !== lang) {
-          metaStore[prevLang] = {
-            slug: slugInput?.value || '',
-            excerpt: excerptInput?.value || '',
-            focusItems: focusItemsInput?.value || '',
-            tags: tagsInput?.value || '',
-          };
+          metaStore[prevLang] = readCurrentMeta();
         }
 
         document.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
@@ -563,13 +587,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
         document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
 
-        // Restore meta from store for new language
         if (prevLang !== lang) {
-          const m = metaStore[lang];
-          if (slugInput) slugInput.value = m.slug;
-          if (excerptInput) excerptInput.value = m.excerpt;
-          if (focusItemsInput) focusItemsInput.value = m.focusItems;
-          if (tagsInput) tagsInput.value = m.tags;
+          applyMeta(metaStore[lang]);
         }
       });
     });
@@ -661,6 +680,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         }
         const saved = await res.json();
         syncSavedState(saved);
+        syncMetaStore(); // keep metaStore in sync after save
         if (shouldShowFeedback) {
           showFeedback(res.status === 201 ? 'Post created.' : 'Draft saved.');
         }
