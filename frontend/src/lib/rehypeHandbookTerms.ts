@@ -35,7 +35,8 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
       'gi',
     );
 
-    const matched = new Set<string>(); // track slugs already matched
+    const matched = new Set<string>(); // track slugs already matched (body)
+    const matchedInRelated = new Set<string>(); // separate tracking for related section
 
     // Build parent map for ancestor chain lookup.
     // Visit ALL node types (not just 'element') so root's children are included,
@@ -111,9 +112,15 @@ export default function rehypeHandbookTerms(termsMap: TermsMap) {
         const entry = termsMap.get(matchedText.toLowerCase());
         if (!entry) continue;
 
-        // First occurrence only — even in "related" sections, skip if already matched
-        if (matched.has(entry.slug)) continue;
-        matched.add(entry.slug);
+        // In "related" sections: link each unique term (even if seen in body)
+        // In body: first occurrence only
+        if (inRelated) {
+          if (matchedInRelated.has(entry.slug)) continue;
+          matchedInRelated.add(entry.slug);
+        } else {
+          if (matched.has(entry.slug)) continue;
+          matched.add(entry.slug);
+        }
 
         // Text before the match
         if (match.index > lastIndex) {
