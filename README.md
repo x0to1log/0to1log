@@ -1,6 +1,6 @@
 # 0to1log
 
-**AI news curation + AI glossary + IT blog platform for Korean readers**
+**AI news curation + AI glossary + IT blog platform**
 
 [한국어 버전 보기](./README_KR.md)
 
@@ -17,6 +17,18 @@ AI moves fastest in English, and English content is most diverse. But Korean rea
 
 **0to1log solves all four in one place.**
 
+## How It Was Built
+
+The AI pipeline went through 5 redesigns over 22 days. Version 1 failed after 5 days and $25 of wasted LLM calls — the architecture was wrong, and no amount of patches could fix it. After deleting everything and rebuilding from scratch, each iteration got exponentially faster: v2 took 1 day, v3 half a day. Six rounds of prompt engineering raised the quality score from 56 to 90 out of 100.
+
+| | v1 | v2 | v3 | v4 | v5–v6 |
+|---|---|---|---|---|---|
+| **Time** | 5 days (failed) | 1 day | half day | half day | 9 days |
+| **Daily cost** | N/A | $0.43 | $0.59 | $0.39 | $0.50–0.80 |
+| **Output** | Nothing | 2 articles | 6–10 articles | 6–10 (2 personas) | + quality scoring |
+
+The full story — including what went wrong, key decisions, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
+
 ## The Three Pillars of 0to1log
 
 ### 🔍 Daily News Digest
@@ -30,7 +42,7 @@ Only real important news, no spam.
 
 **Solves:** News overload + Missing English updates
 
-### 📚 AI Handbook
+### 📚 AI Glossary
 
 **Systematically explain core AI terminology.**
 Understand concepts from today's news in depth.
@@ -80,7 +92,7 @@ When new AI products launch, find them, understand differences, learn how to use
 
 ### ✅ Stable and Running
 - Daily News Digest (auto-generated daily)
-- AI Handbook (1000+ terms)
+- AI Glossary (1000+ terms)
 - Blog (technical articles publishing)
 
 ### 🔄 In Progress
