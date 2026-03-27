@@ -48,8 +48,8 @@ if (!term && !termError) {
   Astro.response.status = 404;
 }
 
-// CDN cache for non-authenticated visitors (skip for logged-in users, preview, 404)
-if (term && !previewMode && !Astro.locals.user) {
+// CDN cache for all non-admin users (bookmark status hydrated client-side)
+if (term && !previewMode && !Astro.locals.isAdmin) {
   Astro.response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 }
 

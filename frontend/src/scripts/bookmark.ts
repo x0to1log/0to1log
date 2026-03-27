@@ -57,4 +57,36 @@ function initBookmarks(): void {
   });
 }
 
-document.addEventListener('astro:page-load', initBookmarks);
+async function hydrateBookmarks(): Promise<void> {
+  if (!isAuthenticatedUser()) return;
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.newsprint-bookmark-icon');
+  const checks: { btn: HTMLButtonElement; itemType: string; itemId: string }[] = [];
+  buttons.forEach((btn) => {
+    const itemId = btn.dataset.itemId;
+    const itemType = btn.dataset.itemType;
+    if (itemId && itemType) checks.push({ btn, itemType, itemId });
+  });
+  if (checks.length === 0) return;
+
+  try {
+    const res = await fetch('/api/user/bookmarks/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: checks.map(c => ({ item_type: c.itemType, item_id: c.itemId })) }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    for (const { btn, itemId } of checks) {
+      const isBookmarked = data.statuses?.[itemId] ?? false;
+      btn.dataset.bookmarked = isBookmarked ? 'true' : 'false';
+      btn.classList.toggle('newsprint-bookmark-icon--active', isBookmarked);
+      const svg = btn.querySelector('svg');
+      if (svg) svg.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
+    }
+  } catch { /* silent */ }
+}
+
+document.addEventListener('astro:page-load', () => {
+  initBookmarks();
+  hydrateBookmarks();
+});
