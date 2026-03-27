@@ -43,6 +43,88 @@ BACKFILL_QUERIES = [
 
 
 # ---------------------------------------------------------------------------
+# Fallback: Exa -> Google News RSS (when Tavily quota exhausted)
+# ---------------------------------------------------------------------------
+
+async def _collect_fallback_news(
+    queries: list[str], date_kwargs: dict, max_results: int = 10,
+) -> list[dict]:
+    """Fallback news collection: Exa first, then Google News RSS."""
+    results: list[dict] = []
+
+    # --- Exa ---
+    if settings.exa_api_key:
+        try:
+            from exa_py import Exa
+            exa = Exa(api_key=settings.exa_api_key)
+            loop = asyncio.get_running_loop()
+            for query in queries[:4]:  # limit to 4 queries to conserve Exa credits
+                try:
+                    exa_resp = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            None,
+                            lambda q=query: exa.search_and_contents(
+                                q, num_results=5, use_autoprompt=True,
+                                type="news", text=True,
+                            ),
+                        ),
+                        timeout=15,
+                    )
+                    for r in (exa_resp.results if hasattr(exa_resp, "results") else []):
+                        results.append({
+                            "url": r.url,
+                            "title": r.title or "",
+                            "content": (r.text or "")[:2000],
+                            "raw_content": r.text or "",
+                        })
+                except Exception as e:
+                    logger.warning("Exa fallback failed for '%s': %s", query, e)
+            if results:
+                logger.info("Exa fallback collected %d results", len(results))
+                return results
+        except ImportError:
+            logger.warning("exa_py not installed, skipping Exa fallback")
+        except Exception as e:
+            logger.warning("Exa fallback error: %s", e)
+
+    # --- Google News RSS ---
+    try:
+        import httpx
+        from urllib.parse import quote
+        google_results: list[dict] = []
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for query in queries[:4]:
+                try:
+                    rss_url = f"https://news.google.com/rss/search?q={quote(query)}&hl=en-US&gl=US&ceid=US:en"
+                    resp = await client.get(rss_url)
+                    if resp.status_code != 200:
+                        continue
+                    # Simple XML parsing for RSS items
+                    import re
+                    items = re.findall(
+                        r"<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>.*?</item>",
+                        resp.text, re.DOTALL,
+                    )
+                    for title, url in items[:5]:
+                        # Clean HTML entities
+                        title = title.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'")
+                        google_results.append({
+                            "url": url.strip(),
+                            "title": title.strip(),
+                            "content": title.strip(),
+                            "raw_content": "",
+                        })
+                except Exception as e:
+                    logger.warning("Google News RSS failed for '%s': %s", query, e)
+        if google_results:
+            logger.info("Google News RSS fallback collected %d results", len(google_results))
+        return google_results
+    except Exception as e:
+        logger.warning("Google News RSS fallback error: %s", e)
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Source: Tavily (general news)
 # ---------------------------------------------------------------------------
 
@@ -81,23 +163,50 @@ async def _collect_tavily(
 
     loop = asyncio.get_running_loop()
     all_results: list[dict] = []
+    tavily_exhausted = False
+
+    async def _search_with_retry(query: str, dk: dict) -> list[dict]:
+        """Search Tavily; if 0 results, retry with wider date range."""
+        nonlocal tavily_exhausted
+        if tavily_exhausted:
+            return []
+        for attempt, kwargs in enumerate([dk, {"days": 5}]):
+            try:
+                response = await loop.run_in_executor(
+                    None,
+                    lambda q=query, k=kwargs: tavily.search(
+                        query=q,
+                        search_depth="advanced",
+                        max_results=max_results_per_query,
+                        topic="news",
+                        include_raw_content=True,
+                        **k,
+                    ),
+                )
+                results = response.get("results", [])
+                if results or attempt > 0:
+                    if attempt > 0 and results:
+                        logger.info("Tavily retry with wider range found %d results for '%s'", len(results), query)
+                    return results
+                logger.info("Tavily 0 results for '%s' with %s, retrying wider range", query, kwargs)
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "402" in err_str or "quota" in err_str.lower() or "limit" in err_str.lower():
+                    logger.warning("Tavily quota exhausted: %s — switching to fallback", e)
+                    tavily_exhausted = True
+                    return []
+                logger.warning("Tavily search failed for '%s': %s", query, e)
+                return []
+        return []
 
     for query in queries:
-        try:
-            response = await loop.run_in_executor(
-                None,
-                lambda q=query, dk=date_kwargs: tavily.search(
-                    query=q,
-                    search_depth="advanced",
-                    max_results=max_results_per_query,
-                    topic="news",
-                    include_raw_content=True,
-                    **dk,
-                ),
-            )
-            all_results.extend(response.get("results", []))
-        except Exception as e:
-            logger.warning("Tavily search failed for query '%s': %s", query, e)
+        results = await _search_with_retry(query, date_kwargs)
+        all_results.extend(results)
+
+    # Fallback: if Tavily exhausted, try Exa then Google News RSS
+    if tavily_exhausted or not all_results:
+        fallback_results = await _collect_fallback_news(queries, date_kwargs, max_results_per_query)
+        all_results.extend(fallback_results)
 
     candidates: list[NewsCandidate] = []
     for item in all_results:
