@@ -621,8 +621,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   예시 (개념): "**주니어 개발자**: RAG 파이프라인을 직접 구축해보세요. LangChain + ChromaDB 조합이 입문에 적합합니다.\n**PM/기획자**: 고객 문의 챗봇에 RAG를 제안할 수 있습니다. '기존 FAQ 문서를 활용한 자동 응답'으로 포지셔닝하세요.\n**시니어 엔지니어**: chunk 크기와 embedding 모델 선택이 성능을 좌우합니다. 프로덕션 투입 전 retrieval 정확도를 반드시 측정하세요."
   예시 (도구): "**주니어 개발자**: 공식 튜토리얼로 간단한 챗봇을 만들어보세요. 면접에서 'LangChain vs LlamaIndex 차이'를 설명할 수 있으면 유리합니다.\n**PM/기획자**: 데모를 보고 우리 제품에 적용 가능한 시나리오를 정리하세요. 개발팀에 PoC 범위를 제안할 수 있습니다."
 - **basic_ko_10_learning_path**: 이 용어를 이해한 후 다음에 읽을 용어 3개를 학습 순서대로. 각 용어에 "왜 다음에 이걸 읽어야 하는지" 한 줄 이유. 형식: 번호 리스트.
-  예시 (모델): "1. **Transformer** -- Gemini의 핵심 아키텍처. 이걸 알아야 왜 멀티모달이 가능한지 이해됨\n2. **Attention Mechanism** -- Transformer 안에서 어디에 집중할지 결정하는 방법\n3. **MoE** -- Gemini가 여러 전문가 네트워크를 조합하는 방식"
-  예시 (개념): "1. **Embedding** -- RAG의 첫 단계. 문서를 벡터로 변환하는 원리\n2. **Vector Database** -- 변환된 벡터를 저장하고 검색하는 방법\n3. **Prompt Engineering** -- 검색 결과를 LLM에게 효과적으로 전달하는 기술"
+  예시 (모델): "1. **Transformer** —Gemini의 핵심 아키텍처. 이걸 알아야 왜 멀티모달이 가능한지 이해됨\n2. **Attention Mechanism** —Transformer 안에서 어디에 집중할지 결정하는 방법\n3. **MoE** —Gemini가 여러 전문가 네트워크를 조합하는 방식"
+  예시 (개념): "1. **Embedding** —RAG의 첫 단계. 문서를 벡터로 변환하는 원리\n2. **Vector Database** —변환된 벡터를 저장하고 검색하는 방법\n3. **Prompt Engineering** —검색 결과를 LLM에게 효과적으로 전달하는 기술"
 
 ## Output JSON Structure
 
@@ -642,9 +642,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_ko_5_where": "- 사례1\\n- 사례2\\n- 사례3\\n- 사례4",
   "basic_ko_6_caution": "- 주의1\\n- 주의2\\n- 주의3",
   "basic_ko_7_comm": "- **용어** 이런 맥락에서 사용\\n- ...",
-  "basic_ko_8_related": "- **용어** -- 관계 설명\\n- ...",
+  "basic_ko_8_related": "- **용어** — 관계 설명\\n- ...",
   "basic_ko_9_roles": "**주니어 개발자**: ...\\n**PM/기획자**: ...\\n**시니어 엔지니어**: ...",
-  "basic_ko_10_learning_path": "1. **용어** -- 이유\\n2. **용어** -- 이유\\n3. **용어** -- 이유"
+  "basic_ko_10_learning_path": "1. **용어** — 이유\\n2. **용어** — 이유\\n3. **용어** — 이유"
 }}
 ```
 
@@ -742,8 +742,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_en_9_roles**: Why this term matters for each job role + what to do about it. 3-4 roles (junior developer, PM/planner, senior/lead, non-technical roles as applicable). 2-3 sentences each.
   Example (concept): "**Junior Developer**: Build a RAG pipeline hands-on. LangChain + ChromaDB is a good starter combo.\n**PM/Planner**: Propose a RAG-powered FAQ chatbot using existing company documents.\n**Senior Engineer**: Chunk size and embedding model choice determine retrieval quality. Measure retrieval accuracy before production deployment."
 - **basic_en_10_learning_path**: 3 terms to read next, in learning order. Each with a one-line reason why it should come next.
-  Example (model): "1. **Transformer** -- Core architecture behind Gemini. Understanding this explains why multimodal is possible.\n2. **Attention Mechanism** -- How Transformer decides where to focus.\n3. **MoE** -- How Gemini combines multiple expert networks."
-  Example (concept): "1. **Embedding** -- First step of RAG. How documents become vectors.\n2. **Vector Database** -- How to store and search those vectors.\n3. **Prompt Engineering** -- How to feed retrieved results to the LLM effectively."
+  Example (model): "1. **Transformer** —Core architecture behind Gemini. Understanding this explains why multimodal is possible.\n2. **Attention Mechanism** —How Transformer decides where to focus.\n3. **MoE** —How Gemini combines multiple expert networks."
+  Example (concept): "1. **Embedding** —First step of RAG. How documents become vectors.\n2. **Vector Database** —How to store and search those vectors.\n3. **Prompt Engineering** —How to feed retrieved results to the LLM effectively."
 
 ## Output JSON Structure
 
@@ -759,7 +759,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_en_7_comm": "...",
   "basic_en_8_related": "...",
   "basic_en_9_roles": "**Junior Developer**: ...\\n**PM/Planner**: ...\\n**Senior Engineer**: ...",
-  "basic_en_10_learning_path": "1. **Term** -- reason\\n2. **Term** -- reason\\n3. **Term** -- reason"
+  "basic_en_10_learning_path": "1. **Term** — reason\\n2. **Term** — reason\\n3. **Term** — reason"
 }}
 ```
 
@@ -853,8 +853,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_ko_5_practical": "실무 활용 + 주의점...",
   "adv_ko_6_why": "왜 중요한가...",
   "adv_ko_7_comm": "업계 대화 맥락...",
-  "adv_ko_8_refs": "- [링크](URL) -- 설명\\n- [링크2](URL2) -- 설명2",
-  "adv_ko_9_related": "- **용어** -- 관계 설명\\n- **용어2** -- 관계 설명2",
+  "adv_ko_8_refs": "- [링크](URL) — 설명\\n- [링크2](URL2) — 설명2",
+  "adv_ko_9_related": "- **용어** — 관계 설명\\n- **용어2** — 관계 설명2",
   "adv_ko_10_when_to_use": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
   "adv_ko_11_pitfalls": "실수: ... -> 해결: ...\\n실수: ... -> 해결: ..."
 }}
@@ -927,7 +927,7 @@ Rule: Include code snippets, architecture details, formulas where relevant.
 - **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
 - **adv_en_7_comm**: 6-8 sentences from **team meetings, Slack threads, architecture reviews, or design docs**. **Bold key terms**. NO news article tone — include specific context like team names, metrics, or deadlines. Ready-to-use professional tone.
 - **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Do NOT fabricate URLs. Prefer URLs from the Reference Materials provided above. If you cannot verify a URL exists, OMIT it entirely.
-- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** -- technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions. Do NOT just state the relationship -- include **performance/architecture/trade-off comparison points** that make the reader want to dig deeper.
+- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** —technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions. Do NOT just state the relationship -- include **performance/architecture/trade-off comparison points** that make the reader want to dig deeper.
 - **adv_en_10_when_to_use**: Decision framework for when to use (or not use) this technology. 3-4 suitable scenarios + 3-4 unsuitable scenarios. Name alternative technologies for each unsuitable case.
   Example (model): "Suitable: Customer support chatbot needing image+text analysis / 100+ page documents with tables and charts\nUnsuitable: Simple text chatbot -- GPT-5.2 is cheaper and sufficient / Real-time voice calls -- latency is 200ms+ (use Whisper)"
   Example (concept): "Suitable: Internal document Q&A system / Domains where recency matters (legal, medical)\nUnsuitable: Structured data analysis -- SQL or pandas is more appropriate / Creative writing -- retrieval dependency hurts creativity"
@@ -946,8 +946,8 @@ Rule: Include code snippets, architecture details, formulas where relevant.
   "adv_en_5_practical": "...",
   "adv_en_6_why": "...",
   "adv_en_7_comm": "...",
-  "adv_en_8_refs": "- [Link](URL) -- annotation\\n- [Link2](URL2) -- annotation2",
-  "adv_en_9_related": "- **Term** -- relationship\\n- **Term2** -- relationship2",
+  "adv_en_8_refs": "- [Link](URL) — annotation\\n- [Link2](URL2) — annotation2",
+  "adv_en_9_related": "- **Term** — relationship\\n- **Term2** — relationship2",
   "adv_en_10_when_to_use": "Suitable: ...\\nUnsuitable: ...",
   "adv_en_11_pitfalls": "Mistake: ... -> Solution: ...\\nMistake: ... -> Solution: ..."
 }}
