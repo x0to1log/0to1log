@@ -64,7 +64,7 @@ Current phase: see `vault/09-Implementation/plans/ACTIVE_SPRINT.md`.
 - Commit small, coherent groups of changes so the history stays readable.
 - Push to `main` after local verification and when the checkpoint is stable.
 - Feature branches are optional, not the default operating mode.
-- A `portfolio` remote exists (`ming2tofu33/0to1log`). Only push to it when the user explicitly asks (e.g., "push to portfolio"). Default push goes to `origin` only.
+
 
 ## Project Skills
 
