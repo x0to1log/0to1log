@@ -21,7 +21,8 @@
 
 ### 진행 중
 - [ ] 프롬프트 감사 P1 이슈 배포 (PROMPT-AUDIT-01 진행 중)
-- [ ] 직접 FastAPI AI 호출 (Vercel 60s timeout 회피) — [[plans/2026-03-25-direct-fastapi-ai-calls]]
+- [x] 직접 FastAPI AI 호출 (Vercel 60s timeout 회피) — [[plans/2026-03-25-direct-fastapi-ai-calls]]
+- [ ] User Analytics — Site Analytics 차트 (DAU/MAU 트렌드, 페르소나, 학습, 댓글)
 - [ ] 뉴스 품질 체크 전면 재작성 (Expert/Learner 양쪽 평가) — [[plans/2026-03-26-news-quality-check-overhaul]]
 - [ ] README 작성 (프로젝트 소개) — [[plans/2026-03-26-README-design]]
 
@@ -35,9 +36,9 @@
 
 | Task ID | 제목 | 상태 | 시작 | 예상 완료 |
 |---|---|---|---|---|
-| FASTAPI-DIRECT-01 | 직접 FastAPI AI 호출 (Vercel timeout 회피) | in_progress | 2026-03-25 | 2026-03-27 |
+| FASTAPI-DIRECT-01 | 직접 FastAPI AI 호출 (Vercel timeout 회피) | done | 2026-03-25 | 2026-03-27 |
 | README-01 | 프로젝트 README 작성 | in_progress | 2026-03-26 | 2026-03-27 |
-| QUALITY-CHECK-02 | 뉴스 품질 체크 재작성 (Expert/Learner) | in_progress | 2026-03-26 | 2026-03-28 |
+| UA-02~05 | User Analytics — Site Analytics 차트 추가 | in_progress | 2026-03-27 | 2026-03-28 |
 
 ---
 
@@ -97,13 +98,13 @@
 
 | Task | 상태 | 목표 | 우선도 |
 |------|------|------|--------|
-| FASTAPI-DIRECT-01 | in_progress | Admin AI 호출 Vercel timeout 회피 | CRITICAL |
 | PROMPT-AUDIT-01 | in_progress | P1/P2 이슈 배포 (40+ 남음) | HIGH |
 
 ### 완료된 BLOCKING
 
 | Task | 완료일 | 결과 |
 |------|--------|------|
+| FASTAPI-DIRECT-01 | 2026-03-27 | AdminAiConfig 컴포넌트 + 4개 에디터 직접 FastAPI 호출 전환, proxy timeout 제거 |
 | QUALITY-CHECK-02 | 2026-03-26 | 품질 체크 Expert/Learner 분리 평가, gpt-4.1-mini, 12000자 truncation |
 
 ### HIGH PRIORITY — 스프린트 게이트
@@ -148,6 +149,21 @@
 - 벤치마크 수치 없음 — "빠르다/정확하다"만 표기
 - Advanced가 Basic과 깊이 차이 적음 — 아키텍처(MoE, attention) 상세 없음
 - 정보 최신성 — "2024 baseline" (현재 2026)
+
+### User Analytics — Site Analytics 강화
+
+> **목표:** 이미 수집 중이지만 안 보여주는 유저 데이터를 Site Analytics에 시각화
+> **설계 참조:** [[plans/2026-03-27-dau-mau-tracking]]
+
+| Task | 상태 | 목표 | 우선도 |
+|------|------|------|--------|
+| UA-01 | done | DAU/MAU 숫자 대시보드 표시 (profiles.last_seen_at) | P0 |
+| UA-02 | todo | DAU/MAU 트렌드 차트 — Site Analytics에 일별 활성 유저 추이 | P0 |
+| UA-03 | todo | 유저 페르소나 분포 — beginner/learner/expert 파이 차트 | P1 |
+| UA-04 | todo | 학습 진행 상세 — read vs learned 비율 표시 | P1 |
+| UA-05 | todo | 댓글 활동량 — 일별 댓글 수 트렌드 (news_comments + blog_comments) | P1 |
+| UA-06 | todo | 퀴즈 정답률 by 포스트 — 어떤 콘텐츠가 이해하기 어려운지 | P2 |
+| UA-07 | todo | 가입→첫 활동 퍼널 (signup → read → bookmark → quiz) | P2 |
 
 ### OPTIONAL — 다음 Phase
 

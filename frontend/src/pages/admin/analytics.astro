@@ -97,6 +97,12 @@ const [
   { count: newsLikeCount },
   { count: blogLikeCount },
   { count: productLikeCount },
+  // UA data
+  { data: rawLastSeenData },
+  { data: rawPersonaData },
+  { data: rawLearningStatusData },
+  { data: rawNewsComments },
+  { data: rawBlogComments },
 ] = await Promise.all([
   // Handbook: only columns needed for source/category/favourite distribution
   sb.from('handbook_terms').select('status, source, categories, is_favourite'),
@@ -138,6 +144,12 @@ const [
   sb.from('news_likes').select('id', { count: 'exact', head: true }),
   sb.from('blog_likes').select('id', { count: 'exact', head: true }),
   sb.from('ai_product_likes').select('id', { count: 'exact', head: true }),
+  // UA: DAU/MAU + persona + learning status + comments
+  sb.from('profiles').select('last_seen_at').not('last_seen_at', 'is', null).order('last_seen_at', { ascending: true }),
+  sb.from('profiles').select('persona'),
+  sb.from('learning_progress').select('status'),
+  sb.from('news_comments').select('created_at'),
+  sb.from('blog_comments').select('created_at'),
 ]);
 
 // ─── Handbook Data ───────────────────────────────────────────
@@ -273,6 +285,60 @@ for (const f of feedbackRows) {
 
 // ─── Likes Summary ──────────────────────────────────────────
 const totalLikes = (newsLikeCount ?? 0) + (blogLikeCount ?? 0) + (productLikeCount ?? 0);
+
+// ─── User Analytics (UA) ────────────────────────────────────
+// DAU/MAU trend: group last_seen_at by date, count unique users per day
+const dauTrend: { label: string; dau: number; _date: string }[] = [];
+const dauMap = new Map<string, number>();
+for (const row of (rawLastSeenData ?? []) as { last_seen_at: string }[]) {
+  if (!row.last_seen_at) continue;
+  const d = row.last_seen_at.slice(0, 10); // YYYY-MM-DD
+  dauMap.set(d, (dauMap.get(d) || 0) + 1);
+}
+for (const [dateStr, count] of Array.from(dauMap.entries()).sort()) {
+  const d = new Date(dateStr + 'T00:00:00');
+  dauTrend.push({ label: `${d.getMonth() + 1}/${d.getDate()}`, dau: count, _date: dateStr });
+}
+
+// MAU for each day: count users with last_seen_at >= (date - 30 days)
+// Compute cumulative MAU per day using sorted last_seen entries
+const allSeenDates = (rawLastSeenData ?? []).map((r: any) => r.last_seen_at?.slice(0, 10)).filter(Boolean) as string[];
+const mauTrend: number[] = dauTrend.map(({ _date }) => {
+  const cutoff = new Date(new Date(_date + 'T00:00:00').getTime() - 30 * 86400000).toISOString().slice(0, 10);
+  return allSeenDates.filter(d => d >= cutoff && d <= _date).length;
+});
+
+// Current DAU/MAU numbers
+const today = new Date().toISOString().slice(0, 10);
+const dauToday = dauMap.get(today) || 0;
+const mauCutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+const mauToday = allSeenDates.filter(d => d >= mauCutoff).length;
+
+// Persona distribution
+const personaDist: Record<string, number> = { beginner: 0, learner: 0, expert: 0, unset: 0 };
+for (const row of (rawPersonaData ?? []) as { persona: string | null }[]) {
+  const p = row.persona || 'unset';
+  personaDist[p] = (personaDist[p] || 0) + 1;
+}
+
+// Learning status breakdown
+const learningStatus = { read: 0, learned: 0 };
+for (const row of (rawLearningStatusData ?? []) as { status: string }[]) {
+  if (row.status === 'learned') learningStatus.learned += 1;
+  else learningStatus.read += 1;
+}
+
+// Comment activity: merge news + blog comments, group by date
+const commentMap = new Map<string, number>();
+for (const row of [...(rawNewsComments ?? []), ...(rawBlogComments ?? [])] as { created_at: string }[]) {
+  const d = row.created_at?.slice(0, 10);
+  if (d) commentMap.set(d, (commentMap.get(d) || 0) + 1);
+}
+const commentTrend = Array.from(commentMap.entries()).sort().map(([dateStr, count]) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  return { label: `${d.getMonth() + 1}/${d.getDate()}`, count };
+});
+const totalComments = (rawNewsComments ?? []).length + (rawBlogComments ?? []).length;
 
 // ─── Popular Content ────────────────────────────────────────
 type PopItem = { item_type: string; item_id: string };
@@ -901,6 +967,62 @@ const nonce = Astro.locals.cspNonce || '';
           </div>
         </section>
 
+        <!-- ─── DAU/MAU Trend ─── -->
+        <section class="sa-section">
+          <h2 class="sa-section__title">Active Users Trend</h2>
+          <div class="sa-stats-grid sa-stats-grid--4">
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">DAU (Today)</span>
+              <strong class="sa-stat-card__value">{dauToday}</strong>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">MAU (30d)</span>
+              <strong class="sa-stat-card__value">{mauToday}</strong>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Comments</span>
+              <strong class="sa-stat-card__value">{totalComments}</strong>
+              <span class="sa-stat-card__detail">All time</span>
+            </div>
+            <div class="sa-stat-card">
+              <span class="sa-stat-card__label">Stickiness</span>
+              <strong class="sa-stat-card__value">{mauToday > 0 ? Math.round((dauToday / mauToday) * 100) : 0}%</strong>
+              <span class="sa-stat-card__detail">DAU / MAU</span>
+            </div>
+          </div>
+          {dauTrend.length > 0 && (
+            <div class="sa-chart-wrap">
+              <canvas id="ua-dau-mau-chart"></canvas>
+            </div>
+          )}
+        </section>
+
+        <!-- ─── User Persona + Learning + Comments Row ─── -->
+        <div class="sa-chart-row">
+          <section class="sa-section sa-section--third">
+            <h2 class="sa-section__title">Persona Distribution</h2>
+            <div class="sa-chart-wrap sa-chart-wrap--sm">
+              <canvas id="ua-persona-chart"></canvas>
+            </div>
+          </section>
+          <section class="sa-section sa-section--third">
+            <h2 class="sa-section__title">Learning Progress</h2>
+            <div class="sa-chart-wrap sa-chart-wrap--sm">
+              <canvas id="ua-learning-chart"></canvas>
+            </div>
+          </section>
+          <section class="sa-section sa-section--third">
+            <h2 class="sa-section__title">Comment Activity</h2>
+            {commentTrend.length > 0 ? (
+              <div class="sa-chart-wrap sa-chart-wrap--sm">
+                <canvas id="ua-comment-chart"></canvas>
+              </div>
+            ) : (
+              <p class="sa-empty">No comments yet.</p>
+            )}
+          </section>
+        </div>
+
         <!-- ─── Quiz Performance ─── -->
         <section class="sa-section">
           <h2 class="sa-section__title">Quiz Performance</h2>
@@ -1273,6 +1395,124 @@ const nonce = Astro.locals.cspNonce || '';
             '</tr>';
         }).join('');
       }
+    }
+  })();
+</script>
+
+<script is:inline nonce={nonce} define:vars={{ dauTrend, mauTrend, personaDist, learningStatus, commentTrend }}>
+  (function () {
+    if (typeof Chart === 'undefined') return;
+    var textColor = '#94a3b8';
+    var gridColor = 'rgba(148,163,184,0.1)';
+
+    /* ── DAU/MAU Trend Chart ── */
+    var dauCanvas = document.getElementById('ua-dau-mau-chart');
+    if (dauCanvas && dauTrend.length > 0) {
+      var labels = dauTrend.map(function(d) { return d.label; });
+      var dauData = dauTrend.map(function(d) { return d.dau; });
+      new Chart(dauCanvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'DAU',
+              data: dauData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16,185,129,0.1)',
+              fill: true, tension: 0.3, pointRadius: 3,
+            },
+            {
+              label: 'MAU',
+              data: mauTrend,
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99,102,241,0.08)',
+              fill: true, tension: 0.3, pointRadius: 2, borderDash: [4, 2],
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, boxWidth: 10, font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+            y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
+          },
+        },
+      });
+    }
+
+    /* ── Persona Distribution (Doughnut) ── */
+    var personaCanvas = document.getElementById('ua-persona-chart');
+    if (personaCanvas) {
+      var pLabels = []; var pData = []; var pColors = [];
+      var colorMap = { beginner: '#10b981', learner: '#6366f1', expert: '#f59e0b', unset: '#64748b' };
+      var nameMap = { beginner: 'Beginner', learner: 'Learner', expert: 'Expert', unset: 'Not set' };
+      for (var key in personaDist) {
+        if (personaDist[key] > 0) {
+          pLabels.push(nameMap[key] || key);
+          pData.push(personaDist[key]);
+          pColors.push(colorMap[key] || '#94a3b8');
+        }
+      }
+      if (pData.length > 0) {
+        new Chart(personaCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: pLabels,
+            datasets: [{ data: pData, backgroundColor: pColors, borderWidth: 0 }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } } },
+          },
+        });
+      }
+    }
+
+    /* ── Learning Progress (Doughnut) ── */
+    var learnCanvas = document.getElementById('ua-learning-chart');
+    if (learnCanvas && (learningStatus.read > 0 || learningStatus.learned > 0)) {
+      new Chart(learnCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Read', 'Learned'],
+          datasets: [{
+            data: [learningStatus.read, learningStatus.learned],
+            backgroundColor: ['#64748b', '#10b981'],
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } } },
+        },
+      });
+    }
+
+    /* ── Comment Activity (Bar) ── */
+    var commentCanvas = document.getElementById('ua-comment-chart');
+    if (commentCanvas && commentTrend.length > 0) {
+      new Chart(commentCanvas, {
+        type: 'bar',
+        data: {
+          labels: commentTrend.map(function(d) { return d.label; }),
+          datasets: [{
+            label: 'Comments',
+            data: commentTrend.map(function(d) { return d.count; }),
+            backgroundColor: 'rgba(99,102,241,0.5)',
+            borderRadius: 3,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
+          },
+        },
+      });
     }
   })();
 </script>
@@ -1825,6 +2065,10 @@ const nonce = Astro.locals.cspNonce || '';
   }
 
   .sa-section--half {
+    margin-bottom: 0;
+  }
+
+  .sa-section--third {
     margin-bottom: 0;
   }
 
