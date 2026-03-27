@@ -754,7 +754,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       { action: 'rewrite', label: 'Rewrite', model: 'gpt-4.1' },
       { action: 'suggest', label: 'Suggest', model: 'gpt-4.1-mini' },
       { action: 'review', label: 'Review', model: 'gpt-4.1-mini' },
-      { action: 'generate', label: 'Generate', model: 'gpt-4.1' },
+      { action: 'generate_bilingual', label: 'Generate EN+KO', model: 'gpt-4.1', wide: true },
     ];
 
     const CATEGORY_SPECIAL: Record<string, { action: string; label: string; model: string; wide?: boolean }> = {
@@ -960,6 +960,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       else if (action === 'rewrite') renderRewrite(result);
       else if (action === 'suggest') renderSuggest(result);
       else if (action === 'generate') renderGenerate(result);
+      else if (action === 'generate_bilingual') renderGenerateBilingual(result);
       else if (action === 'review') renderReview(result);
       else if (action === 'conceptcheck') renderConceptcheck(result);
       else if (action === 'voicecheck') renderVoicecheck(result);
@@ -1014,6 +1015,129 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         if (r.tags?.length && tagsInput) { previousValues.set('tags', tagsInput.value); tagsInput.value = r.tags.join(', '); }
         if (r.focus_items?.length && focusItemsInput) { previousValues.set('focus_items', focusItemsInput.value); focusItemsInput.value = r.focus_items.join(', '); }
         showFeedback('All fields applied.');
+      });
+    }
+
+    function renderGenerateBilingual(r: any) {
+      if (!aiResultEl) return;
+      const src = r.source || {};
+      const tgt = r.target || {};
+      const srcLocale = r.source_locale || 'en';
+      const tgtLocale = r.target_locale || 'ko';
+      const srcLabel = srcLocale.toUpperCase();
+      const tgtLabel = tgtLocale.toUpperCase();
+
+      let html = `<h4>Generated Metadata (${srcLabel} + ${tgtLabel})</h4>`;
+
+      // Source language metadata
+      html += `<div class="admin-ai-section-label">${srcLabel} (current)</div>`;
+      if (src.title_suggestions?.length) {
+        src.title_suggestions.forEach((t: string) => {
+          html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text">${esc(t)}</span><button class="admin-ai-apply-btn" data-apply="title" data-value="${esc(t)}">Use</button></div>`;
+        });
+      }
+      if (src.excerpt) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Excerpt:</strong> ${esc(src.excerpt)}</span><button class="admin-ai-apply-btn" data-apply="excerpt" data-value="${esc(src.excerpt)}">Use</button></div>`;
+      if (src.slug) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Slug:</strong> ${esc(src.slug)}</span><button class="admin-ai-apply-btn" data-apply="slug" data-value="${esc(src.slug)}">Use</button></div>`;
+      if (src.tags?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Tags:</strong> ${src.tags.map(esc).join(', ')}</span><button class="admin-ai-apply-btn" data-apply="tags" data-value="${esc(src.tags.join(', '))}">Use</button></div>`;
+      if (src.focus_items?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Focus:</strong> ${src.focus_items.map(esc).join(' · ')}</span><button class="admin-ai-apply-btn" data-apply="focus_items" data-value="${esc(src.focus_items.join(', '))}">Use</button></div>`;
+
+      // Target language metadata + content preview
+      html += `<div class="admin-ai-section-label" style="margin-top:1rem;">${tgtLabel} (target)</div>`;
+      if (tgt.title) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Title:</strong> ${esc(tgt.title)}</span></div>`;
+      if (tgt.excerpt) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Excerpt:</strong> ${esc(tgt.excerpt)}</span></div>`;
+      if (tgt.slug) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Slug:</strong> ${esc(tgt.slug)}</span></div>`;
+      if (tgt.tags?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Tags:</strong> ${tgt.tags.map(esc).join(', ')}</span></div>`;
+      if (tgt.focus_items?.length) html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Focus:</strong> ${tgt.focus_items.map(esc).join(' · ')}</span></div>`;
+      if (tgt.content) {
+        const preview = tgt.content.length > 200 ? tgt.content.substring(0, 200) + '...' : tgt.content;
+        html += `<div class="admin-ai-suggestion"><span class="admin-ai-suggestion-text"><strong>Content:</strong> ${esc(preview)}</span></div>`;
+      }
+
+      html += `<button class="admin-ai-apply-all-btn" id="ai-apply-all-bilingual">Apply ${srcLabel} + Create ${tgtLabel} Post</button>`;
+      aiResultEl.innerHTML = html;
+
+      // Individual Use buttons for source fields
+      aiResultEl.querySelectorAll<HTMLButtonElement>('.admin-ai-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const field = btn.dataset.apply;
+          const val = btn.dataset.value || '';
+          if (field && val) showDiff(btn, field, val);
+        });
+      });
+
+      // Apply All + Create target post
+      document.getElementById('ai-apply-all-bilingual')?.addEventListener('click', async () => {
+        const applyBtn = document.getElementById('ai-apply-all-bilingual') as HTMLButtonElement;
+        if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Applying...'; }
+
+        // 1. Apply source metadata to current fields
+        if (src.excerpt && excerptInput) { previousValues.set('excerpt', excerptInput.value); excerptInput.value = src.excerpt; }
+        if (src.slug && slugInput) { previousValues.set('slug', slugInput.value); slugInput.value = src.slug; }
+        if (src.tags?.length && tagsInput) { previousValues.set('tags', tagsInput.value); tagsInput.value = src.tags.join(', '); }
+        if (src.focus_items?.length && focusItemsInput) { previousValues.set('focus_items', focusItemsInput.value); focusItemsInput.value = src.focus_items.join(', '); }
+
+        // 2. Determine translation_group_id
+        let groupId = adminData?.dataset.translationGroupId || '';
+        if (!groupId) {
+          groupId = crypto.randomUUID();
+          // Update current post with group id (need to save first)
+          if (adminData) adminData.dataset.translationGroupId = groupId;
+        }
+
+        // 3. Check if target post already exists
+        const tgtPostIdKey = tgtLocale === 'ko' ? 'koPostId' : 'enPostId';
+        const existingTargetId = adminData?.dataset[tgtPostIdKey] || '';
+
+        // 4. Create or update target post
+        try {
+          const targetBody: Record<string, any> = {
+            title: tgt.title || '',
+            slug: tgt.slug || '',
+            content: tgt.content || '',
+            excerpt: tgt.excerpt || '',
+            tags: tgt.tags || [],
+            focus_items: tgt.focus_items || [],
+            locale: tgtLocale,
+            category: categorySelect?.value || 'study',
+            translation_group_id: groupId,
+            source: 'ai-generated',
+          };
+
+          // If current post is saved, link as source
+          const currentPostId = srcLocale === 'en'
+            ? (adminData?.dataset.enPostId || '')
+            : (adminData?.dataset.koPostId || '');
+          if (currentPostId) targetBody.source_post_id = currentPostId;
+
+          // If target exists, update; otherwise create
+          if (existingTargetId) targetBody.id = existingTargetId;
+
+          const res = await fetch('/api/admin/blog/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(targetBody),
+          });
+          const saved = await res.json();
+
+          if (!res.ok) {
+            showFeedback(`Failed to create ${tgtLabel} post: ${saved.error || 'Unknown error'}`, true);
+            if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = `Apply ${srcLabel} + Create ${tgtLabel} Post`; }
+            return;
+          }
+
+          // Update dataset references
+          if (adminData) {
+            adminData.dataset[tgtPostIdKey] = saved.id;
+            adminData.dataset.translationGroupId = groupId;
+          }
+
+          showFeedback(`${srcLabel} fields applied + ${tgtLabel} post ${existingTargetId ? 'updated' : 'created'}.`);
+          if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = `Apply ${srcLabel} + Create ${tgtLabel} Post`; }
+        } catch (err) {
+          console.error('[Bilingual apply] error:', err);
+          showFeedback(`Failed to create ${tgtLabel} post.`, true);
+          if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = `Apply ${srcLabel} + Create ${tgtLabel} Post`; }
+        }
       });
     }
 

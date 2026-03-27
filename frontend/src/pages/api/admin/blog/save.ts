@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { id, title, slug, category, tags, content, excerpt, locale, focus_items, og_image_url, source } = body;
+  const { id, title, slug, category, tags, content, excerpt, locale, focus_items, og_image_url, source, translation_group_id, source_post_id } = body;
   const resolvedCategory = category || 'study';
 
   if (!title?.trim()) {
@@ -51,6 +51,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (focus_items !== undefined) row.focus_items = Array.isArray(focus_items) ? focus_items : [];
   if (og_image_url !== undefined) row.og_image_url = og_image_url || null;
   if (source !== undefined) row.source = source;
+  if (translation_group_id) row.translation_group_id = translation_group_id;
+  if (source_post_id) row.source_post_id = source_post_id;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,

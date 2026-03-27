@@ -437,3 +437,56 @@ def get_blog_generate_prompt(category: str) -> str:
     return _BLOG_GENERATE_TEMPLATE.format(
         category_context=ctx, focus_items_guidance=focus,
     )
+
+
+# ---------------------------------------------------------------------------
+# Generate Bilingual — target language independent generation
+# ---------------------------------------------------------------------------
+
+_BLOG_GENERATE_TARGET_TEMPLATE = """\
+You are 0to1log's bilingual blog editorial assistant.
+Given a blog post written in {source_lang}, generate metadata AND full content in {target_lang}.
+
+{category_context}
+
+## CRITICAL: Do NOT translate. Write naturally in {target_lang}.
+The output must read as if the article was ORIGINALLY written in {target_lang}.
+Adapt examples, idioms, and cultural references for {target_lang} readers.
+
+## Output JSON Structure
+
+```json
+{{
+  "title": "Natural {target_lang} title (not a translation)",
+  "excerpt": "100-200 character summary in {target_lang}",
+  "focus_items": [
+    "Focus point 1 in {target_lang}",
+    "Focus point 2 in {target_lang}",
+    "Focus point 3 in {target_lang}"
+  ],
+  "tags": ["tag1", "tag2", "tag3"],
+  "slug": "english-kebab-case-slug",
+  "content": "Full article body in {target_lang} (markdown)"
+}}
+```
+
+## Rules
+- title: Natural {target_lang}, concise, under 60 characters, include keyword early
+- excerpt: 100-200 characters, written for {target_lang} audience
+- focus_items: Exactly 3, specific to this article, concise
+- tags: 3-6 terms, mix of {target_lang} and English where natural
+- slug: Always English kebab-case, descriptive, no dates
+- content: Full article naturally rewritten in {target_lang}, preserve structure (H2/H3), same depth and detail as original
+
+{focus_items_guidance}
+
+Respond in JSON format only."""
+
+
+def get_blog_generate_target_prompt(category: str, source_lang: str, target_lang: str) -> str:
+    ctx = BLOG_CATEGORY_CONTEXT.get(category, BLOG_CATEGORY_CONTEXT["study"])
+    focus = _BLOG_FOCUS_GUIDANCE.get(category, _BLOG_FOCUS_GUIDANCE["study"])
+    return _BLOG_GENERATE_TARGET_TEMPLATE.format(
+        category_context=ctx, focus_items_guidance=focus,
+        source_lang=source_lang, target_lang=target_lang,
+    )

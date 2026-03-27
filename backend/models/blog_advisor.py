@@ -11,7 +11,7 @@ from typing import Literal
 class BlogAdviseRequest(BaseModel):
     action: Literal[
         "outline", "draft", "rewrite", "suggest",
-        "review", "generate",
+        "review", "generate", "generate_bilingual",
         "conceptcheck", "voicecheck", "retrocheck",
     ]
     post_id: str

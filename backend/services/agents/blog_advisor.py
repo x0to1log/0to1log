@@ -1,5 +1,6 @@
 """Blog AI Advisor service — handles blog-specific AI actions + translate."""
 
+import asyncio
 import logging
 import uuid
 
@@ -28,6 +29,7 @@ from services.agents.prompts_blog_advisor import (
     get_rewrite_prompt,
     get_suggest_prompt,
     get_blog_generate_prompt,
+    get_blog_generate_target_prompt,
     BLOG_TRANSLATE_PROMPT,
 )
 from services.agents.prompts_advisor import (
@@ -131,6 +133,9 @@ def _build_blog_user_prompt(req: BlogAdviseRequest) -> str:
 
 async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
     """Run a blog advisor action. Returns (result_dict, model_name, tokens_used)."""
+    if req.action == "generate_bilingual":
+        return await run_blog_generate_bilingual(req)
+
     config = BLOG_ACTION_CONFIG[req.action]
     model = getattr(settings, config["model_attr"])
     client = get_openai_client()
@@ -179,6 +184,80 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
 
     logger.info("Blog advisor [%s] completed, tokens=%d", req.action, tokens)
     return data, model, tokens
+
+
+# ---------------------------------------------------------------------------
+# Generate Bilingual — source extraction + target independent generation
+# ---------------------------------------------------------------------------
+
+async def run_blog_generate_bilingual(req: BlogAdviseRequest) -> tuple[dict, str, int]:
+    """Generate metadata for both languages in parallel.
+
+    Call 1: Extract metadata in source language (same as existing generate)
+    Call 2: Generate metadata + content in target language (independent, not translation)
+    """
+    source_locale = req.locale or "en"
+    target_locale = "ko" if source_locale == "en" else "en"
+    source_lang = "English" if source_locale == "en" else "Korean"
+    target_lang = "Korean" if target_locale == "ko" else "English"
+
+    model = getattr(settings, "openai_model_main")
+    client = get_openai_client()
+    user_prompt = _build_blog_user_prompt(req)
+
+    # Source prompt: existing generate (metadata extraction)
+    source_system = get_blog_generate_prompt(req.category)
+    source_system += f"\n\nIMPORTANT: Respond entirely in {source_lang}."
+
+    # Target prompt: independent generation with content
+    target_system = get_blog_generate_target_prompt(req.category, source_lang, target_lang)
+
+    logger.info(
+        "Blog generate_bilingual starting: %s→%s, model=%s",
+        source_locale, target_locale, model,
+    )
+
+    resp_source, resp_target = await asyncio.gather(
+        client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": source_system},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=2048,
+        ),
+        client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": target_system},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=8192,  # target includes full content
+        ),
+    )
+
+    source_data = parse_ai_json(resp_source.choices[0].message.content, "BlogGenBilingual-source")
+    target_data = parse_ai_json(resp_target.choices[0].message.content, "BlogGenBilingual-target")
+
+    tokens_source = resp_source.usage.completion_tokens if resp_source.usage else 0
+    tokens_target = resp_target.usage.completion_tokens if resp_target.usage else 0
+    total_tokens = tokens_source + tokens_target
+
+    logger.info(
+        "Blog generate_bilingual completed: source=%d tokens, target=%d tokens",
+        tokens_source, tokens_target,
+    )
+
+    return {
+        "source": source_data,
+        "target": target_data,
+        "source_locale": source_locale,
+        "target_locale": target_locale,
+    }, model, total_tokens
 
 
 # ---------------------------------------------------------------------------
