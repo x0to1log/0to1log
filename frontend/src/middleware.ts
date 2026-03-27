@@ -14,6 +14,21 @@ function buildCspHeader(nonce: string): string {
   ].join('; ');
 }
 
+/** Fire-and-forget: update profiles.last_seen_at if not already today. */
+function touchLastSeen(supabaseUrl: string, supabaseAnonKey: string, accessToken: string, userId: string): void {
+  const today = new Date().toISOString().slice(0, 10);
+  fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&last_seen_at=lt.${today}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${accessToken}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({ last_seen_at: new Date().toISOString() }),
+  }).catch(() => {});
+}
+
 function addNonceToScriptTags(html: string, nonce: string): string {
   return html.replace(/<script\b(?![^>]*\bnonce=)([^>]*)>/gi, `<script nonce="${nonce}"$1>`);
 }
@@ -171,11 +186,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Track site locale via cookie for non-locale-prefixed pages
   const langParam = context.url.searchParams.get('lang');
   if (langParam === 'en' || langParam === 'ko') {
-    context.cookies.set('site-locale', langParam, { path: '/', maxAge: 31536000, sameSite: 'lax' });
+    context.cookies.set('site-locale', langParam, { path: '/', maxAge: 31536000, sameSite: 'lax', secure: true, httpOnly: true });
   } else if (pathname.startsWith('/en/')) {
-    context.cookies.set('site-locale', 'en', { path: '/', maxAge: 31536000, sameSite: 'lax' });
+    context.cookies.set('site-locale', 'en', { path: '/', maxAge: 31536000, sameSite: 'lax', secure: true, httpOnly: true });
   } else if (pathname.startsWith('/ko/')) {
-    context.cookies.set('site-locale', 'ko', { path: '/', maxAge: 31536000, sameSite: 'lax' });
+    context.cookies.set('site-locale', 'ko', { path: '/', maxAge: 31536000, sameSite: 'lax', secure: true, httpOnly: true });
   }
 
   // Skip auth entirely if Supabase not configured
@@ -234,6 +249,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.isAdmin = true;
     context.locals.profile = extras.profile;
     setCachedExtras(context.cookies, extras, isSecure);
+    touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
     return nextWithCsp(next, nonce);
   }
 
@@ -258,6 +274,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.accessToken = result.accessToken;
     context.locals.isAdmin = extras.isAdmin || undefined;
     context.locals.profile = extras.profile;
+    touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
     return nextWithCsp(next, nonce);
   }
 
@@ -293,6 +310,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       context.locals.accessToken = result.accessToken;
       context.locals.isAdmin = extras.isAdmin || undefined;
       context.locals.profile = extras.profile;
+      touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
     }
   }
 
