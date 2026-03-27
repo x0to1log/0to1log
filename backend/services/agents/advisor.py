@@ -568,6 +568,60 @@ async def _search_term_context(term: str) -> str:
         return ""
 
 
+async def _search_deep_context(term: str) -> str:
+    """Search Exa for deep term context (full text). Used for Advanced content generation."""
+    if not settings.exa_api_key:
+        return ""
+    try:
+        from exa_py import Exa
+        exa = Exa(api_key=settings.exa_api_key)
+        loop = asyncio.get_running_loop()
+        results = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: exa.search_and_contents(
+                    f"{term} AI technology deep explanation tutorial",
+                    type="auto",
+                    num_results=3,
+                    text={"max_characters": 10000},
+                    category="research paper",
+                ),
+            ),
+            timeout=20,
+        )
+        if not hasattr(results, "results") or not results.results:
+            # Retry without category restriction
+            results = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: exa.search_and_contents(
+                        f"{term} AI technology explained in depth",
+                        type="auto",
+                        num_results=3,
+                        text={"max_characters": 10000},
+                    ),
+                ),
+                timeout=20,
+            )
+        if not hasattr(results, "results") or not results.results:
+            return ""
+        parts = []
+        for i, r in enumerate(results.results, 1):
+            title = r.title or ""
+            url = r.url or ""
+            text = (r.text or "")[:8000]
+            parts.append(f"### [{i}] {title}\nURL: {url}\n{text}")
+        context = "## Deep Reference Materials (from Exa full text)\n\n" + "\n\n".join(parts)
+        logger.info("Exa deep context for '%s': %d results, %d chars", term, len(results.results), len(context))
+        return context
+    except ImportError:
+        logger.warning("exa_py not installed, skipping deep context")
+        return ""
+    except Exception as e:
+        logger.warning("Exa deep search failed for '%s': %s", term, e)
+        return ""
+
+
 async def _classify_term_type(term: str, categories: list[str], client, model_light: str) -> str:
     """Classify term into one of 10 types using gpt-4o-mini."""
     from services.agents.prompts_handbook_types import CLASSIFY_TERM_PROMPT, TERM_TYPES
@@ -1011,6 +1065,14 @@ async def _run_generate_term(
     logger.info("Term '%s' classified as type: %s, tavily_chars: %d",
                 req.term, term_type, len(tavily_context))
 
+    # --- Conditional Exa deep context for Advanced (only when Tavily is insufficient) ---
+    deep_context = ""
+    tavily_result_count = tavily_context.count("### [")
+    if tavily_result_count < 3:
+        deep_context = await _search_deep_context(req.term)
+        if deep_context:
+            logger.info("Exa deep context added for '%s' (tavily had %d results)", req.term, tavily_result_count)
+
     # --- Call 2 (EN Basic) + Call 3 (KO Advanced) — PARALLEL ---
     # Both depend only on Call 1 output, so they can run concurrently.
     # user_prompt already includes Tavily + article context (applied to all calls)
@@ -1030,6 +1092,8 @@ async def _run_generate_term(
         f"Definition (KO): {definition_ko_context}\n"
         f"Term Type: {term_type}"
     )
+    if deep_context:
+        advanced_prompt += f"\n\n{deep_context}\n\nUse the deep reference materials above for detailed technical analysis, benchmarks, and code examples."
 
     # Inject type-specific depth guide into advanced system prompts
     type_guide = get_type_depth_guide(term_type)
