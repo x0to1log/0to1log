@@ -147,7 +147,7 @@ const [
   // UA: DAU/MAU + persona + learning status + comments
   sb.from('profiles').select('last_seen_at').not('last_seen_at', 'is', null).order('last_seen_at', { ascending: true }),
   sb.from('profiles').select('persona'),
-  sb.from('learning_progress').select('status'),
+  sb.from('learning_progress').select('status, created_at'),
   sb.from('news_comments').select('created_at'),
   sb.from('blog_comments').select('created_at'),
 ]);
@@ -321,12 +321,26 @@ for (const row of (rawPersonaData ?? []) as { persona: string | null }[]) {
   personaDist[p] = (personaDist[p] || 0) + 1;
 }
 
-// Learning status breakdown
+// Learning status breakdown + time series
 const learningStatus = { read: 0, learned: 0 };
-for (const row of (rawLearningStatusData ?? []) as { status: string }[]) {
+const learningByDate = new Map<string, { read: number; learned: number }>();
+for (const row of (rawLearningStatusData ?? []) as { status: string; created_at: string }[]) {
   if (row.status === 'learned') learningStatus.learned += 1;
   else learningStatus.read += 1;
+  const d = row.created_at?.slice(0, 10);
+  if (d) {
+    if (!learningByDate.has(d)) learningByDate.set(d, { read: 0, learned: 0 });
+    const entry = learningByDate.get(d)!;
+    if (row.status === 'learned') entry.learned += 1;
+    else entry.read += 1;
+  }
 }
+const learningTrend = Array.from(learningByDate.entries()).sort().map(([dateStr, counts]) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  return { label: `${d.getMonth() + 1}/${d.getDate()}`, ...counts };
+});
+const learningTotal = learningStatus.read + learningStatus.learned;
+const learningConversion = learningTotal > 0 ? Math.round((learningStatus.learned / learningTotal) * 100) : 0;
 
 // Comment activity: merge news + blog comments, group by date
 const commentMap = new Map<string, number>();
@@ -1006,10 +1020,16 @@ const nonce = Astro.locals.cspNonce || '';
             </div>
           </section>
           <section class="sa-section sa-section--third">
-            <h2 class="sa-section__title">Learning Progress</h2>
-            <div class="sa-chart-wrap sa-chart-wrap--sm">
-              <canvas id="ua-learning-chart"></canvas>
+            <h2 class="sa-section__title">Learning Conversion</h2>
+            <div class="sa-stat-card" style="text-align:center; margin-bottom:0.75rem;">
+              <strong class="sa-stat-card__value" style="font-size:1.8rem;">{learningConversion}%</strong>
+              <span class="sa-stat-card__detail">{learningStatus.learned} learned / {learningTotal} total</span>
             </div>
+            {learningTrend.length > 0 && (
+              <div class="sa-chart-wrap sa-chart-wrap--sm">
+                <canvas id="ua-learning-chart"></canvas>
+              </div>
+            )}
           </section>
           <section class="sa-section sa-section--third">
             <h2 class="sa-section__title">Comment Activity</h2>
@@ -1399,7 +1419,7 @@ const nonce = Astro.locals.cspNonce || '';
   })();
 </script>
 
-<script is:inline nonce={nonce} define:vars={{ dauTrend, mauTrend, personaDist, learningStatus, commentTrend }}>
+<script is:inline nonce={nonce} define:vars={{ dauTrend, mauTrend, personaDist, learningTrend, commentTrend }}>
   (function () {
     if (typeof Chart === 'undefined') return;
     var textColor = '#94a3b8';
@@ -1470,22 +1490,35 @@ const nonce = Astro.locals.cspNonce || '';
       }
     }
 
-    /* ── Learning Progress (Doughnut) ── */
+    /* ── Learning Activity (Stacked Bar — read vs learned per day) ── */
     var learnCanvas = document.getElementById('ua-learning-chart');
-    if (learnCanvas && (learningStatus.read > 0 || learningStatus.learned > 0)) {
+    if (learnCanvas && learningTrend.length > 0) {
       new Chart(learnCanvas, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
-          labels: ['Read', 'Learned'],
-          datasets: [{
-            data: [learningStatus.read, learningStatus.learned],
-            backgroundColor: ['#64748b', '#10b981'],
-            borderWidth: 0,
-          }],
+          labels: learningTrend.map(function(d) { return d.label; }),
+          datasets: [
+            {
+              label: 'Read',
+              data: learningTrend.map(function(d) { return d.read; }),
+              backgroundColor: '#64748b',
+              borderRadius: 2,
+            },
+            {
+              label: 'Learned',
+              data: learningTrend.map(function(d) { return d.learned; }),
+              backgroundColor: '#10b981',
+              borderRadius: 2,
+            },
+          ],
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, boxWidth: 10 } } },
+          plugins: { legend: { labels: { color: textColor, boxWidth: 10, font: { size: 10 } } } },
+          scales: {
+            x: { stacked: true, ticks: { color: textColor, font: { size: 9 } }, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
+          },
         },
       });
     }
