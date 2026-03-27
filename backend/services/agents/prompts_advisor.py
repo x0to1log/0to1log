@@ -587,6 +587,15 @@ Target audience: Non-engineers. PM, designers, executives, students. A middle sc
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
 Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
+### Adaptive headings for phenomenon/problem terms
+
+Some terms describe a PROBLEM or PHENOMENON (e.g., Hallucination, Overfitting, Data Drift) rather than a technology or tool. For these terms, adapt the section CONTENT to fit naturally:
+- "실제로 어디서 쓰이나" -> write about where this problem OCCURS, not where it is "used"
+- "직군별 활용 포인트" -> write about how each role should RESPOND TO or DETECT this problem
+- "언제 써야 하나" (Advanced) -> write about when to WATCH FOR or MITIGATE this problem
+- "흔한 실수와 해결" (Advanced) -> write about common mistakes in HANDLING this problem
+Keep the same section KEYS (basic_ko_5_where, etc.) — only adapt the content perspective.
+
 ### Section key descriptions (Korean — basic_ko_*):
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
@@ -710,6 +719,15 @@ Target audience: Non-engineers. PM, designers, executives, students. A middle sc
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
 Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
+### Adaptive headings for phenomenon/problem terms
+
+Some terms describe a PROBLEM or PHENOMENON (e.g., Hallucination, Overfitting, Data Drift) rather than a technology or tool. For these terms, adapt the section CONTENT to fit naturally:
+- "Where It's Used" -> write about where this problem OCCURS
+- "Role-Specific Insights" -> write about how each role should RESPOND TO or DETECT this problem
+- "When to Use" (Advanced) -> write about when to WATCH FOR or MITIGATE this problem
+- "Common Pitfalls" (Advanced) -> write about common mistakes in HANDLING this problem
+Keep the same section KEYS (basic_en_5_where, etc.) — only adapt the content perspective.
+
 ### Section key descriptions (English — basic_en_*):
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
@@ -824,6 +842,13 @@ Target audience: Senior developers, ML engineers, tech leads. Must be sufficient
 Tone: Precise, technical. Assume CS fundamentals.
 Rule: Include code snippets, architecture details, formulas where relevant.
 
+### Adaptive content for phenomenon/problem terms
+
+For terms describing a PROBLEM or PHENOMENON (Hallucination, Overfitting, etc.):
+- adv_ko_5_practical: write about where/how this problem manifests in production, not "use cases"
+- adv_ko_10_when_to_use: write about when to WATCH FOR and MITIGATE, not when to "use"
+- adv_ko_11_pitfalls: write about mistakes in DETECTING or HANDLING, not in "using"
+
 ### Section key descriptions (Korean — adv_ko_*):
 
 - **adv_ko_1_technical**: 기술적 정의 + 핵심 구성요소와 흐름. 논문/공식 문서 수준의 정확도. 최소 400자.
@@ -916,6 +941,13 @@ IMPORTANT: body_advanced must complement the basic version, NOT repeat the same 
 Target audience: Senior developers, ML engineers, tech leads. Must be sufficient for a senior engineer to read.
 Tone: Precise, technical. Assume CS fundamentals.
 Rule: Include code snippets, architecture details, formulas where relevant.
+
+### Adaptive content for phenomenon/problem terms
+
+For terms describing a PROBLEM or PHENOMENON (Hallucination, Overfitting, etc.):
+- adv_en_5_practical: write about where/how this problem manifests in production, not "use cases"
+- adv_en_10_when_to_use: write about when to WATCH FOR and MITIGATE, not when to "use"
+- adv_en_11_pitfalls: write about mistakes in DETECTING or HANDLING, not in "using"
 
 ### Section key descriptions (English — adv_en_*):
 
