@@ -494,7 +494,10 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       });
     }
 
+    let enEditorInitialized = false;
+
     async function initEditor() {
+      // KO editor: visible by default, init immediately
       if (editorKoEl) {
         crepeKo = new Crepe({
           root: editorKoEl,
@@ -508,19 +511,24 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         });
         await crepeKo.create();
       }
-      if (editorEnEl) {
-        crepeEn = new Crepe({
-          root: editorEnEl,
-          defaultValue: editorEnEl.dataset.content || '',
-          featureConfigs: {
-            [Crepe.Feature.Placeholder]: {
-              text: 'Start writing your blog post...',
-              mode: 'block',
-            },
+      // EN editor: lazy init — Crepe fails when container is display:none
+      // Will be initialized on first tab switch to EN
+    }
+
+    async function ensureEnEditor() {
+      if (enEditorInitialized || !editorEnEl) return;
+      enEditorInitialized = true;
+      crepeEn = new Crepe({
+        root: editorEnEl,
+        defaultValue: editorEnEl.dataset.content || '',
+        featureConfigs: {
+          [Crepe.Feature.Placeholder]: {
+            text: 'Start writing your blog post...',
+            mode: 'block',
           },
-        });
-        await crepeEn.create();
-      }
+        },
+      });
+      await crepeEn.create();
     }
 
     // Language tab switching — swap ALL meta fields per locale
@@ -590,6 +598,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         btn.classList.add('admin-lang-tab--active');
         document.getElementById('lang-ko')!.style.display = lang === 'ko' ? '' : 'none';
         document.getElementById('lang-en')!.style.display = lang === 'en' ? '' : 'none';
+
+        // Lazy init EN editor — Crepe needs visible container
+        if (lang === 'en') ensureEnEditor();
 
         if (prevLang !== lang) {
           applyMeta(metaStore[lang]);
