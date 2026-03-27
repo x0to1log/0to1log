@@ -106,7 +106,7 @@ const nonce = Astro.locals.cspNonce || '';
         <ul class="admin-list" id="webhook-list">
           {hooks.map((h) => (
             <li class="admin-list-item" data-id={h.id} data-active={h.is_active ? 'true' : 'false'}
-                data-label={h.label} data-url={h.url} data-platform={h.platform}>
+                data-label={h.label} data-url={h.url} data-platform={h.platform} data-locale={h.locale || 'all'}>
               <div class="admin-list-info">
                 <h3 class="admin-list-title">
                   <span class={`admin-status-badge ${h.is_active ? 'admin-status-badge--published' : 'admin-status-badge--draft'}`}>
@@ -116,6 +116,7 @@ const nonce = Astro.locals.cspNonce || '';
                 </h3>
                 <div class="admin-list-meta">
                   <span class="admin-source-badge">{h.platform}</span>
+                  <span class="admin-lang-badge">{h.locale === 'all' ? 'ALL' : h.locale?.toUpperCase()}</span>
                   <span style="opacity: 0.6; font-size: 0.75rem; word-break: break-all;">{h.url.slice(0, 60)}{h.url.length > 60 ? '...' : ''}</span>
                 </div>
                 {h.fail_count > 0 && (
@@ -168,6 +169,13 @@ const nonce = Astro.locals.cspNonce || '';
           <option value="custom">Custom</option>
         </select>
 
+        <label class="admin-field-label" style="margin-top: 0.6rem;">Language</label>
+        <select class="admin-input" id="field-locale">
+          <option value="all">All (EN + KO)</option>
+          <option value="ko">Korean only</option>
+          <option value="en">English only</option>
+        </select>
+
         <label class="admin-field-label" style="margin-top: 0.6rem;">Webhook URL</label>
         <input class="admin-input" id="field-url" placeholder="https://discord.com/api/webhooks/..." />
       </div>
@@ -190,6 +198,7 @@ const nonce = Astro.locals.cspNonce || '';
     document.getElementById('modal-title').textContent = 'Add Webhook';
     document.getElementById('field-label').value = '';
     document.getElementById('field-platform').value = 'discord';
+    document.getElementById('field-locale').value = 'all';
     document.getElementById('field-url').value = '';
     overlay.hidden = false;
   });
@@ -202,10 +211,11 @@ const nonce = Astro.locals.cspNonce || '';
   document.getElementById('btn-save')?.addEventListener('click', async function () {
     var label = document.getElementById('field-label').value.trim();
     var platform = document.getElementById('field-platform').value;
+    var locale = document.getElementById('field-locale').value;
     var url = document.getElementById('field-url').value.trim();
     if (!label || !url) return alert('Label and URL are required.');
 
-    var body = { label: label, platform: platform, url: url };
+    var body = { label: label, platform: platform, locale: locale, url: url };
     if (editingId) body.id = editingId;
 
     var res = await fetch('/api/admin/webhooks/save', {
@@ -251,6 +261,7 @@ const nonce = Astro.locals.cspNonce || '';
       document.getElementById('modal-title').textContent = 'Edit Webhook';
       document.getElementById('field-label').value = item.dataset.label || '';
       document.getElementById('field-platform').value = item.dataset.platform || 'discord';
+      document.getElementById('field-locale').value = item.dataset.locale || 'all';
       document.getElementById('field-url').value = item.dataset.url || '';
       overlay.hidden = false;
     }
@@ -272,7 +283,7 @@ const nonce = Astro.locals.cspNonce || '';
       var res = await fetch('/api/admin/webhooks/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, label: item.dataset.label, url: item.dataset.url, platform: item.dataset.platform, is_active: !isActive }),
+        body: JSON.stringify({ id: id, label: item.dataset.label, url: item.dataset.url, platform: item.dataset.platform, locale: item.dataset.locale, is_active: !isActive }),
       });
       if (res.ok) location.reload();
       else { btn.disabled = false; btn.textContent = isActive ? 'Deactivate' : 'Activate'; }

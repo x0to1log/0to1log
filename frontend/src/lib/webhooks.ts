@@ -15,6 +15,7 @@ interface WebhookRow {
   id: string;
   url: string;
   platform: string;
+  locale: string;
   is_active: boolean;
   fail_count: number;
 }
@@ -83,15 +84,18 @@ function formatPayload(platform: string, post: WebhookPost, postUrl: string) {
   return formatCustomPayload(post, postUrl);
 }
 
-export function formatTestPayload(platform: string) {
+export function formatTestPayload(platform: string, locale: string = 'en') {
+  const isKo = locale === 'ko';
   const testPost: WebhookPost = {
-    title: 'Test Notification',
+    title: isKo ? '테스트 알림' : 'Test Notification',
     slug: 'test',
-    locale: 'en',
-    excerpt: 'This is a test message from 0to1log to verify your webhook is working correctly.',
+    locale,
+    excerpt: isKo
+      ? '0to1log 웹훅 연결을 확인하는 테스트 메시지입니다.'
+      : 'This is a test message from 0to1log to verify your webhook is working correctly.',
     post_type: 'research',
   };
-  const testUrl = 'https://0to1log.com/en/news/test/';
+  const testUrl = `https://0to1log.com/${locale}/news/test/`;
   return formatPayload(platform, testPost, testUrl);
 }
 
@@ -107,15 +111,20 @@ export async function fireWebhooks(
 
   const { data: hooks } = await supabase
     .from('webhooks')
-    .select('id, url, platform, is_active, fail_count')
+    .select('id, url, platform, locale, is_active, fail_count')
     .eq('is_active', true);
 
   if (!hooks?.length) return;
 
+  const filtered = (hooks as WebhookRow[]).filter(
+    (h) => h.locale === 'all' || h.locale === post.locale,
+  );
+  if (!filtered.length) return;
+
   const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
   const postUrl = `${siteUrl}/${post.locale}/news/${post.slug}/`;
 
-  for (const hook of hooks as WebhookRow[]) {
+  for (const hook of filtered) {
     const payload = formatPayload(hook.platform, post, postUrl);
 
     fetch(hook.url, {

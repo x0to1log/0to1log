@@ -1,0 +1,169 @@
+---
+export const prerender = true;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+---
+
+<MainLayout title="웹훅 연결 완료" description="0to1log AI 뉴스 웹훅이 연결되었습니다." locale="ko">
+  <div class="wh-test-page">
+    <div class="wh-test-card">
+      <div class="wh-test-badge">웹훅 연결 완료</div>
+      <h1 class="wh-test-title">준비 완료!</h1>
+      <p class="wh-test-sub">
+        채널이 <strong>0to1log</strong>에 연결되었습니다.<br />
+        AI 뉴스가 발행되면 자동으로 알림이 전송됩니다.
+      </p>
+
+      <div class="wh-test-divider"></div>
+
+      <h2 class="wh-test-section-title">어떤 알림을 받게 되나요?</h2>
+      <ul class="wh-test-list">
+        <li><strong>Research Digest</strong> — 매일 AI 연구 뉴스를 기술적 깊이로 큐레이션</li>
+        <li><strong>Business Digest</strong> — 매일 AI 비즈니스 뉴스를 전략적 관점으로 큐레이션</li>
+        <li><strong>Weekly Recap</strong> — 이번 주 베스트 뉴스를 하나로 요약</li>
+      </ul>
+
+      <div class="wh-test-divider"></div>
+
+      <h2 class="wh-test-section-title">0to1log 둘러보기</h2>
+      <div class="wh-test-links">
+        <a href="/ko/news/" class="wh-test-link">
+          <span class="wh-test-link-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8 M15 18h-5 M10 6h8v4h-8V6Z" /></svg>
+          </span>
+          <span>
+            <strong>AI 뉴스</strong>
+            <small>매일 큐레이션된 다이제스트</small>
+          </span>
+        </a>
+        <a href="/ko/handbook/" class="wh-test-link">
+          <span class="wh-test-link-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>
+          </span>
+          <span>
+            <strong>AI 용어집</strong>
+            <small>AI 개념을 쉽게 설명</small>
+          </span>
+        </a>
+        <a href="/ko/rss.xml" class="wh-test-link">
+          <span class="wh-test-link-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" /></svg>
+          </span>
+          <span>
+            <strong>RSS 피드</strong>
+            <small>RSS 리더로 구독하기</small>
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .wh-test-page {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1rem;
+    min-height: 60vh;
+  }
+
+  .wh-test-card {
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .wh-test-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    margin-bottom: 1rem;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-success);
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  }
+
+  .wh-test-title {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .wh-test-sub {
+    margin: 0 0 1.5rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  .wh-test-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+    margin: 1.5rem auto;
+    width: 80%;
+  }
+
+  .wh-test-section-title {
+    margin: 0 0 0.8rem;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .wh-test-list {
+    text-align: left;
+    margin: 0 auto 1.5rem;
+    padding-left: 1.2rem;
+    max-width: 400px;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+  .wh-test-list strong { color: var(--color-text-primary); }
+
+  .wh-test-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  .wh-test-link {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .wh-test-link:hover {
+    border-color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 5%, var(--color-bg-secondary));
+  }
+  .wh-test-link span { display: flex; flex-direction: column; }
+  .wh-test-link strong { font-size: 0.85rem; }
+  .wh-test-link small { font-size: 0.72rem; color: var(--color-text-muted); }
+
+  .wh-test-link-icon {
+    flex-shrink: 0;
+    color: var(--color-accent);
+    opacity: 0.7;
+  }
+</style>

@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { data: hook, error: fetchErr } = await supabase
     .from('webhooks')
-    .select('url, platform')
+    .select('url, platform, locale')
     .eq('id', id)
     .single();
 
@@ -43,7 +43,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const payload = formatTestPayload(hook.platform);
+  const testLocale = hook.locale === 'ko' ? 'ko' : 'en';
+  const payload = formatTestPayload(hook.platform, testLocale);
 
   try {
     const res = await fetch(hook.url, {
