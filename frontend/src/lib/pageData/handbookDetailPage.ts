@@ -29,9 +29,10 @@ function wrapLearnMore(html: string, locale: string): string {
   while ((m = h2Pattern.exec(html)) !== null) {
     matches.push(m.index);
   }
-  // Need at least 5 h2s to split (4 core + 1+ learn more)
-  if (matches.length < 5) return html;
-  const splitIndex = matches[4]; // 5th h2 (0-indexed: 4)
+  // Need at least 6 h2s to split (5 core + 1+ learn more)
+  // Core: 0_summary, 1_plain, 2_example, 3_glance, 4_why
+  if (matches.length < 6) return html;
+  const splitIndex = matches[5]; // 6th h2 (0-indexed: 5)
   const corePart = html.slice(0, splitIndex);
   const learnMorePart = html.slice(splitIndex);
 

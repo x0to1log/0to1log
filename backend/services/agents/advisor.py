@@ -856,6 +856,7 @@ async def _validate_ref_urls(content: str) -> str:
 
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_KO = [
+    ("basic_ko_0_summary", "## 30초 요약"),
     ("basic_ko_1_plain", "## 쉽게 이해하기"),
     ("basic_ko_2_example", "## 예시와 비유"),
     ("basic_ko_3_glance", "## 한눈에 보기"),
@@ -864,10 +865,13 @@ BASIC_SECTIONS_KO = [
     ("basic_ko_6_caution", "## 주의할 점"),
     ("basic_ko_7_comm", "## 대화에서는 이렇게"),
     ("basic_ko_8_related", "## 함께 알면 좋은 용어"),
+    ("basic_ko_9_roles", "## 직군별 활용 포인트"),
+    ("basic_ko_10_learning_path", "## 다음에 읽을 것"),
 ]
 
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_EN = [
+    ("basic_en_0_summary", "## 30-Second Summary"),
     ("basic_en_1_plain", "## Plain Explanation"),
     ("basic_en_2_example", "## Example & Analogy"),
     ("basic_en_3_glance", "## At a Glance"),
@@ -876,6 +880,8 @@ BASIC_SECTIONS_EN = [
     ("basic_en_6_caution", "## Precautions"),
     ("basic_en_7_comm", "## Communication"),
     ("basic_en_8_related", "## Related Terms"),
+    ("basic_en_9_roles", "## Role-Specific Insights"),
+    ("basic_en_10_learning_path", "## What to Read Next"),
 ]
 
 ADVANCED_SECTIONS_KO = [
@@ -888,6 +894,8 @@ ADVANCED_SECTIONS_KO = [
     ("adv_ko_7_comm", "## 업계 대화 맥락"),
     ("adv_ko_8_refs", "## 참조 링크"),
     ("adv_ko_9_related", "## 관련 기술 & 비교"),
+    ("adv_ko_10_when_to_use", "## 언제 써야 하나"),
+    ("adv_ko_11_pitfalls", "## 흔한 실수와 해결"),
 ]
 
 ADVANCED_SECTIONS_EN = [
@@ -900,6 +908,8 @@ ADVANCED_SECTIONS_EN = [
     ("adv_en_7_comm", "## Industry Communication"),
     ("adv_en_8_refs", "## Reference Links"),
     ("adv_en_9_related", "## Related & Comparison"),
+    ("adv_en_10_when_to_use", "## When to Use (and When Not To)"),
+    ("adv_en_11_pitfalls", "## Common Pitfalls & Solutions"),
 ]
 
 
