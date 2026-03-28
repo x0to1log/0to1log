@@ -220,8 +220,11 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 4. English and Korean should cover the same news items with natural expression for each language.
 5. Do NOT include an H1 title - start directly with the first section.
 6. Group news items by their subcategory under the category headers.
-7. Each news item's paragraph count follows the persona guide (Expert: 3-4, Learner: 2-3). Do NOT exceed 4 paragraphs per item. Include context for numbers.
-8. EQUAL COVERAGE: You MUST cover ALL provided news items with the paragraph count specified above. Do not spend 80% of output on one story and rush the rest. Every news item deserves its full analysis.
+7. WEIGHTED DEPTH: Not all news items are equally important. Allocate depth by significance:
+   - **Lead story** (1, at most 2): The most significant item(s) today. Expert: 3-4 paragraphs, Learner: 2-3 paragraphs.
+   - **Supporting stories** (rest): Every remaining item MUST get at least 2 paragraphs (Expert) or 1-2 paragraphs (Learner). Do NOT skip any item or reduce it to a single sentence.
+   - Include context for numbers. Do NOT exceed 4 paragraphs per item even for the lead story.
+8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
 9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 10. Section headers must use the correct language for the target content.
 11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do not include the heading or a placeholder like "(No items today)". ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
