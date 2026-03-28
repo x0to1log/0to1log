@@ -893,6 +893,12 @@ const navItems = [
     overflow: hidden; clip: rect(0,0,0,0); border: 0;
   }
 
+  @media (max-width: 480px) {
+    .nl-env { overflow-y: auto; }
+    .nl-env-envelope { margin-top: clamp(80px, 20vh, 140px); }
+    .nl-env-letter { padding: 1.4rem 1.2rem 1rem; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .nl-env-flap, .nl-env-letter, .nl-env-overlay, .nl-env-stage { transition-duration: 0ms !important; }
   }

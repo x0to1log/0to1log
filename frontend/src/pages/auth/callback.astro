@@ -12,7 +12,6 @@ const nonce = Astro.locals.cspNonce || '';
     <script is:inline nonce={nonce}>
       (function() {
         var stored = localStorage.getItem('theme');
-        if (stored === 'midnight') { stored = 'pink'; localStorage.setItem('theme', stored); }
         if (stored) {
           document.documentElement.setAttribute('data-theme', stored);
         } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -24,6 +23,7 @@ const nonce = Astro.locals.cspNonce || '';
       [data-theme="dark"] { --bg: #1F1A17; --fg: #E0D8C3; }
       [data-theme="light"] { --bg: #F4F1EA; --fg: #333333; }
       [data-theme="pink"] { --bg: #FFF0F3; --fg: #2D1F22; }
+      [data-theme="midnight"] { --bg: #08090E; --fg: #C8CDD8; }
       body {
         display: flex;
         align-items: center;

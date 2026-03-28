@@ -6375,7 +6375,11 @@ body.auth-prompt-open {
   }
 
   .source-card-title {
-    display: none;
+    white-space: normal;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .source-card-link-icon {
