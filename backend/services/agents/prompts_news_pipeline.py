@@ -237,7 +237,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE RULES: (1) If community reactions ARE provided in the input, you MUST include the Community Pulse section — do not skip it. (2) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (3) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (4) Do NOT fabricate quotes — only use reactions from the provided community data. (5) Only omit this section if NO community data appears in the input at all.
+15. COMMUNITY PULSE RULES: (1) Include this section ONLY if the provided community data contains reactions RELEVANT to the news items being covered. If the data is unrelated noise or off-topic threads, OMIT the section entirely. (2) NEVER write "no relevant reactions were found" — either include real, relevant quotes or omit the section completely. (3) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (4) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (5) Do NOT fabricate quotes — only use reactions from the provided community data.
 {handbook_section}
 
 ## Output JSON format
@@ -277,7 +277,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
-9. If community reactions were provided in the input, is the Community Pulse section present in BOTH en and ko? If missing, add it.
+9. Community Pulse: if relevant community quotes are included, is CP present in BOTH en and ko? If CP says "no relevant reactions" or similar, REMOVE the section entirely.
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
