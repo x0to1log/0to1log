@@ -19,15 +19,15 @@ AI moves fastest in English, and English content is most diverse. But Korean rea
 
 ## How It Was Built
 
-The AI pipeline went through 5 redesigns over 22 days. Version 1 failed after 5 days and $25 of wasted LLM calls — the architecture was wrong, and no amount of patches could fix it. After deleting everything and rebuilding from scratch, each iteration got exponentially faster: v2 took 1 day, v3 half a day. Six rounds of prompt engineering raised the quality score from 56 to 90 out of 100.
+The AI pipeline went through 7 versions over 25 days. Version 1 failed after 5 days and $25 of wasted LLM calls — the architecture was wrong, and no amount of patches could fix it. After deleting everything and rebuilding from scratch, each iteration got exponentially faster. Seven rounds of prompt engineering raised the quality score from 56 to 90, and user-perspective evaluation drove v7's quality overhaul.
 
-| | v1 | v2 | v3 | v4 | v5–v6 |
-|---|---|---|---|---|---|
-| **Time** | 5 days (failed) | 1 day | half day | half day | 9 days |
-| **Daily cost** | N/A | $0.43 | $0.59 | $0.39 | $0.50–0.80 |
-| **Output** | Nothing | 2 articles | 6–10 articles | 6–10 (2 personas) | + quality scoring |
+| | v1 | v2 | v3 | v4 | v5–v6 | v7 |
+|---|---|---|---|---|---|---|
+| **Time** | 5 days (failed) | 1 day | half day | half day | 9 days | 2 days |
+| **Daily cost** | N/A | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 |
+| **Output** | Nothing | 2 articles | 6–10 articles | 6–10 (2 personas) | + quality scoring | + community pulse, layered reading, weighted depth |
 
-The full story — including what went wrong, key decisions, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
+The full story — including what went wrong, key decisions, a rollback lesson, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
 
 ## The Three Pillars of 0to1log
 
@@ -81,8 +81,9 @@ When new AI products launch, find them, understand differences, learn how to use
 - [Supabase](https://supabase.com): PostgreSQL-based, built-in Auth & RLS
 
 **AI & Search**
-- [OpenAI](https://openai.com): gpt-4.1 (content generation), gpt-4.1-mini (classification, quality checks, self-critique)
+- [OpenAI](https://openai.com): gpt-4.1 (content generation), gpt-4.1-mini (classification, self-critique), o4-mini (quality checks, ranking)
 - [Tavily API](https://tavily.com): Semantic news search + handbook term context enrichment
+- Community APIs: HN Algolia + Reddit JSON (community reactions with real comment text)
 
 **Automation**
 - Cron jobs: Daily news pipeline automation
@@ -97,8 +98,15 @@ When new AI products launch, find them, understand differences, learn how to use
 
 ### 🔄 In Progress
 - Weekly Recap (digest bundling, awaiting quality stabilization)
-- News quality improvements (prompt audit, citation format normalization)
 - AI Product Guides (expanding detailed guides)
+
+### 🏗️ Recently Completed (v7)
+- News quality overhaul: user-perspective evaluation (76 → 85.3 avg score)
+- Layered Reading Design: Expert adds prior work, limitations, practical signals on top of Learner
+- Weighted Depth: lead story gets editorial emphasis, supporting stories get minimum coverage
+- Community Pulse: real HN/Reddit comment text (not fabricated quotes)
+- Bold markdown post-processing (news + handbook)
+- 4-persona quality check (Research/Business × Expert/Learner)
 
 **View roadmap:**
 - Current sprint: [ACTIVE_SPRINT](./vault/09-Implementation/plans/ACTIVE_SPRINT.md)
@@ -116,7 +124,7 @@ Browse news, terminology, and blog on the 0to1log website.
 
 To understand the code and architecture:
 
-- **Development Journey**: [Pipeline Journey](./docs/portfolio/pipeline-journey.en.md) — How the AI pipelines evolved through 5 redesigns and 6 prompt iterations
+- **Development Journey**: [Pipeline Journey](./docs/portfolio/pipeline-journey.en.md) — How the AI pipelines evolved through 7 versions, including a rollback lesson and user-perspective quality evaluation
 - **Backend Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md) — Pipeline details with Mermaid diagrams
 - **Backend setup**: [backend/CLAUDE.md](./backend/CLAUDE.md) — FastAPI + AI pipeline
 - **Frontend setup**: [frontend/CLAUDE.md](./frontend/CLAUDE.md) — Astro v5 + Tailwind CSS

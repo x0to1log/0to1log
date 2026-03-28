@@ -1,9 +1,9 @@
-# Building AI News Pipelines: 5 Redesigns, 6 Prompt Iterations, and What I Learned
+# Building AI News Pipelines: 7 Versions, a Rollback, and What I Learned
 
 > **Project:** 0to1log — AI News Curation + AI Glossary + IT Blog Platform
-> **Duration:** Mid-February to March 26, 2026 (2 weeks planning + 22 days development)
+> **Duration:** Mid-February to March 29, 2026 (2 weeks planning + 25 days development)
 > **Role:** Solo full-stack developer (planning, design, frontend, backend, AI, infrastructure)
-> **Stack:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-4.1) · Tavily · Vercel · Railway
+> **Stack:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-4.1) · Tavily · HN/Reddit APIs · Vercel · Railway
 
 ---
 
@@ -17,6 +17,7 @@
 6. [Quantitative Results](#6-quantitative-results)
 7. [What I Learned from Failure](#7-what-i-learned-from-failure)
 8. [Current Architecture](#8-current-architecture)
+9. [v7: The Quality Overhaul and the Rollback Lesson](#9-v7-the-quality-overhaul-and-the-rollback-lesson)
 
 ---
 
@@ -53,17 +54,18 @@ v3 ████                                     half day (working)
 v4 ██                                       half day (working)
 v5 ████████████████                         8 days (stabilization)
 v6 ██                                       1 day  (optimization)
+v7 ████████                                 2 days (quality overhaul + rollback)
 ```
 
-| | v1 | v2 | v3 | v4 | v5 | v6 |
-|---|---|---|---|---|---|---|
-| **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) |
-| **Outcome** | Failed → deleted | Working | Working | Working | Stabilized | Optimized |
-| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps |
-| **Code** | 3,444 lines | 1,127 lines | 1,127 lines | Refactored | Extended | Prompts only |
-| **Daily cost** | N/A (broken) | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 |
-| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 |
-| **Dev cost** | $15–25 | $2 | $1 | $1 | $5 | $2 |
+| | v1 | v2 | v3 | v4 | v5 | v6 | v7 |
+|---|---|---|---|---|---|---|---|
+| **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) | 3/28–29 (2d) |
+| **Outcome** | Failed → deleted | Working | Working | Working | Stabilized | Optimized | Quality overhaul |
+| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + community pulse + weighted depth |
+| **Code** | 3,444 lines | 1,127 lines | 1,127 lines | Refactored | Extended | Prompts only | Pipeline + prompts + frontend |
+| **Daily cost** | N/A (broken) | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 | $0.50–0.80 |
+| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 |
+| **Dev cost** | $15–25 | $2 | $1 | $1 | $5 | $2 | $3 |
 
 ---
 
@@ -398,6 +400,7 @@ If no news article qualifies for the Research category, **allow an empty list**.
 | v3 | half day | $1 | $0.59 | 6–10 articles/day |
 | v4 | half day | $1 | $0.39 | 6–10 articles/day (2 personas) |
 | v5–v6 | 9 days | $7 | $0.50–0.80 | 6–10 articles + handbook |
+| v7 | 2 days | $3 | $0.50–0.80 | + community pulse, layered reading |
 
 **v1 burned $15–25 with zero output. From v3 onward, under $1 produces 6–10 curated digest articles.** Over 10x cost efficiency improvement.
 
@@ -406,14 +409,17 @@ Monthly estimate: **$30–$45/month**.
 
 ### Quality Improvement
 
-| Metric | Start | Current | Improvement |
+| Metric | Start | Current (v7) | Improvement |
 |--------|-------|---------|-------------|
 | Prompt quality score | 56/100 | 90/100 | +61% |
-| Automated Business score | — | 99/100 | — |
-| Automated Research score | — | 95/100 | — |
+| User-perspective score | — | 85.3/100 | — |
+| Automated Business score | — | 95/100 | — |
+| Automated Research score | — | 92/100 | — |
 | Execution time | 170s | 90s | -47% |
-| Collection sources | 1 | 4 | +300% |
-| Daily news candidates | 30 | 45 | +50% |
+| Collection sources | 1 | 5 | +400% |
+| Daily news candidates | 30 | 45-55 | +67% |
+| Quality check prompts | 1 | 4 (persona-aware) | — |
+| Community Pulse | None | Real HN/Reddit quotes | — |
 
 ### Codebase Scale
 
@@ -466,25 +472,35 @@ Developing intuition for the boundary between "what LLMs are good at" (writing, 
 ### News Pipeline Flow
 
 ```
-4 sources in parallel (Tavily + HuggingFace + arXiv + GitHub)
-    | 45 candidates/day
+5 sources in parallel (Tavily + HuggingFace + arXiv + GitHub + Google News RSS)
+    | 45-55 candidates/day
     v
 URL deduplication + published URL exclusion (3-day lookback)
+    + Google News URL resolution (googlenewsdecoder)
+    + Filler filter (body < 80 chars → skip)
     |
     v
 o4-mini classification --> Research / Business (0-to-5 rule)
+    + Litmus test + NOT Research list
+    + No section invention (rule 12)
     |
     v
-Community reactions for top 3 articles (Reddit/HN via Tavily)
+Community reactions for top 3 articles
+    (HN Algolia + Reddit JSON — real comment text, not just thread titles)
     |
     v
 +-- Research Digest -------+   +-- Business Digest -------+
 |  Expert EN+KO (gpt-4.1)  |   |  Expert EN+KO (gpt-4.1)  |  <-- parallel
+|   Layered Reading Design  |   |                           |
 |  Learner EN+KO (gpt-4.1) |   |  Learner EN+KO (gpt-4.1) |
 +---------------------------+   +---------------------------+
+    | WEIGHTED DEPTH (lead 3-4p, supporting ≥3p/2-3p)
+    | Community Pulse mandatory when data exists
+    v
+Post-processing: bold markdown fix (**term(abbr)** → **term** (abbr))
     |
     v
-Quality scoring (gpt-4.1-mini, 4 criteria x 25 points)
+Quality scoring (o4-mini, 4 prompts: R/B × Expert/Learner)
     |
     v
 Save as draft --> Admin review --> Publish
@@ -531,7 +547,66 @@ Term input
 
 ---
 
+---
+
+## 9. v7: The Quality Overhaul and the Rollback Lesson
+
+### Why v7 Exists
+
+v6 scored 90/100 on automated quality checks. But when I evaluated the actual published content from a **user's perspective** — reading it as someone who would visit the site — the average was 76/100.
+
+The gap exposed five problems invisible to automated scoring:
+
+| Problem | Automated score | User experience |
+|---------|---------------|-----------------|
+| Google News RSS redirect URLs | Not checked | Readers can't reach sources |
+| Filler articles ("OpenAI: Latest News") | Not checked | "This is empty clickbait" |
+| Expert ≈ Learner (70% overlap) | Not checked | "Why switch personas?" |
+| All items same depth | Not checked | "What's today's top story?" |
+| No community reactions | Not checked | Missing social proof |
+
+### What Changed in v7
+
+**1. Layered Reading Design** — Expert assumes readers already read Learner. Instead of repeating basics, Expert focuses on: prior work comparison, benchmark deltas, limitations/caveats, and practical signals. Learner→Expert feels like "leveling up," not re-reading.
+
+**2. Weighted Depth** — Lead story gets 3-4 paragraphs, supporting stories get minimum coverage. Creates editorial hierarchy: "today's most important story" is visually and structurally prominent.
+
+**3. Community Pulse with Real Comments** — Previous implementation only passed thread titles to the LLM, which fabricated quotes. v7 fetches actual top comments from HN Algolia and Reddit JSON APIs (both free, no API key). The LLM now edits real voices, not imagined ones.
+
+**4. Four Quality Check Prompts** — Instead of one prompt checking Expert EN only, v7 uses four persona-aware prompts (Research/Business × Expert/Learner). Expert is scored on Technical Depth; Learner is scored on Accessibility. Both run in parallel.
+
+**5. Post-Processing** — Bold markdown with parenthetical abbreviations (`**term(abbr)**`) broke rendering. Regex post-processing in both news and handbook pipelines fixes this deterministically.
+
+### The Rollback
+
+Midway through v7, I stacked three prompt changes in one commit: anti-repetition rule, Community Pulse placeholder ban, and Business quality guard. The combined effect was catastrophic:
+
+- Business went from 5 items to **1 item** (quality guard over-corrected)
+- Community Pulse **disappeared entirely** (placeholder ban killed the section)
+- Content got **shorter** (anti-repetition was too aggressive)
+
+Average score dropped from 86.5 to **66.5** — worse than the original baseline.
+
+**Decision:** Roll back `prompts_news_pipeline.py` to the last verified-good state (`7438c20`, score 86.5) and selectively re-apply only the three changes that were proven to work:
+1. "Do not INVENT sections" (fixed a real 3/17 bug)
+2. Community Pulse rule extraction (token savings, no behavior change)
+3. Prior work comparison relaxation (allows well-known examples)
+
+**The lesson:** Prompt changes must be verified one at a time. Stacking multiple changes in one commit makes it impossible to isolate which change caused the regression. "Rollback + selective re-apply" is safer than "patch the patches."
+
+### v7 Quality Trend
+
+| Date | Pipeline | R Expert | R Learner | B Expert | B Learner | Avg |
+|------|----------|----------|-----------|----------|-----------|-----|
+| 3/28 | v5 (baseline) | 72 | 80 | 78 | 74 | **76.0** |
+| 3/19 | v6 peak | 85 | 86 | 88 | 87 | **86.5** |
+| 3/26 v2 | Over-corrected | 78 | 75 | 55 | 58 | **66.5** |
+| 3/26 v3 | v7 (post-rollback) | 86 | 83 | 85 | 87 | **85.3** |
+
+---
+
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 907 commits, 52 prompt issues, 6 prompt iterations, and 5 pipeline redesigns
-> brought the system to its current state.
+> 16 pipeline-related commits in this session alone, including a rollback.
+> 7 pipeline versions, 52 prompt issues, and the discovery that automated scores
+> don't tell the full story — user-perspective evaluation matters more.
 > As a solo project, I handled every stage from planning to deployment.
