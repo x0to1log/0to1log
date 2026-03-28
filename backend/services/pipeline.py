@@ -558,9 +558,16 @@ async def _generate_digest(
         return 0, [], {}
 
     # Build user prompt from classified news items
+    # Filter out items with no substantive content (title-only hub pages, etc.)
     news_items = []
     for item in classified:
         body = raw_content_map.get(item.url, item.snippet)[:4000]
+        if len(body.strip()) < 80:
+            logger.info(
+                "Skipping filler item '%s' — body too short (%d chars)",
+                item.title[:60], len(body.strip()),
+            )
+            continue
         community = community_map.get(item.url, "")
         community_block = f"\n\nCommunity Reactions (Reddit/HN):\n{community[:1000]}" if community else ""
         news_items.append(

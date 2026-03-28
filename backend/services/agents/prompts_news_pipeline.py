@@ -224,8 +224,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 8. EQUAL COVERAGE: You MUST cover ALL provided news items with the paragraph count specified above. Do not spend 80% of output on one story and rush the rest. Every news item deserves its full analysis.
 9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 10. Section headers must use the correct language for the target content.
-11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech) has no items, omit it. Community Pulse is optional — include only if community reactions are provided in the input. But ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
-12. EVERY section header listed in "Required Sections" above that is not omitted per rule 11 MUST appear in your output as a `##` heading. Do not merge, rename, or skip sections.
+11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do not include the heading or a placeholder like "(No items today)". ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
+12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, or skip sections that have content.
 13. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
     - Use **bold** for key terms, company names, and important numbers
