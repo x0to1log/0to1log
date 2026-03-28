@@ -221,8 +221,9 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 5. Do NOT include an H1 title - start directly with the first section.
 6. Group news items by their subcategory under the category headers.
 7. WEIGHTED DEPTH: Not all news items are equally important. Allocate depth by significance:
-   - **Lead story** (1, at most 2): The most significant item(s) today. Expert: 3-4 paragraphs, Learner: 2-3 paragraphs.
-   - **Supporting stories** (rest): Every remaining item MUST get at least 2 paragraphs (Expert) or 1-2 paragraphs (Learner). Do NOT skip any item or reduce it to a single sentence.
+   - **Lead story** (1, at most 2): The most significant item(s) today. 3-4 paragraphs for both Expert and Learner.
+   - **Supporting stories** (rest): Every remaining item MUST get at least 3 paragraphs (Expert) or 2-3 paragraphs (Learner). Do NOT skip any item or reduce it to a single sentence.
+   - Both Expert and Learner should provide substantial, thorough coverage. The difference is WHAT they write (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context) — not how MUCH.
    - Include context for numbers. Do NOT exceed 4 paragraphs per item even for the lead story.
 8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
 9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
@@ -269,7 +270,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 ## FINAL CHECKLIST (verify before responding)
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
-3. Does the lead story have 3-4 paragraphs (expert) or 2-3 (learner), and do supporting stories have at least 2 (expert) or 1-2 (learner)? Expand if below minimum.
+3. Does the lead story have 3-4 paragraphs, and do supporting stories have at least 3 (expert) or 2-3 (learner)? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
