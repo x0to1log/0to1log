@@ -63,8 +63,10 @@ NOT Research (assign to Business instead):
 - **industry**: Startup funding, acquisitions, partnerships, regulatory changes, hardware product launches, research with business/market implications (e.g., procurement models, cost optimization studies)
 - **new_tools**: New AI products, services, or developer tools that are LAUNCHED and AVAILABLE to use. Research papers proposing methods are NOT new_tools — assign to industry if they have business relevance.
 
+Business quality guard: A business digest should be anchored by actual business events (company announcements, funding, product launches, regulatory changes). If ALL selected business articles are research papers with no actual business news, reduce the business list to 0-2 items rather than filling it with papers. It is better to have a short business digest than one that reads like a second research digest.
+
 ## Rules
-1. Select 0-5 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
+1. Select 0-5 articles per category (research and business). If no article meets the criteria, return an empty list — do NOT lower the bar to fill a quota.
 2. The same article CAN appear in both categories if relevant to both
 3. Prefer breaking/exclusive news over incremental updates
 4. Prefer news with concrete data (benchmarks, dollar amounts, dates)
@@ -238,7 +240,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 15. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-16. COMMUNITY PULSE RULES: (1) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (2) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (3) Do NOT fabricate quotes — only use reactions from the provided community data. If no Reddit/HN data exists, omit this section entirely.
+16. COMMUNITY PULSE RULES: (1) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (2) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (3) Do NOT fabricate quotes — only use reactions from the provided community data. (4) If no Reddit/HN reactions are provided in the input, omit this section entirely — do NOT write "no reactions were found" or similar placeholder text. The section should either have real community quotes or not exist at all.
 {handbook_section}
 
 ## Output JSON format
@@ -272,7 +274,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 ## FINAL CHECKLIST (verify before responding)
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
-3. Does the lead story have 3-4 paragraphs, and do supporting stories have at least 3 (expert) or 2-3 (learner)? Expand if below minimum.
+3. PARAGRAPH MINIMUM CHECK: Count paragraphs for EVERY news item. Lead story must have 3-4. Supporting stories must have at least 3 (expert) or 2 (learner). If ANY item has fewer than the minimum, you MUST expand it before responding — this is non-negotiable.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
@@ -311,7 +313,7 @@ Assume the reader already knows WHAT each item is. Do NOT spend paragraphs expla
 Instead, focus each item on what a senior engineer would NOT already know:
 
 Priority order for each news item (include as many as the source material supports):
-1. **Technical novelty vs prior work** — If the source names predecessors or baselines, explain what THIS work does differently at the architecture/method level. Only compare to specific prior work mentioned in the source — do NOT fabricate comparisons.
+1. **Technical novelty vs prior work** — Explain what THIS work does differently. If the source names specific predecessors or baselines, compare directly. If the source describes a general limitation of "prior methods" or "existing approaches" without naming them, you may name well-known examples from the same problem domain (e.g., "prior text-only red-teaming tools like HarmBench") IF you are confident they exist. Do NOT fabricate paper names or benchmark numbers.
 2. **Concrete numbers in context** — benchmarks, params, FLOPs, latency — compared to a named baseline with delta (e.g., "+4.2 on HumanEval vs DeepSeek-Coder-V2"). If the source lacks numbers, say so briefly rather than inventing them.
 3. **Limitations and caveats** — what the paper doesn't solve, hardware constraints, scaling concerns, reproducibility issues. Be specific: "requires H200 (not available on most clouds)" not "may have limitations." If the source doesn't discuss limitations, note what's missing.
 4. **Practical signal** — production-readiness, what a practitioner should watch or try. 1-2 sentences max.
