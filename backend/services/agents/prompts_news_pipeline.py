@@ -226,17 +226,19 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
    - Both Expert and Learner should provide substantial, thorough coverage. The difference is WHAT they write (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context) — not how MUCH.
    - Include context for numbers. Do NOT exceed 4 paragraphs per item even for the lead story.
 8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
-9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
-10. Section headers must use the correct language for the target content.
-11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do not include the heading or a placeholder like "(No items today)". ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
-12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, or skip sections that have content.
-13. Use markdown actively for readability:
+9. NO REPETITION: Each paragraph must add NEW information. If only 1-2 news items are provided, write focused, dense analysis — do NOT pad by restating the same point in different words. Three tight paragraphs with distinct information beats six paragraphs that circle the same idea.
+10. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
+11. Section headers must use the correct language for the target content.
+12. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do not include the heading or a placeholder like "(No items today)". ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
+13. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 12 must not appear at all. Do not merge, rename, or skip sections that have content.
+14. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
     - Use **bold** for key terms, company names, and important numbers
     - Use `>` blockquotes for notable quotes from sources
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
-14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
+15. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
+16. COMMUNITY PULSE RULES: (1) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (2) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (3) Do NOT fabricate quotes — only use reactions from the provided community data. If no Reddit/HN data exists, omit this section entirely.
 {handbook_section}
 
 ## Output JSON format
@@ -295,7 +297,7 @@ RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Newly released or updated models. Cover benchmark deltas, architecture changes, context window, latency, and comparison vs prior baselines.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Notable GitHub or Hugging Face projects. Explain what the project does, why developers care, maturity level, and current limitations.
 - **## Research Papers (ko: ## Research Papers)** - Important new papers from arXiv or major labs. Explain the core idea, experimental result, what is genuinely new, and where the paper is weak or incomplete.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided in the input, write 1 paragraph summarizing the overall sentiment, then include 1-2 direct quotes as blockquotes. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use the original English comment text. In KO, paraphrase in natural Korean but keep the same attribution. (3) Do NOT fabricate quotes -- only use reactions that appear in the provided community data. If no Reddit/HN reactions exist, omit this section entirely.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph summarizing the overall sentiment, then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 16).
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short closing synthesis. 1-2 paragraphs only. Summarize what changed in today's AI technical landscape overall."""
 
 
@@ -341,7 +343,7 @@ RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Explain newly released models in plain language: what changed, what got better, and why people are paying attention.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Introduce notable projects from GitHub or Hugging Face. Explain what they do, who they are for, and why they are trending.
 - **## Research Papers (ko: ## Research Papers)** - Explain important papers simply: the problem, the idea, the result, and why this paper matters.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph in approachable language summarizing what people are saying, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 approachable paragraph summarizing what people are saying, then 1-2 blockquote highlights. Follow Community Pulse Rules (rule 16).
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short reader-friendly wrap-up connecting today's technical developments to the bigger AI landscape."""
 
 
@@ -374,7 +376,7 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Big Tech (ko: ## Big Tech)** - Major moves from OpenAI, Google, Microsoft, Meta, etc. Analyze what happened, the strategic rationale, competitive positioning, and market implications.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Put deal sizes in context and explain what each deal signals strategically.
 - **## New Tools (ko: ## New Tools)** - New AI products or services. Cover pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph analyzing the market sentiment, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph analyzing market sentiment, then 1-2 blockquote highlights. Follow Community Pulse Rules (rule 16).
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
   `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence]`
@@ -407,7 +409,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care.
 - **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 friendly paragraph about what people are saying, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 friendly paragraph about what people are saying, then 1-2 blockquote highlights. Follow Community Pulse Rules (rule 16).
 - **## What This Means for You (ko: ## 나에게 주는 의미)** - How today news connects to daily life, career, and work. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
   `1. **[Action]**: [what to do in 1-2 sentences]`
@@ -799,7 +801,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Contains factual errors or hallucinated benchmarks
 
 4. **Language Quality** (25):
-   - 25: Reads like a peer engineer analysis; assertive tone; each news item is 3-4 paragraphs; natural and fluent
+   - 25: Reads like a peer engineer analysis; assertive tone; lead story 3-4 paragraphs, supporting stories at least 3; natural and fluent
    - 18: Readable and professional; adequate length but some hedging
    - 10: Choppy, translation-sounding, or some items are only 1 paragraph
    - 0: Barely readable or extremely short
@@ -834,7 +836,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No citations
 
 4. **Language Quality** (25):
-   - 25: Conversational but substantive; each item 2-3 paragraphs; no tutorial/action-plan drift
+   - 25: Conversational but substantive; lead story 3-4 paragraphs, supporting 2-3; no tutorial/action-plan drift
    - 18: Readable; mostly appropriate tone; adequate length
    - 10: Too formal, too casual, or too short
    - 0: Barely readable
@@ -869,7 +871,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No analysis or completely generic
 
 4. **Language Quality** (25):
-   - 25: Reads like a strategic advisor briefing; assertive; each item 3-4 paragraphs; specific comparisons
+   - 25: Reads like a strategic advisor briefing; assertive; lead story 3-4 paragraphs, supporting at least 3; specific comparisons
    - 18: Professional and readable; adequate length
    - 10: Choppy or too general; some items only 1 paragraph
    - 0: Barely readable
@@ -903,7 +905,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No actionable content or empty sections
 
 4. **Language Quality** (25):
-   - 25: Friendly but informative; each item 2-3 paragraphs; engaging tone; [N](URL) citations present
+   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting 2-3; engaging tone; [N](URL) citations present
    - 18: Readable; adequate length
    - 10: Too dry, too short, or condescending
    - 0: Barely readable
