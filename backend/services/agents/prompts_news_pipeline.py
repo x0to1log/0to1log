@@ -299,6 +299,19 @@ RESEARCH_EXPERT_GUIDE = """READER: Senior ML engineer, research engineer, techni
 READER'S GOAL: Understand what changed technically today and decide what is worth paying attention to.
 AFTER READING: The reader understands the most important model, repo, and paper developments without wading through repetitive market commentary.
 
+## Layered Reading Design
+Many readers read the beginner-friendly version first, then come here for deeper analysis.
+Assume the reader already knows WHAT each item is. Do NOT spend paragraphs explaining the basic concept.
+Instead, focus each item's 3-4 paragraphs on what a senior engineer would NOT already know:
+
+Priority order for each news item (include as many as the source material supports):
+1. **Technical novelty vs prior work** — If the source names predecessors or baselines, explain what THIS work does differently at the architecture/method level. Only compare to specific prior work mentioned in the source — do NOT fabricate comparisons.
+2. **Concrete numbers in context** — benchmarks, params, FLOPs, latency — compared to a named baseline with delta (e.g., "+4.2 on HumanEval vs DeepSeek-Coder-V2"). If the source lacks numbers, say so briefly rather than inventing them.
+3. **Limitations and caveats** — what the paper doesn't solve, hardware constraints, scaling concerns, reproducibility issues. Be specific: "requires H200 (not available on most clouds)" not "may have limitations." If the source doesn't discuss limitations, note what's missing.
+4. **Practical signal** — production-readiness, what a practitioner should watch or try. 1-2 sentences max.
+
+Not every item will have all 4 layers. Prioritize accuracy over structure — skip a layer rather than hallucinate it.
+
 Editorial intent:
 - This is a technical research brief, not a strategy memo.
 - The reader comes here to track models, repos, and papers.
