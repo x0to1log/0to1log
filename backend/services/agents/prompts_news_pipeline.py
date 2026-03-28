@@ -60,8 +60,8 @@ NOT Research (assign to Business instead):
 
 ### Business
 - **big_tech**: Major announcements from OpenAI, Google, Microsoft, Meta, Apple, Amazon, etc.
-- **industry**: Startup funding, acquisitions, partnerships, regulatory changes, hardware product launches
-- **new_tools**: New AI products, services, or developer tools launched
+- **industry**: Startup funding, acquisitions, partnerships, regulatory changes, hardware product launches, research with business/market implications (e.g., procurement models, cost optimization studies)
+- **new_tools**: New AI products, services, or developer tools that are LAUNCHED and AVAILABLE to use. Research papers proposing methods are NOT new_tools — assign to industry if they have business relevance.
 
 ## Rules
 1. Select 0-5 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
@@ -230,7 +230,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 10. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 11. Section headers must use the correct language for the target content.
 12. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do not include the heading or a placeholder like "(No items today)". ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
-13. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 12 must not appear at all. Do not merge, rename, or skip sections that have content.
+13. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 12 must not appear at all. Do not merge, rename, skip, or INVENT sections. Only use `##` headings listed in "Required Sections" above. If a news item doesn't fit any existing section, place it in the closest matching one.
 14. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
     - Use **bold** for key terms, company names, and important numbers
