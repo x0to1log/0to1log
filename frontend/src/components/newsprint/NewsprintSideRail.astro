@@ -48,8 +48,10 @@ const isKo = locale === 'ko';
       <div class="newsprint-stack">
         {relatedTerms.map((t) => (
           <a class="newsprint-card" href={`/${locale}/handbook/${t.slug}/`}>
-            <strong class="newsprint-rail-link">{isKo && t.koreanName ? t.koreanName : t.term}</strong>
-            {!isKo || t.koreanName ? <span class="newsprint-related-tag" style="font-weight: 400;">{t.term}</span> : null}
+            <span class="newsprint-keyword-row">
+              <strong class="newsprint-rail-link">{isKo && t.koreanName ? t.koreanName : t.term}</strong>
+              {!isKo || t.koreanName ? <span class="newsprint-related-tag">{t.term}</span> : null}
+            </span>
             {t.definition && <p class="newsprint-related-summary">{t.definition}</p>}
           </a>
         ))}
@@ -69,8 +71,8 @@ const isKo = locale === 'ko';
             <strong class="newsprint-rail-link">{p.title}</strong>
             <span class="newsprint-rail-meta">
               {p.post_type && (
-                <span class="newsprint-card-kicker-type">
-                  {p.post_type === 'research' ? 'RESEARCH' : 'BUSINESS'}
+                <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${p.post_type}`}>
+                  {p.post_type === 'research' ? 'Research' : 'Business'}
                 </span>
               )}
               {getCategoryLabel(locale, p.category) && (

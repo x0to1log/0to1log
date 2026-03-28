@@ -118,8 +118,8 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           <h1 class="handbook-detail-title" style="margin-top: 0.75rem;">
             {term.term}
           </h1>
-          {term.korean_name && (
-            <p class="handbook-detail-subtitle">{term.korean_name}</p>
+          {term.term_full && term.term_full !== term.term && (
+            <p class="handbook-detail-subtitle">{term.term_full}</p>
           )}
         </header>
 
@@ -130,16 +130,21 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         <div class="newsprint-divider"></div>
 
         {showLevelSwitcher && (
-          <div class="handbook-level-switcher">
-            {(['basic', 'advanced'] as const).filter((level) => levelHtmlMap[level]).map((level) => (
-              <button
-                type="button"
-                class={`handbook-level-btn ${level === activeLevel ? 'handbook-level-btn--active' : ''}`}
-                data-level={level}
-              >
-                {levelLabels[locale]?.[level] || level}
-              </button>
-            ))}
+          <div class="switcher-bar">
+            <div class="switcher-bar-line"></div>
+            <span class="switcher-bar-label">Difficulty</span>
+            <div class="handbook-level-switcher">
+              {(['basic', 'advanced'] as const).filter((level) => levelHtmlMap[level]).map((level) => (
+                <button
+                  type="button"
+                  class={`handbook-level-btn ${level === activeLevel ? 'handbook-level-btn--active' : ''}`}
+                  data-level={level}
+                >
+                  {levelLabels[locale]?.[level] || level}
+                </button>
+              ))}
+            </div>
+            <div class="switcher-bar-line"></div>
           </div>
         )}
         {showLevelSwitcher && (
