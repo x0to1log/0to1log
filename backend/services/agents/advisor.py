@@ -959,6 +959,13 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     elif "adv_en_1_technical" in raw_data:
         data["body_advanced_en"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_EN)
 
+    # Post-process: fix bold markdown with parenthetical abbreviations
+    # **term(abbreviation)** → **term** (abbreviation)
+    import re
+    for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
+        if data.get(field):
+            data[field] = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', data[field])
+
     return data
 
 

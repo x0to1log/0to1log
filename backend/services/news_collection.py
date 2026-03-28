@@ -504,22 +504,20 @@ async def collect_news(
 
 
 async def collect_community_reactions(title: str, url: str) -> str:
-    """Collect community reactions from Hacker News + Reddit.
+    """Collect community reactions with ACTUAL COMMENT TEXT from HN + Reddit.
 
-    Uses free public APIs (no API key required):
-    - HN Algolia API for Hacker News discussions
-    - Reddit JSON API for Reddit threads
+    Phase 1: Find relevant threads via search APIs.
+    Phase 2: Fetch top comments from the best thread on each platform.
 
-    Returns combined text of reactions, or empty string if none found.
+    Returns formatted reactions with real quotes, or empty string if none found.
     """
     import httpx
 
-    # Extract key terms from title for search (first 8 meaningful words)
     search_terms = " ".join(title.split()[:8])
     parts: list[str] = []
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        # --- Hacker News (Algolia API) ---
+    async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "0to1log-bot/1.0"}) as client:
+        # --- Hacker News: search → fetch top comments ---
         try:
             hn_resp = await client.get(
                 "https://hn.algolia.com/api/v1/search",
@@ -527,42 +525,93 @@ async def collect_community_reactions(title: str, url: str) -> str:
             )
             if hn_resp.status_code == 200:
                 hits = hn_resp.json().get("hits", [])
-                for hit in hits:
-                    hn_title = hit.get("title", "")
-                    hn_url = f"https://news.ycombinator.com/item?id={hit.get('objectID', '')}"
-                    points = hit.get("points", 0)
-                    comments = hit.get("num_comments", 0)
-                    if points > 5 or comments > 3:
-                        parts.append(
-                            f"[Hacker News] {hn_title} ({points} points, {comments} comments)\n{hn_url}"
-                        )
+                # Pick the best thread (most points)
+                best_hit = max(
+                    (h for h in hits if (h.get("points") or 0) > 5 or (h.get("num_comments") or 0) > 3),
+                    key=lambda h: (h.get("points") or 0),
+                    default=None,
+                )
+                if best_hit:
+                    story_id = best_hit.get("objectID", "")
+                    hn_title = best_hit.get("title", "")
+                    points = best_hit.get("points", 0)
+                    # Fetch top comments for this story
+                    comment_resp = await client.get(
+                        "https://hn.algolia.com/api/v1/search",
+                        params={"tags": f"comment,story_{story_id}", "hitsPerPage": 5},
+                    )
+                    comments_text = []
+                    if comment_resp.status_code == 200:
+                        for c in comment_resp.json().get("hits", []):
+                            text = c.get("comment_text", "")
+                            # Strip HTML tags, keep meaningful comments (>50 chars)
+                            import re as _re
+                            clean = _re.sub(r"<[^>]+>", " ", text).strip()
+                            clean = _re.sub(r"\s+", " ", clean)
+                            if len(clean) > 50 and len(clean) < 500:
+                                comments_text.append(clean)
+                            if len(comments_text) >= 3:
+                                break
+                    thread_block = f"[Hacker News] {hn_title} ({points} points)\n"
+                    if comments_text:
+                        thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
+                    else:
+                        thread_block += f"https://news.ycombinator.com/item?id={story_id}"
+                    parts.append(thread_block)
         except Exception as e:
             logger.debug("HN search failed for '%s': %s", title[:40], e)
 
-        # --- Reddit (JSON API) ---
+        # --- Reddit: search → fetch top comments ---
         try:
             reddit_resp = await client.get(
                 "https://www.reddit.com/search.json",
                 params={"q": search_terms, "sort": "relevance", "limit": 3, "t": "week"},
-                headers={"User-Agent": "0to1log-bot/1.0"},
             )
             if reddit_resp.status_code == 200:
                 children = reddit_resp.json().get("data", {}).get("children", [])
+                # Pick the best thread
+                best_thread = None
                 for child in children:
                     rd = child.get("data", {})
-                    rd_title = rd.get("title", "")
-                    rd_url = f"https://reddit.com{rd.get('permalink', '')}"
                     score = rd.get("score", 0)
                     num_comments = rd.get("num_comments", 0)
-                    subreddit = rd.get("subreddit", "")
                     if score > 5 or num_comments > 3:
-                        parts.append(
-                            f"[Reddit r/{subreddit}] {rd_title} ({score} upvotes, {num_comments} comments)\n{rd_url}"
+                        if not best_thread or score > best_thread.get("score", 0):
+                            best_thread = rd
+                if best_thread:
+                    permalink = best_thread.get("permalink", "")
+                    rd_title = best_thread.get("title", "")
+                    subreddit = best_thread.get("subreddit", "")
+                    score = best_thread.get("score", 0)
+                    # Fetch top comments
+                    comments_text = []
+                    try:
+                        comment_resp = await client.get(
+                            f"https://www.reddit.com{permalink}.json",
+                            params={"limit": 5, "sort": "top", "depth": 1},
                         )
+                        if comment_resp.status_code == 200:
+                            comment_data = comment_resp.json()
+                            if len(comment_data) > 1:
+                                for c in comment_data[1].get("data", {}).get("children", []):
+                                    body = c.get("data", {}).get("body", "")
+                                    c_score = c.get("data", {}).get("score", 0)
+                                    if body and len(body) > 30 and len(body) < 500 and c_score > 2:
+                                        comments_text.append(body.strip())
+                                    if len(comments_text) >= 3:
+                                        break
+                    except Exception:
+                        pass
+                    thread_block = f"[Reddit r/{subreddit}] {rd_title} ({score} upvotes)\n"
+                    if comments_text:
+                        thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
+                    else:
+                        thread_block += f"https://reddit.com{permalink}"
+                    parts.append(thread_block)
         except Exception as e:
             logger.debug("Reddit search failed for '%s': %s", title[:40], e)
 
     combined = "\n\n".join(parts)
     if parts:
-        logger.info("Collected %d community reactions for '%s'", len(parts), title[:40])
+        logger.info("Collected %d community threads with comments for '%s'", len(parts), title[:40])
     return combined

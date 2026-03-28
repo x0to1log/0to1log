@@ -237,7 +237,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE RULES: (1) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (2) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (3) Do NOT fabricate quotes — only use reactions from the provided community data. If no Reddit/HN data exists, omit this section entirely.
+15. COMMUNITY PULSE RULES: (1) If community reactions ARE provided in the input, you MUST include the Community Pulse section — do not skip it. (2) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (3) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (4) Do NOT fabricate quotes — only use reactions from the provided community data. (5) Only omit this section if NO community data appears in the input at all.
 {handbook_section}
 
 ## Output JSON format

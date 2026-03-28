@@ -1,6 +1,7 @@
 """AI News Pipeline v3 orchestrator."""
 import asyncio
 import logging
+import re
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -829,6 +830,12 @@ async def _generate_digest(
         # Calculate reading time from expert content (longest persona)
         expert_content = (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else ""
         learner_content = (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else ""
+
+        # Post-process: fix bold markdown with parenthetical abbreviations
+        # **Rejection Fine-Tuning(RFT)** → **Rejection Fine-Tuning** (RFT)
+        expert_content = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', expert_content)
+        learner_content = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', learner_content)
+
         text = expert_content or learner_content or ""
         if locale == "ko":
             # Korean: count characters (excluding spaces/punctuation), ~500 chars/min
