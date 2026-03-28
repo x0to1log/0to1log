@@ -504,37 +504,65 @@ async def collect_news(
 
 
 async def collect_community_reactions(title: str, url: str) -> str:
-    """Collect community reactions (Reddit, HN) for a given article.
+    """Collect community reactions from Hacker News + Reddit.
 
-    Returns combined text of reactions, or empty string on failure.
+    Uses free public APIs (no API key required):
+    - HN Algolia API for Hacker News discussions
+    - Reddit JSON API for Reddit threads
+
+    Returns combined text of reactions, or empty string if none found.
     """
-    if not settings.tavily_api_key:
-        logger.warning("Tavily API key not configured, skipping community reactions")
-        return ""
+    import httpx
 
-    query = f'"{title}" site:reddit.com OR site:news.ycombinator.com'
+    # Extract key terms from title for search (first 8 meaningful words)
+    search_terms = " ".join(title.split()[:8])
+    parts: list[str] = []
 
-    try:
-        tavily = TavilyClient(api_key=settings.tavily_api_key)
-        loop = asyncio.get_running_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: tavily.search(
-                query=query,
-                search_depth="basic",
-                max_results=5,
-            ),
-        )
-        results = response.get("results", [])
-        parts: list[str] = []
-        for item in results:
-            item_url = item.get("url", "")
-            content = item.get("content", "")
-            if item_url or content:
-                parts.append(f"{item_url}\n{content}")
-        combined = "\n\n".join(parts)
-        logger.info("Collected community reactions for '%s': %d results", title, len(results))
-        return combined
-    except Exception as e:
-        logger.warning("Failed to collect community reactions for '%s': %s", title, e)
-        return ""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        # --- Hacker News (Algolia API) ---
+        try:
+            hn_resp = await client.get(
+                "https://hn.algolia.com/api/v1/search",
+                params={"query": search_terms, "tags": "story", "hitsPerPage": 3},
+            )
+            if hn_resp.status_code == 200:
+                hits = hn_resp.json().get("hits", [])
+                for hit in hits:
+                    hn_title = hit.get("title", "")
+                    hn_url = f"https://news.ycombinator.com/item?id={hit.get('objectID', '')}"
+                    points = hit.get("points", 0)
+                    comments = hit.get("num_comments", 0)
+                    if points > 5 or comments > 3:
+                        parts.append(
+                            f"[Hacker News] {hn_title} ({points} points, {comments} comments)\n{hn_url}"
+                        )
+        except Exception as e:
+            logger.debug("HN search failed for '%s': %s", title[:40], e)
+
+        # --- Reddit (JSON API) ---
+        try:
+            reddit_resp = await client.get(
+                "https://www.reddit.com/search.json",
+                params={"q": search_terms, "sort": "relevance", "limit": 3, "t": "week"},
+                headers={"User-Agent": "0to1log-bot/1.0"},
+            )
+            if reddit_resp.status_code == 200:
+                children = reddit_resp.json().get("data", {}).get("children", [])
+                for child in children:
+                    rd = child.get("data", {})
+                    rd_title = rd.get("title", "")
+                    rd_url = f"https://reddit.com{rd.get('permalink', '')}"
+                    score = rd.get("score", 0)
+                    num_comments = rd.get("num_comments", 0)
+                    subreddit = rd.get("subreddit", "")
+                    if score > 5 or num_comments > 3:
+                        parts.append(
+                            f"[Reddit r/{subreddit}] {rd_title} ({score} upvotes, {num_comments} comments)\n{rd_url}"
+                        )
+        except Exception as e:
+            logger.debug("Reddit search failed for '%s': %s", title[:40], e)
+
+    combined = "\n\n".join(parts)
+    if parts:
+        logger.info("Collected %d community reactions for '%s'", len(parts), title[:40])
+    return combined
