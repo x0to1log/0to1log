@@ -269,7 +269,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 ## FINAL CHECKLIST (verify before responding)
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
-3. Does each news item have 3-4 paragraphs (expert) or 2-3 paragraphs (learner)? If not, expand.
+3. Does the lead story have 3-4 paragraphs (expert) or 2-3 (learner), and do supporting stories have at least 2 (expert) or 1-2 (learner)? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
@@ -305,7 +305,7 @@ AFTER READING: The reader understands the most important model, repo, and paper 
 ## Layered Reading Design
 Many readers read the beginner-friendly version first, then come here for deeper analysis.
 Assume the reader already knows WHAT each item is. Do NOT spend paragraphs explaining the basic concept.
-Instead, focus each item's 3-4 paragraphs on what a senior engineer would NOT already know:
+Instead, focus each item on what a senior engineer would NOT already know:
 
 Priority order for each news item (include as many as the source material supports):
 1. **Technical novelty vs prior work** — If the source names predecessors or baselines, explain what THIS work does differently at the architecture/method level. Only compare to specific prior work mentioned in the source — do NOT fabricate comparisons.
@@ -333,7 +333,7 @@ Writing rules:
 - Prioritize technical change over market interpretation
 - Keep market commentary minimal. Do not drift into competitive strategy unless it is necessary to explain technical significance.
 - Do NOT write action bullets, strategic decisions, roadmap advice, or "what to do this week."
-- MINIMUM LENGTH: Each news item MUST be 3-4 paragraphs. If you wrote fewer than 3 paragraphs for any news item, expand with deeper technical analysis."""
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 2. Do NOT pad supporting stories to 3-4 paragraphs just to fill space."""
 
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's AI tech scene in one sentence
@@ -370,9 +370,9 @@ Writing rules:
 # Differentiation axis: Expert=strategic market brief, Learner=accessible market digest
 
 BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's most significant business development in one sentence
-- **## Big Tech (ko: ## Big Tech)** - Major moves from OpenAI, Google, Microsoft, Meta, etc. Each item: 3-4 paragraphs analyzing what happened, the strategic rationale, competitive positioning, and market implications.
-- **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Each item: 3-4 paragraphs with deal sizes in context and what the deal signals strategically.
-- **## New Tools (ko: ## New Tools)** - New AI products or services. Each item: 3-4 paragraphs with pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
+- **## Big Tech (ko: ## Big Tech)** - Major moves from OpenAI, Google, Microsoft, Meta, etc. Analyze what happened, the strategic rationale, competitive positioning, and market implications.
+- **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Put deal sizes in context and explain what each deal signals strategically.
+- **## New Tools (ko: ## New Tools)** - New AI products or services. Cover pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
 - **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph analyzing the market sentiment, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
@@ -399,7 +399,7 @@ Writing rules:
 - Connecting the Dots must reveal causation, not just correlation
 - Mention technical details only when they materially affect business outcomes.
 - Focus on market structure, pricing, partnerships, funding, regulation, product positioning, and competitive consequences.
-- MINIMUM LENGTH: Each news item MUST be 3-4 paragraphs. If you wrote fewer than 3, expand with competitive analysis, number comparisons, and strategic implications."""
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 2. Do NOT pad supporting stories to 3-4 paragraphs just to fill space."""
 
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's AI business scene in one sentence
