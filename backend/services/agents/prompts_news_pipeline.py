@@ -334,7 +334,7 @@ Writing rules:
 - Prioritize technical change over market interpretation
 - Keep market commentary minimal. Do not drift into competitive strategy unless it is necessary to explain technical significance.
 - Do NOT write action bullets, strategic decisions, roadmap advice, or "what to do this week."
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 2. Do NOT pad supporting stories to 3-4 paragraphs just to fill space."""
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
 
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's AI tech scene in one sentence
@@ -364,7 +364,7 @@ Writing rules:
 - Keep business strategy and market impact brief and secondary.
 - The emphasis is: what was released, what it does, what makes it important.
 - Technical/business terms should be linked to Handbook in the body text where they first appear
-- Each news item: 2-3 paragraphs (analogy first when useful + what changed + why it matters)"""
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3. Use analogies first when useful, then what changed, then why it matters."""
 
 
 # --- Business Digest Sections ---
@@ -400,13 +400,13 @@ Writing rules:
 - Connecting the Dots must reveal causation, not just correlation
 - Mention technical details only when they materially affect business outcomes.
 - Focus on market structure, pricing, partnerships, funding, regulation, product positioning, and competitive consequences.
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 2. Do NOT pad supporting stories to 3-4 paragraphs just to fill space."""
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
 
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's AI business scene in one sentence
-- **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work. 2-3 paragraphs per item.
-- **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care. 2-3 paragraphs per item.
-- **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying. 2-3 paragraphs per item.
+- **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work.
+- **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care.
+- **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying.
 - **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 friendly paragraph about what people are saying, then 1-2 blockquote highlights. RULES: (1) Only attribute to "Reddit" or "Hacker News" -- never news outlets, blogs, or other media. (2) In EN, use original English text. In KO, paraphrase naturally but keep same attribution. (3) Only use reactions from the provided data. Omit if no Reddit/HN data.
 - **## What This Means for You (ko: ## 나에게 주는 의미)** - How today news connects to daily life, career, and work. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
@@ -433,7 +433,7 @@ Writing rules:
 - Technical explanation is allowed, but only in service of understanding the business impact.
 - Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
 - Technical/business terms should be linked to Handbook in the body text where they first appear
-- Each news item: 2-3 paragraphs (what changed + why it matters + what it means for you)
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3. Cover: what changed + why it matters + what it means for you.
 - Make it interesting and accessible, not dumbed down"""
 
 
