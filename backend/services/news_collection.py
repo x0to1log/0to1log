@@ -42,6 +42,25 @@ BACKFILL_QUERIES = [
 ]
 
 
+def _resolve_google_news_url(url: str) -> str:
+    """Resolve a Google News RSS redirect URL to the original article URL.
+
+    Google News RSS returns URLs like news.google.com/rss/articles/CBMi...
+    which are opaque redirect links. Uses googlenewsdecoder to extract
+    the original URL. Falls back to the redirect URL on failure.
+    """
+    if "news.google.com/rss/articles/" not in url:
+        return url
+    try:
+        from googlenewsdecoder import new_decoderv1
+        result = new_decoderv1(url)
+        if result.get("status") and result.get("decoded_url"):
+            return result["decoded_url"]
+    except Exception:
+        pass
+    return url
+
+
 # ---------------------------------------------------------------------------
 # Fallback: Exa -> Google News RSS (when Tavily quota exhausted)
 # ---------------------------------------------------------------------------
@@ -105,11 +124,12 @@ async def _collect_fallback_news(
                         r"<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>.*?</item>",
                         resp.text, re.DOTALL,
                     )
-                    for title, url in items[:5]:
+                    for title, raw_url in items[:5]:
                         # Clean HTML entities
                         title = title.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'")
+                        url = _resolve_google_news_url(raw_url.strip())
                         google_results.append({
-                            "url": url.strip(),
+                            "url": url,
                             "title": title.strip(),
                             "content": title.strip(),
                             "raw_content": "",
