@@ -24,10 +24,10 @@ Your task: Given a list of AI news candidates, select the BEST one for each cate
 ```"""
 
 
-# CLASSIFICATION: Select 3-5 articles per category (v4 pipeline, main flow)
+# CLASSIFICATION: Select the most important articles per category (v4 pipeline, main flow)
 CLASSIFICATION_SYSTEM_PROMPT = """You are an AI news editor for 0to1log, a Korean-English bilingual AI news platform.
 
-Your task: Given a list of AI news candidates, classify the most important ones into categories. Select 3-5 articles per category.
+Your task: Given a list of AI news candidates, classify the most important ones into categories.
 
 ## Categories
 
@@ -277,6 +277,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
+9. If community reactions were provided in the input, is the Community Pulse section present in BOTH en and ko? If missing, add it.
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
