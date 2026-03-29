@@ -415,6 +415,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
   `1. **[Action]**: [what to do in 1-2 sentences]`
   Example: `1. **Try the new Claude Code CLI**: Install via npm and test it on a small project to see if it fits your workflow.`
+  Only include actions the reader can ACTUALLY DO this week. "주시하세요", "팔로우하세요", "모니터링하세요" are NOT actions — exclude them. If fewer than 3 concrete actions exist, write fewer items rather than padding with vague awareness items.
   Do NOT include source links in this section."""
 
 
