@@ -100,8 +100,12 @@ async def trigger_news_pipeline(
                         if row.data and row.data.get("value") is False:
                             skip_handbook = True
                             logger.info("Handbook extraction disabled via admin_settings")
-                except Exception:
-                    pass  # default to enabled if setting unavailable
+                        else:
+                            logger.info("Handbook extraction enabled (admin_settings value=%s)", row.data.get("value") if row.data else "missing")
+                except Exception as e:
+                    # Default to DISABLED if setting unavailable — safer than silently extracting
+                    skip_handbook = True
+                    logger.warning("Could not read handbook_auto_extract setting (%s), defaulting to SKIP", e)
             result = await run_daily_pipeline(
                 batch_id=batch_id, target_date=target_date,
                 skip_handbook=skip_handbook,
@@ -138,6 +142,19 @@ async def trigger_handbook_extraction(
     batch_id = body.batch_id
 
     async def _run():
+        # Check admin setting before extraction
+        try:
+            sb = get_supabase()
+            if sb:
+                row = sb.table("admin_settings").select("value").eq("key", "handbook_auto_extract").single().execute()
+                if row.data and row.data.get("value") is False:
+                    logger.info("Handbook extraction SKIPPED for batch %s — disabled via admin_settings", batch_id)
+                    return
+        except Exception as e:
+            # Default to SKIP if setting unavailable
+            logger.warning("Could not read handbook_auto_extract setting (%s), skipping extraction", e)
+            return
+
         try:
             result = await run_handbook_extraction(batch_id)
             logger.info(
