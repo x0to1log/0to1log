@@ -228,7 +228,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
 9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 10. Section headers must use the correct language for the target content.
-11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do not include the heading or a placeholder like "(No items today)". ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
+11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do NOT include the `##` heading, and do NOT write placeholder text like "(오늘은 없습니다)", "(No items today)", or "(No new tools announced today)". The section must not appear at all. ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
 12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, skip, or INVENT sections. Only use `##` headings listed in "Required Sections" above. If a news item doesn't fit any existing section, place it in the closest matching one.
 13. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
@@ -278,6 +278,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
 9. Community Pulse: if relevant community quotes are included, is CP present in BOTH en and ko? If CP says "no relevant reactions" or similar, REMOVE the section entirely.
+10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
