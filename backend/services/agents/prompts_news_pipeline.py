@@ -310,7 +310,8 @@ AFTER READING: The reader understands the most important model, repo, and paper 
 ## Layered Reading Design
 Many readers read the beginner-friendly version first, then come here for deeper analysis.
 Assume the reader already knows WHAT each item is. Do NOT spend paragraphs explaining the basic concept.
-Instead, focus each item on what a senior engineer would NOT already know:
+Instead, focus each item on what a senior engineer would NOT already know.
+IMPORTANT: "Do not explain basics" does NOT mean "write less." Expert items must STILL be at least 3 paragraphs — fill them with technical depth (prior work, benchmarks, limitations), not basic explanations.
 
 Priority order for each news item (include as many as the source material supports):
 1. **Technical novelty vs prior work** — Explain what THIS work does differently. If the source names specific predecessors or baselines, compare directly. If the source describes a general limitation of "prior methods" or "existing approaches" without naming them, you may name well-known examples from the same problem domain (e.g., "prior text-only red-teaming tools like HarmBench") IF you are confident they exist. Do NOT fabricate paper names or benchmark numbers.
