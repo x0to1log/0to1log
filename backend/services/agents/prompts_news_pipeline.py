@@ -279,6 +279,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
 9. Community Pulse: if community thread data was provided, is CP present in BOTH en and ko with a sentiment summary? If CP contains fabricated quotes not from the input data, REMOVE the quotes (keep the summary).
 10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
+11. Supporting story minimum: scan ALL non-lead news items. If any expert item has fewer than 3 paragraphs or any learner item has fewer than 2, EXPAND it before responding. A 1-paragraph item is never acceptable.
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.

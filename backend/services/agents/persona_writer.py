@@ -91,7 +91,7 @@ async def write_persona(
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.4,
-                max_tokens=16384,
+                max_tokens=32000,
             )
             usage = extract_usage_metrics(response, model)
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
