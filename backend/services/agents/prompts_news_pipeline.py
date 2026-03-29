@@ -299,48 +299,27 @@ RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Newly released or updated models. Cover benchmark deltas, architecture changes, context window, latency, and comparison vs prior baselines.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Notable GitHub or Hugging Face projects. Explain what the project does, why developers care, maturity level, and current limitations.
 - **## Research Papers (ko: ## Research Papers)** - Important new papers from arXiv or major labs. Explain the core idea, experimental result, what is genuinely new, and where the paper is weak or incomplete.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph summarizing the overall sentiment, then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Write 1 paragraph summarizing the overall sentiment, then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15). Do NOT skip this section for Expert — practitioners want to know what the community thinks.
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short closing synthesis. 1-2 paragraphs only. Summarize what changed in today's AI technical landscape overall."""
 
 
-RESEARCH_EXPERT_GUIDE = """READER: Senior ML engineer, research engineer, technical PM, or advanced practitioner.
-READER'S GOAL: Understand what changed technically today and decide what is worth paying attention to.
-AFTER READING: The reader understands the most important model, repo, and paper developments without wading through repetitive market commentary.
+RESEARCH_EXPERT_GUIDE = """READER: Senior ML engineer, research engineer, or technical PM.
+READER'S GOAL: Understand what changed technically today and what is worth paying attention to.
+AFTER READING: The reader knows the key technical developments without market commentary.
 
-## Layered Reading Design
-Many readers read the beginner-friendly version first, then come here for deeper analysis.
-Assume the reader already knows WHAT each item is. Do NOT spend paragraphs explaining the basic concept.
-Instead, focus each item on what a senior engineer would NOT already know.
-IMPORTANT: "Do not explain basics" does NOT mean "write less." Expert items must STILL be at least 3 paragraphs — fill them with technical depth (prior work, benchmarks, limitations), not basic explanations.
+Tone: Assertive, peer-to-peer. Prefer "is" over "may". Precise, not promotional.
 
-Priority order for each news item (include as many as the source material supports):
-1. **Technical novelty vs prior work** — Explain what THIS work does differently. If the source names specific predecessors or baselines, compare directly. If the source describes a general limitation of "prior methods" or "existing approaches" without naming them, you may name well-known examples from the same problem domain (e.g., "prior text-only red-teaming tools like HarmBench") IF you are confident they exist. Do NOT fabricate paper names or benchmark numbers.
-2. **Concrete numbers in context** — ALWAYS include numbers from the source — never omit them. If a baseline exists in the source, compare directly with delta (e.g., "+4.2 on HumanEval vs DeepSeek-Coder-V2"). If no baseline exists but you know the domain well, add brief context (e.g., "previous SOTA on this benchmark was around X-level performance") WITHOUT inventing specific numbers. If you cannot provide context, include the number as-is and note "baseline not disclosed."
-3. **Limitations and caveats** — what the paper doesn't solve, hardware constraints, scaling concerns, reproducibility issues. Be specific: "requires H200 (not available on most clouds)" not "may have limitations." If the source doesn't discuss limitations, note what's missing.
-4. **Practical signal** — production-readiness, what a practitioner should watch or try. 1-2 sentences max.
-
-Not every item will have all 4 layers. Prioritize accuracy over structure — skip a layer rather than hallucinate it.
-
-Editorial intent:
-- This is a technical research brief, not a strategy memo.
-- The reader comes here to track models, repos, and papers.
-- Your job is to surface technical novelty and technical significance.
-
-Tone - ASSERTIVE, not hedging:
-- Prefer "is", "means", and "should" over "may", "could", and "suggests"
-- Be precise without becoming promotional
+Each news item — write 3-4 paragraphs covering:
+1. **What's new vs prior work** — name predecessors, explain architectural difference
+2. **Benchmarks in context** — include ALL numbers from the source, compare to named baselines with delta
+3. **Limitations** — what it doesn't solve, hardware constraints, missing ablations
+4. **Practical signal** — production-readiness, what to watch (1-2 sentences)
 
 Writing rules:
-- Write like a peer engineer sharing analysis at a technical review meeting, not like a reporter
-- Include specific benchmarks, parameter counts, FLOPs, latency, and memory requirements
-- When using acronyms (SFT, DPO, GRPO, MoE, etc.), write the full name on FIRST USE: e.g., "DPO(Direct Preference Optimization)". After the first mention, acronym alone is fine.
-- Reference paper IDs (arXiv:XXXX.XXXXX) and code repositories when relevant
-- ALWAYS compare numbers to a baseline
-- Assess production-readiness when it helps explain significance
-- Prioritize technical change over market interpretation
-- Keep market commentary minimal. Do not drift into competitive strategy unless it is necessary to explain technical significance.
-- Do NOT write action bullets, strategic decisions, roadmap advice, or "what to do this week."
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
+- Write like a peer engineer at a technical review, not a reporter
+- Expand acronyms on first use: "DPO(Direct Preference Optimization)"
+- Reference arXiv IDs and repo URLs when available
+- PARAGRAPH COUNTS: [LEAD] items 3-4 paragraphs, [SUPPORTING] items at least 3 paragraphs"""
 
 
 RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's AI tech scene in one sentence
