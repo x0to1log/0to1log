@@ -220,9 +220,9 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 4. English and Korean should cover the same news items with natural expression for each language.
 5. Do NOT include an H1 title - start directly with the first section.
 6. Group news items by their subcategory under the category headers.
-7. WEIGHTED DEPTH: Not all news items are equally important. Allocate depth by significance:
-   - **Lead story** (1, at most 2): The most significant item(s) today. 3-4 paragraphs for both Expert and Learner.
-   - **Supporting stories** (rest): Every remaining item MUST get at least 3 paragraphs for BOTH Expert and Learner. Do NOT skip any item or reduce it to a single sentence.
+7. WEIGHTED DEPTH: Items are tagged [LEAD] or [SUPPORTING] in the input.
+   - **[LEAD] items**: Write 3-4 paragraphs. These are today's most important stories.
+   - **[SUPPORTING] items**: Every remaining item MUST get at least 3 paragraphs for BOTH Expert and Learner. Do NOT skip any item or reduce it to a single sentence.
    - Both Expert and Learner should provide substantial, thorough coverage. The difference is WHAT they write (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context) — not how MUCH.
    - Include context for numbers. Do NOT exceed 4 paragraphs per item even for the lead story.
 8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
@@ -271,7 +271,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 ## FINAL CHECKLIST (verify before responding)
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
-3. Does the lead story have 3-4 paragraphs, and do ALL supporting stories have at least 3 paragraphs (both expert and learner)? Expand if below minimum.
+3. Do [LEAD] items have 3-4 paragraphs, and do ALL [SUPPORTING] items have at least 3 paragraphs? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
@@ -1044,3 +1044,27 @@ def get_weekly_prompt(persona: str, language: str) -> str:
     for key, val in headings.items():
         result = result.replace("{" + key + "}", val)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Ranking Prompt — determines Lead vs Supporting after classification
+# ---------------------------------------------------------------------------
+
+RANKING_SYSTEM_PROMPT_V2 = """You are an AI news editor deciding which story leads today's {category} digest.
+
+Given {count} classified articles with community engagement data, pick the lead story.
+
+## Ranking Criteria (in priority order)
+1. **Impact**: How much does this change the AI landscape? A new SOTA, major funding, paradigm shift > incremental update
+2. **Novelty**: Is this genuinely new? First-of-its-kind, exclusive, leak > routine release
+3. **Evidence**: Concrete benchmarks, dollar amounts, user numbers > vague claims ("step change")
+4. **Community signal**: High upvotes/comments indicate broad interest
+
+## Articles
+{items}
+
+## Output JSON
+Pick exactly 1 lead (rarely 2 if truly equal importance). All others are supporting.
+Order supporting by importance (most important first).
+
+{{"lead": ["url1"], "supporting": ["url2", "url3", "url4", "url5"]}}"""

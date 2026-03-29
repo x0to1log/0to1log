@@ -20,7 +20,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
-from services.agents.ranking import classify_candidates
+from services.agents.ranking import classify_candidates, rank_classified
 from services.news_collection import collect_community_reactions, collect_news
 
 logger = logging.getLogger(__name__)
@@ -571,10 +571,10 @@ async def _generate_digest(
             continue
         community = community_map.get(item.url, "")
         community_block = f"\n\nCommunity Reactions (Reddit/HN):\n{community[:1000]}" if community else ""
+        role_tag = "[LEAD]" if item.reason.startswith("[LEAD]") else "[SUPPORTING]"
         news_items.append(
-            f"### [{item.subcategory}] {item.title}\n"
-            f"Source URL (MUST cite this): {item.url}\n"
-            f"Relevance: {item.relevance_score}\n\n"
+            f"### {role_tag} [{item.subcategory}] {item.title}\n"
+            f"Source URL (MUST cite this): {item.url}\n\n"
             f"{body}{community_block}"
         )
     user_prompt = "\n\n---\n\n".join(news_items)
@@ -1031,28 +1031,50 @@ async def run_daily_pipeline(
         handbook_slugs = _fetch_handbook_slugs(supabase)
         raw_content_map = {c.url: c.raw_content for c in candidates if c.raw_content}
 
-        # Stage: community reactions (top 3 items across both categories)
+        # Stage: community reactions (all classified items, deduplicated)
         t0 = time.monotonic()
-        all_classified = sorted(
-            classification.research + classification.business,
-            key=lambda x: x.relevance_score, reverse=True,
-        )
-        top_items = all_classified[:3]
+        all_classified = classification.research + classification.business
+        seen_community_urls: set[str] = set()
+        unique_items = []
+        for item in all_classified:
+            if item.url not in seen_community_urls:
+                seen_community_urls.add(item.url)
+                unique_items.append(item)
         community_map: dict[str, str] = {}
-        if top_items:
+        if unique_items:
             community_tasks = [
                 collect_community_reactions(item.title, item.url)
-                for item in top_items
+                for item in unique_items
             ]
             community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
-            for item, result in zip(top_items, community_results):
+            for item, result in zip(unique_items, community_results):
                 if isinstance(result, str) and result.strip():
                     community_map[item.url] = result
 
         await _log_stage(
             supabase, run_id, "community", "success", t0,
-            input_summary=f"{len(top_items)} items queried",
+            input_summary=f"{len(unique_items)} items queried",
             output_summary=f"{len(community_map)} reactions collected",
+        )
+
+        # Stage: ranking (Lead/Supporting assignment per category)
+        t0 = time.monotonic()
+        research_ranked, research_rank_usage = await rank_classified(
+            classification.research, "research", community_map,
+        )
+        business_ranked, business_rank_usage = await rank_classified(
+            classification.business, "business", community_map,
+        )
+        classification.research = research_ranked
+        classification.business = business_ranked
+        rank_usage = merge_usage_metrics(research_rank_usage, business_rank_usage)
+        cumulative_usage = merge_usage_metrics(cumulative_usage, rank_usage)
+
+        await _log_stage(
+            supabase, run_id, "ranking", "success", t0,
+            input_summary=f"research={len(classification.research)}, business={len(classification.business)}",
+            output_summary="leads assigned",
+            usage=rank_usage,
         )
 
         # Generate research + business digests in parallel

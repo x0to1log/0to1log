@@ -180,3 +180,93 @@ async def classify_candidates(
     if not result.research:
         logger.warning("No research articles classified — research digest will be skipped")
     return result, usage
+
+
+async def rank_classified(
+    items: list[ClassifiedCandidate],
+    category: str,
+    community_map: dict[str, str] | None = None,
+) -> tuple[list[ClassifiedCandidate], dict[str, Any]]:
+    """Rank classified items: assign [LEAD]/[SUPPORTING] role via o4-mini.
+
+    Returns (reordered items with role in reason field, usage metrics).
+    Lead items come first, then supporting in importance order.
+    """
+    if len(items) <= 1:
+        if items:
+            items[0].reason = f"[LEAD] {items[0].reason}"
+        return items, {}
+
+    from services.agents.prompts_news_pipeline import RANKING_SYSTEM_PROMPT_V2
+
+    community_map = community_map or {}
+
+    item_lines = []
+    for i, item in enumerate(items):
+        source_domain = "/".join(item.url.split("/")[:3]) if "://" in item.url else "unknown"
+        community = community_map.get(item.url, "")
+        engagement = "no community data"
+        if community:
+            first_line = community.split("\n")[0].strip()
+            if first_line:
+                engagement = first_line
+        item_lines.append(
+            f"[{i+1}] {item.title}\n"
+            f"    URL: {item.url}\n"
+            f"    Source: {source_domain}\n"
+            f"    Subcategory: {item.subcategory}\n"
+            f"    Community: {engagement}"
+        )
+
+    prompt = RANKING_SYSTEM_PROMPT_V2.format(
+        category=category,
+        count=len(items),
+        items="\n".join(item_lines),
+    )
+
+    client = get_openai_client()
+    model = settings.openai_model_reasoning
+
+    try:
+        response = await client.chat.completions.create(
+            **build_completion_kwargs(
+                model=model,
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": "Rank these items."},
+                ],
+                max_tokens=256,
+                temperature=0,
+                response_format={"type": "json_object"},
+            )
+        )
+        data = parse_ai_json(response.choices[0].message.content, f"Ranking-{category}")
+        usage = extract_usage_metrics(response, model)
+    except Exception as e:
+        logger.warning("Ranking failed for %s: %s — falling back to classification order", category, e)
+        items[0].reason = f"[LEAD] {items[0].reason}"
+        for item in items[1:]:
+            item.reason = f"[SUPPORTING] {item.reason}"
+        return items, {}
+
+    lead_urls = set(data.get("lead", []))
+    supporting_urls = data.get("supporting", [])
+
+    leads = []
+    supports = []
+    for item in items:
+        if item.url in lead_urls:
+            item.reason = f"[LEAD] {item.reason}"
+            leads.append(item)
+        else:
+            item.reason = f"[SUPPORTING] {item.reason}"
+            supports.append(item)
+
+    url_order = {url: i for i, url in enumerate(supporting_urls)}
+    supports.sort(key=lambda x: url_order.get(x.url, 999))
+
+    logger.info(
+        "Ranking %s: lead=%d, supporting=%d",
+        category, len(leads), len(supports),
+    )
+    return leads + supports, usage
