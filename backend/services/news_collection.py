@@ -83,8 +83,8 @@ async def _collect_fallback_news(
                         loop.run_in_executor(
                             None,
                             lambda q=query: exa.search_and_contents(
-                                q, num_results=5, use_autoprompt=True,
-                                type="news", text=True,
+                                q, num_results=5,
+                                type="auto", category="news", text=True,
                             ),
                         ),
                         timeout=15,
@@ -430,6 +430,65 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 
 
 # ---------------------------------------------------------------------------
+# Source: Exa (business-focused news)
+# ---------------------------------------------------------------------------
+
+EXA_BUSINESS_QUERIES = [
+    "AI startup funding acquisition partnership",
+    "OpenAI Google Microsoft Meta AI announcement",
+    "new AI tool product launch",
+    "AI regulation policy enterprise",
+]
+
+async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
+    """Collect AI business news via Exa API. Runs independently of Tavily."""
+    if not settings.exa_api_key:
+        return []
+
+    try:
+        from exa_py import Exa
+    except ImportError:
+        logger.warning("exa_py not installed, skipping Exa collection")
+        return []
+
+    try:
+        exa = Exa(api_key=settings.exa_api_key)
+        loop = asyncio.get_running_loop()
+        candidates: list[NewsCandidate] = []
+
+        for query in EXA_BUSINESS_QUERIES:
+            try:
+                exa_resp = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda q=query: exa.search_and_contents(
+                            q, num_results=5,
+                            type="auto", category="news", text=True,
+                        ),
+                    ),
+                    timeout=15,
+                )
+                for r in (exa_resp.results if hasattr(exa_resp, "results") else []):
+                    if not r.url:
+                        continue
+                    candidates.append(NewsCandidate(
+                        title=r.title or "",
+                        url=r.url,
+                        snippet=(r.text or "")[:300],
+                        source="exa",
+                        raw_content=r.text or "",
+                    ))
+            except Exception as e:
+                logger.debug("Exa query failed for '%s': %s", query, e)
+
+        logger.info("Collected %d candidates from Exa", len(candidates))
+        return candidates
+    except Exception as e:
+        logger.warning("Exa collection failed: %s", e)
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Main entry point: collect from all sources
 # ---------------------------------------------------------------------------
 
@@ -449,17 +508,18 @@ async def collect_news(
     hf_task = _collect_hf_papers(target_date)
     arxiv_task = _collect_arxiv(target_date)
     github_task = _collect_github_trending(target_date)
+    exa_task = _collect_exa(target_date)
 
     tavily_results, tavily_meta = await tavily_task
-    hf_results, arxiv_results, github_results = await asyncio.gather(
-        hf_task, arxiv_task, github_task, return_exceptions=True,
+    hf_results, arxiv_results, github_results, exa_results = await asyncio.gather(
+        hf_task, arxiv_task, github_task, exa_task, return_exceptions=True,
     )
 
     # Safely collect results (treat exceptions as empty lists)
     all_candidates: list[NewsCandidate] = list(tavily_results)
     source_counts: dict[str, int] = {"tavily": len(tavily_results)}
 
-    for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results)]:
+    for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results), ("exa", exa_results)]:
         if isinstance(result, Exception):
             logger.warning("Collector %s failed: %s", name, result)
             source_counts[name] = 0
@@ -481,10 +541,10 @@ async def collect_news(
             unique.append(c)
 
     logger.info(
-        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, excluded_published=%d)",
+        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, excluded_published=%d)",
         len(unique), source_counts["tavily"], source_counts.get("hf_papers", 0),
         source_counts.get("arxiv", 0), source_counts.get("github_trending", 0),
-        excluded_count,
+        source_counts.get("exa", 0), excluded_count,
     )
 
     is_backfill = False
