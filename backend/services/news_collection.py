@@ -621,17 +621,28 @@ async def collect_community_reactions(title: str, url: str) -> str:
             logger.debug("HN search failed for '%s': %s", title[:40], e)
 
         # --- Reddit: search → fetch top comments ---
+        # Only accept threads from AI/tech-relevant subreddits
+        ALLOWED_SUBREDDITS = {
+            "machinelearning", "artificial", "artificialintelligence",
+            "locallama", "openai", "chatgpt", "claudeai", "singularity",
+            "technology", "programming", "compsci", "science", "datascience",
+            "deeplearning", "learnmachinelearning", "mlops", "stablediffusion",
+            "mistralai", "ollama", "agi",
+        }
         try:
             reddit_resp = await client.get(
                 "https://www.reddit.com/search.json",
-                params={"q": search_terms, "sort": "relevance", "limit": 3, "t": "week"},
+                params={"q": search_terms, "sort": "relevance", "limit": 10, "t": "week"},
             )
             if reddit_resp.status_code == 200:
                 children = reddit_resp.json().get("data", {}).get("children", [])
-                # Pick the best thread
+                # Pick the best thread from allowed subreddits
                 best_thread = None
                 for child in children:
                     rd = child.get("data", {})
+                    subreddit = rd.get("subreddit", "").lower()
+                    if subreddit not in ALLOWED_SUBREDDITS:
+                        continue
                     score = rd.get("score", 0)
                     num_comments = rd.get("num_comments", 0)
                     if score > 5 or num_comments > 3:
