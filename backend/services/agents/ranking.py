@@ -225,7 +225,9 @@ async def rank_classified(
     )
 
     client = get_openai_client()
-    model = settings.openai_model_reasoning
+    # Use gpt-4.1-mini (not o4-mini) — o4-mini returns empty responses
+    # without response_format support. gpt-4.1-mini handles JSON reliably.
+    model = settings.openai_model_light
 
     try:
         response = await client.chat.completions.create(
