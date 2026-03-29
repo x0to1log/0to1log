@@ -574,7 +574,11 @@ The block-wise diffusion decoder combined with uncertainty-driven curriculum lea
 This architecture shift could reshape production OCR pipelines. The open-source implementation on Hugging Face enables immediate evaluation against existing autoregressive baselines. [1](https://arxiv.org/abs/example1)
 
 ### MARCH: Multi-Agent Hallucination Detection
-[3 paragraphs with benchmarks and architecture details, each ending with [N](URL)...]
+MARCH introduces a three-agent verification pipeline (Solver, Proposer, Checker) where no single agent sees the full context, preventing self-confirmation bias. Unlike SelfCheckGPT and similar single-model approaches, MARCH decouples claim generation from claim verification across independent agents. [2](https://arxiv.org/abs/example2)
+
+On the HaluEval benchmark, MARCH achieves 91.2% hallucination detection accuracy with an 8B parameter model, matching GPT-4-level performance at 1/20th the inference cost. The key insight: information asymmetry between agents forces genuine verification rather than pattern matching. [2](https://arxiv.org/abs/example2)
+
+The approach requires 3x inference passes per query, which increases latency. Production deployment would need batching optimizations not addressed in the paper. Code and weights are available on GitHub. [2](https://arxiv.org/abs/example2)
 
 ## Open Source & Repos
 ### WildWorld Dataset
@@ -607,7 +611,11 @@ MinerU-Diffusion은 기존 자기회귀(autoregressive) 디코딩 대신 블록 
 Hugging Face에 오픈소스로 공개돼 기존 자기회귀 파이프라인과의 직접 비교 실험이 용이하다. 문서 처리 파이프라인을 운영하는 팀이라면 즉시 벤치마크할 가치가 있다. [1](https://arxiv.org/abs/example1)
 
 ### MARCH: 멀티 에이전트 환각 탐지 프레임워크
-[3문단 — prior work 비교, 벤치마크 delta, 한계점. 각 문단 끝에 [N](URL)]
+MARCH는 Solver·Proposer·Checker 3개 에이전트가 서로 독립적으로 검증하는 파이프라인을 도입한다. 기존 SelfCheckGPT 등 단일 모델 방식과 달리, 주장 생성과 검증을 분리해 자기확인 편향을 방지한다. [2](https://arxiv.org/abs/example2)
+
+HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성, GPT-4 수준 성능을 추론 비용 1/20로 구현했다. 핵심은 에이전트 간 정보 비대칭으로 패턴 매칭이 아닌 실제 검증을 강제하는 구조다. [2](https://arxiv.org/abs/example2)
+
+쿼리당 3회 추론 패스가 필요해 지연이 증가한다. 논문에서는 프로덕션 배치 최적화를 다루지 않았다. 코드와 가중치는 GitHub에 공개돼 있다. [2](https://arxiv.org/abs/example2)
 
 ## 커뮤니티 반응
 Reddit r/MachineLearning에서 230 upvotes, 47개 댓글로 활발히 논의 중이다. 확산 기반 OCR의 실용성에 대해 기대와 신중한 반응이 교차한다.
