@@ -222,7 +222,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 6. Group news items by their subcategory under the category headers.
 7. WEIGHTED DEPTH: Not all news items are equally important. Allocate depth by significance:
    - **Lead story** (1, at most 2): The most significant item(s) today. 3-4 paragraphs for both Expert and Learner.
-   - **Supporting stories** (rest): Every remaining item MUST get at least 3 paragraphs (Expert) or 2-3 paragraphs (Learner). Do NOT skip any item or reduce it to a single sentence.
+   - **Supporting stories** (rest): Every remaining item MUST get at least 3 paragraphs for BOTH Expert and Learner. Do NOT skip any item or reduce it to a single sentence.
    - Both Expert and Learner should provide substantial, thorough coverage. The difference is WHAT they write (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context) — not how MUCH.
    - Include context for numbers. Do NOT exceed 4 paragraphs per item even for the lead story.
 8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
@@ -271,7 +271,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 ## FINAL CHECKLIST (verify before responding)
 1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
 2. Are ALL required `##` section headers present? If any are missing, add them.
-3. Does the lead story have 3-4 paragraphs, and do supporting stories have at least 3 (expert) or 2-3 (learner)? Expand if below minimum.
+3. Does the lead story have 3-4 paragraphs, and do ALL supporting stories have at least 3 paragraphs (both expert and learner)? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
@@ -279,7 +279,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
 9. Community Pulse: if community thread data was provided, is CP present in BOTH en and ko with a sentiment summary? If CP contains fabricated quotes not from the input data, REMOVE the quotes (keep the summary).
 10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
-11. Supporting story minimum: scan ALL non-lead news items. If any expert item has fewer than 3 paragraphs or any learner item has fewer than 2, EXPAND it before responding. A 1-paragraph item is never acceptable.
+11. Supporting story minimum: scan ALL non-lead news items. If any item (expert OR learner) has fewer than 3 paragraphs, EXPAND it before responding. A 1-2 paragraph item is never acceptable.
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
@@ -332,6 +332,7 @@ Tone - ASSERTIVE, not hedging:
 Writing rules:
 - Write like a peer engineer sharing analysis at a technical review meeting, not like a reporter
 - Include specific benchmarks, parameter counts, FLOPs, latency, and memory requirements
+- When using acronyms (SFT, DPO, GRPO, MoE, etc.), write the full name on FIRST USE: e.g., "DPO(Direct Preference Optimization)". After the first mention, acronym alone is fine.
 - Reference paper IDs (arXiv:XXXX.XXXXX) and code repositories when relevant
 - ALWAYS compare numbers to a baseline
 - Assess production-readiness when it helps explain significance
@@ -367,8 +368,9 @@ Writing rules:
 - Do NOT include "What To Try This Week", tutorials, step-by-step experiments, or tool recommendations unless the repo itself is the story.
 - Keep business strategy and market impact brief and secondary.
 - The emphasis is: what was released, what it does, what makes it important.
+- NEVER omit key numbers (speed improvements, benchmark scores, parameter counts, cost savings). Simplify the explanation around them, but the numbers themselves must appear. "4배 빠르다", "82% 단축" — these are facts Learner readers need too.
 - Technical/business terms should be linked to Handbook in the body text where they first appear
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3. Use analogies first when useful, then what changed, then why it matters."""
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Use analogies first when useful, then what changed, then why it matters."""
 
 
 # --- Business Digest Sections ---
@@ -438,7 +440,7 @@ Writing rules:
 - Technical explanation is allowed, but only in service of understanding the business impact.
 - Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
 - Technical/business terms should be linked to Handbook in the body text where they first appear
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3. Cover: what changed + why it matters + what it means for you.
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you.
 - Make it interesting and accessible, not dumbed down"""
 
 
