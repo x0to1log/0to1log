@@ -623,11 +623,23 @@ async def collect_community_reactions(title: str, url: str) -> str:
         # --- Reddit: search → fetch top comments ---
         # Only accept threads from AI/tech-relevant subreddits
         ALLOWED_SUBREDDITS = {
+            # AI/ML research
             "machinelearning", "artificial", "artificialintelligence",
-            "locallama", "openai", "chatgpt", "claudeai", "singularity",
-            "technology", "programming", "compsci", "science", "datascience",
-            "deeplearning", "learnmachinelearning", "mlops", "stablediffusion",
-            "mistralai", "ollama", "agi",
+            "deeplearning", "datascience", "mlops", "learnmachinelearning",
+            "languagemodels", "agi", "singularity",
+            "reinforcementlearning", "computervision", "nlp", "mlpapers",
+            # Frameworks & tools
+            "pytorch", "tensorflow", "jax",
+            # Model/platform specific
+            "locallama", "openai", "chatgpt", "claudeai", "anthropic",
+            "mistralai", "ollama", "stablediffusion", "huggingface",
+            # Big Tech
+            "google", "microsoft", "apple", "meta", "nvidia", "amd", "aws",
+            # General tech
+            "technology", "programming", "compsci", "computerscience",
+            "science", "futurology", "robotics", "selfhosted", "opensource",
+            # Business/startup
+            "startups",
         }
         try:
             reddit_resp = await client.get(
