@@ -237,7 +237,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE RULES: (1) Write a 1-2 sentence SUMMARY of community sentiment using thread metadata (subreddit name, upvotes, comment count) as the primary signal (e.g., "Reddit r/MachineLearning에서 530 upvotes, 47개 댓글로 활발히 논의 중이다. 기대와 신중한 반응이 교차한다."). (2) Include direct `>` quotes ONLY if the provided data contains relevant, substantive comments. Each quote MUST end with attribution on the next line: `> — Reddit` or `> — Hacker News`. If comments are off-topic or low-quality, write the sentiment summary WITHOUT quotes — the summary alone is sufficient. (3) NEVER fabricate or paraphrase quotes that do not exist in the provided data. (4) Only omit this section if NO community threads were found at all. (5) Only attribute to "Reddit" or "Hacker News". (6) In KO, translate or paraphrase quotes into natural Korean — do NOT leave English quotes in Korean content. Keep the same attribution (Reddit/Hacker News).
+15. COMMUNITY PULSE RULES: (1) Format each thread as: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then add quotes if available. Example EN: `**r/MachineLearning** (530 upvotes) — Cautious optimism around the 3.2x speedup.` Example KO: `**r/MachineLearning** (530 upvotes) — 3.2배 속도 향상에 대해 기대와 신중한 반응이 교차.` (2) Include direct `>` quotes ONLY if the provided data contains relevant, substantive comments. Each quote MUST end with attribution on the next line: `> — Reddit` or `> — Hacker News`. If comments are off-topic or low-quality, write the sentiment summary WITHOUT quotes — the summary alone is sufficient. (3) NEVER fabricate or paraphrase quotes that do not exist in the provided data. (4) Only omit this section if NO community threads were found at all. (5) Only attribute to "Reddit" or "Hacker News". (6) In KO, translate or paraphrase quotes into natural Korean — do NOT leave English quotes in Korean content. Keep the same attribution (Reddit/Hacker News).
 {handbook_section}
 
 ## Output JSON format
@@ -299,7 +299,7 @@ RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Newly released or updated models. Cover benchmark deltas, architecture changes, context window, latency, and comparison vs prior baselines.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Notable GitHub or Hugging Face projects. Explain what the project does, why developers care, maturity level, and current limitations.
 - **## Research Papers (ko: ## Research Papers)** - Important new papers from arXiv or major labs. Explain the core idea, experimental result, what is genuinely new, and where the paper is weak or incomplete.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Write 1 paragraph summarizing the overall sentiment, then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15). Do NOT skip this section for Expert — practitioners want to know what the community thinks.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short closing synthesis. 1-2 paragraphs only. Summarize what changed in today's AI technical landscape overall."""
 
 
@@ -451,10 +451,13 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 [3 paragraphs, each ending with [N](URL)...]
 
 ## Community Pulse
-Industry professionals on Reddit see OpenAI's hiring push as a sign of accelerating consolidation, while Hacker News debates the impact on startup talent pools.
+
+**r/OpenAI** (2.1K upvotes) — OpenAI's hiring push is seen as accelerating industry consolidation, sparking concern over startup talent pipelines.
 
 > "If OpenAI hoovers up 3,500 more engineers, every Series A startup just lost their candidate pipeline."
 > — Reddit
+
+**Hacker News** (890 points) — Debate centers on the strategic pivot away from consumer products toward enterprise margins.
 
 > "The real story is the pivot away from consumer -- enterprise margins are where the IPO math works."
 > — Hacker News
@@ -479,7 +482,8 @@ OpenAI가 Sora를 종료하고 코딩 도구와 에이전트 AI에 자원을 집
 Runway, Pika 등은 비디오 생성에 계속 투자하지만, OpenAI는 소비자 AI 비디오 시장이 아직 컴퓨트 비용을 정당화할 수 없다고 판단했다. 동시에 인력을 4,500명에서 8,000명 이상으로 확대해, 풀스택 AI 애플리케이션 영역 지배를 노린다. [2](https://example.com/openai-hiring)
 
 ## 커뮤니티 반응
-Reddit r/OpenAI에서 1,200 upvotes로 뜨겁게 논의 중이다. 채용 규모에 대한 업계 충격과 스타트업 인재 유출 우려가 교차한다.
+
+**r/OpenAI** (1,200 upvotes) — 채용 규모에 대한 업계 충격과 스타트업 인재 유출 우려가 교차.
 
 > "OpenAI가 3,500명을 더 뽑으면 시리즈 A 스타트업은 뽑을 사람이 없어진다."
 > — Reddit
@@ -514,10 +518,13 @@ The expansion targets research, engineering, and product roles. As AI models get
 [3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
 
 ## Community Pulse
-People online are buzzing about OpenAI's massive hiring plans, with many wondering what it means for smaller AI companies trying to compete for talent.
+
+**r/OpenAI** (2.1K upvotes) — AI engineers celebrate the hiring boom, but startup founders worry about talent competition.
 
 > "If you're an AI engineer, this is great news -- more jobs, better pay. But if you're a startup founder, good luck hiring."
 > — Reddit
+
+**Hacker News** (450 points) — Skepticism about whether scaling headcount translates to faster shipping.
 
 > "The real question is whether 8,000 people can ship faster than a focused team of 500."
 > — Hacker News
@@ -543,7 +550,8 @@ ChatGPT와 DALL-E로 유명한 OpenAI가 직원을 4,500명에서 8,000명 이�
 채용은 연구, 엔지니어링, 제품 분야에 집중됩니다. AI 모델이 복잡해질수록 딥러닝부터 AI 윤리까지 다양한 전문가가 필요해집니다. [1](https://example.com/openai)
 
 ## 커뮤니티 반응
-온라인 커뮤니티에서는 OpenAI의 대규모 채용 계획에 큰 관심을 보이고 있습니다. AI 엔지니어에게는 좋은 소식이지만, 소규모 기업에는 인재 경쟁이 더 치열해질 수 있다는 우려도 있습니다.
+
+**r/OpenAI** (2.1K upvotes) — AI 엔지니어에게는 좋은 소식이지만, 소규모 기업에는 인재 경쟁이 치열해질 수 있다는 우려.
 
 > "AI 엔지니어라면 지금이 최고의 시장이다. 하지만 스타트업 대표라면 채용이 더 어려워진다."
 > — Reddit
@@ -585,7 +593,8 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 [3 paragraphs, each ending with [N](URL)...]
 
 ## Community Pulse
-Reddit r/MachineLearning (340 upvotes, 89 comments) is actively debating whether diffusion-based OCR can replace production autoregressive pipelines, with cautious optimism around the 3.2x speedup.
+
+**r/MachineLearning** (340 upvotes) — Cautious optimism around diffusion-based OCR replacing autoregressive pipelines.
 
 > "The Semantic Shuffle benchmark is the real contribution here -- finally a way to test if OCR models actually read vs. guess from language priors."
 > — Reddit
@@ -622,7 +631,8 @@ HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성
 [3문단 — 프로젝트 설명, 개발자 관심 이유, 한계. 각 문단 끝에 [N](URL)]
 
 ## 커뮤니티 반응
-Reddit r/MachineLearning에서 230 upvotes, 47개 댓글로 활발히 논의 중이다. 확산 기반 OCR의 실용성에 대해 기대와 신중한 반응이 교차한다.
+
+**r/MachineLearning** (230 upvotes) — 확산 기반 OCR의 실용성에 대해 기대와 신중한 반응이 교차.
 
 > "Semantic Shuffle 벤치마크가 진짜 공헌이다. OCR 모델이 읽는 건지 추측하는 건지 드디어 테스트할 수 있게 됐다."
 > — Reddit
@@ -655,7 +665,8 @@ The clever part: each agent only sees part of the information, so they cannot ju
 [3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
 
 ## Community Pulse
-The AI research community on Reddit and Hacker News is particularly excited about MinerU-Diffusion, with many noting its practical implications for document processing pipelines.
+
+**r/MachineLearning** (340 upvotes) — MinerU-Diffusion's practical implications for document processing are generating excitement.
 
 > "Finally, OCR that doesn't choke on tables and formulas. This could save us hours of manual cleanup."
 > — Reddit
@@ -682,7 +693,8 @@ The AI research community on Reddit and Hacker News is particularly excited abou
 [2문단 — 비유 먼저("뉴스룸의 기자·편집자·팩트체커"), 핵심 결과. 각 문단 끝에 [N](URL)]
 
 ## 커뮤니티 반응
-Reddit과 Hacker News의 AI 커뮤니티에서 특히 MinerU-Diffusion에 대한 관심이 높습니다. 문서 처리 업무에 바로 적용할 수 있다는 점에서 실무자들의 기대가 큽니다.
+
+**r/MachineLearning** (340 upvotes) — MinerU-Diffusion의 실무 적용 가능성에 대한 기대가 큼.
 
 > "표랑 수식에서 안 막히는 OCR이라니. 수작업 정리 시간이 확 줄겠다."
 > — Reddit
