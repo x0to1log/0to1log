@@ -136,6 +136,17 @@
 
 목표: 3일 연속 Business ≥ 85, Research ≥ 80 → AUTOPUB-01 구현 착수.
 
+### HIGH PRIORITY — 뉴스 v7 품질 체크리스트
+
+> 3/29 콘텐츠 심층 평가에서 도출. 점수/10 기준.
+
+| Task | 기준 | 현재 | 목표 | 상태 |
+|------|------|------|------|------|
+| NQ-02 | 정보 밀도 — baseline 맥락 누락 | 7.5 | 8.5+ | todo |
+| NQ-03+05+07 | KO skeleton 4개 추가: persona 톤 차별화 + 음차/직역 개선 + Action Items 구체화 (NQ-03, NQ-05, NQ-07 통합) | 7~7.5 | 8+ | todo |
+| NQ-06 | Community Pulse — 인용 강제 → 분위기 요약 중심 전환 (수집 출력 구조화 + Rule 15 + skeleton CP 예시) | 6.5 | 8+ | todo |
+| NQ-07 | Action Items — NQ-03+05+07에 통합 (KO skeleton에서 해결) | 7.5 | 8.5+ | merged |
+
 ### HIGH PRIORITY — 핸드북 퀄리티
 
 | Task | 상태 | 목표 |
