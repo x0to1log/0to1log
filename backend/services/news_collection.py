@@ -595,6 +595,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                     story_id = best_hit.get("objectID", "")
                     hn_title = best_hit.get("title", "")
                     points = best_hit.get("points", 0)
+                    num_comments = best_hit.get("num_comments", 0)
                     # Fetch top comments for this story
                     comment_resp = await client.get(
                         "https://hn.algolia.com/api/v1/search",
@@ -602,21 +603,19 @@ async def collect_community_reactions(title: str, url: str) -> str:
                     )
                     comments_text = []
                     if comment_resp.status_code == 200:
+                        import re as _re
                         for c in comment_resp.json().get("hits", []):
                             text = c.get("comment_text", "")
-                            # Strip HTML tags, keep meaningful comments (>50 chars)
-                            import re as _re
                             clean = _re.sub(r"<[^>]+>", " ", text).strip()
                             clean = _re.sub(r"\s+", " ", clean)
                             if len(clean) > 50 and len(clean) < 500:
                                 comments_text.append(clean)
                             if len(comments_text) >= 3:
                                 break
-                    thread_block = f"[Hacker News] {hn_title} ({points} points)\n"
+                    thread_block = f"[Hacker News] {hn_title} | {points} points | {num_comments} comments\n"
                     if comments_text:
+                        thread_block += "Top comments:\n"
                         thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
-                    else:
-                        thread_block += f"https://news.ycombinator.com/item?id={story_id}"
                     parts.append(thread_block)
         except Exception as e:
             logger.debug("HN search failed for '%s': %s", title[:40], e)
@@ -643,6 +642,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                     rd_title = best_thread.get("title", "")
                     subreddit = best_thread.get("subreddit", "")
                     score = best_thread.get("score", 0)
+                    num_comments = best_thread.get("num_comments", 0)
                     # Fetch top comments
                     comments_text = []
                     try:
@@ -662,11 +662,10 @@ async def collect_community_reactions(title: str, url: str) -> str:
                                         break
                     except Exception:
                         pass
-                    thread_block = f"[Reddit r/{subreddit}] {rd_title} ({score} upvotes)\n"
+                    thread_block = f"[Reddit r/{subreddit}] {rd_title} | {score} upvotes | {num_comments} comments\n"
                     if comments_text:
+                        thread_block += "Top comments:\n"
                         thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
-                    else:
-                        thread_block += f"https://reddit.com{permalink}"
                     parts.append(thread_block)
         except Exception as e:
             logger.debug("Reddit search failed for '%s': %s", title[:40], e)

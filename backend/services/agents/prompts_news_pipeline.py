@@ -237,7 +237,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE RULES: (1) Include this section ONLY if the provided community data contains reactions RELEVANT to the news items being covered. If the data is unrelated noise or off-topic threads, OMIT the section entirely. (2) NEVER write "no relevant reactions were found" — either include real, relevant quotes or omit the section completely. (3) Only attribute to "Reddit" or "Hacker News" — never news outlets, blogs, or other media. (4) In EN, use original English comment text. In KO, paraphrase naturally but keep same attribution. (5) Do NOT fabricate quotes — only use reactions from the provided community data.
+15. COMMUNITY PULSE RULES: (1) Write a 1-2 sentence SUMMARY of community sentiment using thread metadata (subreddit name, upvotes, comment count) as the primary signal (e.g., "Reddit r/MachineLearning에서 530 upvotes, 47개 댓글로 활발히 논의 중이다. 기대와 신중한 반응이 교차한다."). (2) Include direct `>` quotes ONLY if the provided data contains relevant, substantive comments. If comments are off-topic or low-quality, write the sentiment summary WITHOUT quotes — the summary alone is sufficient. (3) NEVER fabricate or paraphrase quotes that do not exist in the provided data. (4) Only omit this section if NO community threads were found at all. (5) Only attribute to "Reddit" or "Hacker News". (6) In KO, paraphrase naturally but keep attribution.
 {handbook_section}
 
 ## Output JSON format
@@ -277,7 +277,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
-9. Community Pulse: if relevant community quotes are included, is CP present in BOTH en and ko? If CP says "no relevant reactions" or similar, REMOVE the section entirely.
+9. Community Pulse: if community thread data was provided, is CP present in BOTH en and ko with a sentiment summary? If CP contains fabricated quotes not from the input data, REMOVE the quotes (keep the summary).
 10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
 
 ## Field rules
@@ -313,7 +313,7 @@ Instead, focus each item on what a senior engineer would NOT already know:
 
 Priority order for each news item (include as many as the source material supports):
 1. **Technical novelty vs prior work** — Explain what THIS work does differently. If the source names specific predecessors or baselines, compare directly. If the source describes a general limitation of "prior methods" or "existing approaches" without naming them, you may name well-known examples from the same problem domain (e.g., "prior text-only red-teaming tools like HarmBench") IF you are confident they exist. Do NOT fabricate paper names or benchmark numbers.
-2. **Concrete numbers in context** — benchmarks, params, FLOPs, latency — compared to a named baseline with delta (e.g., "+4.2 on HumanEval vs DeepSeek-Coder-V2"). If the source lacks numbers, say so briefly rather than inventing them.
+2. **Concrete numbers in context** — ALWAYS include numbers from the source — never omit them. If a baseline exists in the source, compare directly with delta (e.g., "+4.2 on HumanEval vs DeepSeek-Coder-V2"). If no baseline exists but you know the domain well, add brief context (e.g., "previous SOTA on this benchmark was around X-level performance") WITHOUT inventing specific numbers. If you cannot provide context, include the number as-is and note "baseline not disclosed."
 3. **Limitations and caveats** — what the paper doesn't solve, hardware constraints, scaling concerns, reproducibility issues. Be specific: "requires H200 (not available on most clouds)" not "may have limitations." If the source doesn't discuss limitations, note what's missing.
 4. **Practical signal** — production-readiness, what a practitioner should watch or try. 1-2 sentences max.
 
@@ -483,7 +483,30 @@ Industry professionals on Reddit see OpenAI's hiring push as a sign of accelerat
 - **If you run AI on traditional containers**: Benchmark Dynamic Workers -- 100x cold-start improvement changes the cost equation. Risk of inaction: overpaying for inference.
 ```
 
-**Korean ("ko"):** Same structure, Korean headings where specified (## 한 줄 요약, ## 커뮤니티 반응, ## 흐름 연결, ## 전략 판단). Same number of sections, items, and paragraphs. Citations [N](URL) at every paragraph end.
+**Korean ("ko"):**
+```
+## 한 줄 요약
+OpenAI가 엔터프라이즈 AI에 올인하면서 소비자 AI 비디오 시장에서 철수하고, 인력을 두 배로 늘린다.
+
+## Big Tech
+### OpenAI, Sora 종료 후 엔터프라이즈 AI 집중
+OpenAI가 Sora를 종료하고 코딩 도구와 에이전트 AI에 자원을 집중한다. IPO 준비와 맞물려 매출 중심의 엔터프라이즈 제품을 우선시하는 전략 전환이다. [1](https://example.com/openai-sora)
+
+Runway, Pika 등은 비디오 생성에 계속 투자하지만, OpenAI는 소비자 AI 비디오 시장이 아직 컴퓨트 비용을 정당화할 수 없다고 판단했다. 동시에 인력을 4,500명에서 8,000명 이상으로 확대해, 풀스택 AI 애플리케이션 영역 지배를 노린다. [2](https://example.com/openai-hiring)
+
+## 커뮤니티 반응
+Reddit r/OpenAI에서 1,200 upvotes로 뜨겁게 논의 중이다. 채용 규모에 대한 업계 충격과 스타트업 인재 유출 우려가 교차한다.
+
+> "OpenAI가 3,500명을 더 뽑으면 시리즈 A 스타트업은 뽑을 사람이 없어진다."
+> — Reddit
+
+## 흐름 연결
+[2-3문단 — 인과 분석, 시장 구조 변화]
+
+## 전략 판단
+- **OpenAI API 기반 서비스를 운영 중이라면**: 이번 분기 안에 대체 제공사를 최소 1곳 평가하세요 — 가격 정책이 바뀔 수 있기 때문. 미실행 시: 단일 벤더 100% 종속 리스크.
+- **기존 컨테이너 기반 AI 인프라라면**: Dynamic Workers를 벤치마크하세요 — 콜드스타트 100배 개선은 비용 구조를 바꿉니다. 미실행 시: 추론 비용 과다 지출.
+```
 """
 
 BUSINESS_LEARNER_SKELETON = """
@@ -524,7 +547,31 @@ People online are buzzing about OpenAI's massive hiring plans, with many wonderi
 3. **Monitor AI policy changes**: Track the new framework and assess how it affects your work.
 ```
 
-**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 커뮤니티 반응, ## 나에게 주는 의미, ## 지금 할 일). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
+**Korean ("ko"):**
+```
+## 한 줄 요약
+OpenAI가 직원을 두 배로 늘리고, Cloudflare가 AI를 더 빠르게 만들며, 새로운 AI 정책이 업계를 바꿀 수 있습니다.
+
+## Big Tech
+### OpenAI, 직원 두 배 확충 계획
+ChatGPT와 DALL-E로 유명한 OpenAI가 직원을 4,500명에서 8,000명 이상으로 늘릴 계획입니다. 더 많은 사람이 AI 도구를 개발하게 되면, 여러분이 매일 쓰는 앱에도 변화가 올 수 있습니다. [1](https://example.com/openai)
+
+채용은 연구, 엔지니어링, 제품 분야에 집중됩니다. AI 모델이 복잡해질수록 딥러닝부터 AI 윤리까지 다양한 전문가가 필요해집니다. [1](https://example.com/openai)
+
+## 커뮤니티 반응
+온라인 커뮤니티에서는 OpenAI의 대규모 채용 계획에 큰 관심을 보이고 있습니다. AI 엔지니어에게는 좋은 소식이지만, 소규모 기업에는 인재 경쟁이 더 치열해질 수 있다는 우려도 있습니다.
+
+> "AI 엔지니어라면 지금이 최고의 시장이다. 하지만 스타트업 대표라면 채용이 더 어려워진다."
+> — Reddit
+
+## 나에게 주는 의미
+[3-4문단 — 직장인/학생/개발자별 실질 영향]
+
+## 지금 할 일
+1. **OpenAI 채용 페이지 확인**: openai.com/careers에서 본인 경력과 맞는 포지션을 살펴보세요.
+2. **Cloudflare Workers AI 베타 테스트**: developers.cloudflare.com에서 무료로 시작할 수 있습니다. 기존 프로젝트의 추론 속도를 비교해 보세요.
+3. **AI 정책 프레임워크 원문 확인**: whitehouse.gov에서 공개된 AI 정책 문서를 읽고, 본인 업무에 영향이 있는지 파악하세요.
+```
 """
 
 RESEARCH_EXPERT_SKELETON = """
@@ -562,7 +609,31 @@ Engineers on Reddit and Hacker News are debating whether diffusion-based OCR can
 [1-2 paragraphs synthesizing what changed in AI research today]
 ```
 
-**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 커뮤니티 반응, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end.
+**Korean ("ko"):**
+```
+## 한 줄 요약
+확산 기반 디코딩이 문서 OCR의 자기회귀(autoregressive) 패러다임에 도전하고, 멀티 에이전트 검증이 LLM 환각(hallucination) 문제에 새로운 해법을 제시한다.
+
+## Research Papers
+### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR
+MinerU-Diffusion은 기존 자기회귀(autoregressive) 디코딩 대신 블록 단위 확산(diffusion) 방식을 도입, OCR을 역렌더링 문제로 재정의한다. 기존 Nougat, GOT-OCR 등 자기회귀 기반 OCR 대비 3.2배 빠른 디코딩 속도를 달성하면서도 표·수식 등 복잡 레이아웃 정확도를 유지했다. [1](https://arxiv.org/abs/example1)
+
+불확실성 기반 커리큘럼 러닝과 블록 단위 병렬 디코딩의 조합이 핵심이다. Semantic Shuffle 벤치마크에서 언어 모델 사전지식 의존도가 낮아, 시각 정보 기반 추론이 강화됨을 입증했다. 다만 필기체·저해상도 문서에서의 성능은 미검증이며, 프로덕션 배포 시 추론 비용 비교 데이터도 없다. [1](https://arxiv.org/abs/example1)
+
+Hugging Face에 오픈소스로 공개돼 기존 자기회귀 파이프라인과의 직접 비교 실험이 용이하다. 문서 처리 파이프라인을 운영하는 팀이라면 즉시 벤치마크할 가치가 있다. [1](https://arxiv.org/abs/example1)
+
+### MARCH: 멀티 에이전트 환각 탐지 프레임워크
+[3문단 — prior work 비교, 벤치마크 delta, 한계점. 각 문단 끝에 [N](URL)]
+
+## 커뮤니티 반응
+Reddit r/MachineLearning에서 230 upvotes, 47개 댓글로 활발히 논의 중이다. 확산 기반 OCR의 실용성에 대해 기대와 신중한 반응이 교차한다.
+
+> "Semantic Shuffle 벤치마크가 진짜 공헌이다. OCR 모델이 읽는 건지 추측하는 건지 드디어 테스트할 수 있게 됐다."
+> — Reddit
+
+## 왜 중요한가
+[1-2문단 — 기술 동향 종합]
+```
 """
 
 RESEARCH_LEARNER_SKELETON = """
@@ -600,7 +671,29 @@ The AI research community on Reddit and Hacker News is particularly excited abou
 [1-2 paragraphs connecting developments to the bigger picture, accessible language]
 ```
 
-**Korean ("ko"):** Same structure, Korean headings (## 한 줄 요약, ## 커뮤니티 반응, ## 왜 중요한가). Same sections, items, paragraphs. Citations [N](URL) at every paragraph end. When explaining a technical method, lead with WHAT IT DOES in plain language before naming the technique.
+**Korean ("ko"):**
+```
+## 한 줄 요약
+문서를 읽는 AI가 3배 빨라지고, AI가 거짓말하는 문제를 AI끼리 검증하는 기술이 등장했습니다.
+
+## Research Papers
+### MinerU-Diffusion: 문서를 한꺼번에 읽는 새로운 방식
+기존 문서 인식(OCR) AI는 글자를 왼쪽부터 오른쪽으로 한 글자씩 읽었습니다. 마치 책을 한 단어씩 짚어 읽는 것과 비슷합니다. MinerU-Diffusion은 완전히 다른 방법을 씁니다. 페이지 전체를 한눈에 보고 모든 텍스트를 동시에 처리하는데, 이 방식 덕분에 기존보다 3.2배 빠릅니다. [1](https://arxiv.org/abs/example1)
+
+핵심 아이디어는 "이 이미지를 만든 텍스트가 뭘까?"라고 거꾸로 질문하는 것입니다. 기존 방식은 글자를 순서대로 맞추다가 표나 수식에서 실수하면 뒤의 내용까지 틀려졌는데, 이 방식은 각 영역을 독립적으로 처리해 그런 연쇄 오류를 줄입니다. [1](https://arxiv.org/abs/example1)
+
+### MARCH: AI가 서로 사실을 확인하는 팩트체크 시스템
+[2문단 — 비유 먼저("뉴스룸의 기자·편집자·팩트체커"), 핵심 결과. 각 문단 끝에 [N](URL)]
+
+## 커뮤니티 반응
+Reddit과 Hacker News의 AI 커뮤니티에서 특히 MinerU-Diffusion에 대한 관심이 높습니다. 문서 처리 업무에 바로 적용할 수 있다는 점에서 실무자들의 기대가 큽니다.
+
+> "표랑 수식에서 안 막히는 OCR이라니. 수작업 정리 시간이 확 줄겠다."
+> — Reddit
+
+## 왜 중요한가
+[1-2문단 — 쉬운 언어로 큰 그림 연결]
+```
 """
 
 # --- Digest prompt getters ---
