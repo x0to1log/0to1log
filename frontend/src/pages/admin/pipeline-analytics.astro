@@ -170,22 +170,15 @@ qualityEntries.sort((a, b) => {
 });
 
 const stageNames = [
-  'collect', 'classify',
+  'collect', 'classify', 'community', 'ranking',
   'digest:research:expert', 'digest:research:learner',
   'digest:business:expert', 'digest:business:learner',
-  // legacy (for old runs)
-  'digest:research:beginner', 'digest:business:beginner',
-  'rank', 'research.generate.en', 'research.translate.ko', 'business.generate.en', 'business.translate.ko',
 ];
 const stageLabels: Record<string, string> = {
   'collect': 'Collect', 'classify': 'Classify',
+  'community': 'Community', 'ranking': 'Ranking',
   'digest:research:expert': 'Research Expert', 'digest:research:learner': 'Research Learner',
   'digest:business:expert': 'Business Expert', 'digest:business:learner': 'Business Learner',
-  'digest:research:beginner': 'Research Beginner (legacy)', 'digest:business:beginner': 'Business Beginner (legacy)',
-  // v2 legacy
-  'rank': 'Rank', 'research.generate.en': 'Research EN', 'research.translate.ko': 'Research KO',
-  'business.generate.en': 'Business EN', 'business.translate.ko': 'Business KO',
-  'quality.research': 'QC Research (legacy)', 'quality.business': 'QC Business (legacy)',
 };
 
 type StackedCostData = { label: string; costs: number[]; tokens: number[] };
