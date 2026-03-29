@@ -527,11 +527,11 @@ The expansion targets research, engineering, and product roles. As AI models get
 
 ## Industry & Biz
 ### U.S. National AI Policy Framework
-[2-3 paragraphs, plain language, each ending with [N](URL)...]
+[3 paragraphs, plain language, each ending with [N](URL)...]
 
 ## New Tools
 ### Cloudflare Dynamic Workers: Faster AI for Everyone
-[2-3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
+[3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
 
 ## Community Pulse
 People online are buzzing about OpenAI's massive hiring plans, with many wondering what it means for smaller AI companies trying to compete for talent.
@@ -660,7 +660,7 @@ The clever part: each agent only sees part of the information, so they cannot ju
 
 ## Open Source & Repos
 ### WildWorld: A Video Game Dataset for AI Training
-[2-3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
+[3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
 
 ## Community Pulse
 The AI research community on Reddit and Hacker News is particularly excited about MinerU-Diffusion, with many noting its practical implications for document processing pipelines.
@@ -934,7 +934,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No citations
 
 4. **Language Quality** (25):
-   - 25: Conversational but substantive; each item 2-3 paragraphs; no tutorial/action-plan drift
+   - 25: Conversational but substantive; lead story 3-4 paragraphs, supporting at least 3; no tutorial/action-plan drift
    - 18: Readable; mostly appropriate tone; adequate length
    - 10: Too formal, too casual, or too short
    - 0: Barely readable
@@ -1003,7 +1003,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No actionable content or empty sections
 
 4. **Language Quality** (25):
-   - 25: Friendly but informative; each item 2-3 paragraphs; engaging tone; [N](URL) citations present
+   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; [N](URL) citations present
    - 18: Readable; adequate length
    - 10: Too dry, too short, or condescending
    - 0: Barely readable
