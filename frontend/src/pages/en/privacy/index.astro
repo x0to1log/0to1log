@@ -30,6 +30,8 @@ const businessEmail = import.meta.env.PUBLIC_BUSINESS_EMAIL || '';
       <p>If you sign in, <strong>Supabase Auth</strong> stores your email and OAuth profile (Google/GitHub) for authentication and access control.</p>
       <h3>Performance</h3>
       <p><strong>Vercel Analytics</strong> collects Web Vitals and page performance metrics.</p>
+      <h3>Newsletter</h3>
+      <p>If you subscribe to our newsletter, your email address is collected and managed by <strong>Beehiiv</strong>, a third-party email service. We do not store your email in our own database. You can unsubscribe at any time via the link at the bottom of each newsletter email.</p>
     </section>
 
     <section class="legal-section">
@@ -53,7 +55,12 @@ const businessEmail = import.meta.env.PUBLIC_BUSINESS_EMAIL || '';
     </section>
 
     <section class="legal-section">
-      <h2>5. Your Rights</h2>
+      <h2>5. Do Not Track</h2>
+      <p>Our site honors Do Not Track (DNT) signals. When we detect a DNT signal, we do not load analytics cookies (Google Analytics, Microsoft Clarity) unless you have explicitly accepted them through our cookie consent banner.</p>
+    </section>
+
+    <section class="legal-section">
+      <h2>6. Your Rights</h2>
       <p>Under the <strong>EU General Data Protection Regulation (GDPR)</strong> and the <strong>Korean Personal Information Protection Act (KPIPA)</strong>, you have the right to:</p>
       <ul>
         <li>Access the personal data we hold about you</li>
@@ -64,12 +71,12 @@ const businessEmail = import.meta.env.PUBLIC_BUSINESS_EMAIL || '';
     </section>
 
     <section class="legal-section">
-      <h2>6. Data Retention</h2>
+      <h2>7. Data Retention</h2>
       <p>Analytics data is retained according to Google Analytics and Microsoft Clarity default retention policies. Authentication data is retained while your account is active.</p>
     </section>
 
     <section class="legal-section">
-      <h2>7. Contact</h2>
+      <h2>8. Contact</h2>
       <p>For questions about this Privacy Policy or to exercise your rights, contact us at <a href={`mailto:${businessEmail}`}>{businessEmail}</a>.</p>
     </section>
   </div>

@@ -61,6 +61,11 @@ const formSrc = 'https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a
     </form>
   </div>
   <p class="nl-strip__feedback" aria-live="polite"></p>
+  <p class="nl-strip__consent">
+    {isKo
+      ? '구독 시 '
+      : 'By subscribing, you agree to our '}<a href={isKo ? '/ko/privacy/' : '/en/privacy/'}>{isKo ? '개인정보처리방침' : 'Privacy Policy'}</a>{isKo ? '에 동의합니다.' : '.'}
+  </p>
   <p class="nl-strip__alt">
     {altLabel} <a href="/settings/webhooks/">Webhook</a> <span aria-hidden="true">&middot;</span> <a href="/rss.xml">RSS</a>
   </p>
@@ -236,6 +241,22 @@ const formSrc = 'https://subscribe-forms.beehiiv.com/8b66eb99-0f38-420d-9d08-e4a
   }
   .nl-strip__feedback--success { color: var(--color-success); }
   .nl-strip__feedback--error { color: var(--color-error, #ef4444); }
+
+  .nl-strip__consent {
+    text-align: center;
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    color: var(--color-text-muted);
+    opacity: 0.6;
+    margin: 0.2rem 0 0;
+    padding: 0;
+  }
+
+  .nl-strip__consent a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 
   .nl-strip__alt {
     text-align: center;

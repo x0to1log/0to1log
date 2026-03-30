@@ -360,6 +360,7 @@ const navItems = [
           <button type="submit" class="nl-env-btn">{nlCopy.nlButton}</button>
         </form>
         <p class="nl-env-feedback" aria-live="polite"></p>
+        <p class="nl-env-consent">{locale === 'ko' ? '구독 시 ' : 'By subscribing, you agree to our '}<a href={locale === 'ko' ? '/ko/privacy/' : '/en/privacy/'}>{locale === 'ko' ? '개인정보처리방침' : 'Privacy Policy'}</a>{locale === 'ko' ? '에 동의합니다.' : '.'}</p>
         <p class="nl-env-alt">{nlCopy.nlAlt} <a href="/settings/webhooks/">Webhook</a> <span aria-hidden="true">&middot;</span> <a href="/rss.xml">RSS</a></p>
         <div class="nl-env-rule"></div>
       </div>
@@ -873,6 +874,20 @@ const navItems = [
   .nl-env-feedback:not(:empty) { min-height: 1.2em; margin-top: 0.3rem; }
   .nl-env-feedback--success { color: var(--color-success); }
   .nl-env-feedback--error { color: var(--color-error, #ef4444); }
+
+  .nl-env-consent {
+    margin: 0.3rem 0 0;
+    font-family: var(--font-ui);
+    font-size: 0.58rem;
+    color: var(--color-text-muted);
+    opacity: 0.6;
+    text-align: center;
+  }
+  .nl-env-consent a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 
   .nl-env-alt {
     margin: 0.4rem 0 0;
