@@ -1245,6 +1245,29 @@ const isFeatured = product?.featured ?? false;
               });
               fetchBody.context = parts.join('\n');
             }
+            if (['tagline_en', 'tagline_ko', 'description_en', 'description_ko'].includes(action)) {
+              const g = (id) => document.getElementById(id)?.value || '';
+              const feats = [];
+              document.querySelectorAll('#features-list .string-list-input').forEach((el) => {
+                if (el.value) feats.push(`Feature: ${el.value}`);
+              });
+              const ucs = [];
+              const ucList = action === 'description_ko' ? '#usecases-ko-list' : '#usecases-list';
+              document.querySelectorAll(`${ucList} .string-list-input`).forEach((el) => {
+                if (el.value) ucs.push(`Use case: ${el.value}`);
+              });
+              const base = [`Category: ${g('field-category')}`, `Tags: ${g('field-tags')}`];
+              if (action === 'tagline_en') {
+                base.push(`Description: ${g('field-description')}`);
+              } else if (action === 'tagline_ko') {
+                base.push(`Tagline EN: ${g('field-tagline')}`, `Description EN: ${g('field-description')}`, `Description KO: ${g('field-description-ko')}`);
+              } else if (action === 'description_en') {
+                base.push(`Tagline: ${g('field-tagline')}`, `Platform: ${g('field-platform')}`, `Pricing: ${g('field-pricing')}`);
+              } else if (action === 'description_ko') {
+                base.push(`Tagline KO: ${g('field-tagline-ko')}`, `Description EN: ${g('field-description')}`, `Platform: ${g('field-platform')}`);
+              }
+              fetchBody.context = [...base, ...feats, ...ucs].join('\n');
+            }
             return fetchBody;
           })()),
           signal: AbortSignal.timeout(180_000), // 3min

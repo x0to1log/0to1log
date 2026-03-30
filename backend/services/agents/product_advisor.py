@@ -277,7 +277,7 @@ Given a product's basic info and real user reviews/articles, produce enrichment 
 
 ## Important
 
-If review data is not available or says "(not available)", base ALL fields on the product's own page content and observable features. Do NOT fabricate user opinions, quotes, or experiences.
+If review data is not available or says "(not available)", base ALL fields on the product's own page content and observable features. Do NOT fabricate user opinions, quotes, or experiences. Do NOT guess at user experience issues you cannot verify from the product page.
 
 ## Field Definitions
 
@@ -297,19 +297,20 @@ If review data is not available or says "(not available)", base ALL fields on th
    - Write as if explaining to a Korean friend
 
 3. **pros_cons** (EN, object):
-   {"pros": [string, string, string], "cons": [string, string, string]}
+   {"pros": [string, string, string], "cons": [1-3 strings]}
    - Each: one factual observation in one sentence, based on actual evidence
-   - pros: specific strengths backed by features or reviews
+   - pros: exactly 3 specific strengths backed by features or reviews
      - BAD: "Great AI technology" (vague marketing)
      - GOOD: "Free tier includes GPT-4o mini with no daily message limit"
-   - cons: honest limitations, NOT attacks or comparisons
+   - cons: 1-3 honest limitations, NOT attacks or comparisons. Only include what you can support with evidence.
      - BAD: "Worse than competitors" (subjective)
      - GOOD: "Korean language responses are noticeably less fluent than English"
    - Base on actual user reviews and page content, not assumptions
-   - If reviews are not available, base on observable product features/limitations
+   - If reviews are not available, include at most 1 con based on observable limitations (e.g., pricing, language support, platform availability). Do not guess at user experience issues.
 
 4. **pros_cons_ko** (KO, object):
    - Same structure, naturally written in Korean
+   - Must have the same number of pros and cons as the EN version
 
 5. **difficulty** (one of: "beginner", "intermediate", "advanced"):
    - beginner: sign up and use immediately, no technical knowledge needed (e.g., ChatGPT, Midjourney)
@@ -317,17 +318,20 @@ If review data is not available or says "(not available)", base ALL fields on th
    - advanced: requires API keys, coding, or significant technical configuration (e.g., LangChain, self-hosted tools)
 
 6. **editor_note** (EN, 1-2 sentences):
-   - Draft a recommendation the editor will review and personalize
-   - Use "I" voice but keep claims factual — do NOT invent personal experiences with the product
-   - Tone: honest, conversational, like texting a friend who asked "should I try this?"
+   - Draft an editorial recommendation the editor will review and personalize
+   - Use third-person editorial voice ("we recommend", "worth trying if", "best suited for")
+   - Do NOT claim personal experience with the product ("I use this", "my go-to")
+   - Tone: honest, conversational, like a trusted review site
    - Include WHEN to use it or WHO it's best for
    - BAD: "This is a great AI tool" (generic)
    - BAD: "I use this every day" (fabricated personal experience)
-   - GOOD: "My go-to when I need to draft anything fast — emails, blog posts, even code. Start here if you've never tried AI."
+   - GOOD: "Worth trying if you draft emails, blog posts, or code regularly — the fastest starting point for AI beginners."
 
 7. **editor_note_ko** (KO, 1-2 sentences):
-   - Same note, naturally written in Korean — NOT a translation
-   - Tone: 친구에게 추천하듯 솔직하게
+   - Same editorial recommendation, naturally written in Korean — NOT a translation
+   - Use editorial voice: "추천합니다", "적합합니다", "시작하기 좋습니다"
+   - Do NOT use first-person claims ("매일 쓰는", "내가 제일 좋아하는")
+   - Tone: 신뢰할 수 있는 리뷰처럼 솔직하게
 
 8. **korean_quality_note** (string or null):
    - If the product supports Korean: describe the actual quality of Korean support
@@ -362,8 +366,8 @@ For ChatGPT:
     "cons": ["한국어 응답이 영어보다 자연스럽지 않은 편", "무료 플랜에서 최신 GPT-4o 모델 접근이 제한적", "웹 브라우징을 켜지 않으면 실시간 정보에 접근 불가"]
   },
   "difficulty": "beginner",
-  "editor_note": "My go-to when I need to draft anything fast — emails, blog posts, even code. Start here if you've never tried AI.",
-  "editor_note_ko": "뭐든 빠르게 초안을 잡고 싶을 때 가장 먼저 여는 도구. AI를 처음 써본다면 여기서 시작하세요.",
+  "editor_note": "Worth trying if you draft emails, blog posts, or code regularly — the fastest starting point for anyone new to AI.",
+  "editor_note_ko": "이메일, 블로그, 코드 초안을 자주 작성한다면 써볼 만합니다. AI 입문자에게 가장 추천하는 시작점입니다.",
   "korean_quality_note": "Full Korean UI available. Responses in Korean are usable but noticeably less fluent than English."
 }
 ```
@@ -376,7 +380,7 @@ For ChatGPT:
 - pros_cons are factual observations, not marketing language
 - cons are honest but not hostile
 - difficulty accurately reflects the signup-to-first-use experience
-- editor_note sounds personal and conversational, not like marketing copy
+- editor_note uses editorial "we" voice — no first-person claims of product usage
 - korean_quality_note is null if no Korean support, otherwise describes actual quality
 
 ## Output Format
@@ -569,6 +573,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             ],
             max_tokens=2000,
             temperature=0.4,
+            response_format={"type": "json_object"},
         )
         enrichment_model = settings.openai_model_light
         call2_task = client.chat.completions.create(
@@ -579,6 +584,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             ],
             max_tokens=2000,
             temperature=0.5,
+            response_format={"type": "json_object"},
         )
 
         resp1, resp2 = await asyncio.gather(call1_task, call2_task, return_exceptions=True)
