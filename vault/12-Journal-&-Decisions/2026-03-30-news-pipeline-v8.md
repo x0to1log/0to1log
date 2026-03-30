@@ -283,6 +283,31 @@ Guide만 고치고 skeleton을 안 보면 불일치가 생긴다. EN skeleton에
 | `69ecade` | Research Expert skeleton 2nd item 완전 작성 |
 | `f5615f4` | skeleton 정확성 + EN/KO 분리 수정 |
 | `3c9ada6` | 핸드북 auto-extract admin 설정 버그 |
+| `4a5a8e8` | **CP 포맷 표준화** — `**r/sub** (N upvotes) — 분위기 한 줄` 형태로 8개 skeleton 통일 + EN skeleton 한국어 혼입 수정 + Rule 15 예시 업데이트 |
+
+---
+
+## 추가 결정 (3/30)
+
+### CP 포맷 표준화
+
+독자 시선 흐름 분석: CP는 "깊이 읽는 섹션이 아니라 스캔하는 섹션"
+
+기존: 분위기 요약이 본문처럼 이어지고, 인용과 구분 없음
+변경: `**r/서브레딧** (메타데이터) — 분위기 한 줄` + 인용은 아래에
+
+```
+**r/MachineLearning** (340 upvotes) — Cautious optimism around diffusion-based OCR.
+
+> "quote text"
+> — Reddit
+```
+
+스캔 1초(소스+메타데이터), 분위기 2초(한 줄), 인용 3초(있으면). 8개 skeleton 전부 통일.
+
+### 데이터 복구 사례
+
+어드민에서 Learner만 수정·저장 시 Expert content가 빈 값으로 덮어씌워지는 문제 발생 (3/30 Business KO Expert 0chars). EN Expert 기반으로 gpt-4.1 번역으로 복구. pipeline.py에는 "Only include content fields when non-empty" 보호가 있지만, 어드민 에디터 경로에서는 보호 없음 — 추후 어드민 저장 로직에서 빈 content 덮어쓰기 방지 필요.
 
 ## Related
 

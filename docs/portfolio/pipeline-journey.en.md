@@ -1,6 +1,6 @@
 # AI News Pipeline Development Journey
 
-> **Project:** [0to1log](https://0to1log.vercel.app) — AI News Curation + AI Glossary + IT Blog Platform
+> **Project:** [0to1log](https://0to1log.com) — AI News Curation + AI Glossary + IT Blog Platform
 > **Duration:** Mid-February to March 30, 2026 (2 weeks planning + 26 days development)
 > **Role:** Solo full-stack developer (planning, design, frontend, backend, AI, infrastructure)
 > **Stack:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-4.1) · Tavily · HN/Reddit APIs · Vercel · Railway

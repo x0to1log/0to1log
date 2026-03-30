@@ -836,6 +836,12 @@ async def _generate_digest(
         expert_content = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', expert_content)
         learner_content = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', learner_content)
 
+        # Post-process: remove [LEAD]/[SUPPORTING] tags leaked into output
+        # These are input-only signals that LLM sometimes copies into headings
+        for tag in ['[LEAD]', '[SUPPORTING]', '([LEAD])', '([SUPPORTING])']:
+            expert_content = expert_content.replace(tag, '')
+            learner_content = learner_content.replace(tag, '')
+
         text = expert_content or learner_content or ""
         if locale == "ko":
             # Korean: count characters (excluding spaces/punctuation), ~500 chars/min

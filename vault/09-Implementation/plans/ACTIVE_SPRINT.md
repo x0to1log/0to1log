@@ -142,10 +142,15 @@
 
 | Task | 기준 | 현재 | 목표 | 상태 |
 |------|------|------|------|------|
-| NQ-02 | 정보 밀도 — baseline 맥락 누락 | 7.5 | 8.5+ | todo |
-| NQ-03+05+07 | KO skeleton 4개 추가: persona 톤 차별화 + 음차/직역 개선 + Action Items 구체화 (NQ-03, NQ-05, NQ-07 통합) | 7~7.5 | 8+ | todo |
-| NQ-06 | Community Pulse — 인용 강제 → 분위기 요약 중심 전환 (수집 출력 구조화 + Rule 15 + skeleton CP 예시) | 6.5 | 8+ | todo |
-| NQ-07 | Action Items — NQ-03+05+07에 통합 (KO skeleton에서 해결) | 7.5 | 8.5+ | merged |
+| NQ-02 | 정보 밀도 — baseline 맥락 (priority 2 수정) | 7.5 | 8.5+ | done |
+| NQ-03+05+07 | KO skeleton 4개 + persona 톤 + 음차 + Action Items | 7~7.5 | 8+ | done |
+| NQ-05b | Expert 약어 풀네임 규칙 | 7.5 | 8.5+ | done |
+| NQ-06 | Community Pulse — 분위기 요약 중심 전환 (수집 + Rule 15 + skeleton) | 6.5 | 8+ | done |
+| NQ-06b | Learner 숫자 생략 금지 + 최소 3p 통일 | — | 8+ | done |
+| NQ-07 | Action Items — "팔로우/주시" 금지, 구체적 action만 | 7.5 | 8.5+ | done |
+| NQ-08 | 분류/랭킹 분리 — gpt-4.1-mini 랭킹 + [LEAD]/[SUPPORTING] 태그 | 7.5 | 9+ | done |
+| NQ-09 | 랭킹에 "어제 발행 뉴스 제목" 전달 — 같은 이벤트 다른 URL 반복 방지 | — | — | todo |
+| NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
 ### HIGH PRIORITY — 핸드북 퀄리티
 

@@ -1,6 +1,6 @@
 # AI 뉴스 파이프라인 개발 여정
 
-> **프로젝트:** [0to1log](https://0to1log.vercel.app) — AI 뉴스 큐레이션 + AI 용어집 + IT 블로그 플랫폼
+> **프로젝트:** [0to1log](https://0to1log.com) — AI 뉴스 큐레이션 + AI 용어집 + IT 블로그 플랫폼
 > **기간:** 2026년 2월 중순 – 3월 30일 (기획 2주 + 개발 26일)
 > **역할:** 1인 풀스택 개발 (기획, 설계, 프론트엔드, 백엔드, AI, 인프라)
 > **스택:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-4.1) · Tavily · HN/Reddit API · Vercel · Railway
