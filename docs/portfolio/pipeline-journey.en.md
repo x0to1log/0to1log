@@ -408,9 +408,9 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 
 | Period | Runs | Avg cost/run | Range |
 |--------|------|-------------|-------|
-| v2–v4 | 13 | **$0.35** | $0.27–$0.43 |
-| v5–v6 | 10 | **$0.40** | $0.22–$0.55 |
-| v7–v8 | 4 | **$0.48** | $0.40–$0.54 |
+| v2–v4 | 13 | **$0.18** | $0.13–$0.21 |
+| v5–v6 | 10 | **$0.20** | $0.11–$0.28 |
+| v7–v8 | 4 | **$0.25** | $0.20–$0.27 |
 
 ### Quality: Same Cost, Better Output (news_posts, EN)
 
@@ -422,11 +422,11 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | | Business | 2.7 | 13.9 | **14.2** |
 | **News items covered** | Research | 1.3 | 4.6 | **5.0** |
 | | Business | 2.7 | 3.6 | **4.5** |
-| **Avg cost/run** | All | $0.35 | $0.40 | **$0.48** |
+| **Avg cost/run** | All | $0.18 | $0.20 | **$0.25** |
 
 *Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts — a stricter standard — yet scores improved.*
 
-**Summary:** Cost per run stayed nearly flat at $0.35 to $0.48, while citations per digest increased 9.3x (1.8 to 16.8), news coverage grew 2–3x (1.3 to 5.0 items), and collection sources expanded from 1 to 6. These improvements were achieved entirely through prompt structure and pipeline architecture — not by spending more on API calls.
+**Summary:** Cost per run stayed nearly flat at $0.18 to $0.25, while citations per digest increased 9.3x (1.8 to 16.8), news coverage grew 2–3x (1.3 to 5.0 items), and collection sources expanded from 1 to 6. These improvements were achieved entirely through prompt structure and pipeline architecture — not by spending more on API calls.
 
 ### Codebase Scale
 

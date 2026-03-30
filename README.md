@@ -23,7 +23,7 @@ The AI pipeline went through 8 versions over 26 days. Version 1 failed after 5 d
 
 | Metric (measured) | v2–v4 | v5–v6 | v7–v8 |
 |---|---|---|---|
-| **Avg cost/run** | $0.35 | $0.40 | $0.48 |
+| **Avg cost/run** | $0.18 | $0.20 | $0.25 |
 | **Research Expert citations** | 1.8 | 12.9 | 16.8 |
 | **Business Expert citations** | 2.7 | 13.9 | 14.2 |
 | **News items per digest** | 1.3–2.7 | 3.6–4.6 | 4.5–5.0 |
