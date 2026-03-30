@@ -27,6 +27,7 @@ type PipelineLog = {
   pipeline_type: string;
   cost_usd: number | string | null;
   tokens_used: number | null;
+  debug_meta: Record<string, unknown> | null;
 };
 
 type RunCard = PipelineRun & {
@@ -37,6 +38,7 @@ type RunCard = PipelineRun & {
   errorSummary: string;
   durationSeconds: number | null;
   statusTone: 'success' | 'failed' | 'running' | 'idle';
+  warningCount: number;
 };
 
 const runs: RunCard[] = [];
@@ -105,7 +107,7 @@ try {
   const pipelineRuns = (runRows ?? []) as PipelineRun[];
   const runIds = pipelineRuns.map((run) => run.id);
   const { data: logs } = runIds.length
-    ? await sb.from('pipeline_logs').select('run_id, pipeline_type, cost_usd, tokens_used').in('run_id', runIds)
+    ? await sb.from('pipeline_logs').select('run_id, pipeline_type, cost_usd, tokens_used, debug_meta').in('run_id', runIds)
     : { data: [] };
 
   const totals = new Map<
@@ -115,6 +117,7 @@ try {
       totalTokens: number | null;
       stageCount: number;
       hasUsageMetrics: boolean;
+      warningCount: number;
     }
   >();
   // Exclude 'summary' — it's a cumulative duplicate of all other stage costs
@@ -127,6 +130,7 @@ try {
       totalTokens: null,
       stageCount: 0,
       hasUsageMetrics: false,
+      warningCount: 0,
     };
     const parsedCost = parseCost(log.cost_usd);
     if (parsedCost !== null) {
@@ -138,6 +142,9 @@ try {
       current.hasUsageMetrics = true;
     }
     current.stageCount += 1;
+    const meta = log.debug_meta as Record<string, unknown> | null;
+    const warnings = Array.isArray(meta?.warnings) ? (meta.warnings as string[]) : [];
+    current.warningCount += warnings.length;
     totals.set(log.run_id, current);
   }
 
@@ -152,6 +159,7 @@ try {
       errorSummary: formatPipelineError(run.last_error),
       durationSeconds: durationSeconds(run.started_at, run.finished_at),
       statusTone: statusTone(run.status),
+      warningCount: metric?.warningCount ?? 0,
     });
   }
 
@@ -495,6 +503,9 @@ const handbookSummary = buildSummary(handbookRuns);
                   ) : (
                     <p class="pipeline-run-card__ok">No blocking error recorded.</p>
                   )}
+                  {run.warningCount > 0 && (
+                    <span class="pipeline-run-card__warning">⚠️ {run.warningCount} warning{run.warningCount > 1 ? 's' : ''}</span>
+                  )}
                   <span class="pipeline-run-card__cta">Open details</span>
                 </div>
               </a>
@@ -599,6 +610,9 @@ const handbookSummary = buildSummary(handbookRuns);
                     <p class="pipeline-run-card__error">{run.errorSummary}</p>
                   ) : (
                     <p class="pipeline-run-card__ok">No blocking error recorded.</p>
+                  )}
+                  {run.warningCount > 0 && (
+                    <span class="pipeline-run-card__warning">⚠️ {run.warningCount} warning{run.warningCount > 1 ? 's' : ''}</span>
                   )}
                   <span class="pipeline-run-card__cta">Open details</span>
                 </div>
@@ -921,6 +935,12 @@ const handbookSummary = buildSummary(handbookRuns);
 
   .pipeline-run-card__ok {
     color: var(--color-text-secondary);
+  }
+
+  .pipeline-run-card__warning {
+    color: #d97706;
+    font-size: 0.8rem;
+    font-weight: 500;
   }
 
   .pipeline-run-card__cta {
