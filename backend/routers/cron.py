@@ -87,12 +87,10 @@ async def trigger_news_pipeline(
 
     async def _run():
         try:
-            # Manual run: respect the explicit skip_handbook flag from the request
-            # Cron run (no body): check admin_settings to decide
-            explicit_handbook = body is not None and not body.skip_handbook
+            # If request explicitly says skip_handbook=true, respect it immediately.
+            # Otherwise, ALWAYS check admin_settings to decide.
             skip_handbook = body.skip_handbook if body else False
-            if not skip_handbook and not explicit_handbook:
-                # No explicit "include handbook" from UI — check admin_settings
+            if not skip_handbook:
                 try:
                     sb = get_supabase()
                     if sb:
