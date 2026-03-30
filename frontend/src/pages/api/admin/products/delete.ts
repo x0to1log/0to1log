@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const { id } = await request.json();
+  const { id, permanent } = await request.json();
 
   if (!id) {
     return new Response(JSON.stringify({ error: 'id is required' }), {
@@ -30,16 +30,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
 
-  const { error } = await supabase
-    .from('ai_products')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('ai_products delete error:', error.message);
-    return new Response(JSON.stringify({ error: 'Failed to delete product' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+  if (permanent) {
+    const { error } = await supabase
+      .from('ai_products')
+      .delete()
+      .eq('id', id)
+      .eq('archived', true);
+    if (error) {
+      return new Response(JSON.stringify({ error: 'Failed to permanently delete' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } else {
+    const { error } = await supabase
+      .from('ai_products')
+      .update({ archived: true })
+      .eq('id', id);
+    if (error) {
+      return new Response(JSON.stringify({ error: 'Failed to archive product' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   return new Response(JSON.stringify({ success: true }), {

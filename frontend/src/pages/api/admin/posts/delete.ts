@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const { id } = await request.json();
+  const { id, permanent } = await request.json();
 
   if (!id) {
     return new Response(JSON.stringify({ error: 'Missing id' }), {
@@ -30,16 +30,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
 
-  const { error } = await supabase
-    .from('news_posts')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('news_posts delete error:', error.message);
-    return new Response(JSON.stringify({ error: 'Failed to delete post' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+  if (permanent) {
+    const { error } = await supabase
+      .from('news_posts')
+      .delete()
+      .eq('id', id)
+      .eq('status', 'archived');
+    if (error) {
+      return new Response(JSON.stringify({ error: 'Failed to permanently delete' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } else {
+    const { error } = await supabase
+      .from('news_posts')
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) {
+      return new Response(JSON.stringify({ error: 'Failed to archive post' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   return new Response(JSON.stringify({ ok: true }), {
