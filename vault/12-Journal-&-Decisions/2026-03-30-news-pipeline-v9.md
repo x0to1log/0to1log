@@ -242,8 +242,91 @@ v9 초기($0.77)에서 merge 추가 후 $0.45로 42% 감소, 동시에 Research 
 
 ---
 
-## 커밋 목록
+## v9 안정화 단계 (3/30~31)
 
+### NQ-16 v1→v2: classify/merge 분리
+
+**v1 실패 (classify+merge 동시):**
+- 3/16: Research papers 10개를 한 그룹으로 과묶기
+- 3/30: Research papers 5개 한 그룹
+- 원인: LLM이 "분류"와 "묶기"를 혼동 — subcategory가 같으면 전부 묶음
+- ✅/❌ 예시 추가해도 해결 안 됨 → 프롬프트로 해결 불가능한 구조적 문제
+
+**v2 해결 (classify/merge 분리):**
+```
+classify(개별 7-8개) → merge(선별 기준 + 전체 50개에서 같은 이벤트 매칭) → 이후 기존 흐름
+```
+- classify: v8 방식 복원 (개별 아이템, 그룹 아님) — 검증된 로직
+- merge: 별도 LLM 호출, 선별된 아이템 기준으로 전체 후보에서 매칭
+- 추가 비용: ~$0.002 (gpt-4.1-mini 1회)
+- ClassificationResult에 `research_picks`/`business_picks` 추가 (flat → grouped 2단계)
+
+**merge 파싱 버그:**
+- LLM이 items를 `["url"]` 문자열 배열로 반환 → dict 기대하는 코드에서 매칭 실패
+- 같은 URL 중복 삽입 (자기 자신과 묶기)
+- 해결: string/dict 양쪽 파싱 + seen_urls dedup
+
+**커밋:** `074966d`, `bbd1e5c`, `635ae11`
+
+### Citation 안정화
+
+**빈 괄호 사고:**
+- `[](URL)` 포맷 예시를 넣었더니 3/4 페르소나에서 citation 완전 누락
+- "번호는 중요하지 않다"고 말하면 LLM은 citation 자체를 안 함
+- 해결: `[1](URL)` 숫자 포함 포맷 복원, 코드가 뒤에서 조용히 교정
+
+**One-Line Summary citation:**
+- LLM이 "every paragraph" 규칙을 한 줄 요약에도 적용
+- 해결: "One-Line Summary does NOT need citations" 명시
+
+**heading citation 제거:**
+- `### Title [1][2][3]` — 소제목에 citation 집계하면 제목 읽기 방해
+- skeleton에서 제거 + 후처리 코드도 삭제
+- citation은 본문 문단 끝에만 존재하면 충분
+
+**프론트엔드 superscript:**
+- `[1](URL)` 렌더링 → subscript `[1]` 스타일 (muted, hover accent)
+- `::before`/`::after`로 `[]` 괄호 CSS 생성
+
+**source_cards title 누락:**
+- `_renumber_citations()`가 source_cards를 만들 때 title 빈값
+- `_fill_source_titles()`로 LLM sources의 title을 URL 매칭해서 채움
+
+**커밋:** `b3d4a4e`, `8b5c8fa`, `81c60cc`, `5c30734`
+
+### Quality Check 수정
+
+- "Source Citations" → "Source Quality" (다중 소스 종합 평가)
+- "multiple sources synthesized" → "all provided sources utilized" — 소스 1개뿐인 그룹도 정당하게 평가
+
+**커밋:** `848fd75`
+
+### 수집 다변화
+
+**카테고리 페이지 필터:**
+- `techcrunch.com/category/`, `economist.com/topics/` 같은 비기사 URL이 classify를 통과
+- 코드 필터: `/category/`, `/topics/`, `/tag/`, `/archive/`, 도메인 루트 차단
+- classify 프롬프트에도 NO/YES URL 예시 추가
+
+**Exa 쿼리 확대:**
+- 4개 → 8개 (enterprise deployment, chip/hardware, pricing, workforce 추가)
+- 3/18 수집량: 21개 → 45개 (2배 이상)
+
+**Brave Search API 수집기:**
+- `_collect_brave()` 신규 — 4개 뉴스 쿼리, `freshness=pd`(하루)
+- 6개 수집기 병렬 실행 (Tavily + HF + arXiv + GitHub + Exa + Brave)
+- API 키 미설정 시 graceful skip
+
+**merge 로그 강화:**
+- `debug_meta`에 `llm_output` 저장 — 어드민에서 merge가 어떻게 묶었는지 확인 가능
+
+**커밋:** `194456e`, `5a24702`
+
+---
+
+## 커밋 목록 (전체)
+
+### Phase 1: 다중 소스 + Citation 코드화
 | 커밋 | 내용 |
 |------|------|
 | `eb69b62` | **다중 소스 enrichment** — Exa find_similar + 4000자 제한 제거 |
@@ -251,20 +334,56 @@ v9 초기($0.77)에서 merge 추가 후 $0.45로 42% 감소, 동시에 Research 
 | `b3d4a4e` | citation 포맷 예시 복원 — `[](URL)` 빈 괄호가 citation 누락 유발 |
 | `81c60cc` | heading citation 제거 — skeleton + 후처리 코드 삭제 |
 | `5c30734` | citation superscript UI + source_cards title 복원 |
-| `3c61ffc` | **NQ-16 merge+classify 통합** — 분류기가 같은 이벤트 그룹화 |
+
+### Phase 2: NQ-16 merge+classify
+| 커밋 | 내용 |
+|------|------|
+| `3c61ffc` | **NQ-16 v1 merge+classify 통합** — 분류기가 같은 이벤트 그룹화 |
 | `bbd1e5c` | ClassifiedGroup .url → .primary_url 수정 |
 | `d80968b` | merge 규칙 강화 — ✅/❌ 예시로 과도한 묶기 방지 |
 | `848fd75` | quality check Source Quality 기준 수정 |
+
+### Phase 3: NQ-16 v2 classify/merge 분리
+| 커밋 | 내용 |
+|------|------|
+| `074966d` | **NQ-16v2 classify/merge 분리** — 과묶기 근본 해결 |
+| `8b5c8fa` | One-Line Summary citation 제외 + merge 로그 llm_output 추가 |
+| `635ae11` | merge 파싱 — string/dict 양쪽 지원 + URL dedup |
+
+### Phase 4: 수집 다변화
+| 커밋 | 내용 |
+|------|------|
+| `194456e` | classify에 카테고리/토픽 페이지 제외 규칙 추가 |
+| `5a24702` | **카테고리 페이지 필터 + Exa 쿼리 8개 + Brave Search 수집기** |
 
 ---
 
 ## 품질 추이 (v9)
 
-| 날짜 | Research | Business | 비용 | 비고 |
-|------|----------|----------|------|------|
-| 3/20 (v8) | 95 | 96 | $0.46 | baseline |
-| 3/22 (v9 enrich only) | 94 | 95 | $0.77 | 입력 폭발, Research Expert 축소 |
-| 3/30 (v9 + merge) | **94** | **95** | **$0.45** | 비용 v8 이하, 품질 유지, Research Expert 정상화 |
+| 날짜 | Research | Business | 비용 | Sources R/B | 비고 |
+|------|----------|----------|------|------------|------|
+| 3/20 (v8) | 95 | 96 | $0.46 | 8/8 | baseline |
+| 3/22 (v9 enrich only) | 94 | 95 | $0.77 | 8/19 | 입력 폭발, Research Expert 축소 |
+| 3/30 (v9 + merge v1) | 94 | 95 | $0.45 | 15/12 | merge 과묶기 발생 |
+| 3/16 backfill (v2 초기) | 94 | 95 | — | 12/11 | papers 10개 과묶기 |
+| 3/17 backfill (v2 + dedup fix) | 95 | 96 | — | 15/4 | Business 소스 부족 |
+| **3/18 backfill (v2 안정)** | **95** | **95** | — | **16/10** | merge 정상, 수집 다변화 효과 |
+
+---
+
+## 교훈 (추가)
+
+### 8. classify와 merge는 분리해야 한다
+
+한 호출에서 "뭐가 중요한가" + "같은 이벤트인가"를 동시에 시키면 LLM이 subcategory 기준으로 과묶기한다. 각각 단순한 작업으로 분리하면 둘 다 잘한다. 추가 비용 $0.002로 구조적 안정성 확보.
+
+### 9. LLM 출력 포맷을 가정하지 마라
+
+merge LLM이 `{"url": "..."}` dict 대신 `"url"` string을 반환해도 파싱이 되어야 한다. `isinstance(item_data, str)` 체크 한 줄로 해결. 방어적 파싱이 필수.
+
+### 10. 수집 다양성이 최종 품질을 결정한다
+
+Exa 쿼리 4→8개 확대 + 카테고리 페이지 필터로 3/17(21개) → 3/18(45개) 수집량 2배. Business source_cards 4개 → 10개. **좋은 입력 없이 좋은 출력 없다.**
 
 ---
 
@@ -272,11 +391,12 @@ v9 초기($0.77)에서 merge 추가 후 $0.45로 42% 감소, 동시에 Research 
 
 - **NQ-09**: 어제 발행 뉴스 제목을 랭킹에 전달 — 같은 이벤트 반복 방지
 - **NQ-15**: Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성
-- **COLLECT-BRAVE-01**: Brave Search API 수집기 추가 (Tavily 대체/보충)
+- **COLLECT-BRAVE-01**: Brave Search API 키 설정 + 실제 수집 검증 (수집기 코드는 완료)
 
 ## Related
 
 - [[2026-03-30-news-pipeline-v8]] — 이전 세션 (분류/랭킹 분리, Research Guide 리팩토링)
 - [[2026-03-30-multi-source-enrichment]] — NQ-13 설계 문서
-- [[2026-03-30-merge-classify-design]] — NQ-16 merge+classify 설계 문서
+- [[2026-03-30-merge-classify-design]] — NQ-16 merge+classify 설계 문서 (v1→v2 진화 과정 포함)
+- [[2026-03-30-nq16-v2-classify-merge-split]] — NQ-16v2 구현 계획
 - [[ACTIVE_SPRINT]] — NQ-13/14/16 done, NQ-15 todo
