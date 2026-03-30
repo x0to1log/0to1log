@@ -19,17 +19,16 @@ AI moves fastest in English, and English content is most diverse. But Korean rea
 
 ## How It Was Built
 
-The AI pipeline went through 8 versions over 26 days. Version 1 spent 5 days systematically uncovering three architectural flaws — and those findings made v2 possible in just 1 day. Each iteration got exponentially faster. Eight rounds of prompt engineering raised the quality score from 76 to 95 — and v8 discovered that *removing* instructions can improve output more than adding them. All metrics below are measured from production databases.
+The AI pipeline went through 9 versions over 26 days. Version 1 spent 5 days systematically uncovering three architectural flaws — and those findings made v2 possible in just 1 day. Each iteration got exponentially faster, from single-source summaries to multi-source synthesis. All metrics below are measured from production databases.
 
-| Metric (measured) | v2–v4 | v5–v6 | v7–v8 |
-|---|---|---|---|
-| **Avg cost/run** | $0.18 | $0.20 | $0.25 |
-| **Research Expert citations** | 1.8 | 12.9 | 16.8 |
-| **Business Expert citations** | 2.7 | 13.9 | 14.2 |
-| **News items per digest** | 1.3–2.7 | 3.6–4.6 | 4.5–5.0 |
-| **Collection sources** | 1 | 4 | 6 |
+| Metric (measured) | v2–v4 | v5–v6 | v7–v8 | v9 |
+|---|---|---|---|---|
+| **Avg cost/run** | $0.18 | $0.20 | $0.25 | $0.55 |
+| **Expert citations** | 1.8–2.7 | 12.9–13.9 | 14.2–16.8 | 16.8 |
+| **Sources per article** | 1 | 1 | 1 | up to 5 |
+| **Collection sources** | 1 | 4 | 6 | 6 |
 
-The full story — including root cause discoveries, key decisions, a rollback lesson, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
+The full story — including root cause discoveries, key decisions, cost trade-offs, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
 
 ## The Three Pillars of 0to1log
 

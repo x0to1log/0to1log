@@ -9,20 +9,24 @@
 
 ## At a Glance
 
-A pipeline that collects 50–60 AI news articles daily from 6 sources, auto-classifies, ranks, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 26 days through 8 versions.
+A pipeline that collects 50–60 AI news articles daily from 6 sources, auto-classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 26 days through 9 versions.
 
-| | Start (v2) | Current (v8) |
-|---|---|---|
-| **Cost per run** | $0.18 | $0.25 |
-| **Citations per digest** | 1.8 | 16.8 (9.3x) |
-| **News items covered** | 1.3 | 5.0 (3.8x) |
-| **Collection sources** | 1 (Tavily) | 6 |
-| **Quality score (Research)** | 75.8 | 91.8 |
-| **Quality score (Business)** | 82.9 | 94.8 |
+| | Start (v2) | v8 | Current (v9) |
+|---|---|---|---|
+| **Cost per run** | $0.18 | $0.25 | $0.42–0.77 |
+| **Citations per digest** | 1.8 | 16.8 | 16.8 |
+| **Sources per article** | 1 (original only) | 1 | up to 5 (Exa find_similar) |
+| **Writer input tokens** | 14K | 57K | 132–318K |
+| **News items covered** | 1.3 | 5.0 | 5.0 |
+| **Collection sources** | 1 (Tavily) | 6 | 6 |
+| **Quality score (Research)** | 75.8 | 91.8 | 91.8 |
+| **Quality score (Business)** | 82.9 | 94.8 | 94.8 |
 
-$0.25 per run — $7.50/month — for daily automated publishing. All figures measured from production databases.
+Through v8, quality improved 9.3x while keeping cost at $0.25/run. v9 introduced multi-source synthesis, raising cost to $0.42–0.77 because the Writer now processes full text from up to 5 sources per article — single-perspective summaries and multi-source synthesis produce fundamentally different quality. All figures measured from production databases.
 
-Key discovery: removing negative instructions ("don't do X") from LLM prompts improves output. Cutting the Research Expert Guide from 569 to 151 words and deleting all 9 DON'Ts increased per-item depth from 1 paragraph to 3.
+Key discoveries:
+1. Removing negative instructions ("don't do X") from LLM prompts improves output. Cutting the Research Expert Guide from 569 to 151 words and deleting all 9 DON'Ts increased per-item depth from 1 paragraph to 3.
+2. Prompt examples determine LLM behavior. An empty-bracket citation format `[](URL)` in the prompt caused 3 of 4 personas to omit citations entirely.
 
 ---
 
@@ -51,6 +55,45 @@ See actual daily digests at [0to1log.vercel.app](https://0to1log.vercel.app).
 
 AI news floods in daily, but quality Korean-language technical briefings are scarce. News outlets often republish press releases verbatim or list headlines without technical context. I wanted to build a platform that automatically delivers two things: "a technical brief that a research engineer would read on their commute" and "an explanation accessible to someone new to AI."
 
+### Current Architecture
+
+```mermaid
+flowchart TD
+    subgraph COLLECT["1. Collect — 6 sources"]
+        T[Tavily] & HF[HuggingFace<br/>Papers] & AR[arXiv] & GH[GitHub<br/>Trending] & RSS[Google<br/>RSS] & EXA1[Exa News]
+    end
+
+    COLLECT --> DEDUP["2. Dedup + Filter
+    URL dedup | published exclusion | filler filter"]
+
+    DEDUP --> CLASS["3. Classify — gpt-4.1-mini
+    Research 0-5 | Business 0-5"]
+
+    CLASS --> COMM["4. Community — HN + Reddit
+    38 subreddit whitelist"]
+
+    COMM --> RANK["5. Rank — gpt-4.1-mini
+    LEAD / SUPPORTING tags"]
+
+    RANK --> ENRICH["6. Enrich — Exa find_similar
+    up to 4 additional sources per article"]
+
+    ENRICH --> WRITE["7. Write — gpt-4.1 x 4
+    R/B x Expert/Learner | max 32K tokens"]
+
+    WRITE --> POST["8. Post-process
+    bold fix | tag strip | citation renumber"]
+
+    POST --> QC["9. Quality Check — o4-mini x 4
+    R/B x Expert/Learner"]
+
+    QC --> SAVE["10. Save Draft
+    admin review then publish"]
+
+    SAVE -.-> HB["Handbook Extract
+    auto term extraction | conditional"]
+```
+
 ---
 
 ## 2. News Pipeline Evolution
@@ -66,17 +109,16 @@ v5 ████████████████                         8 da
 v6 ██                                       1 day  (optimization)
 v7 ████████                                 2 days (quality overhaul + rollback)
 v8 ████████                                 2 days (structural separation)
+v9 ████                                     1 day  (multi-source enrichment)
 ```
 
-| | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
-|---|---|---|---|---|---|---|---|---|
-| **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) | 3/28–29 (2d) | 3/29–30 (2d) |
-| **Outcome** | Root cause discovery | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation |
-| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + community pulse | 6 sources + ranking step + Guide refactor |
-| **Code** | 3,444 lines | 1,127 lines | 1,127 lines | Refactored | Extended | Prompts only | Pipeline + prompts + frontend | Pipeline + ranking + prompts |
-| **Daily cost** | N/A | $0.13 | $0.17–0.21 | $0.17–0.21 | $0.20 | $0.20 | $0.25 | $0.25 |
-| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 |
-| **Dev cost** | $15–25 | $2 | $1 | $1 | $5 | $2 | $3 | $3 |
+| | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 | v9 |
+|---|---|---|---|---|---|---|---|---|---|
+| **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) | 3/28–29 (2d) | 3/29–30 (2d) | 3/30 (1d) |
+| **Outcome** | Root cause discovery | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation | Multi-source enrichment |
+| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + CP | Ranking + Guide refactor | Exa find_similar + citation automation |
+| **Daily cost** | N/A | $0.13 | $0.17–0.21 | $0.17–0.21 | $0.20 | $0.20 | $0.25 | $0.25 | $0.42–0.77 |
+| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 | 14 |
 
 ---
 
@@ -313,6 +355,35 @@ v7 scored 85.3 overall, but Research Expert remained stubbornly short — 1 para
 
 ---
 
+### v9: Multi-Source Enrichment and Citation Automation (3/30, 1 day)
+
+Backfill testing of v8 (3/21, 3/22) revealed two structural problems:
+
+**1. Writer saw only 1 source.** The `raw_content[:4000]` limit passed only the original article's perspective. Other outlets covering the same story, additional benchmarks, and counterpoints never reached the Writer.
+
+**2. Citation numbers reset per section.** The LLM treated each `###` block independently, restarting from `[1]`. source_cards had 19 entries but the body only used `[1]-[4]` repeatedly.
+
+**Solutions:**
+
+**A. Multi-Source Enrichment** — New `enrich_sources()` function uses Exa `find_similar_and_contents()` to collect up to 4 related sources per ranked article. Removed the 4000-char limit, passing full article text to Writer. A new "enrich" stage was added to the pipeline.
+
+**Why this approach:** The alternative was telling the Writer to "reflect diverse perspectives." But the Writer cannot know what it wasn't given — diversifying the sources themselves is the root-cause fix.
+
+**B. Citation renumbering via code post-processing** — LLM inserts `[N](URL)` with any numbers; `_renumber_citations()` reassigns sequential numbers by URL first-appearance. source_cards are extracted by code, LLM's `sources` JSON is ignored.
+
+**The power of prompt examples:** An empty-bracket citation format `[](URL)` in the prompt caused 3 of 4 personas to omit citations entirely. Restoring `[1](URL)` immediately fixed it. Prompt examples are not neutral — the LLM follows the pattern literally.
+
+**Cost impact:** $0.25 to $0.42–0.77 per run (avg $0.55). Writer input tokens grew from 57K to 132–318K. Single-source summaries and multi-source synthesis are fundamentally different in quality — an acceptable trade-off.
+
+| Date | Version | Writer tokens | Run cost |
+|------|---------|-------------|---------|
+| 3/28 | v8 | 57K | $0.27 |
+| 3/20 | v9 early | 153K | $0.46 |
+| 3/21 | v9 | 236K | $0.62 |
+| 3/22 | v9 peak | 318K | $0.77 |
+
+---
+
 ## 3. Handbook Pipeline Evolution
 
 The Handbook (AI glossary) is tightly coupled with the news pipeline. It automatically extracts AI terms from news articles and generates explanations at two levels: Basic (accessible to beginners) and Advanced (senior engineer reference material).
@@ -393,6 +464,7 @@ The news prompt file (`prompts_news_pipeline.py`) accumulated **50 commits**. Pr
 | v6 | **90** | 4 per-persona skeletons | Sharing one skeleton across 4 personas causes style contamination |
 | v7 | **85.3** | User-perspective eval + rollback | Automated scores miss real UX problems; stack prompt changes = regression |
 | v8 | **90.0** | Remove DON'Ts + skeleton-rule consistency | "Don't do X" makes LLMs over-correct; skeleton beats rules when they conflict |
+| v9 | **90.0** | Multi-source enrichment + citation automation | Empty bracket in prompt example killed citations; code beats LLM for formatting |
 
 ### Key Lessons
 
@@ -460,11 +532,12 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 
 ### Cost per Run (pipeline_logs, failed runs excluded)
 
-| Period | Runs | Avg cost/run | Range |
-|--------|------|-------------|-------|
-| v2–v4 | 13 | **$0.18** | $0.13–$0.21 |
-| v5–v6 | 10 | **$0.20** | $0.11–$0.28 |
-| v7–v8 | 4 | **$0.25** | $0.20–$0.27 |
+| Period | Runs | Avg cost/run | Range | Key change |
+|--------|------|-------------|-------|-----------|
+| v2–v4 | 13 | **$0.18** | $0.13–$0.21 | Single source, 4000 char limit |
+| v5–v6 | 10 | **$0.20** | $0.11–$0.28 | 4 sources + skeleton maps |
+| v7–v8 | 4 | **$0.25** | $0.20–$0.27 | Ranking separation + DON'T removal |
+| v9 | 3 | **$0.55** | $0.42–$0.77 | Multi-source enrichment (Writer 5.6x) |
 
 ### Quality: Same Cost, Better Output (news_posts, EN)
 
@@ -476,11 +549,11 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | | Business | 2.7 | 13.9 | **14.2** |
 | **News items covered** | Research | 1.3 | 4.6 | **5.0** |
 | | Business | 2.7 | 3.6 | **4.5** |
-| **Avg cost/run** | All | $0.18 | $0.20 | **$0.25** |
+| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | **$0.55** |
 
 *Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts — a stricter standard — yet scores improved.*
 
-**Summary:** Cost per run stayed nearly flat at $0.18 to $0.25, while citations per digest increased 9.3x (1.8 to 16.8), news coverage grew 2–3x (1.3 to 5.0 items), and collection sources expanded from 1 to 6. These improvements were achieved entirely through prompt structure and pipeline architecture — not by spending more on API calls.
+**Summary:** Through v8, cost stayed at $0.18–$0.25 while citations grew 9.3x and coverage 3.8x. v9 introduced multi-source synthesis, raising cost to $0.55 avg — because the Writer now processes full text from up to 5 sources per article. Single-perspective summaries and multi-source synthesis produce fundamentally different results.
 
 ### Codebase Scale
 
@@ -514,43 +587,17 @@ In v7, stacking 3 prompt changes in one commit caused a score drop from 86.5 to 
 
 ### Accept LLM limitations, compensate with code
 
-Handbook term linking: prompt accuracy 70%, code post-processing 100%. Tag normalization, hallucinated metadata removal — all handled in code. The boundary between "what LLMs do well" (writing, classifying) and "what code does well" (exact matching, format enforcement) became one of the most valuable intuitions from this project.
+Handbook term linking: prompt accuracy 70%, code post-processing 100%. Citation renumbering: LLM resets per section, code handles it perfectly. The boundary between "what LLMs do well" (writing, classifying) and "what code does well" (exact matching, format enforcement) became one of the most valuable intuitions from this project.
+
+### Prompt examples are not neutral
+
+In v9, an empty-bracket citation format `[](URL)` in the prompt caused 3 of 4 personas to omit citations entirely. Restoring `[1](URL)` fixed it immediately. LLMs follow example patterns literally — examples are effectively stronger instructions than rules.
 
 ---
 
 ## 8. Current Architecture
 
-### News Pipeline Flow
-
-```
-6 sources in parallel (Tavily + HuggingFace + arXiv + GitHub + Google RSS + Exa)
-    | 50-60 candidates/day
-    v
-URL dedup + published URL exclusion (3-day) + Google URL resolution + filler filter
-    v
-Classification (gpt-4.1-mini) --> Research 0-5 / Business 0-5
-    v
-Community collection (HN Algolia + Reddit JSON) -- all classified items
-    38-subreddit whitelist, mood summary style
-    v
-Ranking (gpt-4.1-mini) -- per category, with engagement data
-    --> [LEAD] / [SUPPORTING] tags
-    v
-+-- Research Digest -------+   +-- Business Digest -------+
-|  Expert EN+KO (gpt-4.1)  |   |  Expert EN+KO (gpt-4.1)  |  <-- parallel
-|  Learner EN+KO (gpt-4.1) |   |  Learner EN+KO (gpt-4.1) |
-+---------------------------+   +---------------------------+
-    | [LEAD] 3-4 paragraphs, [SUPPORTING] 3+ paragraphs
-    | max_tokens 32K, Community Pulse when data exists
-    v
-Post-processing: bold fix + [LEAD]/[SUPPORTING] tag removal
-    v
-Quality scoring (o4-mini, 4 prompts: R/B x Expert/Learner)
-    v
-Save as draft --> Admin review --> Publish
-    v
-Handbook term auto-extraction (conditional)
-```
+The full news pipeline flow is shown in the [architecture diagram](#current-architecture) (Mermaid) above.
 
 ### Handbook Term Generation Flow
 
@@ -591,6 +638,7 @@ Term input
 ---
 
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 8 pipeline versions, $0.25 per run for daily automated publishing,
-> and the discovery that removing instructions can improve output more than adding them.
+> 9 pipeline versions, evolving from single-source summaries to multi-source synthesis,
+> and the discoveries that removing instructions improves output,
+> and that a single prompt example can determine the entire output.
 > As a solo project, I handled every stage from planning to deployment.
