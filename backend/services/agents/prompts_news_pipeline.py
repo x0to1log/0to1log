@@ -149,9 +149,8 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...(content). [](URL)`
-   - The number inside [] does not matter — it will be auto-assigned by post-processing. Just use any number.
-   - When multiple sources are provided for a news item, use different citations in different paragraphs to show which source informed which claim.
+1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...content. [1](URL)`
+   - Use [N](URL) format where N is any number. Use different citations in different paragraphs when multiple sources are provided.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
@@ -215,9 +214,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...(content). [](URL)`
-   - The number inside [] does not matter — it will be auto-assigned by post-processing. Just use any number.
-   - When multiple sources are provided for a news item, use different citations in different paragraphs to show which source informed which claim.
+1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...content. [1](URL)`
+   - Use [N](URL) format where N is any number. Use different citations in different paragraphs when multiple sources are provided.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
@@ -273,14 +271,14 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
-1. Citations: Does every paragraph end with at least one [](URL) citation? When multiple sources are provided, are different sources cited in different paragraphs?
+1. Citations: Does every paragraph end with at least one [N](URL) citation? When multiple sources are provided, are different sources cited in different paragraphs?
 2. Are ALL required `##` section headers present? If any are missing, add them.
 3. Do [LEAD] items have 3-4 paragraphs, and do ALL [SUPPORTING] items have at least 3 paragraphs? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
 5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
-8. Does ko have citations [](URL) at the end of every paragraph, just like en? If not, add them.
+8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
 9. Community Pulse: if community thread data was provided, is CP present in BOTH en and ko with a sentiment summary? If CP contains fabricated quotes not from the input data, REMOVE the quotes (keep the summary).
 10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
 11. Supporting story minimum: scan ALL non-lead news items. If any item (expert OR learner) has fewer than 3 paragraphs, EXPAND it before responding. A 1-2 paragraph item is never acceptable.
