@@ -179,6 +179,7 @@
 - **우선순위**: NQ-13(enrich)의 효과를 살리려면 merge가 선행되어야 함
 - **위치**: classify 후, enrich 전 (`classify → ★merge → community → rank → enrich → write`)
 - **방법**: 논의 필요 — LLM merge vs 임베딩 유사도 vs 제목 기반 클러스터링
+- **enrich 역할 변경**: merge 후 소스 2개 이상이면 enrich 스킵, 1개뿐인 아이템만 enrich 실행 (보충 역할)
 
 #### NQ-15 배경 노트
 3/30 3월 21일 backfill 평가에서 도출. 현재 Learner는 Expert 내용을 쉬운 단어로 바꾼 수준이지 학습자 관점으로 재구성한 것이 아님.
@@ -230,6 +231,19 @@
 | WEBHOOK-USER-01c | todo | 발송: `fireWebhooks()` 확장 — user_webhooks 동시 조회 |
 | WEBHOOK-USER-01d | todo | 페이지: `/settings/webhooks/` UI (목록 + 추가 폼 + 가이드) |
 | WEBHOOK-USER-01e | todo | 진입점: 편지지 모달 + 뉴스 스트립 Webhook 링크 연결 |
+
+### 뉴스 수집 다변화
+
+| Task | 상태 | 목표 | 우선도 |
+|------|------|------|--------|
+| COLLECT-BRAVE-01 | todo | Brave Search API 수집기 추가 — 무료 티어(2,000건/월), 뉴스 필터, 독립 인덱스 | P1 |
+
+#### COLLECT-BRAVE-01 배경 노트
+Tavily 용량이 backfill로 소진되는 문제 대비. Brave Search API는 무료 티어 + 뉴스 전용 freshness 파라미터 지원.
+Exa와 병렬 수집기로 추가하면 소스 다양성 확보 + Tavily 의존도 감소.
+- API: https://api.search.brave.com/
+- 무료: 2,000 쿼리/월, 뉴스 검색 지원
+- 우선순위: NQ-16(merge) 완료 후 착수
 
 ### OPTIONAL — 다음 Phase
 
