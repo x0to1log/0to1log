@@ -156,7 +156,8 @@
 | NQ-13 | 같은 이벤트 다중 소스 수집 (Multi-Source Enrichment) — rank 후 Exa find_similar 2차 수집 + Writer 다중 소스 입력 | — | — | done |
 | NQ-14 | Citation 번호 전체 기사 순차 (섹션별 리셋 방지) — per-paragraph citation + 후처리 heading 집계 | — | — | done |
 | NQ-15 | Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성 | — | — | todo |
-| NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | in_progress |
+| NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | done |
+| NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | todo |
 
 #### NQ-13 설계 참조
 - **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
@@ -188,6 +189,14 @@
 - "나한테 무슨 의미?" 가 약함 — 아키텍처 설명 대신 실용적 시나리오가 필요
 - Expert/Learner가 동일 뉴스를 동일 비중으로 다룸 — 학습자에게 더 의미 있는 뉴스에 비중 조절 필요
 - 방향: Learner Guide를 "Expert를 쉽게" → "학습자가 알고 싶은 관점으로 재구성"으로 전환
+
+#### NQ-17 배경 노트
+현재 quality check는 Writer 출력물만 평가. 과정(classify/merge/enrich)에서 발생하는 문제는 결과물에서 안 잡히는 경우가 있음:
+- 카테고리 페이지가 classify 통과 → Writer가 어떻게든 글을 씀 (코드 필터 추가로 일부 해결됨)
+- merge가 관련 없는 기사 묶음 → 소제목이 이상하지만 LLM quality check에서 감점 안 될 수 있음
+- enrich가 소스 0개 반환 → Writer가 원본만 인용, 다중 소스 효과 없음
+- community 0건 → CP 없어도 정당화됨
+- **방향:** LLM 호출 아닌 코드 기반 규칙 체크 (비용 0). 파이프라인 로그에 warning 기록 + 어드민 표시
 
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
