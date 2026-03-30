@@ -1,9 +1,28 @@
-# Building AI News Pipelines: 7 Versions, a Rollback, and What I Learned
+# AI News Pipeline Development Journey
 
-> **Project:** 0to1log — AI News Curation + AI Glossary + IT Blog Platform
-> **Duration:** Mid-February to March 29, 2026 (2 weeks planning + 25 days development)
+> **Project:** [0to1log](https://0to1log.vercel.app) — AI News Curation + AI Glossary + IT Blog Platform
+> **Duration:** Mid-February to March 30, 2026 (2 weeks planning + 26 days development)
 > **Role:** Solo full-stack developer (planning, design, frontend, backend, AI, infrastructure)
 > **Stack:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-4.1) · Tavily · HN/Reddit APIs · Vercel · Railway
+
+---
+
+## At a Glance
+
+A pipeline that collects 50–60 AI news articles daily from 6 sources, auto-classifies, ranks, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 26 days through 8 versions.
+
+| | Start (v2) | Current (v8) |
+|---|---|---|
+| **Cost per run** | $0.18 | $0.25 |
+| **Citations per digest** | 1.8 | 16.8 (9.3x) |
+| **News items covered** | 1.3 | 5.0 (3.8x) |
+| **Collection sources** | 1 (Tavily) | 6 |
+| **Quality score (Research)** | 75.8 | 91.8 |
+| **Quality score (Business)** | 82.9 | 94.8 |
+
+$0.25 per run — $7.50/month — for daily automated publishing. All figures measured from production databases.
+
+Key discovery: removing negative instructions ("don't do X") from LLM prompts improves output. Cutting the Research Expert Guide from 569 to 151 words and deleting all 9 DON'Ts increased per-item depth from 1 paragraph to 3.
 
 ---
 
@@ -12,34 +31,25 @@
 1. [Project Overview](#1-project-overview)
 2. [News Pipeline Evolution](#2-news-pipeline-evolution)
 3. [Handbook Pipeline Evolution](#3-handbook-pipeline-evolution)
-4. [Prompt Engineering: From 56 to 90 Points](#4-prompt-engineering-from-56-to-90-points)
+4. [Prompt Engineering: 8 Iterations](#4-prompt-engineering-8-iterations)
 5. [Key Technical Decisions](#5-key-technical-decisions)
 6. [Quantitative Results](#6-quantitative-results)
-7. [What I Learned from Failure](#7-what-i-learned-from-failure)
+7. [Key Lessons](#7-key-lessons)
 8. [Current Architecture](#8-current-architecture)
-9. [v7: The Quality Overhaul and the Rollback Lesson](#9-v7-the-quality-overhaul-and-the-rollback-lesson)
 
 ---
 
 ## 1. Project Overview
 
-0to1log is an automated AI/IT news curation platform that collects, classifies, and summarizes the latest developments every day. It automatically extracts AI terms from news articles to build a glossary (Handbook), and delivers content through two personas — Expert and Learner — tailored to different reader levels.
+0to1log is an automated AI/IT news curation platform that collects, classifies, and summarizes the latest developments every day. It automatically extracts AI terms from news articles to build a glossary, and delivers content through two personas — Expert and Learner — tailored to different reader levels.
+
+### Live Output
+
+See actual daily digests at [0to1log.vercel.app](https://0to1log.vercel.app).
 
 ### Why I Built This
 
 AI news floods in daily, but quality Korean-language technical briefings are scarce. News outlets often republish press releases verbatim or list headlines without technical context. I wanted to build a platform that automatically delivers two things: "a technical brief that a research engineer would read on their commute" and "an explanation accessible to someone new to AI."
-
-### The Project in Numbers
-
-| Metric | Value |
-|--------|-------|
-| Total commits | 907 (over 22 days) |
-| Avg. daily commits | 41 |
-| Frontend code | 54,000 lines (Astro + TypeScript) |
-| Backend code | 11,000 lines (Python) |
-| AI agent code | 5,700 lines (52% of backend) |
-| Tests | 64, all passing |
-| Vault documents | 204 .md files |
 
 ---
 
@@ -48,7 +58,7 @@ AI news floods in daily, but quality Korean-language technical briefings are sca
 ### Version History at a Glance
 
 ```
-v1 ████████████████████████████████████████ 5 days (FAILED, deleted entirely)
+v1 ████████████████████████████████████████ 5 days (root cause discovery)
 v2 ████████                                 1 day  (working)
 v3 ████                                     half day (working)
 v4 ██                                       half day (working)
@@ -253,9 +263,53 @@ SKELETON_MAP = {
 | v3 (1 skeleton) | 85 | 90 | 65 | 60 | **75** |
 | v6 (4 skeletons) | 95 | 93 | 85 | 88 | **90** |
 
-Automated quality scores (gpt-4.1-mini):
+Automated quality scores (gpt-4.1-mini, single-run peak):
 - **Business: 99** (Expert 100, Learner 98)
 - **Research: 95** (Expert 95, Learner 95)
+
+---
+
+### v7: Quality Overhaul and Rollback Lesson (3/28–29, 2 days)
+
+v6 scored 90/100 on automated checks. But reading the actual published content from a **user's perspective** averaged 76/100.
+
+Five problems invisible to automated scoring:
+
+| Problem | Automated score | User experience |
+|---------|---------------|-----------------|
+| Google News redirect URLs | Not checked | Readers can't reach sources |
+| Filler articles | Not checked | Empty clickbait |
+| Expert ≈ Learner (70% overlap) | Not checked | Why switch personas? |
+| All items same depth | Not checked | No editorial hierarchy |
+| No community reactions | Not checked | Missing social proof |
+
+**v7 changes:** Layered Reading Design (Expert assumes readers read Learner), Weighted Depth (lead 3-4 paragraphs), real-comment Community Pulse (HN Algolia + Reddit JSON), 4 persona-aware quality checks, bold markdown post-processing.
+
+**Rollback lesson:** Stacking 3 prompt changes in one commit crashed the score from 86.5 to 66.5. Rolled back to last verified state and selectively re-applied only 3 proven changes. Prompt changes must be verified one at a time.
+
+---
+
+### v8: Structural Separation and the DON'T Removal (3/29–30, 2 days)
+
+v7 scored 85.3 overall, but Research Expert remained stubbornly short — 1 paragraph per item. Three structural causes:
+
+**1. Classification and ranking coupled.** Importance scores were superficial, so all 5 items got equal depth.
+
+**2. Research Expert Guide had too many DON'Ts.** 569 words, 9 negative instructions. LLM over-interpreted as "write less." Business Expert Guide: 201 words, zero DON'Ts, scoring 90.
+
+**3. Skeleton placeholders taught wrong patterns.** Only first item fully written; rest were `[3 paragraphs...]`.
+
+**Solutions:**
+
+**A. Classification/ranking separation** — New `rank_classified()` function (gpt-4.1-mini) assigns `[LEAD]`/`[SUPPORTING]` tags. Cost: $0.00014/run.
+
+**Why remove rather than rewrite:** The alternative was rewriting DON'Ts as positive instructions. But Business Expert was already proving fewer words + zero DON'Ts = higher scores. Per-item depth jumped from 1 to 3 paragraphs.
+
+**B. Research Expert Guide refactoring:** 569 to 151 words, DON'Ts 9 to 0.
+
+**C. Skeleton 2nd item fully written.** **D. Exa promoted to independent collector (5 to 6 sources).** **E. Community Pulse overhaul (mood summaries + 38-subreddit whitelist).**
+
+**v8 result:** All 4 personas scored 90/100 — the first version where every combination scored equally.
 
 ---
 
@@ -440,37 +494,27 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 
 ---
 
-## 7. What I Learned from Failure
+## 7. Key Lessons
 
-### Five days were not wasted
+### When quality thresholds go down, the architecture is wrong
 
-v1's five days were not wasted — they systematically exposed three architectural flaws that no amount of upfront design could have predicted. The key learning was recognizing when to stop patching and start redesigning: the moment quality thresholds start going down instead of up, the architecture is wrong.
+In v1, I kept lowering the quality bar: 5,000 chars → 3,500 → 2,500. That was the signal to stop patching and redesign. When v2 fixed the architecture, v1's 400 lines of defensive code became entirely unnecessary.
 
-### Good architecture eliminates defensive code
+### Removing DON'Ts makes LLMs perform better
 
-v1's 400 lines of defensive code became entirely unnecessary in v2. When you fix the root cause, the symptom-handling code disappears.
+Deleting all 9 DON'Ts from the Research Expert Guide improved per-item depth from 1 paragraph to 3. LLMs over-interpret negative instructions. The Business Expert Guide was already scoring 90 with 201 words and zero DON'Ts — applying the same pattern to Research confirmed it.
 
-### Fast failure = fast progress
+### Skeletons beat rules when they conflict
 
-```
-v1 → v2: Architecture redesign. 5 days → 1 day.
-v2 → v3: Content strategy change. Infrastructure reused.
-v3 → v4: Optimization. Existing structure maintained.
-```
+Even with "minimum 3 paragraphs" stated in 6 places, if the skeleton shows `[2-3 paragraphs]`, the LLM picks 2. Rules, skeletons, and quality checks must be consistent for the LLM to follow intent.
 
-Each iteration built on the previous foundation, making the next version exponentially faster.
+### Prompt changes must be verified one at a time
 
-### Prompt engineering is software engineering
-
-Prompts need version control, testing, auditing, and refactoring — just like code. 50 commits on a single prompt file isn't an exaggeration; it's reality. "Write one prompt and you're done" is a myth. It requires a structured, iterative improvement process.
+In v7, stacking 3 prompt changes in one commit caused a score drop from 86.5 to 66.5. Impossible to isolate the cause. "Rollback + selective re-apply" is safer than "patch the patches."
 
 ### Accept LLM limitations, compensate with code
 
-- Handbook term linking: prompt accuracy 70% → code post-processing 100%
-- Tag normalization: LLM mixed in Korean tags → code filters English only
-- Date/format: LLM hallucinated metadata like "Vol.01 No.10" → code strips it
-
-Developing intuition for the boundary between "what LLMs are good at" (writing, summarizing, classifying) and "what code is good at" (exact matching, format enforcement, post-processing) was one of the most valuable outcomes of this project.
+Handbook term linking: prompt accuracy 70%, code post-processing 100%. Tag normalization, hallucinated metadata removal — all handled in code. The boundary between "what LLMs do well" (writing, classifying) and "what code does well" (exact matching, format enforcement) became one of the most valuable intuitions from this project.
 
 ---
 
@@ -546,132 +590,7 @@ Term input
 
 ---
 
----
-
-## 9. v7: The Quality Overhaul and the Rollback Lesson
-
-### Why v7 Exists
-
-v6 scored 90/100 on automated quality checks. But when I evaluated the actual published content from a **user's perspective** — reading it as someone who would visit the site — the average was 76/100.
-
-The gap exposed five problems invisible to automated scoring:
-
-| Problem | Automated score | User experience |
-|---------|---------------|-----------------|
-| Google News RSS redirect URLs | Not checked | Readers can't reach sources |
-| Filler articles ("OpenAI: Latest News") | Not checked | "This is empty clickbait" |
-| Expert ≈ Learner (70% overlap) | Not checked | "Why switch personas?" |
-| All items same depth | Not checked | "What's today's top story?" |
-| No community reactions | Not checked | Missing social proof |
-
-### What Changed in v7
-
-**1. Layered Reading Design** — Expert assumes readers already read Learner. Instead of repeating basics, Expert focuses on: prior work comparison, benchmark deltas, limitations/caveats, and practical signals. Learner→Expert feels like "leveling up," not re-reading.
-
-**2. Weighted Depth** — Lead story gets 3-4 paragraphs, supporting stories get minimum coverage. Creates editorial hierarchy: "today's most important story" is visually and structurally prominent.
-
-**3. Community Pulse with Real Comments** — Previous implementation only passed thread titles to the LLM, which fabricated quotes. v7 fetches actual top comments from HN Algolia and Reddit JSON APIs (both free, no API key). The LLM now edits real voices, not imagined ones.
-
-**4. Four Quality Check Prompts** — Instead of one prompt checking Expert EN only, v7 uses four persona-aware prompts (Research/Business × Expert/Learner). Expert is scored on Technical Depth; Learner is scored on Accessibility. Both run in parallel.
-
-**5. Post-Processing** — Bold markdown with parenthetical abbreviations (`**term(abbr)**`) broke rendering. Regex post-processing in both news and handbook pipelines fixes this deterministically.
-
-### The Rollback
-
-Midway through v7, I stacked three prompt changes in one commit: anti-repetition rule, Community Pulse placeholder ban, and Business quality guard. The combined effect was catastrophic:
-
-- Business went from 5 items to **1 item** (quality guard over-corrected)
-- Community Pulse **disappeared entirely** (placeholder ban killed the section)
-- Content got **shorter** (anti-repetition was too aggressive)
-
-Average score dropped from 86.5 to **66.5** — worse than the original baseline.
-
-**Decision:** Roll back `prompts_news_pipeline.py` to the last verified-good state (`7438c20`, score 86.5) and selectively re-apply only the three changes that were proven to work:
-1. "Do not INVENT sections" (fixed a real 3/17 bug)
-2. Community Pulse rule extraction (token savings, no behavior change)
-3. Prior work comparison relaxation (allows well-known examples)
-
-**The lesson:** Prompt changes must be verified one at a time. Stacking multiple changes in one commit makes it impossible to isolate which change caused the regression. "Rollback + selective re-apply" is safer than "patch the patches."
-
-### v7 Quality Trend
-
-| Date | Pipeline | R Expert | R Learner | B Expert | B Learner | Avg |
-|------|----------|----------|-----------|----------|-----------|-----|
-| 3/28 | v5 (baseline) | 72 | 80 | 78 | 74 | **76.0** |
-| 3/19 | v6 peak | 85 | 86 | 88 | 87 | **86.5** |
-| 3/26 v2 | Over-corrected | 78 | 75 | 55 | 58 | **66.5** |
-| 3/26 v3 | v7 (post-rollback) | 86 | 83 | 85 | 87 | **85.3** |
-
----
-
-## 10. v8: Structural Separation and the DON'T Removal (3/29–30, 2 days)
-
-### Three Structural Problems
-
-v7 scored 85.3 overall, but Research Expert remained stubbornly short — often just 1 paragraph per item. Deep analysis revealed three structural problems:
-
-**1. Classification and ranking were coupled.** The classifier handled both "where does this belong?" and "how important is it?" simultaneously. Importance scores were superficial, so the writing LLM treated all 5 items equally — no lead story, no editorial hierarchy.
-
-**2. The Research Expert Guide had too many DON'Ts.** 569 words with 9 negative instructions ("Do NOT explain basics", "Skip a layer rather than hallucinate"). The LLM over-interpreted these as "write less." Meanwhile, the Business Expert Guide was 201 words with almost no DON'Ts — and scored 90.
-
-**3. Skeleton placeholders taught the wrong pattern.** Only the first item was fully written; the rest were `[3 paragraphs...]`. The LLM followed the fully-written item's depth for item 1, then wrote minimally for the rest.
-
-### Solutions
-
-**A. Classification/Ranking Separation**
-
-```
-Before: Collect --> Classify --> Community (top 3) --> Write
-After:  Collect --> Classify --> Community (all) --> Rank --> Write
-```
-
-New `rank_classified()` function (gpt-4.1-mini) compares items within each category and assigns `[LEAD]` or `[SUPPORTING]` tags. The writing LLM sees `### [LEAD] AI Scientist-v2` and knows to give it 3–4 paragraphs. Cost: $0.00014 per run.
-
-**B. Research Expert Guide Refactoring: 569 to 151 Words**
-
-| | Before | After |
-|---|---|---|
-| Words | 569 | **151** |
-| DO instructions | 18 | **7** (core only) |
-| DONT instructions | 9 | **0** |
-
-Every negative instruction was removed.
-
-**Why remove rather than rewrite:** The alternative was rewriting the 9 DON'Ts as positive instructions ("Do X" instead of "Don't Y"). But the Business Expert Guide was already proving that fewer words with zero DON'Ts scored higher. The experiment was: does removing instructions entirely work better than rephrasing them? It did — 1 paragraph per item jumped to 3 paragraphs.
-
-**C. Skeleton Second Item Fully Written**
-
-Instead of `[3 paragraphs with benchmarks...]`, the second skeleton item was completed with real content: prior work (SelfCheckGPT), benchmarks (HaluEval 91.2%, 1/20 GPT-4 cost), and limitations (3x inference latency). This taught the LLM that *every* item deserves full depth.
-
-**D. Source Expansion: 5 to 6**
-
-Exa was promoted from Tavily fallback to independent collector with 4 business-focused queries. When Tavily hit quota limits, Business candidates dropped to zero. With Exa running independently, Business always has 20+ candidates.
-
-**E. Community Pulse Overhaul**
-
-Thread titles only (v7) caused the LLM to fabricate quotes. v8 collects actual comment text via HN Algolia and Reddit JSON, then asks for mood summaries rather than forced quotes. A 38-subreddit whitelist filters irrelevant discussions (r/wallstreetbets, etc.).
-
-### v8 Quality Result
-
-| Date | Pipeline | R Expert | R Learner | B Expert | B Learner | Avg |
-|------|----------|----------|-----------|----------|-----------|-----|
-| 3/26 v3 | v7 | 86 | 83 | 85 | 87 | **85.3** |
-| 3/28 | v8 initial | 75 | 65 | 90 | 90 | **80.0** |
-| **3/28** | **v8 final** | **90** | **90** | **90** | **90** | **90.0** |
-
-All four personas at 90/100 — the first time every combination scored equally.
-
-### Key Lessons from v8
-
-**"Remove DON'Ts = better output."** Deleting 9 negative instructions from the Research Expert Guide improved items from 1 paragraph to 3 paragraphs. LLMs over-interpret "don't do X" as "do less of everything." Concise, positive-only instructions outperform long lists of prohibitions.
-
-**"When rules and skeletons conflict, the skeleton wins."** Even with "minimum 3 paragraphs" stated in 6 places, the skeleton showing `[2-3 paragraphs]` caused the LLM to pick 2. Rules, skeletons, and quality checks must be consistent — the LLM follows the most concrete example.
-
-**"Classification and ranking are different tasks."** Classification asks "where does this belong?" Ranking asks "which is most important?" Combining them in one call makes ranking superficial. Separating them into two calls — at $0.00014 extra per run — dramatically improved editorial hierarchy.
-
----
-
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 8 pipeline versions, 20+ prompt commits per version, and the discovery
-> that removing instructions can improve output more than adding them.
+> 8 pipeline versions, $0.25 per run for daily automated publishing,
+> and the discovery that removing instructions can improve output more than adding them.
 > As a solo project, I handled every stage from planning to deployment.
