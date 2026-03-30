@@ -65,11 +65,14 @@ NOT Research (assign to Business instead):
 
 ## Rules
 1. Select 0-8 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
-2. The same article CAN appear in both categories if relevant to both
-3. Prefer breaking/exclusive news over incremental updates
-4. Prefer news with concrete data (benchmarks, dollar amounts, dates)
-5. Order by importance within each category (most important first)
-6. Every selected article must have a subcategory
+2. Only select individual articles with specific content. Skip category pages, topic indexes, and homepages:
+   - NO: "techcrunch.com/category/artificial-intelligence/", "economist.com/topics/artificial-intelligence", "artificialintelligence-news.com/"
+   - YES: "techcrunch.com/2026/03/17/openai-launches-gpt-5-4/", "economist.com/technology/2026/03/17/ai-regulation"
+3. The same article CAN appear in both categories if relevant to both
+4. Prefer breaking/exclusive news over incremental updates
+5. Prefer news with concrete data (benchmarks, dollar amounts, dates)
+6. Order by importance within each category (most important first)
+7. Every selected article must have a subcategory
 
 ## Cross-Category Rules
 - The same article CAN and SHOULD appear in both categories when it has both technical and business significance.
