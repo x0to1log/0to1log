@@ -818,23 +818,26 @@ const nonce = Astro.locals.cspNonce || '';
     var textColor = style.getPropertyValue('--color-text-secondary').trim() || '#888';
     var gridColor = style.getPropertyValue('--color-border').trim() || '#e5e5e5';
 
-    // Color families: Infra=slate, Research=blue, Business=orange, Other=pink
+    // Color families: Infra=slate, Research=teal, Business=amber, Quality=violet, Summary=rose
     var stageColorMap = {
-      'Collect':           '#94a3b8', // slate-400
-      'Classify':          '#64748b', // slate-500
-      'Merge':             '#334155', // slate-700
-      'Enrich':            '#475569', // slate-600
-      'Research Expert':   '#2563eb', // blue-600
-      'Research Learner':  '#60a5fa', // blue-400
-      'Business Expert':   '#ea580c', // orange-600
-      'Business Learner':  '#fb923c', // orange-400
-      'Research Beginner (legacy)': '#93c5fd', // blue-300
-      'Business Beginner (legacy)': '#fdba74', // orange-300
-      'Rank':              '#ec4899', // pink-500
-      'Research EN':       '#1d4ed8', // blue-700
-      'Research KO':       '#3b82f6', // blue-500
-      'Business EN':       '#c2410c', // orange-700
-      'Business KO':       '#f97316', // orange-500
+      'Collect':           '#64748b', // slate-500
+      'Classify':          '#94a3b8', // slate-400
+      'Merge':             '#475569', // slate-600
+      'Enrich':            '#334155', // slate-700
+      'Research Expert':   '#0d9488', // teal-600
+      'Research Learner':  '#5eead4', // teal-300
+      'Business Expert':   '#d97706', // amber-600
+      'Business Learner':  '#fbbf24', // amber-400
+      'Research Beginner (legacy)': '#99f6e4', // teal-200
+      'Business Beginner (legacy)': '#fde68a', // amber-200
+      'Rank':              '#e879f9', // fuchsia-400
+      'Research EN':       '#0f766e', // teal-700
+      'Research KO':       '#2dd4bf', // teal-400
+      'Business EN':       '#b45309', // amber-700
+      'Business KO':       '#f59e0b', // amber-500
+      'Summary':           '#f43f5e', // rose-500
+      'QC Research':       '#a78bfa', // violet-400
+      'QC Business':       '#7c3aed', // violet-600
     };
     var stageColorFallback = '#cbd5e1';
     var commonScales = {
