@@ -6340,19 +6340,28 @@ body.auth-prompt-open {
 }
 
 .newsprint-citation {
-  margin-left: 0.18rem;
+  margin-left: 0.12rem;
   font-family: var(--font-ui);
-  font-size: 0.72rem;
-  vertical-align: super;
+  font-size: 0.75rem;
+  vertical-align: sub;
 }
 
 .newsprint-citation a {
-  color: var(--color-accent);
+  color: var(--color-text-muted);
   text-decoration: none;
+}
+
+.newsprint-citation a::before {
+  content: "[";
+}
+
+.newsprint-citation a::after {
+  content: "]";
 }
 
 .newsprint-citation a:hover {
   text-decoration: underline;
+  color: var(--color-accent);
 }
 
 .newsprint-sources-count {

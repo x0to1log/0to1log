@@ -50,9 +50,15 @@ function normalizeSourceCards(post: any): Array<{
 
 function applySourceCitations(html: string): string {
   if (!html) return html;
-  return html.replace(/\[\[(\d+)\]\]/g, (_match, index) => {
+  // Legacy format: [[1]] → superscript citation
+  let result = html.replace(/\[\[(\d+)\]\]/g, (_match, index) => {
     return `<sup class="newsprint-citation"><a href="#source-card-${index}">${index}</a></sup>`;
   });
+  // Markdown-rendered citations: <a href="URL">1</a> (text is pure number) → superscript
+  result = result.replace(/<a\s+href="([^"]+)"\s*>(\d+)<\/a>/g, (_match, url, num) => {
+    return `<sup class="newsprint-citation"><a href="${url}" target="_blank" rel="noopener">${num}</a></sup>`;
+  });
+  return result;
 }
 
 export async function getNewsDetailPageData({
