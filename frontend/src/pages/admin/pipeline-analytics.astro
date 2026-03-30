@@ -35,11 +35,12 @@ const filterDate = new Date(Date.now() - filterDays * 24 * 60 * 60 * 1000).toISO
 
 // ─── Queries ─────────────────────────────────────────────────
 
-// Exclude only zero-cost meta/save logs — keep all stages with real costs
+// Exclude zero-cost meta/save logs + summary (cumulative duplicate of other stages)
 const excludeStages = [
   'pipeline', 'research.novelty_gate', 'candidates.save',
   'save.research.en', 'save.research.ko', 'save.business.en', 'save.business.ko',
   'save:research', 'save:business',
+  'summary',  // summary.cost = SUM of all other stages — including it would double-count
 ];
 
 const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }, { data: runsRaw }] = await Promise.all([
@@ -172,7 +173,6 @@ const stageNames = [
   'collect', 'classify', 'community', 'ranking',
   'digest:research:expert', 'digest:research:learner',
   'digest:business:expert', 'digest:business:learner',
-  'summary',
   'quality:research', 'quality:business',
 ];
 const stageLabels: Record<string, string> = {
@@ -180,7 +180,7 @@ const stageLabels: Record<string, string> = {
   'community': 'Community', 'ranking': 'Ranking',
   'digest:research:expert': 'Research Expert', 'digest:research:learner': 'Research Learner',
   'digest:business:expert': 'Business Expert', 'digest:business:learner': 'Business Learner',
-  'summary': 'Summary', 'quality:research': 'QC Research', 'quality:business': 'QC Business',
+  'quality:research': 'QC Research', 'quality:business': 'QC Business',
 };
 
 type StackedCostData = { label: string; costs: number[]; tokens: number[] };

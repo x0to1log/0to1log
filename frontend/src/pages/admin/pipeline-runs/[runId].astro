@@ -142,11 +142,13 @@ const raw_error = run?.last_error || '';
 const normalizedError = formatPipelineError(raw_error);
 const tone = statusTone(run?.status);
 const hasStageLogs = logs.length > 0;
-const hasTokenMetrics = logs.some((log) => typeof log.tokens_used === 'number');
-const hasCostMetrics = logs.some((log) => parseCost(log.cost_usd) !== null);
-const totalTokens = hasTokenMetrics ? logs.reduce((sum, log) => sum + (log.tokens_used ?? 0), 0) : null;
+// Exclude 'summary' from totals — it's a cumulative duplicate of all other stage costs
+const costLogs = logs.filter((log) => log.pipeline_type !== 'summary');
+const hasTokenMetrics = costLogs.some((log) => typeof log.tokens_used === 'number');
+const hasCostMetrics = costLogs.some((log) => parseCost(log.cost_usd) !== null);
+const totalTokens = hasTokenMetrics ? costLogs.reduce((sum, log) => sum + (log.tokens_used ?? 0), 0) : null;
 const totalCost = hasCostMetrics
-  ? logs.reduce((sum, log) => sum + (parseCost(log.cost_usd) ?? 0), 0)
+  ? costLogs.reduce((sum, log) => sum + (parseCost(log.cost_usd) ?? 0), 0)
   : null;
 const totalInputTokens = logs.reduce((sum, log) => {
   const v = debugMetaObject(log).input_tokens;

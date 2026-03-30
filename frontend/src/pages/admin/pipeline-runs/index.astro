@@ -24,6 +24,7 @@ type PipelineRun = {
 
 type PipelineLog = {
   run_id: string;
+  pipeline_type: string;
   cost_usd: number | string | null;
   tokens_used: number | null;
 };
@@ -104,7 +105,7 @@ try {
   const pipelineRuns = (runRows ?? []) as PipelineRun[];
   const runIds = pipelineRuns.map((run) => run.id);
   const { data: logs } = runIds.length
-    ? await sb.from('pipeline_logs').select('run_id, cost_usd, tokens_used').in('run_id', runIds)
+    ? await sb.from('pipeline_logs').select('run_id, pipeline_type, cost_usd, tokens_used').in('run_id', runIds)
     : { data: [] };
 
   const totals = new Map<
@@ -116,7 +117,11 @@ try {
       hasUsageMetrics: boolean;
     }
   >();
-  for (const log of (logs ?? []) as PipelineLog[]) {
+  // Exclude 'summary' — it's a cumulative duplicate of all other stage costs
+  const filteredLogs = ((logs ?? []) as PipelineLog[]).filter(
+    (log) => log.pipeline_type !== 'summary',
+  );
+  for (const log of filteredLogs) {
     const current = totals.get(log.run_id) ?? {
       totalCost: null,
       totalTokens: null,
