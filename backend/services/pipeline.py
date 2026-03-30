@@ -112,6 +112,49 @@ def _fetch_handbook_slugs(supabase) -> list[str]:
         return []
 
 
+def _check_pipeline_health(
+    stage: str,
+    *,
+    classify_picks: tuple[int, int] | None = None,
+    merge_groups: list | None = None,
+    community_total: int | None = None,
+    community_found: int | None = None,
+    enrich_map: dict | None = None,
+    all_groups: list | None = None,
+) -> list[str]:
+    """Run stage-specific health checks. Returns list of warning strings."""
+    warnings: list[str] = []
+
+    if stage == "classify" and classify_picks:
+        r, b = classify_picks
+        if r == 0 and b == 0:
+            warnings.append("classify: 0 picks for both categories")
+        elif r == 0:
+            warnings.append("classify: 0 research picks")
+        elif b == 0:
+            warnings.append("classify: 0 business picks")
+
+    if stage == "merge" and merge_groups is not None:
+        for g in merge_groups:
+            if len(g.items) >= 5:
+                warnings.append(f"merge: group '{g.group_title[:50]}' has {len(g.items)} items (possible over-grouping)")
+            if len(g.items) >= 2:
+                urls = [i.url for i in g.items]
+                if len(set(urls)) < len(urls):
+                    warnings.append(f"merge: group '{g.group_title[:50]}' has duplicate URLs")
+
+    if stage == "community" and community_total is not None:
+        if community_found == 0 and community_total > 0:
+            warnings.append(f"community: 0 reactions from {community_total} queries")
+
+    if stage == "enrich" and enrich_map is not None and all_groups is not None:
+        zero_source = [g.group_title[:50] for g in all_groups if not enrich_map.get(g.primary_url)]
+        if zero_source:
+            warnings.append(f"enrich: {len(zero_source)} groups with 0 sources: {zero_source[:3]}")
+
+    return warnings
+
+
 async def _log_stage(
     supabase,
     run_id: str,
@@ -1126,6 +1169,13 @@ async def run_daily_pipeline(
             ],
         }
 
+        classify_warnings = _check_pipeline_health(
+            "classify",
+            classify_picks=(len(classification.research_picks), len(classification.business_picks)),
+        )
+        for w in classify_warnings:
+            logger.warning("Health check: %s", w)
+
         await _log_stage(
             supabase, run_id, "classify", "success", t0,
             input_summary=f"{len(candidates)} candidates",
@@ -1135,6 +1185,7 @@ async def run_daily_pipeline(
                 "llm_input": _trim(classify_input_summary),
                 "llm_output": classify_output,
                 "candidates_count": len(candidates),
+                "warnings": classify_warnings,
             },
         )
 
@@ -1153,12 +1204,17 @@ async def run_daily_pipeline(
                 for g in classification.business
             ],
         }
+        all_merged = classification.research + classification.business
+        merge_warnings = _check_pipeline_health("merge", merge_groups=all_merged)
+        for w in merge_warnings:
+            logger.warning("Health check: %s", w)
+
         await _log_stage(
             supabase, run_id, "merge", "success", t0,
             input_summary=f"{len(classification.research_picks)+len(classification.business_picks)} picks + {len(candidates)} candidates",
             output_summary=f"research={len(classification.research)} groups, business={len(classification.business)} groups",
             usage=merge_usage,
-            debug_meta={"llm_output": merge_output},
+            debug_meta={"llm_output": merge_output, "warnings": merge_warnings},
         )
 
         handbook_slugs = _fetch_handbook_slugs(supabase)
@@ -1185,10 +1241,19 @@ async def run_daily_pipeline(
                 if isinstance(result, str) and result.strip():
                     community_map[url] = result
 
+        community_warnings = _check_pipeline_health(
+            "community",
+            community_total=len(community_lookup),
+            community_found=len(community_map),
+        )
+        for w in community_warnings:
+            logger.warning("Health check: %s", w)
+
         await _log_stage(
             supabase, run_id, "community", "success", t0,
             input_summary=f"{len(community_lookup)} items queried",
             output_summary=f"{len(community_map)} reactions collected",
+            debug_meta={"warnings": community_warnings} if community_warnings else None,
         )
 
         # Stage: ranking (Lead/Supporting assignment per category)
@@ -1219,10 +1284,17 @@ async def run_daily_pipeline(
         )
         merged_groups = sum(1 for g in all_ranked if len(g.items) >= 2)
         exa_groups = len(all_ranked) - merged_groups
+        enrich_warnings = _check_pipeline_health(
+            "enrich", enrich_map=enriched_map, all_groups=all_ranked,
+        )
+        for w in enrich_warnings:
+            logger.warning("Health check: %s", w)
+
         await _log_stage(
             supabase, run_id, "enrich", "success", t0,
             input_summary=f"{len(all_ranked)} groups ({merged_groups} merged, {exa_groups} via Exa)",
             output_summary=f"{sum(len(s) for s in enriched_map.values())} total sources",
+            debug_meta={"warnings": enrich_warnings} if enrich_warnings else None,
         )
 
         # Generate research + business digests in parallel
