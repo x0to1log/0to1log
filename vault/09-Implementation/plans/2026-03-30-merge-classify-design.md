@@ -1,256 +1,131 @@
-# NQ-16: 같은 주제 아이템 Merge + Classify 통합 설계
+# NQ-16 v2: Classify → Merge 분리 설계
 
-> **상태:** 설계 확정 대기
-> **목표:** 1차 수집 결과에서 같은 이벤트/주제 기사를 묶어서 분류, Writer 입력 폭발 방지 + 다중 소스 자연 확보
-
----
-
-## 현재 문제
-
-1. **같은 이벤트가 별도 아이템으로 분류됨**
-   - 3/22 Research: HuggingFace 관련 4개가 각각 별도 아이템 → 4 × 4소스 = 16소스 전문
-   - 3/30 Research Expert: 입력 84K 토큰 → 출력 비정상 축소 (EN 3,744자, KO 1,749자)
-
-2. **enrich가 이미 묶인 소스를 또 추가**
-   - merge 없이 enrich만 하면 같은 이벤트 기사가 분산된 채 각각 추가 소스를 받음
-   - 5 아이템 × 4 소스 = 20소스 → 입력 폭발
+> **상태:** 설계 확정
+> **목표:** classify와 merge를 분리하여 과묶기 방지 + 1차 수집 데이터 최대 활용 + 외부 enrich는 보충만
+> **이전 설계 (v1):** classify+merge 동시 → subcategory 기준 과묶기 반복 발생 (3/16 papers 10개, 3/30 papers 5개)
 
 ---
 
-## 변경 후 파이프라인 흐름
+## v1 실패 원인
 
-### Before
-```
-수집(50-60) → dedup(URL) → classify(개별 10개) → community → rank → enrich(전체 × 4) → write
-```
+classify+merge를 한 호출에서 시키면 LLM이 "분류"와 "묶기"를 혼동.
+subcategory가 같으면 ("papers") 전부 하나로 묶어버림.
+✅/❌ 예시를 넣어도 반복 발생 — 프롬프트로 해결 불가능한 구조적 문제.
 
-### After
+---
+
+## v2 파이프라인 흐름
+
 ```
-수집(50-60) → dedup(URL) → ★merge+classify(그룹 단위) → community → rank → enrich(소스 부족한 그룹만) → write
+수집(50-60) → dedup(URL)
+    ↓
+★ classify (gpt-4.1-mini) — 개별 아이템 7-8개 선별 (v8 방식 복원)
+    ↓
+★ merge (gpt-4.1-mini) — 선별된 아이템 기준으로 전체 50개에서 같은 이벤트 매칭
+    → 최종 4-5 그룹/카테고리
+    ↓
+community (HN/Reddit) — 그룹 내 모든 URL
+    ↓
+rank (gpt-4.1-mini) — 그룹 단위 LEAD/SUPPORTING
+    ↓
+외부 enrich (Exa find_similar) — 소스 부족 그룹만 보충
+    ↓
+write (gpt-4.1) → 후처리 → quality check → DB
 ```
 
 ---
 
-## 핵심 변경: 분류기가 merge를 동시에 수행
+## 핵심 변경: 3단계 분리
 
-### 현재 분류기 출력
+### Step 1: Classify (기존 v8 방식 복원)
 
-```json
-{
-  "research": [
-    {"url": "arxiv.org/nemotron", "subcategory": "papers", "reason": "...", "score": 85},
-    {"url": "nvidia.com/nemotron-blog", "subcategory": "llm_models", "reason": "...", "score": 82},
-    {"url": "github.com/huggingface/transformers", "subcategory": "open_source", "reason": "...", "score": 80},
-    {"url": "ryzlabs.com/best-llms", "subcategory": "open_source", "reason": "...", "score": 75},
-    {"url": "huggingface.co/viralsuite", "subcategory": "open_source", "reason": "...", "score": 70}
-  ],
-  "business": [...]
-}
-```
+- 50개 후보에서 **개별 아이템 7-8개** 선별
+- 출력: 기존 flat format `[{url, subcategory, reason, score}]`
+- merge 책임 없음 — 순수하게 "어떤 뉴스가 중요한가"만 판단
+- 카테고리당 0-8개 (기존 0-5에서 확대 — merge 후 최종 5그룹 이하로 줄어듦)
 
-### 변경 후 분류기 출력
+### Step 2: Merge (신규 — 별도 LLM 호출)
+
+입력: classify에서 선별된 7-8개 + **전체 50개 후보 목록**
+
+역할:
+1. 선별된 아이템끼리 같은 이벤트면 묶기
+2. 탈락한 42-43개 중에서 선별된 아이템과 같은 이벤트인 기사를 찾아 해당 그룹에 소스로 추가
+
+출력: `ClassifiedGroup` 리스트 (기존 모델 재활용)
 
 ```json
 {
   "research": [
     {
-      "group_title": "Nemotron 3 Super: Hybrid Mamba-Transformer for Agentic AI",
-      "subcategory": "llm_models",
-      "reason": "Major open model release with novel architecture",
-      "score": 85,
+      "group_title": "TurboQuant: LLM KV Cache Compression",
+      "subcategory": "papers",
       "items": [
-        {"url": "arxiv.org/nemotron", "title": "..."},
-        {"url": "nvidia.com/nemotron-blog", "title": "..."}
+        {"url": "arxiv.org/turboquant", "title": "TurboQuant paper"},
+        {"url": "blog.com/turboquant-explained", "title": "탈락했지만 같은 이벤트"}
       ]
     },
     {
-      "group_title": "Hugging Face Ecosystem: Transformers v5.4 & Open Source LLM Rankings",
-      "subcategory": "open_source",
-      "reason": "Major framework release + community benchmarks",
-      "score": 80,
+      "group_title": "AI Scientist-v2",
+      "subcategory": "papers",
       "items": [
-        {"url": "github.com/huggingface/transformers", "title": "..."},
-        {"url": "ryzlabs.com/best-llms", "title": "..."},
-        {"url": "huggingface.co/viralsuite", "title": "..."}
+        {"url": "arxiv.org/ai-scientist-v2", "title": "..."}
       ]
     }
-  ],
-  "business": [...]
+  ]
 }
 ```
 
-### 변경 포인트
+핵심 규칙:
+- 같은 **구체적 이벤트/발표**만 묶기 (같은 subcategory라는 이유로 묶지 말 것)
+- 탈락 후보에서 매칭 못 찾으면 1개 아이템 그룹도 OK
+- 그룹당 아이템 수 제한 없음 (같은 이벤트면 자연스럽게 2-4개)
 
-- 개별 URL → **그룹 단위** (같은 이벤트/주제는 1개 그룹)
-- `group_title`: 분류기가 묶으면서 대표 제목 생성
-- `items`: 그룹에 속한 개별 기사 URL+제목 목록
-- `subcategory`, `score`, `reason`은 그룹 단위로 부여
-- 카테고리당 0-5 **그룹** (기존: 0-5 개별 아이템)
+### Step 3: External Enrich (기존 유지)
 
----
-
-## 데이터 모델 변경
-
-### 현재: ClassifiedCandidate (URL 1개)
-
-```python
-class ClassifiedCandidate(BaseModel):
-    title: str
-    url: str          # 1개
-    snippet: str = ""
-    source: str = "tavily"
-    category: str
-    subcategory: str
-    relevance_score: float = 0.0
-    reason: str = ""
-```
-
-### 변경: ClassifiedGroup (URL N개)
-
-```python
-class GroupedItem(BaseModel):
-    """Individual item within a classified group."""
-    url: str
-    title: str
-
-class ClassifiedGroup(BaseModel):
-    """Group of related news items classified together."""
-    group_title: str          # 대표 제목
-    items: list[GroupedItem]  # 같은 이벤트의 기사들
-    category: str             # "research" or "business"
-    subcategory: str
-    relevance_score: float = 0.0
-    reason: str = ""
-
-    @property
-    def primary_url(self) -> str:
-        """First item's URL (for community lookup, ranking compatibility)."""
-        return self.items[0].url if self.items else ""
-
-class ClassificationResult(BaseModel):
-    research: list[ClassifiedGroup] = []
-    business: list[ClassifiedGroup] = []
-```
+- 소스 1개뿐인 그룹만 Exa find_similar
+- 소스 2개 이상 그룹은 스킵
 
 ---
 
-## enrich 조건부 실행
+## v1 대비 장점
 
-merge 후 그룹의 소스 수에 따라:
-
-```python
-async def enrich_sources(groups, raw_content_map, ...):
-    for group in groups:
-        if len(group.items) >= 2:
-            # 이미 다중 소스 확보 → enrich 스킵
-            continue
-        # 소스 1개뿐 → Exa find_similar로 보충
-        similar = exa.find_similar_and_contents(
-            url=group.items[0].url, ...
-        )
-        group.items.extend(similar)
-```
-
-### 예상 효과
-
-| 시나리오 | merge 전 enrich | merge 후 enrich |
-|---------|----------------|----------------|
-| GPT-5 출시 (3개 기사) | 3 × 4 = 12소스 | 이미 3소스 → enrich 스킵 |
-| 마이너 논문 (1개 기사) | 1 × 4 = 4소스 | 1소스 → enrich 실행 → 3-4소스 |
-| 총 API 호출 | 5회 | 1-2회 |
+| | v1 (동시) | v2 (분리) |
+|---|---|---|
+| 과묶기 | subcategory로 10개 묶기 반복 | classify가 개별 선별 → merge는 5-8개만 비교 |
+| 1차 수집 활용 | classify 통과한 것만 | 탈락 후보도 merge에서 소스로 활용 |
+| LLM 부담 | 50개 분류+묶기 동시 | classify: 50개 선별 / merge: 8개+50개 매칭 (각각 단순) |
+| 비용 | 1회 호출 | 2회 호출 (+$0.001) |
+| 디버깅 | classify가 왜 묶었는지 불투명 | classify/merge 각각 로그로 추적 가능 |
 
 ---
 
-## Writer 입력 포맷 변경
+## 비용 추정
 
-### Before (개별 아이템)
-
-```
-### [LEAD] [llm_models] NVIDIA Nemotron 3 Super
-
-Source 1: https://arxiv.org/...
-{content}
-
----
-
-### [SUPPORTING] [llm_models] NVIDIA Nemotron Blog Post
-
-Source 1: https://nvidia.com/blog/...
-{content}
-```
-
-### After (그룹 단위)
-
-```
-### [LEAD] [llm_models] Nemotron 3 Super: Hybrid Mamba-Transformer for Agentic AI
-
-Source 1: https://arxiv.org/...
-{content}
-
-Source 2: https://nvidia.com/blog/...
-{content}
-```
-
-같은 그룹의 소스가 하나의 `###` 블록 안에 모여서 Writer가 자연스럽게 교차 인용.
+| 단계 | 모델 | 예상 비용 |
+|------|------|----------|
+| classify | gpt-4.1-mini | $0.003 (기존과 동일) |
+| merge | gpt-4.1-mini | ~$0.002 (선별 8개 + 후보 50개 제목) |
+| 기타 (rank, enrich, write, QC) | 기존과 동일 | ~$0.44 |
+| **총 run** | | **~$0.45** (현재와 동일) |
 
 ---
 
-## downstream 영향 (변경 필요한 코드)
+## 수정 파일
 
-### 1. 프롬프트 (`prompts_news_pipeline.py`)
-- `CLASSIFICATION_SYSTEM_PROMPT`: 출력 JSON 포맷 변경 (개별 → 그룹)
-- merge 규칙 추가: "같은 이벤트/주제 기사는 하나의 group으로 묶어라"
-
-### 2. 분류 함수 (`ranking.py`)
-- `classify_candidates()`: 반환 타입 `ClassifiedCandidate` → `ClassifiedGroup`
-- 파싱 로직: `items` 배열 처리
-
-### 3. 랭킹 함수 (`ranking.py`)
-- `rank_classified()`: 입력이 `ClassifiedGroup` 리스트로 변경
-- LEAD/SUPPORTING을 그룹 단위로 판단
-
-### 4. 파이프라인 (`pipeline.py`)
-- `community_map`: 그룹의 primary_url 또는 전체 items URL로 수집
-- `raw_content_map` 조회: 그룹 내 모든 items URL
-- `enrich_sources()`: 조건부 실행 (소스 2개 이상이면 스킵)
-- `_generate_digest()`: Writer 입력 포맷 변경 (그룹 → 다중 소스 블록)
-
-### 5. 데이터 모델 (`models/news_pipeline.py`)
-- `ClassifiedGroup`, `GroupedItem` 추가
-- `ClassificationResult` 타입 변경
+1. `prompts_news_pipeline.py` — CLASSIFICATION_SYSTEM_PROMPT 복원 (v8 개별 포맷) + MERGE_SYSTEM_PROMPT 신규
+2. `ranking.py` — classify_candidates() 복원 (ClassifiedCandidate 반환) + merge_classified() 신규 (ClassifiedGroup 반환)
+3. `pipeline.py` — classify → merge → community → rank → enrich → write 순서
+4. `models/news_pipeline.py` — ClassifiedCandidate 복원 (classify용) + ClassifiedGroup 유지 (merge 이후용)
 
 ---
 
-## 비용 영향 추정
+## 구현 순서
 
-| 항목 | 현재 | 변경 후 |
-|------|------|---------|
-| classify | $0.003 (동일) | $0.003 (merge 추가 부담 미미) |
-| enrich | $0.005 (5회 호출) | $0.001-0.002 (1-2회만) |
-| Writer 입력 | 84K 토큰 (Research) | ~45K 토큰 (그룹화 + 조건부 enrich) |
-| Writer 비용 | $0.47 (Research) | ~$0.25 (40% 감소 추정) |
-| **총 run** | **$0.77** | **~$0.50** |
-
----
-
-## 구현 순서 (예상)
-
-1. `GroupedItem`, `ClassifiedGroup` 모델 추가
-2. `CLASSIFICATION_SYSTEM_PROMPT` 수정 (merge+classify 통합 출력)
-3. `classify_candidates()` 파싱 로직 변경
-4. `rank_classified()` 그룹 단위 입력 대응
-5. `enrich_sources()` 조건부 실행
-6. `_generate_digest()` Writer 입력 포맷 변경 (그룹 → 다중 소스)
-7. `pipeline.py` 오케스트레이션 수정
-8. 검증: 파이프라인 run + 품질/비용 확인
-
----
-
-## 위험 요소
-
-1. **분류기 과부하**: merge까지 시키면 출력 JSON이 복잡해져서 파싱 실패 가능
-   → 대응: 기존 개별 포맷을 fallback으로 유지
-2. **과도한 merge**: 관련 없는 기사를 묶을 위험
-   → 대응: "같은 이벤트/발표"만 묶고, "같은 분야"는 묶지 않도록 프롬프트에 명시
-3. **downstream 호환성**: ClassifiedCandidate를 쓰는 모든 코드 수정 필요
-   → 대응: ClassifiedGroup에 호환 속성(primary_url, title) 유지
+1. CLASSIFICATION_SYSTEM_PROMPT를 v8 개별 포맷으로 복원 (그룹 출력 제거)
+2. classify_candidates()를 ClassifiedCandidate 리스트 반환으로 복원
+3. MERGE_SYSTEM_PROMPT 신규 작성 — 선별된 아이템 + 전체 후보 → ClassifiedGroup 출력
+4. merge_classified() 함수 신규 — 별도 LLM 호출
+5. pipeline.py에서 classify → merge 2단계 호출로 변경
+6. rank/enrich/digest는 ClassifiedGroup 기반으로 기존 유지
+7. ruff check + 테스트

@@ -156,7 +156,7 @@
 | NQ-13 | 같은 이벤트 다중 소스 수집 (Multi-Source Enrichment) — rank 후 Exa find_similar 2차 수집 + Writer 다중 소스 입력 | — | — | done |
 | NQ-14 | Citation 번호 전체 기사 순차 (섹션별 리셋 방지) — per-paragraph citation + 후처리 heading 집계 | — | — | done |
 | NQ-15 | Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성 | — | — | todo |
-| NQ-16 | 같은 주제 아이템 merge — 분류 후 같은 이벤트/주제 아이템을 하나로 묶어 소스 통합 | — | — | todo |
+| NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | in_progress |
 
 #### NQ-13 설계 참조
 - **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
@@ -173,16 +173,14 @@
 - **설계 문서:** [[plans/2026-03-30-merge-classify-design]]
 
 #### NQ-16 배경 노트
-3/30 파이프라인 분석에서 도출. Research Expert 입력 84K 토큰 → 출력 비정상 축소 (EN 3,744자, KO 1,749자).
-근본 원인: enrich(NQ-13)가 같은 주제 아이템에도 각각 최대 4개 소스를 추가해서 입력 폭발.
-- 3/22 Research Learner 소제목 5개 중 4개가 HuggingFace/오픈소스 생태계 — 별도 아이템이 아니라 1-2개로 묶여야 함
-- merge가 없으면 5아이템 × 4소스 = 20소스 전문 → 84K 토큰
-- merge 후: 2-3 묶인 아이템 × 4소스 = 8-12소스 → ~45K 토큰 (적정)
-- Business도 merge 필요하지만, 기사가 짧고 주제가 분산돼서 당장 문제는 아님
-- **우선순위**: NQ-13(enrich)의 효과를 살리려면 merge가 선행되어야 함
-- **위치**: classify 후, enrich 전 (`classify → ★merge → community → rank → enrich → write`)
-- **방법**: 논의 필요 — LLM merge vs 임베딩 유사도 vs 제목 기반 클러스터링
-- **enrich 역할 변경**: merge 후 소스 2개 이상이면 enrich 스킵, 1개뿐인 아이템만 enrich 실행 (보충 역할)
+**v1 실패 (classify+merge 동시):** 3/16 Research papers 10개 한 그룹, 3/30 papers 5개 한 그룹. subcategory 기준 과묶기 반복. 예시 추가해도 해결 안 됨.
+
+**v2 설계 (classify/merge 분리):**
+- classify: 개별 아이템 7-8개 선별 (v8 방식 복원, 검증된 로직)
+- merge: 선별 기준으로 전체 50개에서 같은 이벤트 매칭 → ClassifiedGroup 생성
+- 외부 enrich: 소스 1개뿐인 그룹만 Exa 보충
+- 추가 비용: ~$0.002 (merge LLM 1회)
+- **핵심**: classify가 "뭐가 중요한가"만 판단, merge가 "같은 이벤트인가"만 판단 → 각자 단순한 작업
 
 #### NQ-15 배경 노트
 3/30 3월 21일 backfill 평가에서 도출. 현재 Learner는 Expert 내용을 쉬운 단어로 바꾼 수준이지 학습자 관점으로 재구성한 것이 아님.
