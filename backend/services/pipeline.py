@@ -20,7 +20,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
-from services.agents.ranking import classify_candidates, rank_classified
+from services.agents.ranking import classify_candidates, merge_classified, rank_classified
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
 logger = logging.getLogger(__name__)
@@ -1107,7 +1107,7 @@ async def run_daily_pipeline(
                 logger.warning("Failed to update pipeline run: %s", e)
             return PipelineResult(batch_id=batch_id)
 
-        # Stage: classify (v3 — multi-news categorization)
+        # Stage: classify (individual article selection)
         t0 = time.monotonic()
         classification, classify_usage = await classify_candidates(candidates)
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
@@ -1117,25 +1117,37 @@ async def run_daily_pipeline(
         )
         classify_output = {
             "research": [
-                {"group_title": g.group_title, "items": len(g.items), "subcategory": g.subcategory}
-                for g in classification.research
+                {"title": c.title, "url": c.url, "subcategory": c.subcategory}
+                for c in classification.research_picks
             ],
             "business": [
-                {"group_title": g.group_title, "items": len(g.items), "subcategory": g.subcategory}
-                for g in classification.business
+                {"title": c.title, "url": c.url, "subcategory": c.subcategory}
+                for c in classification.business_picks
             ],
         }
 
         await _log_stage(
             supabase, run_id, "classify", "success", t0,
             input_summary=f"{len(candidates)} candidates",
-            output_summary=f"research={len(classification.research)}, business={len(classification.business)}",
+            output_summary=f"research={len(classification.research_picks)} picks, business={len(classification.business_picks)} picks",
             usage=classify_usage,
             debug_meta={
                 "llm_input": _trim(classify_input_summary),
                 "llm_output": classify_output,
                 "candidates_count": len(candidates),
             },
+        )
+
+        # Stage: merge (group same-event articles from full candidate pool)
+        t0 = time.monotonic()
+        classification, merge_usage = await merge_classified(classification, candidates)
+        cumulative_usage = merge_usage_metrics(cumulative_usage, merge_usage)
+
+        await _log_stage(
+            supabase, run_id, "merge", "success", t0,
+            input_summary=f"{len(classification.research_picks)+len(classification.business_picks)} picks + {len(candidates)} candidates",
+            output_summary=f"research={len(classification.research)} groups, business={len(classification.business)} groups",
+            usage=merge_usage,
         )
 
         handbook_slugs = _fetch_handbook_slugs(supabase)

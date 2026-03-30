@@ -3,9 +3,9 @@ import logging
 from typing import Any
 
 from core.config import settings
-from models.news_pipeline import ClassifiedGroup, ClassificationResult, GroupedItem, NewsCandidate, RankedCandidate, RankingResult
+from models.news_pipeline import ClassifiedCandidate, ClassifiedGroup, ClassificationResult, GroupedItem, NewsCandidate, RankedCandidate, RankingResult
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
-from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, SELECTION_SYSTEM_PROMPT
+from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, MERGE_SYSTEM_PROMPT, SELECTION_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -141,27 +141,136 @@ async def classify_candidates(
     result = ClassificationResult()
 
     for category in ("research", "business"):
+        picks = data.get(category, [])
+        classified = []
+        for pick in picks:
+            # Support both flat format (url) and grouped format fallback (items)
+            url = pick.get("url", "")
+            if not url and pick.get("items"):
+                # Grouped format fallback — take first item
+                url = pick["items"][0].get("url", "") if pick["items"] else ""
+            candidate = url_map.get(url)
+            if not candidate:
+                logger.warning("Classified URL not in candidates: %s", url)
+                continue
+            classified.append(ClassifiedCandidate(
+                title=candidate.title,
+                url=candidate.url,
+                snippet=candidate.snippet,
+                source=candidate.source,
+                category=category,
+                subcategory=pick.get("subcategory", ""),
+                relevance_score=float(pick.get("score", 0)),
+                reason=pick.get("reason", ""),
+            ))
+        setattr(result, f"{category}_picks", classified[:8])
+
+    # Log cross-category overlap
+    if result.research_picks and result.business_picks:
+        research_urls = {c.url for c in result.research_picks}
+        business_urls = {c.url for c in result.business_picks}
+        overlap = research_urls & business_urls
+        if overlap:
+            logger.info("Cross-category overlap: %d URL(s) in both research and business", len(overlap))
+
+    logger.info(
+        "Classification complete: %d research picks, %d business picks",
+        len(result.research_picks), len(result.business_picks),
+    )
+    if not result.business_picks:
+        logger.warning("No business articles classified — business digest will be skipped")
+    if not result.research_picks:
+        logger.warning("No research articles classified — research digest will be skipped")
+    return result, usage
+
+
+async def merge_classified(
+    classification: ClassificationResult,
+    candidates: list[NewsCandidate],
+) -> tuple[ClassificationResult, dict[str, Any]]:
+    """Merge classified picks with matching candidates from the full pool.
+
+    For each selected article, finds other candidates covering the same event
+    and groups them into ClassifiedGroup.
+    """
+    all_picks = classification.research_picks + classification.business_picks
+    if not all_picks:
+        return classification, {}
+
+    # Format selected items
+    selected_lines = []
+    for i, pick in enumerate(all_picks):
+        selected_lines.append(
+            f"[S{i+1}] [{pick.category}/{pick.subcategory}] {pick.title}\n"
+            f"    URL: {pick.url}\n"
+            f"    Reason: {pick.reason}"
+        )
+
+    # Format all candidates (title + URL only, for matching)
+    candidate_lines = []
+    for i, c in enumerate(candidates):
+        candidate_lines.append(f"[{i+1}] {c.title}\n    URL: {c.url}")
+
+    prompt = MERGE_SYSTEM_PROMPT.format(
+        selected_items="\n\n".join(selected_lines),
+        all_candidates="\n\n".join(candidate_lines),
+    )
+
+    client = get_openai_client()
+    model = settings.openai_model_light
+    usage: dict[str, Any] = {}
+
+    try:
+        response = await client.chat.completions.create(
+            **build_completion_kwargs(
+                model=model,
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": "Group same-event articles together."},
+                ],
+                max_tokens=4096,
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+        )
+        data = parse_ai_json(response.choices[0].message.content, "Merge")
+        usage = extract_usage_metrics(response, model)
+    except Exception as e:
+        logger.warning("Merge failed: %s — falling back to 1-item groups", e)
+        # Fallback: each pick becomes a single-item group
+        for category in ("research", "business"):
+            picks = getattr(classification, f"{category}_picks")
+            groups = [
+                ClassifiedGroup(
+                    group_title=pick.title,
+                    items=[GroupedItem(url=pick.url, title=pick.title)],
+                    category=category,
+                    subcategory=pick.subcategory,
+                    relevance_score=pick.relevance_score,
+                    reason=pick.reason,
+                )
+                for pick in picks
+            ]
+            setattr(classification, category, groups)
+        return classification, usage
+
+    # Parse merge output into ClassifiedGroup
+    url_map = {c.url: c for c in candidates}
+
+    for category in ("research", "business"):
         groups_raw = data.get(category, [])
-        classified_groups: list[ClassifiedGroup] = []
+        groups: list[ClassifiedGroup] = []
 
         for group_data in groups_raw:
-            # Support both grouped format (items array) and legacy flat format (single url)
             items_raw = group_data.get("items", [])
-            if not items_raw and group_data.get("url"):
-                # Legacy flat format fallback
-                items_raw = [{"url": group_data["url"], "title": group_data.get("title", "")}]
-
             grouped_items: list[GroupedItem] = []
             for item_data in items_raw:
                 url = item_data.get("url", "")
                 candidate = url_map.get(url)
-                if not candidate:
-                    logger.warning("Classified URL not in candidates: %s", url)
-                    continue
-                grouped_items.append(GroupedItem(url=url, title=candidate.title))
-
+                if candidate:
+                    grouped_items.append(GroupedItem(url=url, title=candidate.title))
             if grouped_items:
-                classified_groups.append(ClassifiedGroup(
+                groups.append(ClassifiedGroup(
                     group_title=group_data.get("group_title", grouped_items[0].title),
                     items=grouped_items,
                     category=category,
@@ -169,27 +278,31 @@ async def classify_candidates(
                     relevance_score=float(group_data.get("score", 0)),
                     reason=group_data.get("reason", ""),
                 ))
-        setattr(result, category, classified_groups[:5])
 
-    # Log cross-category overlap
-    if result.research and result.business:
-        research_urls = {u for g in result.research for u in g.urls}
-        business_urls = {u for g in result.business for u in g.urls}
-        overlap = research_urls & business_urls
-        if overlap:
-            logger.info("Cross-category overlap: %d URL(s) in both research and business", len(overlap))
+        # Fallback: if merge returned nothing, convert picks to 1-item groups
+        if not groups:
+            picks = getattr(classification, f"{category}_picks")
+            groups = [
+                ClassifiedGroup(
+                    group_title=pick.title,
+                    items=[GroupedItem(url=pick.url, title=pick.title)],
+                    category=category,
+                    subcategory=pick.subcategory,
+                    relevance_score=pick.relevance_score,
+                    reason=pick.reason,
+                )
+                for pick in picks
+            ]
+        setattr(classification, category, groups[:5])
 
-    total_items_r = sum(len(g.items) for g in result.research)
-    total_items_b = sum(len(g.items) for g in result.business)
+    total_items_r = sum(len(g.items) for g in classification.research)
+    total_items_b = sum(len(g.items) for g in classification.business)
     logger.info(
-        "Classification complete: %d research groups (%d items), %d business groups (%d items)",
-        len(result.research), total_items_r, len(result.business), total_items_b,
+        "Merge complete: %d research groups (%d items), %d business groups (%d items)",
+        len(classification.research), total_items_r,
+        len(classification.business), total_items_b,
     )
-    if not result.business:
-        logger.warning("No business articles classified — business digest will be skipped")
-    if not result.research:
-        logger.warning("No research articles classified — research digest will be skipped")
-    return result, usage
+    return classification, usage
 
 
 async def rank_classified(

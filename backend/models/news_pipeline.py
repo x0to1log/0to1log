@@ -71,6 +71,9 @@ class ClassificationResult(BaseModel):
     """LLM classification output — grouped candidates per category."""
     research: list[ClassifiedGroup] = []
     business: list[ClassifiedGroup] = []
+    # Flat picks from classify step (before merge)
+    research_picks: list[ClassifiedCandidate] = []
+    business_picks: list[ClassifiedCandidate] = []
 
 
 class FactClaim(BaseModel):

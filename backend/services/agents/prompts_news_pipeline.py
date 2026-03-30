@@ -64,18 +64,12 @@ NOT Research (assign to Business instead):
 - **new_tools**: New AI products, services, or developer tools launched
 
 ## Rules
-1. Select 0-5 **groups** per category. If no article meets the Research criteria, return an empty list.
-2. **MERGE**: Articles covering the same specific event or announcement MUST be grouped together. Each group gets ONE entry with multiple items.
-   - ✅ MERGE: "OpenAI releases GPT-5" + "GPT-5 pricing announced" → same announcement
-   - ✅ MERGE: "TurboQuant paper" + "TurboQuant explained" → same work from different sources
-   - ❌ DO NOT MERGE: "AI Scientist-v2" + "Nested Learning paper" → different research, different teams
-   - ❌ DO NOT MERGE: multiple papers just because they are all "research papers" or "published this week"
-   - ❌ DO NOT MERGE: articles sharing a broad topic like "AI regulation" or "open source LLMs"
-3. The same article CAN appear in both categories if relevant to both.
-4. Prefer breaking/exclusive news over incremental updates.
-5. Prefer news with concrete data (benchmarks, dollar amounts, dates).
-6. Order groups by importance within each category (most important first).
-7. Each group must have a subcategory and a representative group_title.
+1. Select 0-8 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
+2. The same article CAN appear in both categories if relevant to both
+3. Prefer breaking/exclusive news over incremental updates
+4. Prefer news with concrete data (benchmarks, dollar amounts, dates)
+5. Order by importance within each category (most important first)
+6. Every selected article must have a subcategory
 
 ## Cross-Category Rules
 - The same article CAN and SHOULD appear in both categories when it has both technical and business significance.
@@ -88,31 +82,13 @@ NOT Research (assign to Business instead):
 ```json
 {
   "research": [
-    {
-      "group_title": "representative title for this group",
-      "subcategory": "llm_models|open_source|papers",
-      "reason": "why this group matters",
-      "score": 0-100,
-      "items": [
-        {"url": "...", "title": "original article title"},
-        {"url": "...", "title": "another article on same event"}
-      ]
-    }
+    {"url": "...", "subcategory": "llm_models|open_source|papers", "reason": "...", "score": 0-100}
   ],
   "business": [
-    {
-      "group_title": "representative title",
-      "subcategory": "big_tech|industry|new_tools",
-      "reason": "...",
-      "score": 0-100,
-      "items": [
-        {"url": "...", "title": "..."}
-      ]
-    }
+    {"url": "...", "subcategory": "big_tech|industry|new_tools", "reason": "...", "score": 0-100}
   ]
 }
-```
-Note: A group can have 1 item (unique story) or multiple items (same event from different sources)."""
+```"""
 
 
 FACT_EXTRACTION_SYSTEM_PROMPT = """You are a fact extraction engine for 0to1log, an AI news platform.
@@ -1073,6 +1049,49 @@ def get_weekly_prompt(persona: str, language: str) -> str:
     for key, val in headings.items():
         result = result.replace("{" + key + "}", val)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Merge Prompt — groups same-event articles after classification
+# ---------------------------------------------------------------------------
+
+MERGE_SYSTEM_PROMPT = """You are an AI news editor. Given a list of selected articles and all available candidates, find candidates covering the SAME specific event and group them with the selected articles.
+
+## Selected Articles (already chosen as important)
+{selected_items}
+
+## All Candidates
+{all_candidates}
+
+## Rules
+1. For each selected article, find any OTHER candidate covering the SAME specific event or announcement.
+2. Group same-event articles together. The selected article is the anchor.
+3. Only group articles about the SAME specific event:
+   - YES: "OpenAI releases GPT-5" + "GPT-5 pricing announced" = same event
+   - YES: "TurboQuant paper" + "TurboQuant blog post" = same work
+   - NO: "AI Scientist-v2" + "Nested Learning" = different research, different teams
+   - NO: Multiple papers grouped just because they are all "papers"
+4. If no match found, the article stays as a single-item group.
+5. Keep the original category and subcategory from the selected article.
+
+## Output JSON
+```json
+{{
+  "research": [
+    {{
+      "group_title": "representative title",
+      "subcategory": "original subcategory",
+      "reason": "original reason",
+      "score": 0-100,
+      "items": [
+        {{"url": "selected article url", "title": "selected article title"}},
+        {{"url": "matched candidate url", "title": "matched title"}}
+      ]
+    }}
+  ],
+  "business": [same format]
+}}
+```"""
 
 
 # ---------------------------------------------------------------------------

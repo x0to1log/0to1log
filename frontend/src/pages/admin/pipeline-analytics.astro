@@ -170,13 +170,13 @@ qualityEntries.sort((a, b) => {
 });
 
 const stageNames = [
-  'collect', 'classify', 'community', 'ranking', 'enrich',
+  'collect', 'classify', 'merge', 'community', 'ranking', 'enrich',
   'digest:research:expert', 'digest:research:learner',
   'digest:business:expert', 'digest:business:learner',
   'quality:research', 'quality:business',
 ];
 const stageLabels: Record<string, string> = {
-  'collect': 'Collect', 'classify': 'Classify',
+  'collect': 'Collect', 'classify': 'Classify', 'merge': 'Merge',
   'community': 'Community', 'ranking': 'Ranking', 'enrich': 'Enrich',
   'digest:research:expert': 'Research Expert', 'digest:research:learner': 'Research Learner',
   'digest:business:expert': 'Business Expert', 'digest:business:learner': 'Business Learner',
@@ -822,6 +822,7 @@ const nonce = Astro.locals.cspNonce || '';
     var stageColorMap = {
       'Collect':           '#94a3b8', // slate-400
       'Classify':          '#64748b', // slate-500
+      'Merge':             '#334155', // slate-700
       'Enrich':            '#475569', // slate-600
       'Research Expert':   '#2563eb', // blue-600
       'Research Learner':  '#60a5fa', // blue-400
