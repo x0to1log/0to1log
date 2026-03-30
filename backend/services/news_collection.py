@@ -438,6 +438,10 @@ EXA_BUSINESS_QUERIES = [
     "OpenAI Google Microsoft Meta AI announcement",
     "new AI tool product launch",
     "AI regulation policy enterprise",
+    "AI enterprise deployment case study ROI",
+    "AI chip hardware Nvidia AMD Intel",
+    "AI pricing model SaaS subscription",
+    "AI workforce hiring layoffs talent",
 ]
 
 async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
@@ -485,6 +489,58 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
         return candidates
     except Exception as e:
         logger.warning("Exa collection failed: %s", e)
+        return []
+
+
+BRAVE_QUERIES = [
+    "AI news today latest announcements",
+    "AI startup funding round",
+    "new AI product tool launch",
+    "AI regulation policy update",
+]
+
+
+async def _collect_brave(target_date: str | None = None) -> list[NewsCandidate]:
+    """Collect AI news via Brave Search API. Independent collector."""
+    if not settings.brave_api_key:
+        return []
+
+    try:
+        candidates: list[NewsCandidate] = []
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            for query in BRAVE_QUERIES:
+                try:
+                    resp = await client.get(
+                        "https://api.search.brave.com/res/v1/news/search",
+                        headers={"X-Subscription-Token": settings.brave_api_key},
+                        params={
+                            "q": query,
+                            "count": 10,
+                            "freshness": "pd",  # past day
+                        },
+                    )
+                    if resp.status_code != 200:
+                        logger.debug("Brave query '%s' returned %d", query, resp.status_code)
+                        continue
+                    data = resp.json()
+                    for result in data.get("results", []):
+                        url = result.get("url", "")
+                        if not url:
+                            continue
+                        candidates.append(NewsCandidate(
+                            title=result.get("title", ""),
+                            url=url,
+                            snippet=result.get("description", "")[:300],
+                            source="brave",
+                            raw_content=result.get("description", ""),
+                        ))
+                except Exception as e:
+                    logger.debug("Brave query failed for '%s': %s", query, e)
+
+        logger.info("Collected %d candidates from Brave", len(candidates))
+        return candidates
+    except Exception as e:
+        logger.warning("Brave collection failed: %s", e)
         return []
 
 
@@ -641,17 +697,18 @@ async def collect_news(
     arxiv_task = _collect_arxiv(target_date)
     github_task = _collect_github_trending(target_date)
     exa_task = _collect_exa(target_date)
+    brave_task = _collect_brave(target_date)
 
     tavily_results, tavily_meta = await tavily_task
-    hf_results, arxiv_results, github_results, exa_results = await asyncio.gather(
-        hf_task, arxiv_task, github_task, exa_task, return_exceptions=True,
+    hf_results, arxiv_results, github_results, exa_results, brave_results = await asyncio.gather(
+        hf_task, arxiv_task, github_task, exa_task, brave_task, return_exceptions=True,
     )
 
     # Safely collect results (treat exceptions as empty lists)
     all_candidates: list[NewsCandidate] = list(tavily_results)
     source_counts: dict[str, int] = {"tavily": len(tavily_results)}
 
-    for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results), ("exa", exa_results)]:
+    for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results), ("exa", exa_results), ("brave", brave_results)]:
         if isinstance(result, Exception):
             logger.warning("Collector %s failed: %s", name, result)
             source_counts[name] = 0
@@ -659,24 +716,32 @@ async def collect_news(
             all_candidates.extend(result)
             source_counts[name] = len(result)
 
-    # Deduplicate by URL + exclude already-published URLs
+    # Deduplicate by URL + exclude already-published URLs + filter non-article pages
     already_used = published_urls or set()
     seen_urls: set[str] = set()
     unique: list[NewsCandidate] = []
     excluded_count = 0
+    filtered_count = 0
+    _NON_ARTICLE_PATTERNS = ("/category/", "/categories/", "/topics/", "/topic/", "/tag/", "/tags/", "/archive/")
     for c in all_candidates:
         if c.url in already_used:
             excluded_count += 1
+            continue
+        # Filter category/topic/index pages (not individual articles)
+        from urllib.parse import urlparse
+        path = urlparse(c.url).path.rstrip("/")
+        if not path or path == "" or any(p in c.url.lower() for p in _NON_ARTICLE_PATTERNS):
+            filtered_count += 1
             continue
         if c.url not in seen_urls:
             seen_urls.add(c.url)
             unique.append(c)
 
     logger.info(
-        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, excluded_published=%d)",
+        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, brave=%d, excluded_published=%d, filtered_non_article=%d)",
         len(unique), source_counts["tavily"], source_counts.get("hf_papers", 0),
         source_counts.get("arxiv", 0), source_counts.get("github_trending", 0),
-        source_counts.get("exa", 0), excluded_count,
+        source_counts.get("exa", 0), source_counts.get("brave", 0), excluded_count, filtered_count,
     )
 
     is_backfill = False

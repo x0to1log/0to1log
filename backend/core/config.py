@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
     tavily_api_key: str = ""
     exa_api_key: str = ""
+    brave_api_key: str = ""
     admin_email: str = "admin@0to1log.com"
     cron_secret: str = ""
     revalidate_secret: str = ""
