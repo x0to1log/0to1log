@@ -150,6 +150,8 @@
 | NQ-07 | Action Items — "팔로우/주시" 금지, 구체적 action만 | 7.5 | 8.5+ | done |
 | NQ-08 | 분류/랭킹 분리 — gpt-4.1-mini 랭킹 + [LEAD]/[SUPPORTING] 태그 | 7.5 | 9+ | done |
 | NQ-09 | 랭킹에 "어제 발행 뉴스 제목" 전달 — 같은 이벤트 다른 URL 반복 방지 | — | — | todo |
+| NQ-10 | Business Expert citation 중복 — 같은 URL에 매번 새 번호 부여 (18개 → 5개) | — | — | todo |
+| NQ-11 | CP MANDATORY 4곳 통일 (Business Expert CP 누락 반복) | — | — | todo |
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
 ### HIGH PRIORITY — 핸드북 퀄리티

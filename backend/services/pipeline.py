@@ -26,6 +26,19 @@ from services.news_collection import collect_community_reactions, collect_news
 logger = logging.getLogger(__name__)
 
 
+def _dedup_source_cards(sources: list[dict]) -> list[dict]:
+    """Deduplicate source cards by URL and re-number IDs from 1."""
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for s in sources:
+        url = s.get("url", "")
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        deduped.append({**s, "id": len(deduped) + 1})
+    return deduped
+
+
 def _slugify(text: str) -> str:
     """Generate a URL-safe slug from text."""
     import re
@@ -875,7 +888,7 @@ async def _generate_digest(
             "focus_items": focus_items or [],
             "reading_time_min": reading_time,
             "source_urls": source_urls,
-            "source_cards": [s for s in (persona_sources.get("expert") or persona_sources.get("learner") or []) if s.get("url")],
+            "source_cards": _dedup_source_cards(persona_sources.get("expert") or persona_sources.get("learner") or []),
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,

@@ -149,8 +149,12 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: Use numbered citations at the END of each paragraph (Perplexity style). Format: `[1](URL)`. Number citations sequentially across the entire article (not per-section). Each paragraph MUST end with at least one citation. Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
-   Example: `...이는 AI 업계 최대 규모의 채용 계획이다. [1](https://example.com/article)`
+1. CITATION FORMAT: Number citations sequentially across the entire article.
+   - **News items** (### headings): Cite the source ONCE after the item title. Do NOT repeat the same citation at the end of every paragraph.
+     Format: `### Item Title [1](URL)`
+     The paragraphs below inherit this citation — no need to repeat it.
+   - **Analysis sections** (Why It Matters, Connecting the Dots, What This Means for You, 흐름 연결, 나에게 주는 의미): Cite at the END of each paragraph when referencing different sources. Format: `...분석 내용. [2](URL)`
+   - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
 4. English and Korean should cover the same facts with natural expression for each language.
@@ -213,8 +217,12 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: Use numbered citations at the END of each paragraph (Perplexity style). Format: `[1](URL)`. Number citations sequentially across the entire article (not per-section). Each paragraph MUST end with at least one citation. Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
-   Example: `...이는 AI 업계 최대 규모의 채용 계획이다. [1](https://example.com/article)`
+1. CITATION FORMAT: Number citations sequentially across the entire article.
+   - **News items** (### headings): Cite the source ONCE after the item title. Do NOT repeat the same citation at the end of every paragraph.
+     Format: `### Item Title [1](URL)`
+     The paragraphs below inherit this citation — no need to repeat it.
+   - **Analysis sections** (Why It Matters, Connecting the Dots, What This Means for You, 흐름 연결, 나에게 주는 의미): Cite at the END of each paragraph when referencing different sources. Format: `...분석 내용. [2](URL)`
+   - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
 4. English and Korean should cover the same news items with natural expression for each language.
@@ -269,7 +277,7 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
-1. Does EVERY paragraph end with `[N](URL)`? If not, add citations.
+1. Citations: Do news items (### headings) have a citation after the title? Do analysis sections have per-paragraph citations when referencing different sources?
 2. Are ALL required `##` section headers present? If any are missing, add them.
 3. Do [LEAD] items have 3-4 paragraphs, and do ALL [SUPPORTING] items have at least 3 paragraphs? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
@@ -326,7 +334,7 @@ RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Explain newly released models in plain language: what changed, what got better, and why people are paying attention.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Introduce notable projects from GitHub or Hugging Face. Explain what they do, who they are for, and why they are trending.
 - **## Research Papers (ko: ## Research Papers)** - Explain important papers simply: the problem, the idea, the result, and why this paper matters.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 approachable paragraph summarizing what people are saying, then 1-2 blockquote highlights. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short reader-friendly wrap-up connecting today's technical developments to the bigger AI landscape."""
 
 
@@ -360,7 +368,7 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Big Tech (ko: ## Big Tech)** - Major moves from OpenAI, Google, Microsoft, Meta, etc. Analyze what happened, the strategic rationale, competitive positioning, and market implications.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Put deal sizes in context and explain what each deal signals strategically.
 - **## New Tools (ko: ## New Tools)** - New AI products or services. Cover pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 paragraph analyzing market sentiment, then 1-2 blockquote highlights. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
   `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence]`
@@ -393,7 +401,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care.
 - **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - If community reactions are provided, write 1 friendly paragraph about what people are saying, then 1-2 blockquote highlights. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
 - **## What This Means for You (ko: ## 나에게 주는 의미)** - How today news connects to daily life, career, and work. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
   `1. **[Action]**: [what to do in 1-2 sentences]`
@@ -574,19 +582,19 @@ RESEARCH_EXPERT_SKELETON = """
 Diffusion-based decoding disrupts document OCR while multi-agent verification tackles LLM hallucination at scale.
 
 ## Research Papers
-### MinerU-Diffusion: Document OCR via Diffusion Decoding
-MinerU-Diffusion reframes OCR as inverse rendering, replacing sequential autoregressive decoding (used by Nougat, GOT-OCR) with parallel block-wise diffusion. The model achieves 3.2x faster decoding than autoregressive baselines while maintaining accuracy on complex layouts including tables and formulas. [1](https://arxiv.org/abs/example1)
+### MinerU-Diffusion: Document OCR via Diffusion Decoding [1](https://arxiv.org/abs/example1)
+MinerU-Diffusion reframes OCR as inverse rendering, replacing sequential autoregressive decoding (used by Nougat, GOT-OCR) with parallel block-wise diffusion. The model achieves 3.2x faster decoding than autoregressive baselines while maintaining accuracy on complex layouts including tables and formulas.
 
-On the Semantic Shuffle benchmark, MinerU-Diffusion shows reduced reliance on language priors, relying instead on visual cues — a key limitation of prior autoregressive OCR models. The block-wise decoder combined with uncertainty-driven curriculum learning enables stable training on long-form documents. [1](https://arxiv.org/abs/example1)
+On the Semantic Shuffle benchmark, MinerU-Diffusion shows reduced reliance on language priors, relying instead on visual cues — a key limitation of prior autoregressive OCR models. The block-wise decoder combined with uncertainty-driven curriculum learning enables stable training on long-form documents.
 
-Resolution is capped at 224px blocks, limiting performance on dense small-print documents. Inference memory footprint and latency versus Nougat are not reported. The open-source implementation on Hugging Face enables immediate benchmarking. [1](https://arxiv.org/abs/example1)
+Resolution is capped at 224px blocks, limiting performance on dense small-print documents. Inference memory footprint and latency versus Nougat are not reported. The open-source implementation on Hugging Face enables immediate benchmarking.
 
-### MARCH: Multi-Agent Hallucination Detection
-MARCH introduces a three-agent verification pipeline (Solver, Proposer, Checker) where no single agent sees the full context, preventing self-confirmation bias. Unlike SelfCheckGPT and similar single-model approaches, MARCH decouples claim generation from claim verification across independent agents. [2](https://arxiv.org/abs/example2)
+### MARCH: Multi-Agent Hallucination Detection [2](https://arxiv.org/abs/example2)
+MARCH introduces a three-agent verification pipeline (Solver, Proposer, Checker) where no single agent sees the full context, preventing self-confirmation bias. Unlike SelfCheckGPT and similar single-model approaches, MARCH decouples claim generation from claim verification across independent agents.
 
-On the HaluEval benchmark, MARCH achieves 91.2% hallucination detection accuracy with an 8B parameter model, matching GPT-4-level performance at 1/20th the inference cost. The key insight: information asymmetry between agents forces genuine verification rather than pattern matching. [2](https://arxiv.org/abs/example2)
+On the HaluEval benchmark, MARCH achieves 91.2% hallucination detection accuracy with an 8B parameter model, matching GPT-4-level performance at 1/20th the inference cost. The key insight: information asymmetry between agents forces genuine verification rather than pattern matching.
 
-The approach requires 3x inference passes per query, which increases latency. Production deployment would need batching optimizations not addressed in the paper. Code and weights are available on GitHub. [2](https://arxiv.org/abs/example2)
+The approach requires 3x inference passes per query, which increases latency. Production deployment would need batching optimizations not addressed in the paper. Code and weights are available on GitHub.
 
 ## Open Source & Repos
 ### WildWorld Dataset
@@ -612,19 +620,19 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 확산 기반 디코딩이 문서 OCR의 자기회귀(autoregressive) 패러다임에 도전하고, 멀티 에이전트 검증이 LLM 환각(hallucination) 문제에 새로운 해법을 제시한다.
 
 ## Research Papers
-### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR
-MinerU-Diffusion은 기존 Nougat, GOT-OCR 등의 자기회귀(autoregressive) 디코딩 대신 블록 단위 확산(diffusion) 방식을 도입, OCR을 역렌더링 문제로 재정의한다. 자기회귀 방식 대비 3.2배 빠른 디코딩 속도를 달성하면서도 표·수식 등 복잡 레이아웃 정확도를 유지했다. [1](https://arxiv.org/abs/example1)
+### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR [1](https://arxiv.org/abs/example1)
+MinerU-Diffusion은 기존 Nougat, GOT-OCR 등의 자기회귀(autoregressive) 디코딩 대신 블록 단위 확산(diffusion) 방식을 도입, OCR을 역렌더링 문제로 재정의한다. 자기회귀 방식 대비 3.2배 빠른 디코딩 속도를 달성하면서도 표·수식 등 복잡 레이아웃 정확도를 유지했다.
 
-Semantic Shuffle 벤치마크에서 언어 모델 사전지식 의존도가 낮아, 시각 정보 기반 추론이 강화됨을 입증했다. 기존 자기회귀 OCR의 핵심 한계였던 언어 편향 문제를 구조적으로 해결한 점이 기술적 차별화다. [1](https://arxiv.org/abs/example1)
+Semantic Shuffle 벤치마크에서 언어 모델 사전지식 의존도가 낮아, 시각 정보 기반 추론이 강화됨을 입증했다. 기존 자기회귀 OCR의 핵심 한계였던 언어 편향 문제를 구조적으로 해결한 점이 기술적 차별화다.
 
-224px 블록 해상도 제한으로 고밀도 소형 활자 문서에서의 성능은 미검증이다. Nougat 대비 추론 메모리·지연 비교도 미보고. Hugging Face에 오픈소스로 공개돼 즉시 벤치마크 가능하다. [1](https://arxiv.org/abs/example1)
+224px 블록 해상도 제한으로 고밀도 소형 활자 문서에서의 성능은 미검증이다. Nougat 대비 추론 메모리·지연 비교도 미보고. Hugging Face에 오픈소스로 공개돼 즉시 벤치마크 가능하다.
 
-### MARCH: 멀티 에이전트 환각 탐지 프레임워크
-MARCH는 Solver·Proposer·Checker 3개 에이전트가 서로 독립적으로 검증하는 파이프라인을 도입한다. 기존 SelfCheckGPT 등 단일 모델 방식과 달리, 주장 생성과 검증을 분리해 자기확인 편향을 방지한다. [2](https://arxiv.org/abs/example2)
+### MARCH: 멀티 에이전트 환각 탐지 프레임워크 [2](https://arxiv.org/abs/example2)
+MARCH는 Solver·Proposer·Checker 3개 에이전트가 서로 독립적으로 검증하는 파이프라인을 도입한다. 기존 SelfCheckGPT 등 단일 모델 방식과 달리, 주장 생성과 검증을 분리해 자기확인 편향을 방지한다.
 
-HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성, GPT-4 수준 성능을 추론 비용 1/20로 구현했다. 핵심은 에이전트 간 정보 비대칭으로 패턴 매칭이 아닌 실제 검증을 강제하는 구조다. [2](https://arxiv.org/abs/example2)
+HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성, GPT-4 수준 성능을 추론 비용 1/20로 구현했다. 핵심은 에이전트 간 정보 비대칭으로 패턴 매칭이 아닌 실제 검증을 강제하는 구조다.
 
-쿼리당 3회 추론 패스가 필요해 지연이 증가한다. 논문에서는 프로덕션 배치 최적화를 다루지 않았다. 코드와 가중치는 GitHub에 공개돼 있다. [2](https://arxiv.org/abs/example2)
+쿼리당 3회 추론 패스가 필요해 지연이 증가한다. 논문에서는 프로덕션 배치 최적화를 다루지 않았다. 코드와 가중치는 GitHub에 공개돼 있다.
 
 ## Open Source & Repos
 ### WildWorld Dataset
