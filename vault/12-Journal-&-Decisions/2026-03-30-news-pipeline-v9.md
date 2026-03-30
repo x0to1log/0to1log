@@ -141,7 +141,7 @@ After: "Citation numbers will be auto-corrected by post-processing, so exact id 
 
 ---
 
-## v9 파이프라인 흐름
+## v9 파이프라인 흐름 (최종)
 
 ```
 6개 소스 병렬 (Tavily + HF Papers + arXiv + GitHub + Exa + Google RSS)
@@ -149,19 +149,20 @@ After: "Citation numbers will be auto-corrected by post-processing, so exact id 
     v
 URL dedup + 발행 이력 제외 (3일) + Google News URL 해석 + 필러 필터
     v
-분류 (gpt-4.1-mini) → Research 0-5개, Business 0-5개
+★ merge+classify (gpt-4.1-mini) — 같은 이벤트 그룹화 + Research/Business 분류 동시
+    → 0-5 그룹/카테고리 (그룹 = 같은 이벤트의 기사 1~N개)
     v
-커뮤니티 수집 (HN Algolia + Reddit JSON) — 전체 분류 아이템
+커뮤니티 수집 (HN Algolia + Reddit JSON) — 그룹 내 모든 URL
     v
-랭킹 (gpt-4.1-mini) → [LEAD]/[SUPPORTING] 태그
+랭킹 (gpt-4.1-mini) → [LEAD]/[SUPPORTING] 그룹 단위 판단
     v
-★ 2차 수집 (Exa find_similar) — 전체 아이템, 최대 4개 소스/아이템
+★ 조건부 enrich (Exa find_similar) — 소스 1개뿐인 그룹만 보충
     v
-글쓰기 (gpt-4.1, max_tokens=32K) — 다중 소스 × 전문
+글쓰기 (gpt-4.1, max_tokens=32K) — 그룹 내 다중 소스 × 전문
     v
-후처리: bold fix → tag strip → ★citation renumber
+후처리: bold fix → tag strip → ★citation renumber (URL 기반 순차)
     v
-품질 체크 (o4-mini × 4) — Source Quality 기준 포함
+품질 체크 (o4-mini × 4) — Source Quality 기준 (제공 소스 수에 맞게 평가)
     v
 DB 저장 (source_cards = 코드 추출) → Admin 확인 → 발행
 ```
@@ -177,29 +178,35 @@ DB 저장 (source_cards = 코드 추출) → Admin 확인 → 발행
 | 날짜 | 버전 | 총 토큰 | 총 비용 | Research Expert | Business Expert | 비고 |
 |------|------|---------|---------|----------------|-----------------|------|
 | 3/20 | v8 | 169,592 | **$0.46** | 29,280 ($0.09) | 47,155 ($0.13) | 1소스 × 4000자 |
-| 3/21 | v9 초기 | 252,491 | **$0.62** | 61,646 ($0.16) | 56,978 ($0.15) | enrichment 활성화 |
-| 3/22 | v9 | 333,334 | **$0.77** | 103,626 ($0.24) | 55,617 ($0.14) | 다중 소스 × 전문 |
+| 3/22 | v9 enrich only | 333,334 | **$0.77** | 103,626 ($0.24) | 55,617 ($0.14) | merge 없이 enrich만 → 입력 폭발 |
+| **3/30** | **v9 + merge** | **164,375** | **$0.45** | 37,301 ($0.12) | 36,376 ($0.11) | merge+조건부enrich → **v8 수준으로 복귀** |
 
-### 비용 증가 분석
+### 비용 변화 분석
 
-- v8→v9: **$0.46 → $0.77** (67% 증가)
-- 주요 원인: Writer 입력 토큰 증가 (4000자 제한 해제 + 다중 소스 전문 전달)
-- Research Expert가 가장 큰 증가: 29K → 103K 토큰 (3.5배) — 논문/기술 기사 본문이 긴 편
-- Business는 상대적으로 안정: 47K → 56K (1.2배)
+**v9 초기 (enrich만, merge 없음)**: $0.46 → $0.77 (67% 증가)
+- Research Expert가 29K → 103K 토큰 (3.5배) — 5개 아이템 × 4소스 × 전문
+- Business는 47K → 56K (1.2배)
 
-### 스테이지별 비용 (3/22 기준, summary 제외)
+**v9 + NQ-16 merge (최종)**: $0.77 → **$0.45** (42% 감소, v8 이하)
+- merge가 같은 이벤트 기사를 묶어서 입력 중복 제거
+- 조건부 enrich: 소스 2개 이상 그룹은 Exa 호출 스킵
+- Research Expert: 103K → **37K** (65% 감소) — merge 효과가 가장 큼
+- Business Expert: 55K → **36K** (35% 감소)
+- 4개 페르소나 토큰이 균등해짐 (36-37K 범위)
+
+### 스테이지별 비용 (3/30 최종, summary 제외)
 
 | 스테이지 | 토큰 | 비용 | 비중 |
 |----------|------|------|------|
-| classify | 4,091 | $0.003 | 0.4% |
-| ranking | 1,356 | $0.001 | 0.1% |
-| enrich | — | ~$0.005 | 0.6% |
-| digest:research (expert+learner) | 206,365 | $0.47 | 61% |
-| digest:business (expert+learner) | 111,414 | $0.29 | 38% |
-| quality check × 2 | 10,108 | $0.005 | 0.6% |
-| **합계** | **333,334** | **$0.77** | |
+| classify (merge 포함) | 6,231 | $0.005 | 1.1% |
+| ranking | 908 | $0.0004 | 0.1% |
+| enrich (조건부) | — | ~$0.001 | 0.2% |
+| digest:research (expert+learner) | 73,382 | $0.22 | 50% |
+| digest:business (expert+learner) | 72,527 | $0.21 | 48% |
+| quality check × 2 | 11,327 | $0.005 | 1.1% |
+| **합계** | **164,375** | **$0.45** | |
 
-Writer(digest) 단계가 전체 비용의 ~99%를 차지. 비용 최적화 시 입력 토큰 관리가 핵심.
+**핵심**: merge로 입력 중복을 제거하면서 비용이 v8 수준으로 돌아왔고, 품질은 다중 소스 분석으로 더 높아짐.
 
 ---
 
@@ -221,17 +228,43 @@ v8까지 "LLM에게 잘 시키면 된다"는 접근이었지만, citation 넘버
 
 처음에는 `### Title [1][2][3]`처럼 소제목에 citation을 집계하는 후처리를 넣었으나, 실제 읽을 때 제목 읽기를 방해. skeleton에서도 제거하고, 후처리 코드도 삭제. citation은 본문 문단 끝에만 존재하면 충분.
 
+### 5. merge 없는 enrich는 입력 폭발을 일으킨다
+
+enrich만 도입하면 5아이템 × 4소스 × 전문 = 84K 토큰(Research). merge가 같은 이벤트 기사를 묶으면 중복 소스가 자연스럽게 정리되고, 조건부 enrich로 API 호출도 줄어든다. **enrich는 merge 이후에 보충 역할만 해야 한다.**
+
+### 6. merge 규칙은 예시가 필수다
+
+"same topic"이라고 쓰면 LLM이 논문 5개를 "AI research"로 묶어버린다. ✅/❌ 구체적 예시를 넣어야 의도대로 동작. Show Don't Tell 원칙이 분류기에서도 적용됨.
+
+### 7. 비용과 품질은 동시에 개선할 수 있다
+
+v9 초기($0.77)에서 merge 추가 후 $0.45로 42% 감소, 동시에 Research Expert 출력은 3,744자 → 11,059자로 3배 증가. **입력 중복 제거가 비용 절감과 품질 향상을 동시에 달성.**
+
 ---
 
 ## 커밋 목록
 
 | 커밋 | 내용 |
 |------|------|
-| `eb69b62` | **다중 소스 enrichment** — Exa find_similar + 4000자 제한 제거 + Writer 다중 소스 포맷 |
-| `90b56bd` | citation per-paragraph + quality check Source Quality |
+| `eb69b62` | **다중 소스 enrichment** — Exa find_similar + 4000자 제한 제거 |
 | `87443a2` | **citation 넘버링 코드 후처리** — _renumber_citations + source_cards 코드 추출 |
 | `b3d4a4e` | citation 포맷 예시 복원 — `[](URL)` 빈 괄호가 citation 누락 유발 |
-| `81c60cc` | heading citation 제거 — skeleton + 후처리 코드 삭제 + v9 journal |
+| `81c60cc` | heading citation 제거 — skeleton + 후처리 코드 삭제 |
+| `5c30734` | citation superscript UI + source_cards title 복원 |
+| `3c61ffc` | **NQ-16 merge+classify 통합** — 분류기가 같은 이벤트 그룹화 |
+| `bbd1e5c` | ClassifiedGroup .url → .primary_url 수정 |
+| `d80968b` | merge 규칙 강화 — ✅/❌ 예시로 과도한 묶기 방지 |
+| `848fd75` | quality check Source Quality 기준 수정 |
+
+---
+
+## 품질 추이 (v9)
+
+| 날짜 | Research | Business | 비용 | 비고 |
+|------|----------|----------|------|------|
+| 3/20 (v8) | 95 | 96 | $0.46 | baseline |
+| 3/22 (v9 enrich only) | 94 | 95 | $0.77 | 입력 폭발, Research Expert 축소 |
+| 3/30 (v9 + merge) | **94** | **95** | **$0.45** | 비용 v8 이하, 품질 유지, Research Expert 정상화 |
 
 ---
 
@@ -239,10 +272,11 @@ v8까지 "LLM에게 잘 시키면 된다"는 접근이었지만, citation 넘버
 
 - **NQ-09**: 어제 발행 뉴스 제목을 랭킹에 전달 — 같은 이벤트 반복 방지
 - **NQ-15**: Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성
-- **NQ-13 추가 검증**: 다음 파이프라인 run에서 다중 소스 반영 + citation 순차 확인
+- **COLLECT-BRAVE-01**: Brave Search API 수집기 추가 (Tavily 대체/보충)
 
 ## Related
 
 - [[2026-03-30-news-pipeline-v8]] — 이전 세션 (분류/랭킹 분리, Research Guide 리팩토링)
 - [[2026-03-30-multi-source-enrichment]] — NQ-13 설계 문서
-- [[ACTIVE_SPRINT]] — NQ-13 done, NQ-14 done, NQ-15 todo
+- [[2026-03-30-merge-classify-design]] — NQ-16 merge+classify 설계 문서
+- [[ACTIVE_SPRINT]] — NQ-13/14/16 done, NQ-15 todo
