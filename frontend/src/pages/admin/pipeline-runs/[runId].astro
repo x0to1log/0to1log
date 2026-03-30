@@ -74,7 +74,8 @@ function durationSeconds(startedAt: string | null, finishedAt: string | null): n
 }
 
 function formatCurrency(value: number): string {
-  return `$${value.toFixed(2)}`;
+  // Show 4 decimal places for small costs (< $0.01), otherwise 2
+  return value < 0.01 && value > 0 ? `$${value.toFixed(4)}` : `$${value.toFixed(2)}`;
 }
 
 function metricText(value: number | null, formatter?: (num: number) => string): string {
