@@ -1,0 +1,146 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+
+// Detect locale from cookie or referer path
+const cookieLocale = Astro.cookies.get('site-locale')?.value;
+const refererPath = Astro.request.headers.get('referer') || '';
+const pathLocale = refererPath.includes('/ko/') ? 'ko' : refererPath.includes('/en/') ? 'en' : null;
+const locale = (cookieLocale === 'ko' || cookieLocale === 'en')
+  ? cookieLocale as 'en' | 'ko'
+  : pathLocale || 'ko';
+
+const isKo = locale === 'ko';
+
+const heading = isKo ? '페이지를 찾을 수 없습니다' : 'Page Not Found';
+const message = isKo
+  ? '요청하신 페이지가 이동되었거나 존재하지 않습니다.'
+  : 'The page you requested has been moved or does not exist.';
+const homeLabel = isKo ? '홈으로 돌아가기' : 'Return Home';
+
+const quickLinks = isKo
+  ? [
+      { href: '/ko/', label: '홈' },
+      { href: '/ko/news/', label: 'AI 뉴스' },
+      { href: '/ko/handbook/', label: 'AI 용어집' },
+      { href: '/ko/blog/', label: '블로그' },
+      { href: '/ko/products/', label: 'AI 제품군' },
+    ]
+  : [
+      { href: '/en/', label: 'Home' },
+      { href: '/en/news/', label: 'AI News' },
+      { href: '/en/handbook/', label: 'AI Glossary' },
+      { href: '/en/blog/', label: 'Blog' },
+      { href: '/en/products/', label: 'AI Products' },
+    ];
+---
+
+<MainLayout title={`404 — ${heading}`} locale={locale}>
+  <div class="error-404-page">
+    <div class="error-404-container">
+      <div class="error-404-number">404</div>
+      <div class="error-404-rule"></div>
+      <h1 class="error-404-heading">{heading}</h1>
+      <p class="error-404-message">{message}</p>
+
+      <a href={isKo ? '/ko/' : '/en/'} class="error-404-home-link">
+        &larr; {homeLabel}
+      </a>
+
+      <nav class="error-404-nav" aria-label={isKo ? '빠른 이동' : 'Quick links'}>
+        {quickLinks.map((link) => (
+          <a href={link.href} class="error-404-nav-link" data-astro-prefetch="viewport">
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .error-404-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem 1rem;
+  }
+
+  .error-404-container {
+    text-align: center;
+    max-width: 480px;
+  }
+
+  .error-404-number {
+    font-family: var(--font-masthead);
+    font-size: clamp(5rem, 15vw, 9rem);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--color-accent);
+    opacity: 0.35;
+    letter-spacing: -0.04em;
+    user-select: none;
+  }
+
+  .error-404-rule {
+    width: 4rem;
+    height: 2px;
+    background: var(--color-border);
+    margin: 1.5rem auto;
+  }
+
+  .error-404-heading {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 0.75rem;
+  }
+
+  .error-404-message {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0 0 2rem;
+  }
+
+  .error-404-home-link {
+    display: inline-block;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .error-404-home-link:hover {
+    border-color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .error-404-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .error-404-nav-link {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .error-404-nav-link:hover {
+    color: var(--color-accent);
+  }
+</style>
