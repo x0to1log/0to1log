@@ -150,9 +150,10 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 
 ## Writing Rules
 1. CITATION FORMAT: Number citations sequentially across the entire article.
-   - **News items** (### headings): Cite the source ONCE after the item title. Do NOT repeat the same citation at the end of every paragraph.
-     Format: `### Item Title [1](URL)`
-     The paragraphs below inherit this citation — no need to repeat it.
+   - **News items** (### headings): Cite ALL provided sources after the item title.
+     Single source: `### Item Title [1](URL)`
+     Multiple sources: `### Item Title [1](URL1)[2](URL2)[3](URL3)`
+     The paragraphs below inherit these citations — no need to repeat them.
    - **Analysis sections** (Why It Matters, Connecting the Dots, What This Means for You, 흐름 연결, 나에게 주는 의미): Cite at the END of each paragraph when referencing different sources. Format: `...분석 내용. [2](URL)`
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
@@ -218,9 +219,10 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 
 ## Writing Rules
 1. CITATION FORMAT: Number citations sequentially across the entire article.
-   - **News items** (### headings): Cite the source ONCE after the item title. Do NOT repeat the same citation at the end of every paragraph.
-     Format: `### Item Title [1](URL)`
-     The paragraphs below inherit this citation — no need to repeat it.
+   - **News items** (### headings): Cite ALL provided sources after the item title.
+     Single source: `### Item Title [1](URL)`
+     Multiple sources: `### Item Title [1](URL1)[2](URL2)[3](URL3)`
+     The paragraphs below inherit these citations — no need to repeat them.
    - **Analysis sections** (Why It Matters, Connecting the Dots, What This Means for You, 흐름 연결, 나에게 주는 의미): Cite at the END of each paragraph when referencing different sources. Format: `...분석 내용. [2](URL)`
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
@@ -277,7 +279,7 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
-1. Citations: Do news items (### headings) have a citation after the title? Do analysis sections have per-paragraph citations when referencing different sources?
+1. Citations: Do news items (### headings) cite ALL provided sources after the title? (e.g., `### Title [1](URL1)[2](URL2)`) Do analysis sections have per-paragraph citations when referencing different sources?
 2. Are ALL required `##` section headers present? If any are missing, add them.
 3. Do [LEAD] items have 3-4 paragraphs, and do ALL [SUPPORTING] items have at least 3 paragraphs? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.

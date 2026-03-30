@@ -21,7 +21,7 @@ from services.agents.advisor import (
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
 from services.agents.ranking import classify_candidates, rank_classified
-from services.news_collection import collect_community_reactions, collect_news
+from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
 logger = logging.getLogger(__name__)
 
@@ -558,6 +558,7 @@ async def _generate_digest(
     community_map: dict[str, str],
     supabase,
     run_id: str,
+    enriched_map: dict[str, list[dict]] | None = None,
 ) -> tuple[int, list[str], dict[str, Any]]:
     """Generate a daily digest post for one category (research or business).
 
@@ -573,22 +574,46 @@ async def _generate_digest(
 
     # Build user prompt from classified news items
     # Filter out items with no substantive content (title-only hub pages, etc.)
+    _enriched = enriched_map or {}
     news_items = []
     for item in classified:
-        body = raw_content_map.get(item.url, item.snippet)[:4000]
-        if len(body.strip()) < 80:
-            logger.info(
-                "Skipping filler item '%s' — body too short (%d chars)",
-                item.title[:60], len(body.strip()),
-            )
-            continue
+        # Multi-source: use enriched sources if available, else fallback to original
+        sources = _enriched.get(item.url)
+        if sources:
+            # Check if at least one source has substantive content
+            best_content = max((s.get("content", "") for s in sources), key=len)
+            if len(best_content.strip()) < 80:
+                logger.info(
+                    "Skipping filler item '%s' — best source too short (%d chars)",
+                    item.title[:60], len(best_content.strip()),
+                )
+                continue
+            # Build multi-source block
+            source_blocks = []
+            for i, src in enumerate(sources, 1):
+                content = src.get("content", "")
+                if len(content.strip()) < 40:
+                    continue
+                source_blocks.append(
+                    f"Source {i}: {src['url']}\n{content}"
+                )
+            body_block = "\n\n".join(source_blocks)
+        else:
+            body = raw_content_map.get(item.url, item.snippet)
+            if len(body.strip()) < 80:
+                logger.info(
+                    "Skipping filler item '%s' — body too short (%d chars)",
+                    item.title[:60], len(body.strip()),
+                )
+                continue
+            body_block = f"Source 1: {item.url}\n{body}"
+
         community = community_map.get(item.url, "")
         community_block = f"\n\nCommunity Reactions (Reddit/HN):\n{community[:1000]}" if community else ""
         role_tag = "[LEAD]" if item.reason.startswith("[LEAD]") else "[SUPPORTING]"
         news_items.append(
-            f"### {role_tag} [{item.subcategory}] {item.title}\n"
-            f"Source URL (MUST cite this): {item.url}\n\n"
-            f"{body}{community_block}"
+            f"### {role_tag} [{item.subcategory}] {item.title}\n\n"
+            f"{body_block}{community_block}"
         )
     user_prompt = "\n\n---\n\n".join(news_items)
 
@@ -1096,6 +1121,19 @@ async def run_daily_pipeline(
             usage=rank_usage,
         )
 
+        # Stage: enrich — find additional sources for each ranked item
+        t0 = time.monotonic()
+        all_ranked = classification.research + classification.business
+        enriched_map = await enrich_sources(
+            all_ranked, raw_content_map, target_date=target_date,
+        )
+        total_extra = sum(len(s) - 1 for s in enriched_map.values())
+        await _log_stage(
+            supabase, run_id, "enrich", "success", t0,
+            input_summary=f"{len(all_ranked)} items",
+            output_summary=f"{total_extra} additional sources found",
+        )
+
         # Generate research + business digests in parallel
         digest_tasks = []
         for digest_type, classified_items in [
@@ -1114,6 +1152,7 @@ async def run_daily_pipeline(
                     community_map=community_map,
                     supabase=supabase,
                     run_id=run_id,
+                    enriched_map=enriched_map,
                 )
             )
 

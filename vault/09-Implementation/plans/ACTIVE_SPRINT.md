@@ -153,12 +153,18 @@
 | NQ-10 | Business Expert citation 중복 — 같은 URL에 매번 새 번호 부여 (18개 → 5개) | — | — | done |
 | NQ-11 | CP MANDATORY 4곳 통일 (Business Expert CP 누락 반복) | — | — | done |
 | NQ-12 | Citation 포맷 변경 — 뉴스 아이템은 소제목 옆 1회, 분석 섹션만 문단별 | — | — | done |
-| NQ-13 | 같은 이벤트 다른 기사 묶기 — 분류기에서 같은 주제 기사 merge 후 다중 소스 인용 | — | — | todo |
+| NQ-13 | 같은 이벤트 다중 소스 수집 (Multi-Source Enrichment) — rank 후 Exa find_similar 2차 수집 + Writer 다중 소스 입력 | — | — | planned |
 
-#### NQ-13 배경 노트
-현재 소제목 하나에 소스가 항상 1개뿐. "OpenAI $110B 투자" 뉴스를 쓸 때 TechCrunch 기사 1개만 참조하는데, 같은 이벤트를 다룬 Reuters, 공식 블로그가 후보에 있어도 별도 아이템으로 분류되거나 버려짐.
-같은 이벤트의 다른 기사를 묶어서 하나의 소제목 아래에 여러 소스를 교차 인용하면 — 분석 깊이가 올라가고, citation이 1개뿐인 "얇은 느낌"이 해소됨.
-분류기 로직 변경이 필요해서 다음 세션에서 설계 논의 예정.
+#### NQ-13 설계 참조
+- **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
+- **결정 확정 (2026-03-30):**
+  - 글자 제한: 제한 없음 (전문 전달)
+  - 2차 수집: Exa `find_similar(url)` + 48시간 날짜 필터
+  - 소스 상한: 최대 4개 (원본 + 3)
+  - 이벤트 판별: 날짜 필터만 (LLM 판별 불필요)
+  - 대상: 전체 (LEAD + SUPPORTING)
+- **구현 태스크:** 6개 (enrich 함수 → Writer 포맷 → 파이프라인 삽입 → 프롬프트 → 어드민 → 검증)
+- **비용 영향:** +$0.03-0.04/run (현재 $0.25 → $0.28-0.29)
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
 ### HIGH PRIORITY — 핸드북 퀄리티

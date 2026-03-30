@@ -489,6 +489,107 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
 
 
 # ---------------------------------------------------------------------------
+# Multi-source enrichment: find additional sources for classified items
+# ---------------------------------------------------------------------------
+
+async def enrich_sources(
+    items: list,
+    raw_content_map: dict[str, str],
+    target_date: str | None = None,
+    max_sources: int = 4,
+) -> dict[str, list[dict]]:
+    """Find additional sources covering the same event for each news item.
+
+    Uses Exa find_similar to locate other articles about the same event,
+    with a 48-hour date filter to avoid stale results.
+
+    Args:
+        items: ClassifiedCandidate list (post-ranking).
+        raw_content_map: {url: raw_content} from 1st collection.
+        target_date: Target date string (YYYY-MM-DD) or None for today.
+        max_sources: Max total sources per item (including original).
+
+    Returns:
+        {item_url: [{"url": ..., "title": ..., "content": ...}, ...]}
+        Original source is included as first entry. All sources are equal.
+    """
+    if not settings.exa_api_key:
+        logger.info("No Exa API key — skipping enrichment")
+        return {}
+
+    try:
+        from exa_py import Exa
+    except ImportError:
+        logger.warning("exa_py not installed — skipping enrichment")
+        return {}
+
+    # Date filter: 48 hours around target date
+    if target_date:
+        try:
+            base = datetime.strptime(target_date, "%Y-%m-%d")
+        except ValueError:
+            base = datetime.now(timezone.utc)
+    else:
+        base = datetime.now(timezone.utc)
+    start_date = (base - timedelta(days=2)).strftime("%Y-%m-%d")
+    end_date = (base + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    exa = Exa(api_key=settings.exa_api_key)
+    loop = asyncio.get_running_loop()
+    enriched: dict[str, list[dict]] = {}
+
+    async def _enrich_one(item) -> tuple[str, list[dict]]:
+        # Start with original source
+        original_content = raw_content_map.get(item.url, item.snippet)
+        sources = [{"url": item.url, "title": item.title, "content": original_content}]
+
+        try:
+            resp = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: exa.find_similar_and_contents(
+                        url=item.url,
+                        num_results=max_sources - 1,
+                        text=True,
+                        start_published_date=start_date,
+                        end_published_date=end_date,
+                    ),
+                ),
+                timeout=15,
+            )
+            for r in (resp.results if hasattr(resp, "results") else []):
+                if not r.url or r.url == item.url:
+                    continue
+                sources.append({
+                    "url": r.url,
+                    "title": r.title or "",
+                    "content": r.text or "",
+                })
+        except Exception as e:
+            logger.debug("Enrich failed for '%s': %s", item.title[:60], e)
+
+        return item.url, sources
+
+    # Run all enrichment calls in parallel
+    tasks = [_enrich_one(item) for item in items]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for result in results:
+        if isinstance(result, Exception):
+            logger.debug("Enrich task exception: %s", result)
+            continue
+        url, sources = result
+        enriched[url] = sources
+
+    total_extra = sum(len(s) - 1 for s in enriched.values())
+    logger.info(
+        "Enriched %d items with %d additional sources (avg %.1f per item)",
+        len(enriched), total_extra,
+        total_extra / len(enriched) if enriched else 0,
+    )
+    return enriched
+
+
+# ---------------------------------------------------------------------------
 # Main entry point: collect from all sources
 # ---------------------------------------------------------------------------
 
