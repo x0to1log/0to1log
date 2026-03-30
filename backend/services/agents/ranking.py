@@ -264,8 +264,16 @@ async def merge_classified(
         for group_data in groups_raw:
             items_raw = group_data.get("items", [])
             grouped_items: list[GroupedItem] = []
+            seen_urls: set[str] = set()
             for item_data in items_raw:
-                url = item_data.get("url", "")
+                # Support both {"url": "..."} dict and plain "url" string
+                if isinstance(item_data, str):
+                    url = item_data
+                else:
+                    url = item_data.get("url", "")
+                if not url or url in seen_urls:
+                    continue
+                seen_urls.add(url)
                 candidate = url_map.get(url)
                 if candidate:
                     grouped_items.append(GroupedItem(url=url, title=candidate.title))
