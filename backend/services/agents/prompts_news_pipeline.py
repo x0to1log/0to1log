@@ -150,11 +150,8 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 
 ## Writing Rules
 1. CITATION FORMAT: Number citations sequentially across the entire article.
-   - **News items** (### headings): Cite ALL provided sources after the item title.
-     Single source: `### Item Title [1](URL)`
-     Multiple sources: `### Item Title [1](URL1)[2](URL2)[3](URL3)`
-     The paragraphs below inherit these citations — no need to repeat them.
-   - **Analysis sections** (Why It Matters, Connecting the Dots, What This Means for You, 흐름 연결, 나에게 주는 의미): Cite at the END of each paragraph when referencing different sources. Format: `...분석 내용. [2](URL)`
+   - Cite at the END of each paragraph with the source(s) used. Format: `...내용. [1](URL1)[2](URL2)`
+   - When multiple sources are provided for a news item, use different citations in different paragraphs to show which source informed which claim.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
@@ -219,11 +216,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 
 ## Writing Rules
 1. CITATION FORMAT: Number citations sequentially across the entire article.
-   - **News items** (### headings): Cite ALL provided sources after the item title.
-     Single source: `### Item Title [1](URL)`
-     Multiple sources: `### Item Title [1](URL1)[2](URL2)[3](URL3)`
-     The paragraphs below inherit these citations — no need to repeat them.
-   - **Analysis sections** (Why It Matters, Connecting the Dots, What This Means for You, 흐름 연결, 나에게 주는 의미): Cite at the END of each paragraph when referencing different sources. Format: `...분석 내용. [2](URL)`
+   - Cite at the END of each paragraph with the source(s) used. Format: `...내용. [1](URL1)[2](URL2)`
+   - When multiple sources are provided for a news item, use different citations in different paragraphs to show which source informed which claim.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
@@ -279,7 +273,7 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
-1. Citations: Do news items (### headings) cite ALL provided sources after the title? (e.g., `### Title [1](URL1)[2](URL2)`) Do analysis sections have per-paragraph citations when referencing different sources?
+1. Citations: Does every paragraph end with at least one [N](URL) citation? When multiple sources are provided, are different sources cited in different paragraphs?
 2. Are ALL required `##` section headers present? If any are missing, add them.
 3. Do [LEAD] items have 3-4 paragraphs, and do ALL [SUPPORTING] items have at least 3 paragraphs? Expand if below minimum.
 4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
@@ -899,11 +893,11 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 10: 1+ present section is very thin or poorly structured or missing ## headings
    - 0: Content structure is broken or unrecognizable
 
-2. **Source Citations** (25):
-   Expected format: numbered citations [N](URL) at the end of each paragraph (Perplexity style). Numbers should be sequential across the article.
-   - 25: Every paragraph ends with at least one [N](URL) citation; benchmark numbers are attributed
-   - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
-   - 10: Fewer than half of paragraphs have citations, or citations are grouped at the bottom instead of inline
+2. **Source Quality** (25):
+   Expected: per-paragraph [N](URL) citations. When multiple sources are provided, different sources should appear in different paragraphs showing multi-perspective synthesis.
+   - 25: Every paragraph has [N](URL) citation; multiple sources are synthesized (not just one perspective); benchmark numbers are attributed to specific sources
+   - 18: Most paragraphs cite sources; multiple sources used but 1-2 paragraphs missing citations
+   - 10: Only 1 source cited when multiple were provided; or citations grouped at bottom
    - 0: No inline citations or fabricated URLs
 
 3. **Technical Depth** (25):
@@ -940,11 +934,11 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 10: Assumes too much prior knowledge; multiple unexplained terms
    - 0: Written like an expert brief; inaccessible to beginners
 
-3. **Source Citations** (25):
-   Expected format: numbered citations [N](URL) at the end of each paragraph.
-   - 25: Most paragraphs end with [N](URL) citations
+3. **Source Quality** (25):
+   Expected: per-paragraph [N](URL) citations. When multiple sources are provided, different sources should appear showing the topic from multiple angles.
+   - 25: Most paragraphs end with [N](URL) citations; multiple sources synthesized into accessible explanations
    - 18: Most items cite sources; a few paragraphs missing
-   - 10: Fewer than half cite sources, or citations grouped at bottom
+   - 10: Only 1 source cited when multiple were provided; or citations grouped at bottom
    - 0: No citations
 
 4. **Language Quality** (25):
@@ -969,11 +963,11 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 10: Missing a required section (Connecting the Dots or Strategic Decisions) or missing ## headings
    - 0: Missing 2+ required sections
 
-2. **Source Citations** (25):
-   Expected format: numbered citations [N](URL) at the end of each paragraph (Perplexity style).
-   - 25: Every paragraph ends with [N](URL); funding amounts and deal terms attributed
-   - 18: Most paragraphs cite sources; 1-2 missing
-   - 10: Fewer than half cite sources, or citations grouped at bottom
+2. **Source Quality** (25):
+   Expected: per-paragraph [N](URL) citations. When multiple sources are provided, different sources should appear in different paragraphs showing multi-perspective synthesis.
+   - 25: Every paragraph has [N](URL) citation; multiple sources synthesized; funding amounts and deal terms attributed to specific sources
+   - 18: Most paragraphs cite sources; multiple sources used but 1-2 missing
+   - 10: Only 1 source cited when multiple were provided; or citations grouped at bottom
    - 0: No inline citations
 
 3. **Analysis Quality** (25):
@@ -1017,9 +1011,9 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No actionable content or empty sections
 
 4. **Language Quality** (25):
-   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; [N](URL) citations present
-   - 18: Readable; adequate length
-   - 10: Too dry, too short, or condescending
+   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; per-paragraph [N](URL) citations present; multiple sources synthesized when provided
+   - 18: Readable; adequate length; most paragraphs have citations
+   - 10: Too dry, too short, or condescending; citations missing
    - 0: Barely readable
 
 Return JSON only:

@@ -26,6 +26,56 @@ from services.news_collection import collect_community_reactions, collect_news, 
 logger = logging.getLogger(__name__)
 
 
+def _aggregate_heading_citations(content: str) -> str:
+    """Collect per-paragraph citations in each ### section and add them to the heading.
+
+    Scans each ### block, finds all unique [N](URL) references,
+    and appends them after the ### title. Existing heading citations are preserved.
+    """
+    if not content or "###" not in content:
+        return content
+
+    citation_re = re.compile(r'\[(\d+)\]\(([^)]+)\)')
+    lines = content.split('\n')
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith('### '):
+            # Collect all lines in this ### section (until next ## or ###)
+            section_lines = [line]
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith('## ') and not lines[j].startswith('### '):
+                section_lines.append(lines[j])
+                j += 1
+
+            # Find all unique citations in the section body (skip heading itself)
+            seen_nums: set[str] = set()
+            unique_citations: list[str] = []
+            # Also collect citations already on the heading
+            heading_citations = set(m[0] for m in citation_re.finditer(section_lines[0]))
+            for sec_line in section_lines[1:]:
+                for match in citation_re.finditer(sec_line):
+                    num = match.group(1)
+                    full = match.group(0)
+                    if num not in seen_nums and full not in heading_citations:
+                        seen_nums.add(num)
+                        unique_citations.append(full)
+
+            # Append collected citations to heading if any new ones found
+            if unique_citations:
+                heading = section_lines[0].rstrip()
+                section_lines[0] = heading + ' ' + ''.join(unique_citations)
+
+            result.extend(section_lines)
+            i = j
+        else:
+            result.append(line)
+            i += 1
+
+    return '\n'.join(result)
+
+
 def _dedup_source_cards(sources: list[dict]) -> list[dict]:
     """Deduplicate source cards by URL and re-number IDs from 1."""
     seen: set[str] = set()
@@ -879,6 +929,11 @@ async def _generate_digest(
         for tag in ['[LEAD]', '[SUPPORTING]', '([LEAD])', '([SUPPORTING])']:
             expert_content = expert_content.replace(tag, '')
             learner_content = learner_content.replace(tag, '')
+
+        # Post-process: aggregate per-paragraph citations onto ### headings
+        # Scans each ### section, collects unique [N](URL) refs, appends after title
+        expert_content = _aggregate_heading_citations(expert_content)
+        learner_content = _aggregate_heading_citations(learner_content)
 
         text = expert_content or learner_content or ""
         if locale == "ko":
