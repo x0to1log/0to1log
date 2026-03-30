@@ -236,15 +236,16 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
             "confidence_reason": "No verifiable claims found in the content",
         }, model, total_tokens
 
-    # Step 2: Search each claim via Tavily
+    # Step 2: Search each claim via Tavily (Exa fallback)
     search_results = {}
-    if settings.tavily_api_key:
-        from tavily import TavilyClient
-        tavily = TavilyClient(api_key=settings.tavily_api_key)
-        loop = asyncio.get_running_loop()
+    loop = asyncio.get_running_loop()
 
-        async def search_claim(claim_text: str) -> list[dict]:
+    async def search_claim(claim_text: str) -> list[dict]:
+        # Try Tavily first
+        if settings.tavily_api_key:
             try:
+                from tavily import TavilyClient
+                tavily = TavilyClient(api_key=settings.tavily_api_key)
                 result = await loop.run_in_executor(
                     None,
                     lambda: tavily.search(
@@ -255,9 +256,24 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
                 )
                 return result.get("results", [])
             except Exception as e:
-                logger.warning("Tavily search failed for claim: %s", e)
-                return []
+                logger.warning("Tavily search failed for claim, trying Exa: %s", e)
+        # Exa fallback
+        if settings.exa_api_key:
+            try:
+                from exa_py import Exa
+                exa = Exa(api_key=settings.exa_api_key)
+                exa_res = await loop.run_in_executor(
+                    None,
+                    lambda: exa.search_and_contents(
+                        claim_text, num_results=3, text={"max_characters": 3000},
+                    ),
+                )
+                return [{"title": r.title, "url": r.url, "content": (r.text or "")[:3000]} for r in exa_res.results]
+            except Exception as e:
+                logger.warning("Exa search also failed for claim: %s", e)
+        return []
 
+    if settings.tavily_api_key or settings.exa_api_key:
         tasks = [search_claim(c["claim"]) for c in claims]
         results = await asyncio.gather(*tasks)
         for i, c in enumerate(claims):

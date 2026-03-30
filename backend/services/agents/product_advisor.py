@@ -444,48 +444,84 @@ Respond with the keyword text only — no explanation, no formatting."""
 
 
 async def _fetch_page_content(url: str) -> str:
-    """Fetch product page content using Tavily, with graceful fallback."""
-    if not url or not settings.tavily_api_key:
+    """Fetch product page content using Tavily, with Exa fallback."""
+    if not url:
         return ""
-    try:
-        from tavily import TavilyClient
-        tavily = TavilyClient(api_key=settings.tavily_api_key)
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda: tavily.search(url, max_results=1, include_raw_content=True),
-        )
-        content_parts = []
-        for r in results.get("results", []):
-            raw = r.get("raw_content") or r.get("content") or ""
-            if raw:
-                content_parts.append(raw)
-        return "\n\n".join(content_parts)[:4000]
-    except Exception as e:
-        logger.warning("Tavily fetch failed for %s: %s", url, e)
-        return ""
+    loop = asyncio.get_event_loop()
+    # Try Tavily first
+    if settings.tavily_api_key:
+        try:
+            from tavily import TavilyClient
+            tavily = TavilyClient(api_key=settings.tavily_api_key)
+            results = await loop.run_in_executor(
+                None,
+                lambda: tavily.search(url, max_results=1, include_raw_content=True),
+            )
+            content_parts = []
+            for r in results.get("results", []):
+                raw = r.get("raw_content") or r.get("content") or ""
+                if raw:
+                    content_parts.append(raw)
+            if content_parts:
+                return "\n\n".join(content_parts)[:4000]
+        except Exception as e:
+            logger.warning("Tavily fetch failed for %s, trying Exa: %s", url, e)
+    # Exa fallback
+    if settings.exa_api_key:
+        try:
+            from exa_py import Exa
+            exa = Exa(api_key=settings.exa_api_key)
+            exa_res = await loop.run_in_executor(
+                None,
+                lambda: exa.search_and_contents(url, num_results=1, text={"max_characters": 4000}),
+            )
+            if exa_res.results:
+                return (exa_res.results[0].text or "")[:4000]
+        except Exception as e:
+            logger.warning("Exa fetch also failed for %s: %s", url, e)
+    return ""
 
 
 async def _fetch_review_content(name: str) -> str:
-    """Search for product reviews and use cases via Tavily."""
-    if not name or not settings.tavily_api_key:
+    """Search for product reviews and use cases via Tavily, with Exa fallback."""
+    if not name:
         return ""
-    try:
-        from tavily import TavilyClient
-        tavily = TavilyClient(api_key=settings.tavily_api_key)
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda n=name: tavily.search(
-                f"{n} review use cases pros cons",
-                max_results=3,
-            ),
-        )
-        parts = [r.get("content", "") for r in results.get("results", []) if r.get("content")]
-        return "\n\n".join(parts)[:3000]
-    except Exception as e:
-        logger.warning("Tavily review search failed for %s: %s", name, e)
-        return ""
+    loop = asyncio.get_event_loop()
+    # Try Tavily first
+    if settings.tavily_api_key:
+        try:
+            from tavily import TavilyClient
+            tavily = TavilyClient(api_key=settings.tavily_api_key)
+            results = await loop.run_in_executor(
+                None,
+                lambda n=name: tavily.search(
+                    f"{n} review use cases pros cons",
+                    max_results=3,
+                ),
+            )
+            parts = [r.get("content", "") for r in results.get("results", []) if r.get("content")]
+            if parts:
+                return "\n\n".join(parts)[:3000]
+        except Exception as e:
+            logger.warning("Tavily review search failed for %s, trying Exa: %s", name, e)
+    # Exa fallback
+    if settings.exa_api_key:
+        try:
+            from exa_py import Exa
+            exa = Exa(api_key=settings.exa_api_key)
+            exa_res = await loop.run_in_executor(
+                None,
+                lambda n=name: exa.search_and_contents(
+                    f"{n} review use cases pros cons",
+                    num_results=3, text={"max_characters": 3000},
+                ),
+            )
+            parts = [f"[{r.title}]({r.url})\n{(r.text or '')[:3000]}" for r in exa_res.results]
+            if parts:
+                return "\n\n".join(parts)[:3000]
+        except Exception as e:
+            logger.warning("Exa review search also failed for %s: %s", name, e)
+    return ""
 
 
 def _resolve_logo_url(url: str) -> str | None:
@@ -612,13 +648,13 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
     if body.action == "pricing_detail":
         model = settings.openai_model_light
         product_name = body.name or body.url or ""
-        # Tavily search for pricing info
+        # Search for pricing info (Tavily with Exa fallback)
         pricing_context = ""
+        loop = asyncio.get_event_loop()
         if settings.tavily_api_key:
             try:
                 from tavily import TavilyClient
                 tavily = TavilyClient(api_key=settings.tavily_api_key)
-                loop = asyncio.get_event_loop()
                 results = await loop.run_in_executor(
                     None,
                     lambda: tavily.search(
@@ -634,7 +670,22 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                         parts.append(raw[:2000])
                 pricing_context = "\n\n".join(parts)[:5000]
             except Exception as e:
-                logger.warning("Tavily pricing search failed for %s: %s", product_name, e)
+                logger.warning("Tavily pricing search failed for %s, trying Exa: %s", product_name, e)
+        if not pricing_context and settings.exa_api_key:
+            try:
+                from exa_py import Exa
+                exa = Exa(api_key=settings.exa_api_key)
+                exa_res = await loop.run_in_executor(
+                    None,
+                    lambda: exa.search_and_contents(
+                        f"{product_name} pricing plans cost",
+                        num_results=3, text={"max_characters": 2000},
+                    ),
+                )
+                parts = [(r.text or "")[:2000] for r in exa_res.results if r.text]
+                pricing_context = "\n\n".join(parts)[:5000]
+            except Exception as e:
+                logger.warning("Exa pricing search also failed for %s: %s", product_name, e)
 
         system = """You research and verify product pricing information.
 Given a product name and pricing page content, produce a JSON object with:
