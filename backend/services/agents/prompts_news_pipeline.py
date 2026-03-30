@@ -576,14 +576,14 @@ RESEARCH_EXPERT_SKELETON = """
 Diffusion-based decoding disrupts document OCR while multi-agent verification tackles LLM hallucination at scale.
 
 ## Research Papers
-### MinerU-Diffusion: Document OCR via Diffusion Decoding [1](https://arxiv.org/abs/example1)
+### MinerU-Diffusion: Document OCR via Diffusion Decoding
 MinerU-Diffusion reframes OCR as inverse rendering, replacing sequential autoregressive decoding (used by Nougat, GOT-OCR) with parallel block-wise diffusion. The model achieves 3.2x faster decoding than autoregressive baselines while maintaining accuracy on complex layouts including tables and formulas.
 
 On the Semantic Shuffle benchmark, MinerU-Diffusion shows reduced reliance on language priors, relying instead on visual cues — a key limitation of prior autoregressive OCR models. The block-wise decoder combined with uncertainty-driven curriculum learning enables stable training on long-form documents.
 
 Resolution is capped at 224px blocks, limiting performance on dense small-print documents. Inference memory footprint and latency versus Nougat are not reported. The open-source implementation on Hugging Face enables immediate benchmarking.
 
-### MARCH: Multi-Agent Hallucination Detection [2](https://arxiv.org/abs/example2)
+### MARCH: Multi-Agent Hallucination Detection
 MARCH introduces a three-agent verification pipeline (Solver, Proposer, Checker) where no single agent sees the full context, preventing self-confirmation bias. Unlike SelfCheckGPT and similar single-model approaches, MARCH decouples claim generation from claim verification across independent agents.
 
 On the HaluEval benchmark, MARCH achieves 91.2% hallucination detection accuracy with an 8B parameter model, matching GPT-4-level performance at 1/20th the inference cost. The key insight: information asymmetry between agents forces genuine verification rather than pattern matching.
@@ -614,14 +614,14 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 확산 기반 디코딩이 문서 OCR의 자기회귀(autoregressive) 패러다임에 도전하고, 멀티 에이전트 검증이 LLM 환각(hallucination) 문제에 새로운 해법을 제시한다.
 
 ## Research Papers
-### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR [1](https://arxiv.org/abs/example1)
+### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR
 MinerU-Diffusion은 기존 Nougat, GOT-OCR 등의 자기회귀(autoregressive) 디코딩 대신 블록 단위 확산(diffusion) 방식을 도입, OCR을 역렌더링 문제로 재정의한다. 자기회귀 방식 대비 3.2배 빠른 디코딩 속도를 달성하면서도 표·수식 등 복잡 레이아웃 정확도를 유지했다.
 
 Semantic Shuffle 벤치마크에서 언어 모델 사전지식 의존도가 낮아, 시각 정보 기반 추론이 강화됨을 입증했다. 기존 자기회귀 OCR의 핵심 한계였던 언어 편향 문제를 구조적으로 해결한 점이 기술적 차별화다.
 
 224px 블록 해상도 제한으로 고밀도 소형 활자 문서에서의 성능은 미검증이다. Nougat 대비 추론 메모리·지연 비교도 미보고. Hugging Face에 오픈소스로 공개돼 즉시 벤치마크 가능하다.
 
-### MARCH: 멀티 에이전트 환각 탐지 프레임워크 [2](https://arxiv.org/abs/example2)
+### MARCH: 멀티 에이전트 환각 탐지 프레임워크
 MARCH는 Solver·Proposer·Checker 3개 에이전트가 서로 독립적으로 검증하는 파이프라인을 도입한다. 기존 SelfCheckGPT 등 단일 모델 방식과 달리, 주장 생성과 검증을 분리해 자기확인 편향을 방지한다.
 
 HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성, GPT-4 수준 성능을 추론 비용 1/20로 구현했다. 핵심은 에이전트 간 정보 비대칭으로 패턴 매칭이 아닌 실제 검증을 강제하는 구조다.
