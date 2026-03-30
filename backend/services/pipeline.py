@@ -894,16 +894,16 @@ async def _generate_digest(
     translation_group_id = str(uuid.uuid4())
     slug_base = f"{batch_id}-{digest_type}-digest"
 
-    source_urls = [item.url for item in classified]
+    source_urls = [url for group in classified for url in group.urls]
     digest_meta = {
         "digest_type": digest_type,
         "news_items": [
-            {"title": item.title, "url": item.url, "subcategory": item.subcategory}
-            for item in classified
+            {"title": group.group_title, "url": group.primary_url, "subcategory": group.subcategory}
+            for group in classified
         ],
     }
 
-    fallback_title = classified[0].title if classified else ""
+    fallback_title = classified[0].group_title if classified else ""
     type_label = "Research" if digest_type == "research" else "Business"
 
     for locale in ("en", "ko"):
