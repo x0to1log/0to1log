@@ -915,10 +915,10 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Content structure is broken or unrecognizable
 
 2. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations. When multiple sources are provided, different sources should appear in different paragraphs showing multi-perspective synthesis.
-   - 25: Every paragraph has [N](URL) citation; multiple sources are synthesized (not just one perspective); benchmark numbers are attributed to specific sources
-   - 18: Most paragraphs cite sources; multiple sources used but 1-2 paragraphs missing citations
-   - 10: Only 1 source cited when multiple were provided; or citations grouped at bottom
+   Expected: per-paragraph [N](URL) citations. If multiple sources are provided for an item, they should appear in different paragraphs. If only one source is provided, using it well is sufficient.
+   - 25: Every paragraph has [N](URL) citation; all provided sources are utilized; benchmark numbers are attributed
+   - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
+   - 10: Provided sources are ignored or citations grouped at bottom
    - 0: No inline citations or fabricated URLs
 
 3. **Technical Depth** (25):
@@ -956,10 +956,10 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Written like an expert brief; inaccessible to beginners
 
 3. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations. When multiple sources are provided, different sources should appear showing the topic from multiple angles.
-   - 25: Most paragraphs end with [N](URL) citations; multiple sources synthesized into accessible explanations
+   Expected: per-paragraph [N](URL) citations. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
+   - 25: Most paragraphs end with [N](URL) citations; all provided sources are utilized
    - 18: Most items cite sources; a few paragraphs missing
-   - 10: Only 1 source cited when multiple were provided; or citations grouped at bottom
+   - 10: Provided sources are ignored or citations grouped at bottom
    - 0: No citations
 
 4. **Language Quality** (25):
@@ -985,10 +985,10 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Missing 2+ required sections
 
 2. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations. When multiple sources are provided, different sources should appear in different paragraphs showing multi-perspective synthesis.
-   - 25: Every paragraph has [N](URL) citation; multiple sources synthesized; funding amounts and deal terms attributed to specific sources
-   - 18: Most paragraphs cite sources; multiple sources used but 1-2 missing
-   - 10: Only 1 source cited when multiple were provided; or citations grouped at bottom
+   Expected: per-paragraph [N](URL) citations. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
+   - 25: Every paragraph has [N](URL) citation; all provided sources are utilized; funding amounts and deal terms attributed
+   - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
+   - 10: Provided sources are ignored or citations grouped at bottom
    - 0: No inline citations
 
 3. **Analysis Quality** (25):
@@ -1032,7 +1032,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No actionable content or empty sections
 
 4. **Language Quality** (25):
-   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; per-paragraph [N](URL) citations present; multiple sources synthesized when provided
+   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; per-paragraph [N](URL) citations present; all provided sources utilized
    - 18: Readable; adequate length; most paragraphs have citations
    - 10: Too dry, too short, or condescending; citations missing
    - 0: Barely readable
