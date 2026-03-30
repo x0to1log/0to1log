@@ -65,7 +65,12 @@ NOT Research (assign to Business instead):
 
 ## Rules
 1. Select 0-5 **groups** per category. If no article meets the Research criteria, return an empty list.
-2. **MERGE**: Articles covering the same event, announcement, or topic MUST be grouped together. Each group gets ONE entry with multiple items. Only merge articles about the SAME specific event — do NOT merge just because they share a broad topic (e.g., "AI regulation" is too broad, but "White House AI Framework March 2026" is a specific event).
+2. **MERGE**: Articles covering the same specific event or announcement MUST be grouped together. Each group gets ONE entry with multiple items.
+   - ✅ MERGE: "OpenAI releases GPT-5" + "GPT-5 pricing announced" → same announcement
+   - ✅ MERGE: "TurboQuant paper" + "TurboQuant explained" → same work from different sources
+   - ❌ DO NOT MERGE: "AI Scientist-v2" + "Nested Learning paper" → different research, different teams
+   - ❌ DO NOT MERGE: multiple papers just because they are all "research papers" or "published this week"
+   - ❌ DO NOT MERGE: articles sharing a broad topic like "AI regulation" or "open source LLMs"
 3. The same article CAN appear in both categories if relevant to both.
 4. Prefer breaking/exclusive news over incremental updates.
 5. Prefer news with concrete data (benchmarks, dollar amounts, dates).
