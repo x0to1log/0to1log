@@ -61,10 +61,10 @@ v8 ████████                                 2 days (structural s
 | | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
 |---|---|---|---|---|---|---|---|---|
 | **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) | 3/28–29 (2d) | 3/29–30 (2d) |
-| **Outcome** | Failed → deleted | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation |
+| **Outcome** | Root cause discovery | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation |
 | **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + community pulse | 6 sources + ranking step + Guide refactor |
 | **Code** | 3,444 lines | 1,127 lines | 1,127 lines | Refactored | Extended | Prompts only | Pipeline + prompts + frontend | Pipeline + ranking + prompts |
-| **Daily cost** | N/A (broken) | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 | $0.50–0.80 | $0.50–0.80 |
+| **Daily cost** | N/A | $0.13 | $0.17–0.21 | $0.17–0.21 | $0.20 | $0.20 | $0.25 | $0.25 |
 | **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 |
 | **Dev cost** | $15–25 | $2 | $1 | $1 | $5 | $2 | $3 | $3 |
 
