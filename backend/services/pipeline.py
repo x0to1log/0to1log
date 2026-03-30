@@ -1143,11 +1143,22 @@ async def run_daily_pipeline(
         classification, merge_usage = await merge_classified(classification, candidates)
         cumulative_usage = merge_usage_metrics(cumulative_usage, merge_usage)
 
+        merge_output = {
+            "research": [
+                {"group_title": g.group_title, "items": [i.url for i in g.items], "subcategory": g.subcategory}
+                for g in classification.research
+            ],
+            "business": [
+                {"group_title": g.group_title, "items": [i.url for i in g.items], "subcategory": g.subcategory}
+                for g in classification.business
+            ],
+        }
         await _log_stage(
             supabase, run_id, "merge", "success", t0,
             input_summary=f"{len(classification.research_picks)+len(classification.business_picks)} picks + {len(candidates)} candidates",
             output_summary=f"research={len(classification.research)} groups, business={len(classification.business)} groups",
             usage=merge_usage,
+            debug_meta={"llm_output": merge_output},
         )
 
         handbook_slugs = _fetch_handbook_slugs(supabase)

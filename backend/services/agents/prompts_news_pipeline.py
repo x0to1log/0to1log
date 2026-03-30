@@ -150,6 +150,7 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 ## Writing Rules
 1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...content. [1](URL)`
    - Use [N](URL) format where N is any number. Use different citations in different paragraphs when multiple sources are provided.
+   - One-Line Summary does NOT need citations.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
@@ -215,6 +216,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ## Writing Rules
 1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...content. [1](URL)`
    - Use [N](URL) format where N is any number. Use different citations in different paragraphs when multiple sources are provided.
+   - One-Line Summary does NOT need citations.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
 3. Korean content must be naturally written, not a literal translation of English.
