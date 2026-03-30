@@ -150,8 +150,15 @@
 | NQ-07 | Action Items — "팔로우/주시" 금지, 구체적 action만 | 7.5 | 8.5+ | done |
 | NQ-08 | 분류/랭킹 분리 — gpt-4.1-mini 랭킹 + [LEAD]/[SUPPORTING] 태그 | 7.5 | 9+ | done |
 | NQ-09 | 랭킹에 "어제 발행 뉴스 제목" 전달 — 같은 이벤트 다른 URL 반복 방지 | — | — | todo |
-| NQ-10 | Business Expert citation 중복 — 같은 URL에 매번 새 번호 부여 (18개 → 5개) | — | — | todo |
-| NQ-11 | CP MANDATORY 4곳 통일 (Business Expert CP 누락 반복) | — | — | todo |
+| NQ-10 | Business Expert citation 중복 — 같은 URL에 매번 새 번호 부여 (18개 → 5개) | — | — | done |
+| NQ-11 | CP MANDATORY 4곳 통일 (Business Expert CP 누락 반복) | — | — | done |
+| NQ-12 | Citation 포맷 변경 — 뉴스 아이템은 소제목 옆 1회, 분석 섹션만 문단별 | — | — | done |
+| NQ-13 | 같은 이벤트 다른 기사 묶기 — 분류기에서 같은 주제 기사 merge 후 다중 소스 인용 | — | — | todo |
+
+#### NQ-13 배경 노트
+현재 소제목 하나에 소스가 항상 1개뿐. "OpenAI $110B 투자" 뉴스를 쓸 때 TechCrunch 기사 1개만 참조하는데, 같은 이벤트를 다룬 Reuters, 공식 블로그가 후보에 있어도 별도 아이템으로 분류되거나 버려짐.
+같은 이벤트의 다른 기사를 묶어서 하나의 소제목 아래에 여러 소스를 교차 인용하면 — 분석 깊이가 올라가고, citation이 1개뿐인 "얇은 느낌"이 해소됨.
+분류기 로직 변경이 필요해서 다음 세션에서 설계 논의 예정.
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
 ### HIGH PRIORITY — 핸드북 퀄리티
