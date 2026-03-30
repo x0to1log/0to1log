@@ -153,7 +153,9 @@
 | NQ-10 | Business Expert citation 중복 — 같은 URL에 매번 새 번호 부여 (18개 → 5개) | — | — | done |
 | NQ-11 | CP MANDATORY 4곳 통일 (Business Expert CP 누락 반복) | — | — | done |
 | NQ-12 | Citation 포맷 변경 — 뉴스 아이템은 소제목 옆 1회, 분석 섹션만 문단별 | — | — | done |
-| NQ-13 | 같은 이벤트 다중 소스 수집 (Multi-Source Enrichment) — rank 후 Exa find_similar 2차 수집 + Writer 다중 소스 입력 | — | — | planned |
+| NQ-13 | 같은 이벤트 다중 소스 수집 (Multi-Source Enrichment) — rank 후 Exa find_similar 2차 수집 + Writer 다중 소스 입력 | — | — | done |
+| NQ-14 | Citation 번호 전체 기사 순차 (섹션별 리셋 방지) — per-paragraph citation + 후처리 heading 집계 | — | — | done |
+| NQ-15 | Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성 | — | — | todo |
 
 #### NQ-13 설계 참조
 - **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
@@ -165,6 +167,14 @@
   - 대상: 전체 (LEAD + SUPPORTING)
 - **구현 태스크:** 6개 (enrich 함수 → Writer 포맷 → 파이프라인 삽입 → 프롬프트 → 어드민 → 검증)
 - **비용 영향:** +$0.03-0.04/run (현재 $0.25 → $0.28-0.29)
+
+#### NQ-15 배경 노트
+3/30 3월 21일 backfill 평가에서 도출. 현재 Learner는 Expert 내용을 쉬운 단어로 바꾼 수준이지 학습자 관점으로 재구성한 것이 아님.
+- Transformers v5.4.0 breaking changes 같은 개발자 전용 내용이 Learner에도 그대로 포함
+- "나한테 무슨 의미?" 가 약함 — 아키텍처 설명 대신 실용적 시나리오가 필요
+- Expert/Learner가 동일 뉴스를 동일 비중으로 다룸 — 학습자에게 더 의미 있는 뉴스에 비중 조절 필요
+- 방향: Learner Guide를 "Expert를 쉽게" → "학습자가 알고 싶은 관점으로 재구성"으로 전환
+
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
 ### HIGH PRIORITY — 핸드북 퀄리티

@@ -26,6 +26,35 @@ from services.news_collection import collect_community_reactions, collect_news, 
 logger = logging.getLogger(__name__)
 
 
+def _renumber_citations(content: str) -> tuple[str, list[dict]]:
+    """Renumber all [N](URL) citations sequentially by URL first-appearance order.
+
+    Same URL always gets the same number. Returns (renumbered_content, source_cards).
+    source_cards: [{id: 1, url: "...", title: ""}, ...] in order of appearance.
+    """
+    if not content:
+        return content, []
+
+    citation_re = re.compile(r'\[(\d+)\]\(([^)]+)\)')
+    url_to_num: dict[str, int] = {}
+    source_cards: list[dict] = []
+
+    def _assign(url: str) -> int:
+        if url not in url_to_num:
+            num = len(url_to_num) + 1
+            url_to_num[url] = num
+            source_cards.append({"id": num, "url": url, "title": ""})
+        return url_to_num[url]
+
+    def _replace(match: re.Match) -> str:
+        url = match.group(2)
+        new_num = _assign(url)
+        return f"[{new_num}]({url})"
+
+    renumbered = citation_re.sub(_replace, content)
+    return renumbered, source_cards
+
+
 def _aggregate_heading_citations(content: str) -> str:
     """Collect per-paragraph citations in each ### section and add them to the heading.
 
@@ -930,8 +959,12 @@ async def _generate_digest(
             expert_content = expert_content.replace(tag, '')
             learner_content = learner_content.replace(tag, '')
 
+        # Post-process: renumber citations sequentially by URL appearance order
+        # LLM may reset [1] per section — this forces global sequential numbering
+        expert_content, expert_source_cards = _renumber_citations(expert_content)
+        learner_content, learner_source_cards = _renumber_citations(learner_content)
+
         # Post-process: aggregate per-paragraph citations onto ### headings
-        # Scans each ### section, collects unique [N](URL) refs, appends after title
         expert_content = _aggregate_heading_citations(expert_content)
         learner_content = _aggregate_heading_citations(learner_content)
 
@@ -968,7 +1001,7 @@ async def _generate_digest(
             "focus_items": focus_items or [],
             "reading_time_min": reading_time,
             "source_urls": source_urls,
-            "source_cards": _dedup_source_cards(persona_sources.get("expert") or persona_sources.get("learner") or []),
+            "source_cards": expert_source_cards or learner_source_cards,
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
@@ -978,15 +1011,17 @@ async def _generate_digest(
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
 
-        # Build guide_items with persona-specific quizzes and sources
+        # Build guide_items with persona-specific quizzes and code-extracted sources
         guide_items: dict[str, Any] = {}
         for pname in ("expert", "learner"):
             quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
             if quiz:
                 guide_items[f"quiz_poll_{pname}"] = quiz
-            psrc = persona_sources.get(pname)
-            if psrc:
-                guide_items[f"sources_{pname}"] = [s for s in psrc if s.get("url")]
+        # Use code-extracted source_cards (from _renumber_citations) instead of LLM-generated
+        if expert_source_cards:
+            guide_items["sources_expert"] = expert_source_cards
+        if learner_source_cards:
+            guide_items["sources_learner"] = learner_source_cards
         if guide_items:
             row["guide_items"] = guide_items
 
