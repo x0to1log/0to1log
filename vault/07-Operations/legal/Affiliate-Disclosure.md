@@ -26,6 +26,15 @@ tags:
 | **Affiliate 링크** | 해당 제품 카드 또는 상세 페이지 CTA 근처 | "이 링크를 통해 가입하면 소정의 수수료를 받을 수 있습니다" |
 | **Sponsored 제품** | 해당 제품의 Featured 카드에 라벨 | "Sponsored" 또는 "광고" 배지 |
 
+## AI 생성 리뷰 고지 (FTC 2026 신규)
+
+> [!warning] 2026년부터 시행
+> AI로 작성하거나 보강한 제품 리뷰에는 AI 사용 사실을 affiliate 고지와 함께 명시해야 한다.
+
+- 0to1log의 AI Products 설명은 AI 파이프라인이 생성 → 해당됨
+- 고지 문구 예시: "이 리뷰는 AI가 작성하였으며, 편집자가 검수하였습니다"
+- Affiliate 고지와 같은 위치에 함께 표시
+
 ## DB 연결
 
 - `ai_products.affiliate_url` — NULL이 아니면 affiliate 고지 대상
