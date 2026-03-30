@@ -10,7 +10,7 @@ from typing import Any
 from core.config import settings, today_kst
 from core.database import get_supabase
 from models.news_pipeline import (
-    ClassifiedCandidate,
+    ClassifiedGroup,
     PersonaOutput,
     PipelineResult,
 )
@@ -598,7 +598,7 @@ async def _check_digest_quality(
 
 
 async def _generate_digest(
-    classified: list[ClassifiedCandidate],
+    classified: list[ClassifiedGroup],
     digest_type: str,
     batch_id: str,
     handbook_slugs: list[str],
@@ -620,47 +620,50 @@ async def _generate_digest(
     if not classified:
         return 0, [], {}
 
-    # Build user prompt from classified news items
-    # Filter out items with no substantive content (title-only hub pages, etc.)
+    # Build user prompt from classified groups
     _enriched = enriched_map or {}
     news_items = []
-    for item in classified:
-        # Multi-source: use enriched sources if available, else fallback to original
-        sources = _enriched.get(item.url)
+    for group in classified:
+        # Multi-source: use enriched sources (from merge or Exa), else raw_content
+        sources = _enriched.get(group.primary_url)
         if sources:
-            # Check if at least one source has substantive content
             best_content = max((s.get("content", "") for s in sources), key=len)
             if len(best_content.strip()) < 80:
                 logger.info(
-                    "Skipping filler item '%s' — best source too short (%d chars)",
-                    item.title[:60], len(best_content.strip()),
+                    "Skipping filler group '%s' — best source too short (%d chars)",
+                    group.group_title[:60], len(best_content.strip()),
                 )
                 continue
-            # Build multi-source block
             source_blocks = []
             for i, src in enumerate(sources, 1):
                 content = src.get("content", "")
                 if len(content.strip()) < 40:
                     continue
-                source_blocks.append(
-                    f"Source {i}: {src['url']}\n{content}"
-                )
+                source_blocks.append(f"Source {i}: {src['url']}\n{content}")
             body_block = "\n\n".join(source_blocks)
         else:
-            body = raw_content_map.get(item.url, item.snippet)
-            if len(body.strip()) < 80:
-                logger.info(
-                    "Skipping filler item '%s' — body too short (%d chars)",
-                    item.title[:60], len(body.strip()),
-                )
+            # Fallback: assemble from raw_content_map for each item in group
+            source_blocks = []
+            for i, item in enumerate(group.items, 1):
+                content = raw_content_map.get(item.url, "")
+                if len(content.strip()) < 40:
+                    continue
+                source_blocks.append(f"Source {i}: {item.url}\n{content}")
+            if not source_blocks:
+                logger.info("Skipping group '%s' — no substantive content", group.group_title[:60])
                 continue
-            body_block = f"Source 1: {item.url}\n{body}"
+            body_block = "\n\n".join(source_blocks)
 
-        community = community_map.get(item.url, "")
+        # Collect community from any URL in the group
+        community = ""
+        for item in group.items:
+            community = community_map.get(item.url, "")
+            if community:
+                break
         community_block = f"\n\nCommunity Reactions (Reddit/HN):\n{community[:1000]}" if community else ""
-        role_tag = "[LEAD]" if item.reason.startswith("[LEAD]") else "[SUPPORTING]"
+        role_tag = "[LEAD]" if group.reason.startswith("[LEAD]") else "[SUPPORTING]"
         news_items.append(
-            f"### {role_tag} [{item.subcategory}] {item.title}\n\n"
+            f"### {role_tag} [{group.subcategory}] {group.group_title}\n\n"
             f"{body_block}{community_block}"
         )
     user_prompt = "\n\n---\n\n".join(news_items)
@@ -1114,12 +1117,12 @@ async def run_daily_pipeline(
         )
         classify_output = {
             "research": [
-                {"title": c.title, "url": c.url, "subcategory": c.subcategory}
-                for c in classification.research
+                {"group_title": g.group_title, "items": len(g.items), "subcategory": g.subcategory}
+                for g in classification.research
             ],
             "business": [
-                {"title": c.title, "url": c.url, "subcategory": c.subcategory}
-                for c in classification.business
+                {"group_title": g.group_title, "items": len(g.items), "subcategory": g.subcategory}
+                for g in classification.business
             ],
         }
 
@@ -1138,29 +1141,30 @@ async def run_daily_pipeline(
         handbook_slugs = _fetch_handbook_slugs(supabase)
         raw_content_map = {c.url: c.raw_content for c in candidates if c.raw_content}
 
-        # Stage: community reactions (all classified items, deduplicated)
+        # Stage: community reactions (all grouped items, deduplicated)
         t0 = time.monotonic()
         all_classified = classification.research + classification.business
         seen_community_urls: set[str] = set()
-        unique_items = []
-        for item in all_classified:
-            if item.url not in seen_community_urls:
-                seen_community_urls.add(item.url)
-                unique_items.append(item)
+        community_lookup: list[tuple[str, str]] = []  # (title, url)
+        for group in all_classified:
+            for item in group.items:
+                if item.url not in seen_community_urls:
+                    seen_community_urls.add(item.url)
+                    community_lookup.append((item.title, item.url))
         community_map: dict[str, str] = {}
-        if unique_items:
+        if community_lookup:
             community_tasks = [
-                collect_community_reactions(item.title, item.url)
-                for item in unique_items
+                collect_community_reactions(title, url)
+                for title, url in community_lookup
             ]
             community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
-            for item, result in zip(unique_items, community_results):
+            for (_, url), result in zip(community_lookup, community_results):
                 if isinstance(result, str) and result.strip():
-                    community_map[item.url] = result
+                    community_map[url] = result
 
         await _log_stage(
             supabase, run_id, "community", "success", t0,
-            input_summary=f"{len(unique_items)} items queried",
+            input_summary=f"{len(community_lookup)} items queried",
             output_summary=f"{len(community_map)} reactions collected",
         )
 
@@ -1184,17 +1188,18 @@ async def run_daily_pipeline(
             usage=rank_usage,
         )
 
-        # Stage: enrich — find additional sources for each ranked item
+        # Stage: enrich — find additional sources for groups with 1 item only
         t0 = time.monotonic()
         all_ranked = classification.research + classification.business
         enriched_map = await enrich_sources(
             all_ranked, raw_content_map, target_date=target_date,
         )
-        total_extra = sum(len(s) - 1 for s in enriched_map.values())
+        merged_groups = sum(1 for g in all_ranked if len(g.items) >= 2)
+        exa_groups = len(all_ranked) - merged_groups
         await _log_stage(
             supabase, run_id, "enrich", "success", t0,
-            input_summary=f"{len(all_ranked)} items",
-            output_summary=f"{total_extra} additional sources found",
+            input_summary=f"{len(all_ranked)} groups ({merged_groups} merged, {exa_groups} via Exa)",
+            output_summary=f"{sum(len(s) for s in enriched_map.values())} total sources",
         )
 
         # Generate research + business digests in parallel

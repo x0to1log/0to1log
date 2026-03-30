@@ -64,17 +64,17 @@ NOT Research (assign to Business instead):
 - **new_tools**: New AI products, services, or developer tools launched
 
 ## Rules
-1. Select 0-5 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
-2. The same article CAN appear in both categories if relevant to both
-3. Prefer breaking/exclusive news over incremental updates
-4. Prefer news with concrete data (benchmarks, dollar amounts, dates)
-5. Order by importance within each category (most important first)
-6. Every selected article must have a subcategory
+1. Select 0-5 **groups** per category. If no article meets the Research criteria, return an empty list.
+2. **MERGE**: Articles covering the same event, announcement, or topic MUST be grouped together. Each group gets ONE entry with multiple items. Only merge articles about the SAME specific event — do NOT merge just because they share a broad topic (e.g., "AI regulation" is too broad, but "White House AI Framework March 2026" is a specific event).
+3. The same article CAN appear in both categories if relevant to both.
+4. Prefer breaking/exclusive news over incremental updates.
+5. Prefer news with concrete data (benchmarks, dollar amounts, dates).
+6. Order groups by importance within each category (most important first).
+7. Each group must have a subcategory and a representative group_title.
 
 ## Cross-Category Rules
 - The same article CAN and SHOULD appear in both categories when it has both technical and business significance.
 - Research and Business digests are written by different personas with completely different perspectives, so overlap is valuable, not redundant.
-- When an article discusses a technical method (quantization, new architecture, benchmark) AND has business impact (cost reduction, competitive advantage), include it in BOTH categories.
 - Each category has its own angle:
   - Research: what changed technically, how it works, benchmarks
   - Business: market impact, pricing, competitive shift, strategic implications
@@ -83,13 +83,31 @@ NOT Research (assign to Business instead):
 ```json
 {
   "research": [
-    {"url": "...", "subcategory": "llm_models|open_source|papers", "reason": "...", "score": 0-100}
+    {
+      "group_title": "representative title for this group",
+      "subcategory": "llm_models|open_source|papers",
+      "reason": "why this group matters",
+      "score": 0-100,
+      "items": [
+        {"url": "...", "title": "original article title"},
+        {"url": "...", "title": "another article on same event"}
+      ]
+    }
   ],
   "business": [
-    {"url": "...", "subcategory": "big_tech|industry|new_tools", "reason": "...", "score": 0-100}
+    {
+      "group_title": "representative title",
+      "subcategory": "big_tech|industry|new_tools",
+      "reason": "...",
+      "score": 0-100,
+      "items": [
+        {"url": "...", "title": "..."}
+      ]
+    }
   ]
 }
-```"""
+```
+Note: A group can have 1 item (unique story) or multiple items (same event from different sources)."""
 
 
 FACT_EXTRACTION_SYSTEM_PROMPT = """You are a fact extraction engine for 0to1log, an AI news platform.

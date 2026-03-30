@@ -493,35 +493,68 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
 # ---------------------------------------------------------------------------
 
 async def enrich_sources(
-    items: list,
+    groups: list,
     raw_content_map: dict[str, str],
     target_date: str | None = None,
     max_sources: int = 4,
 ) -> dict[str, list[dict]]:
-    """Find additional sources covering the same event for each news item.
+    """Find additional sources for groups that need them.
 
-    Uses Exa find_similar to locate other articles about the same event,
-    with a 48-hour date filter to avoid stale results.
+    Groups with 2+ items already have multi-source coverage from merge — skip.
+    Groups with 1 item use Exa find_similar to locate additional sources.
 
     Args:
-        items: ClassifiedCandidate list (post-ranking).
+        groups: ClassifiedGroup list (post-ranking).
         raw_content_map: {url: raw_content} from 1st collection.
         target_date: Target date string (YYYY-MM-DD) or None for today.
-        max_sources: Max total sources per item (including original).
+        max_sources: Max total sources per group (including originals).
 
     Returns:
-        {item_url: [{"url": ..., "title": ..., "content": ...}, ...]}
-        Original source is included as first entry. All sources are equal.
+        {primary_url: [{"url": ..., "title": ..., "content": ...}, ...]}
     """
+    enriched: dict[str, list[dict]] = {}
+    needs_enrich: list = []
+
+    for group in groups:
+        primary = group.primary_url
+        if not primary:
+            continue
+
+        if len(group.items) >= 2:
+            # Already multi-source from merge — use existing sources
+            enriched[primary] = [
+                {"url": item.url, "title": item.title,
+                 "content": raw_content_map.get(item.url, "")}
+                for item in group.items
+            ]
+        else:
+            needs_enrich.append(group)
+
+    if not needs_enrich:
+        logger.info("All %d groups have 2+ sources — skipping Exa enrichment", len(groups))
+        return enriched
+
     if not settings.exa_api_key:
-        logger.info("No Exa API key — skipping enrichment")
-        return {}
+        logger.info("No Exa API key — returning merge-only sources")
+        for group in needs_enrich:
+            enriched[group.primary_url] = [
+                {"url": item.url, "title": item.title,
+                 "content": raw_content_map.get(item.url, "")}
+                for item in group.items
+            ]
+        return enriched
 
     try:
         from exa_py import Exa
     except ImportError:
-        logger.warning("exa_py not installed — skipping enrichment")
-        return {}
+        logger.warning("exa_py not installed — returning merge-only sources")
+        for group in needs_enrich:
+            enriched[group.primary_url] = [
+                {"url": item.url, "title": item.title,
+                 "content": raw_content_map.get(item.url, "")}
+                for item in group.items
+            ]
+        return enriched
 
     # Date filter: 48 hours around target date
     if target_date:
@@ -536,11 +569,10 @@ async def enrich_sources(
 
     exa = Exa(api_key=settings.exa_api_key)
     loop = asyncio.get_running_loop()
-    enriched: dict[str, list[dict]] = {}
 
-    async def _enrich_one(item) -> tuple[str, list[dict]]:
-        # Start with original source
-        original_content = raw_content_map.get(item.url, item.snippet)
+    async def _enrich_one(group) -> tuple[str, list[dict]]:
+        item = group.items[0]
+        original_content = raw_content_map.get(item.url, "")
         sources = [{"url": item.url, "title": item.title, "content": original_content}]
 
         try:
@@ -566,12 +598,11 @@ async def enrich_sources(
                     "content": r.text or "",
                 })
         except Exception as e:
-            logger.debug("Enrich failed for '%s': %s", item.title[:60], e)
+            logger.debug("Enrich failed for '%s': %s", group.group_title[:60], e)
 
-        return item.url, sources
+        return group.primary_url, sources
 
-    # Run all enrichment calls in parallel
-    tasks = [_enrich_one(item) for item in items]
+    tasks = [_enrich_one(g) for g in needs_enrich]
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for result in results:
         if isinstance(result, Exception):
@@ -580,11 +611,11 @@ async def enrich_sources(
         url, sources = result
         enriched[url] = sources
 
-    total_extra = sum(len(s) - 1 for s in enriched.values())
+    total_extra = sum(max(0, len(s) - 1) for s in enriched.values())
+    merged_count = len(groups) - len(needs_enrich)
     logger.info(
-        "Enriched %d items with %d additional sources (avg %.1f per item)",
-        len(enriched), total_extra,
-        total_extra / len(enriched) if enriched else 0,
+        "Enriched %d groups: %d from merge (skipped Exa), %d via Exa (%d extra sources)",
+        len(groups), merged_count, len(needs_enrich), total_extra,
     )
     return enriched
 

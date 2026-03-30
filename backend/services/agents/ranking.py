@@ -3,7 +3,7 @@ import logging
 from typing import Any
 
 from core.config import settings
-from models.news_pipeline import ClassifiedCandidate, ClassificationResult, NewsCandidate, RankedCandidate, RankingResult
+from models.news_pipeline import ClassifiedGroup, ClassificationResult, GroupedItem, NewsCandidate, RankedCandidate, RankingResult
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
 from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, SELECTION_SYSTEM_PROMPT
 
@@ -141,39 +141,49 @@ async def classify_candidates(
     result = ClassificationResult()
 
     for category in ("research", "business"):
-        picks = data.get(category, [])
-        classified = []
-        for pick in picks:
-            url = pick.get("url", "")
-            candidate = url_map.get(url)
-            if not candidate:
-                logger.warning("Classified URL not in candidates: %s", url)
-                continue
-            classified.append(ClassifiedCandidate(
-                title=candidate.title,
-                url=candidate.url,
-                snippet=candidate.snippet,
-                source=candidate.source,
-                category=category,
-                subcategory=pick.get("subcategory", ""),
-                relevance_score=float(pick.get("score", 0)),
-                reason=pick.get("reason", ""),
-            ))
-        setattr(result, category, classified[:5])
+        groups_raw = data.get(category, [])
+        classified_groups: list[ClassifiedGroup] = []
 
-    # Allow same URL in both categories — Business and Research write from
-    # completely different perspectives (strategic vs technical), so overlap
-    # is valuable, not redundant. Log for visibility.
+        for group_data in groups_raw:
+            # Support both grouped format (items array) and legacy flat format (single url)
+            items_raw = group_data.get("items", [])
+            if not items_raw and group_data.get("url"):
+                # Legacy flat format fallback
+                items_raw = [{"url": group_data["url"], "title": group_data.get("title", "")}]
+
+            grouped_items: list[GroupedItem] = []
+            for item_data in items_raw:
+                url = item_data.get("url", "")
+                candidate = url_map.get(url)
+                if not candidate:
+                    logger.warning("Classified URL not in candidates: %s", url)
+                    continue
+                grouped_items.append(GroupedItem(url=url, title=candidate.title))
+
+            if grouped_items:
+                classified_groups.append(ClassifiedGroup(
+                    group_title=group_data.get("group_title", grouped_items[0].title),
+                    items=grouped_items,
+                    category=category,
+                    subcategory=group_data.get("subcategory", ""),
+                    relevance_score=float(group_data.get("score", 0)),
+                    reason=group_data.get("reason", ""),
+                ))
+        setattr(result, category, classified_groups[:5])
+
+    # Log cross-category overlap
     if result.research and result.business:
-        research_urls = {c.url for c in result.research}
-        business_urls = {c.url for c in result.business}
+        research_urls = {u for g in result.research for u in g.urls}
+        business_urls = {u for g in result.business for u in g.urls}
         overlap = research_urls & business_urls
         if overlap:
-            logger.info("Cross-category overlap: %d URL(s) in both research and business (kept in both)", len(overlap))
+            logger.info("Cross-category overlap: %d URL(s) in both research and business", len(overlap))
 
+    total_items_r = sum(len(g.items) for g in result.research)
+    total_items_b = sum(len(g.items) for g in result.business)
     logger.info(
-        "Classification complete: %d research, %d business",
-        len(result.research), len(result.business),
+        "Classification complete: %d research groups (%d items), %d business groups (%d items)",
+        len(result.research), total_items_r, len(result.business), total_items_b,
     )
     if not result.business:
         logger.warning("No business articles classified — business digest will be skipped")
@@ -183,50 +193,48 @@ async def classify_candidates(
 
 
 async def rank_classified(
-    items: list[ClassifiedCandidate],
+    groups: list[ClassifiedGroup],
     category: str,
     community_map: dict[str, str] | None = None,
-) -> tuple[list[ClassifiedCandidate], dict[str, Any]]:
-    """Rank classified items: assign [LEAD]/[SUPPORTING] role via o4-mini.
+) -> tuple[list[ClassifiedGroup], dict[str, Any]]:
+    """Rank classified groups: assign [LEAD]/[SUPPORTING] role.
 
-    Returns (reordered items with role in reason field, usage metrics).
-    Lead items come first, then supporting in importance order.
+    Returns (reordered groups with role in reason field, usage metrics).
+    Lead groups come first, then supporting in importance order.
     """
-    if len(items) <= 1:
-        if items:
-            items[0].reason = f"[LEAD] {items[0].reason}"
-        return items, {}
+    if len(groups) <= 1:
+        if groups:
+            groups[0].reason = f"[LEAD] {groups[0].reason}"
+        return groups, {}
 
     from services.agents.prompts_news_pipeline import RANKING_SYSTEM_PROMPT_V2
 
     community_map = community_map or {}
 
     item_lines = []
-    for i, item in enumerate(items):
-        source_domain = "/".join(item.url.split("/")[:3]) if "://" in item.url else "unknown"
-        community = community_map.get(item.url, "")
+    for i, group in enumerate(groups):
+        # Collect community engagement from any URL in the group
         engagement = "no community data"
-        if community:
-            first_line = community.split("\n")[0].strip()
-            if first_line:
-                engagement = first_line
+        for item in group.items:
+            community = community_map.get(item.url, "")
+            if community:
+                first_line = community.split("\n")[0].strip()
+                if first_line:
+                    engagement = first_line
+                    break
         item_lines.append(
-            f"[{i+1}] {item.title}\n"
-            f"    URL: {item.url}\n"
-            f"    Source: {source_domain}\n"
-            f"    Subcategory: {item.subcategory}\n"
+            f"[{i+1}] {group.group_title} ({len(group.items)} source(s))\n"
+            f"    Subcategory: {group.subcategory}\n"
             f"    Community: {engagement}"
         )
 
     prompt = RANKING_SYSTEM_PROMPT_V2.format(
         category=category,
-        count=len(items),
+        count=len(groups),
         items="\n".join(item_lines),
     )
 
     client = get_openai_client()
-    # Use gpt-4.1-mini (not o4-mini) — o4-mini returns empty responses
-    # without response_format support. gpt-4.1-mini handles JSON reliably.
     model = settings.openai_model_light
 
     try:
@@ -246,26 +254,37 @@ async def rank_classified(
         usage = extract_usage_metrics(response, model)
     except Exception as e:
         logger.warning("Ranking failed for %s: %s — falling back to classification order", category, e)
-        items[0].reason = f"[LEAD] {items[0].reason}"
-        for item in items[1:]:
-            item.reason = f"[SUPPORTING] {item.reason}"
-        return items, {}
+        groups[0].reason = f"[LEAD] {groups[0].reason}"
+        for group in groups[1:]:
+            group.reason = f"[SUPPORTING] {group.reason}"
+        return groups, {}
 
-    lead_urls = set(data.get("lead", []))
-    supporting_urls = data.get("supporting", [])
+    # Match lead by index (LLM returns [1]-based indices or URLs)
+    lead_indices = set()
+    for lead_ref in data.get("lead", []):
+        if isinstance(lead_ref, int):
+            lead_indices.add(lead_ref - 1)
+        elif isinstance(lead_ref, str):
+            # Try matching by URL or group_title
+            for idx, g in enumerate(groups):
+                if lead_ref in g.urls or lead_ref == g.group_title:
+                    lead_indices.add(idx)
 
     leads = []
     supports = []
-    for item in items:
-        if item.url in lead_urls:
-            item.reason = f"[LEAD] {item.reason}"
-            leads.append(item)
+    for idx, group in enumerate(groups):
+        if idx in lead_indices:
+            group.reason = f"[LEAD] {group.reason}"
+            leads.append(group)
         else:
-            item.reason = f"[SUPPORTING] {item.reason}"
-            supports.append(item)
+            group.reason = f"[SUPPORTING] {group.reason}"
+            supports.append(group)
 
-    url_order = {url: i for i, url in enumerate(supporting_urls)}
-    supports.sort(key=lambda x: url_order.get(x.url, 999))
+    # If no leads matched, fallback: first group is lead
+    if not leads and groups:
+        groups[0].reason = f"[LEAD] {groups[0].reason}"
+        leads = [groups[0]]
+        supports = [g for g in groups[1:] if g.reason.startswith("[SUPPORTING]")]
 
     logger.info(
         "Ranking %s: lead=%d, supporting=%d",

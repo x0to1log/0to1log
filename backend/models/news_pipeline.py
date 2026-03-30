@@ -41,10 +41,36 @@ class ClassifiedCandidate(BaseModel):
     reason: str = ""
 
 
+class GroupedItem(BaseModel):
+    """Individual item within a classified group."""
+    url: str
+    title: str
+
+
+class ClassifiedGroup(BaseModel):
+    """Group of related news items classified together."""
+    group_title: str
+    items: list[GroupedItem]
+    category: str  # "research" or "business"
+    subcategory: str
+    relevance_score: float = 0.0
+    reason: str = ""
+
+    @property
+    def primary_url(self) -> str:
+        """First item's URL — used for community lookup, ranking compatibility."""
+        return self.items[0].url if self.items else ""
+
+    @property
+    def urls(self) -> list[str]:
+        """All URLs in this group."""
+        return [item.url for item in self.items]
+
+
 class ClassificationResult(BaseModel):
-    """LLM classification output — multiple candidates per category."""
-    research: list[ClassifiedCandidate] = []
-    business: list[ClassifiedCandidate] = []
+    """LLM classification output — grouped candidates per category."""
+    research: list[ClassifiedGroup] = []
+    business: list[ClassifiedGroup] = []
 
 
 class FactClaim(BaseModel):
