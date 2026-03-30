@@ -19,13 +19,15 @@ AI moves fastest in English, and English content is most diverse. But Korean rea
 
 ## How It Was Built
 
-The AI pipeline went through 7 versions over 25 days. Version 1 failed after 5 days and $25 of wasted LLM calls — the architecture was wrong, and no amount of patches could fix it. After deleting everything and rebuilding from scratch, each iteration got exponentially faster. Seven rounds of prompt engineering raised the quality score from 56 to 90, and user-perspective evaluation drove v7's quality overhaul.
+The AI pipeline went through 8 versions over 26 days. Version 1 failed after 5 days — the architecture was wrong, and no amount of patches could fix it. After deleting everything and rebuilding from scratch, each iteration got exponentially faster. Eight rounds of prompt engineering raised the quality score from 76 to 95 — and v8 discovered that *removing* instructions can improve output more than adding them. All metrics below are measured from production databases.
 
-| | v1 | v2 | v3 | v4 | v5–v6 | v7 |
-|---|---|---|---|---|---|---|
-| **Time** | 5 days (failed) | 1 day | half day | half day | 9 days | 2 days |
-| **Daily cost** | N/A | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 |
-| **Output** | Nothing | 2 articles | 6–10 articles | 6–10 (2 personas) | + quality scoring | + community pulse, layered reading, weighted depth |
+| Metric (measured) | v2–v4 | v5–v6 | v7–v8 |
+|---|---|---|---|
+| **Avg cost/run** | $0.35 | $0.40 | $0.48 |
+| **Research Expert citations** | 1.8 | 12.9 | 16.8 |
+| **Business Expert citations** | 2.7 | 13.9 | 14.2 |
+| **News items per digest** | 1.3–2.7 | 3.6–4.6 | 4.5–5.0 |
+| **Collection sources** | 1 | 4 | 6 |
 
 The full story — including what went wrong, key decisions, a rollback lesson, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
 

@@ -55,21 +55,24 @@ v4 ██                                       half day (working)
 v5 ████████████████                         8 days (stabilization)
 v6 ██                                       1 day  (optimization)
 v7 ████████                                 2 days (quality overhaul + rollback)
+v8 ████████                                 2 days (structural separation)
 ```
 
-| | v1 | v2 | v3 | v4 | v5 | v6 | v7 |
-|---|---|---|---|---|---|---|---|
-| **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) | 3/28–29 (2d) |
-| **Outcome** | Failed → deleted | Working | Working | Working | Stabilized | Optimized | Quality overhaul |
-| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + community pulse + weighted depth |
-| **Code** | 3,444 lines | 1,127 lines | 1,127 lines | Refactored | Extended | Prompts only | Pipeline + prompts + frontend |
-| **Daily cost** | N/A (broken) | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 | $0.50–0.80 |
-| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 |
-| **Dev cost** | $15–25 | $2 | $1 | $1 | $5 | $2 | $3 |
+| | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
+|---|---|---|---|---|---|---|---|---|
+| **Period** | 3/10–14 (5d) | 3/15 (1d) | 3/16 (½d) | 3/17 (½d) | 3/18–25 (8d) | 3/26 (1d) | 3/28–29 (2d) | 3/29–30 (2d) |
+| **Outcome** | Failed → deleted | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation |
+| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3–5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + community pulse | 6 sources + ranking step + Guide refactor |
+| **Code** | 3,444 lines | 1,127 lines | 1,127 lines | Refactored | Extended | Prompts only | Pipeline + prompts + frontend | Pipeline + ranking + prompts |
+| **Daily cost** | N/A (broken) | $0.43 | $0.59 | $0.39 | $0.50–0.80 | $0.50–0.80 | $0.50–0.80 | $0.50–0.80 |
+| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 |
+| **Dev cost** | $15–25 | $2 | $1 | $1 | $5 | $2 | $3 | $3 |
 
 ---
 
-### v1: The "Try Harder" Trap (3/10–14, 5 days, FAILED)
+### v1: Finding the Root Causes (3/10–14, 5 days)
+
+The first five days produced no publishable output — but they identified three architectural flaws that would have been invisible without building and testing the system end to end. Each flaw directly informed v2's design.
 
 The initial strategy was straightforward: pick one news article, write an in-depth analysis in English, translate to Korean, then convert into three personas (Expert/Intermediate/Beginner).
 
@@ -99,7 +102,7 @@ v2     ████████████  1,127 lines (rewritten from scratch
 | LLM can't generate long text | Added retry logic | Single-call full generation was the problem |
 | Mid-pipeline failures | Built artifact/resume | Pipeline was too tightly coupled |
 
-**Wasted cost:** Dozens of debugging LLM calls = $15–25. Zero usable output.
+**Cost of discovery:** $15–25 (estimated) in LLM calls with zero publishable output. But the three root causes identified here — sequential translation, monolithic generation, and hard validation — became the exact requirements for v2. Without this phase, v2's "build it in one day" would not have been possible.
 
 ---
 
@@ -121,6 +124,8 @@ v2: Collect → Pick 1 → Extract facts → Per-persona EN+KO simultaneous gene
 ```
 
 The **fact extraction step** was the breakthrough. Instead of asking the LLM to "understand + write" in one call, I separated the two: first extract key facts, figures, and quotes into a structured JSON (FactPack), then have each persona write their version based on that FactPack.
+
+**Why this approach:** The alternative was improving the EN→KO translation prompt — adding length constraints, retry on short output. But the root cause was architectural: translation inherently loses content. Generating both languages from the same FactPack eliminated the problem entirely, rather than patching symptoms.
 
 **Result:** Code shrank to 1/3, and it worked in a single day. Every line of defensive code from v1 became unnecessary.
 
@@ -154,6 +159,8 @@ Expert (in-depth) and Learner (accessible) — two clear axes. "Do I want depth,
 - LLM calls: 6 → 4 (2 categories × 2 personas)
 - Cost: -33%
 - UX: Fewer choices, more intuitive
+
+**Why not keep 3 personas:** Intermediate content overlapped 70%+ with Expert. The alternative was differentiating Intermediate further, but this would triple prompt maintenance cost for marginal UX value. Two clear axes (depth vs. accessibility) served readers better than three ambiguous levels.
 
 **2. Pipeline Parallelization — 170s → 90s (47% reduction)**
 
@@ -209,6 +216,8 @@ Full audit of all prompt files, classified into three priority levels:
 - IFEval (instruction following): 87.4% vs 81%
 - Cost: input $2.00/M vs $2.50/M (20% cheaper)
 - A/B test result: gpt-4.1 more consistent with identical prompts
+
+**Alternatives considered:** gpt-4o (existing, familiar), Claude 3.5 Sonnet (strong instruction following), gpt-4.1-mini (cheaper). A/B tested gpt-4o vs gpt-4.1 — same prompts, same failure patterns, but gpt-4.1 scored 6% higher on IFEval and cost 20% less on input tokens. Claude was not tested due to SDK switching cost and existing PydanticAI + OpenAI integration.
 
 **E. Automated quality scoring**
 - 4 criteria × 25 points = 100 total
@@ -318,7 +327,7 @@ Some auto-extracted terms were common nouns, not technical terms. Marketing phra
 
 The news prompt file (`prompts_news_pipeline.py`) accumulated **50 commits**. Prompt engineering was the most iterative — and most educational — part of this project.
 
-### Record of 6 Iterations
+### Record of 8 Iterations
 
 | Iteration | Score | Key change | Lesson |
 |-----------|-------|-----------|--------|
@@ -328,6 +337,8 @@ The news prompt file (`prompts_news_pipeline.py`) accumulated **50 commits**. Pr
 | v4 | **84** | Added KO skeleton + structural parity | "80% of EN length" is wrong for Korean — same content is naturally shorter |
 | v5 | **84** | Structural equivalence (section/item/paragraph count) | Verify by **structure** (section count, item count), not character count |
 | v6 | **90** | 4 per-persona skeletons | Sharing one skeleton across 4 personas causes style contamination |
+| v7 | **85.3** | User-perspective eval + rollback | Automated scores miss real UX problems; stack prompt changes = regression |
+| v8 | **90.0** | Remove DON'Ts + skeleton-rule consistency | "Don't do X" makes LLMs over-correct; skeleton beats rules when they conflict |
 
 ### Key Lessons
 
@@ -391,35 +402,31 @@ If no news article qualifies for the Research category, **allow an empty list**.
 
 ## 6. Quantitative Results
 
-### Cost Efficiency
+All numbers below are measured from production databases (`pipeline_logs` for costs, `news_posts` for quality metrics), not estimates.
 
-| Version | Dev time | Dev cost (LLM) | Daily ops cost | Content output |
-|---------|---------|----------------|---------------|----------------|
-| v1 | 5 days | $15–25 | N/A (broken) | None |
-| v2 | 1 day | $2 | $0.43 | 2 articles/day |
-| v3 | half day | $1 | $0.59 | 6–10 articles/day |
-| v4 | half day | $1 | $0.39 | 6–10 articles/day (2 personas) |
-| v5–v6 | 9 days | $7 | $0.50–0.80 | 6–10 articles + handbook |
-| v7 | 2 days | $3 | $0.50–0.80 | + community pulse, layered reading |
+### Cost per Run (pipeline_logs, failed runs excluded)
 
-**v1 burned $15–25 with zero output. From v3 onward, under $1 produces 6–10 curated digest articles.** Over 10x cost efficiency improvement.
+| Period | Runs | Avg cost/run | Range |
+|--------|------|-------------|-------|
+| v2–v4 | 13 | **$0.35** | $0.27–$0.43 |
+| v5–v6 | 10 | **$0.40** | $0.22–$0.55 |
+| v7–v8 | 4 | **$0.48** | $0.40–$0.54 |
 
-Total daily cost including handbook: **$1.00–$1.50/day**.
-Monthly estimate: **$30–$45/month**.
+### Quality: Same Cost, Better Output (news_posts, EN)
 
-### Quality Improvement
+| Metric | | v2–v4 | v5–v6 | v7–v8 |
+|--------|---|-------|-------|-------|
+| **Quality score** | Research | 75.8 | 92.2 | **91.8** |
+| | Business | 82.9 | 94.1 | **94.8** |
+| **Expert citations** | Research | 1.8 | 12.9 | **16.8** |
+| | Business | 2.7 | 13.9 | **14.2** |
+| **News items covered** | Research | 1.3 | 4.6 | **5.0** |
+| | Business | 2.7 | 3.6 | **4.5** |
+| **Avg cost/run** | All | $0.35 | $0.40 | **$0.48** |
 
-| Metric | Start | Current (v7) | Improvement |
-|--------|-------|---------|-------------|
-| Prompt quality score | 56/100 | 90/100 | +61% |
-| User-perspective score | — | 85.3/100 | — |
-| Automated Business score | — | 95/100 | — |
-| Automated Research score | — | 92/100 | — |
-| Execution time | 170s | 90s | -47% |
-| Collection sources | 1 | 5 | +400% |
-| Daily news candidates | 30 | 45-55 | +67% |
-| Quality check prompts | 1 | 4 (persona-aware) | — |
-| Community Pulse | None | Real HN/Reddit quotes | — |
+*Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts — a stricter standard — yet scores improved.*
+
+**Summary:** Cost per run stayed nearly flat at $0.35 to $0.48, while citations per digest increased 9.3x (1.8 to 16.8), news coverage grew 2–3x (1.3 to 5.0 items), and collection sources expanded from 1 to 6. These improvements were achieved entirely through prompt structure and pipeline architecture — not by spending more on API calls.
 
 ### Codebase Scale
 
@@ -435,9 +442,9 @@ Monthly estimate: **$30–$45/month**.
 
 ## 7. What I Learned from Failure
 
-### "Work differently, not harder"
+### Five days were not wasted
 
-In v1, I spent five days stacking patches and felt productive the entire time. The moment I started lowering quality thresholds was the moment I should have stopped. If I had abandoned v1 on day 3, I would have reached v3 two days earlier.
+v1's five days were not wasted — they systematically exposed three architectural flaws that no amount of upfront design could have predicted. The key learning was recognizing when to stop patching and start redesigning: the moment quality thresholds start going down instead of up, the architecture is wrong.
 
 ### Good architecture eliminates defensive code
 
@@ -472,39 +479,31 @@ Developing intuition for the boundary between "what LLMs are good at" (writing, 
 ### News Pipeline Flow
 
 ```
-5 sources in parallel (Tavily + HuggingFace + arXiv + GitHub + Google News RSS)
-    | 45-55 candidates/day
+6 sources in parallel (Tavily + HuggingFace + arXiv + GitHub + Google RSS + Exa)
+    | 50-60 candidates/day
     v
-URL deduplication + published URL exclusion (3-day lookback)
-    + Google News URL resolution (googlenewsdecoder)
-    + Filler filter (body < 80 chars → skip)
-    |
+URL dedup + published URL exclusion (3-day) + Google URL resolution + filler filter
     v
-o4-mini classification --> Research / Business (0-to-5 rule)
-    + Litmus test + NOT Research list
-    + No section invention (rule 12)
-    |
+Classification (gpt-4.1-mini) --> Research 0-5 / Business 0-5
     v
-Community reactions for top 3 articles
-    (HN Algolia + Reddit JSON — real comment text, not just thread titles)
-    |
+Community collection (HN Algolia + Reddit JSON) -- all classified items
+    38-subreddit whitelist, mood summary style
+    v
+Ranking (gpt-4.1-mini) -- per category, with engagement data
+    --> [LEAD] / [SUPPORTING] tags
     v
 +-- Research Digest -------+   +-- Business Digest -------+
 |  Expert EN+KO (gpt-4.1)  |   |  Expert EN+KO (gpt-4.1)  |  <-- parallel
-|   Layered Reading Design  |   |                           |
 |  Learner EN+KO (gpt-4.1) |   |  Learner EN+KO (gpt-4.1) |
 +---------------------------+   +---------------------------+
-    | WEIGHTED DEPTH (lead 3-4p, supporting ≥3p/2-3p)
-    | Community Pulse mandatory when data exists
+    | [LEAD] 3-4 paragraphs, [SUPPORTING] 3+ paragraphs
+    | max_tokens 32K, Community Pulse when data exists
     v
-Post-processing: bold markdown fix (**term(abbr)** → **term** (abbr))
-    |
+Post-processing: bold fix + [LEAD]/[SUPPORTING] tag removal
     v
-Quality scoring (o4-mini, 4 prompts: R/B × Expert/Learner)
-    |
+Quality scoring (o4-mini, 4 prompts: R/B x Expert/Learner)
     v
 Save as draft --> Admin review --> Publish
-    |
     v
 Handbook term auto-extraction (conditional)
 ```
@@ -605,8 +604,74 @@ Average score dropped from 86.5 to **66.5** — worse than the original baseline
 
 ---
 
+## 10. v8: Structural Separation and the DON'T Removal (3/29–30, 2 days)
+
+### Three Structural Problems
+
+v7 scored 85.3 overall, but Research Expert remained stubbornly short — often just 1 paragraph per item. Deep analysis revealed three structural problems:
+
+**1. Classification and ranking were coupled.** The classifier handled both "where does this belong?" and "how important is it?" simultaneously. Importance scores were superficial, so the writing LLM treated all 5 items equally — no lead story, no editorial hierarchy.
+
+**2. The Research Expert Guide had too many DON'Ts.** 569 words with 9 negative instructions ("Do NOT explain basics", "Skip a layer rather than hallucinate"). The LLM over-interpreted these as "write less." Meanwhile, the Business Expert Guide was 201 words with almost no DON'Ts — and scored 90.
+
+**3. Skeleton placeholders taught the wrong pattern.** Only the first item was fully written; the rest were `[3 paragraphs...]`. The LLM followed the fully-written item's depth for item 1, then wrote minimally for the rest.
+
+### Solutions
+
+**A. Classification/Ranking Separation**
+
+```
+Before: Collect --> Classify --> Community (top 3) --> Write
+After:  Collect --> Classify --> Community (all) --> Rank --> Write
+```
+
+New `rank_classified()` function (gpt-4.1-mini) compares items within each category and assigns `[LEAD]` or `[SUPPORTING]` tags. The writing LLM sees `### [LEAD] AI Scientist-v2` and knows to give it 3–4 paragraphs. Cost: $0.00014 per run.
+
+**B. Research Expert Guide Refactoring: 569 to 151 Words**
+
+| | Before | After |
+|---|---|---|
+| Words | 569 | **151** |
+| DO instructions | 18 | **7** (core only) |
+| DONT instructions | 9 | **0** |
+
+Every negative instruction was removed.
+
+**Why remove rather than rewrite:** The alternative was rewriting the 9 DON'Ts as positive instructions ("Do X" instead of "Don't Y"). But the Business Expert Guide was already proving that fewer words with zero DON'Ts scored higher. The experiment was: does removing instructions entirely work better than rephrasing them? It did — 1 paragraph per item jumped to 3 paragraphs.
+
+**C. Skeleton Second Item Fully Written**
+
+Instead of `[3 paragraphs with benchmarks...]`, the second skeleton item was completed with real content: prior work (SelfCheckGPT), benchmarks (HaluEval 91.2%, 1/20 GPT-4 cost), and limitations (3x inference latency). This taught the LLM that *every* item deserves full depth.
+
+**D. Source Expansion: 5 to 6**
+
+Exa was promoted from Tavily fallback to independent collector with 4 business-focused queries. When Tavily hit quota limits, Business candidates dropped to zero. With Exa running independently, Business always has 20+ candidates.
+
+**E. Community Pulse Overhaul**
+
+Thread titles only (v7) caused the LLM to fabricate quotes. v8 collects actual comment text via HN Algolia and Reddit JSON, then asks for mood summaries rather than forced quotes. A 38-subreddit whitelist filters irrelevant discussions (r/wallstreetbets, etc.).
+
+### v8 Quality Result
+
+| Date | Pipeline | R Expert | R Learner | B Expert | B Learner | Avg |
+|------|----------|----------|-----------|----------|-----------|-----|
+| 3/26 v3 | v7 | 86 | 83 | 85 | 87 | **85.3** |
+| 3/28 | v8 initial | 75 | 65 | 90 | 90 | **80.0** |
+| **3/28** | **v8 final** | **90** | **90** | **90** | **90** | **90.0** |
+
+All four personas at 90/100 — the first time every combination scored equally.
+
+### Key Lessons from v8
+
+**"Remove DON'Ts = better output."** Deleting 9 negative instructions from the Research Expert Guide improved items from 1 paragraph to 3 paragraphs. LLMs over-interpret "don't do X" as "do less of everything." Concise, positive-only instructions outperform long lists of prohibitions.
+
+**"When rules and skeletons conflict, the skeleton wins."** Even with "minimum 3 paragraphs" stated in 6 places, the skeleton showing `[2-3 paragraphs]` caused the LLM to pick 2. Rules, skeletons, and quality checks must be consistent — the LLM follows the most concrete example.
+
+**"Classification and ranking are different tasks."** Classification asks "where does this belong?" Ranking asks "which is most important?" Combining them in one call makes ranking superficial. Separating them into two calls — at $0.00014 extra per run — dramatically improved editorial hierarchy.
+
+---
+
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 16 pipeline-related commits in this session alone, including a rollback.
-> 7 pipeline versions, 52 prompt issues, and the discovery that automated scores
-> don't tell the full story — user-perspective evaluation matters more.
+> 8 pipeline versions, 20+ prompt commits per version, and the discovery
+> that removing instructions can improve output more than adding them.
 > As a solo project, I handled every stage from planning to deployment.
