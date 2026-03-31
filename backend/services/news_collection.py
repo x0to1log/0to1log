@@ -760,6 +760,26 @@ async def collect_news(
     return unique, meta
 
 
+def _is_spam_comment(text: str) -> bool:
+    """Detect bot-generated spam comments (meaningless tech jargon patterns)."""
+    # Spam pattern: sentences with random tech terms strung together without meaning
+    spam_phrases = [
+        "automates dom elements",
+        "queries backend services",
+        "implements continuous integration",
+        "encrypts load balancers",
+        "initializes dom elements",
+        "overrides recursive functions",
+        "enhances complex variables",
+        "iterates responsive layouts",
+        "structures load balancers",
+        "prototyping phase",
+    ]
+    lower = text.lower()
+    matches = sum(1 for p in spam_phrases if p in lower)
+    return matches >= 2
+
+
 async def collect_community_reactions(title: str, url: str) -> str:
     """Collect community reactions with ACTUAL COMMENT TEXT from HN + Reddit.
 
@@ -784,7 +804,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                 hits = hn_resp.json().get("hits", [])
                 # Pick the best thread (most points)
                 best_hit = max(
-                    (h for h in hits if (h.get("points") or 0) > 5 or (h.get("num_comments") or 0) > 3),
+                    (h for h in hits if (h.get("points") or 0) >= 20),
                     key=lambda h: (h.get("points") or 0),
                     default=None,
                 )
@@ -805,7 +825,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                             text = c.get("comment_text", "")
                             clean = _re.sub(r"<[^>]+>", " ", text).strip()
                             clean = _re.sub(r"\s+", " ", clean)
-                            if len(clean) > 50 and len(clean) < 500:
+                            if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
                                 comments_text.append(clean)
                             if len(comments_text) >= 3:
                                 break
@@ -854,7 +874,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                         continue
                     score = rd.get("score", 0)
                     num_comments = rd.get("num_comments", 0)
-                    if score > 5 or num_comments > 3:
+                    if score >= 20:
                         if not best_thread or score > best_thread.get("score", 0):
                             best_thread = rd
                 if best_thread:
@@ -876,7 +896,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                                 for c in comment_data[1].get("data", {}).get("children", []):
                                     body = c.get("data", {}).get("body", "")
                                     c_score = c.get("data", {}).get("score", 0)
-                                    if body and len(body) > 30 and len(body) < 500 and c_score > 2:
+                                    if body and len(body) > 30 and len(body) < 500 and c_score > 2 and not _is_spam_comment(body):
                                         comments_text.append(body.strip())
                                     if len(comments_text) >= 3:
                                         break
