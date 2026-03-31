@@ -253,7 +253,7 @@ if (batchId) {
             </div>
             <div class="pipeline-run-hero__actions">
               <a href="/admin/pipeline-runs" class="pipeline-run-hero__back">Back to runs</a>
-              {tone === 'success' && (
+              {(tone === 'success' || tone === 'failed') && (
                 <div class="pipeline-rerun-dropdown">
                   <button class="pipeline-rerun-btn" data-run-id={runId} data-run-key={run?.run_key ?? ''}>
                     Rerun from...
