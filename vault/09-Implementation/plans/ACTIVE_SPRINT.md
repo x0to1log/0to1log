@@ -158,7 +158,8 @@
 | NQ-15 | Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성 | — | — | todo |
 | NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | done |
 | NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | done |
-| NQ-18 | CP 스팸 필터 — 코멘트 최소 품질 체크(upvote, 패턴) + 소스 도메인 필터(HN/Reddit만) | — | — | todo |
+| NQ-18 | CP 스팸 필터 — 코멘트 최소 품질 체크(upvote, 패턴) + 소스 도메인 필터(HN/Reddit만) | — | — | done |
+| NQ-22 | CP 전면 재설계 — 수집 정확도 + 관련성 검증 + Writer 반영 보장 | — | — | todo |
 | NQ-19 | 파이프라인 체크포인트 — 각 단계 결과 DB 저장 + 임의 지점 재실행 + 어드민 UI | — | — | done |
 | NQ-20 | Writer 다중 소스 활용 개선 — 여러 소스의 다른 관점/정보를 반영해서 작성하도록 Guide 수정 | — | — | done |
 | NQ-21 | GitHub Trending 축소 + 급부상 오픈소스 별도 제공 | — | — | todo |
@@ -201,6 +202,33 @@
 - enrich가 소스 0개 반환 → Writer가 원본만 인용, 다중 소스 효과 없음
 - community 0건 → CP 없어도 정당화됨
 - **방향:** LLM 호출 아닌 코드 기반 규칙 체크 (비용 0). 파이프라인 로그에 warning 기록 + 어드민 표시
+
+#### NQ-22 배경 노트 — CP 전면 재설계
+3/26 backfill에서 CP 관련 문제가 6번 연속 발생. 근본 원인 분석:
+
+**문제 1: 검색 정확도**
+- "Nvidia Vera CPU" 제목으로 Reddit 검색 → r/nvidia "Game Ready Driver FAQ" (431 upvotes) 매칭
+- upvote만 높고 뉴스와 **완전히 무관한 스레드**가 선택됨
+- 원인: Reddit 검색이 키워드 매칭만 하고 **의미적 관련성을 확인 안 함**
+
+**문제 2: 관련성 검증 없음**
+- community 수집이 "가장 upvote 높은 스레드"를 무조건 가져옴
+- 뉴스 제목과 스레드 제목의 관련성을 체크하는 로직이 없음
+- 결과: 무관한 스레드가 Writer에 전달 → Writer가 "이건 관련 없다"고 판단해서 CP 생략
+
+**문제 3: Writer 반영 불확실**
+- community 데이터가 전달돼도 Writer가 "MANDATORY when community data is provided" 규칙을 무시할 수 있음
+- 특히 community 내용이 뉴스와 무관하면 LLM이 정당하게(?) 생략
+
+**문제 4: 검색어 포맷**
+- item.title vs group_title — 메인 파이프라인과 rerun 함수 불일치 (수정 완료)
+- GitHub 레포 제목이 검색에 불리한 포맷 (수정 완료)
+
+**해결 방향:**
+1. **관련성 검증**: 수집된 스레드 제목과 뉴스 제목의 의미적 유사도 체크 (간단한 키워드 겹침 또는 LLM 판별)
+2. **검색 전략 개선**: Reddit 검색에서 subreddit 힌트 추가 (r/MachineLearning에서 "Vera CPU" 검색)
+3. **Writer 강제**: community 데이터가 있으면 CP 섹션을 반드시 포함하도록 후처리 검증
+4. **수집-뉴스 매칭 로직**: 현재 URL 기반 → 의미 기반으로 전환 검토
 
 #### NQ-18 배경 노트
 3/31 자동 파이프라인에서 Research CP에 봇 생성 스팸 텍스트가 실제 코멘트로 인용됨.
