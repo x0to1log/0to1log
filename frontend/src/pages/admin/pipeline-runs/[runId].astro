@@ -620,11 +620,10 @@ if (batchId) {
 
         if (!confirm('Rerun from "' + label + '" for ' + batchId + '?')) return;
 
-        fetch('/api/cron/pipeline-rerun', {
+        fetch('/api/admin/pipeline-rerun', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-cron-secret': 'admin-ui',
           },
           body: JSON.stringify({
             run_id: runId,

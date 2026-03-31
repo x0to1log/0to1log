@@ -152,3 +152,23 @@ export async function handleCancelRequest(env, runId) {
     return jsonResponse({ error: 'Cancel request failed', message }, 502);
   }
 }
+
+export async function handleRerunRequest(env, payload) {
+  const config = getPipelineConfig(env);
+  if (!config) {
+    return jsonResponse({ error: 'Missing configuration' }, 500);
+  }
+  try {
+    const response = await fetch(`${config.backendUrl}/api/cron/pipeline-rerun`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-cron-secret': config.cronSecret },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = await response.json();
+    return jsonResponse({ ok: response.ok, data }, response.ok ? 200 : 502);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return jsonResponse({ error: 'Rerun request failed', message }, 502);
+  }
+}
