@@ -223,11 +223,12 @@ const durationData = pipelineRuns
   .map((r) => {
     const dur = Math.round((new Date(r.finished_at!).getTime() - new Date(r.started_at).getTime()) / 1000);
     // Use batch date from run_key (target/publish date), not started_at (execution date)
-    const batchMatch = r.run_key.match(/\d{4}-\d{2}-\d{2}/);
-    const d = batchMatch ? new Date(batchMatch[0] + 'T00:00:00') : new Date(r.started_at);
-    return { label: `${d.getMonth() + 1}/${d.getDate()}`, seconds: dur > 0 ? dur : 0 };
+    const batchMatch = r.run_key.match(/(\d{4}-\d{2}-\d{2})/);
+    const dateStr = batchMatch ? batchMatch[1] : r.started_at.slice(0, 10);
+    const d = new Date(dateStr + 'T00:00:00');
+    return { label: `${d.getMonth() + 1}/${d.getDate()}`, seconds: dur > 0 ? dur : 0, _sortKey: dateStr };
   })
-  .sort((a, b) => a.label.localeCompare(b.label));
+  .sort((a, b) => a._sortKey.localeCompare(b._sortKey));
 
 // Token totals per stage for donut chart
 const tokenTotals = stackedData
@@ -950,7 +951,17 @@ const nonce = Astro.locals.cspNonce || '';
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: {
+              label: function(ctx) {
+                var s = ctx.parsed.y;
+                var m = Math.floor(s / 60);
+                var sec = s % 60;
+                return m > 0 ? m + 'm ' + sec + 's (' + s + 's)' : sec + 's';
+              },
+            }},
+          },
           scales: {
             x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } },
             y: {
