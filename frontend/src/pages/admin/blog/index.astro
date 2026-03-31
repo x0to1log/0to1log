@@ -37,6 +37,7 @@ let fetchError: string | null = null;
 let allPosts: AdminBlogRow[] = [];
 let blogDraft = 0;
 let blogPublished = 0;
+let blogArchived = 0;
 let blogTotal = 0;
 
 try {
@@ -53,6 +54,7 @@ try {
     blogTotal = allPosts.length;
     blogDraft = allPosts.filter((post) => post.status === 'draft').length;
     blogPublished = allPosts.filter((post) => post.status === 'published').length;
+    blogArchived = allPosts.filter((post) => post.status === 'archived').length;
   }
 } catch (error) {
   fetchError = error instanceof Error ? error.message : 'Unknown error';
@@ -96,6 +98,7 @@ const categoryOptions = dbCategories.map((c) => ({ slug: c.slug, label: c.label_
             <div class="admin-filter-tabs">
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({blogDraft})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({blogPublished})</button>
+              {blogArchived > 0 && <button class="admin-filter-btn" data-filter="archived">Archived ({blogArchived})</button>}
               <button class="admin-filter-btn" data-filter="all">All ({blogTotal})</button>
             </div>
           </div>
