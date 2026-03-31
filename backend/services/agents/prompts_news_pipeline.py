@@ -64,7 +64,7 @@ NOT Research (assign to Business instead):
 - **new_tools**: New AI products, services, or developer tools launched
 
 ## Rules
-1. Select 0-8 articles per category (research and business). If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
+1. Select 0-8 articles per category (research and business). For Research, select at most 4 papers (subcategory "papers") — prioritize the most impactful ones. No limit on llm_models or open_source. If no article meets the Research criteria, return an empty list — do NOT lower the bar to fill a quota.
 2. Only select individual articles with specific content. Skip category pages, topic indexes, and homepages:
    - NO: "techcrunch.com/category/artificial-intelligence/", "economist.com/topics/artificial-intelligence", "artificialintelligence-news.com/"
    - YES: "techcrunch.com/2026/03/17/openai-launches-gpt-5-4/", "economist.com/technology/2026/03/17/ai-regulation"
