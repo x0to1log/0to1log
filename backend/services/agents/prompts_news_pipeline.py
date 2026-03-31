@@ -776,8 +776,13 @@ Write the weekly recap in {language}. Use markdown.
    Every number MUST appear verbatim in the daily digests. Do not estimate or round.
 
 3. **## {top_heading}**
-   7-10 most impactful stories ranked by strategic importance. Each item:
-   - **Bold title** — 2-3 sentences on WHY this matters for decision-makers.
+   7-10 most impactful stories ranked by these criteria (in priority order):
+   (1) Impact — AI landscape change: SOTA, major funding, paradigm shift > incremental update
+   (2) Novelty — genuinely new: first-of-its-kind, exclusive > routine release
+   (3) Evidence — concrete benchmarks, dollar amounts, user numbers > vague claims
+   (4) Community signal — high engagement indicates broad interest
+   Stories marked [LEAD] in the daily digests should naturally rank higher.
+   Each item: **Bold title** — 2-3 sentences on WHY this matters for decision-makers.
    Do NOT include source URLs.
 
 4. **## {trend_heading}**
@@ -837,8 +842,13 @@ Write the weekly recap in {language}. Use markdown.
    Every number MUST appear in the daily digests.
 
 3. **## {top_heading}**
-   7-10 stories ranked by importance. Each item:
-   - **Bold title** — 2-3 sentences explaining what happened AND why it matters. Define acronyms and jargon on first use.
+   7-10 stories ranked by these criteria:
+   (1) Impact — how much does this change things?
+   (2) Novelty — is this genuinely new?
+   (3) Evidence — are there concrete numbers or proof?
+   (4) Community buzz — are people talking about it?
+   Stories marked [LEAD] in the daily digests should naturally rank higher.
+   Each item: **Bold title** — 2-3 sentences explaining what happened AND why it matters. Define acronyms and jargon on first use.
    Do NOT include source URLs.
 
 4. **## {trend_heading}**
