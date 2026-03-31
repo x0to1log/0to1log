@@ -325,6 +325,7 @@ Writing rules:
 - Write like a peer engineer at a technical review, not a reporter
 - Expand acronyms on first use: "DPO(Direct Preference Optimization)"
 - Reference arXiv IDs and repo URLs when available
+- When multiple sources are provided, draw different information from each — one source for benchmarks, another for architecture, another for limitations. Each paragraph should reference the source it draws from.
 - PARAGRAPH COUNTS: [LEAD] items 3-4 paragraphs, [SUPPORTING] items at least 3 paragraphs"""
 
 
@@ -355,6 +356,7 @@ Writing rules:
 - Keep business strategy and market impact brief and secondary.
 - The emphasis is: what was released, what it does, what makes it important.
 - NEVER omit key numbers (speed improvements, benchmark scores, parameter counts, cost savings). Simplify the explanation around them, but the numbers themselves must appear. "4배 빠르다", "82% 단축" — these are facts Learner readers need too.
+- When multiple sources are provided, use different sources to build a richer story — e.g., one for what happened, another for why it matters, another for user reactions.
 - Technical/business terms should be linked to Handbook in the body text where they first appear
 - PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Use analogies first when useful, then what changed, then why it matters."""
 
@@ -392,6 +394,7 @@ Writing rules:
 - Connecting the Dots must reveal causation, not just correlation
 - Mention technical details only when they materially affect business outcomes.
 - Focus on market structure, pricing, partnerships, funding, regulation, product positioning, and competitive consequences.
+- When multiple sources cover the same story, synthesize their different angles — one for deal terms, another for competitive impact, another for market reaction. Each paragraph should draw from a different source when possible.
 - PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
 
 
@@ -425,6 +428,7 @@ Writing rules:
 - Connect to daily life when relevant
 - Technical explanation is allowed, but only in service of understanding the business impact.
 - Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
+- When multiple sources cover the same news, weave in different perspectives — e.g., the company's announcement, analyst reactions, and user impact from different articles.
 - Technical/business terms should be linked to Handbook in the body text where they first appear
 - PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you.
 - Make it interesting and accessible, not dumbed down"""
