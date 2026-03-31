@@ -159,7 +159,8 @@
 | NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | done |
 | NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | done |
 | NQ-18 | CP 스팸 필터 — 코멘트 최소 품질 체크(upvote, 패턴) + 소스 도메인 필터(HN/Reddit만) | — | — | todo |
-| NQ-19 | 파이프라인 체크포인트 — 각 단계 결과 DB 저장 + 임의 지점 재실행 + 어드민 UI | — | — | todo |
+| NQ-19 | 파이프라인 체크포인트 — 각 단계 결과 DB 저장 + 임의 지점 재실행 + 어드민 UI | — | — | done |
+| NQ-20 | Writer 다중 소스 활용 개선 — 여러 소스의 다른 관점/정보를 반영해서 작성하도록 Guide 수정 | — | — | todo |
 
 #### NQ-13 설계 참조
 - **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
@@ -234,6 +235,14 @@
 - 어드민 UI: pipeline-runs 상세에서 "이 단계부터 재실행" 버튼
 - 백엔드 API: `POST /api/admin/pipeline/rerun?run_id=xxx&from_stage=write&category=research`
 - raw_content가 가장 큰 데이터 — 저장 전략 결정 필요 (전문 vs 요약 vs URL만)
+
+#### NQ-20 배경 노트
+3/31 퀄리티 리뷰에서 도출. enrich가 소스 3-4개를 전달하지만 Writer가 1-2개만 인용하는 경향.
+- Anthropic $45B 동맹: 3개 소스 전달 → [1]만 반복 (aibusinessreview 하나에 의존)
+- 원인: LLM이 가장 풍부한 소스 하나에 의존, 나머지 무시
+- **방향:** "전부 인용해라" (억지) 대신 "여러 소스의 다른 관점/정보를 반영해서 작성" (자연스러운 유도)
+- 예: "딜 구조 [1] + 경쟁 영향 [2] + Google 대응 [3]" — 다른 소스에서 다른 정보를 가져오기
+- NQ-15(Learner 재설계)와 함께 Writer Guide 전체를 손볼 때 반영
 
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
