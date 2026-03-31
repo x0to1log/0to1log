@@ -443,18 +443,9 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
       filtersToggle.setAttribute('aria-expanded', String(!open));
     });
 
-    function sortItems(mode) {
-      allItems.sort((a, b) => {
-        if (mode === 'title') {
-          return (a.dataset.title || '').localeCompare(b.dataset.title || '');
-        }
-        if (mode === 'published') {
-          return new Date(b.dataset.published || b.dataset.updated || 0).getTime()
-            - new Date(a.dataset.published || a.dataset.updated || 0).getTime();
-        }
-        return new Date(b.dataset.updated || 0).getTime() - new Date(a.dataset.updated || 0).getTime();
-      });
-      allItems.forEach((item) => list.appendChild(item));
+    function sortItems(_mode) {
+      // Sorting is handled server-side by date groups — no client-side reordering
+      // (appendChild would break the card structure by pulling items out of their cards)
     }
 
     function applyFilter() {
