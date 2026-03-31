@@ -787,17 +787,32 @@ def _is_spam_comment(text: str) -> bool:
     return matches >= 2
 
 
+def _title_relevance(article_title: str, thread_title: str) -> float:
+    """Check relevance between article title and thread title (0-100)."""
+    from difflib import SequenceMatcher
+    # Token-set comparison: normalize, split, compare overlap
+    a_tokens = set(article_title.lower().split())
+    t_tokens = set(thread_title.lower().split())
+    if not a_tokens or not t_tokens:
+        return 0.0
+    overlap = len(a_tokens & t_tokens)
+    # Weighted: overlap / min(len) gives higher score when shorter title fully matches
+    token_score = (overlap / min(len(a_tokens), len(t_tokens))) * 100
+    # Also use sequence matcher for substring similarity
+    seq_score = SequenceMatcher(None, article_title.lower(), thread_title.lower()).ratio() * 100
+    return max(token_score, seq_score)
+
+
 async def collect_community_reactions(title: str, url: str) -> str:
     """Collect community reactions with ACTUAL COMMENT TEXT from HN + Reddit.
 
-    Phase 1: Find relevant threads via search APIs.
-    Phase 2: Fetch top comments from the best thread on each platform.
+    Strategy: URL-based search first (most accurate), keyword fallback with relevance check.
 
     Returns formatted reactions with real quotes, or empty string if none found.
     """
     import httpx
 
-    # Extract key search terms: remove common filler words, keep first 6 meaningful words
+    # Extract key search terms for keyword fallback
     _STOP_WORDS = {"the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for",
                    "of", "and", "or", "its", "it", "this", "that", "with", "by", "from", "as",
                    "has", "have", "had", "how", "what", "why", "new", "latest", "just", "now"}
@@ -806,54 +821,72 @@ async def collect_community_reactions(title: str, url: str) -> str:
     parts: list[str] = []
 
     async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"}) as client:
-        # --- Hacker News: search → fetch top comments ---
+        # --- Hacker News: URL search first, keyword fallback ---
         try:
-            hn_resp = await client.get(
-                "https://hn.algolia.com/api/v1/search",
-                params={"query": search_terms, "tags": "story", "hitsPerPage": 3},
-            )
-            if hn_resp.status_code == 200:
-                hits = hn_resp.json().get("hits", [])
-                # Pick the best thread (most points)
-                best_hit = max(
-                    (h for h in hits if (h.get("points") or 0) >= 5),
-                    key=lambda h: (h.get("points") or 0),
-                    default=None,
+            # Phase 1: URL-based search (most accurate)
+            best_hit = None
+            if url:
+                hn_url_resp = await client.get(
+                    "https://hn.algolia.com/api/v1/search",
+                    params={"query": url, "tags": "story", "restrictSearchableAttributes": "url", "hitsPerPage": 3},
                 )
-                if best_hit:
-                    story_id = best_hit.get("objectID", "")
-                    hn_title = best_hit.get("title", "")
-                    points = best_hit.get("points", 0)
-                    num_comments = best_hit.get("num_comments", 0)
-                    # Fetch top comments for this story
-                    comment_resp = await client.get(
-                        "https://hn.algolia.com/api/v1/search",
-                        params={"tags": f"comment,story_{story_id}", "hitsPerPage": 5},
-                    )
-                    comments_text = []
-                    if comment_resp.status_code == 200:
-                        import re as _re
-                        for c in comment_resp.json().get("hits", []):
-                            text = c.get("comment_text", "")
-                            clean = _re.sub(r"<[^>]+>", " ", text).strip()
-                            clean = _re.sub(r"\s+", " ", clean)
-                            if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
-                                comments_text.append(clean)
-                            if len(comments_text) >= 3:
-                                break
-                    thread_block = f"[Hacker News] {hn_title} | {points} points | {num_comments} comments\n"
-                    if comments_text:
-                        thread_block += "Top comments:\n"
-                        thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
-                    parts.append(thread_block)
+                if hn_url_resp.status_code == 200:
+                    url_hits = [h for h in hn_url_resp.json().get("hits", []) if (h.get("points") or 0) >= 5]
+                    if url_hits:
+                        best_hit = max(url_hits, key=lambda h: h.get("points") or 0)
+                        logger.debug("HN URL match: '%s' (%d pts)", best_hit.get("title", "")[:40], best_hit.get("points", 0))
+
+            # Phase 2: Keyword fallback with relevance check
+            if not best_hit:
+                hn_resp = await client.get(
+                    "https://hn.algolia.com/api/v1/search",
+                    params={"query": search_terms, "tags": "story", "hitsPerPage": 5},
+                )
+                if hn_resp.status_code == 200:
+                    hits = hn_resp.json().get("hits", [])
+                    for h in sorted(hits, key=lambda h: h.get("points") or 0, reverse=True):
+                        if (h.get("points") or 0) < 5:
+                            continue
+                        relevance = _title_relevance(title, h.get("title", ""))
+                        if relevance >= 35:
+                            best_hit = h
+                            logger.debug("HN keyword match: '%s' (relevance=%.0f, pts=%d)", h.get("title", "")[:40], relevance, h.get("points", 0))
+                            break
+                        else:
+                            logger.debug("HN keyword skip (low relevance=%.0f): '%s'", relevance, h.get("title", "")[:40])
+
+            # Fetch comments for matched HN thread (works for both URL and keyword matches)
+            if best_hit:
+                story_id = best_hit.get("objectID", "")
+                hn_title = best_hit.get("title", "")
+                points = best_hit.get("points", 0)
+                num_comments = best_hit.get("num_comments", 0)
+                comment_resp = await client.get(
+                    "https://hn.algolia.com/api/v1/search",
+                    params={"tags": f"comment,story_{story_id}", "hitsPerPage": 5},
+                )
+                comments_text = []
+                if comment_resp.status_code == 200:
+                    import re as _re
+                    for c in comment_resp.json().get("hits", []):
+                        text = c.get("comment_text", "")
+                        clean = _re.sub(r"<[^>]+>", " ", text).strip()
+                        clean = _re.sub(r"\s+", " ", clean)
+                        if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
+                            comments_text.append(clean)
+                        if len(comments_text) >= 3:
+                            break
+                thread_block = f"[Hacker News] {hn_title} | {points} points | {num_comments} comments\n"
+                if comments_text:
+                    thread_block += "Top comments:\n"
+                    thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
+                parts.append(thread_block)
         except Exception as e:
             logger.debug("HN search failed for '%s': %s", title[:40], e)
 
-        # --- Reddit: search → fetch top comments ---
-        # Staggered delay to avoid Reddit rate limiting when called in parallel
+        # --- Reddit: URL search first, keyword fallback with relevance ---
         import random
         await asyncio.sleep(random.uniform(1.0, 5.0))
-        # Only accept threads from AI/tech-relevant subreddits
         ALLOWED_SUBREDDITS = {
             # AI/ML research
             "machinelearning", "artificial", "artificialintelligence",
@@ -874,24 +907,46 @@ async def collect_community_reactions(title: str, url: str) -> str:
             "startups",
         }
         try:
-            reddit_resp = await client.get(
-                "https://www.reddit.com/search.json",
-                params={"q": search_terms, "sort": "relevance", "limit": 10, "t": "week"},
-            )
-            if reddit_resp.status_code == 200:
-                children = reddit_resp.json().get("data", {}).get("children", [])
-                # Pick the best thread from allowed subreddits
-                best_thread = None
-                for child in children:
-                    rd = child.get("data", {})
-                    subreddit = rd.get("subreddit", "").lower()
-                    if subreddit not in ALLOWED_SUBREDDITS:
-                        continue
-                    score = rd.get("score", 0)
-                    num_comments = rd.get("num_comments", 0)
-                    if score >= 5:
-                        if not best_thread or score > best_thread.get("score", 0):
+            best_thread = None
+
+            # Phase 1: URL-based Reddit search (most accurate)
+            if url:
+                rd_url_resp = await client.get(
+                    "https://www.reddit.com/search.json",
+                    params={"q": f"url:{url}", "sort": "relevance", "limit": 5, "t": "month"},
+                )
+                if rd_url_resp.status_code == 200:
+                    for child in rd_url_resp.json().get("data", {}).get("children", []):
+                        rd = child.get("data", {})
+                        if rd.get("subreddit", "").lower() in ALLOWED_SUBREDDITS and (rd.get("score", 0) >= 5):
                             best_thread = rd
+                            logger.debug("Reddit URL match: r/%s '%s' (%d upvotes)", rd.get("subreddit", ""), rd.get("title", "")[:40], rd.get("score", 0))
+                            break
+
+            # Phase 2: Keyword fallback with relevance check
+            if not best_thread:
+                await asyncio.sleep(random.uniform(0.5, 2.0))  # Extra delay between requests
+                reddit_resp = await client.get(
+                    "https://www.reddit.com/search.json",
+                    params={"q": search_terms, "sort": "relevance", "limit": 10, "t": "week"},
+                )
+                if reddit_resp.status_code == 200:
+                    children = reddit_resp.json().get("data", {}).get("children", [])
+                    for child in children:
+                        rd = child.get("data", {})
+                        subreddit = rd.get("subreddit", "").lower()
+                        if subreddit not in ALLOWED_SUBREDDITS:
+                            continue
+                        score = rd.get("score", 0)
+                        if score < 5:
+                            continue
+                        relevance = _title_relevance(title, rd.get("title", ""))
+                        if relevance >= 35:
+                            best_thread = rd
+                            logger.debug("Reddit keyword match: r/%s '%s' (relevance=%.0f, score=%d)", subreddit, rd.get("title", "")[:40], relevance, score)
+                            break
+                        else:
+                            logger.debug("Reddit keyword skip (relevance=%.0f): r/%s '%s'", relevance, subreddit, rd.get("title", "")[:40])
                 if best_thread:
                     permalink = best_thread.get("permalink", "")
                     rd_title = best_thread.get("title", "")
