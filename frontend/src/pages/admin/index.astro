@@ -411,7 +411,7 @@ function relativeTime(dateStr: string): string {
                 <div class="pipeline-control-row">
                   <input type="week" id="weekly-target-week" class="admin-input admin-input--date"
                          title="Leave empty for last week" />
-                  <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled}>Generate Weekly</button>
+                  <button type="button" class="admin-btn" id="run-weekly-btn">Generate Weekly</button>
                 </div>
                 <div class="pipeline-control-toggles">
                   <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
@@ -453,7 +453,7 @@ function relativeTime(dateStr: string): string {
                 <div class="pipeline-control-row">
                   <input type="week" id="weekly-target-week" class="admin-input admin-input--date"
                          title="Leave empty for last week" />
-                  <button type="button" class="admin-btn" id="run-weekly-btn" disabled={!weeklyEnabled}>Generate Weekly</button>
+                  <button type="button" class="admin-btn" id="run-weekly-btn">Generate Weekly</button>
                 </div>
                 <div class="pipeline-control-toggles">
                   <label class="dashboard-pipeline-toggle" title="Enable weekly recap generation">
@@ -1296,6 +1296,11 @@ function relativeTime(dateStr: string): string {
     if (weeklyBtn && !weeklyBtn.dataset.init) {
       weeklyBtn.dataset.init = '1';
       weeklyBtn.addEventListener('click', async () => {
+        const weeklyCheckbox = document.getElementById('weekly-enabled') as HTMLInputElement | null;
+        if (!weeklyCheckbox?.checked) {
+          setWeeklyFeedback('Weekly recap is disabled. Enable it first with the checkbox.', 'error');
+          return;
+        }
         const weekId = weekInput?.value || null;
         const label = weekId || 'last week';
         if (!confirm(`Generate weekly recap for ${label}?`)) return;
