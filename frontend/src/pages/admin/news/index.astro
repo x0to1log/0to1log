@@ -117,7 +117,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
             <div class="admin-filter-tabs">
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({logDraft})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({logPublished})</button>
-              {logArchived > 0 && <button class="admin-filter-btn" data-filter="archived">Archived ({logArchived})</button>}
+              <button class="admin-filter-btn" data-filter="archived">Archived ({logArchived})</button>
               <button class="admin-filter-btn" data-filter="all">All ({logTotal})</button>
             </div>
           </div>

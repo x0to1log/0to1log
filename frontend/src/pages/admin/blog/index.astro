@@ -98,7 +98,7 @@ const categoryOptions = dbCategories.map((c) => ({ slug: c.slug, label: c.label_
             <div class="admin-filter-tabs">
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({blogDraft})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({blogPublished})</button>
-              {blogArchived > 0 && <button class="admin-filter-btn" data-filter="archived">Archived ({blogArchived})</button>}
+              <button class="admin-filter-btn" data-filter="archived">Archived ({blogArchived})</button>
               <button class="admin-filter-btn" data-filter="all">All ({blogTotal})</button>
             </div>
           </div>
