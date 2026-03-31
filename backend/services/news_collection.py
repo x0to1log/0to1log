@@ -942,7 +942,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
     search_queries = _build_search_queries(entities)
     parts: list[str] = []
 
-    async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"}) as client:
+    async with httpx.AsyncClient(timeout=30.0, headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"}) as client:
         # --- Hacker News: URL search first, keyword fallback ---
         try:
             # Phase 1: URL-based search (most accurate)
@@ -1090,15 +1090,17 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                                     continue
                                 _permalink = _perm_match.group(1)
                                 await asyncio.sleep(random.uniform(0.5, 2.0))
+                                # Fetch post + comments in one call (avoids double Reddit request)
                                 rd_fetch = await client.get(
                                     f"https://www.reddit.com{_permalink}.json",
-                                    params={"limit": 1},
+                                    params={"limit": 5, "sort": "top", "depth": 1},
                                 )
                                 if rd_fetch.status_code == 200:
                                     rd_json = rd_fetch.json()
                                     if isinstance(rd_json, list) and rd_json:
                                         post_data = rd_json[0].get("data", {}).get("children", [{}])[0].get("data", {})
                                         if post_data.get("score", 0) >= 5:
+                                            post_data["_brave_comments"] = rd_json
                                             best_thread = post_data
                                             logger.debug("Brave discussions match: r/%s '%s' (relevance=%.0f, score=%d)", subreddit, disc_title[:40], relevance, post_data.get("score", 0))
                                             break
@@ -1113,24 +1115,26 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                 subreddit = best_thread.get("subreddit", "")
                 score = best_thread.get("score", 0)
                 num_comments = best_thread.get("num_comments", 0)
-                # Fetch top comments
+                # Fetch top comments — reuse Brave response if available
                 comments_text = []
                 try:
-                    await asyncio.sleep(random.uniform(0.5, 2.0))
-                    comment_resp = await client.get(
-                        f"https://www.reddit.com{permalink}.json",
-                        params={"limit": 5, "sort": "top", "depth": 1},
-                    )
-                    if comment_resp.status_code == 200:
-                        comment_data = comment_resp.json()
-                        if len(comment_data) > 1:
-                            for c in comment_data[1].get("data", {}).get("children", []):
-                                body = c.get("data", {}).get("body", "")
-                                c_score = c.get("data", {}).get("score", 0)
-                                if body and len(body) > 30 and len(body) < 500 and c_score > 2 and not _is_spam_comment(body):
-                                    comments_text.append(body.strip())
-                                if len(comments_text) >= 3:
-                                    break
+                    comment_data = best_thread.pop("_brave_comments", None)
+                    if not comment_data:
+                        await asyncio.sleep(random.uniform(0.5, 2.0))
+                        comment_resp = await client.get(
+                            f"https://www.reddit.com{permalink}.json",
+                            params={"limit": 5, "sort": "top", "depth": 1},
+                        )
+                        if comment_resp.status_code == 200:
+                            comment_data = comment_resp.json()
+                    if comment_data and isinstance(comment_data, list) and len(comment_data) > 1:
+                        for c in comment_data[1].get("data", {}).get("children", []):
+                            body = c.get("data", {}).get("body", "")
+                            c_score = c.get("data", {}).get("score", 0)
+                            if body and len(body) > 30 and len(body) < 500 and c_score > 2 and not _is_spam_comment(body):
+                                comments_text.append(body.strip())
+                            if len(comments_text) >= 3:
+                                break
                 except Exception:
                     pass
                 thread_block = f"[Reddit r/{subreddit}] {rd_title} | {score} upvotes | {num_comments} comments\n"
