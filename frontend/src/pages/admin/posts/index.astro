@@ -63,6 +63,22 @@ const localeOptions = Array.from(
 const categoryOptions = Array.from(
   new Set(allPosts.map((post) => post.category).filter((category): category is string => Boolean(category))),
 ).sort();
+
+// Group published posts by published_at date for visual grouping
+function getPublishDate(post: AdminPostRow): string {
+  if (!post.published_at) return '';
+  return new Date(post.published_at).toISOString().slice(0, 10);
+}
+const publishedByDate = new Map<string, AdminPostRow[]>();
+for (const post of allPosts.filter(p => p.status === 'published' && p.published_at)) {
+  const date = getPublishDate(post);
+  if (!publishedByDate.has(date)) publishedByDate.set(date, []);
+  publishedByDate.get(date)!.push(post);
+}
+// Build ordered list: drafts first, then published grouped by date (newest first)
+const draftPosts = allPosts.filter(p => p.status === 'draft');
+const sortedDates = Array.from(publishedByDate.keys()).sort().reverse();
+const ungroupedPosts = allPosts.filter(p => p.status !== 'draft' && p.status !== 'published');
 ---
 
 <MainLayout title="Admin Posts" locale="en">
@@ -149,66 +165,122 @@ const categoryOptions = Array.from(
       ) : (
         <>
           <ul class="admin-list" id="post-list">
-            {allPosts.map((post) => (
+            {/* Draft posts (ungrouped) */}
+            {draftPosts.map((post) => (
               <li
-                class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
+                class="admin-list-item"
                 data-status={post.status}
                 data-title={post.title.toLowerCase()}
                 data-locale={post.locale || ''}
                 data-category={post.category || ''}
                 data-updated={post.updated_at || ''}
-                data-published={post.published_at || ''}
-                data-site-url={post.status === 'published' ? `/${post.locale ?? 'ko'}/news/${post.slug}/` : ''}
+                data-published=""
+                data-publish-date=""
               >
                 <input type="checkbox" class="news-bulk-check" data-bulk-id={post.id} />
                 <div class="admin-list-info">
                   <div class="admin-list-title">
-                    <a
-                      href={post.status === 'published'
-                        ? `/${post.locale ?? 'ko'}/news/${post.slug}/`
-                        : `/admin/edit/${post.slug}`}
-                      target={post.status === 'published' ? '_blank' : undefined}
-                      rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
-                    >{post.title}</a>
+                    <a href={`/admin/edit/${post.slug}`}>{post.title}</a>
                   </div>
                   <div class="admin-list-meta">
-                    <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
+                    <span class="admin-status-badge admin-status-badge--draft">draft</span>
                     {post.post_type && (
                       <span class={`admin-posttype-badge admin-posttype-badge--${post.post_type}`}>
                         {post.post_type === 'research' ? 'R' : 'B'}
                       </span>
                     )}
                     {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
-                    {post.category && (
-                      <>
-                        <span class="admin-meta-sep">·</span>
-                        <span>{post.category}</span>
-                      </>
-                    )}
-                    {Array.isArray(post.tags) && post.tags.length > 0 && (
-                      <>
-                        <span class="admin-meta-sep">·</span>
-                        <span class="admin-tag-count">🏷 {post.tags.length}</span>
-                      </>
-                    )}
+                    {post.category && (<><span class="admin-meta-sep">·</span><span>{post.category}</span></>)}
                     <span class="admin-meta-sep">·</span>
                     <span class="admin-meta-date">Updated {new Date(post.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
-                    {post.published_at && (
-                      <>
-                        <span class="admin-meta-sep">·</span>
-                        <span class="admin-meta-date">Published {new Date(post.published_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
-                      </>
-                    )}
                   </div>
                 </div>
                 <div class="admin-list-actions">
                   <a href={`/admin/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
                   <a href={`/admin/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
-                  {post.status === 'draft' ? (
-                    <button class="admin-btn admin-btn-primary" data-action="publish" data-id={post.id}>Publish</button>
-                  ) : (
-                    <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
-                  )}
+                  <button class="admin-btn admin-btn-primary" data-action="publish" data-id={post.id}>Publish</button>
+                  <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
+                </div>
+              </li>
+            ))}
+
+            {/* Published posts grouped by date */}
+            {sortedDates.map((dateStr) => {
+              const posts = publishedByDate.get(dateStr)!;
+              const d = new Date(dateStr + 'T00:00:00');
+              const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              return (
+                <>
+                  <li class="news-date-group-header" data-group-date={dateStr} data-status="published">
+                    <input type="checkbox" class="news-group-check" data-group-date={dateStr} title={`Select all ${label}`} />
+                    <span class="news-date-group-label">{label}</span>
+                    <span class="news-date-group-count">{posts.length} posts</span>
+                  </li>
+                  {posts.map((post) => (
+                    <li
+                      class="admin-list-item admin-list-item--published news-date-group-item"
+                      data-status="published"
+                      data-title={post.title.toLowerCase()}
+                      data-locale={post.locale || ''}
+                      data-category={post.category || ''}
+                      data-updated={post.updated_at || ''}
+                      data-published={post.published_at || ''}
+                      data-publish-date={dateStr}
+                      data-site-url={`/${post.locale ?? 'ko'}/news/${post.slug}/`}
+                    >
+                      <input type="checkbox" class="news-bulk-check" data-bulk-id={post.id} data-group-date={dateStr} />
+                      <div class="admin-list-info">
+                        <div class="admin-list-title">
+                          <a href={`/${post.locale ?? 'ko'}/news/${post.slug}/`} target="_blank" rel="noopener noreferrer">{post.title}</a>
+                        </div>
+                        <div class="admin-list-meta">
+                          <span class="admin-status-badge admin-status-badge--published">published</span>
+                          {post.post_type && (
+                            <span class={`admin-posttype-badge admin-posttype-badge--${post.post_type}`}>
+                              {post.post_type === 'research' ? 'R' : 'B'}
+                            </span>
+                          )}
+                          {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
+                          {post.category && (<><span class="admin-meta-sep">·</span><span>{post.category}</span></>)}
+                          {Array.isArray(post.tags) && post.tags.length > 0 && (<><span class="admin-meta-sep">·</span><span class="admin-tag-count">#{post.tags.length}</span></>)}
+                        </div>
+                      </div>
+                      <div class="admin-list-actions">
+                        <a href={`/admin/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
+                        <a href={`/admin/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
+                        <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
+                        <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
+                      </div>
+                    </li>
+                  ))}
+                </>
+              );
+            })}
+
+            {/* Other status posts */}
+            {ungroupedPosts.map((post) => (
+              <li
+                class="admin-list-item"
+                data-status={post.status}
+                data-title={post.title.toLowerCase()}
+                data-locale={post.locale || ''}
+                data-category={post.category || ''}
+                data-updated={post.updated_at || ''}
+                data-published={post.published_at || ''}
+                data-publish-date=""
+              >
+                <input type="checkbox" class="news-bulk-check" data-bulk-id={post.id} />
+                <div class="admin-list-info">
+                  <div class="admin-list-title">
+                    <a href={`/admin/edit/${post.slug}`}>{post.title}</a>
+                  </div>
+                  <div class="admin-list-meta">
+                    <span class={`admin-status-badge admin-status-badge--${post.status}`}>{post.status}</span>
+                    {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
+                  </div>
+                </div>
+                <div class="admin-list-actions">
+                  <a href={`/admin/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
                   <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
                 </div>
               </li>
@@ -337,6 +409,43 @@ const categoryOptions = Array.from(
     flex-shrink: 0;
     align-self: center;
   }
+
+  .news-date-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    border-bottom: 2px solid var(--color-accent, #6366f1);
+    background: color-mix(in srgb, var(--color-accent, #6366f1) 6%, var(--color-bg-secondary));
+    font-size: 0.82rem;
+    list-style: none;
+  }
+
+  .news-date-group-header:first-child {
+    margin-top: 0;
+  }
+
+  .news-group-check {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-accent, #6366f1);
+  }
+
+  .news-date-group-label {
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .news-date-group-count {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+  }
+
+  .news-date-group-item {
+    border-left: 2px solid color-mix(in srgb, var(--color-accent, #6366f1) 20%, transparent);
+  }
 </style>
 
 <script>
@@ -404,6 +513,14 @@ const categoryOptions = Array.from(
         } else {
           item.style.display = 'none';
         }
+      });
+
+      // Show/hide date group headers based on whether any items in that group are visible
+      list.querySelectorAll<HTMLElement>('.news-date-group-header').forEach((header) => {
+        const date = header.dataset.groupDate;
+        const groupItems = list.querySelectorAll<HTMLElement>(`.news-date-group-item[data-publish-date="${date}"]`);
+        const anyVisible = Array.from(groupItems).some((item) => item.style.display !== 'none');
+        header.style.display = anyVisible ? '' : 'none';
       });
 
       if (noResults) noResults.hidden = visibleCount > 0;
@@ -499,8 +616,32 @@ const categoryOptions = Array.from(
 
     checkboxes.forEach((cb) => cb.addEventListener('change', updateBulkBar));
 
+    // Group checkbox: toggle all items in that date group
+    list.querySelectorAll<HTMLInputElement>('.news-group-check').forEach((groupCb) => {
+      groupCb.addEventListener('change', () => {
+        const date = groupCb.dataset.groupDate;
+        list.querySelectorAll<HTMLInputElement>(`.news-bulk-check[data-group-date="${date}"]`).forEach((cb) => {
+          cb.checked = groupCb.checked;
+        });
+        updateBulkBar();
+      });
+    });
+
+    // Update group checkbox when individual items change
+    checkboxes.forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const date = (cb as HTMLInputElement).dataset.groupDate;
+        if (!date) return;
+        const groupItems = list.querySelectorAll<HTMLInputElement>(`.news-bulk-check[data-group-date="${date}"]`);
+        const allChecked = Array.from(groupItems).every((c) => c.checked);
+        const groupCb = list.querySelector<HTMLInputElement>(`.news-group-check[data-group-date="${date}"]`);
+        if (groupCb) groupCb.checked = allChecked;
+      });
+    });
+
     document.getElementById('bulk-deselect')?.addEventListener('click', () => {
       checkboxes.forEach((cb) => { cb.checked = false; });
+      list.querySelectorAll<HTMLInputElement>('.news-group-check').forEach((cb) => { cb.checked = false; });
       updateBulkBar();
     });
 
