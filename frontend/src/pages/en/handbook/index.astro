@@ -20,17 +20,15 @@ const PREVIEW_COUNT = 4;
 const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
 
 const handbookTags: Record<string, string> = {
-  'ai-ml': 'ChatGPT · Deep Learning · Neural Net · Prompt',
-  'db-data': 'SQL · NoSQL · Redis · Vector DB',
-  backend: 'API · Server · REST · Microservices',
-  'frontend-ux': 'React · CSS · Responsive · Dark Mode',
-  network: 'HTTP · DNS · CDN · Load Balancing',
-  security: 'Login · Encryption · Token · Firewall',
-  'os-core': 'CPU · Memory · Process · Linux',
-  devops: 'Docker · CI/CD · Deploy · Monitoring',
-  performance: 'Cache · Speed · Optimization · Cost',
-  web3: 'Blockchain · NFT · Smart Contract · Wallet',
-  'ai-business': 'AI Trends · Automation · Startup · Investment',
+  'cs-fundamentals': 'API · SQL · OAuth · Data Structures',
+  'math-statistics': 'PCA · Probability · Entropy · Linear Algebra',
+  'ml-fundamentals': 'SVM · Decision Tree · Overfitting · Cross-validation',
+  'deep-learning': 'CNN · Transformer · GAN · Diffusion Model',
+  'llm-genai': 'RAG · Prompt Engineering · RLHF · Agent',
+  'data-engineering': 'ETL · Vector DB · Spark · Parquet',
+  'infra-hardware': 'GPU · CUDA · Kubernetes · Quantization',
+  'safety-ethics': 'AI Alignment · Adversarial Attack · Regulation',
+  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
 };
 
 // User reading history & bookmarks

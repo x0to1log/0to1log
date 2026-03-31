@@ -1,130 +1,108 @@
 import type { Locale } from '../i18n/index';
 
 export type HandbookCategorySlug =
-  | 'ai-ml'
-  | 'db-data'
-  | 'backend'
-  | 'frontend-ux'
-  | 'network'
-  | 'security'
-  | 'os-core'
-  | 'devops'
-  | 'performance'
-  | 'web3'
-  | 'ai-business';
+  | 'cs-fundamentals'
+  | 'math-statistics'
+  | 'ml-fundamentals'
+  | 'deep-learning'
+  | 'llm-genai'
+  | 'data-engineering'
+  | 'infra-hardware'
+  | 'safety-ethics'
+  | 'products-platforms';
 
 const HANDBOOK_CATEGORIES: Record<
   HandbookCategorySlug,
   { label: Record<Locale, string>; description: Record<Locale, string> }
 > = {
-  web3: {
+  'cs-fundamentals': {
     label: {
-      en: 'Decentralization / Web3',
-      ko: '탈중앙화 / Web3',
+      en: 'CS Fundamentals',
+      ko: 'CS 기초',
     },
     description: {
-      en: 'Blockchain, smart contracts, decentralization, tokens',
-      ko: '블록체인, 스마트 컨트랙트, 탈중앙화, 토큰',
+      en: 'Programming, data structures, algorithms, networking, OS, web basics',
+      ko: '프로그래밍, 자료구조, 알고리즘, 네트워크, OS, 웹 기초',
     },
   },
-  'ai-ml': {
+  'math-statistics': {
     label: {
-      en: 'AI/ML & Algorithms',
-      ko: 'AI/ML & 알고리즘',
+      en: 'Math & Statistics',
+      ko: '수학 · 통계',
     },
     description: {
-      en: 'ML models, neural networks, training, AI algorithms',
-      ko: 'ML 모델, 신경망, 학습, AI 알고리즘',
+      en: 'Linear algebra, probability, statistics, information theory',
+      ko: '선형대수, 확률, 통계, 정보이론',
     },
   },
-  performance: {
+  'ml-fundamentals': {
     label: {
-      en: 'Performance / Cost Management',
-      ko: '성능 / 비용 관리',
+      en: 'ML Fundamentals',
+      ko: 'ML 기초',
     },
     description: {
-      en: 'Optimization, caching, cost management, scaling',
-      ko: '최적화, 캐싱, 비용 관리, 확장성',
+      en: 'Classical ML algorithms, learning theory, evaluation methods',
+      ko: '전통 ML 알고리즘, 학습 이론, 평가 방법',
     },
   },
-  devops: {
+  'deep-learning': {
     label: {
-      en: 'DevOps / Operations',
-      ko: 'DevOps / 운영',
+      en: 'Deep Learning',
+      ko: '딥러닝',
     },
     description: {
-      en: 'CI/CD, containers, orchestration, monitoring',
-      ko: 'CI/CD, 컨테이너, 오케스트레이션, 모니터링',
+      en: 'Neural network architectures, training techniques, vision, audio',
+      ko: '신경망 아키텍처, 학습 기법, 비전, 오디오',
     },
   },
-  'frontend-ux': {
+  'llm-genai': {
     label: {
-      en: 'Frontend & UX/UI',
-      ko: '프론트엔드 & UX/UI',
+      en: 'LLM & Generative AI',
+      ko: 'LLM · 생성AI',
     },
     description: {
-      en: 'UI frameworks, rendering, user experience, accessibility',
-      ko: 'UI 프레임워크, 렌더링, 사용자 경험, 접근성',
+      en: 'Large language models, generative AI, agents, RLHF, multimodal',
+      ko: '대형 언어 모델, 생성AI, 에이전트, RLHF, 멀티모달',
     },
   },
-  backend: {
+  'data-engineering': {
     label: {
-      en: 'Backend / Service Architecture',
-      ko: '백엔드 / 서비스 아키텍처',
+      en: 'Data Engineering',
+      ko: '데이터 엔지니어링',
     },
     description: {
-      en: 'Server architecture, APIs, microservices, messaging',
-      ko: '서버 아키텍처, API, 마이크로서비스, 메시징',
+      en: 'Data pipelines, storage, processing, formats',
+      ko: '데이터 파이프라인, 저장소, 처리, 포맷',
     },
   },
-  security: {
+  'infra-hardware': {
     label: {
-      en: 'Security / Access Control',
-      ko: '보안 / 접근 제어',
+      en: 'Infra & Hardware',
+      ko: '인프라 · 하드웨어',
     },
     description: {
-      en: 'Authentication, encryption, access control, vulnerabilities',
-      ko: '인증, 암호화, 접근 제어, 취약점',
+      en: 'GPU, cloud, MLOps, deployment, optimization',
+      ko: 'GPU, 클라우드, MLOps, 배포, 최적화',
     },
   },
-  'db-data': {
+  'safety-ethics': {
     label: {
-      en: 'DB / Data Infrastructure',
-      ko: 'DB / 데이터 인프라',
+      en: 'AI Safety & Ethics',
+      ko: 'AI 안전 · 윤리',
     },
     description: {
-      en: 'Databases, data infrastructure, indexing, storage',
-      ko: '데이터베이스, 데이터 인프라, 인덱싱, 스토리지',
+      en: 'AI safety, security, alignment, regulation, fairness',
+      ko: 'AI 안전, 보안, 정렬, 규제, 공정성',
     },
   },
-  network: {
+  'products-platforms': {
     label: {
-      en: 'Network / Communication',
-      ko: '네트워크 / 통신',
+      en: 'Products & Platforms',
+      ko: '제품 · 플랫폼',
     },
     description: {
-      en: 'Protocols, DNS, load balancing, CDN',
-      ko: '프로토콜, DNS, 로드 밸런싱, CDN',
-    },
-  },
-  'os-core': {
-    label: {
-      en: 'OS / Core Principles',
-      ko: 'OS / 핵심 원리',
-    },
-    description: {
-      en: 'Operating systems, memory, processes, file systems',
-      ko: '운영체제, 메모리, 프로세스, 파일 시스템',
-    },
-  },
-  'ai-business': {
-    label: {
-      en: 'AI Industry & Business',
-      ko: 'AI 산업 & 비즈니스',
-    },
-    description: {
-      en: 'AI industry trends, business applications, market analysis',
-      ko: 'AI 산업 트렌드, 비즈니스 응용, 시장 분석',
+      en: 'Specific models, companies, frameworks, tools',
+      ko: '특정 모델, 기업, 프레임워크, 도구',
     },
   },
 };

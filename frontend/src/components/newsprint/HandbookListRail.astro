@@ -26,87 +26,69 @@ const editorialNote = editorialNoteProp || (isKo
   : 'A concise reference of technical terms across AI, backend, frontend, security, and operations.');
 
 const CATEGORY_ICONS: Record<string, CategoryIcon> = {
-  web3: {
-    title: 'Web3',
+  'cs-fundamentals': {
+    title: 'CS Fundamentals',
     paths: [
-      'M8 2.5 12.5 5v6L8 13.5 3.5 11V5L8 2.5Z',
-      'M8 6.2 10 7.2v2.6L8 10.8 6 9.8V7.2l2-1Z',
+      'M4 11.5 7.5 8 4 4.5',
+      'M8.5 13h5',
     ],
   },
-  'ai-ml': {
-    title: 'AI/ML',
+  'math-statistics': {
+    title: 'Math & Statistics',
+    paths: [
+      'M12 4.5H5l4 5.5-4 5.5h7',
+    ],
+  },
+  'ml-fundamentals': {
+    title: 'ML Fundamentals',
+    paths: [
+      'M3 3v10h10',
+      'M5.5 9a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6ZM8 6.5a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6ZM10.5 8a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6ZM7 11a.8.8 0 1 0 0-1.6.8.8 0 0 0 0 1.6Z',
+    ],
+  },
+  'deep-learning': {
+    title: 'Deep Learning',
+    paths: [
+      'M8 2.5 3 5l5 2.5L13 5 8 2.5Z',
+      'M3 8.5l5 2.5 5-2.5',
+      'M3 11.5l5 2.5 5-2.5',
+    ],
+  },
+  'llm-genai': {
+    title: 'LLM & GenAI',
     paths: [
       'M5 5.5h6v5H5z',
       'M8 2.5v2M8 11v2M2.5 8h2M11.5 8h2M4 4l1.2 1.2M10.8 10.8 12 12M12 4l-1.2 1.2M5.2 10.8 4 12',
     ],
   },
-  performance: {
-    title: 'Performance',
-    paths: [
-      'M3 10.5a5 5 0 0 1 10 0',
-      'M8 10.5 10.8 7.8',
-      'M5.5 13h5',
-    ],
-  },
-  devops: {
-    title: 'DevOps',
-    paths: [
-      'M4.2 5.2h4v-2.2L11.8 6l-3.6 3V6.8h-4',
-      'M11.8 10.8h-4V13L4.2 10l3.6-3v2.2h4',
-    ],
-  },
-  'frontend-ux': {
-    title: 'Frontend',
-    paths: [
-      'M3 4h10v8H3z',
-      'M3 6.5h10',
-      'M6 13.5h4',
-      'M5.2 9.2 6.8 7.6 8.4 9.2',
-    ],
-  },
-  backend: {
-    title: 'Backend',
-    paths: [
-      'M4 4.5h8v2.5H4z',
-      'M4 8.5h8V11H4z',
-      'M5.2 5.8h.01M5.2 9.8h.01',
-    ],
-  },
-  security: {
-    title: 'Security',
-    paths: [
-      'M8 3l4 1.5v3.2c0 2.4-1.6 4.6-4 5.8-2.4-1.2-4-3.4-4-5.8V4.5L8 3Z',
-      'M6.8 8V6.9a1.2 1.2 0 1 1 2.4 0V8',
-      'M6.3 8h3.4v2.3H6.3z',
-    ],
-  },
-  'db-data': {
-    title: 'Database',
+  'data-engineering': {
+    title: 'Data Engineering',
     paths: [
       'M3.5 5.2c0-1.2 2-2.2 4.5-2.2s4.5 1 4.5 2.2-2 2.2-4.5 2.2-4.5-1-4.5-2.2Z',
       'M3.5 5.2v4.6c0 1.2 2 2.2 4.5 2.2s4.5-1 4.5-2.2V5.2',
     ],
   },
-  network: {
-    title: 'Network',
-    paths: [
-      'M8 3.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-4 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z',
-      'M8 5.2v3.1M8 8.3 4.8 9.4M8 8.3l3.2 1.1',
-    ],
-  },
-  'os-core': {
-    title: 'OS',
+  'infra-hardware': {
+    title: 'Infra & Hardware',
     paths: [
       'M5 4h6v8H5z',
       'M7 2.8h2M7 13.2h2',
       'M3.8 6v4M12.2 6v4',
     ],
   },
-  'ai-business': {
-    title: 'AI Business',
+  'safety-ethics': {
+    title: 'AI Safety',
     paths: [
-      'M2 12.5 7 7.5 10.5 10 14.5 4.5',
-      'M11 3.5h4v4',
+      'M8 3l4 1.5v3.2c0 2.4-1.6 4.6-4 5.8-2.4-1.2-4-3.4-4-5.8V4.5L8 3Z',
+      'M6.8 7.5l1.2 1.2 2.4-2.4',
+    ],
+  },
+  'products-platforms': {
+    title: 'Products',
+    paths: [
+      'M8 2.5 12.5 5v6L8 13.5 3.5 11V5L8 2.5Z',
+      'M3.5 5 8 7.5 12.5 5',
+      'M8 7.5V13.5',
     ],
   },
 };

@@ -1019,28 +1019,29 @@ Respond in JSON format only."""
 EXTRACT_TERMS_PROMPT = """\
 You are a technical term extractor for 0to1log, an AI/IT/CS handbook platform.
 
-Given one or more news articles, extract terms that belong to the IT/CS/AI domain and would be valuable entries in a technology handbook for learners. Be precise — only include terms that clearly belong. If in doubt, exclude. A missed borderline term is better than a false positive that pollutes the handbook.
+Given one or more news articles, extract terms that would make strong **standalone handbook entries**. Each extracted term must be a well-defined concept that a developer or tech learner would look up in a glossary. Quality over quantity — a missed borderline term is far better than a false positive that pollutes the handbook.
 
-## Allowed domains
-- AI/ML & Algorithms (e.g., Transformer, RAG, RLHF, attention mechanism, MoE, LoRA)
-- DB / Data Infrastructure (e.g., vector database, sharding, indexing, embeddings)
-- Backend / Service Architecture (e.g., microservices, load balancing, gRPC, REST)
-- Frontend & UX/UI (e.g., server-side rendering, virtual DOM, WebAssembly)
-- Network / Communication (e.g., WebSocket, HTTP/3, CDN, edge computing)
-- Security / Access Control (e.g., zero trust, OAuth, encryption, homomorphic encryption)
-- OS / Core Principles (e.g., kernel, process scheduling, memory management)
-- DevOps / Operations (e.g., CI/CD, containerization, Kubernetes, observability)
-- Performance / Cost Management (e.g., inference cost, token limit, latency, quantization)
-- Decentralization / Web3 (e.g., smart contract, consensus mechanism)
-- AI Industry & Business — ONLY terms with a specific technical/economic definition in AI: (e.g., "inference pricing", "model licensing", "AI compute economics", "GPU cluster", "foundation model", "ARR", "TAM"). NOT generic business words that happen to appear in AI articles.
+## Categories (assign one primary + optional secondary)
+- cs-fundamentals: Programming, data structures, algorithms, networking, OS, web basics (e.g., API, SQL, OAuth, DOM, async programming, HTTP/3, B-Tree)
+- math-statistics: Math behind ML — linear algebra, probability, statistics, information theory (e.g., PCA, entropy, gradient, cross-entropy, Bayes theorem, ARIMA)
+- ml-fundamentals: Classical ML algorithms, learning theory, evaluation methods (e.g., SVM, KNN, Decision Tree, overfitting, cross-validation, reinforcement learning)
+- deep-learning: Neural network architectures, training techniques, vision, audio (e.g., CNN, RNN, Transformer, attention mechanism, GAN, diffusion model, transfer learning)
+- llm-genai: Large language models, generative AI, agents, RLHF, multimodal (e.g., RAG, tokenization, hallucination, fine-tuning, MoE, prompt engineering, agentic model)
+- data-engineering: Data pipelines, storage, processing, formats (e.g., ETL, vector database, Spark, Parquet, feature store, Kafka)
+- infra-hardware: GPU, cloud, MLOps, deployment, optimization (e.g., CUDA, FlashAttention, Kubernetes, quantization, inference cost, distributed training)
+- safety-ethics: AI safety, security, alignment, regulation, fairness (e.g., adversarial attack, AI alignment, data poisoning, supply chain vulnerability)
+- products-platforms: Specific models, companies, frameworks, tools (e.g., GPT-4o, Anthropic, PyTorch, NVIDIA Blackwell, Hugging Face)
 
 ## What to EXCLUDE
 - Generic single words without technical meaning (e.g., "performance", "data", "update", "automation", "efficiency")
 - Generic business/management concepts not specific to AI/IT (e.g., "administrative tasks", "collaborative healthcare", "funding round", "legacy infrastructure", "actionable intelligence", "cost efficiency")
+- Strategy/outcome phrases that describe WHAT companies do, not HOW technology works (e.g., "ecosystem integration", "cross-platform AI", "AI-driven efficiencies", "dynamic content delivery")
 - Company names that are NOT the technology itself (e.g., skip "OpenAI", include "GPT-4o")
 - Specific product/platform names that are too narrow (e.g., "Vera Rubin platform", "M2.7 model", "OpenClaw")
 - Terms from non-IT domains: medicine, biology, law (e.g., "interval cancer", "antitrust", "precision health")
 - Adjective/modifier phrases containing -powered, -driven, -based, -enabled, -oriented anywhere in the term (e.g., "AI-powered tools", "AI-driven efficiencies", "data-driven approach")
+- Ad-hoc compound nouns coined in a specific paper that are NOT established terms (e.g., "warping operation", "self-editing context", "verification-centric agents")
+- Over-specific sub-concepts when the parent term is the real entry (e.g., extract "attention mechanism" not "multi-head attention kernel"; extract "evolutionary algorithm" not "variation operator")
 
 ## Output JSON Structure
 
@@ -1050,45 +1051,67 @@ Given one or more news articles, extract terms that belong to the IT/CS/AI domai
     {
       "term": "Retrieval-Augmented Generation",
       "korean_name": "검색 증강 생성",
-      "category": "ai-ml",
+      "category": "llm-genai",
+      "secondary_categories": [],
       "confidence": "high",
       "reason": "Central concept in the article — readers need to understand RAG to follow the discussion"
+    },
+    {
+      "term": "Transformer",
+      "korean_name": "트랜스포머",
+      "category": "deep-learning",
+      "secondary_categories": ["llm-genai"],
+      "confidence": "high",
+      "reason": "Foundation architecture discussed in depth"
     }
   ]
 }
 ```
 
 ## Rules
-- Extract 5-15 terms per article — be thorough, cover all technical concepts mentioned
-- term: Use the standard English name
+- Extract 3-10 terms per article — prefer fewer high-quality terms over many borderline ones
+- term: Use the **canonical English name** (the established, widely-recognized form)
 - korean_name: Standard Korean translation
-- category: One of: ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
-- confidence: "high" (clearly an IT/AI/CS term, no doubt) or "low" (probably relevant but borderline — e.g., could be too generic, too niche, or domain-ambiguous)
+- category: Primary category. One of: cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, data-engineering, infra-hardware, safety-ethics, products-platforms
+- secondary_categories: Optional array of additional categories (for terms that span multiple domains, e.g., Transformer → ["deep-learning", "llm-genai"]). Omit if only one category applies.
+- confidence: Use the 5-point self-check below to decide.
+  - "high": YES to all 5 checks — established technical term, clearly standalone-worthy
+  - "low": YES to checks 1-3 but uncertain on check 4 or 5 — might be ad-hoc, might overlap with a broader term, might lack depth for a full entry. These go to manual review queue instead of auto-generation.
 - reason: 1 sentence explaining why this term is handbook-worthy based on the article context
 - Order by importance (most central to the article first)
-- When in doubt, INCLUDE the term — a borderline technical term is more valuable than a missed one
 - Do NOT extract multi-word phrases longer than 3 words
 
 ## Self-check before including each term
-For EACH candidate term, verify ALL three:
+For EACH candidate term, verify ALL FIVE:
 1. Is it specific to IT/AI/CS? (not a generic business or domain term)
 2. Would a developer or tech learner search for this in a glossary?
 3. Does it have a technical definition beyond its everyday meaning?
+4. Is it an **established term** used across multiple papers/products? (not coined in one article)
+5. Can it sustain a standalone handbook entry with 2000+ chars of unique technical content?
 If NO to any → exclude it.
 
 Examples:
-- "Transformer" → YES YES YES ✓
-- "fine-tuning" → YES YES YES ✓
-- "RAG" → YES YES YES ✓
-- "quantization" → YES YES YES ✓
-- "vLLM" → YES YES YES ✓
-- "inference pricing" → YES YES YES ✓ (specific AI economics term)
+- "Transformer" → YES to all 5 ✓
+- "fine-tuning" → YES to all 5 ✓
+- "RAG" → YES to all 5 ✓
+- "quantization" → YES to all 5 ✓
+- "vLLM" → YES to all 5 ✓
+- "inference pricing" → YES to all 5 ✓ (specific AI economics term)
+- "mixture of experts" → YES to all 5 ✓ (established architecture)
+- "grouped-query attention" → YES to all 5 ✓ (established Transformer variant)
 - "AI-powered" → NO (adjective, not a concept)
-- "AI-driven efficiencies" → NO (adjective phrase)
+- "AI-driven efficiencies" → NO (adjective + outcome phrase)
+- "ecosystem integration" → NO (business strategy, not technology)
+- "warping operation" → NO (ad-hoc compound, not an established term)
+- "variation operator" → NO (sub-concept of evolutionary algorithm)
+- "multi-head attention kernel" → NO (over-specific; "multi-head attention" is the real term)
+- "self-editing context" → NO (coined in one paper, not established)
 - "administrative tasks" → NO (not IT/CS)
 - "collaborative healthcare" → NO (medical domain)
 - "funding round" → NO (generic finance)
 - "legacy infrastructure" → NO (too vague)
+- "gaming industry" → NO (industry name, not technology)
+- "image generation" → NO (too broad, describes an outcome)
 - "Vera Rubin platform" → NO (specific product, too narrow)
 - "deep learning" → YES (extract broad term, not "Deep Learning Architecture")
 
@@ -1102,8 +1125,10 @@ If the meaning is clear from context (e.g., ML paper discussing "embeddings"), k
 
 ## Final verification
 Before outputting, re-read your term list and remove any term that:
-- Could appear in a non-technical business article
+- Could appear in a non-technical business article without changing meaning
 - Is a modifier/adjective phrase
-- Describes an outcome rather than a technology ("cost efficiency", "actionable intelligence")
+- Describes an outcome or strategy rather than a technology
+- Was coined in the article being analyzed and has no presence outside it
+- Is a sub-concept that would overlap 80%+ with a broader term already in your list
 
 Respond in JSON format only."""

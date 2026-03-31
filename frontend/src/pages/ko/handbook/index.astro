@@ -20,17 +20,15 @@ const PREVIEW_COUNT = 4;
 const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
 
 const handbookTags: Record<string, string> = {
-  'ai-ml': 'ChatGPT · 딥러닝 · 신경망 · 프롬프트',
-  'db-data': 'SQL · NoSQL · Redis · 벡터 DB',
-  backend: 'API · 서버 · REST · 마이크로서비스',
-  'frontend-ux': 'React · CSS · 반응형 · 다크모드',
-  network: 'HTTP · DNS · CDN · 로드밸런싱',
-  security: '로그인 · 암호화 · 토큰 · 방화벽',
-  'os-core': 'CPU · 메모리 · 프로세스 · 리눅스',
-  devops: 'Docker · CI/CD · 배포 · 모니터링',
-  performance: '캐시 · 속도 · 최적화 · 비용 절감',
-  web3: '블록체인 · NFT · 스마트컨트랙트 · 지갑',
-  'ai-business': 'AI 트렌드 · 자동화 · 스타트업 · 투자',
+  'cs-fundamentals': 'API · SQL · OAuth · 자료구조',
+  'math-statistics': 'PCA · 확률 · 엔트로피 · 선형대수',
+  'ml-fundamentals': 'SVM · 결정 트리 · 과적합 · 교차검증',
+  'deep-learning': 'CNN · Transformer · GAN · 확산 모델',
+  'llm-genai': 'RAG · 프롬프트 엔지니어링 · RLHF · 에이전트',
+  'data-engineering': 'ETL · 벡터 DB · Spark · Parquet',
+  'infra-hardware': 'GPU · CUDA · Kubernetes · 양자화',
+  'safety-ethics': 'AI 정렬 · 적대적 공격 · 규제',
+  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
 };
 
 // User reading history & bookmarks

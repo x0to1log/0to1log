@@ -1,7 +1,7 @@
 # ACTIVE SPRINT — News Pipeline v4 Quality Stabilization (NP4-Q)
 
 > **스프린트 기간:** 2026-03-15~진행 중 (NP4-Q phase)
-> **마지막 업데이트:** 2026-03-26 17:45 (+27 commits since 2026-03-19, 48+/50 tasks complete)
+> **마지막 업데이트:** 2026-03-31 (핸드북 품질 감사 HQ-01~08 추가)
 > **목표:** AI News Pipeline v4 (2 페르소나 × 2 언어) 품질 안정화 + 프롬프트 감사 + 뉴스레터/대시보드 구축
 > **설계 참조:** [[AI-News-Pipeline-Design]], [[plans/2026-03-16-daily-digest-design]], [[plans/2026-03-25-direct-fastapi-ai-calls]], [[plans/2026-03-26-news-quality-check-overhaul]]
 > **이전 스프린트:** Phase 3B-SHARE — 2026-03-13 게이트 전체 통과
@@ -40,6 +40,7 @@
 | README-01 | 프로젝트 README 작성 | in_progress | 2026-03-26 | 2026-03-27 |
 | UA-02~05 | User Analytics — Site Analytics 차트 추가 | in_progress | 2026-03-27 | 2026-03-28 |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | 2026-03-27 | 2026-03-29 |
+| HQ-01~02 | 핸드북 Hallucination 수정 + 비기술 용어 정리 | todo | 2026-03-31 | — |
 
 ---
 
@@ -115,6 +116,51 @@
 | WEEKLY-FE-01 | todo | Weekly 탭 프론트 통합 | 백엔드 완료 ✅ |
 | AUTOPUB-01 | monitoring | Quality ≥80 자동 발행 + 어드민 토글 | 3일 연속 90+ 확인 후 구현 |
 | COMMUNITY-01 | todo | Reddit/HN/X 반응 수집 (선택) | 선택사항 |
+
+### HIGH PRIORITY — 핸드북 콘텐츠 품질 (HQ)
+
+> **설계 문서:** [[plans/2026-03-31-handbook-quality-audit]]
+> **배경:** 3/31 published 138개 중 24개 샘플링 심층 분석에서 도출. 3/25 전후 품질 격차 심각.
+
+| Task | 상태 | 목표 | 우선도 |
+|------|------|------|--------|
+| HQ-01 | todo | Hallucination 즉시 수정 — stereo matching 정의, ecosystem integration adv | P0 |
+| HQ-02 | todo | 비기술 용어 archived 처리 — actionable intelligence, AI-driven efficiencies, warping operation 등 | P0 |
+| HQ-03 | todo | 구세대 핵심 용어 재생성 — embedding, reinforcement learning 등 현재 파이프라인으로 regenerate | P1 |
+| HQ-04 | done | 용어 적합성 필터 추가 — 프롬프트 5-point self-check + 코드 blocklist/suffix 필터 | P1 |
+| HQ-05 | todo | quality_scores 저장 버그 수정 — 최근 용어에 점수 미기록 원인 파악 | P1 |
+| HQ-06 | todo | 콘텐츠 최소 기준 코드화 — basic ≥2500자, adv ≥7000자, 비교표/수식 체크 | P2 |
+| HQ-07 | todo | 레퍼런스 다양성 제어 — 같은 batch 동일 URL 인용 비율 제한 | P2 |
+| HQ-08 | todo | 중복 용어 병합 — variation operator → evolutionary search 등 | P2 |
+| HQ-09 | done | 카테고리 재설계 — 11개→9개, 프롬프트+파이프라인+프론트엔드+DB 212개 마이그레이션 완료 | P1 |
+
+#### HQ-09 카테고리 재설계 — 배경 노트
+
+**현재 문제:** ai-ml에 172/212개(81%) 집중, os-core/web3/network 사문, CS 기초 29개 미분류.
+**목표:** "CS 기초 → AI 최전선" 학습 경로를 카테고리로 표현.
+
+**새 카테고리 (9개, 다중 태깅 허용):**
+
+| # | ID | 커버 | 예시 |
+|---|-----|------|------|
+| 1 | cs-fundamentals | 프로그래밍, 자료구조, 네트워크, OS, 웹 | API, SQL, OAuth, DOM, async, B-Tree |
+| 2 | math-statistics | ML 뒤의 수학, 확률, 정보이론 | PCA, entropy, gradient, Bayes, ARIMA |
+| 3 | ml-fundamentals | 전통 ML, 학습 이론, 평가 | SVM, KNN, overfitting, cross-validation |
+| 4 | deep-learning | 신경망 아키텍처, 학습 기법, 비전 | CNN, RNN, Transformer, GAN, diffusion model |
+| 5 | llm-genai | LLM, 생성AI, 에이전트, RLHF | RAG, hallucination, fine-tuning, MoE, prompt engineering |
+| 6 | data-engineering | 파이프라인, 저장소, 포맷 | ETL, vector DB, Spark, Parquet, Kafka |
+| 7 | infra-hardware | GPU, 클라우드, MLOps, 배포 | CUDA, FlashAttention, K8s, quantization, inference cost |
+| 8 | safety-ethics | 보안, 정렬, 규제, 공정성 | adversarial attack, AI alignment, data poisoning |
+| 9 | products-platforms | 특정 모델, 기업, 프레임워크 | GPT-4o, Anthropic, PyTorch, NVIDIA Blackwell |
+
+**주의:** math-statistics는 뉴스 파이프라인에서 잘 안 채워짐 (수동 추가 필요). products-platforms는 유통기한 짧아 주기적 정리 필요.
+
+**구현 범위:**
+- 프롬프트: EXTRACT_TERMS_PROMPT의 allowed domains + category enum 변경
+- 파이프라인: VALID_CATEGORIES 상수 변경
+- DB: 기존 212개 용어 categories 배열 마이그레이션 스크립트
+- 프론트엔드: 핸드북 필터 UI 카테고리 목록 변경
+- 경계 용어 다중 태깅: Transformer→[deep-learning, llm-genai], fine-tuning→[ml-fundamentals, llm-genai] 등
 
 ### 품질 점수 모니터링 (AUTOPUB-01 전제조건)
 
