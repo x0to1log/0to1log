@@ -58,7 +58,7 @@ if (supabase) {
     .select('term, slug, korean_name, definition_en, view_count')
     .eq('status', 'published')
     .order('view_count', { ascending: false })
-    .limit(5);
+    .limit(10);
   popularTerms = data ?? [];
 }
 if (popularTerms.length === 0 || popularTerms.every((t: any) => !t.view_count)) {
@@ -68,7 +68,7 @@ if (popularTerms.length === 0 || popularTerms.every((t: any) => !t.view_count)) 
       .select('term, slug, korean_name, definition_en')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .limit(5);
+      .limit(10);
     popularTerms = data ?? [];
   }
 }
@@ -109,20 +109,20 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       />
     </div>
 
-    {/* Popular Terms */}
-    {railTerms.length > 0 && (
+    {/* Trending Terms */}
+    {popularTerms.length > 0 && (
       <section class="handbook-trending">
-        <h3 class="handbook-trending-title">Popular Terms</h3>
-        <div class="newsprint-stack">
-          {railTerms.map((pt: any) => (
-            <a class="newsprint-card" href={`/${locale}/handbook/${pt.slug}/`}>
-              <span class="newsprint-keyword-row">
-                <strong class="newsprint-rail-link">{pt.term}</strong>
-              </span>
-              {pt.definition_en && <p class="newsprint-related-summary">{pt.definition_en}</p>}
-            </a>
+        <h3 class="handbook-trending-title">Trending Terms</h3>
+        <ol class="handbook-trending-list">
+          {popularTerms.map((pt: any, i: number) => (
+            <li>
+              <a href={`/${locale}/handbook/${pt.slug}/`} class="handbook-trending-link">
+                <span class="handbook-trending-rank">{i + 1}</span>
+                <span>{pt.term}</span>
+              </a>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
     )}
 
