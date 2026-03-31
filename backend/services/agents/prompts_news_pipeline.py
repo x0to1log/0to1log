@@ -243,7 +243,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE RULES: (1) Format each thread as: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then add quotes if available. Example EN: `**r/MachineLearning** (530 upvotes) — Cautious optimism around the 3.2x speedup.` Example KO: `**r/MachineLearning** (530 upvotes) — 3.2배 속도 향상에 대해 기대와 신중한 반응이 교차.` (2) Include direct `>` quotes ONLY if the provided data contains relevant, substantive comments. Each quote MUST end with attribution on the next line: `> — Reddit` or `> — Hacker News`. If comments are off-topic or low-quality, write the sentiment summary WITHOUT quotes — the summary alone is sufficient. (3) NEVER fabricate or paraphrase quotes that do not exist in the provided data. (4) Only omit this section if NO community threads were found at all. (5) Only attribute to "Reddit" or "Hacker News". (6) In KO, translate or paraphrase quotes into natural Korean — do NOT leave English quotes in Korean content. Keep the same attribution (Reddit/Hacker News).
+15. COMMUNITY PULSE RULES: (1) When "Community Pulse Data" is provided in the input, write a ## Community Pulse section using the provided sentiment, quotes, and key discussion point. (2) Format: `**Platform** — sentiment summary incorporating the key discussion point.` Then include provided quotes as `>` blockquotes with attribution (`> — Reddit` or `> — Hacker News`). Determine attribution from the Platform field (HN = Hacker News, r/ = Reddit). (3) Use ALL provided quotes exactly as given — do NOT skip, add, fabricate, or paraphrase quotes. (4) In KO, translate quotes into natural Korean. Keep the same attribution (Reddit/Hacker News). (5) Omit this section only if no Community Pulse Data was provided.
 {handbook_section}
 
 ## Output JSON format
@@ -283,7 +283,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
-9. Community Pulse: if community thread data was provided, is CP present in BOTH en and ko with a sentiment summary? If CP contains fabricated quotes not from the input data, REMOVE the quotes (keep the summary).
+9. Community Pulse: if Community Pulse Data was provided, is CP present in BOTH en and ko? Are ALL provided quotes included exactly? No fabricated or extra quotes?
 10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
 11. Supporting story minimum: scan ALL non-lead news items. If any item (expert OR learner) has fewer than 3 paragraphs, EXPAND it before responding. A 1-2 paragraph item is never acceptable.
 
@@ -1147,3 +1147,37 @@ Pick exactly 1 lead (rarely 2 if truly equal importance). All others are support
 Order supporting by importance (most important first).
 
 {{"lead": ["url1"], "supporting": ["url2", "url3", "url4", "url5"]}}"""
+
+# ---------------------------------------------------------------------------
+# Community Summarizer
+# ---------------------------------------------------------------------------
+
+COMMUNITY_SUMMARIZER_PROMPT = """You are an AI community analyst. Given community discussion data (Hacker News / Reddit) for news articles, extract structured insights.
+
+For each group provided below, analyze the comments and produce:
+
+1. **sentiment**: overall tone of the discussion — one of "positive", "mixed", "negative", or "neutral"
+2. **quotes**: pick 0-2 BEST representative comments from the provided data
+   - If opinions are divided: pick 1 from each side (max 2)
+   - If opinions agree: pick the single best (max 1)
+   - If all comments are low-quality, off-topic, or just links: pick 0
+   - Quotes MUST be copied EXACTLY from the input — do NOT paraphrase, shorten, or combine
+3. **key_point**: 1 sentence summarizing the main discussion theme (in English)
+   - Capture what the community actually cares about, not what the article says
+   - If no meaningful discussion exists: null
+
+## Input Groups
+
+{groups_text}
+
+## Output JSON (strict)
+
+Return ONLY valid JSON, no markdown fences:
+
+{{"groups": {{
+  "<group_key>": {{
+    "sentiment": "mixed",
+    "quotes": ["exact quote 1", "exact quote 2"],
+    "key_point": "Performance praised but pricing concerns dominate"
+  }}
+}}}}"""

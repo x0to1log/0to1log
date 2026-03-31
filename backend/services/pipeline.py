@@ -11,6 +11,7 @@ from core.config import settings, today_kst
 from core.database import get_supabase
 from models.news_pipeline import (
     ClassifiedGroup,
+    CommunityInsight,
     PersonaOutput,
     PipelineResult,
 )
@@ -20,7 +21,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
-from services.agents.ranking import classify_candidates, merge_classified, rank_classified
+from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
 logger = logging.getLogger(__name__)
@@ -367,15 +368,35 @@ async def _extract_and_create_handbook_terms(
     terms_created = 0
     errors: list[str] = []
 
-    # Combine article texts for extraction
     combined = "\n\n---\n\n".join(article_texts)
     if not combined.strip():
         return 0, []
 
-    # Step 1: Extract terms
+    # Step 1: Extract terms per article independently, then merge
     t0 = time.monotonic()
+    all_extracted: list[dict] = []
+    total_usage: dict = {}
     try:
-        extracted, extract_usage = await extract_terms_from_content(combined)
+        results = await asyncio.gather(
+            *[extract_terms_from_content(text) for text in article_texts if text.strip()],
+            return_exceptions=True,
+        )
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning("Handbook term extraction failed for one article: %s", result)
+                continue
+            terms, usage = result
+            all_extracted.extend(terms)
+            total_usage = merge_usage_metrics(total_usage, usage) if total_usage else usage
+
+        # Deduplicate across articles: keep first occurrence by lowercase term
+        seen_terms: set[str] = set()
+        extracted: list[dict] = []
+        for t in all_extracted:
+            key = t.get("term", "").strip().lower()
+            if key and key not in seen_terms:
+                seen_terms.add(key)
+                extracted.append(t)
     except Exception as e:
         logger.warning("Handbook term extraction failed: %s", e)
         await _log_stage(
@@ -387,8 +408,8 @@ async def _extract_and_create_handbook_terms(
     await _log_stage(
         supabase, run_id, "handbook.extract", "success", t0,
         input_summary=f"{len(article_texts)} articles, {len(combined)} chars",
-        output_summary=f"{len(extracted)} terms extracted",
-        usage=extract_usage,
+        output_summary=f"{len(extracted)} terms extracted (from {len(all_extracted)} raw)",
+        usage=total_usage,
         debug_meta={
             "terms": [t.get("term", "") for t in extracted],
         },
@@ -489,6 +510,49 @@ async def _extract_and_create_handbook_terms(
             logger.info("Queuing low-confidence term '%s' for manual review", term_name)
         else:
             valid_terms.append((term_name, korean_name, slug))
+
+    # Semantic dedup within batch: remove terms that overlap with others
+    def _term_words(name: str) -> set[str]:
+        """Extract significant words from a term name for similarity comparison."""
+        # General stop words + domain-common words too generic to signal similarity
+        stop = {
+            "the", "a", "an", "of", "in", "for", "and", "or", "with", "on", "to",
+            "ai", "ml", "gpu", "cpu", "model", "system", "based", "deep", "large",
+        }
+        return {w for w in name.lower().replace("-", " ").split() if w not in stop and len(w) > 1}
+
+    def _is_semantic_dup(term_a: str, term_b: str) -> bool:
+        """Check if two terms are semantically overlapping."""
+        slug_a, slug_b = _slugify(term_a), _slugify(term_b)
+        # One slug contains the other (e.g., "attention" vs "grouped-query attention")
+        if slug_a in slug_b or slug_b in slug_a:
+            return True
+        # High word overlap (e.g., "agentic model" vs "agentic AI")
+        words_a, words_b = _term_words(term_a), _term_words(term_b)
+        if not words_a or not words_b:
+            return False
+        overlap = words_a & words_b
+        if not overlap:
+            return False
+        smaller = min(len(words_a), len(words_b))
+        if smaller <= 1:
+            # Both terms have only 1 significant word and it's the same
+            # e.g., "agentic model" (→ {"agentic"}) vs "agentic AI" (→ {"agentic"})
+            return words_a == words_b and len(words_a) == 1
+        return len(overlap) / smaller >= 0.5
+
+    # Deduplicate valid_terms: keep the first (higher priority from LLM ordering)
+    deduped_valid: list[tuple[str, str, str]] = []
+    for term_name, korean_name, slug in valid_terms:
+        is_dup = False
+        for existing_name, _, _ in deduped_valid:
+            if _is_semantic_dup(term_name, existing_name):
+                logger.info("Skipping '%s' — semantic duplicate of '%s'", term_name, existing_name)
+                is_dup = True
+                break
+        if not is_dup:
+            deduped_valid.append((term_name, korean_name, slug))
+    valid_terms = deduped_valid
 
     # Generate terms concurrently (max 2 at a time)
     sem = asyncio.Semaphore(2)
@@ -728,7 +792,7 @@ async def _generate_digest(
     batch_id: str,
     handbook_slugs: list[str],
     raw_content_map: dict[str, str],
-    community_map: dict[str, str],
+    community_summary_map: dict[str, "CommunityInsight"],
     supabase,
     run_id: str,
     enriched_map: dict[str, list[dict]] | None = None,
@@ -779,13 +843,18 @@ async def _generate_digest(
                 continue
             body_block = "\n\n".join(source_blocks)
 
-        # Collect community from any URL in the group
-        community = ""
-        for item in group.items:
-            community = community_map.get(item.url, "")
-            if community:
-                break
-        community_block = f"\n\nCommunity Reactions (Reddit/HN):\n{community[:1000]}" if community else ""
+        # Collect structured community insight for this group
+        insight = community_summary_map.get(group.primary_url)
+        community_block = ""
+        if insight and (insight.quotes or insight.key_point):
+            parts = ["Community Pulse Data:"]
+            parts.append(f"Platform: {insight.source_label}")
+            parts.append(f"Sentiment: {insight.sentiment}")
+            for q in insight.quotes:
+                parts.append(f'Quote: "{q}"')
+            if insight.key_point:
+                parts.append(f"Key Discussion: {insight.key_point}")
+            community_block = "\n\n" + "\n".join(parts)
         role_tag = "[LEAD]" if group.reason.startswith("[LEAD]") else "[SUPPORTING]"
         news_items.append(
             f"### {role_tag} [{group.subcategory}] {group.group_title}\n\n"
@@ -1363,6 +1432,22 @@ async def run_daily_pipeline(
             "community_map": community_map,
         })
 
+        # Stage: community_summarize (structured insights from raw comments)
+        t0 = time.monotonic()
+        community_summary_map, community_summarize_usage = await summarize_community(
+            community_map, all_classified,
+        )
+        cumulative_usage = merge_usage_metrics(cumulative_usage, community_summarize_usage)
+        await _log_stage(
+            supabase, run_id, "community_summarize", "success", t0,
+            input_summary=f"{len(community_map)} raw reactions",
+            output_summary=f"{len(community_summary_map)} insights produced",
+            usage=community_summarize_usage,
+        )
+        _save_checkpoint(supabase, run_id, "community_summarize", {
+            "summaries": {url: ins.model_dump() for url, ins in community_summary_map.items()},
+        })
+
         # Stage: ranking (Lead/Supporting assignment per category)
         t0 = time.monotonic()
         research_ranked, research_rank_usage = await rank_classified(
@@ -1427,7 +1512,7 @@ async def run_daily_pipeline(
                     batch_id=batch_id,
                     handbook_slugs=handbook_slugs,
                     raw_content_map=raw_content_map,
-                    community_map=community_map,
+                    community_summary_map=community_summary_map,
                     supabase=supabase,
                     run_id=run_id,
                     enriched_map=enriched_map,
@@ -1528,24 +1613,24 @@ async def rerun_pipeline_stage(
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
     """
-    from models.news_pipeline import ClassifiedCandidate, ClassificationResult, NewsCandidate
+    from models.news_pipeline import ClassifiedCandidate, ClassificationResult, CommunityInsight, NewsCandidate
 
     supabase = get_supabase()
     run_id = source_run_id  # Reuse existing run
 
     # Delete logs from the rerun stage onward
     STAGE_CASCADE = {
-        "classify": ["classify", "merge", "community", "ranking", "enrich",
+        "classify": ["classify", "merge", "community", "community_summarize", "ranking", "enrich",
                       "digest:research:expert", "digest:research:learner",
                       "digest:business:expert", "digest:business:learner",
                       "quality:research", "quality:business",
                       "save:research", "save:business", "summary"],
-        "merge": ["merge", "community", "ranking", "enrich",
+        "merge": ["merge", "community", "community_summarize", "ranking", "enrich",
                   "digest:research:expert", "digest:research:learner",
                   "digest:business:expert", "digest:business:learner",
                   "quality:research", "quality:business",
                   "save:research", "save:business", "summary"],
-        "community": ["community", "ranking", "enrich",
+        "community": ["community", "community_summarize", "ranking", "enrich",
                       "digest:research:expert", "digest:research:learner",
                       "digest:business:expert", "digest:business:learner",
                       "quality:research", "quality:business",
@@ -1643,6 +1728,19 @@ async def rerun_pipeline_stage(
             await _log_stage(supabase, run_id, "community", "success", t0,
                              output_summary=f"{len(community_map)} reactions")
 
+            # Community Summarize
+            t0 = time.monotonic()
+            community_summary_map, cs_usage = await summarize_community(
+                community_map, all_classified,
+            )
+            cumulative_usage = merge_usage_metrics(cumulative_usage, cs_usage)
+            _save_checkpoint(supabase, run_id, "community_summarize", {
+                "summaries": {url: ins.model_dump() for url, ins in community_summary_map.items()},
+            })
+            await _log_stage(supabase, run_id, "community_summarize", "success", t0,
+                             output_summary=f"{len(community_summary_map)} insights",
+                             usage=cs_usage)
+
             # Rank
             t0 = time.monotonic()
             r_ranked, r_usage = await rank_classified(classification.research, "research", community_map)
@@ -1672,6 +1770,17 @@ async def rerun_pipeline_stage(
             community_data = _load_checkpoint(supabase, source_run_id, "community")
             community_map = community_data.get("community_map", {}) if community_data else {}
 
+            cs_data = _load_checkpoint(supabase, source_run_id, "community_summarize")
+            if cs_data and cs_data.get("summaries"):
+                community_summary_map = {
+                    url: CommunityInsight(**ins_data)
+                    for url, ins_data in cs_data["summaries"].items()
+                }
+            else:
+                # Fallback: run summarizer on loaded community_map
+                all_classified = classification.research + classification.business
+                community_summary_map, _ = await summarize_community(community_map, all_classified)
+
             rank_data = _load_checkpoint(supabase, source_run_id, "rank")
             if rank_data:
                 classification.research = [ClassifiedGroup(**g) for g in rank_data.get("research", [])]
@@ -1699,7 +1808,7 @@ async def rerun_pipeline_stage(
                     batch_id=batch_id,
                     handbook_slugs=handbook_slugs,
                     raw_content_map=raw_content_map,
-                    community_map=community_map,
+                    community_summary_map=community_summary_map,
                     supabase=supabase,
                     run_id=run_id,
                     enriched_map=enriched_map,

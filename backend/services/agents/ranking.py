@@ -1,11 +1,21 @@
 """LLM-based news candidate ranking agent."""
 import logging
+import re
 from typing import Any
 
 from core.config import settings
-from models.news_pipeline import ClassifiedCandidate, ClassifiedGroup, ClassificationResult, GroupedItem, NewsCandidate, RankedCandidate, RankingResult
+from models.news_pipeline import (
+    ClassifiedCandidate,
+    ClassifiedGroup,
+    ClassificationResult,
+    CommunityInsight,
+    GroupedItem,
+    NewsCandidate,
+    RankedCandidate,
+    RankingResult,
+)
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
-from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, MERGE_SYSTEM_PROMPT, SELECTION_SYSTEM_PROMPT
+from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, COMMUNITY_SUMMARIZER_PROMPT, MERGE_SYSTEM_PROMPT, SELECTION_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -412,3 +422,120 @@ async def rank_classified(
         category, len(leads), len(supports),
     )
     return leads + supports, usage
+
+
+# ---------------------------------------------------------------------------
+# Community Summarizer
+# ---------------------------------------------------------------------------
+
+_HN_HEADER_RE = re.compile(
+    r"\[Hacker News\]\s*.*?\|\s*([\d,]+)\s*points?\s*\|\s*([\d,]+)\s*comments?"
+)
+_REDDIT_HEADER_RE = re.compile(
+    r"\[Reddit\s+r/(\S+)\]\s*.*?\|\s*([\d,]+)\s*upvotes?\s*\|\s*([\d,]+)\s*comments?"
+)
+
+
+def _parse_source_label(raw_text: str) -> str:
+    """Extract human-readable source label from raw community text (deterministic)."""
+    parts: list[str] = []
+    hn = _HN_HEADER_RE.search(raw_text)
+    if hn:
+        points = hn.group(1).replace(",", "")
+        comments = hn.group(2).replace(",", "")
+        parts.append(f"HN {points}\u2191 \u00b7 {comments} comments")
+    rd = _REDDIT_HEADER_RE.search(raw_text)
+    if rd:
+        sub = rd.group(1)
+        upvotes = rd.group(2).replace(",", "")
+        parts.append(f"r/{sub} ({upvotes}\u2191)")
+    return " \u00b7 ".join(parts) if parts else ""
+
+
+async def summarize_community(
+    community_map: dict[str, str],
+    groups: list[ClassifiedGroup],
+) -> tuple[dict[str, CommunityInsight], dict[str, Any]]:
+    """Summarize raw community reactions into structured insights via LLM.
+
+    Returns (url_to_insight_map, usage_metrics).
+    """
+    # Build per-group community data for LLM
+    group_entries: dict[str, tuple[str, str]] = {}  # key -> (raw_text, source_label)
+    for i, group in enumerate(groups):
+        raw = ""
+        for item in group.items:
+            raw = community_map.get(item.url, "")
+            if raw:
+                break
+        if not raw:
+            continue
+        key = f"group_{i}"
+        group_entries[key] = (raw, _parse_source_label(raw))
+
+    # If no community data at all, return empty
+    if not group_entries:
+        logger.info("Community summarizer: no community data to summarize")
+        return {}, {}
+
+    # Build prompt text
+    groups_text_parts = []
+    for key, (raw, _label) in group_entries.items():
+        groups_text_parts.append(f"### {key}\n{raw}")
+    groups_text = "\n\n".join(groups_text_parts)
+
+    prompt = COMMUNITY_SUMMARIZER_PROMPT.format(groups_text=groups_text)
+
+    client = get_openai_client()
+    model = settings.openai_model_light
+    kwargs = build_completion_kwargs(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=2000,
+        temperature=0.2,
+    )
+
+    response = await client.chat.completions.create(**kwargs)
+    usage = extract_usage_metrics(response, model)
+    raw_output = response.choices[0].message.content or ""
+    data = parse_ai_json(raw_output, "CommunitySummarizer")
+
+    # Parse LLM output into CommunityInsight objects
+    result: dict[str, CommunityInsight] = {}
+    llm_groups = data.get("groups", {})
+
+    for i, group in enumerate(groups):
+        key = f"group_{i}"
+        primary_url = group.primary_url
+        if key not in group_entries:
+            # No community data for this group
+            continue
+
+        _raw, source_label = group_entries[key]
+        llm_data = llm_groups.get(key, {})
+
+        sentiment = llm_data.get("sentiment", "neutral")
+        if sentiment not in ("positive", "mixed", "negative", "neutral"):
+            sentiment = "neutral"
+
+        quotes = llm_data.get("quotes", [])
+        if not isinstance(quotes, list):
+            quotes = []
+        quotes = [q for q in quotes[:2] if isinstance(q, str) and len(q.strip()) > 10]
+
+        key_point = llm_data.get("key_point")
+        if key_point and not isinstance(key_point, str):
+            key_point = None
+
+        result[primary_url] = CommunityInsight(
+            sentiment=sentiment,
+            quotes=quotes,
+            key_point=key_point,
+            source_label=source_label,
+        )
+
+    logger.info(
+        "Community summarizer: %d/%d groups summarized",
+        len(result), len(groups),
+    )
+    return result, usage

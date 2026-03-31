@@ -67,6 +67,14 @@ class ClassifiedGroup(BaseModel):
         return [item.url for item in self.items]
 
 
+class CommunityInsight(BaseModel):
+    """Summarized community reaction for a news group."""
+    sentiment: str = "neutral"  # positive / mixed / negative / neutral
+    quotes: list[str] = []  # 0-2 representative quotes (English original)
+    key_point: str | None = None  # 1-line discussion summary (English)
+    source_label: str = ""  # e.g. "HN 342↑ · 89 comments"
+
+
 class ClassificationResult(BaseModel):
     """LLM classification output — grouped candidates per category."""
     research: list[ClassifiedGroup] = []
