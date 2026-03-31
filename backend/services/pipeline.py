@@ -761,15 +761,18 @@ async def _generate_digest(
 
         for attempt in range(MAX_DIGEST_RETRIES + 1):
             try:
-                response = await client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.4,
-                    max_tokens=16000,
+                response = await asyncio.wait_for(
+                    client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.4,
+                        max_tokens=16000,
+                    ),
+                    timeout=180,  # 3 minutes max per digest call
                 )
                 data = parse_ai_json(
                     response.choices[0].message.content,
@@ -833,15 +836,18 @@ async def _generate_digest(
                             "IMPORTANT: Generate ONLY the Korean (ko) content. "
                             "The English version already exists. Return JSON: {{\"ko\": \"...\"}}"
                         )
-                        ko_resp = await client.chat.completions.create(
-                            model=model,
-                            messages=[
-                                {"role": "system", "content": ko_system},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            response_format={"type": "json_object"},
-                            temperature=0.4,
-                            max_tokens=8000,
+                        ko_resp = await asyncio.wait_for(
+                            client.chat.completions.create(
+                                model=model,
+                                messages=[
+                                    {"role": "system", "content": ko_system},
+                                    {"role": "user", "content": user_prompt},
+                                ],
+                                response_format={"type": "json_object"},
+                                temperature=0.4,
+                                max_tokens=8000,
+                            ),
+                            timeout=120,  # 2 minutes for recovery
                         )
                         ko_data = parse_ai_json(
                             ko_resp.choices[0].message.content,
@@ -872,15 +878,18 @@ async def _generate_digest(
                             "IMPORTANT: Generate ONLY the English (en) content. "
                             "The Korean version already exists. Return JSON: {{\"en\": \"...\"}}"
                         )
-                        en_resp = await client.chat.completions.create(
-                            model=model,
-                            messages=[
-                                {"role": "system", "content": en_system},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            response_format={"type": "json_object"},
-                            temperature=0.4,
-                            max_tokens=8000,
+                        en_resp = await asyncio.wait_for(
+                            client.chat.completions.create(
+                                model=model,
+                                messages=[
+                                    {"role": "system", "content": en_system},
+                                    {"role": "user", "content": user_prompt},
+                                ],
+                                response_format={"type": "json_object"},
+                                temperature=0.4,
+                                max_tokens=8000,
+                            ),
+                            timeout=120,
                         )
                         en_data = parse_ai_json(
                             en_resp.choices[0].message.content,
