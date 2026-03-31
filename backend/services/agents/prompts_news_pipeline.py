@@ -1154,7 +1154,9 @@ Order supporting by importance (most important first).
 
 COMMUNITY_SUMMARIZER_PROMPT = """You are an AI community analyst. Given community discussion data (Hacker News / Reddit) for news articles, extract structured insights.
 
-For each group provided below, analyze the comments and produce:
+Each group has an "Original article" title followed by community thread data. FIRST check if the community thread is actually about the same topic as the original article. If the thread is about a DIFFERENT topic (e.g. original is about "AGI predictions" but thread is about "family lawsuit"), return null for all fields.
+
+For each group that IS relevant, produce:
 
 1. **sentiment**: overall tone of the discussion — one of "positive", "mixed", "negative", or "neutral"
 2. **quotes**: pick 0-2 BEST representative comments from the provided data
@@ -1175,9 +1177,16 @@ For each group provided below, analyze the comments and produce:
 Return ONLY valid JSON, no markdown fences:
 
 {{"groups": {{
-  "<group_key>": {{
+  "group_0": {{
     "sentiment": "mixed",
     "quotes": ["exact quote 1", "exact quote 2"],
     "key_point": "Performance praised but pricing concerns dominate"
+  }},
+  "group_1": {{
+    "sentiment": null,
+    "quotes": [],
+    "key_point": null
   }}
-}}}}"""
+}}}}
+
+Note: If the community thread is irrelevant to the original article, return sentiment=null, quotes=[], key_point=null as shown in group_1 above."""

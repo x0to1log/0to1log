@@ -1,6 +1,7 @@
 """News collection from multiple sources: Tavily, HuggingFace, arXiv, GitHub."""
 import asyncio
 import logging
+import re as _re_module
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -803,21 +804,142 @@ def _title_relevance(article_title: str, thread_title: str) -> float:
     return max(token_score, seq_score)
 
 
-async def collect_community_reactions(title: str, url: str) -> str:
+# ---------------------------------------------------------------------------
+# Entity-first search helpers for community keyword fallback
+# ---------------------------------------------------------------------------
+
+# Common headline words that look like entities (capitalized) but aren't
+_HEADLINE_COMMON = {
+    "the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for",
+    "of", "and", "or", "its", "it", "this", "that", "with", "by", "from", "as",
+    "has", "have", "had", "how", "what", "why", "new", "latest", "just", "now",
+    "here", "there", "where", "when", "who", "which", "but", "not", "no", "all",
+    "more", "most", "than", "into", "over", "after", "before", "about", "up",
+    "out", "will", "can", "may", "could", "should", "would", "also", "very",
+    "top", "best", "first", "next", "last", "only", "still", "yet", "even",
+    # Common verbs in headlines
+    "launches", "launch", "cuts", "says", "gets", "raises", "shows",
+    "makes", "takes", "brings", "builds", "releases", "reveals", "announces",
+    "introduces", "joins", "hits", "beats", "meets", "aims", "plans", "seeks",
+    "acquires", "partners", "expands", "opens", "closes", "drops", "adds",
+    # Common adjectives/prepositions
+    "toward", "towards", "across", "behind", "between", "through", "against",
+    "capable", "powerful", "efficient", "end", "fine", "long", "full", "open",
+    # Common headline nouns (not entities)
+    "jobs", "model", "models", "paper", "papers", "tool", "tools", "platform",
+    "startup", "startups", "company", "companies", "report", "update", "deal",
+    "funding", "research", "study", "memory", "attention", "agents", "agent",
+    "statement", "joint", "means", "way", "scale", "editing", "protocol",
+    "benchmark", "benchmarking", "coding", "horizon", "trillion", "billion",
+    "million", "sources", "context", "window", "training", "inference",
+    "performance", "data", "dataset", "code", "system", "framework",
+    # ML/AI terms that appear capitalized but aren't entities
+    "agentic", "multimodal", "sparse", "scaling", "retrieval", "augmented",
+    "fine", "grained", "pre", "post", "self", "supervised", "reinforcement",
+    "generative", "diffusion", "transformer", "scientific", "foundation",
+    "expression", "facial", "amnesia", "degradation", "degrade",
+    "bounty", "tasks", "efficient",
+}
+
+_VERSION_PATTERN = _re_module.compile(r"[A-Za-z][\w]*-?\d[\w.-]*")  # GPT-5.4, Llama-4, H200
+
+
+def _extract_entities(title: str) -> list[str]:
+    """Extract named entities (proper nouns, product names, acronyms) from a title."""
+    entities: list[str] = []
+
+    # 1. Version-style tokens: GPT-5.4, Llama-4, H200, Claude-3.5
+    for m in _VERSION_PATTERN.finditer(title):
+        token = m.group().strip(".,;:")
+        if any(c.isdigit() for c in token) and any(c.isalpha() for c in token):
+            entities.append(token)
+
+    # 2. Named entities: capitalized words not in common list
+    for word in _re_module.split(r"[\s:,;!?()\[\]]+", title):
+        clean = word.strip(".,;:'\"()[]")
+        if not clean or len(clean) < 2:
+            continue
+        if any(clean in e for e in entities):
+            continue
+        lower = clean.lower()
+        if lower in _HEADLINE_COMMON:
+            continue
+        # ALL-CAPS acronyms (2-5 chars): AI, MSA, TTS, NVIDIA
+        if clean.isupper() and 2 <= len(clean) <= 5:
+            entities.append(clean)
+        # Capitalized proper nouns
+        elif clean[0].isupper() and not clean[0].isdigit():
+            entities.append(clean)
+
+    # Deduplicate preserving order
+    seen: set[str] = set()
+    return [e for e in entities if e not in seen and not seen.add(e)]
+
+
+def _build_search_queries(entities: list[str]) -> list[str]:
+    """Build 1-2 short search queries from extracted entities.
+
+    Only uses combinations of 2+ entities to avoid overly broad single-word queries
+    that return irrelevant results (e.g. "Atlassian" alone matches old Trello news).
+    """
+    if not entities:
+        return []
+    queries = []
+    # Primary: top 2-3 entities
+    queries.append(" ".join(entities[:3]))
+    # Secondary: first 2 entities (slightly broader, but still constrained)
+    if len(entities) > 2:
+        queries.append(" ".join(entities[:2]))
+    return queries
+
+
+def _entity_relevance(title: str, thread_title: str, entities: list[str]) -> float:
+    """Enhanced relevance: base + entity boost - foreign entity penalty.
+
+    Boost levels:
+    - Version patterns (GPT-5.4, H200, Llama-4): +40 — very specific
+    - Long proper nouns (≥6 chars, e.g. Atlassian, Anthropic): +20
+    - Short/generic words (AI, US, EU, Act): +0 — too ambiguous
+
+    Penalty: thread contains many entities NOT in our title → likely different topic.
+    e.g. "Sam Altman AGI" vs "Sam Altman Sister Abuse Claims" → foreign=[Sister, Abuse, Claims]
+    """
+    base = _title_relevance(title, thread_title)
+    thread_lower = thread_title.lower()
+    title_lower = title.lower()
+
+    # Boost: our entities found in thread
+    # Only specific identifiers get boost — not short proper nouns (person names, etc.)
+    boost = 0.0
+    for ent in entities:
+        if ent.lower() not in thread_lower:
+            continue
+        if _VERSION_PATTERN.fullmatch(ent):
+            boost = max(boost, 40.0)
+        elif len(ent) >= 8:
+            boost = max(boost, 20.0)
+
+    # Penalty: thread entities NOT in our title (foreign topics)
+    thread_entities = _extract_entities(thread_title)
+    foreign = [e for e in thread_entities if len(e) >= 4 and e.lower() not in title_lower]
+    penalty = min(len(foreign) * 8, 30)
+
+    return base + boost - penalty
+
+
+async def collect_community_reactions(title: str, url: str, target_date: str | None = None) -> str:
     """Collect community reactions with ACTUAL COMMENT TEXT from HN + Reddit.
 
     Strategy: URL-based search first (most accurate), keyword fallback with relevance check.
+    target_date: YYYY-MM-DD batch date — keyword search is limited to ±7 days of this date.
 
     Returns formatted reactions with real quotes, or empty string if none found.
     """
     import httpx
 
-    # Extract key search terms for keyword fallback
-    _STOP_WORDS = {"the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for",
-                   "of", "and", "or", "its", "it", "this", "that", "with", "by", "from", "as",
-                   "has", "have", "had", "how", "what", "why", "new", "latest", "just", "now"}
-    keywords = [w for w in title.split() if w.lower().strip(",:;.!?'\"()") not in _STOP_WORDS]
-    search_terms = " ".join(keywords[:6])
+    # Extract entities for keyword fallback search
+    entities = _extract_entities(title)
+    search_queries = _build_search_queries(entities)
     parts: list[str] = []
 
     async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"}) as client:
@@ -836,24 +958,36 @@ async def collect_community_reactions(title: str, url: str) -> str:
                         best_hit = max(url_hits, key=lambda h: h.get("points") or 0)
                         logger.debug("HN URL match: '%s' (%d pts)", best_hit.get("title", "")[:40], best_hit.get("points", 0))
 
-            # Phase 2: Keyword fallback with relevance check
+            # Phase 2: Entity-based keyword fallback with relevance check
             if not best_hit:
-                hn_resp = await client.get(
-                    "https://hn.algolia.com/api/v1/search",
-                    params={"query": search_terms, "tags": "story", "hitsPerPage": 5},
-                )
-                if hn_resp.status_code == 200:
+                import time as _time
+                if target_date:
+                    from datetime import datetime as _dt
+                    _ref = _dt.strptime(target_date, "%Y-%m-%d")
+                    _cutoff = int(_ref.timestamp()) - (7 * 86400)
+                else:
+                    _cutoff = int(_time.time()) - (14 * 86400)
+                for sq in search_queries:
+                    hn_resp = await client.get(
+                        "https://hn.algolia.com/api/v1/search",
+                        params={"query": sq, "tags": "story", "hitsPerPage": 5,
+                                "numericFilters": f"created_at_i>{_cutoff}"},
+                    )
+                    if hn_resp.status_code != 200:
+                        continue
                     hits = hn_resp.json().get("hits", [])
                     for h in sorted(hits, key=lambda h: h.get("points") or 0, reverse=True):
                         if (h.get("points") or 0) < 5:
                             continue
-                        relevance = _title_relevance(title, h.get("title", ""))
+                        relevance = _entity_relevance(title, h.get("title", ""), entities)
                         if relevance >= 35:
                             best_hit = h
-                            logger.debug("HN keyword match: '%s' (relevance=%.0f, pts=%d)", h.get("title", "")[:40], relevance, h.get("points", 0))
+                            logger.debug("HN keyword match: '%s' (relevance=%.0f, pts=%d, query='%s')", h.get("title", "")[:40], relevance, h.get("points", 0), sq)
                             break
                         else:
-                            logger.debug("HN keyword skip (low relevance=%.0f): '%s'", relevance, h.get("title", "")[:40])
+                            logger.debug("HN keyword skip (relevance=%.0f): '%s'", relevance, h.get("title", "")[:40])
+                    if best_hit:
+                        break
 
             # Fetch comments for matched HN thread (works for both URL and keyword matches)
             if best_hit:
@@ -923,14 +1057,16 @@ async def collect_community_reactions(title: str, url: str) -> str:
                             logger.debug("Reddit URL match: r/%s '%s' (%d upvotes)", rd.get("subreddit", ""), rd.get("title", "")[:40], rd.get("score", 0))
                             break
 
-            # Phase 2: Keyword fallback with relevance check
+            # Phase 2: Entity-based keyword fallback with relevance check
             if not best_thread:
-                await asyncio.sleep(random.uniform(0.5, 2.0))  # Extra delay between requests
-                reddit_resp = await client.get(
-                    "https://www.reddit.com/search.json",
-                    params={"q": search_terms, "sort": "relevance", "limit": 10, "t": "week"},
-                )
-                if reddit_resp.status_code == 200:
+                for sq in search_queries:
+                    await asyncio.sleep(random.uniform(0.5, 2.0))
+                    reddit_resp = await client.get(
+                        "https://www.reddit.com/search.json",
+                        params={"q": sq, "sort": "relevance", "limit": 10, "t": "week"},
+                    )
+                    if reddit_resp.status_code != 200:
+                        continue
                     children = reddit_resp.json().get("data", {}).get("children", [])
                     for child in children:
                         rd = child.get("data", {})
@@ -940,13 +1076,15 @@ async def collect_community_reactions(title: str, url: str) -> str:
                         score = rd.get("score", 0)
                         if score < 5:
                             continue
-                        relevance = _title_relevance(title, rd.get("title", ""))
+                        relevance = _entity_relevance(title, rd.get("title", ""), entities)
                         if relevance >= 35:
                             best_thread = rd
-                            logger.debug("Reddit keyword match: r/%s '%s' (relevance=%.0f, score=%d)", subreddit, rd.get("title", "")[:40], relevance, score)
+                            logger.debug("Reddit keyword match: r/%s '%s' (relevance=%.0f, score=%d, query='%s')", subreddit, rd.get("title", "")[:40], relevance, score, sq)
                             break
                         else:
                             logger.debug("Reddit keyword skip (relevance=%.0f): r/%s '%s'", relevance, subreddit, rd.get("title", "")[:40])
+                    if best_thread:
+                        break
                 if best_thread:
                     permalink = best_thread.get("permalink", "")
                     rd_title = best_thread.get("title", "")

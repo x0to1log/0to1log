@@ -461,7 +461,8 @@ async def summarize_community(
     Returns (url_to_insight_map, usage_metrics).
     """
     # Build per-group community data for LLM
-    group_entries: dict[str, tuple[str, str]] = {}  # key -> (raw_text, source_label)
+    # key -> (raw_text, source_label, group_title)
+    group_entries: dict[str, tuple[str, str, str]] = {}
     for i, group in enumerate(groups):
         raw = ""
         for item in group.items:
@@ -471,17 +472,17 @@ async def summarize_community(
         if not raw:
             continue
         key = f"group_{i}"
-        group_entries[key] = (raw, _parse_source_label(raw))
+        group_entries[key] = (raw, _parse_source_label(raw), group.group_title)
 
     # If no community data at all, return empty
     if not group_entries:
         logger.info("Community summarizer: no community data to summarize")
         return {}, {}
 
-    # Build prompt text
+    # Build prompt text — include original article title for relevance check
     groups_text_parts = []
-    for key, (raw, _label) in group_entries.items():
-        groups_text_parts.append(f"### {key}\n{raw}")
+    for key, (raw, _label, gtitle) in group_entries.items():
+        groups_text_parts.append(f"### {key}\nOriginal article: {gtitle}\n{raw}")
     groups_text = "\n\n".join(groups_text_parts)
 
     prompt = COMMUNITY_SUMMARIZER_PROMPT.format(groups_text=groups_text)
@@ -511,10 +512,14 @@ async def summarize_community(
             # No community data for this group
             continue
 
-        _raw, source_label = group_entries[key]
+        _raw, source_label, _gtitle = group_entries[key]
         llm_data = llm_groups.get(key, {})
 
-        sentiment = llm_data.get("sentiment", "neutral")
+        sentiment = llm_data.get("sentiment")
+        # null sentiment = LLM judged thread irrelevant to original article
+        if sentiment is None:
+            logger.debug("Community summarizer: group %s marked irrelevant by LLM", key)
+            continue
         if sentiment not in ("positive", "mixed", "negative", "neutral"):
             sentiment = "neutral"
 

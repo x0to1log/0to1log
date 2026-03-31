@@ -420,9 +420,9 @@ async def _extract_and_create_handbook_terms(
 
     # Step 2: Filter, dedup, and generate content for new terms (2 at a time)
     VALID_CATEGORIES = {
-        "ai-ml", "db-data", "backend", "frontend-ux", "network",
-        "security", "os-core", "devops", "performance", "web3",
-        "ai-business",
+        "cs-fundamentals", "math-statistics", "ml-fundamentals",
+        "deep-learning", "llm-genai", "data-engineering",
+        "infra-hardware", "safety-ethics", "products-platforms",
     }
 
     # Blocklist: terms that passed LLM extraction but are not handbook-worthy
@@ -444,8 +444,8 @@ async def _extract_and_create_handbook_terms(
     )
 
     # Pre-filter terms before generation
-    valid_terms: list[tuple[str, str, str]] = []  # (term_name, korean_name, slug)
-    queued_terms: list[tuple[str, str, str, str]] = []  # (term_name, korean_name, slug, category)
+    valid_terms: list[tuple[str, str, str, list[str]]] = []  # (term_name, korean_name, slug, categories)
+    queued_terms: list[tuple[str, str, str, list[str]]] = []  # (term_name, korean_name, slug, categories)
     for term_info in extracted:
         term_name = term_info.get("term", "").strip()
         korean_name = term_info.get("korean_name", "").strip()
@@ -474,10 +474,13 @@ async def _extract_and_create_handbook_terms(
             if lower not in known_exceptions:
                 logger.info("Skipping '%s' — generic suffix pattern", term_name)
                 continue
-        category = term_info.get("category", "")
-        if category not in VALID_CATEGORIES:
-            logger.info("Skipping '%s' — invalid category '%s'", term_name, category)
+        # Build categories list from primary + secondary
+        primary_cat = term_info.get("category", "")
+        if primary_cat not in VALID_CATEGORIES:
+            logger.info("Skipping '%s' — invalid category '%s'", term_name, primary_cat)
             continue
+        secondary = term_info.get("secondary_categories", []) or []
+        all_cats = [primary_cat] + [c for c in secondary if c in VALID_CATEGORIES and c != primary_cat]
         slug = _slugify(term_name)
         if not slug:
             continue
@@ -506,10 +509,10 @@ async def _extract_and_create_handbook_terms(
 
         confidence = term_info.get("confidence", "high")
         if confidence == "low":
-            queued_terms.append((term_name, korean_name, slug, category))
+            queued_terms.append((term_name, korean_name, slug, all_cats))
             logger.info("Queuing low-confidence term '%s' for manual review", term_name)
         else:
-            valid_terms.append((term_name, korean_name, slug))
+            valid_terms.append((term_name, korean_name, slug, all_cats))
 
     # Semantic dedup within batch: remove terms that overlap with others
     def _term_words(name: str) -> set[str]:
@@ -542,16 +545,16 @@ async def _extract_and_create_handbook_terms(
         return len(overlap) / smaller >= 0.5
 
     # Deduplicate valid_terms: keep the first (higher priority from LLM ordering)
-    deduped_valid: list[tuple[str, str, str]] = []
-    for term_name, korean_name, slug in valid_terms:
+    deduped_valid: list[tuple[str, str, str, list[str]]] = []
+    for term_name, korean_name, slug, cats in valid_terms:
         is_dup = False
-        for existing_name, _, _ in deduped_valid:
+        for existing_name, _, _, _ in deduped_valid:
             if _is_semantic_dup(term_name, existing_name):
                 logger.info("Skipping '%s' — semantic duplicate of '%s'", term_name, existing_name)
                 is_dup = True
                 break
         if not is_dup:
-            deduped_valid.append((term_name, korean_name, slug))
+            deduped_valid.append((term_name, korean_name, slug, cats))
     valid_terms = deduped_valid
 
     # Generate terms concurrently (max 2 at a time)
@@ -653,7 +656,7 @@ async def _extract_and_create_handbook_terms(
 
     if valid_terms:
         term_results = await asyncio.gather(
-            *[_create_single_term(tn, kn, sl) for tn, kn, sl in valid_terms],
+            *[_create_single_term(tn, kn, sl) for tn, kn, sl, _cats in valid_terms],
         )
         for created, term_errors in term_results:
             terms_created += created
@@ -661,13 +664,13 @@ async def _extract_and_create_handbook_terms(
 
     # Save low-confidence terms as queued (title only, no LLM generation)
     queued_count = 0
-    for term_name, korean_name, slug, category in queued_terms:
+    for term_name, korean_name, slug, cats in queued_terms:
         try:
             supabase.table("handbook_terms").insert({
                 "term": term_name,
                 "slug": slug,
                 "korean_name": korean_name,
-                "categories": [category],
+                "categories": cats,
                 "status": "queued",
                 "source": "pipeline",
             }).execute()
@@ -1404,9 +1407,11 @@ async def run_daily_pipeline(
                     seen_community_urls.add(item.url)
                     community_lookup.append((search_title, item.url))
         community_map: dict[str, str] = {}
+        # Extract date from batch_id (e.g. "news-2026-03-27" → "2026-03-27")
+        _target_date = batch_id.replace("news-", "") if batch_id.startswith("news-") else None
         if community_lookup:
             community_tasks = [
-                collect_community_reactions(title, url)
+                collect_community_reactions(title, url, target_date=_target_date)
                 for title, url in community_lookup
             ]
             community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
@@ -1718,8 +1723,9 @@ async def rerun_pipeline_stage(
                         seen_urls.add(item.url)
                         community_lookup.append((search_title, item.url))
             community_map: dict[str, str] = {}
+            _target_date = batch_id.replace("news-", "") if batch_id.startswith("news-") else None
             if community_lookup:
-                community_tasks = [collect_community_reactions(t, u) for t, u in community_lookup]
+                community_tasks = [collect_community_reactions(t, u, target_date=_target_date) for t, u in community_lookup]
                 community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
                 for (_, url), result in zip(community_lookup, community_results):
                     if isinstance(result, str) and result.strip():
