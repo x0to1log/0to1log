@@ -935,6 +935,7 @@ const nonce = Astro.locals.cspNonce || '';
     }
 
     // Duration chart
+    console.log('[Duration] labels:', chartData.duration.labels, 'values:', chartData.duration.values);
     var durationCanvas = document.getElementById('chart-duration');
     if (durationCanvas && chartData.duration.labels.length > 0) {
       new Chart(durationCanvas, {
