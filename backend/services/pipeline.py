@@ -1982,9 +1982,9 @@ async def _fetch_week_digests(supabase, week_id: str, locale: str) -> list[dict]
         .eq("category", "ai-news")
         .in_("post_type", ["research", "business"])
         .eq("status", "published")
-        .gte("created_at", monday.isoformat())
-        .lte("created_at", sunday.isoformat() + "T23:59:59")
-        .order("created_at", desc=False)
+        .gte("published_at", monday.isoformat())
+        .lte("published_at", sunday.isoformat() + "T23:59:59")
+        .order("published_at", desc=False)
         .execute()
     )
     return result.data or []
@@ -2000,8 +2000,8 @@ async def _fetch_week_handbook_terms(supabase, week_id: str, locale: str) -> lis
         supabase.table("handbook_terms")
         .select("slug, term, korean_term, definition_en, definition_ko")
         .eq("status", "published")
-        .gte("created_at", monday.isoformat())
-        .lte("created_at", sunday.isoformat() + "T23:59:59")
+        .gte("published_at", monday.isoformat())
+        .lte("published_at", sunday.isoformat() + "T23:59:59")
         .limit(3)
         .execute()
     )
@@ -2091,8 +2091,7 @@ async def run_weekly_pipeline(
                     )
 
                     raw = response.choices[0].message.content or ""
-                    usage = extract_usage_metrics(response)
-                    merge_usage_metrics(cumulative_usage, usage)
+                    usage = extract_usage_metrics(response, settings.openai_model_main)
 
                     # Parse JSON block from end of response
                     json_data = {}
