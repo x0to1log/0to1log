@@ -1062,6 +1062,8 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                             break
 
             # Phase 2: Brave Discussions fallback (replaces Reddit keyword search)
+            brave_attempted = 0
+            brave_matched = False
             if not best_thread and settings.brave_api_key:
                 brave_query = " ".join(_extract_entities(title)[:3]) or title[:60]
                 try:
@@ -1077,22 +1079,20 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                             disc_title = disc.get("title", "")
                             if "reddit.com" not in disc_url:
                                 continue
-                            # Extract subreddit from URL
                             _rd_match = _re_module.search(r"reddit\.com/r/(\w+)", disc_url)
                             if not _rd_match:
                                 continue
                             subreddit = _rd_match.group(1).lower()
                             if subreddit not in ALLOWED_SUBREDDITS:
                                 continue
+                            brave_attempted += 1
                             relevance = _entity_relevance(title, disc_title, entities)
                             if relevance >= 35:
-                                # Extract permalink from Brave URL and fetch via Reddit API
                                 _perm_match = _re_module.search(r"(/r/\w+/comments/\w+)", disc_url)
                                 if not _perm_match:
                                     continue
                                 _permalink = _perm_match.group(1)
                                 await asyncio.sleep(random.uniform(0.5, 2.0))
-                                # Fetch post + comments in one call (avoids double Reddit request)
                                 rd_fetch = await client.get(
                                     f"https://www.reddit.com{_permalink}.json",
                                     params={"limit": 5, "sort": "top", "depth": 1},
@@ -1104,12 +1104,19 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                                         if post_data.get("score", 0) >= 5:
                                             post_data["_brave_comments"] = rd_json
                                             best_thread = post_data
-                                            logger.debug("Brave discussions match: r/%s '%s' (relevance=%.0f, score=%d)", subreddit, disc_title[:40], relevance, post_data.get("score", 0))
+                                            brave_matched = True
+                                            logger.info("Brave discussions match: r/%s '%s' (relevance=%.0f, score=%d)", subreddit, disc_title[:40], relevance, post_data.get("score", 0))
                                             break
+                                else:
+                                    logger.warning("Brave→Reddit fetch failed: %d for %s", rd_fetch.status_code, _permalink[:40])
                             else:
                                 logger.debug("Brave discussions skip (relevance=%.0f): '%s'", relevance, disc_title[:40])
+                    else:
+                        logger.warning("Brave API returned %d for '%s'", brave_resp.status_code, title[:40])
                 except Exception as e:
-                    logger.debug("Brave discussions search failed for '%s': %s", title[:40], e)
+                    logger.warning("Brave discussions search failed for '%s': %s", title[:40], e)
+            if brave_attempted:
+                logger.info("Brave discussions: %d attempted, matched=%s for '%s'", brave_attempted, brave_matched, title[:40])
 
             if best_thread:
                 permalink = best_thread.get("permalink", "")

@@ -464,11 +464,12 @@ async def summarize_community(
     # key -> (raw_text, source_label, group_title)
     group_entries: dict[str, tuple[str, str, str]] = {}
     for i, group in enumerate(groups):
-        raw = ""
+        raw_parts = []
         for item in group.items:
-            raw = community_map.get(item.url, "")
-            if raw:
-                break
+            item_raw = community_map.get(item.url, "")
+            if item_raw:
+                raw_parts.append(item_raw)
+        raw = "\n\n".join(raw_parts)
         if not raw:
             continue
         key = f"group_{i}"

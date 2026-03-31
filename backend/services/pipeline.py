@@ -1266,8 +1266,12 @@ async def run_daily_pipeline(
             "status": "running",
         }).execute()
     except Exception as e:
-        logger.warning("Pipeline run already exists for %s, skipping: %s", batch_id, e)
-        return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate run: {batch_id}")
+        err_msg = str(e).lower()
+        if "unique" in err_msg or "duplicate" in err_msg or "23505" in err_msg:
+            logger.warning("Pipeline run already exists for %s, skipping", batch_id)
+            return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate run: {batch_id}")
+        logger.error("Pipeline run insert failed for %s: %s", batch_id, e)
+        raise
 
     try:
         # Fetch recently published source URLs to avoid repeating news
