@@ -1454,8 +1454,11 @@ async def rerun_pipeline_stage(
 ) -> PipelineResult:
     """Rerun pipeline from a specific stage using saved checkpoints.
 
+    Reuses the existing pipeline_run (source_run_id) — deletes logs from
+    the rerun stage onward, then re-executes those stages in place.
+
     Args:
-        source_run_id: Run ID to load checkpoints from.
+        source_run_id: Run ID to rerun (and load checkpoints from).
         from_stage: Stage to start from ("classify"|"merge"|"community"|"write").
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
@@ -1463,18 +1466,41 @@ async def rerun_pipeline_stage(
     from models.news_pipeline import ClassifiedCandidate, ClassificationResult, NewsCandidate
 
     supabase = get_supabase()
+    run_id = source_run_id  # Reuse existing run
 
-    # Create a new pipeline run for this rerun
-    run_id = str(uuid.uuid4())
+    # Delete logs from the rerun stage onward
+    STAGE_CASCADE = {
+        "classify": ["classify", "merge", "community", "ranking", "enrich",
+                      "digest:research:expert", "digest:research:learner",
+                      "digest:business:expert", "digest:business:learner",
+                      "quality:research", "quality:business",
+                      "save:research", "save:business", "summary"],
+        "merge": ["merge", "community", "ranking", "enrich",
+                  "digest:research:expert", "digest:research:learner",
+                  "digest:business:expert", "digest:business:learner",
+                  "quality:research", "quality:business",
+                  "save:research", "save:business", "summary"],
+        "community": ["community", "ranking", "enrich",
+                      "digest:research:expert", "digest:research:learner",
+                      "digest:business:expert", "digest:business:learner",
+                      "quality:research", "quality:business",
+                      "save:research", "save:business", "summary"],
+        "write": ["digest:research:expert", "digest:research:learner",
+                  "digest:business:expert", "digest:business:learner",
+                  "quality:research", "quality:business",
+                  "save:research", "save:business", "summary"],
+    }
+    stages_to_delete = STAGE_CASCADE.get(from_stage, [])
     try:
-        supabase.table("pipeline_runs").insert({
-            "id": run_id,
-            "run_key": f"rerun-{batch_id}-{from_stage}",
+        for stage_name in stages_to_delete:
+            supabase.table("pipeline_logs").delete().eq("run_id", run_id).eq("pipeline_type", stage_name).execute()
+        supabase.table("pipeline_runs").update({
             "status": "running",
-            "started_at": datetime.now(timezone.utc).isoformat(),
-        }).execute()
+            "finished_at": None,
+            "last_error": None,
+        }).eq("id", run_id).execute()
     except Exception as e:
-        return PipelineResult(batch_id=batch_id, status="failed", message=f"Failed to create rerun: {e}")
+        return PipelineResult(batch_id=batch_id, status="failed", message=f"Failed to prepare rerun: {e}")
 
     cumulative_usage: dict[str, Any] = {}
     all_errors: list[str] = []
