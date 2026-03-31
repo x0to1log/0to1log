@@ -20,15 +20,15 @@ const PREVIEW_COUNT = 4;
 const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
 
 const handbookTags: Record<string, string> = {
-  'cs-fundamentals': 'API · SQL · OAuth · 자료구조',
-  'math-statistics': 'PCA · 확률 · 엔트로피 · 선형대수',
-  'ml-fundamentals': 'SVM · 결정 트리 · 과적합 · 교차검증',
-  'deep-learning': 'CNN · Transformer · GAN · 확산 모델',
+  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
   'llm-genai': 'RAG · 프롬프트 엔지니어링 · RLHF · 에이전트',
+  'deep-learning': 'CNN · Transformer · GAN · 확산 모델',
+  'ml-fundamentals': 'SVM · 결정 트리 · 과적합 · 교차검증',
   'data-engineering': 'ETL · 벡터 DB · Spark · Parquet',
   'infra-hardware': 'GPU · CUDA · Kubernetes · 양자화',
   'safety-ethics': 'AI 정렬 · 적대적 공격 · 규제',
-  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
+  'cs-fundamentals': 'API · SQL · OAuth · 자료구조',
+  'math-statistics': 'PCA · 확률 · 엔트로피 · 선형대수',
 };
 
 // User reading history & bookmarks
@@ -55,24 +55,24 @@ let popularTerms: any[] = [];
 if (supabase) {
   const { data } = await supabase
     .from('handbook_terms')
-    .select('term, slug, view_count')
+    .select('term, slug, korean_name, definition_ko, view_count')
     .eq('status', 'published')
     .order('view_count', { ascending: false })
-    .limit(10);
+    .limit(5);
   popularTerms = data ?? [];
 }
 if (popularTerms.length === 0 || popularTerms.every((t: any) => !t.view_count)) {
   if (supabase) {
     const { data } = await supabase
       .from('handbook_terms')
-      .select('term, slug')
+      .select('term, slug, korean_name, definition_ko')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .limit(10);
+      .limit(5);
     popularTerms = data ?? [];
   }
 }
-const railTerms = popularTerms.slice(0, 5);
+const railTerms = popularTerms.slice(0, 3);
 
 const categories = getHandbookCategories();
 
@@ -109,20 +109,21 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
       />
     </div>
 
-    {/* 실시간 인기 용어 */}
-    {popularTerms.length > 0 && (
+    {/* 많이 찾는 용어 */}
+    {railTerms.length > 0 && (
       <section class="handbook-trending">
-        <h3 class="handbook-trending-title">실시간 인기 용어</h3>
-        <ol class="handbook-trending-list">
-          {popularTerms.map((pt: any, i: number) => (
-            <li>
-              <a href={`/${locale}/handbook/${pt.slug}/`} class="handbook-trending-link">
-                <span class="handbook-trending-rank">{i + 1}</span>
-                <span>{pt.term}</span>
-              </a>
-            </li>
+        <h3 class="handbook-trending-title">많이 찾는 용어</h3>
+        <div class="newsprint-stack">
+          {railTerms.map((pt: any) => (
+            <a class="newsprint-card" href={`/${locale}/handbook/${pt.slug}/`}>
+              <span class="newsprint-keyword-row">
+                <strong class="newsprint-rail-link">{pt.korean_name || pt.term}</strong>
+                {pt.korean_name && <span class="newsprint-related-tag">{pt.term}</span>}
+              </span>
+              {pt.definition_ko && <p class="newsprint-related-summary">{pt.definition_ko}</p>}
+            </a>
           ))}
-        </ol>
+        </div>
       </section>
     )}
 
@@ -191,7 +192,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
     </div>
 
     <Fragment slot="rail">
-      <HandbookListRail locale={locale} terms={railTerms} editorialNote={sc.handbook_intro || undefined} />
+      <HandbookListRail locale={locale} terms={railTerms.map((t: any) => ({ term: t.term, slug: t.slug, koreanName: t.korean_name, definition: t.definition_ko }))} editorialNote={sc.handbook_intro || undefined} />
     </Fragment>
   </NewsprintShell>
 </MainLayout>

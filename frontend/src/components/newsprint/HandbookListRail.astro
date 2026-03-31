@@ -4,6 +4,8 @@ import { getHandbookCategoryLabel, getHandbookCategories } from '../../lib/handb
 interface RailTerm {
   term: string;
   slug: string;
+  koreanName?: string;
+  definition?: string;
 }
 
 interface CategoryIcon {
@@ -109,7 +111,11 @@ const CATEGORY_ICONS: Record<string, CategoryIcon> = {
     <div class="newsprint-stack">
       {terms.map((t) => (
         <a class="newsprint-card" href={`/${locale}/handbook/${t.slug}/`}>
-          <strong class="newsprint-rail-link">{t.term}</strong>
+          <span class="newsprint-keyword-row">
+            <strong class="newsprint-rail-link">{isKo && t.koreanName ? t.koreanName : t.term}</strong>
+            {isKo && t.koreanName ? <span class="newsprint-related-tag">{t.term}</span> : null}
+          </span>
+          {t.definition && <p class="newsprint-related-summary">{t.definition}</p>}
         </a>
       ))}
     </div>

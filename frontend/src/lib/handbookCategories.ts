@@ -1,48 +1,38 @@
 import type { Locale } from '../i18n/index';
 
 export type HandbookCategorySlug =
-  | 'cs-fundamentals'
-  | 'math-statistics'
-  | 'ml-fundamentals'
-  | 'deep-learning'
+  | 'products-platforms'
   | 'llm-genai'
+  | 'deep-learning'
+  | 'ml-fundamentals'
   | 'data-engineering'
   | 'infra-hardware'
   | 'safety-ethics'
-  | 'products-platforms';
+  | 'cs-fundamentals'
+  | 'math-statistics';
 
 const HANDBOOK_CATEGORIES: Record<
   HandbookCategorySlug,
   { label: Record<Locale, string>; description: Record<Locale, string> }
 > = {
-  'cs-fundamentals': {
+  'products-platforms': {
     label: {
-      en: 'CS Fundamentals',
-      ko: 'CS 기초',
+      en: 'Products & Platforms',
+      ko: '제품 · 플랫폼',
     },
     description: {
-      en: 'Programming, data structures, algorithms, networking, OS, web basics',
-      ko: '프로그래밍, 자료구조, 알고리즘, 네트워크, OS, 웹 기초',
+      en: 'Specific models, companies, frameworks, tools',
+      ko: '특정 모델, 기업, 프레임워크, 도구',
     },
   },
-  'math-statistics': {
+  'llm-genai': {
     label: {
-      en: 'Math & Statistics',
-      ko: '수학 · 통계',
+      en: 'LLM & Generative AI',
+      ko: 'LLM · 생성AI',
     },
     description: {
-      en: 'Linear algebra, probability, statistics, information theory',
-      ko: '선형대수, 확률, 통계, 정보이론',
-    },
-  },
-  'ml-fundamentals': {
-    label: {
-      en: 'ML Fundamentals',
-      ko: 'ML 기초',
-    },
-    description: {
-      en: 'Classical ML algorithms, learning theory, evaluation methods',
-      ko: '전통 ML 알고리즘, 학습 이론, 평가 방법',
+      en: 'Large language models, generative AI, agents, RLHF, multimodal',
+      ko: '대형 언어 모델, 생성AI, 에이전트, RLHF, 멀티모달',
     },
   },
   'deep-learning': {
@@ -55,14 +45,14 @@ const HANDBOOK_CATEGORIES: Record<
       ko: '신경망 아키텍처, 학습 기법, 비전, 오디오',
     },
   },
-  'llm-genai': {
+  'ml-fundamentals': {
     label: {
-      en: 'LLM & Generative AI',
-      ko: 'LLM · 생성AI',
+      en: 'ML Fundamentals',
+      ko: 'ML 기초',
     },
     description: {
-      en: 'Large language models, generative AI, agents, RLHF, multimodal',
-      ko: '대형 언어 모델, 생성AI, 에이전트, RLHF, 멀티모달',
+      en: 'Classical ML algorithms, learning theory, evaluation methods',
+      ko: '전통 ML 알고리즘, 학습 이론, 평가 방법',
     },
   },
   'data-engineering': {
@@ -95,14 +85,24 @@ const HANDBOOK_CATEGORIES: Record<
       ko: 'AI 안전, 보안, 정렬, 규제, 공정성',
     },
   },
-  'products-platforms': {
+  'cs-fundamentals': {
     label: {
-      en: 'Products & Platforms',
-      ko: '제품 · 플랫폼',
+      en: 'CS Fundamentals',
+      ko: 'CS 기초',
     },
     description: {
-      en: 'Specific models, companies, frameworks, tools',
-      ko: '특정 모델, 기업, 프레임워크, 도구',
+      en: 'Programming, data structures, algorithms, networking, OS, web basics',
+      ko: '프로그래밍, 자료구조, 알고리즘, 네트워크, OS, 웹 기초',
+    },
+  },
+  'math-statistics': {
+    label: {
+      en: 'Math & Statistics',
+      ko: '수학 · 통계',
+    },
+    description: {
+      en: 'Linear algebra, probability, statistics, information theory',
+      ko: '선형대수, 확률, 통계, 정보이론',
     },
   },
 };

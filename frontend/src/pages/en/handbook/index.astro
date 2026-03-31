@@ -20,15 +20,15 @@ const PREVIEW_COUNT = 4;
 const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
 
 const handbookTags: Record<string, string> = {
-  'cs-fundamentals': 'API · SQL · OAuth · Data Structures',
-  'math-statistics': 'PCA · Probability · Entropy · Linear Algebra',
-  'ml-fundamentals': 'SVM · Decision Tree · Overfitting · Cross-validation',
-  'deep-learning': 'CNN · Transformer · GAN · Diffusion Model',
+  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
   'llm-genai': 'RAG · Prompt Engineering · RLHF · Agent',
+  'deep-learning': 'CNN · Transformer · GAN · Diffusion Model',
+  'ml-fundamentals': 'SVM · Decision Tree · Overfitting · Cross-validation',
   'data-engineering': 'ETL · Vector DB · Spark · Parquet',
   'infra-hardware': 'GPU · CUDA · Kubernetes · Quantization',
   'safety-ethics': 'AI Alignment · Adversarial Attack · Regulation',
-  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
+  'cs-fundamentals': 'API · SQL · OAuth · Data Structures',
+  'math-statistics': 'PCA · Probability · Entropy · Linear Algebra',
 };
 
 // User reading history & bookmarks
@@ -55,24 +55,24 @@ let popularTerms: any[] = [];
 if (supabase) {
   const { data } = await supabase
     .from('handbook_terms')
-    .select('term, slug, view_count')
+    .select('term, slug, korean_name, definition_en, view_count')
     .eq('status', 'published')
     .order('view_count', { ascending: false })
-    .limit(10);
+    .limit(5);
   popularTerms = data ?? [];
 }
 if (popularTerms.length === 0 || popularTerms.every((t: any) => !t.view_count)) {
   if (supabase) {
     const { data } = await supabase
       .from('handbook_terms')
-      .select('term, slug')
+      .select('term, slug, korean_name, definition_en')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .limit(10);
+      .limit(5);
     popularTerms = data ?? [];
   }
 }
-const railTerms = popularTerms.slice(0, 5);
+const railTerms = popularTerms.slice(0, 3);
 
 const categories = getHandbookCategories();
 
@@ -109,20 +109,20 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       />
     </div>
 
-    {/* Trending Terms */}
-    {popularTerms.length > 0 && (
+    {/* Popular Terms */}
+    {railTerms.length > 0 && (
       <section class="handbook-trending">
-        <h3 class="handbook-trending-title">Trending Terms</h3>
-        <ol class="handbook-trending-list">
-          {popularTerms.map((pt: any, i: number) => (
-            <li>
-              <a href={`/${locale}/handbook/${pt.slug}/`} class="handbook-trending-link">
-                <span class="handbook-trending-rank">{i + 1}</span>
-                <span>{pt.term}</span>
-              </a>
-            </li>
+        <h3 class="handbook-trending-title">Popular Terms</h3>
+        <div class="newsprint-stack">
+          {railTerms.map((pt: any) => (
+            <a class="newsprint-card" href={`/${locale}/handbook/${pt.slug}/`}>
+              <span class="newsprint-keyword-row">
+                <strong class="newsprint-rail-link">{pt.term}</strong>
+              </span>
+              {pt.definition_en && <p class="newsprint-related-summary">{pt.definition_en}</p>}
+            </a>
           ))}
-        </ol>
+        </div>
       </section>
     )}
 
@@ -191,7 +191,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     </div>
 
     <Fragment slot="rail">
-      <HandbookListRail locale={locale} terms={railTerms} editorialNote={sc.handbook_intro || undefined} />
+      <HandbookListRail locale={locale} terms={railTerms.map((t: any) => ({ term: t.term, slug: t.slug, definition: t.definition_en }))} editorialNote={sc.handbook_intro || undefined} />
     </Fragment>
   </NewsprintShell>
 </MainLayout>
