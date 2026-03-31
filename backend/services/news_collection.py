@@ -804,7 +804,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                 hits = hn_resp.json().get("hits", [])
                 # Pick the best thread (most points)
                 best_hit = max(
-                    (h for h in hits if (h.get("points") or 0) >= 10),
+                    (h for h in hits if (h.get("points") or 0) >= 5),
                     key=lambda h: (h.get("points") or 0),
                     default=None,
                 )
@@ -874,7 +874,7 @@ async def collect_community_reactions(title: str, url: str) -> str:
                         continue
                     score = rd.get("score", 0)
                     num_comments = rd.get("num_comments", 0)
-                    if score >= 10:
+                    if score >= 5:
                         if not best_thread or score > best_thread.get("score", 0):
                             best_thread = rd
                 if best_thread:
