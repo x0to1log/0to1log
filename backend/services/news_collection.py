@@ -937,6 +937,11 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
     """
     import httpx
 
+    # Skip URLs unlikely to have community discussions (GitHub profiles, category pages)
+    if url and _re_module.match(r"https?://github\.com/[^/]+/?$", url):
+        logger.debug("Skipping community search for GitHub profile URL: %s", url[:60])
+        return ""
+
     # Extract entities for keyword fallback search
     entities = _extract_entities(title)
     search_queries = _build_search_queries(entities)
