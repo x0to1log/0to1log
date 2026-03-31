@@ -15,6 +15,9 @@ OPENAI_MODEL_PRICING_PER_1M = {
     "gpt-4.1": {"input": Decimal("2.00"), "output": Decimal("8.00")},
     "gpt-4.1-mini": {"input": Decimal("0.40"), "output": Decimal("1.60")},
     "gpt-4.1-nano": {"input": Decimal("0.10"), "output": Decimal("0.40")},
+    "gpt-5": {"input": Decimal("2.00"), "output": Decimal("8.00")},
+    "gpt-5-mini": {"input": Decimal("0.40"), "output": Decimal("1.60")},
+    "gpt-5-nano": {"input": Decimal("0.10"), "output": Decimal("0.40")},
     "o4-mini": {"input": Decimal("1.10"), "output": Decimal("4.40")},
     "o3": {"input": Decimal("2.00"), "output": Decimal("8.00")},
     "o3-mini": {"input": Decimal("1.10"), "output": Decimal("4.40")},
@@ -22,12 +25,7 @@ OPENAI_MODEL_PRICING_PER_1M = {
 
 
 def get_openai_client() -> AsyncOpenAI:
-    """Return a configured AsyncOpenAI client with 180s default timeout.
-
-    Individual callers can override with shorter timeouts where appropriate
-    (e.g., handbook quality checks). News digest calls need the full 180s
-    because they generate EN+KO simultaneously with 16K max_tokens.
-    """
+    """Return a configured AsyncOpenAI client."""
     return AsyncOpenAI(api_key=settings.openai_api_key, timeout=300.0)
 
 

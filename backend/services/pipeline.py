@@ -404,6 +404,24 @@ async def _extract_and_create_handbook_terms(
         "ai-business",
     }
 
+    # Blocklist: terms that passed LLM extraction but are not handbook-worthy
+    # (outcome/strategy phrases, industry names, overly generic terms)
+    TERM_BLOCKLIST = {
+        "ecosystem integration", "cross-platform ai", "dynamic content delivery",
+        "content recommendations", "photorealistic graphics", "image generation",
+        "gaming industry", "collaboration", "actionable intelligence",
+        "ai-driven efficiencies", "cost efficiency", "administrative tasks",
+        "collaborative healthcare", "precision health", "legacy infrastructure",
+        "warping operation", "self-editing context",
+        "variation operator", "verification-centric agents",
+    }
+
+    # Generic suffix patterns that indicate outcome/strategy phrases, not technology
+    GENERIC_SUFFIXES = (
+        " integration", " optimization", " management", " delivery",
+        " efficiencies", " operations", " intelligence", " industry",
+    )
+
     # Pre-filter terms before generation
     valid_terms: list[tuple[str, str, str]] = []  # (term_name, korean_name, slug)
     queued_terms: list[tuple[str, str, str, str]] = []  # (term_name, korean_name, slug, category)
@@ -420,6 +438,21 @@ async def _extract_and_create_handbook_terms(
         if any(s in lower for s in modifier_suffixes):
             logger.info("Skipping '%s' — adjective/modifier", term_name)
             continue
+        # Blocklist check
+        if lower in TERM_BLOCKLIST:
+            logger.info("Skipping '%s' — blocklisted (not handbook-worthy)", term_name)
+            continue
+        # Generic suffix check (catches "X integration", "Y optimization" patterns)
+        if any(lower.endswith(s) for s in GENERIC_SUFFIXES):
+            # Allow known exceptions (e.g., "query optimization" is a real DB concept)
+            known_exceptions = {
+                "query optimization", "gradient optimization", "kernel optimization",
+                "workflow orchestration", "access management", "memory management",
+                "process management", "dependency management", "package management",
+            }
+            if lower not in known_exceptions:
+                logger.info("Skipping '%s' — generic suffix pattern", term_name)
+                continue
         category = term_info.get("category", "")
         if category not in VALID_CATEGORIES:
             logger.info("Skipping '%s' — invalid category '%s'", term_name, category)
