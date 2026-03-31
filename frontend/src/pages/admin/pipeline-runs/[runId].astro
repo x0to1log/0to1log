@@ -634,7 +634,8 @@ if (batchId) {
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
-          alert('Rerun started: ' + data.message);
+          var msg = (data.data && data.data.message) || data.message || 'Rerun queued';
+          alert('Rerun started: ' + msg);
           menu.style.display = 'none';
           window.location.reload();
         })
