@@ -1507,6 +1507,7 @@ async def rerun_pipeline_stage(
             supabase.table("pipeline_logs").delete().eq("run_id", run_id).eq("pipeline_type", stage_name).execute()
         supabase.table("pipeline_runs").update({
             "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
             "finished_at": None,
             "last_error": None,
         }).eq("id", run_id).execute()
