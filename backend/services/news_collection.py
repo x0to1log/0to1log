@@ -1027,6 +1027,8 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
             "deeplearning", "datascience", "mlops", "learnmachinelearning",
             "languagemodels", "agi", "singularity",
             "reinforcementlearning", "computervision", "nlp", "mlpapers",
+            # AI agents & applications
+            "ai_agents", "aiwars",
             # Frameworks & tools
             "pytorch", "tensorflow", "jax",
             # Model/platform specific
@@ -1037,8 +1039,8 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
             # General tech
             "technology", "programming", "compsci", "computerscience",
             "science", "futurology", "robotics", "selfhosted", "opensource",
-            # Business/startup
-            "startups",
+            # Business/startup/policy
+            "startups", "fintech", "legaltech", "europe",
         }
         try:
             best_thread = None
@@ -1057,64 +1059,85 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                             logger.debug("Reddit URL match: r/%s '%s' (%d upvotes)", rd.get("subreddit", ""), rd.get("title", "")[:40], rd.get("score", 0))
                             break
 
-            # Phase 2: Entity-based keyword fallback with relevance check
-            if not best_thread:
-                for sq in search_queries:
-                    await asyncio.sleep(random.uniform(0.5, 2.0))
-                    reddit_resp = await client.get(
-                        "https://www.reddit.com/search.json",
-                        params={"q": sq, "sort": "relevance", "limit": 10, "t": "week"},
+            # Phase 2: Brave Discussions fallback (replaces Reddit keyword search)
+            if not best_thread and settings.brave_api_key:
+                brave_query = " ".join(_extract_entities(title)[:3]) or title[:60]
+                try:
+                    brave_resp = await client.get(
+                        "https://api.search.brave.com/res/v1/web/search",
+                        headers={"X-Subscription-Token": settings.brave_api_key},
+                        params={"q": brave_query, "count": 5},
                     )
-                    if reddit_resp.status_code != 200:
-                        continue
-                    children = reddit_resp.json().get("data", {}).get("children", [])
-                    for child in children:
-                        rd = child.get("data", {})
-                        subreddit = rd.get("subreddit", "").lower()
-                        if subreddit not in ALLOWED_SUBREDDITS:
-                            continue
-                        score = rd.get("score", 0)
-                        if score < 5:
-                            continue
-                        relevance = _entity_relevance(title, rd.get("title", ""), entities)
-                        if relevance >= 35:
-                            best_thread = rd
-                            logger.debug("Reddit keyword match: r/%s '%s' (relevance=%.0f, score=%d, query='%s')", subreddit, rd.get("title", "")[:40], relevance, score, sq)
-                            break
-                        else:
-                            logger.debug("Reddit keyword skip (relevance=%.0f): r/%s '%s'", relevance, subreddit, rd.get("title", "")[:40])
-                    if best_thread:
-                        break
-                if best_thread:
-                    permalink = best_thread.get("permalink", "")
-                    rd_title = best_thread.get("title", "")
-                    subreddit = best_thread.get("subreddit", "")
-                    score = best_thread.get("score", 0)
-                    num_comments = best_thread.get("num_comments", 0)
-                    # Fetch top comments
-                    comments_text = []
-                    try:
-                        comment_resp = await client.get(
-                            f"https://www.reddit.com{permalink}.json",
-                            params={"limit": 5, "sort": "top", "depth": 1},
-                        )
-                        if comment_resp.status_code == 200:
-                            comment_data = comment_resp.json()
-                            if len(comment_data) > 1:
-                                for c in comment_data[1].get("data", {}).get("children", []):
-                                    body = c.get("data", {}).get("body", "")
-                                    c_score = c.get("data", {}).get("score", 0)
-                                    if body and len(body) > 30 and len(body) < 500 and c_score > 2 and not _is_spam_comment(body):
-                                        comments_text.append(body.strip())
-                                    if len(comments_text) >= 3:
-                                        break
-                    except Exception:
-                        pass
-                    thread_block = f"[Reddit r/{subreddit}] {rd_title} | {score} upvotes | {num_comments} comments\n"
-                    if comments_text:
-                        thread_block += "Top comments:\n"
-                        thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
-                    parts.append(thread_block)
+                    if brave_resp.status_code == 200:
+                        discussions = brave_resp.json().get("discussions", {}).get("results", [])
+                        for disc in discussions:
+                            disc_url = disc.get("url", "")
+                            disc_title = disc.get("title", "")
+                            if "reddit.com" not in disc_url:
+                                continue
+                            # Extract subreddit from URL
+                            _rd_match = _re_module.search(r"reddit\.com/r/(\w+)", disc_url)
+                            if not _rd_match:
+                                continue
+                            subreddit = _rd_match.group(1).lower()
+                            if subreddit not in ALLOWED_SUBREDDITS:
+                                continue
+                            relevance = _entity_relevance(title, disc_title, entities)
+                            if relevance >= 35:
+                                # Extract permalink from Brave URL and fetch via Reddit API
+                                _perm_match = _re_module.search(r"(/r/\w+/comments/\w+)", disc_url)
+                                if not _perm_match:
+                                    continue
+                                _permalink = _perm_match.group(1)
+                                await asyncio.sleep(random.uniform(0.5, 2.0))
+                                rd_fetch = await client.get(
+                                    f"https://www.reddit.com{_permalink}.json",
+                                    params={"limit": 1},
+                                )
+                                if rd_fetch.status_code == 200:
+                                    rd_json = rd_fetch.json()
+                                    if isinstance(rd_json, list) and rd_json:
+                                        post_data = rd_json[0].get("data", {}).get("children", [{}])[0].get("data", {})
+                                        if post_data.get("score", 0) >= 5:
+                                            best_thread = post_data
+                                            logger.debug("Brave discussions match: r/%s '%s' (relevance=%.0f, score=%d)", subreddit, disc_title[:40], relevance, post_data.get("score", 0))
+                                            break
+                            else:
+                                logger.debug("Brave discussions skip (relevance=%.0f): '%s'", relevance, disc_title[:40])
+                except Exception as e:
+                    logger.debug("Brave discussions search failed for '%s': %s", title[:40], e)
+
+            if best_thread:
+                permalink = best_thread.get("permalink", "")
+                rd_title = best_thread.get("title", "")
+                subreddit = best_thread.get("subreddit", "")
+                score = best_thread.get("score", 0)
+                num_comments = best_thread.get("num_comments", 0)
+                # Fetch top comments
+                comments_text = []
+                try:
+                    await asyncio.sleep(random.uniform(0.5, 2.0))
+                    comment_resp = await client.get(
+                        f"https://www.reddit.com{permalink}.json",
+                        params={"limit": 5, "sort": "top", "depth": 1},
+                    )
+                    if comment_resp.status_code == 200:
+                        comment_data = comment_resp.json()
+                        if len(comment_data) > 1:
+                            for c in comment_data[1].get("data", {}).get("children", []):
+                                body = c.get("data", {}).get("body", "")
+                                c_score = c.get("data", {}).get("score", 0)
+                                if body and len(body) > 30 and len(body) < 500 and c_score > 2 and not _is_spam_comment(body):
+                                    comments_text.append(body.strip())
+                                if len(comments_text) >= 3:
+                                    break
+                except Exception:
+                    pass
+                thread_block = f"[Reddit r/{subreddit}] {rd_title} | {score} upvotes | {num_comments} comments\n"
+                if comments_text:
+                    thread_block += "Top comments:\n"
+                    thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
+                parts.append(thread_block)
         except Exception as e:
             logger.debug("Reddit search failed for '%s': %s", title[:40], e)
 
