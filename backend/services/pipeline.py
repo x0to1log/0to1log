@@ -831,7 +831,7 @@ async def _generate_digest(
                 content = src.get("content", "")
                 if len(content.strip()) < 40:
                     continue
-                source_blocks.append(f"Source {i}: {src['url']}\n{content}")
+                source_blocks.append(f"Source {i}: {src['url']}\n{content[:12000]}")
             body_block = "\n\n".join(source_blocks)
         else:
             # Fallback: assemble from raw_content_map for each item in group
@@ -840,7 +840,7 @@ async def _generate_digest(
                 content = raw_content_map.get(item.url, "")
                 if len(content.strip()) < 40:
                     continue
-                source_blocks.append(f"Source {i}: {item.url}\n{content}")
+                source_blocks.append(f"Source {i}: {item.url}\n{content[:12000]}")
             if not source_blocks:
                 logger.info("Skipping group '%s' — no substantive content", group.group_title[:60])
                 continue
