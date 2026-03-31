@@ -157,7 +157,9 @@
 | NQ-14 | Citation 번호 전체 기사 순차 (섹션별 리셋 방지) — per-paragraph citation + 후처리 heading 집계 | — | — | done |
 | NQ-15 | Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성 | — | — | todo |
 | NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | done |
-| NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | todo |
+| NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | done |
+| NQ-18 | CP 스팸 필터 — 코멘트 최소 품질 체크(upvote, 패턴) + 소스 도메인 필터(HN/Reddit만) | — | — | todo |
+| NQ-19 | 어드민 개별 재생성 — Research/Business 따로 digest만 재생성하는 버튼 + 백엔드 API | — | — | todo |
 
 #### NQ-13 설계 참조
 - **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
@@ -197,6 +199,22 @@
 - enrich가 소스 0개 반환 → Writer가 원본만 인용, 다중 소스 효과 없음
 - community 0건 → CP 없어도 정당화됨
 - **방향:** LLM 호출 아닌 코드 기반 규칙 체크 (비용 0). 파이프라인 로그에 warning 기록 + 어드민 표시
+
+#### NQ-18 배경 노트
+3/31 자동 파이프라인에서 Research CP에 봇 생성 스팸 텍스트가 실제 코멘트로 인용됨.
+- "Microservices architecture locally automates DOM elements" — 무의미한 기술 용어 나열
+- 소스: "jplopsoft.idv.tw IT TOP Blog" — 신뢰 불가 도메인
+- **구현 방향:**
+  - 코멘트 최소 품질: upvote 3 미만 스킵, 기술 용어 무의미 나열 패턴 탐지
+  - 소스 도메인 필터: HN Algolia + Reddit JSON만 사용, 기타 소스 무시
+  - 비용 0 (코드 필터)
+
+#### NQ-19 배경 노트
+현재 파이프라인은 research+business를 한번에 생성. CP 스팸이나 특정 카테고리 문제 시 전체를 다시 돌려야 함.
+- **구현 방향:**
+  - 어드민 pipeline-runs 상세에 "Research 재생성" / "Business 재생성" 버튼
+  - 백엔드 API: classify/merge 결과를 DB에 캐시, digest 단계만 재실행
+  - 재생성 시 기존 classify/merge/community/enrich 결과 재활용 → 비용 절감
 
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
