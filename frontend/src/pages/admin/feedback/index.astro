@@ -95,7 +95,7 @@ function getSourceLabel(sourceType: string): string {
 function getEditorUrl(sourceType: string, slug: string | null): string {
   if (!slug) return '#';
   switch (sourceType) {
-    case 'news': return `/admin/posts/edit/${slug}`;
+    case 'news': return `/admin/edit/${slug}`;
     case 'handbook': return `/admin/handbook/edit/${slug}`;
     case 'blog': return `/admin/blog/edit/${slug}`;
     case 'product': return `/admin/products/edit/${slug}`;

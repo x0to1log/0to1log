@@ -1,6 +1,6 @@
 ﻿---
 interface Props {
-  activeSection?: 'dashboard' | 'posts' | 'pipeline' | 'pipeline-analytics' | 'site-analytics' | 'blog' | 'handbook' | 'feedback' | 'products' | 'webhooks' | 'settings';
+  activeSection?: 'dashboard' | 'posts' | 'news' | 'pipeline' | 'pipeline-analytics' | 'site-analytics' | 'blog' | 'handbook' | 'feedback' | 'products' | 'webhooks' | 'settings';
   recentPosts?: Array<{ title: string; slug: string; type: 'post' | 'term' }>;
   stats?: { posts: number; terms: number; drafts: number };
 }
@@ -45,7 +45,7 @@ const currentPath = Astro.url.pathname;
       </svg>
       <span>Site Analytics</span>
     </a>
-    <a href="/admin/posts/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'posts' }]}>
+    <a href="/admin/news/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'news' || activeSection === 'posts' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M2 3h12M2 7h8M2 11h10" />
       </svg>

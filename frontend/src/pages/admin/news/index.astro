@@ -1,0 +1,644 @@
+---
+export const prerender = false;
+
+import MainLayout from '../../../layouts/MainLayout.astro';
+import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
+import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
+import { createClient } from '@supabase/supabase-js';
+
+type AdminPostRow = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string | null;
+  locale: string | null;
+  status: 'draft' | 'published' | string;
+  post_type: string | null;
+  updated_at: string;
+  published_at: string | null;
+  tags?: string[];
+};
+
+const accessToken = Astro.locals.accessToken;
+const sb = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+);
+
+let fetchError: string | null = null;
+let allPosts: AdminPostRow[] = [];
+let logDraft = 0;
+let logPublished = 0;
+let logTotal = 0;
+
+try {
+  const { data, error } = await sb
+    .from('news_posts')
+    .select('id, title, slug, category, locale, status, post_type, tags, updated_at, published_at')
+    .order('updated_at', { ascending: false })
+    .limit(500);
+
+  if (error) {
+    fetchError = error.message;
+  } else {
+    allPosts = data ?? [];
+    logTotal = allPosts.length;
+    logDraft = allPosts.filter((post) => post.status === 'draft').length;
+    logPublished = allPosts.filter((post) => post.status === 'published').length;
+  }
+} catch (error) {
+  fetchError = error instanceof Error ? error.message : 'Unknown error';
+}
+
+allPosts = allPosts.sort((a, b) => {
+  if (a.status === 'draft' && b.status !== 'draft') return -1;
+  if (a.status !== 'draft' && b.status === 'draft') return 1;
+  return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+});
+
+const localeOptions = Array.from(
+  new Set(allPosts.map((post) => post.locale).filter((locale): locale is string => Boolean(locale))),
+).sort();
+const categoryOptions = Array.from(
+  new Set(allPosts.map((post) => post.category).filter((category): category is string => Boolean(category))),
+).sort();
+
+// Group ALL posts by date: published→published_at, draft→updated_at
+function getGroupDate(post: AdminPostRow): string {
+  // Use published_at if available (both published and draft with scheduled date), fallback to updated_at
+  const ts = post.published_at || post.updated_at;
+  return new Date(ts).toISOString().slice(0, 10);
+}
+type DateGroup = { date: string; label: string; posts: AdminPostRow[]; statuses: Set<string> };
+const groupMap = new Map<string, DateGroup>();
+for (const post of allPosts) {
+  const date = getGroupDate(post);
+  if (!groupMap.has(date)) {
+    const d = new Date(date + 'T00:00:00');
+    groupMap.set(date, {
+      date,
+      label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      posts: [],
+      statuses: new Set(),
+    });
+  }
+  const g = groupMap.get(date)!;
+  g.posts.push(post);
+  g.statuses.add(post.status);
+}
+const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+---
+
+<MainLayout title="Admin News" locale="en">
+  <AdminSidebar activeSection="news" />
+
+  <div class="admin-dashboard">
+    <div class="admin-main">
+      <div class="admin-main-header">
+        <div class="admin-main-header-top">
+          <button class="admin-mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div>
+            <h1 class="admin-main-title">News</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-list-toolbar">
+        <div class="admin-list-toolbar-row">
+          <div class="admin-list-toolbar-left">
+            <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
+            <div class="admin-filter-tabs">
+              <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({logDraft})</button>
+              <button class="admin-filter-btn" data-filter="published">Published ({logPublished})</button>
+              <button class="admin-filter-btn" data-filter="all">All ({logTotal})</button>
+            </div>
+          </div>
+          <div class="admin-list-toolbar-right">
+            <input
+              type="search"
+              class="admin-input admin-search-input"
+              id="admin-search"
+              placeholder="Search..."
+            />
+            <button class="admin-btn admin-filters-toggle" id="filters-toggle" type="button">
+              Filters
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 5l3 3 3-3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="admin-list-toolbar-filters" id="filters-panel" hidden>
+          <select id="admin-locale-filter" class="admin-select">
+            <option value="">All locales</option>
+            {localeOptions.map((locale) => (
+              <option value={locale}>{locale.toUpperCase()}</option>
+            ))}
+          </select>
+          <select id="admin-category-filter" class="admin-select">
+            <option value="">All categories</option>
+            {categoryOptions.map((category) => (
+              <option value={category}>{category}</option>
+            ))}
+          </select>
+          <select id="admin-sort" class="admin-select">
+            <option value="updated">Recently updated</option>
+            <option value="published">Recently published</option>
+            <option value="title">Title A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Bulk action bar -->
+      <div class="news-bulk-bar" id="bulk-bar" hidden>
+        <label class="news-bulk-count" id="bulk-count">0 selected</label>
+        <button class="admin-btn admin-btn-primary admin-btn-sm" id="bulk-publish">Publish</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-unpublish">Unpublish</button>
+        <button class="admin-btn admin-btn-sm" id="bulk-deselect">Deselect All</button>
+      </div>
+
+      {fetchError ? (
+        <NewsprintNotice
+          variant="unauthorized"
+          message={`Failed to load posts: ${fetchError}`}
+          linkHref="/admin/news/"
+          linkLabel="Retry"
+        />
+      ) : allPosts.length === 0 ? (
+        <NewsprintNotice variant="empty" message="No posts yet." />
+      ) : (
+        <>
+          <div id="post-list">
+            {dateGroups.map((group) => (
+              <div class="news-date-card" data-group-date={group.date}>
+                <div class="news-date-card__header">
+                  <input type="checkbox" class="news-group-check" data-group-date={group.date} title={`Select all ${group.label}`} />
+                  <span class="news-date-card__label">{group.label}</span>
+                  <span class="news-date-card__count">{group.posts.length}</span>
+                  <div class="news-date-card__badges">
+                    {group.statuses.has('draft') && <span class="admin-status-badge admin-status-badge--draft">draft</span>}
+                    {group.statuses.has('published') && <span class="admin-status-badge admin-status-badge--published">published</span>}
+                  </div>
+                </div>
+                <ul class="news-date-card__list">
+                  {group.posts.map((post) => (
+                    <li
+                      class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
+                      data-status={post.status}
+                      data-title={post.title.toLowerCase()}
+                      data-locale={post.locale || ''}
+                      data-category={post.category || ''}
+                      data-updated={post.updated_at || ''}
+                      data-published={post.published_at || ''}
+                      data-group-date={group.date}
+                      data-site-url={post.status === 'published' ? `/${post.locale ?? 'ko'}/news/${post.slug}/` : ''}
+                    >
+                      <input type="checkbox" class="news-bulk-check" data-bulk-id={post.id} data-group-date={group.date} />
+                      <div class="admin-list-info">
+                        <div class="admin-list-title">
+                          <a
+                            href={post.status === 'published' ? `/${post.locale ?? 'ko'}/news/${post.slug}/` : `/admin/edit/${post.slug}`}
+                            target={post.status === 'published' ? '_blank' : undefined}
+                            rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
+                          >{post.title}</a>
+                        </div>
+                        <div class="admin-list-meta">
+                          {post.post_type && (
+                            <span class={`admin-posttype-badge admin-posttype-badge--${post.post_type}`}>
+                              {post.post_type === 'research' ? 'R' : 'B'}
+                            </span>
+                          )}
+                          {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
+                          {post.category && (<><span class="admin-meta-sep">·</span><span>{post.category}</span></>)}
+                        </div>
+                      </div>
+                      <div class="admin-list-actions">
+                        <a href={`/admin/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
+                        <a href={`/admin/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
+                        {post.status === 'draft' ? (
+                          <button class="admin-btn admin-btn-primary" data-action="publish" data-id={post.id}>Publish</button>
+                        ) : (
+                          <button class="admin-btn" data-action="unpublish" data-id={post.id}>Unpublish</button>
+                        )}
+                        <button class="admin-btn-danger" data-action="delete" data-id={post.id} data-title={post.title}>Delete</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div id="lazy-sentinel" class="lazy-sentinel" style="display:none;"></div>
+          <p id="admin-no-results" class="admin-no-results" hidden>No matching posts.</p>
+        </>
+      )}
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .admin-list-toolbar {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-list-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-list-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-list-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .admin-list-toolbar-right .admin-search-input {
+    width: 160px;
+  }
+
+  .admin-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .admin-filters-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+
+  .admin-list-toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .admin-list-toolbar-filters .admin-select {
+    width: auto;
+  }
+
+  .lazy-sentinel {
+    height: 1px;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .admin-list-toolbar-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-list-toolbar-left {
+      flex-wrap: wrap;
+    }
+
+    .admin-list-toolbar-right {
+      margin-left: 0;
+      flex-wrap: wrap;
+    }
+
+    .admin-list-toolbar-right .admin-search-input {
+      width: 100%;
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+
+    .admin-list-toolbar-filters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  .news-bulk-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: var(--color-text-primary);
+  }
+
+  .news-bulk-count {
+    font-weight: 600;
+    margin-right: auto;
+  }
+
+  .news-bulk-check {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--admin-primary, #3b82f6);
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  .news-date-card {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    background: var(--color-bg-primary);
+  }
+
+  .news-date-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.82rem;
+  }
+
+  .news-group-check {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-accent, #6366f1);
+  }
+
+  .news-date-card__label {
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .news-date-card__count {
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    background: var(--color-bg-tertiary, var(--color-border));
+    padding: 0.1rem 0.4rem;
+    border-radius: 10px;
+  }
+
+  .news-date-card__badges {
+    display: flex;
+    gap: 0.3rem;
+    margin-left: auto;
+  }
+
+  .news-date-card__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .news-date-card__list .admin-list-item {
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+    padding: 0.4rem 0.75rem;
+  }
+
+  .news-date-card__list .admin-list-item:last-child {
+    border-bottom: none;
+  }
+</style>
+
+<script>
+  // @ts-nocheck
+  function initPostsList() {
+    const list = document.getElementById('post-list');
+    if (!list || list.dataset.init === '1') return;
+    list.dataset.init = '1';
+
+    let currentFilter = 'draft';
+    const BATCH_SIZE = 50;
+    let maxVisible = BATCH_SIZE;
+    const searchInput = document.getElementById('admin-search');
+    const localeFilter = document.getElementById('admin-locale-filter');
+    const categoryFilter = document.getElementById('admin-category-filter');
+    const sortSelect = document.getElementById('admin-sort');
+    const noResults = document.getElementById('admin-no-results');
+    const filtersToggle = document.getElementById('filters-toggle');
+    const filtersPanel = document.getElementById('filters-panel');
+    const sentinel = document.getElementById('lazy-sentinel');
+    let allItems = Array.from(list.querySelectorAll('.admin-list-item'));
+
+    filtersToggle?.addEventListener('click', () => {
+      const open = filtersPanel?.hidden === false;
+      if (filtersPanel) filtersPanel.hidden = open;
+      filtersToggle.setAttribute('aria-expanded', String(!open));
+    });
+
+    function sortItems(mode) {
+      allItems.sort((a, b) => {
+        if (mode === 'title') {
+          return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+        }
+        if (mode === 'published') {
+          return new Date(b.dataset.published || b.dataset.updated || 0).getTime()
+            - new Date(a.dataset.published || a.dataset.updated || 0).getTime();
+        }
+        return new Date(b.dataset.updated || 0).getTime() - new Date(a.dataset.updated || 0).getTime();
+      });
+      allItems.forEach((item) => list.appendChild(item));
+    }
+
+    function applyFilter() {
+      sortItems(sortSelect?.value || 'updated');
+
+      const query = (searchInput?.value || '').toLowerCase().trim();
+      const locale = localeFilter?.value || '';
+      const category = categoryFilter?.value || '';
+      const hasActiveSearch = !!(query || locale || category);
+      let visibleCount = 0;
+      let matchCount = 0;
+
+      allItems.forEach((item) => {
+        const matchesStatus = currentFilter === 'all' || item.dataset.status === currentFilter;
+        const matchesQuery = !query || (item.dataset.title || '').includes(query);
+        const matchesLocale = !locale || item.dataset.locale === locale;
+        const matchesCategory = !category || item.dataset.category === category;
+        const matches = matchesStatus && matchesQuery && matchesLocale && matchesCategory;
+
+        if (matches) {
+          matchCount++;
+          const withinLimit = hasActiveSearch || matchCount <= maxVisible;
+          item.style.display = withinLimit ? '' : 'none';
+          if (withinLimit) visibleCount++;
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      // Show/hide date cards based on whether any items inside are visible
+      list.querySelectorAll<HTMLElement>('.news-date-card').forEach((card) => {
+        const items = card.querySelectorAll<HTMLElement>('.admin-list-item');
+        const anyVisible = Array.from(items).some((item) => item.style.display !== 'none');
+        card.style.display = anyVisible ? '' : 'none';
+      });
+
+      if (noResults) noResults.hidden = visibleCount > 0;
+      if (sentinel) {
+        sentinel.style.display = (!hasActiveSearch && matchCount > maxVisible) ? '' : 'none';
+      }
+    }
+
+    document.querySelectorAll('[data-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter || 'draft';
+        maxVisible = BATCH_SIZE;
+        document.querySelectorAll('[data-filter]').forEach((target) => target.classList.remove('admin-filter-btn--active'));
+        btn.classList.add('admin-filter-btn--active');
+        applyFilter();
+      });
+    });
+
+    searchInput?.addEventListener('input', applyFilter);
+    localeFilter?.addEventListener('change', applyFilter);
+    categoryFilter?.addEventListener('change', applyFilter);
+    sortSelect?.addEventListener('change', applyFilter);
+
+    // Row click (outside actions/links): open published site in new tab
+    list.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const item = target.closest('.admin-list-item--published');
+      if (!item) return;
+      if (target.closest('.admin-list-actions') || target.closest('a') || target.closest('input')) return;
+      const siteUrl = item.dataset.siteUrl;
+      if (siteUrl) window.open(siteUrl, '_blank', 'noopener,noreferrer');
+    });
+
+    document.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (!action || !id) return;
+
+        if (action === 'delete') {
+          const title = btn.dataset.title || 'this post';
+          if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+          const res = await fetch('/api/admin/posts/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+          if (res.ok) { window.location.reload(); return; }
+          const data = await res.json();
+          window.alert(`Delete failed: ${data.error || 'Unknown error'}`);
+          return;
+        }
+
+        const res = await fetch('/api/admin/posts/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action }),
+        });
+
+        if (res.ok) {
+          window.location.reload();
+          return;
+        }
+
+        const data = await res.json();
+        window.alert(`${action} failed: ${data.error || 'Unknown error'}`);
+      });
+    });
+
+    if (sentinel) {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          maxVisible += BATCH_SIZE;
+          applyFilter();
+        }
+      }, { rootMargin: '300px' });
+      observer.observe(sentinel);
+    }
+
+    applyFilter();
+
+    // ── Bulk actions ──
+    const bulkBar = document.getElementById('bulk-bar');
+    const bulkCount = document.getElementById('bulk-count');
+    const checkboxes = list.querySelectorAll('.news-bulk-check');
+
+    function updateBulkBar() {
+      const checked = list.querySelectorAll('.news-bulk-check:checked');
+      if (bulkBar) bulkBar.hidden = checked.length === 0;
+      if (bulkCount) bulkCount.textContent = `${checked.length} selected`;
+    }
+
+    checkboxes.forEach((cb) => cb.addEventListener('change', updateBulkBar));
+
+    // Group checkbox: toggle all items in that date group
+    list.querySelectorAll<HTMLInputElement>('.news-group-check').forEach((groupCb) => {
+      groupCb.addEventListener('change', () => {
+        const date = groupCb.dataset.groupDate;
+        list.querySelectorAll<HTMLInputElement>(`.news-bulk-check[data-group-date="${date}"]`).forEach((cb) => {
+          cb.checked = groupCb.checked;
+        });
+        updateBulkBar();
+      });
+    });
+
+    // Update group checkbox when individual items change
+    checkboxes.forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const date = (cb as HTMLInputElement).dataset.groupDate;
+        if (!date) return;
+        const groupItems = list.querySelectorAll<HTMLInputElement>(`.news-bulk-check[data-group-date="${date}"]`);
+        const allChecked = Array.from(groupItems).every((c) => c.checked);
+        const groupCb = list.querySelector<HTMLInputElement>(`.news-group-check[data-group-date="${date}"]`);
+        if (groupCb) groupCb.checked = allChecked;
+      });
+    });
+
+    document.getElementById('bulk-deselect')?.addEventListener('click', () => {
+      checkboxes.forEach((cb) => { cb.checked = false; });
+      list.querySelectorAll<HTMLInputElement>('.news-group-check').forEach((cb) => { cb.checked = false; });
+      updateBulkBar();
+    });
+
+    async function bulkAction(action) {
+      const checked = list.querySelectorAll('.news-bulk-check:checked');
+      const ids = Array.from(checked).map((cb) => cb.dataset.bulkId);
+      if (ids.length === 0) return;
+
+      const label = action.charAt(0).toUpperCase() + action.slice(1);
+      if (!window.confirm(`${label} ${ids.length} post(s)?`)) return;
+
+      const res = await fetch('/api/admin/posts/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids }),
+      });
+
+      const data = await res.json();
+      if (data.failed > 0) {
+        const reasons = data.errors.map((e) => `${e.id}: ${e.reason}`).join('\n');
+        window.alert(`${data.success} succeeded, ${data.failed} failed:\n${reasons}`);
+      }
+      window.location.reload();
+    }
+
+    document.getElementById('bulk-publish')?.addEventListener('click', () => bulkAction('publish'));
+    document.getElementById('bulk-unpublish')?.addEventListener('click', () => bulkAction('unpublish'));
+  }
+
+  document.addEventListener('DOMContentLoaded', initPostsList);
+  initPostsList();
+</script>
