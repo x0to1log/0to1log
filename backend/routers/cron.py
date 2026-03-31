@@ -11,7 +11,7 @@ from core.config import today_kst
 from core.database import get_supabase
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
-from services.pipeline import check_existing_batch, cleanup_existing_batch, run_daily_pipeline, run_handbook_extraction
+from services.pipeline import check_existing_batch, cleanup_existing_batch, rerun_pipeline_stage, run_daily_pipeline, run_handbook_extraction
 
 logger = logging.getLogger(__name__)
 
@@ -227,6 +227,52 @@ async def cancel_pipeline_run(
         logger.error("Pipeline cancel error: %s", e)
         raise HTTPException(500, "Failed to cancel pipeline")
     return {"status": "cancelled", "run_id": body.run_id}
+
+
+class PipelineRerunBody(BaseModel):
+    run_id: str
+    from_stage: str  # "classify"|"merge"|"community"|"write"
+    batch_id: str  # YYYY-MM-DD
+    category: Optional[str] = None  # "research"|"business"|None
+
+
+@router.post("/pipeline-rerun", status_code=202)
+@limiter.limit("5/minute")
+async def rerun_pipeline(
+    request: Request,
+    body: PipelineRerunBody,
+    background_tasks: BackgroundTasks,
+    _secret=Depends(verify_cron_secret),
+):
+    """Rerun pipeline from a specific stage using saved checkpoints."""
+    valid_stages = {"classify", "merge", "community", "write"}
+    if body.from_stage not in valid_stages:
+        raise HTTPException(400, f"Invalid from_stage: {body.from_stage}. Must be one of {valid_stages}")
+    if body.category and body.category not in ("research", "business"):
+        raise HTTPException(400, "category must be 'research', 'business', or null")
+
+    async def _run():
+        try:
+            result = await rerun_pipeline_stage(
+                source_run_id=body.run_id,
+                from_stage=body.from_stage,
+                batch_id=body.batch_id,
+                category=body.category,
+            )
+            logger.info(
+                "Rerun %s from %s: %d posts, %d errors",
+                body.batch_id, body.from_stage, result.posts_created, len(result.errors),
+            )
+        except Exception as e:
+            logger.error("Rerun failed: %s", e)
+
+    background_tasks.add_task(_run)
+    return {
+        "status": "accepted",
+        "run_id": body.run_id,
+        "from_stage": body.from_stage,
+        "message": f"Rerun from {body.from_stage} started in background",
+    }
 
 
 @router.get("/health")

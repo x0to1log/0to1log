@@ -251,7 +251,24 @@ if (batchId) {
                 </span>
               )}
             </div>
-            <a href="/admin/pipeline-runs" class="pipeline-run-hero__back">Back to runs</a>
+            <div class="pipeline-run-hero__actions">
+              <a href="/admin/pipeline-runs" class="pipeline-run-hero__back">Back to runs</a>
+              {tone === 'success' && (
+                <div class="pipeline-rerun-dropdown">
+                  <button class="pipeline-rerun-btn" data-run-id={runId} data-run-key={run?.run_key ?? ''}>
+                    Rerun from...
+                  </button>
+                  <div class="pipeline-rerun-menu" id="rerun-menu" style="display:none;">
+                    <button class="pipeline-rerun-option" data-stage="write" data-category="research">Write: Research only</button>
+                    <button class="pipeline-rerun-option" data-stage="write" data-category="business">Write: Business only</button>
+                    <button class="pipeline-rerun-option" data-stage="write">Write: Both</button>
+                    <button class="pipeline-rerun-option" data-stage="community">From Community</button>
+                    <button class="pipeline-rerun-option" data-stage="merge">From Merge</button>
+                    <button class="pipeline-rerun-option" data-stage="classify">From Classify</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <div class="pipeline-run-hero__meta">
             <span>Started {relativeTime(run?.started_at ?? null)}</span>
@@ -572,6 +589,63 @@ if (batchId) {
       )}
     </div>
   </div>
+
+  <script is:inline nonce={Astro.locals.cspNonce || ''}>
+  (function() {
+    var btn = document.querySelector('.pipeline-rerun-btn');
+    var menu = document.getElementById('rerun-menu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function() {
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
+
+    var runId = btn.getAttribute('data-run-id');
+    var runKey = btn.getAttribute('data-run-key');
+    // Extract batch_id from run_key (e.g., "news-2026-03-31" -> "2026-03-31")
+    var batchMatch = runKey.match(/(\d{4}-\d{2}-\d{2})/);
+    var batchId = batchMatch ? batchMatch[1] : '';
+
+    menu.querySelectorAll('.pipeline-rerun-option').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        var stage = opt.getAttribute('data-stage');
+        var category = opt.getAttribute('data-category') || null;
+        var label = category ? stage + ' (' + category + ')' : stage;
+
+        if (!confirm('Rerun from "' + label + '" for ' + batchId + '?')) return;
+
+        fetch('/api/cron/pipeline-rerun', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-cron-secret': 'admin-ui',
+          },
+          body: JSON.stringify({
+            run_id: runId,
+            from_stage: stage,
+            batch_id: batchId,
+            category: category,
+          }),
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          alert('Rerun started: ' + data.message);
+          menu.style.display = 'none';
+          window.location.reload();
+        })
+        .catch(function(err) {
+          alert('Rerun failed: ' + err.message);
+        });
+      });
+    });
+  })();
+  </script>
 </MainLayout>
 
 <style>
@@ -650,6 +724,60 @@ if (batchId) {
 
   .pipeline-run-hero__back:hover {
     color: var(--color-text-primary);
+  }
+
+  .pipeline-run-hero__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .pipeline-rerun-dropdown {
+    position: relative;
+  }
+
+  .pipeline-rerun-btn {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .pipeline-rerun-btn:hover {
+    background: var(--color-bg-tertiary, var(--color-bg-secondary));
+  }
+
+  .pipeline-rerun-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 0.25rem;
+    min-width: 200px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10;
+    padding: 0.25rem 0;
+  }
+
+  .pipeline-rerun-option {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: none;
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pipeline-rerun-option:hover {
+    background: var(--color-bg-secondary);
   }
 
   .pipeline-run-hero__meta {

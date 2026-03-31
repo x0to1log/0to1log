@@ -136,7 +136,7 @@ def _check_pipeline_health(
 
     if stage == "merge" and merge_groups is not None:
         for g in merge_groups:
-            if len(g.items) >= 5:
+            if len(g.items) >= 8:
                 warnings.append(f"merge: group '{g.group_title[:50]}' has {len(g.items)} items (possible over-grouping)")
             if len(g.items) >= 2:
                 urls = [i.url for i in g.items]
@@ -153,6 +153,34 @@ def _check_pipeline_health(
             warnings.append(f"enrich: {len(zero_source)} groups with 0 sources: {zero_source[:3]}")
 
     return warnings
+
+
+def _save_checkpoint(supabase, run_id: str, stage: str, data: dict) -> None:
+    """Save pipeline stage output as a checkpoint for rerun support."""
+    try:
+        supabase.table("pipeline_checkpoints").upsert(
+            {"run_id": run_id, "stage": stage, "data": data},
+            on_conflict="run_id,stage",
+        ).execute()
+    except Exception as e:
+        logger.warning("Failed to save checkpoint %s: %s", stage, e)
+
+
+def _load_checkpoint(supabase, run_id: str, stage: str) -> dict | None:
+    """Load a checkpoint from a previous run. Returns None if not found."""
+    try:
+        result = (
+            supabase.table("pipeline_checkpoints")
+            .select("data")
+            .eq("run_id", run_id)
+            .eq("stage", stage)
+            .single()
+            .execute()
+        )
+        return result.data.get("data") if result.data else None
+    except Exception as e:
+        logger.warning("Failed to load checkpoint %s for run %s: %s", stage, run_id, e)
+        return None
 
 
 async def _log_stage(
@@ -1137,6 +1165,9 @@ async def run_daily_pipeline(
                 **collect_meta,
             },
         )
+        _save_checkpoint(supabase, run_id, "collect", {
+            "candidates": [c.model_dump() for c in candidates],
+        })
 
         if not candidates:
             logger.info("No news candidates found, pipeline complete")
@@ -1188,6 +1219,10 @@ async def run_daily_pipeline(
                 "warnings": classify_warnings,
             },
         )
+        _save_checkpoint(supabase, run_id, "classify", {
+            "research_picks": [c.model_dump() for c in classification.research_picks],
+            "business_picks": [c.model_dump() for c in classification.business_picks],
+        })
 
         # Stage: merge (group same-event articles from full candidate pool)
         t0 = time.monotonic()
@@ -1216,6 +1251,10 @@ async def run_daily_pipeline(
             usage=merge_usage,
             debug_meta={"llm_output": merge_output, "warnings": merge_warnings},
         )
+        _save_checkpoint(supabase, run_id, "merge", {
+            "research": [g.model_dump() for g in classification.research],
+            "business": [g.model_dump() for g in classification.business],
+        })
 
         handbook_slugs = _fetch_handbook_slugs(supabase)
         raw_content_map = {c.url: c.raw_content for c in candidates if c.raw_content}
@@ -1255,6 +1294,9 @@ async def run_daily_pipeline(
             output_summary=f"{len(community_map)} reactions collected",
             debug_meta={"warnings": community_warnings} if community_warnings else None,
         )
+        _save_checkpoint(supabase, run_id, "community", {
+            "community_map": community_map,
+        })
 
         # Stage: ranking (Lead/Supporting assignment per category)
         t0 = time.monotonic()
@@ -1275,6 +1317,10 @@ async def run_daily_pipeline(
             output_summary="leads assigned",
             usage=rank_usage,
         )
+        _save_checkpoint(supabase, run_id, "rank", {
+            "research": [g.model_dump() for g in classification.research],
+            "business": [g.model_dump() for g in classification.business],
+        })
 
         # Stage: enrich — find additional sources for groups with 1 item only
         t0 = time.monotonic()
@@ -1296,6 +1342,10 @@ async def run_daily_pipeline(
             output_summary=f"{sum(len(s) for s in enriched_map.values())} total sources",
             debug_meta={"warnings": enrich_warnings} if enrich_warnings else None,
         )
+        _save_checkpoint(supabase, run_id, "enrich", {
+            "enriched_map": enriched_map,
+            "raw_content_map": {k: v[:15000] for k, v in raw_content_map.items()},
+        })
 
         # Generate research + business digests in parallel
         digest_tasks = []
@@ -1394,6 +1444,211 @@ async def run_daily_pipeline(
         )
 
     return result
+
+
+async def rerun_pipeline_stage(
+    source_run_id: str,
+    from_stage: str,
+    batch_id: str,
+    category: str | None = None,
+) -> PipelineResult:
+    """Rerun pipeline from a specific stage using saved checkpoints.
+
+    Args:
+        source_run_id: Run ID to load checkpoints from.
+        from_stage: Stage to start from ("classify"|"merge"|"community"|"write").
+        batch_id: Target date (YYYY-MM-DD).
+        category: "research"|"business"|None (both).
+    """
+    from models.news_pipeline import ClassifiedCandidate, ClassificationResult, NewsCandidate
+
+    supabase = get_supabase()
+
+    # Create a new pipeline run for this rerun
+    run_id = str(uuid.uuid4())
+    try:
+        supabase.table("pipeline_runs").insert({
+            "id": run_id,
+            "run_key": f"rerun-{batch_id}-{from_stage}",
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+    except Exception as e:
+        return PipelineResult(batch_id=batch_id, status="failed", message=f"Failed to create rerun: {e}")
+
+    cumulative_usage: dict[str, Any] = {}
+    all_errors: list[str] = []
+    total_posts = 0
+
+    try:
+        # Load necessary checkpoints
+        collect_data = _load_checkpoint(supabase, source_run_id, "collect")
+        if not collect_data:
+            raise ValueError("Checkpoint not found: collect")
+        candidates = [NewsCandidate(**c) for c in collect_data.get("candidates", [])]
+        raw_content_map = {c.url: c.raw_content for c in candidates if c.raw_content}
+        handbook_slugs = _fetch_handbook_slugs(supabase)
+
+        classification = ClassificationResult()
+
+        # --- Load or rerun classify ---
+        if from_stage == "classify":
+            t0 = time.monotonic()
+            classification, classify_usage = await classify_candidates(candidates)
+            cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
+            _save_checkpoint(supabase, run_id, "classify", {
+                "research_picks": [c.model_dump() for c in classification.research_picks],
+                "business_picks": [c.model_dump() for c in classification.business_picks],
+            })
+            await _log_stage(supabase, run_id, "classify", "success", t0,
+                             output_summary=f"research={len(classification.research_picks)}, business={len(classification.business_picks)}",
+                             usage=classify_usage)
+        else:
+            classify_data = _load_checkpoint(supabase, source_run_id, "classify")
+            if classify_data:
+                classification.research_picks = [ClassifiedCandidate(**c) for c in classify_data.get("research_picks", [])]
+                classification.business_picks = [ClassifiedCandidate(**c) for c in classify_data.get("business_picks", [])]
+
+        # --- Load or rerun merge ---
+        if from_stage in ("classify", "merge"):
+            t0 = time.monotonic()
+            classification, merge_usage = await merge_classified(classification, candidates)
+            cumulative_usage = merge_usage_metrics(cumulative_usage, merge_usage)
+            _save_checkpoint(supabase, run_id, "merge", {
+                "research": [g.model_dump() for g in classification.research],
+                "business": [g.model_dump() for g in classification.business],
+            })
+            await _log_stage(supabase, run_id, "merge", "success", t0,
+                             output_summary=f"research={len(classification.research)}, business={len(classification.business)}",
+                             usage=merge_usage)
+        else:
+            merge_data = _load_checkpoint(supabase, source_run_id, "merge")
+            if merge_data:
+                classification.research = [ClassifiedGroup(**g) for g in merge_data.get("research", [])]
+                classification.business = [ClassifiedGroup(**g) for g in merge_data.get("business", [])]
+
+        # --- Load or rerun community + rank + enrich ---
+        if from_stage in ("classify", "merge", "community"):
+            # Community
+            t0 = time.monotonic()
+            all_classified = classification.research + classification.business
+            seen_urls: set[str] = set()
+            community_lookup: list[tuple[str, str]] = []
+            for group in all_classified:
+                for item in group.items:
+                    if item.url not in seen_urls:
+                        seen_urls.add(item.url)
+                        community_lookup.append((item.title, item.url))
+            community_map: dict[str, str] = {}
+            if community_lookup:
+                community_tasks = [collect_community_reactions(t, u) for t, u in community_lookup]
+                community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
+                for (_, url), result in zip(community_lookup, community_results):
+                    if isinstance(result, str) and result.strip():
+                        community_map[url] = result
+            _save_checkpoint(supabase, run_id, "community", {"community_map": community_map})
+            await _log_stage(supabase, run_id, "community", "success", t0,
+                             output_summary=f"{len(community_map)} reactions")
+
+            # Rank
+            t0 = time.monotonic()
+            r_ranked, r_usage = await rank_classified(classification.research, "research", community_map)
+            b_ranked, b_usage = await rank_classified(classification.business, "business", community_map)
+            classification.research = r_ranked
+            classification.business = b_ranked
+            rank_usage = merge_usage_metrics(r_usage, b_usage)
+            cumulative_usage = merge_usage_metrics(cumulative_usage, rank_usage)
+            _save_checkpoint(supabase, run_id, "rank", {
+                "research": [g.model_dump() for g in classification.research],
+                "business": [g.model_dump() for g in classification.business],
+            })
+            await _log_stage(supabase, run_id, "ranking", "success", t0, usage=rank_usage)
+
+            # Enrich
+            t0 = time.monotonic()
+            all_ranked = classification.research + classification.business
+            enriched_map = await enrich_sources(all_ranked, raw_content_map, target_date=batch_id)
+            _save_checkpoint(supabase, run_id, "enrich", {
+                "enriched_map": enriched_map,
+                "raw_content_map": {k: v[:15000] for k, v in raw_content_map.items()},
+            })
+            await _log_stage(supabase, run_id, "enrich", "success", t0,
+                             output_summary=f"{sum(len(s) for s in enriched_map.values())} sources")
+        else:
+            # Load from checkpoint (write-only rerun)
+            community_data = _load_checkpoint(supabase, source_run_id, "community")
+            community_map = community_data.get("community_map", {}) if community_data else {}
+
+            rank_data = _load_checkpoint(supabase, source_run_id, "rank")
+            if rank_data:
+                classification.research = [ClassifiedGroup(**g) for g in rank_data.get("research", [])]
+                classification.business = [ClassifiedGroup(**g) for g in rank_data.get("business", [])]
+
+            enrich_data = _load_checkpoint(supabase, source_run_id, "enrich")
+            enriched_map = enrich_data.get("enriched_map", {}) if enrich_data else {}
+            if enrich_data and enrich_data.get("raw_content_map"):
+                raw_content_map = enrich_data["raw_content_map"]
+
+        # --- Always run write (digest generation) ---
+        digest_tasks = []
+        for digest_type, classified_items in [
+            ("research", classification.research),
+            ("business", classification.business),
+        ]:
+            if not classified_items:
+                continue
+            if category and digest_type != category:
+                continue  # Skip if category filter is set
+            digest_tasks.append(
+                _generate_digest(
+                    classified=classified_items,
+                    digest_type=digest_type,
+                    batch_id=batch_id,
+                    handbook_slugs=handbook_slugs,
+                    raw_content_map=raw_content_map,
+                    community_map=community_map,
+                    supabase=supabase,
+                    run_id=run_id,
+                    enriched_map=enriched_map,
+                )
+            )
+
+        digest_results = await asyncio.gather(*digest_tasks, return_exceptions=True)
+        for result in digest_results:
+            if isinstance(result, Exception):
+                all_errors.append(f"Digest generation failed: {result}")
+            else:
+                posts, errors, usage = result
+                total_posts += posts
+                all_errors.extend(errors)
+                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+
+        status = "success" if total_posts > 0 else "failed"
+        supabase.table("pipeline_runs").update({
+            "status": status,
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "last_error": "; ".join(all_errors) if all_errors else None,
+        }).eq("id", run_id).execute()
+
+        return PipelineResult(
+            batch_id=batch_id,
+            status=status,
+            posts_created=total_posts,
+            errors=all_errors,
+            usage=cumulative_usage,
+        )
+
+    except Exception as e:
+        logger.error("Rerun pipeline failed: %s", e)
+        try:
+            supabase.table("pipeline_runs").update({
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": str(e),
+            }).eq("id", run_id).execute()
+        except Exception:
+            pass
+        return PipelineResult(batch_id=batch_id, status="failed", message=str(e))
 
 
 async def run_handbook_extraction(batch_id: str) -> PipelineResult:
