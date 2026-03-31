@@ -1274,10 +1274,12 @@ async def run_daily_pipeline(
         seen_community_urls: set[str] = set()
         community_lookup: list[tuple[str, str]] = []  # (title, url)
         for group in all_classified:
+            # Use group_title for search (better keywords than raw item titles like GitHub repo names)
+            search_title = group.group_title
             for item in group.items:
                 if item.url not in seen_community_urls:
                     seen_community_urls.add(item.url)
-                    community_lookup.append((item.title, item.url))
+                    community_lookup.append((search_title, item.url))
         community_map: dict[str, str] = {}
         if community_lookup:
             community_tasks = [
