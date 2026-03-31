@@ -1573,10 +1573,11 @@ async def rerun_pipeline_stage(
             seen_urls: set[str] = set()
             community_lookup: list[tuple[str, str]] = []
             for group in all_classified:
+                search_title = group.group_title
                 for item in group.items:
                     if item.url not in seen_urls:
                         seen_urls.add(item.url)
-                        community_lookup.append((item.title, item.url))
+                        community_lookup.append((search_title, item.url))
             community_map: dict[str, str] = {}
             if community_lookup:
                 community_tasks = [collect_community_reactions(t, u) for t, u in community_lookup]
