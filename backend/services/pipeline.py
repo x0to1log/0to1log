@@ -26,10 +26,27 @@ from services.news_collection import collect_community_reactions, collect_news, 
 logger = logging.getLogger(__name__)
 
 
+def _extract_publisher(url: str) -> str:
+    """Extract publisher name from URL domain."""
+    from urllib.parse import urlparse
+    try:
+        host = urlparse(url).netloc.lower()
+        # Remove www. prefix
+        if host.startswith("www."):
+            host = host[4:]
+        # Remove common TLDs for cleaner display
+        parts = host.split(".")
+        if len(parts) >= 2:
+            return parts[-2].capitalize() if parts[-2] not in ("co", "com") else parts[-3].capitalize() if len(parts) >= 3 else parts[0].capitalize()
+        return host.capitalize()
+    except Exception:
+        return ""
+
+
 def _fill_source_titles(
     code_cards: list[dict], llm_sources: list[dict],
 ) -> list[dict]:
-    """Merge LLM-generated titles into code-extracted source_cards by URL matching."""
+    """Merge LLM-generated titles and publisher into code-extracted source_cards."""
     if not code_cards:
         return code_cards
     url_to_title: dict[str, str] = {}
@@ -39,7 +56,11 @@ def _fill_source_titles(
         if url and title:
             url_to_title[url] = title
     return [
-        {**card, "title": url_to_title.get(card["url"], card.get("title", ""))}
+        {
+            **card,
+            "title": url_to_title.get(card["url"], card.get("title", "")),
+            "publisher": card.get("publisher") or _extract_publisher(card.get("url", "")),
+        }
         for card in code_cards
     ]
 
