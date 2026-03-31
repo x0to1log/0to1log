@@ -369,10 +369,10 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
         ref = datetime.strptime(target_date, "%Y-%m-%d")
     else:
         ref = datetime.now(timezone.utc)
-    since_date = (ref - timedelta(days=3)).strftime("%Y-%m-%d")
+    created_since = (ref - timedelta(days=7)).strftime("%Y-%m-%d")
     url = "https://api.github.com/search/repositories"
     params = {
-        "q": f"machine-learning OR deep-learning OR LLM OR language-model pushed:>{since_date} stars:>100",
+        "q": f"machine-learning OR deep-learning OR LLM OR language-model OR AI-agent created:>{created_since} stars:>20",
         "sort": "stars",
         "order": "desc",
         "per_page": "10",

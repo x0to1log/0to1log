@@ -794,7 +794,12 @@ Write the weekly recap in {language}. Use markdown.
    2-3 unresolved storylines worth tracking. Only observations grounded in this week's news — no predictions.
    Bullet format with a brief "why it matters" for each.
 
-6. **## {action_heading}**
+6. **## {opensource_heading}**
+   3-5 notable open source projects or repos mentioned this week. Each item:
+   - **Project name** — one sentence on what it does + why it's worth watching. Include the GitHub/HuggingFace URL if mentioned in the daily digests.
+   Only include projects that appeared in the daily digests. Skip if none were mentioned.
+
+7. **## {action_heading}**
    3-5 concrete decision points as bullet list.
    Format: `- **If [situation]**: [specific action] — because [reasoning from this week]`
 
@@ -861,7 +866,12 @@ Write the weekly recap in {language}. Use markdown.
    Frame as: "If you see this keyword next week, here's the context you need."
    Based on actual news only — no speculation.
 
-6. **## {action_heading}**
+6. **## {opensource_heading}**
+   3-5 open source projects or repos mentioned this week that are worth exploring. Each item:
+   - **Project name** — what it does in plain language + who it's for + link if mentioned in the daily digests.
+   Great for readers who want to try something hands-on. Skip if none were mentioned.
+
+7. **## {action_heading}**
    3-5 learning actions or things to try. Numbered list.
    Format: `1. **[Action]**: [what to do and why]`
    No source links. Focus on what the reader can do this week.
@@ -1052,6 +1062,7 @@ def get_weekly_prompt(persona: str, language: str) -> str:
             "top_heading": "TOP 뉴스",
             "trend_heading": "이번 주 트렌드 분석",
             "watch_heading": "주목할 포인트",
+            "opensource_heading": "이번 주 오픈소스",
             "action_heading": "그래서 나는?" if persona == "expert" else "이번 주 해볼 것",
         }
     else:
@@ -1061,6 +1072,7 @@ def get_weekly_prompt(persona: str, language: str) -> str:
             "top_heading": "Top Stories",
             "trend_heading": "Trend Analysis",
             "watch_heading": "Watch Points",
+            "opensource_heading": "Open Source Spotlight",
             "action_heading": "So What Do I Do?" if persona == "expert" else "What Can I Try?",
         }
 
