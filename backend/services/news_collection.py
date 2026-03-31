@@ -790,10 +790,15 @@ async def collect_community_reactions(title: str, url: str) -> str:
     """
     import httpx
 
-    search_terms = " ".join(title.split()[:8])
+    # Extract key search terms: remove common filler words, keep first 6 meaningful words
+    _STOP_WORDS = {"the", "a", "an", "is", "are", "was", "were", "in", "on", "at", "to", "for",
+                   "of", "and", "or", "its", "it", "this", "that", "with", "by", "from", "as",
+                   "has", "have", "had", "how", "what", "why", "new", "latest", "just", "now"}
+    keywords = [w for w in title.split() if w.lower().strip(",:;.!?'\"()") not in _STOP_WORDS]
+    search_terms = " ".join(keywords[:6])
     parts: list[str] = []
 
-    async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "0to1log-bot/1.0"}) as client:
+    async with httpx.AsyncClient(timeout=10.0, headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"}) as client:
         # --- Hacker News: search → fetch top comments ---
         try:
             hn_resp = await client.get(
@@ -838,6 +843,9 @@ async def collect_community_reactions(title: str, url: str) -> str:
             logger.debug("HN search failed for '%s': %s", title[:40], e)
 
         # --- Reddit: search → fetch top comments ---
+        # Staggered delay to avoid Reddit rate limiting when called in parallel
+        import random
+        await asyncio.sleep(random.uniform(1.0, 5.0))
         # Only accept threads from AI/tech-relevant subreddits
         ALLOWED_SUBREDDITS = {
             # AI/ML research
