@@ -861,7 +861,7 @@ const nonce = Astro.locals.cspNonce || '';
         plugins: { legend: { display: false } },
         scales: {
           ...commonScales,
-          y: { ticks: { color: textColor, callback: function(v) { return '$' + v; } }, grid: { color: gridColor } },
+          y: { ticks: { color: textColor, callback: function(v) { return '$' + Number(v).toFixed(2); } }, grid: { color: gridColor } },
         },
       },
     });
@@ -890,7 +890,7 @@ const nonce = Astro.locals.cspNonce || '';
         scales: {
           ...commonScales,
           x: { ...commonScales.x, stacked: true },
-          y: { stacked: true, ticks: { color: textColor, callback: function(v) { return '$' + v; } }, grid: { color: gridColor } },
+          y: { stacked: true, ticks: { color: textColor, callback: function(v) { return '$' + Number(v).toFixed(2); } }, grid: { color: gridColor } },
         },
       },
     });
@@ -1038,7 +1038,7 @@ const nonce = Astro.locals.cspNonce || '';
           plugins: { legend: { display: false } },
           scales: {
             ...commonScales,
-            y: { ticks: { color: textColor, callback: function(v) { return '$' + v; } }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, callback: function(v) { return '$' + Number(v).toFixed(2); } }, grid: { color: gridColor } },
           },
         },
       });
@@ -1067,7 +1067,7 @@ const nonce = Astro.locals.cspNonce || '';
           scales: {
             ...commonScales,
             x: { ...commonScales.x, stacked: true },
-            y: { stacked: true, ticks: { color: textColor, callback: function(v) { return '$' + v; } }, grid: { color: gridColor } },
+            y: { stacked: true, ticks: { color: textColor, callback: function(v) { return '$' + Number(v).toFixed(2); } }, grid: { color: gridColor } },
           },
         },
       });
