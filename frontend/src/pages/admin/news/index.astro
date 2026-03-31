@@ -215,6 +215,8 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                           )}
                           {post.locale && <span class="admin-lang-badge admin-lang-badge--ready">{post.locale.toUpperCase()}</span>}
                           {post.category && (<><span class="admin-meta-sep">·</span><span>{post.category}</span></>)}
+                          <span class="admin-meta-sep">·</span>
+                          <span class="admin-meta-date">Updated {new Date(post.updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}</span>
                         </div>
                       </div>
                       <div class="admin-list-actions">
