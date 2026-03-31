@@ -372,7 +372,7 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
     since_date = (ref - timedelta(days=3)).strftime("%Y-%m-%d")
     url = "https://api.github.com/search/repositories"
     params = {
-        "q": f"topic:machine-learning OR topic:deep-learning OR topic:llm OR topic:nlp OR topic:computer-vision created:>{since_date}",
+        "q": f"machine-learning OR deep-learning OR LLM OR language-model pushed:>{since_date} stars:>100",
         "sort": "stars",
         "order": "desc",
         "per_page": "10",
@@ -444,6 +444,13 @@ EXA_BUSINESS_QUERIES = [
     "AI workforce hiring layoffs talent",
 ]
 
+EXA_RESEARCH_QUERIES = [
+    "new AI model release benchmark SOTA",
+    "open source LLM launch weights huggingface",
+    "AI framework library update release",
+    "machine learning breakthrough architecture",
+]
+
 async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
     """Collect AI business news via Exa API. Runs independently of Tavily."""
     if not settings.exa_api_key:
@@ -460,7 +467,7 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
         loop = asyncio.get_running_loop()
         candidates: list[NewsCandidate] = []
 
-        for query in EXA_BUSINESS_QUERIES:
+        for query in EXA_BUSINESS_QUERIES + EXA_RESEARCH_QUERIES:
             try:
                 exa_resp = await asyncio.wait_for(
                     loop.run_in_executor(

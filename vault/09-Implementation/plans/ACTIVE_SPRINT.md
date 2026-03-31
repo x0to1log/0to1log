@@ -160,7 +160,8 @@
 | NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | done |
 | NQ-18 | CP 스팸 필터 — 코멘트 최소 품질 체크(upvote, 패턴) + 소스 도메인 필터(HN/Reddit만) | — | — | todo |
 | NQ-19 | 파이프라인 체크포인트 — 각 단계 결과 DB 저장 + 임의 지점 재실행 + 어드민 UI | — | — | done |
-| NQ-20 | Writer 다중 소스 활용 개선 — 여러 소스의 다른 관점/정보를 반영해서 작성하도록 Guide 수정 | — | — | todo |
+| NQ-20 | Writer 다중 소스 활용 개선 — 여러 소스의 다른 관점/정보를 반영해서 작성하도록 Guide 수정 | — | — | done |
+| NQ-21 | GitHub Trending 축소 + 급부상 오픈소스 별도 제공 | — | — | todo |
 
 #### NQ-13 설계 참조
 - **설계 문서:** [[plans/2026-03-30-multi-source-enrichment]]
@@ -244,6 +245,18 @@
 - 예: "딜 구조 [1] + 경쟁 영향 [2] + Google 대응 [3]" — 다른 소스에서 다른 정보를 가져오기
 - NQ-15(Learner 재설계)와 함께 Writer Guide 전체를 손볼 때 반영
 - **관찰 (3/29):** NQ-20 다중 소스 활용이 잘 작동하지만 부작용 발견 — Expert/Learner에서 같은 딜의 숫자가 다름 (500억 vs 670억). 소스마다 집계 방식이 달라서 LLM이 다른 숫자를 골랐음. 발생 빈도 낮고, 완전히 틀린 정보는 아니므로 관찰 유지. 빈도 높아지면 CHECKLIST 또는 소스 입력 단계 대응 검토
+
+#### NQ-21 배경 노트
+GitHub Trending 수집기가 대형 프로젝트(tensorflow, langchain)만 반복 수집하는 문제.
+GitHub API로는 "star 증가율"을 직접 구할 수 없어 진짜 trending을 잡기 어려움.
+
+**방향 2가지:**
+1. **Daily — GitHub 레포 별도 제공**: 뉴스 본문과 별도로 "오늘 언급된 GitHub 레포" 링크 모음 제공 (뉴스/커뮤니티에서 추출한 GitHub URL)
+2. **Weekly — 급부상 오픈소스 섹션**: weekly recap에서 주간 단위로 HN/Reddit/뉴스에서 화제된 오픈소스 프로젝트를 모아서 보여주기
+
+**핵심 인사이트**: GitHub API 직접 쿼리보다, 이미 수집된 HN/Reddit/뉴스에서 GitHub URL을 추출하는 게 더 정확한 "trending" 시그널. HN 200 upvote "Show HN: ML framework"가 stars:>100 쿼리보다 의미 있음.
+
+**GitHub Trending 수집기**: 축소 또는 신규 프로젝트(created:>7일, stars:>50)로 전환. 기존 대형 프로젝트 반복 방지.
 
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 
