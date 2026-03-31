@@ -882,7 +882,7 @@ def _build_search_queries(entities: list[str]) -> list[str]:
     Only uses combinations of 2+ entities to avoid overly broad single-word queries
     that return irrelevant results (e.g. "Atlassian" alone matches old Trello news).
     """
-    if not entities:
+    if len(entities) < 2:
         return []
     queries = []
     # Primary: top 2-3 entities
@@ -1001,10 +1001,12 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                 )
                 comments_text = []
                 if comment_resp.status_code == 200:
+                    import html as _html
                     import re as _re
                     for c in comment_resp.json().get("hits", []):
                         text = c.get("comment_text", "")
                         clean = _re.sub(r"<[^>]+>", " ", text).strip()
+                        clean = _html.unescape(clean)
                         clean = _re.sub(r"\s+", " ", clean)
                         if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
                             comments_text.append(clean)
@@ -1066,7 +1068,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                     brave_resp = await client.get(
                         "https://api.search.brave.com/res/v1/web/search",
                         headers={"X-Subscription-Token": settings.brave_api_key},
-                        params={"q": brave_query, "count": 5},
+                        params={"q": brave_query, "count": 5, "freshness": "pw"},
                     )
                     if brave_resp.status_code == 200:
                         discussions = brave_resp.json().get("discussions", {}).get("results", [])
