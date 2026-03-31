@@ -224,11 +224,30 @@
 - item.title vs group_title — 메인 파이프라인과 rerun 함수 불일치 (수정 완료)
 - GitHub 레포 제목이 검색에 불리한 포맷 (수정 완료)
 
-**해결 방향:**
-1. **관련성 검증**: 수집된 스레드 제목과 뉴스 제목의 의미적 유사도 체크 (간단한 키워드 겹침 또는 LLM 판별)
-2. **검색 전략 개선**: Reddit 검색에서 subreddit 힌트 추가 (r/MachineLearning에서 "Vera CPU" 검색)
-3. **Writer 강제**: community 데이터가 있으면 CP 섹션을 반드시 포함하도록 후처리 검증
-4. **수집-뉴스 매칭 로직**: 현재 URL 기반 → 의미 기반으로 전환 검토
+**해결 방향 (4단계, 리서치 기반):**
+
+Phase 1. **URL 기반 검색** (최우선, 비용 $0)
+- HN: `restrictSearchableAttributes=url`로 기사 URL 직접 검색
+- Reddit: `q=url:<article_url>`로 해당 기사를 공유한 포스트 검색
+- URL 매칭이 가장 정확 — hackernews-button 오픈소스가 이 방식 사용
+- 결과 없으면 키워드 fallback
+
+Phase 2. **관련성 검증 게이트** (비용 $0)
+- `rapidfuzz.token_set_ratio(article_title, thread_title)` 유사도 체크
+- 60 이상: 수락, 40-60: 관련 서브레딧이면 수락, 40 미만: 거부
+- "Nvidia Vera CPU" vs "Game Ready Driver FAQ" = 낮은 점수 → 거부
+
+Phase 3. **서브레딧 타겟 검색** (비용 $0)
+- 글로벌 `/search.json` → 서브레딧별 검색 (`restrict_sr=on`)
+- Research → r/machinelearning, r/locallama, r/mlpapers
+- Business → r/technology, r/openai, r/singularity
+- 글로벌 검색에서 무관한 고upvote 스레드가 밀어내는 문제 제거
+
+Phase 4. **LLM 판별** (선택, ~$0.001/건)
+- gpt-4.1-mini로 "같은 주제?" 이진 분류
+- rapidfuzz 40-60 애매한 케이스에만 적용
+
+**참고:** hackernews-button(오픈소스), last30days-skill(멀티플랫폼 토론 검색)
 
 #### NQ-18 배경 노트
 3/31 자동 파이프라인에서 Research CP에 봇 생성 스팸 텍스트가 실제 코멘트로 인용됨.
