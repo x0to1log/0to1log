@@ -283,7 +283,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
 7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
 8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
-9. Community Pulse: if Community Pulse Data was provided, is CP present in BOTH en and ko? Are ALL provided quotes included exactly? No fabricated or extra quotes?
+9. Community Pulse: if "Community Pulse Data:" appears ANYWHERE in the input, you MUST include a ## Community Pulse section in BOTH en and ko. This is NOT optional — scan the input now. If CP Data exists and your output has no ## Community Pulse, ADD IT before responding. Include ALL provided quotes exactly.
 10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
 11. Supporting story minimum: scan ALL non-lead news items. If any item (expert OR learner) has fewer than 3 paragraphs, EXPAND it before responding. A 1-2 paragraph item is never acceptable.
 
