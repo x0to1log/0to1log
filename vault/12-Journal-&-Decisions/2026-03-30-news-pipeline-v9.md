@@ -387,10 +387,81 @@ Exa 쿼리 4→8개 확대 + 카테고리 페이지 필터로 3/17(21개) → 3/
 
 ---
 
+## v9.1: Community Pulse 품질 개선 (2026-03-31)
+
+> 세션: 2026-03-31 작업 (2 커밋: `7745367`, `062026a`)
+
+### 왜 CP가 중요한가
+
+0to1log의 핵심 가치는 "AI 커뮤니티의 일원으로서, 하루의 AI 뉴스를 한 곳에서 완결"하는 것이다. 독자가 뉴스를 읽고 → 인사이트를 얻고 → 커뮤니티 반응을 살피고 → 퀴즈로 마무리하면서, **자신이 AI 커뮤니티 안에 속해있고 지식을 얻어나간다는 느낌**을 받게 하는 게 목표다. Community Pulse는 이 흐름에서 소속감의 핵심 요소이며, 단순 부가 정보가 아니다.
+
+그런데 v9에서 CP가 불안정했다:
+- 저품질 코멘트 인용 (URL-only, off-topic)
+- CP 섹션 누락 (Expert에서 빠지고 Learner에만 있는 경우)
+- band-aid 필터(spam, relevance, URL-ratio)가 계속 늘어나는 패턴
+
+### 결정 A: Community Summarizer 단계 추가
+
+**문제**: Writer가 raw comment를 직접 받아 선별+요약+포맷+번역을 동시에 하면서 품질이 흔들림.
+
+**해결**: community 수집과 Writer 사이에 `community_summarize` 단계를 추가해 역할 분리.
+
+```
+Before: community → rank → enrich → write (Writer가 raw comment 선별+포맷)
+After:  community → community_summarize → rank → enrich → write
+                    ^^^^^^^^^^^^^^^^
+                    gpt-4.1-mini 배치 1회, ~$0.001
+```
+
+- **Summarizer**: top 5 코멘트 → `{sentiment, quotes(0-2), key_point}` 추출. 영어 원문.
+- **source_label**: `"HN 342↑ · 89 comments"` — 코드가 결정적으로 파싱 (LLM에 맡기면 포맷 흔들림).
+- **Writer**: 정제된 데이터만 받아서 포맷+KO 번역. Rule 15 규칙이 6개 → 5개로 단순화되고, 선별 책임이 사라짐.
+- **실패 시**: quotes=[], key_point=null → Writer는 CP 섹션을 아예 생략 (graceful degradation).
+
+**비용**: ~$0.001 추가 (전체 그룹 배치 1회, 615 토큰 수준).
+
+### 결정 B: Entity-First Search
+
+**문제**: 기존 키워드 검색이 HN Algolia에서 0 결과를 반환. `"Atlassian Cuts 1,600 Jobs AI: Means"` 같은 6개 키워드 연결은 검색 엔진이 전부 AND 매칭하려다 실패. 3/27 비즈니스 5개 중 4개가 CP 수집 실패.
+
+**해결**: Entity-First Search — 타이틀에서 고유명사/버전 패턴만 추출해 2-3 단어 쿼리로 검색.
+
+```
+Before: "Atlassian Cuts 1,600 Jobs AI: Means" → 0 results
+After:  "Atlassian AI" → 5 results (189pts Atlassian layoffs 발견)
+```
+
+핵심 로직:
+- **엔티티 추출**: 대문자 시작 + 일반 영어 아닌 단어 (Atlassian, GPT-5.4, EverMind)
+- **선택적 부스트**: 버전 패턴(GPT-5.4) +40, 긴 고유명사(≥8자, Atlassian) +20, 짧은 단어(AI, US) +0
+- **Foreign entity 패널티**: 스레드에만 있는 엔티티가 많으면 감점 (-8/entity, max -30). "Sam Altman AGI" vs "Sam Altman Sister Abuse Claims" → foreign 4개 → -30 → 차단.
+- **시간 필터**: `target_date` 기준 7일 전부터만 검색 (backfill 대응). HN `numericFilters` 활용.
+
+### 결정 C: Summarizer 2중 방어 (관련성 판단)
+
+Summarizer에 원본 기사 제목을 전달하고, 커뮤니티 스레드가 다른 주제면 `sentiment=null`을 반환하도록 했다. Entity-First Search의 패널티로 대부분 걸러지지만, edge case에서 마지막 방어선 역할.
+
+### 교훈
+
+### 11. LLM에게 너무 많은 책임을 주지 마라
+
+Writer에게 "raw comment에서 좋은 걸 골라서 자연스럽게 인용하라"는 건 선별+요약+포맷+번역을 동시에 시키는 것이다. 각 단계를 분리하면 각각의 품질이 올라간다. Summarizer는 "코멘트 5개 중 대표 1-2개 고르기"라는 단순한 작업 하나만 하면 되니까 정확도가 높다.
+
+### 12. 검색어는 짧을수록 좋다
+
+HN Algolia, Reddit 검색은 긴 쿼리를 잘 처리 못 한다. 6개 키워드 → 0 결과, 2-3개 엔티티 → 5+ 결과. 검색 엔진에는 핵심 고유명사만 던져야 한다.
+
+### 13. 부스트만으로는 부족하다 — 패널티가 있어야 오탐이 잡힌다
+
+"Atlassian"이 매칭됐다고 점수를 올려주면, "Atlassian Remote Work" 같은 무관한 스레드도 통과한다. 스레드에 우리 기사에 없는 엔티티(foreign entities)가 많으면 감점하는 패널티가 false positive를 효과적으로 차단했다.
+
+---
+
 ## 남은 과제
 
 - **NQ-09**: 어제 발행 뉴스 제목을 랭킹에 전달 — 같은 이벤트 반복 방지
 - **NQ-15**: Learner 콘텐츠 재설계 — "Expert의 쉬운 버전"이 아닌 학습자 관점 재구성
+- **NQ-22 Phase 3-4**: CP targeted subreddit search + LLM comment selection (미구현)
 - **COLLECT-BRAVE-01**: Brave Search API 키 설정 + 실제 수집 검증 (수집기 코드는 완료)
 
 ## Related
