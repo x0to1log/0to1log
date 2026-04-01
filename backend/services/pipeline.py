@@ -861,19 +861,9 @@ def _clean_writer_output(content: str) -> str:
     content = _re.sub(r"\s*\[SUPPORTING\]\s*", " ", content)
     content = _re.sub(r"\s*\(Lead\)\s*", "", content, flags=_re.IGNORECASE)
     content = _re.sub(r"\s*\(Supporting\)\s*", "", content, flags=_re.IGNORECASE)
-    # Fix ### headings with body text on same line (gpt-5 sometimes omits newline)
-    # If a ### line exceeds 120 chars, split at first sentence boundary after the title
-    def _split_long_heading(m):
-        line = m.group(0)
-        if len(line) <= 120:
-            return line
-        # Try sentence boundaries
-        for sep in ["니다. ", "다. ", "요. ", ". ", "。"]:
-            idx = line.find(sep, 20)
-            if idx > 0:
-                return line[:idx + len(sep)].rstrip() + "\n\n" + line[idx + len(sep):]
-        return line
-    content = _re.sub(r"^#{2,3}\s+.+$", _split_long_heading, content, flags=_re.MULTILINE)
+    # Also catch Korean translation of LEAD/SUPPORTING
+    content = _re.sub(r"\s*\(리드\)\s*", "", content)
+    content = _re.sub(r"\s*\(서포팅\)\s*", "", content)
     return content
 
 

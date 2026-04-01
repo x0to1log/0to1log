@@ -237,7 +237,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 11. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
 12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, skip, or INVENT sections. Only use `##` headings listed in "Required Sections" above. If a news item doesn't fit any existing section, place it in the closest matching one.
 13. Use markdown actively for readability:
-    - Use `###` sub-headings within each section to separate individual news items by name
+    - Use `###` sub-headings within each section to separate individual news items by name. ALWAYS leave a blank line after `###` before the body text.
     - Use **bold** for key terms, company names, and important numbers
     - Use `>` blockquotes for notable quotes from sources
     - Use markdown tables (`|`) when comparing numbers, features, or options
