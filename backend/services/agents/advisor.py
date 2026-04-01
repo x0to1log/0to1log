@@ -67,7 +67,7 @@ ACTION_CONFIG = {
         "validator": SeoResult,
     },
     "review": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
         "temperature": 0.2,
@@ -88,14 +88,14 @@ ACTION_CONFIG = {
         "validator": ConceptCheckResult,
     },
     "voicecheck": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt": VOICECHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.3,
         "validator": VoiceCheckResult,
     },
     "retrocheck": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt": RETROCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.2,
@@ -743,7 +743,7 @@ async def _self_critique_advanced(
     """CoVe-style self-critique: verify claims against references + depth check."""
     from services.agents.prompts_handbook_types import COVE_CRITIQUE_PROMPT, SELF_CRITIQUE_PROMPT
 
-    reasoning_model = settings.openai_model_light  # gpt-4.1-mini
+    reasoning_model = settings.openai_model_reasoning  # gpt-5-mini for critique
     # Use CoVe when reference context is available, fall back to legacy otherwise
     if reference_context:
         system = COVE_CRITIQUE_PROMPT.format(
@@ -788,7 +788,7 @@ async def _check_handbook_quality(
     from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
 
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
-    reasoning_model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty)
+    reasoning_model = settings.openai_model_reasoning  # gpt-5-mini for quality check
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(
@@ -824,7 +824,7 @@ async def _self_critique_basic(
     """
     from services.agents.prompts_handbook_types import BASIC_SELF_CRITIQUE_PROMPT
 
-    light_model = settings.openai_model_light
+    light_model = settings.openai_model_reasoning  # gpt-5-mini for critique
     system = BASIC_SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     if reference_context:
         system += (
@@ -876,7 +876,7 @@ async def _check_basic_quality(
     from services.agents.prompts_handbook_types import BASIC_QUALITY_CHECK_PROMPT
 
     system = BASIC_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
-    reasoning_model = settings.openai_model_light  # gpt-4.1-mini (consistent with advanced quality check)
+    reasoning_model = settings.openai_model_reasoning  # gpt-5-mini for quality check
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(

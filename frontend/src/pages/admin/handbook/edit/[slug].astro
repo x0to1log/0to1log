@@ -291,26 +291,26 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             <div class="admin-ai-group">
               <span class="admin-ai-group__label">Content</span>
               <button class="admin-ai-action-btn admin-ai-action-btn--primary" data-ai-action="generate" type="button" title="Auto-generate all empty fields (definition, body, metadata) using AI">
-                Generate All Fields<span class="ai-btn-model">gpt-4.1 + Tavily</span>
+                Generate All Fields<span class="ai-btn-model">gpt-5 + Tavily</span>
               </button>
             </div>
             <div class="admin-ai-group">
               <span class="admin-ai-group__label">Quality</span>
               <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="LLM이 작성된 콘텐츠의 기술적 정확성을 자체 검증합니다">
-                Quick Check<span class="ai-btn-model">o4-mini</span>
+                Quick Check<span class="ai-btn-model">gpt-5-mini</span>
               </button>
               <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button" title="LLM이 팩트를 추출하고 Tavily로 웹 검색하여 근거를 확인합니다">
-                Deep Verify<span class="ai-btn-model">o4-mini + Tavily</span>
+                Deep Verify<span class="ai-btn-model">gpt-5-mini + Tavily</span>
               </button>
             </div>
             <div class="admin-ai-group">
               <span class="admin-ai-group__label">Utility</span>
               <button class="admin-ai-action-btn" data-ai-action="related_terms" type="button" title="Find related handbook terms to link to this entry">
-                Related Terms<span class="ai-btn-model">gpt-4.1 + Exa</span>
+                Related Terms<span class="ai-btn-model">gpt-5 + Exa</span>
               </button>
               <div class="admin-ai-translate-row">
                 <button class="admin-ai-action-btn" data-ai-action="translate" type="button" title="Translate content between Korean and English">
-                  Translate<span class="ai-btn-model">gpt-4.1</span>
+                  Translate<span class="ai-btn-model">gpt-5</span>
                 </button>
                 <select id="ai-translate-direction" class="admin-select admin-ai-direction-select" aria-label="Translation direction">
                   <option value="auto">Auto</option>
