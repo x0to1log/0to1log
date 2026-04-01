@@ -138,6 +138,7 @@
 | HQ-07 | todo | 레퍼런스 다양성 제어 — 같은 batch 동일 URL 인용 비율 제한 | P2 |
 | HQ-08 | todo | 중복 용어 병합 — variation operator → evolutionary search 등 | P2 |
 | HQ-09 | done | 카테고리 재설계 — 11개→9개, 프롬프트+파이프라인+프론트엔드+DB 212개 마이그레이션 완료 | P1 |
+| HQ-10 | todo | 카테고리별 프롬프트 컨텍스트 — 9개 CATEGORY_CONTEXT + Basic TYPE_GUIDE 확장 | P1 |
 
 #### HQ-09 카테고리 재설계 — 배경 노트
 
@@ -166,6 +167,31 @@
 - DB: 기존 212개 용어 categories 배열 마이그레이션 스크립트
 - 프론트엔드: 핸드북 필터 UI 카테고리 목록 변경
 - 경계 용어 다중 태깅: Transformer→[deep-learning, llm-genai], fine-tuning→[ml-fundamentals, llm-genai] 등
+
+#### HQ-10 카테고리별 프롬프트 컨텍스트 — 배경 노트
+
+**현재 문제:** 4개 생성 프롬프트가 모든 카테고리에 동일한 DOMAIN CONTEXT ("AI/IT meaning에 집중")를 사용. SQL(cs-fundamentals)도, PCA(math-statistics)도, GPT-4o(products-platforms)도 같은 지시를 받아 도메인 맥락이 부자연스러움.
+
+**리서치 결론:** 프로덕션 시스템들은 "Modular Prompt Composability" 패턴 사용 (Langfuse, LLMpedia, Slide2Text). 36개 전체 프롬프트(Approach B)는 보편적으로 reject. term type과 category는 독립 축으로 유지 (구조 vs 도메인).
+
+**아키텍처:**
+```
+FINAL_PROMPT = BASE_PROMPT (4개, 공통 구조)
+             + CATEGORY_CONTEXT[category] (9개, 도메인 프레이밍)
+             + TYPE_DEPTH_GUIDE[term_type] (10개, 섹션 구조 — Advanced only → Basic에도 확장)
+             + GROUNDING_RULES (1개, 팩트 체크)
+```
+
+**CATEGORY_CONTEXT 구조 (카테고리당 4개 필드):**
+- vocabulary: 도메인에서 자연스러운 용어
+- quality_signals: 좋은 콘텐츠의 특징
+- anti_patterns: 피해야 할 패턴
+- reference_style: 레퍼런스 인용 방식
+
+**구현 범위:**
+- `prompts_handbook_types.py`: CATEGORY_CONTEXT 9개 + `build_category_block()` 함수 + Basic TYPE_GUIDES 10개
+- `advisor.py`: `_run_generate_term`에서 카테고리 블록 주입 (Basic + Advanced 모든 call)
+- 비용 영향: $0 (프롬프트 토큰만 ~300 추가)
 
 ### 품질 점수 모니터링 (AUTOPUB-01 전제조건)
 
