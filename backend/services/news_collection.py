@@ -751,6 +751,10 @@ async def collect_news(
         if any(d in hostname for d in _NON_EN_DOMAINS):
             filtered_count += 1
             continue
+        # Filter non-EN/KO content by detecting CJK characters in title
+        if any("\u4e00" <= ch <= "\u9fff" for ch in c.title):
+            filtered_count += 1
+            continue
         if c.url not in seen_urls:
             seen_urls.add(c.url)
             unique.append(c)
