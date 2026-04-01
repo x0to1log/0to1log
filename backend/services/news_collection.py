@@ -225,9 +225,12 @@ async def _collect_tavily(
         all_results.extend(results)
 
     # Fallback: if Tavily exhausted, try Exa then Google News RSS
+    fallback_results: list[dict] = []
     if tavily_exhausted or not all_results:
         fallback_results = await _collect_fallback_news(queries, date_kwargs, max_results_per_query)
         all_results.extend(fallback_results)
+
+    fallback_urls = {r.get("url", "") for r in fallback_results}
 
     candidates: list[NewsCandidate] = []
     for item in all_results:
@@ -239,7 +242,7 @@ async def _collect_tavily(
                 title=item.get("title", ""),
                 url=url,
                 snippet=item.get("content", ""),
-                source="tavily",
+                source="tavily_fallback" if url in fallback_urls else "tavily",
                 raw_content=item.get("raw_content") or "",
             )
         )
@@ -707,12 +710,16 @@ async def collect_news(
     exa_task = _collect_exa(target_date)
     brave_task = _collect_brave(target_date)
 
-    tavily_results, tavily_meta = await tavily_task
-    hf_results, arxiv_results, github_results, exa_results, brave_results = await asyncio.gather(
-        hf_task, arxiv_task, github_task, exa_task, brave_task, return_exceptions=True,
+    tavily_result, hf_results, arxiv_results, github_results, exa_results, brave_results = await asyncio.gather(
+        tavily_task, hf_task, arxiv_task, github_task, exa_task, brave_task, return_exceptions=True,
     )
 
     # Safely collect results (treat exceptions as empty lists)
+    if isinstance(tavily_result, Exception):
+        logger.warning("Collector tavily failed: %s", tavily_result)
+        tavily_results, tavily_meta = [], {}
+    else:
+        tavily_results, tavily_meta = tavily_result
     all_candidates: list[NewsCandidate] = list(tavily_results)
     source_counts: dict[str, int] = {"tavily": len(tavily_results)}
 
