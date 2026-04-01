@@ -724,7 +724,7 @@ async def _check_digest_quality(
         learner_prompt = QUALITY_CHECK_BUSINESS_LEARNER
 
     client = get_openai_client()
-    quality_model = "gpt-4.1-mini"  # Fixed model for consistent scoring trends (independent of Writer model)
+    quality_model = settings.openai_model_light
 
     async def _score(prompt: str, content: str, label: str) -> tuple[int, dict, dict]:
         try:
@@ -733,7 +733,7 @@ async def _check_digest_quality(
                     model=quality_model,
                     messages=[
                         {"role": "system", "content": prompt},
-                        {"role": "user", "content": content[:12000]},
+                        {"role": "user", "content": content[:16000]},
                     ],
                     max_tokens=500,
                     temperature=0,

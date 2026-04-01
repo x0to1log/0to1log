@@ -1008,6 +1008,8 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 10: Choppy or too general; some items only 1 paragraph
    - 0: Barely readable
 
+SCORING CALIBRATION: Score proportionally. Deduct points per issue but do NOT collapse entire categories to 0 for a single problem. A well-written digest missing one section should score 60-75, not below 40.
+
 Return JSON only:
 {"score": 0-100, "sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25, "issues": ["issue1"]}"""
 
