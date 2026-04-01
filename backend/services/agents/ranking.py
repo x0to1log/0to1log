@@ -552,7 +552,7 @@ async def summarize_community(
         quotes = llm_data.get("quotes", [])
         if not isinstance(quotes, list):
             quotes = []
-        quotes = [q for q in quotes[:2] if isinstance(q, str) and len(q.strip()) > 10]
+        quotes = [q for q in quotes[:2] if isinstance(q, str) and len(q.strip()) > 10 and "http" not in q]
 
         key_point = llm_data.get("key_point")
         if key_point and not isinstance(key_point, str):

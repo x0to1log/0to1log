@@ -845,6 +845,8 @@ def _clean_writer_output(content: str) -> str:
     content = _re.sub(r"\s*\[SUPPORTING\]\s*", " ", content)
     content = _re.sub(r"\s*\(Lead\)\s*", "", content, flags=_re.IGNORECASE)
     content = _re.sub(r"\s*\(Supporting\)\s*", "", content, flags=_re.IGNORECASE)
+    # Fix KO "업보트" → "upvotes" (불필요한 번역)
+    content = content.replace("업보트", "upvotes")
     return content
 
 
