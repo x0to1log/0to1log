@@ -664,11 +664,16 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
 
         if (action === 'delete') {
           const title = btn.dataset.title || 'this term';
-          if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+          const termStatus = btn.closest('[data-status]')?.dataset.status;
+          const isPermanent = termStatus === 'archived';
+          const msg = isPermanent
+            ? `Permanently delete "${title}"? This cannot be undone.`
+            : `Archive "${title}"?`;
+          if (!window.confirm(msg)) return;
           const res = await fetch('/api/admin/handbook/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id }),
+            body: JSON.stringify({ id, permanent: isPermanent }),
           });
           if (res.ok) { window.location.reload(); return; }
           const data = await res.json();
