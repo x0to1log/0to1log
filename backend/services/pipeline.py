@@ -1683,6 +1683,20 @@ async def rerun_pipeline_stage(
     total_posts = 0
 
     try:
+        # Guard: prevent rerun from overwriting published posts
+        published = supabase.table("news_posts").select("id").eq(
+            "pipeline_batch_id", batch_id,
+        ).eq("status", "published").execute()
+        if published.data:
+            msg = f"Cannot rerun: {len(published.data)} published posts exist for {batch_id}. Unpublish first."
+            logger.error(msg)
+            supabase.table("pipeline_runs").update({
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": msg,
+            }).eq("id", source_run_id).execute()
+            return PipelineResult(batch_id=batch_id, status="failed", errors=[msg])
+
         # Load necessary checkpoints
         collect_data = _load_checkpoint(supabase, source_run_id, "collect")
         if not collect_data:
