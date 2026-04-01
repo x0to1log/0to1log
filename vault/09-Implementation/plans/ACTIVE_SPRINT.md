@@ -42,6 +42,7 @@
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | 2026-03-27 | 2026-03-29 |
 | HQ-01~02 | 핸드북 Hallucination 수정 + 비기술 용어 정리 | todo | 2026-03-31 | — |
 | GPT5-01 | gpt-5 모델 마이그레이션 — classify/merge/ranking (gpt-5-mini) | in_progress | 2026-04-01 | — |
+| GPT5-01-FIX | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 | in_progress | 2026-04-01 | — |
 | GPT5-02 | gpt-5 모델 마이그레이션 — community_summarize (gpt-5-nano) | todo | — | — |
 | GPT5-03 | gpt-5 모델 마이그레이션 — Writer digest (gpt-5) | todo | — | — |
 | GPT5-04 | gpt-5 전체 파이프라인 backfill 비교 검증 | todo | — | — |

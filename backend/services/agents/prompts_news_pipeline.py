@@ -1086,13 +1086,7 @@ def get_weekly_prompt(persona: str, language: str) -> str:
 # Merge Prompt — groups same-event articles after classification
 # ---------------------------------------------------------------------------
 
-MERGE_SYSTEM_PROMPT = """You are an AI news editor. Given a list of selected articles and all available candidates, find candidates covering the SAME specific event and group them with the selected articles.
-
-## Selected Articles (already chosen as important)
-{selected_items}
-
-## All Candidates
-{all_candidates}
+MERGE_SYSTEM_PROMPT = """You are an AI news editor. Your task: given selected articles and all candidates, find candidates covering the SAME specific event and group them together.
 
 ## Rules
 1. For each selected article, find any OTHER candidate covering the SAME specific event or announcement.
@@ -1106,7 +1100,7 @@ MERGE_SYSTEM_PROMPT = """You are an AI news editor. Given a list of selected art
 5. Keep the original category and subcategory from the selected article.
 
 ## Output JSON
-```json
+Return ONLY valid JSON:
 {{
   "research": [
     {{
@@ -1121,8 +1115,7 @@ MERGE_SYSTEM_PROMPT = """You are an AI news editor. Given a list of selected art
     }}
   ],
   "business": [same format]
-}}
-```"""
+}}"""
 
 
 # ---------------------------------------------------------------------------

@@ -221,9 +221,12 @@ async def merge_classified(
     for i, c in enumerate(candidates):
         candidate_lines.append(f"[{i+1}] {c.title}\n    URL: {c.url}")
 
-    prompt = MERGE_SYSTEM_PROMPT.format(
-        selected_items="\n\n".join(selected_lines),
-        all_candidates="\n\n".join(candidate_lines),
+    user_content = (
+        "## Selected Articles (already chosen as important)\n"
+        + "\n\n".join(selected_lines)
+        + "\n\n## All Candidates\n"
+        + "\n\n".join(candidate_lines)
+        + "\n\nGroup same-event articles together. Return JSON."
     )
 
     client = get_openai_client()
@@ -235,8 +238,8 @@ async def merge_classified(
             **build_completion_kwargs(
                 model=model,
                 messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": "Group same-event articles together."},
+                    {"role": "system", "content": MERGE_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_content},
                 ],
                 max_tokens=4096,
                 temperature=0.1,
