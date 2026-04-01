@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     supabase_service_key: str = ""
     openai_api_key: str = ""
     openai_model_main: str = "gpt-4.1"
-    openai_model_light: str = "gpt-4.1-mini"
+    openai_model_light: str = "gpt-5-mini"
     openai_model_reasoning: str = "o4-mini"
     pinecone_api_key: str = ""
     pinecone_index_name: str = "news-posts"
