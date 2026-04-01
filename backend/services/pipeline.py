@@ -867,8 +867,8 @@ def _clean_writer_output(content: str) -> str:
         line = m.group(0)
         if len(line) <= 120:
             return line
-        # Try sentence boundaries: ". ", "다. ", "요. ", "。"
-        for sep in ["다. ", "요. ", ". ", "。"]:
+        # Try sentence boundaries
+        for sep in ["니다. ", "다. ", "요. ", ". ", "。"]:
             idx = line.find(sep, 20)
             if idx > 0:
                 return line[:idx + len(sep)].rstrip() + "\n\n" + line[idx + len(sep):]
