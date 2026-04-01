@@ -2025,25 +2025,28 @@ async def run_weekly_pipeline(
     if not supabase:
         return PipelineResult(batch_id=week_id, errors=["Supabase not configured"])
 
-    run_id = str(uuid.uuid4())
     run_key = f"weekly-{week_id}"
     try:
-        # Delete any existing failed/stuck run for this week (allow retry)
-        existing = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).execute()
-        for row in (existing.data or []):
-            if row["status"] in ("failed", "running"):
-                supabase.table("pipeline_logs").delete().eq("run_id", row["id"]).execute()
-                supabase.table("pipeline_runs").delete().eq("id", row["id"]).execute()
-                logger.info("Deleted previous %s weekly run for retry", row["status"])
-            elif row["status"] == "success":
-                logger.warning("Weekly run already succeeded for %s, skipping", week_id)
-                return PipelineResult(batch_id=week_id, status="skipped", message=f"Already completed: {week_id}")
-
-        supabase.table("pipeline_runs").insert({
-            "id": run_id,
-            "run_key": run_key,
-            "status": "running",
-        }).execute()
+        # Reuse existing run (overwrite) or create new
+        existing = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).maybeSingle().execute()
+        if existing.data:
+            run_id = existing.data["id"]
+            # Clear previous logs and reset run
+            supabase.table("pipeline_logs").delete().eq("run_id", run_id).execute()
+            supabase.table("pipeline_runs").update({
+                "status": "running",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "finished_at": None,
+                "last_error": None,
+            }).eq("id", run_id).execute()
+            logger.info("Reusing existing weekly run %s (was %s)", run_key, existing.data["status"])
+        else:
+            run_id = str(uuid.uuid4())
+            supabase.table("pipeline_runs").insert({
+                "id": run_id,
+                "run_key": run_key,
+                "status": "running",
+            }).execute()
     except Exception as e:
         logger.warning("Weekly run setup failed for %s: %s", week_id, e)
         return PipelineResult(batch_id=week_id, status="skipped", message=f"Setup error: {e}")
