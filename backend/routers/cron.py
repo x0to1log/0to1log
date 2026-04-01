@@ -104,9 +104,11 @@ async def trigger_news_pipeline(
                     # Default to DISABLED if setting unavailable — safer than silently extracting
                     skip_handbook = True
                     logger.warning("Could not read handbook_auto_extract setting (%s), defaulting to SKIP", e)
+            force_fresh = body.force if body else False
             result = await run_daily_pipeline(
                 batch_id=batch_id, target_date=target_date,
                 skip_handbook=skip_handbook,
+                force_fresh=force_fresh,
             )
             logger.info(
                 "Pipeline batch %s finished: %d posts, %d errors",

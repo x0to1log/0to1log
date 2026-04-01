@@ -1232,6 +1232,7 @@ async def run_daily_pipeline(
     batch_id: str | None = None,
     target_date: str | None = None,
     skip_handbook: bool = False,
+    force_fresh: bool = False,
 ) -> PipelineResult:
     """Run the full daily AI news pipeline.
 
@@ -1260,18 +1261,23 @@ async def run_daily_pipeline(
 
     run_key = f"news-{batch_id}"
     try:
-        # Reuse existing run (overwrite) or create new
+        # Reuse existing run or create new
         existing = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).maybeSingle().execute()
         if existing.data:
             run_id = existing.data["id"]
-            supabase.table("pipeline_logs").delete().eq("run_id", run_id).execute()
+            if force_fresh:
+                # Manual "Run Pipeline": wipe logs and start from scratch
+                supabase.table("pipeline_logs").delete().eq("run_id", run_id).execute()
+                logger.info("Force-fresh: cleared logs for %s", run_key)
+            else:
+                # Cron retry: preserve logs (checkpoints) for "Rerun from..." support
+                logger.info("Reusing news run %s, preserving logs (was %s)", run_key, existing.data["status"])
             supabase.table("pipeline_runs").update({
                 "status": "running",
                 "started_at": datetime.now(timezone.utc).isoformat(),
                 "finished_at": None,
                 "last_error": None,
             }).eq("id", run_id).execute()
-            logger.info("Reusing existing news run %s (was %s)", run_key, existing.data["status"])
         else:
             run_id = str(uuid.uuid4())
             supabase.table("pipeline_runs").insert({
