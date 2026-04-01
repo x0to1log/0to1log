@@ -2135,6 +2135,12 @@ async def run_weekly_pipeline(
 
             slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
 
+            # published_at = Sunday of the target week at 09:00 UTC
+            iso_year, iso_week = week_id.split("-W")
+            _monday = datetime.strptime(f"{iso_year}-W{int(iso_week)}-1", "%G-W%V-%u").date()
+            _sunday = _monday + timedelta(days=6)
+            published_at = f"{_sunday.isoformat()}T09:00:00Z"
+
             # Reading time
             text = expert_data.get("content", "") or learner_data.get("content", "")
             if locale == "ko":
@@ -2166,6 +2172,7 @@ async def run_weekly_pipeline(
                 "content_expert": expert_data.get("content", ""),
                 "content_learner": learner_data.get("content", ""),
                 "pipeline_batch_id": week_id,
+                "published_at": published_at,
                 "reading_time_min": reading_time,
                 "guide_items": guide_items,
             }
