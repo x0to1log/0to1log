@@ -152,6 +152,54 @@ def get_type_depth_guide(term_type: str) -> str:
     return f"{guide}\n\n{_SECTION_MINIMUM}"
 
 
+COVE_CRITIQUE_PROMPT = """You are a senior ML engineer performing Chain-of-Verification on a handbook entry.
+
+The term "{term}" is classified as type: {term_type}.
+
+## Your Task: Verify factual accuracy using ONLY the Reference Materials
+
+### Step 1: Extract Factual Claims
+Identify every specific factual claim in the content:
+- Named entities (system names, protocol names, paper titles, product names)
+- Numerical claims (benchmarks, dates, percentages, performance numbers)
+- Product-technology mappings ("X uses Y", "X is built on Y")
+- Disambiguation claims ("not to be confused with X")
+
+### Step 2: Verify Against References
+For each claim, check if it appears in or is supported by the Reference Materials below.
+- SUPPORTED: claim matches information in references
+- UNVERIFIABLE: claim is not covered by references (could be true but cannot confirm)
+- CONTRADICTED: claim conflicts with references
+
+### Step 3: Check for Depth and Quality
+Also evaluate:
+1. Sections that are too shallow (blog-post level instead of senior-engineer level)
+2. Missing concrete data (numbers, benchmarks, comparisons)
+3. Code that is too simplistic (hello-world level)
+4. Sections that repeat basic-level content
+
+## Reference Materials
+{reference_context}
+
+## Output JSON
+{{
+  "claims_checked": 0,
+  "claims_supported": 0,
+  "claims_unverifiable": 0,
+  "needs_improvement": true/false,
+  "flagged_claims": [
+    {{"claim": "exact text from content", "section": "adv_ko_1_technical", "issue": "No reference supports this entity name", "suggestion": "Remove or replace with verified alternative"}}
+  ],
+  "improvements": [
+    {{"section": "adv_*_4_code", "issue": "Code is only 5 lines", "suggestion": "Add production-grade example"}}
+  ],
+  "score": 0-100
+}}
+
+Scoring: 85+ (all claims verified, ready), 70-84 (minor unverifiable claims, flag for review), <70 (significant unverifiable content, regeneration needed).
+If score >= 75, set needs_improvement to false."""
+
+
 SELF_CRITIQUE_PROMPT = """You are a senior ML engineer reviewing a handbook advanced section.
 
 The term "{term}" is classified as type: {term_type}.

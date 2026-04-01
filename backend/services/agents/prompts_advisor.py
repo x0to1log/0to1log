@@ -551,6 +551,21 @@ You are a technical documentation translator for 0to1log, specializing in AI/tec
 
 Respond in JSON format only."""
 
+GROUNDING_RULES = """
+## Factual Grounding Rules (MANDATORY)
+1. ONLY use facts, names, and claims that appear in the Reference Materials provided below.
+2. If the Reference Materials do not cover a subtopic, write "해당 주제에 대한 검증된 정보가 부족합니다" (KO) or "Verified information on this topic is limited" (EN) instead of generating from memory.
+3. NEVER fabricate:
+   - System names, protocol names, or framework names
+   - Paper titles, arXiv IDs, author names, or publication venues
+   - Mathematical formulas that are not standard textbook knowledge or from references
+   - Benchmark numbers, performance metrics, or statistics not in references
+   - Product-technology mappings ("X uses Y") unless confirmed in references
+4. Only add disambiguation notes ("~와 혼동하지 않도록" / "Not to be confused with X") for VERIFIABLE alternative meanings that are WELL-KNOWN (e.g., "Kernel in CNN vs OS"). Do NOT invent disambiguation targets.
+5. Reference URLs in adv_*_8_refs MUST come from the Reference Materials. Do NOT generate URLs from memory.
+6. For formulas: only include formulas you can derive step-by-step. If you cannot explain each symbol, do not include it.
+"""
+
 GENERATE_BASIC_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
@@ -563,13 +578,13 @@ DOMAIN CONTEXT:
 - Many terms exist in multiple fields (e.g., "Entropy" in information theory vs thermodynamics, "Kernel" in CNN vs OS, "Agent" in AI vs real estate). Always write from the AI/IT perspective first.
 - If a term is used in other fields, briefly note the difference to prevent confusion (e.g., "Not to be confused with thermodynamic entropy").
 - Base your writing on established facts from official documentation, papers, and widely-accepted definitions. Do not speculate or include unverified claims.
-
+""" + GROUNDING_RULES + """
 LANGUAGE RULE:
 - Fields ending in `_ko`: Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
 - Do NOT use bilingual headers like "한국어 / English". Korean only.
 
 ## Handbook Categories (choose 1-3, priority order)
-ai-ml, db-data, backend, frontend-ux, network, security, os-core, devops, performance, web3, ai-business
+cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, data-engineering, infra-hardware, safety-ethics, products-platforms
 
 ## Term Name Fields
 - term_full: English full name (e.g., "Long Short-Term Memory" for LSTM). Same as term if no abbreviation.
@@ -706,7 +721,7 @@ DOMAIN CONTEXT:
 - Many terms exist in multiple fields (e.g., "Entropy" in information theory vs thermodynamics, "Kernel" in CNN vs OS, "Agent" in AI vs real estate). Always write from the AI/IT perspective first.
 - If a term is used in other fields, briefly note the difference to prevent confusion (e.g., "Not to be confused with thermodynamic entropy").
 - Base your writing on established facts from official documentation, papers, and widely-accepted definitions. Do not speculate or include unverified claims.
-
+""" + GROUNDING_RULES + """
 LANGUAGE RULE:
 - All fields must be in English only.
 - Do NOT use bilingual headers like "한국어 / English". English only.
@@ -827,7 +842,7 @@ Generate ADVANCED-level KOREAN content for a handbook term. This is Call 3 of 4 
 DOMAIN CONTEXT:
 - Focus on the AI/IT meaning. Note cross-field differences if applicable.
 - Base content on established facts from official docs and papers.
-
+""" + GROUNDING_RULES + """
 LANGUAGE RULE:
 - Korean headers and Korean body text. Technical terms (Transformer, API, fine-tuning) may remain in English where natural in Korean tech writing.
 - Do NOT use bilingual headers like "한국어 / English". Korean only.
@@ -927,7 +942,7 @@ Generate ADVANCED-level ENGLISH content for a handbook term. This is Call 4 of 4
 DOMAIN CONTEXT:
 - Focus on the AI/IT meaning. Note cross-field differences if applicable.
 - Base content on established facts from official docs and papers.
-
+""" + GROUNDING_RULES + """
 LANGUAGE RULE:
 - All fields must be in English only.
 - Do NOT use bilingual headers like "한국어 / English". English only.

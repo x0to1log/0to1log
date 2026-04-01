@@ -551,18 +551,39 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
     return data, model, tokens
 
 
-async def _search_term_context(term: str) -> str:
-    """Search web for term context using Tavily. Returns formatted reference text."""
+CATEGORY_SEARCH_QUERIES: dict[str, str] = {
+    "cs-fundamentals": "{term} tutorial documentation site:developer.mozilla.org OR site:geeksforgeeks.org",
+    "math-statistics": "{term} mathematical definition proof statistics Khan Academy OR textbook",
+    "ml-fundamentals": "{term} machine learning algorithm sklearn tutorial explained",
+    "deep-learning": "{term} neural network architecture paper explained",
+    "llm-genai": "{term} large language model generative AI explained",
+    "data-engineering": "{term} data pipeline architecture documentation",
+    "infra-hardware": "{term} infrastructure GPU deployment benchmark documentation",
+    "safety-ethics": "{term} AI safety alignment regulation explained",
+    "products-platforms": "{term} official documentation API release notes",
+}
+
+
+async def _search_term_context(term: str, categories: list[str] | None = None) -> str:
+    """Search web for term context using Tavily. Category-aware queries."""
     if not settings.tavily_api_key:
         return ""
     try:
+        # Build category-aware query
+        query = f"{term} AI technology explained"
+        if categories:
+            primary_cat = categories[0]
+            template = CATEGORY_SEARCH_QUERIES.get(primary_cat)
+            if template:
+                query = template.format(term=term)
+
         tavily = TavilyClient(api_key=settings.tavily_api_key)
         loop = asyncio.get_running_loop()
         results = await asyncio.wait_for(
             loop.run_in_executor(
                 None,
                 lambda: tavily.search(
-                    query=f"{term} AI technology explained",
+                    query=query,
                     search_depth="advanced",
                     max_results=5,
                     include_raw_content=False,
@@ -576,11 +597,61 @@ async def _search_term_context(term: str) -> str:
         for i, r in enumerate(results["results"], 1):
             title = r.get("title", "")
             url = r.get("url", "")
-            content = r.get("content", "")[:600]
+            content = r.get("content", "")[:1500]
             parts.append(f"### [{i}] {title}\nURL: {url}\n{content}")
         return "## Reference Materials (from web search)\n\n" + "\n\n".join(parts)
     except Exception as e:
         logger.warning("Tavily search failed for '%s': %s", term, e)
+        return ""
+
+
+BRAVE_CATEGORY_QUERIES: dict[str, str] = {
+    "cs-fundamentals": "{term} site:stackoverflow.com OR site:developer.mozilla.org tutorial",
+    "math-statistics": "{term} site:mathworld.wolfram.com OR site:en.wikipedia.org mathematical definition",
+    "ml-fundamentals": "{term} site:scikit-learn.org OR site:github.com machine learning implementation",
+    "deep-learning": "{term} site:arxiv.org OR site:github.com neural network implementation",
+    "llm-genai": "{term} site:huggingface.co OR site:github.com large language model",
+    "data-engineering": "{term} site:github.com OR site:docs.databricks.com data pipeline",
+    "infra-hardware": "{term} site:developer.nvidia.com OR site:kubernetes.io documentation",
+    "safety-ethics": "{term} AI safety alignment site:arxiv.org OR site:openai.com",
+    "products-platforms": "{term} official documentation site:docs.* OR site:github.com",
+}
+
+
+async def _search_brave_context(term: str, categories: list[str] | None = None) -> str:
+    """Search Brave for developer-focused references (docs, GitHub, SO)."""
+    if not settings.brave_api_key:
+        return ""
+    try:
+        import httpx
+
+        query = f"{term} official documentation OR github"
+        if categories:
+            template = BRAVE_CATEGORY_QUERIES.get(categories[0])
+            if template:
+                query = template.format(term=term)
+
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                params={"q": query, "count": 5},
+                headers={"X-Subscription-Token": settings.brave_api_key, "Accept": "application/json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        results = data.get("web", {}).get("results", [])
+        if not results:
+            return ""
+        parts = []
+        for i, r in enumerate(results[:5], 1):
+            title = r.get("title", "")
+            url = r.get("url", "")
+            desc = r.get("description", "")[:800]
+            parts.append(f"### [{i}] {title}\nURL: {url}\n{desc}")
+        return "## Developer Reference Materials (from Brave Search)\n\n" + "\n\n".join(parts)
+    except Exception as e:
+        logger.warning("Brave search failed for '%s': %s", term, e)
         return ""
 
 
@@ -667,12 +738,20 @@ async def _classify_term_type(term: str, categories: list[str], client, model_li
 async def _self_critique_advanced(
     term: str, term_type: str, advanced_content: str,
     client, model: str,
+    reference_context: str = "",
 ) -> tuple[bool, str, int, dict]:
-    """Self-critique advanced content. Returns (needs_improvement, feedback, score, usage)."""
-    from services.agents.prompts_handbook_types import SELF_CRITIQUE_PROMPT
+    """CoVe-style self-critique: verify claims against references + depth check."""
+    from services.agents.prompts_handbook_types import COVE_CRITIQUE_PROMPT, SELF_CRITIQUE_PROMPT
 
-    reasoning_model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty)
-    system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
+    reasoning_model = settings.openai_model_light  # gpt-4.1-mini
+    # Use CoVe when reference context is available, fall back to legacy otherwise
+    if reference_context:
+        system = COVE_CRITIQUE_PROMPT.format(
+            term=term, term_type=term_type,
+            reference_context=reference_context[:3000],
+        )
+    else:
+        system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(
@@ -736,6 +815,7 @@ async def _self_critique_basic(
     term: str, term_type: str,
     basic_ko_content: str, basic_en_content: str,
     client, model: str,
+    reference_context: str = "",
 ) -> tuple[bool, bool, str, str, int, int, dict]:
     """Self-critique basic KO+EN content in one call (gpt-4.1-mini).
 
@@ -746,6 +826,11 @@ async def _self_critique_basic(
 
     light_model = settings.openai_model_light
     system = BASIC_SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
+    if reference_context:
+        system += (
+            "\n\n## Reference Materials (for verifying product-technology claims)\n"
+            + reference_context[:2000]
+        )
     combined = f"## Korean Basic\n{basic_ko_content}\n\n## English Basic\n{basic_en_content}"
     try:
         resp = await client.chat.completions.create(
@@ -866,6 +951,89 @@ async def _validate_ref_urls(content: str) -> str:
     return content
 
 
+# Well-known entities that don't need verification
+_ENTITY_ALLOWLIST = {
+    "python", "javascript", "typescript", "java", "go", "rust", "c++",
+    "linux", "windows", "macos", "ios", "android",
+    "google", "microsoft", "amazon", "meta", "apple", "nvidia", "openai", "anthropic",
+    "github", "stack overflow", "wikipedia", "arxiv",
+    "pytorch", "tensorflow", "keras", "scikit-learn", "numpy", "pandas",
+    "docker", "kubernetes", "aws", "gcp", "azure",
+    "transformer", "bert", "gpt", "llama", "gemini", "claude",
+    "sql", "nosql", "redis", "postgresql", "mongodb",
+    "http", "https", "tcp", "udp", "rest", "graphql", "grpc",
+}
+
+
+async def _extract_novel_entities(
+    generated_content: str, reference_text: str, client, model_light: str,
+) -> list[str]:
+    """Extract proper nouns from generated content that don't appear in references."""
+    try:
+        resp = await client.chat.completions.create(
+            model=model_light,
+            messages=[
+                {"role": "system", "content": (
+                    "Extract all specific proper nouns from the text: system names, framework names, "
+                    "protocol names, paper titles, product names, benchmark names. "
+                    'Return JSON: {"entities": ["name1", "name2"]}'
+                )},
+                {"role": "user", "content": generated_content[:6000]},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=500,
+            temperature=0,
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "entity-extract")
+        entities = data.get("entities", [])
+    except Exception as e:
+        logger.warning("Entity extraction failed: %s", e)
+        return []
+
+    # Filter: keep only entities NOT in reference text and NOT in allowlist
+    ref_lower = reference_text.lower()
+    novel = []
+    for ent in entities:
+        ent_stripped = ent.strip()
+        if not ent_stripped or len(ent_stripped) < 3:
+            continue
+        if ent_stripped.lower() in _ENTITY_ALLOWLIST:
+            continue
+        if ent_stripped.lower() in ref_lower:
+            continue
+        novel.append(ent_stripped)
+    return novel[:10]  # Cap at 10 to limit API calls
+
+
+async def _verify_entities(entities: list[str]) -> list[dict]:
+    """Verify entities via Brave Search. Returns [{entity, verified, result_count}]."""
+    if not settings.brave_api_key or not entities:
+        return [{"entity": e, "verified": True, "result_count": -1} for e in entities]
+    try:
+        import httpx
+    except ImportError:
+        return [{"entity": e, "verified": True, "result_count": -1} for e in entities]
+
+    async def _check_one(entity: str) -> dict:
+        try:
+            async with httpx.AsyncClient(timeout=8) as http:
+                resp = await http.get(
+                    "https://api.search.brave.com/res/v1/web/search",
+                    params={"q": f'"{entity}" technology OR software OR AI', "count": 1},
+                    headers={
+                        "X-Subscription-Token": settings.brave_api_key,
+                        "Accept": "application/json",
+                    },
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                count = len(data.get("web", {}).get("results", []))
+                return {"entity": entity, "verified": count > 0, "result_count": count}
+        except Exception:
+            return {"entity": entity, "verified": True, "result_count": -1}  # Assume valid on error
+
+    results = await asyncio.gather(*[_check_one(e) for e in entities])
+    return list(results)
 
 
 # --- Section assembly: JSON keys → markdown ---
@@ -1003,26 +1171,45 @@ async def _run_generate_term(
 
     Returns (merged_data, merged_usage, warnings).
     """
-    # Tavily search runs first — results are used by ALL calls (basic + advanced)
-    tavily_context = await _search_term_context(req.term)
+    # Run all searches in parallel — results are source-role labeled
+    categories_list = req.categories if req.categories else []
+    tavily_context, brave_context, deep_context = await asyncio.gather(
+        _search_term_context(req.term, categories=categories_list),
+        _search_brave_context(req.term, categories=categories_list),
+        _search_deep_context(req.term),
+    )
 
     user_prompt = _build_handbook_user_prompt(req)
-    # Combine article_context (pipeline) + Tavily results
+    # Assemble source-role labeled reference context
     combined_ref = ""
     if article_context:
         combined_ref += (
-            "--- Source Article (use as factual reference) ---\n"
-            "Base your content on the facts in this article. "
+            "## Source Article (PRIMARY factual reference)\n"
+            "Base your content on facts from this article. "
             "Write the handbook entry in reference style, not news style.\n\n"
             f"{article_context[:4000]}\n\n"
         )
     if tavily_context:
-        combined_ref += f"{tavily_context}\n\n"
+        combined_ref += (
+            f"{tavily_context}\n"
+            "SOURCE ROLE: Recent context, examples, and news. "
+            "Good for: basic_*_2_example, basic_*_5_where, basic_*_0_summary.\n\n"
+        )
+    if brave_context:
+        combined_ref += (
+            f"{brave_context}\n"
+            "SOURCE ROLE: Official documentation, code references, Stack Overflow. "
+            "Good for: adv_*_4_code, adv_*_1_technical, adv_*_8_refs.\n\n"
+        )
     if combined_ref:
         user_prompt += (
             "\n\n" + combined_ref +
-            "Use the above reference materials as factual sources. "
-            "Cite specific numbers, dates, and URLs from them.\n"
+            "## Source Usage Rules\n"
+            "- Use Source Article as your PRIMARY factual reference.\n"
+            "- Use Reference Materials for recent context and examples.\n"
+            "- Use Developer Reference Materials for code patterns and official docs.\n"
+            "- ONLY cite facts from the materials above. If a topic is not covered, "
+            "state that information is limited rather than generating from memory.\n"
         )
     warnings: list[str] = []
     supabase = get_supabase()
@@ -1094,20 +1281,17 @@ async def _run_generate_term(
         req.term, req.categories or basic_data.get("categories", []),
         client, settings.openai_model_light,
     )
-    logger.info("Term '%s' classified as type: %s, tavily_chars: %d",
-                req.term, term_type, len(tavily_context))
+    logger.info("Term '%s' classified as type: %s", req.term, term_type)
 
-    # --- Conditional Exa deep context for Advanced (only when Tavily is insufficient) ---
-    deep_context = ""
-    tavily_result_count = tavily_context.count("### [")
-    if tavily_result_count < 3:
-        deep_context = await _search_deep_context(req.term)
-        if deep_context:
-            logger.info("Exa deep context added for '%s' (tavily had %d results)", req.term, tavily_result_count)
+    # deep_context and brave_context already fetched in parallel above
+    logger.info(
+        "Term '%s': tavily=%d chars, brave=%d chars, exa=%d chars",
+        req.term, len(tavily_context), len(brave_context), len(deep_context),
+    )
 
     # --- Call 2 (EN Basic) + Call 3 (KO Advanced) — PARALLEL ---
     # Both depend only on Call 1 output, so they can run concurrently.
-    # user_prompt already includes Tavily + article context (applied to all calls)
+    # user_prompt already includes Tavily + Brave + article context (applied to all calls)
     en_basic_prompt = (
         f"{user_prompt}\n\n"
         f"--- Context from Call 1 ---\n"
@@ -1124,8 +1308,10 @@ async def _run_generate_term(
         f"Definition (KO): {definition_ko_context}\n"
         f"Term Type: {term_type}"
     )
+    if brave_context:
+        advanced_prompt += f"\n\n{brave_context}\nSOURCE ROLE: Official docs, code references. Use for adv_*_4_code, adv_*_8_refs."
     if deep_context:
-        advanced_prompt += f"\n\n{deep_context}\n\nUse the deep reference materials above for detailed technical analysis, benchmarks, and code examples."
+        advanced_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_2_formulas, adv_*_3_howworks, adv_*_1_technical."
 
     # Inject type-specific depth guide into advanced system prompts
     type_guide = get_type_depth_guide(term_type)
@@ -1191,6 +1377,7 @@ async def _run_generate_term(
     )
     basic_critique_task = _self_critique_basic(
         req.term, term_type, basic_ko_preview, basic_en_preview, client, model,
+        reference_context=f"{tavily_context}\n{brave_context}",
     )
     resp4, basic_critique_result = await asyncio.gather(call4_task, basic_critique_task)
 
@@ -1258,8 +1445,12 @@ async def _run_generate_term(
     adv_ko_preview = "\n\n".join(
         f"## {k}: {v[:1000]}" for k, v in advanced_ko_data.items() if k.startswith("adv_ko_")
     )
+    reference_for_critique = f"{tavily_context}\n{brave_context}\n{deep_context}"
     needs_improvement, critique_feedback, critique_score, critique_usage = (
-        await _self_critique_advanced(req.term, term_type, adv_ko_preview, client, model)
+        await _self_critique_advanced(
+            req.term, term_type, adv_ko_preview, client, model,
+            reference_context=reference_for_critique,
+        )
     )
     logger.info(
         "Self-critique for '%s': score=%d, needs_improvement=%s",
@@ -1292,7 +1483,10 @@ async def _run_generate_term(
         f"## {k}: {v[:1000]}" for k, v in advanced_en_data.items() if k.startswith("adv_en_")
     )
     en_needs_improvement, en_critique_feedback, en_critique_score, en_critique_usage = (
-        await _self_critique_advanced(req.term, term_type, adv_en_preview, client, model)
+        await _self_critique_advanced(
+            req.term, term_type, adv_en_preview, client, model,
+            reference_context=reference_for_critique,
+        )
     )
     logger.info(
         "Self-critique EN for '%s': score=%d, needs_improvement=%s",
@@ -1360,6 +1554,28 @@ async def _run_generate_term(
     for field in ("body_advanced_ko", "body_advanced_en"):
         if data.get(field):
             data[field] = await _validate_ref_urls(data[field])
+
+    # Post-processing step 2: Entity verification (detect hallucinated proper nouns)
+    all_generated = " ".join(
+        data.get(f, "") for f in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en")
+    )
+    all_references = f"{tavily_context}\n{brave_context}\n{deep_context}\n{article_context}"
+    try:
+        novel_entities = await _extract_novel_entities(
+            all_generated, all_references, client, settings.openai_model_light,
+        )
+        if novel_entities:
+            verification_results = await _verify_entities(novel_entities)
+            unverified = [v for v in verification_results if not v["verified"]]
+            if unverified:
+                entity_names = [v["entity"] for v in unverified]
+                warnings.append(f"Unverified entities detected: {', '.join(entity_names)}")
+                logger.warning(
+                    "Handbook '%s': %d unverified entities: %s",
+                    req.term, len(unverified), entity_names,
+                )
+    except Exception as e:
+        logger.warning("Entity verification failed for '%s': %s", req.term, e)
 
     # Quality check on assembled advanced content
     adv_combined = f"{data.get('body_advanced_ko', '')}\n\n{data.get('body_advanced_en', '')}"
