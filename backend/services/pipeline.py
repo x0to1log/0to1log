@@ -690,6 +690,7 @@ async def _check_digest_quality(
     personas: dict[str, PersonaOutput],
     digest_type: str,
     classified: list,
+    community_summary_map: dict,
     supabase,
     run_id: str,
     cumulative_usage: dict[str, Any],
@@ -724,7 +725,7 @@ async def _check_digest_quality(
         learner_prompt = QUALITY_CHECK_BUSINESS_LEARNER
 
     client = get_openai_client()
-    quality_model = settings.openai_model_light
+    quality_model = settings.openai_model_reasoning  # gpt-5-mini — nano can't score
 
     async def _score(prompt: str, content: str, label: str) -> tuple[int, dict, dict]:
         try:
@@ -764,18 +765,28 @@ async def _check_digest_quality(
     else:
         combined_score = expert_score
 
+    # Code-based structural penalties
+    structural_penalty, structural_warnings = _check_structural_penalties(
+        expert, learner, community_summary_map, classified,
+    )
+    if structural_penalty > 0:
+        logger.info("Structural penalties for %s: -%d (%s)", digest_type, structural_penalty, "; ".join(structural_warnings))
+    final_score = max(0, combined_score - structural_penalty)
+
     merged_quality_usage = merge_usage_metrics(expert_usage, learner_usage) if learner_usage else expert_usage
 
     await _log_stage(
         supabase, run_id, f"quality:{digest_type}", "success", t0,
-        output_summary=f"score={combined_score}/100 (expert={expert_score}, learner={learner_score})",
+        output_summary=f"score={final_score}/100 (expert={expert_score}, learner={learner_score}, penalty=-{structural_penalty})",
         usage=merged_quality_usage,
         post_type=digest_type,
         debug_meta={
-            "score": combined_score,
-            "quality_score": combined_score,
+            "score": final_score,
+            "quality_score": final_score,
             "expert_score": expert_score,
             "learner_score": learner_score,
+            "structural_penalty": structural_penalty,
+            "structural_warnings": structural_warnings,
             "expert_breakdown": {k: v for k, v in expert_breakdown.items() if k != "score"},
             "learner_breakdown": {k: v for k, v in learner_breakdown.items() if k != "score"},
             "news_count": len(classified),
@@ -783,10 +794,10 @@ async def _check_digest_quality(
     )
 
     logger.info(
-        "Quality check %s: combined=%d/100 (expert=%d, learner=%d)",
-        digest_type, combined_score, expert_score, learner_score,
+        "Quality check %s: final=%d/100 (llm=%d, penalty=-%d)",
+        digest_type, final_score, combined_score, structural_penalty,
     )
-    return combined_score
+    return final_score
 
 
 def _strip_empty_sections(content: str) -> str:
@@ -816,6 +827,92 @@ def _strip_empty_sections(content: str) -> str:
             result.append(parts[i])
             i += 1
     return "".join(result)
+
+
+def _check_structural_penalties(
+    expert: PersonaOutput,
+    learner: PersonaOutput | None,
+    community_summary_map: dict,
+    classified: list,
+) -> tuple[int, list[str]]:
+    """Check structural rule violations in Writer output. Returns (penalty, warnings).
+
+    Runs AFTER _strip_empty_sections post-processing.
+    Penalty is subtracted from LLM quality score.
+    """
+    import re as _re
+    penalty = 0
+    warnings: list[str] = []
+
+    # Check 1: CP data provided but CP section missing (-15)
+    has_cp_data = any(
+        ins.quotes or ins.key_point
+        for ins in community_summary_map.values()
+    ) if community_summary_map else False
+
+    if has_cp_data:
+        for persona_name, output in [("expert", expert), ("learner", learner)]:
+            if not output:
+                continue
+            for locale, content in [("en", output.en), ("ko", output.ko)]:
+                if not content:
+                    continue
+                cp_present = "## Community Pulse" in content or "## 커뮤니티 반응" in content
+                if not cp_present:
+                    penalty += 15
+                    warnings.append(f"CP data provided but missing in {persona_name} {locale}")
+
+    # Check 2: CP exists as ###/#### instead of ## (-5)
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output:
+            continue
+        for locale, content in [("en", output.en), ("ko", output.ko)]:
+            if not content:
+                continue
+            if _re.search(r"^#{3,4}\s*(Community Pulse|커뮤니티 반응)", content, _re.MULTILINE):
+                penalty += 5
+                warnings.append(f"CP uses ###/#### instead of ## in {persona_name} {locale}")
+
+    # Check 3: EN/KO section count mismatch (-5)
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output or not output.en or not output.ko:
+            continue
+        en_sections = [line for line in output.en.split("\n") if line.strip().startswith("## ")]
+        ko_sections = [line for line in output.ko.split("\n") if line.strip().startswith("## ")]
+        diff = abs(len(en_sections) - len(ko_sections))
+        if diff >= 2:
+            penalty += 5
+            warnings.append(f"EN/KO section mismatch in {persona_name}: EN={len(en_sections)} KO={len(ko_sections)}")
+
+    # Check 4: Empty citations [](URL) (-5)
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output:
+            continue
+        for locale, content in [("en", output.en), ("ko", output.ko)]:
+            if not content:
+                continue
+            if _re.findall(r"\[\]\(https?://", content):
+                penalty += 5
+                warnings.append(f"Empty citations [](URL) in {persona_name} {locale}")
+
+    # Check 5: Supporting items with < 3 paragraphs (-5 each, max -10)
+    short_count = 0
+    for output in [expert, learner]:
+        if not output or not output.en:
+            continue
+        items = _re.split(r"^### ", output.en, flags=_re.MULTILINE)
+        for item in items[1:]:
+            if "[LEAD]" in item or "[SUPPORTING]" not in item:
+                continue
+            paragraphs = [p.strip() for p in item.split("\n\n") if p.strip() and not p.strip().startswith("#")]
+            if len(paragraphs) < 3:
+                short_count += 1
+    if short_count > 0:
+        p = min(short_count * 5, 10)
+        penalty += p
+        warnings.append(f"{short_count} supporting item(s) have < 3 paragraphs")
+
+    return min(penalty, 30), warnings
 
 
 async def _generate_digest(
@@ -1123,7 +1220,8 @@ async def _generate_digest(
 
     # Quality check — score the generated digest
     quality_score = await _check_digest_quality(
-        personas, digest_type, classified, supabase, run_id, cumulative_usage,
+        personas, digest_type, classified, community_summary_map,
+        supabase, run_id, cumulative_usage,
     )
 
     # Save EN + KO rows
