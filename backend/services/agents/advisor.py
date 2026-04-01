@@ -60,7 +60,7 @@ ACTION_CONFIG = {
         "validator": GenerateResult,
     },
     "seo": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_nano",
         "prompt_fn": get_seo_prompt,
         "max_tokens": 2048,
         "temperature": 0.5,
@@ -1289,7 +1289,7 @@ async def _run_generate_term(
 
     term_type = await _classify_term_type(
         req.term, req.categories or basic_data.get("categories", []),
-        client, settings.openai_model_light,
+        client, settings.openai_model_nano,
     )
     logger.info("Term '%s' classified as type: %s", req.term, term_type)
 
@@ -1586,7 +1586,7 @@ async def _run_generate_term(
     all_references = f"{tavily_context}\n{brave_context}\n{deep_context}\n{article_context}"
     try:
         novel_entities = await _extract_novel_entities(
-            all_generated, all_references, client, settings.openai_model_light,
+            all_generated, all_references, client, settings.openai_model_nano,
         )
         if novel_entities:
             verification_results = await _verify_entities(novel_entities)
@@ -1736,7 +1736,7 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
     Returns (terms_list, usage_metrics_dict).
     """
     client = get_openai_client()
-    model = getattr(settings, "openai_model_light")
+    model = getattr(settings, "openai_model_nano")
 
     # Truncate to first 24000 chars for extraction (gpt-4.1-mini supports 128K)
     preview = content[:24000]
