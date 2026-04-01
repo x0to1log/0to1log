@@ -564,7 +564,7 @@ async def _extract_and_create_handbook_terms(
 
     TERM_TIMEOUT_SEC = 10 * 60  # 10 minutes max per single term generation
 
-    async def _create_single_term(term_name: str, korean_name: str, slug: str) -> tuple[int, list[str]]:
+    async def _create_single_term(term_name: str, korean_name: str, slug: str, categories: list[str] | None = None) -> tuple[int, list[str]]:
         """Generate and save a single handbook term. Returns (created_count, errors)."""
         # Check pipeline-level timeout before starting a new term
         elapsed = time.monotonic() - pipeline_start
@@ -583,6 +583,7 @@ async def _extract_and_create_handbook_terms(
                     generate_term_content(
                         term_name, korean_name,
                         article_context=term_context,
+                        categories=categories,
                     ),
                     timeout=TERM_TIMEOUT_SEC,
                 )
@@ -607,7 +608,11 @@ async def _extract_and_create_handbook_terms(
 
             # Extract quality warnings propagated from advisor
             warnings = content_data.pop("_warnings", [])
-            term_status = "queued" if any("quality score" in w.lower() for w in warnings) else "draft"
+            _queue_triggers = ("quality score", "unverified entit", "section", "empty", "needs_review")
+            term_status = "queued" if any(
+                any(trigger in w.lower() for trigger in _queue_triggers)
+                for w in warnings
+            ) else "draft"
 
             try:
                 row = {
@@ -637,11 +642,22 @@ async def _extract_and_create_handbook_terms(
                     )
                     return 0, [error_msg]
 
-                logger.info("Created handbook draft: %s (%s)", term_name, slug)
+                new_term_id = result.data[0].get("id") if result.data else None
+                logger.info("Created handbook draft: %s (%s) id=%s", term_name, slug, new_term_id)
+
+                # P2-4: Link quality_scores to the newly created term
+                if new_term_id:
+                    try:
+                        supabase.table("handbook_quality_scores").update(
+                            {"term_id": new_term_id}
+                        ).eq("term_slug", term_name).is_("term_id", "null").execute()
+                    except Exception:
+                        pass  # best-effort linking
+
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "success", t_gen,
                     output_summary=f"term={term_name}, slug={slug}",
-                    debug_meta={"term": term_name, "slug": slug, "source": "pipeline"},
+                    debug_meta={"term": term_name, "slug": slug, "source": "pipeline", "term_id": new_term_id},
                 )
                 return 1, []
             except Exception as e:
@@ -656,7 +672,7 @@ async def _extract_and_create_handbook_terms(
 
     if valid_terms:
         term_results = await asyncio.gather(
-            *[_create_single_term(tn, kn, sl) for tn, kn, sl, _cats in valid_terms],
+            *[_create_single_term(tn, kn, sl, cats) for tn, kn, sl, cats in valid_terms],
         )
         for created, term_errors in term_results:
             terms_created += created
@@ -845,6 +861,19 @@ def _clean_writer_output(content: str) -> str:
     content = _re.sub(r"\s*\[SUPPORTING\]\s*", " ", content)
     content = _re.sub(r"\s*\(Lead\)\s*", "", content, flags=_re.IGNORECASE)
     content = _re.sub(r"\s*\(Supporting\)\s*", "", content, flags=_re.IGNORECASE)
+    # Fix ### headings with body text on same line (gpt-5 sometimes omits newline)
+    # If a ### line exceeds 120 chars, split at first sentence boundary after the title
+    def _split_long_heading(m):
+        line = m.group(0)
+        if len(line) <= 120:
+            return line
+        # Try sentence boundaries: ". ", "다. ", "요. ", "。"
+        for sep in ["다. ", "요. ", ". ", "。"]:
+            idx = line.find(sep, 20)
+            if idx > 0:
+                return line[:idx + len(sep)].rstrip() + "\n\n" + line[idx + len(sep):]
+        return line
+    content = _re.sub(r"^#{2,3}\s+.+$", _split_long_heading, content, flags=_re.MULTILINE)
     return content
 
 

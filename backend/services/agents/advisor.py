@@ -1846,12 +1846,14 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
 async def generate_term_content(
     term_name: str, korean_name: str = "", source: str = "pipeline",
     article_context: str = "",
+    categories: list[str] | None = None,
 ) -> tuple[dict, dict]:
     """Generate full content for a handbook term. Used by pipeline auto-creation.
 
     Args:
         source: "pipeline" (auto-extraction) or "manual" (admin editor)
         article_context: source news article text for grounding (prevents hallucination)
+        categories: pre-classified categories for category-aware search queries
 
     Returns (content_data, usage_metrics_dict).
     """
@@ -1860,6 +1862,7 @@ async def generate_term_content(
         term_id="",
         term=term_name,
         korean_name=korean_name,
+        categories=categories or [],
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
