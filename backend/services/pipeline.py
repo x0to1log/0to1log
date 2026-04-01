@@ -863,10 +863,12 @@ def _check_structural_penalties(
     penalty = 0
     warnings: list[str] = []
 
-    # Check 1: CP data provided but CP section missing (-15)
+    # Check 1: CP data provided FOR THIS DIGEST but CP section missing (-15)
+    # Only check insights that match URLs in this digest's classified groups
+    digest_urls = {url for group in classified for url in (group.urls if hasattr(group, 'urls') else [])}
     has_cp_data = any(
-        ins.quotes or ins.key_point
-        for ins in community_summary_map.values()
+        (ins.quotes or ins.key_point) and url in digest_urls
+        for url, ins in community_summary_map.items()
     ) if community_summary_map else False
 
     if has_cp_data:
@@ -2083,7 +2085,7 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         article_texts = [
             p.get("content_expert", "") or p.get("title", "")
             for p in (posts_result.data or [])
-            if p.get("content_expert")
+            if p.get("content_expert") or p.get("title")
         ]
     except Exception as e:
         return PipelineResult(batch_id=batch_id, errors=[f"Failed to fetch posts: {e}"])
@@ -2106,6 +2108,7 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
     except Exception:
         pass  # proceed with base run_key
 
+    # P1-3: Distinguish duplicate vs other insert failures
     try:
         supabase.table("pipeline_runs").insert({
             "id": run_id,
@@ -2113,8 +2116,12 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
             "status": "running",
         }).execute()
     except Exception as e:
-        logger.warning("Handbook extraction run already exists for %s, skipping: %s", batch_id, e)
-        return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate handbook run: {batch_id}")
+        err_msg = str(e).lower()
+        if "duplicate" in err_msg or "already exists" in err_msg or "unique" in err_msg:
+            logger.info("Handbook extraction run already exists for %s, skipping", batch_id)
+            return PipelineResult(batch_id=batch_id, status="skipped", message=f"Duplicate handbook run: {batch_id}")
+        logger.error("Handbook extraction run insert failed for %s: %s", batch_id, e)
+        return PipelineResult(batch_id=batch_id, status="failed", errors=[f"Run insert failed: {e}"])
 
     try:
         terms_created, errors = await _extract_and_create_handbook_terms(
@@ -2122,7 +2129,8 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
         )
         all_errors.extend(errors)
 
-        status = "success" if not errors else ("partial" if terms_created > 0 else "failed")
+        # P1-2: Only use success/failed (DB constraint doesn't allow "partial")
+        status = "failed" if terms_created == 0 and errors else "success"
         try:
             supabase.table("pipeline_runs").update({
                 "status": status,
@@ -2136,6 +2144,11 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
             "Handbook extraction complete (batch %s): %d terms, %d errors",
             batch_id, terms_created, len(errors),
         )
+        # P1-1: Return actual results from success path
+        return PipelineResult(
+            batch_id=batch_id, status=status,
+            posts_created=terms_created, errors=all_errors,
+        )
     except Exception as e:
         logger.error("Handbook extraction failed: %s", e)
         all_errors.append(str(e))
@@ -2147,12 +2160,10 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
             }).eq("id", run_id).execute()
         except Exception:
             pass
-
-    return PipelineResult(
-        batch_id=batch_id,
-        posts_created=0,
-        errors=all_errors,
-    )
+        return PipelineResult(
+            batch_id=batch_id, status="failed",
+            posts_created=0, errors=all_errors,
+        )
 
 
 # ──────────────────────────────────────────────
