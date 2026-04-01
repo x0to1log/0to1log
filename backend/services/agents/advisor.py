@@ -1251,13 +1251,22 @@ async def _run_generate_term(
         except Exception as e:
             logger.warning("Failed to log handbook %s stage: %s", stage, e)
 
+    # --- Build category-specific prompt blocks ---
+    from services.agents.prompts_handbook_types import build_category_block, get_type_basic_guide
+
+    primary_cat = categories_list[0] if categories_list else ""
+    category_block = build_category_block(primary_cat)
+    basic_ko_system = GENERATE_BASIC_PROMPT
+    if category_block:
+        basic_ko_system += f"\n\n{category_block}"
+
     # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
     for _call1_attempt in range(2):
         resp1 = await client.chat.completions.create(
             **compat_create_kwargs(
                 model,
                 messages=[
-                    {"role": "system", "content": GENERATE_BASIC_PROMPT},
+                    {"role": "system", "content": basic_ko_system},
                     {"role": "user", "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
@@ -1327,17 +1336,33 @@ async def _run_generate_term(
     if deep_context:
         advanced_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_2_formulas, adv_*_3_howworks, adv_*_1_technical."
 
-    # Inject type-specific depth guide into advanced system prompts
+    # Inject type-specific guides into system prompts
     type_guide = get_type_depth_guide(term_type)
-    adv_ko_system = f"{GENERATE_ADVANCED_PROMPT}\n\n{type_guide}"
-    adv_en_system = f"{GENERATE_ADVANCED_EN_PROMPT}\n\n{type_guide}"
+    basic_type_guide = get_type_basic_guide(term_type)
+
+    # EN Basic: category block + basic type guide
+    basic_en_system = GENERATE_BASIC_EN_PROMPT
+    if category_block:
+        basic_en_system += f"\n\n{category_block}"
+    basic_en_system += f"\n\n{basic_type_guide}"
+
+    # Advanced: category block + type depth guide
+    adv_ko_system = GENERATE_ADVANCED_PROMPT
+    if category_block:
+        adv_ko_system += f"\n\n{category_block}"
+    adv_ko_system += f"\n\n{type_guide}"
+
+    adv_en_system = GENERATE_ADVANCED_EN_PROMPT
+    if category_block:
+        adv_en_system += f"\n\n{category_block}"
+    adv_en_system += f"\n\n{type_guide}"
 
     resp2, resp3 = await asyncio.gather(
         client.chat.completions.create(
             **compat_create_kwargs(
                 model,
                 messages=[
-                    {"role": "system", "content": GENERATE_BASIC_EN_PROMPT},
+                    {"role": "system", "content": basic_en_system},
                     {"role": "user", "content": en_basic_prompt},
                 ],
                 response_format={"type": "json_object"},

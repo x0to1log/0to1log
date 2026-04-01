@@ -139,7 +139,7 @@
 | HQ-07 | todo | 레퍼런스 다양성 제어 — 같은 batch 동일 URL 인용 비율 제한 | P2 |
 | HQ-08 | todo | 중복 용어 병합 — variation operator → evolutionary search 등 | P2 |
 | HQ-09 | done | 카테고리 재설계 — 11개→9개, 프롬프트+파이프라인+프론트엔드+DB 212개 마이그레이션 완료 | P1 |
-| HQ-10 | todo | 카테고리별 프롬프트 컨텍스트 — 9개 CATEGORY_CONTEXT + Basic TYPE_GUIDE 확장 | P1 |
+| HQ-10 | done | 카테고리별 프롬프트 컨텍스트 — 9개 CATEGORY_CONTEXT(5필드) + Basic TYPE_GUIDE 10개 + 3-layer 코드 패턴 | P1 |
 
 #### HQ-09 카테고리 재설계 — 배경 노트
 

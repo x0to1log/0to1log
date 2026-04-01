@@ -152,6 +152,184 @@ def get_type_depth_guide(term_type: str) -> str:
     return f"{guide}\n\n{_SECTION_MINIMUM}"
 
 
+# ── Category-specific context (domain framing for all 4 generation calls) ──
+
+CATEGORY_CONTEXT: dict[str, dict[str, str]] = {
+    "cs-fundamentals": {
+        "vocabulary": "data structure, algorithm, protocol, runtime, API, compiler, interpreter, "
+                      "hash table, TCP/IP, HTTP, thread, process, stack, heap",
+        "quality_signals": "Include code examples even in Basic. Use real programming scenarios "
+                          "(building a web app, debugging). Reference official specs (RFC, W3C, MDN).",
+        "anti_patterns": "Do NOT force AI/ML connections. Explain the concept in its native CS domain "
+                        "first. Do not frame everything as 'AI uses this'.",
+        "reference_style": "Prefer MDN, W3C, RFC, language spec links. Cite spec version when relevant.",
+        "code_guide": "Use standard library code (no ML frameworks). Show idiomatic patterns for the "
+                     "language. Layer 2 should use popular frameworks (Express, Django, React) when relevant.",
+    },
+    "math-statistics": {
+        "vocabulary": "proof, theorem, distribution, estimator, variance, convergence, gradient, "
+                      "eigenvalue, expectation, likelihood, posterior, prior",
+        "quality_signals": "Lead with geometric/visual intuition before formulas. Include numerical "
+                          "examples with concrete numbers. Show step-by-step derivation.",
+        "anti_patterns": "Do NOT just say 'AI uses this'. Explain the mathematical concept in its own "
+                        "right first, then connect to ML applications.",
+        "reference_style": "Use standard textbook notation. Cite foundational references "
+                          "(e.g., Bishop, Murphy, Hastie). Link to Khan Academy or 3Blue1Brown for visual intuition.",
+        "code_guide": "Layer 1: Mathematical notation and step-by-step derivation. "
+                     "Layer 2: numpy/scipy implementation with real data. "
+                     "Layer 3: Pure Python from-scratch implementation showing the math.",
+    },
+    "ml-fundamentals": {
+        "vocabulary": "feature, label, training set, overfitting, bias-variance, cross-validation, "
+                      "regularization, hyperparameter, precision, recall, F1, ROC-AUC",
+        "quality_signals": "Include scikit-learn or equivalent library code. Show a full train-evaluate "
+                          "cycle with real dataset names. Compare with alternative methods.",
+        "anti_patterns": "Do NOT only cover deep learning. Classical ML has its own value and use cases. "
+                        "Do not dismiss traditional methods as outdated.",
+        "reference_style": "Cite scikit-learn docs for API. Reference original papers for algorithms "
+                          "(e.g., Breiman for Random Forest). Use UCI/Kaggle dataset names for examples.",
+        "code_guide": "Layer 1: Algorithm pseudocode with decision boundaries/tree visualization concept. "
+                     "Layer 2: scikit-learn pipeline (train/evaluate/predict). "
+                     "Layer 3: From-scratch implementation showing the core algorithm.",
+    },
+    "deep-learning": {
+        "vocabulary": "tensor, gradient, backpropagation, layer, activation function, loss landscape, "
+                      "epoch, batch size, learning rate, convolution, pooling, attention",
+        "quality_signals": "Describe architectures with tensor shape annotations. Distinguish training "
+                          "vs inference behavior. Include computational cost awareness (FLOPs, memory).",
+        "anti_patterns": "Do NOT describe all models as classification-only. Do NOT ignore hardware/memory "
+                        "constraints. Always mention what problem the architecture solves.",
+        "reference_style": "Cite original papers by first author + year (e.g., 'Vaswani et al., 2017'). "
+                          "Link to foundational work (Attention Is All You Need, ResNet, etc.).",
+        "code_guide": "Layer 1: Architecture diagram in text (input shape → layers → output shape). "
+                     "Layer 2: PyTorch implementation with type hints, forward pass, and training loop. "
+                     "Layer 3: Optional numpy-only version showing the core math.",
+    },
+    "llm-genai": {
+        "vocabulary": "token, prompt, context window, hallucination, alignment, agent, tool use, "
+                      "embedding, retrieval, fine-tuning, RLHF, chain-of-thought",
+        "quality_signals": "Include actual prompt examples. Show API usage patterns. Discuss cost/token "
+                          "considerations. Compare model capabilities with benchmarks.",
+        "anti_patterns": "Avoid marketing tone ('revolutionary', 'amazing'). Always mention limitations. "
+                        "Do not omit cost, latency, or safety considerations.",
+        "reference_style": "Cite official API docs (OpenAI, Anthropic, HuggingFace). Reference benchmark "
+                          "leaderboards (MMLU, HumanEval, LMSYS). Include version numbers.",
+        "code_guide": "MUST use 3-layer pattern:\n"
+                     "Layer 1: Conceptual flow as pseudocode comments (5-10 lines showing the pipeline).\n"
+                     "Layer 2: Practical code using real libraries FROM Reference Materials "
+                     "(e.g., LangChain, OpenAI SDK, llama-index). Add version caveat: "
+                     "'# library_name x.y 기준 — 최신 API는 공식 문서 확인'. "
+                     "If Reference Materials contain actual code snippets, adapt and annotate them.\n"
+                     "Layer 3: Under-the-hood implementation with stable libraries (numpy, torch) "
+                     "showing what the high-level library does internally.",
+    },
+    "data-engineering": {
+        "vocabulary": "pipeline, ETL/ELT, schema, partitioning, backfill, idempotency, lineage, "
+                      "throughput, latency, checkpoint, exactly-once, data lake, warehouse",
+        "quality_signals": "Include throughput/latency characteristics. Discuss failure modes and recovery. "
+                          "Show scaling behavior. Mention cost implications.",
+        "anti_patterns": "Do NOT ignore data volume considerations. Do NOT treat all storage as equivalent. "
+                        "Do NOT omit cost implications of different approaches.",
+        "reference_style": "Cite official documentation. Mention specific version numbers when behavior "
+                          "changed between versions. Link to architecture decision records when available.",
+        "code_guide": "Layer 1: Data flow diagram as text (source → transform → sink). "
+                     "Layer 2: Real tool code FROM Reference Materials (Spark, Airflow, dbt, Kafka). "
+                     "Add version caveat. "
+                     "Layer 3: Pure Python showing the core pattern (e.g., streaming processor, batch ETL).",
+    },
+    "infra-hardware": {
+        "vocabulary": "GPU, CUDA, kernel, FLOPS, throughput, latency, quantization, cluster, "
+                      "container, orchestration, inference, batch, shard, replica",
+        "quality_signals": "Include specific benchmark numbers when available. Show actual deployment "
+                          "configurations. Discuss cost analysis ($/token, $/hour).",
+        "anti_patterns": "Do NOT only explain theory without operational considerations. Always include "
+                        "real-world constraints (memory limits, network bandwidth, cost).",
+        "reference_style": "Cite manufacturer docs (NVIDIA, AMD). Reference benchmark papers. "
+                          "Include specific hardware specs and pricing when available.",
+        "code_guide": "Layer 1: System architecture diagram as text (components and data flow). "
+                     "Layer 2: Real deployment code (Docker, K8s YAML, CLI commands, config files). "
+                     "Layer 3: Benchmark/profiling script showing performance characteristics.",
+    },
+    "safety-ethics": {
+        "vocabulary": "alignment, adversarial, red-teaming, bias, fairness, regulation, audit, "
+                      "data poisoning, prompt injection, jailbreak, watermark, guardrail",
+        "quality_signals": "Include specific incidents/cases. Cite regulatory frameworks (EU AI Act, "
+                          "NIST AI RMF). Describe technical defense mechanisms with code.",
+        "anti_patterns": "Do NOT stay abstract. Always include concrete implementation of defenses. "
+                        "Do NOT present only philosophical discussion without technical solutions.",
+        "reference_style": "Cite regulatory documents (EU AI Act, etc.). Reference safety research papers. "
+                          "Link to responsible AI toolkits (Fairlearn, AIF360).",
+        "code_guide": "Layer 1: Threat model diagram (attacker → vulnerability → impact). "
+                     "Layer 2: Defense implementation using real safety libraries (guardrails, fairlearn). "
+                     "Layer 3: Attack/defense demonstration with minimal code.",
+    },
+    "products-platforms": {
+        "vocabulary": "API, SDK, release, version, pricing, benchmark, migration, "
+                      "deprecation, rate limit, quota, SLA, endpoint",
+        "quality_signals": "Include version history, pricing, competitive comparison table. "
+                          "Show actual API code with authentication. State the date explicitly.",
+        "anti_patterns": "Do NOT copy marketing language. Always include limitations and alternatives. "
+                        "Product info ages fast — state version/date explicitly.",
+        "reference_style": "Cite official announcements and docs. Include version/date. "
+                          "Link to official pricing pages and API references.",
+        "code_guide": "Layer 1: Product capability overview (what it does, who it's for). "
+                     "Layer 2: Actual API usage FROM official docs in Reference Materials "
+                     "(authentication, common operations, error handling). Add version/date caveat. "
+                     "Layer 3: Integration pattern showing how to use this product in a real pipeline.",
+    },
+}
+
+
+def build_category_block(category: str) -> str:
+    """Build a structured category context block for prompt injection."""
+    ctx = CATEGORY_CONTEXT.get(category)
+    if not ctx:
+        return ""
+    return (
+        f"## Domain Context: {category}\n"
+        f"<vocabulary>{ctx['vocabulary']}</vocabulary>\n"
+        f"<quality_signals>{ctx['quality_signals']}</quality_signals>\n"
+        f"<anti_patterns>{ctx['anti_patterns']}</anti_patterns>\n"
+        f"<reference_style>{ctx['reference_style']}</reference_style>\n"
+        f"<code_guide>{ctx['code_guide']}</code_guide>"
+    )
+
+
+# ── Basic-level type guides (injected into Basic EN call after type classification) ──
+
+BASIC_TYPE_GUIDES: dict[str, str] = {
+    "algorithm_model": "Explain what the algorithm does with a plain analogy before any technical detail. "
+                       "Code examples should be minimal (5-10 lines), runnable, with comments on every line. "
+                       "No mathematical formulas in Basic — save those for Advanced.",
+    "infrastructure_tool": "Start with what problem this tool solves. Show a minimal 'hello world' usage "
+                          "(3-5 line CLI or config example). Focus on when to use vs alternatives.",
+    "business_industry": "Define in plain business language. Use a real company example. "
+                        "No code needed — replace with a decision framework or checklist.",
+    "concept_theory": "Use an everyday analogy to build intuition. Explain WHY this concept matters "
+                     "with a concrete scenario. Save formal definitions for Advanced.",
+    "product_brand": "Lead with: what it does → who it's for → how to get started. "
+                    "Show the simplest possible usage (1-3 lines). Mention free tier if available.",
+    "metric_measure": "Explain what this metric tells you in plain words. Use a concrete example with "
+                     "real numbers (e.g., 'if you have 10 predictions and 7 are correct...'). "
+                     "No formula derivation in Basic.",
+    "technique_method": "Describe the problem first, then the technique as a solution. "
+                       "Show before/after comparison. Give one concrete 'when to use this' scenario.",
+    "data_structure_format": "Explain with a visual metaphor (stack = pile of plates, etc.). "
+                            "Show basic operations (add, remove, search) with 3-5 line code. "
+                            "Compare with one alternative ('If you used X instead...').",
+    "protocol_standard": "Explain what gets sent between whom. Use a conversation analogy "
+                        "(handshake = introduction at a party). Show a minimal working example.",
+    "architecture_pattern": "Describe the problem that this pattern solves. Draw the structure with text. "
+                           "Give one 'when to use' and one 'when NOT to use' scenario.",
+}
+
+
+def get_type_basic_guide(term_type: str) -> str:
+    """Return type-specific basic-level guide for Basic prompt injection."""
+    guide = BASIC_TYPE_GUIDES.get(term_type, BASIC_TYPE_GUIDES["concept_theory"])
+    return f"## Basic Content Guide ({term_type})\n{guide}"
+
+
 COVE_CRITIQUE_PROMPT = """You are a senior ML engineer performing Chain-of-Verification on a handbook entry.
 
 The term "{term}" is classified as type: {term_type}.
