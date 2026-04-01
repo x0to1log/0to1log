@@ -238,6 +238,16 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, skip, or INVENT sections. Only use `##` headings listed in "Required Sections" above. If a news item doesn't fit any existing section, place it in the closest matching one.
 13. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
+    - Each `###` sub-heading MUST be a title-only line. Never append body text, summary sentences, citations, or quotes on the same line as the `###` heading.
+    - After every `###` sub-heading, insert exactly one blank line, then start the first paragraph on the next line.
+    - Required pattern for every news item:
+      ```md
+      ### Item Title
+
+      First paragraph... [1](URL)
+
+      Second paragraph... [2](URL)
+      ```
     - Use **bold** for key terms, company names, and important numbers
     - Use `>` blockquotes for notable quotes from sources
     - Use markdown tables (`|`) when comparing numbers, features, or options
@@ -272,7 +282,7 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 
 {skeleton}
 
-IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
+IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, `###` sub-heading/body separation, blank lines after headings, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
 1. Citations: Does every paragraph end with at least one [N](URL) citation?
@@ -282,6 +292,8 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 5. Is headline_ko in Korean?
 6. Does ko have citations [N](URL) at the end of every paragraph, just like en?
 7. Community Pulse: if "Community Pulse Data:" appears in the input, is `## Community Pulse` present in BOTH en and ko with all quotes? In ko, are quotes in Korean?
+8. Does every `###` line contain only the news item title, with no body text or citation on the same line?
+9. Is there exactly one blank line after every `###` sub-heading before the first paragraph starts?
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
