@@ -41,6 +41,11 @@
 | UA-02~05 | User Analytics — Site Analytics 차트 추가 | in_progress | 2026-03-27 | 2026-03-28 |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | 2026-03-27 | 2026-03-29 |
 | HQ-01~02 | 핸드북 Hallucination 수정 + 비기술 용어 정리 | todo | 2026-03-31 | — |
+| GPT5-01 | gpt-5 모델 마이그레이션 — classify/merge/ranking (gpt-5-mini) | in_progress | 2026-04-01 | — |
+| GPT5-02 | gpt-5 모델 마이그레이션 — community_summarize (gpt-5-nano) | todo | — | — |
+| GPT5-03 | gpt-5 모델 마이그레이션 — Writer digest (gpt-5) | todo | — | — |
+| GPT5-04 | gpt-5 전체 파이프라인 backfill 비교 검증 | todo | — | — |
+| GPT5-05 | gpt-5 main 머지 + gpt-4.1 deprecation 대응 완료 | todo | — | — |
 
 ---
 
@@ -205,7 +210,9 @@
 | NQ-16 | Classify/Merge 분리 — classify(개별 7-8개) → merge(전체 50개에서 같은 이벤트 매칭) → 외부 enrich(보충) | — | — | done |
 | NQ-17 | 파이프라인 Health Check — classify/merge/enrich 과정의 코드 기반 이상 탐지 + 로그 경고 | — | — | done |
 | NQ-18 | CP 스팸 필터 — 코멘트 최소 품질 체크(upvote, 패턴) + 소스 도메인 필터(HN/Reddit만) | — | — | done |
-| NQ-22 | CP 전면 재설계 — 수집 정확도 + 관련성 검증 + Writer 반영 보장 | — | — | todo |
+| NQ-22 | CP 전면 재설계 — Summarizer + Entity Search + Brave Discussions | — | — | done (Phase 1-2), 검증 대기 |
+| NQ-23 | CP 안정화 — semaphore 동시성 제어 + URL canonicalization | — | — | todo |
+| NQ-24 | 파이프라인 테스트 전면 재작성 — 현재 계약 기반 mock 테스트 | — | — | todo |
 | NQ-19 | 파이프라인 체크포인트 — 각 단계 결과 DB 저장 + 임의 지점 재실행 + 어드민 UI | — | — | done |
 | NQ-20 | Writer 다중 소스 활용 개선 — 여러 소스의 다른 관점/정보를 반영해서 작성하도록 Guide 수정 | — | — | done |
 | NQ-21 | GitHub Trending 축소 + 급부상 오픈소스 별도 제공 | — | — | todo |
@@ -250,50 +257,45 @@
 - **방향:** LLM 호출 아닌 코드 기반 규칙 체크 (비용 0). 파이프라인 로그에 warning 기록 + 어드민 표시
 
 #### NQ-22 배경 노트 — CP 전면 재설계
-3/26 backfill에서 CP 관련 문제가 6번 연속 발생. 근본 원인 분석:
 
-**문제 1: 검색 정확도**
-- "Nvidia Vera CPU" 제목으로 Reddit 검색 → r/nvidia "Game Ready Driver FAQ" (431 upvotes) 매칭
-- upvote만 높고 뉴스와 **완전히 무관한 스레드**가 선택됨
-- 원인: Reddit 검색이 키워드 매칭만 하고 **의미적 관련성을 확인 안 함**
+**구현 완료 (2026-03-31, 6 커밋):**
 
-**문제 2: 관련성 검증 없음**
-- community 수집이 "가장 upvote 높은 스레드"를 무조건 가져옴
-- 뉴스 제목과 스레드 제목의 관련성을 체크하는 로직이 없음
-- 결과: 무관한 스레드가 Writer에 전달 → Writer가 "이건 관련 없다"고 판단해서 CP 생략
+1. **Community Summarizer 단계 추가** (`7745367`)
+   - community → community_summarize → rank 흐름
+   - gpt-4.1-mini 배치 1회, {sentiment, quotes 0-2, key_point} 추출
+   - Writer는 정제된 데이터만 받아서 포맷+번역 (선별 책임 제거)
 
-**문제 3: Writer 반영 불확실**
-- community 데이터가 전달돼도 Writer가 "MANDATORY when community data is provided" 규칙을 무시할 수 있음
-- 특히 community 내용이 뉴스와 무관하면 LLM이 정당하게(?) 생략
+2. **Entity-First Search** (`062026a`)
+   - 타이틀에서 고유명사/버전 패턴 추출 → 짧은 쿼리로 HN 검색
+   - 선택적 부스트 (버전 +40, 긴 고유명사 +20) + foreign entity 패널티 (-8/entity, max -30)
+   - target_date 기준 7일 시간 필터
 
-**문제 4: 검색어 포맷**
-- item.title vs group_title — 메인 파이프라인과 rerun 함수 불일치 (수정 완료)
-- GitHub 레포 제목이 검색에 불리한 포맷 (수정 완료)
+3. **Brave Discussions 교체** (`87db4d7`, `ccb9ba1`)
+   - Reddit 키워드 검색 → Brave Web Search discussions로 교체
+   - Brave가 Reddit URL 발견 → permalink 추출 → 코멘트 1회 fetch
+   - ALLOWED_SUBREDDITS 확장 (ai_agents, aiwars, fintech, legaltech, europe)
 
-**해결 방향 (4단계, 리서치 기반):**
+4. **코드리뷰 수정 6건** (`6d6a1f7`, `a67c538`)
+   - 즉시: Brave freshness=pw, HN html.unescape(), entity 최소 2개
+   - 곧: Brave 로그 warning + 카운트, Summarizer 다중 thread 합치기, insert 실패 구분
 
-Phase 1. **URL 기반 검색** (최우선, 비용 $0)
-- HN: `restrictSearchableAttributes=url`로 기사 URL 직접 검색
-- Reddit: `q=url:<article_url>`로 해당 기사를 공유한 포스트 검색
-- URL 매칭이 가장 정확 — hackernews-button 오픈소스가 이 방식 사용
-- 결과 없으면 키워드 fallback
+**미구현 → NQ-23, NQ-24로 분리:**
+- semaphore 동시성 제어 (현재 URL ~10개라 급하지 않음)
+- URL canonicalization (실제 발생 빈도 데이터 필요)
+- 테스트 전면 재작성 (코드 안정화 후)
 
-Phase 2. **관련성 검증 게이트** (비용 $0)
-- `rapidfuzz.token_set_ratio(article_title, thread_title)` 유사도 체크
-- 60 이상: 수락, 40-60: 관련 서브레딧이면 수락, 40 미만: 거부
-- "Nvidia Vera CPU" vs "Game Ready Driver FAQ" = 낮은 점수 → 거부
+#### NQ-23 배경 노트 — CP 안정화
+코드리뷰에서 도출된 아키텍처 개선:
+- **semaphore 동시성 제어**: gather()로 URL 10+개 동시 호출 + 내부 sleep → 상위에서 asyncio.Semaphore(3-5)로 제한
+- **URL canonicalization**: tracking param, mobile URL, redirect URL 정규화 → URL 검색 false negative 감소
+- 파이프라인 안정화 + 데이터 확보 후 진행
 
-Phase 3. **서브레딧 타겟 검색** (비용 $0)
-- 글로벌 `/search.json` → 서브레딧별 검색 (`restrict_sr=on`)
-- Research → r/machinelearning, r/locallama, r/mlpapers
-- Business → r/technology, r/openai, r/singularity
-- 글로벌 검색에서 무관한 고upvote 스레드가 밀어내는 문제 제거
-
-Phase 4. **LLM 판별** (선택, ~$0.001/건)
-- gpt-4.1-mini로 "같은 주제?" 이진 분류
-- rapidfuzz 40-60 애매한 케이스에만 적용
-
-**참고:** hackernews-button(오픈소스), last30days-skill(멀티플랫폼 토론 검색)
+#### NQ-24 배경 노트 — 테스트 전면 재작성
+현재 test_news_collection.py, test_pipeline.py, test_ranking.py가 모두 예전 계약 기반:
+- community reactions는 Tavily 방식 가정
+- ClassificationResult가 old 구조 기대
+- pipeline 모델 구조 변경 때문에 수집 단계에서 깨짐
+- 방향: httpx.AsyncClient mock 기반으로 HN URL hit, Reddit URL hit, Brave fallback, freshness 적용 각각 테스트
 
 #### NQ-18 배경 노트
 3/31 자동 파이프라인에서 Research CP에 봇 생성 스팸 텍스트가 실제 코멘트로 인용됨.
@@ -350,6 +352,23 @@ GitHub API로는 "star 증가율"을 직접 구할 수 없어 진짜 trending을
 **핵심 인사이트**: GitHub API 직접 쿼리보다, 이미 수집된 HN/Reddit/뉴스에서 GitHub URL을 추출하는 게 더 정확한 "trending" 시그널. HN 200 upvote "Show HN: ML framework"가 stars:>100 쿼리보다 의미 있음.
 
 **GitHub Trending 수집기**: 축소 또는 신규 프로젝트(created:>7일, stars:>50)로 전환. 기존 대형 프로젝트 반복 방지.
+
+#### GPT-5 모델 마이그레이션 배경 노트
+OpenAI gpt-4.1 deprecation 대비. Allowed models: gpt-5, gpt-5-mini, gpt-5-nano, text-embedding-3-small.
+
+**이전 시도 (2026-03-31 실패):** 한번에 전부 교체 → gpt-5-mini classify가 0 picks 반환 → 즉시 revert.
+
+**이번 전략: 단계별 마이그레이션 (gpt5-migration 브랜치)**
+1. GPT5-01: classify/merge/ranking → gpt-5-mini (가벼운 LLM 호출부터)
+2. GPT5-02: community_summarize → gpt-5-nano (가장 작은 모델)
+3. GPT5-03: Writer digest → gpt-5 (가장 비싸고 출력 포맷 영향 큼 → 마지막)
+4. GPT5-04: 전체 파이프라인 backfill → gpt-4.1 결과와 나란히 비교
+5. GPT5-05: 품질 확인 후 main 머지
+
+**핵심 원칙:**
+- 각 단계마다 backfill 1회 돌려서 gpt-4.1 결과와 비교
+- checkpoint 데이터로 같은 입력 → 다른 모델 출력 비교 가능
+- 문제 발생 시 해당 단계만 revert, 나머지는 유지
 
 | NQ-09 | max_tokens 16K→32K (Expert 짧음 근본 원인 해결) | — | — | done |
 

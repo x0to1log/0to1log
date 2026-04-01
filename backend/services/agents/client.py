@@ -34,6 +34,11 @@ def is_o_series(model: str) -> bool:
     return model.startswith("o1") or model.startswith("o3") or model.startswith("o4")
 
 
+def _uses_max_completion_tokens(model: str) -> bool:
+    """Models that require max_completion_tokens instead of max_tokens."""
+    return is_o_series(model) or model.startswith("gpt-5")
+
+
 def build_completion_kwargs(
     model: str,
     messages: list[dict],
@@ -43,10 +48,12 @@ def build_completion_kwargs(
 ) -> dict:
     """Build kwargs for chat.completions.create, handling o-series differences."""
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
-    if is_o_series(model):
+    if _uses_max_completion_tokens(model):
         kwargs["max_completion_tokens"] = max_tokens
     else:
         kwargs["max_tokens"] = max_tokens
+    # gpt-5 and o-series don't support temperature
+    if not is_o_series(model) and not model.startswith("gpt-5"):
         kwargs["temperature"] = temperature
     if response_format and not is_o_series(model):
         kwargs["response_format"] = response_format
