@@ -234,7 +234,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
 9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 10. Section headers must use the correct language for the target content.
-11. If a NEWS section (e.g., LLM & SOTA, Open Source, Big Tech, New Tools) has no items, OMIT it entirely — do NOT include the `##` heading, and do NOT write placeholder text like "(오늘은 없습니다)", "(No items today)", or "(No new tools announced today)". The section must not appear at all. ANALYSIS sections (One-Line Summary, Why It Matters, Connecting the Dots, Strategic Decisions, Action Items, What This Means for You) are ALWAYS required — never omit them.
+11. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
 12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, skip, or INVENT sections. Only use `##` headings listed in "Required Sections" above. If a news item doesn't fit any existing section, place it in the closest matching one.
 13. Use markdown actively for readability:
     - Use `###` sub-headings within each section to separate individual news items by name
@@ -243,7 +243,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE RULES: (1) Community Pulse MUST be a single `## Community Pulse` (ko: `## 커뮤니티 반응`) top-level section — NEVER `###` or `####` inside a news item. Collect ALL community data into this one section, placed after the last news section and before analysis sections. (2) Format: `**Platform** (N↑) — sentiment summary incorporating the key discussion point.` Then include provided quotes as `>` blockquotes with attribution (`> — Reddit` or `> — Hacker News`). Determine attribution from the Platform field (HN = Hacker News, r/ = Reddit). (3) Use ALL provided quotes exactly as given — do NOT skip, add, fabricate, or paraphrase quotes. (4) In KO, ALL quotes MUST be translated into natural Korean — NEVER leave English quotes in Korean content. Translate the meaning naturally, not word-by-word. Keep attribution (Reddit/Hacker News). (5) Omit this section only if no Community Pulse Data was provided.
+15. COMMUNITY PULSE: Write as a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. Copy provided quotes exactly. In KO, translate all quotes into natural Korean. Omit only if no Community Pulse Data was provided.
 {handbook_section}
 
 ## Output JSON format
@@ -275,17 +275,13 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
 ## FINAL CHECKLIST (verify before responding)
-1. Citations: Does every paragraph end with at least one [N](URL) citation? When multiple sources are provided, are different sources cited in different paragraphs?
-2. Are ALL required `##` section headers present? If any are missing, add them.
-3. Do [LEAD] items have 3-4 paragraphs, and do ALL [SUPPORTING] items have at least 3 paragraphs? Expand if below minimum.
-4. Are "en" and "ko" covering the SAME news items with the SAME number of paragraphs per item? ko may be shorter in character count (Korean is naturally more concise), but it MUST have the same number of ## sections, ### sub-items, and paragraphs per item as en.
-5. Does ko use the SAME ## section headers as specified in Required Sections? Do NOT invent new headers for ko.
-6. Is headline_ko in Korean? If it contains no Korean characters, rewrite it.
-7. Do Strategic Decisions / Action Items use the exact bullet format? If not, reformat.
-8. Does ko have citations [N](URL) at the end of every paragraph, just like en? If not, add them.
-9. Community Pulse: if "Community Pulse Data:" appears ANYWHERE in the input, you MUST include a `## Community Pulse` section in BOTH en and ko. Scan now: (a) Is it a `##` top-level section, NOT `###`/`####` inside a news item? (b) Is it placed AFTER all news sections and BEFORE analysis sections? (c) Are ALL provided quotes included? (d) In ko, are ALL quotes in Korean, not English? If any check fails, fix it before responding.
-10. Empty sections: scan for any `##` section that contains only a parenthetical note like "(없습니다)" or "(No items today)". If found, DELETE that entire section (heading + placeholder). Rule 11 requires empty NEWS sections to not exist at all.
-11. Supporting story minimum: scan ALL non-lead news items. If any item (expert OR learner) has fewer than 3 paragraphs, EXPAND it before responding. A 1-2 paragraph item is never acceptable.
+1. Citations: Does every paragraph end with at least one [N](URL) citation?
+2. Are ALL required `##` section headers present?
+3. Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?
+4. Do "en" and "ko" cover the SAME news items with the SAME ## sections and ### sub-items?
+5. Is headline_ko in Korean?
+6. Does ko have citations [N](URL) at the end of every paragraph, just like en?
+7. Community Pulse: if "Community Pulse Data:" appears in the input, is `## Community Pulse` present in BOTH en and ko with all quotes? In ko, are quotes in Korean?
 
 ## Field rules
 - headline: MUST be in English. No Korean characters allowed.
