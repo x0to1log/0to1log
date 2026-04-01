@@ -1666,6 +1666,9 @@ async def rerun_pipeline_stage(
                   "save:research", "save:business", "summary"],
     }
     stages_to_delete = STAGE_CASCADE.get(from_stage, [])
+    # If category filter is set, only delete logs for that category's stages
+    if category:
+        stages_to_delete = [s for s in stages_to_delete if category in s or ":" not in s or s == "summary"]
     try:
         for stage_name in stages_to_delete:
             supabase.table("pipeline_logs").delete().eq("run_id", run_id).eq("pipeline_type", stage_name).execute()
