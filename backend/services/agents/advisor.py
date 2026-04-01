@@ -1714,11 +1714,47 @@ async def _run_generate_term(
                 i += 1
         return ''.join(result)
 
+    _BACKSLASH_TEXT_BRACE = "\x5ctext{"  # \text{ — avoids \t being parsed as tab
+
+    def _clean_math_blocks(text: str) -> str:
+        """Remove code artifacts accidentally embedded inside LaTeX math blocks.
+
+        Handles cases where LLM mixes Python code into LaTeX, e.g.:
+        \\text{cos").replace("\\n", " ")\\text{ine} → \\text{cosine}
+        """
+        tex_marker = _BACKSLASH_TEXT_BRACE  # \text{
+        code_artifacts = ('.replace(', '.join(', '.split(', '.strip(', '.format(')
+        result = text
+        for artifact in code_artifacts:
+            art_idx = result.find(artifact)
+            while art_idx != -1:
+                before = result[:art_idx]
+                text_start = before.rfind(tex_marker)
+                if text_start == -1:
+                    break
+                after_art = result[art_idx:]
+                next_text_rel = after_art.find(tex_marker)
+                if next_text_rel == -1:
+                    break
+                next_text_abs = art_idx + next_text_rel
+                next_brace_start = next_text_abs + len(tex_marker)
+                next_brace_end = result.find('}', next_brace_start)
+                if next_brace_end == -1:
+                    break
+                first_content_start = text_start + len(tex_marker)
+                first_alpha = ''.join(c for c in result[first_content_start:art_idx] if c.isalpha())
+                second_content = result[next_brace_start:next_brace_end]
+                merged = tex_marker + first_alpha + second_content + '}'
+                result = result[:text_start] + merged + result[next_brace_end + 1:]
+                art_idx = result.find(artifact)
+        return result
+
     for key, val in data.items():
         if isinstance(val, str) and '$' in val:
             converted = _fix_single_dollar_math(val)
+            converted = _clean_math_blocks(converted)
             if converted != val:
-                logger.info("Converted single-dollar math to double-dollar in field '%s'", key)
+                logger.info("Fixed math formatting in field '%s'", key)
                 data[key] = converted
 
     logger.info(
