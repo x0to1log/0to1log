@@ -236,7 +236,7 @@ const retryBatchId = handbookNeedsRetry
   ? (lastHandbookRun?.run_key?.replace('handbook-extract-', '') ?? '')
   : lastNewsBatchId;
 
-const newsRuns = runs.filter((r) => r.run_key?.startsWith('news-'));
+const newsRuns = runs.filter((r) => r.run_key?.startsWith('news-') || r.run_key?.startsWith('weekly-') || r.run_key?.startsWith('rerun-'));
 const handbookRuns = runs.filter((r) => r.run_key?.startsWith('handbook-extract-'));
 
 function buildSummary(subset: RunCard[]) {
