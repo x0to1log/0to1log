@@ -731,14 +731,24 @@ async def collect_news(
     excluded_count = 0
     filtered_count = 0
     _NON_ARTICLE_PATTERNS = ("/category/", "/categories/", "/topics/", "/topic/", "/tag/", "/tags/", "/archive/")
+    _NON_EN_DOMAINS = (
+        "landiannews.com", "36kr.com", "unifuncs.com", "minimaxi.com",
+        "ithome.com", "oschina.net", "csdn.net", "juejin.cn",
+        "zhihu.com", "bilibili.com", "baidu.com",
+    )
     for c in all_candidates:
         if c.url in already_used:
             excluded_count += 1
             continue
-        # Filter category/topic/index pages (not individual articles)
+        # Filter category/topic/index pages and non-English domains
         from urllib.parse import urlparse
-        path = urlparse(c.url).path.rstrip("/")
+        parsed = urlparse(c.url)
+        path = parsed.path.rstrip("/")
+        hostname = parsed.hostname or ""
         if not path or path == "" or any(p in c.url.lower() for p in _NON_ARTICLE_PATTERNS):
+            filtered_count += 1
+            continue
+        if any(d in hostname for d in _NON_EN_DOMAINS):
             filtered_count += 1
             continue
         if c.url not in seen_urls:

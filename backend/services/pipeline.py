@@ -829,6 +829,12 @@ def _strip_empty_sections(content: str) -> str:
     return "".join(result)
 
 
+def _fix_bold_spacing(content: str) -> str:
+    """Fix broken markdown bold: '**text **' → '**text**'."""
+    import re as _re
+    return _re.sub(r"\*\*(.+?)\s+\*\*", r"**\1**", content)
+
+
 def _check_structural_penalties(
     expert: PersonaOutput,
     learner: PersonaOutput | None,
@@ -1033,8 +1039,8 @@ async def _generate_digest(
                     f"Digest-{digest_type}-{persona_name}",
                 )
                 persona_output = PersonaOutput(
-                    en=_strip_empty_sections(data.get("en", "")),
-                    ko=_strip_empty_sections(data.get("ko", "")),
+                    en=_fix_bold_spacing(_strip_empty_sections(data.get("en", ""))),
+                    ko=_fix_bold_spacing(_strip_empty_sections(data.get("ko", ""))),
                 )
 
                 # Capture metadata from first persona (expert)
