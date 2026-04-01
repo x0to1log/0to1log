@@ -1268,16 +1268,17 @@ async def run_daily_pipeline(
     run_key = f"news-{batch_id}"
     try:
         # Reuse existing run or create new
-        existing = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).maybeSingle().execute()
-        if existing.data:
-            run_id = existing.data["id"]
+        _res = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).limit(1).execute()
+        existing = _res.data[0] if _res.data else None
+        if existing:
+            run_id = existing["id"]
             if force_fresh:
                 # Manual "Run Pipeline": wipe logs and start from scratch
                 supabase.table("pipeline_logs").delete().eq("run_id", run_id).execute()
                 logger.info("Force-fresh: cleared logs for %s", run_key)
             else:
                 # Cron retry: preserve logs (checkpoints) for "Rerun from..." support
-                logger.info("Reusing news run %s, preserving logs (was %s)", run_key, existing.data["status"])
+                logger.info("Reusing news run %s, preserving logs (was %s)", run_key, existing["status"])
             supabase.table("pipeline_runs").update({
                 "status": "running",
                 "started_at": datetime.now(timezone.utc).isoformat(),
@@ -2078,9 +2079,10 @@ async def run_weekly_pipeline(
     run_key = f"weekly-{week_id}"
     try:
         # Reuse existing run (overwrite) or create new
-        existing = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).maybeSingle().execute()
-        if existing.data:
-            run_id = existing.data["id"]
+        _res = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).limit(1).execute()
+        existing = _res.data[0] if _res.data else None
+        if existing:
+            run_id = existing["id"]
             # Clear previous logs and reset run
             supabase.table("pipeline_logs").delete().eq("run_id", run_id).execute()
             supabase.table("pipeline_runs").update({
@@ -2089,7 +2091,7 @@ async def run_weekly_pipeline(
                 "finished_at": None,
                 "last_error": None,
             }).eq("id", run_id).execute()
-            logger.info("Reusing existing weekly run %s (was %s)", run_key, existing.data["status"])
+            logger.info("Reusing existing weekly run %s (was %s)", run_key, existing["status"])
         else:
             run_id = str(uuid.uuid4())
             supabase.table("pipeline_runs").insert({
