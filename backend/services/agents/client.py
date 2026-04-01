@@ -39,6 +39,21 @@ def _uses_max_completion_tokens(model: str) -> bool:
     return is_o_series(model) or model.startswith("gpt-5")
 
 
+def compat_create_kwargs(model: str, **kwargs) -> dict:
+    """Make chat.completions.create kwargs compatible with gpt-5/o-series.
+
+    Converts max_tokens→max_completion_tokens and removes temperature
+    for models that don't support them. Use for direct API calls
+    that don't go through build_completion_kwargs.
+    """
+    if _uses_max_completion_tokens(model) and "max_tokens" in kwargs:
+        kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+    if (is_o_series(model) or model.startswith("gpt-5")) and "temperature" in kwargs:
+        del kwargs["temperature"]
+    kwargs["model"] = model
+    return kwargs
+
+
 def build_completion_kwargs(
     model: str,
     messages: list[dict],

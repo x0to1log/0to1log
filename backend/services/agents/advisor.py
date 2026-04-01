@@ -25,7 +25,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
+from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
     get_generate_prompt,
@@ -445,14 +445,16 @@ async def _run_related_terms(req: HandbookAdviseRequest, client, model: str) -> 
 
     # Step 1: LLM suggests related terms
     resp = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": RELATED_TERMS_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_tokens=2048,
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": RELATED_TERMS_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=2048,
+        )
     )
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-related_terms")
     tokens = resp.usage.completion_tokens if resp.usage else 0
@@ -528,14 +530,16 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
     user_prompt, source_lang, target_lang = _build_translate_user_prompt(req)
 
     resp = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": TRANSLATE_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-        max_tokens=4096,
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": TRANSLATE_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=4096,
+        )
     )
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-translate")
     tokens = resp.usage.completion_tokens if resp.usage else 0
@@ -716,14 +720,16 @@ async def _classify_term_type(term: str, categories: list[str], client, model_li
     user_msg = f"Term: {term}\nCategories: {', '.join(categories)}"
     try:
         resp = await client.chat.completions.create(
-            model=model_light,
-            messages=[
-                {"role": "system", "content": CLASSIFY_TERM_PROMPT},
-                {"role": "user", "content": user_msg},
-            ],
-            max_tokens=100,
-            temperature=0,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                model_light,
+                messages=[
+                    {"role": "system", "content": CLASSIFY_TERM_PROMPT},
+                    {"role": "user", "content": user_msg},
+                ],
+                max_tokens=100,
+                temperature=0,
+                response_format={"type": "json_object"},
+            )
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-classify")
         term_type = data.get("type", "concept_theory")
@@ -971,18 +977,20 @@ async def _extract_novel_entities(
     """Extract proper nouns from generated content that don't appear in references."""
     try:
         resp = await client.chat.completions.create(
-            model=model_light,
-            messages=[
-                {"role": "system", "content": (
-                    "Extract all specific proper nouns from the text: system names, framework names, "
-                    "protocol names, paper titles, product names, benchmark names. "
-                    'Return JSON: {"entities": ["name1", "name2"]}'
-                )},
-                {"role": "user", "content": generated_content[:6000]},
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=500,
-            temperature=0,
+            **compat_create_kwargs(
+                model_light,
+                messages=[
+                    {"role": "system", "content": (
+                        "Extract all specific proper nouns from the text: system names, framework names, "
+                        "protocol names, paper titles, product names, benchmark names. "
+                        'Return JSON: {"entities": ["name1", "name2"]}'
+                    )},
+                    {"role": "user", "content": generated_content[:6000]},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=500,
+                temperature=0,
+            )
         )
         data = parse_ai_json(resp.choices[0].message.content, "entity-extract")
         entities = data.get("entities", [])
@@ -1242,14 +1250,16 @@ async def _run_generate_term(
     # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
     for _call1_attempt in range(2):
         resp1 = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": GENERATE_BASIC_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=16000,
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": GENERATE_BASIC_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=16000,
+            )
         )
         basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
         usage1_attempt = extract_usage_metrics(resp1, model)
@@ -1320,24 +1330,28 @@ async def _run_generate_term(
 
     resp2, resp3 = await asyncio.gather(
         client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": GENERATE_BASIC_EN_PROMPT},
-                {"role": "user", "content": en_basic_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=16000,
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": GENERATE_BASIC_EN_PROMPT},
+                    {"role": "user", "content": en_basic_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=16000,
+            )
         ),
         client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": adv_ko_system},
-                {"role": "user", "content": advanced_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=16000,
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": adv_ko_system},
+                    {"role": "user", "content": advanced_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=16000,
+            )
         ),
     )
 
@@ -1366,14 +1380,16 @@ async def _run_generate_term(
     )
 
     call4_task = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": adv_en_system},
-            {"role": "user", "content": advanced_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_tokens=16000,
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": adv_en_system},
+                {"role": "user", "content": advanced_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=16000,
+        )
     )
     basic_critique_task = _self_critique_basic(
         req.term, term_type, basic_ko_preview, basic_en_preview, client, model,
@@ -1405,13 +1421,15 @@ async def _run_generate_term(
         logger.info("Regenerating basic KO for '%s' with critique feedback", req.term)
         improved_ko_system = f"{GENERATE_BASIC_PROMPT}\n\n## Reviewer Feedback (MUST address):\n{basic_ko_feedback}"
         resp1b = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": improved_ko_system},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=16000, temperature=0.35,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": improved_ko_system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=16000, temperature=0.35,
+                response_format={"type": "json_object"},
+            )
         )
         improved_basic = parse_ai_json(resp1b.choices[0].message.content, "Handbook-basic-ko-improved")
         for k, v in improved_basic.items():
@@ -1425,13 +1443,15 @@ async def _run_generate_term(
         logger.info("Regenerating basic EN for '%s' with critique feedback", req.term)
         improved_en_system = f"{GENERATE_BASIC_EN_PROMPT}\n\n## Reviewer Feedback (MUST address):\n{basic_en_feedback}"
         resp2b = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": improved_en_system},
-                {"role": "user", "content": en_basic_prompt},
-            ],
-            max_tokens=16000, temperature=0.35,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": improved_en_system},
+                    {"role": "user", "content": en_basic_prompt},
+                ],
+                max_tokens=16000, temperature=0.35,
+                response_format={"type": "json_object"},
+            )
         )
         en_basic_data = parse_ai_json(resp2b.choices[0].message.content, "Handbook-basic-en-improved")
         usage2b = extract_usage_metrics(resp2b, model)
@@ -1462,13 +1482,15 @@ async def _run_generate_term(
         logger.info("Regenerating advanced KO for '%s' with critique feedback", req.term)
         improved_system = f"{adv_ko_system}\n\n## Reviewer Feedback (MUST address these):\n{critique_feedback}"
         resp3b = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": improved_system},
-                {"role": "user", "content": advanced_prompt},
-            ],
-            max_tokens=16000, temperature=0.35,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": improved_system},
+                    {"role": "user", "content": advanced_prompt},
+                ],
+                max_tokens=16000, temperature=0.35,
+                response_format={"type": "json_object"},
+            )
         )
         advanced_ko_data = parse_ai_json(resp3b.choices[0].message.content, "Handbook-adv-ko-improved")
         usage3b = extract_usage_metrics(resp3b, model)
@@ -1497,13 +1519,15 @@ async def _run_generate_term(
         logger.info("Regenerating advanced EN for '%s' with critique feedback", req.term)
         improved_en_adv_system = f"{adv_en_system}\n\n## Reviewer Feedback (MUST address these):\n{en_critique_feedback}"
         resp4b = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": improved_en_adv_system},
-                {"role": "user", "content": advanced_prompt},
-            ],
-            max_tokens=16000, temperature=0.35,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": improved_en_adv_system},
+                    {"role": "user", "content": advanced_prompt},
+                ],
+                max_tokens=16000, temperature=0.35,
+                response_format={"type": "json_object"},
+            )
         )
         advanced_en_data = parse_ai_json(resp4b.choices[0].message.content, "Handbook-adv-en-improved")
         usage4b = extract_usage_metrics(resp4b, model)
@@ -1720,14 +1744,16 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
         preview += "\n[... truncated]"
 
     resp = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": EXTRACT_TERMS_PROMPT},
-            {"role": "user", "content": preview},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-        max_tokens=2048,
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": EXTRACT_TERMS_PROMPT},
+                {"role": "user", "content": preview},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=2048,
+        )
     )
     data = parse_ai_json(resp.choices[0].message.content, "Extract-terms")
     usage = extract_usage_metrics(resp, model)

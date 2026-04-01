@@ -4,7 +4,7 @@ from typing import Any
 
 from core.config import settings
 from models.news_pipeline import FactPack
-from services.agents.client import extract_usage_metrics, get_openai_client, parse_ai_json
+from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
 from services.agents.prompts_news_pipeline import FACT_EXTRACTION_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -38,14 +38,16 @@ async def extract_facts(
     for attempt in range(MAX_RETRIES + 1):
         try:
             response = await client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": FACT_EXTRACTION_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1,
-                max_tokens=4096,
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": FACT_EXTRACTION_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.1,
+                    max_tokens=4096,
+                )
             )
             raw = response.choices[0].message.content
             data = parse_ai_json(raw, "FactExtractor")

@@ -6,6 +6,7 @@ from typing import Any
 from core.config import settings
 from models.news_pipeline import FactPack, PersonaOutput
 from services.agents.client import (
+    compat_create_kwargs,
     extract_usage_metrics,
     get_openai_client,
     merge_usage_metrics,
@@ -84,14 +85,16 @@ async def write_persona(
     for attempt in range(MAX_INFRA_RETRIES + 1):
         try:
             response = await client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.4,
-                max_tokens=32000,
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.4,
+                    max_tokens=32000,
+                )
             )
             usage = extract_usage_metrics(response, model)
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)

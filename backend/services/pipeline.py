@@ -19,7 +19,7 @@ from services.agents.advisor import (
     extract_terms_from_content,
     generate_term_content,
 )
-from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
+from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.prompts_news_pipeline import get_digest_prompt
 from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
@@ -889,14 +889,16 @@ async def _generate_digest(
             try:
                 response = await asyncio.wait_for(
                     client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                        response_format={"type": "json_object"},
-                        temperature=0.4,
-                        max_tokens=16000,
+                        **compat_create_kwargs(
+                            model,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.4,
+                            max_tokens=16000,
+                        )
                     ),
                     timeout=180,  # 3 minutes max per digest call
                 )
@@ -964,14 +966,16 @@ async def _generate_digest(
                         )
                         ko_resp = await asyncio.wait_for(
                             client.chat.completions.create(
-                                model=model,
-                                messages=[
-                                    {"role": "system", "content": ko_system},
-                                    {"role": "user", "content": user_prompt},
-                                ],
-                                response_format={"type": "json_object"},
-                                temperature=0.4,
-                                max_tokens=8000,
+                                **compat_create_kwargs(
+                                    model,
+                                    messages=[
+                                        {"role": "system", "content": ko_system},
+                                        {"role": "user", "content": user_prompt},
+                                    ],
+                                    response_format={"type": "json_object"},
+                                    temperature=0.4,
+                                    max_tokens=8000,
+                                )
                             ),
                             timeout=120,  # 2 minutes for recovery
                         )
@@ -1006,14 +1010,16 @@ async def _generate_digest(
                         )
                         en_resp = await asyncio.wait_for(
                             client.chat.completions.create(
-                                model=model,
-                                messages=[
-                                    {"role": "system", "content": en_system},
-                                    {"role": "user", "content": user_prompt},
-                                ],
-                                response_format={"type": "json_object"},
-                                temperature=0.4,
-                                max_tokens=8000,
+                                **compat_create_kwargs(
+                                    model,
+                                    messages=[
+                                        {"role": "system", "content": en_system},
+                                        {"role": "user", "content": user_prompt},
+                                    ],
+                                    response_format={"type": "json_object"},
+                                    temperature=0.4,
+                                    max_tokens=8000,
+                                )
                             ),
                             timeout=120,
                         )
@@ -2138,13 +2144,15 @@ async def run_weekly_pipeline(
                 try:
                     response = await asyncio.wait_for(
                         client.chat.completions.create(
-                            model=settings.openai_model_main,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": daily_text},
-                            ],
-                            temperature=0.5,
-                            max_tokens=6000,
+                            **compat_create_kwargs(
+                                settings.openai_model_main,
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": daily_text},
+                                ],
+                                temperature=0.5,
+                                max_tokens=6000,
+                            )
                         ),
                         timeout=120,
                     )

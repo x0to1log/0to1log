@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from core.config import settings
 from models.product_advisor import ProductGenerateRequest
-from services.agents.client import get_openai_client, extract_usage_metrics, parse_ai_json
+from services.agents.client import get_openai_client, extract_usage_metrics, parse_ai_json, compat_create_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -566,25 +566,29 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         )
 
         call1_task = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": GENERATE_FROM_URL_SYSTEM},
-                {"role": "user", "content": call1_user},
-            ],
-            max_tokens=2000,
-            temperature=0.4,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": GENERATE_FROM_URL_SYSTEM},
+                    {"role": "user", "content": call1_user},
+                ],
+                max_tokens=2000,
+                temperature=0.4,
+                response_format={"type": "json_object"},
+            ),
         )
         enrichment_model = settings.openai_model_light
         call2_task = client.chat.completions.create(
-            model=enrichment_model,
-            messages=[
-                {"role": "system", "content": ENRICH_SYSTEM},
-                {"role": "user", "content": call2_user},
-            ],
-            max_tokens=2000,
-            temperature=0.5,
-            response_format={"type": "json_object"},
+            **compat_create_kwargs(
+                enrichment_model,
+                messages=[
+                    {"role": "system", "content": ENRICH_SYSTEM},
+                    {"role": "user", "content": call2_user},
+                ],
+                max_tokens=2000,
+                temperature=0.5,
+                response_format={"type": "json_object"},
+            ),
         )
 
         resp1, resp2 = await asyncio.gather(call1_task, call2_task, return_exceptions=True)
@@ -635,13 +639,15 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             ])
             try:
                 corpus_resp = await client.chat.completions.create(
-                    model=settings.openai_model_light,
-                    messages=[
-                        {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
-                        {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
-                    ],
-                    max_tokens=800,
-                    temperature=0.7,
+                    **compat_create_kwargs(
+                        settings.openai_model_light,
+                        messages=[
+                            {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
+                            {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
+                        ],
+                        max_tokens=800,
+                        temperature=0.7,
+                    ),
                 )
                 corpus_metrics = extract_usage_metrics(corpus_resp, settings.openai_model_light)
                 total_tokens += corpus_metrics["tokens_used"]
@@ -715,13 +721,15 @@ Respond with JSON only."""
             user_content += f"\n\nExisting product info:\n{body.context}"
 
         response = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_content},
-            ],
-            max_tokens=800,
-            temperature=0.3,
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_content},
+                ],
+                max_tokens=800,
+                temperature=0.3,
+            ),
         )
         raw = response.choices[0].message.content or ""
         metrics = extract_usage_metrics(response, model)
@@ -743,13 +751,15 @@ Respond with JSON only."""
         user_content = "\n".join(context_parts) or "Generate search keywords for this AI product."
 
         response = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
-                {"role": "user", "content": user_content},
-            ],
-            max_tokens=800,
-            temperature=0.7,
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
+                    {"role": "user", "content": user_content},
+                ],
+                max_tokens=800,
+                temperature=0.7,
+            ),
         )
         raw = response.choices[0].message.content or ""
         metrics = extract_usage_metrics(response, model)
@@ -774,13 +784,15 @@ Respond with JSON only."""
     user_content = "\n".join(user_parts) or "Generate a tagline for this AI product."
 
     response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
-        ],
-        max_tokens=512,
-        temperature=0.6,
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=512,
+            temperature=0.6,
+        ),
     )
     raw = response.choices[0].message.content or ""
     metrics = extract_usage_metrics(response, model)

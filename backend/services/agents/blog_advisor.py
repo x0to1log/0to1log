@@ -22,7 +22,7 @@ from models.advisor import (
     VoiceCheckResult,
     RetroCheckResult,
 )
-from services.agents.client import get_openai_client, parse_ai_json
+from services.agents.client import get_openai_client, parse_ai_json, compat_create_kwargs
 from services.agents.prompts_blog_advisor import (
     get_outline_prompt,
     get_draft_prompt,
@@ -155,14 +155,16 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
     logger.info("Blog advisor [%s] starting with model=%s, locale=%s", req.action, model, req.locale)
 
     response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=config["temperature"],
-        max_tokens=config["max_tokens"],
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=config["temperature"],
+            max_tokens=config["max_tokens"],
+        ),
     )
 
     raw = response.choices[0].message.content
@@ -220,24 +222,28 @@ async def run_blog_generate_bilingual(req: BlogAdviseRequest) -> tuple[dict, str
 
     resp_source, resp_target = await asyncio.gather(
         client.chat.completions.create(
-            model=model_light,
-            messages=[
-                {"role": "system", "content": source_system},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=2048,
+            **compat_create_kwargs(
+                model_light,
+                messages=[
+                    {"role": "system", "content": source_system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=2048,
+            ),
         ),
         client.chat.completions.create(
-            model=model_main,
-            messages=[
-                {"role": "system", "content": target_system},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=8192,  # target includes full content
+            **compat_create_kwargs(
+                model_main,
+                messages=[
+                    {"role": "system", "content": target_system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=8192,  # target includes full content
+            ),
         ),
     )
 
@@ -340,14 +346,16 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
     logger.info("Blog translate [%s] starting with model=%s", direction, model)
 
     response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": BLOG_TRANSLATE_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-        max_tokens=8192,
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": BLOG_TRANSLATE_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=8192,
+        ),
     )
 
     raw = response.choices[0].message.content
