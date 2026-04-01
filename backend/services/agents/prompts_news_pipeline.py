@@ -454,7 +454,7 @@ OpenAI restructures priorities as enterprise AI competition intensifies.
 
 ## Big Tech
 ### OpenAI Discontinues Sora, Pivots to Enterprise AI
-
+[BODY]
 OpenAI announces the shutdown of Sora to redirect resources toward coding tools and agentic AI. The move aligns with IPO preparation, prioritizing revenue-generating enterprise products. [1](https://example.com/openai-sora)
 
 This is a significant strategic signal. Competitors like Runway and Pika continue investing in video generation, but OpenAI judges the consumer AI video market cannot yet justify compute costs. [1](https://example.com/openai-sora)
@@ -463,12 +463,12 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 
 ## Industry & Biz
 ### Oracle Launches Fusion Agentic Applications
-
+[BODY]
 [3 paragraphs, each ending with [N](URL)...]
 
 ## New Tools
 ### Cloudflare Dynamic Workers
-
+[BODY]
 [3 paragraphs, each ending with [N](URL)...]
 
 ## Community Pulse
@@ -498,7 +498,7 @@ OpenAI가 엔터프라이즈 AI에 올인하면서 소비자 AI 비디오 시장
 
 ## Big Tech
 ### OpenAI, Sora 종료 후 엔터프라이즈 AI 집중
-
+[BODY]
 OpenAI가 Sora를 종료하고 코딩 도구와 에이전트 AI에 자원을 집중한다. IPO 준비와 맞물려 매출 중심의 엔터프라이즈 제품을 우선시하는 전략 전환이다. [1](https://example.com/openai-sora)
 
 Runway, Pika 등은 비디오 생성에 계속 투자하지만, OpenAI는 소비자 AI 비디오 시장이 아직 컴퓨트 비용을 정당화할 수 없다고 판단했다. 동시에 인력을 4,500명에서 8,000명 이상으로 확대해, 풀스택 AI 애플리케이션 영역 지배를 노린다. [2](https://example.com/openai-hiring)
@@ -527,19 +527,19 @@ OpenAI is hiring big, Cloudflare makes AI agents faster, and a new policy framew
 
 ## Big Tech
 ### OpenAI Plans to Double Its Workforce
-
+[BODY]
 OpenAI, the company behind ChatGPT and DALL-E, plans to grow from 4,500 to over 8,000 employees. This means more people working on AI tools that could show up in apps you use every day. [1](https://example.com/openai)
 
 The expansion targets research, engineering, and product roles. As AI models get more complex, companies need experts in everything from deep learning to AI ethics. [1](https://example.com/openai)
 
 ## Industry & Biz
 ### U.S. National AI Policy Framework
-
+[BODY]
 [3 paragraphs, plain language, each ending with [N](URL)...]
 
 ## New Tools
 ### Cloudflare Dynamic Workers: Faster AI for Everyone
-
+[BODY]
 [3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
 
 ## Community Pulse
@@ -570,7 +570,7 @@ OpenAI가 직원을 두 배로 늘리고, Cloudflare가 AI를 더 빠르게 만�
 
 ## Big Tech
 ### OpenAI, 직원 두 배 확충 계획
-
+[BODY]
 ChatGPT와 DALL-E로 유명한 OpenAI가 직원을 4,500명에서 8,000명 이상으로 늘릴 계획입니다. 더 많은 사람이 AI 도구를 개발하게 되면, 여러분이 매일 쓰는 앱에도 변화가 올 수 있습니다. [1](https://example.com/openai)
 
 채용은 연구, 엔지니어링, 제품 분야에 집중됩니다. AI 모델이 복잡해질수록 딥러닝부터 AI 윤리까지 다양한 전문가가 필요해집니다. [1](https://example.com/openai)
@@ -601,7 +601,7 @@ Diffusion-based decoding disrupts document OCR while multi-agent verification ta
 
 ## Research Papers
 ### MinerU-Diffusion: Document OCR via Diffusion Decoding
-
+[BODY]
 MinerU-Diffusion reframes OCR as inverse rendering, replacing sequential autoregressive decoding (used by Nougat, GOT-OCR) with parallel block-wise diffusion. The model achieves 3.2x faster decoding than autoregressive baselines while maintaining accuracy on complex layouts including tables and formulas.
 
 On the Semantic Shuffle benchmark, MinerU-Diffusion shows reduced reliance on language priors, relying instead on visual cues — a key limitation of prior autoregressive OCR models. The block-wise decoder combined with uncertainty-driven curriculum learning enables stable training on long-form documents.
@@ -609,7 +609,7 @@ On the Semantic Shuffle benchmark, MinerU-Diffusion shows reduced reliance on la
 Resolution is capped at 224px blocks, limiting performance on dense small-print documents. Inference memory footprint and latency versus Nougat are not reported. The open-source implementation on Hugging Face enables immediate benchmarking.
 
 ### MARCH: Multi-Agent Hallucination Detection
-
+[BODY]
 MARCH introduces a three-agent verification pipeline (Solver, Proposer, Checker) where no single agent sees the full context, preventing self-confirmation bias. Unlike SelfCheckGPT and similar single-model approaches, MARCH decouples claim generation from claim verification across independent agents.
 
 On the HaluEval benchmark, MARCH achieves 91.2% hallucination detection accuracy with an 8B parameter model, matching GPT-4-level performance at 1/20th the inference cost. The key insight: information asymmetry between agents forces genuine verification rather than pattern matching.
@@ -618,7 +618,7 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 
 ## Open Source & Repos
 ### WildWorld Dataset
-
+[BODY]
 [3 paragraphs, each ending with [N](URL)...]
 
 ## Community Pulse
@@ -642,7 +642,7 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 
 ## Research Papers
 ### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR
-
+[BODY]
 MinerU-Diffusion은 기존 Nougat, GOT-OCR 등의 자기회귀(autoregressive) 디코딩 대신 블록 단위 확산(diffusion) 방식을 도입, OCR을 역렌더링 문제로 재정의한다. 자기회귀 방식 대비 3.2배 빠른 디코딩 속도를 달성하면서도 표·수식 등 복잡 레이아웃 정확도를 유지했다.
 
 Semantic Shuffle 벤치마크에서 언어 모델 사전지식 의존도가 낮아, 시각 정보 기반 추론이 강화됨을 입증했다. 기존 자기회귀 OCR의 핵심 한계였던 언어 편향 문제를 구조적으로 해결한 점이 기술적 차별화다.
@@ -650,7 +650,7 @@ Semantic Shuffle 벤치마크에서 언어 모델 사전지식 의존도가 낮�
 224px 블록 해상도 제한으로 고밀도 소형 활자 문서에서의 성능은 미검증이다. Nougat 대비 추론 메모리·지연 비교도 미보고. Hugging Face에 오픈소스로 공개돼 즉시 벤치마크 가능하다.
 
 ### MARCH: 멀티 에이전트 환각 탐지 프레임워크
-
+[BODY]
 MARCH는 Solver·Proposer·Checker 3개 에이전트가 서로 독립적으로 검증하는 파이프라인을 도입한다. 기존 SelfCheckGPT 등 단일 모델 방식과 달리, 주장 생성과 검증을 분리해 자기확인 편향을 방지한다.
 
 HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성, GPT-4 수준 성능을 추론 비용 1/20로 구현했다. 핵심은 에이전트 간 정보 비대칭으로 패턴 매칭이 아닌 실제 검증을 강제하는 구조다.
@@ -659,7 +659,7 @@ HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성
 
 ## Open Source & Repos
 ### WildWorld Dataset
-
+[BODY]
 [3문단 — 프로젝트 설명, 개발자 관심 이유, 한계. 각 문단 끝에 [N](URL)]
 
 ## 커뮤니티 반응
@@ -683,20 +683,20 @@ New AI research makes document scanning dramatically faster and helps AI systems
 
 ## Research Papers
 ### MinerU-Diffusion: A Faster Way to Read Documents
-
+[BODY]
 Traditional document scanners read text one character at a time, left to right -- like reading a book word by word. MinerU-Diffusion takes a completely different approach: it looks at the entire page at once and processes all the text in parallel. This technique, called diffusion-based decoding, makes it 3.2 times faster than traditional methods. [1](https://arxiv.org/abs/example1)
 
 The key innovation is treating document reading as "reverse rendering" -- essentially asking "what text would produce this image?" instead of sequentially decoding characters. This works especially well for complex documents with tables and math formulas, where traditional methods often make errors that cascade through the rest of the page. [1](https://arxiv.org/abs/example1)
 
 ### MARCH: Teaching AI to Fact-Check Itself
-
+[BODY]
 Large language models sometimes make up facts -- a problem called "hallucination." MARCH tackles this by using three separate AI agents that check each other's work, similar to how a newsroom has reporters, editors, and fact-checkers. [2](https://arxiv.org/abs/example2)
 
 The clever part: each agent only sees part of the information, so they cannot just agree with each other. The Solver writes the answer, the Proposer breaks it into claims, and the Checker verifies each claim against source documents -- without seeing the original answer. This approach helps even smaller AI models (8 billion parameters) match the accuracy of much larger systems. [2](https://arxiv.org/abs/example2)
 
 ## Open Source & Repos
 ### WildWorld: A Video Game Dataset for AI Training
-
+[BODY]
 [3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
 
 ## Community Pulse
@@ -720,13 +720,13 @@ The clever part: each agent only sees part of the information, so they cannot ju
 
 ## Research Papers
 ### MinerU-Diffusion: 문서를 한꺼번에 읽는 새로운 방식
-
+[BODY]
 기존 문서 인식(OCR) AI는 글자를 왼쪽부터 오른쪽으로 한 글자씩 읽었습니다. 마치 책을 한 단어씩 짚어 읽는 것과 비슷합니다. MinerU-Diffusion은 완전히 다른 방법을 씁니다. 페이지 전체를 한눈에 보고 모든 텍스트를 동시에 처리하는데, 이 방식 덕분에 기존보다 3.2배 빠릅니다. [1](https://arxiv.org/abs/example1)
 
 핵심 아이디어는 "이 이미지를 만든 텍스트가 뭘까?"라고 거꾸로 질문하는 것입니다. 기존 방식은 글자를 순서대로 맞추다가 표나 수식에서 실수하면 뒤의 내용까지 틀려졌는데, 이 방식은 각 영역을 독립적으로 처리해 그런 연쇄 오류를 줄입니다. [1](https://arxiv.org/abs/example1)
 
 ### MARCH: AI가 서로 사실을 확인하는 팩트체크 시스템
-
+[BODY]
 [2문단 — 비유 먼저("뉴스룸의 기자·편집자·팩트체커"), 핵심 결과. 각 문단 끝에 [N](URL)]
 
 ## 커뮤니티 반응

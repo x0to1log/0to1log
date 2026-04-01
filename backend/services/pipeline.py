@@ -864,6 +864,8 @@ def _clean_writer_output(content: str) -> str:
     # Also catch Korean translation of LEAD/SUPPORTING
     content = _re.sub(r"\s*\(리드\)\s*", "", content)
     content = _re.sub(r"\s*\(서포팅\)\s*", "", content)
+    # [BODY] marker → blank line (ensures ### heading is separated from body)
+    content = content.replace("[BODY]", "\n")
     return content
 
 
