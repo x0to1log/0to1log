@@ -789,6 +789,35 @@ async def _check_digest_quality(
     return combined_score
 
 
+def _strip_empty_sections(content: str) -> str:
+    """Remove ## sections that have a heading but no content (Rule 11 compliance).
+
+    Detects patterns like:
+      ## LLM & SOTA Models\n\n## Open Source & Repos  (empty section)
+      ## Section Title\n\n  (trailing empty section)
+    """
+    import re as _re
+    # Split into sections by ## headings
+    parts = _re.split(r'(^## .+$)', content, flags=_re.MULTILINE)
+    result = []
+    i = 0
+    while i < len(parts):
+        if parts[i].startswith("## "):
+            heading = parts[i]
+            body = parts[i + 1] if i + 1 < len(parts) else ""
+            # Check if body has actual content (not just whitespace)
+            if body.strip():
+                result.append(heading)
+                result.append(body)
+            else:
+                logger.debug("Stripped empty section: %s", heading.strip())
+            i += 2
+        else:
+            result.append(parts[i])
+            i += 1
+    return "".join(result)
+
+
 async def _generate_digest(
     classified: list[ClassifiedGroup],
     digest_type: str,
@@ -907,8 +936,8 @@ async def _generate_digest(
                     f"Digest-{digest_type}-{persona_name}",
                 )
                 persona_output = PersonaOutput(
-                    en=data.get("en", ""),
-                    ko=data.get("ko", ""),
+                    en=_strip_empty_sections(data.get("en", "")),
+                    ko=_strip_empty_sections(data.get("ko", "")),
                 )
 
                 # Capture metadata from first persona (expert)
