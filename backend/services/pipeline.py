@@ -724,7 +724,7 @@ async def _check_digest_quality(
         learner_prompt = QUALITY_CHECK_BUSINESS_LEARNER
 
     client = get_openai_client()
-    quality_model = settings.openai_model_light  # gpt-4.1-mini — cheaper and more reliable for scoring
+    quality_model = settings.openai_model_reasoning  # gpt-5-mini for quality scoring
 
     async def _score(prompt: str, content: str, label: str) -> tuple[int, dict, dict]:
         try:
