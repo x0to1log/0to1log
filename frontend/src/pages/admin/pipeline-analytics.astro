@@ -170,14 +170,15 @@ qualityEntries.sort((a, b) => {
 });
 
 const stageNames = [
-  'collect', 'classify', 'merge', 'community', 'ranking', 'enrich',
+  'collect', 'classify', 'merge', 'community', 'community_summarize', 'ranking', 'enrich',
   'digest:research:expert', 'digest:research:learner',
   'digest:business:expert', 'digest:business:learner',
   'quality:research', 'quality:business',
 ];
 const stageLabels: Record<string, string> = {
   'collect': 'Collect', 'classify': 'Classify', 'merge': 'Merge',
-  'community': 'Community', 'ranking': 'Ranking', 'enrich': 'Enrich',
+  'community': 'Community', 'community_summarize': 'Community Summary',
+  'ranking': 'Ranking', 'enrich': 'Enrich',
   'digest:research:expert': 'Research Expert', 'digest:research:learner': 'Research Learner',
   'digest:business:expert': 'Business Expert', 'digest:business:learner': 'Business Learner',
   'quality:research': 'QC Research', 'quality:business': 'QC Business',
@@ -824,14 +825,17 @@ const nonce = Astro.locals.cspNonce || '';
       'Collect':           '#64748b', // slate-500
       'Classify':          '#94a3b8', // slate-400
       'Merge':             '#475569', // slate-600
-      'Enrich':            '#334155', // slate-700
+      'Community':         '#334155', // slate-700
+      'Community Summary': '#1e293b', // slate-800
+      'Ranking':           '#e879f9', // fuchsia-400
+      'Enrich':            '#818cf8', // indigo-400
       'Research Expert':   '#0d9488', // teal-600
       'Research Learner':  '#5eead4', // teal-300
       'Business Expert':   '#d97706', // amber-600
       'Business Learner':  '#fbbf24', // amber-400
       'Research Beginner (legacy)': '#99f6e4', // teal-200
       'Business Beginner (legacy)': '#fde68a', // amber-200
-      'Rank':              '#e879f9', // fuchsia-400
+      'Rank':              '#e879f9', // fuchsia-400 (legacy)
       'Research EN':       '#0f766e', // teal-700
       'Research KO':       '#2dd4bf', // teal-400
       'Business EN':       '#b45309', // amber-700
