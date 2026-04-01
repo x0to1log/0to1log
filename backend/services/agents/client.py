@@ -39,19 +39,38 @@ def _uses_max_completion_tokens(model: str) -> bool:
     return is_o_series(model) or model.startswith("gpt-5")
 
 
+def _apply_gpt5_compat(kwargs: dict, model: str) -> dict:
+    """Apply gpt-5/o-series compatibility to kwargs.
+
+    gpt-5 is a reasoning model — reasoning tokens consume max_completion_tokens.
+    Without enough headroom, reasoning uses all tokens and output is empty.
+    Fix: multiply token budget by 3x and set reasoning_effort=low.
+    """
+    # max_tokens → max_completion_tokens (with 3x headroom for reasoning)
+    if _uses_max_completion_tokens(model) and "max_tokens" in kwargs:
+        original = kwargs.pop("max_tokens")
+        kwargs["max_completion_tokens"] = original * 3
+    elif _uses_max_completion_tokens(model) and "max_completion_tokens" in kwargs:
+        kwargs["max_completion_tokens"] = kwargs["max_completion_tokens"] * 3
+
+    # gpt-5 and o-series don't support temperature
+    if is_o_series(model) or model.startswith("gpt-5"):
+        kwargs.pop("temperature", None)
+
+    # gpt-5: reduce reasoning effort to save tokens for actual output
+    if model.startswith("gpt-5") and "reasoning_effort" not in kwargs:
+        kwargs["reasoning_effort"] = "low"
+
+    return kwargs
+
+
 def compat_create_kwargs(model: str, **kwargs) -> dict:
     """Make chat.completions.create kwargs compatible with gpt-5/o-series.
 
-    Converts max_tokens→max_completion_tokens and removes temperature
-    for models that don't support them. Use for direct API calls
-    that don't go through build_completion_kwargs.
+    Use for direct API calls that don't go through build_completion_kwargs.
     """
-    if _uses_max_completion_tokens(model) and "max_tokens" in kwargs:
-        kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
-    if (is_o_series(model) or model.startswith("gpt-5")) and "temperature" in kwargs:
-        del kwargs["temperature"]
     kwargs["model"] = model
-    return kwargs
+    return _apply_gpt5_compat(kwargs, model)
 
 
 def build_completion_kwargs(
@@ -61,18 +80,16 @@ def build_completion_kwargs(
     temperature: float = 0.3,
     response_format: dict | None = None,
 ) -> dict:
-    """Build kwargs for chat.completions.create, handling o-series differences."""
+    """Build kwargs for chat.completions.create, handling model differences."""
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
     if _uses_max_completion_tokens(model):
         kwargs["max_completion_tokens"] = max_tokens
     else:
         kwargs["max_tokens"] = max_tokens
-    # gpt-5 and o-series don't support temperature
-    if not is_o_series(model) and not model.startswith("gpt-5"):
-        kwargs["temperature"] = temperature
-    if response_format and not is_o_series(model):
+    kwargs["temperature"] = temperature
+    if response_format:
         kwargs["response_format"] = response_format
-    return kwargs
+    return _apply_gpt5_compat(kwargs, model)
 
 
 def _resolve_pricing_key(model_name: str | None) -> str | None:

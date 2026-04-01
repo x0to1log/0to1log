@@ -232,24 +232,31 @@ async def merge_classified(
     client = get_openai_client()
     model = settings.openai_model_light
     usage: dict[str, Any] = {}
+    data = None
 
-    try:
-        response = await client.chat.completions.create(
-            **build_completion_kwargs(
-                model=model,
-                messages=[
-                    {"role": "system", "content": MERGE_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_content},
-                ],
-                max_tokens=4096,
-                temperature=0.1,
-                response_format={"type": "json_object"},
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            response = await client.chat.completions.create(
+                **build_completion_kwargs(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": MERGE_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_content},
+                    ],
+                    max_tokens=4096,
+                    temperature=0.1,
+                    response_format={"type": "json_object"},
+                )
             )
-        )
-        data = parse_ai_json(response.choices[0].message.content, "Merge")
-        usage = extract_usage_metrics(response, model)
-    except Exception as e:
-        logger.warning("Merge failed: %s — falling back to 1-item groups", e)
+            data = parse_ai_json(response.choices[0].message.content, "Merge")
+            usage = extract_usage_metrics(response, model)
+            break
+        except Exception as e:
+            logger.warning("Merge attempt %d failed: %s", attempt + 1, e)
+            if attempt == MAX_RETRIES:
+                logger.error("Merge failed after %d retries — falling back to 1-item groups", MAX_RETRIES + 1)
+
+    if data is None:
         # Fallback: each pick becomes a single-item group
         for category in ("research", "business"):
             picks = getattr(classification, f"{category}_picks")
@@ -370,28 +377,34 @@ async def rank_classified(
 
     client = get_openai_client()
     model = settings.openai_model_light
+    data = None
+    usage: dict[str, Any] = {}
 
-    try:
-        response = await client.chat.completions.create(
-            **build_completion_kwargs(
-                model=model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": "Rank these items."},
-                ],
-                max_tokens=256,
-                temperature=0,
-                response_format={"type": "json_object"},
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            response = await client.chat.completions.create(
+                **build_completion_kwargs(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": "Rank these items."},
+                    ],
+                    max_tokens=256,
+                    temperature=0,
+                    response_format={"type": "json_object"},
+                )
             )
-        )
-        data = parse_ai_json(response.choices[0].message.content, f"Ranking-{category}")
-        usage = extract_usage_metrics(response, model)
-    except Exception as e:
-        logger.warning("Ranking failed for %s: %s — falling back to classification order", category, e)
-        groups[0].reason = f"[LEAD] {groups[0].reason}"
-        for group in groups[1:]:
-            group.reason = f"[SUPPORTING] {group.reason}"
-        return groups, {}
+            data = parse_ai_json(response.choices[0].message.content, f"Ranking-{category}")
+            usage = extract_usage_metrics(response, model)
+            break
+        except Exception as e:
+            logger.warning("Ranking attempt %d for %s failed: %s", attempt + 1, category, e)
+            if attempt == MAX_RETRIES:
+                logger.error("Ranking failed for %s after %d retries — falling back", category, MAX_RETRIES + 1)
+                groups[0].reason = f"[LEAD] {groups[0].reason}"
+                for group in groups[1:]:
+                    group.reason = f"[SUPPORTING] {group.reason}"
+                return groups, {}
 
     # Match lead by index (LLM returns [1]-based indices or URLs)
     lead_indices = set()
@@ -500,10 +513,19 @@ async def summarize_community(
         temperature=0.2,
     )
 
-    response = await client.chat.completions.create(**kwargs)
-    usage = extract_usage_metrics(response, model)
-    raw_output = response.choices[0].message.content or ""
-    data = parse_ai_json(raw_output, "CommunitySummarizer")
+    data = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            response = await client.chat.completions.create(**kwargs)
+            usage = extract_usage_metrics(response, model)
+            raw_output = response.choices[0].message.content or ""
+            data = parse_ai_json(raw_output, "CommunitySummarizer")
+            break
+        except Exception as e:
+            logger.warning("Community summarizer attempt %d failed: %s", attempt + 1, e)
+            if attempt == MAX_RETRIES:
+                logger.error("Community summarizer failed after %d retries", MAX_RETRIES + 1)
+                return {}, {}
 
     # Parse LLM output into CommunityInsight objects
     result: dict[str, CommunityInsight] = {}
