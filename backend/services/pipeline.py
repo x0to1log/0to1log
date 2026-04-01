@@ -835,6 +835,19 @@ def _fix_bold_spacing(content: str) -> str:
     return _re.sub(r"\*\*(.+?)\s+\*\*", r"**\1**", content)
 
 
+def _clean_writer_output(content: str) -> str:
+    """Post-process Writer output: strip empty sections, fix bold, remove [LEAD] tags."""
+    import re as _re
+    content = _strip_empty_sections(content)
+    content = _fix_bold_spacing(content)
+    # Remove [LEAD]/[SUPPORTING] tags and (Lead)/(Supporting) from headings
+    content = _re.sub(r"\s*\[LEAD\]\s*", " ", content)
+    content = _re.sub(r"\s*\[SUPPORTING\]\s*", " ", content)
+    content = _re.sub(r"\s*\(Lead\)\s*", "", content, flags=_re.IGNORECASE)
+    content = _re.sub(r"\s*\(Supporting\)\s*", "", content, flags=_re.IGNORECASE)
+    return content
+
+
 def _check_structural_penalties(
     expert: PersonaOutput,
     learner: PersonaOutput | None,
@@ -1039,8 +1052,8 @@ async def _generate_digest(
                     f"Digest-{digest_type}-{persona_name}",
                 )
                 persona_output = PersonaOutput(
-                    en=_fix_bold_spacing(_strip_empty_sections(data.get("en", ""))),
-                    ko=_fix_bold_spacing(_strip_empty_sections(data.get("ko", ""))),
+                    en=_clean_writer_output(data.get("en", "")),
+                    ko=_clean_writer_output(data.get("ko", "")),
                 )
 
                 # Capture metadata from first persona (expert)

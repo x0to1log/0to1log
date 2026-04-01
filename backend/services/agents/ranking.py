@@ -459,7 +459,7 @@ def _parse_source_label(raw_text: str) -> str:
     if hn:
         points = hn.group(1).replace(",", "")
         comments = hn.group(2).replace(",", "")
-        parts.append(f"HN {points}\u2191 \u00b7 {comments} comments")
+        parts.append(f"Hacker News {points}\u2191 \u00b7 {comments} comments")
     rd = _REDDIT_HEADER_RE.search(raw_text)
     if rd:
         sub = rd.group(1)
