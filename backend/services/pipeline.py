@@ -1447,7 +1447,8 @@ async def run_daily_pipeline(
         published_urls: set[str] = set()
         try:
             recent = supabase.table("news_posts").select("source_urls") \
-                .gte("created_at", (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()) \
+                .eq("status", "published") \
+                .gte("published_at", (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()) \
                 .execute()
             for row in (recent.data or []):
                 for url in (row.get("source_urls") or []):
@@ -1581,7 +1582,7 @@ async def run_daily_pipeline(
                     community_lookup.append((search_title, item.url))
         community_map: dict[str, str] = {}
         # Extract date from batch_id (e.g. "news-2026-03-27" → "2026-03-27")
-        _target_date = batch_id.replace("news-", "") if batch_id.startswith("news-") else None
+        _target_date = batch_id.replace("news-", "") if batch_id.startswith("news-") else batch_id
         if community_lookup:
             community_tasks = [
                 collect_community_reactions(title, url, target_date=_target_date)
@@ -1913,7 +1914,7 @@ async def rerun_pipeline_stage(
                         seen_urls.add(item.url)
                         community_lookup.append((search_title, item.url))
             community_map: dict[str, str] = {}
-            _target_date = batch_id.replace("news-", "") if batch_id.startswith("news-") else None
+            _target_date = batch_id.replace("news-", "") if batch_id.startswith("news-") else batch_id
             if community_lookup:
                 community_tasks = [collect_community_reactions(t, u, target_date=_target_date) for t, u in community_lookup]
                 community_results = await asyncio.gather(*community_tasks, return_exceptions=True)
