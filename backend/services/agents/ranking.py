@@ -554,6 +554,11 @@ async def summarize_community(
             quotes = []
         quotes = [q for q in quotes[:2] if isinstance(q, str) and len(q.strip()) > 10 and "http" not in q]
 
+        quotes_ko = llm_data.get("quotes_ko", [])
+        if not isinstance(quotes_ko, list):
+            quotes_ko = []
+        quotes_ko = [q for q in quotes_ko[:len(quotes)] if isinstance(q, str) and len(q.strip()) > 5]
+
         key_point = llm_data.get("key_point")
         if key_point and not isinstance(key_point, str):
             key_point = None
@@ -561,6 +566,7 @@ async def summarize_community(
         result[primary_url] = CommunityInsight(
             sentiment=sentiment,
             quotes=quotes,
+            quotes_ko=quotes_ko,
             key_point=key_point,
             source_label=source_label,
         )

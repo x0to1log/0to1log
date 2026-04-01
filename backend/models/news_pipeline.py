@@ -71,8 +71,9 @@ class CommunityInsight(BaseModel):
     """Summarized community reaction for a news group."""
     sentiment: str = "neutral"  # positive / mixed / negative / neutral
     quotes: list[str] = []  # 0-2 representative quotes (English original)
+    quotes_ko: list[str] = []  # 0-2 Korean translations of quotes
     key_point: str | None = None  # 1-line discussion summary (English)
-    source_label: str = ""  # e.g. "HN 342↑ · 89 comments"
+    source_label: str = ""  # e.g. "Hacker News 342↑ · 89 comments"
 
 
 class ClassificationResult(BaseModel):

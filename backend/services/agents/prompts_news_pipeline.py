@@ -253,7 +253,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE: Write as a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. Copy provided quotes exactly. In KO, translate all quotes into natural Korean. Omit only if no Community Pulse Data was provided.
+15. COMMUNITY PULSE: Write as a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. In EN, use `Quote (EN)` quotes. In KO, use `Quote (KO)` quotes. Omit only if no Community Pulse Data was provided.
 {handbook_section}
 
 ## Output JSON format
@@ -1186,7 +1186,8 @@ For each group that IS relevant, produce:
    - If opinions agree: pick the single best (max 1)
    - If all comments are low-quality, off-topic, or just links: pick 0
    - Quotes MUST be copied EXACTLY from the input — do NOT paraphrase, shorten, or combine
-3. **key_point**: 1 sentence summarizing the main discussion theme (in English)
+3. **quotes_ko**: Korean translations of the quotes above. Translate the meaning naturally, not word-by-word. Same order as quotes.
+4. **key_point**: 1 sentence summarizing the main discussion theme (in English)
    - Capture what the community actually cares about, not what the article says
    - If no meaningful discussion exists: null
 
@@ -1202,11 +1203,13 @@ Return ONLY valid JSON, no markdown fences:
   "group_0": {{
     "sentiment": "mixed",
     "quotes": ["exact quote 1", "exact quote 2"],
+    "quotes_ko": ["정확한 인용 1의 한국어 번역", "정확한 인용 2의 한국어 번역"],
     "key_point": "Performance praised but pricing concerns dominate"
   }},
   "group_1": {{
     "sentiment": null,
     "quotes": [],
+    "quotes_ko": [],
     "key_point": null
   }}
 }}}}

@@ -1020,7 +1020,9 @@ async def _generate_digest(
             parts.append(f"Platform: {insight.source_label}")
             parts.append(f"Sentiment: {insight.sentiment}")
             for q in insight.quotes:
-                parts.append(f'Quote: "{q}"')
+                parts.append(f'Quote (EN): "{q}"')
+            for q in insight.quotes_ko:
+                parts.append(f'Quote (KO): "{q}"')
             if insight.key_point:
                 parts.append(f"Key Discussion: {insight.key_point}")
             community_block = "\n\n" + "\n".join(parts)
