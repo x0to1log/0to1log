@@ -1866,6 +1866,17 @@ async def rerun_pipeline_stage(
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
         status = "success" if total_posts > 0 else "failed"
+
+        # Log summary (same as daily pipeline — cumulative usage for this rerun)
+        t_summary = time.monotonic()
+        await _log_stage(
+            supabase, run_id, "summary", status, t_summary,
+            input_summary=f"rerun from {from_stage}" + (f" ({category})" if category else ""),
+            output_summary=f"{total_posts} posts created",
+            usage=cumulative_usage,
+            error_message="; ".join(all_errors) if all_errors else None,
+        )
+
         supabase.table("pipeline_runs").update({
             "status": status,
             "finished_at": datetime.now(timezone.utc).isoformat(),
