@@ -1786,9 +1786,19 @@ async def _run_generate_term(
                 logger.info("Fixed math formatting in field '%s'", key)
                 data[key] = converted
 
+    # Add search source metadata for UI display
+    search_sources = []
+    if tavily_context:
+        search_sources.append("Tavily")
+    if brave_context:
+        search_sources.append("Brave")
+    if deep_context:
+        search_sources.append("Exa")
+    data["_search_sources"] = search_sources
+
     logger.info(
-        "Handbook generate completed for '%s', total_tokens=%d, warnings=%d",
-        req.term, merged_usage.get("tokens_used", 0), len(warnings),
+        "Handbook generate completed for '%s', total_tokens=%d, warnings=%d, sources=%s",
+        req.term, merged_usage.get("tokens_used", 0), len(warnings), search_sources,
     )
     return data, merged_usage, warnings
 

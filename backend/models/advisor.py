@@ -163,6 +163,7 @@ class HandbookAdviseResponse(BaseModel):
     result: dict
     model_used: str
     tokens_used: int
+    search_sources: list[str] = []
     validation_warnings: list[str] = []
 
 
