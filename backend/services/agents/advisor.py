@@ -1152,11 +1152,15 @@ def _assemble_all_sections(raw_data: dict) -> dict:
         data["body_advanced_en"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_EN)
 
     # Post-process: fix bold markdown with parenthetical abbreviations
-    # **term(abbreviation)** → **term** (abbreviation)
+    # **term(abbreviation)** or **term (abbreviation)** → **term** (abbreviation)
     import re
+    def _fix_bold_parens(m: re.Match) -> str:
+        term_part = m.group(1).rstrip()  # strip trailing space before (
+        abbrev = m.group(2)
+        return f"**{term_part}** ({abbrev})"
     for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
         if data.get(field):
-            data[field] = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', data[field])
+            data[field] = re.sub(r'\*\*([^*]+?)\s*\(([^)]+)\)\*\*', _fix_bold_parens, data[field])
 
     return data
 
