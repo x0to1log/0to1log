@@ -49,6 +49,7 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data:
     .gte('pipeline_runs.started_at', filterDate)
     .not('pipeline_type', 'in', `(${excludeStages.map((s) => `"${s}"`).join(',')})`)
     .not('pipeline_type', 'like', 'handbook.%')
+    .not('pipeline_type', 'like', 'weekly:%')
     .order('created_at', { ascending: true })
     .limit(500),
   sb.from('pipeline_logs')
