@@ -2230,7 +2230,7 @@ async def _fetch_week_handbook_terms(supabase, week_id: str, locale: str) -> lis
 
     result = (
         supabase.table("handbook_terms")
-        .select("slug, term, korean_term, definition_en, definition_ko")
+        .select("slug, term, korean_name, definition_en, definition_ko")
         .eq("status", "published")
         .gte("published_at", monday.isoformat())
         .lte("published_at", sunday.isoformat() + "T23:59:59")
@@ -2405,7 +2405,7 @@ async def run_weekly_pipeline(
                 "week_terms": [
                     {
                         "slug": t["slug"],
-                        "term": t.get("korean_term" if locale == "ko" else "term") or t.get("term", ""),
+                        "term": t.get("korean_name" if locale == "ko" else "term") or t.get("term", ""),
                         "definition": t.get(f"definition_{locale}", ""),
                     }
                     for t in week_terms[:2]
