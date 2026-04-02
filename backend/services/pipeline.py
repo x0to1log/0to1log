@@ -2473,7 +2473,7 @@ async def run_weekly_pipeline(
         supabase.table("pipeline_runs").update({
             "status": status,
             "finished_at": datetime.now(timezone.utc).isoformat(),
-            "summary": {"total_posts": total_posts, "errors": all_errors},
+            "last_error": "; ".join(all_errors) if all_errors else None,
         }).eq("id", run_id).execute()
 
         return PipelineResult(
@@ -2490,7 +2490,7 @@ async def run_weekly_pipeline(
             supabase.table("pipeline_runs").update({
                 "status": "failed",
                 "finished_at": datetime.now(timezone.utc).isoformat(),
-                "summary": {"error": str(e)},
+                "last_error": str(e)[:500],
             }).eq("id", run_id).execute()
         except Exception:
             pass
