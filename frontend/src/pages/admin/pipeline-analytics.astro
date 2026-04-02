@@ -43,7 +43,7 @@ const excludeStages = [
   'summary',  // summary.cost = SUM of all other stages — including it would double-count
 ];
 
-const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }, { data: runsRaw }] = await Promise.all([
+const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }, { data: runsRaw }, { data: weeklyLogs }] = await Promise.all([
   sb.from('pipeline_logs')
     .select('pipeline_type, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
@@ -75,7 +75,22 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data:
     .not('run_key', 'like', 'handbook-%')
     .order('started_at', { ascending: true })
     .limit(100),
+  // Weekly pipeline logs (separate from news)
+  sb.from('pipeline_logs')
+    .select('cost_usd, tokens_used')
+    .like('pipeline_type', 'weekly:%')
+    .gte('created_at', filterDate),
 ]);
+
+// ─── Weekly Stats ───────────────────────────────────────────
+const weeklyRows = (weeklyLogs ?? []) as { cost_usd: number | string | null; tokens_used: number | null }[];
+const weeklyCost = weeklyRows.reduce((sum, r) => {
+  const v = r.cost_usd;
+  if (v === null || v === undefined || v === '') return sum;
+  return sum + Number.parseFloat(String(v));
+}, 0);
+const weeklyTokens = weeklyRows.reduce((sum, r) => sum + (r.tokens_used ?? 0), 0);
+const weeklyRunCount = weeklyRows.length > 0 ? 1 : 0; // weekly is 1 run with many logs
 
 // ─── Helpers ─────────────────────────────────────────────────
 function parseCost(value: number | string | null): number {
@@ -549,6 +564,13 @@ const nonce = Astro.locals.cspNonce || '';
           <strong class="pipeline-run-stat__value">{successRate !== null ? `${successRate}%` : '—'}</strong>
           <span class="pipeline-run-stat__detail">{successCount}/{totalPipelineRuns} runs · {failCount} failed</span>
         </div>
+        {weeklyCost > 0 && (
+          <div class="pipeline-run-stat">
+            <span class="pipeline-run-stat__label">Weekly Recap</span>
+            <strong class="pipeline-run-stat__value">${weeklyCost.toFixed(2)}</strong>
+            <span class="pipeline-run-stat__detail">{weeklyRunCount} run · {weeklyTokens.toLocaleString()} tokens</span>
+          </div>
+        )}
       </section>
 
       {runs.length === 0 ? (
