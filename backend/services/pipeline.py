@@ -2447,9 +2447,12 @@ async def run_weekly_pipeline(
 
             t_save = time.monotonic()
             try:
-                supabase.table("news_posts").upsert(
-                    row, on_conflict="slug,locale"
-                ).execute()
+                # Check if post already exists (rerun case)
+                existing_post = supabase.table("news_posts").select("id").eq("slug", slug).eq("locale", locale).limit(1).execute()
+                if existing_post.data:
+                    supabase.table("news_posts").update(row).eq("id", existing_post.data[0]["id"]).execute()
+                else:
+                    supabase.table("news_posts").insert(row).execute()
                 total_posts += 1
                 await _log_stage(supabase, run_id, f"weekly:save:{locale}", "success", t_save,
                                  output_summary=f"saved {slug}", post_type="weekly", locale=locale)
