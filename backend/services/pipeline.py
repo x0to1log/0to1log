@@ -2292,13 +2292,24 @@ async def run_weekly_pipeline(
         for locale in ("en", "ko"):
             language = "English" if locale == "en" else "Korean"
 
-            # Fetch daily digests for the week
-            digests = await _fetch_week_digests(supabase, week_id, locale)
+            # Stage: fetch daily digests
+            t0 = time.monotonic()
+            try:
+                digests = await _fetch_week_digests(supabase, week_id, locale)
+            except Exception as e:
+                await _log_stage(supabase, run_id, f"weekly:fetch:{locale}", "failed", t0,
+                                 error_message=str(e), post_type="weekly", locale=locale)
+                all_errors.append(f"Fetch digests {locale}: {e}")
+                continue
             if not digests:
+                await _log_stage(supabase, run_id, f"weekly:fetch:{locale}", "success", t0,
+                                 output_summary=f"0 digests — skipping {locale}", post_type="weekly", locale=locale)
                 all_errors.append(f"No daily digests for {week_id} {locale}")
                 continue
+            await _log_stage(supabase, run_id, f"weekly:fetch:{locale}", "success", t0,
+                             output_summary=f"{len(digests)} digests loaded", post_type="weekly", locale=locale)
 
-            # Build per-persona input text (avoid tone contamination + save tokens)
+            # Build per-persona input text
             persona_daily_texts: dict[str, str] = {}
             for persona in ("expert", "learner"):
                 content_key = f"content_{persona}"
@@ -2311,8 +2322,15 @@ async def run_weekly_pipeline(
                     text += f"# {d['title']}\n\n{content}\n"
                 persona_daily_texts[persona] = text
 
-            # Fetch handbook terms for bottom card
-            week_terms = await _fetch_week_handbook_terms(supabase, week_id, locale)
+            # Stage: fetch handbook terms
+            t0 = time.monotonic()
+            try:
+                week_terms = await _fetch_week_handbook_terms(supabase, week_id, locale)
+            except Exception as e:
+                logger.warning("Weekly handbook terms fetch failed for %s: %s", locale, e)
+                week_terms = []
+            await _log_stage(supabase, run_id, f"weekly:terms:{locale}", "success", t0,
+                             output_summary=f"{len(week_terms)} terms", post_type="weekly", locale=locale)
 
             # Generate per persona (expert + learner) in parallel
             personas: dict[str, dict] = {}
@@ -2427,14 +2445,18 @@ async def run_weekly_pipeline(
                 "guide_items": guide_items,
             }
 
+            t_save = time.monotonic()
             try:
                 supabase.table("news_posts").upsert(
                     row, on_conflict="slug,locale"
                 ).execute()
                 total_posts += 1
-                logger.info("Saved weekly %s draft: %s", locale, slug)
+                await _log_stage(supabase, run_id, f"weekly:save:{locale}", "success", t_save,
+                                 output_summary=f"saved {slug}", post_type="weekly", locale=locale)
             except Exception as e:
                 all_errors.append(f"Save weekly {locale}: {e}")
+                await _log_stage(supabase, run_id, f"weekly:save:{locale}", "failed", t_save,
+                                 error_message=str(e), post_type="weekly", locale=locale)
 
         # Buttondown email (disabled by default)
         if settings.weekly_email_enabled and total_posts > 0:
