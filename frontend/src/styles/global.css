@@ -688,11 +688,14 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   margin-top: 0.5rem;
   font-size: 0.82rem;
   color: var(--color-text-secondary);
+  min-width: 0;
 }
 
 .newsprint-tags-inline {
   display: inline-flex;
   gap: 0.3rem;
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .newsprint-meta-inline {
