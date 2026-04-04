@@ -1014,11 +1014,18 @@ async def _generate_digest(
                 continue
             body_block = "\n\n".join(source_blocks)
 
-        # Collect structured community insight for this group
+        role_tag = "[LEAD]" if group.reason.startswith("[LEAD]") else "[SUPPORTING]"
+        news_items.append(
+            f"### {role_tag} [{group.subcategory}] {group.group_title}\n\n"
+            f"{body_block}"
+        )
+
+    # Build separate CP block — not mixed into individual news items
+    cp_entries = []
+    for group in classified:
         insight = community_summary_map.get(group.primary_url)
-        community_block = ""
         if insight and (insight.quotes or insight.key_point):
-            parts = ["Community Pulse Data:"]
+            parts = [f"Topic: {group.group_title}"]
             parts.append(f"Platform: {insight.source_label}")
             parts.append(f"Sentiment: {insight.sentiment}")
             for q in insight.quotes:
@@ -1027,13 +1034,11 @@ async def _generate_digest(
                 parts.append(f'Quote (KO): "{q}"')
             if insight.key_point:
                 parts.append(f"Key Discussion: {insight.key_point}")
-            community_block = "\n\n" + "\n".join(parts)
-        role_tag = "[LEAD]" if group.reason.startswith("[LEAD]") else "[SUPPORTING]"
-        news_items.append(
-            f"### {role_tag} [{group.subcategory}] {group.group_title}\n\n"
-            f"{body_block}{community_block}"
-        )
+            cp_entries.append("\n".join(parts))
+
     user_prompt = "\n\n---\n\n".join(news_items)
+    if cp_entries:
+        user_prompt += "\n\n===\n\nCommunity Pulse Data (for ## Community Pulse section — use Quote (EN) for en, Quote (KO) for ko):\n\n" + "\n\n".join(cp_entries)
 
     # Generate personas
     client = get_openai_client()
