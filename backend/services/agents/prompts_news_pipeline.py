@@ -73,6 +73,7 @@ NOT Research (assign to Business instead):
 5. Prefer news with concrete data (benchmarks, dollar amounts, dates)
 6. Order by importance within each category (most important first)
 7. Every selected article must have a subcategory
+8. EVENT DEDUP: If "Recently published headlines" are provided at the end of the input, penalize articles covering the SAME event as those headlines (-30 score). Only select a previously covered event if the new article offers a substantially different angle or major update.
 
 ## Cross-Category Rules
 - The same article CAN and SHOULD appear in both categories when it has both technical and business significance.

@@ -102,10 +102,12 @@ async def rank_candidates(
 
 async def classify_candidates(
     candidates: list[NewsCandidate],
+    recent_headlines: list[str] | None = None,
 ) -> tuple[ClassificationResult, dict[str, Any]]:
     """Classify news candidates into research/business subcategories.
 
     Returns 3-5 picks per category instead of 1.
+    recent_headlines: titles published in the last 2 days — penalize same-event repeats.
     """
     if not candidates:
         logger.info("No candidates to classify")
@@ -117,6 +119,11 @@ async def classify_candidates(
             f"[{i + 1}] {c.title}\n    URL: {c.url}\n    Snippet: {c.snippet[:300]}"
         )
     user_prompt = "\n\n".join(candidate_lines)
+
+    # Add recent headlines for event dedup
+    if recent_headlines:
+        headlines_block = "\n".join(f"- {h}" for h in recent_headlines)
+        user_prompt += f"\n\n---\n\nRecently published headlines (penalize same events, -30 score):\n{headlines_block}"
 
     client = get_openai_client()
     model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty responses for classification)

@@ -1476,18 +1476,25 @@ async def run_daily_pipeline(
         raise
 
     try:
-        # Fetch recently published source URLs to avoid repeating news
+        # Fetch recently published source URLs + headlines to avoid repeating news
         published_urls: set[str] = set()
+        recent_headlines: list[str] = []
         try:
-            recent = supabase.table("news_posts").select("source_urls") \
+            recent = supabase.table("news_posts").select("title, source_urls, published_at") \
                 .eq("status", "published") \
                 .gte("published_at", (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()) \
                 .execute()
             for row in (recent.data or []):
                 for url in (row.get("source_urls") or []):
                     published_urls.add(url)
+            # Headlines from last 2 days only (for event dedup in classify)
+            cutoff_2d = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+            recent_headlines = [
+                row["title"] for row in (recent.data or [])
+                if row.get("published_at", "") >= cutoff_2d and row.get("title")
+            ]
         except Exception as e:
-            logger.warning("Failed to fetch published URLs: %s", e)
+            logger.warning("Failed to fetch published URLs/headlines: %s", e)
 
         # Stage: collect
         t0 = time.monotonic()
@@ -1525,7 +1532,7 @@ async def run_daily_pipeline(
 
         # Stage: classify (individual article selection)
         t0 = time.monotonic()
-        classification, classify_usage = await classify_candidates(candidates)
+        classification, classify_usage = await classify_candidates(candidates, recent_headlines=recent_headlines)
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
 
         classify_input_summary = "\n".join(
