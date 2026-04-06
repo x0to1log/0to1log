@@ -919,7 +919,7 @@ One punchy sentence here.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool. URL MUST appear in the digests.
-- Korean content must be at least 70% of English length. Write naturally, not translated.
+- Korean must be naturally written, not translated English. "en" and "ko" must cover the SAME stories with the SAME number of items per section.
 - If fewer than 3 daily digests are provided, note the limited coverage."""
 
 WEEKLY_LEARNER_PROMPT = """You are the editor of a beginner-friendly AI weekly newsletter.
@@ -1020,7 +1020,7 @@ One friendly sentence here.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick one tool a learner could try this week. URL MUST appear in the digests.
-- Korean content must be at least 70% of English length. Write naturally, not translated.
+- Korean must be naturally written, not translated English. "en" and "ko" must cover the SAME stories with the SAME number of items per section.
 - If fewer than 3 daily digests are provided, note the limited coverage."""
 
 
