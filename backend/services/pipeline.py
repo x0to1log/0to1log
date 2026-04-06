@@ -869,6 +869,8 @@ def _clean_writer_output(content: str) -> str:
     content = _re.sub(r"\s*\(서포팅\)\s*", "", content)
     # [BODY] marker → blank line (ensures ### heading is separated from body)
     content = content.replace("[BODY]", "\n")
+    # Remove Quote (EN)/Quote (KO) labels mistakenly used as attribution
+    content = _re.sub(r"—\s*Quote\s*\((?:EN|KO)\)", "", content)
     return content
 
 
@@ -1032,9 +1034,9 @@ async def _generate_digest(
             parts.append(f"Platform: {insight.source_label}")
             parts.append(f"Sentiment: {insight.sentiment}")
             for q in insight.quotes:
-                parts.append(f'Quote (EN): "{q}"')
+                parts.append(f'[EN quote]: "{q}"')
             for q in insight.quotes_ko:
-                parts.append(f'Quote (KO): "{q}"')
+                parts.append(f'[KO quote]: "{q}"')
             if insight.key_point:
                 parts.append(f"Key Discussion: {insight.key_point}")
             cp_entries.append("\n".join(parts))
