@@ -1823,6 +1823,44 @@ async def _run_generate_term(
                 logger.info("Fixed math formatting in field '%s'", key)
                 data[key] = converted
 
+    # Post-process: remove floating citation numbers [1], [2] etc. outside code blocks
+    def _strip_floating_citations(text: str) -> str:
+        """Remove [N] citation markers that aren't in code blocks or reference headers."""
+        lines = text.split('\n')
+        result_lines = []
+        in_code = False
+        for line in lines:
+            if line.strip().startswith('```'):
+                in_code = not in_code
+                result_lines.append(line)
+                continue
+            if in_code:
+                result_lines.append(line)
+                continue
+            # Skip reference header lines like "### [1] Title"
+            if re.match(r'^#{1,4}\s+\[\d+\]', line):
+                result_lines.append(line)
+                continue
+            # Remove (\[N]) and \[N] patterns (escaped bracket with optional parens)
+            cleaned = re.sub(r'\s*\(\\?\[\d{1,2}\]\)', '', line)  # (\[2]) or ([2])
+            # Remove standalone \[N]
+            cleaned = re.sub(r'\s*\\\[\d{1,2}\]', '', cleaned)
+            # Remove [N] not followed by ( — not a markdown link
+            cleaned = re.sub(r'\s*\[(\d{1,2})\](?!\()', '', cleaned)
+            # Remove (see [N]), (per [N]) including bracket variants
+            cleaned = re.sub(r'\s*\((?:see |per )\[?\d{1,2}\]?\)', '', cleaned)
+            result_lines.append(cleaned)
+        return '\n'.join(result_lines)
+
+    for field in ("body_advanced_ko", "body_advanced_en"):
+        if data.get(field):
+            original = data[field]
+            cleaned = _strip_floating_citations(original)
+            if cleaned != original:
+                removed = len(original) - len(cleaned)
+                logger.info("Stripped floating citations from '%s' (%d chars removed)", field, removed)
+                data[field] = cleaned
+
     # Add search source metadata for UI display
     search_sources = []
     if tavily_context:
