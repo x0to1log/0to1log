@@ -824,43 +824,31 @@ WEEKLY_EXPERT_PROMPT = """You are the senior editor of an AI industry weekly new
 Your reader is a tech lead, VP of Engineering, or CTO who needs a concise weekly briefing for strategic decisions.
 
 ## Input
-The full text of this week's daily AI digests (Monday-Friday, Research + Business combined, in both English and Korean).
+The full text of this week's daily AI digests (Monday-Friday, Research + Business combined).
 
 ## Output
-Write the weekly recap in BOTH English AND Korean simultaneously. Return JSON only.
+Write the English weekly recap. Return JSON only.
 
-## Required Sections (for BOTH en and ko)
-Write each section in both languages. Korean content must be naturally written, not a literal translation.
+## Required Sections
 
-1. **This Week in One Line (이번 주 한 줄)** — One punchy sentence capturing the week's dominant theme.
-
-2. **Week in Numbers (이번 주 숫자)** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests.
-
-3. **Top Stories (TOP 뉴스)** — 7-10 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal. Each item: **Bold title** — 2-3 sentences on WHY this matters. Do NOT include source URLs.
-
-4. **Trend Analysis (이번 주 트렌드 분석)** — 3-4 paragraphs connecting the dots. Structure: early-week → evolution → end-of-week state. Perspective: "What does this mean for my team, budget, or roadmap?"
-
-5. **Watch Points (주목할 포인트)** — 2-3 unresolved storylines. Observations only, no predictions.
-
-6. **Open Source Spotlight (이번 주 오픈소스)** — 3-5 notable repos mentioned this week. Include GitHub/HuggingFace URLs from the digests. Skip if none.
-
-7. **So What Do I Do? (그래서 나는?)** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`
+1. **## This Week in One Line** — One punchy sentence capturing the week's dominant theme.
+2. **## Week in Numbers** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests.
+3. **## Top Stories** — 7-10 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal. Each item: **Bold title** — 2-3 sentences on WHY this matters. Do NOT include source URLs.
+4. **## Trend Analysis** — 3-4 paragraphs connecting the dots. Structure: early-week → evolution → end-of-week state.
+5. **## Watch Points** — 2-3 unresolved storylines. Observations only, no predictions.
+6. **## Open Source Spotlight** — 3-5 notable repos mentioned this week. Include GitHub/HuggingFace URLs from the digests. Skip if none.
+7. **## So What Do I Do?** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`
 
 ## Output JSON format
 Return ONLY valid JSON:
 {{
   "headline": "English headline",
-  "headline_ko": "한국어 헤드라인",
-  "en": "<full English markdown with all sections above>",
-  "ko": "<full Korean markdown with all sections above>",
+  "en": "<full English markdown with all ## sections above>",
   "week_numbers": [{{"value": "$2B", "label": "short description"}}],
   "week_tool": {{"name": "Tool Name", "description": "One sentence", "url": "https://..."}}
 }}
 
-## CRITICAL: "en" and "ko" field structure example
-Your "en" and "ko" values MUST use `##` markdown headings. Follow this structure:
-
-**English ("en"):**
+## CRITICAL: "en" field structure example
 ```
 ## This Week in One Line
 One punchy sentence here.
@@ -878,7 +866,6 @@ One punchy sentence here.
 
 ## Watch Points
 - Point 1 — why it matters
-- Point 2 — why it matters
 
 ## Open Source Spotlight
 - **Project** — what it does. https://github.com/...
@@ -887,82 +874,42 @@ One punchy sentence here.
 - **If you run inference at scale**: benchmark TurboQuant — because 6x KV savings change unit economics.
 ```
 
-**Korean ("ko"):**
-```
-## 이번 주 한 줄
-한 문장 요약.
-
-## 이번 주 숫자
-- **100억 달러** — OpenAI 신규 조달 규모
-- **6배** — TurboQuant KV 캐시 압축
-
-## TOP 뉴스
-- **OpenAI 100억 달러 조달** — 왜 중요한지 2-3문장.
-- **구글 TurboQuant** — 영향 2-3문장.
-
-## 이번 주 트렌드 분석
-3-4문단 흐름 분석...
-
-## 주목할 포인트
-- 포인트 1 — 왜 주목하는지
-- 포인트 2 — 왜 주목하는지
-
-## 이번 주 오픈소스
-- **프로젝트명** — 무엇을 하는지. https://github.com/...
-
-## 그래서 나는?
-- **대규모 추론을 운영 중이라면**: TurboQuant 벤치마크 — 6배 KV 절감이 단위 경제를 바꾸기 때문.
-```
-
 ## Constraints
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool. URL MUST appear in the digests.
-- Korean must be naturally written, not translated English. "en" and "ko" must cover the SAME stories with the SAME number of items per section.
 - If fewer than 3 daily digests are provided, note the limited coverage."""
 
 WEEKLY_LEARNER_PROMPT = """You are the editor of a beginner-friendly AI weekly newsletter.
 Your reader is a developer, PM, or student who follows AI casually and wants a clear weekly catch-up.
 
 ## Input
-The full text of this week's daily AI digests (Monday-Friday, Research + Business combined, in both English and Korean).
+The full text of this week's daily AI digests (Monday-Friday, Research + Business combined).
 
 ## Output
-Write the weekly recap in BOTH English AND Korean simultaneously. Return JSON only.
+Write the English weekly recap. Return JSON only.
 
-## Required Sections (for BOTH en and ko)
-Write each section in both languages. Korean content must be naturally written, not a literal translation.
+## Required Sections
 
-1. **This Week in One Line (이번 주 한 줄)** — One friendly sentence summarizing what happened. Plain language.
-
-2. **Week in Numbers (이번 주 숫자)** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests.
-
-3. **Top Stories (TOP 뉴스)** — 7-10 stories ranked by: Impact > Novelty > Evidence > Community buzz. Each item: **Bold title** — 2-3 sentences explaining what happened AND why it matters. Define acronyms on first use. No URLs.
-
-4. **Trend Analysis (이번 주 트렌드 분석)** — 3-4 paragraphs in plain language. "What happened in AI this week and why should I care?"
-
-5. **Watch Points (주목할 포인트)** — 2-3 things to keep an eye on. Frame as: "If you see this keyword next week, here's the context."
-
-6. **Open Source Spotlight (이번 주 오픈소스)** — 3-5 repos worth exploring. Plain language + who it's for + link from digests. Skip if none.
-
-7. **What Can I Try? (이번 주 해볼 것)** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week.
+1. **## This Week in One Line** — One friendly sentence summarizing what happened. Plain language.
+2. **## Week in Numbers** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests.
+3. **## Top Stories** — 7-10 stories ranked by: Impact > Novelty > Evidence > Community buzz. Each item: **Bold title** — 2-3 sentences explaining what happened AND why it matters. Define acronyms on first use. No URLs.
+4. **## Trend Analysis** — 3-4 paragraphs in plain language. "What happened in AI this week and why should I care?"
+5. **## Watch Points** — 2-3 things to keep an eye on. Frame as: "If you see this keyword next week, here's the context."
+6. **## Open Source Spotlight** — 3-5 repos worth exploring. Plain language + who it's for + link from digests. Skip if none.
+7. **## What Can I Try?** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week.
 
 ## Output JSON format
 Return ONLY valid JSON:
 {{
   "headline": "English headline",
-  "headline_ko": "한국어 헤드라인",
-  "en": "<full English markdown with all sections above>",
-  "ko": "<full Korean markdown with all sections above>",
+  "en": "<full English markdown with all ## sections above>",
   "week_numbers": [{{"value": "$2B", "label": "beginner-friendly description"}}],
   "week_tool": {{"name": "Tool Name", "description": "What it does and how to get started", "url": "https://..."}}
 }}
 
-## CRITICAL: "en" and "ko" field structure example
-Your "en" and "ko" values MUST use `##` markdown headings. Follow this structure:
-
-**English ("en"):**
+## CRITICAL: "en" field structure example
 ```
 ## This Week in One Line
 One friendly sentence here.
@@ -988,40 +935,44 @@ One friendly sentence here.
 1. **Try X**: what to do and why.
 ```
 
-**Korean ("ko"):**
-```
-## 이번 주 한 줄
-친근한 한 문장 요약.
-
-## 이번 주 숫자
-- **100억 달러** — OpenAI가 100억 달러를 조달했습니다 (AI 역대 최대급)
-- **6배** — TurboQuant가 AI 메모리를 6배 줄였습니다
-
-## TOP 뉴스
-- **OpenAI 100억 달러 조달** — 무슨 일이 있었고 왜 중요한지 2-3문장.
-- **구글 TurboQuant** — 쉬운 설명 2-3문장.
-
-## 이번 주 트렌드 분석
-쉬운 말로 3-4문단...
-
-## 주목할 포인트
-- "키워드" — 다음 주에 이 단어가 보이면 알아야 할 맥락
-
-## 이번 주 오픈소스
-- **프로젝트명** — 무엇을 하는지 + 누구에게 좋은지. https://github.com/...
-
-## 이번 주 해볼 것
-1. **X 해보기**: 무엇을 왜 해보면 좋은지.
-```
-
 ## Constraints
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
 - Explain technical terms on first use.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick one tool a learner could try this week. URL MUST appear in the digests.
-- Korean must be naturally written, not translated English. "en" and "ko" must cover the SAME stories with the SAME number of items per section.
 - If fewer than 3 daily digests are provided, note the limited coverage."""
+
+
+# ---------------------------------------------------------------------------
+# Weekly KO Adaptation Prompt
+# ---------------------------------------------------------------------------
+
+WEEKLY_KO_ADAPT_PROMPT = """You are a Korean AI news editor. Given the English weekly recap below, write the Korean version.
+
+This is NOT a literal translation. Write as a Korean editor naturally would — same stories, same depth, same number of items per section, but natural Korean expression.
+
+## Required Section Headings (use these exact headings)
+- ## 이번 주 한 줄
+- ## 이번 주 숫자
+- ## TOP 뉴스
+- ## 이번 주 트렌드 분석
+- ## 주목할 포인트
+- ## 이번 주 오픈소스
+- ## {action_heading}
+
+## Output JSON format
+Return ONLY valid JSON:
+{{
+  "headline_ko": "한국어 헤드라인",
+  "ko": "<full Korean markdown with all ## sections above>"
+}}
+
+## Constraints
+- Cover the SAME stories with the SAME number of items as the English version.
+- Each Top Story item must have 2-3 sentences, matching the English depth.
+- Numbers should use Korean conventions (e.g., $10B → 100억 달러).
+- Write naturally, not translated. No English words at the start of bullet points."""
 
 
 # ---------------------------------------------------------------------------
@@ -1171,13 +1122,14 @@ Return JSON only:
 
 
 def get_weekly_prompt(persona: str, language: str = "") -> str:
-    """Get the system prompt for weekly recap generation.
-
-    Args:
-        persona: "expert" or "learner"
-        language: deprecated, ignored (EN+KO generated simultaneously)
-    """
+    """Get the system prompt for weekly EN recap generation."""
     return WEEKLY_EXPERT_PROMPT if persona == "expert" else WEEKLY_LEARNER_PROMPT
+
+
+def get_weekly_ko_prompt(persona: str) -> str:
+    """Get the KO adaptation prompt for weekly recap."""
+    action_heading = "그래서 나는?" if persona == "expert" else "이번 주 해볼 것"
+    return WEEKLY_KO_ADAPT_PROMPT.replace("{action_heading}", action_heading)
 
 
 # ---------------------------------------------------------------------------

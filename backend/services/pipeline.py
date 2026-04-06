@@ -2346,21 +2346,25 @@ async def run_weekly_pipeline(
                     parts.append(f"--- {d['post_type'].upper()} KO ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{content}")
             persona_inputs[persona] = "\n\n".join(parts)
 
-        # Generate per persona (expert + learner) — each produces EN+KO simultaneously
+        # Generate per persona: Call 1 (EN from digests) → Call 2 (KO from EN)
+        from services.agents.prompts_news_pipeline import get_weekly_ko_prompt
         persona_results: dict[str, dict] = {}
         client = get_openai_client()
+        model = settings.openai_model_main
 
         async def _gen_weekly_persona(persona: str) -> None:
             daily_text = persona_inputs.get(persona, "")
             if not daily_text:
                 return
-            t_p = time.monotonic()
+
+            # Call 1: EN generation from daily digests
+            t_en = time.monotonic()
             system_prompt = get_weekly_prompt(persona)
             try:
-                response = await asyncio.wait_for(
+                en_response = await asyncio.wait_for(
                     client.chat.completions.create(
                         **compat_create_kwargs(
-                            settings.openai_model_main,
+                            model,
                             messages=[
                                 {"role": "system", "content": system_prompt},
                                 {"role": "user", "content": daily_text},
@@ -2372,24 +2376,70 @@ async def run_weekly_pipeline(
                     ),
                     timeout=240,
                 )
-                raw = response.choices[0].message.content or ""
-                usage = extract_usage_metrics(response, settings.openai_model_main)
-                cumulative_usage.update(merge_usage_metrics(cumulative_usage, usage))
-                data = parse_ai_json(raw, f"weekly-{persona}")
-                persona_results[persona] = data
+                en_raw = en_response.choices[0].message.content or ""
+                en_usage = extract_usage_metrics(en_response, model)
+                cumulative_usage.update(merge_usage_metrics(cumulative_usage, en_usage))
+                en_data = parse_ai_json(en_raw, f"weekly-{persona}-en")
 
                 await _log_stage(
-                    supabase, run_id, f"weekly:{persona}", "success", t_p,
-                    output_summary=f"en={len(data.get('en', ''))}c, ko={len(data.get('ko', ''))}c",
-                    usage=usage, post_type="weekly",
+                    supabase, run_id, f"weekly:{persona}:en", "success", t_en,
+                    output_summary=f"en={len(en_data.get('en', ''))}c",
+                    usage=en_usage, post_type="weekly",
                 )
             except Exception as e:
-                logger.warning("Weekly %s %s failed: %s", week_id, persona, e)
-                all_errors.append(f"weekly {persona}: {e}")
+                logger.warning("Weekly %s EN failed: %s", persona, e)
+                all_errors.append(f"weekly {persona} EN: {e}")
                 await _log_stage(
-                    supabase, run_id, f"weekly:{persona}", "failed", t_p,
+                    supabase, run_id, f"weekly:{persona}:en", "failed", t_en,
                     error_message=str(e), post_type="weekly",
                 )
+                return
+
+            en_content = en_data.get("en", "")
+            if not en_content.strip():
+                all_errors.append(f"weekly {persona} EN: empty content")
+                return
+
+            # Call 2: KO adaptation from EN result
+            t_ko = time.monotonic()
+            ko_prompt = get_weekly_ko_prompt(persona)
+            try:
+                ko_response = await asyncio.wait_for(
+                    client.chat.completions.create(
+                        **compat_create_kwargs(
+                            model,
+                            messages=[
+                                {"role": "system", "content": ko_prompt},
+                                {"role": "user", "content": en_content},
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.5,
+                            max_tokens=16000,
+                        )
+                    ),
+                    timeout=180,
+                )
+                ko_raw = ko_response.choices[0].message.content or ""
+                ko_usage = extract_usage_metrics(ko_response, model)
+                cumulative_usage.update(merge_usage_metrics(cumulative_usage, ko_usage))
+                ko_data = parse_ai_json(ko_raw, f"weekly-{persona}-ko")
+
+                await _log_stage(
+                    supabase, run_id, f"weekly:{persona}:ko", "success", t_ko,
+                    output_summary=f"ko={len(ko_data.get('ko', ''))}c",
+                    usage=ko_usage, post_type="weekly",
+                )
+            except Exception as e:
+                logger.warning("Weekly %s KO failed: %s", persona, e)
+                all_errors.append(f"weekly {persona} KO: {e}")
+                ko_data = {}
+                await _log_stage(
+                    supabase, run_id, f"weekly:{persona}:ko", "failed", t_ko,
+                    error_message=str(e), post_type="weekly",
+                )
+
+            # Merge EN + KO results
+            persona_results[persona] = {**en_data, **ko_data}
 
         await asyncio.gather(
             _gen_weekly_persona("expert"),
