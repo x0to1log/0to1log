@@ -157,8 +157,9 @@ export async function getHandbookDetailPageData({
         .select('title, slug, category, published_at, post_type')
         .eq('status', 'published')
         .eq('locale', locale)
-        .contains('tags', [term.term.toLowerCase()])
-        .limit(3),
+        .or(`tags.cs.{${term.term.toLowerCase()}},title.ilike.%${term.term}%`)
+        .order('published_at', { ascending: false })
+        .limit(5),
       // Pre-fetch recent news for backfill (avoids sequential query later)
       publicSupabase
         .from('news_posts')

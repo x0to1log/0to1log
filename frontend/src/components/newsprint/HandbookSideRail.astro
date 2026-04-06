@@ -65,21 +65,26 @@ const hasRelated = relatedTerms.length > 0;
       <hr class="newsprint-rail-divider" />
     )}
     <section>
-      <h3 class="newsprint-section-title">{isKo ? '관련 뉴스 읽어보기' : 'Related News'}</h3>
+      <h3 class="newsprint-section-title">{isKo ? '최근 뉴스에서' : 'In Recent News'}</h3>
       <div class="newsprint-stack">
-        {relatedArticles.map((article) => (
-          <a class="newsprint-card" href={`/${locale}/news/${article.slug}/`}>
-            <strong class="newsprint-rail-link">{article.title}</strong>
-            <span class="newsprint-rail-meta">
-              {article.post_type && (
-                <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${article.post_type}`}>
-                  {article.post_type === 'research' ? 'Research' : 'Business'}
-                </span>
-              )}
-              <span class="newsprint-rail-date">{isKo ? 'AI 뉴스' : 'AI News'}</span>
-            </span>
-          </a>
-        ))}
+        {relatedArticles.map((article) => {
+          const dateStr = article.published_at
+            ? new Date(article.published_at).toLocaleDateString(isKo ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric' })
+            : '';
+          return (
+            <a class="newsprint-card" href={`/${locale}/news/${article.slug}/`}>
+              <strong class="newsprint-rail-link">{article.title}</strong>
+              <span class="newsprint-rail-meta">
+                {article.post_type && (
+                  <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${article.post_type}`}>
+                    {article.post_type === 'research' ? 'Research' : 'Business'}
+                  </span>
+                )}
+                {dateStr && <span class="newsprint-rail-date">{dateStr}</span>}
+              </span>
+            </a>
+          );
+        })}
       </div>
     </section>
   </>
