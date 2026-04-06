@@ -968,6 +968,33 @@ Return ONLY valid JSON:
   "ko": "<full Korean markdown with all ## sections above>"
 }}
 
+## CRITICAL: "ko" field structure example
+```
+## 이번 주 한 줄
+한 문장으로 이번 주 핵심 테마.
+
+## 이번 주 숫자
+- **100억 달러** — OpenAI 신규 조달 규모
+- **6배** — TurboQuant KV 캐시 메모리 절감
+
+## TOP 뉴스
+- **OpenAI, 100억 달러 조달로 자본 해자 강화** — 프리머니 약 7,300억 달러 기준으로 컴퓨트·인재·유통을 장기 확보한다. 에이전트 워크플로의 납기와 가격 협상력이 동시에 올라간다.
+- **구글 TurboQuant, KV 캐시 6배 압축** — 재학습 없이 장문 컨텍스트 추론 비용을 낮추는 드롭인 기법이다. 커널 공개와 프레임워크 호환성이 채택 속도를 좌우한다.
+
+## 이번 주 트렌드 분석
+3-4문단으로 주간 흐름 분석...
+
+## 주목할 포인트
+- 포인트 1 — 왜 주목하는지 한 문장.
+- 포인트 2 — 왜 주목하는지 한 문장.
+
+## 이번 주 오픈소스
+- **프로젝트명** — 무엇을 하는지 한 문장. https://github.com/...
+
+## {action_heading}
+- **대규모 추론을 운영 중이라면**: TurboQuant 벤치마크 — 6배 KV 절감이 단위 경제를 바꾸기 때문.
+```
+
 ## Constraints
 - Cover the SAME stories with the SAME number of items as the English version.
 - Each Top Story item must have 2-3 sentences, matching the English depth.
