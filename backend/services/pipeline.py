@@ -1482,18 +1482,23 @@ async def run_daily_pipeline(
         published_urls: set[str] = set()
         recent_headlines: list[str] = []
         try:
-            recent = supabase.table("news_posts").select("title, source_urls, published_at") \
+            # URL exclusion: published only (draft URLs shouldn't block collection)
+            recent = supabase.table("news_posts").select("source_urls") \
                 .eq("status", "published") \
                 .gte("published_at", (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()) \
                 .execute()
             for row in (recent.data or []):
                 for url in (row.get("source_urls") or []):
                     published_urls.add(url)
-            # Headlines from last 2 days only (for event dedup in classify)
+            # Headlines for event dedup: draft + published (any generated post counts)
             cutoff_2d = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+            headline_rows = supabase.table("news_posts").select("title") \
+                .in_("status", ["published", "draft"]) \
+                .gte("published_at", cutoff_2d) \
+                .execute()
             recent_headlines = [
-                row["title"] for row in (recent.data or [])
-                if row.get("published_at", "") >= cutoff_2d and row.get("title")
+                row["title"] for row in (headline_rows.data or [])
+                if row.get("title")
             ]
         except Exception as e:
             logger.warning("Failed to fetch published URLs/headlines: %s", e)
