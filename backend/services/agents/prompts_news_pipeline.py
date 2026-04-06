@@ -857,6 +857,63 @@ Return ONLY valid JSON:
   "week_tool": {{"name": "Tool Name", "description": "One sentence", "url": "https://..."}}
 }}
 
+## CRITICAL: "en" and "ko" field structure example
+Your "en" and "ko" values MUST use `##` markdown headings. Follow this structure:
+
+**English ("en"):**
+```
+## This Week in One Line
+One punchy sentence here.
+
+## Week in Numbers
+- **$10B** — OpenAI's new funding round
+- **6x** — TurboQuant's KV-cache compression
+
+## Top Stories
+- **OpenAI raises $10B** — 2-3 sentences on why this matters.
+- **Google TurboQuant** — 2-3 sentences on impact.
+
+## Trend Analysis
+3-4 paragraphs connecting the dots...
+
+## Watch Points
+- Point 1 — why it matters
+- Point 2 — why it matters
+
+## Open Source Spotlight
+- **Project** — what it does. https://github.com/...
+
+## So What Do I Do?
+- **If you run inference at scale**: benchmark TurboQuant — because 6x KV savings change unit economics.
+```
+
+**Korean ("ko"):**
+```
+## 이번 주 한 줄
+한 문장 요약.
+
+## 이번 주 숫자
+- **100억 달러** — OpenAI 신규 조달 규모
+- **6배** — TurboQuant KV 캐시 압축
+
+## TOP 뉴스
+- **OpenAI 100억 달러 조달** — 왜 중요한지 2-3문장.
+- **구글 TurboQuant** — 영향 2-3문장.
+
+## 이번 주 트렌드 분석
+3-4문단 흐름 분석...
+
+## 주목할 포인트
+- 포인트 1 — 왜 주목하는지
+- 포인트 2 — 왜 주목하는지
+
+## 이번 주 오픈소스
+- **프로젝트명** — 무엇을 하는지. https://github.com/...
+
+## 그래서 나는?
+- **대규모 추론을 운영 중이라면**: TurboQuant 벤치마크 — 6배 KV 절감이 단위 경제를 바꾸기 때문.
+```
+
 ## Constraints
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
 - Do not repeat the same story across sections.
@@ -901,6 +958,61 @@ Return ONLY valid JSON:
   "week_numbers": [{{"value": "$2B", "label": "beginner-friendly description"}}],
   "week_tool": {{"name": "Tool Name", "description": "What it does and how to get started", "url": "https://..."}}
 }}
+
+## CRITICAL: "en" and "ko" field structure example
+Your "en" and "ko" values MUST use `##` markdown headings. Follow this structure:
+
+**English ("en"):**
+```
+## This Week in One Line
+One friendly sentence here.
+
+## Week in Numbers
+- **$10B** — OpenAI raised $10 billion (one of the largest AI rounds ever)
+- **6x** — TurboQuant makes AI memory 6 times smaller
+
+## Top Stories
+- **OpenAI raises $10B** — 2-3 sentences on what happened and why it matters.
+- **Google TurboQuant** — 2-3 sentences in plain language.
+
+## Trend Analysis
+3-4 paragraphs in plain language...
+
+## Watch Points
+- "Keyword" — context you need if you see this next week
+
+## Open Source Spotlight
+- **Project** — what it does + who it's for. https://github.com/...
+
+## What Can I Try?
+1. **Try X**: what to do and why.
+```
+
+**Korean ("ko"):**
+```
+## 이번 주 한 줄
+친근한 한 문장 요약.
+
+## 이번 주 숫자
+- **100억 달러** — OpenAI가 100억 달러를 조달했습니다 (AI 역대 최대급)
+- **6배** — TurboQuant가 AI 메모리를 6배 줄였습니다
+
+## TOP 뉴스
+- **OpenAI 100억 달러 조달** — 무슨 일이 있었고 왜 중요한지 2-3문장.
+- **구글 TurboQuant** — 쉬운 설명 2-3문장.
+
+## 이번 주 트렌드 분석
+쉬운 말로 3-4문단...
+
+## 주목할 포인트
+- "키워드" — 다음 주에 이 단어가 보이면 알아야 할 맥락
+
+## 이번 주 오픈소스
+- **프로젝트명** — 무엇을 하는지 + 누구에게 좋은지. https://github.com/...
+
+## 이번 주 해볼 것
+1. **X 해보기**: 무엇을 왜 해보면 좋은지.
+```
 
 ## Constraints
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
