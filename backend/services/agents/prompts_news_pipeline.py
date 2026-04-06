@@ -889,7 +889,8 @@ After the markdown, output a fenced JSON block:
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool mentioned this week. The URL MUST appear in the provided daily digests. Do NOT fabricate or guess URLs.
-- If fewer than 3 daily digests are provided, note the limited coverage at the top."""
+- If fewer than 3 daily digests are provided, note the limited coverage at the top.
+- If writing in Korean: write at least 70% of the English version's length. Do NOT over-compress. Write naturally in Korean, not translated English — no "If" at the start of Korean bullet points."""
 
 WEEKLY_LEARNER_PROMPT = """You are the editor of a beginner-friendly AI weekly newsletter.
 Your reader is a developer, PM, or student who follows AI casually and wants a clear weekly catch-up.
@@ -963,7 +964,8 @@ After the markdown, output a fenced JSON block:
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick one tool that a learner could actually try this week. The URL MUST appear in the provided daily digests. Do NOT fabricate or guess URLs.
-- If fewer than 3 daily digests are provided, note the limited coverage at the top."""
+- If fewer than 3 daily digests are provided, note the limited coverage at the top.
+- If writing in Korean: write at least 70% of the English version's length. Do NOT over-compress. Write naturally in Korean, not translated English."""
 
 
 # ---------------------------------------------------------------------------
