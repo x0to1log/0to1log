@@ -2260,7 +2260,7 @@ async def run_weekly_pipeline(
 ) -> PipelineResult:
     """Generate weekly recap from Mon-Fri daily digests.
 
-    Flow: fetch week's dailies -> LLM weekly summary (expert/learner x EN/KO) -> save draft.
+    Flow: fetch EN+KO dailies -> LLM generates EN+KO simultaneously (like daily) -> save drafts.
     """
     from services.agents.prompts_news_pipeline import get_weekly_prompt
 
@@ -2274,12 +2274,10 @@ async def run_weekly_pipeline(
 
     run_key = f"weekly-{week_id}"
     try:
-        # Reuse existing run (overwrite) or create new
         _res = supabase.table("pipeline_runs").select("id, status").eq("run_key", run_key).limit(1).execute()
         existing = _res.data[0] if _res.data else None
         if existing:
             run_id = existing["id"]
-            # Clear previous logs and reset run
             supabase.table("pipeline_logs").delete().eq("run_id", run_id).execute()
             supabase.table("pipeline_runs").update({
                 "status": "running",
@@ -2291,9 +2289,7 @@ async def run_weekly_pipeline(
         else:
             run_id = str(uuid.uuid4())
             supabase.table("pipeline_runs").insert({
-                "id": run_id,
-                "run_key": run_key,
-                "status": "running",
+                "id": run_id, "run_key": run_key, "status": "running",
             }).execute()
     except Exception as e:
         logger.warning("Weekly run setup failed for %s: %s", week_id, e)
@@ -2304,119 +2300,110 @@ async def run_weekly_pipeline(
     total_posts = 0
 
     try:
-        for locale in ("en", "ko"):
-            language = "English" if locale == "en" else "Korean"
+        # Stage: fetch EN + KO digests
+        t0 = time.monotonic()
+        try:
+            digests_en = await _fetch_week_digests(supabase, week_id, "en")
+            digests_ko = await _fetch_week_digests(supabase, week_id, "ko")
+        except Exception as e:
+            await _log_stage(supabase, run_id, "weekly:fetch", "failed", t0,
+                             error_message=str(e), post_type="weekly")
+            raise
+        await _log_stage(supabase, run_id, "weekly:fetch", "success", t0,
+                         output_summary=f"en={len(digests_en)}, ko={len(digests_ko)} digests",
+                         post_type="weekly")
 
-            # Stage: fetch daily digests
-            t0 = time.monotonic()
+        if not digests_en:
+            all_errors.append(f"No EN daily digests for {week_id}")
+
+        # Stage: fetch handbook terms
+        t0 = time.monotonic()
+        week_terms_en: list[dict] = []
+        week_terms_ko: list[dict] = []
+        try:
+            week_terms_en = await _fetch_week_handbook_terms(supabase, week_id, "en")
+            week_terms_ko = await _fetch_week_handbook_terms(supabase, week_id, "ko")
+        except Exception as e:
+            logger.warning("Weekly handbook terms fetch failed: %s", e)
+        await _log_stage(supabase, run_id, "weekly:terms", "success", t0,
+                         output_summary=f"en={len(week_terms_en)}, ko={len(week_terms_ko)} terms",
+                         post_type="weekly")
+
+        # Build per-persona input (EN primary + KO reference)
+        persona_inputs: dict[str, str] = {}
+        for persona in ("expert", "learner"):
+            content_key = f"content_{persona}"
+            parts = []
+            # EN digests (primary)
+            for d in digests_en:
+                content = d.get(content_key, "")
+                if content:
+                    parts.append(f"--- {d['post_type'].upper()} EN ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{content}")
+            # KO digests (reference)
+            for d in digests_ko:
+                content = d.get(content_key, "")
+                if content:
+                    parts.append(f"--- {d['post_type'].upper()} KO ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{content}")
+            persona_inputs[persona] = "\n\n".join(parts)
+
+        # Generate per persona (expert + learner) — each produces EN+KO simultaneously
+        persona_results: dict[str, dict] = {}
+        client = get_openai_client()
+
+        async def _gen_weekly_persona(persona: str) -> None:
+            daily_text = persona_inputs.get(persona, "")
+            if not daily_text:
+                return
+            t_p = time.monotonic()
+            system_prompt = get_weekly_prompt(persona)
             try:
-                digests = await _fetch_week_digests(supabase, week_id, locale)
+                response = await asyncio.wait_for(
+                    client.chat.completions.create(
+                        **compat_create_kwargs(
+                            settings.openai_model_main,
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": daily_text},
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.5,
+                            max_tokens=16000,
+                        )
+                    ),
+                    timeout=240,
+                )
+                raw = response.choices[0].message.content or ""
+                usage = extract_usage_metrics(response, settings.openai_model_main)
+                cumulative_usage.update(merge_usage_metrics(cumulative_usage, usage))
+                data = parse_ai_json(raw, f"weekly-{persona}")
+                persona_results[persona] = data
+
+                await _log_stage(
+                    supabase, run_id, f"weekly:{persona}", "success", t_p,
+                    output_summary=f"en={len(data.get('en', ''))}c, ko={len(data.get('ko', ''))}c",
+                    usage=usage, post_type="weekly",
+                )
             except Exception as e:
-                await _log_stage(supabase, run_id, f"weekly:fetch:{locale}", "failed", t0,
-                                 error_message=str(e), post_type="weekly", locale=locale)
-                all_errors.append(f"Fetch digests {locale}: {e}")
-                continue
-            if not digests:
-                await _log_stage(supabase, run_id, f"weekly:fetch:{locale}", "success", t0,
-                                 output_summary=f"0 digests — skipping {locale}", post_type="weekly", locale=locale)
-                all_errors.append(f"No daily digests for {week_id} {locale}")
-                continue
-            await _log_stage(supabase, run_id, f"weekly:fetch:{locale}", "success", t0,
-                             output_summary=f"{len(digests)} digests loaded", post_type="weekly", locale=locale)
+                logger.warning("Weekly %s %s failed: %s", week_id, persona, e)
+                all_errors.append(f"weekly {persona}: {e}")
+                await _log_stage(
+                    supabase, run_id, f"weekly:{persona}", "failed", t_p,
+                    error_message=str(e), post_type="weekly",
+                )
 
-            # Build per-persona input text
-            persona_daily_texts: dict[str, str] = {}
-            for persona in ("expert", "learner"):
-                content_key = f"content_{persona}"
-                text = ""
-                for d in digests:
-                    content = d.get(content_key, "")
-                    if not content:
-                        continue
-                    text += f"\n\n--- {d['post_type'].upper()} ({d.get('published_at', '')}) ---\n"
-                    text += f"# {d['title']}\n\n{content}\n"
-                persona_daily_texts[persona] = text
+        await asyncio.gather(
+            _gen_weekly_persona("expert"),
+            _gen_weekly_persona("learner"),
+        )
 
-            # Stage: fetch handbook terms
-            t0 = time.monotonic()
-            try:
-                week_terms = await _fetch_week_handbook_terms(supabase, week_id, locale)
-            except Exception as e:
-                logger.warning("Weekly handbook terms fetch failed for %s: %s", locale, e)
-                week_terms = []
-            await _log_stage(supabase, run_id, f"weekly:terms:{locale}", "success", t0,
-                             output_summary=f"{len(week_terms)} terms", post_type="weekly", locale=locale)
+        if not persona_results:
+            all_errors.append("All weekly personas failed")
+        else:
+            expert_data = persona_results.get("expert", {})
+            learner_data = persona_results.get("learner", {})
 
-            # Generate per persona (expert + learner) in parallel
-            personas: dict[str, dict] = {}
-            client = get_openai_client()
-
-            async def _gen_weekly_persona(persona: str) -> None:
-                daily_text = persona_daily_texts.get(persona, "")
-                if not daily_text:
-                    return
-                t_p = time.monotonic()
-                system_prompt = get_weekly_prompt(persona, language)
-                try:
-                    response = await asyncio.wait_for(
-                        client.chat.completions.create(
-                            **compat_create_kwargs(
-                                settings.openai_model_main,
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": daily_text},
-                                ],
-                                temperature=0.5,
-                                max_tokens=6000,
-                            )
-                        ),
-                        timeout=120,
-                    )
-
-                    raw = response.choices[0].message.content or ""
-                    usage = extract_usage_metrics(response, settings.openai_model_main)
-
-                    # Parse JSON block from end of response
-                    json_data = {}
-                    if "```json" in raw:
-                        json_str = raw.split("```json")[-1].split("```")[0].strip()
-                        json_data = parse_ai_json(json_str, f"weekly-{persona}-{locale}")
-                        content = raw[:raw.rfind("```json")].strip()
-                    else:
-                        content = raw
-
-                    personas[persona] = {"content": content, "json_data": json_data}
-
-                    await _log_stage(
-                        supabase, run_id, f"weekly:{persona}:{locale}", "success", t_p,
-                        usage=usage, post_type="weekly", locale=locale,
-                    )
-
-                except Exception as e:
-                    logger.warning("Weekly %s %s %s failed: %s", week_id, persona, locale, e)
-                    all_errors.append(f"weekly {persona} {locale}: {e}")
-                    await _log_stage(
-                        supabase, run_id, f"weekly:{persona}:{locale}", "failed", t_p,
-                        error_message=str(e), post_type="weekly", locale=locale,
-                    )
-
-            await asyncio.gather(
-                _gen_weekly_persona("expert"),
-                _gen_weekly_persona("learner"),
-            )
-
-            if not personas:
-                continue
-
-            # Build row
-            expert_data = personas.get("expert", {})
-            learner_data = personas.get("learner", {})
-            expert_json = expert_data.get("json_data", {})
-            learner_json = learner_data.get("json_data", {})
-
-            headline = expert_json.get("headline") or learner_json.get("headline") or f"AI Weekly — {week_id}"
-
-            slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
+            headline_en = expert_data.get("headline") or learner_data.get("headline") or f"AI Weekly — {week_id}"
+            headline_ko = expert_data.get("headline_ko") or learner_data.get("headline_ko") or headline_en
 
             # published_at = Sunday of the target week at 09:00 UTC
             iso_year, iso_week = week_id.split("-W")
@@ -2424,57 +2411,75 @@ async def run_weekly_pipeline(
             _sunday = _monday + timedelta(days=6)
             published_at = f"{_sunday.isoformat()}T09:00:00Z"
 
-            # Reading time
-            text = expert_data.get("content", "") or learner_data.get("content", "")
-            if locale == "ko":
-                char_count = len([c for c in text if c.strip() and c not in '.,!?;:()[]{}"\'-\u2014\u2026#*_~`|/>'])
-                reading_time = max(1, round(char_count / 500))
-            else:
-                reading_time = max(1, round(len(text.split()) / 200))
-
             guide_items = {
-                "week_numbers": expert_json.get("week_numbers", []),
-                "week_tool": expert_json.get("week_tool") or learner_json.get("week_tool", {}),
-                "week_terms": [
-                    {
-                        "slug": t["slug"],
-                        "term": t.get("korean_name" if locale == "ko" else "term") or t.get("term", ""),
-                        "definition": t.get(f"definition_{locale}", ""),
-                    }
-                    for t in week_terms[:2]
-                ],
+                "week_numbers": expert_data.get("week_numbers") or learner_data.get("week_numbers", []),
+                "week_tool": expert_data.get("week_tool") or learner_data.get("week_tool", {}),
             }
 
-            row = {
-                "title": headline,
-                "slug": slug,
-                "locale": locale,
-                "category": "ai-news",
-                "post_type": "weekly",
-                "status": "draft",
-                "content_expert": _clean_writer_output(expert_data.get("content", "")),
-                "content_learner": _clean_writer_output(learner_data.get("content", "")),
-                "pipeline_batch_id": week_id,
-                "published_at": published_at,
-                "reading_time_min": reading_time,
-                "guide_items": guide_items,
-            }
+            # Save EN + KO rows
+            for locale in ("en", "ko"):
+                slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
+                title = headline_en if locale == "en" else headline_ko
 
-            t_save = time.monotonic()
-            try:
-                # Check if post already exists (rerun case)
-                existing_post = supabase.table("news_posts").select("id").eq("slug", slug).eq("locale", locale).limit(1).execute()
-                if existing_post.data:
-                    supabase.table("news_posts").update(row).eq("id", existing_post.data[0]["id"]).execute()
+                en_expert = _clean_writer_output(expert_data.get("en", ""))
+                ko_expert = _clean_writer_output(expert_data.get("ko", ""))
+                en_learner = _clean_writer_output(learner_data.get("en", ""))
+                ko_learner = _clean_writer_output(learner_data.get("ko", ""))
+
+                content_expert = en_expert if locale == "en" else ko_expert
+                content_learner = en_learner if locale == "en" else ko_learner
+
+                # Reading time
+                text = content_expert or content_learner
+                if locale == "ko":
+                    char_count = len([c for c in text if c.strip() and c not in '.,!?;:()[]{}"\'-\u2014\u2026#*_~`|/>'])
+                    reading_time = max(1, round(char_count / 500))
                 else:
-                    supabase.table("news_posts").insert(row).execute()
-                total_posts += 1
-                await _log_stage(supabase, run_id, f"weekly:save:{locale}", "success", t_save,
-                                 output_summary=f"saved {slug}", post_type="weekly", locale=locale)
-            except Exception as e:
-                all_errors.append(f"Save weekly {locale}: {e}")
-                await _log_stage(supabase, run_id, f"weekly:save:{locale}", "failed", t_save,
-                                 error_message=str(e), post_type="weekly", locale=locale)
+                    reading_time = max(1, round(len(text.split()) / 200))
+
+                # Terms for this locale
+                terms = week_terms_en if locale == "en" else week_terms_ko
+                locale_guide = {
+                    **guide_items,
+                    "week_terms": [
+                        {
+                            "slug": t["slug"],
+                            "term": t.get("korean_name" if locale == "ko" else "term") or t.get("term", ""),
+                            "definition": t.get(f"definition_{locale}", ""),
+                        }
+                        for t in terms[:2]
+                    ],
+                }
+
+                row = {
+                    "title": title,
+                    "slug": slug,
+                    "locale": locale,
+                    "category": "ai-news",
+                    "post_type": "weekly",
+                    "status": "draft",
+                    "content_expert": content_expert,
+                    "content_learner": content_learner,
+                    "pipeline_batch_id": week_id,
+                    "published_at": published_at,
+                    "reading_time_min": reading_time,
+                    "guide_items": locale_guide,
+                }
+
+                t_save = time.monotonic()
+                try:
+                    existing_post = supabase.table("news_posts").select("id").eq("slug", slug).eq("locale", locale).limit(1).execute()
+                    if existing_post.data:
+                        supabase.table("news_posts").update(row).eq("id", existing_post.data[0]["id"]).execute()
+                    else:
+                        supabase.table("news_posts").insert(row).execute()
+                    total_posts += 1
+                    await _log_stage(supabase, run_id, f"weekly:save:{locale}", "success", t_save,
+                                     output_summary=f"saved {slug}", post_type="weekly", locale=locale)
+                except Exception as e:
+                    all_errors.append(f"Save weekly {locale}: {e}")
+                    await _log_stage(supabase, run_id, f"weekly:save:{locale}", "failed", t_save,
+                                     error_message=str(e), post_type="weekly", locale=locale)
 
         # Buttondown email (disabled by default)
         if settings.weekly_email_enabled and total_posts > 0:
@@ -2492,11 +2497,8 @@ async def run_weekly_pipeline(
         }).eq("id", run_id).execute()
 
         return PipelineResult(
-            batch_id=week_id,
-            status=status,
-            total_posts=total_posts,
-            errors=all_errors,
-            usage=cumulative_usage,
+            batch_id=week_id, status=status,
+            total_posts=total_posts, errors=all_errors, usage=cumulative_usage,
         )
 
     except Exception as e:
