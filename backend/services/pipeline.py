@@ -628,6 +628,9 @@ async def _extract_and_create_handbook_terms(
                     "body_basic_en": content_data.get("body_basic_en", ""),
                     "body_advanced_ko": content_data.get("body_advanced_ko", ""),
                     "body_advanced_en": content_data.get("body_advanced_en", ""),
+                    "term_type": content_data.get("term_type", ""),
+                    "facet_intent": content_data.get("facet_intent", []),
+                    "facet_volatility": content_data.get("facet_volatility", "stable"),
                     "status": term_status,
                     "source": "pipeline",
                 }
@@ -1741,7 +1744,7 @@ async def run_daily_pipeline(
 
         # Stage: summary (news only — handbook runs separately)
         t_summary = time.monotonic()
-        status = "success" if not all_errors else "failed"
+        status = "success" if total_posts > 0 and not all_errors else "failed"
 
         await _log_stage(
             supabase, run_id, "summary", status, t_summary,

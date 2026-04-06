@@ -713,9 +713,17 @@ async def _search_deep_context(term: str) -> str:
         return ""
 
 
-async def _classify_term_type(term: str, categories: list[str], client, model_light: str) -> str:
-    """Classify term into one of 10 types using gpt-4o-mini."""
-    from services.agents.prompts_handbook_types import CLASSIFY_TERM_PROMPT, TERM_TYPES
+async def _classify_term_type(
+    term: str, categories: list[str], client, model_light: str,
+) -> tuple[str, list[str], str]:
+    """Classify term type + intent + volatility in one LLM call.
+
+    Returns (type_str, intent_list, volatility_str).
+    """
+    from services.agents.prompts_handbook_types import (
+        CLASSIFY_TERM_PROMPT, TERM_TYPES, TYPE_MIGRATION,
+        INTENT_VALUES, VOLATILITY_VALUES,
+    )
 
     user_msg = f"Term: {term}\nCategories: {', '.join(categories)}"
     try:
@@ -726,19 +734,33 @@ async def _classify_term_type(term: str, categories: list[str], client, model_li
                     {"role": "system", "content": CLASSIFY_TERM_PROMPT},
                     {"role": "user", "content": user_msg},
                 ],
-                max_tokens=100,
+                max_tokens=200,
                 temperature=0,
                 response_format={"type": "json_object"},
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-classify")
-        term_type = data.get("type", "concept_theory")
+
+        # Type: validate and migrate old names
+        term_type = data.get("type", "concept")
         if term_type not in TERM_TYPES:
-            term_type = "concept_theory"
-        return term_type
+            term_type = TYPE_MIGRATION.get(term_type, "concept")
+
+        # Intent: validate, default to ["understand"]
+        raw_intent = data.get("intent", ["understand"])
+        if isinstance(raw_intent, str):
+            raw_intent = [raw_intent]
+        intent_list = [i for i in raw_intent if i in INTENT_VALUES] or ["understand"]
+
+        # Volatility: validate, default to "stable"
+        volatility = data.get("volatility", "stable")
+        if volatility not in VOLATILITY_VALUES:
+            volatility = "stable"
+
+        return term_type, intent_list, volatility
     except Exception as e:
         logger.warning("Term classification failed for '%s': %s", term, e)
-        return "concept_theory"
+        return "concept", ["understand"], "stable"
 
 
 async def _self_critique_advanced(
@@ -1252,7 +1274,7 @@ async def _run_generate_term(
             logger.warning("Failed to log handbook %s stage: %s", stage, e)
 
     # --- Build category-specific prompt blocks ---
-    from services.agents.prompts_handbook_types import build_category_block, get_type_basic_guide
+    from services.agents.prompts_handbook_types import build_category_block, get_type_basic_guide, get_section_weight_guide
 
     primary_cat = categories_list[0] if categories_list else ""
     category_block = build_category_block(primary_cat)
@@ -1300,11 +1322,14 @@ async def _run_generate_term(
     # --- Type classification (for advanced depth guide) ---
     from services.agents.prompts_handbook_types import get_type_depth_guide
 
-    term_type = await _classify_term_type(
+    term_type, intent_list, volatility = await _classify_term_type(
         req.term, req.categories or basic_data.get("categories", []),
         client, settings.openai_model_nano,
     )
-    logger.info("Term '%s' classified as type: %s", req.term, term_type)
+    logger.info(
+        "Term '%s' classified: type=%s, intent=%s, volatility=%s",
+        req.term, term_type, intent_list, volatility,
+    )
 
     # deep_context and brave_context already fetched in parallel above
     logger.info(
@@ -1340,22 +1365,32 @@ async def _run_generate_term(
     type_guide = get_type_depth_guide(term_type)
     basic_type_guide = get_type_basic_guide(term_type)
 
-    # EN Basic: category block + basic type guide
+    # Section weight guide based on type × intent
+    primary_intent = intent_list[0] if intent_list else "understand"
+    section_weight_guide = get_section_weight_guide(term_type, primary_intent)
+
+    # EN Basic: category block + basic type guide + section weight
     basic_en_system = GENERATE_BASIC_EN_PROMPT
     if category_block:
         basic_en_system += f"\n\n{category_block}"
     basic_en_system += f"\n\n{basic_type_guide}"
+    if section_weight_guide:
+        basic_en_system += f"\n\n{section_weight_guide}"
 
-    # Advanced: category block + type depth guide
+    # Advanced: category block + type depth guide + section weight
     adv_ko_system = GENERATE_ADVANCED_PROMPT
     if category_block:
         adv_ko_system += f"\n\n{category_block}"
     adv_ko_system += f"\n\n{type_guide}"
+    if section_weight_guide:
+        adv_ko_system += f"\n\n{section_weight_guide}"
 
     adv_en_system = GENERATE_ADVANCED_EN_PROMPT
     if category_block:
         adv_en_system += f"\n\n{category_block}"
     adv_en_system += f"\n\n{type_guide}"
+    if section_weight_guide:
+        adv_en_system += f"\n\n{section_weight_guide}"
 
     resp2, resp3 = await asyncio.gather(
         client.chat.completions.create(
@@ -1642,6 +1677,8 @@ async def _run_generate_term(
         data["quality_score"] = quality_score
         data["quality_breakdown"] = quality_breakdown
         data["term_type"] = term_type
+        data["facet_intent"] = intent_list
+        data["facet_volatility"] = volatility
         if quality_score < 60:
             warnings.append(f"Advanced quality score: {quality_score}/100 — review recommended")
         logger.info("Handbook quality for '%s': %d/100 (type=%s)", req.term, quality_score, term_type)
@@ -1795,6 +1832,10 @@ async def _run_generate_term(
     if deep_context:
         search_sources.append("Exa")
     data["_search_sources"] = search_sources
+    # Ensure facet data is always present (for pipeline DB storage)
+    data.setdefault("term_type", term_type)
+    data.setdefault("facet_intent", intent_list)
+    data.setdefault("facet_volatility", volatility)
 
     logger.info(
         "Handbook generate completed for '%s', total_tokens=%d, warnings=%d, sources=%s",

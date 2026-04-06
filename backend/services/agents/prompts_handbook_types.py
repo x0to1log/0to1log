@@ -1,70 +1,91 @@
-"""Handbook term type classification and type-specific advanced prompts."""
+"""Handbook term type classification, facets, and type-specific prompts."""
 
 TERM_TYPES = [
-    "algorithm_model",
-    "infrastructure_tool",
-    "business_industry",
-    "concept_theory",
-    "product_brand",
-    "metric_measure",
+    "concept",
+    "model_architecture",
     "technique_method",
-    "data_structure_format",
-    "protocol_standard",
-    "architecture_pattern",
+    "product_platform",
+    "hardware_infra",
+    "workflow_pattern",
+    "metric_benchmark",
+    "protocol_format",
 ]
 
-CLASSIFY_TERM_PROMPT = """You are a technical term classifier. Given a term name and its categories, classify it into exactly ONE type.
+# Old → new type mapping (for migration and backward compat)
+TYPE_MIGRATION = {
+    "algorithm_model": "model_architecture",
+    "infrastructure_tool": "hardware_infra",
+    "business_industry": "concept",
+    "concept_theory": "concept",
+    "product_brand": "product_platform",
+    "metric_measure": "metric_benchmark",
+    "technique_method": "technique_method",
+    "data_structure_format": "protocol_format",
+    "protocol_standard": "protocol_format",
+    "architecture_pattern": "workflow_pattern",
+}
 
-## Types
+INTENT_VALUES = ["understand", "compare", "build", "debug", "evaluate"]
+VOLATILITY_VALUES = ["stable", "evolving", "fast-changing"]
 
-1. **algorithm_model** — Algorithms, ML models, neural network architectures
-   Examples: BERT, Transformer, GAN, Random Forest, Gradient Descent
+CLASSIFY_TERM_PROMPT = """You are a technical term classifier. Given a term name and its categories, classify its type, intent, and volatility.
 
-2. **infrastructure_tool** — DevOps tools, frameworks, runtime environments
-   Examples: Docker, Kubernetes, CUDA, TensorFlow, PostgreSQL
+## Types (choose ONE)
 
-3. **business_industry** — Business concepts, market terms, organizational patterns
-   Examples: Funding Round, AI Ecosystem, SaaS, Product-Market Fit
+1. **concept** — Fundamental CS/ML concepts, principles, phenomena
+   Examples: embedding, hallucination, overfitting, tokenization, attention mechanism, alignment
 
-4. **concept_theory** — Abstract CS/ML concepts, mathematical theories
-   Examples: Overfitting, Bias-Variance Tradeoff, CAP Theorem, Big O Notation
+2. **model_architecture** — Neural network architectures, model designs
+   Examples: Transformer, diffusion model, GAN, VAE, CNN, RNN, MoE, Mamba
 
-5. **product_brand** — Specific commercial products, named AI models/services
-   Examples: GPT-5.4, Claude, Midjourney, GitHub Copilot, AWS SageMaker
+3. **technique_method** — Repeatable practices, training/optimization methods
+   Examples: fine-tuning, LoRA, RLHF, DPO, quantization, RAG, prompt engineering
 
-6. **metric_measure** — Evaluation metrics, scoring methods, benchmarks
-   Examples: AUC, F1 Score, BLEU, Perplexity, FLOPS, Latency
+4. **product_platform** — Specific products, services, frameworks, companies
+   Examples: GPT-4o, Claude, PyTorch, LangChain, Hugging Face, Cursor, Bedrock
 
-7. **technique_method** — Repeatable practices, engineering methods
-   Examples: Data Augmentation, Prompt Engineering, A/B Testing, Feature Engineering
+5. **hardware_infra** — Hardware, compute, deployment infrastructure
+   Examples: GPU, CUDA, Trainium, vLLM, Docker, Kubernetes, TensorRT, H100
 
-8. **data_structure_format** — Data structures, file formats, serialization specs
-   Examples: Parquet, B-Tree, Protocol Buffers, ONNX, JSON-LD, Arrow
+6. **workflow_pattern** — System design patterns, orchestration patterns
+   Examples: agentic workflows, MCP, function calling, CI/CD, MLOps, edge deployment
 
-9. **protocol_standard** — Communication protocols, technical standards
-   Examples: OAuth 2.0, HTTP/3, gRPC, WebSocket, MQTT, TLS 1.3
+7. **metric_benchmark** — Evaluation metrics, scoring methods, benchmarks
+   Examples: F1 Score, perplexity, BLEU, MMLU, HumanEval, AUC-ROC, latency
 
-10. **architecture_pattern** — System design patterns, architectural blueprints
-    Examples: Microservices, Event Sourcing, CQRS, RAG, MapReduce, Pub/Sub
+8. **protocol_format** — Protocols, data formats, data structures, standards
+   Examples: OAuth 2.0, HTTP/3, gRPC, Parquet, B-Tree, Arrow, WebSocket, GraphQL
+
+## Intent (choose 1-2, primary first)
+- **understand**: User wants to learn what this is and how it works
+- **compare**: User wants to compare with alternatives and decide
+- **build**: User wants to implement or apply this
+- **debug**: User wants to diagnose or fix problems related to this
+- **evaluate**: User wants to measure or assess using this
+
+## Volatility (choose ONE)
+- **stable**: Core concept/math settled, changes rarely (Transformer, F1, OAuth)
+- **evolving**: Active development, monthly updates (LoRA, RAG, MoE, MMLU leaderboard)
+- **fast-changing**: Breaking changes frequently, check latest (GPT-5, LangChain, MCP, vLLM)
 
 ## Disambiguation Rules
-- Tool vs Product: free/open-source = infrastructure_tool, commercial/paid = product_brand
-  - PyTorch = infrastructure_tool (free framework)
-  - GitHub Copilot = product_brand (paid commercial service)
-  - TensorFlow = infrastructure_tool (free framework)
-  - AWS SageMaker = product_brand (paid cloud service)
-- Algorithm vs Technique: algorithm has formal math specification, technique is a repeatable practice
-  - Gradient Descent = algorithm_model (has convergence proof)
-  - Data Augmentation = technique_method (family of practices, no single algorithm)
-- Hybrid terms: choose the PRIMARY use case the reader would look up
+- Framework vs Product: OSS framework = hardware_infra (Docker, PyTorch), commercial service = product_platform (Bedrock, Copilot)
+- Architecture vs Technique: architecture = structural design (Transformer, MoE), technique = method you apply (LoRA, quantization)
+- Concept vs Technique: concept explains WHY (overfitting, hallucination), technique explains HOW (data augmentation, RLHF)
+- Workflow vs Technique: workflow has multiple orchestrated components (RAG pipeline, agentic workflow), technique is a single method (fine-tuning)
+- Debug intent: problems/failures/security (hallucination, prompt injection, data drift, overfitting)
 
 ## Output
-Return JSON: {{"type": "one_of_the_10_types"}}
-Only the type field. Nothing else."""
+Return JSON:
+{{
+  "type": "one_of_8_types",
+  "intent": ["primary_intent", "optional_secondary"],
+  "volatility": "stable_or_evolving_or_fast-changing"
+}}"""
 
 
 TYPE_DEPTH_GUIDES: dict[str, str] = {
-    "algorithm_model": """## Type-Specific Depth: Algorithm/Model
+    "model_architecture": """## Type-Specific Depth: Algorithm/Model
 - adv_*_1_technical: Include time/space complexity (Big O). Reference the original paper if applicable.
 - adv_*_2_formulas: Full mathematical formulation with derivation steps, not just final formula. Include loss function, gradient update rules.
 - adv_*_3_howworks: Data flow diagram description. Input → layers/steps → output. Include tensor shapes if applicable.
@@ -72,21 +93,22 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 - adv_*_5_practical: Include benchmark comparisons (accuracy, latency, memory) with specific numbers from reference materials. If no benchmarks are available in references, state "Public benchmarks not yet available" rather than inventing numbers.
 - CRITICAL: Do NOT fabricate paper titles, arXiv IDs, author names, or publication venues. Only cite papers from the Reference Materials provided. If no paper reference is available, write "See official documentation" instead.""",
 
-    "infrastructure_tool": """## Type-Specific Depth: Infrastructure/Tool
+    "hardware_infra": """## Type-Specific Depth: Hardware/Infrastructure
 - adv_*_1_technical: Architecture diagram description (components, data flow, control plane vs data plane).
 - adv_*_2_formulas: Performance characteristics table (throughput, latency, scalability limits). No math formulas needed.
 - adv_*_3_howworks: Internal architecture. How requests are processed, scheduling, resource management.
 - adv_*_4_code: Real configuration examples (YAML, Dockerfile, CLI commands). Production deployment patterns. Min 15 lines.
 - adv_*_5_practical: Troubleshooting guide — common failure modes, debugging commands, monitoring metrics.""",
 
-    "business_industry": """## Type-Specific Depth: Business/Industry
+    # business_industry mapped to concept for backward compat
+    "concept_business": """## Type-Specific Depth: Business/Industry
 - adv_*_1_technical: Precise business definition with industry-standard terminology.
 - adv_*_2_formulas: Market data table — size, growth rate, key players. Decision framework (matrix/flowchart).
 - adv_*_3_howworks: Process flow — how this concept operates in practice. Stakeholders, timeline, decision points.
 - adv_*_4_code: No code needed. Replace with: case study analysis (2-3 real companies, with specific numbers).
 - adv_*_5_practical: Strategic implications — when to use, when to avoid, risk factors, ROI considerations.""",
 
-    "concept_theory": """## Type-Specific Depth: Concept/Theory
+    "concept": """## Type-Specific Depth: Concept/Theory
 - adv_*_1_technical: Formal definition. Cite foundational paper/textbook.
 - adv_*_2_formulas: Mathematical formulation with step-by-step derivation and intuitive interpretation of each term.
 - adv_*_3_howworks: Visual/geometric interpretation. "Imagine a 2D plot where..."
@@ -94,14 +116,14 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 - adv_*_5_practical: Where this concept causes real bugs/failures in production. Anti-patterns.
 - CRITICAL: Do NOT fabricate paper citations or textbook references. Only cite sources from Reference Materials. If unavailable, omit the citation.""",
 
-    "product_brand": """## Type-Specific Depth: Product/Brand
+    "product_platform": """## Type-Specific Depth: Product/Platform
 - adv_*_1_technical: Product capabilities, supported features, API surface area.
 - adv_*_2_formulas: Competitive comparison table — this product vs 3-4 alternatives. Columns: pricing, performance benchmarks, key differentiators, limitations.
 - adv_*_3_howworks: Architecture overview — how the product works internally (if known). API request flow.
 - adv_*_4_code: API usage examples — authentication, common operations, error handling. Use REAL API endpoints from reference materials.
 - adv_*_5_practical: Version history highlights. Migration notes. Known limitations and workarounds. If benchmarks are unavailable in references, state so rather than inventing numbers.""",
 
-    "metric_measure": """## Type-Specific Depth: Metric/Measure
+    "metric_benchmark": """## Type-Specific Depth: Metric/Benchmark
 - adv_*_1_technical: Formal mathematical definition. What does this metric actually measure?
 - adv_*_2_formulas: Full formula with derivation. Why this formula (e.g., why harmonic mean for F1, not arithmetic)?
 - adv_*_3_howworks: Step-by-step calculation example with real numbers. Edge cases where the metric is misleading.
@@ -115,21 +137,21 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 - adv_*_4_code: Implementation of 2+ variants. Show the difference in code. Min 15 lines.
 - adv_*_5_practical: Failure modes — when this technique hurts instead of helps. Hyperparameter sensitivity.""",
 
-    "data_structure_format": """## Type-Specific Depth: Data Structure/Format
+    "protocol_format_data": """## Type-Specific Depth: Data Structure/Format
 - adv_*_1_technical: Internal structure description. How data is organized on disk/memory.
 - adv_*_2_formulas: Complexity analysis table — read/write/delete/search (average + worst case). Space complexity.
 - adv_*_3_howworks: Internal operations — e.g., B-Tree node splitting, Parquet column encoding, Bloom filter hashing.
 - adv_*_4_code: Usage examples — read, write, query. Include serialization/deserialization. Performance comparison code.
 - adv_*_5_practical: When to use vs alternatives. Migration strategies. Compatibility concerns.""",
 
-    "protocol_standard": """## Type-Specific Depth: Protocol/Standard
+    "protocol_format": """## Type-Specific Depth: Protocol/Standard
 - adv_*_1_technical: Protocol version history. What changed and why. RFC references.
 - adv_*_2_formulas: Handshake/flow diagram (described in text). State transitions.
 - adv_*_3_howworks: Message format breakdown. Header structure, payload encoding, error codes.
 - adv_*_4_code: Client/server implementation examples. Configuration for common frameworks. Security setup.
 - adv_*_5_practical: Security considerations. Known vulnerabilities in older versions. Proxy/firewall traversal issues.""",
 
-    "architecture_pattern": """## Type-Specific Depth: Architecture Pattern
+    "workflow_pattern": """## Type-Specific Depth: Workflow/Architecture Pattern
 - adv_*_1_technical: Pattern structure — components, responsibilities, communication.
 - adv_*_2_formulas: Trade-off analysis table — consistency vs availability, complexity vs flexibility, etc.
 - adv_*_3_howworks: Component interaction flow. How a request passes through the system. Failure handling.
@@ -148,8 +170,133 @@ _SECTION_MINIMUM = """
 
 def get_type_depth_guide(term_type: str) -> str:
     """Return type-specific depth instructions for advanced prompt injection."""
-    guide = TYPE_DEPTH_GUIDES.get(term_type, TYPE_DEPTH_GUIDES["concept_theory"])
+    # Support old type names via migration map
+    resolved = TYPE_MIGRATION.get(term_type, term_type)
+    guide = TYPE_DEPTH_GUIDES.get(resolved, TYPE_DEPTH_GUIDES["concept"])
     return f"{guide}\n\n{_SECTION_MINIMUM}"
+
+
+# ── Evidence rules: type → search source priorities (no LLM classification needed) ──
+
+EVIDENCE_RULES: dict[str, list[str]] = {
+    "concept":            ["paper", "docs"],
+    "model_architecture": ["paper", "docs"],
+    "technique_method":   ["paper", "community"],
+    "product_platform":   ["docs", "benchmark"],
+    "hardware_infra":     ["benchmark", "docs"],
+    "workflow_pattern":   ["docs", "community"],
+    "metric_benchmark":   ["paper"],
+    "protocol_format":    ["docs"],
+}
+
+
+def get_evidence_priorities(term_type: str) -> list[str]:
+    """Return search source priorities for a term type."""
+    resolved = TYPE_MIGRATION.get(term_type, term_type)
+    return EVIDENCE_RULES.get(resolved, ["docs", "paper"])
+
+
+# ── Section weights: type × intent → content priority guidance ──
+
+TYPE_SECTION_WEIGHTS: dict[tuple[str, str], dict[str, str]] = {
+    # concept
+    ("concept", "understand"): {
+        "section_guide": "Lead with intuitive analogy and mechanism. Comparison table for related concepts. "
+                        "Keep the tone educational — this is 'what is this and how does it work?'",
+    },
+    ("concept", "debug"): {
+        "section_guide": "Lead with 'what goes wrong' — symptoms, root cause, detection methods. "
+                        "Show fix/mitigation code early. This is 'I have this problem, how do I solve it?'",
+    },
+    # model_architecture
+    ("model_architecture", "understand"): {
+        "section_guide": "Lead with the core innovation — what problem does this architecture solve differently? "
+                        "Architecture diagram (text), tensor flow, key equations. Historical context matters.",
+    },
+    ("model_architecture", "compare"): {
+        "section_guide": "Lead with comparison table vs predecessors and alternatives. "
+                        "Performance benchmarks, complexity trade-offs, when to choose this over that.",
+    },
+    # technique_method
+    ("technique_method", "build"): {
+        "section_guide": "Lead with when/how to apply. Code examples are the most important section. "
+                        "Show practical hyperparameter choices and common pitfalls.",
+    },
+    ("technique_method", "compare"): {
+        "section_guide": "Lead with comparison table vs alternatives (e.g., DPO vs RLHF vs GRPO). "
+                        "When to choose this technique, trade-offs, practical decision criteria.",
+    },
+    ("technique_method", "understand"): {
+        "section_guide": "Lead with the problem this technique solves. Explain the mechanism step by step. "
+                        "Show before/after comparison with concrete examples.",
+    },
+    # product_platform
+    ("product_platform", "compare"): {
+        "section_guide": "Lead with competitive comparison table (3+ alternatives). Include pricing, "
+                        "performance, key differentiators. This is 'which should I choose?'",
+    },
+    ("product_platform", "adopt"): {
+        "section_guide": "Lead with getting-started steps. Quick evaluation criteria. Free tier info. "
+                        "This is 'how do I start using this?'",
+    },
+    ("product_platform", "build"): {
+        "section_guide": "Lead with API patterns, SDK setup, integration code. "
+                        "Authentication, common operations, error handling examples.",
+    },
+    # hardware_infra
+    ("hardware_infra", "compare"): {
+        "section_guide": "Lead with benchmark comparison table. Cost/performance trade-offs. "
+                        "Suitable vs unsuitable workloads. GPU vs this alternative.",
+    },
+    ("hardware_infra", "build"): {
+        "section_guide": "Lead with deployment/configuration code (Docker, YAML, CLI). "
+                        "Show real setup steps, not just concepts.",
+    },
+    # workflow_pattern
+    ("workflow_pattern", "build"): {
+        "section_guide": "Lead with component diagram (text). Show implementation code with real libraries. "
+                        "Cover failure modes and monitoring early — not as an afterthought.",
+    },
+    ("workflow_pattern", "understand"): {
+        "section_guide": "Lead with the problem this pattern solves. Component roles and data flow. "
+                        "Compare with simpler alternatives.",
+    },
+    # metric_benchmark
+    ("metric_benchmark", "evaluate"): {
+        "section_guide": "Lead with 'what does this number actually tell you?' — plain interpretation first. "
+                        "Then 'when is this metric misleading?' — pitfalls are MORE important than formula. "
+                        "Show formula AFTER interpretation, not before.",
+    },
+    # protocol_format
+    ("protocol_format", "build"): {
+        "section_guide": "Lead with handshake/structure diagram. Show implementation code early. "
+                        "Security considerations and common configuration mistakes.",
+    },
+    ("protocol_format", "understand"): {
+        "section_guide": "Lead with what problem this protocol/format solves. Show the message/data flow. "
+                        "Compare with alternatives.",
+    },
+}
+
+
+def get_section_weight_guide(term_type: str, intent: str) -> str:
+    """Return section priority guide for a type × intent combination."""
+    resolved = TYPE_MIGRATION.get(term_type, term_type)
+    weights = TYPE_SECTION_WEIGHTS.get((resolved, intent))
+    if weights:
+        return f"## Content Priority Guide ({resolved} × {intent})\n{weights['section_guide']}"
+    # Fallback: try type with default intent
+    default_intents = {
+        "concept": "understand", "model_architecture": "understand",
+        "technique_method": "build", "product_platform": "compare",
+        "hardware_infra": "compare", "workflow_pattern": "build",
+        "metric_benchmark": "evaluate", "protocol_format": "build",
+    }
+    fallback_intent = default_intents.get(resolved, "understand")
+    weights = TYPE_SECTION_WEIGHTS.get((resolved, fallback_intent))
+    if weights:
+        return f"## Content Priority Guide ({resolved} × {fallback_intent})\n{weights['section_guide']}"
+    return ""
 
 
 # ── Category-specific context (domain framing for all 4 generation calls) ──
