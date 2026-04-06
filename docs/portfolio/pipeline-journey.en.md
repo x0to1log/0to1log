@@ -1,32 +1,33 @@
 # AI News Pipeline Development Journey
 
-> **Project:** [0to1log](https://0to1log.com) — AI News Curation + AI Glossary + IT Blog Platform
-> **Duration:** Mid-February to March 30, 2026 (2 weeks planning + 26 days development)
+> **Project:** [0to1log](https://0to1log.com) -- AI News Curation + AI Glossary + IT Blog Platform
+> **Duration:** Mid-February to April 6, 2026 (2 weeks planning + 33 days development)
 > **Role:** Solo full-stack developer (planning, design, frontend, backend, AI, infrastructure)
-> **Stack:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-4.1) · Tavily · HN/Reddit APIs · Vercel · Railway
+> **Stack:** Astro v5 - FastAPI - Supabase - OpenAI (gpt-5) - Tavily - Exa - Brave - Vercel - Railway
 
 ---
 
 ## At a Glance
 
-A pipeline that collects 50-60 AI news articles daily from 7 sources, auto-groups same-event articles, classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 26 days through 9 versions.
+A pipeline that collects 50-60 AI news articles daily from 7 sources, auto-groups same-event articles, classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 33 days through 10 versions, with a gpt-5 model transition in v10.
 
-| | Start (v2) | v8 | v9 initial | Current (v9 + merge) |
+| | Start (v2) | v8 | v9 + merge | Current (v10, gpt-5) |
 |---|---|---|---|---|
-| **Cost per run** | $0.18 | $0.25 | $0.77 | **$0.43** |
+| **Cost per run** | $0.18 | $0.25 | $0.43 | **$0.58** |
+| **Model** | gpt-4o | gpt-4.1 | gpt-4.1 | **gpt-5** |
 | **Citations per digest** | 1.8 | 16.8 | 16.8 | 16.8 |
-| **Sources per article** | 1 (original only) | 1 | up to 5 | multi-source (merge + conditional enrich) |
-| **News items covered** | 1.3 | 5.0 | 5.0 | 5.0 |
-| **Collection sources** | 1 (Tavily) | 6 | 6 | 7 (+ Brave Search) |
-| **Quality score (Research)** | 75.8 | 91.8 | 91.8 | 95 |
-| **Quality score (Business)** | 82.9 | 94.8 | 94.8 | 95 |
+| **Sources per article** | 1 (original only) | 1 | multi-source | multi-source + CP summary |
+| **Collection sources** | 1 (Tavily) | 6 | 7 | 7 |
+| **Quality score (Research)** | 75.8 | 91.8 | 94 | **96** |
+| **Quality score (Business)** | 82.9 | 94.8 | 95 | **91** |
 
-Through v8, quality improved 9.3x while keeping cost at $0.25/run. v9 initially introduced multi-source synthesis, causing cost to explode to $0.77. Adding a merge step to deduplicate same-event articles brought it back to **$0.43** -- v8-level cost with multi-source quality. All figures measured from production databases.
+Through v8, quality improved 9.3x while keeping cost at $0.18-$0.25/run. v9 cost exploded to $0.77 with multi-source enrichment, then merge brought it back to $0.43. v10 transitioned to gpt-5 with Community Pulse redesign, reaching $0.58/run with quality 96/91. All figures measured from production databases.
 
 Key discoveries:
 1. **Removing DON'Ts makes LLMs perform better.** Cutting the Research Expert Guide from 569 to 151 words and deleting all 9 DON'Ts increased per-item depth from 1 paragraph to 3.
-2. **Give LLMs one role at a time.** Classification/ranking (v8) and classify/merge (v9) both failed when combined in one call. Separating them costs $0.002 and immediately improves accuracy.
+2. **Give LLMs one role at a time.** Classification/ranking (v8), classify/merge (v9), Writer/Summarizer (v10) -- three rounds of validation. Accuracy improved immediately each time tasks were separated.
 3. **Input quality determines output quality.** Instructing the Writer to "reflect diverse perspectives" doesn't work -- actually providing diverse sources does. Merge deduplicated input, cutting cost by 44% while maintaining quality.
+4. **Reasoning models have a different parameter system.** Empty responses from gpt-5 aren't bugs -- reasoning tokens consume the output budget. reasoning_effort=low + 3x headroom solves it.
 
 ---
 
@@ -62,24 +63,27 @@ AI news floods in daily, but quality Korean-language technical briefings are sca
     v
 Dedup + Filter (URL dedup, published exclusion 3d, category pages, filler)
     v
-Classify (gpt-4.1-mini) --> Research 0-5 / Business 0-5 (individual items)
+Classify (gpt-5-mini) --> Research 0-5 / Business 0-5 (individual items)
     v
-Merge (gpt-4.1-mini) --> group same-event articles ($0.002)
+Merge (gpt-5-mini) --> group same-event articles ($0.002)
     v
-Community (HN Algolia + Reddit JSON, 38 subreddits)
+Community (HN Algolia + Brave Discussions)
     v
-Rank (gpt-4.1-mini) --> [LEAD] / [SUPPORTING] (per group)
+Community Summarize (gpt-5-mini) --> sentiment + quotes(EN/KO) + key_point
+    v
+Rank (gpt-5-mini) --> [LEAD] / [SUPPORTING] (per group)
     v
 Conditional Enrich (Exa find_similar -- only groups with 1 source)
     v
 +-- Research Digest -----------+   +-- Business Digest -----------+
-|  Expert EN+KO (gpt-4.1)     |   |  Expert EN+KO (gpt-4.1)     |
-|  Learner EN+KO (gpt-4.1)    |   |  Learner EN+KO (gpt-4.1)    |
+|  Expert EN+KO (gpt-5)       |   |  Expert EN+KO (gpt-5)       |
+|  Learner EN+KO (gpt-5)      |   |  Learner EN+KO (gpt-5)      |
 +------------------------------+   +------------------------------+
     v
 Post-process (bold fix + tag strip + citation renumber)
     v
-Quality Check (o4-mini x 4: R/B x Expert/Learner)
+Quality Check (gpt-5-mini x 4: R/B x Expert/Learner)
+    + Code deductions (CP missing -15, structural mismatch -5, empty citation -5)
     + Health Check (0 classifications, over-grouping, collection failures)
     v
 Save Draft --> Admin Review --> Publish
@@ -103,24 +107,23 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | v7-v8 | 4 | **$0.25** | $0.20-$0.27 | Ranking separation + DON'T removal |
 | v9 initial | 3 | **$0.62** | $0.46-$0.77 | Multi-source enrichment (input explosion) |
 | v9 + merge | 4 | **$0.43** | $0.32-$0.52 | Merge deduplicates input (back to v8 level) |
+| v10 (gpt-5) | 6 | **$0.58** | $0.51-$0.64 | gpt-5 transition + CP Summarizer + code deductions |
 
 ### Quality Trend (news_posts, EN, Research/Business split)
 
-| Metric | | v2-v4 | v5-v6 | v7-v8 | v9 |
-|--------|---|-------|-------|-------|-----|
-| **Quality score** | Research | 75.8 | 92.2 | 91.8 | **94** |
-| | Business | 82.9 | 94.1 | 94.8 | **95** |
-| **Expert citations** | Research | 1.8 | 12.9 | 16.8 | **17.5** |
-| | Business | 2.7 | 13.9 | 14.2 | **20.5** |
-| **News items covered** | Research | 1.3 | 4.6 | 5.0 | **5.5** |
-| | Business | 2.7 | 3.6 | 4.5 | **5.5** |
-| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | **$0.43** |
+| Metric | | v2-v4 | v5-v6 | v7-v8 | v9 | v10 |
+|--------|---|-------|-------|-------|-----|-----|
+| **Quality score** | Research | 75.8 | 92.2 | 91.8 | 94 | **96** |
+| | Business | 82.9 | 94.1 | 94.8 | 95 | **91** |
+| **Expert citations** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 |
+| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 |
+| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | $0.43 | **$0.58** |
 
-*Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts -- a stricter standard -- yet scores improved.*
+*Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts -- a stricter standard -- yet scores improved. v10's Business 91 reflects calibration differences from the gpt-5 scoring model transition -- same content scores differently when the scoring model changes.*
 
-**Summary:** Through v8, cost stayed at $0.18-$0.25 while citations grew 9.3x and coverage 3.8x. v9 initially exploded to $0.77 with multi-source enrichment, but merge deduplicated input and brought cost back to $0.43 -- v8-level cost with multi-source quality.
+**Summary:** Through v8, cost stayed at $0.18-$0.25 while citations grew 9.3x. v9 exploded to $0.77, merge brought it back to $0.43. v10 transitioned to gpt-5 + CP redesign, reaching $0.58 with quality 96/91.
 
-### Prompt Iteration History (9 rounds)
+### Prompt Iteration History (10 rounds)
 
 | Iteration | Score | Key change | Keyword |
 |-----------|-------|-----------|---------|
@@ -133,6 +136,7 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | v7 | **85.3** | User-perspective eval + rollback | Stacked changes = regression |
 | v8 | **90.0** | DON'T removal | Over-correction removed |
 | v9 | **95** | Multi-source + merge + citation code | Cost explosion then recovery |
+| v10 | **96** | gpt-5 transition + CP redesign + code deductions | Reasoning model migration |
 
 ---
 
@@ -140,15 +144,16 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 
 ### Decisions
 
-**3-Tier Model Structure**
+**4-Tier Model Structure (v10, post gpt-5 transition)**
 
-| Tier | Model | Usage | Price (input/output per 1M) |
-|------|-------|-------|---------------------------|
-| Main | gpt-4.1 | Digest generation, handbook content | $2.00 / $8.00 |
-| Light | gpt-4.1-mini | Classification, SEO, review, quality eval | $0.40 / $1.60 |
-| Reasoning | o4-mini | News ranking, fact-checking | $1.10 / $4.40 |
+| Tier | Model | Usage |
+|------|-------|-------|
+| Main | gpt-5 | Digest generation, Weekly Recap |
+| Light | gpt-5-mini | Classification, merge, ranking, CP summary |
+| Nano | gpt-5-nano | Handbook lightweight tasks |
+| Reasoning | gpt-5-mini | Quality evaluation, fact-checking |
 
-**Alternatives considered:** gpt-4o (existing, familiar), Claude 3.5 Sonnet (strong instruction following), gpt-4.1-mini (cheaper). A/B tested gpt-4o vs gpt-4.1 -- same prompts, same failure patterns, but gpt-4.1 scored 6% higher on IFEval and cost 20% less on input tokens. Claude was not tested due to SDK switching cost and existing PydanticAI + OpenAI integration.
+**Model transition history:** gpt-4o (v1-v4) to gpt-4.1 (v5-v9, IFEval +6%, cost -20%) to gpt-5 (v10, reasoning model transition). gpt-5 is a reasoning model with a different parameter system -- max_tokens becomes max_completion_tokens, temperature is not supported, and reasoning tokens consume the output budget causing empty responses. Solved with reasoning_effort=low + 3x headroom. Designed so changing model names in `.env` switches/rolls back without code changes.
 
 **Draft-First Principle**
 
@@ -171,11 +176,17 @@ Expert and Learner need different evaluation criteria. Asking Expert about "acce
 | Business Expert | Section completeness | Source quality | Analysis quality | Language quality |
 | Business Learner | Section completeness | Accessibility | Actionability | Language quality |
 
-Each criterion 0-25 points, total 100. Evaluated by gpt-4.1-mini (temperature=0). Final score is the average of Expert and Learner.
+Each criterion 0-25 points, total 100. Evaluated by gpt-5-mini (temperature=0). Final score is the average of Expert and Learner.
 
-**Layer 2 -- Code-Based Health Check**
+**Layer 2 -- Code-Based Structural Verification + Deductions**
 
-Detects structural anomalies that LLMs miss: 0 classifications, merge over-grouping (5+ items), 0 community results, enrich failures. Logs warnings without blocking the pipeline.
+LLM scoring alone cannot catch structural rule violations like "is the CP section present?" or "do EN/KO section counts match?" Code verifies structure and deducts for violations.
+
+Final score = LLM score (0-100) - code deductions (max -30)
+
+CP data exists but section missing: -15, EN/KO section mismatch: -5, empty citation: -5, Supporting under 3 paragraphs: -5/item.
+
+Health Check is also code-based: 0 classifications, merge over-grouping (5+ items), 0 community results, enrich failures. Logs warnings without blocking the pipeline.
 
 **Layer 3 -- Human Final Judgment**
 
@@ -189,11 +200,11 @@ The handbook pipeline follows the same philosophy: Self-Critique (score < 75 dur
 
 If no news qualifies for Research, **allow an empty list**. The "select 3-5" forced quota degraded quality by pushing subpar articles into the digest.
 
-**Cost savings considered but not adopted** -- sometimes protecting quality matters more than cutting cost.
+**Cost savings considered but not adopted (v5-v8 period)** -- sometimes protecting quality matters more than cutting cost.
 
 | Considered | Decision | Reason |
 |-----------|----------|--------|
-| Use gpt-4.1-mini for classification | Not adopted | $0.03/day savings but classification quality risk |
+| Use lighter model for classification | Not adopted | $0.03/day savings but classification quality risk |
 | Remove quality checks | Not adopted | $0.004/day savings but prerequisite for auto-publish |
 | Remove handbook Self-Critique | Not adopted | $0.02/term savings but needed to guarantee quality floor |
 
@@ -211,7 +222,11 @@ If no news qualifies for Research, **allow an empty list**. The "select 3-5" for
 
 **Accept LLM limitations, compensate with code.** Handbook term linking: prompt 70%, code 100%. Citation renumbering: LLM resets per section, code handles it perfectly.
 
-**Combining two tasks in one call reduces accuracy for both.** The same pattern repeated in classification/ranking (v8) and classify/merge (v9) -- separating them costs $0.002 and both tasks immediately improve.
+**Combining two tasks in one call reduces accuracy for both.** The same pattern repeated in classification/ranking (v8), classify/merge (v9), Writer/Summarizer (v10) -- separating them each time immediately improved both tasks.
+
+**Reasoning models have a different parameter system.** Empty responses from gpt-5 aren't bugs -- reasoning tokens consume the output budget. reasoning_effort=low + 3x headroom solves it. Data in system prompts gets ignored, so system=rules, user=data separation is required.
+
+**Changing the scoring model breaks score trends.** Same content scored 85 by gpt-4.1-mini and 36 by gpt-5-mini. Calibration instructions and content truncation limits must be adjusted when switching scoring models.
 
 ---
 
@@ -229,15 +244,16 @@ v6 ██                                       1 day  (optimization)
 v7 ████████                                 2 days (quality overhaul + rollback)
 v8 ████████                                 2 days (structural separation)
 v9 ████                                     1 day  (multi-source + merge)
+v10 ██████████████████████████               7 days (gpt-5 transition + CP redesign)
 ```
 
-| | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 | v9 |
-|---|---|---|---|---|---|---|---|---|---|
-| **Period** | 3/10-14 (5d) | 3/15 (1d) | 3/16 (1/2d) | 3/17 (1/2d) | 3/18-25 (8d) | 3/26 (1d) | 3/28-29 (2d) | 3/29-30 (2d) | 3/30 (1d) |
-| **Outcome** | Root cause discovery | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation | Multi-source + merge |
-| **Content** | Single article deep-dive | Single article, 3 personas | Digest of 3-5 articles | Digest, 2 personas | 4 sources + quality | Skeleton maps | Layered reading + CP | Ranking + Guide refactor | merge + conditional enrich + 7 sources |
-| **Daily cost** | N/A | $0.13 | $0.17-0.21 | $0.17-0.21 | $0.20 | $0.20 | $0.25 | $0.25 | $0.45 |
-| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 | 14 |
+| | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 | v9 | v10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Period** | 3/10-14 | 3/15 | 3/16 | 3/17 | 3/18-25 | 3/26 | 3/28-29 | 3/29-30 | 3/30 | 3/31-4/6 |
+| **Outcome** | Root cause discovery | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation | Multi-source + merge | gpt-5 + code deductions |
+| **Model** | gpt-4o | gpt-4o | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 |
+| **Cost/run** | N/A | $0.13 | $0.17 | $0.17 | $0.20 | $0.20 | $0.25 | $0.25 | $0.43 | $0.58 |
+| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 | 14 | 15 |
 
 ---
 
@@ -308,17 +324,17 @@ Research Expert stuck at 1 paragraph/item. Three causes: coupled classification/
 
 v8 backfill testing revealed two structural problems: Writer saw only 1 source (`raw_content[:4000]`), and citation numbers reset per section.
 
-**Solutions:** Exa `find_similar` for up to 4 additional sources per article, and citation renumbering moved to code post-processing. **Why this approach:** Writer cannot know what it wasn't given -- diversifying sources themselves is the root-cause fix.
+**Solutions:** Exa `find_similar` for up to 4 additional sources per article, and citation renumbering moved to code post-processing. **Why:** Writer cannot know what it wasn't given -- diversifying sources themselves is the root-cause fix.
 
 **Problem:** Cost exploded from $0.25 to $0.77. 5 items x 4 sources x full text = Writer input went from 57K to 318K tokens.
 
 **Phase 2 -- Recovery via merge**
 
-Same-event articles were classified as separate items -- "OpenAI $110B investment" processed 3 times via TechCrunch, Reuters, and official blog. This duplication was the root cause of input explosion.
+Same-event articles were classified as separate items. This duplication was the root cause of input explosion.
 
 **Solution:** Added a separate merge step after classify to group same-event articles. Merged groups already have multiple sources, so Exa calls are skipped (conditional enrich).
 
-**merge v1 failure then v2:** Initially tried classify and merge in one call -- LLM grouped all articles with the same subcategory (10 papers into 1 group). Same lesson as v8's classification/ranking -- **combining two tasks in one call reduces accuracy for both.** Separating classify and merge solved it. Additional cost: $0.002.
+**merge v1 failure then v2:** Initially tried classify and merge in one call -- LLM grouped all articles with the same subcategory. Same lesson as v8 -- **combining two tasks in one call reduces accuracy for both.** Separating classify and merge solved it. Additional cost: $0.002.
 
 **Result:**
 
@@ -332,6 +348,36 @@ Merge deduplicated input, reducing cost by 44% ($0.77 to $0.43 avg) while mainta
 
 ---
 
+### v10: gpt-5 Transition and Code-Based Quality Management (3/31-4/6, 7 days)
+
+**gpt-5 Migration**
+
+gpt-5 is a reasoning model where existing parameters don't work -- `max_tokens` becomes `max_completion_tokens`, `temperature` is not supported, reasoning tokens consume output tokens causing empty responses. Learned from previous all-at-once failures and validated step by step:
+
+1. `_apply_gpt5_compat()` function handles parameter compatibility in one place (28 call sites)
+2. `reasoning_effort: "low"` + `max_completion_tokens` 3x headroom solves empty responses
+3. Data in system prompts gets ignored by gpt-5 -- separated to system=rules, user=data
+
+**Community Pulse Pipeline Redesign**
+
+Separated the Summarizer stage from Writer. Third application of "role separation" after classification/ranking (v8) and classify/merge (v9).
+
+**Why:** Asking the Writer to do "comment selection + summarization + formatting + KO translation" all at once meant one of the four always failed. Summarizer handles selection + summarization + KO translation, Writer just formats the refined data. Replaced Reddit keyword search with Brave Discussions, and improved HN search accuracy with Entity-First Search.
+
+**Code-Based Quality Management**
+
+Introduced a system combining LLM scoring (subjective quality) with code deductions (structural rule violations). Final score = LLM score - code deductions (max -30). CP missing, empty sections, EN/KO mismatch detected with 100% accuracy by code.
+
+**Quality trend:**
+
+| Stage | Research | Business | Notes |
+|-------|----------|----------|-------|
+| v10 initial (gpt-5) | 61 | 59 | Scoring model calibration absent |
+| v10 stabilized | 89 | 87 | Calibration + 0 structural deductions |
+| v10 final (4/6) | **96** | **91** | [BODY] marker + event dedup scoring |
+
+---
+
 ## 5. Handbook Pipeline
 
 The Handbook (AI glossary) auto-extracts AI terms from news articles and generates explanations at two levels: Basic (accessible to beginners) and Advanced (senior engineer reference).
@@ -342,7 +388,7 @@ Single call for 16 fields caused later fields to be shallow. Split into 4 calls 
 
 ### 10 Term Types
 
-gpt-4.1-mini classifies into Algorithm/Model, Infrastructure/Tool, Business/Industry, Concept/Theory, Product/Brand, Metric/Measure, Technique/Method, Data Structure/Format, Protocol/Standard, or Architecture Pattern. Each type has a dedicated depth prompt. Cost: $0.001/term.
+gpt-5-mini classifies into Algorithm/Model, Infrastructure/Tool, Business/Industry, Concept/Theory, Product/Brand, Metric/Measure, Technique/Method, Data Structure/Format, Protocol/Standard, or Architecture Pattern. Each type has a dedicated depth prompt. Cost: $0.001/term.
 
 ### Tavily + Self-Critique
 
@@ -357,19 +403,19 @@ Term input (auto-extracted from news or admin manual)
     v
 +-- Tavily web search (5 results)  --+
 |                                     |  parallel
-+-- Type classify (gpt-4.1-mini)   --+
++-- Type classify (gpt-5-mini)     --+
     v
 Select type-specific depth prompt (10 types)
     v
 +-----------------------------------+
-| Generate (gpt-4.1 x 4-Call)       |
+| Generate (gpt-5 x 4-Call)         |
 |   Call 1: Meta + Basic KO         |
 |   Call 2: Basic EN     --+  par.  |
 |   Call 3: Advanced KO  --+        |
 |   Call 4: Advanced EN             |
 +-----------------------------------+
     v
-Self-Critique (gpt-4.1-mini, < 75 --> regenerate)
+Self-Critique (gpt-5-mini, < 75 --> regenerate)
     v
 Quality Check (4 criteria x 25 pts, < 60 --> warning)
     v
@@ -384,13 +430,13 @@ Save (High confidence --> draft, Low --> queued)
 |-------|-----------|---------|
 | Frontend | Astro v5 + Tailwind CSS v4 + TypeScript | Vercel |
 | Backend | FastAPI + PydanticAI | Railway |
-| AI | OpenAI (gpt-4.1 / gpt-4.1-mini / o4-mini) + Tavily + Exa | - |
+| AI | OpenAI (gpt-5 / gpt-5-mini / gpt-5-nano) + Tavily + Exa + Brave | - |
 | Database | Supabase (PostgreSQL + Auth + RLS) | Supabase |
 
 ---
 
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 9 pipeline versions, evolving from single-source summaries to multi-source synthesis,
-> cost explosion recovered via merge to v8-level spending,
-> and the discovery that removing instructions makes LLMs perform better.
+> 10 pipeline versions, model transition from gpt-4o to gpt-5,
+> cost explosion recovered via merge, then reasoning model migration,
+> and a quality management system combining LLM scoring with code deductions.
 > As a solo project, I handled every stage from planning to deployment.
