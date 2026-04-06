@@ -1057,7 +1057,7 @@ async def _generate_digest(
     digest_focus_items_ko: list[str] = []
     persona_quizzes: dict[str, dict] = {}  # {"expert": {"en": {...}, "ko": {...}}, "learner": {...}}
 
-    MAX_DIGEST_RETRIES = 1  # 1 retry = 2 total attempts
+    MAX_DIGEST_RETRIES = 2  # 2 retries = 3 total attempts
 
     for persona_name in ("expert", "learner"):
         t_p = time.monotonic()
