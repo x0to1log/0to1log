@@ -47,6 +47,7 @@
 | GPT5-03 | gpt-5 모델 마이그레이션 — Writer digest (gpt-5) | todo | — | — |
 | GPT5-04 | gpt-5 전체 파이프라인 backfill 비교 검증 | todo | — | — |
 | GPT5-05 | gpt-5 main 머지 + gpt-4.1 deprecation 대응 완료 | todo | — | — |
+| WEEKLY-01 | Weekly 파이프라인 EN+KO 동시 생성 — Daily와 구조 통일 | in_progress | 2026-04-06 | — |
 
 ---
 
@@ -140,6 +141,9 @@
 | HQ-08 | todo | 중복 용어 병합 — variation operator → evolutionary search 등 | P2 |
 | HQ-09 | done | 카테고리 재설계 — 11개→9개, 프롬프트+파이프라인+프론트엔드+DB 212개 마이그레이션 완료 | P1 |
 | HQ-10 | done | 카테고리별 프롬프트 컨텍스트 — 9개 CATEGORY_CONTEXT(5필드) + Basic TYPE_GUIDE 10개 + 3-layer 코드 패턴 | P1 |
+| HQ-11 | todo | SEO 구조화 데이터 — DefinedTerm + FAQPage + BreadcrumbList JSON-LD | P0 |
+| HQ-12 | todo | 콘텐츠 톤 재설계 — "AI 위키" → "기술 블로그" 느낌으로 전환, 신뢰감 + 읽히는 콘텐츠 | P1 |
+| HQ-13 | todo | term type 재설계 + facet 시스템 — type 8개 + intent/volatility facet, DB 저장, 분류 프롬프트, 프론트엔드 차별화 | P1 |
 
 #### HQ-09 카테고리 재설계 — 배경 노트
 
@@ -193,6 +197,45 @@ FINAL_PROMPT = BASE_PROMPT (4개, 공통 구조)
 - `prompts_handbook_types.py`: CATEGORY_CONTEXT 9개 + `build_category_block()` 함수 + Basic TYPE_GUIDES 10개
 - `advisor.py`: `_run_generate_term`에서 카테고리 블록 주입 (Basic + Advanced 모든 call)
 - 비용 영향: $0 (프롬프트 토큰만 ~300 추가)
+
+#### HQ-11 SEO 구조화 데이터 — 배경 노트
+
+**현재 문제:** 핸드북 용어 페이지에 JSON-LD가 전혀 없음. NewsArticle만 있고, 용어 정의 페이지임을 Google이 모름.
+**영향:** "RAG란?" 같은 검색에서 리치 스니펫(정의 박스, FAQ 등) 노출 불가. 검색 유입 경로(C)가 사실상 차단.
+
+**구현 범위:**
+- Head.astro에 `DefinedTerm` 스키마 추가 (용어명, 정의, 카테고리)
+- "주의할 점" 섹션을 `FAQPage` 스키마로 변환
+- 카테고리 경로를 `BreadcrumbList`로 추가
+- (선택) 용어별 OG 이미지 자동 생성
+
+#### HQ-12 콘텐츠 톤 재설계 — 배경 노트
+
+**현재 문제:** 콘텐츠 퀄리티는 9/10이지만 "AI가 자동으로 만든 위키"처럼 읽힘. 기술 블로그처럼 누군가의 경험과 관점이 느껴지면 읽겠지만, 백과사전처럼 무미건조하게 나열하면 신뢰가 안 가고 안 읽힘.
+**핵심 인사이트:** 기술 블로그 → 읽는다 (누군가의 관점·경험), 위키 → 참고만 한다 (사전). 우리가 원하는 건 "읽히는 레퍼런스".
+
+**방향 (brainstorming 진행 중):**
+- 프롬프트 톤 변경: 백과사전 스타일 → 시니어 엔지니어가 설명하는 스타일
+- 섹션 구조 변경: "왜 이걸 알아야 하는지"를 먼저, "정의"는 나중에
+- 개인적 인사이트/의견 포함: "실무에서 이걸 쓸 때 주의할 점은..." 식의 경험담 톤
+- 구세대 용어 재생성(HQ-03)과 동시 진행 가능
+
+#### HQ-13 term type 재설계 + facet 시스템 — 배경 노트
+
+**현재 문제:** 10개 term type이 분류만 하고 출력 구조에 영향을 못 줌. Trainium, RAG, GPT-4o가 같은 11개 섹션으로 나와서 "다 똑같은 위키" 느낌.
+
+**설계 (확정):**
+- **term type 8개:** concept, model_architecture, technique_method, product_platform, hardware_infra, workflow_pattern, metric_benchmark, protocol_format
+- **facet 2개:** intent (understand/compare/build/debug/evaluate), volatility (stable/evolving/fast-changing)
+- **evidence는 규칙 기반:** type → evidence 자동 매핑 (LLM 분류 불필요)
+
+**구현 범위:**
+1. DB: handbook_terms에 term_type, facet_intent, facet_volatility 컬럼 추가
+2. 분류 프롬프트: _classify_term_type()를 type + intent + volatility 동시 분류로 확장
+3. 프롬프트: TYPE_SECTION_WEIGHTS — type×intent별 섹션 가중치/우선순위
+4. 프론트엔드: type×intent에 따라 섹션 펼침/접힘/순서 차별화
+5. 기존 용어 마이그레이션: 225개 용어에 type+facet 일괄 분류
+6. evidence 규칙: type → 검색 소스 우선순위 자동 결정
 
 ### 품질 점수 모니터링 (AUTOPUB-01 전제조건)
 
