@@ -91,9 +91,10 @@ Given the English profile of a product, write the Korean version of specific fie
 
 ## Fields
 
-1. **name_ko** (string or null): Korean transliteration ONLY if commonly used.
-   - "미드저니" for Midjourney (Korean transliteration is common)
-   - null for ChatGPT (Koreans say "ChatGPT" as-is)
+1. **name_ko** (string or null): Korean transliteration ONLY if commonly used in Korean tech community.
+   - "미드저니" for Midjourney, "클로드" for Claude, "제미나이" for Gemini, "퍼플렉시티" for Perplexity
+   - null for ChatGPT, Cursor, GitHub Copilot (Koreans use the English name as-is)
+   - When in doubt, prefer providing a transliteration over null — Korean readers appreciate it
 
 2. **tagline_ko** (string): Natural Korean tagline, NOT a translation of the English one.
 
@@ -265,7 +266,7 @@ Return JSON:
   "platforms": ["web", "ios", "android", "api", "desktop"],
   "integrations": ["named integrations, e.g. 'Google Workspace', 'Slack'"],
   "limitations_observed": ["limitations mentioned in sources"],
-  "korean_support_evidence": "direct quote or null"
+  "korean_support_evidence": "direct quote about Korean language support, or 'No Korean support information found in sources'"
 }
 
 Rules:
@@ -452,7 +453,7 @@ async def _search_brave_product(name: str, url: str) -> str:
     try:
         import httpx
         domain = urlparse(url).netloc if url else ""
-        query = f'"{name}" features specifications OR "context window" OR changelog'
+        query = f'"{name}" features specifications OR pricing OR "context window" OR "language support"'
         if domain:
             query += f" site:{domain}"
         async with httpx.AsyncClient(timeout=10) as http:
@@ -842,6 +843,11 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         # Use classification's primary_category as authoritative
         if classification.get("primary_category"):
             result["primary_category"] = classification["primary_category"]
+
+        # Post-processing: assistants should not have "platform" in secondary
+        if result.get("primary_category") == "assistant":
+            sc = result.get("secondary_categories", [])
+            result["secondary_categories"] = [c for c in sc if c != "platform"]
 
         return result, settings.openai_model_main, total_tokens
 
