@@ -19,16 +19,16 @@ AI moves fastest in English, and English content is most diverse. But Korean rea
 
 ## How It Was Built
 
-The AI pipeline went through 9 versions over 26 days. Version 1 spent 5 days systematically uncovering three architectural flaws — and those findings made v2 possible in just 1 day. Each iteration got exponentially faster, from single-source summaries to multi-source synthesis. All metrics below are measured from production databases.
+The AI pipeline went through 10 versions over 33 days, transitioning from gpt-4o to gpt-5. Version 1 spent 5 days systematically uncovering three architectural flaws -- and those findings made v2 possible in just 1 day. All metrics below are measured from production databases.
 
-| Metric (measured) | v2–v4 | v5–v6 | v7–v8 | v9 |
+| Metric (measured) | v2-v4 | v5-v8 | v9 | v10 (gpt-5) |
 |---|---|---|---|---|
-| **Avg cost/run** | $0.18 | $0.20 | $0.25 | $0.55 |
-| **Expert citations** | 1.8–2.7 | 12.9–13.9 | 14.2–16.8 | 16.8 |
-| **Sources per article** | 1 | 1 | 1 | up to 5 |
-| **Collection sources** | 1 | 4 | 6 | 6 |
+| **Avg cost/run** | $0.18 | $0.20-$0.25 | $0.43 | $0.58 |
+| **Model** | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-5 |
+| **Expert citations** | 1.8-2.7 | 12.9-16.8 | 17.5-20.5 | 17.5-20.5 |
+| **Quality (R/B)** | 76/83 | 92/95 | 94/95 | 96/91 |
 
-The full story — including root cause discoveries, key decisions, cost trade-offs, and quantitative results — is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
+The full story -- including root cause discoveries, key decisions, gpt-5 migration, and quantitative results -- is in the [Development Journey](./docs/portfolio/pipeline-journey.en.md).
 
 ## The Three Pillars of 0to1log
 
