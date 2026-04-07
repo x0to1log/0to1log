@@ -47,7 +47,8 @@
 | GPT5-03 | gpt-5 모델 마이그레이션 — Writer digest (gpt-5) | todo | — | — |
 | GPT5-04 | gpt-5 전체 파이프라인 backfill 비교 검증 | todo | — | — |
 | GPT5-05 | gpt-5 main 머지 + gpt-4.1 deprecation 대응 완료 | todo | — | — |
-| WEEKLY-01 | Weekly 파이프라인 EN+KO 동시 생성 — Daily와 구조 통일 | in_progress | 2026-04-06 | — |
+| WEEKLY-01 | Weekly 파이프라인 EN+KO 동시 생성 — Daily와 구조 통일 | done | 2026-04-06 | 2026-04-07 |
+| AUTO-PUB-01 | Auto-publish (quality ≥ 85) + draft email 알림 + 어드민 dot 표시 | in_progress | 2026-04-08 | — |
 
 ---
 

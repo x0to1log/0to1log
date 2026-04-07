@@ -1,4 +1,6 @@
 ﻿---
+import { createClient } from '@supabase/supabase-js';
+
 interface Props {
   activeSection?: 'dashboard' | 'posts' | 'news' | 'pipeline' | 'pipeline-analytics' | 'site-analytics' | 'blog' | 'handbook' | 'feedback' | 'products' | 'webhooks' | 'settings';
   recentPosts?: Array<{ title: string; slug: string; type: 'post' | 'term' }>;
@@ -7,6 +9,25 @@ interface Props {
 
 const { activeSection = 'dashboard', recentPosts = [], stats } = Astro.props;
 const currentPath = Astro.url.pathname;
+
+// Query draft news count for 🔴 dot indicator
+let draftNewsCount = 0;
+try {
+  const accessToken = Astro.locals.accessToken;
+  if (accessToken) {
+    const sb = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+    );
+    const { count } = await sb
+      .from('news_posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'draft')
+      .in('post_type', ['research', 'business']);
+    draftNewsCount = count ?? 0;
+  }
+} catch { /* sidebar dot is best-effort */ }
 ---
 
 <aside class="admin-sidebar" id="admin-sidebar">
@@ -50,6 +71,7 @@ const currentPath = Astro.url.pathname;
         <path d="M2 3h12M2 7h8M2 11h10" />
       </svg>
       <span>News</span>
+      {draftNewsCount > 0 && <span class="admin-dot-alert" title={`${draftNewsCount} draft(s)`}></span>}
     </a>
     <a href="/admin/handbook/" class:list={['admin-sidebar-link', { 'admin-sidebar-link--active': activeSection === 'handbook' }]}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">

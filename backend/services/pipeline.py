@@ -962,6 +962,34 @@ def _check_structural_penalties(
     return min(penalty, 30), warnings
 
 
+async def _send_draft_alert(batch_id: str, digest_type: str, quality_score: int | None) -> None:
+    """Send email alert when a digest is saved as draft (below auto-publish threshold)."""
+    if not settings.resend_api_key or not settings.admin_email:
+        logger.info("Draft alert skipped — resend_api_key or admin_email not configured")
+        return
+    try:
+        import httpx
+        await httpx.AsyncClient().post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+            json={
+                "from": "0to1log <noreply@0to1log.com>",
+                "to": [settings.admin_email],
+                "subject": f"[0to1log] Draft alert: {batch_id} {digest_type} (score: {quality_score})",
+                "text": (
+                    f"{batch_id} {digest_type} scored {quality_score}/100 "
+                    f"(threshold: {settings.auto_publish_threshold}).\n\n"
+                    f"Saved as draft — manual review required.\n\n"
+                    f"Admin: https://0to1log.com/admin/news"
+                ),
+            },
+            timeout=10,
+        )
+        logger.info("Draft alert email sent for %s %s (score=%s)", batch_id, digest_type, quality_score)
+    except Exception as e:
+        logger.warning("Failed to send draft alert email: %s", e)
+
+
 async def _generate_digest(
     classified: list[ClassifiedGroup],
     digest_type: str,
@@ -1343,13 +1371,18 @@ async def _generate_digest(
         excerpt = (digest_excerpt if locale == "en" else digest_excerpt_ko) or digest_excerpt or ""
         focus_items = (digest_focus_items if locale == "en" else digest_focus_items_ko) or digest_focus_items or []
 
+        # Auto-publish if quality score meets threshold; otherwise draft
+        auto_pub = (
+            quality_score is not None
+            and quality_score >= settings.auto_publish_threshold
+        )
         row: dict[str, Any] = {
             "title": title,
             "slug": slug,
             "locale": locale,
             "category": "ai-news",
             "post_type": digest_type,
-            "status": "draft",
+            "status": "published" if auto_pub else "draft",
         }
         # Only include content fields when non-empty to avoid overwriting
         # existing data with null on re-runs (upsert replaces entire row)
@@ -1370,7 +1403,7 @@ async def _generate_digest(
             "fact_pack": {**digest_meta, "quality_score": quality_score},
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
-            "published_at": f"{batch_id}T09:00:00Z",
+            "published_at": f"{batch_id}T00:00:00Z",
             "pipeline_model": settings.openai_model_main,
             "translation_group_id": translation_group_id,
             "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -1404,18 +1437,24 @@ async def _generate_digest(
         try:
             supabase.table("news_posts").upsert(row, on_conflict="slug").execute()
             posts_created += 1
-            logger.info("Saved %s %s digest draft: %s", digest_type, locale, slug)
+            status_label = "published" if auto_pub else "draft"
+            logger.info("Saved %s %s digest (%s, score=%s): %s",
+                        digest_type, locale, status_label, quality_score, slug)
         except Exception as e:
             error_msg = f"Failed to save {digest_type} {locale} digest: {e}"
             logger.error(error_msg)
             errors.append(error_msg)
 
+    # Send email alert if any post was saved as draft (below threshold)
+    if posts_created > 0 and not auto_pub:
+        await _send_draft_alert(batch_id, digest_type, quality_score)
+
     await _log_stage(
         supabase, run_id, f"save:{digest_type}",
         "success" if posts_created > 0 else "failed", t_save,
-        output_summary=f"{posts_created} digest rows saved",
+        output_summary=f"{posts_created} rows saved ({'published' if auto_pub else 'draft'}, score={quality_score})",
         post_type=digest_type,
-        debug_meta={"slug_base": slug_base, "locales": ["en", "ko"]},
+        debug_meta={"slug_base": slug_base, "locales": ["en", "ko"], "auto_published": auto_pub},
     )
 
     return posts_created, errors, cumulative_usage

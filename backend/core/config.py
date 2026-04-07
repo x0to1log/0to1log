@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     tavily_api_key: str = ""
     exa_api_key: str = ""
     brave_api_key: str = ""
-    admin_email: str = "admin@0to1log.com"
+    admin_email: str = "x0to1log@gmail.com"
+    resend_api_key: str = ""
+    auto_publish_threshold: int = 85
     cron_secret: str = ""
     revalidate_secret: str = ""
     fastapi_url: str = ""
