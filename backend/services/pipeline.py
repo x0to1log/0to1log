@@ -1491,7 +1491,7 @@ async def run_daily_pipeline(
                 for url in (row.get("source_urls") or []):
                     published_urls.add(url)
             # Headlines for event dedup: draft + published (any generated post counts)
-            cutoff_2d = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+            cutoff_2d = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
             headline_rows = supabase.table("news_posts").select("title") \
                 .in_("status", ["published", "draft"]) \
                 .gte("published_at", cutoff_2d) \
