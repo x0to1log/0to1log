@@ -215,26 +215,36 @@ Given the product name, URL, and page content excerpt, return JSON:
 }
 
 Categories: assistant, image, video, audio, coding, workflow, builder, platform, research, community
-- assistant: chatbots, LLMs, search AI
+- assistant: chatbots, conversational AI, LLMs with a chat interface, search AI. If the PRIMARY use is "ask questions and get answers" → assistant. Products like ChatGPT, Claude, Gemini, Perplexity are assistants even if they also have an API.
 - image: image generation, editing, design tools
 - video: video generation, editing
 - audio: TTS, music, voice, transcription
-- coding: IDEs, code generation, dev tools
-- workflow: automation, analytics, project management
-- builder: app builders, no-code, LLM frameworks
-- platform: API management, model hosting, DevOps
+- coding: IDEs, code generation, dev tools (Cursor, GitHub Copilot, Replit)
+- workflow: automation, analytics, project management (n8n, Zapier)
+- builder: app builders, no-code, LLM frameworks (Langchain, Flowise)
+- platform: ONLY for products whose PRIMARY purpose is hosting/serving OTHER models or providing infrastructure. Examples: AWS Bedrock, Replicate, Hugging Face Inference. A product that has an API is NOT automatically a platform.
 - research: papers, academic tools
 - community: forums, newsletters, directories
 
+## Disambiguation Rules
+- "Has an API" does NOT make it a platform. ChatGPT has an API but it's an assistant.
+- "Supports multiple models" does NOT make it a platform unless hosting models IS the core product.
+- If end users primarily use a chat/conversation interface → assistant
+- If developers primarily use it to host/deploy/serve models → platform
+- If the product is an LLM with both chat UI and API → assistant (the chat UI is the primary product)
+
 Product nature:
-- tool: standalone app users interact with directly
-- platform: hosts or serves other tools/models
-- service: managed cloud service
+- tool: standalone app users interact with directly (most products)
+- platform: hosts or serves other tools/models (Replicate, HuggingFace)
+- service: managed cloud service (AWS Bedrock, Azure OpenAI)
 - library: code dependency (pip install, npm install)
 - framework: developer scaffold for building apps
 - community: directory, forum, or content hub
 
 Target audience: the PRIMARY user, not everyone who might use it.
+
+## secondary_categories note
+- secondary_categories should NOT include the primary_category (no duplicates).
 
 Respond with JSON only."""
 
