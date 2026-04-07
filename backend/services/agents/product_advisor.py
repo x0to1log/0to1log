@@ -446,6 +446,144 @@ runway 런웨이 영상 생성 비디오 만들기 동영상 제작 AI영상 영
 
 Respond with the keyword text only — no explanation, no formatting."""
 
+CLASSIFY_PRODUCT_SYSTEM = """Classify this AI product into structured categories.
+Given the product name, URL, and page content excerpt, return JSON:
+
+{
+  "primary_category": "one of the categories below",
+  "product_nature": "one of: tool, platform, service, library, framework, community",
+  "target_audience": "one of: beginner, creator, developer, business, researcher",
+  "key_differentiator": "one phrase, max 10 words"
+}
+
+Categories: assistant, image, video, audio, coding, workflow, builder, platform, research, community
+- assistant: chatbots, LLMs, search AI
+- image: image generation, editing, design tools
+- video: video generation, editing
+- audio: TTS, music, voice, transcription
+- coding: IDEs, code generation, dev tools
+- workflow: automation, analytics, project management
+- builder: app builders, no-code, LLM frameworks
+- platform: API management, model hosting, DevOps
+- research: papers, academic tools
+- community: forums, newsletters, directories
+
+Product nature:
+- tool: standalone app users interact with directly
+- platform: hosts or serves other tools/models
+- service: managed cloud service
+- library: code dependency (pip install, npm install)
+- framework: developer scaffold for building apps
+- community: directory, forum, or content hub
+
+Target audience: the PRIMARY user, not everyone who might use it.
+
+Respond with JSON only."""
+
+CATEGORY_GUIDES = {
+    "assistant": {
+        "feature_focus": "Model capabilities, context window size, multimodal support (image/file/voice), plugin/tool ecosystem, conversation memory",
+        "use_case_frame": "[Non-technical person] using AI to [specific daily task] at [work/school/home]",
+        "getting_started_note": "Step 1: sign up (free tier). Step 3: first 'wow' moment — describe a concrete result the user sees",
+        "tagline_rule": "Lead with what the user DOES, not what the AI IS. BAD: 'Advanced AI assistant'. GOOD: 'Ask anything, get answers with sources and files'",
+        "anti_patterns": "Do not say 'powered by GPT/Claude'. Avoid comparing to other assistants unless it's a key differentiator.",
+    },
+    "image": {
+        "feature_focus": "Output quality/resolution, style diversity, editing capabilities (inpainting, outpainting, upscale), input types (text/image/sketch), generation speed",
+        "use_case_frame": "[Creative professional or hobbyist] creating [specific visual content] for [specific purpose]",
+        "getting_started_note": "Step 1: access method (web/Discord/API). Step 3: first generated image with approximate wait time",
+        "tagline_rule": "Lead with the creative outcome. BAD: 'AI image generator'. GOOD: 'Turn a text prompt into publication-quality art in 60 seconds'",
+        "anti_patterns": "Do not omit output resolution or watermark policy. Mention style control options.",
+    },
+    "video": {
+        "feature_focus": "Output resolution and duration, rendering time, style/motion control, input types (text/image/video), watermark policy, export formats",
+        "use_case_frame": "[Content creator or marketer] producing [specific video type] for [platform or purpose]",
+        "getting_started_note": "Step 1: access method. Step 3: first video clip with approximate render time",
+        "tagline_rule": "Lead with the creation outcome. BAD: 'AI video platform'. GOOD: 'Turn a text prompt into a cinematic 10-second clip'",
+        "anti_patterns": "Do not omit rendering time, output duration limits, or resolution caps.",
+    },
+    "audio": {
+        "feature_focus": "Voice quality/naturalness, supported languages, voice cloning capabilities, real-time vs batch, audio format support, latency",
+        "use_case_frame": "[Creator or professional] producing [specific audio content] in [language or context]",
+        "getting_started_note": "Step 1: access method. Step 3: first audio output with quality description",
+        "tagline_rule": "Lead with the audio outcome. BAD: 'AI voice tool'. GOOD: 'Clone any voice and generate natural speech in 29 languages'",
+        "anti_patterns": "Do not omit supported languages or voice quality limitations.",
+    },
+    "coding": {
+        "feature_focus": "Supported languages/frameworks, IDE integration method (extension/standalone/fork), code completion quality, context awareness (codebase-wide or file-level), diff/refactor capabilities",
+        "use_case_frame": "[Developer role] doing [specific coding task] in [specific language/framework]",
+        "getting_started_note": "Step 1: installation method, not just 'sign up'. Step 3: coding 'aha' moment — describe the first generated/fixed code",
+        "tagline_rule": "Lead with the coding action. BAD: 'AI coding assistant for developers'. GOOD: 'Edit code by describing changes in plain English'",
+        "anti_patterns": "Do not say 'AI-powered IDE'. Mention specific model support (GPT-4o, Claude, etc.) if available.",
+    },
+    "workflow": {
+        "feature_focus": "Number of app integrations, trigger types (webhook/cron/event), self-host option, visual builder quality, code extensibility, execution limits",
+        "use_case_frame": "[Role] automating [specific multi-step process] between [specific apps]",
+        "getting_started_note": "Step 1: sign up or self-host command. Step 3: first automation running end-to-end",
+        "tagline_rule": "Lead with the automation outcome. BAD: 'AI workflow automation'. GOOD: 'Connect 400+ apps in visual workflows — no code for simple, full JS for complex'",
+        "anti_patterns": "Do not omit execution limits or pricing tier differences. Mention self-host option if available.",
+    },
+    "builder": {
+        "feature_focus": "No-code/low-code level, deployment options (hosted/self-host), template library, supported AI models, database integration, collaboration features",
+        "use_case_frame": "[Non-developer or developer] building [specific app type] without [specific technical skill]",
+        "getting_started_note": "Step 1: sign up or install. Step 3: first deployed app or working prototype",
+        "tagline_rule": "Lead with what gets built. BAD: 'No-code AI app builder'. GOOD: 'Build and deploy an AI chatbot in 10 minutes without writing code'",
+        "anti_patterns": "Do not conflate no-code and low-code. Be specific about what requires coding.",
+    },
+    "platform": {
+        "feature_focus": "Available models/services, API design (REST/SDK/GraphQL), latency/throughput SLA, pricing model (per-token/per-request/seat), security certifications, region availability",
+        "use_case_frame": "[Developer or team] integrating [specific AI capability] into [production application]",
+        "getting_started_note": "Step 1: API key or account setup. Step 3: first successful API call with response",
+        "tagline_rule": "Lead with the developer value. BAD: 'AI platform for enterprise'. GOOD: 'Access 50+ AI models through one unified API with guaranteed uptime'",
+        "anti_patterns": "Do not use marketing language ('enterprise-grade', 'cutting-edge'). Include specific model names and pricing if available.",
+    },
+    "research": {
+        "feature_focus": "Paper access scope (arXiv/PubMed/all), search quality (semantic vs keyword), citation tools, summarization quality, full-text availability",
+        "use_case_frame": "[Researcher or student] doing [specific research task] for [academic purpose]",
+        "getting_started_note": "Step 1: sign up. Step 3: first useful paper found or summary generated",
+        "tagline_rule": "Lead with the research outcome. BAD: 'AI research tool'. GOOD: 'Find and summarize relevant papers from 200M+ articles in seconds'",
+        "anti_patterns": "Do not overstate paper coverage. Be specific about which databases are indexed.",
+    },
+    "community": {
+        "feature_focus": "Active user count, content types (posts/tools/datasets/models), curation method (algorithmic/editorial), contribution model, API access",
+        "use_case_frame": "[AI enthusiast or professional] discovering [specific resource type] for [specific purpose]",
+        "getting_started_note": "Step 1: create account. Step 3: first useful resource discovered or shared",
+        "tagline_rule": "Lead with what users find or do. BAD: 'AI community platform'. GOOD: 'Discover, share, and deploy 500K+ open-source AI models'",
+        "anti_patterns": "Do not inflate user numbers. Be specific about what type of community it is.",
+    },
+}
+
+
+def build_product_category_guide(classification: dict) -> str:
+    """Build a category-specific guide string for prompt injection."""
+    category = classification.get("primary_category", "assistant")
+    nature = classification.get("product_nature", "tool")
+    audience = classification.get("target_audience", "beginner")
+    differentiator = classification.get("key_differentiator", "")
+    guide = CATEGORY_GUIDES.get(category, CATEGORY_GUIDES["assistant"])
+    parts = [
+        f"## Category-Specific Guide: {category} ({nature} for {audience})",
+    ]
+    if differentiator:
+        parts.append(f"Key differentiator: {differentiator}")
+    parts.extend([
+        f"Feature emphasis: {guide['feature_focus']}",
+        f"Use case format: {guide['use_case_frame']}",
+        f"Getting started: {guide['getting_started_note']}",
+        f"Tagline: {guide['tagline_rule']}",
+        f"Avoid: {guide['anti_patterns']}",
+    ])
+    return "\n".join(parts)
+
+
+PRODUCT_GROUNDING_RULES = """## Factual Grounding (MANDATORY)
+1. Base ALL claims on the provided page content and reviews.
+2. If information is not available, use null or empty array — do NOT fabricate.
+3. NEVER fabricate: pricing numbers, user counts, funding amounts, partnership claims.
+4. For pricing_detail: only include plans visible on the product page. If pricing is gated behind signup, state that instead of guessing.
+5. For features: describe only capabilities confirmed by the page content.
+6. For korean_support: only set true if Korean UI or documentation is explicitly mentioned."""
+
 
 async def _fetch_page_content(url: str) -> str:
     """Fetch product page content using Tavily, with Exa fallback."""
