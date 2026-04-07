@@ -50,6 +50,24 @@ function initBookmarks(): void {
         if (svg) {
           svg.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
         }
+
+        // Bookmark pop + particle effect on save
+        if (isBookmarked && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          btn.classList.add('bookmark-fill-active');
+          btn.addEventListener('animationend', () => btn.classList.remove('bookmark-fill-active'), { once: true });
+          const rect = btn.getBoundingClientRect();
+          btn.style.position = 'relative';
+          for (let i = 0; i < 4; i++) {
+            const p = document.createElement('span');
+            p.className = 'bookmark-particle';
+            p.style.setProperty('--px', (Math.random() * 24 - 12) + 'px');
+            p.style.setProperty('--py', -(Math.random() * 18 + 6) + 'px');
+            p.style.left = (rect.width / 2 - 2.5) + 'px';
+            p.style.top = (rect.height / 2 - 2.5) + 'px';
+            btn.appendChild(p);
+            p.addEventListener('animationend', () => p.remove());
+          }
+        }
       } catch {
         // Silently fail on network errors
       }

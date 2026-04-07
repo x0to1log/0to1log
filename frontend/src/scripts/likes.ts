@@ -44,6 +44,24 @@ function initLikes(): void {
 
       const countEl = btn.querySelector('[data-like-count]');
       if (countEl) countEl.textContent = String(data.count);
+
+      // Heart pop + particle effect on like
+      if (liked && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        btn.classList.add('like-pop-active');
+        btn.addEventListener('animationend', () => btn.classList.remove('like-pop-active'), { once: true });
+        const rect = btn.getBoundingClientRect();
+        for (let i = 0; i < 5; i++) {
+          const p = document.createElement('span');
+          p.className = 'like-particle';
+          p.style.setProperty('--px', (Math.random() * 30 - 15) + 'px');
+          p.style.setProperty('--py', -(Math.random() * 20 + 8) + 'px');
+          p.style.left = (rect.width / 2 - 3) + 'px';
+          p.style.top = (rect.height / 2 - 3) + 'px';
+          btn.style.position = 'relative';
+          btn.appendChild(p);
+          p.addEventListener('animationend', () => p.remove());
+        }
+      }
     } catch {
       // Silently fail
     }

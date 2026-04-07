@@ -12,9 +12,15 @@ function initShare(): void {
     const url = dropdown.dataset.shareUrl || window.location.href;
     const title = dropdown.dataset.shareTitle || document.title;
 
-    // Toggle dropdown
+    // Mobile: use native share API directly, skip dropdown
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+
     toggleBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isMobile && navigator.share) {
+        navigator.share({ title, url }).catch(() => {});
+        return;
+      }
       const isOpen = dropdown.style.display !== 'none';
       dropdown.style.display = isOpen ? 'none' : '';
     });
