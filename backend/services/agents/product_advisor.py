@@ -43,6 +43,7 @@ Given a product page's content, produce a JSON profile that helps readers unders
 10. **features** (array, 3-5 strings): Each follows "[situation] → [result]" format.
     - BAD: "Advanced AI technology" (vague)
     - GOOD: "Paste a meeting transcript → get a structured summary with action items in 30 seconds"
+    - IMPORTANT: If Extracted Facts lists technical_specs or unique_features, you MUST incorporate them into features. For example, if facts say "200K token context window", a feature should mention it: "Upload a 200-page document → get a full summary using the 200K token context window"
 
 11. **use_cases** (array, 2-3 strings): Each follows "[Specific person/role] + [specific task in specific situation]".
     - BAD: "For developers" (too broad)
@@ -84,7 +85,9 @@ Given the English profile of a product, write the Korean version of specific fie
 - Write NATURALLY in Korean — this is NOT a translation task.
 - Use the English profile as factual reference, but choose different angles and expressions.
 - Technical terms (API, LLM, RAG) stay in English. Add brief Korean context only if the term is obscure.
-- Tagline format: "[핵심 기능] — [차별점 또는 대상]"
+- Tagline: max 25 characters (Korean). Format: "[핵심 기능] — [차별점]"
+  - BAD: "Drive·Gmail·Docs에서 바로 물어보고 즉시 정리 — Google Workspace 작업을 빠르게 끝내는 도우미" (too long, 42 chars)
+  - GOOD: "Drive·Gmail 즉시 요약 — Workspace AI 도우미" (22 chars)
 
 ## Fields
 
@@ -244,8 +247,10 @@ Product nature:
 
 Target audience: the PRIMARY user, not everyone who might use it.
 
-## secondary_categories note
+## secondary_categories rules
 - secondary_categories should NOT include the primary_category (no duplicates).
+- Do NOT add "platform" to secondary_categories for products like ChatGPT, Claude, Gemini — having an API does not make it a platform.
+- Only add "platform" if the product genuinely hosts/serves OTHER people's models (e.g., Hugging Face is an assistant AND a platform).
 
 Respond with JSON only."""
 
@@ -447,7 +452,7 @@ async def _search_brave_product(name: str, url: str) -> str:
     try:
         import httpx
         domain = urlparse(url).netloc if url else ""
-        query = f'"{name}" features specifications OR changelog'
+        query = f'"{name}" features specifications OR "context window" OR changelog'
         if domain:
             query += f" site:{domain}"
         async with httpx.AsyncClient(timeout=10) as http:
@@ -869,13 +874,12 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             return ""
 
         async def _brave_pricing_search() -> str:
-            """Step B: Brave web search for official pricing page."""
+            """Step B: Brave web search for pricing page (no site: restriction for cross-domain pricing)."""
             if not settings.brave_api_key:
                 return ""
             try:
                 import httpx
-                domain = urlparse(body.url or "").netloc or product_name
-                query = f"{product_name} pricing site:{domain}"
+                query = f'"{product_name}" pricing plans cost monthly'
                 async with httpx.AsyncClient(timeout=10) as http:
                     resp = await http.get(
                         "https://api.search.brave.com/res/v1/web/search",
