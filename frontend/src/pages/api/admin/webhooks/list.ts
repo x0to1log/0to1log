@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ locals }) => {
     .order('created_at', { ascending: false });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

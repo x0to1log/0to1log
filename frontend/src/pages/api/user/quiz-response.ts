@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return json({ error: error.message }, 500);
+    return json({ error: 'Database error' }, 500);
   }
 
   return json(data);

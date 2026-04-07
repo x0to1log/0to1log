@@ -4,6 +4,27 @@ import { formatTestPayload } from '../../../lib/webhooks';
 
 export const prerender = false;
 
+/** Block SSRF: reject internal IPs, metadata endpoints, non-HTTPS */
+function isSafeWebhookUrl(raw: string): boolean {
+  if (!raw.startsWith('https://')) return false;
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return false;
+    if (host === '169.254.169.254' || host === 'metadata.google.internal') return false;
+    const parts = host.split('.').map(Number);
+    if (parts.length === 4 && !parts.some(isNaN)) {
+      if (parts[0] === 10) return false;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+      if (parts[0] === 192 && parts[1] === 168) return false;
+      if (parts[0] === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -32,6 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error || !hook) return json({ error: 'Webhook not found' }, 404);
+  if (!isSafeWebhookUrl(hook.url)) return json({ error: 'Invalid webhook URL' }, 400);
 
   const payload = formatTestPayload(hook.platform, hook.locale === 'all' ? 'en' : hook.locale);
 
@@ -53,6 +75,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return json({ success: true });
   } catch (err: any) {
-    return json({ success: false, error: err?.message || 'Request failed' });
+    return json({ success: false, error: 'Request failed' });
   }
 };

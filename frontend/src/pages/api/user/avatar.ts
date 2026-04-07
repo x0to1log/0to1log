@@ -102,7 +102,7 @@ export const DELETE: APIRoute = async ({ locals }) => {
     .eq('id', locals.user.id);
 
   if (error) {
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ error: 'Database error' }, 500);
   }
 
   const res = jsonResponse({ avatar_url: oauthAvatar });

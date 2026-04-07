@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .select()
       .single();
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: 'Database error' }), {
         status: 500, headers: { 'Content-Type': 'application/json' },
       });
     }

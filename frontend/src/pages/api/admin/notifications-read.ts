@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ locals }) => {
     .eq('is_read', false);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Database error' }), { status: 500 });
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });

@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ locals }) => {
     .eq('user_id', locals.user.id);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, { onConflict: 'user_id,term_id', ignoreDuplicates: true });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -117,7 +117,7 @@ export const PUT: APIRoute = async ({ request, locals, url }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

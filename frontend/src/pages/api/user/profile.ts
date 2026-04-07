@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
     .maybeSingle();
 
   if (error) {
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ error: 'Database error' }, 500);
   }
 
   // No profile yet — return fallback from user metadata
@@ -148,7 +148,7 @@ export const PUT: APIRoute = async ({ request, locals, cookies }) => {
     if (error.code === '23505' && error.message.includes('username')) {
       return jsonResponse({ error: 'Username already taken' }, 409);
     }
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ error: 'Database error' }, 500);
   }
 
   // Invalidate cached user extras so next page load fetches fresh profile

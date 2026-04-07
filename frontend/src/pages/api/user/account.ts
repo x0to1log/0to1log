@@ -20,7 +20,8 @@ export const DELETE: APIRoute = async ({ locals, cookies }) => {
   const { error } = await supabase.rpc('delete_own_account');
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('delete_own_account error:', error.message);
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

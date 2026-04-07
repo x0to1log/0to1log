@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     .order('created_at', { ascending: true });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -108,7 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -148,7 +148,7 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
   const { data, error } = await deleteQuery.select('id');
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Database error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
     });
   }

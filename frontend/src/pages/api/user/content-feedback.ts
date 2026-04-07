@@ -65,7 +65,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     .maybeSingle();
 
   if (error) {
-    return json({ error: error.message }, 500);
+    return json({ error: 'Database error' }, 500);
   }
 
   return json({
@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .single();
 
   if (error) {
-    return json({ error: error.message }, 500);
+    return json({ error: 'Database error' }, 500);
   }
 
   return json({
@@ -183,7 +183,7 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
     .eq('locale', locale);
 
   if (error) {
-    return json({ error: error.message }, 500);
+    return json({ error: 'Database error' }, 500);
   }
 
   return json({ success: true });

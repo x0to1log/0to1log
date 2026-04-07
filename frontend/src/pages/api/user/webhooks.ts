@@ -8,6 +8,30 @@ const VALID_PLATFORMS = ['discord', 'slack', 'custom'];
 const VALID_LOCALES = ['all', 'en', 'ko'];
 const MAX_WEBHOOKS = 5;
 
+/** Block SSRF: reject internal IPs, metadata endpoints, non-HTTPS */
+function isSafeWebhookUrl(raw: string): boolean {
+  if (!raw.startsWith('https://')) return false;
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.toLowerCase();
+    // Block localhost variants
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return false;
+    // Block cloud metadata
+    if (host === '169.254.169.254' || host === 'metadata.google.internal') return false;
+    // Block private IP ranges (10.x, 172.16-31.x, 192.168.x)
+    const parts = host.split('.').map(Number);
+    if (parts.length === 4 && !parts.some(isNaN)) {
+      if (parts[0] === 10) return false;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+      if (parts[0] === 192 && parts[1] === 168) return false;
+      if (parts[0] === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -34,7 +58,7 @@ export const GET: APIRoute = async ({ locals }) => {
     .eq('user_id', locals.user.id)
     .order('created_at', { ascending: true });
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Database error' }, 500);
   return json(data);
 };
 
@@ -46,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { label, url, platform, locale = 'all' } = body;
 
   if (!label?.trim()) return json({ error: 'Label is required' }, 400);
-  if (!url?.trim() || !url.startsWith('https://')) return json({ error: 'URL must start with https://' }, 400);
+  if (!url?.trim() || !isSafeWebhookUrl(url.trim())) return json({ error: 'Invalid webhook URL' }, 400);
   if (!VALID_PLATFORMS.includes(platform)) return json({ error: 'Invalid platform' }, 400);
   if (!VALID_LOCALES.includes(locale)) return json({ error: 'Invalid locale' }, 400);
 
@@ -74,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .select()
     .single();
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Database error' }, 500);
   return json(data, 201);
 };
 
@@ -86,8 +110,8 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   const { id, label, url, platform, locale, is_active } = body;
 
   if (!id) return json({ error: 'id is required' }, 400);
-  if (url !== undefined && (!url.trim() || !url.startsWith('https://'))) {
-    return json({ error: 'URL must start with https://' }, 400);
+  if (url !== undefined && (!url.trim() || !isSafeWebhookUrl(url.trim()))) {
+    return json({ error: 'Invalid webhook URL' }, 400);
   }
   if (platform !== undefined && !VALID_PLATFORMS.includes(platform)) {
     return json({ error: 'Invalid platform' }, 400);
@@ -115,7 +139,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     .select()
     .single();
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Database error' }, 500);
   return json(data);
 };
 
@@ -133,6 +157,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     .eq('id', id)
     .eq('user_id', locals.user.id);
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Database error' }, 500);
   return json({ success: true });
 };

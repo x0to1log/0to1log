@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     .upsert({ key: body.key, value: body.value, updated_at: new Date().toISOString() });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Database error' }), { status: 500 });
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
