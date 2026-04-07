@@ -1081,13 +1081,15 @@ BASIC_SECTIONS_KO = [
     ("basic_ko_1_plain", "## 쉽게 이해하기"),
     ("basic_ko_2_example", "## 예시와 비유"),
     ("basic_ko_3_glance", "## 한눈에 보기"),
-    ("basic_ko_4_why", "## 왜 중요한가"),
+    ("basic_ko_4_why", "## 알아야 하는 이유"),
     ("basic_ko_5_where", "## 실제로 어디서 쓰이나"),
-    ("basic_ko_9_roles", "## 직군별 활용 포인트"),
+    ("basic_ko_6b_news_context", "## 뉴스에서 만났다면"),
     ("basic_ko_6_caution", "## 주의할 점"),
+    ("basic_ko_6c_checklist", "## 이해 체크리스트"),
     ("basic_ko_7_comm", "## 대화에서는 이렇게"),
     ("basic_ko_8_related", "## 함께 알면 좋은 용어"),
-    ("basic_ko_10_learning_path", "## 다음에 읽을 것"),
+    ("basic_ko_9_roles", "## 직군별 활용 포인트"),
+    ("basic_ko_10_learning_path", "## 더 깊이 알고 싶다면"),
 ]
 
 BASIC_SECTIONS_EN = [
@@ -1095,13 +1097,15 @@ BASIC_SECTIONS_EN = [
     ("basic_en_1_plain", "## Plain Explanation"),
     ("basic_en_2_example", "## Example & Analogy"),
     ("basic_en_3_glance", "## At a Glance"),
-    ("basic_en_4_why", "## Why It Matters"),
+    ("basic_en_4_why", "## Why You Should Know This"),
     ("basic_en_5_where", "## Where It's Used"),
-    ("basic_en_9_roles", "## Role-Specific Insights"),
-    ("basic_en_6_caution", "## Precautions"),
-    ("basic_en_7_comm", "## Communication"),
+    ("basic_en_6b_news_context", "## When You See This in the News"),
+    ("basic_en_6_caution", "## Common Misconceptions"),
+    ("basic_en_6c_checklist", "## Understanding Checklist"),
+    ("basic_en_7_comm", "## How It Sounds in Conversation"),
     ("basic_en_8_related", "## Related Terms"),
-    ("basic_en_10_learning_path", "## What to Read Next"),
+    ("basic_en_9_roles", "## Role-Specific Insights"),
+    ("basic_en_10_learning_path", "## Go Deeper"),
 ]
 
 ADVANCED_SECTIONS_KO = [

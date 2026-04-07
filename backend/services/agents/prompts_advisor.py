@@ -628,13 +628,18 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BANNED: 스마트폰 얼굴 인식, 자율주행차, 음성 비서 — 모든 AI 글에 나오는 뻔한 3대장. 이 시나리오는 사용 금지.
   BAD: "스마트폰 얼굴 인식: AI 칩이 실시간으로 인식" (뻔하고 상황 묘사 없음)
   GOOD: "**넷플릭스 실시간 자막**: 영상을 틀자마자 0.2초 만에 자막이 뜹니다. 서버의 AI 칩이 음성을 실시간으로 텍스트로 변환하기 때문입니다." (의외 + 상황 묘사)
-- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용.
+- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용. 비교표 위에 **한 줄 비교** 2~3개를 먼저 작성 — "X vs Y → 핵심 차이 한 마디"로 3초 만에 차이를 잡아주는 초고속 비교.
   BAD: "| 구분 | 높은 효율 | 낮은 효율 |" (좋다 vs 나쁘다는 비교가 아님 — 속성 대비표 금지)
   BAD: "| 항목 | 설명 |" (단순 용어 설명표 금지)
-  GOOD: "| | Edge AI | Cloud AI | Hybrid |\n| 처리 위치 | 기기 내부 | 원격 서버 | 둘 다 |\n| 응답 속도 | <10ms | 100ms+ | 상황별 |" (구체적 기술 비교)
-- **basic_ko_4_why**: **구체적인 영향** — 이 개념이 없으면 어떤 문제가 생기는지, 있으면 뭐가 달라지는지. "알면 좋다" 수준이 아니라 "모르면 이런 실수를 한다" 수준으로. 4~5개 bullet point.
+  GOOD: "Transformer vs RNN → 전체를 한 번에 보는 것 vs 하나씩 순서대로 읽는 것\nTransformer vs CNN → 텍스트의 전역 관계 vs 이미지의 지역 패턴\n\n| | Transformer | RNN | CNN |\n| 처리 방식 | 병렬 | 순차 | 지역 패턴 |..."
+- **basic_ko_4_why**: **알아야 하는 이유** — 이 개념이 실제로 만든 변화를 중심으로. 검증 가능한 사실 기반으로 "이게 등장한 후 뭐가 달라졌는지" 쓰기. 반사실적 가정("없었다면") 금지 — 실제 일어난 변화만. 4~5개 bullet point.
 - **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마. 제품-기술 매핑은 Reference Materials에서 확인된 것만 사용. 추측으로 "X가 Y를 사용한다"고 쓰지 마. 불확실하면 "~에 활용될 수 있다" 표현 사용.
 - **basic_ko_6_caution**: 이 개념에 대한 **흔한 오해**와 **실제 사실**을 대비. 형식: "❌ 오해: ~라고 생각하기 쉽다 → ✅ 실제: ~이다". 3~4개.
+- **basic_ko_6b_news_context**: **"뉴스에서 만났다면"** — AI 뉴스에서 이 용어가 등장하는 대표적 맥락 3~4개. 형식: "뉴스에서 'X'라고 나오면 → 이런 뜻이다". 사용자가 뉴스를 읽다가 이 용어를 만났을 때 바로 해석할 수 있게.
+  GOOD: "\"새 모델이 Transformer 기반\" → 이 아키텍처 위에 만들었다는 뜻. 거의 모든 최신 LLM이 해당."
+  GOOD: "\"xx-billion parameter\" → 파라미터 수가 클수록 성능은 올라가지만 비용·전력도 비례해서 증가."
+- **basic_ko_6c_checklist**: **"이해 체크리스트"** — 이 용어를 진짜 이해했는지 스스로 확인할 수 있는 질문 4~5개. 형식: "□ 질문". 각 질문은 이 용어의 핵심 개념을 짚어야 하며, 단순 암기가 아닌 이해를 확인하는 질문이어야 함.
+  GOOD: "□ Self-attention에서 Q, K, V가 각각 하는 역할은?\n□ RNN 대비 Transformer의 핵심 장점은?\n□ 왜 positional encoding이 필요한가?"
 - **basic_ko_7_comm**: 실제 **팀 회의, 슬랙 대화, 기술 리뷰**에서 이 용어가 등장하는 예시 문장 4~5개. **핵심 용어를 굵게 표시**. 뉴스 기사체 금지 — 팀명, 지표, 기한 같은 구체적 맥락을 포함한 대화체로.
   BAD: "최근 AI 칩 시장이 급성장하면서 주요 업체들이 경쟁하고 있습니다." (뉴스 기사 톤)
   GOOD: "추론 서버를 A100에서 H100으로 바꾸니까 **latency가 절반**으로 줄었어요. 비용은 좀 올랐는데 SLA 충족이 우선이라..." (팀 대화 톤)
@@ -644,9 +649,10 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_ko_9_roles**: 이 용어가 각 직군에게 왜 중요한지 + 구체적으로 뭘 해야 하는지. 3~4개 직군 (주니어 개발자, PM/기획자, 시니어/리드, 비개발직군 중 해당되는 것). 각 2~3문장.
   예시 (개념): "**주니어 개발자**: RAG 파이프라인을 직접 구축해보세요. LangChain + ChromaDB 조합이 입문에 적합합니다.\n**PM/기획자**: 고객 문의 챗봇에 RAG를 제안할 수 있습니다. '기존 FAQ 문서를 활용한 자동 응답'으로 포지셔닝하세요.\n**시니어 엔지니어**: chunk 크기와 embedding 모델 선택이 성능을 좌우합니다. 프로덕션 투입 전 retrieval 정확도를 반드시 측정하세요."
   예시 (도구): "**주니어 개발자**: 공식 튜토리얼로 간단한 챗봇을 만들어보세요. 면접에서 'LangChain vs LlamaIndex 차이'를 설명할 수 있으면 유리합니다.\n**PM/기획자**: 데모를 보고 우리 제품에 적용 가능한 시나리오를 정리하세요. 개발팀에 PoC 범위를 제안할 수 있습니다."
-- **basic_ko_10_learning_path**: 이 용어를 이해한 후 다음에 읽을 용어 3개를 학습 순서대로. 각 용어에 "왜 다음에 이걸 읽어야 하는지" 한 줄 이유. 형식: 번호 리스트.
-  예시 (모델): "1. **Transformer** —Gemini의 핵심 아키텍처. 이걸 알아야 왜 멀티모달이 가능한지 이해됨\n2. **Attention Mechanism** —Transformer 안에서 어디에 집중할지 결정하는 방법\n3. **MoE** —Gemini가 여러 전문가 네트워크를 조합하는 방식"
-  예시 (개념): "1. **Embedding** —RAG의 첫 단계. 문서를 벡터로 변환하는 원리\n2. **Vector Database** —변환된 벡터를 저장하고 검색하는 방법\n3. **Prompt Engineering** —검색 결과를 LLM에게 효과적으로 전달하는 기술"
+- **basic_ko_10_learning_path**: **"더 깊이 알고 싶다면"** — 두 파트로 구성:
+  **Part 1: 정석 자료** — 이 주제를 제대로 이해하기 위한 최고의 자료 2~3개. Reference Materials에서 확인된 것만. 형식: "**자료 제목** (유형) — 왜 이걸 봐야 하는지 한 줄". 유형: 논문, 블로그, 강의, 공식문서 등.
+  **Part 2: 다음에 읽을 용어** — 이 용어를 이해한 후 다음에 읽을 핸드북 용어 2~3개. 학습 순서대로, 각각 "왜 다음에 이걸 읽어야 하는지" 한 줄 이유.
+  GOOD: "**정석 자료**\n- **\"Attention Is All You Need\"** (논문) — 이 아키텍처를 처음 제안한 원본\n- **\"The Illustrated Transformer\"** — Jay Alammar (블로그) — 도식으로 이해하는 가장 직관적인 자료\n\n**다음에 읽을 용어**\n1. **Self-Attention** — 핵심 연산 원리를 이해해야 Transformer의 강점이 납득됨\n2. **BERT vs GPT** — 인코더/디코더 변형을 비교하며 활용 범위를 넓힐 수 있음"
 
 ## Output JSON Structure
 
@@ -662,13 +668,15 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_ko_1_plain": "비유와 일상 예시로 설명. 최소 300자.",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
   "basic_ko_3_glance": "| 항목 | 설명 |\\n|---|---|\\n| ... | ... |",
-  "basic_ko_4_why": "- 이유1\\n- 이유2\\n- 이유3\\n- 이유4",
+  "basic_ko_4_why": "- 변화1\\n- 변화2\\n- 변화3\\n- 변화4",
   "basic_ko_5_where": "- 사례1\\n- 사례2\\n- 사례3\\n- 사례4",
   "basic_ko_6_caution": "- 주의1\\n- 주의2\\n- 주의3",
+  "basic_ko_6b_news_context": "뉴스에서 'X'라고 나오면 → 이런 뜻\\n...",
+  "basic_ko_6c_checklist": "□ 질문1\\n□ 질문2\\n□ 질문3\\n□ 질문4",
   "basic_ko_7_comm": "- **용어** 이런 맥락에서 사용\\n- ...",
   "basic_ko_8_related": "- **용어** — 관계 설명\\n- ...",
   "basic_ko_9_roles": "**주니어 개발자**: ...\\n**PM/기획자**: ...\\n**시니어 엔지니어**: ...",
-  "basic_ko_10_learning_path": "1. **용어** — 이유\\n2. **용어** — 이유\\n3. **용어** — 이유"
+  "basic_ko_10_learning_path": "**정석 자료**\\n- **자료** (유형) — 이유\\n\\n**다음에 읽을 용어**\\n1. **용어** — 이유\\n2. **용어** — 이유"
 }}
 ```
 
@@ -759,13 +767,18 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BANNED: smartphone face recognition, self-driving cars, voice assistants — overused AI examples. Do NOT use these.
   BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
   GOOD: "**Netflix real-time subtitles**: Subtitles appear within 0.2 seconds of pressing play. The server's AI chip converts speech to text in real time." (surprising + situation detail)
-- **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format).
+- **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format). Start with **2-3 one-line comparisons** above the table — "X vs Y → core difference in one phrase" for instant 3-second understanding.
   BAD: "| Aspect | High Efficiency | Low Efficiency |" (good vs bad is not a comparison — attribute contrast tables are banned)
   BAD: "| Term | Description |" (simple glossary table banned)
-  GOOD: "| | Edge AI | Cloud AI | Hybrid |\n| Processing | On-device | Remote server | Both |\n| Latency | <10ms | 100ms+ | Varies |" (concrete tech comparison)
-- **basic_en_4_why**: **Concrete impact** — what goes wrong without this concept, what improves with it. Not "good to know" level but "you'll make this mistake if you don't know" level. 4-5 bullet points.
+  GOOD: "Transformer vs RNN → seeing everything at once vs reading one word at a time\nTransformer vs CNN → global text relationships vs local image patterns\n\n| | Transformer | RNN | CNN |\n| Processing | Parallel | Sequential | Local patterns |..."
+- **basic_en_4_why**: **Why you should know this** — what real change this concept brought. Focus on verifiable facts about what happened AFTER this concept appeared. NO counterfactual speculation ("without this, X wouldn't exist"). 4-5 bullet points.
 - **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it. Only state product-technology mappings confirmed in Reference Materials. Do NOT guess "X uses Y". If uncertain, OMIT the example entirely rather than hedging.
 - **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
+- **basic_en_6b_news_context**: **"When you see this in the news"** — 3-4 common news phrasings and what they actually mean. Format: "When news says 'X' → it means Y". Help readers instantly decode AI news headlines.
+  GOOD: "\"New model is Transformer-based\" → Built on this architecture. Nearly all modern LLMs qualify."
+  GOOD: "\"xx-billion parameter model\" → More parameters generally means better performance but proportionally higher cost and power."
+- **basic_en_6c_checklist**: **"Understanding checklist"** — 4-5 self-check questions. Format: "□ Question". Each question should test genuine understanding, not mere recall.
+  GOOD: "□ What roles do Q, K, and V play in self-attention?\n□ Why is Transformer faster than RNN for long sequences?\n□ Why does Transformer need positional encoding?"
 - **basic_en_7_comm**: 4-5 example sentences from real **team meetings, Slack conversations, or tech reviews**. **Bold the key term**. NO news article tone — include specific context like team names, metrics, or deadlines.
   BAD: "The AI chip market has been growing rapidly as major companies compete." (news article tone)
   GOOD: "Switching our inference servers from A100 to H100 cut **latency in half**. Cost went up a bit, but hitting SLA targets was the priority..." (team conversation tone)
@@ -774,9 +787,10 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   GOOD: "**TPU** — Google built this because 'GPUs weren't enough.' Training is up to 5x faster than GPU, but less versatile for general workloads" (comparison point + curiosity)
 - **basic_en_9_roles**: Why this term matters for each job role + what to do about it. 3-4 roles (junior developer, PM/planner, senior/lead, non-technical roles as applicable). 2-3 sentences each.
   Example (concept): "**Junior Developer**: Build a RAG pipeline hands-on. LangChain + ChromaDB is a good starter combo.\n**PM/Planner**: Propose a RAG-powered FAQ chatbot using existing company documents.\n**Senior Engineer**: Chunk size and embedding model choice determine retrieval quality. Measure retrieval accuracy before production deployment."
-- **basic_en_10_learning_path**: 3 terms to read next, in learning order. Each with a one-line reason why it should come next.
-  Example (model): "1. **Transformer** —Core architecture behind Gemini. Understanding this explains why multimodal is possible.\n2. **Attention Mechanism** —How Transformer decides where to focus.\n3. **MoE** —How Gemini combines multiple expert networks."
-  Example (concept): "1. **Embedding** —First step of RAG. How documents become vectors.\n2. **Vector Database** —How to store and search those vectors.\n3. **Prompt Engineering** —How to feed retrieved results to the LLM effectively."
+- **basic_en_10_learning_path**: **"Go deeper"** — Two parts:
+  **Part 1: Essential resources** — 2-3 best resources to truly understand this topic. ONLY from Reference Materials. Format: "**Title** (type) — why this resource". Types: paper, blog, video, official docs.
+  **Part 2: Next terms** — 2-3 handbook terms to read next, in order. Each with a one-line reason.
+  GOOD: "**Essential resources**\n- **\"Attention Is All You Need\"** (paper) — The original proposal of this architecture\n- **\"The Illustrated Transformer\"** — Jay Alammar (blog) — Most intuitive visual explanation\n\n**Next terms**\n1. **Self-Attention** — Core operation that makes Transformer work\n2. **BERT vs GPT** — Compare encoder/decoder variants to see the full picture"
 
 ## Output JSON Structure
 
@@ -789,10 +803,12 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_en_4_why": "...",
   "basic_en_5_where": "...",
   "basic_en_6_caution": "...",
+  "basic_en_6b_news_context": "When news says 'X' → it means Y\\n...",
+  "basic_en_6c_checklist": "□ Question 1\\n□ Question 2\\n□ Question 3",
   "basic_en_7_comm": "...",
   "basic_en_8_related": "...",
   "basic_en_9_roles": "**Junior Developer**: ...\\n**PM/Planner**: ...\\n**Senior Engineer**: ...",
-  "basic_en_10_learning_path": "1. **Term** — reason\\n2. **Term** — reason\\n3. **Term** — reason"
+  "basic_en_10_learning_path": "**Essential resources**\\n- **Title** (type) — reason\\n\\n**Next terms**\\n1. **Term** — reason\\n2. **Term** — reason"
 }}
 ```
 
