@@ -273,7 +273,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
           <div class="admin-danger-zone">
             <div class="admin-danger-zone__label">
               <strong>Danger Zone</strong>
-              이 용어를 영구 삭제합니다. 복구할 수 없습니다.
+              This will permanently delete the term. This cannot be undone.
             </div>
             <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>
           </div>
@@ -296,10 +296,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             </div>
             <div class="admin-ai-group">
               <span class="admin-ai-group__label">Quality</span>
-              <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="LLM이 작성된 콘텐츠의 기술적 정확성을 자체 검증합니다">
+              <button class="admin-ai-action-btn" data-ai-action="factcheck" type="button" title="Verify technical accuracy of written content">
                 Quick Check<span class="ai-btn-model">gpt-5-mini</span>
               </button>
-              <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button" title="LLM이 팩트를 추출하고 Tavily로 웹 검색하여 근거를 확인합니다">
+              <button class="admin-ai-action-btn" data-ai-action="deepverify" type="button" title="Extract facts and verify via web search">
                 Deep Verify<span class="ai-btn-model">gpt-5-mini + Tavily</span>
               </button>
             </div>
@@ -562,7 +562,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     // Clear all fields except term name and slug
     document.getElementById('btn-clear')?.addEventListener('click', () => {
-      if (!confirm('제목을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
+      if (!confirm('Clear all fields except title?')) return;
       const form = termForm as HTMLFormElement;
       const koreanName = form.querySelector<HTMLInputElement>('[name="korean_name"]');
       const termFull = form.querySelector<HTMLInputElement>('[name="term_full"]');
@@ -584,7 +584,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       crepeAdvancedKo?.editor.action(replaceAll(''));
       crepeAdvancedEn?.editor.action(replaceAll(''));
       updateAllIndicators();
-      showFeedback('모든 필드를 비웠습니다.');
+      showFeedback('All fields cleared.');
     });
 
     // Auto-open details on desktop
@@ -1428,9 +1428,9 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     async function initBodyEditors() {
       [crepeBasicKo, crepeBasicEn, crepeAdvancedKo, crepeAdvancedEn] = await Promise.all([
-        initCrepe('body-editor-basic-ko', '기초 설명을 작성하세요...'),
+        initCrepe('body-editor-basic-ko', 'Write basic explanation...'),
         initCrepe('body-editor-basic-en', 'Write basic explanation...'),
-        initCrepe('body-editor-advanced-ko', '심화 설명을 작성하세요...'),
+        initCrepe('body-editor-advanced-ko', 'Write advanced explanation...'),
         initCrepe('body-editor-advanced-en', 'Write advanced explanation...'),
       ]);
     }

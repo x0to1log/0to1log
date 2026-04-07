@@ -1004,7 +1004,7 @@ const isFeatured = product?.featured ?? false;
 
   // ── Clear ──────────────────────────────────────────────
   document.getElementById('clear-btn')?.addEventListener('click', () => {
-    if (!confirm('이름을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
+    if (!confirm('Clear all fields except name?')) return;
     const ids = ['field-name-ko','field-url','field-tagline','field-tagline-ko','field-description','field-description-ko',
       'field-logo-url','field-thumbnail-url','field-pricing-note','field-pricing-detail','field-pricing-detail-ko',
       'field-platform','field-tags','field-released-at','field-featured-order','field-sort-order',
@@ -1032,7 +1032,7 @@ const isFeatured = product?.featured ?? false;
       const el = document.getElementById(id);
       if (el) el.innerHTML = '';
     });
-    showFeedback('모든 필드를 비웠습니다.');
+    showFeedback('All fields cleared.');
   });
 
   // ── Save ──────────────────────────────────────────────

@@ -65,7 +65,7 @@ const items: FeedbackItem[] = (feedbackRows ?? []).map((row: any) => ({
   locale: row.locale ?? '',
   archived: row.archived ?? false,
   updatedAt: row.updated_at,
-  content_title: titleMap.get(row.source_id)?.title ?? '(삭제된 콘텐츠)',
+  content_title: titleMap.get(row.source_id)?.title ?? '(deleted content)',
   content_slug: titleMap.get(row.source_id)?.slug ?? null,
   userName: 'User',
 }));

@@ -238,7 +238,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             <div class="admin-danger-zone">
               <div class="admin-danger-zone__label">
                 <strong>Danger Zone</strong>
-                이 글을 영구 삭제합니다. 복구할 수 없습니다.
+                This will permanently delete the post. This cannot be undone.
               </div>
               <button id="btn-delete" class="admin-btn-danger" type="button">Delete</button>
             </div>
@@ -419,7 +419,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
     // Clear all fields except title and slug
     document.getElementById('btn-clear')?.addEventListener('click', () => {
-      if (!confirm('제목을 제외한 모든 필드를 비웁니다. 계속하시겠습니까?')) return;
+      if (!confirm('Clear all fields except title?')) return;
       if (categorySelect) categorySelect.selectedIndex = 0;
       if (tagsInput) tagsInput.value = '';
       if (excerptInput) excerptInput.value = '';
@@ -427,7 +427,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       if (ogImageInput) ogImageInput.value = '';
       crepeKo?.editor.action(replaceAll(''));
       crepeEn?.editor.action(replaceAll(''));
-      showFeedback('모든 필드를 비웠습니다.');
+      showFeedback('All fields cleared.');
     });
 
     function autoResizeTitle() {
@@ -504,7 +504,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           defaultValue: editorKoEl.dataset.content || '',
           featureConfigs: {
             [Crepe.Feature.Placeholder]: {
-              text: '블로그 포스트를 작성하세요...',
+              text: 'Start writing your blog post...',
               mode: 'block',
             },
           },
