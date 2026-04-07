@@ -1,6 +1,7 @@
 """Product AI Advisor service — generates taglines and descriptions from product URL."""
 
 import asyncio
+import json
 import logging
 from urllib.parse import urlparse
 
@@ -248,6 +249,29 @@ Target audience: the PRIMARY user, not everyone who might use it.
 
 Respond with JSON only."""
 
+EXTRACT_FACTS_SYSTEM = """Extract structured facts about this AI product from the provided sources.
+Return JSON:
+{
+  "official_name": "exact name from the product's website",
+  "core_capability": "the ONE thing this product does best, max 15 words",
+  "technical_specs": ["specific capabilities with numbers/versions, e.g. '200K token context window'"],
+  "unique_features": ["features that distinguish from competitors — use the product's official feature names, e.g. 'Artifacts', 'Deep Research', 'Gems'"],
+  "pricing_tiers": [{"name": "Free", "price": "$0", "key_limits": "..."}] or null,
+  "platforms": ["web", "ios", "android", "api", "desktop"],
+  "integrations": ["named integrations, e.g. 'Google Workspace', 'Slack'"],
+  "limitations_observed": ["limitations mentioned in sources"],
+  "korean_support_evidence": "direct quote or null"
+}
+
+Rules:
+- ONLY include facts explicitly stated in the provided sources.
+- For technical_specs: numbers matter — context window size, model count, supported language count, etc.
+- For unique_features: use official feature names from the product page, NOT generic descriptions like "AI-powered".
+- For pricing_tiers: null if no pricing info in sources. Include all tiers visible.
+- Empty array or null for fields with no evidence.
+
+Respond with JSON only."""
+
 CATEGORY_GUIDES = {
     "assistant": {
         "feature_focus": "Model capabilities, context window size, multimodal support (image/file/voice), plugin/tool ecosystem, conversation memory",
@@ -390,6 +414,110 @@ async def _fetch_page_content(url: str) -> str:
         except Exception as e:
             logger.warning("Exa fetch also failed for %s: %s", url, e)
     return ""
+
+
+async def _fetch_features_content(url: str) -> str:
+    """Fetch product features/about page content using Tavily."""
+    if not url or not settings.tavily_api_key:
+        return ""
+    loop = asyncio.get_event_loop()
+    base = url.rstrip("/")
+    for path in ["/features", "/product", "/about"]:
+        try:
+            from tavily import TavilyClient
+            tavily = TavilyClient(api_key=settings.tavily_api_key)
+            target = f"{base}{path}"
+            results = await loop.run_in_executor(
+                None,
+                lambda u=target: tavily.search(u, max_results=1, include_raw_content=True),
+            )
+            for r in results.get("results", []):
+                raw = r.get("raw_content") or r.get("content") or ""
+                if raw and len(raw) > 200:
+                    return raw[:3000]
+        except Exception as e:
+            logger.debug("Features fetch failed for %s%s: %s", base, path, e)
+    return ""
+
+
+async def _search_brave_product(name: str, url: str) -> str:
+    """Search Brave for technical specs, features, and changelog."""
+    if not settings.brave_api_key or not name:
+        return ""
+    try:
+        import httpx
+        domain = urlparse(url).netloc if url else ""
+        query = f'"{name}" features specifications OR changelog'
+        if domain:
+            query += f" site:{domain}"
+        async with httpx.AsyncClient(timeout=10) as http:
+            resp = await http.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                params={"q": query, "count": 5},
+                headers={
+                    "X-Subscription-Token": settings.brave_api_key,
+                    "Accept": "application/json",
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        results = data.get("web", {}).get("results", [])
+        if not results:
+            return ""
+        parts = []
+        for r in results[:5]:
+            title = r.get("title", "")
+            r_url = r.get("url", "")
+            desc = r.get("description", "")[:800]
+            extra = r.get("extra_snippets", [])
+            snippet = "\n".join(extra[:2]) if extra else desc
+            parts.append(f"[{title}]({r_url})\n{snippet}")
+        return ("## Technical References (Brave Search)\n\n" + "\n\n".join(parts))[:3000]
+    except Exception as e:
+        logger.debug("Brave product search failed for %s: %s", name, e)
+        return ""
+
+
+async def _extract_product_facts(
+    name: str, url: str, sources: dict[str, str],
+    client, model: str,
+) -> tuple[dict, int]:
+    """Extract structured facts from multiple sources. Returns (facts_dict, tokens_used)."""
+    source_text_parts = []
+    label_map = {
+        "homepage": "## Homepage Content",
+        "features": "## Features Page Content",
+        "brave": "## Technical References (Brave Search)",
+    }
+    for key, label in label_map.items():
+        if sources.get(key):
+            source_text_parts.append(f"{label}\n\n{sources[key]}")
+    if not source_text_parts:
+        return {}, 0
+
+    combined = "\n\n---\n\n".join(source_text_parts)[:8000]
+    user_content = f"Product: {name}\nURL: {url}\n\n{combined}"
+
+    try:
+        resp = await client.chat.completions.create(
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": EXTRACT_FACTS_SYSTEM},
+                    {"role": "user", "content": user_content},
+                ],
+                max_tokens=500,
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            ),
+        )
+        metrics = extract_usage_metrics(resp, model)
+        raw = resp.choices[0].message.content or ""
+        result = parse_ai_json(raw, "product_facts")
+        return result, metrics["tokens_used"]
+    except Exception as e:
+        logger.warning("Fact extraction failed for %s: %s", name, e)
+        return {}, 0
 
 
 async def _fetch_review_content(name: str) -> str:
