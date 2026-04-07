@@ -439,119 +439,235 @@ def _resolve_logo_url(url: str) -> str | None:
         return None
 
 
+async def _classify_product(name: str, url: str, page_content: str, client, model: str) -> dict:
+    """Classify product into category, nature, audience, and differentiator."""
+    user_content = f"Product: {name}\nURL: {url}\n\nPage excerpt:\n{page_content[:1000]}"
+    try:
+        resp = await client.chat.completions.create(
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": CLASSIFY_PRODUCT_SYSTEM},
+                    {"role": "user", "content": user_content},
+                ],
+                max_tokens=200,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            ),
+        )
+        metrics = extract_usage_metrics(resp, model)
+        raw = resp.choices[0].message.content or ""
+        result = parse_ai_json(raw, "product_classify")
+        return {**result, "_tokens": metrics["tokens_used"]}
+    except Exception as e:
+        logger.warning("Product classification failed, using defaults: %s", e)
+        return {
+            "primary_category": "assistant",
+            "product_nature": "tool",
+            "target_audience": "beginner",
+            "key_differentiator": "",
+            "_tokens": 0,
+        }
+
+
+async def _generate_en_profile(
+    page_content: str, review_content: str, system_prompt: str,
+    client, model: str,
+) -> tuple[dict, int]:
+    """Generate EN-only product profile. Returns (profile_dict, tokens_used)."""
+    user_content = (
+        f"Page content:\n{page_content or '(not available)'}\n\n"
+        f"Reviews & user experiences:\n{review_content or '(not available)'}"
+    )
+    resp = await client.chat.completions.create(
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=2000,
+            temperature=0.4,
+            response_format={"type": "json_object"},
+        ),
+    )
+    metrics = extract_usage_metrics(resp, model)
+    raw = resp.choices[0].message.content or ""
+    result = parse_ai_json(raw, "product_en_profile")
+    return result, metrics["tokens_used"]
+
+
+async def _generate_ko_profile(
+    en_profile: dict, category_guide: str, client, model: str,
+) -> tuple[dict, int]:
+    """Generate KO-only fields using EN profile as context. Returns (ko_dict, tokens_used)."""
+    en_summary = (
+        f"Product: {en_profile.get('name', '')}\n"
+        f"Tagline: {en_profile.get('tagline', '')}\n"
+        f"Description: {en_profile.get('description_en', '')}\n"
+        f"Features: {'; '.join(en_profile.get('features', []))}\n"
+        f"Use cases: {'; '.join(en_profile.get('use_cases', []))}\n"
+        f"Getting started: {'; '.join(en_profile.get('getting_started', []))}\n"
+        f"Pricing detail: {en_profile.get('pricing_detail', '(none)')}"
+    )
+    ko_system = PROFILE_KO_SYSTEM
+    if category_guide:
+        ko_system += "\n\n" + category_guide
+    resp = await client.chat.completions.create(
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": ko_system},
+                {"role": "user", "content": f"English profile for reference:\n\n{en_summary}"},
+            ],
+            max_tokens=1500,
+            temperature=0.5,
+            response_format={"type": "json_object"},
+        ),
+    )
+    metrics = extract_usage_metrics(resp, model)
+    raw = resp.choices[0].message.content or ""
+    result = parse_ai_json(raw, "product_ko_profile")
+    return result, metrics["tokens_used"]
+
+
+async def _generate_enrichment(
+    en_profile: dict, review_content: str, category_guide: str,
+    client, model: str,
+) -> tuple[dict, int]:
+    """Generate enrichment data (scenarios, pros_cons, etc.). Returns (enrich_dict, tokens_used)."""
+    en_summary = (
+        f"Product: {en_profile.get('name', '')}\n"
+        f"Category: {en_profile.get('primary_category', '')}\n"
+        f"Description: {en_profile.get('description_en', '')}\n"
+        f"Features: {'; '.join(en_profile.get('features', []))}\n"
+        f"Use cases: {'; '.join(en_profile.get('use_cases', []))}"
+    )
+    enrich_system = ENRICH_SYSTEM
+    if category_guide:
+        enrich_system += "\n\n" + category_guide
+    user_content = (
+        f"{en_summary}\n\n"
+        f"Reviews & user experiences:\n{review_content or '(not available)'}"
+    )
+    resp = await client.chat.completions.create(
+        **compat_create_kwargs(
+            model,
+            messages=[
+                {"role": "system", "content": enrich_system},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=2000,
+            temperature=0.5,
+            response_format={"type": "json_object"},
+        ),
+    )
+    metrics = extract_usage_metrics(resp, model)
+    raw = resp.choices[0].message.content or ""
+    result = parse_ai_json(raw, "product_enrichment")
+    return result, metrics["tokens_used"]
+
+
 async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict, str, int]:
     """Run a product AI generation action. Returns (result, model_used, tokens_used)."""
     client = get_openai_client()
 
     if body.action == "generate_from_url":
-        model = settings.openai_model_main
         product_name = body.name or body.url or ""
 
-        # Step 1: Fetch page content + reviews in parallel
+        # Step 0: Parallel search (page content + reviews)
         page_content, review_content = await asyncio.gather(
             _fetch_page_content(body.url or ""),
             _fetch_review_content(product_name),
         )
 
-        # Step 2: Call 1 (profile) + Call 2 (enrichment) in parallel
-        call1_user = f"Product: {product_name}\nURL: {body.url}\n\nPage content:\n{page_content or '(not available)'}"
-        call2_user = (
-            f"Product: {product_name}\nURL: {body.url}\n\n"
-            f"Page content:\n{page_content or '(not available)'}\n\n"
-            f"Reviews & user experiences:\n{review_content or '(not available)'}"
+        # Step 1: Classify product (gpt-5-nano)
+        classification = await _classify_product(
+            product_name, body.url or "", page_content,
+            client, settings.openai_model_nano,
         )
+        total_tokens = classification.pop("_tokens", 0)
+        category_guide = build_product_category_guide(classification)
+        logger.info("Product classified: %s", classification)
 
-        call1_task = client.chat.completions.create(
+        # Step 2: Generate EN profile (gpt-5)
+        en_system = PROFILE_EN_SYSTEM + "\n\n" + category_guide + "\n\n" + PRODUCT_GROUNDING_RULES
+        try:
+            en_profile, en_tokens = await _generate_en_profile(
+                page_content, review_content, en_system,
+                client, settings.openai_model_main,
+            )
+            total_tokens += en_tokens
+        except Exception as e:
+            logger.error("EN profile generation failed: %s", e)
+            en_profile = {}
+
+        # Step 3+4+5: KO profile + enrichment + search corpus (parallel, gpt-5-mini)
+        corpus_context = "\n".join([
+            f"Name: {product_name}",
+            f"Category: {en_profile.get('primary_category', '')}",
+            f"Tags: {', '.join(en_profile.get('tags', []))}",
+            f"Description: {en_profile.get('description_en', '')}",
+            f"Features: {'; '.join(en_profile.get('features', []))}",
+            f"Use cases: {'; '.join(en_profile.get('use_cases', []))}",
+        ])
+
+        ko_task = _generate_ko_profile(en_profile, category_guide, client, settings.openai_model_light)
+        enrich_task = _generate_enrichment(en_profile, review_content, category_guide, client, settings.openai_model_light)
+        corpus_task = client.chat.completions.create(
             **compat_create_kwargs(
-                model,
+                settings.openai_model_light,
                 messages=[
-                    {"role": "system", "content": PROFILE_EN_SYSTEM},
-                    {"role": "user", "content": call1_user},
+                    {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
+                    {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
                 ],
-                max_tokens=2000,
-                temperature=0.4,
-                response_format={"type": "json_object"},
+                max_tokens=800,
+                temperature=0.7,
             ),
         )
-        enrichment_model = settings.openai_model_light
-        call2_task = client.chat.completions.create(
-            **compat_create_kwargs(
-                enrichment_model,
-                messages=[
-                    {"role": "system", "content": ENRICH_SYSTEM},
-                    {"role": "user", "content": call2_user},
-                ],
-                max_tokens=2000,
-                temperature=0.5,
-                response_format={"type": "json_object"},
-            ),
+
+        ko_result, enrich_result, corpus_resp = await asyncio.gather(
+            ko_task, enrich_task, corpus_task,
+            return_exceptions=True,
         )
 
-        resp1, resp2 = await asyncio.gather(call1_task, call2_task, return_exceptions=True)
+        # Merge results
+        result: dict = {**en_profile}
 
-        # Parse Call 1 (profile)
-        total_tokens = 0
-        if isinstance(resp1, Exception):
-            logger.error("Product profile generation failed: %s", resp1)
-            result: dict = {}
+        if isinstance(ko_result, tuple) and not isinstance(ko_result, Exception):
+            ko_data, ko_tokens = ko_result
+            if isinstance(ko_data, dict):
+                result.update(ko_data)
+            total_tokens += ko_tokens
+        elif isinstance(ko_result, Exception):
+            logger.error("KO profile generation failed: %s", ko_result)
+
+        if isinstance(enrich_result, tuple) and not isinstance(enrich_result, Exception):
+            enrich_data, enrich_tokens = enrich_result
+            if isinstance(enrich_data, dict):
+                result.update(enrich_data)
+            total_tokens += enrich_tokens
+        elif isinstance(enrich_result, Exception):
+            logger.error("Enrichment generation failed: %s", enrich_result)
+
+        if not isinstance(corpus_resp, Exception):
+            corpus_metrics = extract_usage_metrics(corpus_resp, settings.openai_model_light)
+            total_tokens += corpus_metrics["tokens_used"]
+            result["search_corpus"] = (corpus_resp.choices[0].message.content or "").strip()
         else:
-            metrics1 = extract_usage_metrics(resp1, model)
-            total_tokens += metrics1["tokens_used"]
-            raw1 = resp1.choices[0].message.content or ""
-            try:
-                result = parse_ai_json(raw1, "product_advisor_profile")
-            except Exception:
-                result = {}
+            logger.warning("Search corpus generation failed: %s", corpus_resp)
 
-        # Parse Call 2 (enrichment) and merge
-        if isinstance(resp2, Exception):
-            logger.error("Product enrichment generation failed: %s", resp2)
-        else:
-            metrics2 = extract_usage_metrics(resp2, enrichment_model)
-            total_tokens += metrics2["tokens_used"]
-            raw2 = resp2.choices[0].message.content or ""
-            try:
-                enrich = parse_ai_json(raw2, "product_advisor_enrich")
-                if isinstance(enrich, dict) and isinstance(result, dict):
-                    result.update(enrich)
-            except Exception:
-                logger.warning("Failed to parse enrichment response")
-
-        # Add logo_url if AI didn't provide one
-        if isinstance(result, dict) and not result.get("logo_url"):
+        # Logo fallback
+        if not result.get("logo_url"):
             logo = _resolve_logo_url(body.url or "")
             if logo:
                 result["logo_url"] = logo
 
-        # Auto-generate search corpus from merged results
-        if isinstance(result, dict) and result:
-            corpus_context = "\n".join([
-                f"Name: {product_name}",
-                f"Category: {result.get('primary_category', '')}",
-                f"Tags: {', '.join(result.get('tags', []))}",
-                f"Description: {result.get('description_en', '')}",
-                f"Features: {'; '.join(result.get('features', []))}",
-                f"Use cases: {'; '.join(result.get('use_cases', []))}",
-            ])
-            try:
-                corpus_resp = await client.chat.completions.create(
-                    **compat_create_kwargs(
-                        settings.openai_model_light,
-                        messages=[
-                            {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
-                            {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
-                        ],
-                        max_tokens=800,
-                        temperature=0.7,
-                    ),
-                )
-                corpus_metrics = extract_usage_metrics(corpus_resp, settings.openai_model_light)
-                total_tokens += corpus_metrics["tokens_used"]
-                result["search_corpus"] = (corpus_resp.choices[0].message.content or "").strip()
-            except Exception as e:
-                logger.warning("Search corpus generation failed: %s", e)
+        # Use classification's primary_category as authoritative
+        if classification.get("primary_category"):
+            result["primary_category"] = classification["primary_category"]
 
-        return result, model, total_tokens
+        return result, settings.openai_model_main, total_tokens
 
     if body.action == "pricing_detail":
         model = settings.openai_model_light
