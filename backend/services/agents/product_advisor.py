@@ -577,9 +577,13 @@ def _resolve_logo_url(url: str) -> str | None:
         return None
 
 
-async def _classify_product(name: str, url: str, page_content: str, client, model: str) -> dict:
+async def _classify_product(name: str, url: str, facts: dict, client, model: str) -> dict:
     """Classify product into category, nature, audience, and differentiator."""
-    user_content = f"Product: {name}\nURL: {url}\n\nPage excerpt:\n{page_content[:1000]}"
+    if facts:
+        facts_summary = json.dumps(facts, indent=2, ensure_ascii=False)[:1500]
+        user_content = f"Product: {name}\nURL: {url}\n\nExtracted facts:\n{facts_summary}"
+    else:
+        user_content = f"Product: {name}\nURL: {url}"
     try:
         resp = await client.chat.completions.create(
             **compat_create_kwargs(
@@ -609,14 +613,16 @@ async def _classify_product(name: str, url: str, page_content: str, client, mode
 
 
 async def _generate_en_profile(
-    page_content: str, review_content: str, system_prompt: str,
+    facts: dict, page_content: str, review_content: str, system_prompt: str,
     client, model: str,
 ) -> tuple[dict, int]:
     """Generate EN-only product profile. Returns (profile_dict, tokens_used)."""
-    user_content = (
-        f"Page content:\n{page_content or '(not available)'}\n\n"
-        f"Reviews & user experiences:\n{review_content or '(not available)'}"
-    )
+    parts = []
+    if facts:
+        parts.append(f"## Extracted Facts\n{json.dumps(facts, indent=2, ensure_ascii=False)}")
+    parts.append(f"## Raw Source (additional context)\n{(page_content or '(not available)')[:2000]}")
+    parts.append(f"## Reviews & User Experiences\n{review_content or '(not available)'}")
+    user_content = "\n\n".join(parts)
     resp = await client.chat.completions.create(
         **compat_create_kwargs(
             model,
@@ -636,9 +642,9 @@ async def _generate_en_profile(
 
 
 async def _generate_ko_profile(
-    en_profile: dict, category_guide: str, client, model: str,
+    en_profile: dict, facts: dict, category_guide: str, client, model: str,
 ) -> tuple[dict, int]:
-    """Generate KO-only fields using EN profile as context. Returns (ko_dict, tokens_used)."""
+    """Generate KO-only fields using EN profile + facts as context. Returns (ko_dict, tokens_used)."""
     en_summary = (
         f"Product: {en_profile.get('name', '')}\n"
         f"Tagline: {en_profile.get('tagline', '')}\n"
@@ -648,6 +654,13 @@ async def _generate_ko_profile(
         f"Getting started: {'; '.join(en_profile.get('getting_started', []))}\n"
         f"Pricing detail: {en_profile.get('pricing_detail', '(none)')}"
     )
+    if facts:
+        if facts.get("technical_specs"):
+            en_summary += f"\n\nTechnical specs: {json.dumps(facts['technical_specs'], ensure_ascii=False)}"
+        if facts.get("unique_features"):
+            en_summary += f"\nUnique features: {json.dumps(facts['unique_features'], ensure_ascii=False)}"
+        if facts.get("korean_support_evidence"):
+            en_summary += f"\nKorean support evidence: {facts['korean_support_evidence']}"
     ko_system = PROFILE_KO_SYSTEM
     if category_guide:
         ko_system += "\n\n" + category_guide
@@ -713,26 +726,46 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
     if body.action == "generate_from_url":
         product_name = body.name or body.url or ""
 
-        # Step 0: Parallel search (page content + reviews)
-        page_content, review_content = await asyncio.gather(
+        # Step 0: 4-source parallel search
+        page_content, features_content, brave_content, review_content = await asyncio.gather(
             _fetch_page_content(body.url or ""),
+            _fetch_features_content(body.url or ""),
+            _search_brave_product(product_name, body.url or ""),
             _fetch_review_content(product_name),
         )
 
-        # Step 1: Classify product (gpt-5-nano)
-        classification = await _classify_product(
-            product_name, body.url or "", page_content,
+        # Step 0.5: Fact extraction (gpt-5-nano)
+        sources: dict[str, str] = {}
+        if page_content:
+            sources["homepage"] = page_content
+        if features_content:
+            sources["features"] = features_content
+        if brave_content:
+            sources["brave"] = brave_content
+        facts, facts_tokens = await _extract_product_facts(
+            product_name, body.url or "", sources,
             client, settings.openai_model_nano,
         )
-        total_tokens = classification.pop("_tokens", 0)
+        total_tokens = facts_tokens
+        logger.info("Facts extracted: %d specs, %d features, pricing=%s",
+                     len(facts.get("technical_specs", [])),
+                     len(facts.get("unique_features", [])),
+                     "yes" if facts.get("pricing_tiers") else "no")
+
+        # Step 1: Classify product (gpt-5-nano, uses facts)
+        classification = await _classify_product(
+            product_name, body.url or "", facts,
+            client, settings.openai_model_nano,
+        )
+        total_tokens += classification.pop("_tokens", 0)
         category_guide = build_product_category_guide(classification)
         logger.info("Product classified: %s", classification)
 
-        # Step 2: Generate EN profile (gpt-5)
+        # Step 2: Generate EN profile (gpt-5, receives facts + raw source + reviews)
         en_system = PROFILE_EN_SYSTEM + "\n\n" + category_guide + "\n\n" + PRODUCT_GROUNDING_RULES
         try:
             en_profile, en_tokens = await _generate_en_profile(
-                page_content, review_content, en_system,
+                facts, page_content, review_content, en_system,
                 client, settings.openai_model_main,
             )
             total_tokens += en_tokens
@@ -750,7 +783,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             f"Use cases: {'; '.join(en_profile.get('use_cases', []))}",
         ])
 
-        ko_task = _generate_ko_profile(en_profile, category_guide, client, settings.openai_model_light)
+        ko_task = _generate_ko_profile(en_profile, facts, category_guide, client, settings.openai_model_light)
         enrich_task = _generate_enrichment(en_profile, review_content, category_guide, client, settings.openai_model_light)
         corpus_task = client.chat.completions.create(
             **compat_create_kwargs(
