@@ -1377,9 +1377,16 @@ async def _generate_digest(
         })
 
         # Build guide_items with persona-specific quizzes and code-extracted sources
+        import random as _random
         guide_items: dict[str, Any] = {}
         for pname in ("expert", "learner"):
             quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
+            if quiz and isinstance(quiz, dict) and quiz.get("options") and quiz.get("answer"):
+                # Shuffle quiz options so answer isn't always A/B
+                options = list(quiz["options"])
+                answer = quiz["answer"]
+                _random.shuffle(options)
+                quiz = {**quiz, "options": options, "answer": answer}
             if quiz:
                 guide_items[f"quiz_poll_{pname}"] = quiz
         # Use code-extracted source_cards with LLM-generated titles merged in
