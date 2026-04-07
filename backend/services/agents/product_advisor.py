@@ -672,10 +672,67 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
     if body.action == "pricing_detail":
         model = settings.openai_model_light
         product_name = body.name or body.url or ""
-        # Search for pricing info (Tavily with Exa fallback)
-        pricing_context = ""
         loop = asyncio.get_event_loop()
-        if settings.tavily_api_key:
+
+        # --- 3-source parallel pricing search ---
+
+        async def _crawl_pricing_url() -> str:
+            """Step A: Direct crawl of {url}/pricing via Tavily."""
+            if not body.url or not settings.tavily_api_key:
+                return ""
+            try:
+                from tavily import TavilyClient
+                tavily = TavilyClient(api_key=settings.tavily_api_key)
+                base = body.url.rstrip("/")
+                pricing_url = f"{base}/pricing"
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: tavily.search(pricing_url, max_results=1, include_raw_content=True),
+                )
+                for r in result.get("results", []):
+                    raw = r.get("raw_content") or r.get("content") or ""
+                    if raw:
+                        return f"## Source: Direct pricing page crawl ({pricing_url})\n\n{raw[:3000]}"
+            except Exception as e:
+                logger.debug("Direct pricing crawl failed for %s: %s", body.url, e)
+            return ""
+
+        async def _brave_pricing_search() -> str:
+            """Step B: Brave web search for official pricing page."""
+            if not settings.brave_api_key:
+                return ""
+            try:
+                import httpx
+                domain = urlparse(body.url or "").netloc or product_name
+                query = f"{product_name} pricing site:{domain}"
+                async with httpx.AsyncClient(timeout=10) as http:
+                    resp = await http.get(
+                        "https://api.search.brave.com/res/v1/web/search",
+                        params={"q": query, "count": 3},
+                        headers={"X-Subscription-Token": settings.brave_api_key, "Accept": "application/json"},
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                results = data.get("web", {}).get("results", [])
+                if not results:
+                    return ""
+                parts = []
+                for r in results[:3]:
+                    title = r.get("title", "")
+                    url = r.get("url", "")
+                    desc = r.get("description", "")[:600]
+                    extra = r.get("extra_snippets", [])
+                    snippet = "\n".join(extra[:2]) if extra else desc
+                    parts.append(f"[{title}]({url})\n{snippet}")
+                return "## Source: Brave Search (official pricing)\n\n" + "\n\n".join(parts)
+            except Exception as e:
+                logger.debug("Brave pricing search failed for %s: %s", product_name, e)
+            return ""
+
+        async def _tavily_pricing_search() -> str:
+            """Step C: Tavily general search (fallback)."""
+            if not settings.tavily_api_key:
+                return ""
             try:
                 from tavily import TavilyClient
                 tavily = TavilyClient(api_key=settings.tavily_api_key)
@@ -692,24 +749,18 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                     raw = r.get("raw_content") or r.get("content") or ""
                     if raw:
                         parts.append(raw[:2000])
-                pricing_context = "\n\n".join(parts)[:5000]
+                if parts:
+                    return "## Source: Tavily Search (general pricing info)\n\n" + "\n\n".join(parts)
             except Exception as e:
-                logger.warning("Tavily pricing search failed for %s, trying Exa: %s", product_name, e)
-        if not pricing_context and settings.exa_api_key:
-            try:
-                from exa_py import Exa
-                exa = Exa(api_key=settings.exa_api_key)
-                exa_res = await loop.run_in_executor(
-                    None,
-                    lambda: exa.search_and_contents(
-                        f"{product_name} pricing plans cost",
-                        num_results=3, text={"max_characters": 2000},
-                    ),
-                )
-                parts = [(r.text or "")[:2000] for r in exa_res.results if r.text]
-                pricing_context = "\n\n".join(parts)[:5000]
-            except Exception as e:
-                logger.warning("Exa pricing search also failed for %s: %s", product_name, e)
+                logger.debug("Tavily pricing search failed for %s: %s", product_name, e)
+            return ""
+
+        # Run A+B+C in parallel, merge non-empty results
+        crawl_result, brave_result, tavily_result = await asyncio.gather(
+            _crawl_pricing_url(), _brave_pricing_search(), _tavily_pricing_search(),
+        )
+        pricing_parts = [p for p in [crawl_result, brave_result, tavily_result] if p]
+        pricing_context = "\n\n---\n\n".join(pricing_parts)[:6000]
 
         system = """You research and verify product pricing information.
 Given a product name and pricing page content, produce a JSON object with:
