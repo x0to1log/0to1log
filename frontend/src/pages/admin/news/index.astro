@@ -89,6 +89,19 @@ for (const post of allPosts) {
   g.posts.push(post);
   g.statuses.add(post.status);
 }
+// Sort within each group: KO first, then EN; within same locale, Research before Business
+const localePriority: Record<string, number> = { ko: 0, en: 1 };
+const typePriority: Record<string, number> = { research: 0, business: 1 };
+for (const group of groupMap.values()) {
+  group.posts.sort((a, b) => {
+    const la = localePriority[a.locale || 'en'] ?? 2;
+    const lb = localePriority[b.locale || 'en'] ?? 2;
+    if (la !== lb) return la - lb;
+    const ta = typePriority[a.post_type || ''] ?? 2;
+    const tb = typePriority[b.post_type || ''] ?? 2;
+    return ta - tb;
+  });
+}
 const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCompare(a.date));
 ---
 
