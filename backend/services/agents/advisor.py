@@ -60,7 +60,7 @@ ACTION_CONFIG = {
         "validator": GenerateResult,
     },
     "seo": {
-        "model_attr": "openai_model_nano",
+        "model_attr": "openai_model_light",
         "prompt_fn": get_seo_prompt,
         "max_tokens": 2048,
         "temperature": 0.5,
@@ -71,6 +71,7 @@ ACTION_CONFIG = {
         "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": ReviewResult,
     },
     "factcheck": {
@@ -78,6 +79,7 @@ ACTION_CONFIG = {
         "prompt": FACTCHECK_SYSTEM_PROMPT,
         "max_tokens": 4096,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": FactcheckResult,
     },
     "conceptcheck": {
@@ -85,6 +87,7 @@ ACTION_CONFIG = {
         "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": ConceptCheckResult,
     },
     "voicecheck": {
@@ -92,6 +95,7 @@ ACTION_CONFIG = {
         "prompt": VOICECHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.3,
+        "reasoning_effort": "medium",
         "validator": VoiceCheckResult,
     },
     "retrocheck": {
@@ -99,6 +103,7 @@ ACTION_CONFIG = {
         "prompt": RETROCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": RetroCheckResult,
     },
 }
@@ -165,6 +170,8 @@ async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
         temperature=config["temperature"],
         response_format={"type": "json_object"},
     )
+    if config.get("reasoning_effort"):
+        completion_kwargs["reasoning_effort"] = config["reasoning_effort"]
     response = await client.chat.completions.create(**completion_kwargs)
 
     raw = response.choices[0].message.content
@@ -212,18 +219,18 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
 
     # Step 1: Extract claims
     user_prompt = _build_user_prompt(req)
-    resp1 = await client.chat.completions.create(
-        **build_completion_kwargs(
-            model=model,
-            messages=[
-                {"role": "system", "content": DEEPVERIFY_CLAIM_EXTRACT_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=2048,
-            temperature=0.1,
-            response_format={"type": "json_object"},
-        )
+    step1_kwargs = build_completion_kwargs(
+        model=model,
+        messages=[
+            {"role": "system", "content": DEEPVERIFY_CLAIM_EXTRACT_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        max_tokens=2048,
+        temperature=0.1,
+        response_format={"type": "json_object"},
     )
+    step1_kwargs["reasoning_effort"] = "medium"
+    resp1 = await client.chat.completions.create(**step1_kwargs)
     claims_data = parse_ai_json(resp1.choices[0].message.content, "DeepVerify-extract")
     total_tokens += resp1.usage.completion_tokens if resp1.usage else 0
     claims = claims_data.get("claims", [])
@@ -298,18 +305,18 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
 
     verify_prompt = "\n\n---\n\n".join(verify_input)
 
-    resp2 = await client.chat.completions.create(
-        **build_completion_kwargs(
-            model=model,
-            messages=[
-                {"role": "system", "content": DEEPVERIFY_VERIFY_PROMPT},
-                {"role": "user", "content": verify_prompt},
-            ],
-            max_tokens=4096,
-            temperature=0.1,
-            response_format={"type": "json_object"},
-        )
+    step2_kwargs = build_completion_kwargs(
+        model=model,
+        messages=[
+            {"role": "system", "content": DEEPVERIFY_VERIFY_PROMPT},
+            {"role": "user", "content": verify_prompt},
+        ],
+        max_tokens=4096,
+        temperature=0.1,
+        response_format={"type": "json_object"},
     )
+    step2_kwargs["reasoning_effort"] = "medium"
+    resp2 = await client.chat.completions.create(**step2_kwargs)
     verify_data = parse_ai_json(resp2.choices[0].message.content, "DeepVerify-verify")
     total_tokens += resp2.usage.completion_tokens if resp2.usage else 0
 

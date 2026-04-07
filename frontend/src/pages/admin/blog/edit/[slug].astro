@@ -854,17 +854,17 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       { action: 'draft', label: 'Draft', model: 'gpt-5' },
       { action: 'rewrite', label: 'Rewrite', model: 'gpt-5' },
       { action: 'suggest', label: 'Suggest', model: 'gpt-5-nano' },
-      { action: 'review', label: 'Review', model: 'gpt-5-nano' },
+      { action: 'review', label: 'Review', model: 'gpt-5-mini' },
       { action: 'generate', label: 'Generate', model: 'gpt-5-nano' },
       { action: 'generate_bilingual', label: 'Generate EN+KO', model: 'gpt-5-nano + gpt-5', wide: true },
     ];
 
     const CATEGORY_SPECIAL: Record<string, { action: string; label: string; model: string; wide?: boolean }> = {
       'study': { action: 'conceptcheck', label: 'Concept Check', model: 'gpt-5-mini', wide: true },
-      'career': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-5-nano', wide: true },
-      'project': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-5-nano', wide: true },
-      'work-note': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-5-nano', wide: true },
-      'daily': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-5-nano', wide: true },
+      'career': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-5-mini', wide: true },
+      'project': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-5-mini', wide: true },
+      'work-note': { action: 'retrocheck', label: 'Retro Check', model: 'gpt-5-mini', wide: true },
+      'daily': { action: 'voicecheck', label: 'Voice Check', model: 'gpt-5-mini', wide: true },
     };
 
     const TRANSLATE_ACTION = { action: 'translate', label: 'Translate', model: 'gpt-5', wide: true };

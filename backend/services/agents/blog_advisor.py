@@ -86,31 +86,35 @@ BLOG_ACTION_CONFIG = {
     },
     # Reused from news advisor (same prompts, same validators)
     "review": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": ReviewResult,
     },
     "conceptcheck": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": ConceptCheckResult,
     },
     "voicecheck": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt": VOICECHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.3,
+        "reasoning_effort": "medium",
         "validator": VoiceCheckResult,
     },
     "retrocheck": {
-        "model_attr": "openai_model_light",
+        "model_attr": "openai_model_reasoning",
         "prompt": RETROCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "temperature": 0.2,
+        "reasoning_effort": "medium",
         "validator": RetroCheckResult,
     },
 }
@@ -154,6 +158,10 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
 
     logger.info("Blog advisor [%s] starting with model=%s, locale=%s", req.action, model, req.locale)
 
+    extra = {}
+    if config.get("reasoning_effort"):
+        extra["reasoning_effort"] = config["reasoning_effort"]
+
     response = await client.chat.completions.create(
         **compat_create_kwargs(
             model,
@@ -164,6 +172,7 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
             response_format={"type": "json_object"},
             temperature=config["temperature"],
             max_tokens=config["max_tokens"],
+            **extra,
         ),
     )
 

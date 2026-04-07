@@ -87,8 +87,7 @@ Given a title and category, propose a well-organized outline for the blog post.
 - Write in the same language as the input title
 - Structure should feel natural for the category, not formulaic
 - Do NOT include an "Introduction" or "Conclusion" section — the writer handles those naturally
-
-Respond in JSON format only."""
+"""
 
 _OUTLINE_STRUCTURE = {
     "study": """\
@@ -159,8 +158,7 @@ Given a title, category, and an outline (markdown with H2/H3 headings), expand e
   "content": "full markdown draft with all sections expanded"
 }}
 ```
-
-Respond in JSON format only."""
+"""
 
 _DRAFT_TONE = {
     "study": """\
@@ -242,8 +240,7 @@ Given a blog post, identify sections that can be improved and provide rewritten 
 - "after" should be the same length or shorter than "before" unless adding necessary detail
 - Limit to 3-8 changes (focus on highest impact)
 - Write in the same language as the input content
-
-Respond in JSON format only."""
+"""
 
 _REWRITE_PRESERVE = {
     "study": """\
@@ -313,8 +310,7 @@ Given a blog post, provide structural and content suggestions to improve it. You
 - priority: "high" (significantly improves the post), "medium" (noticeable improvement), "low" (nice-to-have)
 - Focus on content quality, not formatting or grammar
 - Write in the same language as the input content
-
-Respond in JSON format only."""
+"""
 
 
 def get_suggest_prompt(category: str) -> str:
@@ -357,8 +353,7 @@ Translate the given blog post between Korean and English while preserving techni
 - Always generate in English kebab-case regardless of target language
 - If translating KO→EN, create a meaningful English slug from the content
 - If translating EN→KO, keep the original English slug with '-ko' suffix
-
-Respond in JSON format only."""
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -400,8 +395,7 @@ focus_items appear in the right sidebar under "Focus of This Article". They must
 - Concise: 15-40 characters in Korean, 5-12 words in English
 - Written as noun phrases or short declarative statements
 {focus_items_guidance}
-
-Respond in JSON format only."""
+"""
 
 _BLOG_FOCUS_GUIDANCE = {
     "study": """\
@@ -479,8 +473,7 @@ Adapt examples, idioms, and cultural references for {target_lang} readers.
 - content: Full article naturally rewritten in {target_lang}, preserve structure (H2/H3), same depth and detail as original
 
 {focus_items_guidance}
-
-Respond in JSON format only."""
+"""
 
 
 def get_blog_generate_target_prompt(category: str, source_lang: str, target_lang: str) -> str:
