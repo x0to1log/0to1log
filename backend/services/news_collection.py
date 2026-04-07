@@ -14,6 +14,12 @@ from models.news_pipeline import NewsCandidate
 
 logger = logging.getLogger(__name__)
 
+_NON_EN_DOMAINS = (
+    "landiannews.com", "36kr.com", "unifuncs.com", "minimaxi.com",
+    "ithome.com", "oschina.net", "csdn.net", "juejin.cn",
+    "zhihu.com", "bilibili.com", "baidu.com", "idctop.com",
+)
+
 SEARCH_QUERIES = [
     # Common
     "latest AI artificial intelligence news today",
@@ -659,9 +665,16 @@ async def enrich_sources(
             for r in (resp.results if hasattr(resp, "results") else []):
                 if not r.url or r.url == item.url:
                     continue
+                # Filter non-EN/KO sources (same as collect stage)
+                r_title = r.title or ""
+                r_hostname = _re_module.sub(r"https?://(www\.)?", "", r.url).split("/")[0]
+                if any(d in r_hostname for d in _NON_EN_DOMAINS):
+                    continue
+                if any("\u4e00" <= ch <= "\u9fff" for ch in r_title):
+                    continue
                 sources.append({
                     "url": r.url,
-                    "title": r.title or "",
+                    "title": r_title,
                     "content": r.text or "",
                 })
         except Exception as e:
@@ -738,11 +751,7 @@ async def collect_news(
     excluded_count = 0
     filtered_count = 0
     _NON_ARTICLE_PATTERNS = ("/category/", "/categories/", "/topics/", "/topic/", "/tag/", "/tags/", "/archive/")
-    _NON_EN_DOMAINS = (
-        "landiannews.com", "36kr.com", "unifuncs.com", "minimaxi.com",
-        "ithome.com", "oschina.net", "csdn.net", "juejin.cn",
-        "zhihu.com", "bilibili.com", "baidu.com",
-    )
+    # _NON_EN_DOMAINS is defined at module level (shared with enrich_sources)
     for c in all_candidates:
         if c.url in already_used:
             excluded_count += 1
