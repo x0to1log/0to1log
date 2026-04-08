@@ -414,8 +414,8 @@ const hbStageGroups: { label: string; match: (t: string) => boolean }[] = [
   { label: 'Auto Generate', match: (t) => t === 'handbook.auto_generate' },
   { label: 'Manual Generate', match: (t) => t.startsWith('handbook.generate.') },
   { label: 'Classify', match: (t) => t === 'handbook.classify' },
-  { label: 'Quality Check', match: (t) => t === 'handbook.quality_check' },
-  { label: 'Self Critique', match: (t) => t === 'handbook.self_critique' },
+  { label: 'Quality Check', match: (t) => t.startsWith('handbook.quality_check') },
+  { label: 'Self Critique', match: (t) => t.startsWith('handbook.self_critique') },
 ];
 const hbStackedData = hbStageGroups.map((group) => ({
   label: group.label,
