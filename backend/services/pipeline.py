@@ -909,6 +909,16 @@ def _check_structural_penalties(
                     penalty += 15
                     warnings.append(f"CP data provided but missing in {persona_name} {locale}")
 
+    # Check 1b: EN has CP but KO doesn't (-10)
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output or not output.en or not output.ko:
+            continue
+        en_has_cp = "## Community Pulse" in output.en
+        ko_has_cp = "## 커뮤니티 반응" in output.ko or "## Community Pulse" in output.ko
+        if en_has_cp and not ko_has_cp:
+            penalty += 10
+            warnings.append(f"EN has CP but KO missing in {persona_name}")
+
     # Check 2: CP exists as ###/#### instead of ## (-5)
     for persona_name, output in [("expert", expert), ("learner", learner)]:
         if not output:

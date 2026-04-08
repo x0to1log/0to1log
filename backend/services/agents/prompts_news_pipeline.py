@@ -292,7 +292,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 4. Do "en" and "ko" cover the SAME news items with the SAME ## sections and ### sub-items?
 5. Is headline_ko in Korean?
 6. Does ko have citations [N](URL) at the end of every paragraph, just like en?
-7. Community Pulse: if "Community Pulse Data:" appears in the input, is `## Community Pulse` present in BOTH en and ko with all quotes? In ko, are quotes in Korean?
+7. Community Pulse: if "Community Pulse Data:" appears in the input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This is the #1 most common error — ko MUST have `## 커뮤니티 반응` with Korean quotes whenever en has `## Community Pulse`. Never omit CP from ko.
 8. Does every `###` line contain only the news item title, with no body text or citation on the same line?
 9. Is there exactly one blank line after every `###` sub-heading before the first paragraph starts?
 
