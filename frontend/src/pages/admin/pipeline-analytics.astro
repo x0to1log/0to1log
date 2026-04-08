@@ -73,6 +73,8 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data:
     .select('run_key, status, started_at, finished_at')
     .gte('started_at', filterDate)
     .not('run_key', 'like', 'handbook-%')
+    .not('run_key', 'like', 'weekly-%')
+    .not('run_key', 'like', 'rerun-%')
     .order('started_at', { ascending: true })
     .limit(100),
   // Weekly pipeline logs (separate from news)
