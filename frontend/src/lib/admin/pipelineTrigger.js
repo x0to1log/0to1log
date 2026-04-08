@@ -18,7 +18,7 @@ function getPipelineConfig(env) {
   return { cronSecret, backendUrl };
 }
 
-async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null) {
+async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null, isCron = false) {
   const config = getPipelineConfig(env);
   if (!config) {
     return jsonResponse({ error: 'Missing configuration' }, 500);
@@ -83,6 +83,7 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
     if (targetDate) payload.target_date = targetDate;
     if (force) payload.force = true;
     if (skipHandbook) payload.skip_handbook = true;
+    if (isCron) payload.is_cron = true;
 
     const response = await fetch(`${config.backendUrl}/api/cron/news-pipeline`, {
       method: 'POST',
@@ -126,7 +127,7 @@ export async function handleCronTriggerRequest(request, env) {
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
-  return forwardPipelineTrigger(env, 'resume');
+  return forwardPipelineTrigger(env, 'resume', null, false, false, null, true);
 }
 
 export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null) {

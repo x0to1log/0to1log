@@ -1000,6 +1000,7 @@ async def _generate_digest(
     supabase,
     run_id: str,
     enriched_map: dict[str, list[dict]] | None = None,
+    auto_publish: bool = False,
 ) -> tuple[int, list[str], dict[str, Any]]:
     """Generate a daily digest post for one category (research or business).
 
@@ -1371,9 +1372,10 @@ async def _generate_digest(
         excerpt = (digest_excerpt if locale == "en" else digest_excerpt_ko) or digest_excerpt or ""
         focus_items = (digest_focus_items if locale == "en" else digest_focus_items_ko) or digest_focus_items or []
 
-        # Auto-publish if quality score meets threshold; otherwise draft
+        # Auto-publish only when triggered by cron AND quality score meets threshold
         auto_pub = (
-            quality_score is not None
+            auto_publish
+            and quality_score is not None
             and quality_score >= settings.auto_publish_threshold
         )
         row: dict[str, Any] = {
@@ -1466,6 +1468,7 @@ async def run_daily_pipeline(
     target_date: str | None = None,
     skip_handbook: bool = False,
     force_fresh: bool = False,
+    auto_publish: bool = False,
 ) -> PipelineResult:
     """Run the full daily AI news pipeline.
 
@@ -1788,6 +1791,7 @@ async def run_daily_pipeline(
                     supabase=supabase,
                     run_id=run_id,
                     enriched_map=enriched_map,
+                    auto_publish=auto_publish,
                 )
             )
 
@@ -2102,6 +2106,7 @@ async def rerun_pipeline_stage(
                     supabase=supabase,
                     run_id=run_id,
                     enriched_map=enriched_map,
+                    auto_publish=False,
                 )
             )
 

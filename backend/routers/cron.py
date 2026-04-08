@@ -25,6 +25,7 @@ class PipelineTriggerBody(BaseModel):
     target_date: Optional[str] = None
     force: bool = False
     skip_handbook: bool = False
+    is_cron: bool = False
 
 
 class PipelineCancelBody(BaseModel):
@@ -105,10 +106,12 @@ async def trigger_news_pipeline(
                     skip_handbook = True
                     logger.warning("Could not read handbook_auto_extract setting (%s), defaulting to SKIP", e)
             force_fresh = body.force if body else False
+            is_cron = body.is_cron if body else False
             result = await run_daily_pipeline(
                 batch_id=batch_id, target_date=target_date,
                 skip_handbook=skip_handbook,
                 force_fresh=force_fresh,
+                auto_publish=is_cron,
             )
             logger.info(
                 "Pipeline batch %s finished: %d posts, %d errors",
