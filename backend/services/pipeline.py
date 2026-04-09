@@ -747,25 +747,35 @@ async def _check_digest_quality(
     quality_model = settings.openai_model_reasoning  # gpt-5-mini — nano can't score
 
     async def _score(prompt: str, content: str, label: str) -> tuple[int, dict, dict]:
-        try:
-            resp = await client.chat.completions.create(
-                **build_completion_kwargs(
-                    model=quality_model,
-                    messages=[
-                        {"role": "system", "content": prompt},
-                        {"role": "user", "content": content[:20000]},
-                    ],
-                    max_tokens=500,
-                    temperature=0,
-                    response_format={"type": "json_object"},
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                resp = await client.chat.completions.create(
+                    **build_completion_kwargs(
+                        model=quality_model,
+                        messages=[
+                            {"role": "system", "content": prompt},
+                            {"role": "user", "content": content[:20000]},
+                        ],
+                        max_tokens=500,
+                        temperature=0,
+                        response_format={"type": "json_object"},
+                    )
                 )
-            )
-            data = parse_ai_json(resp.choices[0].message.content, label)
-            usage = extract_usage_metrics(resp, quality_model)
-            return int(data.get("score", 0)), data, usage
-        except Exception as e:
-            logger.warning("Quality check %s failed: %s", label, e)
-            return 0, {}, {}
+                raw = resp.choices[0].message.content
+                if not raw or not raw.strip():
+                    logger.warning("Quality check %s attempt %d: empty response", label, attempt + 1)
+                    continue
+                data = parse_ai_json(raw, label)
+                if not data or not data.get("score"):
+                    logger.warning("Quality check %s attempt %d: no score in response", label, attempt + 1)
+                    continue
+                usage = extract_usage_metrics(resp, quality_model)
+                return int(data.get("score", 0)), data, usage
+            except Exception as e:
+                logger.warning("Quality check %s attempt %d failed: %s", label, attempt + 1, e)
+        logger.error("Quality check %s failed after %d attempts", label, max_retries)
+        return 0, {}, {}
 
     # Run expert + learner quality checks in parallel
     tasks = [_score(expert_prompt, expert.en, f"Quality-{digest_type}-expert")]
@@ -998,6 +1008,27 @@ async def _send_draft_alert(batch_id: str, digest_type: str, quality_score: int 
         logger.info("Draft alert email sent for %s %s (score=%s)", batch_id, digest_type, quality_score)
     except Exception as e:
         logger.warning("Failed to send draft alert email: %s", e)
+
+
+async def _notify_auto_publish(slugs: list[str]) -> None:
+    """Notify frontend to fire webhooks + warm CDN for auto-published posts."""
+    frontend_url = settings.fastapi_url.replace("/api", "").rstrip("/")
+    if not frontend_url or not settings.cron_secret:
+        # Try common frontend URL
+        frontend_url = "https://0to1log.com"
+    for slug in slugs:
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{frontend_url}/api/internal/notify-publish",
+                    headers={"x-cron-secret": settings.cron_secret},
+                    json={"slug": slug},
+                    timeout=10,
+                )
+            logger.info("Auto-publish notification sent for %s", slug)
+        except Exception as e:
+            logger.warning("Failed to notify auto-publish for %s: %s", slug, e)
 
 
 async def _generate_digest(
@@ -1325,6 +1356,7 @@ async def _generate_digest(
     t_save = time.monotonic()
     translation_group_id = str(uuid.uuid4())
     slug_base = f"{batch_id}-{digest_type}-digest"
+    published_slugs: list[str] = []
 
     source_urls = [url for group in classified for url in group.urls]
     digest_meta = {
@@ -1449,6 +1481,7 @@ async def _generate_digest(
         try:
             supabase.table("news_posts").upsert(row, on_conflict="slug").execute()
             posts_created += 1
+            published_slugs.append(slug) if auto_pub else None
             status_label = "published" if auto_pub else "draft"
             logger.info("Saved %s %s digest (%s, score=%s): %s",
                         digest_type, locale, status_label, quality_score, slug)
@@ -1460,6 +1493,10 @@ async def _generate_digest(
     # Send email alert if any post was saved as draft (below threshold)
     if posts_created > 0 and not auto_pub:
         await _send_draft_alert(batch_id, digest_type, quality_score)
+
+    # Fire webhooks + warm CDN for auto-published posts
+    if published_slugs:
+        await _notify_auto_publish(published_slugs)
 
     await _log_stage(
         supabase, run_id, f"save:{digest_type}",
