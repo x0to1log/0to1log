@@ -503,6 +503,16 @@ async def _extract_and_create_handbook_terms(
                     existing = exists_by_short.data[0]["term"]
                     logger.info("Handbook term '%s' already exists as '%s' (abbreviation match), skipping", term_name, existing)
                     continue
+            # Reverse abbreviation: "Retrieval-Augmented Generation" → extract initials "RAG" → check DB
+            words = term_name.replace("-", " ").split()
+            if len(words) >= 2:
+                initials = "".join(w[0] for w in words if w[0].isupper())
+                if len(initials) >= 3:  # min 3 chars to avoid false positives (ME, AI, etc.)
+                    exists_by_initials = supabase.table("handbook_terms").select("id, term").ilike("term", initials).limit(1).execute()
+                    if exists_by_initials.data:
+                        existing = exists_by_initials.data[0]["term"]
+                        logger.info("Handbook term '%s' already exists as '%s' (initials match), skipping", term_name, existing)
+                    continue
         except Exception as e:
             logger.warning("Duplicate check failed for '%s': %s", term_name, e)
             continue
