@@ -564,6 +564,7 @@ GROUNDING_RULES = """
 4. Only add disambiguation notes ("~와 혼동하지 않도록" / "Not to be confused with X") for VERIFIABLE alternative meanings that are WELL-KNOWN (e.g., "Kernel in CNN vs OS"). Do NOT invent disambiguation targets.
 5. Reference URLs in adv_*_8_refs MUST come from the Reference Materials. Do NOT generate URLs from memory.
 6. For formulas: only include formulas you can derive step-by-step. If you cannot explain each symbol, do not include it.
+7. NO inline source citations in body text. Do NOT write "(출처: IBM)", "(Ref: X)", "(IBM Research)", "(Refs: Encord, Arize)" etc. in the content. Sources belong ONLY in the "더 깊이 알고 싶다면" / "Go Deeper" section as curated recommendations.
 """
 
 GENERATE_BASIC_PROMPT = """\
@@ -628,18 +629,23 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BANNED: 스마트폰 얼굴 인식, 자율주행차, 음성 비서 — 모든 AI 글에 나오는 뻔한 3대장. 이 시나리오는 사용 금지.
   BAD: "스마트폰 얼굴 인식: AI 칩이 실시간으로 인식" (뻔하고 상황 묘사 없음)
   GOOD: "**넷플릭스 실시간 자막**: 영상을 틀자마자 0.2초 만에 자막이 뜹니다. 서버의 AI 칩이 음성을 실시간으로 텍스트로 변환하기 때문입니다." (의외 + 상황 묘사)
-- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용. 비교표 위에 **한 줄 비교** 2~3개를 먼저 작성 — "X vs Y → 핵심 차이 한 마디"로 3초 만에 차이를 잡아주는 초고속 비교.
-  BAD: "| 구분 | 높은 효율 | 낮은 효율 |" (좋다 vs 나쁘다는 비교가 아님 — 속성 대비표 금지)
-  BAD: "| 항목 | 설명 |" (단순 용어 설명표 금지)
-  GOOD: "Transformer vs RNN → 전체를 한 번에 보는 것 vs 하나씩 순서대로 읽는 것\nTransformer vs CNN → 텍스트의 전역 관계 vs 이미지의 지역 패턴\n\n| | Transformer | RNN | CNN |\n| 처리 방식 | 병렬 | 순차 | 지역 패턴 |..."
+- **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용. 비교표 위에 **한 줄 비교** 2~3개를 먼저 작성.
+  한 줄 비교 규칙: 반드시 "X vs Y → 10단어 이내 차이" 형식. 길면 실패. 설명이 아니라 핵심 차이 한 마디.
+  BAD 한 줄 비교: "Dockerfile/이미지 vs Compose → 단일 서비스 패키징 vs 다중 서비스 오케스트레이션" (너무 길다)
+  GOOD 한 줄 비교: "Docker vs VM → 초 단위 시작 vs 분 단위 부팅"
+  GOOD 한 줄 비교: "LoRA vs 전체 미세조정 → 플러그인 추가 vs 모델 전체 교체"
+  BAD 비교표: "| 구분 | 높은 효율 | 낮은 효율 |" (속성 대비표 금지)
+  BAD 비교표: "| 항목 | 설명 |" (단순 용어 설명표 금지)
+  GOOD 비교표: "| | Transformer | RNN | CNN |\n| 처리 방식 | 병렬 | 순차 | 지역 패턴 |..."
 - **basic_ko_4_why**: **알아야 하는 이유** — 이 개념이 실제로 만든 변화를 중심으로. 검증 가능한 사실 기반으로 "이게 등장한 후 뭐가 달라졌는지" 쓰기. 반사실적 가정("없었다면") 금지 — 실제 일어난 변화만. 4~5개 bullet point.
 - **basic_ko_5_where**: **실제 제품/서비스 이름**과 함께 설명. "추천 시스템에 사용됩니다" (X) → "ChatGPT가 다음 단어를 예측할 때 이 원리를 사용합니다" (O). 확실한 사례만 작성 — 불확실하면 쓰지 마. 제품-기술 매핑은 Reference Materials에서 확인된 것만 사용. 추측으로 "X가 Y를 사용한다"고 쓰지 마. 불확실하면 "~에 활용될 수 있다" 표현 사용.
 - **basic_ko_6_caution**: 이 개념에 대한 **흔한 오해**와 **실제 사실**을 대비. 형식: "❌ 오해: ~라고 생각하기 쉽다 → ✅ 실제: ~이다". 3~4개.
-- **basic_ko_6b_news_context**: **"뉴스에서 만났다면"** — AI 뉴스에서 이 용어가 등장하는 대표적 맥락 3~4개. 형식: "뉴스에서 'X'라고 나오면 → 이런 뜻이다". 사용자가 뉴스를 읽다가 이 용어를 만났을 때 바로 해석할 수 있게.
+- **basic_ko_6b_news_context**: **"뉴스에서 만났다면"** — AI 뉴스에서 이 용어가 등장하는 대표적 맥락 3~4개. 형식: "뉴스에서 'X'라고 나오면 → 이런 뜻이다". 사용자가 뉴스를 읽다가 이 용어를 만났을 때 바로 해석할 수 있게. **인라인 출처 표기 금지** — "(IBM Research)", "(Ref: X)" 같은 괄호 출처를 넣지 마. 이 섹션은 빠른 참고용이므로 깔끔하게.
   GOOD: "\"새 모델이 Transformer 기반\" → 이 아키텍처 위에 만들었다는 뜻. 거의 모든 최신 LLM이 해당."
-  GOOD: "\"xx-billion parameter\" → 파라미터 수가 클수록 성능은 올라가지만 비용·전력도 비례해서 증가."
-- **basic_ko_6c_checklist**: **"이해 체크리스트"** — 이 용어를 진짜 이해했는지 스스로 확인할 수 있는 질문 4~5개. 형식: "□ 질문". 각 질문은 이 용어의 핵심 개념을 짚어야 하며, 단순 암기가 아닌 이해를 확인하는 질문이어야 함.
-  GOOD: "□ Self-attention에서 Q, K, V가 각각 하는 역할은?\n□ RNN 대비 Transformer의 핵심 장점은?\n□ 왜 positional encoding이 필요한가?"
+  BAD: "\"PEFT 중 LoRA 채택\" → ...(IBM Research 맥락)." (인라인 출처 금지)
+- **basic_ko_6c_checklist**: **"이해 체크리스트"** — 이 용어를 진짜 이해했는지 스스로 확인할 수 있는 질문 4~5개. **각 질문을 별도 bullet으로** 작성 (줄바꿈 필수). 단순 암기가 아닌 이해를 확인하는 질문이어야 함. **인라인 출처 표기 금지**.
+  GOOD: "□ Self-attention에서 Q, K, V가 각각 하는 역할은?\n\n□ RNN 대비 Transformer의 핵심 장점은?\n\n□ 왜 positional encoding이 필요한가?"
+  BAD: "□ 질문 (Ref: W&B)" (인라인 출처 금지)
 - **basic_ko_7_comm**: 실제 **팀 회의, 슬랙 대화, 기술 리뷰**에서 이 용어가 등장하는 예시 문장 4~5개. **핵심 용어를 굵게 표시**. 뉴스 기사체 금지 — 팀명, 지표, 기한 같은 구체적 맥락을 포함한 대화체로.
   BAD: "최근 AI 칩 시장이 급성장하면서 주요 업체들이 경쟁하고 있습니다." (뉴스 기사 톤)
   GOOD: "추론 서버를 A100에서 H100으로 바꾸니까 **latency가 절반**으로 줄었어요. 비용은 좀 올랐는데 SLA 충족이 우선이라..." (팀 대화 톤)
@@ -767,18 +773,22 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BANNED: smartphone face recognition, self-driving cars, voice assistants — overused AI examples. Do NOT use these.
   BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
   GOOD: "**Netflix real-time subtitles**: Subtitles appear within 0.2 seconds of pressing play. The server's AI chip converts speech to text in real time." (surprising + situation detail)
-- **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format). Start with **2-3 one-line comparisons** above the table — "X vs Y → core difference in one phrase" for instant 3-second understanding.
-  BAD: "| Aspect | High Efficiency | Low Efficiency |" (good vs bad is not a comparison — attribute contrast tables are banned)
-  BAD: "| Term | Description |" (simple glossary table banned)
-  GOOD: "Transformer vs RNN → seeing everything at once vs reading one word at a time\nTransformer vs CNN → global text relationships vs local image patterns\n\n| | Transformer | RNN | CNN |\n| Processing | Parallel | Sequential | Local patterns |..."
+- **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format). Start with **2-3 one-line comparisons** above the table.
+  One-line comparison rules: MUST be "X vs Y → max 10 words". If it's longer, it fails. Core difference only, not explanation.
+  BAD one-line: "Dockerfile/image vs Compose → single service packaging vs multi-service orchestration" (too long)
+  GOOD one-line: "Docker vs VM → seconds to start vs minutes to boot"
+  GOOD one-line: "LoRA vs full fine-tuning → plugin add-on vs full model replacement"
+  BAD table: "| Aspect | High Efficiency | Low Efficiency |" (attribute contrast banned)
+  GOOD table: "| | Transformer | RNN | CNN |\n| Processing | Parallel | Sequential | Local patterns |..."
 - **basic_en_4_why**: **Why you should know this** — what real change this concept brought. Focus on verifiable facts about what happened AFTER this concept appeared. NO counterfactual speculation ("without this, X wouldn't exist"). 4-5 bullet points.
 - **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it. Only state product-technology mappings confirmed in Reference Materials. Do NOT guess "X uses Y". If uncertain, OMIT the example entirely rather than hedging.
 - **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
-- **basic_en_6b_news_context**: **"When you see this in the news"** — 3-4 common news phrasings and what they actually mean. Format: "When news says 'X' → it means Y". Help readers instantly decode AI news headlines.
+- **basic_en_6b_news_context**: **"When you see this in the news"** — 3-4 common news phrasings and what they actually mean. Format: "When news says 'X' → it means Y". Help readers instantly decode AI news headlines. **No inline citations** — no "(Ref: X)", "(Source: Y)".
   GOOD: "\"New model is Transformer-based\" → Built on this architecture. Nearly all modern LLMs qualify."
   GOOD: "\"xx-billion parameter model\" → More parameters generally means better performance but proportionally higher cost and power."
-- **basic_en_6c_checklist**: **"Understanding checklist"** — 4-5 self-check questions. Format: "□ Question". Each question should test genuine understanding, not mere recall.
-  GOOD: "□ What roles do Q, K, and V play in self-attention?\n□ Why is Transformer faster than RNN for long sequences?\n□ Why does Transformer need positional encoding?"
+- **basic_en_6c_checklist**: **"Understanding checklist"** — 4-5 self-check questions. **Each question on its own line** (line break between each). Test genuine understanding, not recall. **No inline citations**.
+  GOOD: "□ What roles do Q, K, and V play in self-attention?\n\n□ Why is Transformer faster than RNN for long sequences?\n\n□ Why does Transformer need positional encoding?"
+  BAD: "□ Question (Ref: W&B)" (no inline citations)
 - **basic_en_7_comm**: 4-5 example sentences from real **team meetings, Slack conversations, or tech reviews**. **Bold the key term**. NO news article tone — include specific context like team names, metrics, or deadlines.
   BAD: "The AI chip market has been growing rapidly as major companies compete." (news article tone)
   GOOD: "Switching our inference servers from A100 to H100 cut **latency in half**. Cost went up a bit, but hitting SLA targets was the priority..." (team conversation tone)

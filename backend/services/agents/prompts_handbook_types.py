@@ -232,8 +232,10 @@ TYPE_SECTION_WEIGHTS: dict[tuple[str, str], dict[str, str]] = {
     },
     # product_platform
     ("product_platform", "compare"): {
-        "section_guide": "Lead with competitive comparison table (3+ alternatives). Include pricing, "
-                        "performance, key differentiators. This is 'which should I choose?'",
+        "section_guide": "Lead with competitive comparison table (3+ alternatives). "
+                        "MUST include pricing/cost if available in Reference Materials (API cost per token, "
+                        "free tier, subscription tiers). Include performance benchmarks with numbers. "
+                        "This is 'which should I choose?' — users need price + performance to decide.",
     },
     ("product_platform", "adopt"): {
         "section_guide": "Lead with getting-started steps. Quick evaluation criteria. Free tier info. "
