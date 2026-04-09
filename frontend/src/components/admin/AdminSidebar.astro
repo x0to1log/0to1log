@@ -20,11 +20,14 @@ try {
       import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
     );
+    const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
     const { count } = await sb
       .from('news_posts')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'draft')
-      .in('post_type', ['research', 'business']);
+      .in('post_type', ['research', 'business'])
+      .not('pipeline_batch_id', 'is', null)
+      .gte('updated_at', since);
     draftNewsCount = count ?? 0;
   }
 } catch { /* sidebar dot is best-effort */ }
