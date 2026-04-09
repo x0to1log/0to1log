@@ -1,6 +1,5 @@
 """Admin AI Advisor router — post actions + deep verify + handbook."""
 
-import asyncio
 import logging
 import uuid
 
@@ -85,15 +84,27 @@ async def handbook_advise(
                     "error": None,
                 }
                 # Auto-save to DB so results survive polling failures
-                if body.term_id and result:
+                if result:
                     try:
                         from core.database import get_supabase
                         sb = get_supabase()
                         if sb:
-                            update_data = {k: v for k, v in result.items() if v and isinstance(v, str)}
-                            if update_data:
+                            # Fields safe to auto-save (skip internal metadata keys starting with _)
+                            save_fields = {
+                                "definition_ko", "definition_en",
+                                "body_basic_ko", "body_basic_en",
+                                "body_advanced_ko", "body_advanced_en",
+                                "korean_name", "korean_full", "term_full",
+                                "categories",
+                            }
+                            update_data = {k: v for k, v in result.items() if k in save_fields and v}
+                            if update_data and body.term_id:
                                 sb.table("handbook_terms").update(update_data).eq("id", body.term_id).execute()
                                 logger.info("Auto-saved generate result to DB for term %s (%d fields)", body.term_id, len(update_data))
+                            elif update_data and body.term:
+                                # New term without ID — save by term name match
+                                sb.table("handbook_terms").update(update_data).eq("term", body.term).execute()
+                                logger.info("Auto-saved generate result by term name '%s' (%d fields)", body.term, len(update_data))
                     except Exception as save_err:
                         logger.warning("Auto-save to DB failed: %s", save_err)
             except Exception as e:
