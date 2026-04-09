@@ -17,6 +17,7 @@ from models.news_pipeline import (
 )
 from services.agents.advisor import (
     extract_terms_from_content,
+    gate_candidate_terms,
     generate_term_content,
 )
 from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
@@ -566,6 +567,23 @@ async def _extract_and_create_handbook_terms(
         if not is_dup:
             deduped_valid.append((term_name, korean_name, slug, cats))
     valid_terms = deduped_valid
+
+    # LLM gate: verify candidates against existing handbook terms before expensive generation
+    if valid_terms:
+        try:
+            existing = supabase.table("handbook_terms").select("term").neq("status", "archived").execute()
+            existing_names = [r["term"] for r in (existing.data or [])]
+            # Build candidate dicts for gate
+            gate_candidates = [{"term": tn, "korean_name": kn} for tn, kn, _sl, _cats in valid_terms]
+            accepted = await gate_candidate_terms(gate_candidates, existing_names)
+            accepted_names = {c["term"] for c in accepted}
+            before_count = len(valid_terms)
+            valid_terms = [(tn, kn, sl, cats) for tn, kn, sl, cats in valid_terms if tn in accepted_names]
+            rejected_count = before_count - len(valid_terms)
+            if rejected_count:
+                logger.info("LLM gate rejected %d/%d candidates", rejected_count, before_count)
+        except Exception as e:
+            logger.warning("LLM gate failed, proceeding with all candidates: %s", e)
 
     # Generate terms concurrently (max 2 at a time)
     sem = asyncio.Semaphore(2)

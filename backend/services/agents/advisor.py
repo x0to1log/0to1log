@@ -1933,6 +1933,66 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
     return terms, usage
 
 
+async def gate_candidate_terms(
+    candidates: list[dict], existing_terms: list[str],
+) -> list[dict]:
+    """Filter candidate terms through LLM gate before generation.
+
+    Uses nano model to reject duplicates, too-specific, or non-established terms.
+    Returns only accepted candidates.
+    """
+    if not candidates:
+        return []
+
+    from services.agents.prompts_advisor import TERM_GATE_PROMPT
+
+    client = get_openai_client()
+    model = getattr(settings, "openai_model_nano")
+
+    # Format existing terms as compact list
+    existing_str = ", ".join(existing_terms[:500])  # cap at 500 for token budget
+    candidate_names = [c.get("term", "") for c in candidates]
+
+    prompt = TERM_GATE_PROMPT.format(existing_terms=existing_str)
+    user_msg = f"Candidates to evaluate:\n{', '.join(candidate_names)}"
+
+    try:
+        resp = await client.chat.completions.create(
+            **build_completion_kwargs(
+                model=model,
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": user_msg},
+                ],
+                max_tokens=1000,
+                temperature=0,
+                response_format={"type": "json_object"},
+            )
+        )
+        data = parse_ai_json(resp.choices[0].message.content, "term-gate")
+        decisions = {d["term"]: d for d in data.get("decisions", [])}
+
+        accepted = []
+        for candidate in candidates:
+            term = candidate.get("term", "")
+            decision = decisions.get(term, {})
+            if decision.get("decision") == "reject":
+                logger.info(
+                    "Gate rejected '%s': %s", term, decision.get("reason", "no reason"),
+                )
+            else:
+                accepted.append(candidate)
+
+        logger.info(
+            "Term gate: %d candidates → %d accepted, %d rejected",
+            len(candidates), len(accepted), len(candidates) - len(accepted),
+        )
+        return accepted
+    except Exception as e:
+        logger.warning("Term gate failed, passing all candidates: %s", e)
+        return candidates  # fail-open: don't block pipeline on gate failure
+
+
 async def generate_term_content(
     term_name: str, korean_name: str = "", source: str = "pipeline",
     article_context: str = "",

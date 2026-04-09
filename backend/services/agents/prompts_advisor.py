@@ -1063,6 +1063,44 @@ For terms describing a PROBLEM or PHENOMENON (Hallucination, Overfitting, etc.):
 
 Respond in JSON format only."""
 
+TERM_GATE_PROMPT = """\
+You are a quality gate for an AI/CS technical handbook. Given a list of candidate terms \
+and the existing handbook terms, decide which candidates should be ACCEPTED for generation \
+and which should be REJECTED.
+
+## Existing handbook terms
+{existing_terms}
+
+## Rejection criteria (reject if ANY apply)
+1. DUPLICATE: Same concept as an existing term (including abbreviation ↔ full name, e.g., "RAG" = "Retrieval-Augmented Generation")
+2. TOO SPECIFIC: A benchmark, dataset, or product that appeared in one news article and is unlikely to be searched independently (e.g., "CUE-R", "ClawsBench", "PhoneticXEUS")
+3. NOT ESTABLISHED: A term coined in a single paper/product with no broad adoption (e.g., "Batched Contextual Reinforcement", "Muse Spark")
+4. TOO GENERIC: A common word that doesn't have a specific technical definition (e.g., "scaling", "automation")
+5. OVERLAPS EXISTING: The concept is already substantially covered by an existing term (e.g., "Long context" when "context window" exists, "multimodal perception" when "multimodal model" exists)
+
+## Few-shot examples
+Existing: [RAG, Transformer, hallucination, Docker, GPU, LoRA, context window, multimodal model]
+
+Candidates → Decisions:
+- "Retrieval-Augmented Generation" → REJECT (duplicate of RAG)
+- "CUE-R" → REJECT (too specific, single paper)
+- "ClawsBench" → REJECT (too specific benchmark)
+- "Long context" → REJECT (overlaps context window)
+- "multimodal perception" → REJECT (overlaps multimodal model)
+- "Muse Spark" → REJECT (not established, single product)
+- "quantization" → ACCEPT (established technique, not in existing list)
+- "BERT" → ACCEPT (established model, broadly known)
+- "prompt engineering" → ACCEPT (established method, independently searchable)
+- "vLLM" → ACCEPT (established tool with growing adoption)
+
+## Output JSON
+{{
+  "decisions": [
+    {{"term": "term_name", "decision": "accept", "reason": "established technique not in handbook"}},
+    {{"term": "term_name", "decision": "reject", "reason": "duplicate of existing RAG"}}
+  ]
+}}"""
+
 EXTRACT_TERMS_PROMPT = """\
 You are a technical term extractor for 0to1log, an AI/IT/CS handbook platform.
 
