@@ -145,6 +145,7 @@
 | HQ-11 | todo | SEO 구조화 데이터 — DefinedTerm + FAQPage + BreadcrumbList JSON-LD | P0 |
 | HQ-12 | todo | 콘텐츠 톤 재설계 — "AI 위키" → "기술 블로그" 느낌으로 전환, 신뢰감 + 읽히는 콘텐츠 | P1 |
 | HQ-13 | todo | term type 재설계 + facet 시스템 — type 8개 + intent/volatility facet, DB 저장, 분류 프롬프트, 프론트엔드 차별화 | P1 |
+| HQ-14 | todo | 추출 필터 강화 — 기존 용어 목록 기반 LLM gate + 추출 프롬프트에 기존 용어 컨텍스트 | P1 |
 
 #### HQ-09 카테고리 재설계 — 배경 노트
 
@@ -237,6 +238,20 @@ FINAL_PROMPT = BASE_PROMPT (4개, 공통 구조)
 4. 프론트엔드: type×intent에 따라 섹션 펼침/접힘/순서 차별화
 5. 기존 용어 마이그레이션: 225개 용어에 type+facet 일괄 분류
 6. evidence 규칙: type → 검색 소스 우선순위 자동 결정
+
+#### HQ-14 추출 필터 강화 — 배경 노트
+
+**현재 문제:** 4/9 자동 추출 6개 중 6개 전부 삭제 대상 (중복, too specific, 검증 불가).
+5-point self-check + 코드 필터 + 5-layer dedup이 있지만, "CUE-R", "ClawsBench" 같은 1회성 용어를 막지 못함.
+
+**해결 방향 (2단계):**
+1. **추출 프롬프트에 기존 용어 목록 주입** — 추출 LLM이 "RAG가 이미 있으니 풀네임 불필요" 판단 가능
+2. **생성 전 LLM gate (nano)** — 기존 용어와 수준·중복 비교 후 pass/reject
+
+**스케일링 전략:**
+- ~500개: 전체 용어 리스트를 프롬프트에 (~500토큰)
+- 500~2000개: 키워드 DB 검색으로 관련 용어만 전달
+- 2000개+: 임베딩 유사도 검색 (Pinecone 활용)
 
 ### 품질 점수 모니터링 (AUTOPUB-01 전제조건)
 
