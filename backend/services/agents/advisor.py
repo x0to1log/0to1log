@@ -728,7 +728,7 @@ async def _classify_term_type(
     Returns (type_str, intent_list, volatility_str).
     """
     from services.agents.prompts_handbook_types import (
-        CLASSIFY_TERM_PROMPT, TERM_TYPES, TYPE_MIGRATION,
+        CLASSIFY_TERM_PROMPT, TERM_TYPES,
         INTENT_VALUES, VOLATILITY_VALUES,
     )
 
@@ -748,10 +748,10 @@ async def _classify_term_type(
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-classify")
 
-        # Type: validate and migrate old names
+        # Type: validate against TERM_TYPES, fallback to "concept" for unknown values
         term_type = data.get("type", "concept")
         if term_type not in TERM_TYPES:
-            term_type = TYPE_MIGRATION.get(term_type, "concept")
+            term_type = "concept"
 
         # Intent: validate, default to ["understand"]
         raw_intent = data.get("intent", ["understand"])
@@ -1077,19 +1077,13 @@ async def _verify_entities(entities: list[str]) -> list[dict]:
 
 # Sections 1-4: Core (always visible), 5-8: Learn More (collapsible on frontend)
 BASIC_SECTIONS_KO = [
-    ("basic_ko_0_summary", "## 30초 요약"),
     ("basic_ko_1_plain", "## 쉽게 이해하기"),
-    ("basic_ko_2_example", "## 예시와 비유"),
-    ("basic_ko_3_glance", "## 한눈에 보기"),
-    ("basic_ko_4_why", "## 알아야 하는 이유"),
-    ("basic_ko_5_where", "## 실제로 어디서 쓰이나"),
-    ("basic_ko_6b_news_context", "## 뉴스에서 만났다면"),
-    ("basic_ko_6_caution", "## 주의할 점"),
-    ("basic_ko_6c_checklist", "## 이해 체크리스트"),
-    ("basic_ko_7_comm", "## 대화에서는 이렇게"),
-    ("basic_ko_8_related", "## 함께 알면 좋은 용어"),
-    ("basic_ko_9_roles", "## 직군별 활용 포인트"),
-    ("basic_ko_10_learning_path", "## 더 깊이 알고 싶다면"),
+    ("basic_ko_2_example", "## 비유와 예시"),
+    ("basic_ko_3_glance", "## 한눈에 비교"),
+    ("basic_ko_4_impact", "## 어디서 왜 중요한가"),
+    ("basic_ko_5_caution", "## 자주 하는 오해"),
+    ("basic_ko_6_comm", "## 대화에서는 이렇게"),
+    ("basic_ko_7_related", "## 함께 읽으면 좋은 용어"),
 ]
 
 BASIC_SECTIONS_EN = [
@@ -1159,6 +1153,14 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     # Copy meta fields
     for key in ("term_full", "korean_name", "korean_full", "categories",
                 "definition_ko", "definition_en"):
+        if key in raw_data:
+            data[key] = raw_data[key]
+
+    # Copy level-independent fields (hero card, references, sidebar)
+    # These are rendered outside the Basic/Advanced body switcher.
+    for key in ("hero_news_context_ko", "hero_news_context_en",
+                "references_ko", "references_en",
+                "sidebar_checklist_ko", "sidebar_checklist_en"):
         if key in raw_data:
             data[key] = raw_data[key]
 
@@ -1637,12 +1639,18 @@ async def _run_generate_term(
         logger.warning("Handbook generate validation: %s", warnings)
 
     # Check section completeness (including empty detection)
+    # KO Basic: 7 sections (post-redesign). EN Basic: 13 sections (legacy, not yet redesigned).
+    # Advanced: 9 sections (both languages, not yet redesigned).
+    _basic_expected = {"ko": 7, "en": 13}
     for lang in ("ko", "en"):
         basic_content = data.get(f"body_basic_{lang}", "")
+        expected_basic = _basic_expected[lang]
         if not basic_content.strip():
             warnings.append(f"body_basic_{lang}: EMPTY — content generation failed")
-        elif basic_content.count("## ") < 8:
-            warnings.append(f"body_basic_{lang}: only {basic_content.count('## ')}/8 sections")
+        elif basic_content.count("## ") < expected_basic:
+            warnings.append(
+                f"body_basic_{lang}: only {basic_content.count('## ')}/{expected_basic} sections"
+            )
         adv_content = data.get(f"body_advanced_{lang}", "")
         if not adv_content.strip():
             warnings.append(f"body_advanced_{lang}: EMPTY — content generation failed")

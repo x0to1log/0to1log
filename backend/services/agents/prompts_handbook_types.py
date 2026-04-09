@@ -11,20 +11,6 @@ TERM_TYPES = [
     "protocol_format",
 ]
 
-# Old → new type mapping (for migration and backward compat)
-TYPE_MIGRATION = {
-    "algorithm_model": "model_architecture",
-    "infrastructure_tool": "hardware_infra",
-    "business_industry": "concept",
-    "concept_theory": "concept",
-    "product_brand": "product_platform",
-    "metric_measure": "metric_benchmark",
-    "technique_method": "technique_method",
-    "data_structure_format": "protocol_format",
-    "protocol_standard": "protocol_format",
-    "architecture_pattern": "workflow_pattern",
-}
-
 INTENT_VALUES = ["understand", "compare", "build", "debug", "evaluate"]
 VOLATILITY_VALUES = ["stable", "evolving", "fast-changing"]
 
@@ -100,14 +86,6 @@ TYPE_DEPTH_GUIDES: dict[str, str] = {
 - adv_*_4_code: Real configuration examples (YAML, Dockerfile, CLI commands). Production deployment patterns. Min 15 lines.
 - adv_*_5_practical: Troubleshooting guide — common failure modes, debugging commands, monitoring metrics.""",
 
-    # business_industry mapped to concept for backward compat
-    "concept_business": """## Type-Specific Depth: Business/Industry
-- adv_*_1_technical: Precise business definition with industry-standard terminology.
-- adv_*_2_formulas: Market data table — size, growth rate, key players. Decision framework (matrix/flowchart).
-- adv_*_3_howworks: Process flow — how this concept operates in practice. Stakeholders, timeline, decision points.
-- adv_*_4_code: No code needed. Replace with: case study analysis (2-3 real companies, with specific numbers).
-- adv_*_5_practical: Strategic implications — when to use, when to avoid, risk factors, ROI considerations.""",
-
     "concept": """## Type-Specific Depth: Concept/Theory
 - adv_*_1_technical: Formal definition. Cite foundational paper/textbook.
 - adv_*_2_formulas: Mathematical formulation with step-by-step derivation and intuitive interpretation of each term.
@@ -170,9 +148,7 @@ _SECTION_MINIMUM = """
 
 def get_type_depth_guide(term_type: str) -> str:
     """Return type-specific depth instructions for advanced prompt injection."""
-    # Support old type names via migration map
-    resolved = TYPE_MIGRATION.get(term_type, term_type)
-    guide = TYPE_DEPTH_GUIDES.get(resolved, TYPE_DEPTH_GUIDES["concept"])
+    guide = TYPE_DEPTH_GUIDES.get(term_type, TYPE_DEPTH_GUIDES["concept"])
     return f"{guide}\n\n{_SECTION_MINIMUM}"
 
 
@@ -192,8 +168,7 @@ EVIDENCE_RULES: dict[str, list[str]] = {
 
 def get_evidence_priorities(term_type: str) -> list[str]:
     """Return search source priorities for a term type."""
-    resolved = TYPE_MIGRATION.get(term_type, term_type)
-    return EVIDENCE_RULES.get(resolved, ["docs", "paper"])
+    return EVIDENCE_RULES.get(term_type, ["docs", "paper"])
 
 
 # ── Section weights: type × intent → content priority guidance ──
@@ -283,10 +258,9 @@ TYPE_SECTION_WEIGHTS: dict[tuple[str, str], dict[str, str]] = {
 
 def get_section_weight_guide(term_type: str, intent: str) -> str:
     """Return section priority guide for a type × intent combination."""
-    resolved = TYPE_MIGRATION.get(term_type, term_type)
-    weights = TYPE_SECTION_WEIGHTS.get((resolved, intent))
+    weights = TYPE_SECTION_WEIGHTS.get((term_type, intent))
     if weights:
-        return f"## Content Priority Guide ({resolved} × {intent})\n{weights['section_guide']}"
+        return f"## Content Priority Guide ({term_type} × {intent})\n{weights['section_guide']}"
     # Fallback: try type with default intent
     default_intents = {
         "concept": "understand", "model_architecture": "understand",
@@ -294,10 +268,10 @@ def get_section_weight_guide(term_type: str, intent: str) -> str:
         "hardware_infra": "compare", "workflow_pattern": "build",
         "metric_benchmark": "evaluate", "protocol_format": "build",
     }
-    fallback_intent = default_intents.get(resolved, "understand")
-    weights = TYPE_SECTION_WEIGHTS.get((resolved, fallback_intent))
+    fallback_intent = default_intents.get(term_type, "understand")
+    weights = TYPE_SECTION_WEIGHTS.get((term_type, fallback_intent))
     if weights:
-        return f"## Content Priority Guide ({resolved} × {fallback_intent})\n{weights['section_guide']}"
+        return f"## Content Priority Guide ({term_type} × {fallback_intent})\n{weights['section_guide']}"
     return ""
 
 
@@ -447,35 +421,35 @@ def build_category_block(category: str) -> str:
 # ── Basic-level type guides (injected into Basic EN call after type classification) ──
 
 BASIC_TYPE_GUIDES: dict[str, str] = {
-    "algorithm_model": "Explain what the algorithm does with a plain analogy before any technical detail. "
-                       "Code examples should be minimal (5-10 lines), runnable, with comments on every line. "
-                       "No mathematical formulas in Basic — save those for Advanced.",
-    "infrastructure_tool": "Start with what problem this tool solves. Show a minimal 'hello world' usage "
-                          "(3-5 line CLI or config example). Focus on when to use vs alternatives.",
-    "business_industry": "Define in plain business language. Use a real company example. "
-                        "No code needed — replace with a decision framework or checklist.",
-    "concept_theory": "Use an everyday analogy to build intuition. Explain WHY this concept matters "
-                     "with a concrete scenario. Save formal definitions for Advanced.",
-    "product_brand": "Lead with: what it does → who it's for → how to get started. "
-                    "Show the simplest possible usage (1-3 lines). Mention free tier if available.",
-    "metric_measure": "Explain what this metric tells you in plain words. Use a concrete example with "
-                     "real numbers (e.g., 'if you have 10 predictions and 7 are correct...'). "
-                     "No formula derivation in Basic.",
+    "concept": "Use an everyday analogy to build intuition. Explain WHY this concept matters "
+               "with a concrete scenario. For phenomenon/problem concepts (overfitting, hallucination), "
+               "focus on where it OCCURS and what real damage it causes — not where it is 'used'. "
+               "Save formal definitions for Advanced.",
+    "model_architecture": "Explain what the architecture does with a plain analogy before any technical detail. "
+                         "Code examples should be minimal (5-10 lines), runnable, with comments on every line. "
+                         "No mathematical formulas in Basic — save those for Advanced.",
     "technique_method": "Describe the problem first, then the technique as a solution. "
                        "Show before/after comparison. Give one concrete 'when to use this' scenario.",
-    "data_structure_format": "Explain with a visual metaphor (stack = pile of plates, etc.). "
-                            "Show basic operations (add, remove, search) with 3-5 line code. "
-                            "Compare with one alternative ('If you used X instead...').",
-    "protocol_standard": "Explain what gets sent between whom. Use a conversation analogy "
-                        "(handshake = introduction at a party). Show a minimal working example.",
-    "architecture_pattern": "Describe the problem that this pattern solves. Draw the structure with text. "
-                           "Give one 'when to use' and one 'when NOT to use' scenario.",
+    "product_platform": "Lead with: what it does → who it's for → how to get started. "
+                       "Show the simplest possible usage (1-3 lines). Mention free tier / pricing if available. "
+                       "Avoid marketing language — always include limitations.",
+    "hardware_infra": "Start with what problem this tool/hardware solves. Show a minimal 'hello world' usage "
+                     "(3-5 line CLI or config example). Focus on when to use vs alternatives, and real cost "
+                     "implications when known.",
+    "workflow_pattern": "Describe the problem that this pattern solves. Draw the structure with text. "
+                       "Give one 'when to use' and one 'when NOT to use' scenario.",
+    "metric_benchmark": "Explain what this metric tells you in plain words. Use a concrete example with "
+                       "real numbers (e.g., 'if you have 10 predictions and 7 are correct...'). "
+                       "Mention when the metric is misleading. No formula derivation in Basic.",
+    "protocol_format": "Explain the structure with a visual or conversational metaphor "
+                      "(stack = pile of plates, handshake = introduction at a party). "
+                      "Show a minimal working example (3-5 lines). Compare with one alternative.",
 }
 
 
 def get_type_basic_guide(term_type: str) -> str:
     """Return type-specific basic-level guide for Basic prompt injection."""
-    guide = BASIC_TYPE_GUIDES.get(term_type, BASIC_TYPE_GUIDES["concept_theory"])
+    guide = BASIC_TYPE_GUIDES.get(term_type, BASIC_TYPE_GUIDES["concept"])
     return f"## Basic Content Guide ({term_type})\n{guide}"
 
 

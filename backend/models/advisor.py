@@ -186,17 +186,40 @@ class TranslateResult(BaseModel):
     target_lang: str
 
 
+class ReferenceItem(BaseModel):
+    """One entry in the level-independent references footer block."""
+    title: str
+    authors: Optional[str] = ""
+    year: Optional[int] = None
+    venue: Optional[str] = ""
+    type: Literal["paper", "docs", "code", "blog", "wiki", "book"]
+    url: str
+    tier: Literal["primary", "secondary"]
+    annotation: str = Field(default="", max_length=120)
+
+
 class GenerateTermResult(BaseModel):
     term_full: str = ""
     korean_name: str = ""
     korean_full: str = ""
     categories: list[str] = []
-    definition_ko: str = Field(default="", min_length=80)
-    definition_en: str = Field(default="", min_length=80)
+    definition_ko: str = Field(default="", min_length=80, max_length=160)
+    definition_en: str = Field(default="", min_length=80, max_length=200)
     body_basic_ko: str = Field(default="", min_length=2000)
     body_basic_en: str = Field(default="", min_length=2000)
     body_advanced_ko: str = Field(default="", min_length=3000)
     body_advanced_en: str = Field(default="", min_length=3000)
+
+    # --- Level-independent fields (page redesign 2026-04-09) ---
+    # Hero card: news context shown above level switcher (graduates Path A users)
+    hero_news_context_ko: str = ""
+    hero_news_context_en: str = ""
+    # References footer: primary/secondary tiered, shared across Basic/Advanced
+    references_ko: list[ReferenceItem] = []
+    references_en: list[ReferenceItem] = []
+    # Sidebar checklist: shown in right rail during Basic view only
+    sidebar_checklist_ko: str = ""
+    sidebar_checklist_en: str = ""
 
 
 # --- Pipeline Auto-Extract Terms ---

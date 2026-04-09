@@ -46,8 +46,8 @@ def _mock_openai_response(data: dict, tokens: int = 500):
 FULL_GENERATE_RESULT = {
     "korean_name": "트랜스포머",
     "categories": ["ai-ml"],
-    "definition_ko": "트랜스포머는 어텐션 메커니즘을 기반으로 한 딥러닝 모델 아키텍처로, 자연어 처리(NLP)와 컴퓨터 비전 등 다양한 분야에서 사용됩니다." + "x" * 50,
-    "definition_en": "A Transformer is a deep learning model architecture based on attention mechanisms, widely used in natural language processing (NLP) and computer vision." + "x" * 50,
+    "definition_ko": "트랜스포머는 셀프 어텐션 기반의 딥러닝 아키텍처로, 문장 속 단어 간 관계를 병렬로 계산해 NLP와 비전 등 광범위한 작업에서 표준 모델로 쓰인다.",
+    "definition_en": "Transformer is a deep learning architecture using self-attention to compute relations between tokens in parallel, now standard across NLP and vision tasks.",
     "body_basic_ko": "A" * 2500,
     "body_basic_en": "B" * 2500,
     "body_advanced_ko": "C" * 3500,
