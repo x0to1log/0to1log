@@ -630,10 +630,13 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BAD: "스마트폰 얼굴 인식: AI 칩이 실시간으로 인식" (뻔하고 상황 묘사 없음)
   GOOD: "**넷플릭스 실시간 자막**: 영상을 틀자마자 0.2초 만에 자막이 뜹니다. 서버의 AI 칩이 음성을 실시간으로 텍스트로 변환하기 때문입니다." (의외 + 상황 묘사)
 - **basic_ko_3_glance**: 이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용. 비교표 위에 **한 줄 비교** 2~3개를 먼저 작성.
-  한 줄 비교 규칙: 반드시 "X vs Y → 10단어 이내 차이" 형식. 길면 실패. 설명이 아니라 핵심 차이 한 마디.
-  BAD 한 줄 비교: "Dockerfile/이미지 vs Compose → 단일 서비스 패키징 vs 다중 서비스 오케스트레이션" (너무 길다)
-  GOOD 한 줄 비교: "Docker vs VM → 초 단위 시작 vs 분 단위 부팅"
-  GOOD 한 줄 비교: "LoRA vs 전체 미세조정 → 플러그인 추가 vs 모델 전체 교체"
+  한 줄 비교 규칙: "X vs Y → 짧은 대비 한 마디" 형식. → 뒤는 쉼표 없는 한 문장. 설명하지 말고 대비만.
+  BAD: "Dockerfile/이미지 vs Compose → 단일 서비스 패키징 vs 다중 서비스 오케스트레이션" (너무 길고 설명적)
+  BAD: "LoRA vs Fine-tuning → LoRA는 저랭크 행렬만 학습하고 fine-tuning은 전체를 학습한다" (문장이 됨)
+  GOOD: "Docker vs VM → 초 단위 시작 vs 분 단위 부팅"
+  GOOD: "LoRA vs 전체 미세조정 → 플러그인 추가 vs 모델 전체 교체"
+  GOOD: "F1 vs 정확도 → 균형 평가 vs 다수 클래스 편향"
+  GOOD: "RAG vs 파인튜닝 → 외부 검색 vs 모델 재학습"
   BAD 비교표: "| 구분 | 높은 효율 | 낮은 효율 |" (속성 대비표 금지)
   BAD 비교표: "| 항목 | 설명 |" (단순 용어 설명표 금지)
   GOOD 비교표: "| | Transformer | RNN | CNN |\n| 처리 방식 | 병렬 | 순차 | 지역 패턴 |..."
@@ -774,10 +777,13 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
   GOOD: "**Netflix real-time subtitles**: Subtitles appear within 0.2 seconds of pressing play. The server's AI chip converts speech to text in real time." (surprising + situation detail)
 - **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format). Start with **2-3 one-line comparisons** above the table.
-  One-line comparison rules: MUST be "X vs Y → max 10 words". If it's longer, it fails. Core difference only, not explanation.
-  BAD one-line: "Dockerfile/image vs Compose → single service packaging vs multi-service orchestration" (too long)
-  GOOD one-line: "Docker vs VM → seconds to start vs minutes to boot"
-  GOOD one-line: "LoRA vs full fine-tuning → plugin add-on vs full model replacement"
+  One-line comparison rules: "X vs Y → short contrast phrase". After → must be ONE phrase with no commas. Contrast, don't explain.
+  BAD: "Dockerfile/image vs Compose → single service packaging vs multi-service orchestration" (too long, explanatory)
+  BAD: "LoRA vs Fine-tuning → LoRA trains low-rank matrices while fine-tuning updates all weights" (became a sentence)
+  GOOD: "Docker vs VM → seconds to start vs minutes to boot"
+  GOOD: "LoRA vs full fine-tuning → plugin add-on vs full model replacement"
+  GOOD: "F1 vs accuracy → balanced evaluation vs majority-class bias"
+  GOOD: "RAG vs fine-tuning → external search vs model retraining"
   BAD table: "| Aspect | High Efficiency | Low Efficiency |" (attribute contrast banned)
   GOOD table: "| | Transformer | RNN | CNN |\n| Processing | Parallel | Sequential | Local patterns |..."
 - **basic_en_4_why**: **Why you should know this** — what real change this concept brought. Focus on verifiable facts about what happened AFTER this concept appeared. NO counterfactual speculation ("without this, X wouldn't exist"). 4-5 bullet points.
