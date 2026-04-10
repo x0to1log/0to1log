@@ -206,8 +206,8 @@ class GenerateTermResult(BaseModel):
     # Length policy: min_length is a "generation failed" detector (fail-fast on empty/fragment).
     # max_length intentionally omitted — content shape is guided by the prompt, not enforced by
     # Pydantic. Matches the news_pipeline.py pattern (zero length constraints anywhere).
-    definition_ko: str = Field(default="", min_length=80)
-    definition_en: str = Field(default="", min_length=80)
+    definition_ko: str = Field(default="", min_length=180)
+    definition_en: str = Field(default="", min_length=180)
     body_basic_ko: str = Field(default="", min_length=2000)
     body_basic_en: str = Field(default="", min_length=2000)
     body_advanced_ko: str = Field(default="", min_length=3000)

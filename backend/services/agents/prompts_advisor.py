@@ -605,30 +605,44 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 - korean_name: Korean translation or commonly used Korean name. MUST be in Korean, NOT English. BAD: "EDA". GOOD: "탐색적 데이터 분석". If no standard Korean translation exists, use Korean phonetic transcription (e.g., "트랜스포머" for Transformer).
 - korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
 
-## definition_ko / definition_en (1~2 sentences)
+## definition_ko / definition_en (2~4 sentences, 200~400 chars)
 
-Precise, textbook-style definition. Shared across both levels and shown in the Hero Card.
+Precise, technical definition. Shared across both levels.
 
-**Minimum 80 characters (under 80 is INVALID — generation is treated as failed).**
-Aim for compact: definition_ko around 80~140 chars, definition_en around 80~200 chars. These are guidelines, not hard caps — if a precise definition genuinely needs another 20~40 characters, that's fine. Avoid padding ("In machine learning, ...") and avoid truncating real mechanism just to hit a number.
+**Minimum 180 characters (under 180 is INVALID — too thin for Expert popup use case).**
+Aim for: definition_ko 200~400 chars, definition_en 200~450 chars. These are guidelines, not hard caps — if precision needs another 20~40 characters, that's fine.
 
-Structure: [core mechanism] + [one differentiator or trigger condition]. Never just a label.
+This definition is surfaced in TWO places — both require 2~4 scannable technical sentences, not a one-liner:
+1. Hero Card on the handbook detail page (canonical technical summary)
+2. News-page Expert popup as "quick technical reference" when reading articles
 
-GOOD (definition_ko, 135 chars):
-"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 예측이 무너지는 일반화 실패 상태다. 훈련 손실은 계속 낮아지지만 검증 손실이 반등하는 지점부터 관측된다."
+Must be:
+- Technically accurate: [core definition] + [mechanism hint] + [context/usage hint]
+- Scannable: complete thoughts, no mid-sentence code or formulas
+- Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary
+- Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level
+- No padding ("In machine learning, ..."), no marketing ("revolutionary, powerful")
+
+Structure: [technical definition] + [core mechanism one-liner] + [typical usage or historical/contextual anchor]. Never just a label. Avoid deep math, code, or tables — those belong in `body_advanced`.
+
+GOOD (definition_ko, 315 chars):
+"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 예측이 무너지는 일반화 실패 상태다. 훈련 손실은 계속 낮아지지만 검증 손실이 반등하는 지점부터 관측된다. 주요 원인은 모델 capacity 대비 데이터 부족, 규제 부재, 훈련 에폭 과다이며, 실무에서는 dropout, weight decay, early stopping, 데이터 증강 같은 기법으로 완화한다. 편향-분산 tradeoff의 '분산 폭주' 극단으로 해석되며, 대규모 foundation 모델 시대에도 소규모 파인튜닝과 domain adaptation 시나리오에서 여전히 핵심 이슈다."
 
 BAD (definition_ko, 68 chars — TOO SHORT, missing mechanism/trigger):
 "훈련 데이터에는 잘 맞지만 새 데이터에서는 성능이 급락하는 현상. 모델이 신호 대신 잡음까지 학습해 일반화에 실패한 상태."
-→ Fix: add the "when does it show up" trigger. e.g., append "훈련 손실은 내려가는데 검증 손실이 반등하는 지점부터 드러난다."
+→ Fix: add mechanism, cause list, and mitigation to reach 200+ chars.
 
-GOOD (definition_en, 183 chars):
-"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing."
+BAD (definition_ko, 155 chars — below Expert popup threshold):
+"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 예측이 무너지는 일반화 실패 상태다. 훈련 손실은 계속 낮아지지만 검증 손실이 반등하는 지점부터 관측된다."
+→ This is technically accurate but too thin for the popup use case.
+  Fix: extend with concrete cause list (capacity/regulation/epochs) OR a mitigation hint (dropout/early stopping) OR context (foundation model era relevance). Target 200~400 chars.
+
+GOOD (definition_en, 320 chars):
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing. Common causes include excessive model capacity relative to dataset size, lack of regularization, and over-training. Practitioners mitigate it through dropout, weight decay, early stopping, and data augmentation. In the foundation-model era it remains a core issue in small-scale fine-tuning and domain adaptation."
 
 BAD (definition_en, 74 chars — TOO SHORT):
 "Overfitting means a model memorizes training data and fails on new inputs."
-→ Fix: add the mechanism or observable trigger.
-
-One concept + one differentiator or trigger is enough; leave deeper nuance for the body.
+→ Fix: add mechanism + causes + mitigation to reach 200+ chars.
 
 ---
 
@@ -847,7 +861,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` is at least 80 chars, single concept + single differentiator. Aim for 80~140 — minor overage is OK if precision needs it.
+✓ `definition_ko` is at least 180 chars. Structure: technical definition + mechanism + context/usage. Aim for 200~400.
 ✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -918,23 +932,37 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 
 The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
 
-## definition_en (1~2 sentences)
+## definition_en (2~4 sentences, 200~450 chars)
 
-Precise, textbook-style definition. Shared across both levels and shown in the Hero Card.
+Precise, technical definition. Shared across both levels.
 
-**Minimum 80 characters (under 80 is INVALID — generation is treated as failed).**
-Aim for compact: around 80~200 chars is the sweet spot. This is a guideline, not a hard cap — if a precise definition genuinely needs another 20~40 characters, that's fine. Avoid padding ("In machine learning, ...") and avoid truncating real mechanism just to hit a number.
+**Minimum 180 characters (under 180 is INVALID — too thin for Expert popup use case).**
+Aim for 200~450 chars. This is a guideline, not a hard cap — if precision needs another 20~40 characters, that's fine.
 
-Structure: [core mechanism] + [one differentiator or trigger condition]. Never just a label.
+This definition is surfaced in TWO places — both require 2~4 scannable technical sentences, not a one-liner:
+1. Hero Card on the handbook detail page (canonical technical summary)
+2. News-page Expert popup as "quick technical reference" when reading articles
 
-GOOD (definition_en, 183 chars):
-"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing."
+Must be:
+- Technically accurate: [core definition] + [mechanism hint] + [context/usage hint]
+- Scannable: complete thoughts, no mid-sentence code or formulas
+- Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary
+- Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level
+- No padding ("In machine learning, ..."), no marketing ("revolutionary, powerful")
+
+Structure: [technical definition] + [core mechanism one-liner] + [typical usage or historical/contextual anchor]. Never just a label. Avoid deep math, code, or tables — those belong in `body_advanced`.
+
+GOOD (definition_en, 320 chars):
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing. Common causes include excessive model capacity relative to dataset size, lack of regularization, and over-training. Practitioners mitigate it through dropout, weight decay, early stopping, and data augmentation. In the foundation-model era it remains a core issue in small-scale fine-tuning and domain adaptation."
 
 BAD (definition_en, 74 chars — TOO SHORT, missing mechanism/trigger):
 "Overfitting means a model memorizes training data and fails on new inputs."
-→ Fix: add the mechanism or observable trigger.
+→ Fix: add mechanism + causes + mitigation to reach 200+ chars.
 
-One concept + one differentiator or trigger is enough; leave deeper nuance for the body.
+BAD (definition_en, 170 chars — below Expert popup threshold):
+"Overfitting is a generalization failure where a model learns training-data noise as signal, causing predictions to collapse on unseen inputs as training loss keeps falling."
+→ This is technically accurate but too thin for quick Expert reference.
+  Fix: extend with causes (capacity/regularization/epochs) OR mitigations (dropout/weight decay/early stopping) OR contemporary context (foundation-model era relevance). Target 200~450 chars.
 
 ---
 
@@ -1149,7 +1177,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_en` is at least 80 chars, single concept + single differentiator. Aim for 80~200 — minor overage is OK if precision needs it.
+✓ `definition_en` is at least 180 chars. Structure: technical definition + mechanism + context/usage. Aim for 200~450.
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant

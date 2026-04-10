@@ -46,8 +46,19 @@ def _mock_openai_response(data: dict, tokens: int = 500):
 FULL_GENERATE_RESULT = {
     "korean_name": "트랜스포머",
     "categories": ["ai-ml"],
-    "definition_ko": "트랜스포머는 셀프 어텐션 기반의 딥러닝 아키텍처로, 문장 속 단어 간 관계를 병렬로 계산해 NLP와 비전 등 광범위한 작업에서 표준 모델로 쓰인다.",
-    "definition_en": "Transformer is a deep learning architecture using self-attention to compute relations between tokens in parallel, now standard across NLP and vision tasks.",
+    "definition_ko": (
+        "트랜스포머는 셀프 어텐션으로 시퀀스 내 모든 토큰 간 관계를 병렬로 계산하는 딥러닝 아키텍처다. "
+        "위치 인코딩과 multi-head attention을 통해 순환 구조 없이도 긴 문맥을 효과적으로 학습하며, "
+        "2017년 Vaswani et al. 논문 이후 NLP, 비전, 음성 등 거의 모든 현대 foundation 모델의 표준 빌딩 블록으로 자리잡았다. "
+        "GPT, BERT, T5 같은 주요 LLM 계열이 모두 이 구조를 기반으로 한다."
+    ),
+    "definition_en": (
+        "Transformer is a deep learning architecture that uses self-attention to compute relations "
+        "between all tokens in a sequence in parallel. Positional encodings and multi-head attention "
+        "enable capturing long-range context without any recurrence, and since Vaswani et al. (2017) "
+        "it has become the standard building block of virtually all modern foundation models across "
+        "NLP, vision, and speech. GPT, BERT, and T5 families all build on this architecture."
+    ),
     "body_basic_ko": "A" * 2500,
     "body_basic_en": "B" * 2500,
     "body_advanced_ko": "C" * 3500,
