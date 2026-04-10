@@ -86,6 +86,25 @@
 
 > **배경 (3/27 gemini-31 기준):** 비교표가 GPT-4o/Gemini 1.0 (현재 경쟁은 GPT-5.2/Claude Opus 4.6), 벤치마크 수치 없음, 정보 "2024 baseline" (현재 2026).
 
+### HIGH PRIORITY — 핸드북 UX 개선 (HB-UX)
+
+> **설계 문서:** [[plans/2026-04-10-handbook-ux-improvements]]
+> **배경:** 2026-04-10 Advanced 페이지 시각 리듬 부족 + 코드 섹션 스크롤 부담 + 사용자 판단력 확인 장치 부재 관찰. Basic은 HB-REDESIGN으로 정돈됐지만 Advanced는 단조로움.
+
+| Task | 상태 | 목표 | 우선도 |
+|------|------|------|--------|
+| HB-UX-01 | todo | Advanced §3 code block collapsed by default — macOS window 헤더 유지, 펼치기 버튼 추가 (rehypeCodeWindow 플러그인 옵션 확장, handbook advanced processor에만 scoping) | P1 |
+| HB-UX-02 | todo | §5 Production pitfalls callout 스타일링 — 좌측 경고 bar + 연노란 배경 (이모지 없이 CSS만) | P1 |
+| HB-UX-03 | todo | §6 Industry dialogue blockquote 스타일링 — 인용문 시각 구분 강화 | P2 |
+| HB-UX-04 | todo | §4 Tradeoffs 2-column grid — "적합한 경우" / "피해야 할 경우" heading pair 감지 rehype 플러그인 + 2-col CSS | P2 |
+| HB-UX-05 | todo | Advanced 사이드바 체크리스트 (`sidebar_checklist_advanced_ko/en` 신규 필드) — Basic "이해했나요?"와 대응되는 "판단할 수 있나요?" (judgment/application 수준 질문) | P1 |
+
+**구현 전략:**
+- **Phase 1 (즉시, ~1.5h):** HB-UX-01 + HB-UX-02 + HB-UX-03 — CSS/renderer 변경만, DB/프롬프트 최소
+- **Phase 2 (HB-MIGRATE-138과 통합, +3h):** HB-UX-04 + HB-UX-05 — 새 field/rehype plugin + regeneration 필요
+
+Phase 2는 HB-MIGRATE-138 실행 시점에 묶어서 하면 재생성 비용 arbitrage. 별도 regen 없이 한 번에 필드 채움.
+
 ### 뉴스 파이프라인 — rolling 개선
 
 | Task | 상태 | 목표 |
