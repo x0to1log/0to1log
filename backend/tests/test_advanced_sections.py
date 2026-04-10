@@ -36,6 +36,18 @@ def test_advanced_sections_en_keys():
     assert [k for k, _ in ADVANCED_SECTIONS_EN] == expected
 
 
+def test_advanced_warning_threshold_is_seven():
+    """Post-redesign: Advanced section count warning at <7 sections."""
+    import inspect
+    from services.agents import advisor
+
+    source = inspect.getsource(advisor)
+    assert 'adv_content.count("## ") < 7' in source, \
+        "Advanced threshold should be 7 after Plan C redesign"
+    assert 'adv_content.count("## ") < 9' not in source, \
+        "Legacy Advanced=9 threshold must be removed"
+
+
 def test_advanced_sections_no_legacy_keys():
     """Removed sections: 1_technical, 3_howworks, 5_practical (full form),
     6_why, 8_refs, 9_related, 10_when_to_use, 11_pitfalls."""

@@ -1625,8 +1625,7 @@ async def _run_generate_term(
         logger.warning("Handbook generate validation: %s", warnings)
 
     # Check section completeness (including empty detection)
-    # Basic: 7 sections (post-redesign, both KO and EN).
-    # Advanced: 9 sections (both languages, not yet redesigned).
+    # Basic: 7 sections. Advanced: 7 sections. (Post-redesign, both languages.)
     _basic_expected = {"ko": 7, "en": 7}
     for lang in ("ko", "en"):
         basic_content = data.get(f"body_basic_{lang}", "")
@@ -1640,8 +1639,8 @@ async def _run_generate_term(
         adv_content = data.get(f"body_advanced_{lang}", "")
         if not adv_content.strip():
             warnings.append(f"body_advanced_{lang}: EMPTY — content generation failed")
-        elif adv_content.count("## ") < 9:
-            warnings.append(f"body_advanced_{lang}: only {adv_content.count('## ')}/9 sections")
+        elif adv_content.count("## ") < 7:
+            warnings.append(f"body_advanced_{lang}: only {adv_content.count('## ')}/7 sections")
 
     # Post-processing step 1: Validate reference URLs in advanced sections
     for field in ("body_advanced_ko", "body_advanced_en"):
