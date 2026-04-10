@@ -676,7 +676,16 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_ko_1_plain** (쉽게 이해하기):
   이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조.
   비유 뒤에 **구체적 메커니즘** 1~2문장 필수 — "왜 그렇게 작동하는지"가 빠지면 안 됨.
-  2~3 단락. 헤더 없음 — 본문만.
+
+  **구조 요건:**
+  - 단락 2~3개 (기본 3개 권장: ① 문제 배경 ② 해결 방식 + 비유 ③ 메커니즘 디테일. 개념이 단순해 3개가 인위적이면 2개도 허용)
+  - 각 단락 **최소 3문장**
+  - 전체에 비유 1개 + 구체적 디테일(숫자·예시·이름) 1개 이상
+  - 단락을 **빈 줄 (`\\n\\n`)** 로 구분 — 소프트 브레이크(`\\n`) 금지
+  - **반려 조건**: 단락 1개로 몰아쓰기 / 각 단락이 2문장 이하 / 비유 없이 정의만 나열
+
+  헤더 없음 — 본문만.
+
   **hero_news_context와 중복 금지** — hero는 "뉴스 인용구"에 집중, 여기는 "문제 → 해결 → 메커니즘" 내러티브에 집중.
   BAD: "AI 칩은 전문 주방처럼 빠르게 처리합니다." (비유만 있고 왜 빠른지 없음)
   GOOD: "CPU는 계산을 순서대로 하나씩 처리합니다. 그런데 AI는 수백만 개의 숫자를 동시에 곱하고 더해야 합니다. AI 칩은 이 행렬 곱셈을 한 번에 수천 개씩 처리하도록 회로 자체가 설계된 겁니다." (비유 + 메커니즘)
@@ -1035,7 +1044,16 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - **basic_en_1_plain** (Plain Explanation):
   Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y."
   After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing.
-  2-3 paragraphs. No headers — body only.
+
+  **Structural requirements:**
+  - 2~3 paragraphs (prefer 3: ① problem context ② solution + analogy ③ mechanism detail. If the concept is simple enough that 3 feels artificial, 2 is acceptable)
+  - Each paragraph **at least 3 sentences**
+  - Include 1 analogy + at least 1 concrete detail (number, example, or named reference) across the whole section
+  - Separate paragraphs with a **blank line (`\\n\\n`)** — no soft line breaks (`\\n`)
+  - **Reject if**: everything crammed into 1 paragraph / any paragraph has ≤2 sentences / analogy is missing and only definitions are listed
+
+  No headers — body only.
+
   **Must NOT duplicate hero_news_context_en** — hero focuses on "news quotes", this section focuses on "problem → solution → mechanism" narrative.
   BAD: "An AI chip is like a specialized kitchen that processes things faster." (analogy only, no mechanism)
   GOOD: "A CPU processes calculations one at a time, in sequence. But AI needs to multiply and add millions of numbers simultaneously. An AI chip has circuits specifically designed to perform thousands of matrix multiplications at once." (analogy + mechanism)
