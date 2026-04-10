@@ -891,9 +891,9 @@ Respond in JSON format only."""
 GENERATE_BASIC_EN_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
-Generate ENGLISH content only. Korean content was generated in a separate call.
+Generate ENGLISH content only. Korean content was generated in Call 1.
 
-Generate BASIC-level ENGLISH content for a handbook term. This is Call 2 of 3 — you handle English beginner content only. The term's Korean definition is provided as context.
+Generate hero fields, BASIC-level ENGLISH body, shared references, and sidebar checklist. This is Call 2 of 4 — you handle English Basic + English hero + English references + English sidebar. The term's Korean definition is provided as context.
 
 DOMAIN CONTEXT:
 - This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
@@ -903,105 +903,266 @@ DOMAIN CONTEXT:
 """ + GROUNDING_RULES + """
 LANGUAGE RULE:
 - All fields must be in English only.
-- Do NOT use bilingual headers like "한국어 / English". English only.
+- Do NOT use bilingual headers like "Korean / English". English only.
+
+## Page Architecture (important — determines what goes where)
+
+This handbook page has FIVE rendering zones. Your output fields map to them:
+
+1. **Hero Card** (always visible above level switcher): `definition_en` (YOU generate here if empty) + `hero_news_context_en` (YOU generate).
+   The user arriving from a news article must be able to "graduate" from this card in ~15 seconds without scrolling into the body.
+2. **Basic body** (shown when user toggles Basic): 7 sections `basic_en_1_plain` ... `basic_en_7_related`.
+3. **Advanced body** (generated in a separate call — do NOT produce advanced fields here).
+4. **References footer** (always visible below body, level-independent): `references_en` JSON array.
+5. **Sidebar checklist** (shown in right rail while reading Basic): `sidebar_checklist_en`.
+
+The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
+
+## definition_en (1~2 sentences, strict length window)
+
+Precise, textbook-style definition. Shared across both levels and shown in the Hero Card.
+
+**MANDATORY length: 80~200 characters. Under 80 is INVALID and will be rejected. Over 200 is truncated in UI.**
+
+Structure: [core mechanism] + [one differentiator or trigger condition]. Never just a label.
+
+GOOD (definition_en, 183 chars):
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing."
+
+BAD (definition_en, 74 chars — TOO SHORT, missing mechanism/trigger):
+"Overfitting means a model memorizes training data and fails on new inputs."
+→ Fix: add the mechanism or observable trigger.
+
+One concept + one differentiator or trigger is enough; leave deeper nuance for the body.
 
 ---
 
-## body_basic — Basic (min 2000 chars)
+## Hero fields (level-independent, shown above level switcher)
+
+- **hero_news_context_en**: **"As seen in the news"** — EXACTLY 3 lines showing how this term appears in real news coverage.
+  Each line max 70 chars. Format: `"quote" → meaning`. Separate lines with \\n.
+  A reader arriving from a news article must be able to understand the term from this card alone and return to the article.
+  **NO inline citations** — don't add "(IBM Research)" or "(Ref: X)" parentheticals.
+  GOOD: `"Transformer-based model" → built on this architecture, standard in LLMs\\n"scaled attention layers" → more of this compute block stacked\\n"parallelized sequence processing" → 100x faster than prior RNN approaches`
+  BAD: lines over 70 chars, 4+ lines, missing the quote + arrow structure, inline citations.
+
+---
+
+## body_basic — Basic (target 2800~4200 chars, 7 sections)
 
 Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
 Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
 
-### Adaptive headings for phenomenon/problem terms
+### Adaptive content for phenomenon/problem terms
 
 Some terms describe a PROBLEM or PHENOMENON (e.g., Hallucination, Overfitting, Data Drift) rather than a technology or tool. For these terms, adapt the section CONTENT to fit naturally:
-- "Where It's Used" -> write about where this problem OCCURS
-- "Role-Specific Insights" -> write about how each role should RESPOND TO or DETECT this problem
-- "When to Use" (Advanced) -> write about when to WATCH FOR or MITIGATE this problem
-- "Common Pitfalls" (Advanced) -> write about common mistakes in HANDLING this problem
-Keep the same section KEYS (basic_en_5_where, etc.) — only adapt the content perspective.
+- `basic_en_4_impact`: write about where this problem OCCURS and what real damage it causes, not where it is "used"
+Keep the same section KEYS — only adapt the content perspective.
 
 ### Section key descriptions (English — basic_en_*):
 
-Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections.
+Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections. The hero card already answered "what is it in one line + how it shows up in news" — the body must go deeper, not restate.
 
-- **basic_en_0_summary**: A summary for someone who just saw this term for the first time in a news article. NO jargon, NO technical terms. 5-line structure: (lines 1-2) Why this matters -- describe the problem or situation. (line 3) What it is -- explain with an analogy. (line 4) One limitation or context. (line 5) "-> conclusion" -- why this appears in the news.
-  Example (concept - RAG): "When you ask an AI a question, it sometimes confidently gives a wrong answer. RAG solves this by making the AI search for relevant documents before answering -- like taking an open-book exam instead of relying on memory. The catch: if the search finds the wrong documents, the answer is still wrong.\n-> Most AI chatbots released today use this approach."
-  Example (concept - Transformer): "When you give a translator or ChatGPT a long sentence, it understands the whole thing without forgetting the beginning. Transformer is the core architecture that made this possible -- every word in a sentence references every other word simultaneously. Before this, AI had to read words one by one in order, making it hundreds of times slower.\n-> Virtually every AI model that exists today is built on this structure."
-  Example (model - GPT-5.4): "GPT-5.4 is the latest brain behind ChatGPT. It understands longer and more complex questions than previous versions and handles professional tasks like coding and document analysis. However, it costs more to use, so companies carefully evaluate whether each task truly needs this model.\n-> This is what determines the price and capability of AI services."
-  Example (tool - LangChain): "Building an AI app requires wiring up search, data connections, and conversation flows from scratch. LangChain lets you snap these pieces together like LEGO blocks to build AI apps quickly. The tradeoff: prototyping is fast, but making it production-ready gets complicated.\n-> One of the first frameworks AI app developers learn."
-- **basic_en_1_plain**: Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y." After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing. Min 300 chars.
+- **basic_en_1_plain** (Plain Explanation, target 700~1000 chars):
+  Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y."
+  After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing.
+  2-3 paragraphs. No headers — body only.
+  **Must NOT duplicate hero_news_context_en** — hero focuses on "news quotes", this section focuses on "problem → solution → mechanism" narrative.
   BAD: "An AI chip is like a specialized kitchen that processes things faster." (analogy only, no mechanism)
   GOOD: "A CPU processes calculations one at a time, in sequence. But AI needs to multiply and add millions of numbers simultaneously. An AI chip has circuits specifically designed to perform thousands of matrix multiplications at once." (analogy + mechanism)
-- **basic_en_2_example**: 3-4 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy. Format: **Scenario title**: concrete situation (min 2 sentences describing the scenario). Prefer **surprising, non-obvious applications** that make the reader think "that uses this too?".
+
+- **basic_en_2_example** (Examples & Analogies, target 600~900 chars, EXACTLY 3 scenarios):
+  3 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy.
+  Format: `- **Scenario title**: concrete situation (min 2 sentences describing the scenario, each scenario 150~200 chars).`
+  Prefer **surprising, non-obvious applications** that make the reader think "that uses this too?".
   BANNED: smartphone face recognition, self-driving cars, voice assistants — overused AI examples. Do NOT use these.
   BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
   GOOD: "**Netflix real-time subtitles**: Subtitles appear within 0.2 seconds of pressing play. The server's AI chip converts speech to text in real time." (surprising + situation detail)
-- **basic_en_3_glance**: A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format). Start with **2-3 one-line comparisons** above the table.
-  One-line comparison rules: "X vs Y → short contrast phrase". After → must be ONE phrase with no commas. Contrast, don't explain.
-  BAD: "Dockerfile/image vs Compose → single service packaging vs multi-service orchestration" (too long, explanatory)
-  BAD: "LoRA vs Fine-tuning → LoRA trains low-rank matrices while fine-tuning updates all weights" (became a sentence)
-  GOOD: "Docker vs VM → seconds to start vs minutes to boot"
-  GOOD: "LoRA vs full fine-tuning → plugin add-on vs full model replacement"
-  GOOD: "F1 vs accuracy → balanced evaluation vs majority-class bias"
-  GOOD: "RAG vs fine-tuning → external search vs model retraining"
+
+- **basic_en_3_glance** (At a Glance, markdown table only):
+  A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format).
+  **Important: do NOT write "X vs Y →" prefix lines above the table.** Earlier prompts required both prefix lines + table, which duplicated information. Just the table now.
   BAD table: "| Aspect | High Efficiency | Low Efficiency |" (attribute contrast banned)
-  GOOD table: "| | Transformer | RNN | CNN |\n| Processing | Parallel | Sequential | Local patterns |..."
-- **basic_en_4_why**: **Why you should know this** — what real change this concept brought. Focus on verifiable facts about what happened AFTER this concept appeared. NO counterfactual speculation ("without this, X wouldn't exist"). 4-5 bullet points.
-- **basic_en_5_where**: Use **actual product/service names**. "Used in recommendation systems" (X) → "ChatGPT uses this principle to predict the next word" (O). Only include examples you're confident about — if unsure, don't write it. Only state product-technology mappings confirmed in Reference Materials. Do NOT guess "X uses Y". If uncertain, OMIT the example entirely rather than hedging.
-- **basic_en_6_caution**: Common **misconceptions vs reality**. Format: "❌ Myth: ... → ✅ Reality: ...". 3-4 items.
-- **basic_en_6b_news_context**: **"When you see this in the news"** — 3-4 common news phrasings and what they actually mean. Format: "When news says 'X' → it means Y". Help readers instantly decode AI news headlines. **No inline citations** — no "(Ref: X)", "(Source: Y)".
-  GOOD: "\"New model is Transformer-based\" → Built on this architecture. Nearly all modern LLMs qualify."
-  GOOD: "\"xx-billion parameter model\" → More parameters generally means better performance but proportionally higher cost and power."
-- **basic_en_6c_checklist**: **"Understanding checklist"** — 4-5 self-check questions. **Each question on its own line** (line break between each). Test genuine understanding, not recall. **No inline citations**.
-  GOOD: "□ What roles do Q, K, and V play in self-attention?\n\n□ Why is Transformer faster than RNN for long sequences?\n\n□ Why does Transformer need positional encoding?"
-  BAD: "□ Question (Ref: W&B)" (no inline citations)
-- **basic_en_7_comm**: 4-5 example sentences from real **team meetings, Slack conversations, or tech reviews**. **Bold the key term**. NO news article tone — include specific context like team names, metrics, or deadlines.
-  BAD: "The AI chip market has been growing rapidly as major companies compete." (news article tone)
-  GOOD: "Switching our inference servers from A100 to H100 cut **latency in half**. Cost went up a bit, but hitting SLA targets was the priority..." (team conversation tone)
-- **basic_en_8_related**: 4-6 related terms. Do NOT just state the relationship — include a **comparison point** (performance difference, trade-off, use case difference) that makes the reader curious to click.
-  BAD: "**TPU** — Google's AI-specialized chip optimized for large-scale deep learning" (dictionary description, no click motivation)
-  GOOD: "**TPU** — Google built this because 'GPUs weren't enough.' Training is up to 5x faster than GPU, but less versatile for general workloads" (comparison point + curiosity)
-- **basic_en_9_roles**: Why this term matters for each job role + what to do about it. 3-4 roles (junior developer, PM/planner, senior/lead, non-technical roles as applicable). 2-3 sentences each.
-  Example (concept): "**Junior Developer**: Build a RAG pipeline hands-on. LangChain + ChromaDB is a good starter combo.\n**PM/Planner**: Propose a RAG-powered FAQ chatbot using existing company documents.\n**Senior Engineer**: Chunk size and embedding model choice determine retrieval quality. Measure retrieval accuracy before production deployment."
-- **basic_en_10_learning_path**: **"Go deeper"** — Two parts:
-  **Part 1: Essential resources** — 2-3 best resources to truly understand this topic. ONLY from Reference Materials. Format: "**Title** (type) — why this resource". Types: paper, blog, video, official docs.
-  **Part 2: Next terms** — 2-3 handbook terms to read next, in order. Each with a one-line reason.
-  GOOD: "**Essential resources**\n- **\"Attention Is All You Need\"** (paper) — The original proposal of this architecture\n- **\"The Illustrated Transformer\"** — Jay Alammar (blog) — Most intuitive visual explanation\n\n**Next terms**\n1. **Self-Attention** — Core operation that makes Transformer work\n2. **BERT vs GPT** — Compare encoder/decoder variants to see the full picture"
+  BAD table: "| Item | Description |" (simple glossary table banned)
+  GOOD table: "| | Transformer | RNN | CNN |\\n| Processing | Parallel | Sequential | Local patterns |..."
+  You may add 1-2 summary sentences below the table (optional). But no prefix lines above.
+
+- **basic_en_4_impact** (Where and Why It Matters, 4~5 bullets):
+  Combine "where it is actually used or occurs + what it changed" into a single section.
+  NO counterfactual speculation ("without this, X wouldn't exist"). Only real changes/damages.
+  Only confident examples. If uncertain, say "may be used for ~" or drop the bullet entirely.
+
+  **⛔ MOST IMPORTANT RULE: Do NOT list learning resources, libraries, demos, tutorials, or blog posts as bullets.**
+  Those belong in `references_en`. Writing "scikit-learn demo", "AWS guide", "Hugging Face blog" as bullets here is a failure.
+
+  Each bullet must follow ONE of 3 patterns. **You may mix patterns in the same section** — choose whichever is natural for the term.
+
+  ---
+
+  ### Pattern 1 — Concrete use case (product/service name + measurable change)
+  **Prefer this pattern when possible.** Strongest bullet format.
+  Format: `- **Product/service name**: what changed (+ source/evidence)`
+
+  GOOD (DPO):
+  - **Hugging Face TRL DPO Trainer**: Enables LLM fine-tuning from preference data alone, cutting alignment-experiment engineering complexity vs RLHF pipelines.
+  - **Zephyr-7B (HuggingFace H4)**: A 7B model tuned with DPO scored on par with Llama-2-70B-chat on MT-Bench, demonstrating "small model + DPO" viability.
+
+  GOOD (Transformer):
+  - **Google Translate**: Adopted Transformers in 2016; the company reported large BLEU gains over the prior RNN-based system in its Research blog.
+  - **GitHub Copilot**: Ships Transformer-based Codex as its code-completion engine; developer surveys report it is now a daily tool for many users.
+
+  ---
+
+  ### Pattern 2 — Occurrence conditions / shifted engineering practice (phenomena, abstract concepts)
+  **Use this when you can't force-fit a product name.**
+  Describe "when/where does this happen" or "what practice changed after this concept became known".
+  Format: `- **Situation or changed practice**: concrete mechanism/result`
+
+  GOOD (Overfitting):
+  - **Most visible when IID assumptions break**: The wider the gap between training and test distributions, the more overfitting shows up — common in time-series, biased datasets, and distribution-shift regimes.
+  - **Cross-validation as standard practice**: K-fold, early stopping, and holdout splits became table-stakes; "trust training accuracy alone" is no longer an accepted baseline.
+  - **Model-selection mindset shift**: The intuition "bigger model = better" was replaced by "balance capacity with data volume" as a selection rule.
+  - **Default deployment gate**: Models with large train-validation gaps are routinely rejected from production candidate pools.
+
+  GOOD (Hallucination):
+  - **Primary blocker for enterprise LLM adoption**: "Confidently stating unverified facts" is now cited as the top risk in legal, medical, and other high-stakes verticals.
+  - **Why RAG architectures became mainstream**: Bolting external retrieval onto generation — rather than trusting the model's internal knowledge — became the de-facto production pattern.
+
+  ---
+
+  ### Pattern 3 — Evaluation context + misuse warning (metrics · benchmarks)
+  Format: `- **Evaluation context**: what decision it drives + common misreading`
+
+  GOOD (F1 Score):
+  - **Standard for imbalanced classification**: On medical tasks with 1% positive rate, accuracy of 99% is meaningless — F1 is what actually reveals performance.
+  - **Watch out for micro vs macro**: Reports that don't specify the averaging strategy quietly hide minority-class performance.
+
+  ---
+
+  **BAD — absolutely forbidden (resource listing)**:
+  - "- **scikit-learn polynomial regression demo**: Training error decreases while test error rises..." ← **This is a resource, belongs in references.**
+  - "- **AWS guide** (What is Overfitting?): Covers early stopping, pruning..." ← **Resource.**
+  - "- **OpenAI blog**: Announced this technology..." ← **Resource.**
+  - "- **Cross-validation** (k-fold, scikit-learn): Splits data into folds..." ← **Resource.**
+
+  If 3+ bullets match the BAD pattern, this section fails. Write "use contexts · occurrence conditions · shifted practices · evaluation misuse" — not resource lists.
+
+- **basic_en_5_caution** (Common Misconceptions, EXACTLY 3):
+  3 **common misconceptions** paired with **what's actually true**. Format: `- ❌ Myth: ... → ✅ Reality: ...`. Exactly 3, no more, no less.
+  Select the 3 most important misconceptions, not "every misconception". Focus on what a reader would actually get wrong.
+
+- **basic_en_6_comm** (How It Sounds in Conversation, 5 sentences):
+  5 example sentences as they appear in **team meetings, Slack threads, code reviews**. **Bold key terms** with `**`.
+  NO news article tone — include specific context like team names, metrics, or deadlines. Conversational.
+  Format: `- "Sentence..."`. Each a natural, single-line utterance.
+  BAD: "The AI chip market is growing rapidly as major players compete." (news tone)
+  GOOD: "- \\"We swapped the inference server from **A100** to **H100** and **latency dropped in half**. Cost went up but SLA comes first...\\"" (team chat tone)
+
+- **basic_en_7_related** (Related Reading, 4~6 items):
+  4~6 **related terms to read next** in a learning flow. Merges the old `8_related` + `10_learning_path Part 2`.
+  Format: `- **Term name** — relationship to this term + why to read it next (one line).`
+  Not a dictionary definition — include **comparison points** (performance/use-case/trade-off differences) or **learning-order reasons** that make the reader want to click.
+  BAD: "**TPU** — Google's AI-specialized chip, optimized for large-scale deep learning" (dictionary, no curiosity)
+  GOOD: "**TPU** — Google's answer to 'GPUs aren't enough'; ~5x faster training than GPUs but narrower general-purpose use → good to read after GPU for comparison."
+  **Note**: It's OK if some related terms don't yet exist in the handbook. The frontend auto-labels missing terms as "(coming soon)". Just write correct term names.
+
+---
+
+## references_en (JSON array, level-independent footer)
+
+This field is rendered in the page **footer block**, not the body. It stays visible regardless of the Basic/Advanced toggle.
+
+**Schema** (each item in the array):
+```json
+{{
+  "title": "Resource title",
+  "authors": "Author (optional)",
+  "year": 2023,
+  "venue": "Venue (optional, for papers)",
+  "type": "paper|docs|code|blog|wiki|book",
+  "url": "https://...",
+  "tier": "primary|secondary",
+  "annotation": "One-line description (max 120 chars)"
+}}
+```
+
+**Quality rules (must follow):**
+- Total: 3~7 items
+- At least 2 `primary` items required (papers, official docs, official code implementations, standards docs)
+- At most 3 `secondary` items (blog posts, explainers, tutorials, marketing pages)
+- URLs must come from **Reference Materials provided in the user prompt**. Do NOT fabricate URLs from memory.
+- Omit any item you cannot verify.
+- `annotation` is one line, max 120 chars. Explain **why a reader should look at it**. No empty labels like "intro" or "overview".
+- Skip optional fields (authors, year, venue) if unknown. Empty strings are fine.
+- **Tier guidance:** primary = papers, RFC/spec docs, vendor API reference, official implementation repos. secondary = marketing blogs, tutorials, intro guides, conference talk summaries.
+
+**GOOD example (Transformer):**
+```json
+[
+  {{"title": "Attention Is All You Need", "authors": "Vaswani et al.", "year": 2017, "venue": "NeurIPS", "type": "paper", "url": "https://arxiv.org/abs/1706.03762", "tier": "primary", "annotation": "Original Transformer paper: self-attention math + ablation experiments."}},
+  {{"title": "The Illustrated Transformer", "authors": "Jay Alammar", "type": "blog", "url": "https://jalammar.github.io/illustrated-transformer/", "tier": "secondary", "annotation": "The clearest visual walkthrough of attention for newcomers."}}
+]
+```
+
+**BAD examples:**
+- 0 primary items + 5 blog posts (**rule violation**)
+- Fabricated URL: `"url": "https://openai.com/blog/transformer-deep-dive"` (not in provided Reference Materials)
+- Annotation like "a good paper" — meaningless
+
+---
+
+## sidebar_checklist_en (sidebar only, not body)
+
+This field is rendered as the **"Understanding Check"** block in the right sidebar in Basic view. It is NOT part of the body.
+
+- 4~5 questions testing whether the reader actually understood the term.
+- Each question is a separate bullet separated by `\\n\\n`.
+- No rote memorization — ask "why/how" questions that test understanding.
+- Prefix each question with `□ `.
+- No inline citations.
+- GOOD: "□ What role do Q, K, V play in self-attention, and why do you need all three?\\n\\n□ Why can Transformers parallelize in a way RNNs cannot?\\n\\n□ Why does positional encoding matter — what breaks without it?"
+- BAD: "□ When was the Transformer paper published?" (rote fact)
+- BAD: "□ Question (Ref: W&B)" (inline citation)
+
+---
 
 ## Output JSON Structure
 
 ```json
 {{
-  "definition_en": "...",
-  "basic_en_1_plain": "...",
-  "basic_en_2_example": "...",
-  "basic_en_3_glance": "...",
-  "basic_en_4_why": "...",
-  "basic_en_5_where": "...",
-  "basic_en_6_caution": "...",
-  "basic_en_6b_news_context": "When news says 'X' → it means Y\\n...",
-  "basic_en_6c_checklist": "□ Question 1\\n□ Question 2\\n□ Question 3",
-  "basic_en_7_comm": "...",
-  "basic_en_8_related": "...",
-  "basic_en_9_roles": "**Junior Developer**: ...\\n**PM/Planner**: ...\\n**Senior Engineer**: ...",
-  "basic_en_10_learning_path": "**Essential resources**\\n- **Title** (type) — reason\\n\\n**Next terms**\\n1. **Term** — reason\\n2. **Term** — reason"
+  "definition_en": "One-sentence definition (80~200 chars)",
+  "hero_news_context_en": "\\"quote 1\\" → meaning\\n\\"quote 2\\" → meaning\\n\\"quote 3\\" → meaning",
+  "basic_en_1_plain": "Problem → solution → mechanism, 700~1000 chars",
+  "basic_en_2_example": "- **Scenario 1**: description\\n- **Scenario 2**: description\\n- **Scenario 3**: description",
+  "basic_en_3_glance": "| | A | B |\\n|---|---|---|\\n| Aspect | ... | ... |",
+  "basic_en_4_impact": "- **Product/service**: change\\n- **Shift in practice**: mechanism\\n- ...",
+  "basic_en_5_caution": "- ❌ Myth: ... → ✅ Reality: ...\\n- ❌ Myth: ... → ✅ Reality: ...\\n- ❌ Myth: ... → ✅ Reality: ...",
+  "basic_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- \\"sentence 3\\"\\n- \\"sentence 4\\"\\n- \\"sentence 5\\"",
+  "basic_en_7_related": "- **Term 1** — relationship + why to read next\\n- **Term 2** — ...\\n- **Term 3** — ...\\n- **Term 4** — ...",
+  "references_en": [
+    {{"title": "...", "type": "paper", "url": "...", "tier": "primary", "annotation": "..."}}
+  ],
+  "sidebar_checklist_en": "□ Question 1\\n\\n□ Question 2\\n\\n□ Question 3\\n\\n□ Question 4"
 }}
 ```
 
 ## Self-Check (verify before responding)
-✓ No two sections share the same analogy, example, or point
-✓ 1_plain contains a concrete mechanism explanation, not just an analogy
-✓ 2_example uses surprising, non-obvious scenarios (NOT smartphones/self-driving/voice assistants)
-✓ Table compares 2+ specific technologies/concepts (not "high vs low" or single-term glossary)
-✓ Every product/service example is factually correct
-✓ 7_comm sounds like a team meeting/slack, not a news article
-✓ 8_related includes comparison points that trigger curiosity
-✓ 0_summary uses NO jargon: problem/situation -> analogy -> limitation -> conclusion. A non-technical person can understand every word.
-✓ 9_roles has 3+ job roles with specific actionable advice
-✓ 10_learning_path has 3 terms in logical learning order with reasons
-✓ Each section adds information the reader didn't get from previous sections
+✓ `definition_en` is 80~200 chars, single concept + single differentiator
+✓ `hero_news_context_en` is EXACTLY 3 lines, each ≤70 chars, each line has a quote + arrow + meaning
+✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
+✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
+✓ `basic_en_3_glance` is table ONLY — no "X vs Y →" prefix lines above the table
+✓ `basic_en_4_impact` has 4~5 bullets. Each bullet follows ONE of the 3 allowed patterns. Mixing patterns within the section is fine.
+✓ `basic_en_4_impact` does NOT list learning resources, docs, tutorials, or library names as bullets — those belong to references_en. If 3+ bullets look like resource listings, rewrite.
+✓ `basic_en_5_caution` has EXACTLY 3 myth-reality pairs, not 4, not 2
+✓ `basic_en_6_comm` has 5 sentences in team-meeting/slack tone, not news-article tone
+✓ `basic_en_7_related` has 4~6 entries, each with comparison/learning-order reason (not dictionary definition)
+✓ `references_en` has ≥2 primary items, ≤3 secondary items, total 3~7
+✓ All reference URLs are from the provided Reference Materials — no fabricated links
+✓ `sidebar_checklist_en` has 4~5 questions testing understanding, not memorization
+✓ No section repeats content from hero_news_context_en or from another section
+✓ NO deleted fields in output: no `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related`
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
@@ -1009,19 +1170,20 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
-- Do NOT fabricate URLs. If you are unsure a URL exists, OMIT it entirely. Never invent reference links.
+- Do NOT fabricate URLs anywhere (body text or references_en). If unsure, OMIT.
 
 ## Markdown Formatting (within each section value)
-- Use `###` sub-headings to break long sections into scannable parts
 - Use **bold** for key terms and important concepts
 - Use bullet points (`-`) for lists instead of cramming items into one sentence
-- BAD: "EDA의 주요 방법은 1) 시각화 2) 요약 통계 3) 이상치 탐지이다."
-- GOOD: "### EDA의 주요 방법\n- **시각화**: 그래프로 패턴 파악\n- **요약 통계**: 평균, 중간값 등\n- **이상치 탐지**: 비정상 데이터 식별"
+- Do NOT use `###` sub-headings inside body sections — sections are already rendered with H2 headers by the system
+- BAD: "EDA methods are 1) visualization 2) summary statistics 3) outlier detection."
+- GOOD: "- **Visualization**: patterns via plots\\n- **Summary statistics**: mean, median, etc.\\n- **Outlier detection**: flag abnormal records"
 
-## Table Rules (glance sections)
+## Table Rules (glance section)
 - MUST be comparison/contrast tables that ADD VALUE — NOT simple definition tables
-- BAD table: "| 항목 | 설명 |\n| EDA | 데이터 초기 분석 |" (just restating the definition)
-- GOOD table: "| | EDA | 통계 분석 | 데이터 마이닝 |\n| 목적 | 탐색/이해 | 검증/추론 | 패턴 발견 |\n| 시점 | 분석 초기 | 가설 검증 | 분석 후반 |"
+- BAD table: "| Item | Description |\\n| EDA | Initial data analysis |" (restating a definition)
+- GOOD table: "| | EDA | Statistical Analysis | Data Mining |\\n| Purpose | Explore/understand | Verify/infer | Discover patterns |\\n| Stage | Early | Hypothesis testing | Late |"
+- Do NOT add "X vs Y →" prefix lines above the table. Just the table.
 
 Respond in JSON format only."""
 
