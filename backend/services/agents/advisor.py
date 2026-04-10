@@ -1087,19 +1087,13 @@ BASIC_SECTIONS_KO = [
 ]
 
 BASIC_SECTIONS_EN = [
-    ("basic_en_0_summary", "## 30-Second Summary"),
     ("basic_en_1_plain", "## Plain Explanation"),
-    ("basic_en_2_example", "## Example & Analogy"),
+    ("basic_en_2_example", "## Examples & Analogies"),
     ("basic_en_3_glance", "## At a Glance"),
-    ("basic_en_4_why", "## Why You Should Know This"),
-    ("basic_en_5_where", "## Where It's Used"),
-    ("basic_en_6b_news_context", "## When You See This in the News"),
-    ("basic_en_6_caution", "## Common Misconceptions"),
-    ("basic_en_6c_checklist", "## Understanding Checklist"),
-    ("basic_en_7_comm", "## How It Sounds in Conversation"),
-    ("basic_en_8_related", "## Related Terms"),
-    ("basic_en_9_roles", "## Role-Specific Insights"),
-    ("basic_en_10_learning_path", "## Go Deeper"),
+    ("basic_en_4_impact", "## Where and Why It Matters"),
+    ("basic_en_5_caution", "## Common Misconceptions"),
+    ("basic_en_6_comm", "## How It Sounds in Conversation"),
+    ("basic_en_7_related", "## Related Reading"),
 ]
 
 ADVANCED_SECTIONS_KO = [
