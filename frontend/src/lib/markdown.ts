@@ -135,6 +135,8 @@ export async function renderMarkdown(md: string): Promise<string> {
 
 // Handbook-specific processor: block math ($$...$$) only
 // singleDollarTextMath disabled to avoid currency conflicts ($/hour, $10/GB)
+// Code blocks are collapsible by default — Advanced readers opt into seeing
+// long code dumps instead of scrolling past them.
 const handbookProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm, { singleTilde: false })
@@ -145,7 +147,7 @@ const handbookProcessor = unified()
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeKatex)
   .use(rehypeShiki, shikiOptions as any)
-  .use(rehypeCodeWindow)
+  .use(rehypeCodeWindow, { collapsible: true })
   .use(rehypeStringify);
 
 export async function renderHandbookMarkdown(md: string): Promise<string> {
