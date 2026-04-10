@@ -1348,17 +1348,32 @@ async def _run_generate_term(
 
     definition_context = basic_data.get("definition_en", "") or req.definition_en
     definition_ko_context = basic_data.get("definition_ko", "") or req.definition_ko
+
+    # Build Basic body context (post-redesign 7-section assembly).
+    # Truncate each language to 3000 chars to keep total context budget reasonable
+    # (Advanced prompt ~4k tokens + Basic context ~1.5k tokens, well under 16k max).
+    basic_ko_body_for_ctx = _assemble_markdown(basic_data, BASIC_SECTIONS_KO)[:3000]
+    basic_en_body_for_ctx = (
+        _assemble_markdown(basic_data, BASIC_SECTIONS_EN)[:3000]
+        if any(k.startswith("basic_en_") for k in basic_data)
+        else "(Basic EN not yet generated — Call 2 runs in parallel)"
+    )
+
     advanced_prompt = (
         f"{user_prompt}\n\n"
         f"--- Context from Call 1 ---\n"
         f"Definition (EN): {definition_context}\n"
         f"Definition (KO): {definition_ko_context}\n"
-        f"Term Type: {term_type}"
+        f"Term Type: {term_type}\n"
+        f"\n--- Basic KO body (DO NOT duplicate analogies, examples, or phrasing) ---\n"
+        f"{basic_ko_body_for_ctx}\n"
+        f"\n--- Basic EN body (DO NOT duplicate) ---\n"
+        f"{basic_en_body_for_ctx}"
     )
     if brave_context:
-        advanced_prompt += f"\n\n{brave_context}\nSOURCE ROLE: Official docs, code references. Use for adv_*_4_code, adv_*_8_refs."
+        advanced_prompt += f"\n\n{brave_context}\nSOURCE ROLE: Official docs, code references. Use for adv_*_3_code, adv_*_2_formulas."
     if deep_context:
-        advanced_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_2_formulas, adv_*_3_howworks, adv_*_1_technical."
+        advanced_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_1_mechanism, adv_*_2_formulas."
 
     # Inject type-specific guides into system prompts
     type_guide = get_type_depth_guide(term_type)
@@ -1442,12 +1457,33 @@ async def _run_generate_term(
         f"## {k}: {v[:1000]}" for k, v in en_basic_data.items() if k.startswith("basic_en_")
     )
 
+    # Build a Call 4-specific prompt that includes the actual EN Basic body now that
+    # Call 2 has finished. This lets Call 4 (EN Advanced) explicitly differentiate
+    # from the EN Basic that the reader will see right above it. Call 3 (KO Advanced)
+    # already used `advanced_prompt` with a placeholder for EN Basic.
+    basic_en_body_for_ctx_real = _assemble_markdown(en_basic_data, BASIC_SECTIONS_EN)[:3000]
+    advanced_en_prompt = (
+        f"{user_prompt}\n\n"
+        f"--- Context from Call 1 ---\n"
+        f"Definition (EN): {definition_context}\n"
+        f"Definition (KO): {definition_ko_context}\n"
+        f"Term Type: {term_type}\n"
+        f"\n--- Basic KO body (DO NOT duplicate analogies, examples, or phrasing) ---\n"
+        f"{basic_ko_body_for_ctx}\n"
+        f"\n--- Basic EN body (DO NOT duplicate) ---\n"
+        f"{basic_en_body_for_ctx_real}"
+    )
+    if brave_context:
+        advanced_en_prompt += f"\n\n{brave_context}\nSOURCE ROLE: Official docs, code references. Use for adv_*_3_code, adv_*_2_formulas."
+    if deep_context:
+        advanced_en_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_1_mechanism, adv_*_2_formulas."
+
     call4_task = client.chat.completions.create(
         **compat_create_kwargs(
             model,
             messages=[
                 {"role": "system", "content": adv_en_system},
-                {"role": "user", "content": advanced_prompt},
+                {"role": "user", "content": advanced_en_prompt},
             ],
             response_format={"type": "json_object"},
             temperature=0.3,
