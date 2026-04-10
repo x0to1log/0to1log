@@ -689,13 +689,52 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BAD: "스마트폰 얼굴 인식: AI 칩이 실시간으로 인식" (뻔하고 상황 묘사 없음)
   GOOD: "**넷플릭스 실시간 자막**: 영상을 틀자마자 0.2초 만에 자막이 뜹니다. 서버의 AI 칩이 음성을 실시간으로 텍스트로 변환하기 때문입니다."
 
-- **basic_ko_3_glance** (한눈에 비교, 마크다운 표 1개만):
-  이 개념과 **유사 개념을 비교하는 표**. 반드시 **2개 이상의 구체적 기술/개념**을 비교. 반드시 마크다운 테이블(| 형식) 사용.
-  **중요: 표 위에 한 줄 비교 라인(`X vs Y → ...`)을 절대 쓰지 마.** 예전 프롬프트에선 prefix 라인 + 표 둘 다 요구했지만 중복이었음. 이제 표만.
-  BAD 표: "| 구분 | 높은 효율 | 낮은 효율 |" (속성 대비표 금지)
-  BAD 표: "| 항목 | 설명 |" (단순 용어 설명표 금지)
-  GOOD 표: "| | Transformer | RNN | CNN |\\n| 처리 방식 | 병렬 | 순차 | 지역 패턴 |..."
-  표 아래에 1~2문장 요약을 붙여도 됨 (선택). 그러나 표 위 prefix 라인은 금지.
+- **basic_ko_3_glance** (한눈에 비교):
+  유사 개념을 비교하는 **마크다운 표 1개** + **표 아래 핵심 차이 한 문장** (필수, 생략 금지).
+
+  **필수 구조 (3개 요소, 순서 고정):**
+  1. 비교 표 — 2개 이상의 구체적 기술/개념, 3~6행
+  2. **`\\n\\n` (빈 줄)** — 표와 아래 문장을 분리
+  3. 핵심 차이를 압축한 **자연스러운 1문장** — label prefix 없음 (예: "요약:", "정리:", "결론:" 금지)
+
+  **⚠️ 포맷 규칙 (절대 위반 금지):**
+  - 표 마지막 `|` 행 다음에 **반드시 빈 줄** (JSON 문자열에서 `\\n\\n`). 빈 줄 없으면 마크다운 파서가 아래 문장을 표의 연장으로 해석해 렌더링이 깨진다.
+  - 아래 문장에 `"요약:"`, `"정리:"`, `"결론:"` 같은 label을 붙이지 마라. **자연스러운 서술문**으로 직접 시작하라.
+  - 아래 문장은 표에 이미 있는 항목을 나열하지 말고, **왜 그 차이가 중요한지** 혹은 **언제 무엇을 쓰는지**를 한 문장에 녹여라.
+
+  **BAD 1 (빈 줄 없음 — 파서 깨짐):**
+  ```
+  | 활용 범위 | QA, 요약 | 품사 태깅 | 이미지 생성 |
+  LLM은 텍스트 중심 범용성, 전통 NLP는 특화 정확성이 강하다.
+  ```
+  → 마크다운 파서가 두 번째 줄을 표의 마지막 행의 연속으로 해석. 한 셀에 텍스트가 합쳐져 들어가 버림.
+
+  **BAD 2 ("요약:" label — 노이즈):**
+  ```
+  | 활용 범위 | ... | ... | ... |
+
+  요약: LLM은 텍스트 중심 범용성, 전통 NLP는 특화 정확성이 강하다.
+  ```
+  → label이 시각적 노이즈. 없어도 의미 전달 완벽.
+
+  **BAD 3 (아래 문장 누락):**
+  → 표 행이 5개 이상이면 독자가 "그래서 결론이 뭐?"를 즉시 못 잡는다. 한 문장 결론이 반드시 필요.
+
+  **BAD 4 (속성 대비표):** `"| 구분 | 높은 효율 | 낮은 효율 |"`
+  **BAD 5 (단순 설명표):** `"| 항목 | 설명 |"`
+  **BAD 6 (표 위 prefix 라인):** 표 **위**에 `"X vs Y → ..."` 형식 줄 절대 금지. 아래 문장에 모든 정보를 담아라.
+
+  **GOOD:**
+  ```
+  | | Transformer | RNN | CNN |
+  |---|---|---|---|
+  | 처리 방식 | 병렬 attention | 순차 state | 지역 convolution |
+  | 문맥 범위 | 전역 토큰 관계 | 긴 의존성 약함 | 지역 패턴 중심 |
+  | 대표 용도 | LLM, 번역, 생성 | 초기 NLP, 시계열 | 이미지, 음성 초기 |
+
+  Transformer는 장거리 문맥을 전역 병렬로 포착해 긴 시퀀스에서 RNN·CNN보다 확장성이 좋은 반면 CNN은 이미지의 지역 패턴에 여전히 효율적이다.
+  ```
+  ← 표 마지막 `|` 뒤 빈 줄, 그 다음 label 없는 자연스러운 1문장.
 
 - **basic_ko_4_impact** (어디서 왜 중요한가, 4~5 bullet):
   "실제로 어디서 쓰이거나 발생하는가 + 그래서 뭐가 달라졌는가"를 4~5 bullet로.
@@ -848,7 +887,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
   "basic_ko_1_plain": "문제 → 해결 → 메커니즘 600~800자 본문",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
-  "basic_ko_3_glance": "| | A | B |\\n|---|---|---|\\n| 항목 | ... | ... |",
+  "basic_ko_3_glance": "| | A | B |\\n|---|---|---|\\n| 항목 | ... | ... |\\n\\n핵심 차이를 서술한 한 문장 (label prefix 없음).",
   "basic_ko_4_impact": "- **제품/서비스1**: 변화\\n- **제품/서비스2**: 변화\\n- ...",
   "basic_ko_5_caution": "- ❌ 오해: ... → ✅ 실제: ...\\n- ❌ 오해: ... → ✅ 실제: ...\\n- ❌ 오해: ... → ✅ 실제: ...",
   "basic_ko_6_comm": "- \\"문장1\\"\\n- \\"문장2\\"\\n- \\"문장3\\"\\n- \\"문장4\\"\\n- \\"문장5\\"",
@@ -865,7 +904,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
-✓ `basic_ko_3_glance` is table ONLY — no "X vs Y →" prefix lines above the table
+✓ `basic_ko_3_glance` structure: table → `\\n\\n` blank line → single natural sentence (no "요약:" / "정리:" / "결론:" label). No "X vs Y →" prefix line above the table.
 ✓ `basic_ko_4_impact` has 4~5 bullets. Each bullet follows ONE of the 3 allowed patterns (concrete product + change, occurrence condition + practice shift, evaluation context + misuse). Mixing patterns within the section is fine.
 ✓ `basic_ko_4_impact` does NOT list learning resources, docs, tutorials, or library names as bullets — those belong to references_ko. If 3+ bullets look like "자료 나열", rewrite the section.
 ✓ `basic_ko_5_caution` has EXACTLY 3 misconception pairs, not 4, not 2
@@ -1009,13 +1048,52 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
   GOOD: "**Netflix real-time subtitles**: Subtitles appear within 0.2 seconds of pressing play. The server's AI chip converts speech to text in real time." (surprising + situation detail)
 
-- **basic_en_3_glance** (At a Glance, markdown table only):
-  A **comparison table** between **2+ specific technologies/concepts**. Must use markdown table (| format).
-  **Important: do NOT write "X vs Y →" prefix lines above the table.** Earlier prompts required both prefix lines + table, which duplicated information. Just the table now.
-  BAD table: "| Aspect | High Efficiency | Low Efficiency |" (attribute contrast banned)
-  BAD table: "| Item | Description |" (simple glossary table banned)
-  GOOD table: "| | Transformer | RNN | CNN |\\n| Processing | Parallel | Sequential | Local patterns |..."
-  You may add 1-2 summary sentences below the table (optional). But no prefix lines above.
+- **basic_en_3_glance** (At a Glance):
+  A **markdown comparison table** + **one sentence capturing the key difference below the table** (REQUIRED, do not omit).
+
+  **Required structure (3 elements, fixed order):**
+  1. Comparison table — 2+ specific technologies/concepts, 3~6 rows
+  2. **`\\n\\n` (blank line)** — separates the table from the sentence below
+  3. One **natural sentence** summarizing the key difference — no label prefix (e.g., "Summary:", "Takeaway:", "In short:" are BANNED)
+
+  **⚠️ Format rules (do NOT violate):**
+  - After the last `|` row of the table, you MUST insert a blank line (in the JSON string literal: `\\n\\n`). Without the blank line, markdown parsers treat the sentence as a continuation of the last table row — rendering breaks.
+  - Do NOT prefix the sentence with `"Summary:"`, `"Takeaway:"`, `"In short:"`, `"TL;DR:"`, or similar labels. Write it as a **natural sentence** that starts directly.
+  - The sentence must NOT re-list table cells. Instead, compress **why the difference matters** or **when to pick which** into one sentence.
+
+  **BAD 1 (no blank line — parser breaks):**
+  ```
+  | Typical uses | Q&A, summarization | POS tagging | Image gen |
+  LLMs cover broad language tasks while traditional NLP stays specialized.
+  ```
+  → Markdown parser folds the second line into the last table row cell. Rendering mangled.
+
+  **BAD 2 ("Takeaway:" label — noise):**
+  ```
+  | Typical uses | ... | ... | ... |
+
+  Takeaway: LLMs cover broad language tasks while traditional NLP stays specialized.
+  ```
+  → Label is visual noise. Meaning is fully conveyed without it.
+
+  **BAD 3 (summary sentence missing):**
+  → When the table has 5+ rows, the reader can't quickly extract "so what?". The closing sentence is required.
+
+  **BAD 4 (attribute-contrast table):** `"| Aspect | High Efficiency | Low Efficiency |"`
+  **BAD 5 (glossary table):** `"| Item | Description |"`
+  **BAD 6 (prefix line above the table):** Writing `"X vs Y → ..."` above the table is banned. Put all context in the bottom sentence.
+
+  **GOOD:**
+  ```
+  | | Transformer | RNN | CNN |
+  |---|---|---|---|
+  | Processing | Parallel attention | Sequential state | Local convolution |
+  | Context range | Global across tokens | Weak on long deps | Local patterns |
+  | Typical uses | LLMs, translation | Early NLP, time-series | Images, early audio |
+
+  Transformers capture long-range context through global parallel attention, while CNNs remain efficient for local image patterns and RNNs lag on long sequences.
+  ```
+  ← Blank line after the last `|` row, then a natural label-free sentence.
 
 - **basic_en_4_impact** (Where and Why It Matters, 4~5 bullets):
   Combine "where it is actually used or occurs + what it changed" into a single section.
@@ -1164,7 +1242,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
   "hero_news_context_en": "\\"quote 1\\" → meaning\\n\\"quote 2\\" → meaning\\n\\"quote 3\\" → meaning",
   "basic_en_1_plain": "Problem → solution → mechanism, 700~1000 chars",
   "basic_en_2_example": "- **Scenario 1**: description\\n- **Scenario 2**: description\\n- **Scenario 3**: description",
-  "basic_en_3_glance": "| | A | B |\\n|---|---|---|\\n| Aspect | ... | ... |",
+  "basic_en_3_glance": "| | A | B |\\n|---|---|---|\\n| Aspect | ... | ... |\\n\\nA natural sentence capturing the key difference (no label prefix).",
   "basic_en_4_impact": "- **Product/service**: change\\n- **Shift in practice**: mechanism\\n- ...",
   "basic_en_5_caution": "- ❌ Myth: ... → ✅ Reality: ...\\n- ❌ Myth: ... → ✅ Reality: ...\\n- ❌ Myth: ... → ✅ Reality: ...",
   "basic_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- \\"sentence 3\\"\\n- \\"sentence 4\\"\\n- \\"sentence 5\\"",
@@ -1181,7 +1259,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
-✓ `basic_en_3_glance` is table ONLY — no "X vs Y →" prefix lines above the table
+✓ `basic_en_3_glance` structure: table → `\\n\\n` blank line → single natural sentence (no "Summary:" / "Takeaway:" / "TL;DR:" label). No "X vs Y →" prefix line above the table.
 ✓ `basic_en_4_impact` has 4~5 bullets. Each bullet follows ONE of the 3 allowed patterns. Mixing patterns within the section is fine.
 ✓ `basic_en_4_impact` does NOT list learning resources, docs, tutorials, or library names as bullets — those belong to references_en. If 3+ bullets look like resource listings, rewrite.
 ✓ `basic_en_5_caution` has EXACTLY 3 myth-reality pairs, not 4, not 2
