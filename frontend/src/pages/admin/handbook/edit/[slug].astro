@@ -227,6 +227,53 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                   <div class="hb-char-count" id="charcount-advanced-ko"></div>
                 </div>
               </div>
+
+              {/* Redesign fields (KO) — level-independent */}
+              <details class="admin-details admin-details--redesign" open>
+                <summary>Redesign 필드 (Hero / References / Checklist) — KO</summary>
+                <div class="admin-details-body">
+                  <div class="admin-field">
+                    <label for="field-hero-news-context-ko">Hero News Context (KO)</label>
+                    <textarea
+                      name="hero_news_context_ko"
+                      id="field-hero-news-context-ko"
+                      class="admin-textarea"
+                      rows="4"
+                      placeholder={'"인용구1" → 의미1\n"인용구2" → 의미2\n"인용구3" → 의미3'}
+                    >{term?.hero_news_context_ko || ''}</textarea>
+                    <div class="admin-field-hint">정확히 3줄. 각 줄 ≤60자. 형식: "인용구" → 의미</div>
+                  </div>
+
+                  <div class="admin-field">
+                    <label for="field-sidebar-checklist-ko">Sidebar Checklist (KO)</label>
+                    <textarea
+                      name="sidebar_checklist_ko"
+                      id="field-sidebar-checklist-ko"
+                      class="admin-textarea"
+                      rows="6"
+                      placeholder={'□ 질문 1\n\n□ 질문 2\n\n□ 질문 3'}
+                    >{term?.sidebar_checklist_ko || ''}</textarea>
+                    <div class="admin-field-hint">4~5개 질문. 각 질문 앞에 □. 줄 사이 빈 줄.</div>
+                  </div>
+
+                  <div class="admin-field">
+                    <label for="field-references-ko">References (KO) — JSON 배열</label>
+                    <textarea
+                      name="references_ko"
+                      id="field-references-ko"
+                      class="admin-textarea admin-textarea--mono"
+                      rows="12"
+                      data-references-editor
+                      placeholder='[{"title":"...","type":"paper","url":"https://...","tier":"primary","annotation":"..."}]'
+                    >{term?.references_ko ? JSON.stringify(term.references_ko, null, 2) : ''}</textarea>
+                    <div class="admin-field-hint">
+                      JSON 배열. primary 최소 2개, secondary 최대 3개, 총 3~7개.
+                      필드: title, authors?, year?, venue?, type (paper|docs|code|blog|wiki|book), url, tier (primary|secondary), annotation
+                    </div>
+                    <div class="references-validation" id="references-validation-ko"></div>
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
 
@@ -265,6 +312,53 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                   <div class="hb-char-count" id="charcount-advanced-en"></div>
                 </div>
               </div>
+
+              {/* Redesign fields (EN) — level-independent */}
+              <details class="admin-details admin-details--redesign" open>
+                <summary>Redesign Fields (Hero / References / Checklist) — EN</summary>
+                <div class="admin-details-body">
+                  <div class="admin-field">
+                    <label for="field-hero-news-context-en">Hero News Context (EN)</label>
+                    <textarea
+                      name="hero_news_context_en"
+                      id="field-hero-news-context-en"
+                      class="admin-textarea"
+                      rows="4"
+                      placeholder={'"quote 1" → meaning 1\n"quote 2" → meaning 2\n"quote 3" → meaning 3'}
+                    >{term?.hero_news_context_en || ''}</textarea>
+                    <div class="admin-field-hint">Exactly 3 lines. Each line ≤70 chars. Format: "quote" → meaning</div>
+                  </div>
+
+                  <div class="admin-field">
+                    <label for="field-sidebar-checklist-en">Sidebar Checklist (EN)</label>
+                    <textarea
+                      name="sidebar_checklist_en"
+                      id="field-sidebar-checklist-en"
+                      class="admin-textarea"
+                      rows="6"
+                      placeholder={'□ Question 1\n\n□ Question 2\n\n□ Question 3'}
+                    >{term?.sidebar_checklist_en || ''}</textarea>
+                    <div class="admin-field-hint">4~5 questions. Each prefixed with □. Blank line between questions.</div>
+                  </div>
+
+                  <div class="admin-field">
+                    <label for="field-references-en">References (EN) — JSON array</label>
+                    <textarea
+                      name="references_en"
+                      id="field-references-en"
+                      class="admin-textarea admin-textarea--mono"
+                      rows="12"
+                      data-references-editor
+                      placeholder='[{"title":"...","type":"paper","url":"https://...","tier":"primary","annotation":"..."}]'
+                    >{term?.references_en ? JSON.stringify(term.references_en, null, 2) : ''}</textarea>
+                    <div class="admin-field-hint">
+                      JSON array. ≥2 primary, ≤3 secondary, 3~7 total.
+                      Fields: title, authors?, year?, venue?, type (paper|docs|code|blog|wiki|book), url, tier (primary|secondary), annotation
+                    </div>
+                    <div class="references-validation" id="references-validation-en"></div>
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
         </form>
@@ -1579,7 +1673,25 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     data.body_advanced_ko = crepeAdvancedKo ? crepeAdvancedKo.getMarkdown() : '';
     data.body_advanced_en = crepeAdvancedEn ? crepeAdvancedEn.getMarkdown() : '';
 
+    // Redesign fields: parse references JSON. Throws if invalid so handleSave can show feedback.
+    data.references_ko = parseReferencesField(data.references_ko as string | undefined, 'references_ko');
+    data.references_en = parseReferencesField(data.references_en as string | undefined, 'references_en');
+
     return data;
+  }
+
+  function parseReferencesField(raw: string | undefined, fieldLabel: string): any[] | null {
+    if (!raw || !raw.trim()) return null;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      throw new Error(`${fieldLabel} JSON parse error: ${(e as Error).message}`);
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error(`${fieldLabel} must be a JSON array (got ${typeof parsed})`);
+    }
+    return parsed;
   }
 
   function getActivePreviewLang() {
@@ -1620,7 +1732,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
   async function handleSave(options: { showFeedback?: boolean } = {}) {
     const { showFeedback: shouldShowFeedback = true } = options;
-    const data = getFormData();
+    let data: Record<string, any>;
+    try {
+      data = getFormData();
+    } catch (e) {
+      if (shouldShowFeedback) showFeedback((e as Error).message, true);
+      return null;
+    }
     if (!data.term) {
       if (shouldShowFeedback) showFeedback('Term is required.', true);
       return null;
@@ -1765,6 +1883,53 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       showFeedback(`Delete failed: ${err.error}`, true);
     }
   });
+
+  // Live JSON validation for references textareas (KO/EN)
+  function initReferencesValidation() {
+    const editors = document.querySelectorAll<HTMLTextAreaElement>('[data-references-editor]');
+    editors.forEach(editor => {
+      const lang = editor.id.endsWith('-ko') ? 'ko' : 'en';
+      const feedback = document.getElementById(`references-validation-${lang}`);
+      if (!feedback) return;
+
+      const validate = () => {
+        const raw = editor.value.trim();
+        if (!raw) {
+          feedback.textContent = '';
+          feedback.className = 'references-validation';
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            feedback.textContent = '⚠️ JSON 배열이 아닙니다';
+            feedback.className = 'references-validation references-validation--error';
+            return;
+          }
+          const primary = parsed.filter((r: any) => r?.tier === 'primary').length;
+          const secondary = parsed.filter((r: any) => r?.tier === 'secondary').length;
+          const issues: string[] = [];
+          if (parsed.length < 3 || parsed.length > 7) issues.push(`총 ${parsed.length}개 (3~7 권장)`);
+          if (primary < 2) issues.push(`primary ${primary}개 (≥2 필요)`);
+          if (secondary > 3) issues.push(`secondary ${secondary}개 (≤3 권장)`);
+          if (issues.length > 0) {
+            feedback.textContent = `⚠️ ${parsed.length} items — ${issues.join(', ')}`;
+            feedback.className = 'references-validation references-validation--warn';
+          } else {
+            feedback.textContent = `✓ ${parsed.length} items (${primary} primary, ${secondary} secondary)`;
+            feedback.className = 'references-validation references-validation--ok';
+          }
+        } catch (e) {
+          feedback.textContent = `❌ JSON parse error: ${(e as Error).message}`;
+          feedback.className = 'references-validation references-validation--error';
+        }
+      };
+
+      editor.addEventListener('input', validate);
+      validate(); // initial check
+    });
+  }
+  initReferencesValidation();
 
   preview.syncFromLocation();
   }); // end DOMContentLoaded
