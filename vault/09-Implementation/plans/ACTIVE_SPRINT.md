@@ -1,7 +1,7 @@
 # ACTIVE SPRINT — News Pipeline v4 Quality Stabilization (NP4-Q)
 
 > **스프린트 기간:** 2026-03-15~진행 중 (NP4-Q phase)
-> **마지막 업데이트:** 2026-04-10 (HB-REDESIGN B/A/C + HB-EDITOR-V2 완료, HB-MIGRATE-138 다음 작업)
+> **마지막 업데이트:** 2026-04-10 (sprint sync skill 개선 + drift cleanup: Current Doing 19→9개, AUTOPUB-01 done, ghost task 표시)
 > **목표:** AI News Pipeline v4 (2 페르소나 × 2 언어) 품질 안정화 + 프롬프트 감사 + 뉴스레터/대시보드 구축
 > **설계 참조:** [[AI-News-Pipeline-Design]], [[plans/2026-03-16-daily-digest-design]], [[plans/2026-03-25-direct-fastapi-ai-calls]], [[plans/2026-03-26-news-quality-check-overhaul]]
 > **이전 스프린트:** Phase 3B-SHARE — 2026-03-13 게이트 전체 통과
@@ -34,26 +34,19 @@
 
 ## Current Doing (병렬 진행 중)
 
+> **운영 규칙:** Current Doing은 **active work만** 추적. done은 자동으로 제거 (commit hash가 provenance). todo는 Current Doing이 아닌 "남은 태스크" 섹션에. 1주 이상 commit 없는 in_progress는 stale 표시.
+
 | Task ID | 제목 | 상태 | 시작 | 예상 완료 |
 |---|---|---|---|---|
-| FASTAPI-DIRECT-01 | 직접 FastAPI AI 호출 (Vercel timeout 회피) | done | 2026-03-25 | 2026-03-27 |
-| README-01 | 프로젝트 README 작성 | in_progress | 2026-03-26 | 2026-03-27 |
-| UA-02~05 | User Analytics — Site Analytics 차트 추가 | in_progress | 2026-03-27 | 2026-03-28 |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | 2026-03-27 | 2026-03-29 |
-| HQ-01~02 | 핸드북 Hallucination 수정 + 비기술 용어 정리 | todo | 2026-03-31 | — |
-| GPT5-01 | gpt-5 모델 마이그레이션 — classify/merge/ranking (gpt-5-mini) | in_progress | 2026-04-01 | — |
-| GPT5-01-FIX | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 | in_progress | 2026-04-01 | — |
+| GPT5-01 | gpt-5 모델 마이그레이션 — classify/merge/ranking (gpt-5-mini) | in_progress (⚠️ stale: last commit `ff8a081` 9일 전) | 2026-04-01 | — |
+| GPT5-01-FIX | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 | in_progress (⚠️ stale: 매칭 commit 없음) | 2026-04-01 | — |
 | GPT5-02 | gpt-5 모델 마이그레이션 — community_summarize (gpt-5-nano) | todo | — | — |
 | GPT5-03 | gpt-5 모델 마이그레이션 — Writer digest (gpt-5) | todo | — | — |
 | GPT5-04 | gpt-5 전체 파이프라인 backfill 비교 검증 | todo | — | — |
 | GPT5-05 | gpt-5 main 머지 + gpt-4.1 deprecation 대응 완료 | todo | — | — |
-| WEEKLY-01 | Weekly 파이프라인 EN+KO 동시 생성 — Daily와 구조 통일 | done | 2026-04-06 | 2026-04-07 |
-| AUTO-PUB-01 | Auto-publish (quality ≥ 85) + draft email 알림 + 어드민 dot 표시 | in_progress | 2026-04-08 | — |
-| HB-REDESIGN-KO | 핸드북 Basic KO 섹션 재설계 — 13→7, hero/refs/checklist 분리 (commit `70a0e77`) | done | 2026-04-09 | 2026-04-10 |
-| HB-REDESIGN-B | 핸드북 Basic EN 프롬프트 재설계 — KO 구조 복제 (commits `da85b34`, `aaf1a15`, `9f601b0`, `b545a77`) | done | 2026-04-10 | 2026-04-10 |
-| HB-REDESIGN-A | 핸드북 저장 경로 + 프론트엔드 렌더링 — DB 컬럼 + Hero/Refs/Checklist 컴포넌트 (commits `cb84185`~`7739c76`) | done | 2026-04-10 | 2026-04-10 |
-| HB-REDESIGN-C | 핸드북 Advanced 프롬프트 재설계 — 11→7, Basic 차별화 매트릭스 7/7 (commits `2a402d4`~`f961892`) | done | 2026-04-10 | 2026-04-10 |
-| HB-EDITOR-V2 | 어드민 에디터에 redesign 필드 6개 (Hero/References/Checklist) 편집 지원 + UX polish (commits `30eebe9`, `3a6bc93`) | done | 2026-04-10 | 2026-04-10 |
+| README-01 | 프로젝트 README 작성 | ⚠️ ghost (시작 14일 전, 매칭 commit 0건 — drop or restart 결정 필요) | 2026-03-26 | — |
+| UA-02~05 | User Analytics — Site Analytics 차트 추가 | ⚠️ stale (시작 14일 전, 매칭 commit 0건 — 상태 확인 필요) | 2026-03-27 | — |
 | HB-MIGRATE-138 | 138개 published 핸드북 용어를 v4 구조로 전량 regenerate (병렬 ~2시간, 비용 ~$15) | todo | — | — |
 
 ---
@@ -128,7 +121,7 @@
 | Task | 상태 | 목표 | 의존성 |
 |------|------|------|--------|
 | WEEKLY-FE-01 | todo | Weekly 탭 프론트 통합 | 백엔드 완료 ✅ |
-| AUTOPUB-01 | monitoring | Quality ≥80 자동 발행 + 어드민 토글 | 3일 연속 90+ 확인 후 구현 |
+| AUTOPUB-01 | done | Quality ≥85 자동 발행 + 2h 리뷰 윈도우 + draft 이메일 알림 + 어드민 dot (commits `76e3f51`, `74b13b5`, `711c05b`, `6b22647`) | 2026-04-08 |
 | COMMUNITY-01 | todo | Reddit/HN/X 반응 수집 (선택) | 선택사항 |
 
 ### HIGH PRIORITY — 핸드북 콘텐츠 품질 (HQ)
