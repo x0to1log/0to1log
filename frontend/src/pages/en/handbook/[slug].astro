@@ -258,13 +258,13 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         isAuthenticated={!!user}
         articleRedirect={`/${locale}/handbook/${pageSlug}/`}
       >
+        <HandbookUnderstandingChecklist checklist={sidebarChecklist} locale={locale} />
         <HandbookSideRail
           locale={locale}
           relatedTerms={relatedTerms}
           sameCategoryTerms={sameCategoryTerms}
           relatedArticles={relatedArticles}
         />
-        <HandbookUnderstandingChecklist checklist={sidebarChecklist} locale={locale} />
       </ReadingActionsRail>
     </Fragment>
   </NewsprintShell>

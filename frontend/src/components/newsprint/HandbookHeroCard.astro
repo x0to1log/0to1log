@@ -26,8 +26,8 @@ const lines = (newsContext || '')
   .slice(0, 3);
 
 const hasContext = lines.length > 0;
-const heading = locale === 'ko' ? '뉴스에서 이렇게 쓰여' : 'As seen in the news';
-const backLabel = locale === 'ko' ? '원래 기사로 돌아가기' : 'Back to the article';
+const heading = locale === 'ko' ? '뉴스에서는 이렇게' : 'As seen in the news';
+const backLabel = locale === 'ko' ? '기사로 돌아가기' : 'Back to the article';
 ---
 
 {(definition || hasContext) && (

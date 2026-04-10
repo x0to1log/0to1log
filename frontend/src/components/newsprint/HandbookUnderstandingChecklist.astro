@@ -15,7 +15,7 @@ interface Props {
 }
 
 const { checklist, locale } = Astro.props;
-const heading = locale === 'ko' ? '이해 체크리스트' : 'Understanding check';
+const heading = locale === 'ko' ? '이해했나요?' : 'Check your understanding';
 
 // Parse: each question prefixed with `□ ` or `[ ] `, separated by blank lines or just newlines.
 const items = (checklist || '')
