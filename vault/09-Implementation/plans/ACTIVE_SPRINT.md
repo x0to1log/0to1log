@@ -1,7 +1,7 @@
 # ACTIVE SPRINT — News Pipeline v4 Quality Stabilization (NP4-Q)
 
 > **스프린트 기간:** 2026-03-15~진행 중 (NP4-Q phase)
-> **마지막 업데이트:** 2026-03-31 (핸드북 품질 감사 HQ-01~08 추가)
+> **마지막 업데이트:** 2026-04-10 (핸드북 섹션 재설계 HB-REDESIGN-A/B/C 추가)
 > **목표:** AI News Pipeline v4 (2 페르소나 × 2 언어) 품질 안정화 + 프롬프트 감사 + 뉴스레터/대시보드 구축
 > **설계 참조:** [[AI-News-Pipeline-Design]], [[plans/2026-03-16-daily-digest-design]], [[plans/2026-03-25-direct-fastapi-ai-calls]], [[plans/2026-03-26-news-quality-check-overhaul]]
 > **이전 스프린트:** Phase 3B-SHARE — 2026-03-13 게이트 전체 통과
@@ -49,6 +49,10 @@
 | GPT5-05 | gpt-5 main 머지 + gpt-4.1 deprecation 대응 완료 | todo | — | — |
 | WEEKLY-01 | Weekly 파이프라인 EN+KO 동시 생성 — Daily와 구조 통일 | done | 2026-04-06 | 2026-04-07 |
 | AUTO-PUB-01 | Auto-publish (quality ≥ 85) + draft email 알림 + 어드민 dot 표시 | in_progress | 2026-04-08 | — |
+| HB-REDESIGN-KO | 핸드북 Basic KO 섹션 재설계 — 13→7, hero/refs/checklist 분리 (commit `70a0e77`) | done | 2026-04-09 | 2026-04-10 |
+| HB-REDESIGN-B | 핸드북 Basic EN 프롬프트 재설계 — KO 구조 복제 | todo | — | — |
+| HB-REDESIGN-A | 핸드북 저장 경로 + 프론트엔드 렌더링 — DB 컬럼 + Hero/Refs/Checklist 컴포넌트 | todo | — | — |
+| HB-REDESIGN-C | 핸드북 Advanced 프롬프트 재설계 — 11→7, Basic 차별화 | todo | — | — |
 
 ---
 
@@ -146,6 +150,52 @@
 | HQ-12 | todo | 콘텐츠 톤 재설계 — "AI 위키" → "기술 블로그" 느낌으로 전환, 신뢰감 + 읽히는 콘텐츠 | P1 |
 | HQ-13 | todo | term type 재설계 + facet 시스템 — type 8개 + intent/volatility facet, DB 저장, 분류 프롬프트, 프론트엔드 차별화 | P1 |
 | HQ-14 | todo | 추출 필터 강화 — 기존 용어 목록 기반 LLM gate + 추출 프롬프트에 기존 용어 컨텍스트 | P1 |
+
+### HIGH PRIORITY — 핸드북 섹션 재설계 (HB-REDESIGN)
+
+> **마스터 설계 문서:** [[plans/2026-04-09-handbook-section-redesign]]
+> **배경:** 2026-04-09 5개 용어(overfitting, DPO, Hugging Face, MCP, fine-tuning) 품질 평가에서 Basic 13섹션이 중복·과잉·Basic/Advanced 차별화 실종으로 드러남. 페이지 구조를 7섹션 + hero card + references footer + sidebar checklist로 재설계.
+> **완료:** KO Basic 재설계 (commit `70a0e77`, 5개 용어 v3 regen 검증 완료 — anti-pattern 0건, definition 80~140자 강제, body 2785~3189자)
+> **진행 순서:** B → A → C
+
+| Task | 상태 | 목표 | 의존성 | 플랜 |
+|------|------|------|--------|------|
+| HB-REDESIGN-KO | done | Basic KO 프롬프트 + 조립 + Pydantic + dead code 제거 | — | [[plans/2026-04-09-handbook-section-redesign]] |
+| HB-REDESIGN-B | todo | Basic EN 프롬프트를 KO 구조로 복제 (7섹션 + hero + refs + checklist) | HB-REDESIGN-KO ✅ | [[plans/2026-04-10-handbook-basic-en-redesign]] |
+| HB-REDESIGN-A | todo | DB migration + admin save endpoint 확장 + 프론트엔드 Hero/References/Checklist 컴포넌트 배치 | HB-REDESIGN-B | [[plans/2026-04-10-handbook-save-and-render]] |
+| HB-REDESIGN-C | todo | Advanced 프롬프트 11→7 재작성 (KO/EN), Basic 차별화 매트릭스 충족 | HB-REDESIGN-A | [[plans/2026-04-10-handbook-advanced-redesign]] |
+
+#### HB-REDESIGN 배경 노트
+
+**재설계 트리거 (2026-04-09 품질 평가):**
+- Basic 13섹션 → 중복 3개 ("30초 요약" + "쉽게 이해" + "알아야 하는 이유" 같은 내용 반복)
+- "직군별 활용" / "이해 체크리스트" 본문 내 배치 → 학습자 외 독자에겐 노이즈
+- "함께 알면 좋은 용어" 30개 후보 중 27개가 orphan link → 클릭 사망
+- References가 Basic + Advanced에 각각 중복 저장 → level 토글 시 깜빡임
+- Basic vs Advanced 차별화 실종 (길이만 다름)
+
+**재설계 핵심:**
+- **Basic 7섹션**: 쉽게/비유/비교/어디서·왜/오해/대화/관련 (13→7, -45% 분량)
+- **Hero card**: `hero_news_context_{ko,en}` — level-independent, definition + 뉴스 인용구 3줄 ("Path A popup 독자는 여기서 졸업")
+- **References footer**: `references_{ko,en}` JSONB — primary/secondary tier, 3~7개, primary 최소 2개
+- **Sidebar checklist**: `sidebar_checklist_{ko,en}` — 본문 아님, 사이드바, Basic 뷰 전용
+- **§4 통합**: 기존 `4_why` + `5_where` → `4_impact`. 3패턴 허용 (제품+변화 / 발생조건·실무변화 / 평가맥락·오용) + 자료나열 금지
+
+**KO Basic v3 regen 검증 결과 (2026-04-10):**
+- 5/5 용어 전부 anti-pattern 0건
+- definition 길이 범위 내 (87~111자)
+- body 분량 2725~3189자 (Hugging Face가 최장)
+- §4가 type 성격에 따라 자연스럽게 분화: overfitting(concept) 패턴 2, Hugging Face(product_platform) 패턴 1, MCP(workflow_pattern) 패턴 2
+
+**Dead code 제거 (함께 처리):**
+- `TYPE_MIGRATION` dict + 4개 호출처 (실제 사용처 0건 확인)
+- `BASIC_TYPE_GUIDES` old name 키 10개 → new name 8개 (`business_industry`+`concept_theory` → `concept`, `data_structure_format`+`protocol_standard` → `protocol_format` 통합)
+- `concept_business` depth guide 엔트리
+
+**B → A → C 순서 이유:**
+- **B 먼저**: EN 프롬프트는 KO 구조 복제만 하면 되는 작은 작업. 두 언어 모두 프롬프트 stable 후 렌더링 작업이 자연스럽다.
+- **A 두 번째**: DB + 프론트는 EN/KO 양쪽 필드를 모두 렌더해야 하므로 B 선행이 효율적.
+- **C 마지막**: Advanced는 Basic의 차별화 쌍으로 설계돼야 하므로 Basic 양 언어 + 렌더 모두 안정화된 후 작업.
 
 #### HQ-09 카테고리 재설계 — 배경 노트
 
