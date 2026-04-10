@@ -133,12 +133,12 @@ export async function renderMarkdown(md: string): Promise<string> {
   return getCachedOrRender(contentHash(md), async () => String(await processor.process(md)));
 }
 
-// Handbook-specific processor: allows single-dollar math ($...$)
-// News uses the default processor (singleDollarTextMath: false) to avoid $2 currency conflicts
+// Handbook-specific processor: block math ($$...$$) only
+// singleDollarTextMath disabled to avoid currency conflicts ($/hour, $10/GB)
 const handbookProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm, { singleTilde: false })
-  .use(remarkMath, { singleDollarTextMath: true })
+  .use(remarkMath, { singleDollarTextMath: false })
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   .use(rehypeStripDel)
