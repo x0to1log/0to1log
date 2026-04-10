@@ -283,3 +283,14 @@ def test_generate_term_result_accepts_valid_content():
     result = GenerateTermResult.model_validate(FULL_GENERATE_RESULT)
     assert result.korean_name == "트랜스포머"
     assert len(result.body_basic_ko) >= 2000
+
+
+def test_basic_en_expected_section_count_matches_redesign():
+    """After Plan B redesign, EN Basic section count warning fires at <7 sections."""
+    import inspect
+    from services.agents import advisor
+
+    source = inspect.getsource(advisor)
+    # The _basic_expected dict should have "en": 7, not "en": 13
+    assert '"en": 7' in source, "EN Basic threshold should be 7 after Plan B redesign"
+    assert '"en": 13' not in source, "Legacy EN=13 threshold must be removed"

@@ -1633,9 +1633,9 @@ async def _run_generate_term(
         logger.warning("Handbook generate validation: %s", warnings)
 
     # Check section completeness (including empty detection)
-    # KO Basic: 7 sections (post-redesign). EN Basic: 13 sections (legacy, not yet redesigned).
+    # Basic: 7 sections (post-redesign, both KO and EN).
     # Advanced: 9 sections (both languages, not yet redesigned).
-    _basic_expected = {"ko": 7, "en": 13}
+    _basic_expected = {"ko": 7, "en": 7}
     for lang in ("ko", "en"):
         basic_content = data.get(f"body_basic_{lang}", "")
         expected_basic = _basic_expected[lang]
