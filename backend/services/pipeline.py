@@ -1040,10 +1040,10 @@ async def _send_draft_alert(batch_id: str, digest_type: str, quality_score: int 
 
 async def _notify_auto_publish(slugs: list[str]) -> None:
     """Notify frontend to fire webhooks + warm CDN for auto-published posts."""
-    frontend_url = settings.fastapi_url.replace("/api", "").rstrip("/")
-    if not frontend_url or not settings.cron_secret:
-        # Try common frontend URL
-        frontend_url = "https://0to1log.com"
+    frontend_url = "https://0to1log.com"
+    if not settings.cron_secret:
+        logger.warning("cron_secret not set, skipping auto-publish notification")
+        return
     for slug in slugs:
         try:
             import httpx
@@ -1057,6 +1057,89 @@ async def _notify_auto_publish(slugs: list[str]) -> None:
             logger.info("Auto-publish notification sent for %s", slug)
         except Exception as e:
             logger.warning("Failed to notify auto-publish for %s: %s", slug, e)
+
+
+async def promote_drafts(batch_id: str | None = None) -> dict[str, Any]:
+    """Promote eligible drafts (score >= threshold) from today's batch to published.
+
+    Only promotes drafts with fact_pack.auto_publish_eligible=true (cron-triggered).
+    Sends email alert for drafts below threshold. Fires webhooks for promoted posts.
+    """
+    if batch_id is None:
+        batch_id = today_kst()
+
+    supabase = get_supabase()
+    if not supabase:
+        logger.error("promote_drafts: Supabase unavailable")
+        return {"promoted": 0, "kept_draft": 0, "errors": ["supabase unavailable"]}
+
+    # Fetch all drafts for this batch
+    result = (
+        supabase.table("news_posts")
+        .select("id,slug,quality_score,post_type,fact_pack,title")
+        .eq("pipeline_batch_id", batch_id)
+        .eq("status", "draft")
+        .in_("post_type", ["research", "business"])
+        .execute()
+    )
+    drafts = result.data or []
+    logger.info("promote_drafts: %d drafts found for batch %s", len(drafts), batch_id)
+
+    if not drafts:
+        logger.warning("promote_drafts: no drafts found for batch %s — pipeline may have failed", batch_id)
+        return {"promoted": 0, "kept_draft": 0, "batch_id": batch_id, "errors": ["no drafts found"]}
+
+    threshold = settings.auto_publish_threshold
+    promoted_slugs: list[str] = []
+    kept_drafts: list[dict] = []
+    errors: list[str] = []
+
+    for draft in drafts:
+        fp = draft.get("fact_pack") or {}
+        eligible = fp.get("auto_publish_eligible", False)
+        score = draft.get("quality_score")
+
+        if not eligible:
+            logger.info("Skipping %s — not eligible (manual trigger)", draft["slug"])
+            continue
+
+        if score is None or score < threshold:
+            logger.info("Keeping draft %s — score %s < threshold %d", draft["slug"], score, threshold)
+            kept_drafts.append(draft)
+            continue
+
+        # Promote to published
+        try:
+            supabase.table("news_posts").update({
+                "status": "published",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", draft["id"]).execute()
+            promoted_slugs.append(draft["slug"])
+            logger.info("Promoted %s (score=%d) to published", draft["slug"], score)
+        except Exception as e:
+            error_msg = f"Failed to promote {draft['slug']}: {e}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+
+    # Fire webhooks + warm CDN for promoted posts
+    if promoted_slugs:
+        await _notify_auto_publish(promoted_slugs)
+
+    # Send draft alert emails (one per distinct post_type that was kept)
+    alerted_types: set[str] = set()
+    for d in kept_drafts:
+        ptype = d.get("post_type") or "unknown"
+        if ptype not in alerted_types:
+            await _send_draft_alert(batch_id, ptype, d.get("quality_score"))
+            alerted_types.add(ptype)
+
+    return {
+        "promoted": len(promoted_slugs),
+        "kept_draft": len(kept_drafts),
+        "promoted_slugs": promoted_slugs,
+        "batch_id": batch_id,
+        "errors": errors,
+    }
 
 
 async def _generate_digest(
@@ -1384,7 +1467,6 @@ async def _generate_digest(
     t_save = time.monotonic()
     translation_group_id = str(uuid.uuid4())
     slug_base = f"{batch_id}-{digest_type}-digest"
-    published_slugs: list[str] = []
 
     source_urls = [url for group in classified for url in group.urls]
     digest_meta = {
@@ -1442,19 +1524,15 @@ async def _generate_digest(
         excerpt = (digest_excerpt if locale == "en" else digest_excerpt_ko) or digest_excerpt or ""
         focus_items = (digest_focus_items if locale == "en" else digest_focus_items_ko) or digest_focus_items or []
 
-        # Auto-publish only when triggered by cron AND quality score meets threshold
-        auto_pub = (
-            auto_publish
-            and quality_score is not None
-            and quality_score >= settings.auto_publish_threshold
-        )
+        # Always save as draft — promote cron at KST 09:00 decides publish
+        # auto_publish param marks whether this draft is eligible for promotion
         row: dict[str, Any] = {
             "title": title,
             "slug": slug,
             "locale": locale,
             "category": "ai-news",
             "post_type": digest_type,
-            "status": "published" if auto_pub else "draft",
+            "status": "draft",
         }
         # Only include content fields when non-empty to avoid overwriting
         # existing data with null on re-runs (upsert replaces entire row)
@@ -1472,7 +1550,11 @@ async def _generate_digest(
                 expert_source_cards or learner_source_cards,
                 persona_sources.get("expert") or persona_sources.get("learner") or [],
             ),
-            "fact_pack": {**digest_meta, "quality_score": quality_score},
+            "fact_pack": {
+                **digest_meta,
+                "quality_score": quality_score,
+                "auto_publish_eligible": auto_publish,
+            },
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
             "published_at": f"{batch_id}T00:00:00Z",
@@ -1509,29 +1591,19 @@ async def _generate_digest(
         try:
             supabase.table("news_posts").upsert(row, on_conflict="slug").execute()
             posts_created += 1
-            published_slugs.append(slug) if auto_pub else None
-            status_label = "published" if auto_pub else "draft"
-            logger.info("Saved %s %s digest (%s, score=%s): %s",
-                        digest_type, locale, status_label, quality_score, slug)
+            logger.info("Saved %s %s digest draft (score=%s, eligible=%s): %s",
+                        digest_type, locale, quality_score, auto_publish, slug)
         except Exception as e:
             error_msg = f"Failed to save {digest_type} {locale} digest: {e}"
             logger.error(error_msg)
             errors.append(error_msg)
 
-    # Send email alert if any post was saved as draft (below threshold)
-    if posts_created > 0 and not auto_pub:
-        await _send_draft_alert(batch_id, digest_type, quality_score)
-
-    # Fire webhooks + warm CDN for auto-published posts
-    if published_slugs:
-        await _notify_auto_publish(published_slugs)
-
     await _log_stage(
         supabase, run_id, f"save:{digest_type}",
         "success" if posts_created > 0 else "failed", t_save,
-        output_summary=f"{posts_created} rows saved ({'published' if auto_pub else 'draft'}, score={quality_score})",
+        output_summary=f"{posts_created} draft rows saved (score={quality_score}, eligible={auto_publish})",
         post_type=digest_type,
-        debug_meta={"slug_base": slug_base, "locales": ["en", "ko"], "auto_published": auto_pub},
+        debug_meta={"slug_base": slug_base, "locales": ["en", "ko"], "auto_publish_eligible": auto_publish},
     )
 
     return posts_created, errors, cumulative_usage

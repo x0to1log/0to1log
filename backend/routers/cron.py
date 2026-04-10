@@ -11,7 +11,7 @@ from core.config import today_kst
 from core.database import get_supabase
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
-from services.pipeline import check_existing_batch, cleanup_existing_batch, rerun_pipeline_stage, run_daily_pipeline, run_handbook_extraction
+from services.pipeline import check_existing_batch, cleanup_existing_batch, promote_drafts, rerun_pipeline_stage, run_daily_pipeline, run_handbook_extraction
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,10 @@ class PipelineTriggerBody(BaseModel):
 
 class PipelineCancelBody(BaseModel):
     run_id: str
+
+
+class PromoteDraftsBody(BaseModel):
+    batch_id: Optional[str] = None
 
 
 @router.post("/news-pipeline", status_code=202)
@@ -277,6 +281,43 @@ async def rerun_pipeline(
         "run_id": body.run_id,
         "from_stage": body.from_stage,
         "message": f"Rerun from {body.from_stage} started in background",
+    }
+
+
+@router.post("/promote-drafts", status_code=202)
+@limiter.limit("2/minute")
+async def trigger_promote_drafts(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    body: PromoteDraftsBody | None = None,
+    _secret=Depends(verify_cron_secret),
+):
+    """Promote today's eligible drafts (score >= threshold) to published.
+
+    Triggered by Vercel cron at KST 09:00, after pipeline cron at KST 07:00.
+    Only promotes drafts with fact_pack.auto_publish_eligible=true.
+    """
+    batch_id = (body.batch_id if body and body.batch_id else None) or today_kst()
+
+    if batch_id and not _DATE_RE.match(batch_id):
+        raise HTTPException(400, "batch_id must be YYYY-MM-DD")
+
+    async def _run():
+        try:
+            result = await promote_drafts(batch_id=batch_id)
+            logger.info(
+                "Promote drafts %s finished: %d promoted, %d kept draft",
+                result.get("batch_id"), result.get("promoted", 0), result.get("kept_draft", 0),
+            )
+        except Exception as e:
+            logger.error("Promote drafts %s crashed: %s", batch_id, e)
+
+    background_tasks.add_task(_run)
+
+    return {
+        "status": "accepted",
+        "batch_id": batch_id,
+        "message": "Promote drafts started in background",
     }
 
 
