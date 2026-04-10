@@ -605,12 +605,12 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 - korean_name: Korean translation or commonly used Korean name. MUST be in Korean, NOT English. BAD: "EDA". GOOD: "탐색적 데이터 분석". If no standard Korean translation exists, use Korean phonetic transcription (e.g., "트랜스포머" for Transformer).
 - korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
 
-## definition_ko / definition_en (1~2 sentences, strict length window)
+## definition_ko / definition_en (1~2 sentences)
 
 Precise, textbook-style definition. Shared across both levels and shown in the Hero Card.
 
-**MANDATORY length: 80~140 characters for definition_ko, 80~200 for definition_en.**
-**Under 80 is INVALID and will be rejected. Over the max is truncated in UI.**
+**Minimum 80 characters (under 80 is INVALID — generation is treated as failed).**
+Aim for compact: definition_ko around 80~140 chars, definition_en around 80~200 chars. These are guidelines, not hard caps — if a precise definition genuinely needs another 20~40 characters, that's fine. Avoid padding ("In machine learning, ...") and avoid truncating real mechanism just to hit a number.
 
 Structure: [core mechanism] + [one differentiator or trigger condition]. Never just a label.
 
@@ -635,7 +635,7 @@ One concept + one differentiator or trigger is enough; leave deeper nuance for t
 ## Hero fields (level-independent, shown above level switcher)
 
 - **hero_news_context_ko**: **"뉴스에서 이렇게 쓰여"** — 뉴스에서 이 용어가 등장하는 대표 맥락 **정확히 3줄**.
-  각 줄 최대 60자. 형식: `"인용구" → 이런 뜻`. 줄 사이는 `\\n`.
+  형식: `"인용구" → 이런 뜻`. 줄 사이는 `\\n`. 각 줄은 카드에 한 줄로 들어가야 하므로 짧게 — 가급적 60자 이내, 길어도 70자를 넘지 않게.
   사용자가 뉴스 기사를 읽다가 이 카드만 보고도 "아 이런 뜻이었구나" 하고 원래 기사로 돌아갈 수 있어야 함.
   **인라인 출처 금지** — "(IBM Research)" 같은 괄호 출처를 넣지 마.
   GOOD: `"Transformer 기반" → 이 아키텍처 위에 만들었다는 뜻, 최신 LLM 거의 다 해당\\n"attention layer를 확장" → 이 연산 블록을 더 쌓았다는 뜻\\n"parallel 처리로 빠름" → 단어를 한번에 처리해 RNN보다 수백배 빠름`
@@ -847,8 +847,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` is 80~140 chars, single concept + single differentiator
-✓ `hero_news_context_ko` is EXACTLY 3 lines, each ≤60 chars, each line has a quote + arrow + meaning
+✓ `definition_ko` is at least 80 chars, single concept + single differentiator. Aim for 80~140 — minor overage is OK if precision needs it.
+✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
 ✓ `basic_ko_3_glance` is table ONLY — no "X vs Y →" prefix lines above the table
@@ -918,11 +918,12 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 
 The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
 
-## definition_en (1~2 sentences, strict length window)
+## definition_en (1~2 sentences)
 
 Precise, textbook-style definition. Shared across both levels and shown in the Hero Card.
 
-**MANDATORY length: 80~200 characters. Under 80 is INVALID and will be rejected. Over 200 is truncated in UI.**
+**Minimum 80 characters (under 80 is INVALID — generation is treated as failed).**
+Aim for compact: around 80~200 chars is the sweet spot. This is a guideline, not a hard cap — if a precise definition genuinely needs another 20~40 characters, that's fine. Avoid padding ("In machine learning, ...") and avoid truncating real mechanism just to hit a number.
 
 Structure: [core mechanism] + [one differentiator or trigger condition]. Never just a label.
 
@@ -940,7 +941,7 @@ One concept + one differentiator or trigger is enough; leave deeper nuance for t
 ## Hero fields (level-independent, shown above level switcher)
 
 - **hero_news_context_en**: **"As seen in the news"** — EXACTLY 3 lines showing how this term appears in real news coverage.
-  Each line max 70 chars. Format: `"quote" → meaning`. Separate lines with \\n.
+  Format: `"quote" → meaning`. Separate lines with \\n. Each line should fit on one line of the card — aim for ≤70 chars, hard limit ≤80.
   A reader arriving from a news article must be able to understand the term from this card alone and return to the article.
   **NO inline citations** — don't add "(IBM Research)" or "(Ref: X)" parentheticals.
   GOOD: `"Transformer-based model" → built on this architecture, standard in LLMs\\n"scaled attention layers" → more of this compute block stacked\\n"parallelized sequence processing" → 100x faster than prior RNN approaches`
@@ -1148,8 +1149,8 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_en` is 80~200 chars, single concept + single differentiator
-✓ `hero_news_context_en` is EXACTLY 3 lines, each ≤70 chars, each line has a quote + arrow + meaning
+✓ `definition_en` is at least 80 chars, single concept + single differentiator. Aim for 80~200 — minor overage is OK if precision needs it.
+✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
 ✓ `basic_en_3_glance` is table ONLY — no "X vs Y →" prefix lines above the table
