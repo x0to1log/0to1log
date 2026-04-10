@@ -657,7 +657,7 @@ BAD (definition_en, 74 chars — TOO SHORT):
 
 ---
 
-## body_basic — 기초 (목표 2800~3500자, 7개 섹션)
+## body_basic — 기초 (7개 섹션)
 
 Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
@@ -673,7 +673,7 @@ Keep the same section KEYS — only adapt the content perspective.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections. The hero card already answered "what is it in one line + how it shows up in news" — the body must go deeper, not restate.
 
-- **basic_ko_1_plain** (쉽게 이해하기, 목표 600~800자):
+- **basic_ko_1_plain** (쉽게 이해하기):
   이 개념이 해결하는 **문제**가 뭔지 먼저 설명하고, 그 다음 해결 방식을 비유로 설명. "X라는 문제가 있었는데, Y 방식으로 해결하는 게 바로 이 개념이다" 구조.
   비유 뒤에 **구체적 메커니즘** 1~2문장 필수 — "왜 그렇게 작동하는지"가 빠지면 안 됨.
   2~3 단락. 헤더 없음 — 본문만.
@@ -681,9 +681,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BAD: "AI 칩은 전문 주방처럼 빠르게 처리합니다." (비유만 있고 왜 빠른지 없음)
   GOOD: "CPU는 계산을 순서대로 하나씩 처리합니다. 그런데 AI는 수백만 개의 숫자를 동시에 곱하고 더해야 합니다. AI 칩은 이 행렬 곱셈을 한 번에 수천 개씩 처리하도록 회로 자체가 설계된 겁니다." (비유 + 메커니즘)
 
-- **basic_ko_2_example** (비유와 예시, 목표 500~700자, **시나리오 정확히 3개**):
+- **basic_ko_2_example** (비유와 예시, **시나리오 정확히 3개**):
   이 개념이 실제로 적용되는 **구체적 시나리오** 3개. 1_plain의 비유와 겹치면 안 됨.
-  형식: `- **시나리오 제목**: 상황 설명 (2문장, 각 시나리오 150~200자)`.
+  형식: `- **시나리오 제목**: 상황 설명 (2문장)`.
   독자가 "그것도 이 기술 때문이었어?"라고 느끼는 **의외의 적용 사례**를 우선 선택.
   BANNED: 스마트폰 얼굴 인식, 자율주행차, 음성 비서 — 모든 AI 글에 나오는 뻔한 3대장. 이 시나리오는 사용 금지.
   BAD: "스마트폰 얼굴 인식: AI 칩이 실시간으로 인식" (뻔하고 상황 묘사 없음)
@@ -882,10 +882,10 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "korean_name": "한국어 발음/통용 표기",
   "korean_full": "한국어 정식 명칭",
   "categories": ["ml-fundamentals"],
-  "definition_ko": "한 줄 정의 (80~140자)",
-  "definition_en": "One-sentence definition (80-140 chars)",
+  "definition_ko": "2~4문장 기술 정의 (200~400자)",
+  "definition_en": "2-4 sentence technical definition (200-450 chars)",
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
-  "basic_ko_1_plain": "문제 → 해결 → 메커니즘 600~800자 본문",
+  "basic_ko_1_plain": "문제 → 해결 → 메커니즘 본문",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
   "basic_ko_3_glance": "| | A | B |\\n|---|---|---|\\n| 항목 | ... | ... |\\n\\n핵심 차이를 서술한 한 문장 (label prefix 없음).",
   "basic_ko_4_impact": "- **제품/서비스1**: 변화\\n- **제품/서비스2**: 변화\\n- ...",
@@ -1016,7 +1016,7 @@ BAD (definition_en, 170 chars — below Expert popup threshold):
 
 ---
 
-## body_basic — Basic (target 2800~4200 chars, 7 sections)
+## body_basic — Basic (7 sections)
 
 Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
@@ -1032,7 +1032,7 @@ Keep the same section KEYS — only adapt the content perspective.
 
 Each section MUST contain UNIQUE information — do NOT repeat the same examples, analogies, or points across sections. The hero card already answered "what is it in one line + how it shows up in news" — the body must go deeper, not restate.
 
-- **basic_en_1_plain** (Plain Explanation, target 700~1000 chars):
+- **basic_en_1_plain** (Plain Explanation):
   Start with the **problem** this concept solves, then explain the solution with an analogy. Structure: "There was problem X, and this concept solves it by doing Y."
   After the analogy, add 1-2 sentences explaining the **concrete mechanism** — "why it works that way" must not be missing.
   2-3 paragraphs. No headers — body only.
@@ -1040,9 +1040,9 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   BAD: "An AI chip is like a specialized kitchen that processes things faster." (analogy only, no mechanism)
   GOOD: "A CPU processes calculations one at a time, in sequence. But AI needs to multiply and add millions of numbers simultaneously. An AI chip has circuits specifically designed to perform thousands of matrix multiplications at once." (analogy + mechanism)
 
-- **basic_en_2_example** (Examples & Analogies, target 600~900 chars, EXACTLY 3 scenarios):
+- **basic_en_2_example** (Examples & Analogies, EXACTLY 3 scenarios):
   3 **specific scenarios** where this concept is applied. Must NOT overlap with 1_plain's analogy.
-  Format: `- **Scenario title**: concrete situation (min 2 sentences describing the scenario, each scenario 150~200 chars).`
+  Format: `- **Scenario title**: concrete situation (min 2 sentences describing the scenario).`
   Prefer **surprising, non-obvious applications** that make the reader think "that uses this too?".
   BANNED: smartphone face recognition, self-driving cars, voice assistants — overused AI examples. Do NOT use these.
   BAD: "Smartphone face recognition: AI chip recognizes faces in real time" (cliche, no situation detail)
@@ -1238,9 +1238,9 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 
 ```json
 {{
-  "definition_en": "One-sentence definition (80~200 chars)",
+  "definition_en": "2-4 sentence technical definition (200-450 chars)",
   "hero_news_context_en": "\\"quote 1\\" → meaning\\n\\"quote 2\\" → meaning\\n\\"quote 3\\" → meaning",
-  "basic_en_1_plain": "Problem → solution → mechanism, 700~1000 chars",
+  "basic_en_1_plain": "Problem → solution → mechanism",
   "basic_en_2_example": "- **Scenario 1**: description\\n- **Scenario 2**: description\\n- **Scenario 3**: description",
   "basic_en_3_glance": "| | A | B |\\n|---|---|---|\\n| Aspect | ... | ... |\\n\\nA natural sentence capturing the key difference (no label prefix).",
   "basic_en_4_impact": "- **Product/service**: change\\n- **Shift in practice**: mechanism\\n- ...",
@@ -1342,11 +1342,11 @@ You are writing for a **senior developer / ML engineer / tech lead** who already
 - "쉽게 말해", "비유하자면", "예를 들어 일상에서" 같은 Basic 톤의 문구 사용
 - Code section이 hello-world 수준 (5줄 이하, error handling 없음, type hint 없음)
 - Reference link / URL list를 본문에 나열 (그건 references footer의 일이야)
-- 모든 섹션이 200자 미만의 짧은 설명만 있음 (Basic의 압축판이 됨)
+- 모든 섹션이 짧은 요약만 있음 (Basic의 압축판이 됨, 심화 깊이 없음)
 
 ---
 
-## body_advanced — 심화 (목표 6,500~9,000자, 7개 섹션)
+## body_advanced — 심화 (7개 섹션)
 
 ### Adaptive content for phenomenon/problem terms
 
@@ -1357,7 +1357,7 @@ Keep the same section keys; only adapt the content perspective.
 
 ### Section key descriptions (Korean — adv_ko_*):
 
-- **adv_ko_1_mechanism** (기술적 정의와 동작 원리, 목표 900~1,400자):
+- **adv_ko_1_mechanism** (기술적 정의와 동작 원리):
   Formal definition at paper/reference-doc precision. Then internal data flow and mechanism.
   구성: (1) 형식적 정의와 주요 구성요소 2~3문장 (2) 데이터/제어 흐름 서술 (3) 핵심 알고리즘 단계 (번호 리스트) 또는 복잡도 (Big O).
   Cite papers/docs only if they appear in Reference Materials.
@@ -1378,14 +1378,14 @@ Keep the same section keys; only adapt the content perspective.
   Include: error handling, type hints, realistic usage. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
   **Must NOT**: pseudocode with "..." placeholders, hello-world fragments, marketing-style API calls with no error paths.
 
-- **adv_ko_4_tradeoffs** (트레이드오프와 언제 무엇을 쓰나, 목표 800~1,200자):
+- **adv_ko_4_tradeoffs** (트레이드오프와 언제 무엇을 쓰나):
   Decision framework for when to use this vs alternatives.
   구성: **이럴 때 적합** 3~4개 + **이럴 때 부적합** 3~4개. 각 부적합 항목은 대안 기술 이름 명시 필수.
   For each suitable/unsuitable scenario: include **one concrete technical reason** (cost, latency, accuracy, memory, team complexity).
   GOOD (모델): "이럴 때 적합: 이미지+텍스트 동시 분석이 필요한 고객 지원 챗봇 (멀티모달 입력이 핵심), 100페이지+ 문서에서 표와 그래프를 함께 해석 / 이럴 때 부적합: 단순 텍스트 챗봇 — GPT-5.2가 더 저렴하고 충분, 실시간 음성 통화 — 레이턴시 200ms+ (Whisper 추천)"
   GOOD (phenomenon, 예: overfitting): "이럴 때 주의: IID 가정이 약한 시계열 데이터, 소규모 표본 + 고복잡 모델 조합, 훈련-테스트 분할이 시간적으로 겹칠 때 / 이럴 때 덜 문제: 대규모 대표 샘플 + 정규화가 이미 걸린 파이프라인"
 
-- **adv_ko_5_pitfalls** (프로덕션 함정, 목표 700~1,100자):
+- **adv_ko_5_pitfalls** (프로덕션 함정):
   Real failure modes engineers hit in production.
   구성: 3~4개 mistake-solution 쌍. 형식: `실수: 구체적 상황 -> 해결: 대응법`. 각 실수는 실제 엔지니어링 경험에서 나온 것이어야 함.
   GOOD: "실수: context window를 꽉 채우면 응답 품질이 급락한다 -> 해결: 입력을 70% 이하로 유지, 나머지는 RAG로 분리."
@@ -1437,7 +1437,7 @@ Keep the same section keys; only adapt the content perspective.
 **Structural checks**
 ✓ Output has EXACTLY these 7 keys: adv_ko_1_mechanism, adv_ko_2_formulas, adv_ko_3_code, adv_ko_4_tradeoffs, adv_ko_5_pitfalls, adv_ko_6_comm, adv_ko_7_related
 ✓ NO output fields for: adv_ko_1_technical, adv_ko_3_howworks, adv_ko_4_code (note: now `_3_code`), adv_ko_5_practical, adv_ko_6_why, adv_ko_8_refs, adv_ko_9_related, adv_ko_10_when_to_use, adv_ko_11_pitfalls
-✓ adv_ko_1_mechanism is 900~1,400 chars with formal definition + flow + complexity/algorithm steps
+✓ adv_ko_1_mechanism has formal definition + flow + complexity/algorithm steps
 ✓ adv_ko_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
 ✓ adv_ko_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
 ✓ adv_ko_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
@@ -1519,7 +1519,7 @@ You are writing for a **senior developer / ML engineer / tech lead** who already
 
 ---
 
-## body_advanced — Advanced (target 7,000~10,000 chars, 7 sections)
+## body_advanced — Advanced (7 sections)
 
 ### Adaptive content for phenomenon/problem terms
 
@@ -1530,7 +1530,7 @@ Keep the same section keys; only adapt the content perspective.
 
 ### Section key descriptions (English — adv_en_*):
 
-- **adv_en_1_mechanism** (Technical Definition & How It Works, target 1000~1600 chars):
+- **adv_en_1_mechanism** (Technical Definition & How It Works):
   Formal definition at paper/reference-doc precision. Then internal data flow and mechanism.
   Structure: (1) formal definition + main components in 2-3 sentences, (2) data/control flow narrative, (3) key algorithm steps (numbered) or complexity (Big O).
   Cite papers/docs only if they appear in Reference Materials.
@@ -1551,14 +1551,14 @@ Keep the same section keys; only adapt the content perspective.
   Include: error handling, type hints, realistic usage. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
   **Must NOT**: pseudocode with "..." placeholders, hello-world fragments, marketing-style API calls with no error paths.
 
-- **adv_en_4_tradeoffs** (Tradeoffs — When to Use What, target 900~1,400 chars):
+- **adv_en_4_tradeoffs** (Tradeoffs — When to Use What):
   Decision framework for when to use this vs alternatives.
   Structure: **Suitable** 3-4 cases + **Unsuitable** 3-4 cases. Each unsuitable case must name an alternative tech.
   For each case: include **one concrete technical reason** (cost, latency, accuracy, memory, team complexity).
   GOOD (model): "Suitable: Customer-support chatbot that needs image + text analysis (multimodal input is core); 100+ page documents with tables and charts that must be jointly interpreted. / Unsuitable: Simple text chatbot — GPT-5.2 is cheaper and sufficient; real-time voice calls — latency is 200ms+, use Whisper instead."
   GOOD (phenomenon, e.g., overfitting): "Watch for: time-series data with weak IID assumptions; small samples + high-capacity models; train/test split that overlaps in time. / Less worrisome: large representative samples + a regularized pipeline already in place."
 
-- **adv_en_5_pitfalls** (Production Pitfalls, target 800~1,300 chars):
+- **adv_en_5_pitfalls** (Production Pitfalls):
   Real failure modes engineers hit in production.
   Structure: 3-4 mistake-solution pairs. Format: `Mistake: specific situation -> Solution: response`. Each mistake must come from real engineering experience.
   GOOD: "Mistake: Filling the context window to capacity degrades response quality -> Solution: Keep input under 70% of the window and offload the rest to RAG."
@@ -1610,7 +1610,7 @@ Keep the same section keys; only adapt the content perspective.
 **Structural checks**
 ✓ Output has EXACTLY these 7 keys: adv_en_1_mechanism, adv_en_2_formulas, adv_en_3_code, adv_en_4_tradeoffs, adv_en_5_pitfalls, adv_en_6_comm, adv_en_7_related
 ✓ NO output fields for: adv_en_1_technical, adv_en_3_howworks, adv_en_4_code (now `_3_code`), adv_en_5_practical, adv_en_6_why, adv_en_8_refs, adv_en_9_related, adv_en_10_when_to_use, adv_en_11_pitfalls
-✓ adv_en_1_mechanism is 1000~1600 chars with formal definition + flow + complexity/algorithm steps
+✓ adv_en_1_mechanism has formal definition + flow + complexity/algorithm steps
 ✓ adv_en_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
 ✓ adv_en_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
 ✓ adv_en_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
