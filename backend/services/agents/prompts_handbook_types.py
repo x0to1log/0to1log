@@ -71,78 +71,71 @@ Return JSON:
 
 
 TYPE_DEPTH_GUIDES: dict[str, str] = {
-    "model_architecture": """## Type-Specific Depth: Algorithm/Model
-- adv_*_1_technical: Include time/space complexity (Big O). Reference the original paper if applicable.
-- adv_*_2_formulas: Full mathematical formulation with derivation steps, not just final formula. Include loss function, gradient update rules.
-- adv_*_3_howworks: Data flow diagram description. Input → layers/steps → output. Include tensor shapes if applicable.
-- adv_*_4_code: Production-grade code (NOT hello world). Include error handling, type hints, real library usage (torch, sklearn). Min 15 lines.
-- adv_*_5_practical: Include benchmark comparisons (accuracy, latency, memory) with specific numbers from reference materials. If no benchmarks are available in references, state "Public benchmarks not yet available" rather than inventing numbers.
-- CRITICAL: Do NOT fabricate paper titles, arXiv IDs, author names, or publication venues. Only cite papers from the Reference Materials provided. If no paper reference is available, write "See official documentation" instead.""",
+    "model_architecture": """## Type-Specific Depth: Model Architecture
+- adv_*_1_mechanism: Formal definition + data flow (input → layers/steps → output) + tensor shapes where relevant. Include time/space complexity (Big O). Reference the original paper only if it appears in Reference Materials.
+- adv_*_2_formulas: Full mathematical formulation with derivation steps, not just final formula. Include loss function and gradient update rules.
+- adv_*_3_code: Production-grade code (NOT hello world). Error handling, type hints, real library usage (torch, sklearn). Min 15 substantial lines.
+- adv_*_4_tradeoffs: When to use this architecture vs alternatives. Include benchmark comparisons (accuracy, latency, memory) with numbers from Reference Materials. State "Public benchmarks not yet available" rather than inventing numbers.
+- adv_*_5_pitfalls: Production failure modes — gradient instability, memory explosion, convergence problems, data leakage. Each with mitigation.
+- CRITICAL: Do NOT fabricate paper titles, arXiv IDs, author names, or venues. Only cite papers from Reference Materials. If none available, write "See official documentation" instead.""",
 
     "hardware_infra": """## Type-Specific Depth: Hardware/Infrastructure
-- adv_*_1_technical: Architecture diagram description (components, data flow, control plane vs data plane).
+- adv_*_1_mechanism: Architecture description (components, data flow, control plane vs data plane). How requests are processed, scheduling, resource management.
 - adv_*_2_formulas: Performance characteristics table (throughput, latency, scalability limits). No math formulas needed.
-- adv_*_3_howworks: Internal architecture. How requests are processed, scheduling, resource management.
-- adv_*_4_code: Real configuration examples (YAML, Dockerfile, CLI commands). Production deployment patterns. Min 15 lines.
-- adv_*_5_practical: Troubleshooting guide — common failure modes, debugging commands, monitoring metrics.""",
+- adv_*_3_code: Real configuration examples (YAML, Dockerfile, CLI commands). Production deployment patterns. Min 15 lines.
+- adv_*_4_tradeoffs: When this infra fits vs alternatives. Cost/performance positioning. Suitable workloads vs unsuitable.
+- adv_*_5_pitfalls: Common failure modes, debugging commands, monitoring metrics. Capacity-planning mistakes.""",
 
     "concept": """## Type-Specific Depth: Concept/Theory
-- adv_*_1_technical: Formal definition. Cite foundational paper/textbook.
+- adv_*_1_mechanism: Formal definition + visual/geometric interpretation ("Imagine a 2D plot where..."). Cite foundational paper/textbook only if in Reference Materials.
 - adv_*_2_formulas: Mathematical formulation with step-by-step derivation and intuitive interpretation of each term.
-- adv_*_3_howworks: Visual/geometric interpretation. "Imagine a 2D plot where..."
-- adv_*_4_code: Demonstration code showing the concept in action (visualization, simulation). Min 15 lines.
-- adv_*_5_practical: Where this concept causes real bugs/failures in production. Anti-patterns.
+- adv_*_3_code: Demonstration code showing the concept in action (visualization, simulation). Min 15 lines.
+- adv_*_4_tradeoffs: When this concept applies vs when it breaks down. Compared to alternative framings.
+- adv_*_5_pitfalls: Where this concept causes real bugs/failures in production. Anti-patterns. Each with mitigation.
 - CRITICAL: Do NOT fabricate paper citations or textbook references. Only cite sources from Reference Materials. If unavailable, omit the citation.""",
 
     "product_platform": """## Type-Specific Depth: Product/Platform
-- adv_*_1_technical: Product capabilities, supported features, API surface area.
+- adv_*_1_mechanism: Product capabilities, supported features, API surface area, internal architecture overview.
 - adv_*_2_formulas: Competitive comparison table — this product vs 3-4 alternatives. Columns: pricing, performance benchmarks, key differentiators, limitations.
-- adv_*_3_howworks: Architecture overview — how the product works internally (if known). API request flow.
-- adv_*_4_code: API usage examples — authentication, common operations, error handling. Use REAL API endpoints from reference materials.
-- adv_*_5_practical: Version history highlights. Migration notes. Known limitations and workarounds. If benchmarks are unavailable in references, state so rather than inventing numbers.""",
+- adv_*_3_code: API usage examples — authentication, common operations, error handling. Use REAL API endpoints from Reference Materials.
+- adv_*_4_tradeoffs: When to choose this product vs alternatives. Pricing/feature/lock-in trade-offs. Migration cost considerations.
+- adv_*_5_pitfalls: Version history gotchas, migration notes, known limitations and workarounds. State "Public benchmarks not yet available" rather than inventing numbers.""",
 
     "metric_benchmark": """## Type-Specific Depth: Metric/Benchmark
-- adv_*_1_technical: Formal mathematical definition. What does this metric actually measure?
+- adv_*_1_mechanism: Formal mathematical definition. What does this metric actually measure? Step-by-step calculation example with real numbers.
 - adv_*_2_formulas: Full formula with derivation. Why this formula (e.g., why harmonic mean for F1, not arithmetic)?
-- adv_*_3_howworks: Step-by-step calculation example with real numbers. Edge cases where the metric is misleading.
-- adv_*_4_code: Implementation from scratch + library usage (sklearn, torch). Visualization code (ROC curve, confusion matrix).
-- adv_*_5_practical: When NOT to use this metric. Alternative metrics and when to prefer them. Micro vs macro averaging.""",
+- adv_*_3_code: Implementation from scratch + library usage (sklearn, torch). Visualization code (ROC curve, confusion matrix).
+- adv_*_4_tradeoffs: When this metric is the right choice vs when it misleads. Alternative metrics and when to prefer them. Micro vs macro averaging.
+- adv_*_5_pitfalls: Edge cases where the metric is misleading. Common reporting mistakes. Each with how to detect and fix.""",
 
     "technique_method": """## Type-Specific Depth: Technique/Method
-- adv_*_1_technical: Formal description of the technique. Variants and their differences.
+- adv_*_1_mechanism: Formal description of the technique. Variants and their differences. Step-by-step procedure: when to apply, in what order, how it interacts with other techniques.
 - adv_*_2_formulas: Comparison table — variants of this technique (e.g., CutMix vs Mixup vs CutOut for augmentation).
-- adv_*_3_howworks: Step-by-step procedure. When to apply, in what order, how it interacts with other techniques.
-- adv_*_4_code: Implementation of 2+ variants. Show the difference in code. Min 15 lines.
-- adv_*_5_practical: Failure modes — when this technique hurts instead of helps. Hyperparameter sensitivity.""",
+- adv_*_3_code: Implementation of 2+ variants. Show the difference in code. Min 15 lines.
+- adv_*_4_tradeoffs: When to apply this technique vs alternatives. Hyperparameter sensitivity vs configuration cost. Compatibility with other techniques.
+- adv_*_5_pitfalls: Failure modes — when this technique hurts instead of helps. Subtle bugs in implementation. Each with mitigation.""",
 
-    "protocol_format_data": """## Type-Specific Depth: Data Structure/Format
-- adv_*_1_technical: Internal structure description. How data is organized on disk/memory.
-- adv_*_2_formulas: Complexity analysis table — read/write/delete/search (average + worst case). Space complexity.
-- adv_*_3_howworks: Internal operations — e.g., B-Tree node splitting, Parquet column encoding, Bloom filter hashing.
-- adv_*_4_code: Usage examples — read, write, query. Include serialization/deserialization. Performance comparison code.
-- adv_*_5_practical: When to use vs alternatives. Migration strategies. Compatibility concerns.""",
-
-    "protocol_format": """## Type-Specific Depth: Protocol/Standard
-- adv_*_1_technical: Protocol version history. What changed and why. RFC references.
-- adv_*_2_formulas: Handshake/flow diagram (described in text). State transitions.
-- adv_*_3_howworks: Message format breakdown. Header structure, payload encoding, error codes.
-- adv_*_4_code: Client/server implementation examples. Configuration for common frameworks. Security setup.
-- adv_*_5_practical: Security considerations. Known vulnerabilities in older versions. Proxy/firewall traversal issues.""",
+    "protocol_format": """## Type-Specific Depth: Protocol/Format/Data Structure
+- adv_*_1_mechanism: Protocol/format structure description (internal layout, header, payload, encoding) + version history if relevant. RFC references only if in Reference Materials.
+- adv_*_2_formulas: Handshake/flow diagram (text). State transitions OR complexity analysis table for data structures (read/write/delete/search, average + worst case).
+- adv_*_3_code: Client/server implementation OR usage examples (read, write, query). Configuration for common frameworks. Security setup. Min 15 lines.
+- adv_*_4_tradeoffs: When to use this format/protocol vs alternatives. Compatibility, migration strategies, performance/safety trade-offs.
+- adv_*_5_pitfalls: Security considerations, known vulnerabilities in older versions, proxy/firewall traversal issues. Common encoding/serialization mistakes.""",
 
     "workflow_pattern": """## Type-Specific Depth: Workflow/Architecture Pattern
-- adv_*_1_technical: Pattern structure — components, responsibilities, communication.
+- adv_*_1_mechanism: Pattern structure — components, responsibilities, communication. Component interaction flow. How a request passes through the system. Failure handling.
 - adv_*_2_formulas: Trade-off analysis table — consistency vs availability, complexity vs flexibility, etc.
-- adv_*_3_howworks: Component interaction flow. How a request passes through the system. Failure handling.
-- adv_*_4_code: Skeleton implementation showing the pattern structure. Configuration examples. Min 15 lines.
-- adv_*_5_practical: Migration strategy from monolith/alternative. Real failure stories. When NOT to use this pattern.""",
+- adv_*_3_code: Skeleton implementation showing the pattern structure. Configuration examples. Min 15 lines.
+- adv_*_4_tradeoffs: When this pattern fits vs simpler alternatives. Migration strategy from monolith/alternative.
+- adv_*_5_pitfalls: Real failure stories. When NOT to use this pattern. Coordination/operational pitfalls.""",
 }
 
 
 _SECTION_MINIMUM = """
 ## Section Quality Minimums
 - Each advanced section: minimum 200 characters of substantive content
-- adv_*_1_technical: minimum 400 characters (most important section)
-- adv_*_4_code: minimum 15 lines of substantial code (if code applies to this type)
+- adv_*_1_mechanism: minimum 600 characters (most important section — formal definition + flow + complexity)
+- adv_*_3_code: minimum 15 lines of substantial code (if code applies to this type)
 - Empty or placeholder sections ("TBD", "N/A") are NOT acceptable — omit the section key entirely if not applicable"""
 
 
@@ -489,10 +482,10 @@ Also evaluate:
   "claims_unverifiable": 0,
   "needs_improvement": true/false,
   "flagged_claims": [
-    {{"claim": "exact text from content", "section": "adv_ko_1_technical", "issue": "No reference supports this entity name", "suggestion": "Remove or replace with verified alternative"}}
+    {{"claim": "exact text from content", "section": "adv_ko_1_mechanism", "issue": "No reference supports this entity name", "suggestion": "Remove or replace with verified alternative"}}
   ],
   "improvements": [
-    {{"section": "adv_*_4_code", "issue": "Code is only 5 lines", "suggestion": "Add production-grade example"}}
+    {{"section": "adv_*_3_code", "issue": "Code is only 5 lines", "suggestion": "Add production-grade example"}}
   ],
   "score": 0-100
 }}
@@ -515,9 +508,9 @@ Review the advanced content below and identify:
 ## Output JSON
 {{
   "needs_improvement": true/false,
-  "weak_sections": ["adv_*_3_howworks"],
+  "weak_sections": ["adv_*_1_mechanism"],
   "improvements": [
-    {{"section": "adv_*_4_code", "issue": "Code is only 5 lines with no error handling", "suggestion": "Add production-grade example with type hints and error handling"}}
+    {{"section": "adv_*_3_code", "issue": "Code is only 5 lines with no error handling", "suggestion": "Add production-grade example with type hints and error handling"}}
   ],
   "score": 0-100
 }}
@@ -530,7 +523,7 @@ If score >= 75, set needs_improvement to false.
 {{"needs_improvement": false, "weak_sections": [], "improvements": [], "score": 82}}
 
 ### Fail (score=55)
-{{"needs_improvement": true, "weak_sections": ["adv_ko_4_code", "adv_ko_5_practical"], "improvements": [{{"section": "adv_ko_4_code", "issue": "Only 5 lines, no error handling", "suggestion": "Add production example with type hints, try/except, real library usage (15+ lines)"}}, {{"section": "adv_ko_5_practical", "issue": "No benchmark numbers", "suggestion": "Add specific performance comparison: latency, memory, accuracy vs alternatives"}}], "score": 55}}"""
+{{"needs_improvement": true, "weak_sections": ["adv_ko_3_code", "adv_ko_5_pitfalls"], "improvements": [{{"section": "adv_ko_3_code", "issue": "Only 5 lines, no error handling", "suggestion": "Add production example with type hints, try/except, real library usage (15+ lines)"}}, {{"section": "adv_ko_5_pitfalls", "issue": "No concrete failure examples", "suggestion": "Add 3+ mistake-solution pairs from real production incidents"}}], "score": 55}}"""
 
 
 HANDBOOK_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's advanced section quality.
