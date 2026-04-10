@@ -1097,31 +1097,23 @@ BASIC_SECTIONS_EN = [
 ]
 
 ADVANCED_SECTIONS_KO = [
-    ("adv_ko_1_technical", "## 기술적 설명"),
-    ("adv_ko_2_formulas", "## 핵심 수식 & 도표"),
-    ("adv_ko_3_howworks", "## 동작 원리"),
-    ("adv_ko_4_code", "## 코드 예시"),
-    ("adv_ko_5_practical", "## 실무 활용 & 주의점"),
-    ("adv_ko_10_when_to_use", "## 언제 써야 하나"),
-    ("adv_ko_11_pitfalls", "## 흔한 실수와 해결"),
-    ("adv_ko_6_why", "## 왜 중요한가"),
-    ("adv_ko_7_comm", "## 업계 대화 맥락"),
-    ("adv_ko_8_refs", "## 참조 링크"),
-    ("adv_ko_9_related", "## 관련 기술 & 비교"),
+    ("adv_ko_1_mechanism", "## 기술적 정의와 동작 원리"),
+    ("adv_ko_2_formulas", "## 핵심 수식·아키텍처·도표"),
+    ("adv_ko_3_code", "## 코드 또는 의사코드"),
+    ("adv_ko_4_tradeoffs", "## 트레이드오프와 언제 무엇을 쓰나"),
+    ("adv_ko_5_pitfalls", "## 프로덕션 함정"),
+    ("adv_ko_6_comm", "## 업계 대화 맥락"),
+    ("adv_ko_7_related", "## 선행·대안·확장 개념"),
 ]
 
 ADVANCED_SECTIONS_EN = [
-    ("adv_en_1_technical", "## Technical Description"),
-    ("adv_en_2_formulas", "## Key Formulas & Diagrams"),
-    ("adv_en_3_howworks", "## How It Works"),
-    ("adv_en_4_code", "## Code Example"),
-    ("adv_en_5_practical", "## Practical Use & Precautions"),
-    ("adv_en_10_when_to_use", "## When to Use (and When Not To)"),
-    ("adv_en_11_pitfalls", "## Common Pitfalls & Solutions"),
-    ("adv_en_6_why", "## Why It Matters"),
-    ("adv_en_7_comm", "## Industry Communication"),
-    ("adv_en_8_refs", "## Reference Links"),
-    ("adv_en_9_related", "## Related & Comparison"),
+    ("adv_en_1_mechanism", "## Technical Definition & How It Works"),
+    ("adv_en_2_formulas", "## Formulas, Architecture, and Diagrams"),
+    ("adv_en_3_code", "## Code or Pseudocode"),
+    ("adv_en_4_tradeoffs", "## Tradeoffs — When to Use What"),
+    ("adv_en_5_pitfalls", "## Production Pitfalls"),
+    ("adv_en_6_comm", "## Industry Communication"),
+    ("adv_en_7_related", "## Prerequisites, Alternatives, and Extensions"),
 ]
 
 
