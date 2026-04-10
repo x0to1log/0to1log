@@ -29,14 +29,15 @@ MVP → Intelligence → Community → App 확장까지 5단계 로드맵.
 ==핵심 AI 파이프라인 구축 — 포트폴리오 임팩트의 핵심==
 
 - Railway에 FastAPI 배포 (범용 API 서버)
-- [[AI-News-Pipeline-Design|멀티 에이전트 파이프라인]] (Ranking → Research/Business → Editorial)
+- [[AI-News-Pipeline-Design|멀티 에이전트 파이프라인]] (Ranking → Research/Business → Editorial) — v4 완료 (2026-03-17, 2 페르소나 + Skeleton-map)
 - [[Daily-Dual-News]]: Research(자동) + Business(수동 검수)
 - [[Persona-System|Persona-Based RAG-Refine]] (Tavily → OpenAI → Supabase)
 - PydanticAI 검증 레이어
-- Persona Switcher: 로그인 DB > 쿠키 > beginner
+- Persona Switcher: 로그인 DB > 쿠키 > beginner (3→2 페르소나로 축소: Expert + Learner)
 - Vercel Cron Jobs 자동화
 - AdSense 신청 (콘텐츠 30개+ 축적 후)
 - [[Global-Local-Intelligence]] 전략 구체화
+- **Handbook Redesign 완료 (2026-04-10):** Basic 13→7 + Advanced 11→7 + Hero card + References footer + Sidebar checklist
 
 ## Phase 3: Intelligence & Polish (4~6개월)
 

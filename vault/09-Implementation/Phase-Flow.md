@@ -8,7 +8,9 @@ tags:
 # Phase Flow
 
 Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
-실행 계약/원칙은 [[Implementation-Plan]] 참조.
+실행 계약/원칙은 [[Implementation-Plan]] 참조. 현재 진행 중인 태스크는 [[plans/ACTIVE_SPRINT]] 참조.
+
+> **마지막 업데이트:** 2026-04-10 (NP4-Q 클로즈 + HB-QM 선언 반영)
 
 ---
 
@@ -54,41 +56,44 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 **품질 강화 + 4-call 분리** | Tavily 검색, 유형 분류, self-critique, 점수 매기기
 - [x] term_full/korean_full 필드, 심화 품질 시스템, Bulk API
 
+## Handbook Redesign (HB-REDESIGN) ✅ (2026-04-09~10)
+**섹션 재설계 + redesign 필드** | Basic 13→7 + Advanced 11→7 + Hero card + References footer + Sidebar checklist
+
+- [x] **HB-REDESIGN-KO** — Basic KO 프롬프트 재작성 + 조립 + Pydantic 마이그레이션 + dead code 제거
+- [x] **HB-REDESIGN-B** — Basic EN 프롬프트 복제 (7섹션 + hero + refs + checklist), definition max_length 제거
+- [x] **HB-REDESIGN-A** — DB migration (6개 신규 컬럼) + admin save + detail loader + 3 component (HeroCard/References/UnderstandingChecklist) + KO/EN [slug].astro 배치 + level switcher 확장
+- [x] **HB-REDESIGN-C** — Advanced 프롬프트 KO/EN 재작성 + Basic body context 주입 (verbatim overlap 0건) + 차별화 매트릭스 검증
+- [x] **HB-EDITOR-V2** — 어드민 에디터 redesign 필드 6개 편집 지원 + JSON live validation + UX polish
+
+**결과:** 8개 샘플 용어 (overfitting, DPO, fine-tuning, Hugging Face, MCP, Transformer, CUDA, prompt injection) 모두 차별화 매트릭스 통과.
+**설계/회고:** [[plans/2026-04-09-handbook-section-redesign]], [[12-Journal-&-Decisions/2026-04-10-handbook-section-redesign-shipped]]
+
 ---
 
-## News Pipeline v4 Quality Stabilization 🔄 (2026-03-15~진행 중)
+## News Pipeline v4 Quality Stabilization (NP4-Q) ✅ (2026-03-15 ~ 2026-04-10)
 
-> **현황:** 48+/50 tasks (96% 완료) | 마지막 업데이트: **2026-03-26 17:45**
+**클로즈일:** 2026-04-10 | **기간:** 27일 | **commits:** 100+
 
 ### 핵심 완료 사항
 
 **파이프라인 구조:**
-- ✅ **News 수집**: Tavily + HF Daily Papers + arXiv + GitHub (3~5건씩)
-- ✅ **분류**: o4-mini로 research/business 카테고리 배정 (0~5건 유연)
-- ✅ **2-페르소나 독립 생성**: Expert + Learner (각각 EN+KO 동시)
-- ✅ **Skeleton-map 라우팅**: R/B × Expert/Learner = 4개 skeleton으로 자동 선택
-- ✅ **품질 점수링**: 0~100, Research/Business 기준 분리
-- ✅ **Weekly Recap 백엔드**: 주간 요약 자동 생성 (프론트 통합 대기)
-- ✅ **프론트 2-탭**: Expert/Learner 탭 분리 노출
-- ✅ **자동 복구**: EN-only일 때 KO만 재호출
+- ✅ 2-페르소나 독립 생성 (Expert + Learner, 각각 EN+KO)
+- ✅ Skeleton-map 라우팅 (R/B × Expert/Learner = 4 skeleton)
+- ✅ 품질 점수링 v2 (0~100, Research/Business 기준 분리)
+- ✅ Weekly Recap 백엔드 완료 (프론트 통합은 HB-QM OPTIONAL)
+- ✅ 직접 FastAPI 호출 (Vercel 60s timeout 제거)
 
-**최근 완료 (27+ commits, 2026-03-20~26):**
-| 항목 | 상태 |
-|------|------|
-| Per-persona skeleton + Research Learner 접근성 | ✅ fc517fa |
-| 프롬프트 구조 동등성 규칙 | ✅ 412ec85 |
-| Perplexity 스타일 인용 형식 | ✅ 8af5625 |
-| Analytics 탭 확장 (퀴즈, 피드백, 트래픽) | ✅ 80f2560 |
-| KaTeX 수식 렌더링 보안 | ✅ 24aa89a |
-| PROMPT-AUDIT P0/P1 배포 (11개) | ✅ rolling |
+**뉴스 품질 v7 (NQ-*):** 17개 done (NQ-02/03/05/06/07/08/10/11/12/13/14/16/17/18/19/20/22)
+- Classify/Merge 분리, Multi-Source Enrichment, Entity-First Search, Brave Discussions
+- Community Summarizer, Writer 다중 소스 활용, 파이프라인 체크포인트
+- 5개는 HB-QM으로 이월: NQ-09/15/21/23/24
 
-### 진행 중인 작업 (3개, ~2026-03-28)
+**PROMPT-AUDIT 52개:** P0 2개 + P1 9개 배포, P2 40개는 rolling 프롬프트 개선에 흡수 → **별도 track 종료**
 
-| 태스크 | 목표 | 우선도 |
-|--------|------|--------|
-| **FASTAPI-DIRECT-01** | Vercel 60s timeout 회피 (직접 FastAPI 호출) | 🔴 CRITICAL |
-| **QUALITY-CHECK-02** | 품질 체크 Expert/Learner 양쪽 평가 | 🔴 CRITICAL |
-| **PROMPT-AUDIT-01** | P1/P2 41개 이슈 배포 (rolling) | 🟠 HIGH |
+**자동화:**
+- AUTOPUB-01 ✅ — Quality ≥85 자동 발행 + 2h 리뷰 윈도우 + 이메일 알림 + 어드민 dot
+- FASTAPI-DIRECT-01 ✅ — Vercel 60s proxy timeout 완전 제거
+- QUALITY-CHECK-02 ✅ — Expert/Learner 분리 평가
 
 ### 파이프라인 진화
 
@@ -96,50 +101,74 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 |---|------|-----------|------|
 | v2 | 2026-01 | 모듈화, Pydantic, Tavily | ✅ |
 | v3 | 2026-03-15 | Daily Digest, 6 페르소나×R/B | ✅ |
-| **v4** | **2026-03-17** | **2 페르소나, -33% 비용** | **🔄 96%** |
-| v4.1+ | 2026-03-26 | Skeleton-map, 품질 안정화 | 🚀 배포 |
+| v4 | 2026-03-17 | 2 페르소나, -33% 비용 | ✅ |
+| v4.1+ | 2026-03-26 ~ 04-10 | Skeleton-map, 품질 안정화, Weekly Recap, AUTOPUB | ✅ NP4-Q 완료 |
 
-### 게이트 기준 (NP4-Q 완료 조건)
+### NP4-Q 최종 게이트 (전부 통과)
 
-- [x] v4 core (skeleton-map, 2 personas) — **완료**
-- [x] Weekly Recap 백엔드 — **완료**
-- 🔄 PROMPT-AUDIT 70% 배포 (41/52) — **~2026-03-28**
-- 🔄 FastAPI direct calls — **~2026-03-27**
-- 🔄 품질 체크 Expert/Learner — **~2026-03-28**
-- ⏳ `ruff check . ` + `pytest` 통과 — **PROMPT-AUDIT 후**
+- [x] v4 core (skeleton-map, 2 personas)
+- [x] Weekly Recap 백엔드
+- [x] FASTAPI-DIRECT-01 (Admin timeout 회피)
+- [x] QUALITY-CHECK-02 (Expert/Learner 양쪽 평가)
+- [x] PROMPT-AUDIT P0/P1 배포 (P2는 rolling 흡수)
+
+**ruff/pytest 최종 검증은 HB-QM 게이트로 이월** (HB-MIGRATE-138 완료와 함께 실행).
 
 ---
 
+## Handbook Quality & Content Migration (HB-QM) 🔄 (2026-04-10 ~ 현재)
+
+> **상세:** [[plans/ACTIVE_SPRINT]]
+
+### 스프린트 목표
+
+핸드북 콘텐츠 품질 및 규모 확장 — 138개 전량 재생성 + P0 품질 수정 + SEO 구조화 데이터
+
+### 게이트 (BLOCKING)
+
+- [ ] **HB-MIGRATE-138** — 138개 published 용어 v4 7섹션 구조 + redesign 필드로 regenerate
+- [ ] **HQ-01** — Hallucination 즉시 수정 (stereo matching, ecosystem integration adv)
+- [ ] **HQ-02** — 비기술 용어 archived 처리
+- [ ] **HQ-11** — SEO 구조화 데이터 (DefinedTerm + FAQPage + BreadcrumbList)
+- [ ] **최종 검증** — `ruff check .` + `pytest tests/ -v`
+
+### 선택 목표
+
+- HQ-03 (구세대 재생성), HQ-05 (quality_scores 버그), HQ-12 (톤 재설계), HQ-13 (term type + facet)
+- GPT5-01~05 (gpt-5 단계별 마이그레이션 완료)
+- Weekly Recap 프론트 통합 (WEEKLY-FE-01)
+
 ---
 
-## Phase 3-Intelligence 🎯 (2026-03-30 예정)
+## Phase 3-Intelligence 🎯 (HB-QM 완료 후 시작)
 
-> NP4 완료 후 시작. **AI 추천 + 학습 고도화**
+> HB-QM 게이트 통과 후 시작. **AI 추천 + 학습 고도화**
 
-### 진입 기준 (목표 2026-03-30)
-- [x] News Pipeline v4 완료 — **2026-03-17** ✅
-- 🔄 PROMPT-AUDIT 70% 배포 — **~2026-03-28**
-- 🔄 FastAPI direct + quality check — **~2026-03-28**
-- ⏳ `ruff` + `pytest` 통과 — **이후**
+### 진입 기준
 
-### 핵심 태스크
+- [x] News Pipeline v4 완료 (NP4-Q)
+- [x] HB-REDESIGN ship (2026-04-10)
+- [ ] HB-MIGRATE-138 완료
+- [ ] HQ P0 (01, 02, 11) 배포
+- [ ] ruff + pytest 통과
 
-**Wave 1: 개인화 기초 (2026-03-30~04-10)**
-- 개인 학습 프로필 (사용자 선호도)
-- 뉴스 추천 알고리즘
+### 핵심 태스크 (HB-QM 이후)
+
+**Wave 1: 개인화 기초**
+- 개인 학습 프로필 (사용자 선호도 저장)
+- 뉴스 추천 알고리즘 (관심 기반)
 - Weekly Recap 프론트엔드 통합
 
-**Wave 2: 커뮤니티 기반 (2026-04-10~04-20)**
-- COMMUNITY-01: Reddit/HN/X 반응 수집
-- 사용자 피드백 수집 (퀴즈, 북마크)
-- 트렌드 분석 및 핫이슈
+**Wave 2: 커뮤니티 기반**
+- COMMUNITY-01 — Reddit/HN/X 반응 수집
+- 사용자 피드백 수집 (퀴즈, 북마크, 댓글)
+- 트렌드 분석 및 핫이슈 추천
 
-**Wave 3: 자동화 (2026-04-20~05-01)**
-- AUTOPUB-01: Quality ≥80 자동 발행
-- 스마트 발행 스케줄
+**Wave 3: 자동화 확장**
+- 스마트 발행 스케줄 (최적 시간)
 - A/B 테스트 자동화
 
----
+> **주의:** 이전 Phase-Flow에 있던 Wave 1/2/3 날짜(2026-03-30~05-01)는 NP4-Q와 HB-REDESIGN 때문에 미뤄짐. 새 날짜는 HB-QM 종료 후 결정.
 
 ---
 
@@ -176,9 +205,17 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 - Supabase RLS 구독 상태 기반 접근 제어
 - 커뮤니티 가이드라인 + 환불 정책 추가
 
+### 학습 모드 (Duolingo style) — Phase 4
+- 핸드북 7섹션 본문에서 lesson cards 자동 추출 (새 LLM 생성 X)
+- Skill tree = HQ-09의 9 카테고리 + prerequisite 관계
+- DB 신규: `term_lesson_cards` (jsonb), `user_lesson_progress`, `user_xp`
+- 상세: [[03-Features/Community-&-Gamification|Community & Gamification]] — 학습 모드 섹션
+
+> **주의 — 시점 결정:** Phase 4는 사용자 베이스 + 활동 데이터가 쌓인 후. 지금은 vision만 명확히.
+
 ---
 
-## Phase 4 — Community (미래)
+## Phase 4 — Community (Phase 3-Intelligence 이후)
 
 | 기능 |
 |---|
@@ -187,6 +224,7 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 | Highlight to Share |
 | 포인트 시스템 UI |
 | Prediction Game UI |
+| 학습 모드 (lesson cards + skill tree + streak) |
 
 ---
 
@@ -201,10 +239,11 @@ Phase별 구현 범위, 태스크, 완료 기준을 관리하는 상세 문서.
 
 ## Related
 
-- [[plans/ACTIVE_SPRINT]] — 현재 진행 중인 태스크
+- [[plans/ACTIVE_SPRINT]] — 현재 진행 중인 태스크 (HB-QM)
 - [[Implementation-Plan]] — 실행 계약 + 운영 원칙
 - [[Checklists-&-DoD]] — 완료 기준 체크리스트
 - [[Design-System]] — 디자인 토큰
 - [[Monetization-Roadmap]] — 수익화 단계별 상세
 - [[Legal-&-Compliance]] — 법률/컴플라이언스 정책
 - [[Newsletter-&-Email-Strategy]] — RSS/뉴스레터 전략
+- [[Phases-Roadmap]] — 상위 5단계 전략 로드맵
