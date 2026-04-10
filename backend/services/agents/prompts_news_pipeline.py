@@ -254,7 +254,11 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
     - Use markdown tables (`|`) when comparing numbers, features, or options
     - Break long analysis into sub-sections with clear headings
 14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE: Write as a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. In EN, use `[EN quote]` text. In KO, use `[KO quote]` text. Attribution must be `> — Reddit` or `> — Hacker News` (from Platform field), NOT "Quote (EN)" or "Quote (KO)". Omit only if no Community Pulse Data was provided.
+15. COMMUNITY PULSE: Write as a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
+    - If `HasQuotes: yes` → emit blockquote(s) using the exact "English quote N" text in the en section and the matching "Korean quote N" text in the ko section. Attribution line must be `> — Reddit` or `> — Hacker News` (from Platform field).
+    - If `HasQuotes: no` → write ONE short paragraph based on Sentiment + Key Discussion. Do NOT emit any blockquote. Do NOT invent quotes.
+    - NEVER write the literal strings `[EN quote]`, `[KO quote]`, `Quote (EN)`, or `Quote (KO)` in the output. These are input labels, not output text.
+    - Omit the entire Community Pulse section only if no Community Pulse Data was provided.
 {handbook_section}
 
 ## Output JSON format

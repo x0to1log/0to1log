@@ -909,6 +909,15 @@ def _clean_writer_output(content: str) -> str:
     content = content.replace("[BODY]", "\n")
     # Remove Quote (EN)/Quote (KO) labels mistakenly used as attribution
     content = _re.sub(r"—\s*Quote\s*\((?:EN|KO)\)", "", content)
+    # Remove leaked `[EN quote]` / `[KO quote]` placeholder literals
+    # First: drop entire blockquote lines that contain only the placeholder
+    # (pattern: `> "[EN quote]"` followed by `> — Source`)
+    content = _re.sub(
+        r'>\s*"?\[(?:EN|KO)\s*quote\]"?\s*\n(?:>\s*—[^\n]*\n?)?',
+        "", content, flags=_re.IGNORECASE,
+    )
+    # Fallback: any remaining literal occurrences inside prose
+    content = _re.sub(r'"?\[(?:EN|KO)\s*quote\]"?', "", content, flags=_re.IGNORECASE)
     return content
 
 
@@ -956,6 +965,20 @@ def _check_structural_penalties(
         if en_has_cp and not ko_has_cp:
             penalty += 10
             warnings.append(f"EN has CP but KO missing in {persona_name}")
+
+    # Check 1c: Leaked placeholder literal `[EN quote]` / `[KO quote]` (-10 per occurrence, max -20)
+    # Acts as runtime safety net in case _clean_writer_output regex misses a variant
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output:
+            continue
+        for locale, content in [("en", output.en), ("ko", output.ko)]:
+            if not content:
+                continue
+            leaks = len(_re.findall(r"\[(?:EN|KO)\s*quote\]", content, _re.IGNORECASE))
+            if leaks:
+                inc = min(leaks * 10, 20)
+                penalty += inc
+                warnings.append(f"CP leaked {leaks} placeholder literal(s) in {persona_name} {locale}")
 
     # Check 2: CP exists as ###/#### instead of ## (-5)
     for persona_name, output in [("expert", expert), ("learner", learner)]:
@@ -1207,24 +1230,40 @@ async def _generate_digest(
         )
 
     # Build separate CP block — not mixed into individual news items
+    # Option B: insights with quotes get blockquotes; insights with only key_point
+    # get a paragraph (no blockquote). Never emit placeholder literals.
     cp_entries = []
     for group in classified:
         insight = community_summary_map.get(group.primary_url)
-        if insight and (insight.quotes or insight.key_point):
-            parts = [f"Topic: {group.group_title}"]
-            parts.append(f"Platform: {insight.source_label}")
-            parts.append(f"Sentiment: {insight.sentiment}")
-            for q in insight.quotes:
-                parts.append(f'[EN quote]: "{q}"')
-            for q in insight.quotes_ko:
-                parts.append(f'[KO quote]: "{q}"')
-            if insight.key_point:
-                parts.append(f"Key Discussion: {insight.key_point}")
-            cp_entries.append("\n".join(parts))
+        if not insight or not (insight.quotes or insight.key_point):
+            continue
+        has_quotes = bool(insight.quotes)
+        parts = [f"Topic: {group.group_title}"]
+        parts.append(f"Platform: {insight.source_label}")
+        parts.append(f"Sentiment: {insight.sentiment}")
+        if has_quotes:
+            parts.append(f"HasQuotes: yes — emit {len(insight.quotes)} blockquote(s) below")
+            for i, q in enumerate(insight.quotes, start=1):
+                parts.append(f'English quote {i}: "{q}"')
+            for i, q in enumerate(insight.quotes_ko, start=1):
+                parts.append(f'Korean quote {i} (translation of English quote {i}): "{q}"')
+        else:
+            parts.append("HasQuotes: no — DO NOT emit any blockquote for this topic, write key point as a regular paragraph only")
+        if insight.key_point:
+            parts.append(f"Key Discussion: {insight.key_point}")
+        cp_entries.append("\n".join(parts))
 
     user_prompt = "\n\n---\n\n".join(news_items)
     if cp_entries:
-        user_prompt += "\n\n===\n\nCommunity Pulse Data (for ## Community Pulse section — use Quote (EN) for en, Quote (KO) for ko):\n\n" + "\n\n".join(cp_entries)
+        user_prompt += (
+            "\n\n===\n\nCommunity Pulse Data:\n"
+            "Each topic below has a HasQuotes flag. If HasQuotes=yes, emit blockquotes "
+            "using 'English quote N' values in en section and matching 'Korean quote N' "
+            "values in ko section. If HasQuotes=no, write only a short paragraph based on "
+            "Sentiment + Key Discussion — never emit an empty blockquote and never write "
+            "the literal text '[EN quote]' or '[KO quote]' in the output.\n\n"
+            + "\n\n".join(cp_entries)
+        )
 
     # Generate personas
     client = get_openai_client()
