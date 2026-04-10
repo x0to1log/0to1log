@@ -1367,7 +1367,7 @@ You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
 Generate ENGLISH content only. Korean content was generated in a separate call.
 
-Generate ADVANCED-level ENGLISH content for a handbook term. This is Call 4 of 4 — you handle English engineer-level content only. The term's definition (from Call 1) is provided as context.
+Generate ADVANCED-level ENGLISH body for a handbook term. This is Call 4 of 4 — you handle English engineer-level content only. The term's definition AND Basic body (from Calls 1-2) are provided as context. You must NOT duplicate the Basic body.
 
 DOMAIN CONTEXT:
 - Focus on the AI/IT meaning. Note cross-field differences if applicable.
@@ -1375,89 +1375,162 @@ DOMAIN CONTEXT:
 """ + GROUNDING_RULES + """
 LANGUAGE RULE:
 - All fields must be in English only.
-- Do NOT use bilingual headers like "한국어 / English". English only.
+- Do NOT use bilingual headers like "Korean / English". English only.
 
-IMPORTANT: body_advanced must complement the basic version, NOT repeat the same content at a deeper level. Assume the reader already understands the basics.
+## Page Architecture Reminder
+
+This handbook page has FIVE rendering zones. Advanced body fills ONE of them:
+
+1. **Hero Card** — already generated. Do NOT duplicate definition or news context.
+2. **Basic body** — already generated (provided as context). Do NOT repeat any of those concepts, examples, or analogies.
+3. **Advanced body** ← YOU generate 7 sections here.
+4. **References footer** — already generated (`references_en`). Do NOT generate reference lists, reading lists, or link collections in Advanced sections.
+5. **Sidebar checklist** — already generated. Not your concern.
+
+**IMPORTANT — DELETED FIELDS**: The old advanced sections `adv_en_1_technical`, `adv_en_3_howworks`, `adv_en_5_practical`, `adv_en_6_why`, `adv_en_8_refs`, `adv_en_9_related`, `adv_en_10_when_to_use`, `adv_en_11_pitfalls` no longer exist. Do NOT output them. Their content has been merged or moved as described in the section descriptions below.
+
+## Basic vs Advanced Differentiation (CRITICAL)
+
+You are writing for a **senior developer / ML engineer / tech lead** who already read the Basic version (provided in context). The Advanced body must answer DIFFERENT questions than Basic:
+
+| Reader question | Basic answered (already done) | Advanced answers (YOU now) |
+|---|---|---|
+| What is it? | Plain analogy | Formal definition + data flow |
+| Show me | Scenarios + comparison table | Code, math, architecture |
+| Where used | External world uses | Production failures and fixes |
+| How to compare | Concept differences | Technical trade-offs (cost, latency, complexity) |
+| Communication | Slack casual | PR review / design doc / incident postmortem tone |
+| What to read next | Learning sequence | Prerequisites + alternatives + extensions |
+
+**Do NOT restate Basic.** Do NOT include analogies, non-technical examples, or "why this matters for business" — that's the Basic's job. Assume the reader has CS fundamentals and can read code and math.
+
+**FAIL CONDITIONS** — these will cause the section to be rejected:
+- Any analogy or scenario that already appears in Basic body
+- Phrases like "Simply put", "In other words", "Imagine that…", "Think of it as…" (Basic tone)
+- Code section is hello-world level (under 5 lines, no error handling, no type hints)
+- Reference link / URL list inline in body (those go in references footer)
+- Every section under 200 chars (becomes a compressed Basic, not Advanced)
 
 ---
 
-## body_advanced — Advanced (min 3000 chars)
-
-Target audience: Senior developers, ML engineers, tech leads. Must be sufficient for a senior engineer to read.
-Tone: Precise, technical. Assume CS fundamentals.
-Rule: Include code snippets, architecture details, formulas where relevant.
+## body_advanced — Advanced (target 7,000~10,000 chars, 7 sections)
 
 ### Adaptive content for phenomenon/problem terms
 
-For terms describing a PROBLEM or PHENOMENON (Hallucination, Overfitting, etc.):
-- adv_en_5_practical: write about where/how this problem manifests in production, not "use cases"
-- adv_en_10_when_to_use: write about when to WATCH FOR and MITIGATE, not when to "use"
-- adv_en_11_pitfalls: write about mistakes in DETECTING or HANDLING, not in "using"
+For terms describing a PROBLEM or PHENOMENON (e.g., Hallucination, Overfitting, Data Drift):
+- `adv_en_4_tradeoffs`: write about when to WATCH FOR and MITIGATE, not when to "use"
+- `adv_en_5_pitfalls`: write about mistakes in DETECTING or HANDLING the problem, not mistakes in "using" a tool
+Keep the same section keys; only adapt the content perspective.
 
 ### Section key descriptions (English — adv_en_*):
 
-- **adv_en_1_technical**: Technical definition + core components and flow. Paper/official-doc level accuracy. Min 400 chars.
-- **adv_en_2_formulas**: Mathematical formulas, architecture diagrams, technical comparison tables. Use markdown tables and formulas. If no formulas apply, include comparison/structure tables only.
-- **adv_en_3_howworks**: Deep technical explanation: internal architecture and data flow, key algorithms or protocols (with complexity if relevant), implementation steps (numbered list). Min 500 chars.
-- **adv_en_4_code**: Real code snippets. Python/JavaScript preferred. Language tag required (```python). Min 15 substantial lines (excluding blanks, comments, single-brace lines). Include error handling, type hints. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
-- **adv_en_5_practical**: 4-5 real-world engineering examples + 4-5 pitfalls (performance issues, security risks, common mistakes). Practical tone.
-- **adv_en_6_why**: 4-5 bullet points on technical/business impact. Connect to: performance, scalability, reliability, cost, compliance.
-- **adv_en_7_comm**: 6-8 sentences from **team meetings, Slack threads, architecture reviews, or design docs**. **Bold key terms**. NO news article tone — include specific context like team names, metrics, or deadlines. Ready-to-use professional tone.
-- **adv_en_8_refs**: 3-6 curated links to REAL resources (official docs, papers, GitHub repos). **Bullet list format required.** Format: `- [Display Name](URL) — 1-sentence annotation`. Do NOT fabricate URLs. Prefer URLs from the Reference Materials provided above. If you cannot verify a URL exists, OMIT it entirely.
-- **adv_en_9_related**: 4-6 related technologies with difference analysis. **Bullet list format required.** Format: `- **Term** —technical relationship to current term`. Include: prerequisites, alternatives, complementary concepts, extensions. Do NOT just state the relationship -- include **performance/architecture/trade-off comparison points** that make the reader want to dig deeper.
-- **adv_en_10_when_to_use**: Decision framework for when to use (or not use) this technology. 3-4 suitable scenarios + 3-4 unsuitable scenarios. Name alternative technologies for each unsuitable case.
-  Example (model): "Suitable: Customer support chatbot needing image+text analysis / 100+ page documents with tables and charts\nUnsuitable: Simple text chatbot -- GPT-5.2 is cheaper and sufficient / Real-time voice calls -- latency is 200ms+ (use Whisper)"
-  Example (concept): "Suitable: Internal document Q&A system / Domains where recency matters (legal, medical)\nUnsuitable: Structured data analysis -- SQL or pandas is more appropriate / Creative writing -- retrieval dependency hurts creativity"
-- **adv_en_11_pitfalls**: 3-4 common engineering mistakes when adopting this technology. Each with a concrete solution.
-  Example (model): "Mistake: Sending all inputs as multimodal increases cost 10x -> Solution: Route text-only requests to text-only mode\nMistake: Filling context window to capacity degrades response quality -> Solution: Keep input under 70%, offload rest to RAG"
-  Example (concept): "Mistake: Oversized chunks mix irrelevant information -> Solution: Experiment with domain-specific chunk sizes (typically 500-1000 tokens)\nMistake: Changing embedding model requires full vector DB re-indexing -> Solution: Choose embedding model carefully at the start"
+- **adv_en_1_mechanism** (Technical Definition & How It Works, target 1000~1600 chars):
+  Formal definition at paper/reference-doc precision. Then internal data flow and mechanism.
+  Structure: (1) formal definition + main components in 2-3 sentences, (2) data/control flow narrative, (3) key algorithm steps (numbered) or complexity (Big O).
+  Cite papers/docs only if they appear in Reference Materials.
+  **Must NOT**: re-explain what the term is at an intro level (Basic did that). No analogies. No "easy to understand" framing. No business framing.
+  GOOD opening: "Transformer is a sequence-to-sequence architecture built around the self-attention operation. Each encoder/decoder block uses multi-head attention plus a position-wise FFN, computing all token-pair relationships in parallel at O(n²) time."
+  BAD opening: "Transformer is a new way for AI to understand sentences." ← Basic tone, rejected.
+
+- **adv_en_2_formulas** (Formulas, Architecture, and Diagrams):
+  Mathematical formulation with derivation + architecture diagrams (text-based) + technical comparison tables. Include math when applicable; otherwise comparison/structure tables only.
+  Use `$$formula$$` for math (LaTeX inside double dollars). Never single `$` (reserved for currency).
+  NEVER put math inside table cells — they don't render. Use bullet lists for formula comparisons.
+  Example: Attention formula `$$\\text{{Attention}}(Q, K, V) = \\text{{softmax}}\\left(\\frac{{QK^T}}{{\\sqrt{{d_k}}}}\\right)V$$`
+  For terms without formulas (products, protocols), provide a comparison/spec table instead.
+
+- **adv_en_3_code** (Code or Pseudocode, 15+ lines):
+  Real production-grade code. Python/JS preferred. Language tag required: ` ```python `.
+  Min 15 substantial lines (excluding blanks, comments, single-brace lines).
+  Include: error handling, type hints, realistic usage. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
+  **Must NOT**: pseudocode with "..." placeholders, hello-world fragments, marketing-style API calls with no error paths.
+
+- **adv_en_4_tradeoffs** (Tradeoffs — When to Use What, target 900~1,400 chars):
+  Decision framework for when to use this vs alternatives.
+  Structure: **Suitable** 3-4 cases + **Unsuitable** 3-4 cases. Each unsuitable case must name an alternative tech.
+  For each case: include **one concrete technical reason** (cost, latency, accuracy, memory, team complexity).
+  GOOD (model): "Suitable: Customer-support chatbot that needs image + text analysis (multimodal input is core); 100+ page documents with tables and charts that must be jointly interpreted. / Unsuitable: Simple text chatbot — GPT-5.2 is cheaper and sufficient; real-time voice calls — latency is 200ms+, use Whisper instead."
+  GOOD (phenomenon, e.g., overfitting): "Watch for: time-series data with weak IID assumptions; small samples + high-capacity models; train/test split that overlaps in time. / Less worrisome: large representative samples + a regularized pipeline already in place."
+
+- **adv_en_5_pitfalls** (Production Pitfalls, target 800~1,300 chars):
+  Real failure modes engineers hit in production.
+  Structure: 3-4 mistake-solution pairs. Format: `Mistake: specific situation -> Solution: response`. Each mistake must come from real engineering experience.
+  GOOD: "Mistake: Filling the context window to capacity degrades response quality -> Solution: Keep input under 70% of the window and offload the rest to RAG."
+  GOOD: "Mistake: Swapping embedding models forces a full re-index of the vector DB -> Solution: Pick the embedding model carefully up front and lock the version."
+  BAD: "Mistake: Starting without a tutorial is hard -> Solution: Read the official docs." (too vague, rejected)
+
+- **adv_en_6_comm** (Industry Communication, 6-8 sentences):
+  Sentences as they appear in **PR reviews, design docs, architecture reviews, incident postmortems** — not casual Slack.
+  **Bold key terms** with `**`. Include specific context: version numbers, metrics, team names.
+  Tone: precise, engineering-y, sometimes post-incident reflective.
+  GOOD: "- 'During the **v2 rollout**, **p99 latency jumped from 350ms to 510ms**. We traced it to the **MoE layer** routing too many tokens to a single expert; we'll add an **aux load-balancing loss** next sprint.'"
+  GOOD: "- 'In the **DPO experiment**, the **chosen/rejected gap** wasn't converging cleanly until we raised **β from 0.1 to 0.3**. The trade-off is a higher **KL to the reference model** — worth it for our domain.'"
+  BAD: "- 'This tech is really cool!'" (casual, no technical substance, rejected)
+  **Must differentiate from `basic_en_6_comm`** — Basic uses Slack/standup tone, Advanced uses PR review/design doc/incident tone.
+
+- **adv_en_7_related** (Prerequisites, Alternatives, and Extensions, 4-6 entries):
+  Related terms categorized: **Prerequisites** (learn first), **Alternatives** (competitors), **Extensions** (what comes next).
+  Format: `- **Term** (prerequisite|alternative|extension) — technical relationship + why it matters from this angle`
+  Do NOT repeat Basic's `7_related` learning-flow framing. Here, focus on **technical dependency** and **system design choice**.
+  GOOD: "- **Multi-head attention** (prerequisite) — addresses the representation bottleneck of single-head attention; required mental model for understanding Transformers."
+  GOOD: "- **Mamba** (alternative) — state space model that brings the cost from O(n²) to O(n); the relevant comparison point for long-context workloads."
+  GOOD: "- **Mixture of Experts** (extension) — extends the Transformer FFN into an expert pool; lets you scale parameters while keeping per-token compute roughly constant."
+
+---
 
 ## Output JSON Structure
 
 ```json
 {{
-  "adv_en_1_technical": "...",
-  "adv_en_2_formulas": "...",
-  "adv_en_3_howworks": "...",
-  "adv_en_4_code": "...",
-  "adv_en_5_practical": "...",
-  "adv_en_6_why": "...",
-  "adv_en_7_comm": "...",
-  "adv_en_8_refs": "- [Link](URL) — annotation\\n- [Link2](URL2) — annotation2",
-  "adv_en_9_related": "- **Term** — relationship\\n- **Term2** — relationship2",
-  "adv_en_10_when_to_use": "Suitable: ...\\nUnsuitable: ...",
-  "adv_en_11_pitfalls": "Mistake: ... -> Solution: ...\\nMistake: ... -> Solution: ..."
+  "adv_en_1_mechanism": "Formal definition + data flow + complexity",
+  "adv_en_2_formulas": "Math/diagrams ($$-wrapped LaTeX or comparison tables)",
+  "adv_en_3_code": "```python\\n...\\n```",
+  "adv_en_4_tradeoffs": "Suitable: ...\\nUnsuitable: ...",
+  "adv_en_5_pitfalls": "Mistake: ... -> Solution: ...\\nMistake: ... -> Solution: ...",
+  "adv_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- ...",
+  "adv_en_7_related": "- **Term** (prerequisite|alternative|extension) — relationship"
 }}
 ```
 
 ## Self-Check (verify before responding)
-✓ No section repeats content from the basic version or from other advanced sections
-✓ Table/formula section contains actual comparisons or technical specs
-✓ Code examples are syntactically correct and runnable
-✓ Reference URLs point to real, well-known resources
-✓ 10_when_to_use has 3+ suitable + 3+ unsuitable scenarios with alternative tech named
-✓ 11_pitfalls has 3+ mistake-solution pairs from real engineering experience
-✓ Each section adds depth the reader didn't get from the basic version
+
+**Critical: Basic body duplication check (highest priority)**
+✓ No analogy, example, scenario, or phrasing from the Basic body is reused or lightly rephrased
+✓ Zero "Simply put", "In other words", "Imagine", "Think of it as" Basic-tone phrases
+✓ adv_en_1_mechanism opens with a formal definition (no intro framing)
+✓ adv_en_5_pitfalls is different from Basic's "common misconceptions (myth/reality)" — operational mistakes + fixes
+✓ adv_en_6_comm uses PR review / design doc / incident postmortem tone, NOT Basic's Slack/standup tone
+
+**Structural checks**
+✓ Output has EXACTLY these 7 keys: adv_en_1_mechanism, adv_en_2_formulas, adv_en_3_code, adv_en_4_tradeoffs, adv_en_5_pitfalls, adv_en_6_comm, adv_en_7_related
+✓ NO output fields for: adv_en_1_technical, adv_en_3_howworks, adv_en_4_code (now `_3_code`), adv_en_5_practical, adv_en_6_why, adv_en_8_refs, adv_en_9_related, adv_en_10_when_to_use, adv_en_11_pitfalls
+✓ adv_en_1_mechanism is 1000~1600 chars with formal definition + flow + complexity/algorithm steps
+✓ adv_en_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
+✓ adv_en_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
+✓ adv_en_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
+✓ adv_en_5_pitfalls has 3+ concrete mistake-solution pairs (each side ≥40 chars)
+✓ adv_en_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
+✓ adv_en_7_related has 4~6 entries, each tagged (prerequisite|alternative|extension)
+✓ NO reference list or link bullets in any section — references belong in the footer (already generated)
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
-- Include code snippets, formulas, and architecture details.
-- Reference links in refs fields must be real URLs to well-known resources.
-- Do NOT repeat content from the basic version.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
+- **References go in `references_en` footer (generated in Call 2). Do NOT list references, reading lists, or link collections in Advanced sections.**
+- Do NOT fabricate paper titles, arXiv IDs, or author names.
 
-## Markdown Formatting (within each section value)
-- Use `###` sub-headings to break long sections into scannable parts
+## Markdown Formatting
 - Use **bold** for key terms
 - Use bullet points for lists, NOT inline numbering like "1) 2) 3)"
 - Use code blocks with language tags for code examples
+- Do NOT use `###` sub-headings inside body sections — section H2 is added by the system
 
-## Table Rules (formulas/table sections)
-- MUST be comparison/contrast tables or technical spec tables — NOT simple definitions
+## Table Rules
+- MUST be comparison/contrast or technical spec tables — NOT simple definitions
 - Include actual numbers, formulas, or architectural comparisons
-- Math formulas MUST use double-dollar signs: $$E = mc^2$$ (NOT single $). This applies to both inline and block math. Single $ is reserved for currency.
-- NEVER put math formulas inside markdown table cells — they will not render. If a comparison involves formulas, use a bullet list instead of a table.
+- Math formulas: `$$formula$$` only (NOT single $). Single $ is reserved for currency.
+- NEVER put math inside markdown table cells — they will not render. Use bullet lists for formula comparisons.
 
 Respond in JSON format only."""
 
