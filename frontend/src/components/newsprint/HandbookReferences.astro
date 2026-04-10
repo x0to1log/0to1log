@@ -1,0 +1,146 @@
+---
+/**
+ * HandbookReferences — level-independent footer block.
+ *
+ * Renders curated primary/secondary sources for a handbook term. Stays visible
+ * regardless of the Basic/Advanced toggle. Sorted: primary first, then by source
+ * type (paper > docs > code > book > wiki > blog).
+ *
+ * Plan: vault/09-Implementation/plans/2026-04-09-handbook-section-redesign.md §5.4
+ */
+
+import type { ReferenceItem } from '../../lib/pageData/handbookDetailPage';
+
+interface Props {
+  references: ReferenceItem[] | null | undefined;
+  locale: 'ko' | 'en';
+}
+
+const { references, locale } = Astro.props;
+const heading = locale === 'ko' ? '참고 자료' : 'References';
+
+// Sort: primary first, then by type rank within tier.
+const typeRank: Record<ReferenceItem['type'], number> = {
+  paper: 0, docs: 1, code: 2, book: 3, wiki: 4, blog: 5,
+};
+const sorted = [...(references || [])].sort((a, b) => {
+  if (a.tier !== b.tier) return a.tier === 'primary' ? -1 : 1;
+  return (typeRank[a.type] ?? 99) - (typeRank[b.type] ?? 99);
+});
+
+const typeLabel: Record<ReferenceItem['type'], string> = {
+  paper: locale === 'ko' ? '논문' : 'Paper',
+  docs: locale === 'ko' ? '공식 문서' : 'Docs',
+  code: locale === 'ko' ? '코드' : 'Code',
+  blog: locale === 'ko' ? '블로그' : 'Blog',
+  wiki: 'Wiki',
+  book: locale === 'ko' ? '도서' : 'Book',
+};
+---
+
+{sorted.length > 0 && (
+  <section class="handbook-references" aria-label={heading}>
+    <h2 class="handbook-references__heading">{heading}</h2>
+    <ul class="handbook-references__list">
+      {sorted.map(ref => (
+        <li class={`handbook-references__item handbook-references__item--${ref.tier}`}>
+          <div class="handbook-references__meta">
+            <span class={`handbook-references__tier handbook-references__tier--${ref.tier}`} aria-label={ref.tier}>
+              {ref.tier === 'primary' ? '★' : '·'}
+            </span>
+            <span class="handbook-references__type">{typeLabel[ref.type]}</span>
+            {ref.year && <span class="handbook-references__year">{ref.year}</span>}
+          </div>
+          <a
+            href={ref.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="handbook-references__link"
+          >
+            {ref.title}
+          </a>
+          {ref.authors && <span class="handbook-references__authors">{ref.authors}</span>}
+          {ref.venue && <span class="handbook-references__venue">{ref.venue}</span>}
+          {ref.annotation && (
+            <p class="handbook-references__annotation">{ref.annotation}</p>
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+<style>
+  .handbook-references {
+    margin: 2rem 0 1rem;
+    padding: 1rem 0 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .handbook-references__heading {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin: 0 0 0.875rem;
+    font-weight: 600;
+  }
+  .handbook-references__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .handbook-references__item {
+    padding: 0.625rem 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .handbook-references__item + .handbook-references__item {
+    border-top: 1px dashed var(--color-border);
+  }
+  .handbook-references__item--primary {
+    /* primary items get slightly stronger emphasis via the star marker */
+  }
+  .handbook-references__meta {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    margin-right: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .handbook-references__tier--primary {
+    color: var(--color-accent);
+    font-size: 0.875rem;
+  }
+  .handbook-references__tier--secondary {
+    color: var(--color-text-muted);
+  }
+  .handbook-references__type {
+    font-weight: 500;
+  }
+  .handbook-references__link {
+    color: var(--color-text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--color-border);
+    text-underline-offset: 2px;
+  }
+  .handbook-references__link:hover {
+    text-decoration-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .handbook-references__authors,
+  .handbook-references__venue {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.125rem;
+  }
+  .handbook-references__annotation {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    margin: 0.375rem 0 0;
+    line-height: 1.5;
+  }
+</style>

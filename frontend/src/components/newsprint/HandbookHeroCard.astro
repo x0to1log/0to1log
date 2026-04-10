@@ -1,0 +1,108 @@
+---
+/**
+ * HandbookHeroCard — level-independent card shown above the Basic/Advanced switcher.
+ *
+ * Holds the term's definition + 3 news-context lines so a reader who clicked through
+ * from a news article can understand the term in 15 seconds and return to the article
+ * without scrolling into the body.
+ *
+ * Plan: vault/09-Implementation/plans/2026-04-09-handbook-section-redesign.md §4
+ */
+
+interface Props {
+  definition: string | null;
+  newsContext: string | null;   // raw \n-separated lines
+  locale: 'ko' | 'en';
+  backUrl?: string | null;
+}
+
+const { definition, newsContext, locale, backUrl = null } = Astro.props;
+
+// Parse news context defensively (may be empty, may have stray whitespace)
+const lines = (newsContext || '')
+  .split('\n')
+  .map(l => l.trim())
+  .filter(Boolean)
+  .slice(0, 3);
+
+const hasContext = lines.length > 0;
+const heading = locale === 'ko' ? '뉴스에서 이렇게 쓰여' : 'As seen in the news';
+const backLabel = locale === 'ko' ? '원래 기사로 돌아가기' : 'Back to the article';
+---
+
+{(definition || hasContext) && (
+  <aside class="handbook-hero-card" aria-label={locale === 'ko' ? '핵심 요약' : 'Key summary'}>
+    {definition && (
+      <p
+        class="handbook-hero-card__definition"
+        set:html={definition.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}
+      />
+    )}
+    {hasContext && (
+      <>
+        <h2 class="handbook-hero-card__heading">{heading}</h2>
+        <ul class="handbook-hero-card__news-list">
+          {lines.map(line => (
+            <li class="handbook-hero-card__news-line">{line}</li>
+          ))}
+        </ul>
+      </>
+    )}
+    {backUrl && (
+      <a href={backUrl} class="handbook-hero-card__back">{backLabel}</a>
+    )}
+  </aside>
+)}
+
+<style>
+  .handbook-hero-card {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0 1.5rem;
+    border-radius: 6px;
+  }
+  .handbook-hero-card__definition {
+    font-size: 1rem;
+    line-height: 1.55;
+    margin: 0 0 0.5rem;
+    color: var(--color-text-primary);
+  }
+  .handbook-hero-card__definition:last-child {
+    margin-bottom: 0;
+  }
+  .handbook-hero-card__heading {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin: 0.875rem 0 0.5rem;
+    font-weight: 600;
+  }
+  .handbook-hero-card__news-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+  }
+  .handbook-hero-card__news-line {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    padding: 0.3rem 0;
+    border-bottom: 1px dashed var(--color-border);
+  }
+  .handbook-hero-card__news-line:last-child {
+    border-bottom: none;
+  }
+  .handbook-hero-card__back {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+  }
+  .handbook-hero-card__back:hover {
+    color: var(--color-accent-hover);
+  }
+</style>
