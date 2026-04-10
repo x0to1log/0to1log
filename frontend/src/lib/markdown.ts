@@ -12,6 +12,7 @@ import { createCssVariablesTheme } from 'shiki';
 import rehypeStringify from 'rehype-stringify';
 import rehypeHandbookTerms, { type TermsMap } from './rehypeHandbookTerms';
 import rehypeCodeWindow from './rehypeCodeWindow';
+import rehypeHandbookSectionMarkers from './rehypeHandbookSectionMarkers';
 import { visit } from 'unist-util-visit';
 
 /** Strip <del> tags — LLM uses ~~ for approximate values, not strikethrough. */
@@ -137,6 +138,7 @@ export async function renderMarkdown(md: string): Promise<string> {
 // singleDollarTextMath disabled to avoid currency conflicts ($/hour, $10/GB)
 // Code blocks are collapsible by default — Advanced readers opt into seeing
 // long code dumps instead of scrolling past them.
+// rehypeHandbookSectionMarkers tags §5 pitfalls list for CSS callout styling.
 const handbookProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm, { singleTilde: false })
@@ -147,6 +149,7 @@ const handbookProcessor = unified()
   .use(rehypeSanitize, sanitizeSchema)
   .use(rehypeKatex)
   .use(rehypeShiki, shikiOptions as any)
+  .use(rehypeHandbookSectionMarkers)
   .use(rehypeCodeWindow, { collapsible: true })
   .use(rehypeStringify);
 

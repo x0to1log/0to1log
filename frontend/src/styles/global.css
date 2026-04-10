@@ -1475,6 +1475,78 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   display: none;
 }
 
+/* ================================================================
+   §5 Pitfalls callout — handbook Advanced only.
+   rehypeHandbookSectionMarkers tags the pitfalls list with
+   `.hb-section-pitfalls`. Each list item becomes a warning card with
+   a yellow left border + tinted background. No emoji used — color
+   and typography carry the "warning" signal.
+   ================================================================ */
+.newsprint-prose .hb-section-pitfalls {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+.newsprint-prose .hb-section-pitfalls > li {
+  list-style: none;
+  padding: 0.75rem 1rem 0.75rem 1.125rem;
+  margin: 0.625rem 0;
+  background: color-mix(in srgb, var(--color-warning) 9%, transparent);
+  border-left: 3px solid var(--color-warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.newsprint-prose .hb-section-pitfalls > li::marker {
+  content: none;
+}
+
+.newsprint-prose .hb-section-pitfalls > li > strong:first-child {
+  display: block;
+  color: var(--color-text-primary);
+  margin-bottom: 0.25rem;
+  font-size: 0.9375em;
+}
+
+.newsprint-prose .hb-section-pitfalls > li p {
+  margin: 0.25rem 0 0;
+}
+
+.newsprint-prose .hb-section-pitfalls > li > :last-child {
+  margin-bottom: 0;
+}
+
+/* ================================================================
+   §6 Industry dialogue blockquote — handbook Advanced (also safe
+   fallback for any blockquote elsewhere in newsprint-prose, which is
+   rare). Accent-color left border + italic quote body + muted
+   attribution line (second paragraph).
+   ================================================================ */
+.newsprint-prose blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding: 0.75rem 1rem 0.75rem 1.125rem;
+  margin: 1rem 0;
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.newsprint-prose blockquote p {
+  margin: 0 0 0.4rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.newsprint-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.newsprint-prose blockquote p + p {
+  font-style: normal;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
 .newsprint-prose code {
   font-family: var(--font-code);
   font-size: 0.88em;
@@ -1491,23 +1563,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   border-radius: 0;
   line-height: 1.5;
   word-break: normal;
-}
-
-.newsprint-prose blockquote {
-  margin: 1.2rem 0;
-  padding: 0.75rem 1.25rem;
-  border-left: 3px solid var(--color-accent);
-  background: var(--color-accent-subtle);
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
-.newsprint-prose blockquote p {
-  margin-top: 0;
-}
-
-.newsprint-prose blockquote p+p {
-  margin-top: 0.6rem;
 }
 
 .newsprint-prose a {
