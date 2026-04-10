@@ -65,6 +65,26 @@ interface HandbookDetailPageContext extends DetailPageContext {
   previewLevel?: string | null;
 }
 
+export interface ReferenceItem {
+  title: string;
+  authors?: string;
+  year?: number;
+  venue?: string;
+  type: 'paper' | 'docs' | 'code' | 'blog' | 'wiki' | 'book';
+  url: string;
+  tier: 'primary' | 'secondary';
+  annotation: string;
+}
+
+interface HandbookTermJsonEntry {
+  term: string;
+  korean_name: string;
+  term_full: string;
+  categories: string[];
+  definition: string;
+  basic_plain: string;
+}
+
 export async function getHandbookDetailPageData({
   locale,
   slug,
@@ -103,6 +123,16 @@ export async function getHandbookDetailPageData({
   const bodyBasic = term ? localField(term, 'body_basic', locale) : '';
   const bodyAdvanced = term ? localField(term, 'body_advanced', locale) : '';
 
+  // Level-independent fields (2026-04-10 redesign).
+  // Text fields use localField (KO fallback). references is JSONB so direct access with manual fallback.
+  const heroNewsContext = term ? localField(term, 'hero_news_context', locale) : '';
+  const sidebarChecklist = term ? localField(term, 'sidebar_checklist', locale) : '';
+  const references: ReferenceItem[] | null = term
+    ? ((locale === 'ko' ? term.references_ko : term.references_en)
+       ?? (locale === 'ko' ? term.references_en : term.references_ko)
+       ?? null)
+    : null;
+
   const levelHtmlMap: Record<string, string> = {};
   let relatedArticles: any[] = [];
   let relatedTerms: any[] = [];
@@ -110,7 +140,7 @@ export async function getHandbookDetailPageData({
   let isBookmarked = false;
   let learningStatus: string | null = null;
   let learningProgressId: string | null = null;
-  let handbookTermsJson: Record<string, { term: string; korean_name: string; categories: string[]; definition: string }> = {};
+  let handbookTermsJson: Record<string, HandbookTermJsonEntry> = {};
 
   if (publicSupabase && term) {
     const authSupabase = !previewMode && locals.user && locals.accessToken
@@ -244,5 +274,9 @@ export async function getHandbookDetailPageData({
     isBookmarked: previewMode ? false : isBookmarked,
     learningStatus: previewMode ? null : learningStatus,
     learningProgressId: previewMode ? null : learningProgressId,
+    // Level-independent redesign fields (2026-04-10)
+    heroNewsContext,
+    references,
+    sidebarChecklist,
   };
 }
