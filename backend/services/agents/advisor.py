@@ -1164,12 +1164,12 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     # Assemble advanced sections (or pass through if already assembled)
     if "body_advanced_ko" in raw_data:
         data["body_advanced_ko"] = raw_data["body_advanced_ko"]
-    elif "adv_ko_1_technical" in raw_data:
+    elif "adv_ko_1_mechanism" in raw_data:
         data["body_advanced_ko"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_KO)
 
     if "body_advanced_en" in raw_data:
         data["body_advanced_en"] = raw_data["body_advanced_en"]
-    elif "adv_en_1_technical" in raw_data:
+    elif "adv_en_1_mechanism" in raw_data:
         data["body_advanced_en"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_EN)
 
     # Post-process: fix bold markdown with parenthetical abbreviations
