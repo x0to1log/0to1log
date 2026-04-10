@@ -178,7 +178,7 @@ export async function getHandbookDetailPageData({
       : (md: string) => renderMarkdown(md);
 
     // Run markdown rendering and DB queries in parallel — they don't depend on each other
-    // Advanced uses handbookProcessor (singleDollarTextMath: true) for math formulas
+    // Advanced uses handbookProcessor (block math $$...$$ only) for formulas
     const [basicHtml, advancedHtml, articlesRes, recentNewsRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
       bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
       bodyAdvanced ? renderHandbookMarkdown(bodyAdvanced) : Promise.resolve(''),
