@@ -1,7 +1,7 @@
 # ACTIVE SPRINT — News Pipeline v4 Quality Stabilization (NP4-Q)
 
 > **스프린트 기간:** 2026-03-15~진행 중 (NP4-Q phase)
-> **마지막 업데이트:** 2026-04-10 (HB-REDESIGN B/A/C 모두 완료)
+> **마지막 업데이트:** 2026-04-10 (HB-REDESIGN B/A/C + HB-EDITOR-V2 완료, HB-MIGRATE-138 다음 작업)
 > **목표:** AI News Pipeline v4 (2 페르소나 × 2 언어) 품질 안정화 + 프롬프트 감사 + 뉴스레터/대시보드 구축
 > **설계 참조:** [[AI-News-Pipeline-Design]], [[plans/2026-03-16-daily-digest-design]], [[plans/2026-03-25-direct-fastapi-ai-calls]], [[plans/2026-03-26-news-quality-check-overhaul]]
 > **이전 스프린트:** Phase 3B-SHARE — 2026-03-13 게이트 전체 통과
@@ -53,6 +53,8 @@
 | HB-REDESIGN-B | 핸드북 Basic EN 프롬프트 재설계 — KO 구조 복제 (commits `da85b34`, `aaf1a15`, `9f601b0`, `b545a77`) | done | 2026-04-10 | 2026-04-10 |
 | HB-REDESIGN-A | 핸드북 저장 경로 + 프론트엔드 렌더링 — DB 컬럼 + Hero/Refs/Checklist 컴포넌트 (commits `cb84185`~`7739c76`) | done | 2026-04-10 | 2026-04-10 |
 | HB-REDESIGN-C | 핸드북 Advanced 프롬프트 재설계 — 11→7, Basic 차별화 매트릭스 7/7 (commits `2a402d4`~`f961892`) | done | 2026-04-10 | 2026-04-10 |
+| HB-EDITOR-V2 | 어드민 에디터에 redesign 필드 6개 (Hero/References/Checklist) 편집 지원 + UX polish (commits `30eebe9`, `3a6bc93`) | done | 2026-04-10 | 2026-04-10 |
+| HB-MIGRATE-138 | 138개 published 핸드북 용어를 v4 구조로 전량 regenerate (병렬 ~2시간, 비용 ~$15) | todo | — | — |
 
 ---
 
@@ -155,9 +157,9 @@
 
 > **마스터 설계 문서:** [[plans/2026-04-09-handbook-section-redesign]]
 > **배경:** 2026-04-09 5개 용어(overfitting, DPO, Hugging Face, MCP, fine-tuning) 품질 평가에서 Basic 13섹션이 중복·과잉·Basic/Advanced 차별화 실종으로 드러남. 페이지 구조를 7섹션 + hero card + references footer + sidebar checklist로 재설계.
-> **완료:** **HB-REDESIGN B/A/C 모두 완료** (KO + EN Basic + DB/프론트엔드 렌더링 + Advanced 재설계). 7섹션 구조, hero card, references footer, sidebar checklist 전부 ship-ready. 5개 샘플 용어 (overfitting, DPO, fine-tuning, Hugging Face, MCP) 모두 차별화 매트릭스 5+/7 통과. Advanced는 Basic body를 context로 받아 verbatim 50-char overlap 0건, Basic-tone phrase 0건, code/math/formal-definition 모두 Advanced에만 등장.
-> **진행 순서:** B → A → C — **모두 완료 (2026-04-10)**.
-> **남은 작업:** 138개 published 용어 전량 regenerate (별도 follow-up).
+> **완료:** **HB-REDESIGN B/A/C + HB-EDITOR-V2 모두 완료** (KO + EN Basic + DB/프론트엔드 렌더링 + Advanced 재설계 + 어드민 에디터 redesign 필드 편집 지원). 7섹션 구조, hero card, references footer, sidebar checklist 전부 ship-ready. 8개 샘플 용어 (overfitting, DPO, fine-tuning, Hugging Face, MCP, Transformer, CUDA, prompt injection) 모두 차별화 매트릭스 통과. Advanced는 Basic body를 context로 받아 verbatim overlap 0건. 어드민에서 모든 신규 필드 편집 + JSON live validation 지원.
+> **진행 순서:** B → A → C → EDITOR-V2 — **모두 완료 (2026-04-10)**.
+> **다음 작업:** HB-MIGRATE-138 (138개 published 용어 전량 regenerate). 별도 plan 없이 병렬 실행 ~2시간 / 비용 ~$15. **단 시점은 별도 결정** — 사용자 베이스 / 활동 / 다른 우선순위와의 trade-off 고려.
 
 | Task | 상태 | 목표 | 의존성 | 플랜 |
 |------|------|------|--------|------|
@@ -165,6 +167,8 @@
 | HB-REDESIGN-B | done | Basic EN 프롬프트를 KO 구조로 복제 (7섹션 + hero + refs + checklist), max_length 제거 | HB-REDESIGN-KO ✅ | [[plans/2026-04-10-handbook-basic-en-redesign]] |
 | HB-REDESIGN-A | done | DB migration + admin save + detail loader + 3 component + KO/EN [slug].astro 배치 + Playwright 검증 | HB-REDESIGN-B ✅ | [[plans/2026-04-10-handbook-save-and-render]] |
 | HB-REDESIGN-C | done | Advanced 프롬프트 11→7 재작성 (KO/EN) + Basic body context 주입 + 5/5 용어 차별화 매트릭스 7/7 또는 5/7 통과 | HB-REDESIGN-A ✅ | [[plans/2026-04-10-handbook-advanced-redesign]] |
+| HB-EDITOR-V2 | done | 어드민 에디터에 redesign 필드 6개 (Hero/References/Checklist) 편집 지원 + JSON live validation + UX polish | HB-REDESIGN-A ✅ | — |
+| HB-MIGRATE-138 | todo | 138개 published 용어를 새 7섹션 구조 + redesign 필드로 전량 regenerate. 별도 plan 없이 진행 가능. 병렬 실행 ~2시간, 비용 ~$15. | HB-EDITOR-V2 ✅ | — |
 
 #### HB-REDESIGN 배경 노트
 
