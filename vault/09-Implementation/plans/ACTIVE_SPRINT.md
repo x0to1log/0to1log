@@ -1,7 +1,7 @@
 # ACTIVE SPRINT — News Pipeline v4 Quality Stabilization (NP4-Q)
 
 > **스프린트 기간:** 2026-03-15~진행 중 (NP4-Q phase)
-> **마지막 업데이트:** 2026-04-10 (HB-REDESIGN-B 완료, A 진행 예정)
+> **마지막 업데이트:** 2026-04-10 (HB-REDESIGN-A 완료, C 진행 예정)
 > **목표:** AI News Pipeline v4 (2 페르소나 × 2 언어) 품질 안정화 + 프롬프트 감사 + 뉴스레터/대시보드 구축
 > **설계 참조:** [[AI-News-Pipeline-Design]], [[plans/2026-03-16-daily-digest-design]], [[plans/2026-03-25-direct-fastapi-ai-calls]], [[plans/2026-03-26-news-quality-check-overhaul]]
 > **이전 스프린트:** Phase 3B-SHARE — 2026-03-13 게이트 전체 통과
@@ -51,7 +51,7 @@
 | AUTO-PUB-01 | Auto-publish (quality ≥ 85) + draft email 알림 + 어드민 dot 표시 | in_progress | 2026-04-08 | — |
 | HB-REDESIGN-KO | 핸드북 Basic KO 섹션 재설계 — 13→7, hero/refs/checklist 분리 (commit `70a0e77`) | done | 2026-04-09 | 2026-04-10 |
 | HB-REDESIGN-B | 핸드북 Basic EN 프롬프트 재설계 — KO 구조 복제 (commits `da85b34`, `aaf1a15`, `9f601b0`, `b545a77`) | done | 2026-04-10 | 2026-04-10 |
-| HB-REDESIGN-A | 핸드북 저장 경로 + 프론트엔드 렌더링 — DB 컬럼 + Hero/Refs/Checklist 컴포넌트 | todo | — | — |
+| HB-REDESIGN-A | 핸드북 저장 경로 + 프론트엔드 렌더링 — DB 컬럼 + Hero/Refs/Checklist 컴포넌트 (commits `cb84185`~`7739c76`) | done | 2026-04-10 | 2026-04-10 |
 | HB-REDESIGN-C | 핸드북 Advanced 프롬프트 재설계 — 11→7, Basic 차별화 | todo | — | — |
 
 ---
@@ -155,15 +155,15 @@
 
 > **마스터 설계 문서:** [[plans/2026-04-09-handbook-section-redesign]]
 > **배경:** 2026-04-09 5개 용어(overfitting, DPO, Hugging Face, MCP, fine-tuning) 품질 평가에서 Basic 13섹션이 중복·과잉·Basic/Advanced 차별화 실종으로 드러남. 페이지 구조를 7섹션 + hero card + references footer + sidebar checklist로 재설계.
-> **완료:** KO Basic 재설계 (commit `70a0e77`) + EN Basic 재설계 (commits `da85b34`, `aaf1a15`, `9f601b0`, `b545a77`). 5개 용어 KO/EN 양쪽 v3 regen 검증 완료 — anti-pattern 0건, 7섹션 일관 생성, max_length 제거로 길이 자유도 확보.
-> **진행 순서:** B → A → C (B 완료, A 진행 예정)
+> **완료:** KO Basic 재설계 (commit `70a0e77`) + EN Basic 재설계 (commits `da85b34`, `aaf1a15`, `9f601b0`, `b545a77`) + DB migration + frontend 렌더링 (commits `cb84185`~`7739c76`). 5개 용어 KO/EN 양쪽 v3 regen 검증 완료. overfitting을 published로 전환해 KO/EN 양쪽 페이지에서 Hero Card · References Footer · Sidebar Checklist 모두 시각 검증 완료 (Playwright). Level switcher 토글 시 sidebar checklist만 사라지고 Hero/References는 유지됨.
+> **진행 순서:** B → A → C (B, A 완료. C 진행 예정)
 
 | Task | 상태 | 목표 | 의존성 | 플랜 |
 |------|------|------|--------|------|
 | HB-REDESIGN-KO | done | Basic KO 프롬프트 + 조립 + Pydantic + dead code 제거 | — | [[plans/2026-04-09-handbook-section-redesign]] |
 | HB-REDESIGN-B | done | Basic EN 프롬프트를 KO 구조로 복제 (7섹션 + hero + refs + checklist), max_length 제거 | HB-REDESIGN-KO ✅ | [[plans/2026-04-10-handbook-basic-en-redesign]] |
-| HB-REDESIGN-A | todo | DB migration + admin save endpoint 확장 + 프론트엔드 Hero/References/Checklist 컴포넌트 배치 | HB-REDESIGN-B ✅ | [[plans/2026-04-10-handbook-save-and-render]] |
-| HB-REDESIGN-C | todo | Advanced 프롬프트 11→7 재작성 (KO/EN), Basic 차별화 매트릭스 충족 | HB-REDESIGN-A | [[plans/2026-04-10-handbook-advanced-redesign]] |
+| HB-REDESIGN-A | done | DB migration + admin save + detail loader + 3 component + KO/EN [slug].astro 배치 + Playwright 검증 | HB-REDESIGN-B ✅ | [[plans/2026-04-10-handbook-save-and-render]] |
+| HB-REDESIGN-C | todo | Advanced 프롬프트 11→7 재작성 (KO/EN), Basic 차별화 매트릭스 충족 | HB-REDESIGN-A ✅ | [[plans/2026-04-10-handbook-advanced-redesign]] |
 
 #### HB-REDESIGN 배경 노트
 
