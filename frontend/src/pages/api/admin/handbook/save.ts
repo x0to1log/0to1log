@@ -44,6 +44,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     definition_en,
     body_basic_en,
     body_advanced_en,
+    // Level-independent fields (2026-04-10 redesign)
+    hero_news_context_ko,
+    hero_news_context_en,
+    references_ko,
+    references_en,
+    sidebar_checklist_ko,
+    sidebar_checklist_en,
     source,
   } = body;
 
@@ -70,6 +77,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     definition_en: definition_en || null,
     body_basic_en: body_basic_en || null,
     body_advanced_en: body_advanced_en || null,
+    // Level-independent fields
+    hero_news_context_ko: hero_news_context_ko || null,
+    hero_news_context_en: hero_news_context_en || null,
+    references_ko: Array.isArray(references_ko) ? references_ko : null,
+    references_en: Array.isArray(references_en) ? references_en : null,
+    sidebar_checklist_ko: sidebar_checklist_ko || null,
+    sidebar_checklist_en: sidebar_checklist_en || null,
     updated_at: new Date().toISOString(),
   };
 
