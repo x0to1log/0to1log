@@ -130,12 +130,19 @@ async def handbook_advise(
         logger.error("Handbook advisor [%s] unexpected error: %s", body.action, e)
         raise HTTPException(status_code=500, detail="AI returned invalid response")
 
+    # Propagate search_sources from the result dict to the top-level
+    # response field so the API contract in HandbookAdviseResponse is
+    # actually populated. The service writes the list inside `result`;
+    # we mirror it out here so API consumers can read either location.
+    search_sources = result.get("search_sources", []) if isinstance(result, dict) else []
+
     return HandbookAdviseResponse(
         action=body.action,
         success=not warnings,
         result=result,
         model_used=model,
         tokens_used=tokens,
+        search_sources=search_sources,
         validation_warnings=warnings,
     )
 

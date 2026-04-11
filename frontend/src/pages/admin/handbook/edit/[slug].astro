@@ -1164,8 +1164,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
     function renderGenerate(r: any) {
       if (!aiResultEl) return;
       let html = '<h4>Generated Content</h4>';
-      // Show search sources used
-      const sources = r._search_sources || [];
+      // Show search sources used. The backend writes this inside the
+      // result dict (non-underscore key) and mirrors it to the top-level
+      // response.search_sources for API consumers.
+      const sources = r.search_sources || [];
       if (sources.length > 0) {
         html += `<div class="admin-ai-meta-footer" style="margin-bottom:0.5rem">Search sources: ${sources.map((s: string) => `<strong>${esc(s)}</strong>`).join(' · ')}</div>`;
       }

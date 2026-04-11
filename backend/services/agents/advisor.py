@@ -1906,7 +1906,11 @@ async def _run_generate_term(
                 logger.info("Stripped floating citations from '%s' (%d chars removed)", field, removed)
                 data[field] = cleaned
 
-    # Add search source metadata for UI display
+    # Add search source metadata for UI display.
+    # Stored inside the result dict (non-underscore key) alongside other
+    # metadata like term_type / facet_intent. The router also propagates
+    # this to the top-level HandbookAdviseResponse.search_sources field
+    # so API consumers see a consistent contract.
     search_sources = []
     if tavily_context:
         search_sources.append("Tavily")
@@ -1914,7 +1918,7 @@ async def _run_generate_term(
         search_sources.append("Brave")
     if deep_context:
         search_sources.append("Exa")
-    data["_search_sources"] = search_sources
+    data["search_sources"] = search_sources
     # Ensure facet data is always present (for pipeline DB storage)
     data.setdefault("term_type", term_type)
     data.setdefault("facet_intent", intent_list)
