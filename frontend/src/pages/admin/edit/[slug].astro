@@ -145,6 +145,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             class="admin-editor-title"
             rows="1"
             placeholder="Untitled"
+            data-title-expert={post?.title || ''}
+            data-title-learner={post?.guide_items?.title_learner || ''}
           >{post?.title || ''}</textarea>
 
           <div class="admin-editor-meta">
@@ -194,6 +196,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
               <div class="admin-editor-meta-row">
                 <label class="admin-field-label" for="edit-excerpt">Excerpt</label>
                 <textarea id="edit-excerpt" class="admin-input" rows="2" style="flex:1;"
+                  data-excerpt-expert={post?.excerpt || ''}
+                  data-excerpt-learner={post?.guide_items?.excerpt_learner || ''}
                   placeholder="Brief summary for list pages and SEO...">{post?.excerpt || ''}</textarea>
               </div>
               <div class="admin-editor-meta-row">
@@ -515,10 +519,36 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       personaEditors[persona] = c;
     }
 
+    // Per-persona title/excerpt state — initialized from data attributes,
+    // updated when user types, swapped when persona tab changes.
+    const titleByPersona: Record<string, string> = {
+      expert: titleInput?.dataset.titleExpert || titleInput?.value || '',
+      learner: titleInput?.dataset.titleLearner || '',
+    };
+    const excerptByPersona: Record<string, string> = {
+      expert: excerptInput?.dataset.excerptExpert || excerptInput?.value || '',
+      learner: excerptInput?.dataset.excerptLearner || '',
+    };
+    // Initial display: learner tab is active by default (matches markup)
+    if (titleInput && titleByPersona.learner) titleInput.value = titleByPersona.learner;
+    if (excerptInput && excerptByPersona.learner) excerptInput.value = excerptByPersona.learner;
+
+    // Track edits to the active persona's value as user types
+    titleInput?.addEventListener('input', () => {
+      titleByPersona[activePersonaTab] = titleInput.value;
+    });
+    excerptInput?.addEventListener('input', () => {
+      excerptByPersona[activePersonaTab] = excerptInput.value;
+    });
+
     function setupPersonaTabs() {
       personaTabs.forEach(btn => {
         btn.addEventListener('click', async () => {
           const p = btn.dataset.personaTab!;
+          if (p === activePersonaTab) return;
+          // Save current input values back to active persona's state before swapping
+          if (titleInput) titleByPersona[activePersonaTab] = titleInput.value;
+          if (excerptInput) excerptByPersona[activePersonaTab] = excerptInput.value;
           personaTabs.forEach(b => b.classList.remove('admin-lang-tab--active'));
           btn.classList.add('admin-lang-tab--active');
           (['learner', 'expert'] as const).forEach(k => {
@@ -526,6 +556,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             if (el) el.style.display = k === p ? '' : 'none';
           });
           activePersonaTab = p;
+          // Load new persona's title/excerpt into the inputs
+          if (titleInput) titleInput.value = titleByPersona[p] || '';
+          if (excerptInput) excerptInput.value = excerptByPersona[p] || '';
           await initPersonaEditor(p);
         });
       });
@@ -584,15 +617,32 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       const focusItems = focusRaw.split(',').map((s: string) => s.trim()).filter(Boolean);
       const ogImageUrl = ogImageInput?.value || '';
 
+      // Sync the active persona's current input values back into state before save
+      if (isBusinessEditor && titleInput) titleByPersona[activePersonaTab] = titleInput.value;
+      if (isBusinessEditor && excerptInput) excerptByPersona[activePersonaTab] = excerptInput.value;
+
+      // Canonical fields use the EXPERT version (matches frontend rendering convention:
+      // news_posts.title is the expert/canonical title, guide_items.title_learner holds the learner version)
+      const canonicalTitle = isBusinessEditor ? (titleByPersona.expert || title) : title;
+      const canonicalExcerpt = isBusinessEditor ? (excerptByPersona.expert || excerpt) : excerpt;
+
       const saveBody: Record<string, any> = {
         id: isNewPost ? undefined : postId,
-        title, slug, category, tags,
-        excerpt, post_type: postType, locale, focus_items: focusItems, og_image_url: ogImageUrl,
+        title: canonicalTitle,
+        slug, category, tags,
+        excerpt: canonicalExcerpt,
+        post_type: postType, locale, focus_items: focusItems, og_image_url: ogImageUrl,
       };
 
       if (isBusinessEditor) {
         saveBody.content_learner = personaEditors.learner?.getMarkdown() || '';
         saveBody.content_expert = personaEditors.expert?.getMarkdown() || '';
+        // Persona-specific title/excerpt go into guide_items via partial merge
+        // (preserves pipeline-set fields like sources_expert, quiz_poll_*, etc.)
+        saveBody.guide_items_partial = {
+          title_learner: titleByPersona.learner || '',
+          excerpt_learner: excerptByPersona.learner || '',
+        };
       } else {
         saveBody.content_original = crepe ? crepe.getMarkdown() : '';
       }

@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { id, title, slug, category, tags, content_original, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url } = body;
+  const { id, title, slug, category, tags, content_original, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url, guide_items_partial } = body;
 
   if (!title?.trim()) {
     return new Response(JSON.stringify({ error: 'title is required' }), {
@@ -64,6 +64,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
     { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
   );
+
+  // Merge guide_items_partial into existing guide_items (preserves pipeline-set
+  // fields like sources_expert, quiz_poll_*, etc. while updating only what admin edited)
+  if (guide_items_partial && typeof guide_items_partial === 'object' && id) {
+    const { data: existing } = await supabase
+      .from('news_posts')
+      .select('guide_items')
+      .eq('id', id)
+      .single();
+    const merged: Record<string, any> = { ...(existing?.guide_items || {}) };
+    for (const [key, value] of Object.entries(guide_items_partial)) {
+      // Empty string clears the field; non-empty sets it
+      if (value === '' || value === null) {
+        delete merged[key];
+      } else {
+        merged[key] = value;
+      }
+    }
+    row.guide_items = merged;
+  } else if (guide_items_partial && typeof guide_items_partial === 'object') {
+    // New post: just use the partial as-is (after stripping empty values)
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(guide_items_partial)) {
+      if (value !== '' && value !== null) cleaned[key] = value;
+    }
+    if (Object.keys(cleaned).length > 0) row.guide_items = cleaned;
+  }
 
   if (id) {
     // Update existing
