@@ -1100,8 +1100,13 @@ ADVANCED_SECTIONS_KO = [
     ("adv_ko_1_mechanism", "## 기술적 정의와 동작 원리"),
     ("adv_ko_2_formulas", "## 핵심 수식·아키텍처·도표"),
     ("adv_ko_3_code", "## 코드 또는 의사코드"),
-    ("adv_ko_4_tradeoffs", "## 트레이드오프와 언제 무엇을 쓰나"),
+    # NOTE: Display order swapped — pitfalls (concrete failures) before tradeoffs
+    # (strategic judgment). Knowing what breaks helps reason about when to use.
+    # JSON keys keep their numeric labels (4_tradeoffs, 5_pitfalls) so existing
+    # LLM outputs still parse, but the assembled markdown places §5 content
+    # before §4 content.
     ("adv_ko_5_pitfalls", "## 프로덕션 함정"),
+    ("adv_ko_4_tradeoffs", "## 트레이드오프와 언제 무엇을 쓰나"),
     ("adv_ko_6_comm", "## 업계 대화 맥락"),
     ("adv_ko_7_related", "## 선행·대안·확장 개념"),
 ]
@@ -1110,8 +1115,9 @@ ADVANCED_SECTIONS_EN = [
     ("adv_en_1_mechanism", "## Technical Definition & How It Works"),
     ("adv_en_2_formulas", "## Formulas, Architecture, and Diagrams"),
     ("adv_en_3_code", "## Code or Pseudocode"),
-    ("adv_en_4_tradeoffs", "## Tradeoffs — When to Use What"),
+    # See KO comment above — same swap.
     ("adv_en_5_pitfalls", "## Production Pitfalls"),
+    ("adv_en_4_tradeoffs", "## Tradeoffs — When to Use What"),
     ("adv_en_6_comm", "## Industry Communication"),
     ("adv_en_7_related", "## Prerequisites, Alternatives, and Extensions"),
 ]
