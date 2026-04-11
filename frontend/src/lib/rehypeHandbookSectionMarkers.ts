@@ -80,6 +80,45 @@ function addClass(node: Element, className: string): void {
   node.properties = { ...(node.properties || {}), className: classes };
 }
 
+/**
+ * Split a pitfall `<li>` on the " → " separator that joins the 실수/해결
+ * (Mistake/Solution) halves, inserting a <br> so 해결 starts on its own
+ * line. Without this, both halves run together inline and the Solution
+ * strong gets visually lost in the middle of the item. The arrow itself
+ * is removed since the line break (plus the colored strong labels) now
+ * carries the "problem → fix" relation.
+ */
+function splitPitfallArrow(li: Element): void {
+  const children = li.children;
+  for (let i = 0; i < children.length; i++) {
+    const node = children[i];
+    if (node.type !== 'text') continue;
+
+    const arrowIdx = node.value.lastIndexOf(' → ');
+    if (arrowIdx < 0) continue;
+
+    const next = children[i + 1];
+    if (!next || next.type !== 'element') continue;
+    if ((next as Element).tagName !== 'strong') continue;
+
+    const beforeText = node.value.slice(0, arrowIdx);
+    const afterText = node.value.slice(arrowIdx + 3);
+
+    const replacement: ElementContent[] = [];
+    if (beforeText) replacement.push({ type: 'text', value: beforeText });
+    replacement.push({
+      type: 'element',
+      tagName: 'br',
+      properties: {},
+      children: [],
+    });
+    if (afterText) replacement.push({ type: 'text', value: afterText });
+
+    children.splice(i, 1, ...replacement);
+    return;
+  }
+}
+
 function stripTrailingColon(text: string): string {
   return text.replace(/[\s:：]+$/u, '');
 }
@@ -209,6 +248,14 @@ export default function rehypeHandbookSectionMarkers() {
         if (el.tagName === 'h2') return;
         if (el.tagName === 'ul' || el.tagName === 'ol') {
           addClass(el, marker.className);
+          // Pitfalls only: split each <li> on " → " so 해결 starts on a new line.
+          if (marker.className === 'hb-section-pitfalls') {
+            for (const child of el.children) {
+              if (child.type === 'element' && (child as Element).tagName === 'li') {
+                splitPitfallArrow(child as Element);
+              }
+            }
+          }
           return;
         }
       }
