@@ -245,6 +245,15 @@ function initHandbookPopup(): void {
     // Source 1: .handbook-term spans
     const termSpan = target.closest<HTMLElement>('.handbook-term');
     if (termSpan) {
+      // A primary term inside a §7 related-terms row is the anchor
+      // of a wrapping <a class="hb-related-terms__row-link">. Skip
+      // the popup and let the row's <a> navigate directly — the row
+      // reads as a single clickable entry to that term's page. Non-
+      // primary .handbook-term spans (e.g., terms mentioned inside
+      // the description) still fall through to the popup path.
+      if (termSpan.dataset.primaryTerm === 'true') {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       const slug = termSpan.dataset.slug || '';

@@ -1733,6 +1733,33 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   grid-template-columns: 1fr;
 }
 
+/* Row link — wraps the content column so the whole row navigates to
+   the primary term's page on click. Inherits color + hover styles
+   from the parent <li>. Description-level .handbook-term spans still
+   fire the popup because handbook-popup.ts preventDefaults on them,
+   stopping the row-link's default navigation for those cases. */
+.newsprint-prose .hb-related-terms__row-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.newsprint-prose .hb-related-terms__row-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* The primary term span inside the row-link keeps its existing
+   bolded + accent-linkified look. Remove the dashed underline
+   though — the whole row is now the click target, so the inline
+   underline would be visual duplication of the same affordance. */
+.newsprint-prose .hb-related-terms__row-link .handbook-term[data-primary-term="true"] {
+  border-bottom: none;
+  background: none;
+  padding: 0;
+}
+
 /* ================================================================
    HandbookSectionNav — client-side TOC in the side rail.
    Styles live here (not in the .astro component's <style>) because
