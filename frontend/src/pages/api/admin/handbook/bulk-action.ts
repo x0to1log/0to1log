@@ -41,10 +41,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const errors: { id: string; reason: string }[] = [];
 
   if (action === 'publish') {
-    // Fetch all terms to validate publish gate
+    // Fetch all terms to validate publish gate.
+    // Same policy as the single-item status endpoint: KO definition + body
+    // + categories + hero_news_context_ko + references_ko (≥1 entry).
+    // EN fields are intentionally optional.
     const { data: terms } = await supabase
       .from('handbook_terms')
-      .select('id, term, slug, definition_ko, categories, body_basic_ko, body_advanced_ko')
+      .select(`
+        id, term, slug, definition_ko, categories,
+        body_basic_ko, body_advanced_ko,
+        hero_news_context_ko, references_ko
+      `)
       .in('id', ids);
 
     const termsById = new Map((terms ?? []).map((t: any) => [t.id, t]));
@@ -57,12 +64,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
-      const missing = [];
+      const missing: string[] = [];
       if (!term.term) missing.push('term');
       if (!term.slug) missing.push('slug');
       if (!term.definition_ko) missing.push('definition_ko');
       if (!Array.isArray(term.categories) || term.categories.length === 0) missing.push('categories');
       if (!term.body_basic_ko && !term.body_advanced_ko) missing.push('body');
+      if (!term.hero_news_context_ko) missing.push('hero_news_context_ko');
+      if (!Array.isArray(term.references_ko) || term.references_ko.length === 0) missing.push('references_ko');
 
       if (missing.length > 0) {
         failed++;
