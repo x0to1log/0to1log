@@ -609,42 +609,50 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 
 Precise, technical definition. Shared across both levels.
 
-**Length rules (strict):**
-- `definition_ko`: 2~4 sentences. **Hard minimum 200, hard maximum 420. Target 260~340.**
-- `definition_en`: 2~4 sentences. **Hard minimum 200, hard maximum 450. Target 280~360.**
-- Under 200 chars → INVALID (too thin for the Expert popup use case). Over the hard max → INVALID (reader won't finish). Stay inside the target range unless a technical nuance genuinely needs the buffer.
+**Structure (strict — quality-based, not length-based):**
+- **2~4 sentences.** Not 1, not 5+. Each sentence must carry distinct information.
+- **Required chunks, in order:**
+  1. Technical definition — what this concept *is*, in domain vocabulary.
+  2. Mechanism — *how* it actually works or *what* distinguishes it.
+  3. Context or differentiator — when it matters, what problem it solves, or what it competes with.
+  Three chunks = typically 3 sentences. If one sentence naturally carries two chunks, 2 sentences is fine. If a mechanism genuinely needs elaboration, a 4th sentence is fine.
+- **NO filler phrases** ("in essence", "simply put", "essentially", "at its core", "in machine learning,", "put another way").
+- **NO repetition** of the same idea in different words — every clause must add new information.
+- **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
+- **Depth floor:** if the draft fits in under ~150 characters total, it's too thin — a reader arriving from a news-article popup can't graduate in 15 seconds with only a one-liner. Add the missing chunk (usually mechanism or context) and retry.
 
-This definition is surfaced in TWO places — both require 2~4 scannable technical sentences, not a one-liner:
-1. Hero Card on the handbook detail page (canonical technical summary)
-2. News-page Expert popup as "quick technical reference" when reading articles
+This definition is surfaced in TWO places — both require scannable technical sentences with real information density, not a dictionary-style one-liner:
+1. Hero Card on the handbook detail page (canonical technical summary).
+2. News-page Expert popup as "quick technical reference" when reading articles.
 
 Must be:
-- Technically accurate: [core definition] + [mechanism hint] + [context/usage hint]
-- Scannable: complete thoughts, no mid-sentence code or formulas
-- Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary
-- Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level
-- No padding ("In machine learning, ..."), no marketing ("revolutionary, powerful")
+- Technically accurate, using domain vocabulary without unpacking everything.
+- Scannable: complete thoughts, no mid-sentence code or formulas.
+- Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary.
+- Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level.
 
-Structure: [technical definition] + [core mechanism one-liner] + [typical usage or historical/contextual anchor]. Never just a label. Avoid deep math, code, or tables — those belong in `body_advanced`.
-
-GOOD (definition_ko, 315 chars):
+GOOD (definition_ko):
 "과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 예측이 무너지는 일반화 실패 상태다. 훈련 손실은 계속 낮아지지만 검증 손실이 반등하는 지점부터 관측된다. 주요 원인은 모델 capacity 대비 데이터 부족, 규제 부재, 훈련 에폭 과다이며, 실무에서는 dropout, weight decay, early stopping, 데이터 증강 같은 기법으로 완화한다. 편향-분산 tradeoff의 '분산 폭주' 극단으로 해석되며, 대규모 foundation 모델 시대에도 소규모 파인튜닝과 domain adaptation 시나리오에서 여전히 핵심 이슈다."
+→ Passes: 4 sentences, each a distinct chunk (definition / observation signal / causes + mitigation / context), no filler.
 
-BAD (definition_ko, 68 chars — TOO SHORT, missing mechanism/trigger):
+BAD (definition_ko — too thin, missing mechanism):
 "훈련 데이터에는 잘 맞지만 새 데이터에서는 성능이 급락하는 현상. 모델이 신호 대신 잡음까지 학습해 일반화에 실패한 상태."
-→ Fix: add mechanism, cause list, and mitigation to reach 200+ chars.
+→ Rejected: 2 sentences but they restate the same idea twice. Zero mechanism, zero context.
+  Fix: replace sentence 2 with actual mechanism (capacity / regularization / training epochs) and add one sentence of context.
 
-BAD (definition_ko, 155 chars — below Expert popup threshold):
+BAD (definition_ko — technically correct but no context):
 "과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 예측이 무너지는 일반화 실패 상태다. 훈련 손실은 계속 낮아지지만 검증 손실이 반등하는 지점부터 관측된다."
-→ This is technically accurate but too thin for the popup use case.
-  Fix: extend with concrete cause list (capacity/regulation/epochs) OR a mitigation hint (dropout/early stopping) OR context (foundation model era relevance). Target 200~400 chars.
+→ Rejected: has definition + observation but no mechanism and no context. Reader learning the term for the first time doesn't know what *causes* it or *why it matters*.
+  Fix: append the "causes + mitigation" chunk OR the "foundation-model relevance" chunk.
 
-GOOD (definition_en, 320 chars):
+GOOD (definition_en):
 "Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing. Common causes include excessive model capacity relative to dataset size, lack of regularization, and over-training. Practitioners mitigate it through dropout, weight decay, early stopping, and data augmentation. In the foundation-model era it remains a core issue in small-scale fine-tuning and domain adaptation."
+→ Passes: 4 sentences, each a distinct chunk, no filler.
 
-BAD (definition_en, 74 chars — TOO SHORT):
+BAD (definition_en — too thin):
 "Overfitting means a model memorizes training data and fails on new inputs."
-→ Fix: add mechanism + causes + mitigation to reach 200+ chars.
+→ Rejected: one sentence, no mechanism, no causes, no context.
+  Fix: add mechanism (capacity / training loss vs validation loss signal) + causes + mitigation.
 
 ---
 
@@ -917,8 +925,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "korean_name": "한국어 발음/통용 표기",
   "korean_full": "한국어 정식 명칭",
   "categories": ["ml-fundamentals"],
-  "definition_ko": "2~4문장 기술 정의 (200~400자)",
-  "definition_en": "2-4 sentence technical definition (200-450 chars)",
+  "definition_ko": "2~4문장 기술 정의 — 구조: 정의 + 메커니즘 + 맥락",
+  "definition_en": "2-4 sentence technical definition — structure: definition + mechanism + context",
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
   "basic_ko_1_plain": "문제 → 해결 → 메커니즘 본문",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
@@ -935,7 +943,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` is 200~420 chars (target 260~340), 2~4 sentences. Structure: technical definition + mechanism + context/usage. Reject if under 200 or over 420.
+✓ `definition_ko` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
 ✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -1014,34 +1022,41 @@ The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `ba
 
 Precise, technical definition. Shared across both levels.
 
-**Length rules (strict):**
-- 2~4 sentences. **Hard minimum 200 chars, hard maximum 450 chars. Target 280~360.**
-- Under 200 chars → INVALID (too thin for the Expert popup use case). Over 450 → INVALID (reader won't finish). Stay inside the target unless a technical nuance genuinely needs the buffer.
+**Structure (strict — quality-based, not length-based):**
+- **2~4 sentences.** Not 1, not 5+. Each sentence must carry distinct information.
+- **Required chunks, in order:**
+  1. Technical definition — what this concept *is*, in domain vocabulary.
+  2. Mechanism — *how* it actually works or *what* distinguishes it.
+  3. Context or differentiator — when it matters, what problem it solves, or what it competes with.
+  Three chunks ≈ 3 sentences. If one sentence naturally carries two chunks, 2 sentences is fine. If the mechanism genuinely needs elaboration, a 4th sentence is fine.
+- **NO filler phrases** ("in essence", "simply put", "essentially", "at its core", "In machine learning,", "put another way").
+- **NO repetition** of the same idea in different words — every clause must add new information.
+- **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
+- **Depth floor:** if the draft fits in roughly one short sentence, it's too thin — a reader arriving from a news-article popup can't graduate in 15 seconds with only a one-liner. Add the missing chunk (usually mechanism or context) and retry.
 
-This definition is surfaced in TWO places — both require 2~4 scannable technical sentences, not a one-liner:
-1. Hero Card on the handbook detail page (canonical technical summary)
-2. News-page Expert popup as "quick technical reference" when reading articles
+This definition is surfaced in TWO places — both require scannable technical sentences with real information density, not a dictionary-style one-liner:
+1. Hero Card on the handbook detail page (canonical technical summary).
+2. News-page Expert popup as "quick technical reference" when reading articles.
 
 Must be:
-- Technically accurate: [core definition] + [mechanism hint] + [context/usage hint]
-- Scannable: complete thoughts, no mid-sentence code or formulas
-- Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary
-- Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level
-- No padding ("In machine learning, ..."), no marketing ("revolutionary, powerful")
+- Technically accurate, using domain vocabulary without unpacking everything.
+- Scannable: complete thoughts, no mid-sentence code or formulas.
+- Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary.
+- Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level.
 
-Structure: [technical definition] + [core mechanism one-liner] + [typical usage or historical/contextual anchor]. Never just a label. Avoid deep math, code, or tables — those belong in `body_advanced`.
-
-GOOD (definition_en, 320 chars):
+GOOD (definition_en):
 "Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing. Common causes include excessive model capacity relative to dataset size, lack of regularization, and over-training. Practitioners mitigate it through dropout, weight decay, early stopping, and data augmentation. In the foundation-model era it remains a core issue in small-scale fine-tuning and domain adaptation."
+→ Passes: 4 sentences, each a distinct chunk (definition / causes / mitigation / context), no filler.
 
-BAD (definition_en, 74 chars — TOO SHORT, missing mechanism/trigger):
+BAD (definition_en — too thin):
 "Overfitting means a model memorizes training data and fails on new inputs."
-→ Fix: add mechanism + causes + mitigation to reach 200+ chars.
+→ Rejected: one sentence, no mechanism, no causes, no context.
+  Fix: add mechanism (capacity / training loss vs validation loss signal) + causes + mitigation.
 
-BAD (definition_en, 170 chars — below Expert popup threshold):
+BAD (definition_en — technically correct but no context):
 "Overfitting is a generalization failure where a model learns training-data noise as signal, causing predictions to collapse on unseen inputs as training loss keeps falling."
-→ This is technically accurate but too thin for quick Expert reference.
-  Fix: extend with causes (capacity/regularization/epochs) OR mitigations (dropout/weight decay/early stopping) OR contemporary context (foundation-model era relevance). Target 200~450 chars.
+→ Rejected: single sentence with definition only. No mechanism beyond "learns noise as signal", no causes, no context.
+  Fix: append causes (capacity / regularization / epochs) and context (why it matters today).
 
 ---
 
@@ -1311,7 +1326,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 
 ```json
 {{
-  "definition_en": "2-4 sentence technical definition (200-450 chars)",
+  "definition_en": "2-4 sentence technical definition — structure: definition + mechanism + context",
   "hero_news_context_en": "\\"quote 1\\" → meaning\\n\\"quote 2\\" → meaning\\n\\"quote 3\\" → meaning",
   "basic_en_1_plain": "Problem → solution → mechanism",
   "basic_en_2_example": "- **Scenario 1**: description\\n- **Scenario 2**: description\\n- **Scenario 3**: description",
@@ -1328,7 +1343,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_en` is 200~450 chars (target 280~360), 2~4 sentences. Structure: technical definition + mechanism + context/usage. Reject if under 200 or over 450.
+✓ `definition_en` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
