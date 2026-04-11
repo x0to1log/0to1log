@@ -649,7 +649,7 @@ async def _extract_and_create_handbook_terms(
                     if exists_by_initials.data:
                         existing = exists_by_initials.data[0]["term"]
                         logger.info("Handbook term '%s' already exists as '%s' (initials match), skipping", term_name, existing)
-                    continue
+                        continue
         except Exception as e:
             logger.warning("Duplicate check failed for '%s': %s", term_name, e)
             continue
