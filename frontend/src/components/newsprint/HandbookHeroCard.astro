@@ -40,7 +40,7 @@ const backLabel = locale === 'ko' ? '기사로 돌아가기' : 'Back to the arti
     )}
     {hasContext && (
       <>
-        <h2 class="handbook-hero-card__heading">{heading}</h2>
+        <div class="handbook-hero-card__heading" role="heading" aria-level="3">{heading}</div>
         <ul class="handbook-hero-card__news-list">
           {lines.map(line => (
             <li class="handbook-hero-card__news-line">{line}</li>
@@ -72,11 +72,13 @@ const backLabel = locale === 'ko' ? '기사로 돌아가기' : 'Back to the arti
     margin-bottom: 0;
   }
   .handbook-hero-card__heading {
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-text-muted);
-    margin: 0.875rem 0 0.5rem;
+    color: var(--color-text-secondary);
+    margin: 1rem 0 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--color-border);
     font-weight: 600;
   }
   .handbook-hero-card__news-list {

@@ -9,11 +9,14 @@ import { visit } from 'unist-util-visit';
  * For each matching h2, the plugin walks forward through siblings (stopping
  * at the next h2) and tags the first `ul`/`ol` it finds with the marker
  * class. This lets CSS style `.hb-section-pitfalls > li` as warning callouts
- * without any heading-text CSS selector gymnastics.
+ * (or `.hb-section-dialogue > li` as quote cards) without any heading-text
+ * CSS selector gymnastics.
  *
- * Currently targets Advanced §5 pitfalls. Extend the MARKERS list to add
- * more sections later (e.g., §4 tradeoffs, though that uses a different
- * grid-based plugin).
+ * Currently targets:
+ * - Advanced §5 프로덕션 함정 / Production Pitfalls → `.hb-section-pitfalls`
+ * - Advanced §6 업계 대화 맥락 / Industry Communication → `.hb-section-dialogue`
+ *
+ * Extend the MARKERS list to add more sections later.
  */
 
 interface SectionMarker {
@@ -25,6 +28,10 @@ const MARKERS: SectionMarker[] = [
   {
     className: 'hb-section-pitfalls',
     patterns: [/프로덕션\s*함정/, /production\s*pitfalls/i],
+  },
+  {
+    className: 'hb-section-dialogue',
+    patterns: [/업계\s*대화/, /Industry\s+Communication/i],
   },
 ];
 

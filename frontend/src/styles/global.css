@@ -1517,6 +1517,44 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 }
 
 /* ================================================================
+   §6 Industry dialogue — handbook Advanced only.
+   rehypeHandbookSectionMarkers tags the dialogue list with
+   `.hb-section-dialogue`. Each list item becomes a quoted-sentence
+   card with accent-color left border + italic text. Visually paired
+   with §5 pitfalls callout but using accent (not warning) color so
+   readers learn: yellow = caution, accent = quote.
+   ================================================================ */
+.newsprint-prose .hb-section-dialogue {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+.newsprint-prose .hb-section-dialogue > li {
+  list-style: none;
+  padding: 0.625rem 0.875rem 0.625rem 1rem;
+  margin: 0.5rem 0;
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.newsprint-prose .hb-section-dialogue > li::marker {
+  content: none;
+}
+
+.newsprint-prose .hb-section-dialogue > li p {
+  margin: 0;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.newsprint-prose .hb-section-dialogue > li p strong {
+  font-style: normal;
+  color: var(--color-text-primary);
+}
+
+/* ================================================================
    §6 Industry dialogue blockquote — handbook Advanced (also safe
    fallback for any blockquote elsewhere in newsprint-prose, which is
    rare). Accent-color left border + italic quote body + muted
