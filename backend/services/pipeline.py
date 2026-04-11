@@ -1409,20 +1409,50 @@ async def _generate_digest(
     # Build separate CP block — not mixed into individual news items
     # Option B: insights with quotes get blockquotes; insights with only key_point
     # get a paragraph (no blockquote). Never emit placeholder literals.
+    #
+    # Defensive cleanup: insights loaded from older checkpoints may still contain
+    # quotes wrapped in surrounding quote marks and/or scheme-less URLs. We clean
+    # at point-of-use so both new summaries AND legacy checkpoint data are safe.
+    import re as _re
+    _quote_marks = '"\u201C\u201D\u2018\u2019\''
+    _url_pat = _re.compile(
+        r"(?:https?://|\b(?:github|arxiv|twitter|x|youtu|youtube|medium|reddit|huggingface|paperswithcode|openai|anthropic|deepmind)\.(?:com|org|be)/)",
+        _re.IGNORECASE,
+    )
+
+    def _sanitize_quote(q: str) -> str | None:
+        """Strip surrounding quote marks; reject if quote contains a URL."""
+        if not isinstance(q, str):
+            return None
+        s = q.strip()
+        for _ in range(3):
+            if len(s) >= 2 and s[0] in _quote_marks and s[-1] in _quote_marks:
+                s = s[1:-1].strip()
+            else:
+                break
+        if len(s) < 10 or _url_pat.search(s):
+            return None
+        return s
+
     cp_entries = []
     for group in classified:
         insight = community_summary_map.get(group.primary_url)
         if not insight or not (insight.quotes or insight.key_point):
             continue
-        has_quotes = bool(insight.quotes)
+        # Sanitize quotes defensively (handles both fresh and checkpoint-loaded data)
+        clean_quotes = [s for q in (insight.quotes or []) if (s := _sanitize_quote(q))]
+        clean_quotes_ko = [s for q in (insight.quotes_ko or []) if (s := _sanitize_quote(q))]
+        # Align lengths: quotes_ko should match quotes count (Writer expects 1:1 mapping)
+        clean_quotes_ko = clean_quotes_ko[:len(clean_quotes)]
+        has_quotes = bool(clean_quotes)
         parts = [f"Topic: {group.group_title}"]
         parts.append(f"Platform: {insight.source_label}")
         parts.append(f"Sentiment: {insight.sentiment}")
         if has_quotes:
-            parts.append(f"HasQuotes: yes — emit {len(insight.quotes)} blockquote(s) below")
-            for i, q in enumerate(insight.quotes, start=1):
+            parts.append(f"HasQuotes: yes — emit {len(clean_quotes)} blockquote(s) below")
+            for i, q in enumerate(clean_quotes, start=1):
                 parts.append(f'English quote {i}: "{q}"')
-            for i, q in enumerate(insight.quotes_ko, start=1):
+            for i, q in enumerate(clean_quotes_ko, start=1):
                 parts.append(f'Korean quote {i} (translation of English quote {i}): "{q}"')
         else:
             parts.append("HasQuotes: no — DO NOT emit any blockquote for this topic, write key point as a regular paragraph only")
@@ -2330,14 +2360,36 @@ async def rerun_pipeline_stage(
     if category:
         stages_to_delete = [s for s in stages_to_delete if category in s or ":" not in s or s == "summary"]
     try:
+        # Compare-and-set lock: only claim the run if it's NOT already running.
+        # This prevents concurrent reruns (double-click, frontend retry, etc.)
+        # from both deleting+recreating logs and producing duplicate entries.
+        claim_result = (
+            supabase.table("pipeline_runs")
+            .update({
+                "status": "running",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "finished_at": None,
+                "last_error": None,
+            })
+            .eq("id", run_id)
+            .neq("status", "running")
+            .execute()
+        )
+        if not claim_result.data:
+            # Another rerun already has the lock; abort silently so we don't
+            # interfere with the in-progress run.
+            logger.warning(
+                "Rerun for run_id=%s rejected — another rerun already running",
+                run_id,
+            )
+            return PipelineResult(
+                batch_id=batch_id,
+                status="failed",
+                errors=["Another rerun is already running for this batch"],
+            )
+        # Lock acquired — safe to delete old logs and re-execute stages
         for stage_name in stages_to_delete:
             supabase.table("pipeline_logs").delete().eq("run_id", run_id).eq("pipeline_type", stage_name).execute()
-        supabase.table("pipeline_runs").update({
-            "status": "running",
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "finished_at": None,
-            "last_error": None,
-        }).eq("id", run_id).execute()
     except Exception as e:
         return PipelineResult(batch_id=batch_id, status="failed", message=f"Failed to prepare rerun: {e}")
 
