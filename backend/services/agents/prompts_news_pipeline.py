@@ -203,6 +203,7 @@ def _build_digest_prompt(
     sections_description: str,
     handbook_slugs: list[str],
     skeleton: str = "",
+    title_strategy: str = "",
 ) -> str:
     handbook_section = _build_handbook_section(handbook_slugs)
 
@@ -265,16 +266,18 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 
 IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, `###` sub-heading/body separation, blank lines after headings, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
 
+{title_strategy}
+
+{HALLUCINATION_GUARD}
+
 ## FINAL CHECKLIST (verify before responding)
 1. Citations: Does every paragraph end with at least one [N](URL) citation?
-2. Are ALL required `##` section headers present?
+2. **Sub-item count match**: Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)
 3. Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?
-4. Do "en" and "ko" cover the SAME news items with the SAME ## sections and ### sub-items?
-5. Is headline_ko in Korean?
-6. Does ko have citations [N](URL) at the end of every paragraph, just like en?
-7. Community Pulse: if "Community Pulse Data:" appears in the input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This is the #1 most common error — ko MUST have `## 커뮤니티 반응` with Korean quotes whenever en has `## Community Pulse`. Never omit CP from ko.
-8. Does every `###` line contain only the news item title, with no body text or citation on the same line?
-9. Is there exactly one blank line after every `###` sub-heading before the first paragraph starts?
+4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
+5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
+6. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
+7. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?
 
 """
 
@@ -314,32 +317,28 @@ RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Explain newly released models in plain language: what changed, what got better, and why people are paying attention.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Introduce notable projects from GitHub or Hugging Face. Explain what they do, who they are for, and why they are trending.
 - **## Research Papers (ko: ## Research Papers)** - Explain important papers simply: the problem, the idea, the result, and why this paper matters.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
-- **## Why It Matters (ko: ## 왜 중요한가)** - A short reader-friendly wrap-up connecting today's technical developments to the bigger AI landscape."""
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 9).
+- **## Why It Matters (ko: ## 왜 중요한가)** - A short reader-friendly wrap-up connecting today's technical developments to the bigger AI landscape.
+- **## 이번 주 시도해볼 것 (ko: ## 이번 주 시도해볼 것)** - OPTIONAL. 1-2 things a non-developer reader can ACTUALLY try this week to engage with today's research news. Examples: try a Hugging Face Space demo of the model, watch a 5-min YouTube explainer of the technique, install a free desktop tool. Format: `1. **[Action name]**: [one-line how-to with link if available]`. Skip the section entirely if no genuinely try-able item exists. NEVER list "주시하세요", "팔로우하세요", "모니터링하세요" — those are not actions."""
 
 
-RESEARCH_LEARNER_GUIDE = """READER: Curious developers, PMs, students, career changers, and non-specialists who want to follow AI research.
-READER'S GOAL: Understand today's models, repos, and papers without getting lost.
-AFTER READING: The reader understands what changed in AI research today and learned the terms needed to follow it tomorrow.
+RESEARCH_LEARNER_GUIDE = """READER: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. AI를 쫓아가지 않으면 뒤처질 것 같은 불안과 시간 결핍을 동시에 안고 있음.
+READER'S GOAL: 오늘의 AI 연구 흐름을 5분 안에 안전하게 따라잡고, 동료에게 1줄 인용할 인사이트 1개와 새 어휘 2-3개를 얻기.
+AFTER READING: 독자는 오늘 무엇이 바뀌었는지 한 문장으로 말할 수 있고, 새 용어 2-3개를 ‘아는 단어’로 만든다.
 
 Editorial intent:
-- This is a guided technical digest, not a hands-on tutorial and not a business analysis piece.
-- The reader should come away understanding what changed in AI research today.
+- This is a guided technical digest written FOR people who don't read papers — not a watered-down expert brief.
+- The reader should come away with vocabulary and a mental model, not jargon dumps.
 
 Writing rules:
-- Write like a senior colleague explaining things over coffee - approachable but substantive
-- Use analogy only when it helps. If the news is straightforward, get to the point.
-- Keep technical terms but ALWAYS add brief inline explanations ON FIRST USE
-- When using ANY acronym or abbreviated name (MoE, HisPO, DPO, RLHF, etc.), ALWAYS write the full name first, then the acronym in parentheses. Example: "Hierarchical Importance Sampling Policy Optimization (HisPO)". Never use an acronym without expanding it first.
-- When explaining a technical method, lead with WHAT IT DOES in plain language BEFORE naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time -- a technique called parallel diffusion decoding"
-- Focus on understanding, not action plans
-- Do NOT include "What To Try This Week", tutorials, step-by-step experiments, or tool recommendations unless the repo itself is the story.
-- Keep business strategy and market impact brief and secondary.
-- The emphasis is: what was released, what it does, what makes it important.
-- NEVER omit key numbers (speed improvements, benchmark scores, parameter counts, cost savings). Simplify the explanation around them, but the numbers themselves must appear. "4배 빠르다", "82% 단축" — these are facts Learner readers need too.
-- When multiple sources are provided, use different sources to build a richer story — e.g., one for what happened, another for why it matters, another for user reactions.
-- Technical/business terms should be linked to Handbook in the body text where they first appear
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Use analogies first when useful, then what changed, then why it matters."""
+- Write like a knowledgeable friend explaining over lunch — peer-level, NEVER lecturing.
+- LEAD WITH WHAT IT DOES IN PLAIN LANGUAGE before naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time — this technique is called parallel diffusion decoding"
+- Use analogies generously when they help (a complex method ↔ a familiar everyday situation). If the news is straightforward, skip analogy.
+- When introducing ANY acronym, expand it FIRST in Korean style: Korean meaning then English in parentheses. Example: "전문가 혼합(Mixture of Experts, MoE)". NEVER use an acronym without prior explanation.
+- NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize: "85.6% (이 분야 최고 수준)" not just "85.6%".
+- Connect to readers' lives where natural: "이 기술이 일상화되면 우리가 쓰는 챗봇이 더 빨라진다" — but don't force it.
+- Technical/business terms should be linked to Handbook on first appearance.
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
 
 
 # --- Business Digest Sections ---
@@ -392,27 +391,91 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
   Do NOT include source links in this section."""
 
 
-BUSINESS_LEARNER_GUIDE = """READER: Anyone interested in AI business - marketers, planners, developers, students, and curious professionals.
-READER'S GOAL: Understand AI business developments and apply them - find useful tools, anticipate industry changes, and build AI business vocabulary.
-AFTER READING: The reader understands today's business news, takes a specific action, and learned 3-5 AI/business terms.
+BUSINESS_LEARNER_GUIDE = """READER: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT 정도는 매일 쓰지만 GPU 가격이나 IPO 구조는 모름. AI 산업 변화를 '내 일에 영향이 있나' 관점에서 따라가고 싶음.
+READER'S GOAL: 오늘 AI 업계에 무엇이 일어났는지 5분 안에 따라잡고, 자기 직무(마케팅·기획·디자인·학생)에 적용할 수 있는 단서 1-2개를 얻기.
+AFTER READING: 독자는 오늘의 핵심 변화를 동료에게 1문장으로 말할 수 있고, 이번 주 안에 직접 시도해볼 액션 1-2개를 가져간다.
 
 Editorial intent:
-- This is an AI market digest for general readers.
-- The reader should leave with a clear sense of what changed in the industry today.
+- AI 시장 다이제스트지만 '비개발자 직장인 입장에서' 의미를 풀어주는 게 핵심.
+- The reader should leave with: (1) a clear sense of what changed, (2) one concrete thing they could try this week.
 
 Writing rules:
-- Write like a knowledgeable colleague explaining what matters over lunch - approachable, not lecturing
-- Before discussing a company's strategy, briefly explain what the company does
-- Use analogy when it helps explain a complex business move
-- Keep business and AI terms but explain them inline on first use
-- Connect every item to practical impact
-- Connect to daily life when relevant
-- Technical explanation is allowed, but only in service of understanding the business impact.
+- Write like a knowledgeable friend explaining over lunch — peer-level, NEVER lecturing.
+- Before discussing a company's strategy, briefly explain what the company does (assume reader knows OpenAI/Google/Meta but NOT Anthropic/Mistral/Cohere/Z.AI).
+- Use analogy when explaining a complex business move ("이건 마치 ___와 비슷합니다").
+- Connect every item to practical impact for the reader's job (마케터/기획자 관점).
+- Technical explanation is allowed, but only in service of understanding the business impact — never tech-for-tech-sake.
 - Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
-- When multiple sources cover the same news, weave in different perspectives — e.g., the company's announcement, analyst reactions, and user impact from different articles.
-- Technical/business terms should be linked to Handbook in the body text where they first appear
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you.
-- Make it interesting and accessible, not dumbed down"""
+- When multiple sources cover the same news, weave in different perspectives (announcement + analyst reaction + user impact).
+- Action Items must be ACTUALLY DOABLE by a non-developer this week — no "build a multi-agent pipeline", no "evaluate vendor lock-in risk". YES "try Meta AI in WhatsApp", "check the new ChatGPT mode", "read Anthropic's blog post".
+- Technical/business terms link to Handbook on first appearance.
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
+
+
+# --- Title Strategy (per persona) ---
+# These are injected into the system prompt as `## Title Strategy` section.
+# They guide ONLY the headline/headline_ko/excerpt/excerpt_ko fields, not the body.
+# The body still follows persona guide + skeleton.
+
+EXPERT_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
+
+Reader: senior ML engineer / AI PM / CTO. Already saw today's events on X, HN, internal Slack. Reads 0to1log for one reason — an editorial TAKE on what those events mean. Not for "what happened" — for "how to think about it".
+
+Tone: 단정체 (-다), analyst voice. 3rd person. Confident but grounded in source facts.
+Length: headline_ko 35–55 chars. excerpt_ko 1-2 sentences.
+
+Pick ONE archetype for headline_ko based on which fits today's news best:
+
+- 사건 클러스터 (Event Cluster): same week, similar move by 2+ actors. State actors + the common pattern.
+  ex: "엔비디아·Z.AI 동시 출시 — 모두 '오래 일하는 모델'을 겨냥"
+
+- 숨은 숫자 (Hidden Number): highlight a specific number from the source that mainstream headlines missed.
+  ex: "GLM-5.1의 진짜 뉴스는 SOTA가 아니라 '8시간 자율 실행' 데모다"
+
+- 주목 밖의 진짜 뉴스 (What Got Missed): counter-attention frame, smaller story is actually more important.
+  ex: "메타 발표에 시선이 몰린 사이, 앤트로픽의 5분 공지가 더 중요했다"
+
+Forbidden in headline_ko/excerpt_ko:
+- 한국 경제신문 cliché: 재편, 재정렬, 각축전, 정조준, 베팅 가속, 격화, 돌파, 공조, 본격화, 가속, 선회
+- Vendor PR verbs: 선점, 끌어올리다, 이끈다, 강세, 약진, 견인
+- Motivation invention: "진짜 의도는 X", "X 때문에 했다", "사실은 Y" (unless source explicitly states)
+- Future predictions: "Q2에", "내년", "다음 분기", "곧" (forward-looking specific)
+- Hedging: "주목된다", "전망된다", "예상된다", "관측된다"
+- Listicle pattern "X는 A, Y는 B, Z는 C" (UNLESS used inside the 사건 클러스터 archetype)"""
+
+
+LEARNER_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
+
+Reader: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. 출퇴근길에 5분 안에 "안전하게 똑똑해질 수 있는" 콘텐츠를 찾고 있음. 자존감 압박(AI 모르면 뒤처진다)과 시간 결핍이 동시에 작동.
+
+Tone: 친근체 (-에요/-습니다), peer 친구처럼. 1·2인칭("우리", "당신") 가능.
+Length: headline_ko 25–45 chars. excerpt_ko 1-2 sentences.
+
+Pick ONE archetype for headline_ko based on which fits today's news best:
+
+- 패턴 발견 (Pattern Discovery): when 3+ events share a clear theme. Show readers the bigger shape.
+  ex: "메타·앤트로픽이 같은 주에 '폐쇄형 AI'로 돌아섰어요 — 무엇이 달라지나"
+
+- 새 기준선 (New Baseline): when a previously impossible capability becomes routine. Anchor to a concrete fact.
+  ex: "AI가 8시간 혼자 일할 수 있게 된 날 — 새 기준선이 생겼어요"
+
+- 용어 입문 (Term Primer): when one keyword keeps appearing in this week's news. Promise vocabulary.
+  ex: "이번 주 키워드 '에이전트' — 5분이면 따라잡습니다"
+
+Forbidden in headline_ko/excerpt_ko:
+- English acronyms (only ChatGPT/AI/GPT allowed): NO MoE, MTP, RLHF, LLM, RAG, AGI, NVFP4, SOTA, SLM
+- Tech specs: NO "1M tokens", "4-bit", "120B parameters", "FP8", context window numbers
+- 한국 경제신문 cliché: 재편, 각축전, 정조준, 베팅, 격화, 돌파, 공조, 본격화
+- Vendor PR verbs: 선점, 끌어올리다, 이끈다, 강세
+- Self-help / exclusion tone: "당신이 알아야 할", "필독", "꼭 봐야", "개발자가 알아야 할"
+- Hype: "충격", "경악", "혁명적", "혁신"
+
+Encouraged words/patterns: 정리했어요, 사실은, 왜, 오늘, 함께, ~된 날, 이렇게 봐야 해요"""
+
+
+HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headline, excerpt, AND body)
+
+Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate."""
 
 
 # --- Per-persona skeletons ---
@@ -766,6 +829,11 @@ SKELETON_MAP = {
     ("business", "learner"): BUSINESS_LEARNER_SKELETON,
 }
 
+TITLE_STRATEGY_MAP = {
+    "expert": EXPERT_TITLE_STRATEGY,
+    "learner": LEARNER_TITLE_STRATEGY,
+}
+
 
 def get_digest_prompt(
     digest_type: str, persona: str, handbook_slugs: list[str],
@@ -785,7 +853,10 @@ def get_digest_prompt(
         (digest_type, persona),
         RESEARCH_LEARNER_SKELETON,
     )
-    return _build_digest_prompt(persona, guide, digest_type, sections, handbook_slugs, skeleton)
+    title_strategy = TITLE_STRATEGY_MAP.get(persona, LEARNER_TITLE_STRATEGY)
+    return _build_digest_prompt(
+        persona, guide, digest_type, sections, handbook_slugs, skeleton, title_strategy,
+    )
 
 
 # ──────────────────────────────────────────────

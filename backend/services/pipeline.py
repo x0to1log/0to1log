@@ -67,11 +67,17 @@ def _fill_source_titles(
     ]
 
 
-def _renumber_citations(content: str) -> tuple[str, list[dict]]:
+def _renumber_citations(
+    content: str,
+    allowed_urls: set[str] | None = None,
+) -> tuple[str, list[dict]]:
     """Renumber all [N](URL) citations sequentially by URL first-appearance order.
 
     Same URL always gets the same number. Returns (renumbered_content, source_cards).
     source_cards: [{id: 1, url: "...", title: ""}, ...] in order of appearance.
+
+    If allowed_urls is provided, citations pointing to URLs not in the allowlist
+    are stripped (LLM hallucination guard) and a warning is logged.
     """
     if not content:
         return content, []
@@ -79,6 +85,18 @@ def _renumber_citations(content: str) -> tuple[str, list[dict]]:
     citation_re = re.compile(r'\[(\d+)\]\(([^)]+)\)')
     url_to_num: dict[str, int] = {}
     source_cards: list[dict] = []
+    stripped_urls: list[str] = []
+
+    def _is_allowed(url: str) -> bool:
+        if allowed_urls is None:
+            return True
+        # Match exact, prefix, or suffix (handle trailing slashes, query params)
+        url_norm = url.rstrip("/")
+        return any(
+            url == src or url_norm == src.rstrip("/") or url.startswith(src.rstrip("/"))
+            or src.startswith(url_norm)
+            for src in allowed_urls
+        )
 
     def _assign(url: str) -> int:
         if url not in url_to_num:
@@ -89,10 +107,19 @@ def _renumber_citations(content: str) -> tuple[str, list[dict]]:
 
     def _replace(match: re.Match) -> str:
         url = match.group(2)
+        if not _is_allowed(url):
+            stripped_urls.append(url)
+            return ""  # Strip the citation entirely
         new_num = _assign(url)
         return f"[{new_num}]({url})"
 
     renumbered = citation_re.sub(_replace, content)
+    if stripped_urls:
+        logger.warning(
+            "Stripped %d hallucinated citation(s): %s",
+            len(stripped_urls),
+            ", ".join(set(stripped_urls))[:300],
+        )
     return renumbered, source_cards
 
 
@@ -1269,10 +1296,14 @@ async def _generate_digest(
     client = get_openai_client()
     model = settings.openai_model_main
     personas: dict[str, PersonaOutput] = {}
-    digest_headline = ""
-    digest_headline_ko = ""
-    digest_excerpt = ""
-    digest_excerpt_ko = ""
+    digest_headline = ""           # expert headline (becomes news_posts.title for EN)
+    digest_headline_ko = ""        # expert headline_ko (becomes news_posts.title for KO)
+    digest_excerpt = ""            # expert excerpt
+    digest_excerpt_ko = ""         # expert excerpt_ko
+    digest_headline_learner = ""           # learner headline (saved to guide_items.title_learner)
+    digest_headline_learner_ko = ""        # learner headline_ko
+    digest_excerpt_learner = ""            # learner excerpt
+    digest_excerpt_learner_ko = ""         # learner excerpt_ko
     persona_sources: dict[str, list[dict]] = {}  # {"expert": [...], "learner": [...]}
     digest_tags: list[str] = []
     digest_focus_items: list[str] = []
@@ -1314,20 +1345,34 @@ async def _generate_digest(
                 # Capture metadata from first persona (expert)
                 def _has_ko(s: str) -> bool:
                     return any('\uAC00' <= c <= '\uD7AF' for c in s)
-                if not digest_headline and data.get("headline"):
-                    h = data["headline"]
-                    if _has_ko(h):
-                        logger.warning("headline contains Korean, swapping to headline_ko")
-                        if not digest_headline_ko:
-                            digest_headline_ko = h
-                    else:
-                        digest_headline = h
-                if not digest_headline_ko and data.get("headline_ko"):
-                    digest_headline_ko = data["headline_ko"]
-                if not digest_excerpt and data.get("excerpt"):
-                    digest_excerpt = data["excerpt"]
-                if not digest_excerpt_ko and data.get("excerpt_ko"):
-                    digest_excerpt_ko = data["excerpt_ko"]
+                # Capture metadata: expert call fills the canonical fields (used in DB title/excerpt),
+                # learner call fills the persona-specific fields (saved to guide_items for learner display).
+                if persona_name == "expert":
+                    if not digest_headline and data.get("headline"):
+                        h = data["headline"]
+                        if _has_ko(h):
+                            logger.warning("headline contains Korean, swapping to headline_ko")
+                            if not digest_headline_ko:
+                                digest_headline_ko = h
+                        else:
+                            digest_headline = h
+                    if not digest_headline_ko and data.get("headline_ko"):
+                        digest_headline_ko = data["headline_ko"]
+                    if not digest_excerpt and data.get("excerpt"):
+                        digest_excerpt = data["excerpt"]
+                    if not digest_excerpt_ko and data.get("excerpt_ko"):
+                        digest_excerpt_ko = data["excerpt_ko"]
+                elif persona_name == "learner":
+                    if not digest_headline_learner and data.get("headline"):
+                        h = data["headline"]
+                        if not _has_ko(h):
+                            digest_headline_learner = h
+                    if not digest_headline_learner_ko and data.get("headline_ko"):
+                        digest_headline_learner_ko = data["headline_ko"]
+                    if not digest_excerpt_learner and data.get("excerpt"):
+                        digest_excerpt_learner = data["excerpt"]
+                    if not digest_excerpt_learner_ko and data.get("excerpt_ko"):
+                        digest_excerpt_learner_ko = data["excerpt_ko"]
                 if not digest_tags and data.get("tags"):
                     digest_tags = data["tags"]
                 if not digest_focus_items and data.get("focus_items"):
@@ -1545,9 +1590,16 @@ async def _generate_digest(
             learner_content = learner_content.replace(tag, '')
 
         # Post-process: renumber citations sequentially by URL appearance order
-        # LLM may reset [1] per section — this forces global sequential numbering
-        expert_content, expert_source_cards = _renumber_citations(expert_content)
-        learner_content, learner_source_cards = _renumber_citations(learner_content)
+        # LLM may reset [1] per section — this forces global sequential numbering.
+        # Also strip hallucinated URLs (citations pointing to URLs not in source set).
+        allowed_urls: set[str] = set(raw_content_map.keys())
+        for url, sources in (enriched_map or {}).items():
+            allowed_urls.add(url)
+            for s in sources:
+                if isinstance(s, dict) and s.get("url"):
+                    allowed_urls.add(s["url"])
+        expert_content, expert_source_cards = _renumber_citations(expert_content, allowed_urls)
+        learner_content, learner_source_cards = _renumber_citations(learner_content, allowed_urls)
 
 
         text = expert_content or learner_content or ""
@@ -1624,6 +1676,13 @@ async def _generate_digest(
             guide_items["sources_learner"] = _fill_source_titles(
                 learner_source_cards, persona_sources.get("learner") or [],
             )
+        # Persona-specific title/excerpt for learner (B2 — used in list cards, SNS preview, search)
+        learner_title = digest_headline_learner_ko if locale == "ko" else digest_headline_learner
+        learner_excerpt = digest_excerpt_learner_ko if locale == "ko" else digest_excerpt_learner
+        if learner_title:
+            guide_items["title_learner"] = learner_title
+        if learner_excerpt:
+            guide_items["excerpt_learner"] = learner_excerpt
         if guide_items:
             row["guide_items"] = guide_items
 
