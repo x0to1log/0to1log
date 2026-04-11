@@ -159,8 +159,26 @@ const handbookProcessor = unified()
   .use(rehypeCodeWindow, { collapsible: true })
   .use(rehypeStringify);
 
+/**
+ * LLM output for §4 trade-offs puts `이럴 때 적합:` / `이럴 때 부적합:`
+ * (or `Suitable:` / `Unsuitable:`) on a line by itself, but CommonMark
+ * treats an unindented non-blank line after a list item as lazy list
+ * continuation, so "부적합:" gets swallowed into the last `<li>` and the
+ * two bullet lists merge into one. Force a blank line on both sides of
+ * these labels before parsing so they become standalone paragraphs and
+ * the p/ul/p/ul shape survives into hast for the trade-offs grid plugin.
+ */
+const TRADEOFFS_LABEL_RE =
+  /^[ \t]*((?:이럴\s*때\s*[부]?적합|(?:Un)?suitable)\s*[:：])[ \t]*$/gim;
+
+function normalizeTradeoffsLabels(md: string): string {
+  return md.replace(TRADEOFFS_LABEL_RE, '\n$1\n');
+}
+
 export async function renderHandbookMarkdown(md: string): Promise<string> {
-  return getCachedOrRender('hb:' + contentHash(md), async () => String(await handbookProcessor.process(md)));
+  return getCachedOrRender('hb:' + contentHash(md), async () =>
+    String(await handbookProcessor.process(normalizeTradeoffsLabels(md))),
+  );
 }
 
 export { type TermsMap } from './rehypeHandbookTerms';
