@@ -12,7 +12,6 @@ import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.ast
 import HandbookSectionNav from '../../../components/newsprint/HandbookSectionNav.astro';
 import HandbookHeroCard from '../../../components/newsprint/HandbookHeroCard.astro';
 import HandbookReferences from '../../../components/newsprint/HandbookReferences.astro';
-import HandbookUnderstandingChecklist from '../../../components/newsprint/HandbookUnderstandingChecklist.astro';
 import PreviewReadonlyBanner from '../../../components/common/PreviewReadonlyBanner.astro';
 import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
 import ReadingProgressBar from '../../../components/common/ReadingProgressBar.astro';
@@ -43,7 +42,6 @@ const {
   // Level-independent redesign fields (2026-04-10)
   heroNewsContext,
   references,
-  sidebarChecklist,
 } = await getHandbookDetailPageData({
   locale,
   slug: pageSlug,
@@ -260,7 +258,6 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         articleRedirect={`/${locale}/handbook/${pageSlug}/`}
       >
         <HandbookSectionNav locale={locale} />
-        <HandbookUnderstandingChecklist checklist={sidebarChecklist} locale={locale} />
         <HandbookSideRail
           locale={locale}
           relatedTerms={relatedTerms}
@@ -405,11 +402,6 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.level === level));
-      // Sidebar understanding checklist is for Basic only — toggle visibility on level change
-      const checklistEl = document.querySelector<HTMLElement>('.handbook-checklist');
-      if (checklistEl) {
-        checklistEl.style.display = level === 'basic' ? '' : 'none';
-      }
       document.querySelector('.handbook-detail-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       // 본문 높이 변경 → 프로그레스바 재계산
       requestAnimationFrame(() => window.dispatchEvent(new Event('reading-content-changed')));

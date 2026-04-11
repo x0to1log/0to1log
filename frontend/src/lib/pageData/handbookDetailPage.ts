@@ -67,7 +67,6 @@ export async function getHandbookDetailPageData({
   // Level-independent fields (2026-04-10 redesign).
   // Text fields use localField (KO fallback). references is JSONB so direct access with manual fallback.
   const heroNewsContext = term ? localField(term, 'hero_news_context', locale) : '';
-  const sidebarChecklist = term ? localField(term, 'sidebar_checklist', locale) : '';
   const references: ReferenceItem[] | null = term
     ? ((locale === 'ko' ? term.references_ko : term.references_en)
        ?? (locale === 'ko' ? term.references_en : term.references_ko)
@@ -220,6 +219,5 @@ export async function getHandbookDetailPageData({
     // Level-independent redesign fields (2026-04-10)
     heroNewsContext,
     references,
-    sidebarChecklist,
   };
 }

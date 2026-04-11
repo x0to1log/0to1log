@@ -593,7 +593,6 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 2. **Basic body** (shown when user toggles Basic): 7 sections `basic_ko_1_plain` ... `basic_ko_7_related`.
 3. **Advanced body** (shown when user toggles Advanced): generated in a separate call. Do NOT produce advanced fields here.
 4. **References footer** (always visible below body, level-independent): `references_ko` JSON array.
-5. **Sidebar checklist** (shown in right rail while reading Basic): `sidebar_checklist_ko`.
 
 The old sections `basic_ko_0_summary`, `basic_ko_4_why`, `basic_ko_5_where`, `basic_ko_6b_news_context`, `basic_ko_6c_checklist`, `basic_ko_9_roles`, `basic_ko_10_learning_path`, `basic_ko_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
 
@@ -902,21 +901,6 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 ---
 
-## sidebar_checklist_ko (사이드바 전용, 본문 아님)
-
-이 필드는 Basic 뷰 사이드바에 **"이해 체크리스트"** 블록으로 렌더된다. 본문에는 포함되지 않는다.
-
-- 이 용어를 진짜 이해했는지 스스로 확인할 질문 **4~5개**.
-- **각 질문을 별도 bullet으로** 작성 (`\\n\\n`로 구분).
-- 단순 사실 암기 금지 — 이해를 확인하는 "왜/어떻게" 질문이어야 함.
-- 각 질문 앞에 `□ ` 접두사.
-- 인라인 출처 금지.
-- GOOD: "□ Self-attention에서 Q, K, V가 각각 하는 역할은 무엇이며 왜 세 개가 필요한가?\\n\\n□ RNN 대비 Transformer의 병렬 처리가 왜 가능한가?\\n\\n□ 왜 positional encoding이 없으면 순서 정보가 사라지는가?"
-- BAD: "□ Transformer가 언제 발표됐는가?" (사실 암기)
-- BAD: "□ 질문 (Ref: W&B)" (인라인 출처)
-
----
-
 ## Output JSON Structure
 
 ```json
@@ -937,8 +921,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_ko_7_related": "- (기초|유사|심화) **용어1** — 관계 + 읽는 이유\\n- (기초|유사|심화) **용어2** — ...\\n- (기초|유사|심화) **용어3** — ...\\n- (기초|유사|심화) **용어4** — ...",
   "references_ko": [
     {{"title": "...", "type": "paper", "url": "...", "tier": "primary", "annotation": "..."}}
-  ],
-  "sidebar_checklist_ko": "□ 질문1\\n\\n□ 질문2\\n\\n□ 질문3\\n\\n□ 질문4"
+  ]
 }}
 ```
 
@@ -959,7 +942,6 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
    (c) 동일 용어가 2회 이상 등장
 ✓ `references_ko` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
-✓ `sidebar_checklist_ko` has 4~5 questions testing understanding, not memorization
 ✓ No section repeats content from the hero card or from another section
 ✓ korean_name is in Korean (not English)
 ✓ NO deleted fields in output: no `basic_ko_0_summary`, `basic_ko_4_why`, `basic_ko_5_where`, `basic_ko_6b_news_context`, `basic_ko_6c_checklist`, `basic_ko_9_roles`, `basic_ko_10_learning_path`, `basic_ko_8_related`
@@ -1014,7 +996,6 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 2. **Basic body** (shown when user toggles Basic): 7 sections `basic_en_1_plain` ... `basic_en_7_related`.
 3. **Advanced body** (generated in a separate call — do NOT produce advanced fields here).
 4. **References footer** (always visible below body, level-independent): `references_en` JSON array.
-5. **Sidebar checklist** (shown in right rail while reading Basic): `sidebar_checklist_en`.
 
 The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
 
@@ -1307,21 +1288,6 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 
 ---
 
-## sidebar_checklist_en (sidebar only, not body)
-
-This field is rendered as the **"Understanding Check"** block in the right sidebar in Basic view. It is NOT part of the body.
-
-- 4~5 questions testing whether the reader actually understood the term.
-- Each question is a separate bullet separated by `\\n\\n`.
-- No rote memorization — ask "why/how" questions that test understanding.
-- Prefix each question with `□ `.
-- No inline citations.
-- GOOD: "□ What role do Q, K, V play in self-attention, and why do you need all three?\\n\\n□ Why can Transformers parallelize in a way RNNs cannot?\\n\\n□ Why does positional encoding matter — what breaks without it?"
-- BAD: "□ When was the Transformer paper published?" (rote fact)
-- BAD: "□ Question (Ref: W&B)" (inline citation)
-
----
-
 ## Output JSON Structure
 
 ```json
@@ -1337,8 +1303,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
   "basic_en_7_related": "- (before|similar|next) **Term 1** — relationship + why to read next\\n- (before|similar|next) **Term 2** — ...\\n- (before|similar|next) **Term 3** — ...\\n- (before|similar|next) **Term 4** — ...",
   "references_en": [
     {{"title": "...", "type": "paper", "url": "...", "tier": "primary", "annotation": "..."}}
-  ],
-  "sidebar_checklist_en": "□ Question 1\\n\\n□ Question 2\\n\\n□ Question 3\\n\\n□ Question 4"
+  ]
 }}
 ```
 
@@ -1359,7 +1324,6 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
    (c) repeats the same term twice
 ✓ `references_en` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
-✓ `sidebar_checklist_en` has 4~5 questions testing understanding, not memorization
 ✓ No section repeats content from hero_news_context_en or from another section
 ✓ NO deleted fields in output: no `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related`
 

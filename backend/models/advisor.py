@@ -220,9 +220,6 @@ class GenerateTermResult(BaseModel):
     # References footer: primary/secondary tiered, shared across Basic/Advanced
     references_ko: list[ReferenceItem] = []
     references_en: list[ReferenceItem] = []
-    # Sidebar checklist: shown in right rail during Basic view only
-    sidebar_checklist_ko: str = ""
-    sidebar_checklist_en: str = ""
 
 
 # --- Pipeline Auto-Extract Terms ---

@@ -1148,11 +1148,10 @@ def _assemble_all_sections(raw_data: dict) -> dict:
         if key in raw_data:
             data[key] = raw_data[key]
 
-    # Copy level-independent fields (hero card, references, sidebar)
+    # Copy level-independent fields (hero card, references).
     # These are rendered outside the Basic/Advanced body switcher.
     for key in ("hero_news_context_ko", "hero_news_context_en",
-                "references_ko", "references_en",
-                "sidebar_checklist_ko", "sidebar_checklist_en"):
+                "references_ko", "references_en"):
         if key in raw_data:
             data[key] = raw_data[key]
 

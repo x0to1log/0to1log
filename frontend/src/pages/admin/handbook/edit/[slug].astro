@@ -230,7 +230,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
               {/* Redesign fields (KO) — level-independent */}
               <details class="admin-details admin-details--redesign" open>
-                <summary>Redesign 필드 (Hero / References / Checklist) — KO</summary>
+                <summary>Redesign 필드 (Hero / References) — KO</summary>
                 <div class="admin-details-body">
                   <div class="admin-field">
                     <label for="field-hero-news-context-ko">Hero News Context (KO)</label>
@@ -242,18 +242,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                       placeholder={'"인용구1" → 의미1\n"인용구2" → 의미2\n"인용구3" → 의미3'}
                     >{term?.hero_news_context_ko || ''}</textarea>
                     <div class="admin-field-hint">정확히 3줄. 각 줄 ≤60자. 형식: "인용구" → 의미</div>
-                  </div>
-
-                  <div class="admin-field">
-                    <label for="field-sidebar-checklist-ko">Sidebar Checklist (KO)</label>
-                    <textarea
-                      name="sidebar_checklist_ko"
-                      id="field-sidebar-checklist-ko"
-                      class="admin-textarea"
-                      rows="6"
-                      placeholder={'□ 질문 1\n\n□ 질문 2\n\n□ 질문 3'}
-                    >{term?.sidebar_checklist_ko || ''}</textarea>
-                    <div class="admin-field-hint">4~5개 질문. 각 질문 앞에 □. 줄 사이 빈 줄.</div>
                   </div>
 
                   <div class="admin-field">
@@ -315,7 +303,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
               {/* Redesign fields (EN) — level-independent */}
               <details class="admin-details admin-details--redesign" open>
-                <summary>Redesign Fields (Hero / References / Checklist) — EN</summary>
+                <summary>Redesign Fields (Hero / References) — EN</summary>
                 <div class="admin-details-body">
                   <div class="admin-field">
                     <label for="field-hero-news-context-en">Hero News Context (EN)</label>
@@ -327,18 +315,6 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                       placeholder={'"quote 1" → meaning 1\n"quote 2" → meaning 2\n"quote 3" → meaning 3'}
                     >{term?.hero_news_context_en || ''}</textarea>
                     <div class="admin-field-hint">Exactly 3 lines. Each line ≤70 chars. Format: "quote" → meaning</div>
-                  </div>
-
-                  <div class="admin-field">
-                    <label for="field-sidebar-checklist-en">Sidebar Checklist (EN)</label>
-                    <textarea
-                      name="sidebar_checklist_en"
-                      id="field-sidebar-checklist-en"
-                      class="admin-textarea"
-                      rows="6"
-                      placeholder={'□ Question 1\n\n□ Question 2\n\n□ Question 3'}
-                    >{term?.sidebar_checklist_en || ''}</textarea>
-                    <div class="admin-field-hint">4~5 questions. Each prefixed with □. Blank line between questions.</div>
                   </div>
 
                   <div class="admin-field">
