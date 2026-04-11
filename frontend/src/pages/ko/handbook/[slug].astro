@@ -9,6 +9,7 @@ import { getHandbookDetailPageData } from '../../../lib/pageData/handbookDetailP
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
+import HandbookSectionNav from '../../../components/newsprint/HandbookSectionNav.astro';
 import HandbookHeroCard from '../../../components/newsprint/HandbookHeroCard.astro';
 import HandbookReferences from '../../../components/newsprint/HandbookReferences.astro';
 import HandbookUnderstandingChecklist from '../../../components/newsprint/HandbookUnderstandingChecklist.astro';
@@ -253,6 +254,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         isAuthenticated={!!user}
         articleRedirect={`/${locale}/handbook/${pageSlug}/`}
       >
+        <HandbookSectionNav locale={locale} />
         <HandbookUnderstandingChecklist checklist={sidebarChecklist} locale={locale} />
         <HandbookSideRail
           locale={locale}
