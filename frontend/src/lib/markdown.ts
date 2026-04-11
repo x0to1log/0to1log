@@ -13,6 +13,7 @@ import rehypeStringify from 'rehype-stringify';
 import rehypeHandbookTerms, { type TermsMap } from './rehypeHandbookTerms';
 import rehypeCodeWindow from './rehypeCodeWindow';
 import rehypeHandbookSectionMarkers from './rehypeHandbookSectionMarkers';
+import remarkConvertInlineMathDollars from './remarkConvertInlineMathDollars';
 import { visit } from 'unist-util-visit';
 
 /** Strip <del> tags — LLM uses ~~ for approximate values, not strikethrough. */
@@ -135,13 +136,18 @@ export async function renderMarkdown(md: string): Promise<string> {
 }
 
 // Handbook-specific processor: block math ($$...$$) only
-// singleDollarTextMath disabled to avoid currency conflicts ($/hour, $10/GB)
+// singleDollarTextMath disabled to avoid currency conflicts ($/hour, $10/GB).
+// remarkConvertInlineMathDollars runs BEFORE remarkMath to rewrite math-looking
+// $X$ pairs as $$X$$ so inline LaTeX still renders without re-enabling
+// singleDollarTextMath (currency stays untouched because the classifier
+// recognizes only LaTeX patterns).
 // Code blocks are collapsible by default — Advanced readers opt into seeing
 // long code dumps instead of scrolling past them.
 // rehypeHandbookSectionMarkers tags §5 pitfalls list for CSS callout styling.
 const handbookProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm, { singleTilde: false })
+  .use(remarkConvertInlineMathDollars)
   .use(remarkMath, { singleDollarTextMath: false })
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
@@ -175,6 +181,7 @@ export async function renderMarkdownWithTerms(
       termsProcessor = unified()
         .use(remarkParse)
         .use(remarkGfm, { singleTilde: false })
+        .use(remarkConvertInlineMathDollars)
         .use(remarkMath, { singleDollarTextMath: false })
         .use(remarkRehype, { allowDangerousHtml: true })
         .use(rehypeRaw)
