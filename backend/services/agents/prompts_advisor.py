@@ -1798,11 +1798,46 @@ and which should be REJECTED.
 {existing_terms}
 
 ## Rejection criteria (reject if ANY apply)
-1. DUPLICATE: Same concept as an existing term (including abbreviation ↔ full name, e.g., "RAG" = "Retrieval-Augmented Generation")
+1. DUPLICATE: Same concept as an existing term (including abbreviation ↔ full name, e.g., "RAG" = "Retrieval-Augmented Generation").
+   ⚠ This rule is about **concept identity**, not surface-name identity. A candidate that shares a surface name with an existing term but refers to a **distinct concept** is NOT a duplicate — see the "Name overlap" acceptance note below.
 2. TOO SPECIFIC: A benchmark, dataset, or product that appeared in one news article and is unlikely to be searched independently (e.g., "CUE-R", "ClawsBench", "PhoneticXEUS")
 3. NOT ESTABLISHED: A term coined in a single paper/product with no broad adoption (e.g., "Batched Contextual Reinforcement", "Muse Spark")
 4. TOO GENERIC: A common word that doesn't have a specific technical definition (e.g., "scaling", "automation")
 5. OVERLAPS EXISTING: The concept is already substantially covered by an existing term (e.g., "Long context" when "context window" exists, "multimodal perception" when "multimodal model" exists)
+
+## Name overlap — ACCEPT when surface name collides but concepts differ
+
+When a candidate shares its surface name with an existing handbook term
+but refers to a **distinct concept** (product vs classical term,
+different domain, different entity), **ACCEPT it**. The slug layer
+handles disambiguation downstream — the pipeline's job here is to
+decide "is this a new concept worth an entry?", not to enforce
+one-term-per-name.
+
+ACCEPT examples:
+- Existing: `[perplexity]` (info-theory metric)
+  Candidate: "Perplexity AI" → ACCEPT (search product; distinct concept,
+  distinct slug `perplexity-ai`)
+- Existing: `[Mamba (SSM architecture)]`
+  Candidate: "Mamba 2" → ACCEPT if it's an established follow-up
+  architecture; REJECT if it's an unestablished single-paper variant
+  (fall back to TOO SPECIFIC / NOT ESTABLISHED)
+- Existing: `[Gemini]` (Google LLM)
+  Candidate: "Gemini Pro 1.5" → REJECT as TOO SPECIFIC (sub-version),
+  not as DUPLICATE — the concept overlap is real but the reject reason
+  is granularity, not name collision.
+
+REJECT examples (genuine duplicates — same concept, different surface):
+- Existing: `[RAG]`
+  Candidate: "Retrieval-Augmented Generation" → REJECT (abbreviation ↔
+  full name of the same concept)
+- Existing: `[LLM]`
+  Candidate: "Large Language Model" → REJECT (same concept)
+
+When uncertain whether a name collision represents same-concept or
+distinct-concept, **prefer ACCEPT with a reason like "distinct concept
+— metric vs product"** and let the human reviewer resolve it. Coverage
+errors are cheaper to fix than silently-dropped distinct entries.
 
 ## Few-shot examples
 Existing: [RAG, Transformer, hallucination, Docker, GPU, LoRA, context window, multimodal model]
@@ -1853,6 +1888,42 @@ Given one or more news articles, extract terms that would make strong **standalo
 - Adjective/modifier phrases containing -powered, -driven, -based, -enabled, -oriented anywhere in the term (e.g., "AI-powered tools", "AI-driven efficiencies", "data-driven approach")
 - Ad-hoc compound nouns coined in a specific paper that are NOT established terms (e.g., "warping operation", "self-editing context", "verification-centric agents")
 - Over-specific sub-concepts when the parent term is the real entry (e.g., extract "attention mechanism" not "multi-head attention kernel"; extract "evolutionary algorithm" not "variation operator")
+
+## Name-clash rule (products/companies that share a name with a technical concept)
+
+Some products, companies, or tools deliberately borrow their name from a
+classical CS/ML concept (e.g., **Perplexity AI** the search product vs
+the information-theory metric *perplexity*; **Mistral AI** the company
+vs the general word; **Mamba** the state-space-model architecture vs the
+Mamba package manager). These collide at the term-name level and must
+be disambiguated at extraction time, not downstream.
+
+**Rule:** When a term name overlaps with an established technical
+concept, always extract it in its **fully-qualified form** — never bare.
+The full form usually includes a corporate suffix (`AI`, `Labs`,
+`Research`), a model size (`-7B`, `-8B`), or a platform qualifier.
+
+- BAD:  `term: "Perplexity"` (collides with the info-theory metric)
+- GOOD: `term: "Perplexity AI"` (the search product, unambiguous)
+
+- BAD:  `term: "Mistral"` (generic French word; ambiguous)
+- GOOD: `term: "Mistral AI"` (the company) OR `term: "Mistral 7B"` (the model)
+
+- BAD:  `term: "Claude"` (first name; ambiguous on its own)
+- GOOD: `term: "Claude"` IS fine only because no classical CS term is "Claude" — but you should verify the article talks about the assistant, not a person.
+
+- BAD:  `term: "Mamba"` (SSM architecture? package manager? animal?)
+- GOOD: `term: "Mamba (SSM)"` — or skip entirely if the context is too
+  ambiguous to be confident.
+
+If the article uses a bare name but the intent is clearly the product
+(context like "raised $500M", "launched", "CEO", "acquired"), **expand
+the bare name to its full branded form at extraction time**. If you
+cannot confidently expand it (no suffix exists, no context signal), set
+`confidence: "low"` so a human reviewer decides.
+
+Never extract a bare name that would create a slug collision with an
+existing technical concept entry in the handbook.
 
 ## Output JSON Structure
 
