@@ -89,21 +89,25 @@
 ### HIGH PRIORITY — 핸드북 UX 개선 (HB-UX)
 
 > **설계 문서:** [[plans/2026-04-10-handbook-ux-improvements]]
-> **배경:** 2026-04-10 Advanced 페이지 시각 리듬 부족 + 코드 섹션 스크롤 부담 + 사용자 판단력 확인 장치 부재 관찰. Basic은 HB-REDESIGN으로 정돈됐지만 Advanced는 단조로움.
+> **배경:** 2026-04-10 Advanced 페이지 시각 리듬 부족 + 코드 섹션 스크롤 부담 관찰. Basic은 HB-REDESIGN으로 정돈됐지만 Advanced는 단조로움.
 
-| Task | 상태 | 목표 | 우선도 |
-|------|------|------|--------|
-| HB-UX-01 | todo | Advanced §3 code block collapsed by default — macOS window 헤더 유지, 펼치기 버튼 추가 (rehypeCodeWindow 플러그인 옵션 확장, handbook advanced processor에만 scoping) | P1 |
-| HB-UX-02 | todo | §5 Production pitfalls callout 스타일링 — 좌측 경고 bar + 연노란 배경 (이모지 없이 CSS만) | P1 |
-| HB-UX-03 | todo | §6 Industry dialogue blockquote 스타일링 — 인용문 시각 구분 강화 | P2 |
-| HB-UX-04 | todo | §4 Tradeoffs 2-column grid — "적합한 경우" / "피해야 할 경우" heading pair 감지 rehype 플러그인 + 2-col CSS | P2 |
-| HB-UX-05 | todo | Advanced 사이드바 체크리스트 (`sidebar_checklist_advanced_ko/en` 신규 필드) — Basic "이해했나요?"와 대응되는 "판단할 수 있나요?" (judgment/application 수준 질문) | P1 |
+| Task | 상태 | 목표 | 우선도 | Commit |
+|------|------|------|--------|--------|
+| HB-UX-01 | done | Advanced §3 code block collapsed by default — macOS window 헤더 유지, 펼치기 버튼 (rehypeCodeWindow 옵션 확장, handbook advanced processor에만 scoping) | P1 | `a744824` |
+| HB-UX-02 | done | §5 Production pitfalls callout 스타일링 — rehypeHandbookSectionMarkers 플러그인으로 ul 태그 + 좌측 경고 bar + 연노란 배경 | P1 | `7571d36` + `0f7b707` (프롬프트 bullet 강제) |
+| HB-UX-03 | done | §6 blockquote CSS — 단 effect는 news blockquote에만 (handbook §6는 ul/li 구조라 별도 처리 필요 → HB-UX-04로) | P2 | `7571d36` |
+| HB-UX-04 | done | §6 Industry dialogue marker — rehypeHandbookSectionMarkers 확장 + accent border + italic + bold de-italic + Hero label semantic 수정 (h2→div role=heading) | P1 | `b64e789` |
+| HB-UX-05 | **cancelled** | ~~Advanced 사이드바 체크리스트~~ — 사용자 거부 ("판단할 수 있나요?" 인위적, 콘텐츠 감 부족) | — | — |
+| HB-UX-06 | todo | §4 Tradeoffs 2-column grid — "적합한 경우" / "피해야 할 경우" heading pair 감지 rehype 플러그인 + 2-col CSS | P2 | — |
 
 **구현 전략:**
-- **Phase 1 (즉시, ~1.5h):** HB-UX-01 + HB-UX-02 + HB-UX-03 — CSS/renderer 변경만, DB/프롬프트 최소
-- **Phase 2 (HB-MIGRATE-138과 통합, +3h):** HB-UX-04 + HB-UX-05 — 새 field/rehype plugin + regeneration 필요
+- **Phase 1 ✅ done (commits a744824 → 7571d36 → 0f7b707 → b64e789):** HB-UX-01/02/03/04 — CSS/renderer + 마커 플러그인 + 프롬프트 §5 bullet 강제. 효과 즉시.
+- **Phase 2 (HB-MIGRATE-138과 통합, +1.5h):** HB-UX-06만 남음. 새 rehype plugin (`rehypeHandbookSectionCards`) + §4 프롬프트 heading pair 강제 + regen 필요. 별도 batch 비용 arbitrage 가능.
 
-Phase 2는 HB-MIGRATE-138 실행 시점에 묶어서 하면 재생성 비용 arbitrage. 별도 regen 없이 한 번에 필드 채움.
+**HB-UX Phase 1 회고 (2026-04-11):**
+- Playwright 시각 검수가 silent failure 잡음 — HB-UX-03이 commit 시점엔 작동하는 줄 알았으나 §6 콘텐츠가 ul/li 구조라 효과 0. HB-UX-04가 그 fix.
+- §5 pitfalls 프롬프트 format이 free-form text였다가 callout 추가 후 bullet 강제 (`0f7b707`) — UI 변경이 backend prompt 수정을 trigger한 사례.
+- 마커 플러그인 (`rehypeHandbookSectionMarkers`) 패턴이 §5/§6 모두 재사용. 새 추상화 안 만들어도 확장 가능 = 좋은 plugin 설계 신호.
 
 ### 뉴스 파이프라인 — rolling 개선
 
