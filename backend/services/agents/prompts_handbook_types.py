@@ -536,7 +536,20 @@ Rate the advanced content (0-100) based on this term's type:
 - Depth: Is this senior-engineer level, not blog-post level? (0-25)
 - Accuracy: Are claims specific and verifiable? (0-25)
 - Uniqueness: Does advanced content differ from basic? (0-25)
-- Completeness: Are all 9 sections substantive? (0-25)
+- Completeness: Are all 7 sections substantive? (0-25)
+
+The advanced body is exactly 7 H2 sections (in order):
+  1. Technical Definition & How It Works
+  2. Formulas / Architecture / Diagrams
+  3. Code or Pseudocode
+  4. Production Pitfalls (❌ Mistake / ✅ Fix pairs)
+  5. Tradeoffs — When to Use What
+  6. Industry Communication (PR review / postmortem tone)
+  7. Prerequisites, Alternatives, and Extensions
+
+References live in the footer (level-independent), not in the body.
+There is NO longer a sidebar checklist, a "why it matters" section,
+or any content section beyond these seven.
 
 ## Score Interpretation
 - score = depth + accuracy + uniqueness + completeness (each 0-25, sum = 0-100)
@@ -569,10 +582,10 @@ Rate the advanced content (0-100) based on this term's type:
 - 0-7: Essentially the same content as basic
 
 ### Completeness
-- 23-25: All 9 sections substantive (min 200 chars each), no thin sections
-- 18-22: 8-9 sections substantive, 1 thin
-- 13-17: 6-7 sections substantive, 2-3 thin
-- 8-12: 4-5 sections substantive, rest thin or empty
+- 23-25: All 7 sections substantive (min 200 chars each), no thin sections, each section adds distinct information
+- 18-22: 6-7 sections substantive, at most 1 thin
+- 13-17: 5-6 sections substantive, 1-2 thin
+- 8-12: 3-4 sections substantive, rest thin or empty
 - 0-7: Multiple empty sections, incomplete coverage
 
 ## Output JSON

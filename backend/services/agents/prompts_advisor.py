@@ -594,8 +594,6 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 3. **Advanced body** (shown when user toggles Advanced): generated in a separate call. Do NOT produce advanced fields here.
 4. **References footer** (always visible below body, level-independent): `references_ko` JSON array.
 
-The old sections `basic_ko_0_summary`, `basic_ko_4_why`, `basic_ko_5_where`, `basic_ko_6b_news_context`, `basic_ko_6c_checklist`, `basic_ko_9_roles`, `basic_ko_10_learning_path`, `basic_ko_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
-
 ## Handbook Categories (choose 1-3, priority order)
 cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, data-engineering, infra-hardware, safety-ethics, products-platforms
 
@@ -944,7 +942,6 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
 ✓ No section repeats content from the hero card or from another section
 ✓ korean_name is in Korean (not English)
-✓ NO deleted fields in output: no `basic_ko_0_summary`, `basic_ko_4_why`, `basic_ko_5_where`, `basic_ko_6b_news_context`, `basic_ko_6c_checklist`, `basic_ko_9_roles`, `basic_ko_10_learning_path`, `basic_ko_8_related`
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
@@ -996,8 +993,6 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 2. **Basic body** (shown when user toggles Basic): 7 sections `basic_en_1_plain` ... `basic_en_7_related`.
 3. **Advanced body** (generated in a separate call — do NOT produce advanced fields here).
 4. **References footer** (always visible below body, level-independent): `references_en` JSON array.
-
-The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
 
 ## definition_en (2~4 sentences)
 
@@ -1325,7 +1320,6 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 ✓ `references_en` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
 ✓ No section repeats content from hero_news_context_en or from another section
-✓ NO deleted fields in output: no `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related`
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
@@ -1534,7 +1528,6 @@ Keep the same section keys; only adapt the content perspective.
 
 **Structural checks**
 ✓ Output has EXACTLY these 7 keys: adv_ko_1_mechanism, adv_ko_2_formulas, adv_ko_3_code, adv_ko_4_tradeoffs, adv_ko_5_pitfalls, adv_ko_6_comm, adv_ko_7_related
-✓ NO output fields for: adv_ko_1_technical, adv_ko_3_howworks, adv_ko_4_code (note: now `_3_code`), adv_ko_5_practical, adv_ko_6_why, adv_ko_8_refs, adv_ko_9_related, adv_ko_10_when_to_use, adv_ko_11_pitfalls
 ✓ adv_ko_1_mechanism has formal definition + flow + complexity/algorithm steps
 ✓ adv_ko_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
 ✓ adv_ko_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
@@ -1753,7 +1746,6 @@ Keep the same section keys; only adapt the content perspective.
 
 **Structural checks**
 ✓ Output has EXACTLY these 7 keys: adv_en_1_mechanism, adv_en_2_formulas, adv_en_3_code, adv_en_4_tradeoffs, adv_en_5_pitfalls, adv_en_6_comm, adv_en_7_related
-✓ NO output fields for: adv_en_1_technical, adv_en_3_howworks, adv_en_4_code (now `_3_code`), adv_en_5_practical, adv_en_6_why, adv_en_8_refs, adv_en_9_related, adv_en_10_when_to_use, adv_en_11_pitfalls
 ✓ adv_en_1_mechanism has formal definition + flow + complexity/algorithm steps
 ✓ adv_en_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
 ✓ adv_en_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
