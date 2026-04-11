@@ -1,5 +1,5 @@
-import type { Root, Text } from 'mdast';
-import { visit } from 'unist-util-visit';
+import type { Root, Text, PhrasingContent } from 'mdast';
+import { visit, SKIP } from 'unist-util-visit';
 
 /**
  * Decide whether the content inside a $...$ pair looks like LaTeX math.
@@ -32,48 +32,97 @@ export function looksLikeMath(content: string): boolean {
 
 /**
  * Match $...$ pairs on a single line. Lazy match: shortest content possible.
- *
- * Excludes:
- * - Cross-line content (no \n inside)
- * - Empty content ($$  is handled by remark-math directly)
- * - Already-double-dollar (the regex matches single-pair, leaves $$X$$ alone)
  */
-const INLINE_DOLLAR_RE = /\$([^$\n]+?)\$/g;
+const INLINE_MATH_RE = /\$([^$\n]+?)\$/g;
 
 /**
- * Remark plugin: convert math-looking $X$ pairs to $$X$$ inside text nodes.
+ * Escape HTML attribute / text content special chars (defense in depth — the
+ * LaTeX content goes inside a span that rehype-katex parses, but we still
+ * escape the few chars that could break HTML structure if KaTeX errors out
+ * and the raw content is exposed).
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Remark plugin: find math-looking $X$ pairs in text nodes and replace them
+ * with mdast `html` nodes containing `<span class="math math-inline">X</span>`.
  *
- * Runs BEFORE remark-math. The downstream parser is configured with
- * singleDollarTextMath: false, so:
- * - $$X$$ pairs we produce → parsed as math (inline if mid-paragraph)
- * - $X$ pairs we leave alone → stay as literal text
+ * Why direct HTML injection instead of `inlineMath` mdast nodes?
+ * remark-rehype only knows the `inlineMath` node type if remark-math has
+ * registered the handler for it during the SAME pipeline pass. With
+ * singleDollarTextMath:false the handlers don't always activate. Direct
+ * HTML injection is more robust: we produce the exact hast structure that
+ * rehype-katex looks for (`.math-inline` class), bypassing the handler
+ * registration uncertainty.
  *
- * Currency-like patterns ($10, $/시간) are left alone because they don't
- * match looksLikeMath() heuristics.
+ * Pipeline:
+ *   markdown text "$P(t_{1:n})$"
+ *   → this plugin → mdast `html` node `<span class="math math-inline">P(t_{1:n})</span>`
+ *   → remarkRehype → hast (html node passes through as raw)
+ *   → rehypeRaw → parses the html string into proper hast element
+ *   → rehypeSanitize → keeps `<span class>` (allowed in our schema)
+ *   → rehypeKatex → finds `.math-inline` and renders KaTeX MathML/HTML
  *
- * Why a preprocessor instead of toggling singleDollarTextMath: true?
- * Because that re-introduces the GPU $/시간 currency-vs-math conflict
- * (commit 6b5f1f5 disabled it for that reason). This plugin lets math
- * and currency coexist by classifying content shape, not delimiter shape.
+ * Currency-like patterns ($10, $/시간) don't match looksLikeMath() and stay
+ * in text nodes as literal text.
  */
 export default function remarkConvertInlineMathDollars() {
   return (tree: Root) => {
-    visit(tree, 'text', (node: Text) => {
+    visit(tree, 'text', (node: Text, index, parent) => {
+      if (!parent || typeof index !== 'number') return;
       if (!node.value.includes('$')) return;
 
-      let changed = false;
-      const newValue = node.value.replace(INLINE_DOLLAR_RE, (match, inner) => {
-        if (!inner.trim()) return match;
-        if (looksLikeMath(inner)) {
-          changed = true;
-          return `$$${inner}$$`;
-        }
-        return match;
-      });
-
-      if (changed) {
-        node.value = newValue;
+      // Find all math matches in this text node
+      const matches: Array<{ start: number; end: number; content: string }> = [];
+      for (const m of node.value.matchAll(INLINE_MATH_RE)) {
+        if (m.index === undefined) continue;
+        const inner = m[1];
+        if (!inner.trim()) continue;
+        if (!looksLikeMath(inner)) continue;
+        matches.push({
+          start: m.index,
+          end: m.index + m[0].length,
+          content: inner,
+        });
       }
+
+      if (matches.length === 0) return;
+
+      // Build replacement nodes: alternating text + html (math span)
+      const newNodes: PhrasingContent[] = [];
+      let cursor = 0;
+      for (const match of matches) {
+        if (match.start > cursor) {
+          newNodes.push({
+            type: 'text',
+            value: node.value.slice(cursor, match.start),
+          });
+        }
+        // Inject raw HTML span. rehype-raw parses this into hast,
+        // rehype-katex then renders the KaTeX content.
+        newNodes.push({
+          type: 'html',
+          value: `<span class="math math-inline">${escapeHtml(match.content)}</span>`,
+        });
+        cursor = match.end;
+      }
+      if (cursor < node.value.length) {
+        newNodes.push({
+          type: 'text',
+          value: node.value.slice(cursor),
+        });
+      }
+
+      // Replace the original text node with the new sequence
+      parent.children.splice(index, 1, ...newNodes);
+
+      // Skip past the inserted nodes so we don't re-visit them
+      return [SKIP, index + newNodes.length];
     });
   };
 }
