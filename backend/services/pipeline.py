@@ -1207,6 +1207,36 @@ def _check_structural_penalties(
                     f"{len(long_headings)} over-long `###` heading(s) (body stuck to title?) in {persona_name} {locale}"
                 )
 
+    # Check 7: One-Line Summary hard limit (-3 each, max -6)
+    # KO: ≤60 Hangul chars (excluding whitespace). EN: ≤15 words.
+    def _extract_one_liner(content: str, heading: str) -> str:
+        match = _re.search(
+            rf"^##\s*{_re.escape(heading)}\s*\n+(.+?)(?:\n|$)",
+            content,
+            _re.MULTILINE,
+        )
+        return match.group(1).strip() if match else ""
+
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output:
+            continue
+        if output.ko:
+            ko_line = _extract_one_liner(output.ko, "한 줄 요약")
+            ko_len = len(_re.sub(r"\s+", "", ko_line))
+            if ko_len > 60:
+                penalty += 3
+                warnings.append(
+                    f"한 줄 요약 too long ({ko_len} chars > 60) in {persona_name} ko"
+                )
+        if output.en:
+            en_line = _extract_one_liner(output.en, "One-Line Summary")
+            en_words = len(en_line.split()) if en_line else 0
+            if en_words > 15:
+                penalty += 3
+                warnings.append(
+                    f"One-Line Summary too long ({en_words} words > 15) in {persona_name} en"
+                )
+
     return min(penalty, 40), warnings
 
 

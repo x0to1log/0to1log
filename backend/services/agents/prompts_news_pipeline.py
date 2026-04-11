@@ -211,6 +211,18 @@ def _build_digest_prompt(
     title_strategy: str = "",
 ) -> str:
     handbook_section = _build_handbook_section(handbook_slugs)
+    learner_ko_rule = LEARNER_KO_LANGUAGE_RULE if persona == "learner" else ""
+    one_line_summary_checklist = (
+        "\n8. One-Line Summary hard limit: is `## 한 줄 요약` ≤60 Korean chars with ONE central idea? "
+        "Is `## One-Line Summary` ≤15 English words? NO comma-chained multi-topic sentences."
+    )
+    learner_ko_checklist = (
+        "\n9. KO language purity: does the `ko` field contain any banned English connective words "
+        "(hence, thus, so, and, but, however, therefore, i.e., e.g., vs, via)? Are technical acronyms "
+        "(RAG, CLI, WAL, MCP, ONNX, PSNR, etc.) introduced with Korean meaning on first use?"
+        if persona == "learner"
+        else ""
+    )
 
     return f"""You are a {persona}-level AI news digest writer for 0to1log.
 
@@ -283,6 +295,8 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 
 {HALLUCINATION_GUARD}
 
+{ONE_LINE_SUMMARY_RULE}
+{learner_ko_rule}
 ## FINAL CHECKLIST (verify before responding)
 1. Citations: Does every paragraph end with at least one [N](URL) citation?
 2. **Sub-item count match**: Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)
@@ -290,7 +304,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
 6. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
-7. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?
+7. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?{one_line_summary_checklist}{learner_ko_checklist}
 
 """
 
@@ -491,6 +505,38 @@ HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headlin
 Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate."""
 
 
+ONE_LINE_SUMMARY_RULE = """## One-Line Summary — HARD LIMIT (applies to BOTH en AND ko)
+
+The `## One-Line Summary` / `## 한 줄 요약` section MUST be exactly ONE sentence with ONE central idea.
+
+- KO: ≤60 Korean characters (excluding spaces). EN: ≤15 words.
+- NEVER list multiple topics connected by commas, em-dashes, or "and"/"그리고"/"또한".
+- Pick the SINGLE most important development of the day. Supporting stories belong in their own sections.
+- BAD (3 topics, 120+ chars): "A가 X하고, B는 Y하고, C는 Z한다 — 판도가 재편되고 있어요"
+- BAD (comma-chained): "OpenAI restructures, Meta invests $21B, and Alibaba tops rankings"
+- GOOD (1 topic, 25 chars): "알리바바가 '해피호스'의 주인공으로 드러났어요"
+- GOOD (1 topic, 10 words): "Alibaba revealed as the mystery top-ranked video AI model."
+"""
+
+
+LEARNER_KO_LANGUAGE_RULE = """## KO Language Purity (LEARNER ONLY — applies to the `ko` field)
+
+Learner readers are Korean non-developers. Keep the Korean text Korean.
+
+1. **NEVER insert English connective or filler words mid-sentence**. Banned: "hence", "thus", "so", "and", "but", "however", "therefore", "i.e.", "e.g.", "vs", "via", "or", "also". Use 한국어 connectives only: "그래서", "하지만", "또한", "즉", "예를 들어", "대 (vs.)", "-을 통해".
+
+2. **Technical acronyms and jargon**: on FIRST use, write the Korean meaning FIRST with the acronym in parentheses. Example format: `검색 증강 생성(RAG)`, `명령줄 인터페이스(CLI)`, `쓰기 앞 로그(WAL)`, `모델 컨텍스트 프로토콜(MCP)`. After first mention, the acronym alone is OK. Covers: RAG, CLI, WAL, MCP, ONNX, CPU, GPU, SDK, API, PSNR, SSIM, LPIPS, IPO, CoT, GAN.
+
+3. **Proper nouns (company, product, person, place) stay in English**: OpenAI, Meta, Google, Anthropic, Nvidia, CoreWeave, GitHub, Hugging Face, Claude Code, ChatGPT — do NOT transliterate these.
+
+4. **Consumer brand names should be Koreanized when a natural Korean form exists**: Instagram → 인스타그램, WhatsApp → 왓츠앱, YouTube → 유튜브, Facebook → 페이스북, TikTok → 틱톡. Keep English for developer/API products.
+
+5. **Common English nouns with natural Korean equivalents → Korean**: feedback → 피드백(OK, loan word) / 의견, deadline → 마감, launch → 출시, benchmark → 벤치마크(OK) / 성능 비교, workflow → 워크플로(OK), vendor → 공급사, baseline → 기준선.
+
+Before submitting, scan the `ko` field for these banned English connective words and fix any you find.
+"""
+
+
 # --- Per-persona skeletons ---
 # Each skeleton shows the EXACT output structure for that persona+type combination.
 # LLM uses this as a template — keeps headers, citation format, paragraph count.
@@ -543,7 +589,7 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 **Korean ("ko"):**
 ```
 ## 한 줄 요약
-OpenAI가 엔터프라이즈 AI에 올인하면서 소비자 AI 비디오 시장에서 철수하고, 인력을 두 배로 늘린다.
+OpenAI가 Sora를 종료하고 엔터프라이즈 AI에 컴퓨트를 재배치한다.
 
 ## Big Tech
 ### OpenAI, Sora 종료 후 엔터프라이즈 AI 집중
@@ -587,7 +633,7 @@ BUSINESS_LEARNER_SKELETON = """
 **English ("en"):**
 ```
 ## One-Line Summary
-OpenAI is hiring big, Cloudflare makes AI agents faster, and a new policy framework could reshape the industry.
+OpenAI is shutting down Sora to put its compute behind enterprise AI tools.
 
 ## Big Tech
 ### OpenAI Plans to Double Its Workforce
@@ -630,7 +676,7 @@ The expansion targets research, engineering, and product roles. As AI models get
 **Korean ("ko"):**
 ```
 ## 한 줄 요약
-OpenAI가 직원을 두 배로 늘리고, Cloudflare가 AI를 더 빠르게 만들며, 새로운 AI 정책이 업계를 바꿀 수 있습니다.
+OpenAI가 Sora를 접고 엔터프라이즈 AI 도구에 컴퓨트를 몰아주기로 했어요.
 
 ## Big Tech
 ### OpenAI, 직원 두 배 확충 계획
@@ -676,7 +722,7 @@ RESEARCH_EXPERT_SKELETON = """
 (NOTE: This example shows Research Papers and Open Source sections. If LLM & SOTA Models news exists that day, include that section too with the same depth.)
 ```
 ## One-Line Summary
-Diffusion-based decoding disrupts document OCR while multi-agent verification tackles LLM hallucination at scale.
+Diffusion-based decoding delivers 3.2x faster document OCR while cutting language-prior bias.
 
 ## Research Papers
 ### MinerU-Diffusion: Document OCR via Diffusion Decoding
@@ -717,7 +763,7 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 **Korean ("ko"):**
 ```
 ## 한 줄 요약
-확산 기반 디코딩이 문서 OCR의 자기회귀(autoregressive) 패러다임에 도전하고, 멀티 에이전트 검증이 LLM 환각(hallucination) 문제에 새로운 해법을 제시한다.
+확산 기반 디코딩이 문서 OCR을 3.2배 가속하며 언어 편향 의존도를 낮춘다.
 
 ## Research Papers
 ### MinerU-Diffusion: 확산 디코딩 기반 문서 OCR
@@ -761,7 +807,7 @@ RESEARCH_LEARNER_SKELETON = """
 (NOTE: This example shows Research Papers and Open Source sections. If LLM & SOTA Models news exists that day, include that section too.)
 ```
 ## One-Line Summary
-New AI research makes document scanning dramatically faster and helps AI systems avoid making things up.
+A new AI reads document pages 3x faster by looking at the whole page at once.
 
 ## Research Papers
 ### MinerU-Diffusion: A Faster Way to Read Documents
@@ -798,7 +844,7 @@ The clever part: each agent only sees part of the information, so they cannot ju
 **Korean ("ko"):**
 ```
 ## 한 줄 요약
-문서를 읽는 AI가 3배 빨라지고, AI가 거짓말하는 문제를 AI끼리 검증하는 기술이 등장했습니다.
+문서 인식(OCR) AI가 페이지 전체를 한눈에 보는 방식으로 3배 빨라졌어요.
 
 ## Research Papers
 ### MinerU-Diffusion: 문서를 한꺼번에 읽는 새로운 방식
