@@ -1495,19 +1495,26 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   background: color-mix(in srgb, var(--color-accent) 5%, transparent);
   border-left: 3px solid var(--color-accent);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+  color: var(--color-text-secondary);
 }
 
 .newsprint-prose .hb-section-dialogue > li::marker {
   content: none;
 }
 
-.newsprint-prose .hb-section-dialogue > li p {
+/* Loose list case (remark wraps each <li> in <p> when items are
+   separated by blank lines). Remove the inherited paragraph spacing
+   so the quote card reads as a single block. */
+.newsprint-prose .hb-section-dialogue > li > p {
   margin: 0;
-  font-style: italic;
-  color: var(--color-text-secondary);
 }
 
-.newsprint-prose .hb-section-dialogue > li p strong {
+/* Bold terms within the quote stay upright even when the surrounding
+   text is italic. Also lift the color back to primary so the emphasis
+   actually reads. Works for both tight (li > strong) and loose
+   (li > p > strong) list cases. */
+.newsprint-prose .hb-section-dialogue > li strong {
   font-style: normal;
   color: var(--color-text-primary);
 }
