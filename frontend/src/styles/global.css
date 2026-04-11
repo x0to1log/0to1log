@@ -1596,6 +1596,113 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 }
 
 /* ================================================================
+   Related terms "next step rows" — Basic "함께 읽으면 좋은 용어"
+   and Advanced "선행·대안·확장 개념". rehypeHandbookSectionMarkers
+   tags the list with `.hb-related-terms`. Each <li> becomes a
+   clickable row: term name (auto-linkified) in accent color with a
+   dashed underline, description wrapping below, right-side → arrow
+   that slides on hover. Horizontal dividers only, no card — keeps
+   navigation visually distinct from §4 grid / §6 quote cards while
+   staying lighter than either.
+   ================================================================ */
+.newsprint-prose .hb-related-terms {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.newsprint-prose .hb-related-terms > li {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  list-style: none;
+  position: relative;
+  padding: 0.875rem 2.25rem 0.875rem 1rem;
+  margin: 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  transition: background-color 150ms ease;
+}
+
+.newsprint-prose .hb-related-terms > li::marker {
+  content: none;
+}
+
+.newsprint-prose .hb-related-terms > li:hover {
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+}
+
+/* Tag pill — sits in the fixed left grid column so labels stack
+   vertically and readers can eye-filter by category. */
+.newsprint-prose .hb-related-terms__tag {
+  display: inline-block;
+  justify-self: start;
+  padding: 0.1875rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, transparent);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Content column — wraps term name + description (and absorbs any
+   loose-list <p> wrappers remark produced). */
+.newsprint-prose .hb-related-terms__content > p {
+  margin: 0;
+}
+
+/* Term name — the <strong> typically wraps an auto-linkified <a>. */
+.newsprint-prose .hb-related-terms__content strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.newsprint-prose .hb-related-terms__content strong a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+  background: none;
+  padding: 0;
+}
+
+.newsprint-prose .hb-related-terms > li:hover .hb-related-terms__content strong a {
+  border-bottom-style: solid;
+}
+
+/* Right-side "→" affordance */
+.newsprint-prose .hb-related-terms > li::after {
+  content: "→";
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 150ms ease, color 150ms ease;
+}
+
+.newsprint-prose .hb-related-terms > li:hover::after {
+  color: var(--color-accent);
+  transform: translateY(-50%) translateX(3px);
+}
+
+/* Graceful fallback: when there's no pill (older content), collapse
+   the empty grid column so the row reads like a single-column list. */
+.newsprint-prose .hb-related-terms > li:not(:has(.hb-related-terms__tag)) {
+  grid-template-columns: 1fr;
+}
+
+/* ================================================================
    HandbookSectionNav — client-side TOC in the side rail.
    Styles live here (not in the .astro component's <style>) because
    the <li>/<a> children are built at runtime via JS and therefore

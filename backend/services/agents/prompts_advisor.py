@@ -818,10 +818,16 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 - **basic_ko_7_related** (함께 읽으면 좋은 용어, 4~6개):
   **학습 흐름 다음 단계**로 읽으면 좋은 관련 용어 4~6개. 예전 `8_related` + `10_learning_path` Part 2 통합.
-  형식: `- **용어명** — 이 용어와의 관계 + 왜 다음에 읽어야 하는지 (한 줄)`.
+  형식: `- **용어명** (기초|비슷|심화) — 이 용어와의 관계 + 왜 다음에 읽어야 하는지 (한 줄)`.
+  **카테고리 태그 필수** — 3가지 중 하나:
+  - `기초` = 이 용어 이해에 먼저 필요한 선행 지식 (전제)
+  - `비슷` = 같은 층위의 유사 개념이나 비교 대상
+  - `심화` = 이 용어를 알고 난 다음에 읽으면 좋은 심화/확장 개념
   단순 관계 설명이 아니라 **비교 포인트**(성능 차이, 용도 차이, 트레이드오프) 또는 **학습 순서 이유**를 포함해서 독자가 클릭하고 싶게 만들어라.
-  BAD: "**TPU** — Google 개발 AI 특화 칩, 대규모 딥러닝 최적화" (사전식 설명, 클릭 욕구 없음)
-  GOOD: "**TPU** — Google이 'GPU로는 부족하다'며 직접 만든 칩. 학습은 GPU 대비 5배 빠르지만 범용성은 떨어짐 → GPU를 이해한 다음 비교 관점으로 읽기 좋음"
+  BAD: "**TPU** — Google 개발 AI 특화 칩, 대규모 딥러닝 최적화" (태그 누락 + 사전식 설명)
+  GOOD: "- **GPU** (기초) — TPU를 이해하기 전에 먼저 알아야 할 병렬 연산 하드웨어의 기본."
+  GOOD: "- **H100** (비슷) — 같은 'AI 훈련용 가속기' 범주에서 NVIDIA 쪽 대표. TPU와 용도는 겹치지만 생태계·비용이 다름."
+  GOOD: "- **MoE** (심화) — TPU를 어느 정도 이해한 뒤 '어떻게 더 큰 모델을 효율적으로 돌릴까' 단계로 넘어갈 때 읽기 좋음."
   **참고**: 관련 용어가 아직 핸드북에 없어도 괜찮다. 프론트엔드가 용어 존재 여부를 확인해 "(예정)" 라벨을 자동으로 붙인다. 용어 이름만 정확히 쓰면 된다.
 
 ---
@@ -900,7 +906,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "basic_ko_4_impact": "- **제품/서비스1**: 변화\\n- **제품/서비스2**: 변화\\n- ...",
   "basic_ko_5_caution": "- ❌ 오해: ... → ✅ 실제: ...\\n- ❌ 오해: ... → ✅ 실제: ...\\n- ❌ 오해: ... → ✅ 실제: ...",
   "basic_ko_6_comm": "- \\"문장1\\"\\n- \\"문장2\\"\\n- \\"문장3\\"\\n- \\"문장4\\"\\n- \\"문장5\\"",
-  "basic_ko_7_related": "- **용어1** — 관계 + 읽는 이유\\n- **용어2** — ...\\n- **용어3** — ...\\n- **용어4** — ...",
+  "basic_ko_7_related": "- **용어1** (기초|비슷|심화) — 관계 + 읽는 이유\\n- **용어2** (기초|비슷|심화) — ...\\n- **용어3** (기초|비슷|심화) — ...\\n- **용어4** (기초|비슷|심화) — ...",
   "references_ko": [
     {{"title": "...", "type": "paper", "url": "...", "tier": "primary", "annotation": "..."}}
   ],
@@ -918,7 +924,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ `basic_ko_4_impact` does NOT list learning resources, docs, tutorials, or library names as bullets — those belong to references_ko. If 3+ bullets look like "자료 나열", rewrite the section.
 ✓ `basic_ko_5_caution` has EXACTLY 3 misconception pairs, not 4, not 2
 ✓ `basic_ko_6_comm` has 5 sentences in team-meeting/slack tone, not news article tone
-✓ `basic_ko_7_related` has 4~6 entries, each with comparison/learning-order reason (not dictionary definition)
+✓ `basic_ko_7_related` has 4~6 entries. Every entry starts with `- **용어명** (기초|비슷|심화) —` (Korean tag required, one of the three exactly, no English tags). Each gives a comparison/learning-order reason (not a dictionary definition).
 ✓ `references_ko` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
 ✓ `sidebar_checklist_ko` has 4~5 questions testing understanding, not memorization
@@ -1186,10 +1192,16 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 - **basic_en_7_related** (Related Reading, 4~6 items):
   4~6 **related terms to read next** in a learning flow. Merges the old `8_related` + `10_learning_path Part 2`.
-  Format: `- **Term name** — relationship to this term + why to read it next (one line).`
+  Format: `- **Term name** (before|similar|next) — relationship to this term + why to read it next (one line).`
+  **Category tag required** — exactly one of:
+  - `before` = prerequisite concept you should read first
+  - `similar` = parallel concept at the same level / comparison point
+  - `next` = deeper / follow-up concept to read after this one
   Not a dictionary definition — include **comparison points** (performance/use-case/trade-off differences) or **learning-order reasons** that make the reader want to click.
-  BAD: "**TPU** — Google's AI-specialized chip, optimized for large-scale deep learning" (dictionary, no curiosity)
-  GOOD: "**TPU** — Google's answer to 'GPUs aren't enough'; ~5x faster training than GPUs but narrower general-purpose use → good to read after GPU for comparison."
+  BAD: "**TPU** — Google's AI-specialized chip, optimized for large-scale deep learning" (missing tag + dictionary tone)
+  GOOD: "- **GPU** (before) — Understand the general-purpose parallel-compute hardware first; TPU is the specialized cousin."
+  GOOD: "- **H100** (similar) — Same 'AI training accelerator' category on the NVIDIA side; overlapping use case but different ecosystem and cost profile."
+  GOOD: "- **Mixture of Experts** (next) — Once TPUs feel familiar, this is the natural next question: how do we run even bigger models efficiently?"
   **Note**: It's OK if some related terms don't yet exist in the handbook. The frontend auto-labels missing terms as "(coming soon)". Just write correct term names.
 
 ---
@@ -1264,7 +1276,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
   "basic_en_4_impact": "- **Product/service**: change\\n- **Shift in practice**: mechanism\\n- ...",
   "basic_en_5_caution": "- ❌ Myth: ... → ✅ Reality: ...\\n- ❌ Myth: ... → ✅ Reality: ...\\n- ❌ Myth: ... → ✅ Reality: ...",
   "basic_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- \\"sentence 3\\"\\n- \\"sentence 4\\"\\n- \\"sentence 5\\"",
-  "basic_en_7_related": "- **Term 1** — relationship + why to read next\\n- **Term 2** — ...\\n- **Term 3** — ...\\n- **Term 4** — ...",
+  "basic_en_7_related": "- **Term 1** (before|similar|next) — relationship + why to read next\\n- **Term 2** (before|similar|next) — ...\\n- **Term 3** (before|similar|next) — ...\\n- **Term 4** (before|similar|next) — ...",
   "references_en": [
     {{"title": "...", "type": "paper", "url": "...", "tier": "primary", "annotation": "..."}}
   ],
@@ -1282,7 +1294,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ✓ `basic_en_4_impact` does NOT list learning resources, docs, tutorials, or library names as bullets — those belong to references_en. If 3+ bullets look like resource listings, rewrite.
 ✓ `basic_en_5_caution` has EXACTLY 3 myth-reality pairs, not 4, not 2
 ✓ `basic_en_6_comm` has 5 sentences in team-meeting/slack tone, not news-article tone
-✓ `basic_en_7_related` has 4~6 entries, each with comparison/learning-order reason (not dictionary definition)
+✓ `basic_en_7_related` has 4~6 entries. Every entry starts with `- **Term** (before|similar|next) —` (tag required, exactly one of the three). Each gives a comparison/learning-order reason (not a dictionary definition).
 ✓ `references_en` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
 ✓ `sidebar_checklist_en` has 4~5 questions testing understanding, not memorization
@@ -1433,12 +1445,14 @@ Keep the same section keys; only adapt the content perspective.
   **Must differentiate from `basic_ko_6_comm`** — Basic uses Slack/standup tone, Advanced uses PR review/design doc/incident tone.
 
 - **adv_ko_7_related** (선행·대안·확장 개념, 4~6개):
-  Related terms categorized: **Prerequisites** (learn first), **Alternatives** (competitors), **Extensions** (what comes next).
-  형식: `- **용어** (prerequisite|alternative|extension) — 기술적 관계 + 왜 이 관점에서 중요한가`
+  Related terms categorized: **선행** (Prerequisites — learn first), **대안** (Alternatives — competitors), **확장** (Extensions — what comes next).
+  형식: `- **용어** (선행|대안|확장) — 기술적 관계 + 왜 이 관점에서 중요한가`
+  **한국어 태그 필수** — `선행`, `대안`, `확장` 중 하나. 영어 태그(prerequisite/alternative/extension) 금지.
   Do NOT repeat Basic's `7_related` learning-flow framing. Here, focus on **technical dependency** and **system design choice**.
-  GOOD: "- **Multi-head attention** (prerequisite) — single-head attention의 한계(표현력 제약)를 풀기 위해 제안된 구조. Transformer를 이해하려면 먼저 잡아야 함."
-  GOOD: "- **Mamba** (alternative) — state space model 기반으로 O(n²) → O(n)으로 복잡도 개선. long-context에서 트레이드오프 비교 대상."
-  GOOD: "- **Mixture of Experts** (extension) — Transformer 기반 FFN을 expert pool로 확장. 파라미터 확장 + 추론 비용 제어를 동시에 노림."
+  GOOD: "- **Multi-head attention** (선행) — single-head attention의 한계(표현력 제약)를 풀기 위해 제안된 구조. Transformer를 이해하려면 먼저 잡아야 함."
+  GOOD: "- **Mamba** (대안) — state space model 기반으로 O(n²) → O(n)으로 복잡도 개선. long-context에서 트레이드오프 비교 대상."
+  GOOD: "- **Mixture of Experts** (확장) — Transformer 기반 FFN을 expert pool로 확장. 파라미터 확장 + 추론 비용 제어를 동시에 노림."
+  BAD: "- **Multi-head attention** (prerequisite) — ..." — 반려 (영어 태그)
 
 ---
 
@@ -1452,7 +1466,7 @@ Keep the same section keys; only adapt the content perspective.
   "adv_ko_4_tradeoffs": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
   "adv_ko_5_pitfalls": "- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...",
   "adv_ko_6_comm": "- \\"문장 1\\"\\n- \\"문장 2\\"\\n- ...",
-  "adv_ko_7_related": "- **용어** (prerequisite|alternative|extension) — 관계"
+  "adv_ko_7_related": "- **용어** (선행|대안|확장) — 관계"
 }}
 ```
 

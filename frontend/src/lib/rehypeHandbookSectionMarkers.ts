@@ -53,6 +53,15 @@ const MARKERS: SectionMarker[] = [
       /How\s+It\s+Sounds/i,
     ],
   },
+  {
+    className: 'hb-related-terms',
+    patterns: [
+      /함께\s*읽으면/,
+      /선행[·ㆍ]/,
+      /Related\s+Reading/i,
+      /Prerequisites/i,
+    ],
+  },
 ];
 
 const TRADEOFFS_H2_PATTERNS = [/트레이드오프/, /tradeoffs?/i];
@@ -82,6 +91,92 @@ function addClass(node: Element, className: string): void {
 
 function stripTrailingColon(text: string): string {
   return text.replace(/[\s:：]+$/u, '');
+}
+
+/**
+ * Related-terms tag extraction. Matches the ` (TAG)` suffix pattern
+ * the advisor prompt produces directly after the bold term name, e.g.
+ *   "<strong>Term</strong> (기초) — description"
+ *   "<strong>Term</strong> (prerequisite) — description"
+ * Both KO friendly-Basic tags (기초/비슷/심화), KO Advanced tags
+ * (선행/대안/확장), EN Basic tags (before/similar/next), and EN
+ * Advanced tags (prerequisite/alternative/extension) are recognized.
+ */
+const RELATED_TAG_RE =
+  /^\s*\((기초|비슷|심화|선행|대안|확장|before|similar|next|prerequisite|alternative|extension)\)\s*/;
+
+/**
+ * Transform a related-terms <li> so the inline `(tag)` marker becomes a
+ * leading pill span + a content wrapper. Grid layout in CSS aligns the
+ * pills into a fixed-width column so readers can eye-filter by tag.
+ *
+ * Input (loose list):
+ *   <li><p><strong><a>Term</a></strong> (기초) — description</p></li>
+ * Output:
+ *   <li>
+ *     <span class="hb-related-terms__tag" data-tag="기초">기초</span>
+ *     <div class="hb-related-terms__content">
+ *       <p><strong><a>Term</a></strong> — description</p>
+ *     </div>
+ *   </li>
+ *
+ * Leaves the <li> untouched if the tag pattern isn't found (graceful
+ * degradation for older generations that didn't emit the tag yet).
+ */
+function extractRelatedTermTag(li: Element): void {
+  // Find the first text node that sits immediately after a <strong>
+  // and starts with ` (tag)`. Walk the tree one level deep — the
+  // <strong> lives either directly under <li> (tight list) or under
+  // a <p> child (loose list).
+  const containers: Element[] = [li];
+  for (const child of li.children) {
+    if (child.type === 'element' && (child as Element).tagName === 'p') {
+      containers.push(child as Element);
+    }
+  }
+
+  for (const container of containers) {
+    const kids = container.children;
+    for (let i = 0; i < kids.length; i++) {
+      const cur = kids[i];
+      if (cur.type !== 'element') continue;
+      if ((cur as Element).tagName !== 'strong') continue;
+
+      const next = kids[i + 1];
+      if (!next || next.type !== 'text') continue;
+
+      const match = (next as { value: string }).value.match(RELATED_TAG_RE);
+      if (!match) continue;
+
+      const tag = match[1];
+      // Strip the leading ` (tag) ` (or ` (tag)`) from the text node
+      (next as { value: string }).value = (next as { value: string }).value.slice(
+        match[0].length,
+      );
+
+      // Build the pill span
+      const pill: Element = {
+        type: 'element',
+        tagName: 'span',
+        properties: {
+          className: ['hb-related-terms__tag'],
+          'data-tag': tag,
+        },
+        children: [{ type: 'text', value: tag }],
+      };
+
+      // Wrap all existing <li> children in a content div, then prepend
+      // the pill so CSS grid puts it in the fixed left column.
+      const contentWrap: Element = {
+        type: 'element',
+        tagName: 'div',
+        properties: { className: ['hb-related-terms__content'] },
+        children: [...li.children],
+      };
+      li.children = [pill, contentWrap];
+      return;
+    }
+  }
 }
 
 /**
@@ -209,6 +304,14 @@ export default function rehypeHandbookSectionMarkers() {
         if (el.tagName === 'h2') return;
         if (el.tagName === 'ul' || el.tagName === 'ol') {
           addClass(el, marker.className);
+          // Related-terms only: extract tag pills from each <li>.
+          if (marker.className === 'hb-related-terms') {
+            for (const liChild of el.children) {
+              if (liChild.type === 'element' && (liChild as Element).tagName === 'li') {
+                extractRelatedTermTag(liChild as Element);
+              }
+            }
+          }
           return;
         }
       }
