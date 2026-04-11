@@ -4,13 +4,17 @@ import { visit } from 'unist-util-visit';
 /**
  * Rehype plugin: shape specific handbook sections for custom styling.
  *
- * Two operations on Advanced handbook bodies:
+ * Two operations on handbook bodies:
  *
- * 1. §5 프로덕션 함정 / Production Pitfalls → `ul.hb-section-pitfalls`
- *    §6 업계 대화 / Industry Communication → `ul.hb-section-dialogue`
+ * 1. §6 업계 대화 / Industry Communication → `ul.hb-section-dialogue`
  *    Basic "대화에서는 이렇게" / "How It Sounds in Conversation"
  *    also → `ul.hb-section-dialogue` (same quote-card layout).
- *    (simple class injection so CSS can target the list)
+ *    Simple class injection so CSS can target the list.
+ *
+ *    (§5 프로덕션 함정 used to get a `.hb-section-pitfalls` tag here too.
+ *    The prompt now emits `- ❌ 실수: ... → ✅ 해결: ...` which is the
+ *    same shape as Basic "자주 하는 오해", so §5 is rendered as a plain
+ *    bullet list with no custom tagging or styling.)
  *
  * 2. §4 트레이드오프 / Tradeoffs → wraps `적합/부적합` into a 2-column grid.
  *    Input shape (produced by the advisor prompt):
@@ -40,10 +44,6 @@ interface SectionMarker {
 }
 
 const MARKERS: SectionMarker[] = [
-  {
-    className: 'hb-section-pitfalls',
-    patterns: [/프로덕션\s*함정/, /production\s*pitfalls/i],
-  },
   {
     className: 'hb-section-dialogue',
     patterns: [
@@ -78,45 +78,6 @@ function addClass(node: Element, className: string): void {
     : [];
   if (!classes.includes(className)) classes.push(className);
   node.properties = { ...(node.properties || {}), className: classes };
-}
-
-/**
- * Split a pitfall `<li>` on the " → " separator that joins the 실수/해결
- * (Mistake/Solution) halves, inserting a <br> so 해결 starts on its own
- * line. Without this, both halves run together inline and the Solution
- * strong gets visually lost in the middle of the item. The arrow itself
- * is removed since the line break (plus the colored strong labels) now
- * carries the "problem → fix" relation.
- */
-function splitPitfallArrow(li: Element): void {
-  const children = li.children;
-  for (let i = 0; i < children.length; i++) {
-    const node = children[i];
-    if (node.type !== 'text') continue;
-
-    const arrowIdx = node.value.lastIndexOf(' → ');
-    if (arrowIdx < 0) continue;
-
-    const next = children[i + 1];
-    if (!next || next.type !== 'element') continue;
-    if ((next as Element).tagName !== 'strong') continue;
-
-    const beforeText = node.value.slice(0, arrowIdx);
-    const afterText = node.value.slice(arrowIdx + 3);
-
-    const replacement: ElementContent[] = [];
-    if (beforeText) replacement.push({ type: 'text', value: beforeText });
-    replacement.push({
-      type: 'element',
-      tagName: 'br',
-      properties: {},
-      children: [],
-    });
-    if (afterText) replacement.push({ type: 'text', value: afterText });
-
-    children.splice(i, 1, ...replacement);
-    return;
-  }
 }
 
 function stripTrailingColon(text: string): string {
@@ -232,7 +193,7 @@ export default function rehypeHandbookSectionMarkers() {
       }
     });
 
-    // Pass 2: tag §5/§6 lists with marker classes (existing behavior).
+    // Pass 2: tag §6 dialogue lists with marker class.
     visit(tree, 'element', (node: Element, index, parent) => {
       if (node.tagName !== 'h2' || !parent || index === undefined) return;
 
@@ -248,14 +209,6 @@ export default function rehypeHandbookSectionMarkers() {
         if (el.tagName === 'h2') return;
         if (el.tagName === 'ul' || el.tagName === 'ol') {
           addClass(el, marker.className);
-          // Pitfalls only: split each <li> on " → " so 해결 starts on a new line.
-          if (marker.className === 'hb-section-pitfalls') {
-            for (const child of el.children) {
-              if (child.type === 'element' && (child as Element).tagName === 'li') {
-                splitPitfallArrow(child as Element);
-              }
-            }
-          }
           return;
         }
       }

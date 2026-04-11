@@ -1407,19 +1407,21 @@ Keep the same section keys; only adapt the content perspective.
   Real failure modes engineers hit in production.
   **구성: 3~4개 mistake-solution 쌍, 반드시 마크다운 bullet list 형식.**
 
-  형식 (필수):
+  형식 (필수 — Basic 자주 하는 오해와 동일 shape):
   ```
-  - **실수**: 구체적 상황 → **해결**: 대응법
-  - **실수**: 구체적 상황 → **해결**: 대응법
-  - **실수**: 구체적 상황 → **해결**: 대응법
+  - ❌ 실수: 구체적 상황 → ✅ 해결: 대응법
+  - ❌ 실수: 구체적 상황 → ✅ 해결: 대응법
+  - ❌ 실수: 구체적 상황 → ✅ 해결: 대응법
   ```
 
-  각 실수는 실제 엔지니어링 경험에서 나온 것. 프론트엔드가 이 list를 감지해 경고 callout으로 렌더링하니 **반드시 `- ` bullet으로 시작**할 것. 평문 단락 금지.
+  각 실수는 실제 엔지니어링 경험에서 나온 것. **반드시 `- ❌ 실수:` 로 시작하고 반드시 ` → ✅ 해결:` 를 포함**. 평문 단락 금지, bold(`**`) 없음, 이모지(❌/✅)는 semantic 마커이므로 필수. 각 side(실수 / 해결) 최소 40자.
 
-  GOOD: `- **실수**: context window를 꽉 채우면 응답 품질이 급락한다 → **해결**: 입력을 70% 이하로 유지, 나머지는 RAG로 분리.`
-  GOOD: `- **실수**: embedding 모델을 교체하면 기존 벡터 DB 전체를 재인덱싱해야 한다 → **해결**: 초기에 embedding 모델을 신중히 선택하고 버전 락을 건다.`
+  GOOD: `- ❌ 실수: context window를 꽉 채우면 응답 품질이 급락한다 → ✅ 해결: 입력을 70% 이하로 유지, 나머지는 RAG로 분리.`
+  GOOD: `- ❌ 실수: embedding 모델을 교체하면 기존 벡터 DB 전체를 재인덱싱해야 한다 → ✅ 해결: 초기에 embedding 모델을 신중히 선택하고 버전 락을 건다.`
   BAD (평문, bullet 없음): `실수: context window... -> 해결: 입력을...` — 반려
-  BAD (막연함): `- **실수**: 튜토리얼 없이 시작하면 어렵다 → **해결**: 공식 문서를 읽는다.` — 반려
+  BAD (bold 사용): `- **실수**: ... → **해결**: ...` — 반려 (이제 bold 대신 이모지 사용)
+  BAD (이모지 누락): `- 실수: ... → 해결: ...` — 반려 (❌/✅ 마커 필수)
+  BAD (막연함): `- ❌ 실수: 튜토리얼 없이 시작하면 어렵다 → ✅ 해결: 공식 문서를 읽는다.` — 반려
 
 - **adv_ko_6_comm** (업계 대화 맥락, 6~8개 문장):
   Sentences as they appear in **PR reviews, design docs, architecture reviews, incident postmortems** — not casual Slack.
@@ -1448,7 +1450,7 @@ Keep the same section keys; only adapt the content perspective.
   "adv_ko_2_formulas": "수식과 도표 ($$로 감싼 LaTeX 또는 비교표)",
   "adv_ko_3_code": "```python\\n...\\n```",
   "adv_ko_4_tradeoffs": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
-  "adv_ko_5_pitfalls": "- **실수**: ... → **해결**: ...\\n- **실수**: ... → **해결**: ...\\n- **실수**: ... → **해결**: ...",
+  "adv_ko_5_pitfalls": "- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...",
   "adv_ko_6_comm": "- \\"문장 1\\"\\n- \\"문장 2\\"\\n- ...",
   "adv_ko_7_related": "- **용어** (prerequisite|alternative|extension) — 관계"
 }}
@@ -1470,7 +1472,7 @@ Keep the same section keys; only adapt the content perspective.
 ✓ adv_ko_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
 ✓ adv_ko_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
 ✓ adv_ko_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
-✓ adv_ko_5_pitfalls has 3+ concrete mistake-solution pairs (each ≥40 chars per side)
+✓ adv_ko_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ 실수:` and contains ` → ✅ 해결:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_ko_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
 ✓ adv_ko_7_related has 4~6 entries, each tagged (prerequisite|alternative|extension)
 ✓ NO reference list or link bullets in any section — references belong in the footer (already generated)
@@ -1591,19 +1593,21 @@ Keep the same section keys; only adapt the content perspective.
   Real failure modes engineers hit in production.
   **Structure: 3-4 mistake-solution pairs, MUST be a markdown bullet list.**
 
-  Required format:
+  Required format (same shape as Basic "Common Misconceptions"):
   ```
-  - **Mistake**: specific situation → **Solution**: response
-  - **Mistake**: specific situation → **Solution**: response
-  - **Mistake**: specific situation → **Solution**: response
+  - ❌ Mistake: specific situation → ✅ Fix: response
+  - ❌ Mistake: specific situation → ✅ Fix: response
+  - ❌ Mistake: specific situation → ✅ Fix: response
   ```
 
-  Each mistake must come from real engineering experience. The frontend detects this list and renders it as warning callouts, so **every pitfall MUST start with `- `** (bullet). Flowing paragraphs are forbidden.
+  Each mistake must come from real engineering experience. **Every bullet MUST start with `- ❌ Mistake:` and MUST contain ` → ✅ Fix:`**. No flowing paragraphs, no bold (`**`). The ❌/✅ emojis are semantic markers and are required. Each side (Mistake / Fix) at least 40 chars.
 
-  GOOD: `- **Mistake**: Filling the context window to capacity degrades response quality → **Solution**: Keep input under 70% of the window and offload the rest to RAG.`
-  GOOD: `- **Mistake**: Swapping embedding models forces a full re-index of the vector DB → **Solution**: Pick the embedding model carefully up front and lock the version.`
+  GOOD: `- ❌ Mistake: Filling the context window to capacity degrades response quality → ✅ Fix: Keep input under 70% of the window and offload the rest to RAG.`
+  GOOD: `- ❌ Mistake: Swapping embedding models forces a full re-index of the vector DB → ✅ Fix: Pick the embedding model carefully up front and lock the version.`
   BAD (flowing paragraph, no bullet): `Mistake: Filling the context... -> Solution: Keep input...` — rejected
-  BAD (too vague): `- **Mistake**: Starting without a tutorial is hard → **Solution**: Read the official docs.` — rejected
+  BAD (bold syntax): `- **Mistake**: ... → **Solution**: ...` — rejected (use emoji markers, not bold)
+  BAD (missing emoji): `- Mistake: ... → Fix: ...` — rejected (❌/✅ markers required)
+  BAD (too vague): `- ❌ Mistake: Starting without a tutorial is hard → ✅ Fix: Read the official docs.` — rejected
 
 - **adv_en_6_comm** (Industry Communication, 6-8 sentences):
   Sentences as they appear in **PR reviews, design docs, architecture reviews, incident postmortems** — not casual Slack.
@@ -1632,7 +1636,7 @@ Keep the same section keys; only adapt the content perspective.
   "adv_en_2_formulas": "Math/diagrams ($$-wrapped LaTeX or comparison tables)",
   "adv_en_3_code": "```python\\n...\\n```",
   "adv_en_4_tradeoffs": "Suitable: ...\\nUnsuitable: ...",
-  "adv_en_5_pitfalls": "- **Mistake**: ... → **Solution**: ...\\n- **Mistake**: ... → **Solution**: ...\\n- **Mistake**: ... → **Solution**: ...",
+  "adv_en_5_pitfalls": "- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...",
   "adv_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- ...",
   "adv_en_7_related": "- **Term** (prerequisite|alternative|extension) — relationship"
 }}
@@ -1654,7 +1658,7 @@ Keep the same section keys; only adapt the content perspective.
 ✓ adv_en_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
 ✓ adv_en_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
 ✓ adv_en_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
-✓ adv_en_5_pitfalls has 3+ concrete mistake-solution pairs (each side ≥40 chars)
+✓ adv_en_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ Mistake:` and contains ` → ✅ Fix:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_en_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
 ✓ adv_en_7_related has 4~6 entries, each tagged (prerequisite|alternative|extension)
 ✓ NO reference list or link bullets in any section — references belong in the footer (already generated)

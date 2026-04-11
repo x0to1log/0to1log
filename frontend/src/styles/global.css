@@ -1476,65 +1476,11 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 }
 
 /* ================================================================
-   §5 Pitfalls callout — handbook Advanced only.
-   rehypeHandbookSectionMarkers tags the pitfalls list with
-   `.hb-section-pitfalls`. Toned down to match §4 tradeoffs visual
-   weight: same 1px frame + 3px left bar + ~5% warning tint. The
-   "signature" lives only in the semantic inline colors — 실수/실패
-   in warning and 해결 in success — so the content itself, not the
-   container, carries the "warning" signal. Top counter tab removed;
-   the surrounding <ol> already provides ordering implicitly.
-   ================================================================ */
-.newsprint-prose .hb-section-pitfalls {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0.875rem;
-}
-
-.newsprint-prose .hb-section-pitfalls > li {
-  list-style: none;
-  padding: 0.75rem 1rem 0.875rem 1rem;
-  margin: 0.875rem 0;
-  background: color-mix(in srgb, var(--color-warning) 5%, transparent);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-warning);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.newsprint-prose .hb-section-pitfalls > li::marker {
-  content: none;
-}
-
-/* 실수 (first strong) — warning color, inline */
-.newsprint-prose .hb-section-pitfalls > li > strong:first-child {
-  display: inline;
-  color: var(--color-warning);
-  font-weight: 700;
-  margin: 0;
-  font-size: inherit;
-}
-
-/* 해결 (second strong) — success color */
-.newsprint-prose .hb-section-pitfalls > li > strong:not(:first-child) {
-  color: var(--color-success);
-  font-weight: 700;
-}
-
-.newsprint-prose .hb-section-pitfalls > li p {
-  margin: 0.25rem 0 0;
-}
-
-.newsprint-prose .hb-section-pitfalls > li > :last-child {
-  margin-bottom: 0;
-}
-
-/* ================================================================
-   §6 Industry dialogue — handbook Advanced only.
-   rehypeHandbookSectionMarkers tags the dialogue list with
-   `.hb-section-dialogue`. Each list item becomes a quoted-sentence
-   card with accent-color left border + italic text. Visually paired
-   with §5 pitfalls callout but using accent (not warning) color so
-   readers learn: yellow = caution, accent = quote.
+   Dialogue quote cards — handbook.
+   rehypeHandbookSectionMarkers tags the Advanced §6 "업계 대화 맥락"
+   and Basic "대화에서는 이렇게" lists with `.hb-section-dialogue`.
+   Each list item becomes a quoted-sentence card with accent-color
+   left border + italic text.
    ================================================================ */
 .newsprint-prose .hb-section-dialogue {
   list-style: none;
