@@ -208,7 +208,8 @@ export async function renderMarkdownWithTerms(
         .use(rehypeSanitize, sanitizeSchemaWithTerms)
         .use(rehypeKatex)
         .use(rehypeShiki, shikiOptions as any)
-        .use(rehypeCodeWindow)
+        .use(rehypeHandbookSectionMarkers)
+        .use(rehypeCodeWindow, { collapsible: true })
         .use(rehypeStringify);
       termsProcessorCache.set(termsMap, termsProcessor);
     }

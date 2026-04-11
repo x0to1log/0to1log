@@ -116,7 +116,7 @@ export async function getHandbookDetailPageData({
     const hasTerms = handbookTermsMap.size > 0;
     const renderMd = hasTerms
       ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
-      : (md: string) => renderMarkdown(md);
+      : (md: string) => renderHandbookMarkdown(md);
 
     // Run markdown rendering and DB queries in parallel — they don't depend on each other
     // Advanced uses handbookProcessor (block math $$...$$ only) for formulas
