@@ -6736,6 +6736,91 @@ body.auth-prompt-open {
   display: block;
 }
 
+/* ── News TOC (H2 only, mounted inside ReadingActionsRail, below progress bar) ── */
+.newsprint-toc {
+  margin-bottom: 1.5rem;
+}
+
+.newsprint-toc[hidden] {
+  display: none;
+}
+
+.newsprint-toc__title {
+  margin: 0 0 0.625rem;
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.newsprint-toc__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: np-toc;
+}
+
+.newsprint-toc__item {
+  counter-increment: np-toc;
+  padding: 0;
+  margin: 0.0625rem 0;
+}
+
+.newsprint-toc__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.625rem 0.4375rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.newsprint-toc__link::before {
+  content: counter(np-toc);
+  flex: 0 0 1rem;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.newsprint-toc__text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.newsprint-toc__link:hover {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+}
+
+.newsprint-toc__item[data-active="true"] > .newsprint-toc__link {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  border-left-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.newsprint-toc__item[data-active="true"] > .newsprint-toc__link::before {
+  color: var(--color-accent);
+}
+
+@media (max-width: 1024px) {
+  .newsprint-toc {
+    display: none;
+  }
+}
+
 /* ── Guide Items (5-Block) ── */
 .newsprint-guide-items {
   margin: 2rem 0 1.5rem;

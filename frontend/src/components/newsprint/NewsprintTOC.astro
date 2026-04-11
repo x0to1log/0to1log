@@ -1,0 +1,110 @@
+---
+/**
+ * NewsprintTOC — dynamic H2 TOC for news detail pages.
+ *
+ * Scrapes h2 headings from `.newsprint-prose[data-article-find-root]` at
+ * runtime and builds an inline card placed above the guide-items aside.
+ * Rebuilds on `newsprint:article-content-updated` so persona toggle
+ * (expert/learner) stays in sync. Hidden on viewports below 1024px and
+ * when the current content has fewer than 3 H2 headings.
+ *
+ * Styles live in global.css because `<li>`/`<a>` children are created at
+ * runtime via document.createElement and therefore don't carry Astro's
+ * scoping attribute.
+ */
+interface Props {
+  locale: 'ko' | 'en';
+}
+const { locale } = Astro.props;
+const isKo = locale === 'ko';
+const label = isKo ? '목차' : 'Contents';
+---
+
+<nav class="newsprint-toc" data-newsprint-toc aria-label={label} hidden>
+  <p class="newsprint-toc__title">{label}</p>
+  <ol class="newsprint-toc__list" data-newsprint-toc-list></ol>
+</nav>
+
+<script>
+  let observer: IntersectionObserver | null = null;
+  const liByHeadingId = new Map<string, HTMLLIElement>();
+
+  function buildTOC(): void {
+    const nav = document.querySelector<HTMLElement>('[data-newsprint-toc]');
+    const list = document.querySelector<HTMLOListElement>('[data-newsprint-toc-list]');
+    const body = document.querySelector<HTMLElement>('.newsprint-prose[data-article-find-root]');
+    if (!nav || !list || !body) return;
+
+    const headings = Array.from(body.querySelectorAll<HTMLHeadingElement>('h2'));
+    if (headings.length < 3) {
+      nav.hidden = true;
+      list.innerHTML = '';
+      if (observer) { observer.disconnect(); observer = null; }
+      liByHeadingId.clear();
+      return;
+    }
+
+    if (observer) { observer.disconnect(); observer = null; }
+    liByHeadingId.clear();
+    list.innerHTML = '';
+
+    headings.forEach((h, idx) => {
+      if (!h.id) h.id = `newsprint-section-${idx}`;
+      const li = document.createElement('li');
+      li.className = 'newsprint-toc__item';
+      li.dataset.active = 'false';
+
+      const a = document.createElement('a');
+      a.className = 'newsprint-toc__link';
+      a.href = `#${h.id}`;
+      const fullText = (h.textContent || '').trim();
+      a.title = fullText;
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'newsprint-toc__text';
+      textSpan.textContent = fullText;
+      a.appendChild(textSpan);
+
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const top = h.getBoundingClientRect().top + window.scrollY - 96;
+        window.scrollTo({ top, behavior: 'smooth' });
+        history.replaceState(null, '', `#${h.id}`);
+      });
+
+      li.appendChild(a);
+      list.appendChild(li);
+      liByHeadingId.set(h.id, li);
+    });
+
+    nav.hidden = false;
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topmost = visible.reduce((a, b) =>
+          a.boundingClientRect.top < b.boundingClientRect.top ? a : b
+        );
+        const activeId = (topmost.target as HTMLElement).id;
+        liByHeadingId.forEach((li, id) => {
+          li.dataset.active = id === activeId ? 'true' : 'false';
+        });
+      },
+      { rootMargin: '-20% 0% -60% 0%', threshold: 0 }
+    );
+
+    headings.forEach((h) => observer!.observe(h));
+  }
+
+  function init(): void {
+    buildTOC();
+    document.addEventListener('newsprint:article-content-updated', buildTOC);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>

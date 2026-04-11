@@ -6,6 +6,7 @@ import { t } from '../../../i18n/index';
 import { normalizeCategorySlug, getCategoryLabel } from '../../../lib/categories';
 import { getNewsDetailPageData } from '../../../lib/pageData/newsDetailPage';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
+import NewsprintTOC from '../../../components/newsprint/NewsprintTOC.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
@@ -194,6 +195,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         commentCount={commentCount}
         isLiked={isLiked}
       >
+        <NewsprintTOC locale="en" />
         <NewsprintSideRail locale="en" focusItems={focusItems} similarPosts={similarPosts} relatedTerms={relatedTerms} />
       </ReadingActionsRail>
     </Fragment>
