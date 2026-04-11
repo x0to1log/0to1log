@@ -40,6 +40,8 @@ const {
   activePersona,
   personaHtmlMap,
   hasPersonaSwitcher,
+  displayTitle,
+  displayExcerpt,
 } = await getNewsDetailPageData({
   locale: 'ko',
   slug: pageSlug,
@@ -67,8 +69,8 @@ const editionMap: Record<string, string> = {
 const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || ''] || '딥 다이브') : '딥 다이브';
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
-const pageTitle = post ? post.title : '찾을 수 없음';
-const pageDescription = post?.excerpt?.slice(0, 155) || undefined;
+const pageTitle = post ? (displayTitle || post.title) : '찾을 수 없음';
+const pageDescription = (displayExcerpt || post?.excerpt || '').slice(0, 155) || undefined;
 const altSlugValue = pairedSlug || undefined;
 const isWeekly = post?.post_type === 'weekly';
 const weekTerms: Array<{slug: string; term: string; definition: string}> = isWeekly ? (post?.guide_items?.week_terms || []) : [];
@@ -112,8 +114,8 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         locale="ko"
         slug={pageSlug}
         showSlug={false}
-        title={post.title}
-        excerpt={post.excerpt}
+        title={displayTitle || post.title}
+        excerpt={displayExcerpt || post.excerpt}
         category={post.category}
         publishedAt={post.published_at}
         readingTimeMin={post.reading_time_min}

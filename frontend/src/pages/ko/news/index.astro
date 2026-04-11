@@ -6,6 +6,7 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCategorySlug, getPostTypeLabel } from '../../../lib/categories';
+import { resolveDisplayTitleExcerpt, getEffectivePersona } from '../../../lib/personaTitle';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintHeadline from '../../../components/newsprint/NewsprintHeadline.astro';
 import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
@@ -34,7 +35,7 @@ const [postsResult, histRes, bmRes, sc] = await Promise.all([
   supabase
     ? supabase
         .from('news_posts')
-        .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, excerpt')
+        .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, excerpt, guide_items')
         .eq('status', 'published')
         .eq('locale', 'ko')
         .eq('category', 'ai-news')
@@ -61,6 +62,14 @@ if (postsResult.error) {
 }
 (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
 (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
+
+// Resolve persona-aware title/excerpt for each post (learner default for anonymous)
+const persona = getEffectivePersona(Astro.locals.profile);
+for (const p of posts) {
+  const resolved = resolveDisplayTitleExcerpt(p, persona);
+  p.display_title = resolved.title;
+  p.display_excerpt = resolved.excerpt;
+}
 
 const headline = posts.find(p => p.post_type === 'business') ?? null;
 const rest = posts.filter(p => p !== headline);
@@ -111,8 +120,8 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
         {headline && (
           <NewsprintHeadline
             href={`/ko/news/${headline.slug}/`}
-            title={headline.title}
-            excerpt={headline.excerpt}
+            title={headline.display_title || headline.title}
+            excerpt={headline.display_excerpt || headline.excerpt}
             category={headline.category}
             publishedAt={headline.published_at}
             readingTimeMin={headline.reading_time_min}
@@ -130,11 +139,11 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
             {rest.map((post) => (
               <NewsprintListCard
                 href={`/ko/news/${post.slug}/`}
-                title={post.title}
+                title={post.display_title || post.title}
                 category={post.category}
                 publishedAt={post.published_at}
                 readingTimeMin={post.reading_time_min}
-                excerpt={post.excerpt}
+                excerpt={post.display_excerpt || post.excerpt}
                 tags={post.tags}
                 locale="ko"
                 isRead={readPostIds.has(post.id)}

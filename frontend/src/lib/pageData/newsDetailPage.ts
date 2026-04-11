@@ -1,5 +1,6 @@
 import { getArticleFocusItems } from '../articleRail';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
+import { resolveDisplayTitleExcerpt } from '../personaTitle';
 import { getAuthorizedSupabase, getDefinitionField, getPublicSupabase, type DetailPageContext } from './shared';
 
 interface NewsDetailPageContext extends DetailPageContext {
@@ -306,6 +307,14 @@ export async function getNewsDetailPageData({
     // Fallback: persona sources unavailable, sourceCards (default) will be used
   }
 
+  // Persona-aware display title/excerpt — used in <title>, OG meta, and article header.
+  // For learners (and anonymous viewers, since default = 'learner'), use guide_items
+  // beginner-friendly versions when available; expert + fallback uses canonical fields.
+  const { title: displayTitle, excerpt: displayExcerpt } = resolveDisplayTitleExcerpt(
+    post,
+    activePersona,
+  );
+
   return {
     post,
     postError,
@@ -330,5 +339,7 @@ export async function getNewsDetailPageData({
     personaSourceCardsMap,
     hasPersonaSwitcher,
     applySourceCitations,
+    displayTitle,
+    displayExcerpt,
   };
 }
