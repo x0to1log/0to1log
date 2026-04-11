@@ -31,19 +31,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
 
   // For publish, validate required fields.
-  // Publish gate mirrors the admin editor's "primary" fields: term/slug
-  // identity, KO definition + body, categories, plus the hero_news_context
-  // and references footer which are level-independent first-class content.
-  // EN fields (definition_en / body_basic_en / body_advanced_en / hero_*_en /
-  // references_en) are intentionally NOT required — a term may publish
-  // bilingually-incomplete if only the KO side is ready.
+  // Publish gate enforces bilingual completeness: both KO and EN sides
+  // must have definition + body (basic or advanced) + hero news context +
+  // at least 1 reference. Identity fields (term/slug/categories) are
+  // language-independent.
   if (action === 'publish') {
     const { data: term } = await supabase
       .from('handbook_terms')
       .select(`
-        term, slug, definition_ko, categories,
-        body_basic_ko, body_advanced_ko,
-        hero_news_context_ko, references_ko
+        term, slug, categories,
+        definition_ko, body_basic_ko, body_advanced_ko,
+        hero_news_context_ko, references_ko,
+        definition_en, body_basic_en, body_advanced_en,
+        hero_news_context_en, references_en
       `)
       .eq('id', id)
       .single();
@@ -57,11 +57,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const missing: string[] = [];
     if (!term.term) missing.push('term');
     if (!term.slug) missing.push('slug');
-    if (!term.definition_ko) missing.push('definition_ko');
     if (!Array.isArray(term.categories) || term.categories.length === 0) missing.push('categories');
+
+    // KO side
+    if (!term.definition_ko) missing.push('definition_ko');
     if (!term.body_basic_ko && !term.body_advanced_ko) missing.push('body_basic_ko or body_advanced_ko');
     if (!term.hero_news_context_ko) missing.push('hero_news_context_ko');
     if (!Array.isArray(term.references_ko) || term.references_ko.length === 0) missing.push('references_ko');
+
+    // EN side
+    if (!term.definition_en) missing.push('definition_en');
+    if (!term.body_basic_en && !term.body_advanced_en) missing.push('body_basic_en or body_advanced_en');
+    if (!term.hero_news_context_en) missing.push('hero_news_context_en');
+    if (!Array.isArray(term.references_en) || term.references_en.length === 0) missing.push('references_en');
 
     if (missing.length > 0) {
       return new Response(JSON.stringify({

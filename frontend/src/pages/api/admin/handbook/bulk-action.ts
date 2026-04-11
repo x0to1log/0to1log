@@ -42,15 +42,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'publish') {
     // Fetch all terms to validate publish gate.
-    // Same policy as the single-item status endpoint: KO definition + body
-    // + categories + hero_news_context_ko + references_ko (≥1 entry).
-    // EN fields are intentionally optional.
+    // Same bilingual-complete policy as the single-item status endpoint:
+    // both KO and EN must have definition + body + hero + references.
     const { data: terms } = await supabase
       .from('handbook_terms')
       .select(`
-        id, term, slug, definition_ko, categories,
-        body_basic_ko, body_advanced_ko,
-        hero_news_context_ko, references_ko
+        id, term, slug, categories,
+        definition_ko, body_basic_ko, body_advanced_ko,
+        hero_news_context_ko, references_ko,
+        definition_en, body_basic_en, body_advanced_en,
+        hero_news_context_en, references_en
       `)
       .in('id', ids);
 
@@ -67,11 +68,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const missing: string[] = [];
       if (!term.term) missing.push('term');
       if (!term.slug) missing.push('slug');
-      if (!term.definition_ko) missing.push('definition_ko');
       if (!Array.isArray(term.categories) || term.categories.length === 0) missing.push('categories');
-      if (!term.body_basic_ko && !term.body_advanced_ko) missing.push('body');
+
+      // KO side
+      if (!term.definition_ko) missing.push('definition_ko');
+      if (!term.body_basic_ko && !term.body_advanced_ko) missing.push('body_ko');
       if (!term.hero_news_context_ko) missing.push('hero_news_context_ko');
       if (!Array.isArray(term.references_ko) || term.references_ko.length === 0) missing.push('references_ko');
+
+      // EN side
+      if (!term.definition_en) missing.push('definition_en');
+      if (!term.body_basic_en && !term.body_advanced_en) missing.push('body_en');
+      if (!term.hero_news_context_en) missing.push('hero_news_context_en');
+      if (!Array.isArray(term.references_en) || term.references_en.length === 0) missing.push('references_en');
 
       if (missing.length > 0) {
         failed++;
