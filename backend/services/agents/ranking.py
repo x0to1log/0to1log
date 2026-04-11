@@ -570,15 +570,48 @@ async def summarize_community(
         if sentiment not in ("positive", "mixed", "negative", "neutral"):
             sentiment = "neutral"
 
-        quotes = llm_data.get("quotes", [])
-        if not isinstance(quotes, list):
-            quotes = []
-        quotes = [q for q in quotes[:2] if isinstance(q, str) and len(q.strip()) > 10 and "http" not in q]
+        import re as _re
+        # URL-like pattern: matches 'http://...', 'https://...', AND scheme-less 'github.com/...',
+        # 'arxiv.org/...'. Used to filter quotes that are just link dumps.
+        _url_pattern = _re.compile(r"(?:https?://|\b(?:github|arxiv|twitter|x|youtu|youtube|medium|reddit|huggingface|paperswithcode|openai|anthropic|deepmind)\.(?:com|org|be)/)", _re.IGNORECASE)
 
-        quotes_ko = llm_data.get("quotes_ko", [])
-        if not isinstance(quotes_ko, list):
-            quotes_ko = []
-        quotes_ko = [q for q in quotes_ko[:len(quotes)] if isinstance(q, str) and len(q.strip()) > 5]
+        def _clean_quote(q: str) -> str:
+            """Strip surrounding quote marks (straight and curly) from a quote string.
+            LLM summarizer often wraps quotes in double-quotes, which then get
+            double-wrapped when writer emits `> "<quote>"`. Strip them here.
+            """
+            q = q.strip()
+            # Strip matching pairs of outer quote marks (any combination)
+            for _ in range(3):  # up to 3 nested pairs
+                if len(q) >= 2 and q[0] in '"\u201C\u201D\u2018\u2019\'' and q[-1] in '"\u201C\u201D\u2018\u2019\'':
+                    q = q[1:-1].strip()
+                else:
+                    break
+            return q
+
+        def _is_valid_quote(q) -> bool:
+            if not isinstance(q, str):
+                return False
+            stripped = _clean_quote(q)
+            if len(stripped) < 10:
+                return False
+            # Reject quotes that contain URLs (scheme-full or scheme-less)
+            if _url_pattern.search(stripped):
+                return False
+            return True
+
+        quotes_raw = llm_data.get("quotes", [])
+        if not isinstance(quotes_raw, list):
+            quotes_raw = []
+        quotes = [_clean_quote(q) for q in quotes_raw[:2] if _is_valid_quote(q)]
+
+        quotes_ko_raw = llm_data.get("quotes_ko", [])
+        if not isinstance(quotes_ko_raw, list):
+            quotes_ko_raw = []
+        quotes_ko = [
+            _clean_quote(q) for q in quotes_ko_raw[:len(quotes)]
+            if isinstance(q, str) and len(_clean_quote(q)) > 5 and not _url_pattern.search(_clean_quote(q))
+        ]
 
         key_point = llm_data.get("key_point")
         if key_point and not isinstance(key_point, str):

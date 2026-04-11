@@ -1041,8 +1041,29 @@ def _clean_writer_output(content: str) -> str:
     # Also catch Korean translation of LEAD/SUPPORTING
     content = _re.sub(r"\s*\(리드\)\s*", "", content)
     content = _re.sub(r"\s*\(서포팅\)\s*", "", content)
-    # [BODY] marker → blank line (ensures ### heading is separated from body)
+    # [BODY] marker → blank line (legacy backward compat; skeletons no longer use [BODY])
     content = content.replace("[BODY]", "\n")
+    # Regex fallback: if a ### line still has body text stuck to it (LLM dropped
+    # the newline entirely), try to split at the first ". " (period + space)
+    # followed by a capital letter or Hangul syllable. Titles rarely end with
+    # a period, so this is a strong boundary signal.
+    def _split_heading_body(match: _re.Match) -> str:
+        head = match.group(1)  # "### " prefix
+        line = match.group(2)  # rest of the heading line
+        # Try to find a sentence boundary inside the line
+        m = _re.search(r'([^.!?]+?[.!?])\s+([A-Z\u3131-\uD7A3])', line)
+        if m:
+            title_part = line[:m.end(1)]
+            body_part = line[m.end(1):].lstrip()
+            return f"{head}{title_part}\n\n{body_part}"
+        return match.group(0)
+    # Apply only to ### lines longer than 120 chars (heuristic: normal titles
+    # are rarely that long, and this avoids false-positives on legitimate titles)
+    content = _re.sub(r"^(### )([^\n]{120,})$", _split_heading_body, content, flags=_re.MULTILINE)
+    # Also: if a ### line is followed DIRECTLY by a non-blank line (no blank line
+    # separator), insert a blank line. This catches the milder regression where
+    # LLM has title on its own line but no blank line before body.
+    content = _re.sub(r"^(### [^\n]+)\n(?!\n|### |## |- |\d+\. )", r"\1\n\n", content, flags=_re.MULTILINE)
     # Remove Quote (EN)/Quote (KO) labels mistakenly used as attribution
     content = _re.sub(r"—\s*Quote\s*\((?:EN|KO)\)", "", content)
     # Remove leaked `[EN quote]` / `[KO quote]` placeholder literals
@@ -1166,7 +1187,27 @@ def _check_structural_penalties(
         penalty += p
         warnings.append(f"{short_count} supporting item(s) have < 3 paragraphs")
 
-    return min(penalty, 30), warnings
+    # Check 6: ### heading has body stuck to it (title-only rule violation, -5 each, max -15).
+    # A well-formed `### Title` line should be under ~120 chars for most news items.
+    # Longer lines almost always indicate body text glued to the heading.
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output:
+            continue
+        for locale, content in [("en", output.en), ("ko", output.ko)]:
+            if not content:
+                continue
+            long_headings = [
+                line for line in content.split("\n")
+                if line.startswith("### ") and len(line) > 140
+            ]
+            if long_headings:
+                inc = min(len(long_headings) * 5, 15)
+                penalty += inc
+                warnings.append(
+                    f"{len(long_headings)} over-long `###` heading(s) (body stuck to title?) in {persona_name} {locale}"
+                )
+
+    return min(penalty, 40), warnings
 
 
 async def _send_draft_alert(batch_id: str, digest_type: str, quality_score: int | None) -> None:
