@@ -218,69 +218,45 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...content. [1](URL)`
-   - Use [N](URL) format where N is any number. Use different citations in different paragraphs when multiple sources are provided.
-   - One-Line Summary does NOT need citations.
-   - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
-2. Use concrete numbers and data - no vague statements.
-3. Korean content must be naturally written, not a literal translation of English.
-4. English and Korean should cover the same news items with natural expression for each language.
-5. Do NOT include an H1 title - start directly with the first section.
-6. Group news items by their subcategory under the category headers.
-7. WEIGHTED DEPTH: Items are tagged [LEAD] or [SUPPORTING] in the input.
-   - **[LEAD] items**: Write 3-4 paragraphs. These are today's most important stories.
-   - **[SUPPORTING] items**: Every remaining item MUST get at least 3 paragraphs for BOTH Expert and Learner. Do NOT skip any item or reduce it to a single sentence.
-   - Both Expert and Learner should provide substantial, thorough coverage. The difference is WHAT they write (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context) — not how MUCH.
-   - Include context for numbers. Do NOT exceed 4 paragraphs per item even for the lead story.
-8. You MUST cover ALL provided news items. No item may be dropped or reduced to just a title. The minimum paragraph counts above are mandatory.
-9. Write in present tense for the news itself ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
-10. Section headers must use the correct language for the target content.
-11. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
-12. EVERY section header that HAS content MUST appear as a `##` heading. Sections omitted per rule 11 must not appear at all. Do not merge, rename, skip, or INVENT sections. Only use `##` headings listed in "Required Sections" above. If a news item doesn't fit any existing section, place it in the closest matching one.
-13. Use markdown actively for readability:
-    - Use `###` sub-headings within each section to separate individual news items by name
-    - Each `###` sub-heading MUST be a title-only line. Never append body text, summary sentences, citations, or quotes on the same line as the `###` heading.
-    - After every `###` sub-heading, insert exactly one blank line, then start the first paragraph on the next line.
-    - Required pattern for every news item:
-      ```md
-      ### Item Title
-
-      First paragraph... [1](URL)
-
-      Second paragraph... [2](URL)
-      ```
-    - Use **bold** for key terms, company names, and important numbers
-    - Use `>` blockquotes for notable quotes from sources
-    - Use markdown tables (`|`) when comparing numbers, features, or options
-    - Break long analysis into sub-sections with clear headings
-14. MATH FORMULAS: Use double-dollar `$$...$$` for ALL math expressions (both inline and block). NEVER use single-dollar `$...$` because it conflicts with currency amounts like $2B. Example: `$$x^2 + y^2 = z^2$$`
-15. COMMUNITY PULSE: Write as a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
-    - If `HasQuotes: yes` → emit blockquote(s) using the exact "English quote N" text in the en section and the matching "Korean quote N" text in the ko section. Attribution line must be `> — Reddit` or `> — Hacker News` (from Platform field).
-    - If `HasQuotes: no` → write ONE short paragraph based on Sentiment + Key Discussion. Do NOT emit any blockquote. Do NOT invent quotes.
-    - NEVER write the literal strings `[EN quote]`, `[KO quote]`, `Quote (EN)`, or `Quote (KO)` in the output. These are input labels, not output text.
-    - Omit the entire Community Pulse section only if no Community Pulse Data was provided.
+1. CITATION FORMAT: cite at the END of every paragraph using `[N](URL)`. Use different citations across paragraphs when multiple sources exist. One-Line Summary needs no citation. Do NOT group sources at the bottom. Do NOT use `[Title](URL)` format.
+2. Use concrete numbers and data — no vague statements.
+3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
+   - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
+   - **[SUPPORTING] items**: every remaining item gets at least 3 paragraphs. Do NOT drop or one-sentence any item.
+   - Both Expert and Learner provide substantial coverage. The difference is WHAT they write (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context) — not how MUCH.
+   - Do NOT exceed 4 paragraphs per item even for lead stories.
+4. You MUST cover ALL provided classified groups — each `[LEAD]` or `[SUPPORTING]` group in the input becomes EXACTLY ONE `###` sub-item in the output. Do NOT promote enriched sources to standalone `###` sub-items; use enriched sources inside the group's paragraphs for richer multi-source detail. Do NOT skip a group or reduce it to just a title.
+5. Write in present tense for news events ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
+6. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
+7. Markdown: use the exact `###` heading + body pattern shown in the skeleton (title-only `###` line, blank line, then paragraph). Use **bold** for key terms/companies/numbers and `>` blockquotes for direct source quotes.
+8. MATH FORMULAS: use `$$...$$` for ALL math expressions. NEVER use single `$...$` (it conflicts with currency like $2B).
+9. COMMUNITY PULSE: write a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
+   - `HasQuotes: yes` → emit blockquote(s) using the exact "English quote N" text in en and matching "Korean quote N" in ko. Attribution must be `> — Reddit` or `> — Hacker News` (from Platform field).
+   - `HasQuotes: no` → write ONE short paragraph based on Sentiment + Key Discussion. Do NOT emit any blockquote. Do NOT invent quotes.
+   - NEVER write literal `[EN quote]`, `[KO quote]`, `Quote (EN)`, or `Quote (KO)` in the output — these are input labels, not output text.
+   - Omit the entire Community Pulse section only when no Community Pulse Data was provided.
 {handbook_section}
 
 ## Output JSON format
 ```json
 {{
-  "headline": "(MUST be in English) Attention-grabbing English title summarizing today's top story",
-  "headline_ko": "(MUST be in Korean) 오늘의 핵심 뉴스를 요약하는 한국어 제목",
-  "excerpt": "(MUST be in English) Marketing teaser that raises curiosity and is different from the headline and body summary",
-  "excerpt_ko": "(MUST be in Korean) 제목과 본문 요약과는 다른 클릭 유도형 요약",
-  "tags": ["company-name", "technology", "topic", "tool-name", "concept"],
-  "focus_items": ["Concrete point 1", "Concrete point 2", "Concrete point 3"],
-  "focus_items_ko": ["구체 포인트 1", "구체 포인트 2", "구체 포인트 3"],
-  "en": "<SEE EXAMPLE BELOW>",
-  "ko": "<SEE EXAMPLE BELOW>",
-  "quiz_en": {{"question": "Question", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "Why A is correct."}},
-  "quiz_ko": {{"question": "질문", "options": ["가", "나", "다", "라"], "answer": "가", "explanation": "정답 해설"}},
+  "headline": "(English ONLY, no Korean characters) Attention-grabbing title for today's top story",
+  "headline_ko": "(Korean ONLY, must contain Hangul) 오늘의 핵심 뉴스 제목",
+  "excerpt": "(English) 1-2 sentences that make readers click. MUST differ from both headline and the body's One-Line Summary",
+  "excerpt_ko": "(Korean) 제목·한 줄 요약과 모두 다른 1-2문장의 클릭 유도형 요약",
+  "tags": ["4-6 English keyword tags: company names, key tech, industry terms, notable tools"],
+  "focus_items": ["Exactly 3 bullets, EN 5-12 words each. P1=what changed, P2=why it matters, P3=what to watch"],
+  "focus_items_ko": ["정확히 3개, 각 15-40자. 1=무엇이 바뀌었나, 2=왜 중요한가, 3=무엇을 지켜볼지"],
+  "en": "<SEE SKELETON BELOW>",
+  "ko": "<SEE SKELETON BELOW>",
+  "quiz_en": {{"question": "One 4-choice question. Expert=analytical, Learner=factual", "options": ["A","B","C","D"], "answer": "exact text of correct option", "explanation": "Why correct."}},
+  "quiz_ko": {{"question": "오늘 뉴스 기반 4지선다 1문제. 전문가=분석형, 학습자=사실형", "options": ["가","나","다","라"], "answer": "정답 옵션의 정확한 텍스트", "explanation": "정답 해설"}},
   "sources": [
-    {{"id": 1, "url": "https://...", "title": "Article or paper title as it appears in the original source"}},
-    {{"id": 2, "url": "https://...", "title": "..."}}
+    {{"id": 1, "url": "https://full-url", "title": "Original article or paper title"}}
   ]
 }}
 ```
+Note: Every URL cited in the body must appear in `sources`. Citation IDs are auto-renumbered post-process. Handbook links: use the term display name as link text, not the slug.
 
 ## CRITICAL: "en" and "ko" field structure example
 Your "en" and "ko" values MUST follow the skeleton below. Replace content but keep ALL section headers and the citation/bullet format.
@@ -300,15 +276,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 8. Does every `###` line contain only the news item title, with no body text or citation on the same line?
 9. Is there exactly one blank line after every `###` sub-heading before the first paragraph starts?
 
-## Field rules
-- headline: MUST be in English. No Korean characters allowed.
-- headline_ko: MUST be in Korean. Must contain at least one Korean character. This is NOT optional. Every response MUST include a Korean headline.
-- excerpt/excerpt_ko: 1-2 sentences that make readers click. MUST be different from headline AND the one-line summary in the body.
-- tags: 4-6 keyword tags in English only. Include company names, key technologies, industry terms, and notable tools.
-- focus_items/focus_items_ko: Exactly 3 bullet points summarizing this specific digest (EN: 5-12 words each, KO: 15-40 chars each). Point 1 = what changed, Point 2 = why it matters, Point 3 = what to watch.
-- Handbook links: Use the display name of the term as link text, not the slug.
-- quiz_en/quiz_ko: One 4-choice quiz question based on today news. Expert = analytical question, Learner = factual question. answer MUST be the exact text of the correct option. All 4 options must be plausible. EN quiz in English, KO quiz in Korean.
-- sources: List ALL unique URLs cited in the body. Each entry has id, url (full URL), and title (original article or paper title). Citation numbers will be auto-corrected by post-processing, so exact id matching is not required."""
+"""
 
 
 # --- Research Digest Sections ---
