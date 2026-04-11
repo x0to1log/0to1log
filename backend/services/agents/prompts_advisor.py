@@ -820,15 +820,23 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   **학습 흐름 다음 단계**로 읽으면 좋은 관련 용어 4~6개. 예전 `8_related` + `10_learning_path` Part 2 통합.
   형식: `- (기초|유사|심화) **용어명** — 이 용어와의 관계 + 왜 다음에 읽어야 하는지 (한 줄)`.
   **카테고리 태그는 bullet 맨 앞 괄호로** — 3가지 중 하나:
-  - `기초` = 이 용어 이해에 먼저 필요한 선행 지식 (전제)
-  - `유사` = 같은 층위의 유사 개념이나 비교 대상
-  - `심화` = 이 용어를 알고 난 다음에 읽으면 좋은 심화/확장 개념
+  - `기초` = 이 용어 **바깥**에 존재하는 별개 개념 중, 이해의 전제가 되는 것
+  - `유사` = 같은 층위의 비교 대상 / 현재 시점의 경쟁 또는 대비 개념
+  - `심화` = 이 용어를 알고 난 다음에 읽으면 좋은 심화/확장/발전형
   단순 관계 설명이 아니라 **비교 포인트**(성능 차이, 용도 차이, 트레이드오프) 또는 **학습 순서 이유**를 포함해서 독자가 클릭하고 싶게 만들어라.
+
+  **카테고리 오분류 금지 (모든 용어 종류 공통):**
+  - ❌ **내부 구성요소를 "기초"로 분류 금지.** 이 용어의 수식/알고리즘/부품은 기초 아님.
+    BAD (attention): `(기초) Q/K/V` — 내부 구성 요소
+    BAD (CUDA): `(기초) CUDA 커널` — CUDA 자체의 내부
+  - ❌ **이 용어의 alias/줄임말/번역어 금지.**
+    BAD (GPU): `(기초) Graphics Processing Unit` — 같은 용어
+
   GOOD: "- (기초) **GPU** — TPU를 이해하기 전에 먼저 알아야 할 병렬 연산 하드웨어의 기본."
   GOOD: "- (유사) **H100** — 같은 'AI 훈련용 가속기' 범주에서 NVIDIA 쪽 대표. TPU와 용도는 겹치지만 생태계·비용이 다름."
   GOOD: "- (심화) **MoE** — TPU를 어느 정도 이해한 뒤 '어떻게 더 큰 모델을 효율적으로 돌릴까' 단계로 넘어갈 때 읽기 좋음."
-  BAD: "**TPU** — Google 개발 AI 특화 칩, 대규모 딥러닝 최적화" (태그 누락 + 사전식 설명)
-  BAD (태그 위치 틀림): "- **GPU** (기초) — ..." — 반려 (태그는 **용어 앞**에 와야 함)
+  BAD: "**TPU** — Google 개발 AI 특화 칩" (태그 누락 + 사전식 설명)
+  BAD (태그 위치 틀림): "- **GPU** (기초) — ..." — 반려 (태그는 **용어 앞**)
   **참고**: 관련 용어가 아직 핸드북에 없어도 괜찮다. 프론트엔드가 용어 존재 여부를 확인해 "(예정)" 라벨을 자동으로 붙인다. 용어 이름만 정확히 쓰면 된다.
 
 ---
@@ -1195,10 +1203,18 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   4~6 **related terms to read next** in a learning flow. Merges the old `8_related` + `10_learning_path Part 2`.
   Format: `- (before|similar|next) **Term name** — relationship to this term + why to read it next (one line).`
   **Category tag goes at the start of the bullet, in parentheses** — exactly one of:
-  - `before` = prerequisite concept you should read first
-  - `similar` = parallel concept at the same level / comparison point
-  - `next` = deeper / follow-up concept to read after this one
+  - `before` = a **separate** concept *outside* this term that you should read first
+  - `similar` = parallel concept at the same level / contemporary comparison point
+  - `next` = deeper / follow-up concept / evolution of this term to read after
   Not a dictionary definition — include **comparison points** (performance/use-case/trade-off differences) or **learning-order reasons** that make the reader want to click.
+
+  **Category misclassifications to avoid (apply across all term kinds):**
+  - ❌ **Internal components are NOT "before".** Do not label parts of this term's own formula / algorithm / architecture as `before`.
+    BAD (attention): `(before) Q/K/V` — internal to attention
+    BAD (CUDA): `(before) CUDA kernels` — internal to CUDA itself
+  - ❌ **No aliases, abbreviations, or full names of the same term.**
+    BAD (GPU): `(before) Graphics Processing Unit` — same term
+
   GOOD: "- (before) **GPU** — Understand the general-purpose parallel-compute hardware first; TPU is the specialized cousin."
   GOOD: "- (similar) **H100** — Same 'AI training accelerator' category on the NVIDIA side; overlapping use case but different ecosystem and cost profile."
   GOOD: "- (next) **Mixture of Experts** — Once TPUs feel familiar, this is the natural next question: how do we run even bigger models efficiently?"
@@ -1447,13 +1463,39 @@ Keep the same section keys; only adapt the content perspective.
   **Must differentiate from `basic_ko_6_comm`** — Basic uses Slack/standup tone, Advanced uses PR review/design doc/incident tone.
 
 - **adv_ko_7_related** (선행·대안·확장 개념, 4~6개):
-  Related terms categorized: **선행** (Prerequisites — learn first), **대안** (Alternatives — competitors), **확장** (Extensions — what comes next).
+  Related terms categorized: **선행** (Prerequisites), **대안** (Alternatives), **확장** (Extensions).
   형식: `- (선행|대안|확장) **용어** — 기술적 관계 + 왜 이 관점에서 중요한가`
-  **태그는 bullet 맨 앞 괄호로** — `선행`, `대안`, `확장` 중 하나. 영어 태그(prerequisite/alternative/extension) 금지.
+  **태그는 bullet 맨 앞 괄호로** — `선행`, `대안`, `확장` 중 하나. 영어 태그 금지.
   Do NOT repeat Basic's `7_related` learning-flow framing. Here, focus on **technical dependency** and **system design choice**.
-  GOOD: "- (선행) **Multi-head attention** — single-head attention의 한계(표현력 제약)를 풀기 위해 제안된 구조. Transformer를 이해하려면 먼저 잡아야 함."
-  GOOD: "- (대안) **Mamba** — state space model 기반으로 O(n²) → O(n)으로 복잡도 개선. long-context에서 트레이드오프 비교 대상."
-  GOOD: "- (확장) **Mixture of Experts** — Transformer 기반 FFN을 expert pool로 확장. 파라미터 확장 + 추론 비용 제어를 동시에 노림."
+
+  **카테고리 분류 원칙 (모든 용어 종류에 공통 — 모델/제품/알고리즘/현상):**
+  - `선행` = **이 용어 바깥에** 존재하는 별개 개념/기술로, 이해의 전제가 되는 것. **이 용어의 내부 구성요소는 절대 금지**.
+  - `대안` = **같은 문제를 다른 방식으로** 푸는 **현재 시점의 경쟁** 기술/접근. 역사적 원조는 대안이 아니라 선행.
+  - `확장` = 이 용어를 **기반으로** 만들어지거나, 이 용어의 **특수화/변형/발전형**인 개념.
+
+  **자주 나오는 오분류 (절대 금지):**
+  - ❌ **내부 구성요소를 선행으로 분류 금지.** 이 용어의 수식/알고리즘/아키텍처 **안쪽 부품**은 선행이 아님.
+    BAD (attention): `(선행) Q/K/V 투영` — Q/K/V는 attention 수식 내부
+    BAD (Adam): `(선행) 1차/2차 모멘트 추정` — Adam 알고리즘 내부
+    BAD (Transformer): `(선행) residual connection` — Transformer 블록 내부
+    BAD (CUDA): `(선행) CUDA 커널` — CUDA 자체의 내부 개념
+  - ❌ **역사적 원조를 대안으로 분류 금지.** 해당 용어가 "해결하려 했던 과거 방식"은 **선행**이지 대안 아님.
+    BAD (attention): `(대안) RNN+Seq2Seq` — Seq2Seq는 attention의 historical 선행
+    OK  (attention): `(선행) RNN+Seq2Seq` + `(대안) Mamba`
+  - ❌ **이 용어의 alias/줄임말/번역어 금지.**
+    BAD (GPU): `(선행) Graphics Processing Unit` — 같은 용어의 풀네임
+    BAD (LLM): `(선행) Large Language Model` — 같은 용어
+
+  **도메인별 좋은 예시 (참고):**
+  - 모델/아키텍처 (Transformer): 선행=Seq2Seq, Encoder-Decoder / 대안=RNN, Mamba / 확장=BERT, MoE, Vision Transformer
+  - 제품/도구 (CUDA): 선행=GPU 하드웨어, 병렬 컴퓨팅 기초 / 대안=OpenCL, ROCm / 확장=cuDNN, TensorRT, Triton
+  - 알고리즘 (Adam): 선행=SGD, momentum / 대안=RMSProp, Lion / 확장=AdamW, LAMB
+  - 현상/문제 (Overfitting): 선행=Bias-Variance Tradeoff / 대안=Underfitting (같은 축의 반대 현상) / 확장=Regularization, Dropout, Early Stopping
+  - 현상/문제 (Hallucination): 선행=LLM 디코딩 / 대안=Factuality failure, Calibration error / 확장=RAG, Grounding, Self-consistency
+
+  GOOD: "- (선행) **Seq2Seq** — attention이 해결하려 했던 encoder→decoder 고정-벡터 병목. 이해하면 attention의 motivation이 명확해짐."
+  GOOD: "- (대안) **Mamba** — state space model 기반으로 O(n²) → O(n)으로 복잡도 개선. long-context에서 attention과 경쟁하는 현재 대안."
+  GOOD: "- (확장) **Mixture of Experts** — Transformer 기반 FFN을 expert pool로 확장. attention 아키텍처의 후속 발전형."
   BAD: "- **Multi-head attention** (prerequisite) — ..." — 반려 (영어 태그 + 위치 틀림)
   BAD (태그가 뒤): "- **Multi-head attention** (선행) — ..." — 반려 (태그는 용어 앞)
 
@@ -1636,13 +1678,39 @@ Keep the same section keys; only adapt the content perspective.
   **Must differentiate from `basic_en_6_comm`** — Basic uses Slack/standup tone, Advanced uses PR review/design doc/incident tone.
 
 - **adv_en_7_related** (Prerequisites, Alternatives, and Extensions, 4-6 entries):
-  Related terms categorized: **Prerequisites** (learn first), **Alternatives** (competitors), **Extensions** (what comes next).
+  Related terms categorized: **Prerequisites**, **Alternatives**, **Extensions**.
   Format: `- (prerequisite|alternative|extension) **Term** — technical relationship + why it matters from this angle`
   **Tag comes first, inside parentheses, before the bolded term.**
   Do NOT repeat Basic's `7_related` learning-flow framing. Here, focus on **technical dependency** and **system design choice**.
-  GOOD: "- (prerequisite) **Multi-head attention** — addresses the representation bottleneck of single-head attention; required mental model for understanding Transformers."
-  GOOD: "- (alternative) **Mamba** — state space model that brings the cost from O(n²) to O(n); the relevant comparison point for long-context workloads."
-  GOOD: "- (extension) **Mixture of Experts** — extends the Transformer FFN into an expert pool; lets you scale parameters while keeping per-token compute roughly constant."
+
+  **Category rules (apply across all term kinds — model/product/algorithm/phenomenon):**
+  - `prerequisite` = a **separate** concept/technology outside the current term that must be understood first. **Never an internal sub-component of this term.**
+  - `alternative` = a **currently-competing** approach that solves the **same problem a different way**. Historical predecessors are NOT alternatives (they are prerequisites).
+  - `extension` = a concept **built on top of** this term, or a **specialization/variant/evolution** of it.
+
+  **Common misclassifications (forbidden):**
+  - ❌ **Internal components are NEVER prerequisites.** Do not label parts of this term's own formula / algorithm / architecture as prerequisites.
+    BAD (attention): `(prerequisite) Q/K/V projections` — Q/K/V is *inside* the attention formula
+    BAD (Adam): `(prerequisite) first/second moment estimates` — internal to Adam
+    BAD (Transformer): `(prerequisite) residual connection` — a Transformer block internal
+    BAD (CUDA): `(prerequisite) CUDA kernels` — internal to CUDA itself
+  - ❌ **Historical predecessors are NOT alternatives.** The "old way this term replaced" is a **prerequisite**, not an alternative.
+    BAD (attention): `(alternative) RNN+Seq2Seq` — Seq2Seq is the historical prerequisite
+    OK  (attention): `(prerequisite) RNN+Seq2Seq` + `(alternative) Mamba`
+  - ❌ **No aliases, abbreviations, or full names of the same term.**
+    BAD (GPU): `(prerequisite) Graphics Processing Unit` — same term
+    BAD (LLM): `(prerequisite) Large Language Model` — same term
+
+  **Domain examples (for reference):**
+  - Models/architectures (Transformer): prereq=Seq2Seq, Encoder-Decoder / alt=RNN, Mamba / ext=BERT, MoE, Vision Transformer
+  - Products/tools (CUDA): prereq=GPU hardware, parallel computing basics / alt=OpenCL, ROCm / ext=cuDNN, TensorRT, Triton
+  - Algorithms (Adam): prereq=SGD, momentum / alt=RMSProp, Lion / ext=AdamW, LAMB
+  - Phenomena (Overfitting): prereq=Bias-Variance Tradeoff / alt=Underfitting (opposite failure on the same axis) / ext=Regularization, Dropout, Early Stopping
+  - Phenomena (Hallucination): prereq=LLM decoding / alt=Factuality failure, Calibration error / ext=RAG, Grounding, Self-consistency
+
+  GOOD: "- (prerequisite) **Seq2Seq** — the fixed-vector bottleneck between encoder and decoder that attention was invented to remove; understanding it makes attention's motivation concrete."
+  GOOD: "- (alternative) **Mamba** — state space model that brings the cost from O(n²) to O(n); the relevant contemporary alternative for long-context workloads."
+  GOOD: "- (extension) **Mixture of Experts** — extends the Transformer FFN into an expert pool; the natural evolution on top of attention-based architectures."
   BAD (tag after term): "- **Mamba** (alternative) — ..." — rejected (tag must come before the term)
 
 ---
