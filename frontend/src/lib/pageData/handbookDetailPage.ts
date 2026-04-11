@@ -118,11 +118,13 @@ export async function getHandbookDetailPageData({
       ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
       : (md: string) => renderHandbookMarkdown(md);
 
-    // Run markdown rendering and DB queries in parallel — they don't depend on each other
-    // Advanced uses handbookProcessor (block math $$...$$ only) for formulas
+    // Run markdown rendering and DB queries in parallel — they don't depend on each other.
+    // Both Basic and Advanced go through renderMd so auto-linkification of
+    // other handbook terms fires in both bodies (otherwise Advanced §7
+    // related-terms links would never become clickable popups).
     const [basicHtml, advancedHtml, articlesRes, recentNewsRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
       bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
-      bodyAdvanced ? renderHandbookMarkdown(bodyAdvanced) : Promise.resolve(''),
+      bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
       publicSupabase
         .from('news_posts')
         .select('title, slug, category, published_at, post_type')

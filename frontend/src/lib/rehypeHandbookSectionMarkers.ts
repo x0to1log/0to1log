@@ -94,24 +94,26 @@ function stripTrailingColon(text: string): string {
 }
 
 /**
- * Related-terms tag extraction. Matches the ` (TAG)` suffix pattern
- * the advisor prompt produces directly after the bold term name, e.g.
- *   "<strong>Term</strong> (기초) — description"
- *   "<strong>Term</strong> (prerequisite) — description"
- * Both KO friendly-Basic tags (기초/비슷/심화), KO Advanced tags
- * (선행/대안/확장), EN Basic tags (before/similar/next), and EN
- * Advanced tags (prerequisite/alternative/extension) are recognized.
+ * Related-terms tag extraction. Matches the `(TAG)` prefix the advisor
+ * prompt produces at the very start of each bullet, e.g.
+ *   "(기초) <strong>Term</strong> — description"
+ *   "(prerequisite) <strong>Term</strong> — description"
+ * Recognizes:
+ *   • KO Basic: 기초 / 유사 / 심화
+ *   • KO Advanced: 선행 / 대안 / 확장
+ *   • EN Basic: before / similar / next
+ *   • EN Advanced: prerequisite / alternative / extension
  */
 const RELATED_TAG_RE =
-  /^\s*\((기초|비슷|심화|선행|대안|확장|before|similar|next|prerequisite|alternative|extension)\)\s*/;
+  /^\s*\((기초|유사|심화|선행|대안|확장|before|similar|next|prerequisite|alternative|extension)\)\s*/;
 
 /**
- * Transform a related-terms <li> so the inline `(tag)` marker becomes a
- * leading pill span + a content wrapper. Grid layout in CSS aligns the
- * pills into a fixed-width column so readers can eye-filter by tag.
+ * Transform a related-terms <li> so the leading `(tag)` marker becomes
+ * a pill span + a content wrapper. Grid layout in CSS aligns the pills
+ * into a fixed-width column so readers can eye-filter by tag.
  *
  * Input (loose list):
- *   <li><p><strong><a>Term</a></strong> (기초) — description</p></li>
+ *   <li><p>(기초) <strong><a>Term</a></strong> — description</p></li>
  * Output:
  *   <li>
  *     <span class="hb-related-terms__tag" data-tag="기초">기초</span>
@@ -120,63 +122,50 @@ const RELATED_TAG_RE =
  *     </div>
  *   </li>
  *
- * Leaves the <li> untouched if the tag pattern isn't found (graceful
- * degradation for older generations that didn't emit the tag yet).
+ * Leaves the <li> untouched when the tag prefix isn't present, so
+ * older content that still uses ` **Term** (tag) —` or has no tag at
+ * all falls back to a single-column row via the CSS `:has()` rule.
  */
 function extractRelatedTermTag(li: Element): void {
-  // Find the first text node that sits immediately after a <strong>
-  // and starts with ` (tag)`. Walk the tree one level deep — the
-  // <strong> lives either directly under <li> (tight list) or under
-  // a <p> child (loose list).
-  const containers: Element[] = [li];
-  for (const child of li.children) {
-    if (child.type === 'element' && (child as Element).tagName === 'p') {
-      containers.push(child as Element);
-    }
+  // The tag lives at the very start of the <li> content: either as
+  // the first text child (tight list) or as the first text node
+  // inside the <li>'s only <p> child (loose list).
+  let container: Element = li;
+  if (
+    li.children.length >= 1 &&
+    li.children[0].type === 'element' &&
+    (li.children[0] as Element).tagName === 'p'
+  ) {
+    container = li.children[0] as Element;
   }
 
-  for (const container of containers) {
-    const kids = container.children;
-    for (let i = 0; i < kids.length; i++) {
-      const cur = kids[i];
-      if (cur.type !== 'element') continue;
-      if ((cur as Element).tagName !== 'strong') continue;
+  const firstKid = container.children[0];
+  if (!firstKid || firstKid.type !== 'text') return;
 
-      const next = kids[i + 1];
-      if (!next || next.type !== 'text') continue;
+  const textNode = firstKid as { value: string };
+  const match = textNode.value.match(RELATED_TAG_RE);
+  if (!match) return;
 
-      const match = (next as { value: string }).value.match(RELATED_TAG_RE);
-      if (!match) continue;
+  const tag = match[1];
+  textNode.value = textNode.value.slice(match[0].length);
 
-      const tag = match[1];
-      // Strip the leading ` (tag) ` (or ` (tag)`) from the text node
-      (next as { value: string }).value = (next as { value: string }).value.slice(
-        match[0].length,
-      );
+  const pill: Element = {
+    type: 'element',
+    tagName: 'span',
+    properties: {
+      className: ['hb-related-terms__tag'],
+      'data-tag': tag,
+    },
+    children: [{ type: 'text', value: tag }],
+  };
 
-      // Build the pill span
-      const pill: Element = {
-        type: 'element',
-        tagName: 'span',
-        properties: {
-          className: ['hb-related-terms__tag'],
-          'data-tag': tag,
-        },
-        children: [{ type: 'text', value: tag }],
-      };
-
-      // Wrap all existing <li> children in a content div, then prepend
-      // the pill so CSS grid puts it in the fixed left column.
-      const contentWrap: Element = {
-        type: 'element',
-        tagName: 'div',
-        properties: { className: ['hb-related-terms__content'] },
-        children: [...li.children],
-      };
-      li.children = [pill, contentWrap];
-      return;
-    }
-  }
+  const contentWrap: Element = {
+    type: 'element',
+    tagName: 'div',
+    properties: { className: ['hb-related-terms__content'] },
+    children: [...li.children],
+  };
+  li.children = [pill, contentWrap];
 }
 
 /**

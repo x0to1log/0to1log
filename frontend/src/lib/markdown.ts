@@ -214,6 +214,6 @@ export async function renderMarkdownWithTerms(
       termsProcessorCache.set(termsMap, termsProcessor);
     }
 
-    return String(await termsProcessor.process(md));
+    return String(await termsProcessor.process(normalizeTradeoffsLabels(md)));
   });
 }
