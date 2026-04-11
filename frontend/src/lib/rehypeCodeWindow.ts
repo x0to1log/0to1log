@@ -83,7 +83,24 @@ export default function rehypeCodeWindow(options: CodeWindowOptions = {}) {
           properties: { className: ['code-window-lines'] },
           children: [{ type: 'text', value: `${lineCount} lines` }],
         });
-        // Toggle button (collapse/expand)
+      }
+
+      // Copy button — pushed BEFORE the toggle so that the toggle stays at
+      // the header's right edge in both collapsed and expanded states.
+      // Without this ordering, clicking 펼치기 would reveal Copy and visually
+      // "take over" the right-edge slot the user just clicked, breaking the
+      // in-place label-swap mental model (펼치기 ↔ 접기).
+      // Copy is hidden via CSS while the window is collapsed.
+      headerChildren.push({
+        type: 'element',
+        tagName: 'button',
+        properties: { className: ['code-copy-btn'], 'data-code-copy': '', type: 'button' },
+        children: [{ type: 'text', value: 'Copy' }],
+      });
+
+      if (collapsible) {
+        // Toggle button (collapse/expand) — last in the header so it anchors
+        // the right edge and keeps its spatial position across state flips.
         headerChildren.push({
           type: 'element',
           tagName: 'button',
@@ -96,14 +113,6 @@ export default function rehypeCodeWindow(options: CodeWindowOptions = {}) {
           children: [{ type: 'text', value: '펼치기 ▾' }],
         });
       }
-
-      // Copy button (always present; hidden via CSS when collapsed)
-      headerChildren.push({
-        type: 'element',
-        tagName: 'button',
-        properties: { className: ['code-copy-btn'], 'data-code-copy': '', type: 'button' },
-        children: [{ type: 'text', value: 'Copy' }],
-      });
 
       const header: Element = {
         type: 'element',
