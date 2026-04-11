@@ -10,6 +10,7 @@ from typing import Any
 from core.config import settings, today_kst
 from core.database import get_supabase
 from models.news_pipeline import (
+    ClassificationResult,
     ClassifiedGroup,
     CommunityInsight,
     PersonaOutput,
@@ -65,6 +66,114 @@ def _fill_source_titles(
         }
         for card in code_cards
     ]
+
+
+# Stopwords excluded from entity-overlap dedup. These are generic words that
+# would create false positives if counted as "entity" tokens. Includes common
+# news verbs, prepositions, and AI-generic terms.
+_DEDUP_STOPWORDS = frozenset({
+    "the", "and", "for", "with", "from", "into", "this", "that", "their", "more",
+    "but", "not", "are", "was", "were", "has", "have", "had", "will", "can", "may",
+    "ai", "llm", "gpt", "model", "models", "tool", "tools", "new", "first", "best",
+    "now", "soon", "today", "yesterday", "week", "weeks", "year", "years", "day",
+    "report", "reports", "news", "study", "research", "test", "tests", "version",
+    "release", "releases", "launch", "launches", "launched", "released", "introduces",
+    "announces", "announced", "unveils", "unveiled", "shows", "showed", "says",
+    "raises", "raised", "billion", "million", "open", "source", "free",
+    "company", "companies", "team", "teams", "user", "users", "data",
+})
+
+
+def _extract_entity_tokens(title: str) -> set[str]:
+    """Extract proper-noun-ish tokens from a title for dedup matching.
+
+    Heuristic: any word that starts with an uppercase letter, OR contains
+    a digit, OR is at least 4 chars and not in stopwords. Lowercased for
+    case-insensitive comparison. The goal is to capture entity tokens
+    (company names, product names, version numbers) while filtering out
+    generic news vocabulary.
+    """
+    import re as _re
+    tokens: set[str] = set()
+    # Split on whitespace and common punctuation; preserve hyphenated names
+    raw_words = _re.findall(r"[A-Za-z][A-Za-z0-9\-]*|\d+[A-Z]?", title)
+    for word in raw_words:
+        normalized = word.lower().strip("-")
+        if not normalized or len(normalized) < 3:
+            continue
+        if normalized in _DEDUP_STOPWORDS:
+            continue
+        # Keep if: started with uppercase (proper noun), or has a digit (version),
+        # or is at least 4 chars (substantive word, possibly entity)
+        if word[0].isupper() or any(ch.isdigit() for ch in word) or len(normalized) >= 4:
+            tokens.add(normalized)
+    return tokens
+
+
+# Action verbs that signal a structurally NEW event about a previously-covered
+# entity. If a candidate title contains any of these (case-insensitive substring),
+# the entity-overlap dedup is bypassed. Major M&A and corporate actions get through
+# even when company names overlap with recent headlines.
+_DEDUP_BYPASS_VERBS = (
+    "acquires", "acquisition", "buys", "bought", "merger",
+    "sues", "lawsuit", "files suit", "filed suit",
+    "lays off", "layoff", "fires",
+    "files for ipo", "ipo filing",
+    "files for bankruptcy", "shuts down", "closes",
+    "resigns", "steps down", "fired",
+    "raids", "investigates", "fines", "fined",
+    "인수", "합병", "고소", "제소", "해고", "사임", "파산",
+)
+
+
+def _filter_recent_duplicates(
+    classified: ClassificationResult,
+    recent_headlines: list[str],
+    overlap_threshold: int = 2,
+) -> tuple[ClassificationResult, list[str]]:
+    """Drop classified candidates whose entity tokens overlap heavily with
+    any recent headline. Code-level safety net for when the LLM ignores the
+    prompt-level dedup instruction.
+
+    Bypass: if the candidate title contains a major-action verb from
+    _DEDUP_BYPASS_VERBS, it is NOT dropped even when entities overlap, because
+    such verbs signal a structurally new event (acquisition, lawsuit, etc.).
+
+    Returns (filtered_result, dropped_titles).
+    """
+    if not recent_headlines:
+        return classified, []
+
+    recent_token_sets = [_extract_entity_tokens(h) for h in recent_headlines]
+    dropped: list[str] = []
+
+    def _has_bypass_verb(title: str) -> bool:
+        title_lower = title.lower()
+        return any(verb in title_lower for verb in _DEDUP_BYPASS_VERBS)
+
+    def _is_dup(candidate_title: str) -> bool:
+        if _has_bypass_verb(candidate_title):
+            return False  # major structural event — let it through
+        cand_tokens = _extract_entity_tokens(candidate_title)
+        if len(cand_tokens) < 2:
+            return False  # too few tokens to confidently match
+        for recent_tokens in recent_token_sets:
+            overlap = cand_tokens & recent_tokens
+            if len(overlap) >= overlap_threshold:
+                return True
+        return False
+
+    filtered = ClassificationResult()
+    for category in ("research_picks", "business_picks"):
+        kept = []
+        for c in getattr(classified, category):
+            if _is_dup(c.title):
+                dropped.append(f"{category[:-6]}: {c.title}")
+                logger.info("Dedup drop: %s", c.title[:100])
+            else:
+                kept.append(c)
+        setattr(filtered, category, kept)
+    return filtered, dropped
 
 
 def _renumber_citations(
@@ -1833,12 +1942,24 @@ async def run_daily_pipeline(
 
         # Stage: classify (individual article selection)
         t0 = time.monotonic()
-        classification, classify_usage = await classify_candidates(candidates, recent_headlines=recent_headlines)
+        classification, classify_usage, classify_user_prompt = await classify_candidates(
+            candidates, recent_headlines=recent_headlines,
+        )
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
 
-        classify_input_summary = "\n".join(
-            f"[{i+1}] {c.title} ({c.url})" for i, c in enumerate(candidates)
-        )
+        # Code-level dedup safety net: even if the LLM ignored the ALREADY COVERED
+        # block, drop candidates whose entity tokens (company + product) overlap
+        # heavily with recent headlines. This is a deterministic guard.
+        dedup_dropped: list[str] = []
+        if recent_headlines:
+            classification, dedup_dropped = _filter_recent_duplicates(classification, recent_headlines)
+            if dedup_dropped:
+                logger.warning("Code-level dedup dropped %d candidate(s): %s",
+                               len(dedup_dropped), "; ".join(dedup_dropped)[:300])
+
+        # Use the EXACT user_prompt the LLM saw (includes ALREADY COVERED block).
+        # This is the only reliable way to debug dedup behavior.
+        classify_input_summary = classify_user_prompt
         classify_output = {
             "research": [
                 {"title": c.title, "url": c.url, "subcategory": c.subcategory}
@@ -1867,6 +1988,8 @@ async def run_daily_pipeline(
                 "llm_output": classify_output,
                 "candidates_count": len(candidates),
                 "warnings": classify_warnings,
+                "dedup_dropped": dedup_dropped,
+                "recent_headlines_count": len(recent_headlines),
             },
         )
         _save_checkpoint(supabase, run_id, "classify", {

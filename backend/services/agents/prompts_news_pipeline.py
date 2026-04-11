@@ -73,7 +73,12 @@ NOT Research (assign to Business instead):
 5. Prefer news with concrete data (benchmarks, dollar amounts, dates)
 6. Order by importance within each category (most important first)
 7. Every selected article must have a subcategory
-8. EVENT DEDUP: If "Recently published headlines" are provided at the end of the input, DO NOT select articles covering the SAME event as those headlines. An event already covered = SKIP IT. The ONLY exception: a major NEW development about that event (e.g., "Company X acquires Y" is new even if Company X was covered yesterday). Same announcements, same benchmarks, same funding from different news sites = SKIP.
+8. EVENT DEDUP — STRICT: If an "ALREADY COVERED HEADLINES" block appears at the end of the input, DO NOT select any candidate that covers the SAME core event (= same company + same product/announcement) as ANY headline in the block. Apply this even when:
+   - The candidate is from a different news outlet than yesterday's coverage
+   - The candidate has a slightly different angle ("X hits app charts", "X benchmark Y", "X integration with Z", "X Q&A with CEO", "X analyst reaction")
+   - The candidate was published on a later date but covers the same event
+   The ONLY acceptable repeat is a STRUCTURALLY DIFFERENT action verb explicitly stated in the source itself: acquires / sues / shuts down / lays off / files for IPO / pivots away. "Hits charts", "performs better than expected", "enterprise interest grows" are NOT structurally different — they are follow-on commentary on the same event and MUST be skipped.
+   When in doubt, SKIP. False negatives (skipping a borderline new story) are far less costly than false positives (repeating yesterday's news).
 
 ## Cross-Category Rules
 - The same article CAN and SHOULD appear in both categories when it has both technical and business significance.

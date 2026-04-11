@@ -103,15 +103,18 @@ async def rank_candidates(
 async def classify_candidates(
     candidates: list[NewsCandidate],
     recent_headlines: list[str] | None = None,
-) -> tuple[ClassificationResult, dict[str, Any]]:
+) -> tuple[ClassificationResult, dict[str, Any], str]:
     """Classify news candidates into research/business subcategories.
 
-    Returns 3-5 picks per category instead of 1.
-    recent_headlines: titles published in the last 2 days — penalize same-event repeats.
+    Returns (result, usage, user_prompt). The user_prompt is returned so callers
+    can log the EXACT input the LLM saw — including the dedup block — for debugging.
+
+    recent_headlines: titles published in the last 3 days. The classifier prompt
+    instructs the LLM to skip same-event repeats.
     """
     if not candidates:
         logger.info("No candidates to classify")
-        return ClassificationResult(), {}
+        return ClassificationResult(), {}, ""
 
     candidate_lines = []
     for i, c in enumerate(candidates):
@@ -120,10 +123,21 @@ async def classify_candidates(
         )
     user_prompt = "\n\n".join(candidate_lines)
 
-    # Add recent headlines for event dedup
+    # Add recent headlines for event dedup. Label MUST match the system prompt rule
+    # so the LLM connects the rule to the data block.
     if recent_headlines:
         headlines_block = "\n".join(f"- {h}" for h in recent_headlines)
-        user_prompt += f"\n\n---\n\nALREADY COVERED — DO NOT select articles about these events again:\n{headlines_block}"
+        user_prompt += (
+            "\n\n---\n\n"
+            "ALREADY COVERED HEADLINES (last 3 days, both published and draft):\n"
+            f"{headlines_block}\n\n"
+            "DO NOT select any candidate above that covers the SAME core event "
+            "(same company + same product/announcement) as ANY headline in this list. "
+            "Variations like 'X hits app charts', 'X gets benchmark Y', 'X integration with Z' "
+            "are STILL the same core event and MUST be skipped. The only acceptable repeat "
+            "is a structurally different action verb in the source itself "
+            "(e.g., source explicitly says 'acquires', 'sues', 'shuts down')."
+        )
 
     client = get_openai_client()
     model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty responses for classification)
@@ -151,7 +165,7 @@ async def classify_candidates(
             logger.warning("Classification attempt %d failed: %s", attempt + 1, e)
             if attempt == MAX_RETRIES:
                 logger.error("Classification failed after %d retries", MAX_RETRIES + 1)
-                return ClassificationResult(), usage
+                return ClassificationResult(), usage, user_prompt
             continue
 
     url_map = {c.url: c for c in candidates}
@@ -198,7 +212,7 @@ async def classify_candidates(
         logger.warning("No business articles classified — business digest will be skipped")
     if not result.research_picks:
         logger.warning("No research articles classified — research digest will be skipped")
-    return result, usage
+    return result, usage, user_prompt
 
 
 async def merge_classified(
