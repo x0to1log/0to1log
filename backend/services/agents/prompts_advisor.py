@@ -605,12 +605,14 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 - korean_name: Korean translation or commonly used Korean name. MUST be in Korean, NOT English. BAD: "EDA". GOOD: "탐색적 데이터 분석". If no standard Korean translation exists, use Korean phonetic transcription (e.g., "트랜스포머" for Transformer).
 - korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
 
-## definition_ko / definition_en (2~4 sentences, 200~400 chars)
+## definition_ko / definition_en (2~4 sentences)
 
 Precise, technical definition. Shared across both levels.
 
-**Minimum 180 characters (under 180 is INVALID — too thin for Expert popup use case).**
-Aim for: definition_ko 200~400 chars, definition_en 200~450 chars. These are guidelines, not hard caps — if precision needs another 20~40 characters, that's fine.
+**Length rules (strict):**
+- `definition_ko`: 2~4 sentences. **Hard minimum 200, hard maximum 420. Target 260~340.**
+- `definition_en`: 2~4 sentences. **Hard minimum 200, hard maximum 450. Target 280~360.**
+- Under 200 chars → INVALID (too thin for the Expert popup use case). Over the hard max → INVALID (reader won't finish). Stay inside the target range unless a technical nuance genuinely needs the buffer.
 
 This definition is surfaced in TWO places — both require 2~4 scannable technical sentences, not a one-liner:
 1. Hero Card on the handbook detail page (canonical technical summary)
@@ -662,6 +664,15 @@ BAD (definition_en, 74 chars — TOO SHORT):
 Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
 Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
+
+**FAIL CONDITIONS** — 아래 중 하나라도 해당하면 섹션이 반려됨:
+- 설명 없이 영어 약어·전문 용어 등장 (예: "RLHF를 통해…" 설명 없이)
+- Hero card의 한 줄 정의를 거의 그대로 복제한 §1 (hero는 이미 보여줬으므로 §1은 더 깊어야 함)
+- 비유만 있고 **구체 메커니즘** 1~2문장이 없음 (비유는 시작점일 뿐)
+- `basic_ko_2_example` 에 스마트폰·자율주행·음성비서 같은 **진부한 포괄 예시** 사용 (금지 목록)
+- 하드코딩된 수치 없이 "빠르다/느리다/크다/작다" 같은 추상 비교만 (`basic_ko_3_glance` 에서는 구체 수치 필수)
+- References가 본문 bullet으로 나열됨 (references_ko footer 전용)
+- 섹션 간 동일 비유/예시 반복 (각 섹션 unique 정보 원칙 위반)
 
 ### Adaptive content for phenomenon/problem terms
 
@@ -924,7 +935,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` is at least 180 chars. Structure: technical definition + mechanism + context/usage. Aim for 200~400.
+✓ `definition_ko` is 200~420 chars (target 260~340), 2~4 sentences. Structure: technical definition + mechanism + context/usage. Reject if under 200 or over 420.
 ✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -934,6 +945,10 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ✓ `basic_ko_5_caution` has EXACTLY 3 misconception pairs, not 4, not 2
 ✓ `basic_ko_6_comm` has 5 sentences in team-meeting/slack tone, not news article tone
 ✓ `basic_ko_7_related` has 4~6 entries. Every entry starts with `- (기초|유사|심화) **용어명** —` (tag before term, one of the three Korean tags exactly). Each gives a comparison/learning-order reason (not a dictionary definition).
+✓ `basic_ko_7_related` 카테고리 검증 — 아래 중 하나라도 해당하면 반려 후 다시 작성:
+   (a) 이 용어의 **내부 구성요소**를 기초로 분류 (예: attention의 Q/K/V, Adam의 running average, CUDA의 커널)
+   (b) 이 용어의 alias / 풀네임 / 번역어를 항목으로 넣음 (예: GPU에서 "Graphics Processing Unit")
+   (c) 동일 용어가 2회 이상 등장
 ✓ `references_ko` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
 ✓ `sidebar_checklist_ko` has 4~5 questions testing understanding, not memorization
@@ -995,12 +1010,13 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 
 The old sections `basic_en_0_summary`, `basic_en_4_why`, `basic_en_5_where`, `basic_en_6b_news_context`, `basic_en_6c_checklist`, `basic_en_9_roles`, `basic_en_10_learning_path`, `basic_en_8_related` no longer exist. Do NOT output them. Their content has been merged or relocated as described below.
 
-## definition_en (2~4 sentences, 200~450 chars)
+## definition_en (2~4 sentences)
 
 Precise, technical definition. Shared across both levels.
 
-**Minimum 180 characters (under 180 is INVALID — too thin for Expert popup use case).**
-Aim for 200~450 chars. This is a guideline, not a hard cap — if precision needs another 20~40 characters, that's fine.
+**Length rules (strict):**
+- 2~4 sentences. **Hard minimum 200 chars, hard maximum 450 chars. Target 280~360.**
+- Under 200 chars → INVALID (too thin for the Expert popup use case). Over 450 → INVALID (reader won't finish). Stay inside the target unless a technical nuance genuinely needs the buffer.
 
 This definition is surfaced in TWO places — both require 2~4 scannable technical sentences, not a one-liner:
 1. Hero Card on the handbook detail page (canonical technical summary)
@@ -1045,6 +1061,15 @@ BAD (definition_en, 170 chars — below Expert popup threshold):
 Target audience: Non-engineers. PM, designers, executives, students. A middle schooler should be able to understand it.
 Tone: Friendly, approachable. Like explaining to a smart friend with no tech background.
 Rule: NO code, NO complex formulas, NO jargon without immediate explanation.
+
+**FAIL CONDITIONS** — the section is rejected if any of the following is true:
+- An English acronym or technical term appears without immediate plain-language explanation (e.g. "Using RLHF…" with no unpacking).
+- `basic_en_1_plain` nearly restates the hero-card one-line definition instead of going deeper (the hero already answered "what is it"; §1 must add a concrete mechanism).
+- An analogy is used without a follow-up 1~2 sentence **concrete mechanism** explanation.
+- `basic_en_2_example` uses clichéd generic examples (smartphones / self-driving cars / voice assistants are on the banned list).
+- `basic_en_3_glance` compares things only with vague adjectives (fast/slow, big/small) without concrete numbers or versioned reference points.
+- References are listed as body bullets (they belong in the `references_en` footer only).
+- The same analogy or example is repeated across multiple sections (each section must carry unique information).
 
 ### Adaptive content for phenomenon/problem terms
 
@@ -1303,7 +1328,7 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_en` is at least 180 chars. Structure: technical definition + mechanism + context/usage. Aim for 200~450.
+✓ `definition_en` is 200~450 chars (target 280~360), 2~4 sentences. Structure: technical definition + mechanism + context/usage. Reject if under 200 or over 450.
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -1313,6 +1338,10 @@ This field is rendered as the **"Understanding Check"** block in the right sideb
 ✓ `basic_en_5_caution` has EXACTLY 3 myth-reality pairs, not 4, not 2
 ✓ `basic_en_6_comm` has 5 sentences in team-meeting/slack tone, not news-article tone
 ✓ `basic_en_7_related` has 4~6 entries. Every entry starts with `- (before|similar|next) **Term** —` (tag before term, one of the three exactly). Each gives a comparison/learning-order reason (not a dictionary definition).
+✓ `basic_en_7_related` category validation — reject and rewrite if any item:
+   (a) uses an **internal component** of this term as "before" (e.g. Q/K/V for attention, running average for Adam, kernels for CUDA)
+   (b) lists an alias / full name / translation of the same term (e.g. "Graphics Processing Unit" under GPU)
+   (c) repeats the same term twice
 ✓ `references_en` has ≥2 primary items, ≤3 secondary items, total 3~7
 ✓ All reference URLs are from the provided Reference Materials — no fabricated links
 ✓ `sidebar_checklist_en` has 4~5 questions testing understanding, not memorization
@@ -1534,6 +1563,11 @@ Keep the same section keys; only adapt the content perspective.
 ✓ adv_ko_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ 실수:` and contains ` → ✅ 해결:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_ko_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
 ✓ adv_ko_7_related has 4~6 entries, every bullet starts with `- (선행|대안|확장) **용어** —` (Korean tag before the term)
+✓ adv_ko_7_related 카테고리 검증 — 아래 중 하나라도 해당하면 반려 후 다시 작성:
+   (a) **선행** 항목이 이 용어의 **내부 구성요소** (예: attention의 Q/K/V, Adam의 running average, CUDA의 커널, Transformer의 residual)
+   (b) **대안** 항목이 이 용어의 **역사적 원조** (예: attention에서 RNN+Seq2Seq는 선행이지 대안이 아님)
+   (c) 이 용어의 alias / 풀네임 / 번역어를 항목으로 넣음 (예: GPU에서 "Graphics Processing Unit")
+   (d) 한 bullet에 두 개 이상의 독립 개념을 복합으로 묶음 (예: "마스크드 어텐션과 어텐션 풀링" — 분리해야 함)
 ✓ NO reference list or link bullets in any section — references belong in the footer (already generated)
 
 ## Quality Rules
@@ -1748,6 +1782,11 @@ Keep the same section keys; only adapt the content perspective.
 ✓ adv_en_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ Mistake:` and contains ` → ✅ Fix:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_en_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
 ✓ adv_en_7_related has 4~6 entries, every bullet starts with `- (prerequisite|alternative|extension) **Term** —` (tag before the term)
+✓ adv_en_7_related category validation — reject and rewrite if any item:
+   (a) a **prerequisite** that is an **internal component** of this term (e.g. Q/K/V for attention, running average for Adam, kernels for CUDA, residual for Transformer)
+   (b) an **alternative** that is the **historical predecessor** of this term (e.g. RNN+Seq2Seq for attention — that's a prerequisite, not an alternative)
+   (c) lists an alias / full name / translation of the same term (e.g. "Graphics Processing Unit" under GPU)
+   (d) bundles two independent concepts into one bullet (e.g. "Masked attention and attention pooling" — split them)
 ✓ NO reference list or link bullets in any section — references belong in the footer (already generated)
 
 ## Quality Rules
