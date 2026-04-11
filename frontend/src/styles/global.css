@@ -1476,44 +1476,75 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 }
 
 /* ================================================================
-   Dialogue quote cards — handbook.
+   Pull-quote — handbook dialogue sections.
    rehypeHandbookSectionMarkers tags the Advanced §6 "업계 대화 맥락"
    and Basic "대화에서는 이렇게" lists with `.hb-section-dialogue`.
-   Each list item becomes a quoted-sentence card with accent-color
-   left border + italic text.
+   Rendered as editorial pull-quotes: an oversized faded `"` sits
+   behind the text like a watermark, the content is italic serif
+   (inherited from .newsprint-prose), no card container, generous
+   vertical rhythm so each quote reads as its own editorial moment.
+   Matches the newsprint theme of the site and stays quiet enough
+   for Advanced's incident-postmortem tone while still reading as
+   "something a person said" at Basic level.
    ================================================================ */
 .newsprint-prose .hb-section-dialogue {
   list-style: none;
   padding: 0;
-  margin: 0.75rem 0;
+  margin: 1.25rem 0 1.75rem;
 }
 
 .newsprint-prose .hb-section-dialogue > li {
   list-style: none;
-  padding: 0.625rem 0.875rem 0.625rem 1rem;
-  margin: 0.5rem 0;
-  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
-  border-left: 3px solid var(--color-accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  position: relative;
+  padding: 0.5rem 0.5rem 0.75rem 2.75rem;
+  margin: 1.125rem 0;
   font-style: italic;
+  font-size: 1.02rem;
+  line-height: 1.7;
   color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-radius: 0;
 }
 
 .newsprint-prose .hb-section-dialogue > li::marker {
   content: none;
 }
 
-/* Loose list case (remark wraps each <li> in <p> when items are
-   separated by blank lines). Remove the inherited paragraph spacing
-   so the quote card reads as a single block. */
+/* Oversized decorative opening quote (LEFT DOUBLE QUOTATION MARK).
+   Positioned behind the text as a watermark — low opacity so the
+   content's own "..." punctuation reads normally over it. */
+.newsprint-prose .hb-section-dialogue > li::before {
+  content: "\201C";
+  position: absolute;
+  left: 0;
+  top: -0.35rem;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 3.2rem;
+  line-height: 1;
+  color: var(--color-accent);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+/* Subtle dashed separator between quotes — newspaper column divider
+   feel. Last item skips the divider. */
+.newsprint-prose .hb-section-dialogue > li + li {
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 80%, transparent);
+  padding-top: 1.125rem;
+}
+
+/* Loose list case: remark wraps content in <p>. Collapse the
+   inherited paragraph spacing so the quote reads as a single block. */
 .newsprint-prose .hb-section-dialogue > li > p {
   margin: 0;
 }
 
-/* Bold terms within the quote stay upright even when the surrounding
-   text is italic. Also lift the color back to primary so the emphasis
-   actually reads. Works for both tight (li > strong) and loose
-   (li > p > strong) list cases. */
+/* Bold terms stay upright even when surrounding text is italic, and
+   lift back to primary color so the emphasis actually reads. Works
+   for both tight (li > strong) and loose (li > p > strong) shapes. */
 .newsprint-prose .hb-section-dialogue > li strong {
   font-style: normal;
   color: var(--color-text-primary);
