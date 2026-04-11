@@ -1,0 +1,146 @@
+---
+/**
+ * HandbookSectionNav — draft (HB-UX Phase 1.5)
+ *
+ * Dynamic table of contents extracted from h2 headings in #handbook-body.
+ * Re-builds on `reading-content-changed` to stay in sync with Basic/Advanced
+ * level switches (which swap innerHTML wholesale). Hidden when the current
+ * level has fewer than 2 headings, and hidden entirely on mobile.
+ */
+interface Props {
+  locale: 'ko' | 'en';
+}
+const { locale } = Astro.props;
+const isKo = locale === 'ko';
+const label = isKo ? '목차' : 'Contents';
+---
+
+<nav class="handbook-toc" data-handbook-toc aria-label={label} hidden>
+  <h3 class="newsprint-section-title handbook-toc__title">{label}</h3>
+  <ol class="handbook-toc__list" data-handbook-toc-list></ol>
+</nav>
+
+<style>
+  .handbook-toc {
+    margin-bottom: 1.25rem;
+  }
+  .handbook-toc[hidden] {
+    display: none;
+  }
+  .handbook-toc__title {
+    margin-bottom: 0.5rem;
+  }
+  .handbook-toc__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-left: 2px solid var(--color-border);
+  }
+  .handbook-toc__item {
+    position: relative;
+    padding: 0;
+    margin: 0;
+  }
+  .handbook-toc__link {
+    display: block;
+    padding: 0.375rem 0.5rem 0.375rem 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    margin-left: -2px;
+    transition: color 150ms ease, border-color 150ms ease;
+  }
+  .handbook-toc__link:hover {
+    color: var(--color-text-primary);
+  }
+  .handbook-toc__item[data-active="true"] > .handbook-toc__link {
+    color: var(--color-accent);
+    border-left-color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  @media (max-width: 1024px) {
+    .handbook-toc {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  let observer: IntersectionObserver | null = null;
+  const liByHeadingId = new Map<string, HTMLLIElement>();
+
+  function buildTOC(): void {
+    const nav = document.querySelector<HTMLElement>('[data-handbook-toc]');
+    const list = document.querySelector<HTMLOListElement>('[data-handbook-toc-list]');
+    const body = document.getElementById('handbook-body');
+    if (!nav || !list || !body) return;
+
+    const headings = Array.from(body.querySelectorAll<HTMLHeadingElement>('h2'));
+    if (headings.length < 2) {
+      nav.hidden = true;
+      list.innerHTML = '';
+      if (observer) { observer.disconnect(); observer = null; }
+      liByHeadingId.clear();
+      return;
+    }
+
+    if (observer) { observer.disconnect(); observer = null; }
+    liByHeadingId.clear();
+    list.innerHTML = '';
+
+    headings.forEach((h, idx) => {
+      if (!h.id) h.id = `handbook-section-${idx}`;
+      const li = document.createElement('li');
+      li.className = 'handbook-toc__item';
+      li.dataset.active = 'false';
+
+      const a = document.createElement('a');
+      a.className = 'handbook-toc__link';
+      a.href = `#${h.id}`;
+      a.textContent = (h.textContent || '').trim();
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const top = h.getBoundingClientRect().top + window.scrollY - 96;
+        window.scrollTo({ top, behavior: 'smooth' });
+        history.replaceState(null, '', `#${h.id}`);
+      });
+
+      li.appendChild(a);
+      list.appendChild(li);
+      liByHeadingId.set(h.id, li);
+    });
+
+    nav.hidden = false;
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length === 0) return;
+        const topmost = visible.reduce((a, b) =>
+          a.boundingClientRect.top < b.boundingClientRect.top ? a : b
+        );
+        const activeId = (topmost.target as HTMLElement).id;
+        liByHeadingId.forEach((li, id) => {
+          li.dataset.active = id === activeId ? 'true' : 'false';
+        });
+      },
+      { rootMargin: '-20% 0% -60% 0%', threshold: 0 }
+    );
+
+    headings.forEach((h) => observer!.observe(h));
+  }
+
+  function init(): void {
+    buildTOC();
+    window.addEventListener('reading-content-changed', buildTOC);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>

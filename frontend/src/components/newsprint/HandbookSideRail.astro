@@ -1,4 +1,6 @@
 ---
+import HandbookSectionNav from './HandbookSectionNav.astro';
+
 interface RailTerm {
   term: string;
   slug: string;
@@ -23,6 +25,9 @@ const { locale, relatedTerms, sameCategoryTerms, relatedArticles } = Astro.props
 const isKo = locale === 'ko';
 const hasRelated = relatedTerms.length > 0;
 ---
+
+{/* Dynamic section TOC (draft — hides on <2 headings and on mobile) */}
+<HandbookSectionNav locale={locale} />
 
 {/* Primary: Related Terms (curated) */}
 {hasRelated && (
