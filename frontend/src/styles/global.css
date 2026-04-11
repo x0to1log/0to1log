@@ -1669,6 +1669,98 @@ html[lang="ko"] .newsprint-prose .hb-section-pitfalls > li::before {
 }
 
 /* ================================================================
+   HandbookSectionNav — client-side TOC in the side rail.
+   Styles live here (not in the .astro component's <style>) because
+   the <li>/<a> children are built at runtime via JS and therefore
+   don't carry Astro's data-astro-cid scoping attribute. Scoped
+   selectors would silently skip them.
+   ================================================================ */
+.handbook-toc {
+  margin-bottom: 1.5rem;
+}
+
+.handbook-toc[hidden] {
+  display: none;
+}
+
+.handbook-toc__title {
+  margin: 0 0 0.625rem;
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.handbook-toc__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: hb-toc;
+}
+
+.handbook-toc__item {
+  counter-increment: hb-toc;
+  padding: 0;
+  margin: 0.0625rem 0;
+}
+
+.handbook-toc__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.625rem 0.4375rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: color 150ms ease, background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.handbook-toc__link::before {
+  content: counter(hb-toc);
+  flex: 0 0 1rem;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.handbook-toc__text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handbook-toc__link:hover {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+}
+
+.handbook-toc__item[data-active="true"] > .handbook-toc__link {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  border-left-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.handbook-toc__item[data-active="true"] > .handbook-toc__link::before {
+  color: var(--color-accent);
+}
+
+@media (max-width: 1024px) {
+  .handbook-toc {
+    display: none;
+  }
+}
+
+/* ================================================================
    §6 Industry dialogue blockquote — handbook Advanced (also safe
    fallback for any blockquote elsewhere in newsprint-prose, which is
    rare). Accent-color left border + italic quote body + muted

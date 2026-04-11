@@ -1,11 +1,16 @@
 ---
 /**
- * HandbookSectionNav — draft (HB-UX Phase 1.5)
+ * HandbookSectionNav — dynamic section TOC (HB-UX Phase 1.5)
  *
- * Dynamic table of contents extracted from h2 headings in #handbook-body.
- * Re-builds on `reading-content-changed` to stay in sync with Basic/Advanced
- * level switches (which swap innerHTML wholesale). Hidden when the current
- * level has fewer than 2 headings, and hidden entirely on mobile.
+ * Extracts h2 headings from #handbook-body at runtime and builds a sticky
+ * nav in the side rail. Rebuilds on `reading-content-changed` so the
+ * Basic/Advanced level switch stays in sync. Hidden when the current
+ * level has fewer than 2 headings and on viewports below 1024px.
+ *
+ * NOTE: styles live in global.css, not in a scoped <style> block, because
+ * the <li>/<a> children are created at runtime via document.createElement
+ * and therefore don't carry Astro's data-astro-cid scoping attribute.
+ * Scoped styles would silently fail to apply to them.
  */
 interface Props {
   locale: 'ko' | 'en';
@@ -16,57 +21,9 @@ const label = isKo ? '목차' : 'Contents';
 ---
 
 <nav class="handbook-toc" data-handbook-toc aria-label={label} hidden>
-  <h3 class="newsprint-section-title handbook-toc__title">{label}</h3>
+  <p class="handbook-toc__title">{label}</p>
   <ol class="handbook-toc__list" data-handbook-toc-list></ol>
 </nav>
-
-<style>
-  .handbook-toc {
-    margin-bottom: 1.25rem;
-  }
-  .handbook-toc[hidden] {
-    display: none;
-  }
-  .handbook-toc__title {
-    margin-bottom: 0.5rem;
-  }
-  .handbook-toc__list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    border-left: 2px solid var(--color-border);
-  }
-  .handbook-toc__item {
-    position: relative;
-    padding: 0;
-    margin: 0;
-  }
-  .handbook-toc__link {
-    display: block;
-    padding: 0.375rem 0.5rem 0.375rem 0.875rem;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    color: var(--color-text-secondary);
-    text-decoration: none;
-    border-left: 2px solid transparent;
-    margin-left: -2px;
-    transition: color 150ms ease, border-color 150ms ease;
-  }
-  .handbook-toc__link:hover {
-    color: var(--color-text-primary);
-  }
-  .handbook-toc__item[data-active="true"] > .handbook-toc__link {
-    color: var(--color-accent);
-    border-left-color: var(--color-accent);
-    font-weight: 600;
-  }
-
-  @media (max-width: 1024px) {
-    .handbook-toc {
-      display: none;
-    }
-  }
-</style>
 
 <script>
   let observer: IntersectionObserver | null = null;
@@ -100,7 +57,14 @@ const label = isKo ? '목차' : 'Contents';
       const a = document.createElement('a');
       a.className = 'handbook-toc__link';
       a.href = `#${h.id}`;
-      a.textContent = (h.textContent || '').trim();
+      const fullText = (h.textContent || '').trim();
+      a.title = fullText;
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'handbook-toc__text';
+      textSpan.textContent = fullText;
+      a.appendChild(textSpan);
+
       a.addEventListener('click', (e) => {
         e.preventDefault();
         const top = h.getBoundingClientRect().top + window.scrollY - 96;
