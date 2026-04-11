@@ -2,65 +2,6 @@ import { localField } from '../handbookUtils';
 import { renderMarkdown, renderMarkdownWithTerms, renderHandbookMarkdown, type TermsMap } from '../markdown';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
-// Question-style labels for collapsed sections — maps section keyword to curiosity question
-const QUESTION_MAP_KO: Record<string, string> = {
-  '어디서': '실제로 어디서 쓰여요?',
-  '주의': '자주 하는 실수가 뭐예요?',
-  '대화': '회의에서 어떻게 말해요?',
-  '함께': '다음에 뭘 공부하면 좋아요?',
-};
-const QUESTION_MAP_EN: Record<string, string> = {
-  'where': 'Where is it actually used?',
-  'precaution': 'What mistakes do people make?',
-  'communication': 'How do you talk about it?',
-  'related': 'What should I learn next?',
-};
-
-/**
- * Wrap handbook basic HTML sections 5-8 in a collapsible block.
- * Splits at the 5th <h2> tag — first 4 sections stay visible, rest go into <details>.
- * Collapsed sections show question-style labels to drive curiosity clicks.
- */
-function wrapLearnMore(html: string, locale: string): string {
-  if (!html) return html;
-  const h2Pattern = /<h2[\s>]/gi;
-  const matches: number[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = h2Pattern.exec(html)) !== null) {
-    matches.push(m.index);
-  }
-  // Need at least 6 h2s to split (5 core + 1+ learn more)
-  // Core: 0_summary, 1_plain, 2_example, 3_glance, 4_why
-  if (matches.length < 6) return html;
-  const splitIndex = matches[5]; // 6th h2 (0-indexed: 5)
-  const corePart = html.slice(0, splitIndex);
-  const learnMorePart = html.slice(splitIndex);
-
-  const questionMap = locale === 'ko' ? QUESTION_MAP_KO : QUESTION_MAP_EN;
-  const bulbIcon = '<svg class="learn-more-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
-  const summaryLabel = locale === 'ko'
-    ? `이런 것도 궁금하지 않으세요? ${bulbIcon}`
-    : `Curious about more? ${bulbIcon}`;
-
-  // Extract section titles and convert to question-style labels
-  const titlePattern = /<h2[^>]*>(.*?)<\/h2>/gi;
-  const questions: string[] = [];
-  let tm: RegExpExecArray | null;
-  while ((tm = titlePattern.exec(learnMorePart)) !== null) {
-    const rawTitle = tm[1].replace(/<[^>]+>/g, '').trim();
-    // Find matching keyword and use question version
-    const titleLower = rawTitle.toLowerCase();
-    const keyword = Object.keys(questionMap).find(k => titleLower.includes(k));
-    questions.push(keyword ? questionMap[keyword] : rawTitle);
-  }
-
-  const questionsHtml = questions.length > 0
-    ? `<ul class="learn-more-questions">${questions.map(q => `<li class="learn-more-question">${q}</li>`).join('')}</ul>`
-    : '';
-
-  return `${corePart}<details class="handbook-learn-more"><summary><div class="learn-more-header"><span class="learn-more-chevron">▶</span> ${summaryLabel}</div>${questionsHtml}</summary>${learnMorePart}</details>`;
-}
-
 interface HandbookDetailPageContext extends DetailPageContext {
   previewLevel?: string | null;
 }
@@ -233,7 +174,7 @@ export async function getHandbookDetailPageData({
         : Promise.resolve({ data: null }),
     ]);
 
-    if (basicHtml) levelHtmlMap.basic = wrapLearnMore(basicHtml, locale);
+    if (basicHtml) levelHtmlMap.basic = basicHtml;
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
 
     // Use tag-matched articles, fall back to recent news
@@ -250,7 +191,7 @@ export async function getHandbookDetailPageData({
       bodyBasic ? renderHandbookMarkdown(bodyBasic) : Promise.resolve(''),
       bodyAdvanced ? renderHandbookMarkdown(bodyAdvanced) : Promise.resolve(''),
     ]);
-    if (basicHtml) levelHtmlMap.basic = wrapLearnMore(basicHtml, locale);
+    if (basicHtml) levelHtmlMap.basic = basicHtml;
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
   }
 
