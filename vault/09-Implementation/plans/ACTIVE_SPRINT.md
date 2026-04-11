@@ -99,6 +99,7 @@
 | HB-UX-04 | done | §6 Industry dialogue marker — rehypeHandbookSectionMarkers 확장 + accent border + italic + bold de-italic + Hero label semantic 수정 (h2→div role=heading) | P1 | `b64e789` |
 | HB-UX-05 | **cancelled** | ~~Advanced 사이드바 체크리스트~~ — 사용자 거부 ("판단할 수 있나요?" 인위적, 콘텐츠 감 부족) | — | — |
 | HB-UX-06 | todo | §4 Tradeoffs 2-column grid — "적합한 경우" / "피해야 할 경우" heading pair 감지 rehype 플러그인 + 2-col CSS | P2 | — |
+| HB-UX-07 | done | Math/currency $ classifier preprocessor — `$P(t_{1:n})$` 같은 inline math가 literal로 렌더되던 문제 fix. 4-rule 분류기로 math vs currency 분기, math만 `$$X$$`로 rewrite → render time fix, no regen | P0 | `42b7ee7` |
 
 **구현 전략:**
 - **Phase 1 ✅ done (commits a744824 → 7571d36 → 0f7b707 → b64e789):** HB-UX-01/02/03/04 — CSS/renderer + 마커 플러그인 + 프롬프트 §5 bullet 강제. 효과 즉시.
@@ -108,6 +109,7 @@
 - Playwright 시각 검수가 silent failure 잡음 — HB-UX-03이 commit 시점엔 작동하는 줄 알았으나 §6 콘텐츠가 ul/li 구조라 효과 0. HB-UX-04가 그 fix.
 - §5 pitfalls 프롬프트 format이 free-form text였다가 callout 추가 후 bullet 강제 (`0f7b707`) — UI 변경이 backend prompt 수정을 trigger한 사례.
 - 마커 플러그인 (`rehypeHandbookSectionMarkers`) 패턴이 §5/§6 모두 재사용. 새 추상화 안 만들어도 확장 가능 = 좋은 plugin 설계 신호.
+- **HB-UX-07** — HB-UX-01 시리즈의 두 번째 silent failure 발견 (LLM 페이지 사용자 보고). `singleDollarTextMath: false`가 GPU 통화는 fix했지만 LLM `$P(t_{1:n})$` 같은 inline math를 literal로 깨뜨림. Render-time preprocessor가 둘 다 만족시키는 분기 로직 도입 (4-rule heuristic). 공통 패턴: **하나의 fix가 다른 silent failure를 만들 수 있고, 시각 검수만이 잡을 수 있음**.
 
 ### 뉴스 파이프라인 — rolling 개선
 
