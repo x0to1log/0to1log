@@ -98,19 +98,19 @@
    DARK THEME (Default)
    =========================== */
 [data-theme="dark"] {
-  --color-bg-primary: #181412;
-  --color-bg-secondary: #12100E;
-  --color-bg-tertiary: #1F1B18;
-  --color-bg-card: #201C1A;
-  --color-input-surface: #201C1A;
-  --color-text-primary: #E0D8C3;
-  --color-text-secondary: #A39D8E;
-  --color-text-muted: #948C7E;
-  --color-border: #3D3529;
-  --color-accent: #C3A370;
-  --color-accent-hover: #D4B882;
-  --color-accent-glow: rgba(195, 163, 112, 0.15);
-  --color-accent-subtle: rgba(195, 163, 112, 0.08);
+  --color-bg-primary: #171311;
+  --color-bg-secondary: #100D0B;
+  --color-bg-tertiary: #201B18;
+  --color-bg-card: #1C1714;
+  --color-input-surface: #1D1916;
+  --color-text-primary: #E7DFCF;
+  --color-text-secondary: #B3AC9D;
+  --color-text-muted: #968E81;
+  --color-border: #4A4137;
+  --color-accent: #C8A66F;
+  --color-accent-hover: #D6B882;
+  --color-accent-glow: rgba(200, 166, 111, 0.16);
+  --color-accent-subtle: rgba(200, 166, 111, 0.09);
   --color-success: #5A8E5D;
   --color-warning: #D4A843;
   --color-error: #A8524B;
@@ -118,21 +118,21 @@
   --noise-opacity: 0.025;
 
   /* Category Colors */
-  --color-cat-ainews: #C3A370;
-  --color-cat-study: #7A8B78;
-  --color-cat-career: #8B5E3C;
-  --color-cat-project: #8888A0;
-  --color-cat-work-note: #6E8C92;
-  --color-cat-daily: #A97C68;
+  --color-cat-ainews: #C8A66F;
+  --color-cat-study: #829A7D;
+  --color-cat-career: #A06B44;
+  --color-cat-project: #9596B3;
+  --color-cat-work-note: #759AA2;
+  --color-cat-daily: #B18470;
 
   /* Shiki — Warm Sepia */
   --shiki-token-keyword: #D4A87C;
   --shiki-token-string: #8FAE7E;
   --shiki-token-function: #B8A9D4;
-  --shiki-token-comment: #948C7E;
-  --shiki-token-constant: #C3A370;
-  --shiki-token-punctuation: #E0D8C3;
-  --shiki-color-text: #E0D8C3;
+  --shiki-token-comment: #968E81;
+  --shiki-token-constant: #C8A66F;
+  --shiki-token-punctuation: #E7DFCF;
+  --shiki-color-text: #E7DFCF;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
@@ -140,41 +140,41 @@
    MIDNIGHT THEME — Cool Ink
    =========================== */
 [data-theme="midnight"] {
-  --color-bg-primary: #08090E;
-  --color-bg-secondary: #101218;
-  --color-bg-tertiary: #1A1C25;
-  --color-bg-card: #101218;
-  --color-input-surface: #101218;
-  --color-text-primary: #C8CDD8;
-  --color-text-secondary: #A0A6B4;
-  --color-text-muted: #7E8596;
-  --color-border: #2E3242;
-  --color-accent: #C4B07A;
-  --color-accent-hover: #D4C08A;
-  --color-accent-glow: rgba(100, 150, 255, 0.12);
-  --color-accent-subtle: rgba(100, 150, 255, 0.06);
-  --color-success: #4E9A6B;
-  --color-warning: #C9A044;
-  --color-error: #B85450;
+  --color-bg-primary: #070910;
+  --color-bg-secondary: #0D1118;
+  --color-bg-tertiary: #171C26;
+  --color-bg-card: #10151E;
+  --color-input-surface: #121822;
+  --color-text-primary: #D6DCE8;
+  --color-text-secondary: #ABB4C4;
+  --color-text-muted: #838DA0;
+  --color-border: #353D50;
+  --color-accent: #C7B07B;
+  --color-accent-hover: #D6C18B;
+  --color-accent-glow: rgba(199, 176, 123, 0.14);
+  --color-accent-subtle: rgba(199, 176, 123, 0.07);
+  --color-success: #60A17B;
+  --color-warning: #D1AA4C;
+  --color-error: #C26663;
   --color-shadow: rgba(0, 0, 0, 0.6);
   --noise-opacity: 0.025;
 
   /* Category Colors — cool shift */
-  --color-cat-ainews: #9AA8B8;
-  --color-cat-study: #6E9682;
-  --color-cat-career: #7A5030;
-  --color-cat-project: #8282AF;
-  --color-cat-work-note: #6496AA;
-  --color-cat-daily: #AA8282;
+  --color-cat-ainews: #9EB4D2;
+  --color-cat-study: #79A18C;
+  --color-cat-career: #A66C45;
+  --color-cat-project: #8F94C7;
+  --color-cat-work-note: #6EA6BF;
+  --color-cat-daily: #B08E8D;
 
   /* Shiki — Cool Ink */
-  --shiki-token-keyword: #D4C08A;
-  --shiki-token-string: #6E9682;
-  --shiki-token-function: #8282AF;
-  --shiki-token-comment: #7E8596;
-  --shiki-token-constant: #C4B07A;
-  --shiki-token-punctuation: #C8CDD8;
-  --shiki-color-text: #C8CDD8;
+  --shiki-token-keyword: #D6C18B;
+  --shiki-token-string: #79A18C;
+  --shiki-token-function: #8F94C7;
+  --shiki-token-comment: #838DA0;
+  --shiki-token-constant: #C7B07B;
+  --shiki-token-punctuation: #D6DCE8;
+  --shiki-color-text: #D6DCE8;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
