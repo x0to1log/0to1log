@@ -8,6 +8,8 @@ import { visit } from 'unist-util-visit';
  *
  * 1. §5 프로덕션 함정 / Production Pitfalls → `ul.hb-section-pitfalls`
  *    §6 업계 대화 / Industry Communication → `ul.hb-section-dialogue`
+ *    Basic "대화에서는 이렇게" / "How It Sounds in Conversation"
+ *    also → `ul.hb-section-dialogue` (same quote-card layout).
  *    (simple class injection so CSS can target the list)
  *
  * 2. §4 트레이드오프 / Tradeoffs → wraps `적합/부적합` into a 2-column grid.
@@ -44,7 +46,12 @@ const MARKERS: SectionMarker[] = [
   },
   {
     className: 'hb-section-dialogue',
-    patterns: [/업계\s*대화/, /Industry\s+Communication/i],
+    patterns: [
+      /업계\s*대화/,
+      /대화에서는/,
+      /Industry\s+Communication/i,
+      /How\s+It\s+Sounds/i,
+    ],
   },
 ];
 

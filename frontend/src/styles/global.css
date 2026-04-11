@@ -1478,53 +1478,27 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 /* ================================================================
    §5 Pitfalls callout — handbook Advanced only.
    rehypeHandbookSectionMarkers tags the pitfalls list with
-   `.hb-section-pitfalls`. Each list item becomes a warning card with:
-   - Top tab label "함정 #N" / "PITFALL #N" (auto-counter)
-   - Full border with strong left bar
-   - Stronger background tint than §6 dialogue
-   - Semantic color coding: 실수 in warning color, 해결 in success color
-   No emoji used — color, typography, and the top tab carry the
-   "warning" signal in a way that's visually distinct from §6 dialogue.
+   `.hb-section-pitfalls`. Toned down to match §4 tradeoffs visual
+   weight: same 1px frame + 3px left bar + ~5% warning tint. The
+   "signature" lives only in the semantic inline colors — 실수/실패
+   in warning and 해결 in success — so the content itself, not the
+   container, carries the "warning" signal. Top counter tab removed;
+   the surrounding <ol> already provides ordering implicitly.
    ================================================================ */
 .newsprint-prose .hb-section-pitfalls {
   list-style: none;
   padding: 0;
-  margin: 1.25rem 0 0.875rem;
-  counter-reset: pitfall;
+  margin: 1rem 0 0.875rem;
 }
 
 .newsprint-prose .hb-section-pitfalls > li {
-  counter-increment: pitfall;
   list-style: none;
-  position: relative;
-  padding: 1rem 1.125rem 0.875rem 1.125rem;
-  margin: 1.5rem 0;
-  background: color-mix(in srgb, var(--color-warning) 11%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-warning) 28%, transparent);
-  border-left: 4px solid var(--color-warning);
+  padding: 0.75rem 1rem 0.875rem 1rem;
+  margin: 0.875rem 0;
+  background: color-mix(in srgb, var(--color-warning) 5%, transparent);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-warning);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.newsprint-prose .hb-section-pitfalls > li::before {
-  content: "PITFALL #" counter(pitfall);
-  position: absolute;
-  top: -0.6875rem;
-  left: -1px;
-  background: var(--color-warning);
-  color: var(--color-bg-primary);
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 3px 9px 3px 10px;
-  border-radius: 0 3px 3px 0;
-  font-family: var(--font-code);
-  line-height: 1;
-}
-
-html[lang="ko"] .newsprint-prose .hb-section-pitfalls > li::before {
-  content: "함정 #" counter(pitfall);
-  letter-spacing: 0.04em;
 }
 
 .newsprint-prose .hb-section-pitfalls > li::marker {
