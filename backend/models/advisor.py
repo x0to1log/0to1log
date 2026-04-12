@@ -155,6 +155,7 @@ class HandbookAdviseRequest(BaseModel):
     body_advanced_ko: str = ""
     body_advanced_en: str = ""
     force_direction: str = ""  # "ko2en", "en2ko", or "" (auto)
+    skip_quality_check: bool = False  # skip LLM quality evaluation (structural checks still run)
 
 
 class HandbookAdviseResponse(BaseModel):

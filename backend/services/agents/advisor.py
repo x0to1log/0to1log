@@ -816,10 +816,157 @@ async def _self_critique_advanced(
         return False, "", 50, {}
 
 
+def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
+    """Score handbook structural quality via deterministic code checks.
+
+    Mirrors the news pipeline's _check_structural_penalties() pattern:
+    granular per-violation penalties, per-check caps, total cap at 40.
+    Returns (penalty: 0-40, warnings: list of human-readable issues).
+
+    This runs inline during generation (pure Python, no API calls, <1ms)
+    and provides the "structural health" component of the hybrid quality
+    score. The semantic component comes from the optional LLM quality
+    check which may or may not run.
+    """
+    import re as _re
+
+    penalty = 0
+    warnings: list[str] = []
+
+    def _count_h2(body: str) -> int:
+        if not body:
+            return 0
+        count = body.count("\n## ")
+        if body.startswith("## "):
+            count += 1
+        return count
+
+    def _sentence_count(text: str) -> int:
+        if not text:
+            return 0
+        # Split on period/question/exclamation followed by space or end
+        sentences = [s for s in _re.split(r'[.。?!]\s', text) if len(s.strip()) > 10]
+        return max(1, len(sentences))
+
+    # --- Check 1: Advanced section completeness (-3/missing, cap -15) ---
+    check1_penalty = 0
+    for locale in ["ko", "en"]:
+        body = data.get(f"body_advanced_{locale}", "") or ""
+        h2 = _count_h2(body)
+        missing = max(0, 7 - h2)
+        if missing > 0:
+            p = missing * 3
+            check1_penalty += p
+            warnings.append(f"adv_{locale}: {h2}/7 sections (-{p})")
+    penalty += min(check1_penalty, 15)
+
+    # --- Check 2: Basic section completeness (-2/missing, cap -10) ---
+    check2_penalty = 0
+    for locale in ["ko", "en"]:
+        body = data.get(f"body_basic_{locale}", "") or ""
+        h2 = _count_h2(body)
+        missing = max(0, 7 - h2)
+        if missing > 0:
+            p = missing * 2
+            check2_penalty += p
+            warnings.append(f"basic_{locale}: {h2}/7 sections (-{p})")
+    penalty += min(check2_penalty, 10)
+
+    # --- Check 3: Definition structure (-5 if <2 sents, -3 if >5, cap -5) ---
+    check3_penalty = 0
+    for locale in ["ko", "en"]:
+        defn = data.get(f"definition_{locale}", "") or ""
+        if not defn:
+            check3_penalty += 5
+            warnings.append(f"definition_{locale} missing (-5)")
+        else:
+            sc = _sentence_count(defn)
+            if sc < 2:
+                check3_penalty += 5
+                warnings.append(f"definition_{locale}: {sc} sentence(s), need 2-4 (-5)")
+            elif sc > 5:
+                check3_penalty += 3
+                warnings.append(f"definition_{locale}: {sc} sentences, too long (-3)")
+    penalty += min(check3_penalty, 5)
+
+    # --- Check 4: §5 pitfalls ❌/✅ markers (-5 if missing) ---
+    adv_ko = data.get("body_advanced_ko", "") or ""
+    if adv_ko and "❌" not in adv_ko:
+        penalty += 5
+        warnings.append("§5 pitfalls: ❌ markers missing in adv_ko (-5)")
+
+    # --- Check 5: §7 category tags (-5 if missing, cap -5) ---
+    check5_penalty = 0
+    if adv_ko and not any(t in adv_ko for t in ["(선행)", "(대안)", "(확장)"]):
+        check5_penalty += 3
+        warnings.append("§7 adv_ko: category tags (선행/대안/확장) missing (-3)")
+    adv_en = data.get("body_advanced_en", "") or ""
+    if adv_en and not any(t in adv_en for t in ["(prerequisite)", "(alternative)", "(extension)"]):
+        check5_penalty += 3
+        warnings.append("§7 adv_en: category tags missing (-3)")
+    penalty += min(check5_penalty, 5)
+
+    # --- Check 6: §4 tradeoffs labels (-3 if missing) ---
+    if adv_ko and "이럴 때 적합" not in adv_ko and "이럴 때 부적합" not in adv_ko:
+        penalty += 3
+        warnings.append("§4 tradeoffs: 적합/부적합 labels missing in adv_ko (-3)")
+
+    # --- Check 7: References (-3 per violation, cap -6) ---
+    check7_penalty = 0
+    for locale in ["ko", "en"]:
+        refs = data.get(f"references_{locale}", []) or []
+        if len(refs) < 3:
+            check7_penalty += 3
+            warnings.append(f"refs_{locale}: {len(refs)} items < 3 (-3)")
+        else:
+            primary = sum(1 for r in refs if (r.get("tier") if isinstance(r, dict) else "") == "primary")
+            if primary < 2:
+                check7_penalty += 2
+                warnings.append(f"refs_{locale}: {primary} primary < 2 (-2)")
+    penalty += min(check7_penalty, 6)
+
+    # --- Check 8: Hero news context (-3 per missing locale, cap -6) ---
+    check8_penalty = 0
+    for locale in ["ko", "en"]:
+        if not data.get(f"hero_news_context_{locale}"):
+            check8_penalty += 3
+            warnings.append(f"hero_{locale} missing (-3)")
+    penalty += min(check8_penalty, 6)
+
+    # --- Check 9: Advanced section depth (-1 per thin section, cap -5) ---
+    check9_penalty = 0
+    for locale in ["ko", "en"]:
+        body = data.get(f"body_advanced_{locale}", "") or ""
+        if not body:
+            continue
+        sections = _re.split(r"\n## ", body)
+        for i, sec in enumerate(sections):
+            sec_text = sec.strip()
+            if sec_text and len(sec_text) < 200:
+                check9_penalty += 1
+                if check9_penalty <= 3:  # only log first 3 to avoid noise
+                    warnings.append(f"adv_{locale} section {i}: {len(sec_text)} chars < 200 (-1)")
+    penalty += min(check9_penalty, 5)
+
+    # --- Check 10: Advanced total body length (-5 if under 6000) ---
+    adv_total = len(adv_ko) + len(adv_en)
+    if adv_total < 6000:
+        penalty += 5
+        warnings.append(f"adv total: {adv_total} chars < 6000 (-5)")
+
+    # --- Check 11: Korean name present (-1 if missing) ---
+    if not data.get("korean_name"):
+        penalty += 1
+        warnings.append("korean_name missing (-1)")
+
+    return min(penalty, 40), warnings
+
+
 async def _check_handbook_quality(
     term: str, term_type: str, advanced_content: str, client,
-) -> tuple[int, dict, dict]:
-    """Score handbook advanced quality. Returns (score, breakdown, usage)."""
+) -> tuple[int | None, dict, dict]:
+    """Score handbook advanced quality. Returns (score, breakdown, usage).
+    Returns (None, {}, {}) on failure — NOT a default score."""
     from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
 
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
@@ -843,7 +990,7 @@ async def _check_handbook_quality(
         return score, data, usage
     except Exception as e:
         logger.warning("Handbook quality check failed for '%s': %s", term, e)
-        return 50, {}, {}
+        return None, {}, {}
 
 
 async def _self_critique_basic(
@@ -931,7 +1078,7 @@ async def _check_basic_quality(
         return score, data, usage
     except Exception as e:
         logger.warning("Basic quality check failed for '%s': %s", term, e)
-        return 50, {}, {}
+        return None, {}, {}
 
 
 async def _validate_ref_urls(content: str) -> str:
@@ -1710,63 +1857,149 @@ async def _run_generate_term(
     except Exception as e:
         logger.warning("Entity verification failed for '%s': %s", req.term, e)
 
-    # Quality check on assembled advanced content
-    adv_combined = f"{data.get('body_advanced_ko', '')}\n\n{data.get('body_advanced_en', '')}"
-    quality_score = None
-    if adv_combined.strip():
-        quality_score, quality_breakdown, quality_usage = await _check_handbook_quality(
-            req.term, term_type, adv_combined, client,
-        )
-        if quality_usage:
-            merged_usage = merge_usage_metrics(merged_usage, quality_usage)
-        data["quality_score"] = quality_score
-        data["quality_breakdown"] = quality_breakdown
-        data["term_type"] = term_type
-        data["facet_intent"] = intent_list
-        data["facet_volatility"] = volatility
-        if quality_score < 60:
-            warnings.append(f"Advanced quality score: {quality_score}/100 — review recommended")
-        logger.info("Handbook quality for '%s': %d/100 (type=%s)", req.term, quality_score, term_type)
-        _log_handbook_stage("handbook.quality_check", quality_usage or {},
-                            extra_meta={"quality_score": quality_score, "term_type": term_type})
+    # ── Hybrid quality scoring ──────────────────────────────────────────
+    # Phase 1: Structural penalties (code, always runs, free, <1ms)
+    structural_penalty, structural_warnings = _check_handbook_structural_penalties(data)
+    warnings.extend(structural_warnings)
 
-    # Quality check on assembled basic content
-    basic_combined = f"{data.get('body_basic_ko', '')}\n\n{data.get('body_basic_en', '')}"
-    basic_quality_score = None
-    if basic_combined.strip():
-        basic_quality_score, basic_quality_breakdown, basic_quality_usage = (
-            await _check_basic_quality(req.term, term_type, basic_combined, client)
-        )
-        if basic_quality_usage:
-            merged_usage = merge_usage_metrics(merged_usage, basic_quality_usage)
-        data["basic_quality_score"] = basic_quality_score
-        data["basic_quality_breakdown"] = basic_quality_breakdown
-        if basic_quality_score is not None and basic_quality_score < 60:
-            warnings.append(f"Basic quality score: {basic_quality_score}/100 — review recommended")
-        logger.info("Basic quality for '%s': %d/100", req.term, basic_quality_score or 0)
-        _log_handbook_stage("handbook.quality_check.basic", basic_quality_usage or {},
-                            extra_meta={"basic_quality_score": basic_quality_score, "term_type": term_type})
+    # Metadata fields (written regardless of quality check)
+    data["term_type"] = term_type
+    data["facet_intent"] = intent_list
+    data["facet_volatility"] = volatility
+
+    # Phase 2: Semantic quality via LLM (optional, costs ~$0.10/term)
+    semantic_score = None
+    semantic_breakdown = {}
+    basic_semantic_score = None
+    basic_semantic_breakdown = {}
+
+    if not req.skip_quality_check:
+        # Advanced semantic check
+        adv_combined = f"{data.get('body_advanced_ko', '')}\n\n{data.get('body_advanced_en', '')}"
+        if adv_combined.strip():
+            try:
+                semantic_score, semantic_breakdown, quality_usage = await _check_handbook_quality(
+                    req.term, term_type, adv_combined, client,
+                )
+                if quality_usage:
+                    merged_usage = merge_usage_metrics(merged_usage, quality_usage)
+                if semantic_score is not None:
+                    _log_handbook_stage("handbook.quality_check", quality_usage or {},
+                                        extra_meta={"semantic_score": semantic_score, "term_type": term_type})
+            except Exception as e:
+                logger.warning("Advanced quality check failed for '%s': %s", req.term, e)
+
+        # Basic semantic check
+        basic_combined = f"{data.get('body_basic_ko', '')}\n\n{data.get('body_basic_en', '')}"
+        if basic_combined.strip():
+            try:
+                basic_semantic_score, basic_semantic_breakdown, basic_quality_usage = (
+                    await _check_basic_quality(req.term, term_type, basic_combined, client)
+                )
+                if basic_quality_usage:
+                    merged_usage = merge_usage_metrics(merged_usage, basic_quality_usage)
+                if basic_semantic_score is not None:
+                    _log_handbook_stage("handbook.quality_check.basic", basic_quality_usage or {},
+                                        extra_meta={"basic_semantic_score": basic_semantic_score})
+            except Exception as e:
+                logger.warning("Basic quality check failed for '%s': %s", req.term, e)
+
+    # Phase 3: Combine scores (news pipeline pattern: semantic - penalty)
+    def _combine_quality(semantic: int | None, penalty: int) -> int:
+        if semantic is not None:
+            return max(0, semantic - penalty)
+        return max(0, 100 - penalty * 2)
+
+    def _grade(score: int) -> str:
+        if score >= 85:
+            return "A"
+        if score >= 70:
+            return "B"
+        if score >= 55:
+            return "C"
+        return "D"
+
+    adv_final = _combine_quality(semantic_score, structural_penalty)
+    basic_final = _combine_quality(basic_semantic_score, structural_penalty)
+
+    data["quality"] = {
+        "advanced": {
+            "total": adv_final,
+            "grade": _grade(adv_final),
+            "structural_penalty": structural_penalty,
+            "structural_warnings": structural_warnings,
+            "semantic_score": semantic_score,
+            "semantic_breakdown": semantic_breakdown if semantic_score is not None else None,
+            "method": "hybrid" if semantic_score is not None else "structural-only",
+        },
+        "basic": {
+            "total": basic_final,
+            "grade": _grade(basic_final),
+            "semantic_score": basic_semantic_score,
+            "semantic_breakdown": basic_semantic_breakdown if basic_semantic_score is not None else None,
+            "method": "hybrid" if basic_semantic_score is not None else "structural-only",
+        },
+    }
+
+    # Legacy compatibility: keep top-level quality_score for existing consumers
+    data["quality_score"] = adv_final
+    data["basic_quality_score"] = basic_final
+
+    # Grade-based warnings
+    if adv_final < 55:
+        warnings.append(f"Advanced quality: {adv_final}/100 ({_grade(adv_final)}) — regen recommended")
+    elif adv_final < 70:
+        warnings.append(f"Advanced quality: {adv_final}/100 ({_grade(adv_final)}) — review recommended")
+    if basic_final < 55:
+        warnings.append(f"Basic quality: {basic_final}/100 ({_grade(basic_final)}) — regen recommended")
+    elif basic_final < 70:
+        warnings.append(f"Basic quality: {basic_final}/100 ({_grade(basic_final)}) — review recommended")
+
+    logger.info(
+        "Handbook quality for '%s': adv=%d/%s basic=%d/%s (structural_penalty=%d, method=%s)",
+        req.term, adv_final, _grade(adv_final), basic_final, _grade(basic_final),
+        structural_penalty, data["quality"]["advanced"]["method"],
+    )
 
     # Record to dedicated quality scores table
     if supabase:
         try:
-            import re
-            term_slug = re.sub(r'[^a-z0-9]+', '-', req.term.lower().strip()).strip('-')
-            base_row = {"term_slug": term_slug, "term_type": term_type, "source": source}
-            if req.term_id:
-                base_row["term_id"] = req.term_id
+            import re as _re
+            term_slug = _re.sub(r'[^a-z0-9]+', '-', req.term.lower().strip()).strip('-')
 
-            if quality_score is not None:
+            # Resolve actual UUID — batch scripts use fake term_ids like "batch-regen-xxx"
+            actual_id = None
+            if req.term_id:
+                try:
+                    import uuid
+                    uuid.UUID(req.term_id)
+                    actual_id = req.term_id
+                except ValueError:
+                    pass
+            if not actual_id:
+                row = supabase.table("handbook_terms").select("id").eq("slug", term_slug).limit(1).execute()
+                if row.data:
+                    actual_id = row.data[0]["id"]
+
+            base_row = {"term_slug": term_slug, "term_type": term_type, "source": source}
+            if actual_id:
+                base_row["term_id"] = actual_id
+
+            quality_data = data.get("quality", {})
+            adv_q = quality_data.get("advanced", {})
+            basic_q = quality_data.get("basic", {})
+
+            if adv_q.get("total") is not None:
                 supabase.table("handbook_quality_scores").insert({
                     **base_row,
-                    "score": quality_score,
-                    "breakdown": {"level": "advanced", **quality_breakdown},
+                    "score": adv_q["total"],
+                    "breakdown": {"level": "advanced", **adv_q},
                 }).execute()
-            if basic_quality_score is not None:
+            if basic_q.get("total") is not None:
                 supabase.table("handbook_quality_scores").insert({
                     **base_row,
-                    "score": basic_quality_score,
-                    "breakdown": {"level": "basic", **basic_quality_breakdown},
+                    "score": basic_q["total"],
+                    "breakdown": {"level": "basic", **basic_q},
                 }).execute()
         except Exception as e:
             logger.warning("Failed to record handbook quality score: %s", e)

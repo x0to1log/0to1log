@@ -644,36 +644,45 @@ BASIC_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's basic secti
 
 Term: "{term}" | Type: {term_type}
 
-Rate the basic content (0-100) on criteria relevant to beginner-oriented educational content:
+Rate the basic content (0-100) on criteria relevant to beginner-oriented educational content.
+
+The basic body has exactly 7 H2 sections (in order):
+  1. 쉽게 이해하기 / Plain Explanation
+  2. 비유와 예시 / Examples & Analogies
+  3. 한눈에 비교 / At a Glance (comparison table)
+  4. 어디서 왜 중요한가 / Where and Why It Matters
+  5. 자주 하는 오해 / Common Misconceptions (❌/✅ pairs)
+  6. 대화에서는 이렇게 / How It Sounds in Conversation
+  7. 함께 읽으면 좋은 용어 / Related Reading
 
 ## Criteria
 
 ### Engagement (0-25)
-- 23-25: 1_plain has clear analogy AND concrete mechanism. 2_example uses surprising non-obvious scenarios. 8_related triggers curiosity with comparison points.
+- 23-25: §1 has clear analogy AND concrete mechanism. §2 uses surprising non-obvious scenarios. §7 triggers curiosity with comparison points and category tags.
 - 18-22: Analogy and mechanism present but one is weak. Examples are specific but not surprising. Related terms have some comparison points.
 - 13-17: Analogy exists but mechanism missing. Examples are generic (smartphones, self-driving). Related terms are dictionary-style.
 - 8-12: Shallow analogy only. Examples are cliche. Related terms just list names.
 - 0-7: No analogy, no mechanism. Generic one-liners.
 
 ### Accuracy (0-25)
-- 23-25: All product-technology mappings verified. 6_caution myths are concept-specific. No fabricated claims.
+- 23-25: All product-technology mappings verified. §5 myths are concept-specific. No fabricated claims.
 - 18-22: Most claims accurate, one minor unverifiable statement.
 - 13-17: Mix of accurate and vague claims ("widely used in industry").
 - 8-12: Some fabricated product claims or wrong technology mappings.
 - 0-7: Multiple factual errors.
 
 ### Uniqueness (0-25)
-- 23-25: Zero cross-section repetition. 3_glance compares 2+ specific technologies. Each section adds genuinely new information.
+- 23-25: Zero cross-section repetition. §3 compares 2+ specific technologies. Each section adds genuinely new information.
 - 18-22: Minimal repetition. Table compares real concepts but lacks depth.
 - 13-17: Some repeated analogies/examples across sections. Table is "high vs low" style.
 - 8-12: Significant repetition. Table is a glossary.
 - 0-7: Sections are essentially reworded versions of each other.
 
 ### Completeness (0-25)
-- 23-25: All 8 sections substantive (min 150 chars each). 1_plain >= 300 chars. 7_comm has 4+ team conversation examples.
-- 18-22: 7-8 sections substantive, one slightly thin.
-- 13-17: 6-7 sections substantive, 1-2 thin.
-- 8-12: 4-5 sections substantive, rest thin or empty.
+- 23-25: All 7 sections substantive (min 150 chars each). §1 >= 300 chars. §6 has 4+ team conversation examples.
+- 18-22: 6-7 sections substantive, one slightly thin.
+- 13-17: 5-6 sections substantive, 1-2 thin.
+- 8-12: 3-4 sections substantive, rest thin or empty.
 - 0-7: Multiple empty sections.
 
 ## Score Interpretation
