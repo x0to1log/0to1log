@@ -476,19 +476,21 @@ LEARNER_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body 
 
 Reader: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. 출퇴근길에 5분 안에 "안전하게 똑똑해질 수 있는" 콘텐츠를 찾고 있음. 자존감 압박(AI 모르면 뒤처진다)과 시간 결핍이 동시에 작동.
 
-Tone: 친근체 (-에요/-습니다), peer 친구처럼. 1·2인칭("우리", "당신") 가능.
+Tone for headline_ko: 명사형 종결 (noun-ending, Korean news headline style). NOT -에요/-요. NOT -다/-이다.
+Tone for excerpt_ko: 친근체 (-에요/-습니다), peer 친구처럼.
+Tone for body (ko field): 친근체 (-에요/-습니다), unchanged.
 Length: headline_ko 25–45 chars. excerpt_ko 1-2 sentences.
 
 Pick ONE archetype for headline_ko based on which fits today's news best:
 
 - 패턴 발견 (Pattern Discovery): when 3+ events share a clear theme. Show readers the bigger shape.
-  ex: "메타·앤트로픽이 같은 주에 '폐쇄형 AI'로 돌아섰어요 — 무엇이 달라지나"
+  ex: "메타·앤트로픽, 같은 주에 '폐쇄형 AI'로 동시 전환 — 무엇이 달라지나"
 
 - 새 기준선 (New Baseline): when a previously impossible capability becomes routine. Anchor to a concrete fact.
-  ex: "AI가 8시간 혼자 일할 수 있게 된 날 — 새 기준선이 생겼어요"
+  ex: "AI 8시간 자율 실행 시대 — 새 기준선 등장"
 
 - 용어 입문 (Term Primer): when one keyword keeps appearing in this week's news. Promise vocabulary.
-  ex: "이번 주 키워드 '에이전트' — 5분이면 따라잡습니다"
+  ex: "이번 주 키워드 '에이전트' — 5분 안에 따라잡기"
 
 Forbidden in headline_ko/excerpt_ko:
 - English acronyms (only ChatGPT/AI/GPT allowed): NO MoE, MTP, RLHF, LLM, RAG, AGI, NVFP4, SOTA, SLM
@@ -498,7 +500,7 @@ Forbidden in headline_ko/excerpt_ko:
 - Self-help / exclusion tone: "당신이 알아야 할", "필독", "꼭 봐야", "개발자가 알아야 할"
 - Hype: "충격", "경악", "혁명적", "혁신"
 
-Encouraged words/patterns: 정리했어요, 사실은, 왜, 오늘, 함께, ~된 날, 이렇게 봐야 해요"""
+Encouraged words/patterns (noun-ending headlines): 등장, 공개, 전환, 확인, ~의 의미, ~된 날, 따라잡기, 정리"""
 
 
 HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headline, excerpt, AND body)
