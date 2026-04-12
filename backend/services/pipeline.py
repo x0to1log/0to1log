@@ -1237,6 +1237,22 @@ def _check_structural_penalties(
                     f"One-Line Summary too long ({en_words} words > 15) in {persona_name} en"
                 )
 
+    # Check 8: KO ### heading with zero Hangul (-5 each, max -15)
+    _hangul_re = _re.compile(r"[\uAC00-\uD7AF]")
+    for persona_name, output in [("expert", expert), ("learner", learner)]:
+        if not output or not output.ko:
+            continue
+        en_only_count = 0
+        for line in output.ko.split("\n"):
+            if line.startswith("### ") and not _hangul_re.search(line):
+                en_only_count += 1
+        if en_only_count:
+            inc = min(en_only_count * 5, 15)
+            penalty += inc
+            warnings.append(
+                f"{en_only_count} English-only `###` heading(s) in {persona_name} ko"
+            )
+
     return min(penalty, 40), warnings
 
 

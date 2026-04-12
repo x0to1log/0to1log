@@ -254,6 +254,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 
    Second paragraph, ending with [2](URL)
    ```
+   **KO `###` headings**: MUST contain Korean text. Use format `영문 고유명: 한국어 설명`. For papers, write a short Korean descriptive title — NEVER copy the full English paper title. Include the original English title in the body's first sentence if needed. Example: `### UNLOCK: 훈련 없이 모델 간 능력 이식` (O), `### The Master Key Hypothesis: Unlocking Cross-Model Capability Transfer via Linear Subspace Alignment` (X).
    Use **bold** for key terms/companies/numbers and `>` blockquotes for direct source quotes.
 8. MATH FORMULAS: use `$$...$$` for ALL math expressions. NEVER use single `$...$` (it conflicts with currency like $2B).
 9. COMMUNITY PULSE: write a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
