@@ -1554,10 +1554,10 @@ async def _generate_digest(
                             ],
                             response_format={"type": "json_object"},
                             temperature=0.4,
-                            max_tokens=16000,
+                            max_tokens=24000,
                         )
                     ),
-                    timeout=180,  # 3 minutes max per digest call
+                    timeout=240,  # 4 minutes max per digest call
                 )
                 data = parse_ai_json(
                     response.choices[0].message.content,
