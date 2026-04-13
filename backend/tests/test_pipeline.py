@@ -134,6 +134,64 @@ def _community_summary_map():
     }
 
 
+class _InsertCaptureQuery:
+    def __init__(self, supabase, name):
+        self.supabase = supabase
+        self.name = name
+        self._insert_payload = None
+
+    def select(self, *args, **kwargs):
+        return self
+
+    def update(self, *args, **kwargs):
+        return self
+
+    def insert(self, payload):
+        self._insert_payload = payload
+        return self
+
+    def upsert(self, *args, **kwargs):
+        return self
+
+    def delete(self, *args, **kwargs):
+        return self
+
+    def eq(self, *args, **kwargs):
+        return self
+
+    def ilike(self, *args, **kwargs):
+        return self
+
+    def neq(self, *args, **kwargs):
+        return self
+
+    def gte(self, *args, **kwargs):
+        return self
+
+    def in_(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
+    def is_(self, *args, **kwargs):
+        return self
+
+    def execute(self):
+        if self.name == "handbook_terms" and self._insert_payload is not None:
+            self.supabase.inserted_rows.append(self._insert_payload)
+            return MagicMock(data=[{"id": "term-row-1"}])
+        return MagicMock(data=[])
+
+
+class _HandbookInsertCaptureSupabase:
+    def __init__(self):
+        self.inserted_rows = []
+
+    def table(self, name):
+        return _InsertCaptureQuery(self, name)
+
+
 @pytest.mark.asyncio
 async def test_run_daily_pipeline_happy_path():
     """Current pipeline creates 4 digest rows when both categories survive."""
@@ -228,3 +286,57 @@ async def test_pipeline_supabase_not_configured():
 
     assert result.posts_created == 0
     assert any("not configured" in e.lower() for e in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_extract_and_create_handbook_terms_persists_hero_and_references_fields():
+    from services.pipeline import _extract_and_create_handbook_terms
+
+    supabase = _HandbookInsertCaptureSupabase()
+    extracted_terms = [
+        {
+            "term": "Function Calling",
+            "korean_name": "함수 호출",
+            "category": "llm-genai",
+            "secondary_categories": ["products-platforms"],
+            "confidence": "high",
+        }
+    ]
+    generated_content = {
+        "korean_name": "함수 호출",
+        "term_full": "Function Calling",
+        "korean_full": "함수 호출",
+        "categories": ["llm-genai", "products-platforms"],
+        "definition_ko": "ko definition " * 20,
+        "definition_en": "en definition " * 20,
+        "body_basic_ko": "ko basic " * 300,
+        "body_basic_en": "en basic " * 300,
+        "body_advanced_ko": "ko advanced " * 320,
+        "body_advanced_en": "en advanced " * 320,
+        "hero_news_context_ko": "\"quote1\" → 의미1\n\"quote2\" → 의미2\n\"quote3\" → 의미3",
+        "hero_news_context_en": "\"quote1\" -> meaning1\n\"quote2\" -> meaning2\n\"quote3\" -> meaning3",
+        "references_ko": [{"title": "KO Ref", "type": "docs", "url": "https://example.com/ko", "tier": "primary", "annotation": "ko"}],
+        "references_en": [{"title": "EN Ref", "type": "docs", "url": "https://example.com/en", "tier": "primary", "annotation": "en"}],
+        "term_type": "api_feature",
+        "facet_intent": ["build"],
+        "facet_volatility": "evolving",
+    }
+
+    with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
+         patch("services.pipeline.generate_term_content", new=AsyncMock(return_value=(generated_content.copy(), EMPTY_USAGE))), \
+         patch("services.pipeline.gate_candidate_terms", new=AsyncMock(return_value=[{"term": "Function Calling", "korean_name": "함수 호출"}])), \
+         patch("services.pipeline._log_stage", new=AsyncMock()):
+        created, errors = await _extract_and_create_handbook_terms(
+            article_texts=["Function Calling helps models choose tools."],
+            supabase=supabase,
+            run_id="run-1",
+        )
+
+    assert created == 1
+    assert errors == []
+    assert len(supabase.inserted_rows) == 1
+    row = supabase.inserted_rows[0]
+    assert row["hero_news_context_ko"] == generated_content["hero_news_context_ko"]
+    assert row["hero_news_context_en"] == generated_content["hero_news_context_en"]
+    assert row["references_ko"] == generated_content["references_ko"]
+    assert row["references_en"] == generated_content["references_en"]

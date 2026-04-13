@@ -147,6 +147,8 @@ class HandbookAdviseRequest(BaseModel):
     term_id: str
     term: str
     korean_name: str = ""
+    term_full: str = ""
+    korean_full: str = ""
     categories: list[str] = []
     definition_ko: str = ""
     definition_en: str = ""
@@ -154,6 +156,10 @@ class HandbookAdviseRequest(BaseModel):
     body_basic_en: str = ""
     body_advanced_ko: str = ""
     body_advanced_en: str = ""
+    hero_news_context_ko: str = ""
+    hero_news_context_en: str = ""
+    references_ko: list[dict] = []
+    references_en: list[dict] = []
     force_direction: str = ""  # "ko2en", "en2ko", or "" (auto)
     skip_quality_check: bool = False  # skip LLM quality evaluation (structural checks still run)
 

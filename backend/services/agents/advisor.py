@@ -1,6 +1,7 @@
 """AI Advisor agent handlers — post actions + deep verify + handbook."""
 
 import asyncio
+import json
 import logging
 import re
 
@@ -340,6 +341,8 @@ def _build_handbook_user_prompt(req: HandbookAdviseRequest) -> str:
     parts = [
         f"Term: {req.term}",
         f"Korean name: {req.korean_name}" if req.korean_name else None,
+        f"English full name: {req.term_full}" if req.term_full else None,
+        f"Korean full name: {req.korean_full}" if req.korean_full else None,
         f"Categories: {', '.join(req.categories)}" if req.categories else None,
     ]
     # Include available content
@@ -347,14 +350,21 @@ def _build_handbook_user_prompt(req: HandbookAdviseRequest) -> str:
         defn = getattr(req, f"definition_{lang}", "")
         basic = getattr(req, f"body_basic_{lang}", "")
         advanced = getattr(req, f"body_advanced_{lang}", "")
-        if any([defn, basic, advanced]):
+        hero = getattr(req, f"hero_news_context_{lang}", "")
+        refs = getattr(req, f"references_{lang}", [])
+        if any([defn, basic, advanced, hero, refs]):
             parts.append(f"\n--- Content ({lang.upper()}) ---")
             if defn:
                 parts.append(f"Definition: {defn}")
+            if hero:
+                parts.append(f"Hero News Context:\n{hero}")
             if basic:
                 parts.append(f"Body (Basic):\n{basic}")
             if advanced:
                 parts.append(f"Body (Advanced):\n{advanced}")
+            if refs:
+                refs_json = json.dumps(refs, ensure_ascii=False, indent=2)
+                parts.append(f"References:\n{refs_json[:2000]}")
     return "\n".join(p for p in parts if p is not None)
 
 

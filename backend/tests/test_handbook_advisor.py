@@ -305,3 +305,31 @@ def test_basic_en_expected_section_count_matches_redesign():
     # The _basic_expected dict should have "en": 7, not "en": 13
     assert '"en": 7' in source, "EN Basic threshold should be 7 after Plan B redesign"
     assert '"en": 13' not in source, "Legacy EN=13 threshold must be removed"
+
+
+def test_build_handbook_user_prompt_includes_redesign_fields():
+    from services.agents.advisor import _build_handbook_user_prompt
+
+    req = HandbookAdviseRequest(
+        action="generate",
+        term_id="term-1",
+        term="Function Calling",
+        korean_name="함수 호출",
+        term_full="Function Calling",
+        korean_full="함수 호출",
+        categories=["llm-genai", "products-platforms"],
+        definition_ko="정의 ko",
+        definition_en="definition en",
+        hero_news_context_ko="\"quote\" → 의미",
+        hero_news_context_en="\"quote\" -> meaning",
+        references_ko=[{"title": "KO Ref", "type": "docs", "url": "https://example.com/ko", "tier": "primary"}],
+        references_en=[{"title": "EN Ref", "type": "docs", "url": "https://example.com/en", "tier": "primary"}],
+    )
+
+    prompt = _build_handbook_user_prompt(req)
+
+    assert "English full name: Function Calling" in prompt
+    assert "Korean full name: 함수 호출" in prompt
+    assert "Hero News Context:\n\"quote\" → 의미" in prompt
+    assert '"title": "KO Ref"' in prompt
+    assert '"title": "EN Ref"' in prompt

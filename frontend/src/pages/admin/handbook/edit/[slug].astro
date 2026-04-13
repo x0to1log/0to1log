@@ -803,6 +803,13 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       if (input) { input.value = value; updateAllIndicators(); }
     }
 
+    function formatGeneratedFieldValue(value: unknown): string {
+      if (typeof value === 'string') return value;
+      if (Array.isArray(value)) return JSON.stringify(value, null, 2);
+      if (value && typeof value === 'object') return JSON.stringify(value, null, 2);
+      return '';
+    }
+
     function showDiff(btn: HTMLButtonElement, fieldName: string, newValue: string) {
       const currentValue = getHandbookValue(fieldName);
       const container = btn.closest('.admin-ai-suggestion') as HTMLElement | null;
@@ -862,6 +869,23 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       };
       setAiLoading(true, loadingLabels[action] || action);
 
+      let referencesKo: any[] | null = null;
+      let referencesEn: any[] | null = null;
+      try {
+        referencesKo = parseReferencesField(
+          (form.querySelector('[name="references_ko"]') as HTMLTextAreaElement)?.value || '',
+          'references_ko',
+        );
+        referencesEn = parseReferencesField(
+          (form.querySelector('[name="references_en"]') as HTMLTextAreaElement)?.value || '',
+          'references_en',
+        );
+      } catch (err) {
+        showFeedback((err as Error).message, true);
+        setAiLoading(false);
+        return;
+      }
+
       const body: Record<string, any> = {
         action,
         term_id: (form.querySelector('[name="id"]') as HTMLInputElement)?.value || 'new',
@@ -876,6 +900,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         body_basic_en: crepeBasicEn ? crepeBasicEn.getMarkdown() : '',
         body_advanced_ko: crepeAdvancedKo ? crepeAdvancedKo.getMarkdown() : '',
         body_advanced_en: crepeAdvancedEn ? crepeAdvancedEn.getMarkdown() : '',
+        hero_news_context_ko: (form.querySelector('[name="hero_news_context_ko"]') as HTMLTextAreaElement)?.value || '',
+        hero_news_context_en: (form.querySelector('[name="hero_news_context_en"]') as HTMLTextAreaElement)?.value || '',
+        references_ko: referencesKo,
+        references_en: referencesEn,
       };
 
       // Apply overrides (e.g. force body_basic/advanced empty for body-only generation)
@@ -1201,20 +1229,22 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         { key: 'definition', label: 'Definition' },
         { key: 'body_basic', label: 'Body (Basic)' },
         { key: 'body_advanced', label: 'Body (Advanced)' },
+        { key: 'hero_news_context', label: 'Hero News Context' },
+        { key: 'references', label: 'References' },
       ];
 
       ['ko', 'en'].forEach(lang => {
         const langLabel = lang.toUpperCase();
         let hasContent = false;
         contentFields.forEach(f => {
-          const val = r[`${f.key}_${lang}`];
+          const val = formatGeneratedFieldValue(r[`${f.key}_${lang}`]);
           if (val) hasContent = true;
         });
         if (!hasContent) return;
 
         html += `<div class="admin-ai-generate-lang"><strong>${langLabel}</strong></div>`;
         contentFields.forEach(f => {
-          const val = r[`${f.key}_${lang}`];
+          const val = formatGeneratedFieldValue(r[`${f.key}_${lang}`]);
           if (!val) return;
           const fieldName = `${f.key}_${lang}`;
           const truncLen = 200;
