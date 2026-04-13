@@ -1082,6 +1082,35 @@ def _clean_writer_output(content: str) -> str:
     return content
 
 
+def _find_digest_blockers(personas: dict[str, PersonaOutput]) -> list[str]:
+    """Return hard-blocking structural issues that should prevent saving drafts."""
+    import re as _re
+
+    hangul_re = _re.compile(r"[\u3131-\u318E\uAC00-\uD7A3]")
+    placeholder_re = _re.compile(r"^[-\u2013\u2014:|/·•*~_()\[\]\s]+$")
+    blockers: list[str] = []
+
+    for persona_name, output in personas.items():
+        for locale, content in (("en", output.en), ("ko", output.ko)):
+            if not content:
+                continue
+            for raw_line in content.splitlines():
+                if not raw_line.startswith("### "):
+                    continue
+                heading = raw_line[4:].strip()
+                if not heading or placeholder_re.fullmatch(heading):
+                    blockers.append(
+                        f"{persona_name} {locale}: placeholder `###` heading `{raw_line.strip()}`"
+                    )
+                    continue
+                if locale == "en" and hangul_re.search(heading):
+                    blockers.append(
+                        f"{persona_name} {locale}: Hangul in EN `###` heading `{raw_line.strip()}`"
+                    )
+
+    return blockers
+
+
 def _check_structural_penalties(
     expert: PersonaOutput,
     learner: PersonaOutput | None,
@@ -1767,6 +1796,23 @@ async def _generate_digest(
         errors.append(error_msg)
         return 0, errors, cumulative_usage
 
+    blockers = _find_digest_blockers(personas)
+    if blockers:
+        error_msg = f"{digest_type} digest structural validation failed — {'; '.join(blockers)}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+        await _log_stage(
+            supabase,
+            run_id,
+            f"validate:{digest_type}",
+            "failed",
+            time.monotonic(),
+            error_message=error_msg,
+            post_type=digest_type,
+            debug_meta={"blockers": blockers},
+        )
+        return 0, errors, cumulative_usage
+
     # Quality check — score the generated digest
     quality_score = await _check_digest_quality(
         personas, digest_type, classified, community_summary_map,
@@ -1782,7 +1828,11 @@ async def _generate_digest(
     translation_group_id = str(uuid.uuid4())
     slug_base = f"{batch_id}-{digest_type}-digest"
 
-    source_urls = [url for group in classified for url in group.urls]
+    fallback_source_urls = [url for group in classified for url in group.urls]
+    merged_persona_sources = (
+        (persona_sources.get("expert") or []) +
+        (persona_sources.get("learner") or [])
+    )
     digest_meta = {
         "digest_type": digest_type,
         "news_items": [
@@ -1830,6 +1880,14 @@ async def _generate_digest(
                     allowed_urls.add(s["url"])
         expert_content, expert_source_cards = _renumber_citations(expert_content, allowed_urls)
         learner_content, learner_source_cards = _renumber_citations(learner_content, allowed_urls)
+        combined_source_cards = _dedup_source_cards(
+            (expert_source_cards or []) + (learner_source_cards or [])
+        )
+        if not combined_source_cards and fallback_source_urls:
+            combined_source_cards = [
+                {"id": idx + 1, "url": url, "title": ""}
+                for idx, url in enumerate(dict.fromkeys(fallback_source_urls))
+            ]
 
 
         text = expert_content or learner_content or ""
@@ -1866,10 +1924,10 @@ async def _generate_digest(
             "tags": digest_tags or [],
             "focus_items": focus_items or [],
             "reading_time_min": reading_time,
-            "source_urls": source_urls,
+            "source_urls": [card["url"] for card in combined_source_cards],
             "source_cards": _fill_source_titles(
-                expert_source_cards or learner_source_cards,
-                persona_sources.get("expert") or persona_sources.get("learner") or [],
+                combined_source_cards,
+                merged_persona_sources,
             ),
             "fact_pack": {
                 **digest_meta,
