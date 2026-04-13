@@ -65,6 +65,13 @@ def test_business_expert_prompt_separates_front_load_from_analysis_sections():
     assert "If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt" in prompt
 
 
+def test_business_expert_prompt_softens_secondary_source_interpretation_in_front_load():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert 'avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on"' in prompt
+    assert 'phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as"' in prompt
+
+
 def test_research_prompt_has_license_sensitive_wording_guard():
     prompt = get_digest_prompt("research", "expert", [])
 

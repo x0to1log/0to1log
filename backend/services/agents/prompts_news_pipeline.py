@@ -419,6 +419,8 @@ Writing rules:
 - In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
 - Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
 - If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt or frame it as reported/suggestive rather than definitive.
+- In the headline, excerpt, and first paragraph, avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on" unless a primary source states that conclusion directly.
+- If front-loaded interpretation depends mainly on secondary reporting, phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as" rather than sounding settled.
 - ALWAYS compare numbers to competitors or industry benchmarks
 - Analyze competitive dynamics with explicit reasoning chains grounded in sourced facts
 - Connecting the Dots should explain the strongest plausible drivers and market pattern without inventing hidden motives unsupported by sources
