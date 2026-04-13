@@ -57,6 +57,23 @@ def test_business_expert_prompt_distinguishes_fact_from_inference():
     assert "signals, points to, implies, or suggests" in prompt
 
 
+def test_digest_prompt_requires_english_field_purity():
+    prompt = get_digest_prompt("research", "expert", [])
+
+    assert "EN FIELD PURITY" in prompt
+    assert "The `en` field is a standalone English article." in prompt
+    assert "Do not use Hangul anywhere in the English headline, excerpt, section summaries, `###` headings, or body paragraphs." in prompt
+
+
+def test_digest_prompt_requires_english_only_subheadings_and_checklist():
+    prompt = get_digest_prompt("research", "expert", [])
+
+    assert "**EN `###` headings**: MUST be English-only." in prompt
+    assert "Good: `### ClawBench: Agent performance on everyday web tasks`" in prompt
+    assert "Bad: `### ClawBench: 실사용 웹 과제에서의 에이전트 성능 점검`" in prompt
+    assert "Does the `en` field contain any Hangul in the headline, excerpt, `###` headings, or body?" in prompt
+
+
 def test_classification_prompt_allows_cross_category_overlap_for_dual_significance():
     assert "The same article CAN appear in both categories if relevant to both" in CLASSIFICATION_SYSTEM_PROMPT
     assert "The same article CAN and SHOULD appear in both categories when it has both technical and business significance." in CLASSIFICATION_SYSTEM_PROMPT

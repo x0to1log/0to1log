@@ -207,6 +207,15 @@ def _build_digest_prompt(
         "\n8. One-Line Summary hard limit: is `## 한 줄 요약` ≤60 Korean chars with ONE central idea? "
         "Is `## One-Line Summary` ≤15 English words? NO comma-chained multi-topic sentences."
     )
+    english_field_purity_rule = (
+        "\n2a. EN FIELD PURITY: The `en` field is a standalone English article. "
+        "Do not use Hangul anywhere in the English headline, excerpt, section summaries, `###` headings, or body paragraphs. "
+        "If an explanatory gloss is needed, put it in the first sentence after the heading, never inside the heading."
+    )
+    english_field_purity_checklist = (
+        "\n8b. EN field purity: Does the `en` field contain any Hangul in the headline, excerpt, `###` headings, or body? "
+        "If explanation is needed, is it written in English body text after the heading rather than inside the heading itself?"
+    )
     learner_opening_checklist = (
         "\n8a. LEARNER OPENING SENTENCE: after every `###` heading, does the first sentence explain in plain "
         "everyday language what this item is or does before benchmarks, acronyms, or secondary details? "
@@ -236,6 +245,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 ## Writing Rules
 1. CITATION FORMAT: cite at the END of every paragraph using `[N](URL)`. Use different citations across paragraphs when multiple sources exist. One-Line Summary needs no citation. Do NOT group sources at the bottom. Do NOT use `[Title](URL)` format.
 2. Use concrete numbers and data — no vague statements.
+{english_field_purity_rule}
 {learner_opening_rule}
 {learner_density_rule}
 3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
@@ -255,6 +265,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
    Second paragraph, ending with [2](URL)
    ```
    **KO `###` headings**: MUST contain Korean text. Use format `영문 고유명: 한국어 설명`. For papers, write a short Korean descriptive title — NEVER copy the full English paper title. Include the original English title in the body's first sentence if needed. Example: `### UNLOCK: 훈련 없이 모델 간 능력 이식` (O), `### The Master Key Hypothesis: Unlocking Cross-Model Capability Transfer via Linear Subspace Alignment` (X).
+   **EN `###` headings**: MUST be English-only. Good: `### ClawBench: Agent performance on everyday web tasks`. Bad: `### ClawBench: 실사용 웹 과제에서의 에이전트 성능 점검`. Keep explanation in the first English sentence after the heading, not inside the heading.
    Use **bold** for key terms/companies/numbers and `>` blockquotes for direct source quotes.
 8. MATH FORMULAS: use `$$...$$` for ALL math expressions. NEVER use single `$...$` (it conflicts with currency like $2B).
 9. COMMUNITY PULSE: write a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
@@ -305,7 +316,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
 6. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
-7. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?{one_line_summary_checklist}{learner_opening_checklist}{learner_ko_checklist}
+7. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
 
 """
 
