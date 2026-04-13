@@ -1533,6 +1533,29 @@ async def _generate_digest(
     if not classified:
         return 0, [], {}
 
+    def _normalize_source_url(url: str) -> str:
+        return (url or "").strip().rstrip("/")
+
+    def _source_sort_key(meta: dict[str, Any]) -> tuple[int, int, int, str]:
+        tier_rank = {"primary": 0, "secondary": 1}
+        kind_rank = {
+            "official_site": 0,
+            "paper": 1,
+            "official_repo": 2,
+            "official_platform_asset": 3,
+            "registry": 4,
+            "media": 5,
+            "analysis": 6,
+            "community": 7,
+        }
+        confidence_rank = {"high": 0, "medium": 1, "low": 2}
+        return (
+            tier_rank.get((meta.get("source_tier") or "").lower(), 9),
+            kind_rank.get((meta.get("source_kind") or "").lower(), 9),
+            confidence_rank.get((meta.get("source_confidence") or "").lower(), 9),
+            _normalize_source_url(meta.get("url", "")),
+        )
+
     def _format_source_header(index: int, source_url: str, meta: dict[str, Any]) -> str:
         tier = (meta.get("source_tier") or "").upper()
         kind = meta.get("source_kind") or ""
@@ -1548,6 +1571,16 @@ async def _generate_digest(
         # Multi-source: use enriched sources (from merge or Exa), else raw_content
         sources = _enriched.get(group.primary_url)
         if sources:
+            ordered_sources = []
+            seen_source_urls: set[str] = set()
+            for src in sorted(sources, key=_source_sort_key):
+                normalized_url = _normalize_source_url(src.get("url", ""))
+                if normalized_url and normalized_url in seen_source_urls:
+                    continue
+                if normalized_url:
+                    seen_source_urls.add(normalized_url)
+                ordered_sources.append(src)
+            sources = ordered_sources
             best_content = max((s.get("content", "") for s in sources), key=len)
             if len(best_content.strip()) < 80:
                 logger.info(

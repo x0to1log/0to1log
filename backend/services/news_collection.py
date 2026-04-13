@@ -95,6 +95,13 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_tier": "primary",
         }
 
+    if "microsoft.com" in hostname and path.startswith("/en-us/research/blog/"):
+        return {
+            "source_kind": "official_site",
+            "source_confidence": "high",
+            "source_tier": "primary",
+        }
+
     if any(domain in hostname for domain in _OFFICIAL_SITE_DOMAINS):
         return {
             "source_kind": "official_site",

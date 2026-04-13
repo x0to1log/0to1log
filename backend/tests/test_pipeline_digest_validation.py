@@ -476,6 +476,91 @@ async def test_generate_digest_saves_source_cards_with_source_metadata():
 
 
 @pytest.mark.asyncio
+async def test_generate_digest_orders_primary_sources_first_in_prompt():
+    from services.pipeline import _generate_digest
+
+    captured_user_prompts: list[str] = []
+    responses = [
+        _mock_openai_response(
+            {
+                "en": "## Research Papers\n\n### Expert Heading\n\nExpert body [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### ?꾨Ц媛 ?쒕ぉ\n\n?꾨Ц媛 蹂몃Ц [1](https://example.com/story)",
+                "headline": "Expert headline",
+                "headline_ko": "?꾨Ц媛 ?ㅻ뱶?쇱씤",
+                "excerpt": "Expert excerpt",
+                "excerpt_ko": "?꾨Ц媛 ?붿빟",
+                "sources": [{"url": "https://example.com/story", "title": "Primary source"}],
+            }
+        ),
+        _mock_openai_response(
+            {
+                "en": "## Research Papers\n\n### Learner Heading\n\nLearner body [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### ?숈뒿???쒕ぉ\n\n?숈뒿??蹂몃Ц [1](https://example.com/story)",
+                "headline": "Learner headline",
+                "headline_ko": "?숈뒿???ㅻ뱶?쇱씤",
+                "excerpt": "Learner excerpt",
+                "excerpt_ko": "?숈뒿???붿빟",
+                "sources": [{"url": "https://example.com/story", "title": "Primary source"}],
+            }
+        ),
+    ]
+
+    async def _capture_create(*args, **kwargs):
+        captured_user_prompts.append(kwargs["messages"][1]["content"])
+        return responses.pop(0)
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={
+                "https://example.com/story": [
+                    {
+                        "url": "https://example.com/analysis",
+                        "title": "Media coverage",
+                        "content": "Coverage and context. " * 8,
+                        "source_kind": "media",
+                        "source_confidence": "high",
+                        "source_tier": "secondary",
+                    },
+                    {
+                        "url": "https://example.com/story",
+                        "title": "Primary source",
+                        "content": "Official launch details. " * 8,
+                        "source_kind": "official_site",
+                        "source_confidence": "high",
+                        "source_tier": "primary",
+                    },
+                ]
+            },
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    assert any(
+        prompt.index("Source 1 [PRIMARY / official_site / high]: https://example.com/story")
+        < prompt.index("Source 2 [SECONDARY / media / high]: https://example.com/analysis")
+        for prompt in captured_user_prompts
+    )
+
+
+@pytest.mark.asyncio
 async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
     from services.pipeline import _generate_digest
 

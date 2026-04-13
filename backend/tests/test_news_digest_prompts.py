@@ -116,3 +116,13 @@ def test_classification_prompt_allows_cross_category_overlap_for_dual_significan
     assert "The same article CAN appear in both categories if relevant to both" in CLASSIFICATION_SYSTEM_PROMPT
     assert "The same article CAN and SHOULD appear in both categories when it has both technical and business significance." in CLASSIFICATION_SYSTEM_PROMPT
     assert "overlap is valuable, not redundant." in CLASSIFICATION_SYSTEM_PROMPT
+
+
+def test_digest_prompt_reframes_one_line_summary_as_top_story_synthesis():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "must be exactly ONE sentence that synthesizes the main pattern or shared shift across today's top 2-3 stories." in prompt
+    assert "Do not merely restate a single headline when multiple major stories clearly point to a broader theme." in prompt
+    assert "Does it synthesize the common thread or day's main throughline across the top stories" in prompt
+    assert "≤15 English words" not in prompt
+    assert "≤60 Korean chars" not in prompt

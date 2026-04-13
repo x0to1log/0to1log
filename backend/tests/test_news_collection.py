@@ -68,6 +68,22 @@ def test_classify_source_meta_marks_nvidia_developer_blog_as_official_site():
     }
 
 
+def test_classify_source_meta_marks_microsoft_research_blog_as_official_site():
+    from services.news_collection import _classify_source_meta
+
+    meta = _classify_source_meta(
+        url="https://www.microsoft.com/en-us/research/blog/fara-7b-an-efficient-agentic-model-for-computer-use/",
+        source="tavily",
+        title="Fara-7B: An Efficient Agentic Model for Computer Use",
+    )
+
+    assert meta == {
+        "source_kind": "official_site",
+        "source_confidence": "high",
+        "source_tier": "primary",
+    }
+
+
 def test_classify_source_meta_marks_media_as_secondary():
     from services.news_collection import _classify_source_meta
 

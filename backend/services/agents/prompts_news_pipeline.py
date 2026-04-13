@@ -204,8 +204,9 @@ def _build_digest_prompt(
         else ""
     )
     one_line_summary_checklist = (
-        "\n8. One-Line Summary hard limit: is `## 한 줄 요약` ≤60 Korean chars with ONE central idea? "
-        "Is `## One-Line Summary` ≤15 English words? NO comma-chained multi-topic sentences."
+        "\n8. One-Line Summary role: Is `## One-Line Summary` / `## 한 줄 요약` exactly one sentence? "
+        "Does it synthesize the common thread or day's main throughline across the top stories rather than just repeating one headline "
+        "or listing unrelated items?"
     )
     english_field_purity_rule = (
         "\n2a. EN FIELD PURITY: The `en` field is a standalone English article. "
@@ -538,17 +539,18 @@ HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headlin
 Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate."""
 
 
-ONE_LINE_SUMMARY_RULE = """## One-Line Summary — HARD LIMIT (applies to BOTH en AND ko)
+ONE_LINE_SUMMARY_RULE = """## One-Line Summary — ROLE (applies to BOTH en AND ko)
 
-The `## One-Line Summary` / `## 한 줄 요약` section MUST be exactly ONE sentence with ONE central idea.
+The `## One-Line Summary` / `## 한 줄 요약` section must be exactly ONE sentence that synthesizes the main pattern or shared shift across today's top 2-3 stories.
 
-- KO: ≤60 Korean characters (excluding spaces). EN: ≤15 words.
-- NEVER list multiple topics connected by commas, em-dashes, or "and"/"그리고"/"또한".
-- Pick the SINGLE most important development of the day. Supporting stories belong in their own sections.
-- BAD (3 topics, 120+ chars): "A가 X하고, B는 Y하고, C는 Z한다 — 판도가 재편되고 있어요"
-- BAD (comma-chained): "OpenAI restructures, Meta invests $21B, and Alibaba tops rankings"
-- GOOD (1 topic, 25 chars): "알리바바가 '해피호스'의 주인공으로 드러났어요"
-- GOOD (1 topic, 10 words): "Alibaba revealed as the mystery top-ranked video AI model."
+- Write the digest's throughline, not just the top headline repeated.
+- Do not merely restate a single headline when multiple major stories clearly point to a broader theme.
+- Keep it concise and punchy, but prioritize informational value over arbitrary word counts.
+- You may mention 2 named actors or moves if that is necessary to express the shared pattern, but do NOT turn it into a laundry list of disconnected headlines.
+- BAD (single-story restatement): "OpenAI updates its macOS apps after a certificate issue."
+- BAD (headline list): "OpenAI updates apps, Microsoft launches models, and Amazon signs a deal."
+- GOOD (shared throughline): "Trust incidents, in-house models, and cloud alliances are reshaping who controls AI distribution this week."
+- GOOD (technical throughline): "Open agent models are shifting from benchmark chasing to long-horizon, task-specific execution."
 """
 
 
