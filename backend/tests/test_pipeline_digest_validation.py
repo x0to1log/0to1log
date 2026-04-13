@@ -53,6 +53,27 @@ def _sample_group() -> list[ClassifiedGroup]:
     ]
 
 
+def _sample_groups_for_locale_parity() -> list[ClassifiedGroup]:
+    return [
+        ClassifiedGroup(
+            group_title="Microsoft launches three in-house MAI models",
+            items=[GroupedItem(url="https://example.com/microsoft", title="Microsoft launches three in-house MAI models")],
+            category="business",
+            subcategory="big_tech",
+            relevance_score=0.9,
+            reason="Lead",
+        ),
+        ClassifiedGroup(
+            group_title="Anthropic Managed Agents",
+            items=[GroupedItem(url="https://example.com/anthropic", title="Anthropic Managed Agents")],
+            category="business",
+            subcategory="industry",
+            relevance_score=0.8,
+            reason="Supporting",
+        ),
+    ]
+
+
 def test_find_digest_blockers_flags_placeholder_level3_heading():
     from services.pipeline import _find_digest_blockers
 
@@ -89,6 +110,58 @@ def test_find_digest_blockers_flags_hangul_in_en_heading():
     blockers = _find_digest_blockers(personas)
 
     assert any("Hangul in EN `###` heading" in blocker for blocker in blockers)
+
+
+def test_find_digest_blockers_flags_locale_parity_item_count_mismatch():
+    from services.pipeline import _find_digest_blockers
+
+    personas = {
+        "expert": PersonaOutput(
+            en=(
+                "## Big Tech\n\n"
+                "### Microsoft launches three in-house MAI models\n\n"
+                "Body [1](https://example.com/microsoft)\n"
+            ),
+            ko=(
+                "## Big Tech\n\n"
+                "### Microsoft launches three in-house MAI models: MS 자체 모델\n\n"
+                "본문 [1](https://example.com/microsoft)\n\n"
+                "### Anthropic Managed Agents: 호스팅 에이전트 런타임\n\n"
+                "본문 [2](https://example.com/anthropic)\n"
+            ),
+        ),
+    }
+
+    blockers = _find_digest_blockers(personas, classified=_sample_groups_for_locale_parity())
+
+    assert any("locale parity item count mismatch" in blocker for blocker in blockers)
+
+
+def test_find_digest_blockers_flags_locale_parity_story_set_mismatch():
+    from services.pipeline import _find_digest_blockers
+
+    personas = {
+        "expert": PersonaOutput(
+            en=(
+                "## Big Tech\n\n"
+                "### Microsoft launches three in-house MAI models\n\n"
+                "Body [1](https://example.com/microsoft)\n\n"
+                "### Anthropic Managed Agents\n\n"
+                "Body [2](https://example.com/anthropic)\n"
+            ),
+            ko=(
+                "## Big Tech\n\n"
+                "### Microsoft launches three in-house MAI models: MS 자체 모델\n\n"
+                "본문 [1](https://example.com/microsoft)\n\n"
+                "### Another Microsoft angle: 가격 인하 경쟁\n\n"
+                "본문 [2](https://example.com/microsoft)\n"
+            ),
+        ),
+    }
+
+    blockers = _find_digest_blockers(personas, classified=_sample_groups_for_locale_parity())
+
+    assert any("locale parity story set mismatch" in blocker for blocker in blockers)
 
 
 @pytest.mark.asyncio
@@ -225,6 +298,181 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
             "https://example.com/story",
             "https://extra.example.com/analysis",
         ]
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_includes_source_metadata_labels_in_writer_prompt():
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    captured_user_prompts: list[str] = []
+    responses = [
+        _mock_openai_response(
+            {
+                "en": "## Research Papers\n\n### Expert Heading\n\nExpert body [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 전문가 제목\n\n전문가 본문 [1](https://example.com/story)",
+                "headline": "Expert headline",
+                "headline_ko": "전문가 헤드라인",
+                "excerpt": "Expert excerpt",
+                "excerpt_ko": "전문가 요약",
+            }
+        ),
+        _mock_openai_response(
+            {
+                "en": "## Research Papers\n\n### Learner Heading\n\nLearner body [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 학습자 제목\n\n학습자 본문 [1](https://example.com/story)",
+                "headline": "Learner headline",
+                "headline_ko": "학습자 헤드라인",
+                "excerpt": "Learner excerpt",
+                "excerpt_ko": "학습자 요약",
+            }
+        ),
+    ]
+
+    async def _capture_create(*args, **kwargs):
+        captured_user_prompts.append(kwargs["messages"][1]["content"])
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={
+                "https://example.com/story": [
+                    {
+                        "url": "https://example.com/story",
+                        "title": "Primary source",
+                        "content": "Official launch details. " * 8,
+                        "source_kind": "official_site",
+                        "source_confidence": "high",
+                        "source_tier": "primary",
+                    },
+                    {
+                        "url": "https://example.com/analysis",
+                        "title": "Media coverage",
+                        "content": "Coverage and context. " * 8,
+                        "source_kind": "media",
+                        "source_confidence": "high",
+                        "source_tier": "secondary",
+                    },
+                ]
+            },
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    assert any(
+        "Source 1 [PRIMARY / official_site / high]: https://example.com/story" in prompt
+        for prompt in captured_user_prompts
+    )
+    assert any(
+        "Source 2 [SECONDARY / media / high]: https://example.com/analysis" in prompt
+        for prompt in captured_user_prompts
+    )
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_saves_source_cards_with_source_metadata():
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### Expert Heading\n\nExpert body [1](https://example.com/story) [2](https://example.com/analysis)",
+                    "ko": "## Research Papers\n\n### 전문가 제목\n\n전문가 본문 [1](https://example.com/story) [2](https://example.com/analysis)",
+                    "headline": "Expert headline",
+                    "headline_ko": "전문가 헤드라인",
+                    "excerpt": "Expert excerpt",
+                    "excerpt_ko": "전문가 요약",
+                    "sources": [
+                        {"url": "https://example.com/story", "title": "Primary source"},
+                        {"url": "https://example.com/analysis", "title": "Media coverage"},
+                    ],
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### Learner Heading\n\nLearner body [1](https://example.com/story)",
+                    "ko": "## Research Papers\n\n### 학습자 제목\n\n학습자 본문 [1](https://example.com/story)",
+                    "headline": "Learner headline",
+                    "headline_ko": "학습자 헤드라인",
+                    "excerpt": "Learner excerpt",
+                    "excerpt_ko": "학습자 요약",
+                    "sources": [
+                        {"url": "https://example.com/story", "title": "Primary source"},
+                        {"url": "https://example.com/analysis", "title": "Media coverage"},
+                    ],
+                }
+            ),
+        ]
+    )
+
+    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={
+                "https://example.com/story": [
+                    {
+                        "url": "https://example.com/story",
+                        "title": "Primary source",
+                        "content": "Official launch details. " * 8,
+                        "source_kind": "official_site",
+                        "source_confidence": "high",
+                        "source_tier": "primary",
+                    },
+                    {
+                        "url": "https://example.com/analysis",
+                        "title": "Media coverage",
+                        "content": "Coverage and context. " * 8,
+                        "source_kind": "media",
+                        "source_confidence": "high",
+                        "source_tier": "secondary",
+                    },
+                ]
+            },
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    for table_name, payload in supabase.saved_rows:
+        assert table_name == "news_posts"
+        assert payload["source_cards"][0]["source_kind"] == "official_site"
+        assert payload["source_cards"][0]["source_confidence"] == "high"
+        assert payload["source_cards"][0]["source_tier"] == "primary"
+        assert payload["source_cards"][1]["source_kind"] == "media"
+        assert payload["source_cards"][1]["source_confidence"] == "high"
+        assert payload["source_cards"][1]["source_tier"] == "secondary"
 
 
 @pytest.mark.asyncio

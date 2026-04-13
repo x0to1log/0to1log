@@ -22,12 +22,63 @@ TAVILY_SEARCH_RESPONSE = {
 }
 
 
+def test_classify_source_meta_marks_official_site_primary():
+    from services.news_collection import _classify_source_meta
+
+    meta = _classify_source_meta(
+        url="https://openai.com/index/introducing-gpt-5-4/",
+        source="tavily",
+        title="Introducing GPT-5.4",
+    )
+
+    assert meta == {
+        "source_kind": "official_site",
+        "source_confidence": "high",
+        "source_tier": "primary",
+    }
+
+
+def test_classify_source_meta_marks_hf_blog_as_official_platform_asset():
+    from services.news_collection import _classify_source_meta
+
+    meta = _classify_source_meta(
+        url="https://huggingface.co/blog/Hcompany/holo3",
+        source="tavily",
+        title="Holo3",
+    )
+
+    assert meta["source_kind"] == "official_platform_asset"
+    assert meta["source_confidence"] == "medium"
+    assert meta["source_tier"] == "primary"
+
+
+def test_classify_source_meta_marks_media_as_secondary():
+    from services.news_collection import _classify_source_meta
+
+    meta = _classify_source_meta(
+        url="https://venturebeat.com/ai/story",
+        source="tavily",
+        title="VentureBeat coverage",
+    )
+
+    assert meta["source_kind"] == "media"
+    assert meta["source_tier"] == "secondary"
+
+
 def _patch_new_collectors():
     """Patch HF, arXiv, GitHub collectors to return empty lists."""
     return (
         patch("services.news_collection._collect_hf_papers", new_callable=AsyncMock, return_value=[]),
         patch("services.news_collection._collect_arxiv", new_callable=AsyncMock, return_value=[]),
         patch("services.news_collection._collect_github_trending", new_callable=AsyncMock, return_value=[]),
+    )
+
+
+def _patch_other_collectors():
+    """Patch optional secondary collectors to keep collection tests deterministic."""
+    return (
+        patch("services.news_collection._collect_exa", new_callable=AsyncMock, return_value=[]),
+        patch("services.news_collection._collect_brave", new_callable=AsyncMock, return_value=[]),
     )
 
 
@@ -51,6 +102,26 @@ async def test_collect_news_returns_candidates():
     assert meta["is_backfill"] is False
     assert meta["total_candidates"] == 2
     mock_tavily.search.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_collect_news_attaches_source_metadata():
+    mock_tavily = MagicMock()
+    mock_tavily.search.return_value = TAVILY_SEARCH_RESPONSE
+
+    p1, p2, p3 = _patch_new_collectors()
+    p4, p5 = _patch_other_collectors()
+    with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
+         patch("services.news_collection.settings") as mock_settings, \
+         p1, p2, p3, p4, p5:
+        mock_settings.tavily_api_key = "test-key"
+
+        from services.news_collection import collect_news
+        candidates, _meta = await collect_news()
+
+    assert candidates[0].source_kind == "official_site"
+    assert candidates[0].source_confidence == "high"
+    assert candidates[0].source_tier == "primary"
 
 
 @pytest.mark.asyncio
@@ -108,6 +179,31 @@ async def test_collect_news_api_error_returns_empty():
 
     assert candidates == []
     assert meta["total_candidates"] == 0
+
+
+@pytest.mark.asyncio
+async def test_enrich_sources_preserves_source_metadata():
+    from models.news_pipeline import ClassifiedGroup, GroupedItem
+    from services.news_collection import enrich_sources
+
+    groups = [
+        ClassifiedGroup(
+            group_title="Official launch",
+            items=[GroupedItem(url="https://openai.com/index/launch", title="Launch post")],
+            category="business",
+            subcategory="big_tech",
+        )
+    ]
+    raw_content_map = {"https://openai.com/index/launch": "Launch content"}
+
+    with patch("services.news_collection.settings") as mock_settings:
+        mock_settings.exa_api_key = ""
+        enriched = await enrich_sources(groups, raw_content_map)
+
+    first = enriched["https://openai.com/index/launch"][0]
+    assert first["source_kind"] == "official_site"
+    assert first["source_confidence"] == "high"
+    assert first["source_tier"] == "primary"
 
 
 TAVILY_REACTION_RESPONSE = {

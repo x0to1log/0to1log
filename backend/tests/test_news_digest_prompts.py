@@ -72,6 +72,14 @@ def test_business_expert_prompt_softens_secondary_source_interpretation_in_front
     assert 'phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as"' in prompt
 
 
+def test_business_prompt_uses_source_metadata_for_front_load_calibration():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph." in prompt
+    assert "SECONDARY or analysis sources should be framed more cautiously in those front-loaded positions." in prompt
+    assert "Treat official_platform_asset sources as factual for release details, but keep strategic interpretation one step more cautious than official_site or paper sources." in prompt
+
+
 def test_research_prompt_has_license_sensitive_wording_guard():
     prompt = get_digest_prompt("research", "expert", [])
 

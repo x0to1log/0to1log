@@ -179,6 +179,7 @@ def _filter_recent_duplicates(
 def _renumber_citations(
     content: str,
     allowed_urls: set[str] | None = None,
+    source_meta_by_url: dict[str, dict[str, str]] | None = None,
 ) -> tuple[str, list[dict]]:
     """Renumber all [N](URL) citations sequentially by URL first-appearance order.
 
@@ -211,7 +212,17 @@ def _renumber_citations(
         if url not in url_to_num:
             num = len(url_to_num) + 1
             url_to_num[url] = num
-            source_cards.append({"id": num, "url": url, "title": ""})
+            meta = (source_meta_by_url or {}).get(url, {})
+            source_cards.append(
+                {
+                    "id": num,
+                    "url": url,
+                    "title": "",
+                    "source_kind": meta.get("source_kind", ""),
+                    "source_confidence": meta.get("source_confidence", ""),
+                    "source_tier": meta.get("source_tier", ""),
+                }
+            )
         return url_to_num[url]
 
     def _replace(match: re.Match) -> str:
@@ -1081,10 +1092,70 @@ def _clean_writer_output(content: str) -> str:
     content = _re.sub(r'"?\[(?:EN|KO)\s*quote\]"?', "", content, flags=_re.IGNORECASE)
     return content
 
+def _extract_digest_items(content: str) -> list[tuple[str, set[str]]]:
+    """Extract digest `###` items and the URLs cited inside each item."""
+    import re as _re
 
-def _find_digest_blockers(personas: dict[str, PersonaOutput]) -> list[str]:
+    citation_re = _re.compile(r"\[\d+\]\((https?://[^)]+)\)")
+    items: list[tuple[str, set[str]]] = []
+    current_heading: str | None = None
+    current_lines: list[str] = []
+
+    def _flush() -> None:
+        nonlocal current_heading, current_lines
+        if current_heading is None:
+            return
+        items.append((current_heading, set(citation_re.findall("\n".join(current_lines)))))
+        current_heading = None
+        current_lines = []
+
+    for line in content.splitlines():
+        if line.startswith("### "):
+            _flush()
+            current_heading = line[4:].strip()
+            current_lines = []
+            continue
+        if current_heading is not None:
+            if line.startswith("## "):
+                _flush()
+                continue
+            current_lines.append(line)
+
+    _flush()
+    return items
+
+
+def _map_digest_items_to_group_indexes(
+    content: str, classified: list[ClassifiedGroup],
+) -> tuple[list[int], list[str]]:
+    """Map digest items to classified groups by overlapping cited primary URLs."""
+    group_url_sets = [set(group.urls) for group in classified]
+    mapped_indexes: list[int] = []
+    unmapped_headings: list[str] = []
+
+    for heading, cited_urls in _extract_digest_items(content):
+        best_index = -1
+        best_overlap = 0
+        for idx, group_urls in enumerate(group_url_sets):
+            overlap = len(cited_urls & group_urls)
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_index = idx
+        if best_index >= 0 and best_overlap > 0:
+            mapped_indexes.append(best_index)
+        else:
+            unmapped_headings.append(heading)
+
+    return mapped_indexes, unmapped_headings
+
+
+def _find_digest_blockers(
+    personas: dict[str, PersonaOutput],
+    classified: list[ClassifiedGroup] | None = None,
+) -> list[str]:
     """Return hard-blocking structural issues that should prevent saving drafts."""
     import re as _re
+    from collections import Counter
 
     hangul_re = _re.compile(r"[\u3131-\u318E\uAC00-\uD7A3]")
     placeholder_re = _re.compile(r"^[-\u2013\u2014:|/·•*~_()\[\]\s]+$")
@@ -1106,6 +1177,23 @@ def _find_digest_blockers(personas: dict[str, PersonaOutput]) -> list[str]:
                 if locale == "en" and hangul_re.search(heading):
                     blockers.append(
                         f"{persona_name} {locale}: Hangul in EN `###` heading `{raw_line.strip()}`"
+                    )
+
+        if classified and output.en and output.ko:
+            en_items = _extract_digest_items(output.en)
+            ko_items = _extract_digest_items(output.ko)
+            if len(en_items) != len(ko_items):
+                blockers.append(
+                    f"{persona_name}: locale parity item count mismatch EN={len(en_items)} KO={len(ko_items)}"
+                )
+                continue
+
+            en_group_indexes, en_unmapped = _map_digest_items_to_group_indexes(output.en, classified)
+            ko_group_indexes, ko_unmapped = _map_digest_items_to_group_indexes(output.ko, classified)
+            if not en_unmapped and not ko_unmapped:
+                if Counter(en_group_indexes) != Counter(ko_group_indexes):
+                    blockers.append(
+                        f"{persona_name}: locale parity story set mismatch EN={sorted(en_group_indexes)} KO={sorted(ko_group_indexes)}"
                     )
 
     return blockers
@@ -1445,6 +1533,14 @@ async def _generate_digest(
     if not classified:
         return 0, [], {}
 
+    def _format_source_header(index: int, source_url: str, meta: dict[str, Any]) -> str:
+        tier = (meta.get("source_tier") or "").upper()
+        kind = meta.get("source_kind") or ""
+        confidence = meta.get("source_confidence") or ""
+        if tier and kind and confidence:
+            return f"Source {index} [{tier} / {kind} / {confidence}]: {source_url}"
+        return f"Source {index}: {source_url}"
+
     # Build user prompt from classified groups
     _enriched = enriched_map or {}
     news_items = []
@@ -1464,7 +1560,9 @@ async def _generate_digest(
                 content = src.get("content", "")
                 if len(content.strip()) < 40:
                     continue
-                source_blocks.append(f"Source {i}: {src['url']}\n{content[:12000]}")
+                source_blocks.append(
+                    f"{_format_source_header(i, src['url'], src)}\n{content[:12000]}"
+                )
             body_block = "\n\n".join(source_blocks)
         else:
             # Fallback: assemble from raw_content_map for each item in group
@@ -1798,7 +1896,7 @@ async def _generate_digest(
         errors.append(error_msg)
         return 0, errors, cumulative_usage
 
-    blockers = _find_digest_blockers(personas)
+    blockers = _find_digest_blockers(personas, classified=classified)
     recoverable_en_personas = sorted({
         blocker.split(":", 1)[0].split()[0]
         for blocker in blockers
@@ -1863,7 +1961,7 @@ async def _generate_digest(
                     "EN heading recovery failed for %s %s: %s",
                     digest_type, persona_name, en_err,
                 )
-        blockers = _find_digest_blockers(personas)
+        blockers = _find_digest_blockers(personas, classified=classified)
 
     if blockers:
         error_msg = f"{digest_type} digest structural validation failed — {'; '.join(blockers)}"
@@ -1941,19 +2039,40 @@ async def _generate_digest(
         # LLM may reset [1] per section — this forces global sequential numbering.
         # Also strip hallucinated URLs (citations pointing to URLs not in source set).
         allowed_urls: set[str] = set(raw_content_map.keys())
+        source_meta_by_url: dict[str, dict[str, str]] = {}
         for url, sources in (enriched_map or {}).items():
             allowed_urls.add(url)
             for s in sources:
                 if isinstance(s, dict) and s.get("url"):
                     allowed_urls.add(s["url"])
-        expert_content, expert_source_cards = _renumber_citations(expert_content, allowed_urls)
-        learner_content, learner_source_cards = _renumber_citations(learner_content, allowed_urls)
+                    source_meta_by_url[s["url"]] = {
+                        "source_kind": s.get("source_kind", ""),
+                        "source_confidence": s.get("source_confidence", ""),
+                        "source_tier": s.get("source_tier", ""),
+                    }
+        expert_content, expert_source_cards = _renumber_citations(
+            expert_content,
+            allowed_urls,
+            source_meta_by_url,
+        )
+        learner_content, learner_source_cards = _renumber_citations(
+            learner_content,
+            allowed_urls,
+            source_meta_by_url,
+        )
         combined_source_cards = _dedup_source_cards(
             (expert_source_cards or []) + (learner_source_cards or [])
         )
         if not combined_source_cards and fallback_source_urls:
             combined_source_cards = [
-                {"id": idx + 1, "url": url, "title": ""}
+                {
+                    "id": idx + 1,
+                    "url": url,
+                    "title": "",
+                    "source_kind": source_meta_by_url.get(url, {}).get("source_kind", ""),
+                    "source_confidence": source_meta_by_url.get(url, {}).get("source_confidence", ""),
+                    "source_tier": source_meta_by_url.get(url, {}).get("source_tier", ""),
+                }
                 for idx, url in enumerate(dict.fromkeys(fallback_source_urls))
             ]
 

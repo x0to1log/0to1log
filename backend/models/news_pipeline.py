@@ -9,6 +9,9 @@ class NewsCandidate(BaseModel):
     snippet: str = ""
     source: str = "tavily"
     raw_content: str = ""
+    source_kind: str = ""
+    source_confidence: str = ""
+    source_tier: str = ""
 
 class ClassifiedCandidate(BaseModel):
     """News candidate classified into a category and subcategory."""
@@ -92,6 +95,9 @@ class FactSource(BaseModel):
     publisher: str = ""
     url: str = ""
     published_at: str = ""
+    source_kind: str = ""
+    source_confidence: str = ""
+    source_tier: str = ""
 
 
 class FactPack(BaseModel):

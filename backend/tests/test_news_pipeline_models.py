@@ -59,6 +59,40 @@ def test_news_candidate_minimal():
     assert nc.title == "Some news"
 
 
+def test_news_candidate_accepts_source_metadata():
+    from models.news_pipeline import NewsCandidate
+
+    candidate = NewsCandidate(
+        title="Official launch",
+        url="https://openai.com/index/launch",
+        source="tavily",
+        source_kind="official_site",
+        source_confidence="high",
+        source_tier="primary",
+    )
+
+    assert candidate.source_kind == "official_site"
+    assert candidate.source_confidence == "high"
+    assert candidate.source_tier == "primary"
+
+
+def test_fact_source_accepts_source_metadata():
+    from models.news_pipeline import FactSource
+
+    source = FactSource(
+        id="s1",
+        title="Launch post",
+        url="https://openai.com/index/launch",
+        source_kind="official_site",
+        source_confidence="high",
+        source_tier="primary",
+    )
+
+    assert source.source_kind == "official_site"
+    assert source.source_confidence == "high"
+    assert source.source_tier == "primary"
+
+
 def test_pipeline_result_structure():
     from models.news_pipeline import PipelineResult
     pr = PipelineResult(batch_id="2026-03-15", posts_created=4, errors=[], usage={"model_used": "gpt-4o", "tokens_used": 5000, "cost_usd": 0.05})

@@ -418,6 +418,9 @@ Writing rules:
 - Write like a trusted strategic advisor in a private briefing, not a news reporter
 - In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
 - Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
+- PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph.
+- SECONDARY or analysis sources should be framed more cautiously in those front-loaded positions.
+- Treat official_platform_asset sources as factual for release details, but keep strategic interpretation one step more cautious than official_site or paper sources.
 - If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt or frame it as reported/suggestive rather than definitive.
 - In the headline, excerpt, and first paragraph, avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on" unless a primary source states that conclusion directly.
 - If front-loaded interpretation depends mainly on secondary reporting, phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as" rather than sounding settled.

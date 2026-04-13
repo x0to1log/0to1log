@@ -5,6 +5,7 @@ import re as _re_module
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from tavily import TavilyClient
@@ -47,6 +48,136 @@ BACKFILL_QUERIES = [
     "AI enterprise regulation policy",
     "new AI tool product feature release update",
 ]
+
+_OFFICIAL_SITE_DOMAINS = (
+    "openai.com",
+    "anthropic.com",
+    "techcommunity.microsoft.com",
+    "blog.google",
+    "blogs.nvidia.com",
+    "blog.cloudflare.com",
+    "developer.apple.com",
+)
+
+_MEDIA_DOMAINS = (
+    "venturebeat.com",
+    "techcrunch.com",
+    "theverge.com",
+    "yahoo.com",
+    "reuters.com",
+    "bloomberg.com",
+    "wsj.com",
+    "ft.com",
+    "wired.com",
+)
+
+
+def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[str, str]:
+    """Classify source provenance metadata using rule-based URL heuristics."""
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    path = parsed.path.lower().rstrip("/")
+    title_lower = title.lower()
+    _ = source  # keep signature stable for future collector-specific rules
+
+    if not hostname:
+        return {
+            "source_kind": "analysis",
+            "source_confidence": "low",
+            "source_tier": "secondary",
+        }
+
+    if "arxiv.org" in hostname:
+        return {
+            "source_kind": "paper",
+            "source_confidence": "high",
+            "source_tier": "primary",
+        }
+
+    if any(domain in hostname for domain in _OFFICIAL_SITE_DOMAINS):
+        return {
+            "source_kind": "official_site",
+            "source_confidence": "high",
+            "source_tier": "primary",
+        }
+
+    if "huggingface.co" in hostname:
+        if path.startswith("/blog/"):
+            return {
+                "source_kind": "official_platform_asset",
+                "source_confidence": "medium",
+                "source_tier": "primary",
+            }
+        return {
+            "source_kind": "official_platform_asset",
+            "source_confidence": "high",
+            "source_tier": "primary",
+        }
+
+    if "github.com" in hostname:
+        if "/pull/" in path or "/releases" in path or "/blob/" in path or path.count("/") <= 2:
+            return {
+                "source_kind": "official_repo",
+                "source_confidence": "medium",
+                "source_tier": "primary",
+            }
+        if "github.com/" in url and any(term in title_lower for term in ("release", "readme", "docs")):
+            return {
+                "source_kind": "official_repo",
+                "source_confidence": "medium",
+                "source_tier": "primary",
+            }
+
+    if "registry.npmjs.org" in hostname or "npmjs.com" in hostname:
+        return {
+            "source_kind": "registry",
+            "source_confidence": "medium",
+            "source_tier": "primary",
+        }
+
+    if any(domain in hostname for domain in _MEDIA_DOMAINS):
+        return {
+            "source_kind": "media",
+            "source_confidence": "high",
+            "source_tier": "secondary",
+        }
+
+    if any(domain in hostname for domain in ("medium.com", "substack.com")):
+        return {
+            "source_kind": "analysis",
+            "source_confidence": "medium",
+            "source_tier": "secondary",
+        }
+
+    if any(domain in hostname for domain in ("reddit.com", "news.ycombinator.com", "x.com", "twitter.com")):
+        return {
+            "source_kind": "community",
+            "source_confidence": "medium",
+            "source_tier": "secondary",
+        }
+
+    return {
+        "source_kind": "analysis",
+        "source_confidence": "low",
+        "source_tier": "secondary",
+    }
+
+
+def _build_source_payload(
+    *,
+    url: str,
+    title: str,
+    content: str,
+    source: str = "",
+) -> dict[str, str]:
+    """Create a normalized source payload with provenance metadata."""
+    meta = _classify_source_meta(url=url, source=source, title=title)
+    return {
+        "url": url,
+        "title": title,
+        "content": content,
+        **meta,
+    }
 
 
 def _resolve_google_news_url(url: str) -> str:
@@ -596,8 +727,12 @@ async def enrich_sources(
         if len(group.items) >= 2:
             # Already multi-source from merge — use existing sources
             enriched[primary] = [
-                {"url": item.url, "title": item.title,
-                 "content": raw_content_map.get(item.url, "")}
+                _build_source_payload(
+                    url=item.url,
+                    title=item.title,
+                    content=raw_content_map.get(item.url, ""),
+                    source="merge",
+                )
                 for item in group.items
             ]
         else:
@@ -611,8 +746,12 @@ async def enrich_sources(
         logger.info("No Exa API key — returning merge-only sources")
         for group in needs_enrich:
             enriched[group.primary_url] = [
-                {"url": item.url, "title": item.title,
-                 "content": raw_content_map.get(item.url, "")}
+                _build_source_payload(
+                    url=item.url,
+                    title=item.title,
+                    content=raw_content_map.get(item.url, ""),
+                    source="merge",
+                )
                 for item in group.items
             ]
         return enriched
@@ -623,8 +762,12 @@ async def enrich_sources(
         logger.warning("exa_py not installed — returning merge-only sources")
         for group in needs_enrich:
             enriched[group.primary_url] = [
-                {"url": item.url, "title": item.title,
-                 "content": raw_content_map.get(item.url, "")}
+                _build_source_payload(
+                    url=item.url,
+                    title=item.title,
+                    content=raw_content_map.get(item.url, ""),
+                    source="merge",
+                )
                 for item in group.items
             ]
         return enriched
@@ -646,7 +789,14 @@ async def enrich_sources(
     async def _enrich_one(group) -> tuple[str, list[dict]]:
         item = group.items[0]
         original_content = raw_content_map.get(item.url, "")
-        sources = [{"url": item.url, "title": item.title, "content": original_content}]
+        sources = [
+            _build_source_payload(
+                url=item.url,
+                title=item.title,
+                content=original_content,
+                source="merge",
+            )
+        ]
 
         try:
             resp = await asyncio.wait_for(
@@ -672,11 +822,14 @@ async def enrich_sources(
                     continue
                 if any("\u4e00" <= ch <= "\u9fff" for ch in r_title):
                     continue
-                sources.append({
-                    "url": r.url,
-                    "title": r_title,
-                    "content": r.text or "",
-                })
+                sources.append(
+                    _build_source_payload(
+                        url=r.url,
+                        title=r_title,
+                        content=r.text or "",
+                        source="exa_enrich",
+                    )
+                )
         except Exception as e:
             logger.debug("Enrich failed for '%s': %s", group.group_title[:60], e)
 
@@ -773,7 +926,11 @@ async def collect_news(
             continue
         if c.url not in seen_urls:
             seen_urls.add(c.url)
-            unique.append(c)
+            unique.append(
+                c.model_copy(
+                    update=_classify_source_meta(url=c.url, source=c.source, title=c.title)
+                )
+            )
 
     logger.info(
         "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, brave=%d, excluded_published=%d, filtered_non_article=%d)",
