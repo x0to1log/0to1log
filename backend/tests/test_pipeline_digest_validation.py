@@ -225,3 +225,64 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
             "https://example.com/story",
             "https://extra.example.com/analysis",
         ]
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### ClawBench: 실사용 웹 과제에서의 에이전트 성능 점검\n\nExpert body [1](https://example.com/story)",
+                    "ko": "## Research Papers\n\n### ClawBench: 실사용 웹 과제에서의 에이전트 성능 점검\n\n전문가 본문 [1](https://example.com/story)",
+                    "headline": "Expert headline",
+                    "headline_ko": "전문가 헤드라인",
+                    "excerpt": "Expert excerpt",
+                    "excerpt_ko": "전문가 요약",
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### Learner Heading\n\nLearner body [1](https://example.com/story)",
+                    "ko": "## Research Papers\n\n### 학습자 제목\n\n학습자 본문 [1](https://example.com/story)",
+                    "headline": "Learner headline",
+                    "headline_ko": "학습자 헤드라인",
+                    "excerpt": "Learner excerpt",
+                    "excerpt_ko": "학습자 요약",
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### ClawBench: Agent performance on everyday web tasks\n\nRecovered expert body [1](https://example.com/story)"
+                }
+            ),
+        ]
+    )
+
+    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    en_row = next(payload for _table, payload in supabase.saved_rows if payload["locale"] == "en")
+    assert "Agent performance on everyday web tasks" in en_row["content_expert"]

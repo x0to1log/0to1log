@@ -1568,12 +1568,14 @@ async def _generate_digest(
     digest_focus_items: list[str] = []
     digest_focus_items_ko: list[str] = []
     persona_quizzes: dict[str, dict] = {}  # {"expert": {"en": {...}, "ko": {...}}, "learner": {...}}
+    persona_prompts: dict[str, str] = {}
 
     MAX_DIGEST_RETRIES = 2  # 2 retries = 3 total attempts
 
     for persona_name in ("expert", "learner"):
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
+        persona_prompts[persona_name] = system_prompt
 
         for attempt in range(MAX_DIGEST_RETRIES + 1):
             try:
@@ -1797,6 +1799,72 @@ async def _generate_digest(
         return 0, errors, cumulative_usage
 
     blockers = _find_digest_blockers(personas)
+    recoverable_en_personas = sorted({
+        blocker.split(":", 1)[0].split()[0]
+        for blocker in blockers
+        if ": Hangul in EN `###` heading " in blocker
+    })
+    if recoverable_en_personas:
+        for persona_name in recoverable_en_personas:
+            system_prompt = persona_prompts.get(persona_name) or get_digest_prompt(
+                digest_type, persona_name, handbook_slugs,
+            )
+            try:
+                en_system = (
+                    f"{system_prompt}\n\n"
+                    "IMPORTANT: Generate ONLY the English (en) content. "
+                    "The previous English output leaked Korean in one or more `###` headings. "
+                    "Regenerate the English content so every `###` heading and body line is fully English. "
+                    "Do not include Korean text in the English output. Return JSON: {{\"en\": \"...\"}}"
+                )
+                en_resp = await asyncio.wait_for(
+                    client.chat.completions.create(
+                        **compat_create_kwargs(
+                            model,
+                            messages=[
+                                {"role": "system", "content": en_system},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.4,
+                            max_tokens=8000,
+                        )
+                    ),
+                    timeout=120,
+                )
+                en_data = parse_ai_json(
+                    en_resp.choices[0].message.content,
+                    f"Digest-{digest_type}-{persona_name}-en-heading-recovery",
+                )
+                en_usage = extract_usage_metrics(en_resp, model)
+                cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
+                recovered_en = _clean_writer_output(en_data.get("en", ""))
+                if recovered_en.strip():
+                    personas[persona_name] = PersonaOutput(
+                        en=recovered_en,
+                        ko=personas[persona_name].ko,
+                    )
+                    await _log_stage(
+                        supabase,
+                        run_id,
+                        f"recover:{digest_type}:{persona_name}:en",
+                        "success",
+                        time.monotonic(),
+                        output_summary=f"Recovered EN after locale-heading validation failure ({len(recovered_en)} chars)",
+                        usage=en_usage,
+                        post_type=digest_type,
+                    )
+                    logger.info(
+                        "EN heading recovery succeeded for %s %s: %d chars",
+                        digest_type, persona_name, len(recovered_en),
+                    )
+            except Exception as en_err:
+                logger.warning(
+                    "EN heading recovery failed for %s %s: %s",
+                    digest_type, persona_name, en_err,
+                )
+        blockers = _find_digest_blockers(personas)
+
     if blockers:
         error_msg = f"{digest_type} digest structural validation failed — {'; '.join(blockers)}"
         logger.error(error_msg)
@@ -2689,7 +2757,7 @@ async def rerun_pipeline_stage(
                 all_errors.extend(errors)
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
-        status = "success" if total_posts > 0 else "failed"
+        status = "failed" if all_errors else ("success" if total_posts > 0 else "failed")
 
         # Log summary (same as daily pipeline — cumulative usage for this rerun)
         t_summary = time.monotonic()
