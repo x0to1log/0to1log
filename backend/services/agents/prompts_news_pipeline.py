@@ -421,7 +421,10 @@ Writing rules:
 - PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph.
 - SECONDARY or analysis sources should be framed more cautiously in those front-loaded positions.
 - Treat official_platform_asset sources as factual for release details, but keep strategic interpretation one step more cautious than official_site or paper sources.
+- If a lead story is supported mostly by SECONDARY, analysis, or official_platform_asset sources, anchor the headline, excerpt, and first paragraph to the observable event first before any market interpretation.
 - If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt or frame it as reported/suggestive rather than definitive.
+- Prefer factual front-load verbs such as "launches", "releases", "announces", "files", "opens", "reviews", "says", or "prices" over dramatic framing.
+- Avoid loaded words such as "scramble", "showdown", "takes aim", "shot at", "salvo", or "war" in the headline, excerpt, and first paragraph unless the source itself uses that framing.
 - In the headline, excerpt, and first paragraph, avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on" unless a primary source states that conclusion directly.
 - If front-loaded interpretation depends mainly on secondary reporting, phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as" rather than sounding settled.
 - ALWAYS compare numbers to competitors or industry benchmarks

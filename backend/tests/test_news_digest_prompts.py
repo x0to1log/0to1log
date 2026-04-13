@@ -80,6 +80,14 @@ def test_business_prompt_uses_source_metadata_for_front_load_calibration():
     assert "Treat official_platform_asset sources as factual for release details, but keep strategic interpretation one step more cautious than official_site or paper sources." in prompt
 
 
+def test_business_prompt_makes_front_load_observable_event_first_for_secondary_sources():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "If a lead story is supported mostly by SECONDARY, analysis, or official_platform_asset sources, anchor the headline, excerpt, and first paragraph to the observable event first before any market interpretation." in prompt
+    assert 'Prefer factual front-load verbs such as "launches", "releases", "announces", "files", "opens", "reviews", "says", or "prices" over dramatic framing.' in prompt
+    assert 'Avoid loaded words such as "scramble", "showdown", "takes aim", "shot at", "salvo", or "war" in the headline, excerpt, and first paragraph unless the source itself uses that framing.' in prompt
+
+
 def test_research_prompt_has_license_sensitive_wording_guard():
     prompt = get_digest_prompt("research", "expert", [])
 

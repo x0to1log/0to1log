@@ -55,6 +55,7 @@ _OFFICIAL_SITE_DOMAINS = (
     "techcommunity.microsoft.com",
     "blog.google",
     "blogs.nvidia.com",
+    "developer.nvidia.com",
     "blog.cloudflare.com",
     "developer.apple.com",
 )

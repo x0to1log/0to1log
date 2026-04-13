@@ -52,6 +52,22 @@ def test_classify_source_meta_marks_hf_blog_as_official_platform_asset():
     assert meta["source_tier"] == "primary"
 
 
+def test_classify_source_meta_marks_nvidia_developer_blog_as_official_site():
+    from services.news_collection import _classify_source_meta
+
+    meta = _classify_source_meta(
+        url="https://developer.nvidia.com/blog/introducing-nemotron-3-super-an-open-hybrid-mamba-transformer-moe-for-agentic-reasoning",
+        source="tavily",
+        title="Introducing Nemotron 3 Super",
+    )
+
+    assert meta == {
+        "source_kind": "official_site",
+        "source_confidence": "high",
+        "source_tier": "primary",
+    }
+
+
 def test_classify_source_meta_marks_media_as_secondary():
     from services.news_collection import _classify_source_meta
 
