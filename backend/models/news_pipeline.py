@@ -1,6 +1,5 @@
-"""Pydantic models for AI News Pipeline v2."""
+"""Pydantic models for the AI News Pipeline."""
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class NewsCandidate(BaseModel):
@@ -10,24 +9,6 @@ class NewsCandidate(BaseModel):
     snippet: str = ""
     source: str = "tavily"
     raw_content: str = ""
-
-
-class RankedCandidate(BaseModel):
-    """News candidate after LLM ranking."""
-    title: str
-    url: str
-    snippet: str = ""
-    source: str = "tavily"
-    assigned_type: str  # "research" or "business"
-    relevance_score: float = 0.0
-    ranking_reason: str = ""
-
-
-class RankingResult(BaseModel):
-    """LLM ranking output."""
-    research: Optional[RankedCandidate] = None
-    business: Optional[RankedCandidate] = None
-
 
 class ClassifiedCandidate(BaseModel):
     """News candidate classified into a category and subcategory."""

@@ -46,11 +46,11 @@ def test_persona_output_empty_string_allowed():
     assert po.en == ""
 
 
-def test_ranked_candidate_valid():
-    from models.news_pipeline import RankedCandidate
-    rc = RankedCandidate.model_validate({"title": "GPT-5 Released", "url": "https://example.com/gpt5", "snippet": "OpenAI announces GPT-5.", "source": "tavily", "assigned_type": "research", "relevance_score": 0.95, "ranking_reason": "Major model release"})
-    assert rc.assigned_type == "research"
-    assert rc.relevance_score == 0.95
+def test_legacy_ranking_models_removed():
+    import models.news_pipeline as news_pipeline
+
+    assert not hasattr(news_pipeline, "RankedCandidate")
+    assert not hasattr(news_pipeline, "RankingResult")
 
 
 def test_news_candidate_minimal():

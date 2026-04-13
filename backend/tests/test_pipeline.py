@@ -1,12 +1,14 @@
-"""Tests for the pipeline orchestrator."""
-import json
+"""Tests for the current daily pipeline orchestrator."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from models.news_pipeline import (
     ClassifiedCandidate,
+    ClassifiedGroup,
     ClassificationResult,
+    CommunityInsight,
+    GroupedItem,
     NewsCandidate,
 )
 
@@ -24,147 +26,204 @@ SAMPLE_COLLECT_META = {
     "unique_candidates": 2,
 }
 
-SAMPLE_CLASSIFICATION = ClassificationResult(
-    research=[
+SAMPLE_CLASSIFY_RESULT = ClassificationResult(
+    research_picks=[
         ClassifiedCandidate(
-            title="GPT-5", url="https://a.com/1", snippet="Model release",
-            category="research", subcategory="llm_models", relevance_score=0.9, reason="Major",
+            title="GPT-5",
+            url="https://a.com/1",
+            snippet="Model release",
+            source="tavily",
+            category="research",
+            subcategory="llm_models",
+            relevance_score=0.9,
+            reason="Major",
+        ),
+    ],
+    business_picks=[
+        ClassifiedCandidate(
+            title="AI Fund",
+            url="https://b.com/2",
+            snippet="$500M raised",
+            source="tavily",
+            category="business",
+            subcategory="industry",
+            relevance_score=0.85,
+            reason="Big funding",
+        ),
+    ],
+)
+
+SAMPLE_MERGED_RESULT = ClassificationResult(
+    research=[
+        ClassifiedGroup(
+            group_title="GPT-5",
+            items=[GroupedItem(url="https://a.com/1", title="GPT-5")],
+            category="research",
+            subcategory="llm_models",
+            relevance_score=0.9,
+            reason="Major",
         ),
     ],
     business=[
-        ClassifiedCandidate(
-            title="AI Fund", url="https://b.com/2", snippet="$500M raised",
-            category="business", subcategory="industry", relevance_score=0.85, reason="Big funding",
+        ClassifiedGroup(
+            group_title="AI Fund",
+            items=[GroupedItem(url="https://b.com/2", title="AI Fund")],
+            category="business",
+            subcategory="industry",
+            relevance_score=0.85,
+            reason="Big funding",
         ),
     ],
+    research_picks=SAMPLE_CLASSIFY_RESULT.research_picks,
+    business_picks=SAMPLE_CLASSIFY_RESULT.business_picks,
 )
 
 EMPTY_USAGE = {"model_used": "gpt-4o", "input_tokens": 0, "output_tokens": 0, "tokens_used": 0, "cost_usd": 0.0}
 
 
-def _mock_supabase():
-    """Create a mock Supabase client with chain methods."""
-    mock = MagicMock()
-    mock.table.return_value.select.return_value.eq.return_value.execute.return_value = MagicMock(data=[
-        {"slug": "transformer"}, {"slug": "llm"}, {"slug": "gpt"},
-    ])
-    mock.table.return_value.insert.return_value.execute.return_value = MagicMock(data=[{"id": "run-id"}])
-    mock.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
-    mock.table.return_value.upsert.return_value.execute.return_value = MagicMock(data=[{"id": "post-id"}])
-    mock.table.return_value.delete.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
-    return mock
+class _Query:
+    def __init__(self, data):
+        self._data = data
+
+    def select(self, *args, **kwargs):
+        return self
+
+    def update(self, *args, **kwargs):
+        return self
+
+    def insert(self, *args, **kwargs):
+        return self
+
+    def upsert(self, *args, **kwargs):
+        return self
+
+    def delete(self, *args, **kwargs):
+        return self
+
+    def eq(self, *args, **kwargs):
+        return self
+
+    def gte(self, *args, **kwargs):
+        return self
+
+    def in_(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
+    def execute(self):
+        return MagicMock(data=self._data)
 
 
-def _mock_openai_digest_response():
-    """Mock OpenAI response for digest generation."""
-    mock_resp = MagicMock()
-    mock_resp.choices = [MagicMock()]
-    mock_resp.choices[0].message.content = json.dumps({
-        "en": "## One-Line Summary\nTest digest EN content " + "x" * 500,
-        "ko": "## 한 줄 요약\nTest digest KO content " + "가" * 500,
-    })
-    mock_resp.usage = MagicMock()
-    mock_resp.usage.prompt_tokens = 2000
-    mock_resp.usage.completion_tokens = 1000
-    mock_resp.usage.total_tokens = 3000
-    return mock_resp
+class _Supabase:
+    def table(self, name):
+        if name == "pipeline_runs":
+            return _Query([])
+        if name == "news_posts":
+            return _Query([])
+        if name == "pipeline_logs":
+            return _Query([])
+        return _Query([])
+
+
+def _community_summary_map():
+    return {
+        "https://a.com/1": CommunityInsight(sentiment="positive", quotes=[], quotes_ko=[]),
+        "https://b.com/2": CommunityInsight(sentiment="mixed", quotes=[], quotes_ko=[]),
+    }
 
 
 @pytest.mark.asyncio
 async def test_run_daily_pipeline_happy_path():
-    """Full v3 pipeline creates 4 digest rows (2 types x 2 locales)."""
-    mock_sb = _mock_supabase()
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.return_value = _mock_openai_digest_response()
-
-    with patch("services.pipeline.get_supabase", return_value=mock_sb), \
+    """Current pipeline creates 4 digest rows when both categories survive."""
+    with patch("services.pipeline.get_supabase", return_value=_Supabase()), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
-         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(SAMPLE_CLASSIFICATION, EMPTY_USAGE)), \
-         patch("services.pipeline.get_openai_client", return_value=mock_client):
-
+         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(SAMPLE_CLASSIFY_RESULT, EMPTY_USAGE, "prompt body")), \
+         patch("services.pipeline.merge_classified", new_callable=AsyncMock, return_value=(SAMPLE_MERGED_RESULT, EMPTY_USAGE)), \
+         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="community raw"), \
+         patch("services.pipeline.summarize_community", new_callable=AsyncMock, return_value=(_community_summary_map(), EMPTY_USAGE)), \
+         patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
+         patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
         from services.pipeline import run_daily_pipeline
+
         result = await run_daily_pipeline()
 
-    assert result.posts_created == 4  # research EN/KO + business EN/KO
+    assert result.posts_created == 4
     assert result.errors == []
     assert result.batch_id
 
 
 @pytest.mark.asyncio
 async def test_pipeline_no_research_creates_2_posts():
-    """When classification returns no research, only business digest is created."""
+    """When only business survives after classify, only the business digest is created."""
     classification_no_research = ClassificationResult(
-        research=[],
-        business=SAMPLE_CLASSIFICATION.business,
+        business_picks=SAMPLE_CLASSIFY_RESULT.business_picks,
     )
-    mock_sb = _mock_supabase()
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.return_value = _mock_openai_digest_response()
+    merged_no_research = ClassificationResult(
+        business=SAMPLE_MERGED_RESULT.business,
+        business_picks=SAMPLE_CLASSIFY_RESULT.business_picks,
+    )
 
-    with patch("services.pipeline.get_supabase", return_value=mock_sb), \
+    with patch("services.pipeline.get_supabase", return_value=_Supabase()), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
-         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(classification_no_research, EMPTY_USAGE)), \
-         patch("services.pipeline.get_openai_client", return_value=mock_client):
-
+         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(classification_no_research, EMPTY_USAGE, "prompt body")), \
+         patch("services.pipeline.merge_classified", new_callable=AsyncMock, return_value=(merged_no_research, EMPTY_USAGE)), \
+         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="community raw"), \
+         patch("services.pipeline.summarize_community", new_callable=AsyncMock, return_value=(_community_summary_map(), EMPTY_USAGE)), \
+         patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[([], EMPTY_USAGE), (merged_no_research.business, EMPTY_USAGE)]), \
+         patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
         from services.pipeline import run_daily_pipeline
+
         result = await run_daily_pipeline()
 
-    assert result.posts_created == 2  # business EN + KO only
+    assert result.posts_created == 2
 
 
 @pytest.mark.asyncio
 async def test_pipeline_no_candidates_returns_zero_posts():
-    """Empty Tavily results = 0 posts, no error."""
-    mock_sb = _mock_supabase()
-
-    with patch("services.pipeline.get_supabase", return_value=mock_sb), \
+    """Empty collect result returns 0 posts without error."""
+    with patch("services.pipeline.get_supabase", return_value=_Supabase()), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=([], {})):
-
         from services.pipeline import run_daily_pipeline
+
         result = await run_daily_pipeline()
 
     assert result.posts_created == 0
     assert result.errors == []
-    mock_sb.table.return_value.update.assert_called()
 
 
 @pytest.mark.asyncio
 async def test_pipeline_digest_failure_continues():
-    """Digest generation failure for one type doesn't stop the other."""
-    mock_sb = _mock_supabase()
-    mock_client = AsyncMock()
-
-    call_count = {"calls": 0}
-
-    async def _mock_create(**kwargs):
-        call_count["calls"] += 1
-        # First 4 calls fail (research: 2 personas × 2 attempts each with retry)
-        if call_count["calls"] <= 4:
-            raise Exception("API timeout")
-        return _mock_openai_digest_response()
-
-    mock_client.chat.completions.create.side_effect = _mock_create
-
-    with patch("services.pipeline.get_supabase", return_value=mock_sb), \
+    """Digest generation failure for one category should not stop the other."""
+    with patch("services.pipeline.get_supabase", return_value=_Supabase()), \
          patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
-         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(SAMPLE_CLASSIFICATION, EMPTY_USAGE)), \
-         patch("services.pipeline.get_openai_client", return_value=mock_client):
-
+         patch("services.pipeline.classify_candidates", new_callable=AsyncMock, return_value=(SAMPLE_CLASSIFY_RESULT, EMPTY_USAGE, "prompt body")), \
+         patch("services.pipeline.merge_classified", new_callable=AsyncMock, return_value=(SAMPLE_MERGED_RESULT, EMPTY_USAGE)), \
+         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="community raw"), \
+         patch("services.pipeline.summarize_community", new_callable=AsyncMock, return_value=(_community_summary_map(), EMPTY_USAGE)), \
+         patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
+         patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, side_effect=[Exception("digest failed"), (2, [], EMPTY_USAGE)]):
         from services.pipeline import run_daily_pipeline
+
         result = await run_daily_pipeline()
 
-    # Research digest: both personas failed → not saved (requires both)
-    # Business digest: both personas succeeded → saved (EN + KO)
-    assert result.posts_created == 2  # only business succeeded (EN + KO)
-    assert len(result.errors) >= 2  # 2 research persona failures + incomplete error
+    assert result.posts_created == 2
+    assert any("Digest generation failed" in error for error in result.errors)
 
 
 @pytest.mark.asyncio
 async def test_pipeline_supabase_not_configured():
     """Pipeline without Supabase should fail gracefully."""
     with patch("services.pipeline.get_supabase", return_value=None):
-
         from services.pipeline import run_daily_pipeline
+
         result = await run_daily_pipeline()
 
     assert result.posts_created == 0

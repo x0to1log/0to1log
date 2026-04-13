@@ -1,4 +1,4 @@
-"""Tests for LLM news ranking agent."""
+"""Tests for classification-stage ranking helpers."""
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,104 +24,6 @@ SAMPLE_CANDIDATES = [
     NewsCandidate(title="New transformer paper", url="https://c.com/3", snippet="Architecture improvement", source="tavily"),
 ]
 
-RANKING_LLM_RESPONSE = {
-    "research": {"url": "https://c.com/3", "reason": "Novel architecture", "score": 0.92},
-    "business": {"url": "https://b.com/2", "reason": "Major funding", "score": 0.88},
-}
-
-
-@pytest.mark.asyncio
-async def test_rank_candidates_selects_research_and_business():
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.return_value = _mock_openai_response(RANKING_LLM_RESPONSE)
-
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
-
-        from services.agents.ranking import rank_candidates
-        result, usage = await rank_candidates(SAMPLE_CANDIDATES)
-
-    assert result.research is not None
-    assert result.research.url == "https://c.com/3"
-    assert result.research.assigned_type == "research"
-    assert result.business is not None
-    assert result.business.url == "https://b.com/2"
-    assert result.business.assigned_type == "business"
-    assert usage["tokens_used"] > 0
-
-
-@pytest.mark.asyncio
-async def test_rank_candidates_no_research():
-    response_data = {"research": None, "business": {"url": "https://b.com/2", "reason": "Important", "score": 0.85}}
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.return_value = _mock_openai_response(response_data)
-
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
-
-        from services.agents.ranking import rank_candidates
-        result, usage = await rank_candidates(SAMPLE_CANDIDATES)
-
-    assert result.research is None
-    assert result.business is not None
-
-
-@pytest.mark.asyncio
-async def test_rank_candidates_empty_list():
-    from services.agents.ranking import rank_candidates
-    result, usage = await rank_candidates([])
-    assert result.research is None
-    assert result.business is None
-    assert usage == {}
-
-
-@pytest.mark.asyncio
-async def test_rank_candidates_json_parse_error_retries():
-    good_response = _mock_openai_response(RANKING_LLM_RESPONSE)
-    bad_response = MagicMock()
-    bad_response.choices = [MagicMock()]
-    bad_response.choices[0].message.content = "not valid json{{"
-    bad_response.usage = MagicMock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-
-    mock_client = AsyncMock()
-    mock_client.chat.completions.create.side_effect = [bad_response, good_response]
-
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
-
-        from services.agents.ranking import rank_candidates
-        result, usage = await rank_candidates(SAMPLE_CANDIDATES)
-
-    assert result.research is not None
-    assert mock_client.chat.completions.create.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_rank_candidates_all_retries_fail_returns_empty():
-    bad_response = MagicMock()
-    bad_response.choices = [MagicMock()]
-    bad_response.choices[0].message.content = "not valid json{{"
-    bad_response.usage = MagicMock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-
-    mock_client = AsyncMock()
-    # 3 total attempts (MAX_RETRIES=2 means 0,1,2 → 3 calls)
-    mock_client.chat.completions.create.side_effect = [bad_response, bad_response, bad_response]
-
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
-
-        from services.agents.ranking import rank_candidates
-        result, usage = await rank_candidates(SAMPLE_CANDIDATES)
-
-    assert result.research is None
-    assert result.business is None
-    assert usage == {}
-    assert mock_client.chat.completions.create.call_count == 3
-
 
 CLASSIFICATION_LLM_RESPONSE = {
     "research": [
@@ -135,29 +37,41 @@ CLASSIFICATION_LLM_RESPONSE = {
 }
 
 
+def test_legacy_rank_candidates_api_removed():
+    from services.agents import ranking
+
+    assert not hasattr(ranking, "rank_candidates")
+
+
 @pytest.mark.asyncio
-async def test_classify_candidates_returns_multiple():
+async def test_classify_candidates_returns_multiple_picks_and_prompt():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
 
     with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
          patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+        mock_settings.openai_model_light = "gpt-4o"
 
         from services.agents.ranking import classify_candidates
-        result, usage = await classify_candidates(SAMPLE_CANDIDATES)
+        result, usage, user_prompt = await classify_candidates(SAMPLE_CANDIDATES)
 
-    assert len(result.research) == 2
-    # Dedup removes a.com/1 from business (research score 0.88 > business score 0.85)
-    assert len(result.business) == 1
-    assert result.research[0].subcategory == "papers"
-    assert result.business[0].subcategory == "industry"
-    assert any(c.url == "https://a.com/1" for c in result.research)
+    assert len(result.research_picks) == 2
+    assert len(result.business_picks) == 2
+    assert result.research_picks[0].subcategory == "papers"
+    assert result.business_picks[0].subcategory == "industry"
+    assert any(c.url == "https://a.com/1" for c in result.research_picks)
+    assert any(c.url == "https://a.com/1" for c in result.business_picks)
+    assert "[1] GPT-5 Released" in user_prompt
+    assert usage["tokens_used"] > 0
 
 
 @pytest.mark.asyncio
-async def test_classify_candidates_empty_list():
+async def test_classify_candidates_empty_list_returns_empty_result():
     from services.agents.ranking import classify_candidates
-    result, usage = await classify_candidates([])
-    assert result.research == []
-    assert result.business == []
+
+    result, usage, user_prompt = await classify_candidates([])
+
+    assert result.research_picks == []
+    assert result.business_picks == []
+    assert usage == {}
+    assert user_prompt == ""

@@ -27,6 +27,21 @@ def test_research_learner_prompt_stays_curated_not_action_driven():
     assert "guided technical digest" in prompt
 
 
+def test_learner_prompt_requires_plain_language_before_benchmarks():
+    prompt = get_digest_prompt("research", "learner", [])
+
+    assert "the first sentence after every `###` heading must explain" in prompt
+    assert "before benchmarks, acronyms, or secondary details" in prompt
+    assert "must stay fully grounded in the provided sources" in prompt
+
+
+def test_learner_prompt_allows_compressing_secondary_detail_after_plain_language_opening():
+    prompt = get_digest_prompt("research", "learner", [])
+
+    assert "learner may compress secondary benchmark, architecture, or pricing detail" in prompt
+    assert "after the plain-language opening" in prompt
+
+
 def test_business_prompt_keeps_strategy_sections():
     prompt = get_digest_prompt("business", "expert", [])
 
@@ -34,6 +49,15 @@ def test_business_prompt_keeps_strategy_sections():
     assert "## Strategic Decisions" in prompt
 
 
-def test_classification_prompt_prefers_primary_category_before_duplication():
-    assert "Prefer assigning each article to ONE primary category." in CLASSIFICATION_SYSTEM_PROMPT
-    assert "Duplication is allowed only for major stories with clear technical and market significance." in CLASSIFICATION_SYSTEM_PROMPT
+def test_business_expert_prompt_distinguishes_fact_from_inference():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "State sourced facts directly." in prompt
+    assert "use calibrated language such as" in prompt
+    assert "signals, points to, implies, or suggests" in prompt
+
+
+def test_classification_prompt_allows_cross_category_overlap_for_dual_significance():
+    assert "The same article CAN appear in both categories if relevant to both" in CLASSIFICATION_SYSTEM_PROMPT
+    assert "The same article CAN and SHOULD appear in both categories when it has both technical and business significance." in CLASSIFICATION_SYSTEM_PROMPT
+    assert "overlap is valuable, not redundant." in CLASSIFICATION_SYSTEM_PROMPT

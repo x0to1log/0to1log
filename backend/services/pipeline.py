@@ -2471,7 +2471,7 @@ async def rerun_pipeline_stage(
         # --- Load or rerun classify ---
         if from_stage == "classify":
             t0 = time.monotonic()
-            classification, classify_usage = await classify_candidates(candidates)
+            classification, classify_usage, _ = await classify_candidates(candidates)
             cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
             _save_checkpoint(supabase, run_id, "classify", {
                 "research_picks": [c.model_dump() for c in classification.research_picks],
