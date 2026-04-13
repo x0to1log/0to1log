@@ -124,5 +124,26 @@ def test_digest_prompt_reframes_one_line_summary_as_top_story_synthesis():
     assert "must be exactly ONE sentence that synthesizes the main pattern or shared shift across today's top 2-3 stories." in prompt
     assert "Do not merely restate a single headline when multiple major stories clearly point to a broader theme." in prompt
     assert "Does it synthesize the common thread or day's main throughline across the top stories" in prompt
-    assert "≤15 English words" not in prompt
-    assert "≤60 Korean chars" not in prompt
+    assert "15 English words" not in prompt
+    assert "60 Korean chars" not in prompt
+
+
+def test_learner_prompt_prefers_news_editor_tone_over_chatty_friend_tone():
+    prompt = get_digest_prompt("research", "learner", [])
+
+    assert "written news/editorial prose" in prompt
+    assert "knowledgeable friend explaining over lunch" not in prompt
+
+
+def test_business_expert_prompt_uses_editorial_brief_tone_not_private_advisor_tone():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "strategic news brief" in prompt
+    assert "trusted strategic advisor in a private briefing" not in prompt
+
+
+def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():
+    prompt = get_digest_prompt("business", "learner", [])
+
+    assert "Tone for body (ko field): written news/editorial prose by default." in prompt
+    assert "친근체 (-에요/-습니다), unchanged." not in prompt

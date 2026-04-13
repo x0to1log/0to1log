@@ -353,7 +353,7 @@ Each news item — write 3-4 paragraphs covering:
 4. **Practical signal** — production-readiness, what to watch (1-2 sentences)
 
 Writing rules:
-- Write like a peer engineer at a technical review, not a reporter
+- Write like a technical editor briefing peer engineers: precise, reportorial, and analytical, not casual
 - Expand acronyms on first use: "DPO(Direct Preference Optimization)"
 - Reference arXiv IDs and repo URLs when available
 - When multiple sources are provided, draw different information from each — one source for benchmarks, another for architecture, another for limitations. Each paragraph should reference the source it draws from.
@@ -378,12 +378,13 @@ Editorial intent:
 - The reader should come away with vocabulary and a mental model, not jargon dumps.
 
 Writing rules:
-- Write like a knowledgeable friend explaining over lunch — peer-level, NEVER lecturing.
+- Write like a clear news editor for general readers — approachable and explanatory, but still reportorial and article-like. NEVER chatty, NEVER lecturing.
 - LEAD WITH WHAT IT DOES IN PLAIN LANGUAGE before naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time — this technique is called parallel diffusion decoding"
 - Use analogies generously when they help (a complex method ↔ a familiar everyday situation). If the news is straightforward, skip analogy.
 - When introducing ANY acronym, expand it FIRST in Korean style: Korean meaning then English in parentheses. Example: "전문가 혼합(Mixture of Experts, MoE)". NEVER use an acronym without prior explanation.
 - NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize: "85.6% (이 분야 최고 수준)" not just "85.6%".
 - Connect to readers' lives where natural: "이 기술이 일상화되면 우리가 쓰는 챗봇이 더 빨라진다" — but don't force it.
+- In Korean, use written news/editorial prose by default. Interpretive sections may be slightly softer, but stay in editorial prose rather than conversational chat.
 - Technical/business terms should be linked to Handbook on first appearance.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
 
@@ -416,7 +417,7 @@ Tone - DECISIVE, but calibrated:
 - Be confident, but distinguish observable facts from editorial interpretation.
 
 Writing rules:
-- Write like a trusted strategic advisor in a private briefing, not a news reporter
+- Write like an editor writing a strategic news brief: reportorial in the core story, analytical in the synthesis, never chatty
 - In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
 - Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
 - PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph.
@@ -459,7 +460,7 @@ Editorial intent:
 - The reader should leave with: (1) a clear sense of what changed, (2) one concrete thing they could try this week.
 
 Writing rules:
-- Write like a knowledgeable friend explaining over lunch — peer-level, NEVER lecturing.
+- Write like a clear news editor for general readers — easy to follow, but still written as a digest article rather than a chatty explainer.
 - Before discussing a company's strategy, briefly explain what the company does (assume reader knows OpenAI/Google/Meta but NOT Anthropic/Mistral/Cohere/Z.AI).
 - Use analogy when explaining a complex business move ("이건 마치 ___와 비슷합니다").
 - Connect every item to practical impact for the reader's job (마케터/기획자 관점).
@@ -467,6 +468,7 @@ Writing rules:
 - Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
 - When multiple sources cover the same news, weave in different perspectives (announcement + analyst reaction + user impact).
 - Action Items must be ACTUALLY DOABLE by a non-developer this week — no "build a multi-agent pipeline", no "evaluate vendor lock-in risk". YES "try Meta AI in WhatsApp", "check the new ChatGPT mode", "read Anthropic's blog post".
+- In Korean, use written news/editorial prose by default. Reader-facing sections may be slightly softer, but avoid conversational chat tone.
 - Technical/business terms link to Handbook on first appearance.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
 
@@ -508,8 +510,8 @@ LEARNER_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body 
 Reader: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. 출퇴근길에 5분 안에 "안전하게 똑똑해질 수 있는" 콘텐츠를 찾고 있음. 자존감 압박(AI 모르면 뒤처진다)과 시간 결핍이 동시에 작동.
 
 Tone for headline_ko: 명사형 종결 (noun-ending, Korean news headline style). NOT -에요/-요. NOT -다/-이다.
-Tone for excerpt_ko: 친근체 (-에요/-습니다), peer 친구처럼.
-Tone for body (ko field): 친근체 (-에요/-습니다), unchanged.
+Tone for excerpt_ko: written editorial prose, concise and readable.
+Tone for body (ko field): written news/editorial prose by default. Slightly softer phrasing is allowed in interpretive sections, but do not use conversational chat tone.
 Length: headline_ko 25–45 chars. excerpt_ko 1-2 sentences.
 
 Pick ONE archetype for headline_ko based on which fits today's news best:
