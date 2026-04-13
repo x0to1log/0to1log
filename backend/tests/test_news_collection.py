@@ -1,4 +1,5 @@
 """Tests for multi-source news collection service."""
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -236,6 +237,57 @@ async def test_enrich_sources_preserves_source_metadata():
     assert first["source_kind"] == "official_site"
     assert first["source_confidence"] == "high"
     assert first["source_tier"] == "primary"
+
+
+@pytest.mark.asyncio
+async def test_enrich_sources_adds_official_source_for_secondary_lead_group():
+    from models.news_pipeline import ClassifiedGroup, GroupedItem
+    from services.news_collection import enrich_sources
+
+    group = ClassifiedGroup(
+        group_title="OpenAI Confirms Security Incident—Mac Users Must Update All Apps Now",
+        items=[
+            GroupedItem(
+                url="https://www.forbes.com/sites/daveywinder/2026/04/12/openai-confirms-security-incident-mac-users-must-update-all-apps-now/",
+                title="OpenAI Confirms Security Incident—Mac Users Must Update All Apps Now",
+            )
+        ],
+        category="business",
+        subcategory="big_tech",
+        reason="[LEAD] Most important business story",
+    )
+    raw_content_map = {group.primary_url: "Forbes coverage"}
+
+    mock_exa = MagicMock()
+    mock_exa.search_and_contents.return_value = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                url="https://openai.com/index/axios-developer-tool-compromise/",
+                title="Our response to the Axios developer tool compromise",
+                text="Official OpenAI response",
+            )
+        ]
+    )
+    mock_exa.find_similar_and_contents.return_value = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                url="https://www.magzter.com/stories/technology/PC-WORLD/OPENAI-CONFIRMS-SECURITY-INCIDENT-MAC-USERS-MUST-UPDATE-APP-NOW",
+                title="OpenAI Confirms Security Incident",
+                text="Secondary coverage",
+            )
+        ]
+    )
+
+    with patch("services.news_collection.settings") as mock_settings, \
+         patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
+        mock_settings.exa_api_key = "test-key"
+        enriched = await enrich_sources([group], raw_content_map, target_date="2026-04-13")
+
+    sources = enriched[group.primary_url]
+    assert any(source["url"] == "https://openai.com/index/axios-developer-tool-compromise/" for source in sources)
+    official = next(source for source in sources if source["url"] == "https://openai.com/index/axios-developer-tool-compromise/")
+    assert official["source_tier"] == "primary"
+    assert sources[1]["url"] == "https://openai.com/index/axios-developer-tool-compromise/"
 
 
 TAVILY_REACTION_RESPONSE = {

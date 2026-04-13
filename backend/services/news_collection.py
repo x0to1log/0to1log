@@ -72,6 +72,28 @@ _MEDIA_DOMAINS = (
     "wired.com",
 )
 
+_OFFICIAL_LOOKUP_DOMAIN_HINTS: dict[str, tuple[str, ...]] = {
+    "openai": ("openai.com",),
+    "anthropic": ("anthropic.com",),
+    "microsoft": ("techcommunity.microsoft.com", "microsoft.com", "www.microsoft.com"),
+    "nvidia": ("developer.nvidia.com", "blogs.nvidia.com"),
+    "google": ("blog.google", "deepmind.google", "ai.google.dev"),
+    "deepmind": ("deepmind.google", "blog.google"),
+    "meta": ("about.fb.com", "ai.meta.com"),
+    "amazon": ("aboutamazon.com", "aws.amazon.com", "openai.com"),
+    "aws": ("aws.amazon.com", "aboutamazon.com"),
+    "apple": ("developer.apple.com", "machinelearning.apple.com"),
+    "cloudflare": ("blog.cloudflare.com",),
+    "coreweave": ("coreweave.com",),
+}
+
+_OFFICIAL_LOOKUP_STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "into", "over", "after",
+    "about", "their", "there", "while", "users", "must", "update", "apps", "app",
+    "news", "today", "week", "story", "report", "reported", "reportedly", "latest",
+    "confirms", "launches", "announces", "introduces", "released", "release",
+}
+
 
 def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[str, str]:
     """Classify source provenance metadata using rule-based URL heuristics."""
@@ -186,6 +208,129 @@ def _build_source_payload(
         "content": content,
         **meta,
     }
+
+
+def _canonicalize_source_url(url: str) -> str:
+    """Normalize a source URL for stable dedupe."""
+    if not url:
+        return ""
+    stripped = url.strip()
+    parsed = urlparse(stripped)
+    path = parsed.path.rstrip("/")
+    normalized = parsed._replace(fragment="", path=path)
+    return normalized.geturl()
+
+
+def _official_lookup_domains(group_title: str, item_title: str) -> list[str]:
+    """Infer likely official domains from group/item titles."""
+    text = f"{group_title} {item_title}".lower()
+    domains: list[str] = []
+    for keyword, hinted_domains in _OFFICIAL_LOOKUP_DOMAIN_HINTS.items():
+        if keyword not in text:
+            continue
+        for domain in hinted_domains:
+            if domain not in domains:
+                domains.append(domain)
+    return domains
+
+
+def _official_lookup_terms(group_title: str, item_title: str) -> list[str]:
+    """Build a compact keyword query for official-source lookup."""
+    text = f"{group_title} {item_title}".lower()
+    raw_terms = _re_module.findall(r"[a-z0-9][a-z0-9\-.]{2,}", text)
+    seen: set[str] = set()
+    terms: list[str] = []
+    for term in raw_terms:
+        if term in _OFFICIAL_LOOKUP_STOPWORDS:
+            continue
+        if term in seen:
+            continue
+        seen.add(term)
+        terms.append(term)
+    return terms[:8]
+
+
+def _should_lookup_official_source(group) -> bool:
+    """Only do official lookup for single-source groups that start from a secondary URL."""
+    if len(group.items) != 1:
+        return False
+    item = group.items[0]
+    meta = _classify_source_meta(url=item.url, title=item.title)
+    if meta["source_tier"] == "primary":
+        return False
+    return group.reason.startswith("[LEAD]") or meta["source_tier"] == "secondary"
+
+
+async def _lookup_official_sources(
+    *,
+    exa,
+    loop,
+    group,
+    max_sources: int,
+    start_date: str,
+    end_date: str,
+) -> list[dict]:
+    """Search likely official domains for a source article that matches the lead story."""
+    item = group.items[0]
+    domains = _official_lookup_domains(group.group_title, item.title)
+    if not domains:
+        return []
+
+    terms = _official_lookup_terms(group.group_title, item.title)
+    if not terms:
+        return []
+
+    existing = {_canonicalize_source_url(item.url)}
+    official_sources: list[dict] = []
+
+    for domain in domains:
+        query = f"{' '.join(terms)} site:{domain}"
+        try:
+            resp = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda q=query: exa.search_and_contents(
+                        q,
+                        num_results=max(2, max_sources - 1),
+                        type="auto",
+                        text=True,
+                        start_published_date=start_date,
+                        end_published_date=end_date,
+                    ),
+                ),
+                timeout=15,
+            )
+        except Exception as e:
+            logger.debug("Official lookup failed for '%s' on %s: %s", group.group_title[:60], domain, e)
+            continue
+
+        for result in (resp.results if hasattr(resp, "results") else []):
+            if not result.url:
+                continue
+            hostname = (urlparse(result.url).hostname or "").lower()
+            if hostname != domain and not hostname.endswith(f".{domain}"):
+                continue
+            canonical_url = _canonicalize_source_url(result.url)
+            if canonical_url in existing:
+                continue
+            result_title = result.title or ""
+            if any(d in hostname for d in _NON_EN_DOMAINS):
+                continue
+            if any("\u4e00" <= ch <= "\u9fff" for ch in result_title):
+                continue
+            official_sources.append(
+                _build_source_payload(
+                    url=result.url,
+                    title=result_title,
+                    content=result.text or "",
+                    source="exa_official_lookup",
+                )
+            )
+            existing.add(canonical_url)
+            if len(official_sources) >= max_sources - 1:
+                return official_sources
+
+    return official_sources
 
 
 def _resolve_google_news_url(url: str) -> str:
@@ -806,6 +951,19 @@ async def enrich_sources(
             )
         ]
 
+        if _should_lookup_official_source(group):
+            official_sources = await _lookup_official_sources(
+                exa=exa,
+                loop=loop,
+                group=group,
+                max_sources=max_sources,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            sources.extend(official_sources)
+
+        seen_source_urls = {_canonicalize_source_url(source["url"]) for source in sources}
+
         try:
             resp = await asyncio.wait_for(
                 loop.run_in_executor(
@@ -830,6 +988,9 @@ async def enrich_sources(
                     continue
                 if any("\u4e00" <= ch <= "\u9fff" for ch in r_title):
                     continue
+                canonical_url = _canonicalize_source_url(r.url)
+                if canonical_url in seen_source_urls:
+                    continue
                 sources.append(
                     _build_source_payload(
                         url=r.url,
@@ -838,6 +999,7 @@ async def enrich_sources(
                         source="exa_enrich",
                     )
                 )
+                seen_source_urls.add(canonical_url)
         except Exception as e:
             logger.debug("Enrich failed for '%s': %s", group.group_title[:60], e)
 
