@@ -57,6 +57,21 @@ def test_business_expert_prompt_distinguishes_fact_from_inference():
     assert "signals, points to, implies, or suggests" in prompt
 
 
+def test_business_expert_prompt_separates_front_load_from_analysis_sections():
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation." in prompt
+    assert "Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions." in prompt
+    assert "If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt" in prompt
+
+
+def test_research_prompt_has_license_sensitive_wording_guard():
+    prompt = get_digest_prompt("research", "expert", [])
+
+    assert 'do NOT call it "open-source" or "open source"' in prompt
+    assert 'Use "public weights", "weights released", or "released under non-commercial terms" instead.' in prompt
+
+
 def test_digest_prompt_requires_english_field_purity():
     prompt = get_digest_prompt("research", "expert", [])
 

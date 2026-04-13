@@ -216,6 +216,12 @@ def _build_digest_prompt(
         "\n8b. EN field purity: Does the `en` field contain any Hangul in the headline, excerpt, `###` headings, or body? "
         "If explanation is needed, is it written in English body text after the heading rather than inside the heading itself?"
     )
+    license_wording_guard = (
+        "\n## License-Sensitive Wording\n\n"
+        'If a model or repo is released under non-commercial, research-only, or otherwise restricted terms, '
+        'do NOT call it "open-source" or "open source". Use "public weights", "weights released", or '
+        '"released under non-commercial terms" instead.'
+    )
     learner_opening_checklist = (
         "\n8a. LEARNER OPENING SENTENCE: after every `###` heading, does the first sentence explain in plain "
         "everyday language what this item is or does before benchmarks, acronyms, or secondary details? "
@@ -306,6 +312,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 {title_strategy}
 
 {HALLUCINATION_GUARD}
+{license_wording_guard}
 
 {ONE_LINE_SUMMARY_RULE}
 {learner_ko_rule}
@@ -409,6 +416,9 @@ Tone - DECISIVE, but calibrated:
 
 Writing rules:
 - Write like a trusted strategic advisor in a private briefing, not a news reporter
+- In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
+- Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
+- If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt or frame it as reported/suggestive rather than definitive.
 - ALWAYS compare numbers to competitors or industry benchmarks
 - Analyze competitive dynamics with explicit reasoning chains grounded in sourced facts
 - Connecting the Dots should explain the strongest plausible drivers and market pattern without inventing hidden motives unsupported by sources
