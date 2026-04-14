@@ -1,5 +1,9 @@
 from services.agents.prompts_news_pipeline import (
     CLASSIFICATION_SYSTEM_PROMPT,
+    QUALITY_CHECK_BUSINESS_EXPERT,
+    QUALITY_CHECK_BUSINESS_LEARNER,
+    QUALITY_CHECK_RESEARCH_EXPERT,
+    QUALITY_CHECK_RESEARCH_LEARNER,
     get_digest_prompt,
 )
 
@@ -140,6 +144,33 @@ def test_business_expert_prompt_uses_editorial_brief_tone_not_private_advisor_to
 
     assert "strategic news brief" in prompt
     assert "trusted strategic advisor in a private briefing" not in prompt
+
+
+def test_quality_prompts_allow_brief_uncited_one_line_summary():
+    prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+    ]
+
+    for prompt in prompts:
+        assert "One-Line Summary may be brief if it clearly synthesizes the day's main throughline." in prompt
+        assert "One-Line Summary does not require an inline citation if the body paragraphs are properly cited." in prompt
+
+
+def test_quality_prompts_require_structured_issue_schema():
+    prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+    ]
+
+    for prompt in prompts:
+        assert '"severity": "major|minor"' in prompt
+        assert '"scope": "expert_body|learner_body|frontload|ko|en"' in prompt
+        assert '"category": "source|overclaim|accessibility|locale|structure|clarity"' in prompt
 
 
 def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():

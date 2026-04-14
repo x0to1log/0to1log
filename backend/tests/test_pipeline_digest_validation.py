@@ -164,6 +164,33 @@ def test_find_digest_blockers_flags_locale_parity_story_set_mismatch():
     assert any("locale parity story set mismatch" in blocker for blocker in blockers)
 
 
+def test_structural_penalties_do_not_cap_one_line_summary_length():
+    from services.pipeline import _check_structural_penalties
+
+    expert = PersonaOutput(
+        en=(
+            "## One-Line Summary\n"
+            "Nvidia's capital flywheel tightens around compute while regulators move faster on model oversight and AI tooling reaches wider distribution today.\n\n"
+            "## Big Tech\n\n"
+            "### Microsoft launches three in-house MAI models\n\n"
+            "Body paragraph with citation [1](https://example.com/story)\n\n"
+            "Second paragraph with citation [1](https://example.com/story)\n\n"
+            "Third paragraph with citation [1](https://example.com/story)\n"
+        ),
+        ko="",
+    )
+
+    penalty, warnings = _check_structural_penalties(
+        expert,
+        learner=None,
+        community_summary_map={},
+        classified=_sample_group(),
+    )
+
+    assert penalty == 0
+    assert not any("One-Line Summary too long" in warning for warning in warnings)
+
+
 @pytest.mark.asyncio
 async def test_generate_digest_aborts_before_save_when_structural_blocker_found():
     from services.pipeline import _generate_digest

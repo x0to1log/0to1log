@@ -1148,19 +1148,21 @@ Return ONLY valid JSON:
 
 QUALITY_CHECK_RESEARCH_EXPERT = """You are a strict quality reviewer for an AI tech research digest written for senior ML engineers.
 
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
+
 Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters.
    NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists for that day. Do NOT penalize intentional omissions. But Why It Matters and One-Line Summary are ALWAYS required.
-   - 25: All present sections have substantial content (200+ chars each) with ## headings. One-Line Summary is concise and accurate.
-   - 18: Present sections are adequate but 1 is thin (<150 chars)
+   - 25: All present sections except One-Line Summary have substantial content (200+ chars each) with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline.
+   - 18: Present sections are adequate but 1 non-summary section is thin (<150 chars), or the One-Line Summary is generic rather than synthetic
    - 10: 1+ present section is very thin or poorly structured or missing ## headings
    - 0: Content structure is broken or unrecognizable
 
 2. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations. If multiple sources are provided for an item, they should appear in different paragraphs. If only one source is provided, using it well is sufficient.
-   - 25: Every paragraph has [N](URL) citation; all provided sources are utilized; benchmark numbers are attributed
+   Expected: per-paragraph [N](URL) citations in body sections. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. If multiple sources are provided for an item, they should appear in different paragraphs. If only one source is provided, using it well is sufficient.
+   - 25: Every body paragraph has [N](URL) citation; all provided sources are utilized; benchmark numbers are attributed
    - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
    - 10: Provided sources are ignored or citations grouped at bottom
    - 0: No inline citations or fabricated URLs
@@ -1178,18 +1180,20 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Barely readable or extremely short
 
 Return JSON only:
-{"score": 0-100, "sections": 0-25, "sources": 0-25, "depth": 0-25, "language": 0-25, "issues": ["issue1"]}"""
+{"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "depth": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
 
 
 QUALITY_CHECK_RESEARCH_LEARNER = """You are a quality reviewer for an AI tech research digest written for beginners and curious developers.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
 
 Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters.
    NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists. But Why It Matters and One-Line Summary are ALWAYS required.
-   - 25: All present sections have substantial content with ## headings. One-Line Summary is approachable.
-   - 18: Present sections adequate but 1 is thin
+   - 25: All present sections except One-Line Summary have substantial content with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline.
+   - 18: Present sections adequate but 1 non-summary section is thin, or the One-Line Summary is generic rather than synthetic
    - 10: 1+ present section is very thin or missing ## headings
    - 0: Broken structure
 
@@ -1200,7 +1204,7 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Written like an expert brief; inaccessible to beginners
 
 3. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
+   Expected: per-paragraph [N](URL) citations in body sections. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
    - 25: Most paragraphs end with [N](URL) citations; all provided sources are utilized
    - 18: Most items cite sources; a few paragraphs missing
    - 10: Provided sources are ignored or citations grouped at bottom
@@ -1213,24 +1217,26 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: Barely readable
 
 Return JSON only:
-{"score": 0-100, "sections": 0-25, "accessibility": 0-25, "sources": 0-25, "language": 0-25, "issues": ["issue1"]}"""
+{"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "sources": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
 
 
 QUALITY_CHECK_BUSINESS_EXPERT = """You are a strict quality reviewer for an AI business digest written for senior decision-makers.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
 
 Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions.
    NOTE: Big Tech, Industry & Biz, and New Tools may be omitted if no relevant news exists. But One-Line Summary, Connecting the Dots, and Strategic Decisions are ALWAYS required.
-   - 25: All present sections have substantial content (200+ chars each) with ## headings. Strategic Decisions uses bullet format.
-   - 18: All present but 1 is thin
+   - 25: All present sections except One-Line Summary have substantial content (200+ chars each) with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline. Strategic Decisions uses bullet format.
+   - 18: All present but 1 non-summary section is thin, or the One-Line Summary is generic rather than synthetic
    - 10: Missing a required section (Connecting the Dots or Strategic Decisions) or missing ## headings
    - 0: Missing 2+ required sections
 
 2. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
-   - 25: Every paragraph has [N](URL) citation; all provided sources are utilized; funding amounts and deal terms attributed
+   Expected: per-paragraph [N](URL) citations in body sections. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
+   - 25: Every body paragraph has [N](URL) citation; all provided sources are utilized; funding amounts and deal terms attributed
    - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
    - 10: Provided sources are ignored or citations grouped at bottom
    - 0: No inline citations
@@ -1250,18 +1256,20 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
 SCORING CALIBRATION: Score proportionally. Deduct points per issue but do NOT collapse entire categories to 0 for a single problem. A well-written digest missing one section should score 60-75, not below 40.
 
 Return JSON only:
-{"score": 0-100, "sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25, "issues": ["issue1"]}"""
+{"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
 
 
 QUALITY_CHECK_BUSINESS_LEARNER = """You are a quality reviewer for an AI business digest written for general audiences.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
 
 Score this digest on 4 criteria (0-25 each, total 0-100):
 
 1. **Section Completeness** (25):
    Required sections: One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items.
    NOTE: Big Tech, Industry & Biz, and New Tools may be omitted if no news. But One-Line Summary, What This Means for You, and Action Items are ALWAYS required.
-   - 25: All present sections have substantial content with ## headings. Action Items uses numbered list format.
-   - 18: All present but 1 is thin
+   - 25: All present sections except One-Line Summary have substantial content with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline. Action Items uses numbered list format.
+   - 18: All present but 1 non-summary section is thin, or the One-Line Summary is generic rather than synthetic
    - 10: Missing a required section or missing ## headings
    - 0: Missing 2+ required sections
 
@@ -1278,13 +1286,50 @@ Score this digest on 4 criteria (0-25 each, total 0-100):
    - 0: No actionable content or empty sections
 
 4. **Language Quality** (25):
-   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; per-paragraph [N](URL) citations present; all provided sources utilized
+   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; One-Line Summary may be brief if it clearly synthesizes the day's main throughline. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. All provided sources are utilized
    - 18: Readable; adequate length; most paragraphs have citations
    - 10: Too dry, too short, or condescending; citations missing
    - 0: Barely readable
 
 Return JSON only:
-{"score": 0-100, "sections": 0-25, "accessibility": 0-25, "actionability": 0-25, "language": 0-25, "issues": ["issue1"]}"""
+{"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "actionability": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
+
+
+QUALITY_CHECK_FRONTLOAD = """You are a strict quality reviewer for digest frontload quality.
+
+The input contains English and Korean frontload fields for the same digest:
+- headline / headline_ko
+- excerpt / excerpt_ko
+- focus_items / focus_items_ko
+
+Score this frontload on 4 criteria (0-25 each, total 0-100):
+
+1. **Factuality** (25):
+   - 25: Claims are grounded in the digest body and do not add unsupported facts
+   - 18: Mostly grounded, but one phrase stretches beyond direct support
+   - 10: Multiple claims overreach beyond the body or source support
+   - 0: Clearly unsupported or misleading
+
+2. **Calibration** (25):
+   - 25: Tone matches source strength; secondary-heavy stories stay fact-led
+   - 18: Mostly calibrated with one slightly overstated phrase
+   - 10: Competitive or strategic framing is too strong for the evidence
+   - 0: Heavily overclaims beyond support
+
+3. **Clarity** (25):
+   - 25: Headline, excerpt, and focus items are specific, informative, and non-generic
+   - 18: Mostly clear but slightly crowded or repetitive
+   - 10: Vague, overloaded, or low-information
+   - 0: Confusing or unusable
+
+4. **Locale Alignment** (25):
+   - 25: EN and KO communicate the same editorial judgment naturally
+   - 18: Mostly aligned with minor nuance drift
+   - 10: Noticeable mismatch in emphasis or meaning
+   - 0: EN and KO feel like different takes
+
+Return JSON only:
+{"score": 0-100, "subscores": {"factuality": 0-25, "calibration": 0-25, "clarity": 0-25, "locale_alignment": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
 
 
 def get_weekly_prompt(persona: str, language: str = "") -> str:
