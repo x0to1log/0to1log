@@ -62,6 +62,44 @@ def test_build_quality_payloads_include_ko_and_frontload_fields():
     assert "한국어 포인트" in frontload_payload
 
 
+def test_normalize_scope_handles_llm_variants():
+    from services.pipeline import _normalize_scope
+
+    assert _normalize_scope("frontload", "en") == "frontload"
+    assert _normalize_scope("expert_body|ko|en", "en") == "expert_body"
+    assert _normalize_scope("Frontload", "en") == "frontload"
+    assert _normalize_scope("misc|frontload", "en") == "frontload"
+    assert _normalize_scope(" expert_body | en ", "ko") == "expert_body"
+    assert _normalize_scope("", "learner_body") == "learner_body"
+    assert _normalize_scope(None, "en") == "en"
+    assert _normalize_scope("   ", "en") == "en"
+    assert _normalize_scope("unknown_scope", "en") == "unknown_scope"
+
+
+def test_issue_penalty_cap_activates_with_piped_scope():
+    """LLM may return 'frontload|en|ko' — cap must still activate."""
+    from services.pipeline import _apply_issue_penalties_and_caps, _extract_structured_issues
+
+    raw_issues = [
+        {
+            "severity": "major",
+            "scope": "frontload|en|ko",
+            "category": "overclaim",
+            "message": "Headline overstates competitive impact",
+        }
+    ]
+    normalized = _extract_structured_issues(raw_issues, default_scope="en")
+    assert normalized[0]["scope"] == "frontload"
+
+    final_score, penalty, caps = _apply_issue_penalties_and_caps(
+        base_score=97,
+        issues=normalized,
+    )
+    assert penalty == 5
+    assert "frontload_overclaim_cap_89" in caps
+    assert final_score == 89
+
+
 def test_issue_penalty_and_caps_are_deterministic():
     from services.pipeline import _apply_issue_penalties_and_caps
 

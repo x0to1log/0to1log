@@ -173,6 +173,40 @@ def test_quality_prompts_require_structured_issue_schema():
         assert '"category": "source|overclaim|accessibility|locale|structure|clarity"' in prompt
 
 
+def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
+    """Severity taxonomy + scoring resolution guidance must be present.
+
+    Without these, LLM judges drift: severity gets applied subjectively and
+    body scores saturate at 95-100. Regression guard against accidental
+    removal during future prompt edits.
+    """
+    from services.agents.prompts_news_pipeline import QUALITY_CHECK_FRONTLOAD
+
+    body_prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+    ]
+
+    for prompt in body_prompts:
+        # Severity rubric
+        assert "## Severity rules" in prompt
+        assert "Fabrication / hallucination" in prompt
+        assert "unsure whether" in prompt  # the "when in doubt → minor" tiebreaker
+        assert "AT MOST 5 issues" in prompt
+        # Scoring resolution (stops 95-100 saturation on body judges)
+        assert "SCORING RESOLUTION" in prompt
+        assert "19-21" in prompt  # intermediate tier anchor
+        assert "22-23" in prompt
+
+    # Frontload gets severity rubric but NOT scoring resolution: its
+    # distribution is already healthy (49-97 observed) so extra calibration
+    # would over-penalize.
+    assert "## Severity rules" in QUALITY_CHECK_FRONTLOAD
+    assert "SCORING RESOLUTION" not in QUALITY_CHECK_FRONTLOAD
+
+
 def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():
     prompt = get_digest_prompt("business", "learner", [])
 

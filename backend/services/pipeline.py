@@ -935,6 +935,29 @@ def _build_frontload_quality_payload(frontload: dict[str, Any] | None) -> str:
     ).strip()
 
 
+_CANONICAL_SCOPES = {
+    "expert_body", "learner_body", "frontload", "ko", "en",
+}
+
+
+def _normalize_scope(raw_scope: Any, default_scope: str) -> str:
+    """Pick a single canonical scope from LLM output.
+
+    LLM judges sometimes return combined scopes like "expert_body|ko|en" or
+    "frontload en". Split on pipe/comma/whitespace, then pick the first
+    canonical scope. Fall back to the first non-empty token, or default.
+    """
+    if not raw_scope:
+        return default_scope
+    tokens = [t for t in re.split(r"[|,\s]+", str(raw_scope).lower()) if t]
+    if not tokens:
+        return default_scope
+    for token in tokens:
+        if token in _CANONICAL_SCOPES:
+            return token
+    return tokens[0]
+
+
 def _normalize_quality_issue(issue: Any, default_scope: str) -> dict[str, str]:
     """Normalize free-form or structured issues into a consistent schema."""
     if isinstance(issue, dict):
@@ -943,7 +966,7 @@ def _normalize_quality_issue(issue: Any, default_scope: str) -> dict[str, str]:
             severity = "minor"
         return {
             "severity": severity,
-            "scope": str(issue.get("scope") or default_scope),
+            "scope": _normalize_scope(issue.get("scope"), default_scope),
             "category": str(issue.get("category") or "general"),
             "message": str(issue.get("message") or issue.get("text") or "").strip(),
         }
@@ -997,7 +1020,9 @@ def _apply_issue_penalties_and_caps(
         return penalized_score, penalty, []
     cap_score, _label = min(caps, key=lambda item: item[0])
     final_score = min(penalized_score, cap_score)
-    return final_score, penalty, [label for _, label in sorted(set(caps))]
+    # Dedup labels and return strictest cap first (smallest cap value).
+    ordered_unique = sorted(set(caps), key=lambda item: (item[0], item[1]))
+    return final_score, penalty, [label for _, label in ordered_unique]
 
 
 def _compute_structure_score(personas: dict[str, PersonaOutput]) -> int:
