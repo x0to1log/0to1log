@@ -49,6 +49,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
       : null;
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
     const definitionField = getDefinitionField(locale);
+    const summaryField = locale === 'ko' ? 'summary_ko' : 'summary_en';
 
     const rawContent = post.content || '';
 
@@ -57,7 +58,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     const renderTrack = (async () => {
       const hbTermsRes = await publicSupabase
         .from('handbook_terms')
-        .select(`term, slug, korean_name, term_full, categories, ${definitionField}, body_basic_ko, body_basic_en`)
+        .select(`term, slug, korean_name, term_full, categories, ${summaryField}, ${definitionField}, body_basic_ko, body_basic_en`)
         .eq('status', 'published')
         .limit(200);
 
@@ -72,6 +73,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
           korean_name: entry.korean_name || '',
           term_full: (entry as Record<string, any>).term_full || '',
           categories: entry.categories || [],
+          summary: (entry as Record<string, any>)[summaryField] || '',
           definition: (entry as Record<string, any>)[definitionField] || '',
           basic_plain: locale === 'ko'
             ? (entry as Record<string, any>).body_basic_ko || ''

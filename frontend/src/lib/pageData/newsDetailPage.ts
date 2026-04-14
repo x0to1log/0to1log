@@ -115,6 +115,7 @@ export async function getNewsDetailPageData({
   if (post && publicSupabase) {
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
     const definitionField = getDefinitionField(locale);
+    const summaryField = locale === 'ko' ? 'summary_ko' : 'summary_en';
 
     // Fire FastAPI call early — don't await, collect result later during markdown rendering
     const similarPostsPromise = (import.meta.env.FASTAPI_URL && post.id)
@@ -167,7 +168,7 @@ export async function getNewsDetailPageData({
       Promise.resolve({ data: null }),
       publicSupabase
         .from('handbook_terms')
-        .select(`term, slug, korean_name, term_full, categories, ${definitionField}, body_basic_ko, body_basic_en`)
+        .select(`term, slug, korean_name, term_full, categories, ${summaryField}, ${definitionField}, body_basic_ko, body_basic_en`)
         .eq('status', 'published')
         .limit(200),
       post.category
@@ -203,6 +204,7 @@ export async function getNewsDetailPageData({
         korean_name: entry.korean_name || '',
         term_full: (entry as Record<string, any>).term_full || '',
         categories: entry.categories || [],
+        summary: (entry as Record<string, any>)[summaryField] || '',
         definition: (entry as Record<string, any>)[definitionField] || '',
         basic_plain: locale === 'ko'
           ? (entry as Record<string, any>).body_basic_ko || ''

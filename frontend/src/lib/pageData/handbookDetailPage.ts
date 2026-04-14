@@ -22,6 +22,7 @@ interface HandbookTermJsonEntry {
   korean_name: string;
   term_full: string;
   categories: string[];
+  summary: string;
   definition: string;
   basic_plain: string;
 }
@@ -89,9 +90,10 @@ export async function getHandbookDetailPageData({
 
     // Build handbook terms map for inline linking (exclude self to prevent self-link)
     const definitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
+    const summaryField = locale === 'ko' ? 'summary_ko' : 'summary_en';
     const hbTermsRes = await publicSupabase
       .from('handbook_terms')
-      .select(`term, slug, korean_name, term_full, categories, ${definitionField}, body_basic_ko, body_basic_en`)
+      .select(`term, slug, korean_name, term_full, categories, ${summaryField}, ${definitionField}, body_basic_ko, body_basic_en`)
       .eq('status', 'published')
       .neq('slug', pageSlug)  // exclude self
       .limit(200);
@@ -106,6 +108,7 @@ export async function getHandbookDetailPageData({
         korean_name: entry.korean_name || '',
         term_full: (entry as any).term_full || '',
         categories: entry.categories || [],
+        summary: (entry as any)[summaryField] || '',
         definition: (entry as any)[definitionField] || '',
         basic_plain: locale === 'ko'
           ? (entry as any).body_basic_ko || ''

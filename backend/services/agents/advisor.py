@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import ValidationError
@@ -44,6 +45,9 @@ from services.agents.prompts_advisor import (
     GENERATE_BASIC_EN_PROMPT,
     GENERATE_ADVANCED_PROMPT,
     GENERATE_ADVANCED_EN_PROMPT,
+    ADVANCED_NO_CODE_PASS_SUFFIX,
+    GENERATE_ADVANCED_CODE_SECTION_KO_PROMPT,
+    GENERATE_ADVANCED_CODE_SECTION_EN_PROMPT,
     EXTRACT_TERMS_PROMPT,
 )
 
@@ -347,13 +351,16 @@ def _build_handbook_user_prompt(req: HandbookAdviseRequest) -> str:
     ]
     # Include available content
     for lang in ("ko", "en"):
+        summary = getattr(req, f"summary_{lang}", "")
         defn = getattr(req, f"definition_{lang}", "")
         basic = getattr(req, f"body_basic_{lang}", "")
         advanced = getattr(req, f"body_advanced_{lang}", "")
         hero = getattr(req, f"hero_news_context_{lang}", "")
         refs = getattr(req, f"references_{lang}", [])
-        if any([defn, basic, advanced, hero, refs]):
+        if any([summary, defn, basic, advanced, hero, refs]):
             parts.append(f"\n--- Content ({lang.upper()}) ---")
+            if summary:
+                parts.append(f"Learner summary: {summary}")
             if defn:
                 parts.append(f"Definition: {defn}")
             if hero:
@@ -366,6 +373,25 @@ def _build_handbook_user_prompt(req: HandbookAdviseRequest) -> str:
                 refs_json = json.dumps(refs, ensure_ascii=False, indent=2)
                 parts.append(f"References:\n{refs_json[:2000]}")
     return "\n".join(p for p in parts if p is not None)
+
+
+def _build_handbook_classification_context(
+    req: HandbookAdviseRequest,
+    article_context: str = "",
+) -> str:
+    """Build a short context snippet for planner-style type classification."""
+    parts = []
+    if req.definition_ko:
+        parts.append(f"Definition KO: {req.definition_ko[:400]}")
+    if req.definition_en:
+        parts.append(f"Definition EN: {req.definition_en[:400]}")
+    if req.body_basic_ko:
+        parts.append(f"Basic KO excerpt: {req.body_basic_ko[:500]}")
+    if req.body_basic_en:
+        parts.append(f"Basic EN excerpt: {req.body_basic_en[:500]}")
+    if article_context:
+        parts.append(f"Source article excerpt: {article_context[:800]}")
+    return "\n".join(parts)[:1800]
 
 
 def _build_translate_user_prompt(req: HandbookAdviseRequest) -> tuple[str, str, str]:
@@ -585,18 +611,83 @@ CATEGORY_SEARCH_QUERIES: dict[str, str] = {
 }
 
 
-async def _search_term_context(term: str, categories: list[str] | None = None) -> str:
+SURFACE_EVIDENCE_HINTS: dict[str, dict[str, str]] = {
+    "tavily": {
+        "paper": "research paper explained",
+        "docs": "official docs guide overview",
+        "benchmark": "performance benchmark comparison",
+        "community": "practical examples tutorial",
+        "code": "github examples tutorial",
+    },
+    "brave": {
+        "paper": "site:arxiv.org OR site:paperswithcode.com",
+        "docs": "site:docs.* OR site:developer.* OR official documentation",
+        "benchmark": "benchmark pricing performance",
+        "community": "site:github.com OR site:stackoverflow.com",
+        "code": "site:github.com examples",
+    },
+    "exa": {
+        "paper": "research paper deep explanation",
+        "docs": "official docs architecture deep dive",
+        "benchmark": "benchmark analysis workload comparison",
+        "community": "practical architecture walkthrough",
+        "code": "implementation deep dive",
+    },
+}
+
+INTENT_QUERY_HINTS: dict[str, str] = {
+    "understand": "explained clearly how it works",
+    "compare": "alternatives comparison tradeoffs",
+    "build": "implementation architecture usage",
+    "debug": "failure modes troubleshooting mitigation",
+    "evaluate": "measurement interpretation limitations",
+}
+
+
+def _build_type_aware_search_query(
+    term: str,
+    categories: list[str] | None,
+    term_type: str,
+    subtype: str | None,
+    surface: str,
+    intent: str = "understand",
+) -> str:
+    """Build a retrieval query that blends category framing with type-aware evidence needs."""
+    from services.agents.prompts_handbook_types import get_evidence_priorities, get_type_query_focus
+
+    primary_category = categories[0] if categories else ""
+    category_template = (
+        CATEGORY_SEARCH_QUERIES.get(primary_category)
+        if surface == "tavily"
+        else BRAVE_CATEGORY_QUERIES.get(primary_category)
+        if surface == "brave"
+        else None
+    )
+    base = category_template.format(term=term) if category_template else term
+
+    evidence_priorities = get_evidence_priorities(term_type, subtype)
+    evidence_hints = SURFACE_EVIDENCE_HINTS.get(surface, SURFACE_EVIDENCE_HINTS["tavily"])
+    source_terms = " ".join(evidence_hints.get(item, item) for item in evidence_priorities[:2])
+    focus = get_type_query_focus(term_type, subtype)
+    intent_hint = INTENT_QUERY_HINTS.get(intent, INTENT_QUERY_HINTS["understand"])
+
+    if surface == "exa" and "paper" in evidence_priorities[:2]:
+        return f"{term} {focus} {intent_hint} research paper deep explanation"
+    return f"{base} {focus} {intent_hint} {source_terms}".strip()
+
+
+async def _search_term_context(
+    term: str,
+    categories: list[str] | None = None,
+    term_type: str = "foundational_concept",
+    subtype: str | None = None,
+    intent: str = "understand",
+) -> str:
     """Search web for term context using Tavily. Category-aware queries."""
     if not settings.tavily_api_key:
         return ""
     try:
-        # Build category-aware query
-        query = f"{term} AI technology explained"
-        if categories:
-            primary_cat = categories[0]
-            template = CATEGORY_SEARCH_QUERIES.get(primary_cat)
-            if template:
-                query = template.format(term=term)
+        query = _build_type_aware_search_query(term, categories, term_type, subtype, "tavily", intent)
 
         tavily = TavilyClient(api_key=settings.tavily_api_key)
         loop = asyncio.get_running_loop()
@@ -639,18 +730,20 @@ BRAVE_CATEGORY_QUERIES: dict[str, str] = {
 }
 
 
-async def _search_brave_context(term: str, categories: list[str] | None = None) -> str:
+async def _search_brave_context(
+    term: str,
+    categories: list[str] | None = None,
+    term_type: str = "foundational_concept",
+    subtype: str | None = None,
+    intent: str = "understand",
+) -> str:
     """Search Brave for developer-focused references (docs, GitHub, SO)."""
     if not settings.brave_api_key:
         return ""
     try:
         import httpx
 
-        query = f"{term} official documentation OR github"
-        if categories:
-            template = BRAVE_CATEGORY_QUERIES.get(categories[0])
-            if template:
-                query = template.format(term=term)
+        query = _build_type_aware_search_query(term, categories, term_type, subtype, "brave", intent)
 
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(
@@ -676,7 +769,13 @@ async def _search_brave_context(term: str, categories: list[str] | None = None) 
         return ""
 
 
-async def _search_deep_context(term: str) -> str:
+async def _search_deep_context(
+    term: str,
+    categories: list[str] | None = None,
+    term_type: str = "foundational_concept",
+    subtype: str | None = None,
+    intent: str = "understand",
+) -> str:
     """Search Exa for deep term context (full text). Used for Advanced content generation."""
     if not settings.exa_api_key:
         return ""
@@ -684,15 +783,15 @@ async def _search_deep_context(term: str) -> str:
         from exa_py import Exa
         exa = Exa(api_key=settings.exa_api_key)
         loop = asyncio.get_running_loop()
+        query = _build_type_aware_search_query(term, categories, term_type, subtype, "exa", intent)
         results = await asyncio.wait_for(
             loop.run_in_executor(
                 None,
                 lambda: exa.search_and_contents(
-                    f"{term} AI technology deep explanation tutorial",
+                    query,
                     type="auto",
                     num_results=3,
                     text={"max_characters": 10000},
-                    category="research paper",
                 ),
             ),
             timeout=20,
@@ -703,7 +802,7 @@ async def _search_deep_context(term: str) -> str:
                 loop.run_in_executor(
                     None,
                     lambda: exa.search_and_contents(
-                        f"{term} AI technology explained in depth",
+                        f"{term} {query} in depth",
                         type="auto",
                         num_results=3,
                         text={"max_characters": 10000},
@@ -731,18 +830,34 @@ async def _search_deep_context(term: str) -> str:
 
 
 async def _classify_term_type(
-    term: str, categories: list[str], client, model_light: str,
-) -> tuple[str, list[str], str]:
-    """Classify term type + intent + volatility in one LLM call.
-
-    Returns (type_str, intent_list, volatility_str).
-    """
+    term: str,
+    categories: list[str],
+    context_snippet: str,
+    client,
+    model_light: str,
+) -> tuple[str, str | None, list[str], str, float]:
+    """Classify term type + intent + volatility before retrieval and generation."""
     from services.agents.prompts_handbook_types import (
         CLASSIFY_TERM_PROMPT, TERM_TYPES,
+        TYPE_SUBTYPE_VALUES, normalize_term_subtype,
         INTENT_VALUES, VOLATILITY_VALUES,
+        DEFAULT_INTENT_BY_TYPE, DEFAULT_VOLATILITY_BY_TYPE,
+        get_term_planner_override,
     )
 
-    user_msg = f"Term: {term}\nCategories: {', '.join(categories)}"
+    override = get_term_planner_override(term)
+    if override:
+        term_type = str(override["type"])
+        subtype = normalize_term_subtype(term_type, override.get("subtype"))
+        intents = [i for i in override.get("intent", DEFAULT_INTENT_BY_TYPE[term_type]) if i in INTENT_VALUES]
+        volatility = str(override.get("volatility", DEFAULT_VOLATILITY_BY_TYPE[term_type]))
+        return term_type, subtype, intents or ["understand"], volatility, 1.0
+
+    user_msg = (
+        f"Term: {term}\n"
+        f"Categories: {', '.join(categories)}\n"
+        f"Context:\n{context_snippet or 'No extra context.'}"
+    )
     try:
         resp = await client.chat.completions.create(
             **compat_create_kwargs(
@@ -758,26 +873,33 @@ async def _classify_term_type(
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-classify")
 
-        # Type: validate against TERM_TYPES, fallback to "concept" for unknown values
-        term_type = data.get("type", "concept")
+        term_type = data.get("type", "foundational_concept")
         if term_type not in TERM_TYPES:
-            term_type = "concept"
+            term_type = "foundational_concept"
+        subtype = normalize_term_subtype(term_type, data.get("subtype"))
+        if term_type not in TYPE_SUBTYPE_VALUES:
+            subtype = None
 
-        # Intent: validate, default to ["understand"]
-        raw_intent = data.get("intent", ["understand"])
+        raw_intent = data.get("intent", DEFAULT_INTENT_BY_TYPE.get(term_type, ["understand"]))
         if isinstance(raw_intent, str):
             raw_intent = [raw_intent]
         intent_list = [i for i in raw_intent if i in INTENT_VALUES] or ["understand"]
 
-        # Volatility: validate, default to "stable"
-        volatility = data.get("volatility", "stable")
+        volatility = data.get("volatility", DEFAULT_VOLATILITY_BY_TYPE.get(term_type, "stable"))
         if volatility not in VOLATILITY_VALUES:
-            volatility = "stable"
+            volatility = DEFAULT_VOLATILITY_BY_TYPE.get(term_type, "stable")
 
-        return term_type, intent_list, volatility
+        confidence = data.get("confidence", 0.5)
+        try:
+            confidence = float(confidence)
+        except (TypeError, ValueError):
+            confidence = 0.5
+        confidence = max(0.0, min(1.0, confidence))
+
+        return term_type, subtype, intent_list, volatility, confidence
     except Exception as e:
         logger.warning("Term classification failed for '%s': %s", term, e)
-        return "concept", ["understand"], "stable"
+        return "foundational_concept", None, ["understand"], "stable", 0.0
 
 
 async def _self_critique_advanced(
@@ -863,11 +985,12 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
     for locale in ["ko", "en"]:
         body = data.get(f"body_advanced_{locale}", "") or ""
         h2 = _count_h2(body)
-        missing = max(0, 7 - h2)
+        expected = _expected_advanced_sections(data.get("code_mode_hint"))
+        missing = max(0, expected - h2)
         if missing > 0:
             p = missing * 3
             check1_penalty += p
-            warnings.append(f"adv_{locale}: {h2}/7 sections (-{p})")
+            warnings.append(f"adv_{locale}: {h2}/{expected} sections (-{p})")
     penalty += min(check1_penalty, 15)
 
     # --- Check 2: Basic section completeness (-2/missing, cap -10) ---
@@ -1091,6 +1214,405 @@ async def _check_basic_quality(
         return None, {}, {}
 
 
+def _build_generation_gate(
+    advanced_score: int,
+    basic_score: int,
+    classification_confidence: float,
+    structural_penalty: int,
+) -> dict:
+    """Build a small gate result for downstream save/publish decisions."""
+    status = "pass"
+    reasons: list[str] = []
+
+    if classification_confidence < 0.35:
+        status = "blocked"
+        reasons.append("classification_confidence_below_min")
+    elif classification_confidence < 0.55:
+        status = "review_required"
+        reasons.append("classification_confidence_below_review_threshold")
+
+    if advanced_score < 55:
+        status = "blocked"
+        reasons.append("advanced_quality_below_min")
+    elif advanced_score < 70 and status != "blocked":
+        status = "review_required"
+        reasons.append("advanced_quality_below_review_threshold")
+
+    if basic_score < 55:
+        status = "blocked"
+        reasons.append("basic_quality_below_min")
+    elif basic_score < 70 and status != "blocked":
+        status = "review_required"
+        reasons.append("basic_quality_below_review_threshold")
+
+    if structural_penalty >= 25 and status == "pass":
+        status = "review_required"
+        reasons.append("structural_penalty_high")
+
+    return {
+        "status": status,
+        "auto_save_allowed": status == "pass",
+        "review_required": status != "pass",
+        "reasons": reasons,
+        "thresholds": {
+            "advanced_min": 70,
+            "basic_min": 70,
+            "confidence_min": 0.55,
+        },
+    }
+
+
+def _contains_insufficient_info(*chunks: str) -> bool:
+    markers = (
+        "해당 주제에 대한 검증된 정보가 부족합니다",
+        "검증된 정보가 부족합니다",
+        "공식 정의",
+        "확인할 수 없어",
+        "information on this topic is limited",
+        "verified information is limited",
+        "cannot confirm",
+        "official documentation",
+    )
+    haystack = "\n".join(chunk for chunk in chunks if chunk).lower()
+    return any(marker.lower() in haystack for marker in markers)
+
+
+def _count_primary_references(reference_items: list[dict] | None) -> int:
+    refs = reference_items or []
+    return sum(1 for item in refs if str(item.get("tier", "")).lower() == "primary")
+
+
+def _has_official_docs_reference(reference_items: list[dict] | None) -> bool:
+    refs = reference_items or []
+    for item in refs:
+        if str(item.get("type", "")).lower() != "docs":
+            continue
+        title = str(item.get("title", "")).lower()
+        venue = str(item.get("venue", "")).lower()
+        annotation = str(item.get("annotation", "")).lower()
+        url = str(item.get("url", "")).lower()
+        if (
+            "official" in title
+            or "official" in annotation
+            or "docs" in venue
+            or "developer" in url
+            or "docs." in url
+        ):
+            return True
+    return False
+
+
+def _has_clear_io_contract_signal(term_type: str, term_subtype: str | None, *chunks: str) -> bool:
+    if term_type in {
+        "protocol_format_data_structure",
+        "capability_feature_spec",
+        "library_framework_sdk",
+        "data_storage_indexing_system",
+        "system_workflow_pattern",
+    }:
+        return True
+    text = "\n".join(chunk for chunk in chunks if chunk).lower()
+    io_markers = (
+        "json",
+        "schema",
+        "request",
+        "response",
+        "payload",
+        "parameter",
+        "argument",
+        "api",
+        "endpoint",
+        "function",
+        "tool call",
+        "인자",
+        "파라미터",
+        "스키마",
+        "호출",
+    )
+    return any(marker in text for marker in io_markers)
+
+
+def _derive_reference_strength(
+    reference_items: list[dict] | None,
+    has_official_spec_signal: bool,
+) -> str:
+    refs = reference_items or []
+    primary_refs = _count_primary_references(refs)
+    if len(refs) >= 4 and primary_refs >= 2 and has_official_spec_signal:
+        return "high"
+    if len(refs) >= 3 and primary_refs >= 1:
+        return "medium"
+    return "low"
+
+
+def _extract_reference_host(url: str) -> str:
+    host = urlparse((url or "").strip()).netloc.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def _is_official_reference(item: dict) -> bool:
+    host = _extract_reference_host(str(item.get("url", "")))
+    authors = str(item.get("authors", "")).lower()
+    venue = str(item.get("venue", "")).lower()
+    ref_type = str(item.get("type", "")).lower()
+    official_hosts = (
+        "openai.com",
+        "anthropic.com",
+        "ai.google.dev",
+        "developers.google.com",
+        "docs.aws.amazon.com",
+        "learn.microsoft.com",
+        "cloud.google.com",
+    )
+    return (
+        host.endswith(official_hosts)
+        or "official" in venue
+        or "docs" in venue
+        or ref_type == "docs"
+        or any(org in authors for org in ("openai", "anthropic", "google", "aws", "microsoft"))
+    )
+
+
+def _score_reference_directness(term: str, item: dict) -> int:
+    title = str(item.get("title", "")).lower()
+    annotation = str(item.get("annotation", "")).lower()
+    url = str(item.get("url", "")).lower()
+    normalized_term = re.sub(r"[^a-z0-9]+", " ", (term or "").lower()).strip()
+    term_tokens = [token for token in normalized_term.split() if len(token) >= 3]
+    score = 0
+    for token in term_tokens:
+        if token in title:
+            score += 2
+        if token in annotation:
+            score += 1
+        if token in url:
+            score += 1
+    if _is_official_reference(item):
+        score += 2
+    if str(item.get("tier", "")).lower() == "primary":
+        score += 1
+    return score
+
+
+def _evaluate_reference_candidates(
+    term: str,
+    term_type: str,
+    term_subtype: str | None,
+    references_ko: list[dict] | None,
+    references_en: list[dict] | None,
+) -> dict:
+    from services.agents.prompts_handbook_types import get_reference_blocklist
+
+    blocked_hosts = set(get_reference_blocklist(term_type, term_subtype))
+    blocked_hosts_found: set[str] = set()
+    candidate_by_url: dict[str, dict] = {}
+
+    for item in [*(references_ko or []), *(references_en or [])]:
+        url = str(item.get("url", "")).strip()
+        if not url:
+            continue
+        host = _extract_reference_host(url)
+        if any(host == blocked or host.endswith(f".{blocked}") for blocked in blocked_hosts):
+            blocked_hosts_found.add(host)
+            continue
+        score = _score_reference_directness(term, item)
+        if score <= 0:
+            continue
+        enriched = dict(item)
+        enriched["_directness_score"] = score
+        current = candidate_by_url.get(url)
+        if current is None or score > current.get("_directness_score", -1):
+            candidate_by_url[url] = enriched
+
+    accepted_references = sorted(
+        candidate_by_url.values(),
+        key=lambda item: (
+            0 if str(item.get("tier", "")).lower() == "primary" else 1,
+            0 if _is_official_reference(item) else 1,
+            -int(item.get("_directness_score", 0)),
+            item.get("title", ""),
+        ),
+    )
+    primary_count = _count_primary_references(accepted_references)
+    has_official_docs = any(_is_official_reference(item) for item in accepted_references)
+    directness_score = sum(int(item.get("_directness_score", 0)) for item in accepted_references)
+    reference_strength = _derive_reference_strength(accepted_references, has_official_docs)
+
+    return {
+        "reference_strength": reference_strength,
+        "primary_count": primary_count,
+        "has_official_docs": has_official_docs,
+        "directness_score": directness_score,
+        "blocked_hosts_found": sorted(blocked_hosts_found),
+        "accepted_references": [
+            {k: v for k, v in item.items() if not str(k).startswith("_")}
+            for item in accepted_references
+        ],
+    }
+
+
+def _synchronize_reference_sets(
+    accepted_references: list[dict],
+    references_ko: list[dict] | None,
+    references_en: list[dict] | None,
+) -> tuple[list[dict], list[dict]]:
+    ko_by_url = {str(item.get("url", "")).strip(): dict(item) for item in (references_ko or []) if item.get("url")}
+    en_by_url = {str(item.get("url", "")).strip(): dict(item) for item in (references_en or []) if item.get("url")}
+    synced_ko: list[dict] = []
+    synced_en: list[dict] = []
+
+    for accepted in accepted_references:
+        url = str(accepted.get("url", "")).strip()
+        if not url:
+            continue
+        ko_item = dict(ko_by_url.get(url) or en_by_url.get(url) or accepted)
+        en_item = dict(en_by_url.get(url) or ko_by_url.get(url) or accepted)
+        synced_ko.append(ko_item)
+        synced_en.append(en_item)
+
+    return synced_ko, synced_en
+
+
+def _summarize_mechanism_text(*chunks: str, limit: int = 320) -> str:
+    text = " ".join(chunk.strip() for chunk in chunks if chunk and chunk.strip())
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return ""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    summary = " ".join(sentences[:2]).strip()
+    if len(summary) > limit:
+        return summary[:limit].rstrip() + "..."
+    return summary
+
+
+def decide_code_mode(
+    term_type: str,
+    term_subtype: str | None,
+    reference_strength: str,
+    has_clear_io_contract: bool,
+    has_official_spec_signal: bool,
+    insufficient_info_flag: bool,
+) -> str:
+    if insufficient_info_flag:
+        return "no-code"
+
+    if term_type in {"problem_failure_mode", "metric_benchmark"}:
+        return "no-code"
+
+    if term_type in {
+        "foundational_concept",
+        "model_algorithm_family",
+        "training_optimization_method",
+        "retrieval_knowledge_system",
+        "system_workflow_pattern",
+    }:
+        return "pseudocode"
+
+    if reference_strength == "high" and has_clear_io_contract and has_official_spec_signal:
+        return "real-code"
+
+    if term_type in {
+        "data_storage_indexing_system",
+        "protocol_format_data_structure",
+        "capability_feature_spec",
+        "library_framework_sdk",
+        "hardware_runtime_infra",
+        "product_platform_service",
+    }:
+        return "pseudocode"
+
+    return "no-code"
+
+
+def _build_code_mode_metadata(
+    term_type: str,
+    term_subtype: str | None,
+    basic_data: dict,
+    brave_context: str,
+    deep_context: str,
+    reference_eval: dict | None = None,
+) -> dict:
+    references_ko = basic_data.get("references_ko", []) or []
+    references_en = basic_data.get("references_en", []) or []
+    merged_refs = [*references_ko, *references_en]
+    mechanism_summary = _summarize_mechanism_text(
+        basic_data.get("definition_ko", ""),
+        basic_data.get("definition_en", ""),
+        basic_data.get("basic_ko_1_plain", ""),
+        basic_data.get("basic_en_1_plain", ""),
+    )
+    accepted_refs = (reference_eval or {}).get("accepted_references") or merged_refs
+    has_official_spec_signal = bool((reference_eval or {}).get("has_official_docs")) or bool(brave_context.strip()) or _has_official_docs_reference(accepted_refs)
+    has_clear_io_contract = _has_clear_io_contract_signal(
+        term_type,
+        term_subtype,
+        mechanism_summary,
+        basic_data.get("basic_ko_1_plain", ""),
+        basic_data.get("basic_en_1_plain", ""),
+    )
+    insufficient_info_flag = _contains_insufficient_info(
+        basic_data.get("definition_ko", ""),
+        basic_data.get("definition_en", ""),
+        basic_data.get("basic_ko_1_plain", ""),
+        basic_data.get("basic_en_1_plain", ""),
+    )
+    reference_strength = str((reference_eval or {}).get("reference_strength") or _derive_reference_strength(accepted_refs, has_official_spec_signal))
+    code_mode_hint = decide_code_mode(
+        term_type,
+        term_subtype,
+        reference_strength,
+        has_clear_io_contract,
+        has_official_spec_signal,
+        insufficient_info_flag,
+    )
+    vendor_lock_in_risk = (
+        "high"
+        if term_type in {"product_platform_service", "capability_feature_spec"} and term_subtype != "ecosystem_platform"
+        else "medium"
+        if term_type in {"library_framework_sdk", "hardware_runtime_infra", "data_storage_indexing_system"}
+        else "low"
+    )
+
+    return {
+        "code_mode_hint": code_mode_hint,
+        "mechanism_summary": mechanism_summary,
+        "has_clear_io_contract": has_clear_io_contract,
+        "has_official_spec_signal": has_official_spec_signal,
+        "reference_strength": reference_strength,
+        "vendor_lock_in_risk": vendor_lock_in_risk,
+        "insufficient_info_flag": insufficient_info_flag,
+    }
+
+
+def _select_source_context_for_field(
+    term_type: str,
+    term_subtype: str | None,
+    field: str,
+    source_bundle: dict[str, str],
+) -> str:
+    from services.agents.prompts_handbook_types import get_field_source_priority
+
+    selected_chunks: list[str] = []
+    seen_chunks: set[str] = set()
+    for source_name in get_field_source_priority(term_type, field, term_subtype):
+        chunk = (source_bundle.get(source_name) or "").strip()
+        if not chunk or chunk in seen_chunks:
+            continue
+        selected_chunks.append(chunk)
+        seen_chunks.add(chunk)
+    return "\n\n".join(selected_chunks)
+
+
+def _advanced_sections_for_mode(locale: str, code_mode: str | None) -> list[tuple[str, str]]:
+    return ADVANCED_SECTIONS_KO if locale == "ko" else ADVANCED_SECTIONS_EN
+
+
+def _expected_advanced_sections(code_mode: str | None) -> int:
+    return 7
+
+
 async def _validate_ref_urls(content: str) -> str:
     """HEAD-check markdown link URLs in content. Remove broken links, keep text.
 
@@ -1290,6 +1812,17 @@ def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
     return "\n\n".join(parts)
 
 
+def _derive_learner_summary_from_basic(body_basic: str) -> str:
+    """Fallback learner summary derived from the first Basic section."""
+    if not body_basic:
+        return ""
+    stripped = re.sub(r"^##\s+[^\n]*\n+", "", body_basic.strip(), count=1)
+    next_heading = stripped.find("\n##")
+    first_section = stripped[:next_heading].strip() if next_heading > 0 else stripped.strip()
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", first_section) if p.strip()]
+    return "\n\n".join(paragraphs[:2]).strip()
+
+
 def _assemble_all_sections(raw_data: dict) -> dict:
     """Convert section-per-key LLM output to body_basic/advanced_ko/en fields.
 
@@ -1300,8 +1833,29 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     data = {}
 
     # Copy meta fields
-    for key in ("term_full", "korean_name", "korean_full", "categories",
-                "definition_ko", "definition_en"):
+    for key in (
+        "term_full",
+        "korean_name",
+        "korean_full",
+        "categories",
+        "summary_ko",
+        "summary_en",
+        "definition_ko",
+        "definition_en",
+        "term_type",
+        "term_subtype",
+        "facet_intent",
+        "facet_volatility",
+        "facet_type_confidence",
+        "generation_gate",
+        "code_mode_hint",
+        "mechanism_summary",
+        "has_clear_io_contract",
+        "has_official_spec_signal",
+        "reference_strength",
+        "vendor_lock_in_risk",
+        "insufficient_info_flag",
+    ):
         if key in raw_data:
             data[key] = raw_data[key]
 
@@ -1323,16 +1877,27 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     elif "basic_en_1_plain" in raw_data:
         data["body_basic_en"] = _assemble_markdown(raw_data, BASIC_SECTIONS_EN)
 
+    if not data.get("summary_ko"):
+        data["summary_ko"] = _derive_learner_summary_from_basic(data.get("body_basic_ko", ""))
+    if not data.get("summary_en"):
+        data["summary_en"] = _derive_learner_summary_from_basic(data.get("body_basic_en", ""))
+
     # Assemble advanced sections (or pass through if already assembled)
     if "body_advanced_ko" in raw_data:
         data["body_advanced_ko"] = raw_data["body_advanced_ko"]
     elif "adv_ko_1_mechanism" in raw_data:
-        data["body_advanced_ko"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_KO)
+        data["body_advanced_ko"] = _assemble_markdown(
+            raw_data,
+            _advanced_sections_for_mode("ko", raw_data.get("code_mode_hint")),
+        )
 
     if "body_advanced_en" in raw_data:
         data["body_advanced_en"] = raw_data["body_advanced_en"]
     elif "adv_en_1_mechanism" in raw_data:
-        data["body_advanced_en"] = _assemble_markdown(raw_data, ADVANCED_SECTIONS_EN)
+        data["body_advanced_en"] = _assemble_markdown(
+            raw_data,
+            _advanced_sections_for_mode("en", raw_data.get("code_mode_hint")),
+        )
 
     # Post-process: fix bold markdown with parenthetical abbreviations
     # **term(abbreviation)** or **term (abbreviation)** → **term** (abbreviation)
@@ -1346,6 +1911,59 @@ def _assemble_all_sections(raw_data: dict) -> dict:
             data[field] = re.sub(r'\*\*([^*]+?)\s*\(([^)]+)\)\*\*', _fix_bold_parens, data[field])
 
     return data
+
+
+def _build_code_section_user_prompt(
+    req: HandbookAdviseRequest,
+    code_mode: str,
+    locale: str,
+    definition_ko: str,
+    definition_en: str,
+    mechanism_summary: str,
+    advanced_non_code_sections: dict,
+    references: list[dict] | None,
+) -> str:
+    section_prefix = f"adv_{locale}_"
+    non_code_keys = [
+        f"{section_prefix}1_mechanism",
+        f"{section_prefix}2_formulas",
+        f"{section_prefix}4_tradeoffs",
+        f"{section_prefix}5_pitfalls",
+        f"{section_prefix}6_comm",
+        f"{section_prefix}7_related",
+    ]
+    parts = [
+        f"Term: {req.term}",
+        f"Korean name: {req.korean_name}" if req.korean_name else None,
+        f"Code mode: {code_mode}",
+        f"Target locale: {locale}",
+        f"Definition KO: {definition_ko}" if definition_ko else None,
+        f"Definition EN: {definition_en}" if definition_en else None,
+        f"Mechanism summary: {mechanism_summary}" if mechanism_summary else None,
+        "",
+        "Generate only section 3. Keep it consistent with the non-code advanced sections below.",
+    ]
+    for key in non_code_keys:
+        value = (advanced_non_code_sections.get(key) or "").strip()
+        if value:
+            parts.append(f"\n## {key}\n{value[:1800]}")
+    if references:
+        refs_json = json.dumps(references[:6], ensure_ascii=False, indent=2)
+        parts.append(f"\n## References\n{refs_json}")
+    return "\n".join(part for part in parts if part is not None)
+
+
+def _extract_code_section_text(section_data: dict, locale: str) -> str:
+    return (section_data.get(f"adv_{locale}_3_code") or "").strip()
+
+
+def _normalize_quality_score_value(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return None
 
 
 async def _run_generate_term(
@@ -1368,41 +1986,60 @@ async def _run_generate_term(
     """
     # Run all searches in parallel — results are source-role labeled
     categories_list = req.categories if req.categories else []
-    tavily_context, brave_context, deep_context = await asyncio.gather(
-        _search_term_context(req.term, categories=categories_list),
-        _search_brave_context(req.term, categories=categories_list),
-        _search_deep_context(req.term),
+    classification_context = _build_handbook_classification_context(req, article_context)
+    term_type, term_subtype, intent_list, volatility, type_confidence = await _classify_term_type(
+        req.term,
+        categories_list,
+        classification_context,
+        client,
+        settings.openai_model_nano,
     )
+    primary_intent = intent_list[0] if intent_list else "understand"
+    logger.info(
+        "Term '%s' classified before retrieval: type=%s subtype=%s intent=%s volatility=%s confidence=%.2f",
+        req.term, term_type, term_subtype, intent_list, volatility, type_confidence,
+    )
+    tavily_context, brave_context, deep_context = await asyncio.gather(
+        _search_term_context(req.term, categories=categories_list, term_type=term_type, subtype=term_subtype, intent=primary_intent),
+        _search_brave_context(req.term, categories=categories_list, term_type=term_type, subtype=term_subtype, intent=primary_intent),
+        _search_deep_context(req.term, categories=categories_list, term_type=term_type, subtype=term_subtype, intent=primary_intent),
+    )
+    from services.agents.prompts_handbook_types import get_term_generation_override
+
+    term_generation_override = get_term_generation_override(req.term)
+    curated_context = ""
+    if term_generation_override:
+        curated_context = str(term_generation_override.get("reference_context", "")).strip()
+
+    source_bundle = {
+        "curated": curated_context,
+        "brave": brave_context,
+        "exa": deep_context,
+        "tavily": tavily_context,
+    }
 
     user_prompt = _build_handbook_user_prompt(req)
-    # Assemble source-role labeled reference context
-    combined_ref = ""
+    call1_contexts: list[str] = []
     if article_context:
-        combined_ref += (
+        call1_contexts.append(
             "## Source Article (PRIMARY factual reference)\n"
             "Base your content on facts from this article. "
             "Write the handbook entry in reference style, not news style.\n\n"
             f"{article_context[:4000]}\n\n"
         )
-    if tavily_context:
-        combined_ref += (
-            f"{tavily_context}\n"
-            "SOURCE ROLE: Recent context, examples, and news. "
-            "Good for: basic_*_2_example, basic_*_5_where, basic_*_0_summary.\n\n"
-        )
-    if brave_context:
-        combined_ref += (
-            f"{brave_context}\n"
-            "SOURCE ROLE: Official documentation, code references, Stack Overflow. "
-            "Good for: adv_*_4_code, adv_*_1_technical, adv_*_8_refs.\n\n"
-        )
+    for field_name in ("definition", "hero", "basic", "references"):
+        selected = _select_source_context_for_field(term_type, term_subtype, field_name, source_bundle)
+        if selected and selected not in call1_contexts:
+            call1_contexts.append(selected)
+    combined_ref = "\n\n".join(call1_contexts)
     if combined_ref:
         user_prompt += (
             "\n\n" + combined_ref +
             "## Source Usage Rules\n"
             "- Use Source Article as your PRIMARY factual reference.\n"
             "- Use Reference Materials for recent context and examples.\n"
-            "- Use Developer Reference Materials for code patterns and official docs.\n"
+            "- Prioritize official docs and direct sources for definition and references.\n"
+            "- Use recent/news sources mainly for hero context and fresh examples.\n"
             "- ONLY cite facts from the materials above. If a topic is not covered, "
             "state that information is limited rather than generating from memory.\n"
         )
@@ -1435,13 +2072,28 @@ async def _run_generate_term(
             logger.warning("Failed to log handbook %s stage: %s", stage, e)
 
     # --- Build category-specific prompt blocks ---
-    from services.agents.prompts_handbook_types import build_category_block, get_type_basic_guide, get_section_weight_guide
+    from services.agents.prompts_handbook_types import (
+        build_category_block,
+        get_section_weight_guide,
+        get_type_basic_guide,
+        get_type_depth_guide,
+    )
 
     primary_cat = categories_list[0] if categories_list else ""
     category_block = build_category_block(primary_cat)
+    basic_type_guide = get_type_basic_guide(term_type, term_subtype)
+    type_guide = get_type_depth_guide(term_type, term_subtype)
+    section_weight_guide = get_section_weight_guide(term_type, primary_intent, term_subtype)
     basic_ko_system = GENERATE_BASIC_PROMPT
     if category_block:
         basic_ko_system += f"\n\n{category_block}"
+    basic_ko_system += f"\n\n{basic_type_guide}"
+    if section_weight_guide:
+        basic_ko_system += f"\n\n{section_weight_guide}"
+    if term_generation_override:
+        basic_ko_focus_guide = str(term_generation_override.get("basic_ko_focus_guide", "")).strip()
+        if basic_ko_focus_guide:
+            basic_ko_system += f"\n\n{basic_ko_focus_guide}"
 
     # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
     for _call1_attempt in range(2):
@@ -1479,18 +2131,45 @@ async def _run_generate_term(
         req.term, usage1.get("tokens_used", 0), has_ko_basic,
     )
     _log_handbook_stage("handbook.generate.basic", usage1)
-
-    # --- Type classification (for advanced depth guide) ---
-    from services.agents.prompts_handbook_types import get_type_depth_guide
-
-    term_type, intent_list, volatility = await _classify_term_type(
-        req.term, req.categories or basic_data.get("categories", []),
-        client, settings.openai_model_nano,
+    if term_generation_override:
+        override_refs_ko = [dict(item) for item in term_generation_override.get("references_ko", [])]
+        override_refs_en = [dict(item) for item in term_generation_override.get("references_en", [])]
+        if override_refs_ko:
+            basic_data["references_ko"] = override_refs_ko
+        if override_refs_en:
+            basic_data["references_en"] = override_refs_en
+    reference_eval = _evaluate_reference_candidates(
+        req.term,
+        term_type,
+        term_subtype,
+        basic_data.get("references_ko", []),
+        basic_data.get("references_en", []),
     )
-    logger.info(
-        "Term '%s' classified: type=%s, intent=%s, volatility=%s",
-        req.term, term_type, intent_list, volatility,
+    synced_refs_ko, synced_refs_en = _synchronize_reference_sets(
+        reference_eval["accepted_references"],
+        basic_data.get("references_ko", []),
+        basic_data.get("references_en", []),
     )
+    basic_data["references_ko"] = synced_refs_ko
+    basic_data["references_en"] = synced_refs_en
+    if reference_eval["blocked_hosts_found"]:
+        warnings.append(
+            "reference filter removed low-trust hosts: "
+            + ", ".join(reference_eval["blocked_hosts_found"])
+        )
+    code_mode_meta = _build_code_mode_metadata(
+        term_type,
+        term_subtype,
+        basic_data,
+        brave_context,
+        deep_context,
+        reference_eval=reference_eval,
+    )
+    if term_generation_override:
+        code_mode_meta["code_mode_hint"] = str(term_generation_override.get("preferred_code_mode", "real-code"))
+        code_mode_meta["reference_strength"] = str(reference_eval.get("reference_strength", "high"))
+        code_mode_meta["has_official_spec_signal"] = bool(reference_eval.get("has_official_docs", True))
+        code_mode_meta["has_clear_io_contract"] = True
 
     # deep_context and brave_context already fetched in parallel above
     logger.info(
@@ -1527,23 +2206,38 @@ async def _run_generate_term(
         f"Definition (EN): {definition_context}\n"
         f"Definition (KO): {definition_ko_context}\n"
         f"Term Type: {term_type}\n"
+        f"Term Subtype: {term_subtype or 'none'}\n"
         f"\n--- Basic KO body (DO NOT duplicate analogies, examples, or phrasing) ---\n"
         f"{basic_ko_body_for_ctx}\n"
         f"\n--- Basic EN body (DO NOT duplicate) ---\n"
         f"{basic_en_body_for_ctx}"
     )
-    if brave_context:
-        advanced_prompt += f"\n\n{brave_context}\nSOURCE ROLE: Official docs, code references. Use for adv_*_3_code, adv_*_2_formulas."
-    if deep_context:
-        advanced_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_1_mechanism, adv_*_2_formulas."
+    advanced_contexts: list[str] = []
+    for field_name in ("advanced", "references"):
+        selected = _select_source_context_for_field(term_type, term_subtype, field_name, source_bundle)
+        if selected and selected not in advanced_contexts:
+            advanced_contexts.append(selected)
+    if advanced_contexts:
+        advanced_prompt += (
+            "\n\n--- Selected Reference Context for Advanced Sections ---\n"
+            + "\n\n".join(advanced_contexts)
+            + "\n\nUse these sources primarily for mechanism, formulas/architecture, tradeoffs, pitfalls, and references."
+        )
 
     # Inject type-specific guides into system prompts
-    type_guide = get_type_depth_guide(term_type)
-    basic_type_guide = get_type_basic_guide(term_type)
+    type_guide = get_type_depth_guide(term_type, term_subtype)
+    basic_type_guide = get_type_basic_guide(term_type, term_subtype)
 
     # Section weight guide based on type × intent
     primary_intent = intent_list[0] if intent_list else "understand"
-    section_weight_guide = get_section_weight_guide(term_type, primary_intent)
+    section_weight_guide = get_section_weight_guide(term_type, primary_intent, term_subtype)
+    term_focus_guide = ""
+    code_contract_guide = ""
+    advanced_ko_focus_guide = ""
+    if term_generation_override:
+        term_focus_guide = str(term_generation_override.get("advanced_focus_guide", "")).strip()
+        code_contract_guide = str(term_generation_override.get("code_contract_guide", "")).strip()
+        advanced_ko_focus_guide = str(term_generation_override.get("advanced_ko_focus_guide", "")).strip()
 
     # EN Basic: category block + basic type guide + section weight
     basic_en_system = GENERATE_BASIC_EN_PROMPT
@@ -1560,13 +2254,22 @@ async def _run_generate_term(
     adv_ko_system += f"\n\n{type_guide}"
     if section_weight_guide:
         adv_ko_system += f"\n\n{section_weight_guide}"
-
+    if term_focus_guide:
+        adv_ko_system += f"\n\n{term_focus_guide}"
+    if advanced_ko_focus_guide:
+        adv_ko_system += f"\n\n{advanced_ko_focus_guide}"
+    if code_contract_guide:
+        adv_ko_system += f"\n\n{code_contract_guide}"
     adv_en_system = GENERATE_ADVANCED_EN_PROMPT
     if category_block:
         adv_en_system += f"\n\n{category_block}"
     adv_en_system += f"\n\n{type_guide}"
     if section_weight_guide:
         adv_en_system += f"\n\n{section_weight_guide}"
+    if term_focus_guide:
+        adv_en_system += f"\n\n{term_focus_guide}"
+    if code_contract_guide:
+        adv_en_system += f"\n\n{code_contract_guide}"
 
     resp2, resp3 = await asyncio.gather(
         client.chat.completions.create(
@@ -1630,15 +2333,18 @@ async def _run_generate_term(
         f"Definition (EN): {definition_context}\n"
         f"Definition (KO): {definition_ko_context}\n"
         f"Term Type: {term_type}\n"
+        f"Term Subtype: {term_subtype or 'none'}\n"
         f"\n--- Basic KO body (DO NOT duplicate analogies, examples, or phrasing) ---\n"
         f"{basic_ko_body_for_ctx}\n"
         f"\n--- Basic EN body (DO NOT duplicate) ---\n"
         f"{basic_en_body_for_ctx_real}"
     )
-    if brave_context:
-        advanced_en_prompt += f"\n\n{brave_context}\nSOURCE ROLE: Official docs, code references. Use for adv_*_3_code, adv_*_2_formulas."
-    if deep_context:
-        advanced_en_prompt += f"\n\n{deep_context}\nSOURCE ROLE: Deep technical papers. Use for adv_*_1_mechanism, adv_*_2_formulas."
+    if advanced_contexts:
+        advanced_en_prompt += (
+            "\n\n--- Selected Reference Context for Advanced Sections ---\n"
+            + "\n\n".join(advanced_contexts)
+            + "\n\nUse these sources primarily for mechanism, formulas/architecture, tradeoffs, pitfalls, and references."
+        )
 
     call4_task = client.chat.completions.create(
         **compat_create_kwargs(
@@ -1680,7 +2386,7 @@ async def _run_generate_term(
 
     if basic_ko_needs and basic_ko_feedback:
         logger.info("Regenerating basic KO for '%s' with critique feedback", req.term)
-        improved_ko_system = f"{GENERATE_BASIC_PROMPT}\n\n## Reviewer Feedback (MUST address):\n{basic_ko_feedback}"
+        improved_ko_system = basic_ko_system + f"\n\n## Reviewer Feedback (MUST address):\n{basic_ko_feedback}"
         resp1b = await client.chat.completions.create(
             **compat_create_kwargs(
                 model,
@@ -1702,7 +2408,7 @@ async def _run_generate_term(
 
     if basic_en_needs and basic_en_feedback:
         logger.info("Regenerating basic EN for '%s' with critique feedback", req.term)
-        improved_en_system = f"{GENERATE_BASIC_EN_PROMPT}\n\n## Reviewer Feedback (MUST address):\n{basic_en_feedback}"
+        improved_en_system = basic_en_system + f"\n\n## Reviewer Feedback (MUST address):\n{basic_en_feedback}"
         resp2b = await client.chat.completions.create(
             **compat_create_kwargs(
                 model,
@@ -1726,7 +2432,15 @@ async def _run_generate_term(
     adv_ko_preview = "\n\n".join(
         f"## {k}: {v[:1000]}" for k, v in advanced_ko_data.items() if k.startswith("adv_ko_")
     )
-    reference_for_critique = f"{tavily_context}\n{brave_context}\n{deep_context}"
+    reference_for_critique = "\n".join(
+        chunk
+        for chunk in [
+            _select_source_context_for_field(term_type, term_subtype, "definition", source_bundle),
+            _select_source_context_for_field(term_type, term_subtype, "advanced", source_bundle),
+            _select_source_context_for_field(term_type, term_subtype, "references", source_bundle),
+        ]
+        if chunk
+    )
     needs_improvement, critique_feedback, critique_score, critique_usage = (
         await _self_critique_advanced(
             req.term, term_type, adv_ko_preview, client, model,
@@ -1799,7 +2513,13 @@ async def _run_generate_term(
         _log_handbook_stage("handbook.self_critique.en", en_critique_usage)
 
     # --- Merge results ---
-    raw_data = {**basic_data, **en_basic_data, **advanced_ko_data, **advanced_en_data}
+    raw_data = {
+        **basic_data,
+        **en_basic_data,
+        **advanced_ko_data,
+        **advanced_en_data,
+        **code_mode_meta,
+    }
     merged_usage = merge_usage_metrics(
         merge_usage_metrics(usage1, usage2),
         merge_usage_metrics(usage3, usage4),
@@ -1813,6 +2533,17 @@ async def _run_generate_term(
 
     # --- Assemble section keys into markdown ---
     data = _assemble_all_sections(raw_data)
+    final_refs_ko, final_refs_en = _synchronize_reference_sets(
+        reference_eval["accepted_references"],
+        data.get("references_ko", []),
+        data.get("references_en", []),
+    )
+    data["references_ko"] = final_refs_ko
+    data["references_en"] = final_refs_en
+    data["reference_strength"] = str(reference_eval.get("reference_strength", data.get("reference_strength", "")))
+    data["has_official_spec_signal"] = bool(reference_eval.get("has_official_docs", data.get("has_official_spec_signal", False)))
+    if term_generation_override:
+        data["code_mode_hint"] = str(term_generation_override.get("preferred_code_mode", data.get("code_mode_hint", "")))
 
     try:
         GenerateTermResult.model_validate(data)
@@ -1825,6 +2556,7 @@ async def _run_generate_term(
     # Check section completeness (including empty detection)
     # Basic: 7 sections. Advanced: 7 sections. (Post-redesign, both languages.)
     _basic_expected = {"ko": 7, "en": 7}
+    expected_advanced = _expected_advanced_sections(data.get("code_mode_hint"))
     for lang in ("ko", "en"):
         basic_content = data.get(f"body_basic_{lang}", "")
         expected_basic = _basic_expected[lang]
@@ -1837,8 +2569,10 @@ async def _run_generate_term(
         adv_content = data.get(f"body_advanced_{lang}", "")
         if not adv_content.strip():
             warnings.append(f"body_advanced_{lang}: EMPTY — content generation failed")
-        elif adv_content.count("## ") < 7:
-            warnings.append(f"body_advanced_{lang}: only {adv_content.count('## ')}/7 sections")
+        elif adv_content.count("## ") < expected_advanced:
+            warnings.append(
+                f"body_advanced_{lang}: only {adv_content.count('## ')}/{expected_advanced} sections"
+            )
 
     # Post-processing step 1: Validate reference URLs in advanced sections
     for field in ("body_advanced_ko", "body_advanced_en"):
@@ -1874,8 +2608,10 @@ async def _run_generate_term(
 
     # Metadata fields (written regardless of quality check)
     data["term_type"] = term_type
+    data["term_subtype"] = term_subtype
     data["facet_intent"] = intent_list
     data["facet_volatility"] = volatility
+    data["facet_type_confidence"] = type_confidence
 
     # Phase 2: Semantic quality via LLM (optional, costs ~$0.10/term)
     semantic_score = None
@@ -1954,6 +2690,17 @@ async def _run_generate_term(
     # Legacy compatibility: keep top-level quality_score for existing consumers
     data["quality_score"] = adv_final
     data["basic_quality_score"] = basic_final
+    generation_gate = _build_generation_gate(
+        adv_final,
+        basic_final,
+        type_confidence,
+        structural_penalty,
+    )
+    data["generation_gate"] = generation_gate
+    if generation_gate["status"] != "pass":
+        warnings.append(
+            f"Generation gate: {generation_gate['status']} ({', '.join(generation_gate['reasons'])})"
+        )
 
     # Grade-based warnings
     if adv_final < 55:
@@ -1999,16 +2746,18 @@ async def _run_generate_term(
             adv_q = quality_data.get("advanced", {})
             basic_q = quality_data.get("basic", {})
 
-            if adv_q.get("total") is not None:
+            adv_score = _normalize_quality_score_value(adv_q.get("total"))
+            if adv_score is not None:
                 supabase.table("handbook_quality_scores").insert({
                     **base_row,
-                    "score": adv_q["total"],
+                    "score": adv_score,
                     "breakdown": {"level": "advanced", **adv_q},
                 }).execute()
-            if basic_q.get("total") is not None:
+            basic_score = _normalize_quality_score_value(basic_q.get("total"))
+            if basic_score is not None:
                 supabase.table("handbook_quality_scores").insert({
                     **base_row,
-                    "score": basic_q["total"],
+                    "score": basic_score,
                     "breakdown": {"level": "basic", **basic_q},
                 }).execute()
         except Exception as e:
@@ -2164,6 +2913,7 @@ async def _run_generate_term(
     data["search_sources"] = search_sources
     # Ensure facet data is always present (for pipeline DB storage)
     data.setdefault("term_type", term_type)
+    data.setdefault("term_subtype", term_subtype)
     data.setdefault("facet_intent", intent_list)
     data.setdefault("facet_volatility", volatility)
 
@@ -2217,10 +2967,10 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
 async def gate_candidate_terms(
     candidates: list[dict], existing_terms: list[str],
 ) -> list[dict]:
-    """Filter candidate terms through LLM gate before generation.
+    """Evaluate candidate terms through the handbook gate before generation.
 
-    Uses nano model to reject duplicates, too-specific, or non-established terms.
-    Returns only accepted candidates.
+    Uses nano model to classify candidates as accept, queue, or reject.
+    Returns one decision object per candidate term.
     """
     if not candidates:
         return []
@@ -2230,12 +2980,10 @@ async def gate_candidate_terms(
     client = get_openai_client()
     model = getattr(settings, "openai_model_nano")
 
-    # Format existing terms as compact list
     existing_str = ", ".join(existing_terms[:500])  # cap at 500 for token budget
-    candidate_names = [c.get("term", "") for c in candidates]
 
     prompt = TERM_GATE_PROMPT.format(existing_terms=existing_str)
-    user_msg = f"Candidates to evaluate:\n{', '.join(candidate_names)}"
+    user_msg = json.dumps({"candidates": candidates}, ensure_ascii=False)
 
     try:
         resp = await client.chat.completions.create(
@@ -2253,25 +3001,44 @@ async def gate_candidate_terms(
         data = parse_ai_json(resp.choices[0].message.content, "term-gate")
         decisions = {d["term"]: d for d in data.get("decisions", [])}
 
-        accepted = []
+        resolved_decisions: list[dict] = []
+        accepted_count = 0
+        queued_count = 0
+        rejected_count = 0
         for candidate in candidates:
             term = candidate.get("term", "")
-            decision = decisions.get(term, {})
-            if decision.get("decision") == "reject":
-                logger.info(
-                    "Gate rejected '%s': %s", term, decision.get("reason", "no reason"),
-                )
+            decision_info = decisions.get(term, {})
+            decision = str(decision_info.get("decision", "accept")).lower()
+            if decision not in {"accept", "queue", "reject"}:
+                decision = "accept"
+            reason = decision_info.get("reason", "")
+            resolved_decisions.append({
+                "term": term,
+                "decision": decision,
+                "reason": reason,
+            })
+            if decision == "reject":
+                rejected_count += 1
+            elif decision == "queue":
+                queued_count += 1
             else:
-                accepted.append(candidate)
+                accepted_count += 1
 
         logger.info(
-            "Term gate: %d candidates → %d accepted, %d rejected",
-            len(candidates), len(accepted), len(candidates) - len(accepted),
+            "Term gate: %d candidates -> %d accepted, %d queued, %d rejected",
+            len(candidates), accepted_count, queued_count, rejected_count,
         )
-        return accepted
+        return resolved_decisions
     except Exception as e:
-        logger.warning("Term gate failed, passing all candidates: %s", e)
-        return candidates  # fail-open: don't block pipeline on gate failure
+        logger.warning("Term gate failed, accepting all candidates: %s", e)
+        return [
+            {
+                "term": candidate.get("term", ""),
+                "decision": "accept",
+                "reason": "gate failure fallback",
+            }
+            for candidate in candidates
+        ]
 
 
 async def generate_term_content(

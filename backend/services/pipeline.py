@@ -592,8 +592,8 @@ async def _extract_and_create_handbook_terms(
     )
 
     # Pre-filter terms before generation
-    valid_terms: list[tuple[str, str, str, list[str]]] = []  # (term_name, korean_name, slug, categories)
-    queued_terms: list[tuple[str, str, str, list[str]]] = []  # (term_name, korean_name, slug, categories)
+    valid_terms: list[dict] = []
+    queued_terms: list[dict] = []
     for term_info in extracted:
         term_name = term_info.get("term", "").strip()
         korean_name = term_info.get("korean_name", "").strip()
@@ -666,11 +666,20 @@ async def _extract_and_create_handbook_terms(
             continue
 
         confidence = term_info.get("confidence", "high")
+        term_payload = {
+            "term": term_name,
+            "korean_name": korean_name,
+            "slug": slug,
+            "categories": all_cats,
+            "category": primary_cat,
+            "secondary_categories": secondary,
+            "reason": term_info.get("reason", "").strip(),
+        }
         if confidence == "low":
-            queued_terms.append((term_name, korean_name, slug, all_cats))
+            queued_terms.append(term_payload)
             logger.info("Queuing low-confidence term '%s' for manual review", term_name)
         else:
-            valid_terms.append((term_name, korean_name, slug, all_cats))
+            valid_terms.append(term_payload)
 
     # Semantic dedup within batch: remove terms that overlap with others
     def _term_words(name: str) -> set[str]:
@@ -703,16 +712,18 @@ async def _extract_and_create_handbook_terms(
         return len(overlap) / smaller >= 0.5
 
     # Deduplicate valid_terms: keep the first (higher priority from LLM ordering)
-    deduped_valid: list[tuple[str, str, str, list[str]]] = []
-    for term_name, korean_name, slug, cats in valid_terms:
+    deduped_valid: list[dict] = []
+    for term_info in valid_terms:
+        term_name = term_info["term"]
         is_dup = False
-        for existing_name, _, _, _ in deduped_valid:
+        for existing_info in deduped_valid:
+            existing_name = existing_info["term"]
             if _is_semantic_dup(term_name, existing_name):
                 logger.info("Skipping '%s' — semantic duplicate of '%s'", term_name, existing_name)
                 is_dup = True
                 break
         if not is_dup:
-            deduped_valid.append((term_name, korean_name, slug, cats))
+            deduped_valid.append(term_info)
     valid_terms = deduped_valid
 
     # LLM gate: verify candidates against existing handbook terms before expensive generation
@@ -720,15 +731,49 @@ async def _extract_and_create_handbook_terms(
         try:
             existing = supabase.table("handbook_terms").select("term").neq("status", "archived").execute()
             existing_names = [r["term"] for r in (existing.data or [])]
-            # Build candidate dicts for gate
-            gate_candidates = [{"term": tn, "korean_name": kn} for tn, kn, _sl, _cats in valid_terms]
-            accepted = await gate_candidate_terms(gate_candidates, existing_names)
-            accepted_names = {c["term"] for c in accepted}
-            before_count = len(valid_terms)
-            valid_terms = [(tn, kn, sl, cats) for tn, kn, sl, cats in valid_terms if tn in accepted_names]
-            rejected_count = before_count - len(valid_terms)
-            if rejected_count:
-                logger.info("LLM gate rejected %d/%d candidates", rejected_count, before_count)
+            gate_candidates = [
+                {
+                    "term": term_info["term"],
+                    "korean_name": term_info["korean_name"],
+                    "category": term_info.get("category", ""),
+                    "secondary_categories": term_info.get("secondary_categories", []),
+                    "reason": term_info.get("reason", ""),
+                }
+                for term_info in valid_terms
+            ]
+            gate_results = await gate_candidate_terms(gate_candidates, existing_names)
+            decisions = {
+                result["term"]: result
+                for result in gate_results
+                if result.get("term")
+            }
+            accepted_terms: list[dict] = []
+            queued_from_gate = 0
+            rejected_count = 0
+            for term_info in valid_terms:
+                decision_info = decisions.get(term_info["term"], {})
+                decision = str(decision_info.get("decision", "accept")).lower()
+                reason = decision_info.get("reason", "")
+                if decision == "reject":
+                    rejected_count += 1
+                    logger.info("LLM gate rejected '%s': %s", term_info["term"], reason or "no reason")
+                    continue
+                if decision == "queue":
+                    queued_from_gate += 1
+                    queued_terms.append(term_info)
+                    logger.info("LLM gate queued '%s': %s", term_info["term"], reason or "no reason")
+                    continue
+                accepted_terms.append(term_info)
+
+            valid_terms = accepted_terms
+            if rejected_count or queued_from_gate:
+                logger.info(
+                    "LLM gate filtered %d/%d candidates (%d queued, %d rejected)",
+                    queued_from_gate + rejected_count,
+                    len(gate_candidates),
+                    queued_from_gate,
+                    rejected_count,
+                )
         except Exception as e:
             logger.warning("LLM gate failed, proceeding with all candidates: %s", e)
 
@@ -797,6 +842,8 @@ async def _extract_and_create_handbook_terms(
                     "term_full": content_data.get("term_full", ""),
                     "korean_full": content_data.get("korean_full", ""),
                     "categories": content_data.get("categories", []),
+                    "summary_ko": content_data.get("summary_ko", ""),
+                    "summary_en": content_data.get("summary_en", ""),
                     "definition_ko": content_data.get("definition_ko", ""),
                     "definition_en": content_data.get("definition_en", ""),
                     "body_basic_ko": content_data.get("body_basic_ko", ""),
@@ -854,7 +901,15 @@ async def _extract_and_create_handbook_terms(
 
     if valid_terms:
         term_results = await asyncio.gather(
-            *[_create_single_term(tn, kn, sl, cats) for tn, kn, sl, cats in valid_terms],
+            *[
+                _create_single_term(
+                    term_info["term"],
+                    term_info["korean_name"],
+                    term_info["slug"],
+                    term_info.get("categories"),
+                )
+                for term_info in valid_terms
+            ],
         )
         for created, term_errors in term_results:
             terms_created += created
@@ -862,7 +917,11 @@ async def _extract_and_create_handbook_terms(
 
     # Save low-confidence terms as queued (title only, no LLM generation)
     queued_count = 0
-    for term_name, korean_name, slug, cats in queued_terms:
+    for term_info in queued_terms:
+        term_name = term_info["term"]
+        korean_name = term_info["korean_name"]
+        slug = term_info["slug"]
+        cats = term_info.get("categories", [])
         try:
             supabase.table("handbook_terms").insert({
                 "term": term_name,

@@ -307,6 +307,8 @@ async def test_extract_and_create_handbook_terms_persists_hero_and_references_fi
         "term_full": "Function Calling",
         "korean_full": "함수 호출",
         "categories": ["llm-genai", "products-platforms"],
+        "summary_ko": "학습자용 요약 ko",
+        "summary_en": "Learner summary en",
         "definition_ko": "ko definition " * 20,
         "definition_en": "en definition " * 20,
         "body_basic_ko": "ko basic " * 300,
@@ -340,3 +342,100 @@ async def test_extract_and_create_handbook_terms_persists_hero_and_references_fi
     assert row["hero_news_context_en"] == generated_content["hero_news_context_en"]
     assert row["references_ko"] == generated_content["references_ko"]
     assert row["references_en"] == generated_content["references_en"]
+    assert row["summary_ko"] == generated_content["summary_ko"]
+    assert row["summary_en"] == generated_content["summary_en"]
+
+
+@pytest.mark.asyncio
+async def test_extract_and_create_handbook_terms_queues_gate_downgraded_candidates():
+    from services.pipeline import _extract_and_create_handbook_terms
+
+    supabase = _HandbookInsertCaptureSupabase()
+    extracted_terms = [
+        {
+            "term": "EquiformerV3",
+            "korean_name": "EquiformerV3",
+            "category": "deep-learning",
+            "secondary_categories": ["data-engineering"],
+            "confidence": "high",
+            "reason": "Mentioned in the article as a technical architecture",
+        }
+    ]
+
+    gate_mock = AsyncMock(
+        return_value=[
+            {
+                "term": "EquiformerV3",
+                "decision": "queue",
+                "reason": "versioned niche model name; queue for manual review",
+            }
+        ]
+    )
+
+    with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
+         patch("services.pipeline.generate_term_content", new=AsyncMock()), \
+         patch("services.pipeline.gate_candidate_terms", new=gate_mock), \
+         patch("services.pipeline._log_stage", new=AsyncMock()):
+        created, errors = await _extract_and_create_handbook_terms(
+            article_texts=["EquiformerV3 improves molecular modeling throughput."],
+            supabase=supabase,
+            run_id="run-1",
+        )
+
+    assert created == 0
+    assert errors == []
+    assert len(supabase.inserted_rows) == 1
+    row = supabase.inserted_rows[0]
+    assert row["term"] == "EquiformerV3"
+    assert row["status"] == "queued"
+    assert row["source"] == "pipeline"
+    assert "definition_ko" not in row
+
+
+@pytest.mark.asyncio
+async def test_extract_and_create_handbook_terms_passes_category_and_reason_to_gate():
+    from services.pipeline import _extract_and_create_handbook_terms
+
+    supabase = _HandbookInsertCaptureSupabase()
+    extracted_terms = [
+        {
+            "term": "Reversible transforms",
+            "korean_name": "가역 변환",
+            "category": "data-engineering",
+            "secondary_categories": ["ml-fundamentals"],
+            "confidence": "high",
+            "reason": "Article frames it as a transform class for round-trip restoration",
+        }
+    ]
+
+    gate_mock = AsyncMock(return_value=[
+        {
+            "term": "Reversible transforms",
+            "decision": "reject",
+            "reason": "descriptive umbrella phrase, not canonical enough",
+        }
+    ])
+
+    with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
+         patch("services.pipeline.generate_term_content", new=AsyncMock()), \
+         patch("services.pipeline.gate_candidate_terms", new=gate_mock), \
+         patch("services.pipeline._log_stage", new=AsyncMock()):
+        created, errors = await _extract_and_create_handbook_terms(
+            article_texts=["Reversible transforms can restore original representations after preprocessing."],
+            supabase=supabase,
+            run_id="run-1",
+        )
+
+    assert created == 0
+    assert errors == []
+    gate_candidates, existing_names = gate_mock.await_args.args
+    assert existing_names == []
+    assert gate_candidates == [
+        {
+            "term": "Reversible transforms",
+            "korean_name": "가역 변환",
+            "category": "data-engineering",
+            "secondary_categories": ["ml-fundamentals"],
+            "reason": "Article frames it as a transform class for round-trip restoration",
+        }
+    ]

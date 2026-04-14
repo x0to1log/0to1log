@@ -71,11 +71,13 @@ async def handbook_advise(
         async def _run_generate():
             try:
                 result, model, tokens, warnings = await run_handbook_advise(body)
+                generation_gate = result.get("generation_gate", {}) if isinstance(result, dict) else {}
+                generation_passed = generation_gate.get("status", "pass") == "pass"
                 _handbook_jobs[job_id] = {
                     "status": "completed",
                     "result": {
                         "action": body.action,
-                        "success": not warnings,
+                        "success": generation_passed,
                         "result": result,
                         "model_used": model,
                         "tokens_used": tokens,
@@ -83,8 +85,8 @@ async def handbook_advise(
                     },
                     "error": None,
                 }
-                # Auto-save to DB so results survive polling failures
-                if result:
+                # Auto-save only when generation passed the internal gate.
+                if result and generation_gate.get("auto_save_allowed", True):
                     try:
                         from core.database import get_supabase
                         sb = get_supabase()
@@ -96,6 +98,9 @@ async def handbook_advise(
                                 "body_advanced_ko", "body_advanced_en",
                                 "korean_name", "korean_full", "term_full",
                                 "categories",
+                                "summary_ko", "summary_en",
+                                "hero_news_context_ko", "hero_news_context_en",
+                                "references_ko", "references_en",
                             }
                             update_data = {k: v for k, v in result.items() if k in save_fields and v}
                             if update_data and body.term_id:
@@ -107,6 +112,12 @@ async def handbook_advise(
                                 logger.info("Auto-saved generate result by term name '%s' (%d fields)", body.term, len(update_data))
                     except Exception as save_err:
                         logger.warning("Auto-save to DB failed: %s", save_err)
+                elif result:
+                    logger.info(
+                        "Skipped handbook auto-save for '%s' because generation gate=%s",
+                        body.term,
+                        generation_gate.get("status", "unknown"),
+                    )
             except Exception as e:
                 logger.error("Handbook generate background failed: %s", e)
                 _handbook_jobs[job_id] = {
@@ -135,10 +146,12 @@ async def handbook_advise(
     # actually populated. The service writes the list inside `result`;
     # we mirror it out here so API consumers can read either location.
     search_sources = result.get("search_sources", []) if isinstance(result, dict) else []
+    generation_gate = result.get("generation_gate", {}) if isinstance(result, dict) else {}
+    generation_passed = generation_gate.get("status", "pass") == "pass"
 
     return HandbookAdviseResponse(
         action=body.action,
-        success=not warnings,
+        success=generation_passed if body.action == "generate" else not warnings,
         result=result,
         model_used=model,
         tokens_used=tokens,

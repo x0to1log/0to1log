@@ -594,6 +594,13 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 3. **Advanced body** (shown when user toggles Advanced): generated in a separate call. Do NOT produce advanced fields here.
 4. **References footer** (always visible below body, level-independent): `references_ko` JSON array.
 
+## Learner Popup Summary
+- `summary_ko` is a learner-facing popup summary shown outside the full handbook page.
+- Write 3~5 short sentences in Korean.
+- It should be shorter and easier than `basic_ko_1_plain`, but more explanatory than `definition_ko`.
+- Cover: what it is, how it basically works, and why it matters.
+- No markdown headings, no bullet lists, no code, no formulas.
+
 ## Handbook Categories (choose 1-3, priority order)
 cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, data-engineering, infra-hardware, safety-ethics, products-platforms
 
@@ -601,6 +608,40 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 - term_full: English full name (e.g., "Long Short-Term Memory" for LSTM). Same as term if no abbreviation.
 - korean_name: Korean translation or commonly used Korean name. MUST be in Korean, NOT English. BAD: "EDA". GOOD: "탐색적 데이터 분석". If no standard Korean translation exists, use Korean phonetic transcription (e.g., "트랜스포머" for Transformer).
 - korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
+
+## Term Name Few-Shot Examples
+- Prefer a standard Korean translation for `korean_name` when one exists.
+- Use phonetic transcription only when a standard Korean translation is not commonly used.
+- `korean_full` may add an English parenthetical when that helps disambiguate the formal name.
+
+```json
+[
+  {
+    "term": "RAG",
+    "term_full": "Retrieval-Augmented Generation",
+    "korean_name": "검색 증강 생성",
+    "korean_full": "검색 증강 생성(Retrieval-Augmented Generation)"
+  },
+  {
+    "term": "Function Calling",
+    "term_full": "Function Calling",
+    "korean_name": "함수 호출",
+    "korean_full": "함수 호출(Function Calling)"
+  },
+  {
+    "term": "Transformer",
+    "term_full": "Transformer",
+    "korean_name": "트랜스포머",
+    "korean_full": "트랜스포머(Transformer)"
+  },
+  {
+    "term": "PyTorch",
+    "term_full": "PyTorch",
+    "korean_name": "파이토치",
+    "korean_full": "파이토치(PyTorch)"
+  }
+]
+```
 
 ## definition_ko / definition_en (2~4 sentences)
 
@@ -907,6 +948,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "korean_name": "한국어 발음/통용 표기",
   "korean_full": "한국어 정식 명칭",
   "categories": ["ml-fundamentals"],
+  "summary_ko": "학습자 팝업용 3~5문장 요약",
   "definition_ko": "2~4문장 기술 정의 — 구조: 정의 + 메커니즘 + 맥락",
   "definition_en": "2-4 sentence technical definition — structure: definition + mechanism + context",
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
@@ -925,6 +967,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 
 ## Self-Check (verify before responding)
 ✓ `definition_ko` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
+✓ `summary_ko` is 3~5 sentences, easier than `definition_ko`, and does not copy `basic_ko_1_plain` verbatim
 ✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -993,6 +1036,13 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 2. **Basic body** (shown when user toggles Basic): 7 sections `basic_en_1_plain` ... `basic_en_7_related`.
 3. **Advanced body** (generated in a separate call — do NOT produce advanced fields here).
 4. **References footer** (always visible below body, level-independent): `references_en` JSON array.
+
+## Learner Popup Summary
+- `summary_en` is a learner-facing popup summary shown outside the full handbook page.
+- Write 3-5 short sentences in English.
+- It should be shorter and easier than `basic_en_1_plain`, but more explanatory than `definition_en`.
+- Cover: what it is, how it basically works, and why it matters.
+- No markdown headings, no bullet lists, no code, no formulas.
 
 ## definition_en (2~4 sentences)
 
@@ -1287,6 +1337,7 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 
 ```json
 {{
+  "summary_en": "3-5 sentence learner popup summary",
   "definition_en": "2-4 sentence technical definition — structure: definition + mechanism + context",
   "hero_news_context_en": "\\"quote 1\\" → meaning\\n\\"quote 2\\" → meaning\\n\\"quote 3\\" → meaning",
   "basic_en_1_plain": "Problem → solution → mechanism",
@@ -1303,6 +1354,7 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 ```
 
 ## Self-Check (verify before responding)
+✓ `summary_en` is 3~5 sentences, easier than `definition_en`, and does not copy `basic_en_1_plain` verbatim
 ✓ `definition_en` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
@@ -1781,13 +1833,76 @@ Keep the same section keys; only adapt the content perspective.
 
 Respond in JSON format only."""
 
+
+ADVANCED_NO_CODE_PASS_SUFFIX = """
+
+## Pass-Specific Rule: This pass generates non-code advanced sections only
+
+- Generate ONLY these section keys:
+  - mechanism
+  - formulas / architecture / diagrams
+  - tradeoffs
+  - pitfalls
+  - industry / engineering communication
+  - related terms
+- DO NOT generate the code section in this pass.
+- Omit the `adv_*_3_code` key entirely or return it as an empty string.
+- Do not compensate by pushing code-like content into other sections.
+"""
+
+
+GENERATE_ADVANCED_CODE_SECTION_KO_PROMPT = """\
+You are a technical education writer for 0to1log.
+
+Generate ONLY the Korean advanced section 3 for a handbook term.
+
+Output JSON only:
+{
+  "adv_ko_3_code": "..."
+}
+
+Rules:
+- Return one section only. Do not rewrite other sections.
+- Stay consistent with the provided definition, mechanism, tradeoffs, and references.
+- If `code_mode` is `pseudocode`, write structured pseudocode or algorithmic flow only.
+- If `code_mode` is `real-code`, write realistic runnable-style code with error handling and type hints when natural.
+- Never invent vendor-specific SDK details, parameters, or API surfaces not supported by the provided references/context.
+- If evidence is weak, prefer pseudocode-like structure over fabricated concrete code.
+"""
+
+
+GENERATE_ADVANCED_CODE_SECTION_EN_PROMPT = """\
+You are a technical education writer for 0to1log.
+
+Generate ONLY the English advanced section 3 for a handbook term.
+
+Output JSON only:
+{
+  "adv_en_3_code": "..."
+}
+
+Rules:
+- Return one section only. Do not rewrite other sections.
+- Stay consistent with the provided definition, mechanism, tradeoffs, and references.
+- If `code_mode` is `pseudocode`, write structured pseudocode or algorithmic flow only.
+- If `code_mode` is `real-code`, write realistic runnable-style code with error handling and type hints when natural.
+- Never invent vendor-specific SDK details, parameters, or API surfaces not supported by the provided references/context.
+- If evidence is weak, prefer pseudocode-like structure over fabricated concrete code.
+"""
+
 TERM_GATE_PROMPT = """\
 You are a quality gate for an AI/CS technical handbook. Given a list of candidate terms \
-and the existing handbook terms, decide which candidates should be ACCEPTED for generation \
-and which should be REJECTED.
+and the existing handbook terms, decide which candidates should be ACCEPTED for generation, \
+QUEUED for manual review, or REJECTED.
 
 ## Existing handbook terms
 {existing_terms}
+
+## Decision rules
+Return:
+- `accept` when the term is an established, independently searchable glossary concept worth a handbook entry.
+- `queue` when the term might be valid but is ambiguous, version-specific, too niche, or needs human judgment on canonicality.
+- `reject` when the term clearly fails glossary quality.
 
 ## Rejection criteria (reject if ANY apply)
 1. DUPLICATE: Same concept as an existing term (including abbreviation ↔ full name, e.g., "RAG" = "Retrieval-Augmented Generation").
@@ -1796,6 +1911,12 @@ and which should be REJECTED.
 3. NOT ESTABLISHED: A term coined in a single paper/product with no broad adoption (e.g., "Batched Contextual Reinforcement", "Muse Spark")
 4. TOO GENERIC: A common word that doesn't have a specific technical definition (e.g., "scaling", "automation")
 5. OVERLAPS EXISTING: The concept is already substantially covered by an existing term (e.g., "Long context" when "context window" exists, "multimodal perception" when "multimodal model" exists)
+
+## Queue criteria (queue if ANY apply and reject does not clearly apply)
+1. AMBIGUOUS CANONICALITY: The concept might be valid, but the title is not the clearest canonical handbook term.
+2. VERSIONED OR VARIANT LABEL: A versioned model / method / release name that may deserve coverage only under a broader parent term.
+3. RESEARCH-NICHE ENTITY: A paper-specific or lab-specific term that might matter, but likely belongs in manual review before generating a public glossary page.
+4. UMBRELLA PHRASE: A descriptive phrase that groups multiple related approaches without being the standard standalone term.
 
 ## Name overlap — ACCEPT when surface name collides but concepts differ
 
@@ -1844,12 +1965,16 @@ Candidates → Decisions:
 - "quantization" → ACCEPT (established technique, not in existing list)
 - "BERT" → ACCEPT (established model, broadly known)
 - "prompt engineering" → ACCEPT (established method, independently searchable)
-- "vLLM" → ACCEPT (established tool with growing adoption)
+- "vLLM" ??ACCEPT (established tool with growing adoption)
+- "EquiformerV3" ??QUEUE (versioned niche research model; manual review needed)
+- "Reversible transforms" ??QUEUE (descriptive umbrella phrase, not clearly canonical)
+- "Adaptive token allocation" ??QUEUE (may be valid but not clearly the canonical handbook term)
 
 ## Output JSON
 {{
   "decisions": [
     {{"term": "term_name", "decision": "accept", "reason": "established technique not in handbook"}},
+    {{"term": "term_name", "decision": "queue", "reason": "possibly valid but manual review is needed to confirm canonicality"}},
     {{"term": "term_name", "decision": "reject", "reason": "duplicate of existing RAG"}}
   ]
 }}"""

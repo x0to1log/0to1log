@@ -199,6 +199,17 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
                 <label for="field-definition-ko">Definition (KO)</label>
                 <textarea name="definition_ko" id="field-definition-ko" class="admin-textarea" rows="3">{term?.definition_ko || ''}</textarea>
               </div>
+              <div class="admin-field">
+                <label for="field-summary-ko">Learner Summary (KO)</label>
+                <textarea
+                  name="summary_ko"
+                  id="field-summary-ko"
+                  class="admin-textarea"
+                  rows="4"
+                  placeholder="학습자 팝오버용 3~5문장 요약"
+                >{term?.summary_ko || ''}</textarea>
+                <div class="admin-field-hint">Learner popup 전용 요약. 3~5문장 권장.</div>
+              </div>
               <div class="admin-level-tabs">
                 <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="ko" data-level="basic">Basic <span class="hb-tab-indicator" id="level-indicator-basic-ko" hidden></span></button>
                 <button type="button" class="admin-level-tab" data-level-lang="ko" data-level="advanced">Advanced <span class="hb-tab-indicator" id="level-indicator-advanced-ko" hidden></span></button>
@@ -271,6 +282,17 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
               <div class="admin-field">
                 <label for="field-definition-en">Definition (EN)</label>
                 <textarea name="definition_en" id="field-definition-en" class="admin-textarea" rows="3">{term?.definition_en || ''}</textarea>
+              </div>
+              <div class="admin-field">
+                <label for="field-summary-en">Learner Summary (EN)</label>
+                <textarea
+                  name="summary_en"
+                  id="field-summary-en"
+                  class="admin-textarea"
+                  rows="4"
+                  placeholder="3-5 sentence learner popup summary"
+                >{term?.summary_en || ''}</textarea>
+                <div class="admin-field-hint">Learner popup only. 3-5 short sentences.</div>
               </div>
               <div class="admin-level-tabs">
                 <button type="button" class="admin-level-tab admin-level-tab--active" data-level-lang="en" data-level="basic">Basic <span class="hb-tab-indicator" id="level-indicator-basic-en" hidden></span></button>
@@ -637,12 +659,16 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
       const koreanName = form.querySelector<HTMLInputElement>('[name="korean_name"]');
       const termFull = form.querySelector<HTMLInputElement>('[name="term_full"]');
       const koreanFull = form.querySelector<HTMLInputElement>('[name="korean_full"]');
+      const summaryKo = form.querySelector<HTMLTextAreaElement>('[name="summary_ko"]');
+      const summaryEn = form.querySelector<HTMLTextAreaElement>('[name="summary_en"]');
       const defKo = form.querySelector<HTMLTextAreaElement>('[name="definition_ko"]');
       const defEn = form.querySelector<HTMLTextAreaElement>('[name="definition_en"]');
       const favCheckbox = form.querySelector<HTMLInputElement>('[name="is_favourite"]');
       if (koreanName) koreanName.value = '';
       if (termFull) termFull.value = '';
       if (koreanFull) koreanFull.value = '';
+      if (summaryKo) summaryKo.value = '';
+      if (summaryEn) summaryEn.value = '';
       if (defKo) defKo.value = '';
       if (defEn) defEn.value = '';
       if (favCheckbox) favCheckbox.checked = false;
@@ -894,6 +920,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
         korean_name: (form.querySelector('[name="korean_name"]') as HTMLInputElement)?.value || '',
         korean_full: (form.querySelector('[name="korean_full"]') as HTMLInputElement)?.value || '',
         categories: Array.from(form.querySelectorAll<HTMLInputElement>('input[name="categories"]:checked')).map(cb => cb.value),
+        summary_ko: (form.querySelector('[name="summary_ko"]') as HTMLTextAreaElement)?.value || '',
+        summary_en: (form.querySelector('[name="summary_en"]') as HTMLTextAreaElement)?.value || '',
         definition_ko: (form.querySelector('[name="definition_ko"]') as HTMLTextAreaElement)?.value || '',
         definition_en: (form.querySelector('[name="definition_en"]') as HTMLTextAreaElement)?.value || '',
         body_basic_ko: crepeBasicKo ? crepeBasicKo.getMarkdown() : '',
@@ -1226,6 +1254,7 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
       // Content fields (bilingual)
       const contentFields = [
+        { key: 'summary', label: 'Learner Summary' },
         { key: 'definition', label: 'Definition' },
         { key: 'body_basic', label: 'Body (Basic)' },
         { key: 'body_advanced', label: 'Body (Advanced)' },
@@ -1585,15 +1614,17 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     // --- Tab content indicators ---
     function updateTabIndicators(): void {
+      const summaryKo = (document.querySelector<HTMLTextAreaElement>('[name="summary_ko"]')?.value || '').trim();
       const defKo = (document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.value || '').trim();
       const bodyBasicKo = crepeBasicKo ? crepeBasicKo.getMarkdown().trim() : '';
       const bodyAdvKo = crepeAdvancedKo ? crepeAdvancedKo.getMarkdown().trim() : '';
-      const koHasContent = defKo.length > 0 || bodyBasicKo.length > 0 || bodyAdvKo.length > 0;
+      const koHasContent = summaryKo.length > 0 || defKo.length > 0 || bodyBasicKo.length > 0 || bodyAdvKo.length > 0;
 
+      const summaryEn = (document.querySelector<HTMLTextAreaElement>('[name="summary_en"]')?.value || '').trim();
       const defEn = (document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.value || '').trim();
       const bodyBasicEn = crepeBasicEn ? crepeBasicEn.getMarkdown().trim() : '';
       const bodyAdvEn = crepeAdvancedEn ? crepeAdvancedEn.getMarkdown().trim() : '';
-      const enHasContent = defEn.length > 0 || bodyBasicEn.length > 0 || bodyAdvEn.length > 0;
+      const enHasContent = summaryEn.length > 0 || defEn.length > 0 || bodyBasicEn.length > 0 || bodyAdvEn.length > 0;
 
       const koIndicator = document.getElementById('lang-indicator-ko');
       const enIndicator = document.getElementById('lang-indicator-en');
@@ -1642,6 +1673,8 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
 
     // Update completeness on meta field input changes
     document.querySelector<HTMLInputElement>('[name="korean_name"]')?.addEventListener('input', updateAllIndicators);
+    document.querySelector<HTMLTextAreaElement>('[name="summary_ko"]')?.addEventListener('input', updateAllIndicators);
+    document.querySelector<HTMLTextAreaElement>('[name="summary_en"]')?.addEventListener('input', updateAllIndicators);
     document.querySelector<HTMLTextAreaElement>('[name="definition_ko"]')?.addEventListener('input', updateAllIndicators);
     document.querySelector<HTMLTextAreaElement>('[name="definition_en"]')?.addEventListener('input', updateAllIndicators);
     document.querySelectorAll<HTMLInputElement>('input[name="categories"]').forEach(cb => {

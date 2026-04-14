@@ -150,6 +150,8 @@ class HandbookAdviseRequest(BaseModel):
     term_full: str = ""
     korean_full: str = ""
     categories: list[str] = []
+    summary_ko: str = ""
+    summary_en: str = ""
     definition_ko: str = ""
     definition_en: str = ""
     body_basic_ko: str = ""
@@ -210,6 +212,21 @@ class GenerateTermResult(BaseModel):
     korean_name: str = ""
     korean_full: str = ""
     categories: list[str] = []
+    summary_ko: str = ""
+    summary_en: str = ""
+    term_type: str = ""
+    term_subtype: str | None = None
+    facet_intent: list[str] = []
+    facet_volatility: str = ""
+    facet_type_confidence: float = 0.0
+    generation_gate: dict = {}
+    code_mode_hint: Literal["no-code", "pseudocode", "real-code", "uncertain"] | None = None
+    mechanism_summary: str = ""
+    has_clear_io_contract: bool | None = None
+    has_official_spec_signal: bool | None = None
+    reference_strength: Literal["low", "medium", "high"] | None = None
+    vendor_lock_in_risk: Literal["low", "medium", "high"] | None = None
+    insufficient_info_flag: bool | None = None
     # Length policy: min_length is a "generation failed" detector (fail-fast on empty/fragment).
     # max_length intentionally omitted — content shape is guided by the prompt, not enforced by
     # Pydantic. Matches the news_pipeline.py pattern (zero length constraints anywhere).
