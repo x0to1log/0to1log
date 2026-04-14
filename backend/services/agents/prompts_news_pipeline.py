@@ -1207,7 +1207,19 @@ Mark an issue as **major** ONLY when it matches one of these:
 
 Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
 
-Return AT MOST 5 issues total. Prioritize the most impactful. Do NOT list every minor polish nit.
+## Issue count discipline
+
+Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+
+An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
+- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
+- "could benefit from a parenthetical note" / "could link to X" — optional improvements
+- "could simplify for beginners" — editorial choices that aren't wrong
+- "some paragraphs summarize multiple claims" — factual observations that aren't defects
+- "headline is punchy but compressed" — subjective critique
+- "paragraph reuses the same source" — not a defect if citations are present
+
+The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "depth": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1272,7 +1284,19 @@ Mark an issue as **major** ONLY when it matches one of these:
 
 Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
 
-Return AT MOST 5 issues total. Prioritize the most impactful. Do NOT list every minor polish nit.
+## Issue count discipline
+
+Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+
+An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
+- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
+- "could benefit from a parenthetical note" / "could link to X" — optional improvements
+- "could simplify for beginners" — editorial choices that aren't wrong
+- "some paragraphs summarize multiple claims" — factual observations that aren't defects
+- "headline is punchy but compressed" — subjective critique
+- "paragraph reuses the same source" — not a defect if citations are present
+
+The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "sources": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1339,7 +1363,19 @@ Mark an issue as **major** ONLY when it matches one of these:
 
 Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
 
-Return AT MOST 5 issues total. Prioritize the most impactful. Do NOT list every minor polish nit.
+## Issue count discipline
+
+Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+
+An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
+- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
+- "could benefit from a parenthetical note" / "could link to X" — optional improvements
+- "could simplify for beginners" — editorial choices that aren't wrong
+- "some paragraphs summarize multiple claims" — factual observations that aren't defects
+- "headline is punchy but compressed" — subjective critique
+- "paragraph reuses the same source" — not a defect if citations are present
+
+The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1403,7 +1439,19 @@ Mark an issue as **major** ONLY when it matches one of these:
 
 Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
 
-Return AT MOST 5 issues total. Prioritize the most impactful. Do NOT list every minor polish nit.
+## Issue count discipline
+
+Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+
+An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
+- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
+- "could benefit from a parenthetical note" / "could link to X" — optional improvements
+- "could simplify for beginners" — editorial choices that aren't wrong
+- "some paragraphs summarize multiple claims" — factual observations that aren't defects
+- "headline is punchy but compressed" — subjective critique
+- "paragraph reuses the same source" — not a defect if citations are present
+
+The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "actionability": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1453,7 +1501,19 @@ Mark an issue as **major** ONLY when it matches one of these:
 
 Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
 
-Return AT MOST 5 issues total. Prioritize the most impactful. Do NOT list every minor polish nit.
+## Issue count discipline
+
+Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+
+An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
+- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
+- "could benefit from a parenthetical note" / "could link to X" — optional improvements
+- "could simplify for beginners" — editorial choices that aren't wrong
+- "some paragraphs summarize multiple claims" — factual observations that aren't defects
+- "headline is punchy but compressed" — subjective critique
+- "paragraph reuses the same source" — not a defect if citations are present
+
+The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"factuality": 0-25, "calibration": 0-25, "clarity": 0-25, "locale_alignment": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""

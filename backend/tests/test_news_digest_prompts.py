@@ -194,7 +194,8 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
         assert "## Severity rules" in prompt
         assert "Fabrication / hallucination" in prompt
         assert "unsure whether" in prompt  # the "when in doubt → minor" tiebreaker
-        assert "AT MOST 5 issues" in prompt
+        assert "AT MOST **3 issues**" in prompt  # hard cap on issue count
+        assert "ZERO issues" in prompt  # counter to "must fill the list"
         # Scoring resolution (stops 95-100 saturation on body judges)
         assert "SCORING RESOLUTION" in prompt
         assert "19-21" in prompt  # intermediate tier anchor
@@ -204,6 +205,7 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     # distribution is already healthy (49-97 observed) so extra calibration
     # would over-penalize.
     assert "## Severity rules" in QUALITY_CHECK_FRONTLOAD
+    assert "AT MOST **3 issues**" in QUALITY_CHECK_FRONTLOAD
     assert "SCORING RESOLUTION" not in QUALITY_CHECK_FRONTLOAD
 
 
