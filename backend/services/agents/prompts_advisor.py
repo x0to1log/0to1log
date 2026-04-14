@@ -599,7 +599,21 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 - Write 3~5 short sentences in Korean.
 - It should be shorter and easier than `basic_ko_1_plain`, but more explanatory than `definition_ko`.
 - Cover: what it is, how it basically works, and why it matters.
+- A useful default flow is: what it is → an intuition or analogy (if it genuinely helps) → how it basically works → why it matters.
+- You do NOT have to force that exact order if the term reads more naturally another way.
+- Use one intuitive analogy or everyday comparison when it genuinely improves comprehension.
+- Skip the analogy for product names, standards, policy terms, or cases where an analogy would feel forced or misleading.
+- Prefer concrete everyday images like "reception desk", "traffic controller", "recipe", "translator", or "librarian" over abstract metaphors.
 - No markdown headings, no bullet lists, no code, no formulas.
+- Do not sound like a spec, design doc, benchmark report, or API reference.
+- Avoid jargon-heavy words unless unavoidable. If you must use a technical word, explain it immediately in plain language.
+- Avoid these phrases and tones: "JSON schema", "latency budget", "validation pipeline", "execution boundary", "throughput gain", "benchmark", "architecture", "orchestration" unless the term cannot be explained without them.
+
+GOOD style example:
+- "함수 호출은 AI가 필요한 도구를 골라 사람 대신 버튼을 눌러보게 만드는 방식이라고 생각하면 된다. 식당에서 주문을 받는 직원이 메뉴를 고르고 주방에 전달하는 것처럼, 모델은 어떤 함수를 쓸지와 필요한 인자를 정리해 앱에 넘긴다. 실제 실행은 앱이 맡기 때문에 잘못된 요청을 걸러낼 수 있다. 그래서 채팅이 설명만 하는 것을 넘어 실제 행동으로 이어질 수 있다."
+
+BAD style example:
+- "함수 호출은 LLM이 JSON schema에 맞는 인자를 생성하고 host application이 validation pipeline을 통해 실행하는 메커니즘이다. 이는 tool orchestration과 execution boundary를 분리해 latency budget을 관리하는 데 유리하다."
 
 ## Handbook Categories (choose 1-3, priority order)
 cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, data-engineering, infra-hardware, safety-ethics, products-platforms
@@ -968,6 +982,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ## Self-Check (verify before responding)
 ✓ `definition_ko` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
 ✓ `summary_ko` is 3~5 sentences, easier than `definition_ko`, and does not copy `basic_ko_1_plain` verbatim
+✓ `summary_ko` uses an intuitive analogy or everyday comparison when it genuinely helps comprehension, and skips it when it would feel forced or misleading
+✓ `summary_ko` avoids design-doc / benchmark / API-reference tone and keeps jargon to a minimum
 ✓ `hero_news_context_ko` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤60 chars per line; 70 max.
 ✓ `basic_ko_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_ko_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -1042,7 +1058,21 @@ This handbook page has FIVE rendering zones. Your output fields map to them:
 - Write 3-5 short sentences in English.
 - It should be shorter and easier than `basic_en_1_plain`, but more explanatory than `definition_en`.
 - Cover: what it is, how it basically works, and why it matters.
+- A useful default flow is: what it is → an intuition or analogy (if it genuinely helps) → how it basically works → why it matters.
+- You do NOT have to force that exact order if the term reads more naturally another way.
+- Use one intuitive analogy or everyday comparison when it genuinely improves comprehension.
+- Skip the analogy for product names, standards, policy terms, or cases where an analogy would feel unnatural or misleading.
+- Prefer concrete comparisons like "reception desk", "traffic controller", "recipe", "translator", or "librarian" over abstract metaphors.
 - No markdown headings, no bullet lists, no code, no formulas.
+- Do not sound like a spec, design doc, benchmark report, or API reference.
+- Avoid jargon-heavy wording unless unavoidable. If a technical word is necessary, explain it immediately in plain language.
+- Avoid phrases and tones such as "JSON schema", "latency budget", "validation pipeline", "execution boundary", "throughput gain", "benchmark", "architecture", "orchestration" unless the term cannot be explained without them.
+
+GOOD style example:
+- "Function calling is a way for an AI model to pick the right tool and hand over the details needed to use it. You can picture it like a receptionist who decides which department to call and passes along the message in the right format. The app still does the real work, so it can check bad inputs before anything runs. That is what turns a chat response into an actual action."
+
+BAD style example:
+- "Function calling is a mechanism where the LLM emits JSON-schema-compliant arguments and the host application executes them through a validation pipeline. This separates orchestration from the execution boundary and improves latency management."
 
 ## definition_en (2~4 sentences)
 
@@ -1355,6 +1385,8 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 
 ## Self-Check (verify before responding)
 ✓ `summary_en` is 3~5 sentences, easier than `definition_en`, and does not copy `basic_en_1_plain` verbatim
+✓ `summary_en` uses an intuitive analogy or everyday comparison when it genuinely helps comprehension, and skips it when it would feel forced or misleading
+✓ `summary_en` avoids design-doc / benchmark / API-reference tone and keeps jargon to a minimum
 ✓ `definition_en` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)

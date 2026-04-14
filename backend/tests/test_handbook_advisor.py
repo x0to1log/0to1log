@@ -429,3 +429,17 @@ def test_generate_basic_prompt_includes_term_naming_few_shots():
     assert '"korean_name": "트랜스포머"' in GENERATE_BASIC_PROMPT
     assert '"term": "PyTorch"' in GENERATE_BASIC_PROMPT
     assert '"korean_name": "파이토치"' in GENERATE_BASIC_PROMPT
+
+
+def test_generate_basic_prompts_require_learner_summary_analogy_and_plain_tone():
+    from services.agents.prompts_advisor import GENERATE_BASIC_EN_PROMPT, GENERATE_BASIC_PROMPT
+
+    assert "A useful default flow is:" in GENERATE_BASIC_PROMPT
+    assert "You do NOT have to force that exact order" in GENERATE_BASIC_PROMPT
+    assert "GOOD style example:" in GENERATE_BASIC_PROMPT
+    assert "BAD style example:" in GENERATE_BASIC_PROMPT
+    assert "Avoid these phrases and tones:" in GENERATE_BASIC_PROMPT
+    assert "Use one intuitive analogy or everyday comparison" in GENERATE_BASIC_EN_PROMPT
+    assert "Do not sound like a spec, design doc, benchmark report, or API reference." in GENERATE_BASIC_EN_PROMPT
+    assert "avoids design-doc / benchmark / API-reference tone" in GENERATE_BASIC_EN_PROMPT
+    assert "skips it when it would feel forced or misleading" in GENERATE_BASIC_EN_PROMPT
