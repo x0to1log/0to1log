@@ -41,6 +41,7 @@ const {
   activePersona,
   personaHtmlMap,
   hasPersonaSwitcher,
+  personaDisplayMap,
   displayTitle,
   displayExcerpt,
 } = await getNewsDetailPageData({
@@ -137,6 +138,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         isLiked={isLiked}
         activePersona={activePersona}
         personaHtmlMap={hasPersonaSwitcher ? personaHtmlMap : undefined}
+        personaDisplayMap={personaDisplayMap}
         guideItems={post.guide_items}
         initialFindQuery={articleFindQuery}
         previewMode={previewMode}

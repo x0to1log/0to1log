@@ -314,6 +314,13 @@ export async function getNewsDetailPageData({
     post,
     activePersona,
   );
+  const personaDisplayMap: Record<string, { title?: string; excerpt?: string | null }> = post ? {
+    expert: {
+      title: post.title || '',
+      excerpt: post.excerpt || '',
+    },
+    learner: resolveDisplayTitleExcerpt(post, 'learner'),
+  } : {};
 
   return {
     post,
@@ -338,6 +345,7 @@ export async function getNewsDetailPageData({
     personaHtmlMap,
     personaSourceCardsMap,
     hasPersonaSwitcher,
+    personaDisplayMap,
     applySourceCitations,
     displayTitle,
     displayExcerpt,

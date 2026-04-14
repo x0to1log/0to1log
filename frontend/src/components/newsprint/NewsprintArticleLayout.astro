@@ -65,6 +65,7 @@ interface Props {
   isLiked?: boolean;
   activePersona?: string | null;
   personaHtmlMap?: Record<string, string>;
+  personaDisplayMap?: Record<string, { title?: string; excerpt?: string | null }>;
   guideItems?: GuideItems | null;
   initialFindQuery?: string;
   previewMode?: boolean;
@@ -99,6 +100,7 @@ const {
   isLiked = false,
   activePersona = null,
   personaHtmlMap,
+  personaDisplayMap,
   guideItems = null,
   initialFindQuery = '',
   previewMode = false,
@@ -303,7 +305,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         </div>
         <div class="switcher-bar-line"></div>
       </div>
-      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-quizzes={JSON.stringify({
+      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
         expert: guideItemsAny?.quiz_poll_expert || null,
         learner: guideItemsAny?.quiz_poll_learner || null,
       })} data-sources={JSON.stringify({
@@ -521,6 +523,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     const template = document.getElementById('persona-data') as HTMLTemplateElement | null;
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
+    const displayMap: Record<string, { title?: string; excerpt?: string }> = JSON.parse(template.dataset.display || '{}');
     const quizMap: Record<string, any> = JSON.parse(template.dataset.quizzes || '{}');
     const sourcesMap: Record<string, any[]> = JSON.parse(template.dataset.sources || '{}');
     const prose = document.querySelector('.newsprint-prose');
@@ -576,6 +579,27 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     function setActivePersona(p: string) {
       if (!map[p]) return;
       prose!.innerHTML = map[p];
+      const leadTitle = document.querySelector<HTMLElement>('.newsprint-lead-title');
+      let deck = document.querySelector<HTMLElement>('.newsprint-deck');
+      const nextDisplay = displayMap[p] || {};
+      const nextTitle = (nextDisplay.title || '').trim();
+      const nextExcerpt = (nextDisplay.excerpt || '').trim();
+      if (leadTitle && nextTitle) leadTitle.textContent = nextTitle;
+      if (leadTitle) {
+        if (nextExcerpt) {
+          if (!deck) {
+            deck = document.createElement('p');
+            deck.className = 'newsprint-deck';
+            leadTitle.insertAdjacentElement('afterend', deck);
+          }
+          deck.textContent = nextExcerpt;
+          deck.style.display = '';
+        } else if (deck) {
+          deck.textContent = '';
+          deck.style.display = 'none';
+        }
+      }
+      document.title = nextTitle ? `${nextTitle} | 0to1log` : '0to1log';
       switcher!.querySelectorAll('.persona-switcher-btn').forEach(b =>
         b.classList.toggle('persona-switcher-btn--active',
           (b as HTMLElement).dataset.persona === p));
