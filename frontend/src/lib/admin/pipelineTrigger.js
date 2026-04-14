@@ -1,5 +1,9 @@
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+/**
+ * @typedef {{ CRON_SECRET?: string; FASTAPI_URL?: string }} PipelineTriggerEnv
+ */
+
 function jsonResponse(payload, status) {
   return new Response(JSON.stringify(payload), {
     status,
@@ -18,6 +22,16 @@ function getPipelineConfig(env) {
   return { cronSecret, backendUrl };
 }
 
+/**
+ * @param {PipelineTriggerEnv} env
+ * @param {'resume' | 'force_refresh' | 'handbook-extract' | 'weekly'} [mode]
+ * @param {string | null} [targetDate]
+ * @param {boolean} [force]
+ * @param {boolean} [skipHandbook]
+ * @param {string | null} [weekId]
+ * @param {boolean} [isCron]
+ * @returns {Promise<Response>}
+ */
 async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null, isCron = false) {
   const config = getPipelineConfig(env);
   if (!config) {
@@ -116,6 +130,11 @@ async function forwardPipelineTrigger(env, mode = 'resume', targetDate = null, f
   }
 }
 
+/**
+ * @param {Request} request
+ * @param {PipelineTriggerEnv} env
+ * @returns {Promise<Response>}
+ */
 export async function handleCronTriggerRequest(request, env) {
   const config = getPipelineConfig(env);
   if (!config) {
@@ -130,6 +149,15 @@ export async function handleCronTriggerRequest(request, env) {
   return forwardPipelineTrigger(env, 'resume', null, false, false, null, true);
 }
 
+/**
+ * @param {PipelineTriggerEnv} env
+ * @param {'resume' | 'force_refresh' | 'handbook-extract' | 'weekly'} [mode]
+ * @param {string | null} [targetDate]
+ * @param {boolean} [force]
+ * @param {boolean} [skipHandbook]
+ * @param {string | null} [weekId]
+ * @returns {Promise<Response>}
+ */
 export async function handleAdminTriggerRequest(env, mode = 'resume', targetDate = null, force = false, skipHandbook = false, weekId = null) {
   return forwardPipelineTrigger(env, mode, targetDate, force, skipHandbook, weekId);
 }

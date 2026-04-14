@@ -109,19 +109,19 @@ const [
   sb.from('handbook_terms').select('id', { count: 'exact', head: true }),
   sb.from('handbook_terms').select('id', { count: 'exact', head: true }).eq('status', 'published'),
   sb.from('handbook_terms').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
-  sb.from('handbook_terms').select('term, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+  sb.from('handbook_terms').select('term, slug, status, source, updated_at').order('updated_at', { ascending: false }).limit(5),
   // Blog: only columns needed for locale/category/source distribution
   sb.from('blog_posts').select('status, locale, category, source'),
   sb.from('blog_posts').select('id', { count: 'exact', head: true }),
   sb.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
   sb.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
-  sb.from('blog_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+  sb.from('blog_posts').select('title, slug, status, locale, source, updated_at').order('updated_at', { ascending: false }).limit(5),
   // News: only columns needed for category/locale/post_type distribution
   sb.from('news_posts').select('status, category, locale, post_type'),
   sb.from('news_posts').select('id', { count: 'exact', head: true }),
   sb.from('news_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
   sb.from('news_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
-  sb.from('news_posts').select('title, slug, status, updated_at').order('updated_at', { ascending: false }).limit(5),
+  sb.from('news_posts').select('title, slug, status, category, locale, updated_at').order('updated_at', { ascending: false }).limit(5),
   // Products (already using specific columns)
   sb.from('ai_products')
     .select('id, name, slug, is_published, primary_category, pricing, featured, view_count, like_count')
@@ -174,7 +174,7 @@ for (const t of handbookTerms) {
 const handbookCategories = Array.from(handbookCategoryMap.entries())
   .sort((a, b) => b[1] - a[1]);
 
-const recentHandbook = (recentHandbookRows ?? []) as { term: string; slug: string; status: string; updated_at: string }[];
+const recentHandbook = (recentHandbookRows ?? []) as { term: string; slug: string; status: string; source: string | null; updated_at: string }[];
 
 // ─── Blog Data ───────────────────────────────────────────────
 const blogPosts = (rawBlog ?? []) as BlogRow[];
@@ -200,7 +200,7 @@ for (const p of blogPosts) {
   blogBySource[src] = (blogBySource[src] || 0) + 1;
 }
 
-const recentBlog = (recentBlogRows ?? []) as { title: string; slug: string; status: string; updated_at: string }[];
+const recentBlog = (recentBlogRows ?? []) as { title: string; slug: string; status: string; locale: string | null; source: string | null; updated_at: string }[];
 
 // ─── News Data ──────────────────────────────────────────────
 const newsPosts = (rawNews ?? []) as NewsRow[];
@@ -226,7 +226,7 @@ for (const p of newsPosts) {
   newsByType[t] = (newsByType[t] || 0) + 1;
 }
 
-const recentNews = (recentNewsRows ?? []) as { title: string; slug: string; status: string; updated_at: string }[];
+const recentNews = (recentNewsRows ?? []) as { title: string; slug: string; status: string; category: string | null; locale: string | null; updated_at: string }[];
 
 // ─── Products Data ──────────────────────────────────────────
 const products = (rawProducts ?? []) as ProductRow[];

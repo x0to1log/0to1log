@@ -482,7 +482,8 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
   function initFeedbackAdmin() {
     const list = document.getElementById('feedback-list');
     if (!list || list.dataset.init === '1') return;
-    list.dataset.init = '1';
+    const feedbackList = list;
+    feedbackList.dataset.init = '1';
 
     let activeFilter = 'active';
     let activeSource = 'all';
@@ -616,10 +617,10 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
     // Bulk selection
     const bulkBar = document.getElementById('bulk-bar');
     const bulkCount = document.getElementById('bulk-count');
-    const checkboxes = list.querySelectorAll('.feedback-bulk-check');
+    const checkboxes = feedbackList.querySelectorAll('.feedback-bulk-check');
 
     function updateBulkBar() {
-      const checked = list.querySelectorAll('.feedback-bulk-check:checked');
+      const checked = feedbackList.querySelectorAll('.feedback-bulk-check:checked');
       const count = checked.length;
       if (bulkBar) bulkBar.hidden = count === 0;
       if (bulkCount) bulkCount.textContent = `${count} selected`;
@@ -633,7 +634,7 @@ function getEditorUrl(sourceType: string, slug: string | null): string {
     });
 
     async function bulkAction(action: string) {
-      const checked = list.querySelectorAll('.feedback-bulk-check:checked');
+      const checked = feedbackList.querySelectorAll('.feedback-bulk-check:checked');
       const ids = Array.from(checked).map((cb) => (cb as HTMLInputElement).dataset.bulkId);
       if (ids.length === 0) return;
 

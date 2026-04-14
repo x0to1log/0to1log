@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  let mode = 'resume';
+  let mode: 'resume' | 'force_refresh' | 'handbook-extract' | 'weekly' = 'resume';
   let targetDate: string | null = null;
   let weekId: string | null = null;
   let force = false;
@@ -44,5 +44,5 @@ export const POST: APIRoute = async ({ request, locals }) => {
     CRON_SECRET: import.meta.env.CRON_SECRET,
     FASTAPI_URL: import.meta.env.FASTAPI_URL,
   };
-  return handleAdminTriggerRequest(env, mode, targetDate as any, force, skipHandbook, weekId);
+  return handleAdminTriggerRequest(env, mode, targetDate, force, skipHandbook, weekId);
 };
