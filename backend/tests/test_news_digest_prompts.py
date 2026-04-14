@@ -173,6 +173,32 @@ def test_quality_prompts_require_structured_issue_schema():
         assert '"category": "source|overclaim|accessibility|locale|structure|clarity"' in prompt
 
 
+def test_digest_writer_prompt_enforces_frontload_locale_parity():
+    """Writer prompt must forbid KO frontload from adding facts not in EN.
+
+    Dominant failure mode in 4/8-4/14 rescore was KO headline/excerpt
+    adding numbers, rankings, or allegations not present in EN. This
+    rule is prevention for that pattern — the code-level penalty check
+    (if added later) is detection.
+    """
+    for digest_type, persona in [
+        ("research", "expert"),
+        ("research", "learner"),
+        ("business", "expert"),
+        ("business", "learner"),
+    ]:
+        prompt = get_digest_prompt(digest_type, persona, [])
+        assert "Frontload Locale Parity" in prompt
+        # Core rule
+        assert "NATURAL TRANSLATIONS" in prompt
+        assert "translation, not a rewrite" in prompt or "translation, not" in prompt.lower()
+        # Explicit DO NOT list
+        assert "DO NOT add to KO" in prompt
+        assert "DO NOT omit from KO" in prompt
+        # Checklist item
+        assert "Frontload locale parity" in prompt
+
+
 def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     """Severity taxonomy + scoring resolution guidance must be present.
 

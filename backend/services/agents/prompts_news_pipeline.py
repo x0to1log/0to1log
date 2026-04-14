@@ -313,6 +313,8 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 {title_strategy}
 
 {HALLUCINATION_GUARD}
+
+{FRONTLOAD_LOCALE_PARITY}
 {license_wording_guard}
 
 {ONE_LINE_SUMMARY_RULE}
@@ -323,8 +325,9 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 3. Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
-6. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
-7. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
+6. **Frontload locale parity**: Does `headline_ko` contain any specific number, ranking, allegation, or claim that is NOT in `headline`? Does `excerpt_ko` add any new fact not in `excerpt`? If yes, fix the mismatch before responding — KO is a translation, not a rewrite.
+7. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
+8. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
 
 """
 
@@ -539,6 +542,32 @@ Encouraged words/patterns (noun-ending headlines): 등장, 공개, 전환, 확�
 HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headline, excerpt, AND body)
 
 Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate."""
+
+
+FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to headline/headline_ko AND excerpt/excerpt_ko)
+
+`headline_ko` and `excerpt_ko` are NATURAL TRANSLATIONS of `headline` and `excerpt`, not independent rewrites. They MUST convey the same facts, entities, and claims — no more, no less.
+
+**DO NOT add to KO anything that is not in EN:**
+- Numbers or rankings ("5위", "100억 달러", "30%") that EN does not mention
+- Specific allegations ("모든 주요 OS·브라우저 취약점", "독점 계약") that EN does not state
+- New entities or people EN does not name
+- Stronger claims than EN supports ("장악", "독점", "완승" when EN says "leads" or "gains")
+- Editorial framing that shifts the story's emphasis
+
+**DO NOT omit from KO what IS in EN:**
+- If EN names a specific person (e.g., "Mira Murati"), KO should too (or use the Korean equivalent "미라 무라티")
+- If EN gives a specific figure, KO must carry the same figure
+- If EN names a company, KO names the same company
+
+**Translation style is flexible. Facts are not.**
+- OK: `headline` = "Meta's AI app climbs charts" → `headline_ko` = "메타 AI 앱, 차트 상승세"
+- OK: `headline` = "OpenAI raises $122B" → `headline_ko` = "OpenAI, 1,220억 달러 조달"
+- BAD: `headline` = "Meta's AI app climbs charts" → `headline_ko` = "메타 AI 앱, **앱 5위** 진입" (added "5위")
+- BAD: `headline` = "Microsoft launches in-house models" → `headline_ko` = "MS가 **모든 주요 클라우드** 장악 시작" (added "모든 주요 클라우드" + "장악")
+- BAD: `headline` = "Nvidia-backed Thinking Machines unveils gigawatt-scale deal" → `headline_ko` = "엔비디아가 **미라 무라티 신생사**에 거액 베팅" (omits "gigawatt-scale", adds editorial framing)
+
+Before finalizing, check: does every specific claim in `headline_ko`/`excerpt_ko` have a corresponding claim in `headline`/`excerpt`? If not, either add it to EN or remove it from KO. They must match."""
 
 
 ONE_LINE_SUMMARY_RULE = """## One-Line Summary — ROLE (applies to BOTH en AND ko)
