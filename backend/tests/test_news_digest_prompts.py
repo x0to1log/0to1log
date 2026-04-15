@@ -125,9 +125,9 @@ def test_classification_prompt_allows_cross_category_overlap_for_dual_significan
 def test_digest_prompt_reframes_one_line_summary_as_top_story_synthesis():
     prompt = get_digest_prompt("business", "expert", [])
 
-    assert "must be exactly ONE sentence that synthesizes the main pattern or shared shift across today's top 2-3 stories." in prompt
-    assert "Do not merely restate a single headline when multiple major stories clearly point to a broader theme." in prompt
-    assert "Does it synthesize the common thread or day's main throughline across the top stories" in prompt
+    assert "should synthesize the common pattern across the top 2-3 stories in one sentence." in prompt
+    assert "It should not read like a stitched list of headlines." in prompt
+    assert "Name the shift, pressure, or pattern that connects the stories." in prompt
     assert "15 English words" not in prompt
     assert "60 Korean chars" not in prompt
 
@@ -137,6 +137,8 @@ def test_learner_prompt_prefers_news_editor_tone_over_chatty_friend_tone():
 
     assert "written news/editorial prose" in prompt
     assert "knowledgeable friend explaining over lunch" not in prompt
+    assert "Write the learner version in clear editorial news prose" in prompt
+    assert 'Do not write body paragraphs in a friendly spoken "~요" tone.' in prompt
 
 
 def test_business_expert_prompt_uses_editorial_brief_tone_not_private_advisor_tone():
@@ -144,6 +146,34 @@ def test_business_expert_prompt_uses_editorial_brief_tone_not_private_advisor_to
 
     assert "strategic news brief" in prompt
     assert "trusted strategic advisor in a private briefing" not in prompt
+    assert "foreground the concrete market-moving event or decision first" in prompt
+    assert "Avoid semicolon headlines or stitched three-story rollups" in prompt
+
+
+def test_expert_title_strategy_prefers_one_clear_throughline_over_glued_lists():
+    prompt = get_digest_prompt("research", "expert", [])
+
+    assert "The frontload should make today's main shift legible quickly" in prompt
+    assert "Do not pack too many separate stories into one line." in prompt
+    assert "Prefer one clear throughline over a list of 2-3 headlines glued together." in prompt
+    assert "Move technical knobs, benchmark details, and specialist phrasing into the body" in prompt
+
+
+def test_learner_title_strategy_says_what_changed_before_the_mechanism():
+    prompt = get_digest_prompt("research", "learner", [])
+
+    assert "Say what changed before naming the technical mechanism." in prompt
+    assert "Prefer user-visible or decision-relevant impact before jargon." in prompt
+    assert "If a technical term appears, it should not be the first thing the reader has to decode." in prompt
+
+
+def test_research_prompts_frontload_practical_advance_before_shorthand():
+    expert_prompt = get_digest_prompt("research", "expert", [])
+    learner_prompt = get_digest_prompt("research", "learner", [])
+
+    for prompt in [expert_prompt, learner_prompt]:
+        assert "foreground the practical advance before the technical mechanism." in prompt
+        assert "Avoid leading with insider shorthand such as FP8, KV cache, policy routing" in prompt
 
 
 def test_quality_prompts_allow_brief_uncited_one_line_summary():
@@ -238,5 +268,6 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
 def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():
     prompt = get_digest_prompt("business", "learner", [])
 
-    assert "Tone for body (ko field): written news/editorial prose by default." in prompt
+    assert "Use readable editorial news prose, not chatty spoken copy." in prompt
+    assert "News sections should default to concise editorial 기사체." in prompt
     assert "친근체 (-에요/-습니다), unchanged." not in prompt

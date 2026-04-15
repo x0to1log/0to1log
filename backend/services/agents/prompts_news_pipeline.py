@@ -357,6 +357,8 @@ Each news item — write 3-4 paragraphs covering:
 
 Writing rules:
 - Write like a technical editor briefing peer engineers: precise, reportorial, and analytical, not casual
+- In the frontload, foreground the practical advance before the technical mechanism.
+- Avoid leading with insider shorthand such as FP8, KV cache, policy routing, or similar specialist terms unless the benefit is clear in the same line.
 - Expand acronyms on first use: "DPO(Direct Preference Optimization)"
 - Reference arXiv IDs and repo URLs when available
 - When multiple sources are provided, draw different information from each — one source for benchmarks, another for architecture, another for limitations. Each paragraph should reference the source it draws from.
@@ -381,13 +383,16 @@ Editorial intent:
 - The reader should come away with vocabulary and a mental model, not jargon dumps.
 
 Writing rules:
-- Write like a clear news editor for general readers — approachable and explanatory, but still reportorial and article-like. NEVER chatty, NEVER lecturing.
+- Write the learner version in clear editorial news prose: approachable and explanatory, but still reportorial and article-like. NEVER chatty, NEVER lecturing.
+- In the frontload, foreground the practical advance before the technical mechanism.
+- Avoid leading with insider shorthand such as FP8, KV cache, policy routing, or similar specialist terms unless the benefit is clear in the same line.
 - LEAD WITH WHAT IT DOES IN PLAIN LANGUAGE before naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time — this technique is called parallel diffusion decoding"
 - Use analogies generously when they help (a complex method ↔ a familiar everyday situation). If the news is straightforward, skip analogy.
 - When introducing ANY acronym, expand it FIRST in Korean style: Korean meaning then English in parentheses. Example: "전문가 혼합(Mixture of Experts, MoE)". NEVER use an acronym without prior explanation.
 - NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize: "85.6% (이 분야 최고 수준)" not just "85.6%".
 - Connect to readers' lives where natural: "이 기술이 일상화되면 우리가 쓰는 챗봇이 더 빨라진다" — but don't force it.
 - In Korean, use written news/editorial prose by default. Interpretive sections may be slightly softer, but stay in editorial prose rather than conversational chat.
+- Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms should be linked to Handbook on first appearance.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
 
@@ -421,6 +426,8 @@ Tone - DECISIVE, but calibrated:
 
 Writing rules:
 - Write like an editor writing a strategic news brief: reportorial in the core story, analytical in the synthesis, never chatty
+- In the frontload, foreground the concrete market-moving event or decision first and move broader interpretation second.
+- Avoid semicolon headlines or stitched three-story rollups unless the stories clearly express one common business pattern.
 - In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
 - Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
 - PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph.
@@ -463,7 +470,9 @@ Editorial intent:
 - The reader should leave with: (1) a clear sense of what changed, (2) one concrete thing they could try this week.
 
 Writing rules:
-- Write like a clear news editor for general readers — easy to follow, but still written as a digest article rather than a chatty explainer.
+- Write the learner version in clear editorial news prose for an intelligent non-specialist — easy to follow, but still written as a digest article rather than a chatty explainer.
+- In the frontload, foreground the concrete market-moving event or decision first and move broader interpretation second.
+- Avoid semicolon headlines or stitched three-story rollups unless the stories clearly express one common business pattern.
 - Before discussing a company's strategy, briefly explain what the company does (assume reader knows OpenAI/Google/Meta but NOT Anthropic/Mistral/Cohere/Z.AI).
 - Use analogy when explaining a complex business move ("이건 마치 ___와 비슷합니다").
 - Connect every item to practical impact for the reader's job (마케터/기획자 관점).
@@ -472,6 +481,94 @@ Writing rules:
 - When multiple sources cover the same news, weave in different perspectives (announcement + analyst reaction + user impact).
 - Action Items must be ACTUALLY DOABLE by a non-developer this week — no "build a multi-agent pipeline", no "evaluate vendor lock-in risk". YES "try Meta AI in WhatsApp", "check the new ChatGPT mode", "read Anthropic's blog post".
 - In Korean, use written news/editorial prose by default. Reader-facing sections may be slightly softer, but avoid conversational chat tone.
+- Do not write body paragraphs in a friendly spoken "~요" tone.
+- Technical/business terms link to Handbook on first appearance.
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
+
+
+# Compact overrides for tone/frontload quality. Keep behavior changes local and
+# avoid accumulating extra rules across the main prompt body.
+RESEARCH_LEARNER_GUIDE = """READER: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. AI를 쫓아가지 않으면 뒤처질 것 같은 불안과 시간 결핍을 동시에 안고 있음.
+READER'S GOAL: 오늘의 AI 연구 흐름을 5분 안에 안전하게 따라잡고, 동료에게 1줄로 설명할 인사이트와 핵심 용어를 얻는다.
+AFTER READING: 독자는 오늘 무엇이 바뀌었는지 한 문장으로 말할 수 있고, 핵심 용어 2-3개를 자기 언어로 풀어낼 수 있다.
+
+Editorial intent:
+- This is a guided technical digest written FOR people who don't read papers — not a watered-down expert brief.
+- The reader should come away with vocabulary and a mental model, not jargon dumps.
+
+Writing rules:
+- Write the learner version in clear editorial news prose: approachable and explanatory, but still reportorial and article-like. NEVER chatty, NEVER lecturing.
+- In the frontload, foreground the practical advance before the technical mechanism.
+- Avoid leading with insider shorthand such as FP8, KV cache, policy routing, or similar specialist terms unless the benefit is clear in the same line.
+- LEAD WITH WHAT IT DOES IN PLAIN LANGUAGE before naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time — this technique is called parallel diffusion decoding"
+- Use analogies generously when they help (a complex method → a familiar everyday situation). If the news is straightforward, skip analogy.
+- When introducing ANY acronym, expand it FIRST in Korean style: Korean meaning then English in parentheses. Example: "전문가 혼합(Mixture of Experts, MoE)". NEVER use an acronym without prior explanation.
+- NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize them in plain language.
+- Connect to readers' lives where natural, but do not force the analogy.
+- In Korean, use written news/editorial prose by default. Interpretive sections may be slightly softer, but stay in editorial prose rather than conversational chat.
+- Do not write body paragraphs in a friendly spoken "~요" tone.
+- Technical/business terms should be linked to Handbook on first appearance.
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
+
+
+BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy lead. An AI-era business decision-maker.
+READER'S GOAL: Make strategic decisions - allocate budget, choose partners, adjust product roadmap, and respond to competitive moves.
+AFTER READING: The reader adjusts their strategy, brings insights to leadership, or initiates a competitive response.
+
+Editorial intent:
+- This is a strategic market brief, not a technical roundup.
+- The reader is here for implications, not deep model or paper explanation.
+
+Tone - DECISIVE, but calibrated:
+- State sourced facts directly.
+- For strategy, motivation, or market interpretation not stated explicitly in the source, use calibrated language such as "signals, points to, implies, or suggests" instead of stating inference as fact.
+- Be confident, but distinguish observable facts from editorial interpretation.
+
+Writing rules:
+- Write like an editor writing a strategic news brief: reportorial in the core story, analytical in the synthesis, never chatty
+- In the frontload, foreground the concrete market-moving event or decision first and move broader interpretation second.
+- Avoid semicolon headlines or stitched three-story rollups unless the stories clearly express one common business pattern.
+- In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
+- Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
+- PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph.
+- SECONDARY or analysis sources should be framed more cautiously in those front-loaded positions.
+- Treat official_platform_asset sources as factual for release details, but keep strategic interpretation one step more cautious than official_site or paper sources.
+- If a lead story is supported mostly by SECONDARY, analysis, or official_platform_asset sources, anchor the headline, excerpt, and first paragraph to the observable event first before any market interpretation.
+- If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt or frame it as reported/suggestive rather than definitive.
+- Prefer factual front-load verbs such as "launches", "releases", "announces", "files", "opens", "reviews", "says", or "prices" over dramatic framing.
+- Avoid loaded words such as "scramble", "showdown", "takes aim", "shot at", "salvo", or "war" in the headline, excerpt, and first paragraph unless the source itself uses that framing.
+- In the headline, excerpt, and first paragraph, avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on" unless a primary source states that conclusion directly.
+- If front-loaded interpretation depends mainly on secondary reporting, phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as" rather than sounding settled.
+- ALWAYS compare numbers to competitors or industry benchmarks
+- Analyze competitive dynamics with explicit reasoning chains grounded in sourced facts
+- Connecting the Dots should explain the strongest plausible drivers and market pattern without inventing hidden motives unsupported by sources
+- Mention technical details only when they materially affect business outcomes.
+- Focus on market structure, pricing, partnerships, funding, regulation, product positioning, and competitive consequences.
+- When multiple sources cover the same story, synthesize their different angles — one for deal terms, another for competitive impact, another for market reaction. Each paragraph should draw from a different source when possible.
+- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
+
+
+BUSINESS_LEARNER_GUIDE = """READER: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT 정도는 매일 쓰지만 GPU 가격이나 IPO 구조는 모름. AI 산업 변화를 '내 일에 영향이 있나' 관점에서 따라가고 싶음.
+READER'S GOAL: 오늘 AI 업계에서 무슨 일이 있었는지 5분 안에 따라잡고, 자기 직무에 적용 가능한 신호 1-2개를 얻는다.
+AFTER READING: 독자는 오늘의 큰 변화를 동료에게 1문장으로 설명할 수 있고, 이번 주에 직접 시도할 액션 1-2개를 고를 수 있다.
+
+Editorial intent:
+- AI 시장 다이제스트지만 '비개발자 직장인'의 입장에서 읽히는 기사형 브리프를 쓴다.
+- The reader should leave with: (1) a clear sense of what changed, (2) one concrete thing they could try this week.
+
+Writing rules:
+- Write the learner version in clear editorial news prose for an intelligent non-specialist — easy to follow, but still written as a digest article rather than a chatty explainer.
+- In the frontload, foreground the concrete market-moving event or decision first and move broader interpretation second.
+- Avoid semicolon headlines or stitched three-story rollups unless the stories clearly express one common business pattern.
+- Before discussing a company's strategy, briefly explain what the company does (assume reader knows OpenAI/Google/Meta but NOT Anthropic/Mistral/Cohere/Z.AI).
+- Use analogy when explaining a complex business move only when it genuinely helps.
+- Connect every item to practical impact for the reader's job.
+- Technical explanation is allowed, but only in service of understanding the business impact — never tech-for-tech-sake.
+- Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
+- When multiple sources cover the same news, weave in different perspectives (announcement + analyst reaction + user impact).
+- Action Items must be ACTUALLY DOABLE by a non-developer this week — no "build a multi-agent pipeline", no "evaluate vendor lock-in risk". YES "try Meta AI in WhatsApp", "check the new ChatGPT mode", "read Anthropic's blog post".
+- In Korean, use written news/editorial prose by default. Reader-facing sections may be slightly softer, but avoid conversational chat tone.
+- Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms link to Handbook on first appearance.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
 
@@ -939,6 +1036,52 @@ The clever part: each agent only sees part of the information, so they cannot ju
 """
 
 # --- Digest prompt getters ---
+
+EXPERT_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
+
+Write the expert frontload like a sharp news editor for an expert audience.
+The frontload should make today's main shift legible quickly, not compress every major story into one line.
+
+For headline:
+- Capture one clear throughline or one dominant development.
+- Do not pack too many separate stories into one line.
+- Prefer one clear throughline over a list of 2-3 headlines glued together.
+
+For excerpt:
+- Sentence 1: what happened in concrete terms.
+- Sentence 2: why it matters.
+- Prefer broadly understandable wording before insider shorthand.
+- Move technical knobs, benchmark details, and specialist phrasing into the body unless they are essential to the main news value.
+"""
+
+
+LEARNER_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
+
+Write the learner frontload like a clear news editor for an intelligent non-specialist.
+The learner frontload should be easier, not thinner.
+
+For headline and excerpt:
+- Say what changed before naming the technical mechanism.
+- Prefer user-visible or decision-relevant impact before jargon.
+- Do not cram multiple separate stories into one line.
+- If a technical term appears, it should not be the first thing the reader has to decode.
+
+For Korean:
+- Use readable editorial news prose, not chatty spoken copy.
+- News sections should default to concise editorial 기사체.
+- Reader-facing sections may be slightly softer, but should still sound like an editorial digest rather than a casual conversation.
+"""
+
+
+ONE_LINE_SUMMARY_RULE = """## One-Line Summary — ROLE (applies to BOTH en AND ko)
+
+The One-Line Summary should synthesize the common pattern across the top 2-3 stories in one sentence.
+It should not read like a stitched list of headlines.
+Name the shift, pressure, or pattern that connects the stories.
+It may be slightly longer when needed for clarity.
+Inline citations are not required.
+"""
+
 
 DIGEST_PROMPT_MAP = {
     ("research", "expert"): (RESEARCH_EXPERT_SECTIONS, RESEARCH_EXPERT_GUIDE),
