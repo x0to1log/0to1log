@@ -4,6 +4,7 @@ import logging
 import re as _re_module
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Any
 from urllib.parse import urlparse
 
@@ -11,9 +12,45 @@ import httpx
 from tavily import TavilyClient
 
 from core.config import settings, today_kst
+from core.database import get_supabase
 from models.news_pipeline import NewsCandidate
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _load_domain_filters() -> dict[str, frozenset[str]]:
+    """Load domain filter lists from Supabase news_domain_filters table.
+
+    Cached for the lifetime of the process — restart Railway to refresh.
+    Returns dict with keys: block_non_en, official_priority, media_tier.
+    Falls back to empty sets if DB is unreachable (logs error).
+    """
+    result: dict[str, frozenset[str]] = {
+        "block_non_en": frozenset(),
+        "official_priority": frozenset(),
+        "media_tier": frozenset(),
+    }
+    try:
+        supabase = get_supabase()
+        if supabase is None:
+            logger.error("Supabase client unavailable — falling back to empty domain filters")
+            return result
+        rows = supabase.table("news_domain_filters").select("domain, filter_type").execute()
+        if not rows.data:
+            logger.error("news_domain_filters table is empty — falling back to empty filters")
+            return result
+        buckets: dict[str, set[str]] = {k: set() for k in result}
+        for row in rows.data:
+            ftype = row.get("filter_type")
+            domain = row.get("domain")
+            if ftype in buckets and domain:
+                buckets[ftype].add(domain.lower())
+        return {k: frozenset(v) for k, v in buckets.items()}
+    except Exception as e:
+        logger.error("Failed to load news_domain_filters from DB: %s — falling back to empty", e)
+        return result
+
 
 _NON_EN_DOMAINS = (
     "landiannews.com", "36kr.com", "unifuncs.com", "minimaxi.com",

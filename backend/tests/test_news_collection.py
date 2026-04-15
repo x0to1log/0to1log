@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from core.config import settings
+
 
 TAVILY_SEARCH_RESPONSE = {
     "results": [
@@ -360,3 +362,23 @@ async def test_collect_community_reactions_client_construction_error():
         text = await collect_community_reactions("Title", "https://example.com")
 
     assert text == ""
+
+
+@pytest.mark.skipif(
+    not settings.supabase_url,
+    reason="Requires live Supabase connection"
+)
+def test_load_domain_filters_returns_three_categories():
+    """domain filter loader가 3개 카테고리로 분류된 set을 반환한다."""
+    from services.news_collection import _load_domain_filters
+
+    # Clear lru_cache in case another test populated it
+    _load_domain_filters.cache_clear()
+    filters = _load_domain_filters()
+    assert "block_non_en" in filters
+    assert "official_priority" in filters
+    assert "media_tier" in filters
+    assert isinstance(filters["block_non_en"], frozenset)
+    # Sanity: 시드 데이터가 들어 있어야 함
+    assert "openai.com" in filters["official_priority"]
+    assert "36kr.com" in filters["block_non_en"]
