@@ -1,403 +1,776 @@
-"""Handbook term type classification, facets, and type-specific prompts."""
+"""Handbook term taxonomy and type-specific prompt helpers."""
+
+from __future__ import annotations
+
+import re
 
 TERM_TYPES = [
-    "concept",
-    "model_architecture",
-    "technique_method",
-    "product_platform",
-    "hardware_infra",
-    "workflow_pattern",
+    "foundational_concept",
+    "problem_failure_mode",
+    "model_algorithm_family",
+    "training_optimization_method",
+    "retrieval_knowledge_system",
+    "system_workflow_pattern",
+    "data_storage_indexing_system",
+    "protocol_format_data_structure",
+    "capability_feature_spec",
     "metric_benchmark",
-    "protocol_format",
+    "product_platform_service",
+    "library_framework_sdk",
+    "hardware_runtime_infra",
 ]
 
 INTENT_VALUES = ["understand", "compare", "build", "debug", "evaluate"]
 VOLATILITY_VALUES = ["stable", "evolving", "fast-changing"]
 
-CLASSIFY_TERM_PROMPT = """You are a technical term classifier. Given a term name and its categories, classify its type, intent, and volatility.
+TYPE_SUBTYPE_VALUES: dict[str, list[str]] = {
+    "foundational_concept": [
+        "reasoning_method",
+        "policy_discourse",
+        "standard_regulation",
+    ],
+    "product_platform_service": [
+        "ecosystem_platform",
+        "model_api_service",
+        "managed_ai_cloud_platform",
+        "managed_ai_infra_service",
+        "developer_tool_platform",
+    ],
+    "hardware_runtime_infra": [
+        "accelerator_hardware",
+        "compute_runtime",
+        "serving_engine",
+    ],
+    "metric_benchmark": [
+        "scalar_metric",
+        "benchmark_suite",
+    ],
+    "protocol_format_data_structure": [
+        "wire_protocol",
+        "data_format",
+        "core_data_structure",
+    ],
+}
 
-## Types (choose ONE)
+DEFAULT_INTENT_BY_TYPE: dict[str, list[str]] = {
+    "foundational_concept": ["understand"],
+    "problem_failure_mode": ["debug", "understand"],
+    "model_algorithm_family": ["understand", "compare"],
+    "training_optimization_method": ["build", "compare"],
+    "retrieval_knowledge_system": ["build", "understand"],
+    "system_workflow_pattern": ["build", "compare"],
+    "data_storage_indexing_system": ["build", "compare"],
+    "protocol_format_data_structure": ["build", "understand"],
+    "capability_feature_spec": ["compare", "evaluate"],
+    "metric_benchmark": ["evaluate", "understand"],
+    "product_platform_service": ["compare", "build"],
+    "library_framework_sdk": ["build", "compare"],
+    "hardware_runtime_infra": ["compare", "build"],
+}
 
-1. **concept** — Fundamental CS/ML concepts, principles, phenomena
-   Examples: embedding, hallucination, overfitting, tokenization, attention mechanism, alignment
+DEFAULT_VOLATILITY_BY_TYPE: dict[str, str] = {
+    "foundational_concept": "stable",
+    "problem_failure_mode": "evolving",
+    "model_algorithm_family": "stable",
+    "training_optimization_method": "evolving",
+    "retrieval_knowledge_system": "evolving",
+    "system_workflow_pattern": "fast-changing",
+    "data_storage_indexing_system": "evolving",
+    "protocol_format_data_structure": "stable",
+    "capability_feature_spec": "fast-changing",
+    "metric_benchmark": "evolving",
+    "product_platform_service": "fast-changing",
+    "library_framework_sdk": "evolving",
+    "hardware_runtime_infra": "fast-changing",
+}
 
-2. **model_architecture** — Neural network architectures, model designs
-   Examples: Transformer, diffusion model, GAN, VAE, CNN, RNN, MoE, Mamba
 
-3. **technique_method** — Repeatable practices, training/optimization methods
-   Examples: fine-tuning, LoRA, RLHF, DPO, quantization, RAG, prompt engineering
+def normalize_term_key(term: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9]+", " ", (term or "").lower()).strip()
+    return re.sub(r"\s+", " ", cleaned)
 
-4. **product_platform** — Specific products, services, frameworks, companies
-   Examples: GPT-4o, Claude, PyTorch, LangChain, Hugging Face, Cursor, Bedrock
 
-5. **hardware_infra** — Hardware, compute, deployment infrastructure
-   Examples: GPU, CUDA, Trainium, vLLM, Docker, Kubernetes, TensorRT, H100
+def normalize_term_subtype(term_type: str, subtype: object | None) -> str | None:
+    if not subtype:
+        return None
+    allowed = TYPE_SUBTYPE_VALUES.get(term_type, [])
+    if not allowed:
+        return None
+    normalized = normalize_term_key(str(subtype)).replace(" ", "_")
+    return normalized if normalized in allowed else None
 
-6. **workflow_pattern** — System design patterns, orchestration patterns
-   Examples: agentic workflows, MCP, function calling, CI/CD, MLOps, edge deployment
 
-7. **metric_benchmark** — Evaluation metrics, scoring methods, benchmarks
-   Examples: F1 Score, perplexity, BLEU, MMLU, HumanEval, AUC-ROC, latency
+def format_term_type_label(term_type: str, subtype: str | None = None) -> str:
+    return f"{term_type} / {subtype}" if subtype else term_type
 
-8. **protocol_format** — Protocols, data formats, data structures, standards
-   Examples: OAuth 2.0, HTTP/3, gRPC, Parquet, B-Tree, Arrow, WebSocket, GraphQL
 
-## Intent (choose 1-2, primary first)
-- **understand**: User wants to learn what this is and how it works
-- **compare**: User wants to compare with alternatives and decide
-- **build**: User wants to implement or apply this
-- **debug**: User wants to diagnose or fix problems related to this
-- **evaluate**: User wants to measure or assess using this
+TERM_PLANNER_OVERRIDES: dict[str, dict[str, object]] = {
+    "rag": {"type": "retrieval_knowledge_system", "intent": ["build", "understand"], "volatility": "evolving"},
+    "retrieval augmented generation": {"type": "retrieval_knowledge_system", "intent": ["build", "understand"], "volatility": "evolving"},
+    "hugging face": {"type": "product_platform_service", "subtype": "ecosystem_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "huggingface": {"type": "product_platform_service", "subtype": "ecosystem_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "pytorch": {"type": "library_framework_sdk", "intent": ["build", "compare"], "volatility": "evolving"},
+    "attention": {"type": "model_algorithm_family", "intent": ["understand", "compare"], "volatility": "stable"},
+    "transformer": {"type": "model_algorithm_family", "intent": ["understand", "compare"], "volatility": "stable"},
+    "chain of thought": {"type": "foundational_concept", "subtype": "reasoning_method", "intent": ["understand", "compare"], "volatility": "evolving"},
+    "cot": {"type": "foundational_concept", "subtype": "reasoning_method", "intent": ["understand", "compare"], "volatility": "evolving"},
+    "frontier model": {"type": "foundational_concept", "subtype": "policy_discourse", "intent": ["understand", "evaluate"], "volatility": "fast-changing"},
+    "iso 42001": {"type": "foundational_concept", "subtype": "standard_regulation", "intent": ["understand", "evaluate"], "volatility": "stable"},
+    "lora": {"type": "training_optimization_method", "intent": ["build", "compare"], "volatility": "evolving"},
+    "qlora": {"type": "training_optimization_method", "intent": ["build", "compare"], "volatility": "evolving"},
+    "fine tuning": {"type": "training_optimization_method", "intent": ["build", "compare"], "volatility": "evolving"},
+    "agentic workflow": {"type": "system_workflow_pattern", "intent": ["build", "compare"], "volatility": "fast-changing"},
+    "agentic workflows": {"type": "system_workflow_pattern", "intent": ["build", "compare"], "volatility": "fast-changing"},
+    "edge deployment": {"type": "system_workflow_pattern", "intent": ["build", "compare"], "volatility": "evolving"},
+    "vector database": {"type": "data_storage_indexing_system", "intent": ["build", "compare"], "volatility": "evolving"},
+    "feature store": {"type": "data_storage_indexing_system", "intent": ["build", "compare"], "volatility": "evolving"},
+    "parquet": {"type": "protocol_format_data_structure", "subtype": "data_format", "intent": ["build", "understand"], "volatility": "stable"},
+    "apache arrow": {"type": "protocol_format_data_structure", "subtype": "data_format", "intent": ["build", "understand"], "volatility": "stable"},
+    "jsonl": {"type": "protocol_format_data_structure", "subtype": "data_format", "intent": ["build", "understand"], "volatility": "stable"},
+    "oauth 2 0": {"type": "protocol_format_data_structure", "subtype": "wire_protocol", "intent": ["build", "understand"], "volatility": "stable"},
+    "grpc": {"type": "protocol_format_data_structure", "subtype": "wire_protocol", "intent": ["build", "understand"], "volatility": "stable"},
+    "websocket": {"type": "protocol_format_data_structure", "subtype": "wire_protocol", "intent": ["build", "understand"], "volatility": "stable"},
+    "b tree": {"type": "protocol_format_data_structure", "subtype": "core_data_structure", "intent": ["build", "understand"], "volatility": "stable"},
+    "1m context": {"type": "capability_feature_spec", "intent": ["compare", "evaluate"], "volatility": "fast-changing"},
+    "function calling": {"type": "capability_feature_spec", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "multimodal": {"type": "capability_feature_spec", "intent": ["compare", "understand"], "volatility": "fast-changing"},
+    "f1 score": {"type": "metric_benchmark", "subtype": "scalar_metric", "intent": ["evaluate", "understand"], "volatility": "stable"},
+    "perplexity": {"type": "metric_benchmark", "subtype": "scalar_metric", "intent": ["evaluate", "understand"], "volatility": "stable"},
+    "mmlu": {"type": "metric_benchmark", "subtype": "benchmark_suite", "intent": ["evaluate", "compare"], "volatility": "evolving"},
+    "humaneval": {"type": "metric_benchmark", "subtype": "benchmark_suite", "intent": ["evaluate", "compare"], "volatility": "evolving"},
+    "hallucination": {"type": "problem_failure_mode", "intent": ["debug", "understand"], "volatility": "evolving"},
+    "prompt injection": {"type": "problem_failure_mode", "intent": ["debug", "build"], "volatility": "fast-changing"},
+    "openai api": {"type": "product_platform_service", "subtype": "model_api_service", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "anthropic api": {"type": "product_platform_service", "subtype": "model_api_service", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "gemini api": {"type": "product_platform_service", "subtype": "model_api_service", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "bedrock": {"type": "product_platform_service", "subtype": "managed_ai_cloud_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "vertex ai": {"type": "product_platform_service", "subtype": "managed_ai_cloud_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "azure ai foundry": {"type": "product_platform_service", "subtype": "managed_ai_cloud_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "pinecone": {"type": "product_platform_service", "subtype": "managed_ai_infra_service", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "qdrant cloud": {"type": "product_platform_service", "subtype": "managed_ai_infra_service", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "langsmith": {"type": "product_platform_service", "subtype": "developer_tool_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "weights and biases": {"type": "product_platform_service", "subtype": "developer_tool_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "w b": {"type": "product_platform_service", "subtype": "developer_tool_platform", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "trainium": {"type": "hardware_runtime_infra", "subtype": "accelerator_hardware", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "h100": {"type": "hardware_runtime_infra", "subtype": "accelerator_hardware", "intent": ["compare", "build"], "volatility": "fast-changing"},
+    "cuda": {"type": "hardware_runtime_infra", "subtype": "compute_runtime", "intent": ["build", "compare"], "volatility": "fast-changing"},
+    "tensorrt": {"type": "hardware_runtime_infra", "subtype": "compute_runtime", "intent": ["build", "compare"], "volatility": "fast-changing"},
+    "vllm": {"type": "hardware_runtime_infra", "subtype": "serving_engine", "intent": ["build", "compare"], "volatility": "fast-changing"},
+    "text generation inference": {"type": "hardware_runtime_infra", "subtype": "serving_engine", "intent": ["build", "compare"], "volatility": "fast-changing"},
+}
 
-## Volatility (choose ONE)
-- **stable**: Core concept/math settled, changes rarely (Transformer, F1, OAuth)
-- **evolving**: Active development, monthly updates (LoRA, RAG, MoE, MMLU leaderboard)
-- **fast-changing**: Breaking changes frequently, check latest (GPT-5, LangChain, MCP, vLLM)
 
-## Disambiguation Rules
-- Framework vs Product: OSS framework = hardware_infra (Docker, PyTorch), commercial service = product_platform (Bedrock, Copilot)
-- Architecture vs Technique: architecture = structural design (Transformer, MoE), technique = method you apply (LoRA, quantization)
-- Concept vs Technique: concept explains WHY (overfitting, hallucination), technique explains HOW (data augmentation, RLHF)
-- Workflow vs Technique: workflow has multiple orchestrated components (RAG pipeline, agentic workflow), technique is a single method (fine-tuning)
-- Debug intent: problems/failures/security (hallucination, prompt injection, data drift, overfitting)
+def get_term_planner_override(term: str) -> dict[str, object] | None:
+    return TERM_PLANNER_OVERRIDES.get(normalize_term_key(term))
 
-## Output
+
+TERM_GENERATION_OVERRIDES: dict[str, dict[str, object]] = {
+    "function calling": {
+        "preferred_code_mode": "real-code",
+        "basic_ko_focus_guide": (
+            "## Function Calling KO Basic Compression Guide\n"
+            "- Keep '쉽게 이해하기' to 3 short paragraphs max.\n"
+            "- Keep '비유와 예시' to exactly 3 bullets.\n"
+            "- Keep '한눈에 비교' to a table plus at most 2 short follow-up sentences.\n"
+            "- Keep '어디서 왜 중요한가' to exactly 3 bullets.\n"
+            "- Keep '자주 하는 오해' to exactly 3 misconception -> correction pairs.\n"
+            "- Keep '대화에서는 이렇게' to exactly 4 short team-style lines."
+        ),
+        "advanced_ko_focus_guide": (
+            "## Function Calling KO Advanced Readability Guide\n"
+            "- Use design-review tone, not paper-summary tone.\n"
+            "- Prefer bullets over long dense paragraphs.\n"
+            "- Keep one claim per sentence whenever possible.\n"
+            "- Prefer execution flow and runtime boundaries over abstract formalism.\n"
+            "- Keep formulas minimal unless they directly clarify validation or control flow."
+        ),
+        "code_contract_guide": (
+            "## Function Calling Code Contract\n"
+            "- KO and EN code sections must implement the same system model and same logical steps.\n"
+            "- Include a tool registry, schema validation, unknown tool handling, bad args handling, "
+            "network or timeout failure handling, retry or backoff logic, and a no-call case.\n"
+            "- Keep the code vendor-neutral. Do not rely on provider-specific SDK behavior.\n"
+            "- Locale differences belong in the explanatory prose, not in the core code path."
+        ),
+        "advanced_focus_guide": (
+            "## Function Calling Recovery Guide\n"
+            "- Center the advanced explanation on the real runtime loop: tool schema definition -> model tool selection "
+            "-> argument emission -> host-side validation -> execution boundary -> tool result handoff.\n"
+            "- Explicitly distinguish model proposal from host execution. The model suggests a call; the application "
+            "owns validation, authorization, retries, and failure handling.\n"
+            "- In tradeoffs, compare function calling against RAG, generic tool-use prompts, and hardcoded routing.\n"
+            "- In pitfalls, prioritize wrong tool choice, malformed arguments, unsafe defaults, relevance misses, "
+            "unknown function handling, and runtime failure handling over benchmark commentary.\n"
+            "- In code, include schema validation, unknown function handling, bad args, and network failure paths.\n"
+            "- Avoid drifting into benchmark summaries unless they directly support an engineering decision."
+        ),
+        "reference_context": (
+            "## Curated Function Calling Reference Materials\n\n"
+            "### [1] Function calling - OpenAI API\n"
+            "URL: https://platform.openai.com/docs/guides/function-calling/how-do-i-ensure-the-model-calls-the-correct-function\n"
+            "Official guide describing the tool calling flow, JSON schema-based function definitions, strict mode, "
+            "parallel tool calls, and the requirement that the application executes tool calls and returns outputs.\n\n"
+            "### [2] Structured model outputs - OpenAI API\n"
+            "URL: https://platform.openai.com/docs/guides/structured-outputs/supported-types\n"
+            "Official guide distinguishing structured outputs from function calling and clarifying when JSON schema "
+            "should constrain tool arguments versus final assistant responses.\n\n"
+            "### [3] Tool use with Claude - Anthropic\n"
+            "URL: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview\n"
+            "Official overview of tool use, tool_use blocks, and the client-side responsibility to implement tools.\n\n"
+            "### [4] How to implement tool use - Anthropic\n"
+            "URL: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use\n"
+            "Implementation guide covering tool definitions, message structure, execution handoff, and practical tool "
+            "result loops.\n\n"
+            "### [5] Function calling with the Gemini API - Google AI for Developers\n"
+            "URL: https://ai.google.dev/gemini-api/docs/function-calling\n"
+            "Official guide covering function declarations, OpenAPI-compatible schemas, application-side execution, "
+            "modes, validation, and error handling recommendations."
+        ),
+        "references_en": [
+            {
+                "title": "Function calling",
+                "authors": "OpenAI",
+                "venue": "OpenAI API Docs",
+                "type": "docs",
+                "url": "https://platform.openai.com/docs/guides/function-calling/how-do-i-ensure-the-model-calls-the-correct-function",
+                "tier": "primary",
+                "annotation": "Official tool-calling flow, schema design, strict mode, and host execution loop.",
+            },
+            {
+                "title": "Structured model outputs",
+                "authors": "OpenAI",
+                "venue": "OpenAI API Docs",
+                "type": "docs",
+                "url": "https://platform.openai.com/docs/guides/structured-outputs/supported-types",
+                "tier": "primary",
+                "annotation": "Clarifies when to use function calling versus schema-constrained final responses.",
+            },
+            {
+                "title": "Tool use with Claude",
+                "authors": "Anthropic",
+                "venue": "Anthropic Docs",
+                "type": "docs",
+                "url": "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview",
+                "tier": "primary",
+                "annotation": "Official overview of tool_use blocks and client-owned execution boundaries.",
+            },
+            {
+                "title": "How to implement tool use",
+                "authors": "Anthropic",
+                "venue": "Anthropic Docs",
+                "type": "docs",
+                "url": "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use",
+                "tier": "primary",
+                "annotation": "Concrete implementation guidance for tool schemas, execution loops, and tool results.",
+            },
+            {
+                "title": "Function calling with the Gemini API",
+                "authors": "Google",
+                "venue": "Google AI for Developers",
+                "type": "docs",
+                "url": "https://ai.google.dev/gemini-api/docs/function-calling",
+                "tier": "primary",
+                "annotation": "Official function declaration, mode, validation, and error-handling guidance.",
+            },
+        ],
+        "references_ko": [
+            {
+                "title": "Function calling",
+                "authors": "OpenAI",
+                "venue": "OpenAI API Docs",
+                "type": "docs",
+                "url": "https://platform.openai.com/docs/guides/function-calling/how-do-i-ensure-the-model-calls-the-correct-function",
+                "tier": "primary",
+                "annotation": "공식 툴 호출 흐름, JSON 스키마 정의, strict mode, 호스트 실행 책임을 정리한 문서.",
+            },
+            {
+                "title": "Structured model outputs",
+                "authors": "OpenAI",
+                "venue": "OpenAI API Docs",
+                "type": "docs",
+                "url": "https://platform.openai.com/docs/guides/structured-outputs/supported-types",
+                "tier": "primary",
+                "annotation": "함수 호출과 구조화 응답의 경계를 설명해 언제 어떤 방식을 써야 하는지 구분해 준다.",
+            },
+            {
+                "title": "Tool use with Claude",
+                "authors": "Anthropic",
+                "venue": "Anthropic Docs",
+                "type": "docs",
+                "url": "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview",
+                "tier": "primary",
+                "annotation": "tool_use 블록 구조와 모델 제안 대 클라이언트 실행 경계를 공식적으로 설명한다.",
+            },
+            {
+                "title": "How to implement tool use",
+                "authors": "Anthropic",
+                "venue": "Anthropic Docs",
+                "type": "docs",
+                "url": "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use",
+                "tier": "primary",
+                "annotation": "툴 스키마 정의, 실행 루프, tool result 전달 패턴을 구현 관점에서 정리한 문서.",
+            },
+            {
+                "title": "Function calling with the Gemini API",
+                "authors": "Google",
+                "venue": "Google AI for Developers",
+                "type": "docs",
+                "url": "https://ai.google.dev/gemini-api/docs/function-calling",
+                "tier": "primary",
+                "annotation": "함수 선언, 모드 설정, 검증, 에러 처리까지 포함한 공식 함수 호출 가이드.",
+            },
+        ],
+    },
+    "rag": {
+        "preferred_code_mode": "pseudocode",
+        "advanced_focus_guide": "",
+    },
+    "prompt injection": {
+        "preferred_code_mode": "no-code",
+        "advanced_focus_guide": "",
+    },
+    "vector database": {
+        "preferred_code_mode": "real-code",
+        "advanced_focus_guide": "",
+    },
+    "quantization": {
+        "preferred_code_mode": "pseudocode",
+        "advanced_focus_guide": "",
+    },
+    "context window": {
+        "preferred_code_mode": "no-code",
+        "advanced_focus_guide": "",
+    },
+}
+
+
+def get_term_generation_override(term: str) -> dict[str, object] | None:
+    return TERM_GENERATION_OVERRIDES.get(normalize_term_key(term))
+
+
+SOURCE_FIELDS = ("definition", "hero", "basic", "advanced", "references")
+SOURCE_CANDIDATES = ("curated", "brave", "exa", "tavily")
+
+FIELD_SOURCE_PRIORITY: dict[str, list[str]] = {
+    "definition": ["curated", "brave", "exa", "tavily"],
+    "hero": ["tavily", "curated", "brave", "exa"],
+    "basic": ["brave", "tavily", "curated", "exa"],
+    "advanced": ["brave", "exa", "curated", "tavily"],
+    "references": ["curated", "brave", "exa", "tavily"],
+}
+
+TYPE_SOURCE_PRIORITY: dict[str, dict[str, list[str]]] = {
+    "capability_feature_spec": dict(FIELD_SOURCE_PRIORITY),
+    "product_platform_service": {
+        "definition": ["brave", "curated", "tavily", "exa"],
+        "hero": ["tavily", "brave", "curated", "exa"],
+        "basic": ["brave", "tavily", "curated", "exa"],
+        "advanced": ["brave", "exa", "tavily", "curated"],
+        "references": ["brave", "curated", "exa", "tavily"],
+    },
+    "model_algorithm_family": {
+        "definition": ["exa", "brave", "curated", "tavily"],
+        "hero": ["tavily", "brave", "exa", "curated"],
+        "basic": ["exa", "brave", "tavily", "curated"],
+        "advanced": ["exa", "brave", "curated", "tavily"],
+        "references": ["exa", "brave", "curated", "tavily"],
+    },
+    "training_optimization_method": {
+        "definition": ["exa", "brave", "curated", "tavily"],
+        "hero": ["tavily", "brave", "exa", "curated"],
+        "basic": ["exa", "brave", "tavily", "curated"],
+        "advanced": ["exa", "brave", "curated", "tavily"],
+        "references": ["exa", "brave", "curated", "tavily"],
+    },
+    "problem_failure_mode": {
+        "definition": ["brave", "exa", "curated", "tavily"],
+        "hero": ["tavily", "brave", "exa", "curated"],
+        "basic": ["brave", "exa", "tavily", "curated"],
+        "advanced": ["brave", "exa", "curated", "tavily"],
+        "references": ["brave", "exa", "curated", "tavily"],
+    },
+}
+
+SUBTYPE_SOURCE_PRIORITY: dict[tuple[str, str], dict[str, list[str]]] = {
+    ("foundational_concept", "reasoning_method"): {
+        "definition": ["exa", "brave", "curated", "tavily"],
+        "hero": ["tavily", "exa", "brave", "curated"],
+        "basic": ["exa", "brave", "curated", "tavily"],
+        "advanced": ["exa", "brave", "curated", "tavily"],
+        "references": ["exa", "brave", "curated", "tavily"],
+    },
+    ("foundational_concept", "policy_discourse"): {
+        "definition": ["brave", "curated", "exa", "tavily"],
+        "hero": ["tavily", "brave", "curated", "exa"],
+        "basic": ["brave", "exa", "curated", "tavily"],
+        "advanced": ["brave", "exa", "curated", "tavily"],
+        "references": ["brave", "curated", "exa", "tavily"],
+    },
+    ("foundational_concept", "standard_regulation"): {
+        "definition": ["brave", "curated", "exa", "tavily"],
+        "hero": ["tavily", "brave", "curated", "exa"],
+        "basic": ["brave", "curated", "exa", "tavily"],
+        "advanced": ["brave", "curated", "exa", "tavily"],
+        "references": ["brave", "curated", "exa", "tavily"],
+    },
+}
+
+TYPE_AWARE_REFERENCE_BLOCKLISTS: dict[str, list[str]] = {
+    "capability_feature_spec": [
+        "datacamp.com",
+        "mlsysbook.ai",
+        "pmc.ncbi.nlm.nih.gov",
+        "substack.com",
+    ]
+}
+
+SUBTYPE_AWARE_REFERENCE_BLOCKLISTS: dict[tuple[str, str], list[str]] = {
+    ("foundational_concept", "reasoning_method"): [
+        "datacamp.com",
+        "mlsysbook.ai",
+        "pmc.ncbi.nlm.nih.gov",
+        "substack.com",
+    ],
+}
+
+
+def get_field_source_priority(term_type: str, field: str, subtype: str | None = None) -> list[str]:
+    subtype_priority = SUBTYPE_SOURCE_PRIORITY.get((term_type, subtype or ""), {}).get(field)
+    if subtype_priority:
+        return list(subtype_priority)
+    priority = TYPE_SOURCE_PRIORITY.get(term_type, {}).get(field)
+    if priority:
+        return list(priority)
+    return list(FIELD_SOURCE_PRIORITY.get(field, list(SOURCE_CANDIDATES)))
+
+
+def get_reference_blocklist(term_type: str, subtype: str | None = None) -> list[str]:
+    merged: list[str] = []
+    for host in TYPE_AWARE_REFERENCE_BLOCKLISTS.get(term_type, []):
+        if host not in merged:
+            merged.append(host)
+    for host in SUBTYPE_AWARE_REFERENCE_BLOCKLISTS.get((term_type, subtype or ""), []):
+        if host not in merged:
+            merged.append(host)
+    return merged
+
+
+CLASSIFY_TERM_PROMPT = """You are a planner for an AI handbook pipeline.
+
+Classify the term into exactly one type:
+- foundational_concept
+- problem_failure_mode
+- model_algorithm_family
+- training_optimization_method
+- retrieval_knowledge_system
+- system_workflow_pattern
+- data_storage_indexing_system
+- protocol_format_data_structure
+- capability_feature_spec
+- metric_benchmark
+- product_platform_service
+- library_framework_sdk
+- hardware_runtime_infra
+
+Guidance:
+- hosted platform/service/model surface => product_platform_service
+- importable framework/sdk => library_framework_sdk
+- retrieval/indexing/reranking/grounding system => retrieval_knowledge_system
+- orchestration across components => system_workflow_pattern
+- feature/spec claim like context length/function calling => capability_feature_spec
+- failure or security issue => problem_failure_mode
+- architecture/mechanism => model_algorithm_family
+- if type=foundational_concept, also choose one subtype when it materially sharpens retrieval and framing:
+  - reasoning_method: prompting or reasoning scaffold such as Chain-of-Thought, scratchpad prompting, or deliberate reasoning traces
+  - policy_discourse: umbrella governance/safety/capability term such as frontier model where technical meaning and policy meaning must be separated
+  - standard_regulation: named standard, certification, or management-system concept such as ISO 42001
+- if type=product_platform_service, also choose one subtype:
+  - ecosystem_platform: hub/repository/distribution surface for models, datasets, apps
+  - model_api_service: hosted model API endpoint and pricing surface
+  - managed_ai_cloud_platform: cloud control plane with IAM/region/enterprise integration
+  - managed_ai_infra_service: managed vector/runtime/inference infrastructure service
+  - developer_tool_platform: eval, tracing, experiments, observability, prompt workflow tooling
+- if type=hardware_runtime_infra, also choose one subtype:
+  - accelerator_hardware: chips/accelerators such as Trainium or H100
+  - compute_runtime: driver/compiler/runtime stack such as CUDA or TensorRT
+  - serving_engine: serving stack such as vLLM or TGI
+- if type=metric_benchmark, also choose one subtype:
+  - scalar_metric: single-number metric such as F1 score or perplexity
+  - benchmark_suite: multi-task benchmark or leaderboard such as MMLU
+- if type=protocol_format_data_structure, also choose one subtype:
+  - wire_protocol: network/auth/protocol flow such as OAuth 2.0 or gRPC
+  - data_format: serialization/storage format such as Parquet or Arrow
+  - core_data_structure: abstract data structure such as B-tree
+
 Return JSON:
-{{
-  "type": "one_of_8_types",
+{
+  "type": "one_of_13_types",
+  "subtype": "optional_subtype_or_null",
   "intent": ["primary_intent", "optional_secondary"],
-  "volatility": "stable_or_evolving_or_fast-changing"
-}}"""
+  "volatility": "stable_or_evolving_or_fast-changing",
+  "confidence": 0.0
+}
+"""
 
 
 TYPE_DEPTH_GUIDES: dict[str, str] = {
-    "model_architecture": """## Type-Specific Depth: Model Architecture
-- adv_*_1_mechanism: Formal definition + data flow (input → layers/steps → output) + tensor shapes where relevant. Include time/space complexity (Big O). Reference the original paper only if it appears in Reference Materials.
-- adv_*_2_formulas: Full mathematical formulation with derivation steps, not just final formula. Include loss function and gradient update rules.
-- adv_*_3_code: Production-grade code (NOT hello world). Error handling, type hints, real library usage (torch, sklearn). Min 15 substantial lines.
-- adv_*_4_tradeoffs: When to use this architecture vs alternatives. Include benchmark comparisons (accuracy, latency, memory) with numbers from Reference Materials. State "Public benchmarks not yet available" rather than inventing numbers.
-- adv_*_5_pitfalls: Production failure modes — gradient instability, memory explosion, convergence problems, data leakage. Each with mitigation.
-- CRITICAL: Do NOT fabricate paper titles, arXiv IDs, author names, or venues. Only cite papers from Reference Materials. If none available, write "See official documentation" instead.""",
-
-    "hardware_infra": """## Type-Specific Depth: Hardware/Infrastructure
-- adv_*_1_mechanism: Architecture description (components, data flow, control plane vs data plane). How requests are processed, scheduling, resource management.
-- adv_*_2_formulas: Performance characteristics table (throughput, latency, scalability limits). No math formulas needed.
-- adv_*_3_code: Real configuration examples (YAML, Dockerfile, CLI commands). Production deployment patterns. Min 15 lines.
-- adv_*_4_tradeoffs: When this infra fits vs alternatives. Cost/performance positioning. Suitable workloads vs unsuitable.
-- adv_*_5_pitfalls: Common failure modes, debugging commands, monitoring metrics. Capacity-planning mistakes.""",
-
-    "concept": """## Type-Specific Depth: Concept/Theory
-- adv_*_1_mechanism: Formal definition + visual/geometric interpretation ("Imagine a 2D plot where..."). Cite foundational paper/textbook only if in Reference Materials.
-- adv_*_2_formulas: Mathematical formulation with step-by-step derivation and intuitive interpretation of each term.
-- adv_*_3_code: Demonstration code showing the concept in action (visualization, simulation). Min 15 lines.
-- adv_*_4_tradeoffs: When this concept applies vs when it breaks down. Compared to alternative framings.
-- adv_*_5_pitfalls: Where this concept causes real bugs/failures in production. Anti-patterns. Each with mitigation.
-- CRITICAL: Do NOT fabricate paper citations or textbook references. Only cite sources from Reference Materials. If unavailable, omit the citation.""",
-
-    "product_platform": """## Type-Specific Depth: Product/Platform
-- adv_*_1_mechanism: Product capabilities, supported features, API surface area, internal architecture overview.
-- adv_*_2_formulas: Competitive comparison table — this product vs 3-4 alternatives. Columns: pricing, performance benchmarks, key differentiators, limitations.
-- adv_*_3_code: API usage examples — authentication, common operations, error handling. Use REAL API endpoints from Reference Materials.
-- adv_*_4_tradeoffs: When to choose this product vs alternatives. Pricing/feature/lock-in trade-offs. Migration cost considerations.
-- adv_*_5_pitfalls: Version history gotchas, migration notes, known limitations and workarounds. State "Public benchmarks not yet available" rather than inventing numbers.""",
-
-    "metric_benchmark": """## Type-Specific Depth: Metric/Benchmark
-- adv_*_1_mechanism: Formal mathematical definition. What does this metric actually measure? Step-by-step calculation example with real numbers.
-- adv_*_2_formulas: Full formula with derivation. Why this formula (e.g., why harmonic mean for F1, not arithmetic)?
-- adv_*_3_code: Implementation from scratch + library usage (sklearn, torch). Visualization code (ROC curve, confusion matrix).
-- adv_*_4_tradeoffs: When this metric is the right choice vs when it misleads. Alternative metrics and when to prefer them. Micro vs macro averaging.
-- adv_*_5_pitfalls: Edge cases where the metric is misleading. Common reporting mistakes. Each with how to detect and fix.""",
-
-    "technique_method": """## Type-Specific Depth: Technique/Method
-- adv_*_1_mechanism: Formal description of the technique. Variants and their differences. Step-by-step procedure: when to apply, in what order, how it interacts with other techniques.
-- adv_*_2_formulas: Comparison table — variants of this technique (e.g., CutMix vs Mixup vs CutOut for augmentation).
-- adv_*_3_code: Implementation of 2+ variants. Show the difference in code. Min 15 lines.
-- adv_*_4_tradeoffs: When to apply this technique vs alternatives. Hyperparameter sensitivity vs configuration cost. Compatibility with other techniques.
-- adv_*_5_pitfalls: Failure modes — when this technique hurts instead of helps. Subtle bugs in implementation. Each with mitigation.""",
-
-    "protocol_format": """## Type-Specific Depth: Protocol/Format/Data Structure
-- adv_*_1_mechanism: Protocol/format structure description (internal layout, header, payload, encoding) + version history if relevant. RFC references only if in Reference Materials.
-- adv_*_2_formulas: Handshake/flow diagram (text). State transitions OR complexity analysis table for data structures (read/write/delete/search, average + worst case).
-- adv_*_3_code: Client/server implementation OR usage examples (read, write, query). Configuration for common frameworks. Security setup. Min 15 lines.
-- adv_*_4_tradeoffs: When to use this format/protocol vs alternatives. Compatibility, migration strategies, performance/safety trade-offs.
-- adv_*_5_pitfalls: Security considerations, known vulnerabilities in older versions, proxy/firewall traversal issues. Common encoding/serialization mistakes.""",
-
-    "workflow_pattern": """## Type-Specific Depth: Workflow/Architecture Pattern
-- adv_*_1_mechanism: Pattern structure — components, responsibilities, communication. Component interaction flow. How a request passes through the system. Failure handling.
-- adv_*_2_formulas: Trade-off analysis table — consistency vs availability, complexity vs flexibility, etc.
-- adv_*_3_code: Skeleton implementation showing the pattern structure. Configuration examples. Min 15 lines.
-- adv_*_4_tradeoffs: When this pattern fits vs simpler alternatives. Migration strategy from monolith/alternative.
-- adv_*_5_pitfalls: Real failure stories. When NOT to use this pattern. Coordination/operational pitfalls.""",
+    "foundational_concept": "Explain the concept precisely, then its intuition, then where it matters.",
+    "problem_failure_mode": "Lead with symptoms, root causes, detection, and mitigation.",
+    "model_algorithm_family": "Explain data flow, complexity, bottlenecks, and what problem the design solves.",
+    "training_optimization_method": "Explain when the method is applied, major variants, and configuration tradeoffs.",
+    "retrieval_knowledge_system": "Organize around ingestion, chunking, indexing, retrieval, reranking, grounding, and evaluation.",
+    "system_workflow_pattern": "Describe components, request flow, failure handling, and observability.",
+    "data_storage_indexing_system": "Explain storage model, indexing path, read path, and scaling constraints.",
+    "protocol_format_data_structure": "Explain structure, flow, compatibility, and safety.",
+    "capability_feature_spec": "Explain what the feature label means operationally and where people over-interpret it.",
+    "metric_benchmark": "Explain what the number means before formulas, then misuse cases and alternatives.",
+    "product_platform_service": "Explain who it is for, what surface it exposes, pricing/lock-in, and migration cost.",
+    "library_framework_sdk": "Explain developer abstractions, idiomatic usage, and integration constraints.",
+    "hardware_runtime_infra": "Explain workload fit, throughput/latency tradeoffs, memory model, and deployment cost.",
 }
 
+SUBTYPE_DEPTH_GUIDES: dict[tuple[str, str], str] = {
+    ("foundational_concept", "reasoning_method"): "Emphasize the direct method definition, what the reasoning trace is doing, and where adjacent reasoning discourse should be excluded.",
+    ("foundational_concept", "policy_discourse"): "Separate the technical definition from the policy meaning. Do not collapse governance framing, safety framing, and capability framing into one blurry explanation.",
+    ("foundational_concept", "standard_regulation"): "Emphasize scope, management system requirements, audit boundaries, and what teams must operationalize to comply.",
+    ("product_platform_service", "ecosystem_platform"): "Emphasize hub surface, repository workflow, ecosystem gravity, and how models, datasets, and apps connect.",
+    ("product_platform_service", "model_api_service"): "Emphasize endpoint surface, model lineup, rate limits, pricing semantics, and migration cost.",
+    ("product_platform_service", "managed_ai_cloud_platform"): "Emphasize cloud control plane, IAM and region model, enterprise guardrails, and provider abstraction.",
+    ("product_platform_service", "managed_ai_infra_service"): "Emphasize managed index/runtime topology, latency and scaling model, and operational constraints.",
+    ("product_platform_service", "developer_tool_platform"): "Emphasize evals, traces, experiment tracking, prompt workflow, and team collaboration surface.",
+    ("hardware_runtime_infra", "accelerator_hardware"): "Emphasize chip role, workload fit, memory/interconnect constraints, and cost or region availability.",
+    ("hardware_runtime_infra", "compute_runtime"): "Emphasize the software stack around drivers, kernels, compilers, configuration flags, and compatibility constraints.",
+    ("hardware_runtime_infra", "serving_engine"): "Emphasize batching, KV cache behavior, scheduler design, latency-throughput tradeoffs, and deployment patterns.",
+    ("metric_benchmark", "scalar_metric"): "Emphasize formula meaning, threshold effects, and common misuse in imbalanced or noisy settings.",
+    ("metric_benchmark", "benchmark_suite"): "Emphasize task composition, scoring methodology, contamination risk, and leaderboard caveats.",
+    ("protocol_format_data_structure", "wire_protocol"): "Emphasize handshake or auth flow, actor responsibilities, interoperability, and security boundaries.",
+    ("protocol_format_data_structure", "data_format"): "Emphasize schema layout, serialization model, compatibility, compression, and read/write tradeoffs.",
+    ("protocol_format_data_structure", "core_data_structure"): "Emphasize invariants, supported operations, asymptotic behavior, and implementation tradeoffs.",
+}
 
 _SECTION_MINIMUM = """
 ## Section Quality Minimums
-- Each advanced section: minimum 200 characters of substantive content
-- adv_*_1_mechanism: minimum 600 characters (most important section — formal definition + flow + complexity)
-- adv_*_3_code: minimum 15 lines of substantial code (if code applies to this type)
-- Empty or placeholder sections ("TBD", "N/A") are NOT acceptable — omit the section key entirely if not applicable"""
+- Each advanced section must be substantive.
+- adv_*_1_mechanism should be the deepest section.
+- adv_*_3_code should show real usage or implementation patterns when code is relevant.
+- Omit non-applicable sections instead of using placeholders.
+"""
 
 
-def get_type_depth_guide(term_type: str) -> str:
-    """Return type-specific depth instructions for advanced prompt injection."""
-    guide = TYPE_DEPTH_GUIDES.get(term_type, TYPE_DEPTH_GUIDES["concept"])
-    return f"{guide}\n\n{_SECTION_MINIMUM}"
+def get_type_depth_guide(term_type: str, subtype: str | None = None) -> str:
+    guide = TYPE_DEPTH_GUIDES.get(term_type, TYPE_DEPTH_GUIDES["foundational_concept"])
+    subtype_guide = SUBTYPE_DEPTH_GUIDES.get((term_type, subtype))
+    label = format_term_type_label(term_type, subtype)
+    if subtype_guide:
+        guide = f"{guide} {subtype_guide}"
+    return f"## Type-Specific Depth ({label})\n{guide}\n\n{_SECTION_MINIMUM}"
 
-
-# ── Evidence rules: type → search source priorities (no LLM classification needed) ──
 
 EVIDENCE_RULES: dict[str, list[str]] = {
-    "concept":            ["paper", "docs"],
-    "model_architecture": ["paper", "docs"],
-    "technique_method":   ["paper", "community"],
-    "product_platform":   ["docs", "benchmark"],
-    "hardware_infra":     ["benchmark", "docs"],
-    "workflow_pattern":   ["docs", "community"],
-    "metric_benchmark":   ["paper"],
-    "protocol_format":    ["docs"],
+    "foundational_concept": ["paper", "docs"],
+    "problem_failure_mode": ["docs", "paper", "community"],
+    "model_algorithm_family": ["paper", "docs", "community"],
+    "training_optimization_method": ["paper", "docs", "community"],
+    "retrieval_knowledge_system": ["paper", "docs", "community"],
+    "system_workflow_pattern": ["docs", "community", "paper"],
+    "data_storage_indexing_system": ["docs", "benchmark", "community"],
+    "protocol_format_data_structure": ["docs", "paper"],
+    "capability_feature_spec": ["docs", "benchmark", "community"],
+    "metric_benchmark": ["paper", "docs", "benchmark"],
+    "product_platform_service": ["docs", "benchmark", "community"],
+    "library_framework_sdk": ["docs", "community", "code"],
+    "hardware_runtime_infra": ["benchmark", "docs", "community"],
+}
+
+SUBTYPE_EVIDENCE_RULES: dict[tuple[str, str], list[str]] = {
+    ("foundational_concept", "reasoning_method"): ["paper", "docs", "community"],
+    ("foundational_concept", "policy_discourse"): ["docs", "paper", "community"],
+    ("foundational_concept", "standard_regulation"): ["docs", "paper"],
+    ("product_platform_service", "ecosystem_platform"): ["docs", "community", "code"],
+    ("product_platform_service", "model_api_service"): ["docs", "benchmark", "community"],
+    ("product_platform_service", "managed_ai_cloud_platform"): ["docs", "benchmark", "community"],
+    ("product_platform_service", "managed_ai_infra_service"): ["docs", "benchmark", "community"],
+    ("product_platform_service", "developer_tool_platform"): ["docs", "community", "benchmark"],
+    ("hardware_runtime_infra", "accelerator_hardware"): ["benchmark", "docs", "community"],
+    ("hardware_runtime_infra", "compute_runtime"): ["docs", "benchmark", "community"],
+    ("hardware_runtime_infra", "serving_engine"): ["benchmark", "docs", "community"],
+    ("metric_benchmark", "scalar_metric"): ["paper", "docs", "benchmark"],
+    ("metric_benchmark", "benchmark_suite"): ["paper", "benchmark", "docs"],
+    ("protocol_format_data_structure", "wire_protocol"): ["docs", "paper"],
+    ("protocol_format_data_structure", "data_format"): ["docs", "code", "community"],
+    ("protocol_format_data_structure", "core_data_structure"): ["docs", "paper"],
+}
+
+TYPE_QUERY_FOCUS: dict[str, str] = {
+    "foundational_concept": "definition intuition mechanism examples",
+    "problem_failure_mode": "symptoms root cause detection mitigation",
+    "model_algorithm_family": "architecture mechanism complexity comparison",
+    "training_optimization_method": "implementation variants hyperparameters tradeoffs",
+    "retrieval_knowledge_system": "chunking indexing retrieval reranking grounding evaluation",
+    "system_workflow_pattern": "orchestration components request flow observability",
+    "data_storage_indexing_system": "storage index retrieval consistency scaling",
+    "protocol_format_data_structure": "spec format handshake schema interoperability",
+    "capability_feature_spec": "capability limits benchmarking usage constraints",
+    "metric_benchmark": "formula interpretation pitfalls comparison",
+    "product_platform_service": "official docs pricing release notes comparison",
+    "library_framework_sdk": "official docs api usage examples integration",
+    "hardware_runtime_infra": "benchmark deployment configuration workload fit",
+}
+
+SUBTYPE_QUERY_FOCUS: dict[tuple[str, str], str] = {
+    ("foundational_concept", "reasoning_method"): "reasoning method explicit reasoning traces scratchpad prompting direct definition",
+    ("foundational_concept", "policy_discourse"): "technical definition policy meaning governance safety capability framing official definition",
+    ("foundational_concept", "standard_regulation"): "standard requirements controls certification audit scope management system",
+    ("product_platform_service", "ecosystem_platform"): "hub datasets spaces model cards repository workflow ecosystem",
+    ("product_platform_service", "model_api_service"): "api endpoints pricing rate limits responses migration",
+    ("product_platform_service", "managed_ai_cloud_platform"): "iam regions guardrails knowledge bases agents governance",
+    ("product_platform_service", "managed_ai_infra_service"): "index cluster namespaces replicas latency scaling operations",
+    ("product_platform_service", "developer_tool_platform"): "traces evals experiments observability prompt management workflow",
+    ("hardware_runtime_infra", "accelerator_hardware"): "accelerator chip memory bandwidth interconnect throughput training inference",
+    ("hardware_runtime_infra", "compute_runtime"): "runtime kernels compiler driver configuration compatibility performance",
+    ("hardware_runtime_infra", "serving_engine"): "batching kv cache scheduler serving throughput latency deployment",
+    ("metric_benchmark", "scalar_metric"): "formula threshold interpretation misuse class imbalance",
+    ("metric_benchmark", "benchmark_suite"): "tasks scoring coverage contamination leaderboard comparison",
+    ("protocol_format_data_structure", "wire_protocol"): "handshake authorization flow tokens interoperability spec",
+    ("protocol_format_data_structure", "data_format"): "schema serialization columnar compression compatibility read write",
+    ("protocol_format_data_structure", "core_data_structure"): "insert lookup traversal complexity invariants balancing",
 }
 
 
-def get_evidence_priorities(term_type: str) -> list[str]:
-    """Return search source priorities for a term type."""
-    return EVIDENCE_RULES.get(term_type, ["docs", "paper"])
+def get_evidence_priorities(term_type: str, subtype: str | None = None) -> list[str]:
+    return SUBTYPE_EVIDENCE_RULES.get((term_type, subtype), EVIDENCE_RULES.get(term_type, ["docs", "paper"]))
 
 
-# ── Section weights: type × intent → content priority guidance ──
+def get_type_query_focus(term_type: str, subtype: str | None = None) -> str:
+    return SUBTYPE_QUERY_FOCUS.get((term_type, subtype), TYPE_QUERY_FOCUS.get(term_type, TYPE_QUERY_FOCUS["foundational_concept"]))
 
-TYPE_SECTION_WEIGHTS: dict[tuple[str, str], dict[str, str]] = {
-    # concept
-    ("concept", "understand"): {
-        "section_guide": "Lead with intuitive analogy and mechanism. Comparison table for related concepts. "
-                        "Keep the tone educational — this is 'what is this and how does it work?'",
-    },
-    ("concept", "debug"): {
-        "section_guide": "Lead with 'what goes wrong' — symptoms, root cause, detection methods. "
-                        "Show fix/mitigation code early. This is 'I have this problem, how do I solve it?'",
-    },
-    # model_architecture
-    ("model_architecture", "understand"): {
-        "section_guide": "Lead with the core innovation — what problem does this architecture solve differently? "
-                        "Architecture diagram (text), tensor flow, key equations. Historical context matters.",
-    },
-    ("model_architecture", "compare"): {
-        "section_guide": "Lead with comparison table vs predecessors and alternatives. "
-                        "Performance benchmarks, complexity trade-offs, when to choose this over that.",
-    },
-    # technique_method
-    ("technique_method", "build"): {
-        "section_guide": "Lead with when/how to apply. Code examples are the most important section. "
-                        "Show practical hyperparameter choices and common pitfalls.",
-    },
-    ("technique_method", "compare"): {
-        "section_guide": "Lead with comparison table vs alternatives (e.g., DPO vs RLHF vs GRPO). "
-                        "When to choose this technique, trade-offs, practical decision criteria.",
-    },
-    ("technique_method", "understand"): {
-        "section_guide": "Lead with the problem this technique solves. Explain the mechanism step by step. "
-                        "Show before/after comparison with concrete examples.",
-    },
-    # product_platform
-    ("product_platform", "compare"): {
-        "section_guide": "Lead with competitive comparison table (3+ alternatives). "
-                        "MUST include pricing/cost if available in Reference Materials (API cost per token, "
-                        "free tier, subscription tiers). Include performance benchmarks with numbers. "
-                        "This is 'which should I choose?' — users need price + performance to decide.",
-    },
-    ("product_platform", "adopt"): {
-        "section_guide": "Lead with getting-started steps. Quick evaluation criteria. Free tier info. "
-                        "This is 'how do I start using this?'",
-    },
-    ("product_platform", "build"): {
-        "section_guide": "Lead with API patterns, SDK setup, integration code. "
-                        "Authentication, common operations, error handling examples.",
-    },
-    # hardware_infra
-    ("hardware_infra", "compare"): {
-        "section_guide": "Lead with benchmark comparison table. Cost/performance trade-offs. "
-                        "Suitable vs unsuitable workloads. GPU vs this alternative.",
-    },
-    ("hardware_infra", "build"): {
-        "section_guide": "Lead with deployment/configuration code (Docker, YAML, CLI). "
-                        "Show real setup steps, not just concepts.",
-    },
-    # workflow_pattern
-    ("workflow_pattern", "build"): {
-        "section_guide": "Lead with component diagram (text). Show implementation code with real libraries. "
-                        "Cover failure modes and monitoring early — not as an afterthought.",
-    },
-    ("workflow_pattern", "understand"): {
-        "section_guide": "Lead with the problem this pattern solves. Component roles and data flow. "
-                        "Compare with simpler alternatives.",
-    },
-    # metric_benchmark
-    ("metric_benchmark", "evaluate"): {
-        "section_guide": "Lead with 'what does this number actually tell you?' — plain interpretation first. "
-                        "Then 'when is this metric misleading?' — pitfalls are MORE important than formula. "
-                        "Show formula AFTER interpretation, not before.",
-    },
-    # protocol_format
-    ("protocol_format", "build"): {
-        "section_guide": "Lead with handshake/structure diagram. Show implementation code early. "
-                        "Security considerations and common configuration mistakes.",
-    },
-    ("protocol_format", "understand"): {
-        "section_guide": "Lead with what problem this protocol/format solves. Show the message/data flow. "
-                        "Compare with alternatives.",
-    },
+
+TYPE_SECTION_WEIGHTS: dict[tuple[str, str], str] = {
+    ("foundational_concept", "understand"): "Lead with intuition, then mechanism. Do not rush into implementation.",
+    ("problem_failure_mode", "debug"): "Lead with symptoms, then root cause, then detection and mitigation.",
+    ("model_algorithm_family", "compare"): "Lead with what problem the design solves relative to nearby alternatives.",
+    ("training_optimization_method", "build"): "Lead with when to apply the method and what configuration choices matter.",
+    ("retrieval_knowledge_system", "build"): "Lead with pipeline stages and evaluation criteria. Do not let code outrun system design.",
+    ("system_workflow_pattern", "build"): "Lead with component responsibilities, execution flow, guardrails, and observability.",
+    ("data_storage_indexing_system", "build"): "Lead with data model, index strategy, read/write path, and scaling tradeoffs.",
+    ("protocol_format_data_structure", "build"): "Lead with structure or flow before API details.",
+    ("capability_feature_spec", "compare"): "Lead with what the feature means operationally and where the label is misleading.",
+    ("metric_benchmark", "evaluate"): "Lead with interpretation and misuse risk before formulas or leaderboards.",
+    ("product_platform_service", "compare"): "Lead with adoption criteria, alternatives, pricing, lock-in, and migration cost.",
+    ("library_framework_sdk", "build"): "Lead with core abstractions, installation context, and integration ergonomics.",
+    ("hardware_runtime_infra", "compare"): "Lead with workload fit, throughput/latency, memory limits, and deployment cost.",
+}
+
+SUBTYPE_SECTION_WEIGHTS: dict[tuple[str, str, str], str] = {
+    ("foundational_concept", "reasoning_method", "understand"): "Lead with the direct method definition and what the reasoning trace contributes. Keep adjacent benchmark or general reasoning discourse secondary.",
+    ("foundational_concept", "reasoning_method", "compare"): "Compare the reasoning method against nearby prompting or reasoning scaffolds without drifting into unrelated evaluation trends.",
+    ("foundational_concept", "policy_discourse", "understand"): "Separate the technical definition from the policy meaning. Explain why the label is contested before discussing examples.",
+    ("foundational_concept", "policy_discourse", "evaluate"): "Evaluate the discourse term by separating technical scope, governance scope, and safety claims. Do not collapse them.",
+    ("foundational_concept", "standard_regulation", "understand"): "Lead with scope, control objectives, and what an adopting organization must operationalize.",
+    ("foundational_concept", "standard_regulation", "evaluate"): "Lead with applicability, auditability, evidence requirements, and implementation burden.",
+    ("product_platform_service", "ecosystem_platform", "compare"): "Lead with what the hub/ecosystem contains, how teams publish or consume assets, and where switching cost comes from.",
+    ("product_platform_service", "ecosystem_platform", "build"): "Lead with repository workflow, model and dataset distribution, and how SDKs connect to the ecosystem surface.",
+    ("product_platform_service", "model_api_service", "compare"): "Lead with endpoint surface, pricing units, rate limits, model coverage, and migration friction.",
+    ("product_platform_service", "managed_ai_cloud_platform", "compare"): "Lead with enterprise controls, region and IAM model, managed integrations, and provider coverage.",
+    ("product_platform_service", "managed_ai_infra_service", "compare"): "Lead with managed runtime or index topology, latency envelope, scaling knobs, and operational fit.",
+    ("product_platform_service", "developer_tool_platform", "compare"): "Lead with eval, traces, experiment workflow, and how the tool changes team operating habits.",
+    ("hardware_runtime_infra", "accelerator_hardware", "compare"): "Lead with workload fit, memory and interconnect constraints, and cost-performance tradeoffs against nearby accelerators.",
+    ("hardware_runtime_infra", "compute_runtime", "build"): "Lead with software stack role, compatibility prerequisites, and the configuration knobs developers actually touch.",
+    ("hardware_runtime_infra", "serving_engine", "build"): "Lead with batching, scheduler design, KV cache handling, and deployment tradeoffs before generic serving claims.",
+    ("metric_benchmark", "scalar_metric", "evaluate"): "Lead with what the scalar means, when it misleads, and how thresholding or class imbalance changes interpretation.",
+    ("metric_benchmark", "benchmark_suite", "evaluate"): "Lead with what tasks are inside the suite, what the score aggregates, and why leaderboard comparisons can be brittle.",
+    ("protocol_format_data_structure", "wire_protocol", "build"): "Lead with request or auth flow, participant roles, and interoperability or security constraints.",
+    ("protocol_format_data_structure", "data_format", "build"): "Lead with schema and storage layout, then compatibility and performance tradeoffs.",
+    ("protocol_format_data_structure", "core_data_structure", "build"): "Lead with supported operations, invariants, and complexity before implementation detail.",
 }
 
 
-def get_section_weight_guide(term_type: str, intent: str) -> str:
-    """Return section priority guide for a type × intent combination."""
-    weights = TYPE_SECTION_WEIGHTS.get((term_type, intent))
-    if weights:
-        return f"## Content Priority Guide ({term_type} × {intent})\n{weights['section_guide']}"
-    # Fallback: try type with default intent
-    default_intents = {
-        "concept": "understand", "model_architecture": "understand",
-        "technique_method": "build", "product_platform": "compare",
-        "hardware_infra": "compare", "workflow_pattern": "build",
-        "metric_benchmark": "evaluate", "protocol_format": "build",
-    }
-    fallback_intent = default_intents.get(term_type, "understand")
-    weights = TYPE_SECTION_WEIGHTS.get((term_type, fallback_intent))
-    if weights:
-        return f"## Content Priority Guide ({term_type} × {fallback_intent})\n{weights['section_guide']}"
+def get_section_weight_guide(term_type: str, intent: str, subtype: str | None = None) -> str:
+    label = format_term_type_label(term_type, subtype)
+    guide = SUBTYPE_SECTION_WEIGHTS.get((term_type, subtype or "", intent))
+    if guide:
+        return f"## Content Priority Guide ({label} x {intent})\n{guide}"
+    guide = TYPE_SECTION_WEIGHTS.get((term_type, intent))
+    if guide:
+        return f"## Content Priority Guide ({label} x {intent})\n{guide}"
+    fallback_intent = DEFAULT_INTENT_BY_TYPE.get(term_type, ["understand"])[0]
+    fallback = SUBTYPE_SECTION_WEIGHTS.get((term_type, subtype or "", fallback_intent))
+    if fallback:
+        return f"## Content Priority Guide ({label} x {fallback_intent})\n{fallback}"
+    fallback = TYPE_SECTION_WEIGHTS.get((term_type, fallback_intent))
+    if fallback:
+        return f"## Content Priority Guide ({label} x {fallback_intent})\n{fallback}"
     return ""
 
 
-# ── Category-specific context (domain framing for all 4 generation calls) ──
-
 CATEGORY_CONTEXT: dict[str, dict[str, str]] = {
     "cs-fundamentals": {
-        "vocabulary": "data structure, algorithm, protocol, runtime, API, compiler, interpreter, "
-                      "hash table, TCP/IP, HTTP, thread, process, stack, heap",
-        "quality_signals": "Include code examples even in Basic. Use real programming scenarios "
-                          "(building a web app, debugging). Reference official specs (RFC, W3C, MDN).",
-        "anti_patterns": "Do NOT force AI/ML connections. Explain the concept in its native CS domain "
-                        "first. Do not frame everything as 'AI uses this'.",
-        "reference_style": "Prefer MDN, W3C, RFC, language spec links. Cite spec version when relevant.",
-        "code_guide": "Use standard library code (no ML frameworks). Show idiomatic patterns for the "
-                     "language. Layer 2 should use popular frameworks (Express, Django, React) when relevant.",
+        "vocabulary": "data structure, algorithm, protocol, runtime, API, compiler, interpreter, hash table, HTTP, thread, process, stack, heap",
+        "quality_signals": "Use concrete programming scenarios and official specs where relevant.",
+        "anti_patterns": "Do not force AI framing when the concept is fundamentally general CS.",
+        "reference_style": "Prefer MDN, RFCs, W3C, language specifications, and official docs.",
+        "code_guide": "Use standard library or mainstream framework examples before niche tools.",
     },
     "math-statistics": {
-        "vocabulary": "proof, theorem, distribution, estimator, variance, convergence, gradient, "
-                      "eigenvalue, expectation, likelihood, posterior, prior",
-        "quality_signals": "Lead with geometric/visual intuition before formulas. Include numerical "
-                          "examples with concrete numbers. Show step-by-step derivation.",
-        "anti_patterns": "Do NOT just say 'AI uses this'. Explain the mathematical concept in its own "
-                        "right first, then connect to ML applications.",
-        "reference_style": "Use standard textbook notation. Cite foundational references "
-                          "(e.g., Bishop, Murphy, Hastie). Link to Khan Academy or 3Blue1Brown for visual intuition.",
-        "code_guide": "Layer 1: Mathematical notation and step-by-step derivation. "
-                     "Layer 2: numpy/scipy implementation with real data. "
-                     "Layer 3: Pure Python from-scratch implementation showing the math.",
+        "vocabulary": "proof, theorem, estimator, variance, convergence, expectation, likelihood, posterior, prior",
+        "quality_signals": "Lead with intuition before formulas. Use concrete numerical examples.",
+        "anti_patterns": "Do not reduce the concept to only AI usage.",
+        "reference_style": "Use textbook notation and foundational sources when available.",
+        "code_guide": "Pair math explanation with numpy/scipy examples when code helps.",
     },
     "ml-fundamentals": {
-        "vocabulary": "feature, label, training set, overfitting, bias-variance, cross-validation, "
-                      "regularization, hyperparameter, precision, recall, F1, ROC-AUC",
-        "quality_signals": "Include scikit-learn or equivalent library code. Show a full train-evaluate "
-                          "cycle with real dataset names. Compare with alternative methods.",
-        "anti_patterns": "Do NOT only cover deep learning. Classical ML has its own value and use cases. "
-                        "Do not dismiss traditional methods as outdated.",
-        "reference_style": "Cite scikit-learn docs for API. Reference original papers for algorithms "
-                          "(e.g., Breiman for Random Forest). Use UCI/Kaggle dataset names for examples.",
-        "code_guide": "Layer 1: Algorithm pseudocode with decision boundaries/tree visualization concept. "
-                     "Layer 2: scikit-learn pipeline (train/evaluate/predict). "
-                     "Layer 3: From-scratch implementation showing the core algorithm.",
+        "vocabulary": "feature, label, overfitting, regularization, cross-validation, hyperparameter, precision, recall, ROC-AUC",
+        "quality_signals": "Show full train/evaluate context and compare credible alternatives.",
+        "anti_patterns": "Do not treat classical ML as obsolete by default.",
+        "reference_style": "Use official library docs and foundational algorithm references.",
+        "code_guide": "Prefer scikit-learn style examples for baseline implementations.",
     },
     "deep-learning": {
-        "vocabulary": "tensor, gradient, backpropagation, layer, activation function, loss landscape, "
-                      "epoch, batch size, learning rate, convolution, pooling, attention",
-        "quality_signals": "Describe architectures with tensor shape annotations. Distinguish training "
-                          "vs inference behavior. Include computational cost awareness (FLOPs, memory).",
-        "anti_patterns": "Do NOT describe all models as classification-only. Do NOT ignore hardware/memory "
-                        "constraints. Always mention what problem the architecture solves.",
-        "reference_style": "Cite original papers by first author + year (e.g., 'Vaswani et al., 2017'). "
-                          "Link to foundational work (Attention Is All You Need, ResNet, etc.).",
-        "code_guide": "Layer 1: Architecture diagram in text (input shape → layers → output shape). "
-                     "Layer 2: PyTorch implementation with type hints, forward pass, and training loop. "
-                     "Layer 3: Optional numpy-only version showing the core math.",
+        "vocabulary": "tensor, gradient, backpropagation, layer, activation, learning rate, convolution, attention",
+        "quality_signals": "Make tensor flow and compute tradeoffs explicit.",
+        "anti_patterns": "Do not ignore memory, latency, or training-vs-inference differences.",
+        "reference_style": "Use original papers and official implementation/docs when possible.",
+        "code_guide": "Prefer PyTorch examples with clear shapes and data flow.",
     },
     "llm-genai": {
-        "vocabulary": "token, prompt, context window, hallucination, alignment, agent, tool use, "
-                      "embedding, retrieval, fine-tuning, RLHF, chain-of-thought",
-        "quality_signals": "Include actual prompt examples. Show API usage patterns. Discuss cost/token "
-                          "considerations. Compare model capabilities with benchmarks.",
-        "anti_patterns": "Avoid marketing tone ('revolutionary', 'amazing'). Always mention limitations. "
-                        "Do not omit cost, latency, or safety considerations.",
-        "reference_style": "Cite official API docs (OpenAI, Anthropic, HuggingFace). Reference benchmark "
-                          "leaderboards (MMLU, HumanEval, LMSYS). Include version numbers.",
-        "code_guide": "MUST use 3-layer pattern:\n"
-                     "Layer 1: Conceptual flow as pseudocode comments (5-10 lines showing the pipeline).\n"
-                     "Layer 2: Practical code using real libraries FROM Reference Materials "
-                     "(e.g., LangChain, OpenAI SDK, llama-index). Add version caveat: "
-                     "'# library_name x.y 기준 — 최신 API는 공식 문서 확인'. "
-                     "If Reference Materials contain actual code snippets, adapt and annotate them.\n"
-                     "Layer 3: Under-the-hood implementation with stable libraries (numpy, torch) "
-                     "showing what the high-level library does internally.",
+        "vocabulary": "token, prompt, context window, alignment, agent, tool use, embedding, retrieval, fine-tuning",
+        "quality_signals": "Use developer workflows, cost awareness, and limitations.",
+        "anti_patterns": "Avoid marketing language and vague capability claims.",
+        "reference_style": "Prefer official API docs, benchmark references, and current platform docs.",
+        "code_guide": "Show practical API or orchestration patterns, then what happens under the hood.",
     },
     "data-engineering": {
-        "vocabulary": "pipeline, ETL/ELT, schema, partitioning, backfill, idempotency, lineage, "
-                      "throughput, latency, checkpoint, exactly-once, data lake, warehouse",
-        "quality_signals": "Include throughput/latency characteristics. Discuss failure modes and recovery. "
-                          "Show scaling behavior. Mention cost implications.",
-        "anti_patterns": "Do NOT ignore data volume considerations. Do NOT treat all storage as equivalent. "
-                        "Do NOT omit cost implications of different approaches.",
-        "reference_style": "Cite official documentation. Mention specific version numbers when behavior "
-                          "changed between versions. Link to architecture decision records when available.",
-        "code_guide": "Layer 1: Data flow diagram as text (source → transform → sink). "
-                     "Layer 2: Real tool code FROM Reference Materials (Spark, Airflow, dbt, Kafka). "
-                     "Add version caveat. "
-                     "Layer 3: Pure Python showing the core pattern (e.g., streaming processor, batch ETL).",
+        "vocabulary": "pipeline, schema, partitioning, checkpoint, idempotency, lineage, throughput, latency, backfill",
+        "quality_signals": "Discuss scaling, failure recovery, and maintenance cost.",
+        "anti_patterns": "Do not treat all storage or indexing approaches as interchangeable.",
+        "reference_style": "Prefer official architecture docs and versioned product documentation.",
+        "code_guide": "Show data flow, then real integration snippets or configuration.",
     },
     "infra-hardware": {
-        "vocabulary": "GPU, CUDA, kernel, FLOPS, throughput, latency, quantization, cluster, "
-                      "container, orchestration, inference, batch, shard, replica",
-        "quality_signals": "Include specific benchmark numbers when available. Show actual deployment "
-                          "configurations. Discuss cost analysis ($/token, $/hour).",
-        "anti_patterns": "Do NOT only explain theory without operational considerations. Always include "
-                        "real-world constraints (memory limits, network bandwidth, cost).",
-        "reference_style": "Cite manufacturer docs (NVIDIA, AMD). Reference benchmark papers. "
-                          "Include specific hardware specs and pricing when available.",
-        "code_guide": "Layer 1: System architecture diagram as text (components and data flow). "
-                     "Layer 2: Real deployment code (Docker, K8s YAML, CLI commands, config files). "
-                     "Layer 3: Benchmark/profiling script showing performance characteristics.",
+        "vocabulary": "GPU, CUDA, kernel, throughput, latency, quantization, cluster, container, shard, replica",
+        "quality_signals": "Use operational constraints, workload fit, and cost-aware comparisons.",
+        "anti_patterns": "Do not explain only theory and skip deployment constraints.",
+        "reference_style": "Use vendor docs, benchmarks, and deployment docs.",
+        "code_guide": "Prefer deployment config, runtime flags, or profiling examples.",
     },
     "safety-ethics": {
-        "vocabulary": "alignment, adversarial, red-teaming, bias, fairness, regulation, audit, "
-                      "data poisoning, prompt injection, jailbreak, watermark, guardrail",
-        "quality_signals": "Include specific incidents/cases. Cite regulatory frameworks (EU AI Act, "
-                          "NIST AI RMF). Describe technical defense mechanisms with code.",
-        "anti_patterns": "Do NOT stay abstract. Always include concrete implementation of defenses. "
-                        "Do NOT present only philosophical discussion without technical solutions.",
-        "reference_style": "Cite regulatory documents (EU AI Act, etc.). Reference safety research papers. "
-                          "Link to responsible AI toolkits (Fairlearn, AIF360).",
-        "code_guide": "Layer 1: Threat model diagram (attacker → vulnerability → impact). "
-                     "Layer 2: Defense implementation using real safety libraries (guardrails, fairlearn). "
-                     "Layer 3: Attack/defense demonstration with minimal code.",
+        "vocabulary": "alignment, adversarial, bias, red teaming, audit, data poisoning, jailbreak, guardrail",
+        "quality_signals": "Ground discussion in incidents, detection, and defenses.",
+        "anti_patterns": "Avoid purely philosophical discussion when the term has technical mitigations.",
+        "reference_style": "Use safety research, standards, and official guidance.",
+        "code_guide": "Prefer concrete mitigation patterns, evaluators, and guardrail examples.",
     },
     "products-platforms": {
-        "vocabulary": "API, SDK, release, version, pricing, benchmark, migration, "
-                      "deprecation, rate limit, quota, SLA, endpoint",
-        "quality_signals": "Include version history, pricing, competitive comparison table. "
-                          "Show actual API code with authentication. State the date explicitly.",
-        "anti_patterns": "Do NOT copy marketing language. Always include limitations and alternatives. "
-                        "Product info ages fast — state version/date explicitly.",
-        "reference_style": "Cite official announcements and docs. Include version/date. "
-                          "Link to official pricing pages and API references.",
-        "code_guide": "Layer 1: Product capability overview (what it does, who it's for). "
-                     "Layer 2: Actual API usage FROM official docs in Reference Materials "
-                     "(authentication, common operations, error handling). Add version/date caveat. "
-                     "Layer 3: Integration pattern showing how to use this product in a real pipeline.",
+        "vocabulary": "API, SDK, release, pricing, benchmark, migration, deprecation, rate limit, quota, SLA",
+        "quality_signals": "Include version/date sensitivity, pricing, and alternatives.",
+        "anti_patterns": "Do not repeat marketing claims without tradeoffs.",
+        "reference_style": "Prefer official docs, changelogs, and pricing pages.",
+        "code_guide": "Show real integration or API usage with version awareness.",
     },
 }
 
 
 def build_category_block(category: str) -> str:
-    """Build a structured category context block for prompt injection."""
     ctx = CATEGORY_CONTEXT.get(category)
     if not ctx:
         return ""
@@ -411,66 +784,56 @@ def build_category_block(category: str) -> str:
     )
 
 
-# ── Basic-level type guides (injected into Basic EN call after type classification) ──
-
 BASIC_TYPE_GUIDES: dict[str, str] = {
-    "concept": "Use an everyday analogy to build intuition. Explain WHY this concept matters "
-               "with a concrete scenario. For phenomenon/problem concepts (overfitting, hallucination), "
-               "focus on where it OCCURS and what real damage it causes — not where it is 'used'. "
-               "Save formal definitions for Advanced.",
-    "model_architecture": "Explain what the architecture does with a plain analogy before any technical detail. "
-                         "Code examples should be minimal (5-10 lines), runnable, with comments on every line. "
-                         "No mathematical formulas in Basic — save those for Advanced.",
-    "technique_method": "Describe the problem first, then the technique as a solution. "
-                       "Show before/after comparison. Give one concrete 'when to use this' scenario.",
-    "product_platform": "Lead with: what it does → who it's for → how to get started. "
-                       "Show the simplest possible usage (1-3 lines). Mention free tier / pricing if available. "
-                       "Avoid marketing language — always include limitations.",
-    "hardware_infra": "Start with what problem this tool/hardware solves. Show a minimal 'hello world' usage "
-                     "(3-5 line CLI or config example). Focus on when to use vs alternatives, and real cost "
-                     "implications when known.",
-    "workflow_pattern": "Describe the problem that this pattern solves. Draw the structure with text. "
-                       "Give one 'when to use' and one 'when NOT to use' scenario.",
-    "metric_benchmark": "Explain what this metric tells you in plain words. Use a concrete example with "
-                       "real numbers (e.g., 'if you have 10 predictions and 7 are correct...'). "
-                       "Mention when the metric is misleading. No formula derivation in Basic.",
-    "protocol_format": "Explain the structure with a visual or conversational metaphor "
-                      "(stack = pile of plates, handshake = introduction at a party). "
-                      "Show a minimal working example (3-5 lines). Compare with one alternative.",
+    "foundational_concept": "Start with plain intuition, then explain the concrete mechanism.",
+    "problem_failure_mode": "Start with what breaks and what it looks like in practice.",
+    "model_algorithm_family": "Explain what the family does differently and what problem it solves before formulas or code.",
+    "training_optimization_method": "Describe the problem first, then the method as a practical lever.",
+    "retrieval_knowledge_system": "Frame the explanation around ingestion, indexing, retrieval, and grounding stages.",
+    "system_workflow_pattern": "Describe the overall flow and roles of the components.",
+    "data_storage_indexing_system": "Explain what gets stored, how it is organized, and how it gets read back.",
+    "protocol_format_data_structure": "Use a visual metaphor for structure or flow, then show a tiny practical example.",
+    "capability_feature_spec": "Explain what the feature label really means in practice and where people over-interpret it.",
+    "metric_benchmark": "Explain what the number tells you in plain language before any math.",
+    "product_platform_service": "Lead with what it is, who it is for, and how people usually adopt it.",
+    "library_framework_sdk": "Lead with what a developer installs and what abstractions they work with.",
+    "hardware_runtime_infra": "Start with what workload problem this solves and what it costs operationally.",
+}
+
+SUBTYPE_BASIC_GUIDES: dict[tuple[str, str], str] = {
+    ("foundational_concept", "reasoning_method"): "Lead with the direct reasoning method first: what the trace is, why it helps, and how it differs from broader reasoning discourse.",
+    ("foundational_concept", "policy_discourse"): "Lead with the plain-language definition, then separate the technical meaning from the governance or policy meaning.",
+    ("foundational_concept", "standard_regulation"): "Lead with what the standard applies to, who uses it, and what adopting it changes operationally.",
+    ("product_platform_service", "ecosystem_platform"): "Lead with the hub or ecosystem surface first: what assets live there, who publishes them, and how teams usually use the platform.",
+    ("product_platform_service", "model_api_service"): "Lead with the hosted API surface: what developers call, what models they get, and what pricing or limits matter first.",
+    ("product_platform_service", "managed_ai_cloud_platform"): "Lead with the managed cloud surface: what the provider manages, how enterprise teams adopt it, and where governance shows up.",
+    ("product_platform_service", "managed_ai_infra_service"): "Lead with the managed infrastructure service: what gets operated for the user and what scaling or latency problem it solves.",
+    ("product_platform_service", "developer_tool_platform"): "Lead with the developer workflow: what teams observe, evaluate, or coordinate through the platform.",
+    ("hardware_runtime_infra", "accelerator_hardware"): "Lead with what kind of chip or accelerator it is, what workload it is built for, and what practical constraints teams hit first.",
+    ("hardware_runtime_infra", "compute_runtime"): "Lead with the runtime layer developers install or depend on, then explain what that layer unlocks and what it constrains.",
+    ("hardware_runtime_infra", "serving_engine"): "Lead with how it serves models in practice: batching, memory reuse, and deployment behavior.",
+    ("metric_benchmark", "scalar_metric"): "Lead with what the single number means in plain language and when it can be misleading.",
+    ("metric_benchmark", "benchmark_suite"): "Lead with what kinds of tasks are bundled together and what a higher score actually does and does not prove.",
+    ("protocol_format_data_structure", "wire_protocol"): "Lead with who talks to whom and what the handshake or auth flow looks like.",
+    ("protocol_format_data_structure", "data_format"): "Lead with what the bytes or columns represent and why teams choose this format over nearby alternatives.",
+    ("protocol_format_data_structure", "core_data_structure"): "Lead with what operations the structure makes fast or slow before discussing internals.",
 }
 
 
-def get_type_basic_guide(term_type: str) -> str:
-    """Return type-specific basic-level guide for Basic prompt injection."""
-    guide = BASIC_TYPE_GUIDES.get(term_type, BASIC_TYPE_GUIDES["concept"])
-    return f"## Basic Content Guide ({term_type})\n{guide}"
+def get_type_basic_guide(term_type: str, subtype: str | None = None) -> str:
+    guide = SUBTYPE_BASIC_GUIDES.get((term_type, subtype), BASIC_TYPE_GUIDES.get(term_type, BASIC_TYPE_GUIDES["foundational_concept"]))
+    label = format_term_type_label(term_type, subtype)
+    return f"## Basic Content Guide ({label})\n{guide}"
 
 
 COVE_CRITIQUE_PROMPT = """You are a senior ML engineer performing Chain-of-Verification on a handbook entry.
 
 The term "{term}" is classified as type: {term_type}.
 
-## Your Task: Verify factual accuracy using ONLY the Reference Materials
-
-### Step 1: Extract Factual Claims
-Identify every specific factual claim in the content:
-- Named entities (system names, protocol names, paper titles, product names)
-- Numerical claims (benchmarks, dates, percentages, performance numbers)
-- Product-technology mappings ("X uses Y", "X is built on Y")
-- Disambiguation claims ("not to be confused with X")
-
-### Step 2: Verify Against References
-For each claim, check if it appears in or is supported by the Reference Materials below.
-- SUPPORTED: claim matches information in references
-- UNVERIFIABLE: claim is not covered by references (could be true but cannot confirm)
-- CONTRADICTED: claim conflicts with references
-
-### Step 3: Check for Depth and Quality
-Also evaluate:
-1. Sections that are too shallow (blog-post level instead of senior-engineer level)
-2. Missing concrete data (numbers, benchmarks, comparisons)
-3. Code that is too simplistic (hello-world level)
-4. Sections that repeat basic-level content
+Use only the supplied reference materials to:
+1. identify factual claims
+2. verify or flag them
+3. note shallow sections or weak code
 
 ## Reference Materials
 {reference_context}
@@ -480,17 +843,16 @@ Also evaluate:
   "claims_checked": 0,
   "claims_supported": 0,
   "claims_unverifiable": 0,
-  "needs_improvement": true/false,
+  "needs_improvement": true,
   "flagged_claims": [
-    {{"claim": "exact text from content", "section": "adv_ko_1_mechanism", "issue": "No reference supports this entity name", "suggestion": "Remove or replace with verified alternative"}}
+    {{"claim": "exact claim", "section": "adv_ko_1_mechanism", "issue": "why weak", "suggestion": "how to fix"}}
   ],
   "improvements": [
-    {{"section": "adv_*_3_code", "issue": "Code is only 5 lines", "suggestion": "Add production-grade example"}}
+    {{"section": "adv_*_3_code", "issue": "issue", "suggestion": "fix"}}
   ],
-  "score": 0-100
+  "score": 0
 }}
 
-Scoring: 85+ (all claims verified, ready), 70-84 (minor unverifiable claims, flag for review), <70 (significant unverifiable content, regeneration needed).
 If score >= 75, set needs_improvement to false."""
 
 
@@ -498,106 +860,41 @@ SELF_CRITIQUE_PROMPT = """You are a senior ML engineer reviewing a handbook adva
 
 The term "{term}" is classified as type: {term_type}.
 
-## Your Task
-Review the advanced content below and identify:
-1. Sections that are too shallow (blog-post level instead of senior-engineer level)
-2. Missing concrete data (numbers, benchmarks, comparisons)
-3. Code that is too simplistic (hello-world level)
-4. Sections that repeat basic-level content
+Find shallow sections, missing data, weak code, or places where advanced content repeats basic content.
 
 ## Output JSON
 {{
-  "needs_improvement": true/false,
-  "weak_sections": ["adv_*_1_mechanism"],
+  "needs_improvement": true,
+  "weak_sections": ["adv_ko_1_mechanism"],
   "improvements": [
-    {{"section": "adv_*_3_code", "issue": "Code is only 5 lines with no error handling", "suggestion": "Add production-grade example with type hints and error handling"}}
+    {{"section": "adv_*_3_code", "issue": "issue", "suggestion": "fix"}}
   ],
-  "score": 0-100
+  "score": 0
 }}
 
-If score >= 75, set needs_improvement to false.
-
-## Examples
-
-### Pass (score=82)
-{{"needs_improvement": false, "weak_sections": [], "improvements": [], "score": 82}}
-
-### Fail (score=55)
-{{"needs_improvement": true, "weak_sections": ["adv_ko_3_code", "adv_ko_5_pitfalls"], "improvements": [{{"section": "adv_ko_3_code", "issue": "Only 5 lines, no error handling", "suggestion": "Add production example with type hints, try/except, real library usage (15+ lines)"}}, {{"section": "adv_ko_5_pitfalls", "issue": "No concrete failure examples", "suggestion": "Add 3+ mistake-solution pairs from real production incidents"}}], "score": 55}}"""
+If score >= 75, set needs_improvement to false."""
 
 
 HANDBOOK_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's advanced section quality.
 
 Term: "{term}" | Type: {term_type}
 
-Rate the advanced content (0-100) based on this term's type:
-
-## Universal Criteria (all types)
-- Depth: Is this senior-engineer level, not blog-post level? (0-25)
-- Accuracy: Are claims specific and verifiable? (0-25)
-- Uniqueness: Does advanced content differ from basic? (0-25)
-- Completeness: Are all 7 sections substantive? (0-25)
-
-The advanced body is exactly 7 H2 sections (in order):
-  1. Technical Definition & How It Works
-  2. Formulas / Architecture / Diagrams
-  3. Code or Pseudocode
-  4. Production Pitfalls (❌ Mistake / ✅ Fix pairs)
-  5. Tradeoffs — When to Use What
-  6. Industry Communication (PR review / postmortem tone)
-  7. Prerequisites, Alternatives, and Extensions
-
-References live in the footer (level-independent), not in the body.
-There is NO longer a sidebar checklist, a "why it matters" section,
-or any content section beyond these seven.
-
-## Score Interpretation
-- score = depth + accuracy + uniqueness + completeness (each 0-25, sum = 0-100)
-- 80+: Senior-engineer reference quality. Ready for publication.
-- 60-79: Acceptable with minor improvements. Review recommended.
-- 40-59: Blog-post level. Needs significant depth improvement.
-- <40: Insufficient. Major revision needed.
-
-## Scoring Rubric (5 tiers per criterion)
-
-### Depth
-- 23-25: Production code + architecture diagrams + math proofs + benchmark comparisons with cited sources
-- 18-22: Production code + detailed explanations + some benchmarks
-- 13-17: Working code + adequate explanations but lacking depth/benchmarks
-- 8-12: Partial code or simplified explanations, blog-post level
-- 0-7: Conceptual only, no implementation examples, Wikipedia-level
-
-### Accuracy
-- 23-25: All claims cite reference materials, verifiable numbers, no fabricated mappings
-- 18-22: Most claims sourced, minor uncited statements
-- 13-17: Mix of sourced and unsourced claims
-- 8-12: Vague "widely used" statements, some fabricated product claims
-- 0-7: Fabricated URLs, wrong product-technology mappings
-
-### Uniqueness
-- 23-25: Zero overlap with basic content, advanced-only insights and code
-- 18-22: Minimal overlap, mostly new content
-- 13-17: Some repeated analogies or examples from basic
-- 8-12: Significant overlap, rephrased basic content
-- 0-7: Essentially the same content as basic
-
-### Completeness
-- 23-25: All 7 sections substantive (min 200 chars each), no thin sections, each section adds distinct information
-- 18-22: 6-7 sections substantive, at most 1 thin
-- 13-17: 5-6 sections substantive, 1-2 thin
-- 8-12: 3-4 sections substantive, rest thin or empty
-- 0-7: Multiple empty sections, incomplete coverage
+Rate the advanced content on:
+- depth
+- accuracy
+- uniqueness
+- completeness
 
 ## Output JSON
 {{
-  "score": 0-100,
+  "score": 0,
   "breakdown": {{
-    "depth": 0-25,
-    "accuracy": 0-25,
-    "uniqueness": 0-25,
-    "completeness": 0-25
+    "depth": 0,
+    "accuracy": 0,
+    "uniqueness": 0,
+    "completeness": 0
   }},
-  "summary": "1-sentence assessment"
+  "summary": "one sentence"
 }}"""
 
 
@@ -605,101 +902,49 @@ BASIC_SELF_CRITIQUE_PROMPT = """You are reviewing a handbook basic section for q
 
 The term "{term}" is classified as type: {term_type}.
 
-## Your Task
-Review the basic content (KO and EN) below and identify:
-1. Sections where the analogy exists but the **concrete mechanism** is missing (1_plain must explain WHY it works, not just WHAT it is)
-2. Examples that are cliche: smartphone face recognition, self-driving cars, voice assistants are BANNED
-3. Comparison tables that are attribute tables ("high vs low", "good vs bad") instead of comparing 2+ real technologies
-4. Communication examples (7_comm) that sound like news articles instead of team meeting/slack conversations
-5. Product-technology claims (5_where) that seem fabricated or unverifiable
-6. Cross-section repetition (same analogy/example reused across sections)
+Review both KO and EN basic content for:
+- missing mechanism after analogy
+- cliche examples
+- weak comparisons
+- article-like tone in communication sections
+- fabricated product claims
+- cross-section repetition
 
 ## Output JSON
 {{
-  "ko_needs_improvement": true/false,
-  "en_needs_improvement": true/false,
+  "ko_needs_improvement": true,
+  "en_needs_improvement": true,
   "ko_improvements": [
-    {{"section": "basic_ko_2_example", "issue": "Uses banned smartphone example", "suggestion": "Replace with surprising, non-obvious application scenario"}}
+    {{"section": "basic_ko_1_plain", "issue": "issue", "suggestion": "fix"}}
   ],
   "en_improvements": [
-    {{"section": "basic_en_7_comm", "issue": "Reads like a news article", "suggestion": "Rewrite in team conversation tone with specific metrics/context"}}
+    {{"section": "basic_en_1_plain", "issue": "issue", "suggestion": "fix"}}
   ],
-  "ko_score": 0-100,
-  "en_score": 0-100
+  "ko_score": 0,
+  "en_score": 0
 }}
 
-If ko_score >= 75, set ko_needs_improvement to false.
-If en_score >= 75, set en_needs_improvement to false.
-
-## Examples
-
-### Pass (score=82)
-{{"ko_needs_improvement": false, "en_needs_improvement": false, "ko_improvements": [], "en_improvements": [], "ko_score": 82, "en_score": 80}}
-
-### Fail (score=55)
-{{"ko_needs_improvement": true, "en_needs_improvement": true, "ko_improvements": [{{"section": "basic_ko_1_plain", "issue": "Only analogy, no mechanism", "suggestion": "After the analogy, add 1-2 sentences explaining the concrete technical reason"}}, {{"section": "basic_ko_2_example", "issue": "Uses self-driving car example", "suggestion": "Replace with non-obvious scenario like Netflix subtitle generation"}}], "en_improvements": [{{"section": "basic_en_7_comm", "issue": "News article tone", "suggestion": "Rewrite as team slack message with metrics"}}], "ko_score": 55, "en_score": 60}}"""
+If score >= 75, mark that language as not needing improvement."""
 
 
 BASIC_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's basic section quality.
 
 Term: "{term}" | Type: {term_type}
 
-Rate the basic content (0-100) on criteria relevant to beginner-oriented educational content.
-
-The basic body has exactly 7 H2 sections (in order):
-  1. 쉽게 이해하기 / Plain Explanation
-  2. 비유와 예시 / Examples & Analogies
-  3. 한눈에 비교 / At a Glance (comparison table)
-  4. 어디서 왜 중요한가 / Where and Why It Matters
-  5. 자주 하는 오해 / Common Misconceptions (❌/✅ pairs)
-  6. 대화에서는 이렇게 / How It Sounds in Conversation
-  7. 함께 읽으면 좋은 용어 / Related Reading
-
-## Criteria
-
-### Engagement (0-25)
-- 23-25: §1 has clear analogy AND concrete mechanism. §2 uses surprising non-obvious scenarios. §7 triggers curiosity with comparison points and category tags.
-- 18-22: Analogy and mechanism present but one is weak. Examples are specific but not surprising. Related terms have some comparison points.
-- 13-17: Analogy exists but mechanism missing. Examples are generic (smartphones, self-driving). Related terms are dictionary-style.
-- 8-12: Shallow analogy only. Examples are cliche. Related terms just list names.
-- 0-7: No analogy, no mechanism. Generic one-liners.
-
-### Accuracy (0-25)
-- 23-25: All product-technology mappings verified. §5 myths are concept-specific. No fabricated claims.
-- 18-22: Most claims accurate, one minor unverifiable statement.
-- 13-17: Mix of accurate and vague claims ("widely used in industry").
-- 8-12: Some fabricated product claims or wrong technology mappings.
-- 0-7: Multiple factual errors.
-
-### Uniqueness (0-25)
-- 23-25: Zero cross-section repetition. §3 compares 2+ specific technologies. Each section adds genuinely new information.
-- 18-22: Minimal repetition. Table compares real concepts but lacks depth.
-- 13-17: Some repeated analogies/examples across sections. Table is "high vs low" style.
-- 8-12: Significant repetition. Table is a glossary.
-- 0-7: Sections are essentially reworded versions of each other.
-
-### Completeness (0-25)
-- 23-25: All 7 sections substantive (min 150 chars each). §1 >= 300 chars. §6 has 4+ team conversation examples.
-- 18-22: 6-7 sections substantive, one slightly thin.
-- 13-17: 5-6 sections substantive, 1-2 thin.
-- 8-12: 3-4 sections substantive, rest thin or empty.
-- 0-7: Multiple empty sections.
-
-## Score Interpretation
-- score = engagement + accuracy + uniqueness + completeness (each 0-25, sum = 0-100)
-- 80+: Publication ready. Engaging and accurate.
-- 60-79: Acceptable with minor improvements.
-- 40-59: Needs revision.
-- <40: Major revision needed.
+Rate the basic content on:
+- engagement
+- accuracy
+- uniqueness
+- completeness
 
 ## Output JSON
 {{
-  "score": 0-100,
+  "score": 0,
   "breakdown": {{
-    "engagement": 0-25,
-    "accuracy": 0-25,
-    "uniqueness": 0-25,
-    "completeness": 0-25
+    "engagement": 0,
+    "accuracy": 0,
+    "uniqueness": 0,
+    "completeness": 0
   }},
-  "summary": "1-sentence assessment"
+  "summary": "one sentence"
 }}"""
