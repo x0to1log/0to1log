@@ -55,13 +55,16 @@ PAPER_REFERENCE_REQUIRED_TYPES: frozenset[str] = frozenset({
 # Not a failure on its own, but informs refresh prioritization.
 STALE_AGE_DAYS: int = 90
 
-# Regex patterns for dated claims. Matches "as of 2023", "2024 baseline", etc.
-# Phrases that explicitly anchor content to a past year trigger a flag.
+# Regex patterns for dated claims. Matches "as of 2023", "2024 baseline",
+# "2024년 기준", etc. Phrases that explicitly anchor content to a past year
+# trigger a flag. Korean patterns use lookarounds instead of \b because
+# Hangul syllables are \w in Python's Unicode mode — \b between digit and
+# 년 does not create a word boundary.
 DATED_CLAIM_PATTERNS: tuple[str, ...] = (
     r"\bas of (?:20[12]\d)\b",
-    r"\b(?:20[12]\d)\s*(?:baseline|기준)\b",
-    r"\b현재\s*(?:20[12]\d)\b",
-    r"\b기준일[^\n]*(?:20[12]\d)\b",
+    r"(?<!\d)(?:20[12]\d)(?:년)?\s*(?:baseline|기준)(?!\w)",
+    r"(?<!\w)현재\s*(?:20[12]\d)(?:년)?(?!\d)",
+    r"(?<!\w)기준일[^\n]*?(?:20[12]\d)(?:년)?(?!\d)",
 )
 
 # Architecture keywords expected in body_advanced for ARCHITECTURE_REQUIRED_TYPES.
@@ -69,10 +72,10 @@ DATED_CLAIM_PATTERNS: tuple[str, ...] = (
 ARCHITECTURE_KEYWORDS: frozenset[str] = frozenset({
     # EN
     "parameters", "parameter count", "layers", "attention heads",
-    "FLOPs", "context window", "training data", "token",
+    "FLOPs", "context window", "training data", "token count",
     "architecture", "transformer", "encoder", "decoder",
     # KO
-    "파라미터", "어텐션", "헤드", "레이어", "임베딩",
+    "파라미터", "어텐션", "어텐션 헤드", "레이어", "임베딩",
     "아키텍처", "트랜스포머", "학습 데이터",
 })
 
