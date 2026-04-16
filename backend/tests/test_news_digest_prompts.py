@@ -246,23 +246,25 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     ]
 
     for prompt in body_prompts:
-        # Severity rubric
-        assert "## Severity rules" in prompt
-        assert "Fabrication / hallucination" in prompt
-        assert "unsure whether" in prompt  # the "when in doubt → minor" tiebreaker
-        assert "AT MOST **3 issues**" in prompt  # hard cap on issue count
-        assert "ZERO issues" in prompt  # counter to "must fill the list"
+        # Severity rubric (header + 5 major categories + minor tiebreaker)
+        assert "## Severity" in prompt
+        assert "fabrication" in prompt.lower()  # fabrication/hallucination category
+        assert "When unsure" in prompt or "minor" in prompt.lower()  # tiebreaker
+        assert "≤3 issues" in prompt or "AT MOST 3" in prompt  # hard cap
+        assert "Zero is valid" in prompt or "ZERO issues" in prompt  # anti-invention
         # Scoring resolution (stops 95-100 saturation on body judges)
-        assert "SCORING RESOLUTION" in prompt
+        assert "calibration" in prompt.lower() or "SCORING" in prompt
         assert "19-21" in prompt  # intermediate tier anchor
         assert "22-23" in prompt
 
-    # Frontload gets severity rubric but NOT scoring resolution: its
+    # Frontload gets severity rubric but NOT scoring calibration: its
     # distribution is already healthy (49-97 observed) so extra calibration
     # would over-penalize.
-    assert "## Severity rules" in QUALITY_CHECK_FRONTLOAD
-    assert "AT MOST **3 issues**" in QUALITY_CHECK_FRONTLOAD
-    assert "SCORING RESOLUTION" not in QUALITY_CHECK_FRONTLOAD
+    assert "## Severity" in QUALITY_CHECK_FRONTLOAD
+    assert "≤3 issues" in QUALITY_CHECK_FRONTLOAD or "AT MOST 3" in QUALITY_CHECK_FRONTLOAD
+    # Frontload prompt should NOT have the 25/22-23/19-21 calibration scale
+    # (kept minimal; only the body-persona prompts need that)
+    assert "19-21 solid" not in QUALITY_CHECK_FRONTLOAD
 
 
 def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():

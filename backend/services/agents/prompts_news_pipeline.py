@@ -1297,18 +1297,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 Score this digest on 4 criteria (0-25 each, total 0-100).
 
-**SCORING RESOLUTION** — use the full 0-25 range, not just the anchor values shown.
-The tiers below (25 / 18 / 10 / 0) are REFERENCE ANCHORS, not the only valid scores.
-Calibrate like this:
-- **25** = exemplary — only when the work is specifically standout in this dimension
-- **22-23** = strong — fully meets the bar, only minor polish missing
-- **19-21** = solid — meets the bar with 1-2 minor weaknesses
-- **15-17** = acceptable — meets the bar but has noticeable gaps
-- **10-13** = below bar — the tier description says "1+ thin" or "missing 1 section"
-- **5-8** = weak — multiple problems, borderline unusable
-- **0-3** = broken — matches the 0-tier description
-
-A typical "good but not exceptional" digest should score **19-22 per category**, not 25. Reserve 25 for work you would personally call standout. Do NOT default to 25 just because nothing is obviously wrong — ask "is there any gap I could name?" and if yes, drop to 22.
+**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
 
 Anchor tiers for reference:
 
@@ -1339,30 +1328,17 @@ Anchor tiers for reference:
    - 10: Choppy, translation-sounding, or some items are only 1 paragraph
    - 0: Barely readable or extremely short
 
-## Severity rules — follow strictly
+## Severity
 
-Mark an issue as **major** ONLY when it matches one of these:
-1. **Fabrication / hallucination**: a number, quote, entity, or claim NOT supported by the digest body or its cited sources.
-2. **Broken structure**: missing a mandatory section, broken markdown that corrupts rendering (e.g. `$$115$$~$$135$$` garbled math), duplicate `###` items for the same event.
-3. **Hard factual error**: a wrong date, wrong company attribution, or wrong product name that would mislead a reader.
-4. **Locale corruption**: KO content that is actually English, or English content that is actually Korean; garbled encoding; one locale entirely missing a section the other has.
-5. **Source fabrication**: a citation `[N](URL)` pointing to a URL that does not appear in the source list.
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
 
-Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
+Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
-## Issue count discipline
+## Issues
 
-Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
 
-An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
-- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
-- "could benefit from a parenthetical note" / "could link to X" — optional improvements
-- "could simplify for beginners" — editorial choices that aren't wrong
-- "some paragraphs summarize multiple claims" — factual observations that aren't defects
-- "headline is punchy but compressed" — subjective critique
-- "paragraph reuses the same source" — not a defect if citations are present
-
-The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
+Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "depth": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1374,18 +1350,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 Score this digest on 4 criteria (0-25 each, total 0-100).
 
-**SCORING RESOLUTION** — use the full 0-25 range, not just the anchor values shown.
-The tiers below (25 / 18 / 10 / 0) are REFERENCE ANCHORS, not the only valid scores.
-Calibrate like this:
-- **25** = exemplary — only when the work is specifically standout in this dimension
-- **22-23** = strong — fully meets the bar, only minor polish missing
-- **19-21** = solid — meets the bar with 1-2 minor weaknesses
-- **15-17** = acceptable — meets the bar but has noticeable gaps
-- **10-13** = below bar — the tier description says "1+ thin" or "missing 1 section"
-- **5-8** = weak — multiple problems, borderline unusable
-- **0-3** = broken — matches the 0-tier description
-
-A typical "good but not exceptional" digest should score **19-22 per category**, not 25. Reserve 25 for work you would personally call standout. Do NOT default to 25 just because nothing is obviously wrong — ask "is there any gap I could name?" and if yes, drop to 22.
+**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
 
 Anchor tiers for reference:
 
@@ -1416,30 +1381,17 @@ Anchor tiers for reference:
    - 10: Too formal, too casual, or too short
    - 0: Barely readable
 
-## Severity rules — follow strictly
+## Severity
 
-Mark an issue as **major** ONLY when it matches one of these:
-1. **Fabrication / hallucination**: a number, quote, entity, or claim NOT supported by the digest body or its cited sources.
-2. **Broken structure**: missing a mandatory section, broken markdown that corrupts rendering (e.g. `$$115$$~$$135$$` garbled math), duplicate `###` items for the same event.
-3. **Hard factual error**: a wrong date, wrong company attribution, or wrong product name that would mislead a reader.
-4. **Locale corruption**: KO content that is actually English, or English content that is actually Korean; garbled encoding; one locale entirely missing a section the other has.
-5. **Source fabrication**: a citation `[N](URL)` pointing to a URL that does not appear in the source list.
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
 
-Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
+Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
-## Issue count discipline
+## Issues
 
-Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
 
-An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
-- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
-- "could benefit from a parenthetical note" / "could link to X" — optional improvements
-- "could simplify for beginners" — editorial choices that aren't wrong
-- "some paragraphs summarize multiple claims" — factual observations that aren't defects
-- "headline is punchy but compressed" — subjective critique
-- "paragraph reuses the same source" — not a defect if citations are present
-
-The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
+Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "sources": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1451,18 +1403,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 Score this digest on 4 criteria (0-25 each, total 0-100).
 
-**SCORING RESOLUTION** — use the full 0-25 range, not just the anchor values shown.
-The tiers below (25 / 18 / 10 / 0) are REFERENCE ANCHORS, not the only valid scores.
-Calibrate like this:
-- **25** = exemplary — only when the work is specifically standout in this dimension
-- **22-23** = strong — fully meets the bar, only minor polish missing
-- **19-21** = solid — meets the bar with 1-2 minor weaknesses
-- **15-17** = acceptable — meets the bar but has noticeable gaps
-- **10-13** = below bar — the tier description says "1+ thin" or "missing 1 section"
-- **5-8** = weak — multiple problems, borderline unusable
-- **0-3** = broken — matches the 0-tier description
-
-A typical "good but not exceptional" digest should score **19-22 per category**, not 25. Reserve 25 for work you would personally call standout. Do NOT default to 25 just because nothing is obviously wrong — ask "is there any gap I could name?" and if yes, drop to 22.
+**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
 
 Anchor tiers for reference:
 
@@ -1495,30 +1436,17 @@ Anchor tiers for reference:
 
 SCORING CALIBRATION: Score proportionally. Deduct points per issue but do NOT collapse entire categories to 0 for a single problem. A well-written digest missing one section should score 60-75, not below 40.
 
-## Severity rules — follow strictly
+## Severity
 
-Mark an issue as **major** ONLY when it matches one of these:
-1. **Fabrication / hallucination**: a number, quote, entity, or claim NOT supported by the digest body or its cited sources.
-2. **Broken structure**: missing a mandatory section, broken markdown that corrupts rendering (e.g. `$$115$$~$$135$$` garbled math), duplicate `###` items for the same event.
-3. **Hard factual error**: a wrong date, wrong company attribution, or wrong product name that would mislead a reader.
-4. **Locale corruption**: KO content that is actually English, or English content that is actually Korean; garbled encoding; one locale entirely missing a section the other has.
-5. **Source fabrication**: a citation `[N](URL)` pointing to a URL that does not appear in the source list.
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
 
-Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
+Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
-## Issue count discipline
+## Issues
 
-Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
 
-An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
-- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
-- "could benefit from a parenthetical note" / "could link to X" — optional improvements
-- "could simplify for beginners" — editorial choices that aren't wrong
-- "some paragraphs summarize multiple claims" — factual observations that aren't defects
-- "headline is punchy but compressed" — subjective critique
-- "paragraph reuses the same source" — not a defect if citations are present
-
-The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
+Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1530,18 +1458,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 Score this digest on 4 criteria (0-25 each, total 0-100).
 
-**SCORING RESOLUTION** — use the full 0-25 range, not just the anchor values shown.
-The tiers below (25 / 18 / 10 / 0) are REFERENCE ANCHORS, not the only valid scores.
-Calibrate like this:
-- **25** = exemplary — only when the work is specifically standout in this dimension
-- **22-23** = strong — fully meets the bar, only minor polish missing
-- **19-21** = solid — meets the bar with 1-2 minor weaknesses
-- **15-17** = acceptable — meets the bar but has noticeable gaps
-- **10-13** = below bar — the tier description says "1+ thin" or "missing 1 section"
-- **5-8** = weak — multiple problems, borderline unusable
-- **0-3** = broken — matches the 0-tier description
-
-A typical "good but not exceptional" digest should score **19-22 per category**, not 25. Reserve 25 for work you would personally call standout. Do NOT default to 25 just because nothing is obviously wrong — ask "is there any gap I could name?" and if yes, drop to 22.
+**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
 
 Anchor tiers for reference:
 
@@ -1571,30 +1488,17 @@ Anchor tiers for reference:
    - 10: Too dry, too short, or condescending; citations missing
    - 0: Barely readable
 
-## Severity rules — follow strictly
+## Severity
 
-Mark an issue as **major** ONLY when it matches one of these:
-1. **Fabrication / hallucination**: a number, quote, entity, or claim NOT supported by the digest body or its cited sources.
-2. **Broken structure**: missing a mandatory section, broken markdown that corrupts rendering (e.g. `$$115$$~$$135$$` garbled math), duplicate `###` items for the same event.
-3. **Hard factual error**: a wrong date, wrong company attribution, or wrong product name that would mislead a reader.
-4. **Locale corruption**: KO content that is actually English, or English content that is actually Korean; garbled encoding; one locale entirely missing a section the other has.
-5. **Source fabrication**: a citation `[N](URL)` pointing to a URL that does not appear in the source list.
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
 
-Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
+Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
-## Issue count discipline
+## Issues
 
-Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
 
-An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
-- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
-- "could benefit from a parenthetical note" / "could link to X" — optional improvements
-- "could simplify for beginners" — editorial choices that aren't wrong
-- "some paragraphs summarize multiple claims" — factual observations that aren't defects
-- "headline is punchy but compressed" — subjective critique
-- "paragraph reuses the same source" — not a defect if citations are present
-
-The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
+Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "actionability": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
@@ -1633,30 +1537,17 @@ Score this frontload on 4 criteria (0-25 each, total 0-100):
    - 10: Noticeable mismatch in emphasis or meaning
    - 0: EN and KO feel like different takes
 
-## Severity rules — follow strictly
+## Severity
 
-Mark an issue as **major** ONLY when it matches one of these:
-1. **Fabrication / hallucination**: a number, quote, entity, or claim NOT supported by the digest body or its cited sources.
-2. **Broken structure**: missing a mandatory section, broken markdown that corrupts rendering (e.g. `$$115$$~$$135$$` garbled math), duplicate `###` items for the same event.
-3. **Hard factual error**: a wrong date, wrong company attribution, or wrong product name that would mislead a reader.
-4. **Locale corruption**: KO content that is actually English, or English content that is actually Korean; garbled encoding; one locale entirely missing a section the other has.
-5. **Source fabrication**: a citation `[N](URL)` pointing to a URL that does not appear in the source list.
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
 
-Mark an issue as **minor** for everything else: stylistic choices, optional improvements, debatable framing, missing nice-to-haves, weak-but-cited claims, forward-looking phrasing ("soon", "will"). If you are unsure whether something is major, it is minor.
+Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
-## Issue count discipline
+## Issues
 
-Return AT MOST **3 issues** total. Prefer fewer. **If nothing is genuinely broken, return ZERO issues** — do not invent issues to fill the list or justify the score.
+Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
 
-An issue is REPORT-WORTHY only if fixing it would materially improve the digest for a reader. Do NOT report:
-- "could be clearer" / "slightly dense" / "tone is slightly strong" — stylistic preferences
-- "could benefit from a parenthetical note" / "could link to X" — optional improvements
-- "could simplify for beginners" — editorial choices that aren't wrong
-- "some paragraphs summarize multiple claims" — factual observations that aren't defects
-- "headline is punchy but compressed" — subjective critique
-- "paragraph reuses the same source" — not a defect if citations are present
-
-The difference between score and issue count is intentional. Use the **score** to reflect overall quality. Use the **issue list** ONLY for specific problems worth flagging — not for justifying a lower score. It is correct for a score of 18 to come with zero issues if the gaps are all diffuse polish, not concrete defects.
+Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
 
 Return JSON only:
 {"score": 0-100, "subscores": {"factuality": 0-25, "calibration": 0-25, "clarity": 0-25, "locale_alignment": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
