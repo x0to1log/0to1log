@@ -1,7 +1,7 @@
 ---
 title: 뉴스 파이프라인 하드닝 — 3 Phase 의존성 기반 개선
 date: 2026-04-15
-status: phase 1 complete (2026-04-16), phase 2 in planning
+status: phase 3 code complete (2026-04-17), production verify pending
 type: design / spec
 related:
   - vault/09-Implementation/plans/2026-03-18-prompt-audit-fixes.md
@@ -447,7 +447,58 @@ messages=[
 - URL 검증 unit test 통과: 9/9 PASS + 2/2 integration PASS
 - Daily cron run_id: [Amy 검증 후 기록]
 
-### Phase 3
-- Baseline 토큰 사용량 (Phase 3 시작 전 7일):
-- After 토큰 사용량 (Phase 3 종료 후 3일):
-- Daily cron run_id:
+### Phase 3 — Code Implementation Complete (2026-04-17)
+
+**Commits (4):**
+- `3da7706` — feat(scripts): add token usage measurement script + baseline snapshot
+- `93e04c5` — refactor(prompts): remove shadowed dead-code duplicates (-61 lines)
+- `f6b3ed9` — refactor(ranking): split summarize_community prompt into system + user
+- `7bfd061` — refactor(prompts): tighten QUALITY_CHECK shared sections (-1956 tokens)
+
+**Scope contractions discovered during execution (documented in plan Critical Constraints):**
+- Token logging infrastructure: ALREADY EXISTED in `_log_stage` — Task 1 reduced to measurement script only
+- `ranking.py` messages normalization: 3 of 4 LLM calls already used system+user (classify / merge / rank). Only `summarize_community` needed fixing.
+- Task 5 (additional token reduction beyond Task 3+4): SKIPPED — -1956 > target -1250
+
+**Per-prompt token measurements (tiktoken gpt-4):**
+
+| Prompt | Before | After | Δ |
+|---|---|---|---|
+| CLASSIFICATION_SYSTEM_PROMPT | 1149 | 1149 | 0 (untouched, target already met) |
+| QUALITY_CHECK_RESEARCH_EXPERT | 1436 | 1013 | **-423** |
+| QUALITY_CHECK_RESEARCH_LEARNER | 1382 | 959 | **-423** |
+| QUALITY_CHECK_BUSINESS_EXPERT | 1474 | 1051 | **-423** |
+| QUALITY_CHECK_BUSINESS_LEARNER | 1381 | 958 | **-423** |
+| QUALITY_CHECK_FRONTLOAD | 928 | 664 | **-264** |
+| **TOTAL (6 main prompts)** | **7750** | **5794** | **-1956 (25% reduction)** |
+
+**Phase 3 Done criterion: net -1250 tokens.** Achieved: **-1956 (156% of target).**
+
+**Runtime impact (estimated per daily cron):**
+- quality:research saves ~423+423=846 tokens per call (from expert + learner prompts × 1 call each)
+- quality:business saves ~423+423=846 tokens per call
+- quality:frontload saves ~264 tokens per call
+- Estimated daily savings: ~2000 tokens (~$0.01/day at gpt-5-mini rates). Small absolute but compounds over time.
+
+**Other changes:**
+- `prompts_news_pipeline.py`: 1840 → 1779 lines via dead-code cleanup (Task 2)
+- `summarize_community` now uses `messages=[{system, user}]` (was user-only)
+- New `COMMUNITY_SUMMARIZER_SYSTEM` + `COMMUNITY_SUMMARIZER_USER_TEMPLATE` constants; backward-compat `COMMUNITY_SUMMARIZER_PROMPT` retained
+
+**Tests:**
+- 9 pre-existing failures unchanged
+- 158 passed (baseline preserved)
+- 25 prompt tests all pass (1 test updated to match new header "## Severity" — intent unchanged)
+- Ruff: 3 pre-existing errors in `advisor.py` (out of scope), clean on all Phase 3 touched files
+
+**남은 액션 (Amy gate):**
+1. Railway 재배포 확인 (~3-5분)
+2. 다음 daily cron 자동 실행 또는 manual trigger
+3. `backend/scripts/measure_token_usage.py --days 3` 로 after 수치 측정
+4. quality_score 회귀 없음 확인 (~85-92 범위 유지)
+5. 위 OK이면 design.md status를 `phase 3 complete`로 변경
+
+**알려진 adaptation (plan과 차이):**
+1. Task 3 CLASSIFICATION 축약 skip: QUALITY_CHECK 축약만으로 목표 초과 달성
+2. Task 4 Option A (f-string 공통 template) 대신 단순 replace_all로 shared block 축약 — 모든 5 QUALITY_CHECK가 동일 텍스트 공유해서 in-place 단축이 더 간단
+3. Task 6 backward-compat: `COMMUNITY_SUMMARIZER_PROMPT` 상수 유지 (다른 caller 가능성 대비)
