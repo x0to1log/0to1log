@@ -578,62 +578,11 @@ Writing rules:
 # They guide ONLY the headline/headline_ko/excerpt/excerpt_ko fields, not the body.
 # The body still follows persona guide + skeleton.
 
-EXPERT_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
-
-Reader: senior ML engineer / AI PM / CTO. Already saw today's events on X, HN, internal Slack. Reads 0to1log for one reason — an editorial TAKE on what those events mean. Not for "what happened" — for "how to think about it".
-
-Tone: 단정체 (-다), analyst voice. 3rd person. Confident but grounded in source facts.
-Length: headline_ko 35–55 chars. excerpt_ko 1-2 sentences.
-
-Pick ONE archetype for headline_ko based on which fits today's news best:
-
-- 사건 클러스터 (Event Cluster): same week, similar move by 2+ actors. State actors + the common pattern.
-  ex: "엔비디아·Z.AI 동시 출시 — 모두 '오래 일하는 모델'을 겨냥"
-
-- 숨은 숫자 (Hidden Number): highlight a specific number from the source that mainstream headlines missed.
-  ex: "GLM-5.1의 진짜 뉴스는 SOTA가 아니라 '8시간 자율 실행' 데모다"
-
-- 주목 밖의 진짜 뉴스 (What Got Missed): counter-attention frame, smaller story is actually more important.
-  ex: "메타 발표에 시선이 몰린 사이, 앤트로픽의 5분 공지가 더 중요했다"
-
-Forbidden in headline_ko/excerpt_ko:
-- 한국 경제신문 cliché: 재편, 재정렬, 각축전, 정조준, 베팅 가속, 격화, 돌파, 공조, 본격화, 가속, 선회
-- Vendor PR verbs: 선점, 끌어올리다, 이끈다, 강세, 약진, 견인
-- Motivation invention: "진짜 의도는 X", "X 때문에 했다", "사실은 Y" (unless source explicitly states)
-- Future predictions: "Q2에", "내년", "다음 분기", "곧" (forward-looking specific)
-- Hedging: "주목된다", "전망된다", "예상된다", "관측된다"
-- Listicle pattern "X는 A, Y는 B, Z는 C" (UNLESS used inside the 사건 클러스터 archetype)"""
-
-
-LEARNER_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
-
-Reader: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. 출퇴근길에 5분 안에 "안전하게 똑똑해질 수 있는" 콘텐츠를 찾고 있음. 자존감 압박(AI 모르면 뒤처진다)과 시간 결핍이 동시에 작동.
-
-Tone for headline_ko: 명사형 종결 (noun-ending, Korean news headline style). NOT -에요/-요. NOT -다/-이다.
-Tone for excerpt_ko: written editorial prose, concise and readable.
-Tone for body (ko field): written news/editorial prose by default. Slightly softer phrasing is allowed in interpretive sections, but do not use conversational chat tone.
-Length: headline_ko 25–45 chars. excerpt_ko 1-2 sentences.
-
-Pick ONE archetype for headline_ko based on which fits today's news best:
-
-- 패턴 발견 (Pattern Discovery): when 3+ events share a clear theme. Show readers the bigger shape.
-  ex: "메타·앤트로픽, 같은 주에 '폐쇄형 AI'로 동시 전환 — 무엇이 달라지나"
-
-- 새 기준선 (New Baseline): when a previously impossible capability becomes routine. Anchor to a concrete fact.
-  ex: "AI 8시간 자율 실행 시대 — 새 기준선 등장"
-
-- 용어 입문 (Term Primer): when one keyword keeps appearing in this week's news. Promise vocabulary.
-  ex: "이번 주 키워드 '에이전트' — 5분 안에 따라잡기"
-
-Forbidden in headline_ko/excerpt_ko:
-- English acronyms (only ChatGPT/AI/GPT allowed): NO MoE, MTP, RLHF, LLM, RAG, AGI, NVFP4, SOTA, SLM
-- Tech specs: NO "1M tokens", "4-bit", "120B parameters", "FP8", context window numbers
-- 한국 경제신문 cliché: 재편, 각축전, 정조준, 베팅, 격화, 돌파, 공조, 본격화
-- Vendor PR verbs: 선점, 끌어올리다, 이끈다, 강세
-- Self-help / exclusion tone: "당신이 알아야 할", "필독", "꼭 봐야", "개발자가 알아야 할"
-- Hype: "충격", "경악", "혁명적", "혁신"
-
-Encouraged words/patterns (noun-ending headlines): 등장, 공개, 전환, 확인, ~의 의미, ~된 날, 따라잡기, 정리"""
+# NOTE: EXPERT_TITLE_STRATEGY and LEARNER_TITLE_STRATEGY previously had
+# definitions here (~55 lines total) that were shadowed by the active versions
+# at the bottom of this file (Python re-assignment wins). Removed 2026-04-17
+# in Phase 3 cleanup. Active versions: see later in file, referenced by
+# TITLE_STRATEGY_MAP.
 
 
 HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headline, excerpt, AND body)
@@ -667,19 +616,9 @@ FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to
 Before finalizing, check: does every specific claim in `headline_ko`/`excerpt_ko` have a corresponding claim in `headline`/`excerpt`? If not, either add it to EN or remove it from KO. They must match."""
 
 
-ONE_LINE_SUMMARY_RULE = """## One-Line Summary — ROLE (applies to BOTH en AND ko)
-
-The `## One-Line Summary` / `## 한 줄 요약` section must be exactly ONE sentence that synthesizes the main pattern or shared shift across today's top 2-3 stories.
-
-- Write the digest's throughline, not just the top headline repeated.
-- Do not merely restate a single headline when multiple major stories clearly point to a broader theme.
-- Keep it concise and punchy, but prioritize informational value over arbitrary word counts.
-- You may mention 2 named actors or moves if that is necessary to express the shared pattern, but do NOT turn it into a laundry list of disconnected headlines.
-- BAD (single-story restatement): "OpenAI updates its macOS apps after a certificate issue."
-- BAD (headline list): "OpenAI updates apps, Microsoft launches models, and Amazon signs a deal."
-- GOOD (shared throughline): "Trust incidents, in-house models, and cloud alliances are reshaping who controls AI distribution this week."
-- GOOD (technical throughline): "Open agent models are shifting from benchmark chasing to long-horizon, task-specific execution."
-"""
+# NOTE: ONE_LINE_SUMMARY_RULE previously had a definition here (~13 lines)
+# that was shadowed by the active version at the bottom of this file. Removed
+# 2026-04-17 in Phase 3 cleanup. Active version: see later in file.
 
 
 LEARNER_KO_LANGUAGE_RULE = """## KO Language Purity (LEARNER ONLY — applies to the `ko` field)
