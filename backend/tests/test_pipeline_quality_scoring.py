@@ -442,3 +442,73 @@ async def test_check_digest_quality_url_validation_passes_when_all_cited():
 
     assert result["url_validation_failed"] is False
     assert "auto_publish_eligible" not in result or result.get("auto_publish_eligible") is not False
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_allowlist_includes_all_group_items_not_just_primary():
+    """Regression guard (2026-04-16 production bug):
+    URL validator must treat EVERY item URL in a ClassifiedGroup as allowed,
+    not just items[0] (primary). Citing a non-primary item legitimately
+    must NOT trigger url_validation_failed.
+    """
+    from services.pipeline import _check_digest_quality
+
+    PRIMARY = "https://primary.example.com/a"
+    SECONDARY = "https://secondary.example.com/b"
+    TERTIARY = "https://tertiary.example.com/c"
+
+    classified = [
+        ClassifiedGroup(
+            group_title="Multi-item group",
+            items=[
+                GroupedItem(url=PRIMARY, title="Primary"),
+                GroupedItem(url=SECONDARY, title="Secondary"),
+                GroupedItem(url=TERTIARY, title="Tertiary"),
+            ],
+            category="business",
+            subcategory="industry",
+            relevance_score=0.9,
+            reason="[LEAD]",
+        )
+    ]
+
+    # Body cites the SECONDARY URL (not the primary) — this is legitimate
+    # because the writer was given all three items.
+    personas = {
+        "expert": PersonaOutput(
+            en=f"## One-Line Summary\nExpert body [1]({SECONDARY})\n\n### Deal\n\nPara [1]({TERTIARY})\n",
+            ko=f"## 한 줄 요약\n본문 [1]({SECONDARY})\n\n### 딜\n\n단락 [1]({TERTIARY})\n",
+        ),
+    }
+
+    responses = [
+        _mock_openai_response({"score": 95, "subscores": {}, "issues": []}),
+        _mock_openai_response({"score": 96, "subscores": {}, "issues": []}),
+    ]
+
+    async def _create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=classified,
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-allowlist",
+            cumulative_usage={},
+            frontload=None,
+        )
+
+    assert result["url_validation_failed"] is False, (
+        f"Non-primary group items should be in allowlist, but got failures: "
+        f"{result.get('url_validation_failures')}"
+    )

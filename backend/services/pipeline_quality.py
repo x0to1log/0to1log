@@ -422,11 +422,19 @@ async def _check_digest_quality(
     }
 
     # Phase 2 — URL strict allowlist validation (fact_pack.news_items cite-check)
+    # Allowlist covers EVERY item URL across all classified groups, not just
+    # each group's primary (items[0].url). The writer is given all items in a
+    # group, so citing any of them is legitimate — using primary_url only would
+    # produce false-positive failures for group members ≥2.
+    # Known gap: enriched/related URLs passed to the writer but not in
+    # group.items are NOT in this allowlist — will still false-positive.
+    # Broaden later via a dedicated parameter if needed.
     fact_pack_for_validation = {
         "news_items": [
-            {"url": g.primary_url, "title": g.group_title}
+            {"url": item.url, "title": g.group_title}
             for g in classified
-            if getattr(g, "primary_url", None)
+            for item in (g.items or [])
+            if getattr(item, "url", None)
         ],
     }
     url_validation_failures: list[dict[str, Any]] = []
