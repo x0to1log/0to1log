@@ -1,7 +1,7 @@
 ---
 title: 뉴스 파이프라인 하드닝 — 3 Phase 의존성 기반 개선
 date: 2026-04-15
-status: phase 3 code complete (2026-04-17), production verify pending
+status: all phases complete (2026-04-17) — long-tail monitoring (Option B Exa restore + Phase 3 token usage) in observation
 type: design / spec
 related:
   - vault/09-Implementation/plans/2026-03-18-prompt-audit-fixes.md
