@@ -293,3 +293,152 @@ class TestValidateCitationUrls:
         fact_pack = {}  # no news_items key
         result = validate_citation_urls(body, fact_pack)
         assert result["valid"] is False
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_url_validation_failure_marks_ineligible():
+    """Integration: hallucinated URL in body forces auto_publish_eligible=False via quality_meta."""
+    from services.pipeline import _check_digest_quality
+
+    BAD_URL = "https://hallucinated.example.com/fake"
+    GOOD_URL = "https://example.com/story"
+
+    personas = {
+        "expert": PersonaOutput(
+            en=(
+                "## One-Line Summary\nEnglish expert body [1](" + GOOD_URL + ")\n\n"
+                "## Industry & Biz\n\n"
+                "### Thinking Machines deal\n\n"
+                "First paragraph [1](" + BAD_URL + ")\n\n"
+                "Second paragraph [1](" + GOOD_URL + ")\n\n"
+                "Third paragraph [1](" + GOOD_URL + ")\n"
+            ),
+            ko=(
+                "## 한 줄 요약\n한국어 전문가 본문 [1](" + GOOD_URL + ")\n\n"
+                "## Industry & Biz\n\n"
+                "### Thinking Machines 딜\n\n"
+                "첫 문단 [1](" + GOOD_URL + ")\n\n"
+                "둘째 문단 [1](" + GOOD_URL + ")\n\n"
+                "셋째 문단 [1](" + GOOD_URL + ")\n"
+            ),
+        ),
+        "learner": PersonaOutput(
+            en=(
+                "## One-Line Summary\nEnglish learner body [1](" + GOOD_URL + ")\n\n"
+                "## What This Means for You\n\n"
+                "### Why it matters\n\n"
+                "First paragraph [1](" + GOOD_URL + ")\n\n"
+                "Second paragraph [1](" + GOOD_URL + ")\n\n"
+                "Third paragraph [1](" + GOOD_URL + ")\n"
+            ),
+            ko=(
+                "## 한 줄 요약\n한국어 학습자 본문 [1](" + GOOD_URL + ")\n\n"
+                "## What This Means for You\n\n"
+                "### 왜 중요한가\n\n"
+                "첫 문단 [1](" + GOOD_URL + ")\n\n"
+                "둘째 문단 [1](" + GOOD_URL + ")\n\n"
+                "셋째 문단 [1](" + GOOD_URL + ")\n"
+            ),
+        ),
+    }
+    frontload = {
+        "headline": "Nvidia wins",
+        "headline_ko": "엔비디아 승리",
+        "excerpt": "Nvidia infrastructure dominance.",
+        "excerpt_ko": "엔비디아 인프라 지배.",
+        "focus_items": ["Deal signed"],
+        "focus_items_ko": ["계약 체결"],
+    }
+
+    # Mock LLM judge call with clean (no-issue) scores so we're testing ONLY URL validation
+    responses = [
+        _mock_openai_response({"score": 95, "subscores": {}, "issues": []}),
+        _mock_openai_response({"score": 94, "subscores": {}, "issues": []}),
+        _mock_openai_response({"score": 96, "subscores": {}, "issues": []}),
+    ]
+
+    async def _create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=_sample_group(),  # has primary_url = GOOD_URL
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-url-val",
+            cumulative_usage={},
+            frontload=frontload,
+        )
+
+    # URL validation flags
+    assert result["url_validation_failed"] is True
+    assert result["auto_publish_eligible"] is False
+    failures = result["url_validation_failures"]
+    assert len(failures) >= 1
+    # Check that BAD_URL is in at least one failure's unknown_urls
+    all_unknown = [u for f in failures for u in f["unknown_urls"]]
+    assert BAD_URL in all_unknown
+    # Only the expert.en content has the bad URL, so exactly one failure entry expected
+    expert_en_failures = [f for f in failures if f["persona"] == "expert" and f["locale"] == "en"]
+    assert len(expert_en_failures) == 1
+    assert BAD_URL in expert_en_failures[0]["unknown_urls"]
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_url_validation_passes_when_all_cited():
+    """Happy path: all citations resolve to fact_pack URLs → url_validation_failed=False."""
+    from services.pipeline import _check_digest_quality
+
+    GOOD_URL = "https://example.com/story"
+
+    personas = {
+        "expert": PersonaOutput(
+            en=(
+                "## One-Line Summary\nExpert body [1](" + GOOD_URL + ")\n\n"
+                "### Deal\n\nFirst [1](" + GOOD_URL + ")\n\nSecond [1](" + GOOD_URL + ")\n\nThird [1](" + GOOD_URL + ")\n"
+            ),
+            ko=(
+                "## 한 줄 요약\n본문 [1](" + GOOD_URL + ")\n\n"
+                "### 딜\n\n첫 [1](" + GOOD_URL + ")\n\n둘 [1](" + GOOD_URL + ")\n\n셋 [1](" + GOOD_URL + ")\n"
+            ),
+        ),
+    }
+
+    responses = [
+        _mock_openai_response({"score": 95, "subscores": {}, "issues": []}),
+        _mock_openai_response({"score": 96, "subscores": {}, "issues": []}),
+    ]
+
+    async def _create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=_sample_group(),
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-url-ok",
+            cumulative_usage={},
+            frontload=None,
+        )
+
+    assert result["url_validation_failed"] is False
+    assert "auto_publish_eligible" not in result or result.get("auto_publish_eligible") is not False

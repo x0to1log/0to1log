@@ -421,6 +421,41 @@ async def _check_digest_quality(
         "news_count": len(classified),
     }
 
+    # Phase 2 — URL strict allowlist validation (fact_pack.news_items cite-check)
+    fact_pack_for_validation = {
+        "news_items": [
+            {"url": g.primary_url, "title": g.group_title}
+            for g in classified
+            if getattr(g, "primary_url", None)
+        ],
+    }
+    url_validation_failures: list[dict[str, Any]] = []
+    for persona_name, persona_output in personas.items():
+        if not persona_output:
+            continue
+        for locale, content in (("en", persona_output.en), ("ko", persona_output.ko)):
+            if not content:
+                continue
+            url_result = validate_citation_urls(content, fact_pack_for_validation)
+            if not url_result["valid"]:
+                url_validation_failures.append({
+                    "persona": persona_name,
+                    "locale": locale,
+                    "unknown_urls": url_result["unknown_urls"],
+                    "citation_count": url_result["citation_count"],
+                })
+
+    if url_validation_failures:
+        logger.warning(
+            "URL validation failed for %s digest: %d persona/locale pairs with unknown URLs",
+            digest_type, len(url_validation_failures),
+        )
+        result["url_validation_failed"] = True
+        result["url_validation_failures"] = url_validation_failures
+        result["auto_publish_eligible"] = False
+    else:
+        result["url_validation_failed"] = False
+
     await _log_stage(
         supabase, run_id, f"quality:{digest_type}", "success", t0,
         output_summary=(
