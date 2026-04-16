@@ -13,7 +13,12 @@ from models.news_pipeline import (
     NewsCandidate,
 )
 from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
-from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT, COMMUNITY_SUMMARIZER_PROMPT, MERGE_SYSTEM_PROMPT
+from services.agents.prompts_news_pipeline import (
+    CLASSIFICATION_SYSTEM_PROMPT,
+    COMMUNITY_SUMMARIZER_SYSTEM,
+    COMMUNITY_SUMMARIZER_USER_TEMPLATE,
+    MERGE_SYSTEM_PROMPT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -443,13 +448,16 @@ async def summarize_community(
         groups_text_parts.append(f"### {key}\nOriginal article: {gtitle}\n{raw}")
     groups_text = "\n\n".join(groups_text_parts)
 
-    prompt = COMMUNITY_SUMMARIZER_PROMPT.format(groups_text=groups_text)
+    user_content = COMMUNITY_SUMMARIZER_USER_TEMPLATE.format(groups_text=groups_text)
 
     client = get_openai_client()
     model = settings.openai_model_light
     kwargs = build_completion_kwargs(
         model=model,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": COMMUNITY_SUMMARIZER_SYSTEM},
+            {"role": "user", "content": user_content},
+        ],
         max_tokens=2000,
         temperature=0.2,
     )

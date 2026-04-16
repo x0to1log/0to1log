@@ -1736,7 +1736,8 @@ Order supporting by importance (most important first).
 # Community Summarizer
 # ---------------------------------------------------------------------------
 
-COMMUNITY_SUMMARIZER_PROMPT = """You are an AI community analyst. Given community discussion data (Hacker News / Reddit) for news articles, extract structured insights.
+# System prompt: static rules + output format (no interpolation).
+COMMUNITY_SUMMARIZER_SYSTEM = """You are an AI community analyst. Given community discussion data (Hacker News / Reddit) for news articles, extract structured insights.
 
 Each group has an "Original article" title followed by community thread data. FIRST check if the community thread is actually about the same topic as the original article. If the thread is about a DIFFERENT topic (e.g. original is about "AGI predictions" but thread is about "family lawsuit"), return null for all fields.
 
@@ -1753,27 +1754,38 @@ For each group that IS relevant, produce:
    - Capture what the community actually cares about, not what the article says
    - If no meaningful discussion exists: null
 
-## Input Groups
-
-{groups_text}
-
 ## Output JSON (strict)
 
 Return ONLY valid JSON, no markdown fences:
 
-{{"groups": {{
-  "group_0": {{
+{"groups": {
+  "group_0": {
     "sentiment": "mixed",
     "quotes": ["exact quote 1", "exact quote 2"],
     "quotes_ko": ["정확한 인용 1의 한국어 번역", "정확한 인용 2의 한국어 번역"],
     "key_point": "Performance praised but pricing concerns dominate"
-  }},
-  "group_1": {{
+  },
+  "group_1": {
     "sentiment": null,
     "quotes": [],
     "quotes_ko": [],
     "key_point": null
-  }}
-}}}}
+  }
+}}
 
 Note: If the community thread is irrelevant to the original article, return sentiment=null, quotes=[], key_point=null as shown in group_1 above."""
+
+
+# User template: dynamic input groups only.
+COMMUNITY_SUMMARIZER_USER_TEMPLATE = """## Input Groups
+
+{groups_text}"""
+
+
+# Backward-compat: retained for any external caller still using the monolithic constant.
+# Ranking.py now uses COMMUNITY_SUMMARIZER_SYSTEM + COMMUNITY_SUMMARIZER_USER_TEMPLATE directly.
+COMMUNITY_SUMMARIZER_PROMPT = (
+    COMMUNITY_SUMMARIZER_SYSTEM
+    + "\n\n"
+    + COMMUNITY_SUMMARIZER_USER_TEMPLATE
+)
