@@ -63,3 +63,13 @@ def check_missing_paper_reference(term: dict) -> tuple[bool, str]:
         if re.search(pattern, body, re.IGNORECASE):
             return False, ""
     return True, f"term_type={term.get('term_type')} but no arxiv/paper reference"
+
+
+def check_dated_claim(term: dict) -> tuple[bool, str]:
+    """Fail if body contains phrases explicitly anchoring content to a past year."""
+    body = _all_bodies(term)
+    for pattern in DATED_CLAIM_PATTERNS:
+        m = re.search(pattern, body, re.IGNORECASE)
+        if m:
+            return True, f"dated claim matched: {m.group(0)!r}"
+    return False, ""

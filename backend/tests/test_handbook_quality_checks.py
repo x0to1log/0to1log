@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from services.handbook_quality_checks import (
+    check_dated_claim,
     check_missing_architecture_detail,
     check_missing_paper_reference,
     check_stale_model_comparison,
@@ -102,4 +103,34 @@ def test_paper_reference_skips_non_research_type():
         body_advanced_en="A product.",
     )
     failed, _ = check_missing_paper_reference(term)
+    assert failed is False
+
+
+# ---------------- 2d: dated_claim ----------------
+
+
+def test_dated_claim_fails_on_as_of_2024():
+    term = _term(body_advanced_en="As of 2024, this model leads benchmarks.")
+    failed, reason = check_dated_claim(term)
+    assert failed is True
+    assert "2024" in reason
+
+
+def test_dated_claim_fails_on_korean_baseline():
+    term = _term(body_advanced_ko="2024 기준 성능은 ...")
+    failed, _ = check_dated_claim(term)
+    assert failed is True
+
+
+def test_dated_claim_fails_on_year_with_nyeon_suffix():
+    """Regression: code review found `\\b` doesn't match between digit and Hangul,
+    so `2024년 기준` was silently missed before the regex was Hangul-aware."""
+    term = _term(body_advanced_ko="2024년 기준 성능은 높습니다.")
+    failed, _ = check_dated_claim(term)
+    assert failed is True
+
+
+def test_dated_claim_passes_when_no_date_anchor():
+    term = _term(body_advanced_en="The model performs well on MMLU.")
+    failed, _ = check_dated_claim(term)
     assert failed is False
