@@ -394,10 +394,58 @@ messages=[
 5. `_extract_digest_items`, `_map_digest_items_to_group_indexes`가 pipeline_digest.py로 이동하면서 pipeline_quality.py의 import를 직접 import로 변경 (re-export chain의 순환 회피).
 6. pipeline_digest ↔ pipeline_quality 사이의 잠재적 순환 의존성을 lazy import (`_check_digest_quality`, `_find_digest_blockers`를 `_generate_digest` 함수 내부에서 import)로 해결.
 
-### Phase 2
-- Failure measurement 결과:
-- URL 검증 unit test 통과:
-- Daily cron run_id:
+### Phase 2 — Code Implementation Complete (2026-04-16)
+
+**Commits (7):**
+- `9c6c673` — feat(scripts): add prompt failure measurement + record 14-day baseline
+- `de48138` — feat(quality): add validate_citation_urls() with URL normalization (strict allowlist)
+- `ed3decd` — feat(quality): integrate URL validation into _check_digest_quality, force draft on failure
+- `e497199` — feat(db): extend news_domain_filters with research_priority/research_blocklist
+- `94ff8c3` — feat(news): classify research_blocklist as spam tier, research_priority as primary
+- `dfbc6a0` — feat(news): drop spam-tier candidates at collection time
+- `37ff314` — feat(prompts): add Few-shot examples to Top 2 failure modes
+
+**Failure measurement (14-day baseline, 60 digests):**
+- Sample: 60 digests, auto_publish_eligible=true 13.3%
+- `raw_llm.frontload` mean=83.8 (min 49) vs expert_body=94.6 / learner_body=93.8 — frontload is weakest by 10+ points
+- Top failure modes (scope × category):
+  1. frontload + overclaim (38)
+  2. frontload + clarity (30)
+  3. ko + locale (28)
+- Top 1+2 combined = 46% of all issues → concentrated in frontload scope
+
+**Added to code:**
+- `scripts/measure_prompt_failures.py` (107 lines) — re-runnable measurement
+- `validate_citation_urls()` in `pipeline_quality.py` + 9 unit tests + 2 integration tests
+- `news_domain_filters` table: +15 `research_priority` + 8 `research_blocklist` rows (applied to production Supabase)
+- `_classify_source_meta` ordering: research_blocklist → arxiv/HF/official_priority → research_priority → media/analysis
+- Spam-tier candidate drop in `enrich_sources` (fail-open on load errors)
+- Few-shot ✅/❌ pairs in 3 prompt locations:
+  1. `EXPERT_TITLE_STRATEGY` (L1040) — calibrated vs overclaim/vague
+  2. `LEARNER_TITLE_STRATEGY` (L1058) — impact-first vs jargon-first
+  3. `LEARNER_KO_LANGUAGE_RULE` (L685) — natural Korean vs literal translation
+
+**Tests (baseline → after Phase 2):**
+- 9 failed, 141 passed (baseline) → 9 failed, 154 passed → **+13 new tests (9 URL unit + 2 URL integration + 2 classify research)**
+- All pre-existing failures unchanged — no regression
+- All 25 digest prompt tests still pass (Few-shot additions are additive to prompts)
+- Ruff clean on all 5 touched files
+
+**Key deviations from plan (with rationale):**
+1. `research_priority` branch moved BELOW specific handlers (arxiv, HF) in `_classify_source_meta` — literal ordering would have regressed `test_classify_source_meta_marks_hf_blog_as_official_platform_asset` because HF has a richer handler. research_blocklist remains FIRST (required invariant).
+2. `_load_domain_filters()` `result` dict needed `research_priority` + `research_blocklist` added to initial empty frozensets — loader's `if ftype in buckets` filter was silently dropping new types.
+3. `validate_citation_urls` import path: tests use `from services.pipeline import validate_citation_urls` (via re-export) instead of direct `from services.pipeline_quality` due to pre-existing circular import between pipeline.py and pipeline_quality.py.
+4. Added 2 integration tests (happy + failure) instead of just 1 for better contract coverage.
+
+**남은 액션 (Amy gate):**
+1. `git push origin main` — 7개 Phase 2 commit을 Railway에 배포
+2. Railway 배포 성공 확인 + health check
+3. Daily cron 자동 실행 (또는 manual trigger)로 1회 검증
+4. `pipeline_runs` 결과 + `news_posts.fact_pack` (url_validation_failed 필드 존재 확인) + `source_urls`에서 blocklist 도메인 0건 확인
+5. 위 통과 시 design.md status를 `phase 2 complete`로 업데이트 + commit
+
+- URL 검증 unit test 통과: 9/9 PASS + 2/2 integration PASS
+- Daily cron run_id: [Amy 검증 후 기록]
 
 ### Phase 3
 - Baseline 토큰 사용량 (Phase 3 시작 전 7일):
