@@ -2094,29 +2094,44 @@ async def run_weekly_pipeline(
 
 
 # -----------------------------------------------------------------------------
-# Backward-compat re-exports (Phase 1 refactoring 2026-04-15)
-# Functions below were moved to services.pipeline_persistence. External callers
-# (routers/cron.py, tests/*) still import them from services.pipeline, so we
-# re-export them here. Also makes the names available to run_weekly_pipeline
-# (defined above) via module-level attribute lookup at call time.
+# Backward-compat re-exports  (Phase 1 refactoring 2026-04-15)
+#
+# These imports MUST stay at the bottom of the file to avoid circular imports
+# (pipeline_digest.py / pipeline_quality.py import helpers from pipeline.py).
+#
+# Two categories:
+#   (a) Used by orchestrator code above  – called at runtime by
+#       run_daily_pipeline / rerun_pipeline_stage / run_weekly_pipeline.
+#   (b) Re-export only  – not called here, but external callers
+#       (routers/cron.py, tests/*) still import them from services.pipeline.
 # -----------------------------------------------------------------------------
+
+# --- pipeline_persistence: (a) used + (b) re-export -------------------------
 from services.pipeline_persistence import (  # noqa: E402, F401
+    # (a) used by run_weekly_pipeline
     _fetch_week_digests,
     _fetch_week_handbook_terms,
     _iso_week_id,
+    _send_weekly_email,
+    # (b) re-export only
     _notify_auto_publish,
     _send_draft_alert,
-    _send_weekly_email,
     promote_drafts,
 )
+
+# --- pipeline_digest: (a) used + (b) re-export ------------------------------
 from services.pipeline_digest import (  # noqa: E402, F401
+    # (a) used by run_daily_pipeline / rerun_pipeline_stage / run_weekly_pipeline
     _clean_writer_output,
+    _generate_digest,
+    # (b) re-export only
     _extract_digest_items,
     _fix_bold_spacing,
-    _generate_digest,
     _map_digest_items_to_group_indexes,
     _strip_empty_sections,
 )
+
+# --- pipeline_quality: (b) re-export only ------------------------------------
 from services.pipeline_quality import (  # noqa: E402, F401
     _apply_issue_penalties_and_caps,
     _body_paragraphs_for_quality,
