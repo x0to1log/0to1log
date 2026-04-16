@@ -374,27 +374,9 @@ RESEARCH_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## 이번 주 시도해볼 것 (ko: ## 이번 주 시도해볼 것)** - OPTIONAL. 1-2 things a non-developer reader can ACTUALLY try this week to engage with today's research news. Examples: try a Hugging Face Space demo of the model, watch a 5-min YouTube explainer of the technique, install a free desktop tool. Format: `1. **[Action name]**: [one-line how-to with link if available]`. Skip the section entirely if no genuinely try-able item exists. NEVER list "주시하세요", "팔로우하세요", "모니터링하세요" — those are not actions."""
 
 
-RESEARCH_LEARNER_GUIDE = """READER: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT는 매일 쓰지만 모델 학습이나 논문 읽기 경험은 0. AI를 쫓아가지 않으면 뒤처질 것 같은 불안과 시간 결핍을 동시에 안고 있음.
-READER'S GOAL: 오늘의 AI 연구 흐름을 5분 안에 안전하게 따라잡고, 동료에게 1줄 인용할 인사이트 1개와 새 어휘 2-3개를 얻기.
-AFTER READING: 독자는 오늘 무엇이 바뀌었는지 한 문장으로 말할 수 있고, 새 용어 2-3개를 ‘아는 단어’로 만든다.
-
-Editorial intent:
-- This is a guided technical digest written FOR people who don't read papers — not a watered-down expert brief.
-- The reader should come away with vocabulary and a mental model, not jargon dumps.
-
-Writing rules:
-- Write the learner version in clear editorial news prose: approachable and explanatory, but still reportorial and article-like. NEVER chatty, NEVER lecturing.
-- In the frontload, foreground the practical advance before the technical mechanism.
-- Avoid leading with insider shorthand such as FP8, KV cache, policy routing, or similar specialist terms unless the benefit is clear in the same line.
-- LEAD WITH WHAT IT DOES IN PLAIN LANGUAGE before naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time — this technique is called parallel diffusion decoding"
-- Use analogies generously when they help (a complex method ↔ a familiar everyday situation). If the news is straightforward, skip analogy.
-- When introducing ANY acronym, expand it FIRST in Korean style: Korean meaning then English in parentheses. Example: "전문가 혼합(Mixture of Experts, MoE)". NEVER use an acronym without prior explanation.
-- NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize: "85.6% (이 분야 최고 수준)" not just "85.6%".
-- Connect to readers' lives where natural: "이 기술이 일상화되면 우리가 쓰는 챗봇이 더 빨라진다" — but don't force it.
-- In Korean, use written news/editorial prose by default. Interpretive sections may be slightly softer, but stay in editorial prose rather than conversational chat.
-- Do not write body paragraphs in a friendly spoken "~요" tone.
-- Technical/business terms should be linked to Handbook on first appearance.
-- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
+# NOTE: RESEARCH_LEARNER_GUIDE previously had a definition here that was
+# shadowed by the compact-override version at L491+ (Python re-assignment
+# wins). Removed 2026-04-17 post-audit cleanup. Active version: see below.
 
 
 # --- Business Digest Sections ---
@@ -411,41 +393,9 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
   Example: `- **If you rely on OpenAI APIs**: evaluate alternative providers this quarter — because vendor concentration risk is rising. Risk of inaction: 100% dependency on a single provider's pricing decisions.`"""
 
 
-BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy lead. An AI-era business decision-maker.
-READER'S GOAL: Make strategic decisions - allocate budget, choose partners, adjust product roadmap, and respond to competitive moves.
-AFTER READING: The reader adjusts their strategy, brings insights to leadership, or initiates a competitive response.
-
-Editorial intent:
-- This is a strategic market brief, not a technical roundup.
-- The reader is here for implications, not deep model or paper explanation.
-
-Tone - DECISIVE, but calibrated:
-- State sourced facts directly.
-- For strategy, motivation, or market interpretation not stated explicitly in the source, use calibrated language such as "signals, points to, implies, or suggests" instead of stating inference as fact.
-- Be confident, but distinguish observable facts from editorial interpretation.
-
-Writing rules:
-- Write like an editor writing a strategic news brief: reportorial in the core story, analytical in the synthesis, never chatty
-- In the frontload, foreground the concrete market-moving event or decision first and move broader interpretation second.
-- Avoid semicolon headlines or stitched three-story rollups unless the stories clearly express one common business pattern.
-- In the headline, excerpt, and first paragraph of each item, lead with sourced facts and only light interpretation.
-- Stronger synthesis belongs in sections like Connecting the Dots and Strategic Decisions.
-- PRIMARY sources can support direct factual statements in the headline, excerpt, and first paragraph.
-- SECONDARY or analysis sources should be framed more cautiously in those front-loaded positions.
-- Treat official_platform_asset sources as factual for release details, but keep strategic interpretation one step more cautious than official_site or paper sources.
-- If a lead story is supported mostly by SECONDARY, analysis, or official_platform_asset sources, anchor the headline, excerpt, and first paragraph to the observable event first before any market interpretation.
-- If a claim depends mainly on secondary reporting, keep it out of the headline and excerpt or frame it as reported/suggestive rather than definitive.
-- Prefer factual front-load verbs such as "launches", "releases", "announces", "files", "opens", "reviews", "says", or "prices" over dramatic framing.
-- Avoid loaded words such as "scramble", "showdown", "takes aim", "shot at", "salvo", or "war" in the headline, excerpt, and first paragraph unless the source itself uses that framing.
-- In the headline, excerpt, and first paragraph, avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on" unless a primary source states that conclusion directly.
-- If front-loaded interpretation depends mainly on secondary reporting, phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as" rather than sounding settled.
-- ALWAYS compare numbers to competitors or industry benchmarks
-- Analyze competitive dynamics with explicit reasoning chains grounded in sourced facts
-- Connecting the Dots should explain the strongest plausible drivers and market pattern without inventing hidden motives unsupported by sources
-- Mention technical details only when they materially affect business outcomes.
-- Focus on market structure, pricing, partnerships, funding, regulation, product positioning, and competitive consequences.
-- When multiple sources cover the same story, synthesize their different angles — one for deal terms, another for competitive impact, another for market reaction. Each paragraph should draw from a different source when possible.
-- PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
+# NOTE: BUSINESS_EXPERT_GUIDE previously had a definition here that was
+# shadowed by the compact-override version at L514+ (Python re-assignment
+# wins). Removed 2026-04-17 post-audit cleanup. Active version: see below.
 
 
 BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - Today's AI business scene in one sentence
@@ -461,29 +411,9 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
   Do NOT include source links in this section."""
 
 
-BUSINESS_LEARNER_GUIDE = """READER: 25–40세 비개발자 직장인 (마케터, 기획자, 디자이너, 학생, 커리어 전환자). ChatGPT 정도는 매일 쓰지만 GPU 가격이나 IPO 구조는 모름. AI 산업 변화를 '내 일에 영향이 있나' 관점에서 따라가고 싶음.
-READER'S GOAL: 오늘 AI 업계에 무엇이 일어났는지 5분 안에 따라잡고, 자기 직무(마케팅·기획·디자인·학생)에 적용할 수 있는 단서 1-2개를 얻기.
-AFTER READING: 독자는 오늘의 핵심 변화를 동료에게 1문장으로 말할 수 있고, 이번 주 안에 직접 시도해볼 액션 1-2개를 가져간다.
-
-Editorial intent:
-- AI 시장 다이제스트지만 '비개발자 직장인 입장에서' 의미를 풀어주는 게 핵심.
-- The reader should leave with: (1) a clear sense of what changed, (2) one concrete thing they could try this week.
-
-Writing rules:
-- Write the learner version in clear editorial news prose for an intelligent non-specialist — easy to follow, but still written as a digest article rather than a chatty explainer.
-- In the frontload, foreground the concrete market-moving event or decision first and move broader interpretation second.
-- Avoid semicolon headlines or stitched three-story rollups unless the stories clearly express one common business pattern.
-- Before discussing a company's strategy, briefly explain what the company does (assume reader knows OpenAI/Google/Meta but NOT Anthropic/Mistral/Cohere/Z.AI).
-- Use analogy when explaining a complex business move ("이건 마치 ___와 비슷합니다").
-- Connect every item to practical impact for the reader's job (마케터/기획자 관점).
-- Technical explanation is allowed, but only in service of understanding the business impact — never tech-for-tech-sake.
-- Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
-- When multiple sources cover the same news, weave in different perspectives (announcement + analyst reaction + user impact).
-- Action Items must be ACTUALLY DOABLE by a non-developer this week — no "build a multi-agent pipeline", no "evaluate vendor lock-in risk". YES "try Meta AI in WhatsApp", "check the new ChatGPT mode", "read Anthropic's blog post".
-- In Korean, use written news/editorial prose by default. Reader-facing sections may be slightly softer, but avoid conversational chat tone.
-- Do not write body paragraphs in a friendly spoken "~요" tone.
-- Technical/business terms link to Handbook on first appearance.
-- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
+# NOTE: BUSINESS_LEARNER_GUIDE previously had a definition here that was
+# shadowed by the compact-override version at L551+ (Python re-assignment
+# wins). Removed 2026-04-17 post-audit cleanup. Active version: see below.
 
 
 # Compact overrides for tone/frontload quality. Keep behavior changes local and
@@ -587,7 +517,9 @@ Writing rules:
 
 HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headline, excerpt, AND body)
 
-Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate."""
+Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate.
+
+**Citations**: every `[N](URL)` must reference a URL from the provided source list verbatim. NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation."""
 
 
 FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to headline/headline_ko AND excerpt/excerpt_ko)
@@ -1122,7 +1054,7 @@ Write the English weekly recap. Return JSON only.
 7. **## So What Do I Do?** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`
 
 ## Output JSON format
-Return ONLY valid JSON:
+Return JSON only:
 {{
   "headline": "English headline",
   "en": "<full English markdown with all ## sections above>",
@@ -1183,7 +1115,7 @@ Write the English weekly recap. Return JSON only.
 7. **## What Can I Try?** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week.
 
 ## Output JSON format
-Return ONLY valid JSON:
+Return JSON only:
 {{
   "headline": "English headline",
   "en": "<full English markdown with all ## sections above>",
@@ -1244,7 +1176,7 @@ This is NOT a literal translation. Write as a Korean editor naturally would — 
 - ## {action_heading}
 
 ## Output JSON format
-Return ONLY valid JSON:
+Return JSON only:
 {{
   "headline_ko": "한국어 헤드라인",
   "ko": "<full Korean markdown with all ## sections above>"
@@ -1582,7 +1514,7 @@ MERGE_SYSTEM_PROMPT = """You are an AI news editor. Your task: given selected ar
 5. Keep the original category and subcategory from the selected article.
 
 ## Output JSON
-Return ONLY valid JSON:
+Return JSON only:
 {{
   "research": [
     {{
@@ -1647,7 +1579,7 @@ For each group that IS relevant, produce:
 
 ## Output JSON (strict)
 
-Return ONLY valid JSON, no markdown fences:
+Return JSON only:
 
 {"groups": {
   "group_0": {
