@@ -761,13 +761,18 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 # ---------------------------------------------------------------------------
 
 # Trimmed 2026-04-16 — 14-day measurement showed Exa 3.19% selection efficiency
-# (847 candidates / 27 selected). Reducing queries 12 → 5 cuts API cost ~58%
-# while the remaining top-3 business + top-2 research queries preserve the
-# highest-ROI coverage. See vault/.../api-collector-usage-measurement.md.
+# (847 candidates / 27 selected). Reduced queries 12 → 5 cut API cost ~58%.
+# Partial restore 2026-04-17 — after API diet, business digest content dropped
+# 22% (research stayed stable because research uses free arxiv/github/hf_papers
+# unaffected by the diet). Restored 2 business queries covering editorial
+# angles not caught by Tavily SEARCH_QUERIES: regulatory/policy and
+# chip/hardware. Now 5 business + 2 research = 7 (was 12 → 3).
 EXA_BUSINESS_QUERIES = [
     "AI startup funding acquisition partnership",
     "OpenAI Google Microsoft Meta AI announcement",
     "new AI tool product launch",
+    "AI regulation policy enterprise",
+    "AI chip hardware Nvidia AMD Intel",
 ]
 
 EXA_RESEARCH_QUERIES = [
