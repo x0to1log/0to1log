@@ -4,6 +4,7 @@ from services.handbook_quality_checks import (
     check_dated_claim,
     check_missing_architecture_detail,
     check_missing_paper_reference,
+    check_stale_age,
     check_stale_model_comparison,
 )
 
@@ -133,4 +134,25 @@ def test_dated_claim_fails_on_year_with_nyeon_suffix():
 def test_dated_claim_passes_when_no_date_anchor():
     term = _term(body_advanced_en="The model performs well on MMLU.")
     failed, _ = check_dated_claim(term)
+    assert failed is False
+
+
+# ---------------- 2e: stale_age ----------------
+
+
+def test_stale_age_fails_when_older_than_threshold():
+    term = _term(published_at="2025-01-01T00:00:00Z")
+    failed, _ = check_stale_age(term, now=datetime(2026, 4, 16, tzinfo=timezone.utc))
+    assert failed is True
+
+
+def test_stale_age_passes_when_recent():
+    term = _term(published_at="2026-04-01T00:00:00Z")
+    failed, _ = check_stale_age(term, now=datetime(2026, 4, 16, tzinfo=timezone.utc))
+    assert failed is False
+
+
+def test_stale_age_passes_when_no_published_at():
+    term = _term(published_at=None)
+    failed, _ = check_stale_age(term, now=datetime(2026, 4, 16, tzinfo=timezone.utc))
     assert failed is False

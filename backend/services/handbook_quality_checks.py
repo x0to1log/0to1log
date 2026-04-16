@@ -73,3 +73,22 @@ def check_dated_claim(term: dict) -> tuple[bool, str]:
         if m:
             return True, f"dated claim matched: {m.group(0)!r}"
     return False, ""
+
+
+def check_stale_age(term: dict, now: datetime | None = None) -> tuple[bool, str]:
+    """Flag if term was published more than STALE_AGE_DAYS ago.
+
+    `now` injectable for tests. Defaults to datetime.now(timezone.utc).
+    """
+    published_at = term.get("published_at")
+    if not published_at:
+        return False, ""
+    try:
+        pub_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False, ""
+    now = now or datetime.now(timezone.utc)
+    age = now - pub_dt
+    if age > timedelta(days=STALE_AGE_DAYS):
+        return True, f"published {age.days} days ago (threshold {STALE_AGE_DAYS})"
+    return False, ""
