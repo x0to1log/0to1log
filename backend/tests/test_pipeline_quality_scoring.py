@@ -188,9 +188,9 @@ async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
         mock_settings.openai_model_reasoning = "gpt-5-mini"
 
         result = await _check_digest_quality(
