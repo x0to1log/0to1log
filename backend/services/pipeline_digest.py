@@ -722,6 +722,7 @@ async def _generate_digest(
         personas, digest_type, classified, community_summary_map,
         supabase, run_id, cumulative_usage,
         frontload=frontload_payload,
+        enriched_map=enriched_map,
     )
     if isinstance(quality_result, dict):
         quality_score = int(quality_result.get("score", quality_result.get("quality_score", 0)) or 0)

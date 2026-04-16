@@ -512,3 +512,76 @@ async def test_check_digest_quality_allowlist_includes_all_group_items_not_just_
         f"Non-primary group items should be in allowlist, but got failures: "
         f"{result.get('url_validation_failures')}"
     )
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_allowlist_includes_enriched_urls():
+    """Regression guard (2026-04-16 2nd production verification):
+    URLs passed via enriched_map (post-classification enrichment) must be
+    in the allowlist. Without this, writers citing legitimate enriched URLs
+    trigger url_validation_failed=true, trapping every research digest in draft.
+    """
+    from services.pipeline import _check_digest_quality
+
+    GROUP_URL = "https://primary.example.com/story"
+    ENRICHED_RELATED_URL = "https://related.example.com/analysis"
+    ENRICHED_ANCHOR_URL = "https://anchor.example.com/hub"
+
+    classified = [
+        ClassifiedGroup(
+            group_title="Research with enrichment",
+            items=[GroupedItem(url=GROUP_URL, title="Primary")],
+            category="research",
+            subcategory="papers",
+            relevance_score=0.9,
+            reason="[LEAD]",
+        )
+    ]
+
+    # Enrichment adds URLs the writer sees but that don't belong to any ClassifiedGroup
+    enriched_map = {
+        ENRICHED_ANCHOR_URL: [
+            {"url": ENRICHED_RELATED_URL, "title": "Related analysis", "content": "..."},
+        ],
+    }
+
+    # Body cites the enriched related URL — legitimate, must not trigger failure
+    personas = {
+        "expert": PersonaOutput(
+            en=f"## One-Line Summary\nBody [1]({ENRICHED_RELATED_URL})\n\n### Heading\n\nMore [1]({GROUP_URL})\n",
+            ko=f"## 한 줄 요약\n본문 [1]({ENRICHED_RELATED_URL})\n\n### 제목\n\n추가 [1]({GROUP_URL})\n",
+        ),
+    }
+
+    responses = [
+        _mock_openai_response({"score": 95, "subscores": {}, "issues": []}),
+        _mock_openai_response({"score": 96, "subscores": {}, "issues": []}),
+    ]
+
+    async def _create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="research",
+            classified=classified,
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-enriched",
+            cumulative_usage={},
+            frontload=None,
+            enriched_map=enriched_map,
+        )
+
+    assert result["url_validation_failed"] is False, (
+        f"Enriched URL citations should be in allowlist, but got failures: "
+        f"{result.get('url_validation_failures')}"
+    )

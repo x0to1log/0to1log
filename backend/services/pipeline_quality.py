@@ -262,6 +262,7 @@ async def _check_digest_quality(
     run_id: str,
     cumulative_usage: dict[str, Any],
     frontload: dict[str, Any] | None = None,
+    enriched_map: dict[str, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     """Score quality of generated digest with body + frontload + deterministic checks."""
     t0 = time.monotonic()
@@ -421,22 +422,24 @@ async def _check_digest_quality(
         "news_count": len(classified),
     }
 
-    # Phase 2 — URL strict allowlist validation (fact_pack.news_items cite-check)
-    # Allowlist covers EVERY item URL across all classified groups, not just
-    # each group's primary (items[0].url). The writer is given all items in a
-    # group, so citing any of them is legitimate — using primary_url only would
-    # produce false-positive failures for group members ≥2.
-    # Known gap: enriched/related URLs passed to the writer but not in
-    # group.items are NOT in this allowlist — will still false-positive.
-    # Broaden later via a dedicated parameter if needed.
-    fact_pack_for_validation = {
-        "news_items": [
-            {"url": item.url, "title": g.group_title}
-            for g in classified
-            for item in (g.items or [])
-            if getattr(item, "url", None)
-        ],
-    }
+    # Phase 2 — URL strict allowlist validation (cite-check).
+    # Allowlist covers EVERY URL the writer was shown:
+    #   (1) Every item URL across all classified groups (group.items[*].url)
+    #   (2) Every enriched/related URL (enriched_map values) — added post-classify,
+    #       used by writer prompt. Without (2), enrichment URLs trigger false positives.
+    allowed_items: list[dict[str, str]] = []
+    for g in classified:
+        for item in (g.items or []):
+            if getattr(item, "url", None):
+                allowed_items.append({"url": item.url, "title": g.group_title})
+    for anchor_url, enriched_list in (enriched_map or {}).items():
+        if anchor_url:
+            allowed_items.append({"url": anchor_url, "title": "enriched_anchor"})
+        for entry in (enriched_list or []):
+            url = entry.get("url") if isinstance(entry, dict) else None
+            if url:
+                allowed_items.append({"url": url, "title": "enriched_related"})
+    fact_pack_for_validation = {"news_items": allowed_items}
     url_validation_failures: list[dict[str, Any]] = []
     for persona_name, persona_output in personas.items():
         if not persona_output:
