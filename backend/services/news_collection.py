@@ -63,8 +63,8 @@ SEARCH_QUERIES = [
     "latest AI artificial intelligence news today",
     # Research
     "new AI model release benchmark",
-    "AI machine learning research paper arxiv breakthrough",
-    "trending AI open source project GitHub HuggingFace",
+    # (arxiv/github/HF research queries dropped 2026-04-16 — free arxiv/github_trending/hf_papers
+    #  collectors already cover these domains. Tavily rediscovery was wasted quota.)
     # Business
     "AI startup funding investment acquisition partnership",
     "big tech AI announcement OpenAI Google Microsoft Meta",
@@ -77,8 +77,7 @@ BACKFILL_QUERIES = [
     "AI artificial intelligence news",
     # Research
     "new AI model release benchmark",
-    "AI machine learning research paper arxiv",
-    "trending AI open source GitHub HuggingFace",
+    # (arxiv/github/HF backfill queries dropped 2026-04-16 — same reason as SEARCH_QUERIES)
     # Business
     "AI startup funding investment acquisition partnership",
     "big tech AI announcement OpenAI Google Microsoft",
@@ -761,22 +760,19 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 # Source: Exa (business-focused news)
 # ---------------------------------------------------------------------------
 
+# Trimmed 2026-04-16 — 14-day measurement showed Exa 3.19% selection efficiency
+# (847 candidates / 27 selected). Reducing queries 12 → 5 cuts API cost ~58%
+# while the remaining top-3 business + top-2 research queries preserve the
+# highest-ROI coverage. See vault/.../api-collector-usage-measurement.md.
 EXA_BUSINESS_QUERIES = [
     "AI startup funding acquisition partnership",
     "OpenAI Google Microsoft Meta AI announcement",
     "new AI tool product launch",
-    "AI regulation policy enterprise",
-    "AI enterprise deployment case study ROI",
-    "AI chip hardware Nvidia AMD Intel",
-    "AI pricing model SaaS subscription",
-    "AI workforce hiring layoffs talent",
 ]
 
 EXA_RESEARCH_QUERIES = [
     "new AI model release benchmark SOTA",
     "open source LLM launch weights huggingface",
-    "AI framework library update release",
-    "machine learning breakthrough architecture",
 ]
 
 async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
@@ -827,56 +823,11 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
         return []
 
 
-BRAVE_QUERIES = [
-    "AI news today latest announcements",
-    "AI startup funding round",
-    "new AI product tool launch",
-    "AI regulation policy update",
-]
-
-
-async def _collect_brave(target_date: str | None = None) -> list[NewsCandidate]:
-    """Collect AI news via Brave Search API. Independent collector."""
-    if not settings.brave_api_key:
-        return []
-
-    try:
-        candidates: list[NewsCandidate] = []
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            for query in BRAVE_QUERIES:
-                try:
-                    resp = await client.get(
-                        "https://api.search.brave.com/res/v1/news/search",
-                        headers={"X-Subscription-Token": settings.brave_api_key},
-                        params={
-                            "q": query,
-                            "count": 10,
-                            "freshness": "pd",  # past day
-                        },
-                    )
-                    if resp.status_code != 200:
-                        logger.debug("Brave query '%s' returned %d", query, resp.status_code)
-                        continue
-                    data = resp.json()
-                    for result in data.get("results", []):
-                        url = result.get("url", "")
-                        if not url:
-                            continue
-                        candidates.append(NewsCandidate(
-                            title=result.get("title", ""),
-                            url=url,
-                            snippet=result.get("description", "")[:300],
-                            source="brave",
-                            raw_content=result.get("description", ""),
-                        ))
-                except Exception as e:
-                    logger.debug("Brave query failed for '%s': %s", query, e)
-
-        logger.info("Collected %d candidates from Brave", len(candidates))
-        return candidates
-    except Exception as e:
-        logger.warning("Brave collection failed: %s", e)
-        return []
+# Brave news collection removed 2026-04-16.
+# Measurement (14 days, 372 candidates → 7 selected, 1.88% efficiency) showed
+# near-zero ROI vs. Tavily/Exa/free collectors. Brave API key and settings.brave_api_key
+# remain in use by collect_community_reactions() for HN/Reddit thread discovery —
+# that is Brave's unique value; it is NOT replaced here.
 
 
 # ---------------------------------------------------------------------------
@@ -1078,10 +1029,13 @@ async def collect_news(
     arxiv_task = _collect_arxiv(target_date)
     github_task = _collect_github_trending(target_date)
     exa_task = _collect_exa(target_date)
-    brave_task = _collect_brave(target_date)
+    # Brave news collection dropped 2026-04-16 — 14-day measurement showed 1.88%
+    # selection efficiency (372 candidates / 7 selected). Brave API key remains
+    # required for collect_community_reactions() which uses Brave web search for
+    # HN/Reddit thread discovery.
 
-    tavily_result, hf_results, arxiv_results, github_results, exa_results, brave_results = await asyncio.gather(
-        tavily_task, hf_task, arxiv_task, github_task, exa_task, brave_task, return_exceptions=True,
+    tavily_result, hf_results, arxiv_results, github_results, exa_results = await asyncio.gather(
+        tavily_task, hf_task, arxiv_task, github_task, exa_task, return_exceptions=True,
     )
 
     # Safely collect results (treat exceptions as empty lists)
@@ -1093,7 +1047,7 @@ async def collect_news(
     all_candidates: list[NewsCandidate] = list(tavily_results)
     source_counts: dict[str, int] = {"tavily": len(tavily_results)}
 
-    for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results), ("exa", exa_results), ("brave", brave_results)]:
+    for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results), ("exa", exa_results)]:
         if isinstance(result, Exception):
             logger.warning("Collector %s failed: %s", name, result)
             source_counts[name] = 0
@@ -1139,10 +1093,10 @@ async def collect_news(
             unique.append(c.model_copy(update=source_meta))
 
     logger.info(
-        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, brave=%d, excluded_published=%d, filtered_non_article=%d)",
+        "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, excluded_published=%d, filtered_non_article=%d)",
         len(unique), source_counts["tavily"], source_counts.get("hf_papers", 0),
         source_counts.get("arxiv", 0), source_counts.get("github_trending", 0),
-        source_counts.get("exa", 0), source_counts.get("brave", 0), excluded_count, filtered_count,
+        source_counts.get("exa", 0), excluded_count, filtered_count,
     )
 
     is_backfill = False

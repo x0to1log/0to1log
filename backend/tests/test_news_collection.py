@@ -111,9 +111,10 @@ def _patch_new_collectors():
 
 def _patch_other_collectors():
     """Patch optional secondary collectors to keep collection tests deterministic."""
+    # Brave news collection removed 2026-04-16; Brave web search still used by
+    # collect_community_reactions() but that is a separate code path.
     return (
         patch("services.news_collection._collect_exa", new_callable=AsyncMock, return_value=[]),
-        patch("services.news_collection._collect_brave", new_callable=AsyncMock, return_value=[]),
     )
 
 
@@ -145,10 +146,10 @@ async def test_collect_news_attaches_source_metadata():
     mock_tavily.search.return_value = TAVILY_SEARCH_RESPONSE
 
     p1, p2, p3 = _patch_new_collectors()
-    p4, p5 = _patch_other_collectors()
+    (p4,) = _patch_other_collectors()
     with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
          patch("services.news_collection.settings") as mock_settings, \
-         p1, p2, p3, p4, p5:
+         p1, p2, p3, p4:
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
