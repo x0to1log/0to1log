@@ -28,12 +28,13 @@ from services.agents.client import (
     parse_ai_json,
 )
 
-# Helpers that remain in pipeline.py — safe to import because they are defined
-# near the top of pipeline.py (L356, L1416, L1449), well before the re-export
-# block at the bottom that triggers this module's load.
-from services.pipeline import (  # type: ignore[attr-defined]
+# _log_stage remains in pipeline.py (defined early, before re-export block).
+from services.pipeline import _log_stage  # type: ignore[attr-defined]
+
+# Digest helpers moved to pipeline_digest.py (no cycle: pipeline_quality does
+# not import from pipeline_digest and vice versa).
+from services.pipeline_digest import (
     _extract_digest_items,
-    _log_stage,
     _map_digest_items_to_group_indexes,
 )
 

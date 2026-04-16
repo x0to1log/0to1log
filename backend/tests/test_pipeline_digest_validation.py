@@ -222,11 +222,11 @@ async def test_generate_digest_aborts_before_save_when_structural_blocker_found(
         ]
     )
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock) as quality_mock, \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock) as quality_mock, \
+         patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
 
         posts_created, errors, _usage = await _generate_digest(
@@ -286,11 +286,11 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
         ]
     )
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
 
         posts_created, errors, _usage = await _generate_digest(
@@ -363,11 +363,11 @@ async def test_generate_digest_includes_source_metadata_labels_in_writer_prompt(
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
 
         posts_created, errors, _usage = await _generate_digest(
@@ -452,11 +452,11 @@ async def test_generate_digest_saves_source_cards_with_source_metadata():
         ]
     )
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
 
         posts_created, errors, _usage = await _generate_digest(
@@ -540,11 +540,11 @@ async def test_generate_digest_orders_primary_sources_first_in_prompt():
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
 
         posts_created, errors, _usage = await _generate_digest(
@@ -623,11 +623,11 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
         ]
     )
 
-    with patch("services.pipeline.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline.get_digest_prompt", return_value="prompt"), \
-         patch("services.pipeline._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline.settings") as mock_settings:
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
+         patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
 
         posts_created, errors, _usage = await _generate_digest(
