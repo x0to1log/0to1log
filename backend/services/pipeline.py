@@ -2146,4 +2146,5 @@ from services.pipeline_quality import (  # noqa: E402, F401
     _find_digest_blockers,
     _normalize_quality_issue,
     _normalize_scope,
+    validate_citation_urls,
 )

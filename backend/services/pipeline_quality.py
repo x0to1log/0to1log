@@ -17,6 +17,7 @@ import logging
 import re
 import time
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from core.config import settings
 from models.news_pipeline import ClassifiedGroup, PersonaOutput
@@ -669,3 +670,84 @@ def _check_structural_penalties(
             )
 
     return min(penalty, 40), warnings
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — URL Strict Allowlist Validation
+# ---------------------------------------------------------------------------
+
+# Citation pattern: [N](URL) where N is digits and URL starts with http
+_CITATION_RE = re.compile(r"\[(\d+)\]\((https?://[^\s\)]+)\)")
+
+# Tracking params to strip during URL normalization
+_TRACKING_PARAM_PREFIXES = ("utm_",)
+_TRACKING_PARAM_NAMES = frozenset({
+    "fbclid", "gclid", "msclkid", "ref", "referrer", "source",
+    "share", "share_id", "src", "feature", "campaign",
+})
+
+
+def _normalize_url(url: str) -> str:
+    """Normalize URL for citation comparison: scheme, trailing slash, tracking params, fragment."""
+    try:
+        parsed = urlparse(url.strip())
+    except (ValueError, AttributeError):
+        return url
+
+    # Force https for comparison (treat http and https as same)
+    scheme = "https" if parsed.scheme in ("http", "https") else parsed.scheme
+
+    # Strip trailing slash from path
+    path = parsed.path.rstrip("/") or "/"
+
+    # Filter query params: drop tracking
+    query_params = [
+        (k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+        if not k.lower().startswith(_TRACKING_PARAM_PREFIXES)
+        and k.lower() not in _TRACKING_PARAM_NAMES
+    ]
+    query = urlencode(query_params)
+
+    # Drop fragment
+    fragment = ""
+
+    return urlunparse((scheme, parsed.netloc.lower(), path, parsed.params, query, fragment))
+
+
+def validate_citation_urls(body: str, fact_pack: dict) -> dict:
+    """Verify all [N](URL) citations in body refer to URLs in fact_pack.news_items.
+
+    Returns dict with:
+      - valid: bool
+      - unknown_urls: list[str] — citations that don't match any allowed URL
+      - citation_count: int — number of unique URLs cited (after dedup)
+      - allowed_count: int — number of URLs in fact_pack.news_items
+
+    Bodies with zero citations always pass (e.g., One-Line Summary section).
+    URL comparison is normalized: scheme/trailing-slash/tracking-params/fragment stripped.
+    """
+    if not body:
+        return {"valid": True, "unknown_urls": [], "citation_count": 0, "allowed_count": 0}
+
+    # Build allowed set from fact_pack.news_items[*].url
+    news_items = (fact_pack or {}).get("news_items") or []
+    allowed = {
+        _normalize_url(item["url"])
+        for item in news_items
+        if isinstance(item, dict) and item.get("url")
+    }
+
+    # Extract all citations and dedup by normalized URL
+    cited_raw = [m.group(2) for m in _CITATION_RE.finditer(body)]
+    cited_norm = {_normalize_url(u) for u in cited_raw}
+
+    if not cited_norm:
+        return {"valid": True, "unknown_urls": [], "citation_count": 0, "allowed_count": len(allowed)}
+
+    unknown = sorted(cited_norm - allowed)
+    return {
+        "valid": len(unknown) == 0,
+        "unknown_urls": unknown,
+        "citation_count": len(cited_norm),
+        "allowed_count": len(allowed),
+    }

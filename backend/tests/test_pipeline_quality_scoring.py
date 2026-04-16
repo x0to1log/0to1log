@@ -210,3 +210,86 @@ async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     assert any("한국어 전문가 본문" in prompt for prompt in captured_user_prompts[:2])
     assert "AI infrastructure war" in captured_user_prompts[2]
     assert "엔비디아가 Thinking Machines 딜로 AI 인프라 전쟁 승리" in captured_user_prompts[2]
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — URL Strict Allowlist Validation
+# ---------------------------------------------------------------------------
+
+class TestValidateCitationUrls:
+    """Verify URL strict allowlist validation against fact_pack.news_items."""
+
+    def test_all_citations_in_fact_pack_passes(self):
+        from services.pipeline import validate_citation_urls
+        body = "Some content. [1](https://example.com/a)\n\nMore. [2](https://example.com/b)"
+        fact_pack = {"news_items": [
+            {"url": "https://example.com/a", "title": "A"},
+            {"url": "https://example.com/b", "title": "B"},
+        ]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is True
+        assert result["unknown_urls"] == []
+
+    def test_unknown_url_fails(self):
+        from services.pipeline import validate_citation_urls
+        body = "Cited [1](https://hallucinated.example.com/fake)."
+        fact_pack = {"news_items": [{"url": "https://example.com/real", "title": "R"}]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is False
+        assert "https://hallucinated.example.com/fake" in result["unknown_urls"]
+
+    def test_zero_citations_passes(self):
+        """Sections like One-Line Summary may have no citations — must pass."""
+        from services.pipeline import validate_citation_urls
+        body = "Just a summary, no citations.\n\n## Section\n\nMore prose."
+        fact_pack = {"news_items": [{"url": "https://example.com/a", "title": "A"}]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is True
+        assert result["unknown_urls"] == []
+        assert result["citation_count"] == 0
+
+    def test_url_normalization_strips_tracking_params(self):
+        """utm_*, fbclid, ref params should normalize away before comparing."""
+        from services.pipeline import validate_citation_urls
+        body = "Cited [1](https://example.com/a?utm_source=twitter&utm_medium=social)."
+        fact_pack = {"news_items": [{"url": "https://example.com/a", "title": "A"}]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is True
+
+    def test_url_normalization_strips_trailing_slash(self):
+        from services.pipeline import validate_citation_urls
+        body = "Cited [1](https://example.com/a/)."
+        fact_pack = {"news_items": [{"url": "https://example.com/a", "title": "A"}]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is True
+
+    def test_url_normalization_strips_fragment(self):
+        from services.pipeline import validate_citation_urls
+        body = "Cited [1](https://example.com/a#section-2)."
+        fact_pack = {"news_items": [{"url": "https://example.com/a", "title": "A"}]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is True
+
+    def test_duplicate_citations_deduped(self):
+        """Same URL cited multiple times = 1 unique URL to validate."""
+        from services.pipeline import validate_citation_urls
+        body = "First [1](https://example.com/a). Second [1](https://example.com/a)."
+        fact_pack = {"news_items": [{"url": "https://example.com/a", "title": "A"}]}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is True
+        assert result["citation_count"] == 1
+
+    def test_empty_fact_pack_with_citations_fails(self):
+        from services.pipeline import validate_citation_urls
+        body = "Cited [1](https://example.com/a)."
+        fact_pack = {"news_items": []}
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is False
+        assert "https://example.com/a" in result["unknown_urls"]
+
+    def test_missing_news_items_field_treated_as_empty(self):
+        from services.pipeline import validate_citation_urls
+        body = "Cited [1](https://example.com/a)."
+        fact_pack = {}  # no news_items key
+        result = validate_citation_urls(body, fact_pack)
+        assert result["valid"] is False
