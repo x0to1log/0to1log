@@ -117,6 +117,23 @@ Option B Exa 복원 때 Amy 질문: "넉넉하게 잡는 건 소용없어서 줄
 
 **Lesson**: 중간 trade-off는 "middle-ground"로 포장하기보다 "이건 가설, 검증 안 됨" 명시. Amy는 sharp question을 할 권리가 있고, 솔직한 답이 신뢰를 쌓음.
 
+### 6. "Target 달성 ≠ 완성도" — YAGNI의 잘못된 해석
+
+Phase 3에서 -1250 target을 156% (-1956 tokens) 초과 달성하자 "이정도면 됐다"고 관성 stop. 그 결과:
+- Dead GUIDE 3개 누락 (눈에 안 띈 건이지만 체계적 re-grep 안 했음)
+- JSON footer 10곳 3 variant 불일치 (audit H1 기준 미완료)
+- Citation 구조 방어 prompt-side 미구현 (defense-in-depth 관점 자체 없음)
+
+원래 YAGNI는 "필요 없는 것 안 만들기"이지 "필요 있는데 귀찮은 것 건너뛰기"가 아님. "Done criteria 달성"을 너무 관대하게 "끝"으로 해석.
+
+**Lesson**: Target은 **최소** 기준이지 정지선이 아님. 완료 선언 전 "같은 주제에서 추가로 가능한 low-hanging fruit은?"을 한 번 더 묻는 habit 필요.
+
+### 7. "Phase complete 선언"의 한계 — Audit Review가 별도 phase
+
+Phase 1/2/3 완료 마킹 후 audit review에서 4건 추가 발견 (3건 valid, 1건 scope 경계). 즉 **"완료 = 모든 가능한 개선 끝"이 아니라 "spec Done criteria 달성"**일 뿐. Spec이 narrow하게 scope을 잡았으면 그 바깥은 안 건드림. 하지만 같은 파일/같은 주제라면 **while-you're-in-there 기회**가 있었음.
+
+**Lesson**: `Phase N complete`는 snapshot이지 관 뚜껑이 아님. Review cycle이 별도 phase라고 인식하면 "완료 후 cleanup"이 자연스럽게 계획됨. 일종의 **N.5 phase** 개념 — 다음 프로젝트에 적용 가능.
+
 ---
 
 ## 핵심 지표 변화
@@ -158,6 +175,11 @@ Option B Exa 복원 때 Amy 질문: "넉넉하게 잡는 건 소용없어서 줄
 - Amy 체감상 "너무 얇다"가 지속되면 Option B + 추가 조치
 - 유지되면 "shorter + higher quality = 개선" 결론
 
+### 5. Citation guard 효과 (post-audit cleanup 409cd23)
+- HALLUCINATION_GUARD에 citation-specific 문구 추가 이후 `url_validation_failed=true` 비율 감소 여부
+- Baseline (2026-04-14~16): research digest에서 0-4 URL/run false-positive 관찰됨
+- 사전 예방 (prompt-side) + 사후 검증 (validator) 2층 방어 중 prompt-side 기여 측정
+
 ---
 
 ## 드롭된 것들 (재검토 조건 기록)
@@ -193,8 +215,39 @@ Option B Exa 복원 때 Amy 질문: "넉넉하게 잡는 건 소용없어서 줄
 
 ---
 
+## Addendum — Post-audit cleanup (2026-04-17 늦은 시간)
+
+Phase 3 complete 선언 후 audit review에서 4건 발견:
+
+1. Dead GUIDE 3건 남음 (RESEARCH_LEARNER/BUSINESS_EXPERT/BUSINESS_LEARNER)
+2. "Return JSON only" 7회 반복 (H1 audit 기준 미완료)
+3. RANKING_SYSTEM_PROMPT_V2 rename + M4 category mismatch
+4. C2 구조적 방지가 post-hoc validator만 존재, prompt-side 누락
+
+**처리 (commit 409cd23):**
+- Task A — Dead GUIDE 3개 삭제 (-77 lines, DIGEST_PROMPT_MAP 일관성 검증)
+- Task B — JSON footer 3 variant → 1 ("Return JSON only:")로 통일
+- Task C — HALLUCINATION_GUARD에 citation-specific 1 paragraph 추가 (prompt-side + post-hoc 2층 방어)
+
+**Deferred (3번):**
+- RANKING rename + M4는 `2026-03-18-prompt-audit-fixes.md` 범위로 분리
+- scope 경계 정당화 인정 (feedback 저자도 부분 동의 가능 여지)
+
+**솔직한 self-critique (Amy 질문 "뭐 반론할 게 있어?"에 대한 답):**
+- 1, 2, 4번은 "생각이 있어서"가 아니라 **그냥 놓침**
+- 3번만 의도적 scope narrow
+- YAGNI를 "target 달성하면 stop"으로 잘못 해석 (Lesson 6 참조)
+
+**파일 상태:** prompts_news_pipeline.py 1689 → 1610 lines. 기존 Phase 3 cleanup과 합산하면 1840 → 1610 (**-230 lines, -12.5%**).
+
+---
+
 ## 결론
 
-3 phase + API diet + Option B를 통해 news pipeline의 **유지보수성 + 신뢰도 + 비용**이 모두 개선됨. 측정 → scope 축소 → 구현 → production verify → course-correct 루프가 작동했고, 최대 산출물은 "spec scope의 30-50%가 실제로는 필요 없거나 이미 존재"라는 발견.
+3 phase + API diet + Option B + post-audit cleanup을 통해 news pipeline의 **유지보수성 + 신뢰도 + 비용**이 모두 개선됨. 측정 → scope 축소 → 구현 → production verify → course-correct → **audit review → cleanup** 루프가 작동했고, 최대 산출물은 다음 3가지:
 
-남은 관찰 대상 4개는 1-2주 데이터로 자연스럽게 해결될 것으로 예상.
+1. "Spec scope의 30-50%가 실제로는 필요 없거나 이미 존재" (측정 후 scope 축소 패턴)
+2. "Phase complete ≠ audit clean" (review를 별도 phase로 계획해야)
+3. "Target 달성 = YAGNI 정지선이 아님" (완료 선언 전 추가 스캔 habit)
+
+남은 관찰 대상 5개는 1-2주 데이터로 자연스럽게 해결될 것으로 예상.
