@@ -697,6 +697,14 @@ Learner readers are Korean non-developers. Keep the Korean text Korean.
 5. **Common English nouns with natural Korean equivalents → Korean**: feedback → 피드백(OK, loan word) / 의견, deadline → 마감, launch → 출시, benchmark → 벤치마크(OK) / 성능 비교, workflow → 워크플로(OK), vendor → 공급사, baseline → 기준선.
 
 Before submitting, scan the `ko` field for these banned English connective words and fix any you find.
+
+## Examples — natural Korean vs literal translation
+
+✅ Good (natural Korean prose):
+"Meta는 Broadcom과 1GW 규모의 맞춤 칩 계약을 연장했다. 이 계약은 Meta의 GPU 의존도를 낮추려는 전략과 맞닿아 있다."
+
+❌ Bad (literal translation with English fillers):
+"Meta는 Broadcom과 1GW custom chip deal을 extend했다. This deal은 Meta's GPU 의존도를 lower하려는 strategy와 align한다."
 """
 
 
@@ -1052,6 +1060,20 @@ For excerpt:
 - Sentence 2: why it matters.
 - Prefer broadly understandable wording before insider shorthand.
 - Move technical knobs, benchmark details, and specialist phrasing into the body unless they are essential to the main news value.
+
+## Examples — calibrated headlines vs overclaim/vague
+
+✅ Good (specific, sourced, calibrated):
+- EN: "Meta commits 1GW to Broadcom custom chips — first phase of multi-year silicon shift"
+- KO: "Meta–Broadcom 맞춤 칩 1GW 계약 — 다년 실리콘 전환의 1단계"
+
+❌ Bad (overclaim — projects strategic aim as confirmed outcome):
+- EN: "Meta's 1GW Broadcom deal signals the end of the NVIDIA era"
+- KO: "Meta 1GW 딜, NVIDIA 시대의 종말을 선언"
+
+❌ Bad (vague — no throughline, no specifics):
+- EN: "Major AI infrastructure announcements reshape the industry today"
+- KO: "오늘 주요 AI 인프라 발표들이 업계를 재편"
 """
 
 
@@ -1070,6 +1092,16 @@ For Korean:
 - Use readable editorial news prose, not chatty spoken copy.
 - News sections should default to concise editorial 기사체.
 - Reader-facing sections may be slightly softer, but should still sound like an editorial digest rather than a casual conversation.
+
+## Examples — what-changed-first vs jargon-first
+
+✅ Good (impact first, jargon second):
+- EN: "OpenAI will run enterprise AI on AWS from next month — a $50B, multi-year commitment"
+- KO: "OpenAI가 내달부터 AWS에서 기업용 AI를 운영한다 — 500억 달러 규모 다년 계약"
+
+❌ Bad (jargon first, impact unclear):
+- EN: "OpenAI Trainium commitment restructures cloud deployment topology"
+- KO: "OpenAI Trainium 약정으로 클라우드 배치 토폴로지 재편"
 """
 
 
