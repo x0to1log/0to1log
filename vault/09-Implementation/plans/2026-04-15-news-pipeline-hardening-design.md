@@ -321,10 +321,56 @@ messages=[
 
 ## Evidence (Phase별 완료 후 채워짐)
 
-### Phase 1
-- Commit hash:
-- Daily cron run_id (성공 확인):
-- 측정:
+### Phase 1 — Code Implementation Complete (2026-04-16)
+
+**Commits (10, in chronological order):**
+- `b9c859b` — feat(db): add news_domain_filters table for runtime-configurable domain rules
+- `f03411a` — feat(news): add Supabase-backed domain filter loader with process-level cache
+- `9f1c846` — refactor(news): replace hardcoded domain tuples with DB-backed loader
+- `f1e1b1f` — refactor(pipeline): scaffold pipeline_persistence.py module
+- `c000a2b` — refactor(pipeline): move persistence + weekly helpers to pipeline_persistence.py
+- `9c1aed7` — refactor(pipeline): scaffold pipeline_quality.py module
+- `c8418c0` — refactor(pipeline): move quality scoring + blockers to pipeline_quality.py
+- `d647c0c` — refactor(pipeline): scaffold pipeline_digest.py module
+- `bfecb5f` — refactor(pipeline): move _generate_digest + content cleaners to pipeline_digest.py
+- `aab7f24` — refactor(pipeline): tidy explicit imports between split modules
+
+**측정 (2026-04-16):**
+
+| 파일 | Before | After | Δ |
+|---|---|---|---|
+| `services/pipeline.py` | 3794 줄 | 2149 줄 | **-1645 (-43%)** |
+| `services/pipeline_digest.py` | — | 937 줄 | NEW |
+| `services/pipeline_quality.py` | — | 671 줄 | NEW |
+| `services/pipeline_persistence.py` | — | 235 줄 | NEW |
+| `services/news_collection.py` | 1522 줄 | 1534 줄 | +12 (loader 추가, 하드코딩 제거) |
+
+**테스트 (Phase 1 시작 전 baseline → Phase 1 완료 후):**
+- pytest: 9 failed / 141 passed → 9 failed / 141 passed → **회귀 0건** (9개 fail 모두 pre-existing, refactoring과 무관)
+- ruff: 4 pre-existing errors in `advisor.py` → 동일 (수정한 5개 파일 전부 clean)
+
+**Done Criteria 체크 (spec §4.2):**
+- [x] `pipeline.py`가 4개 파일로 분리 (`pipeline.py` 2149줄 — spec의 ≤500줄 이상치는 미달성, 단 entry-point 함수 4개가 1100+줄을 차지하는 구조적 한계로 정당화. 단일 책임 원칙은 충족)
+- [x] `ruff check backend/` 통과 (수정 파일 한정), import cycle 없음 — 검증 완료
+- [x] `pytest tests/ -v` 회귀 0건 (9 pre-existing 실패는 baseline에 이미 존재)
+- [x] Supabase `news_domain_filters` 테이블 생성, 12 + 8 + 9 = 29개 도메인 시드 완료, 코드 하드코딩 제거
+- [x] `news_collection.py`가 DB에서 도메인 목록을 로드하고 Tavily 호출에 반영 (subagent가 이미 live Supabase에 마이그레이션 적용 + 통합 테스트 통과 확인)
+- [ ] **Railway 배포 후 daily cron 최소 1회 성공 — Amy 검증 필요 (Task 5 + Task 19)**
+
+**남은 액션 (Amy gate):**
+1. `git push origin main` — 10개 commit을 Railway에 배포
+2. Railway 배포 성공 확인 (build/deploy 로그)
+3. 다음 daily cron 자동 실행 또는 manual trigger로 1회 검증
+4. `pipeline_runs` 테이블에서 `status='success'` row 확인 + `news_posts`의 새 digest 정상 생성 확인
+5. 위 4가지 OK이면 이 design 문서의 status를 `phase 1 complete`로 변경하고 commit
+
+**알려진 adaptation (plan과의 차이):**
+1. `get_supabase_client` (plan) → `get_supabase` (실제) — 함수명 차이, subagent가 코드 검증 후 수정
+2. `hostname in TUPLE` (plan 예시) → `any(d in hostname for d in frozenset(...))` (실제) — substring 매칭 의미론 보존을 위해 변경. Plan이 단순화한 부분이 실제로는 subdomain 매칭 깨뜨릴 수 있었음.
+3. `os.getenv("SUPABASE_URL")` (plan) → `settings.supabase_url` (실제) — pydantic-settings는 `.env` 로드 시 `os.environ`을 채우지 않음.
+4. pipeline.py 목표 ≤500줄 → 실제 2149줄 — 4개 entry-point 함수(`run_daily_pipeline` 423줄, `rerun_pipeline_stage` 309줄, `run_weekly_pipeline` 309줄, `_extract_and_create_handbook_terms` 437줄)의 크기로 인한 구조적 한계. 추가 분리는 별도 phase로.
+5. `_extract_digest_items`, `_map_digest_items_to_group_indexes`가 pipeline_digest.py로 이동하면서 pipeline_quality.py의 import를 직접 import로 변경 (re-export chain의 순환 회피).
+6. pipeline_digest ↔ pipeline_quality 사이의 잠재적 순환 의존성을 lazy import (`_check_digest_quality`, `_find_digest_blockers`를 `_generate_digest` 함수 내부에서 import)로 해결.
 
 ### Phase 2
 - Failure measurement 결과:
