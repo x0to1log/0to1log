@@ -156,3 +156,40 @@ def test_stale_age_passes_when_no_published_at():
     term = _term(published_at=None)
     failed, _ = check_stale_age(term, now=datetime(2026, 4, 16, tzinfo=timezone.utc))
     assert failed is False
+
+
+def test_stale_model_comparison_does_not_double_count_gpt4_inside_gpt4o():
+    """Regression: before I1 fix, `"GPT-4"` substring-matched inside `"GPT-4o"`,
+    polluting the reason with a bare `GPT-4` it never actually saw."""
+    term = _term(body_advanced_en="We benchmark GPT-4o against Claude 3 Opus.")
+    failed, reason = check_stale_model_comparison(term)
+    assert failed is True
+    assert "GPT-4o" in reason
+    # The bare "GPT-4" must NOT appear as a separate hit (it's inside GPT-4o)
+    # Use a guard that's robust to either join style:
+    assert "GPT-4," not in reason and not reason.endswith("GPT-4 without any current-gen model")
+
+
+def test_stale_model_comparison_matches_longest_first_with_turbo():
+    """Both GPT-4 Turbo (which contains GPT-4) and GPT-4o present — each reported exactly once."""
+    term = _term(body_advanced_en="Compare GPT-4 Turbo and GPT-4o on MMLU.")
+    failed, reason = check_stale_model_comparison(term)
+    assert failed is True
+    assert "GPT-4 Turbo" in reason
+    assert "GPT-4o" in reason
+
+
+def test_stale_age_handles_naive_datetime():
+    """Regression: naive ISO strings (no Z, no offset) used to raise TypeError
+    on datetime subtraction. Now treated as UTC."""
+    term = _term(published_at="2025-01-01T00:00:00")  # no Z
+    failed, _ = check_stale_age(term, now=datetime(2026, 4, 16, tzinfo=timezone.utc))
+    assert failed is True
+
+
+def test_stale_age_returns_false_on_non_string_published_at():
+    """Defensive: if published_at arrives as a non-string (e.g., already a datetime
+    from some Supabase client versions), do not crash."""
+    term = _term(published_at=12345)  # int, not str
+    failed, _ = check_stale_age(term, now=datetime(2026, 4, 16, tzinfo=timezone.utc))
+    assert failed is False

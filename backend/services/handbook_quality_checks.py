@@ -30,16 +30,32 @@ def _all_bodies(term: dict) -> str:
     return "\n".join(parts)
 
 
+_MODEL_BOUNDARY = r"(?<![\w.-]){}(?![\w.-])"
+
+
+def _find_model_mentions(body: str, models: frozenset[str]) -> list[str]:
+    """Find model names in body as word-ish tokens (no overlap).
+
+    Prevents `GPT-4` from matching inside `GPT-4o`. Longest-first ensures
+    `GPT-4 Turbo` matches before `GPT-4`.
+    """
+    hits: list[str] = []
+    for m in sorted(models, key=len, reverse=True):
+        if re.search(_MODEL_BOUNDARY.format(re.escape(m)), body):
+            hits.append(m)
+    return hits
+
+
 def check_stale_model_comparison(term: dict) -> tuple[bool, str]:
     """Fail if term mentions stale models without any current-gen counterpart."""
     body = _all_bodies(term)
-    stale_hits = [m for m in STALE_MODELS if m in body]
+    stale_hits = _find_model_mentions(body, STALE_MODELS)
     if not stale_hits:
         return False, ""
-    current_hits = [m for m in CURRENT_MODELS if m in body]
+    current_hits = _find_model_mentions(body, CURRENT_MODELS)
     if current_hits:
         return False, ""
-    return True, f"mentions {stale_hits} without any current-gen model"
+    return True, f"mentions {', '.join(sorted(stale_hits))} without any current-gen model"
 
 
 def check_missing_architecture_detail(term: dict) -> tuple[bool, str]:
@@ -79,14 +95,17 @@ def check_stale_age(term: dict, now: datetime | None = None) -> tuple[bool, str]
     """Flag if term was published more than STALE_AGE_DAYS ago.
 
     `now` injectable for tests. Defaults to datetime.now(timezone.utc).
+    Naive published_at strings are treated as UTC.
     """
     published_at = term.get("published_at")
     if not published_at:
         return False, ""
     try:
         pub_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-    except ValueError:
+    except (ValueError, AttributeError):
         return False, ""
+    if pub_dt.tzinfo is None:
+        pub_dt = pub_dt.replace(tzinfo=timezone.utc)
     now = now or datetime.now(timezone.utc)
     age = now - pub_dt
     if age > timedelta(days=STALE_AGE_DAYS):
