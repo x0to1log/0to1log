@@ -52,3 +52,14 @@ def check_missing_architecture_detail(term: dict) -> tuple[bool, str]:
     if hits:
         return False, ""
     return True, f"term_type={term.get('term_type')} but no architecture keyword found"
+
+
+def check_missing_paper_reference(term: dict) -> tuple[bool, str]:
+    """Fail if term_type needs paper citation but none present."""
+    if term.get("term_type") not in PAPER_REFERENCE_REQUIRED_TYPES:
+        return False, ""
+    body = _all_bodies(term)
+    for pattern in PAPER_REFERENCE_PATTERNS:
+        if re.search(pattern, body, re.IGNORECASE):
+            return False, ""
+    return True, f"term_type={term.get('term_type')} but no arxiv/paper reference"

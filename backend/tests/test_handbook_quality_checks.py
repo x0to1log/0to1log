@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from services.handbook_quality_checks import (
     check_missing_architecture_detail,
+    check_missing_paper_reference,
     check_stale_model_comparison,
 )
 
@@ -71,4 +72,34 @@ def test_architecture_check_skips_non_required_types():
         body_advanced_en="A chatbot app.",
     )
     failed, _ = check_missing_architecture_detail(term)
+    assert failed is False
+
+
+# ---------------- 2c: missing_paper_reference ----------------
+
+
+def test_paper_reference_fails_for_research_method_without_link():
+    term = _term(
+        term_type="research_method",
+        body_advanced_en="A method that improves training.",
+    )
+    failed, _ = check_missing_paper_reference(term)
+    assert failed is True
+
+
+def test_paper_reference_passes_with_arxiv():
+    term = _term(
+        term_type="research_method",
+        body_advanced_en="See https://arxiv.org/abs/2401.12345 for details.",
+    )
+    failed, _ = check_missing_paper_reference(term)
+    assert failed is False
+
+
+def test_paper_reference_skips_non_research_type():
+    term = _term(
+        term_type="product_brand",
+        body_advanced_en="A product.",
+    )
+    failed, _ = check_missing_paper_reference(term)
     assert failed is False
