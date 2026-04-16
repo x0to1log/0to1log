@@ -52,11 +52,9 @@ def _load_domain_filters() -> dict[str, frozenset[str]]:
         return result
 
 
-_NON_EN_DOMAINS = (
-    "landiannews.com", "36kr.com", "unifuncs.com", "minimaxi.com",
-    "ithome.com", "oschina.net", "csdn.net", "juejin.cn",
-    "zhihu.com", "bilibili.com", "baidu.com", "idctop.com",
-)
+# Domain filter lists are now loaded from Supabase via _load_domain_filters().
+# See migration 00050_news_domain_filters.sql for schema and seed data.
+# To modify: update the table directly, then restart Railway to refresh the cache.
 
 SEARCH_QUERIES = [
     # Common
@@ -85,29 +83,6 @@ BACKFILL_QUERIES = [
     "AI enterprise regulation policy",
     "new AI tool product feature release update",
 ]
-
-_OFFICIAL_SITE_DOMAINS = (
-    "openai.com",
-    "anthropic.com",
-    "techcommunity.microsoft.com",
-    "blog.google",
-    "blogs.nvidia.com",
-    "developer.nvidia.com",
-    "blog.cloudflare.com",
-    "developer.apple.com",
-)
-
-_MEDIA_DOMAINS = (
-    "venturebeat.com",
-    "techcrunch.com",
-    "theverge.com",
-    "yahoo.com",
-    "reuters.com",
-    "bloomberg.com",
-    "wsj.com",
-    "ft.com",
-    "wired.com",
-)
 
 _OFFICIAL_LOOKUP_DOMAIN_HINTS: dict[str, tuple[str, ...]] = {
     "openai": ("openai.com",),
@@ -161,7 +136,7 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_tier": "primary",
         }
 
-    if any(domain in hostname for domain in _OFFICIAL_SITE_DOMAINS):
+    if any(domain in hostname for domain in _load_domain_filters()["official_priority"]):
         return {
             "source_kind": "official_site",
             "source_confidence": "high",
@@ -202,7 +177,7 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_tier": "primary",
         }
 
-    if any(domain in hostname for domain in _MEDIA_DOMAINS):
+    if any(domain in hostname for domain in _load_domain_filters()["media_tier"]):
         return {
             "source_kind": "media",
             "source_confidence": "high",
@@ -351,7 +326,7 @@ async def _lookup_official_sources(
             if canonical_url in existing:
                 continue
             result_title = result.title or ""
-            if any(d in hostname for d in _NON_EN_DOMAINS):
+            if any(d in hostname for d in _load_domain_filters()["block_non_en"]):
                 continue
             if any("\u4e00" <= ch <= "\u9fff" for ch in result_title):
                 continue
@@ -1021,7 +996,7 @@ async def enrich_sources(
                 # Filter non-EN/KO sources (same as collect stage)
                 r_title = r.title or ""
                 r_hostname = _re_module.sub(r"https?://(www\.)?", "", r.url).split("/")[0]
-                if any(d in r_hostname for d in _NON_EN_DOMAINS):
+                if any(d in r_hostname for d in _load_domain_filters()["block_non_en"]):
                     continue
                 if any("\u4e00" <= ch <= "\u9fff" for ch in r_title):
                     continue
@@ -1111,7 +1086,7 @@ async def collect_news(
     excluded_count = 0
     filtered_count = 0
     _NON_ARTICLE_PATTERNS = ("/category/", "/categories/", "/topics/", "/topic/", "/tag/", "/tags/", "/archive/")
-    # _NON_EN_DOMAINS is defined at module level (shared with enrich_sources)
+    # Domain filters are loaded from Supabase via _load_domain_filters() (shared with enrich_sources)
     for c in all_candidates:
         if c.url in already_used:
             excluded_count += 1
@@ -1124,7 +1099,7 @@ async def collect_news(
         if not path or path == "" or any(p in c.url.lower() for p in _NON_ARTICLE_PATTERNS):
             filtered_count += 1
             continue
-        if any(d in hostname for d in _NON_EN_DOMAINS):
+        if any(d in hostname for d in _load_domain_filters()["block_non_en"]):
             filtered_count += 1
             continue
         # Filter non-EN/KO content by detecting CJK characters in title
