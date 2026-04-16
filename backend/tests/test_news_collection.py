@@ -382,3 +382,24 @@ def test_load_domain_filters_returns_three_categories():
     # Sanity: 시드 데이터가 들어 있어야 함
     assert "openai.com" in filters["official_priority"]
     assert "36kr.com" in filters["block_non_en"]
+
+
+def test_classify_source_meta_research_blocklist_returns_spam_tier():
+    """Domains in research_blocklist should be marked source_kind='spam', source_tier='spam'."""
+    from services.news_collection import _classify_source_meta, _load_domain_filters
+    _load_domain_filters.cache_clear()
+    # Pre-condition: agent-wars.com seeded in research_blocklist (migration 00051)
+    result = _classify_source_meta("https://agent-wars.com/some/article", title="x")
+    assert result["source_tier"] == "spam"
+    assert result["source_kind"] == "spam"
+    assert result["source_confidence"] == "low"
+
+
+def test_classify_source_meta_research_priority_returns_primary_tier():
+    """Research priority domains should be marked primary tier with high confidence."""
+    from services.news_collection import _classify_source_meta, _load_domain_filters
+    _load_domain_filters.cache_clear()
+    # Use openreview.net — added in migration 00051, not handled by existing logic
+    result = _classify_source_meta("https://openreview.net/forum?id=abc123", title="paper")
+    assert result["source_tier"] == "primary"
+    assert result["source_confidence"] == "high"

@@ -30,6 +30,8 @@ def _load_domain_filters() -> dict[str, frozenset[str]]:
         "block_non_en": frozenset(),
         "official_priority": frozenset(),
         "media_tier": frozenset(),
+        "research_priority": frozenset(),
+        "research_blocklist": frozenset(),
     }
     try:
         supabase = get_supabase()
@@ -120,6 +122,23 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_kind": "analysis",
             "source_confidence": "low",
             "source_tier": "secondary",
+        }
+
+    # Phase 2 — research_blocklist HIGHEST priority (kill source before any other tier check)
+    filters = _load_domain_filters()
+    if any(d in hostname for d in filters.get("research_blocklist", frozenset())):
+        return {
+            "source_kind": "spam",
+            "source_confidence": "low",
+            "source_tier": "spam",
+        }
+
+    # Phase 2 — research_priority next, before existing tier classification
+    if any(d in hostname for d in filters.get("research_priority", frozenset())):
+        return {
+            "source_kind": "research_primary",
+            "source_confidence": "high",
+            "source_tier": "primary",
         }
 
     if "arxiv.org" in hostname:
