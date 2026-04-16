@@ -40,3 +40,15 @@ def check_stale_model_comparison(term: dict) -> tuple[bool, str]:
     if current_hits:
         return False, ""
     return True, f"mentions {stale_hits} without any current-gen model"
+
+
+def check_missing_architecture_detail(term: dict) -> tuple[bool, str]:
+    """Fail if term_type requires architecture detail but none present."""
+    if term.get("term_type") not in ARCHITECTURE_REQUIRED_TYPES:
+        return False, ""
+    body = _all_bodies(term)
+    body_lower = body.lower()
+    hits = [k for k in ARCHITECTURE_KEYWORDS if k.lower() in body_lower]
+    if hits:
+        return False, ""
+    return True, f"term_type={term.get('term_type')} but no architecture keyword found"

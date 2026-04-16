@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from services.handbook_quality_checks import (
+    check_missing_architecture_detail,
     check_stale_model_comparison,
 )
 
@@ -39,4 +40,35 @@ def test_stale_model_comparison_passes_when_stale_paired_with_current():
 def test_stale_model_comparison_passes_when_no_models_mentioned():
     term = _term(body_advanced_en="An attention mechanism uses softmax.")
     failed, _ = check_stale_model_comparison(term)
+    assert failed is False
+
+
+# ---------------- 2b: missing_architecture_detail ----------------
+
+
+def test_architecture_check_fails_for_model_family_without_keywords():
+    term = _term(
+        term_type="model_family",
+        body_advanced_en="A new AI model. It works well on tasks.",
+    )
+    failed, reason = check_missing_architecture_detail(term)
+    assert failed is True
+    assert "architecture" in reason.lower()
+
+
+def test_architecture_check_passes_for_model_family_with_keywords():
+    term = _term(
+        term_type="model_family",
+        body_advanced_en="70B parameters across 80 transformer layers.",
+    )
+    failed, _ = check_missing_architecture_detail(term)
+    assert failed is False
+
+
+def test_architecture_check_skips_non_required_types():
+    term = _term(
+        term_type="product_brand",
+        body_advanced_en="A chatbot app.",
+    )
+    failed, _ = check_missing_architecture_detail(term)
     assert failed is False
