@@ -133,14 +133,6 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_tier": "spam",
         }
 
-    # Phase 2 — research_priority next, before existing tier classification
-    if any(d in hostname for d in filters.get("research_priority", frozenset())):
-        return {
-            "source_kind": "research_primary",
-            "source_confidence": "high",
-            "source_tier": "primary",
-        }
-
     if "arxiv.org" in hostname:
         return {
             "source_kind": "paper",
@@ -193,6 +185,17 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
         return {
             "source_kind": "registry",
             "source_confidence": "medium",
+            "source_tier": "primary",
+        }
+
+    # Phase 2 — research_priority catches remaining research domains
+    # (openreview.net, distill.pub, deepmind.google, etc.) not covered by
+    # the specific handlers above. arxiv.org and huggingface.co keep their
+    # more specific kinds via the earlier branches.
+    if any(d in hostname for d in filters.get("research_priority", frozenset())):
+        return {
+            "source_kind": "research_primary",
+            "source_confidence": "high",
             "source_tier": "primary",
         }
 
@@ -1127,11 +1130,13 @@ async def collect_news(
             continue
         if c.url not in seen_urls:
             seen_urls.add(c.url)
-            unique.append(
-                c.model_copy(
-                    update=_classify_source_meta(url=c.url, source=c.source, title=c.title)
-                )
-            )
+            source_meta = _classify_source_meta(url=c.url, source=c.source, title=c.title)
+            # Phase 2 — drop spam-tier (research_blocklist) candidates at collection time
+            if source_meta.get("source_tier") == "spam":
+                logger.info("Dropping spam-tier source: %s", c.url)
+                filtered_count += 1
+                continue
+            unique.append(c.model_copy(update=source_meta))
 
     logger.info(
         "Collected %d unique candidates (tavily=%d, hf=%d, arxiv=%d, github=%d, exa=%d, brave=%d, excluded_published=%d, filtered_non_article=%d)",
