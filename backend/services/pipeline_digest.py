@@ -734,6 +734,16 @@ async def _generate_digest(
             "quality_version": "v1",
         }
 
+    # Phase 2 — URL strict allowlist: force draft if LLM cited URLs outside fact_pack.
+    # _check_digest_quality sets these flags on quality_meta; honour them here so
+    # caller-provided auto_publish=True cannot override a validation failure.
+    if quality_meta.get("url_validation_failed"):
+        logger.warning(
+            "Forcing auto_publish=False for %s digest: URL validation failed",
+            digest_type,
+        )
+        auto_publish = False
+
     # Save EN + KO rows
     missing = [p for p in ("expert", "learner") if p not in personas]
     if missing:
@@ -875,6 +885,9 @@ async def _generate_digest(
                 "structural_penalty": quality_meta.get("structural_penalty", 0),
                 "structural_warnings": quality_meta.get("structural_warnings", []),
                 "auto_publish_eligible": auto_publish,
+                # Phase 2 — surface URL validation outcome to DB for admin visibility
+                "url_validation_failed": bool(quality_meta.get("url_validation_failed", False)),
+                "url_validation_failures": quality_meta.get("url_validation_failures", []),
             },
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,

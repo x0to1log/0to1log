@@ -646,3 +646,151 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
     assert errors == []
     en_row = next(payload for _table, payload in supabase.saved_rows if payload["locale"] == "en")
     assert "Agent performance on everyday web tasks" in en_row["content_expert"]
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_surfaces_url_validation_to_fact_pack_and_forces_draft():
+    """Phase 2 regression guard: url_validation_failed on quality_meta must
+    (1) land in the persisted fact_pack, and (2) force auto_publish_eligible=False
+    even when the caller passed auto_publish=True. Catches the 2026-04-16 bug where
+    the fact_pack whitelist dropped Phase 2 fields.
+    """
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response({
+                "en": "## Research Papers\n\n### Expert\n\nBody [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 전문가\n\n본문 [1](https://example.com/story)",
+                "headline": "H", "headline_ko": "헤",
+                "excerpt": "E", "excerpt_ko": "요",
+                "sources": [{"url": "https://example.com/story", "title": "S"}],
+            }),
+            _mock_openai_response({
+                "en": "## Research Papers\n\n### Learner\n\nBody [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 학습자\n\n본문 [1](https://example.com/story)",
+                "headline": "H", "headline_ko": "헤",
+                "excerpt": "E", "excerpt_ko": "요",
+                "sources": [{"url": "https://example.com/story", "title": "S"}],
+            }),
+        ]
+    )
+
+    # Simulate _check_digest_quality reporting a URL validation failure.
+    quality_meta_with_failure = {
+        "score": 95,
+        "quality_score": 95,
+        "quality_version": "v2",
+        "quality_breakdown": {},
+        "quality_issues": [],
+        "quality_caps_applied": [],
+        "structural_penalty": 0,
+        "structural_warnings": [],
+        "url_validation_failed": True,
+        "url_validation_failures": [
+            {"persona": "expert", "locale": "en",
+             "unknown_urls": ["https://hallucinated.example.com/fake"],
+             "citation_count": 1},
+        ],
+        "auto_publish_eligible": False,
+    }
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=quality_meta_with_failure), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-15",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+            auto_publish=True,  # caller requested auto-publish — must be overridden
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    assert len(supabase.saved_rows) == 2
+    for _table, payload in supabase.saved_rows:
+        fp = payload["fact_pack"]
+        # (1) URL validation outcome surfaced to DB
+        assert fp["url_validation_failed"] is True, \
+            f"url_validation_failed missing from fact_pack: keys={list(fp.keys())}"
+        assert fp["url_validation_failures"], "url_validation_failures should not be empty"
+        # (2) auto_publish=True was overridden to False due to validation failure
+        assert fp["auto_publish_eligible"] is False, \
+            "auto_publish_eligible must be False when url_validation_failed=True"
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_surfaces_url_validation_pass_state_to_fact_pack():
+    """Happy path: url_validation_failed=False must also land in fact_pack (not null).
+    Ensures the field is always surfaced, not just when failures occur.
+    """
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response({
+                "en": "## Research Papers\n\n### Expert\n\nBody [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 전문가\n\n본문 [1](https://example.com/story)",
+                "headline": "H", "headline_ko": "헤",
+                "excerpt": "E", "excerpt_ko": "요",
+                "sources": [{"url": "https://example.com/story", "title": "S"}],
+            }),
+            _mock_openai_response({
+                "en": "## Research Papers\n\n### Learner\n\nBody [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 학습자\n\n본문 [1](https://example.com/story)",
+                "headline": "H", "headline_ko": "헤",
+                "excerpt": "E", "excerpt_ko": "요",
+                "sources": [{"url": "https://example.com/story", "title": "S"}],
+            }),
+        ]
+    )
+
+    quality_meta_clean = {
+        "score": 90, "quality_score": 90, "quality_version": "v2",
+        "quality_breakdown": {}, "quality_issues": [], "quality_caps_applied": [],
+        "structural_penalty": 0, "structural_warnings": [],
+        "url_validation_failed": False,
+        "url_validation_failures": [],
+    }
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=quality_meta_clean), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-15",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+        )
+
+    assert posts_created == 2
+    for _table, payload in supabase.saved_rows:
+        fp = payload["fact_pack"]
+        assert fp.get("url_validation_failed") is False, \
+            f"expected url_validation_failed=False, got {fp.get('url_validation_failed')}"
+        assert fp.get("url_validation_failures") == []
