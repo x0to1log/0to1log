@@ -1125,8 +1125,8 @@ One punchy sentence here.
 ## Length Target (approximate — depth > literal count)
 - Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items, English prose averaging ~120-150 chars per sentence)
 - Trend Analysis: 3-4 substantive paragraphs, ~1200-2000 chars total
-- Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~3000-4000 chars combined
-- **Total EN content (en field): aim for 12000+ chars**
+- Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~4000-5000 chars combined
+- **Total EN content (en field): aim for 16000+ chars**
 - Principle: depth > length. If the week has thin news (<5 major stories), write shorter rather than pad with weak items. The character numbers are guidance, not a quota.
 
 ## Constraints
@@ -1227,8 +1227,8 @@ One friendly sentence here.
 ## Length Target (approximate — depth > literal count)
 - Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items)
 - Trend Analysis: 3-4 substantive paragraphs, ~1200-2000 chars total
-- Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~2500-3500 chars combined
-- **Total EN content (en field): aim for 10000+ chars**
+- Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~3500-4500 chars combined
+- **Total EN content (en field): aim for 13000+ chars**
 - Principle: depth > length. If the week has thin news (<5 major stories), write shorter rather than pad with weak items. The character numbers are guidance, not a quota.
 
 ## Constraints
