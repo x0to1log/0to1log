@@ -1081,11 +1081,11 @@ Write the English weekly recap. Return JSON only.
    (2) For each theme, trace how it evolved (early-week framing → mid-week reinforcement → late-week consolidation or shift).
    (3) Synthesize what these evolutions jointly reveal about this week's dominant pattern or shift.
 
-   Then write 3-4 paragraphs narrating steps 1-3 without showing the numbered reasoning. The goal is substantive synthesis — not headline restatement.
+   Then write 3-4 paragraphs narrating steps 1-3 without showing the numbered reasoning. The goal is substantive synthesis — not headline restatement. **Each paragraph MUST end with at least one `[N](URL)` citation** linking to the Top Story sources that support that theme.
 
-5. **## Watch Points** — 2-3 unresolved storylines. Observations only, no predictions.
+5. **## Watch Points** — 2-3 unresolved storylines. Observations only, no predictions. Each point MUST include a `[N](URL)` citation.
 6. **## Open Source Spotlight** — 3-5 notable repos mentioned this week. Include GitHub/HuggingFace URLs from the digests. Skip if none.
-7. **## So What Do I Do?** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`
+7. **## So What Do I Do?** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`. Each point MUST include a `[N](URL)` citation.
 
 ## Output JSON format
 Return JSON only:
@@ -1183,11 +1183,11 @@ Write the English weekly recap. Return JSON only.
    (2) For each theme, trace how it evolved (early-week framing → mid-week reinforcement → late-week consolidation or shift).
    (3) Synthesize what these evolutions jointly reveal about this week's dominant pattern or shift.
 
-   Then write 3-4 paragraphs narrating steps 1-3 in plain language without showing the numbered reasoning. The goal is substantive synthesis — not headline restatement.
+   Then write 3-4 paragraphs narrating steps 1-3 in plain language without showing the numbered reasoning. The goal is substantive synthesis — not headline restatement. **Each paragraph MUST end with at least one `[N](URL)` citation** linking to the Top Story sources that support that theme.
 
-5. **## Watch Points** — 2-3 things to keep an eye on. Frame as: "If you see this keyword next week, here's the context."
+5. **## Watch Points** — 2-3 things to keep an eye on. Frame as: "If you see this keyword next week, here's the context." Each point MUST include a `[N](URL)` citation.
 6. **## Open Source Spotlight** — 3-5 repos worth exploring. Plain language + who it's for + link from digests. Skip if none.
-7. **## What Can I Try?** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week.
+7. **## What Can I Try?** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week. Each action MUST include a `[N](URL)` citation.
 
 ## Output JSON format
 Return JSON only:
