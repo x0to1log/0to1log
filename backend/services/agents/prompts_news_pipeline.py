@@ -1047,7 +1047,7 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 - NEVER invent motivations. If a company's intent isn't stated, use "appears positioned as" or "may be driven by".
 - NEVER predict the future ("Q2에", "내년", "다음 분기 전망", "will disrupt", "Expect X to Y"). Use "signals", "points toward", "implies" instead. Watch Points section is for monitoring, not forecasting.
 - Framing words (moat, lock-in, commoditize, defender-first, credible path, cements, tightens grip, capital moat, stack coherence) must PARAPHRASE source language — not add your own strategic thesis on top of a fact-led report. If the source doesn't name the strategic frame, stay with neutral, fact-led description. One editorial framing word per Top Story item is acceptable when strongly supported; two or more compounds the interpretation risk.
-- Source hierarchy: when multiple sources cover the same claim, cite the PRIMARY source first; only add secondary sources if they contribute distinct facts not in the primary. Do not pile 3 citations onto a single sentence for emphasis.
+- Source hierarchy: when multiple sources cover the same story, the reader's FIRST citation must be the most authoritative URL — company blog (openai.com/blog, google.com/blog, microsoft.com/blog, nvidia.com/blog), official announcement, arxiv paper, or GitHub repo. Secondary reporting (TechCrunch, Forbes, CNBC, Ars Technica, Business Insider) goes AFTER the primary if it adds distinct context. Do not pile 3 citations onto a single sentence for emphasis.
 - Mention technical details (parameter counts, architectures) only when they materially affect business/strategic outcomes.
 - Connect themes across stories explicitly in Trend Analysis — weekly's value is synthesis, not restatement.
 
@@ -1062,6 +1062,10 @@ Write the English weekly recap. Return JSON only.
 1. **## This Week in One Line** — One punchy sentence capturing the week's dominant theme.
 2. **## Week in Numbers** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots (e.g., if OpenAI raised $10B at $730B pre-money valuation, pick ONE of those numbers, not both).
 3. **## Top Stories** — 7-10 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
+
+   **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring strategic themes or industry interpretations without a specific triggering event this week belong in Trend Analysis, not Top Stories.
+
+   **Evidence means**: number of independent primary sources, specificity of disclosed figures, and source strength (official announcement > single-source exclusive report > unnamed sources). Stories supported only by a single secondary report rank lower.
 
    Each item: **Bold title** — 4-5 sentences covering:
    - WHAT happened (facts + specific numbers)
@@ -1161,12 +1165,16 @@ Write the English weekly recap. Return JSON only.
 2. **## Week in Numbers** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots.
 3. **## Top Stories** — 7-10 stories ranked by: Impact > Novelty > Evidence > Community buzz.
 
+   **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring themes or industry commentary without a specific triggering event this week belong in Trend Analysis, not Top Stories.
+
+   **Evidence means**: number of independent primary sources, specificity of disclosed figures, and source strength (official announcement > single-source exclusive report > unnamed sources). Stories supported only by a single secondary report rank lower.
+
    Each item: **Bold title** — 4-5 sentences covering:
    - WHAT happened (facts + specific numbers, in plain language)
    - WHY it matters to a non-specialist (impact on everyday work, career, or consumer AI experience)
    - CONTEXT (for beginners — compare to something familiar, explain why this differs from prior state)
 
-   Define any acronyms on first use. End paragraphs with `[N](URL)` citing the original source. URLs MUST come from the daily digest content provided in the Input (look for existing `[N](URL)` patterns in the daily digests). NEVER invent URLs.
+   When citing, lead with the primary source (company blog, official announcement, arxiv paper, GitHub repo) before secondary reporting. Define any acronyms on first use. End paragraphs with `[N](URL)` citing the original source. URLs MUST come from the daily digest content provided in the Input (look for existing `[N](URL)` patterns in the daily digests). NEVER invent URLs.
 
 4. **## Trend Analysis** — 3-4 paragraphs in plain language. "What happened in AI this week and why should I care?"
 
