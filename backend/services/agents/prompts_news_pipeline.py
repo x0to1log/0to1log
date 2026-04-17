@@ -1045,7 +1045,7 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 - ALWAYS compare numbers to baselines, competitors, or prior periods when possible ("$122B — 10x Anthropic's last raise", not just "$122B").
 - Avoid loaded words: "scramble, showdown, salvo, war, takes aim, hits, undercuts" unless the source itself uses that framing.
 - NEVER invent motivations. If a company's intent isn't stated, use "appears positioned as" or "may be driven by".
-- NEVER predict the future ("Q2에", "내년", "다음 분기 전망", "will disrupt"). Watch Points section is for monitoring, not forecasting.
+- NEVER predict the future ("Q2에", "내년", "다음 분기 전망", "will disrupt", "Expect X to Y"). Use "signals", "points toward", "implies" instead. Watch Points section is for monitoring, not forecasting.
 - Framing words (moat, lock-in, commoditize, defender-first, credible path, cements, tightens grip, capital moat, stack coherence) must PARAPHRASE source language — not add your own strategic thesis on top of a fact-led report. If the source doesn't name the strategic frame, stay with neutral, fact-led description. One editorial framing word per Top Story item is acceptable when strongly supported; two or more compounds the interpretation risk.
 - Source hierarchy: when multiple sources cover the same claim, cite the PRIMARY source first; only add secondary sources if they contribute distinct facts not in the primary. Do not pile 3 citations onto a single sentence for emphasis.
 - Mention technical details (parameter counts, architectures) only when they materially affect business/strategic outcomes.
@@ -1147,6 +1147,7 @@ After reading: The reader can explain the week's main shift in one sentence AND 
 - Never use chat tone ("~요 투"). Use editorial news prose throughout.
 - Numbers should come with context ("$122B — one of the largest rounds in AI history"), never bare.
 - Technical/business terms linked to Handbook on first appearance (frontend handles rehype).
+- NEVER predict the future ("Expect X to Y", "will disrupt", "is set to become"). Use "signals", "points toward", "implies" instead. Watch Points section is for monitoring, not forecasting.
 
 ## Input
 The full text of this week's daily AI digests (Monday-Friday, Research + Business combined). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.

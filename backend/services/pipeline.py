@@ -1995,15 +1995,26 @@ async def run_weekly_pipeline(
                 "week_tool": expert_data.get("week_tool") or learner_data.get("week_tool", {}),
             }
 
+            # Clean + renumber citations (same URL → same number, sequential)
+            en_expert = _clean_writer_output(expert_data.get("en", ""))
+            ko_expert = _clean_writer_output(expert_data.get("ko", ""))
+            en_learner = _clean_writer_output(learner_data.get("en", ""))
+            ko_learner = _clean_writer_output(learner_data.get("ko", ""))
+
+            en_expert, en_expert_cards = _renumber_citations(en_expert)
+            ko_expert, ko_expert_cards = _renumber_citations(ko_expert)
+            en_learner, en_learner_cards = _renumber_citations(en_learner)
+            ko_learner, ko_learner_cards = _renumber_citations(ko_learner)
+
+            weekly_source_cards = {
+                "en": _dedup_source_cards((en_expert_cards or []) + (en_learner_cards or [])),
+                "ko": _dedup_source_cards((ko_expert_cards or []) + (ko_learner_cards or [])),
+            }
+
             # Save EN + KO rows
             for locale in ("en", "ko"):
                 slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
                 title = headline_en if locale == "en" else headline_ko
-
-                en_expert = _clean_writer_output(expert_data.get("en", ""))
-                ko_expert = _clean_writer_output(expert_data.get("ko", ""))
-                en_learner = _clean_writer_output(learner_data.get("en", ""))
-                ko_learner = _clean_writer_output(learner_data.get("ko", ""))
 
                 content_expert = en_expert if locale == "en" else ko_expert
                 content_learner = en_learner if locale == "en" else ko_learner
@@ -2030,6 +2041,7 @@ async def run_weekly_pipeline(
                     ],
                 }
 
+                locale_cards = weekly_source_cards.get(locale, [])
                 row = {
                     "title": title,
                     "slug": slug,
@@ -2043,6 +2055,8 @@ async def run_weekly_pipeline(
                     "published_at": published_at,
                     "reading_time_min": reading_time,
                     "guide_items": locale_guide,
+                    "source_urls": [c["url"] for c in locale_cards],
+                    "source_cards": locale_cards,
                 }
 
                 t_save = time.monotonic()
