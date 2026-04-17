@@ -1981,8 +1981,10 @@ async def run_weekly_pipeline(
             expert_data = persona_results.get("expert", {})
             learner_data = persona_results.get("learner", {})
 
-            headline_en = expert_data.get("headline") or learner_data.get("headline") or f"AI Weekly — {week_id}"
-            headline_ko = expert_data.get("headline_ko") or learner_data.get("headline_ko") or headline_en
+            headline_en = expert_data.get("headline") or f"AI Weekly — {week_id}"
+            headline_learner_en = learner_data.get("headline") or headline_en
+            headline_ko = expert_data.get("headline_ko") or headline_en
+            headline_learner_ko = learner_data.get("headline_ko") or headline_ko
 
             # published_at = Sunday of the target week at 09:00 UTC
             iso_year, iso_week = week_id.split("-W")
@@ -2015,6 +2017,7 @@ async def run_weekly_pipeline(
             for locale in ("en", "ko"):
                 slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
                 title = headline_en if locale == "en" else headline_ko
+                title_learner = headline_learner_en if locale == "en" else headline_learner_ko
 
                 content_expert = en_expert if locale == "en" else ko_expert
                 content_learner = en_learner if locale == "en" else ko_learner
@@ -2044,6 +2047,7 @@ async def run_weekly_pipeline(
                 locale_cards = weekly_source_cards.get(locale, [])
                 row = {
                     "title": title,
+                    "title_learner": title_learner,
                     "slug": slug,
                     "locale": locale,
                     "category": "ai-news",

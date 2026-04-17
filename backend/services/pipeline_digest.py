@@ -927,6 +927,7 @@ async def _generate_digest(
             guide_items["title_learner"] = learner_title
         if learner_excerpt:
             guide_items["excerpt_learner"] = learner_excerpt
+        row["title_learner"] = learner_title if learner_title else None
         if guide_items:
             row["guide_items"] = guide_items
 

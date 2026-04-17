@@ -18,6 +18,7 @@
  */
 export interface PersonaResolvableContent {
   title?: string | null;
+  title_learner?: string | null;
   excerpt?: string | null;
   guide_items?: {
     title_learner?: string;
@@ -40,11 +41,14 @@ export function resolveDisplayTitleExcerpt(
   const canonicalTitle = post.title || '';
   const canonicalExcerpt = post.excerpt || '';
 
-  if (persona === 'learner' && post.guide_items?.title_learner) {
-    return {
-      title: post.guide_items.title_learner,
-      excerpt: post.guide_items.excerpt_learner || canonicalExcerpt,
-    };
+  if (persona === 'learner') {
+    const learnerTitle = post.title_learner || post.guide_items?.title_learner;
+    if (learnerTitle) {
+      return {
+        title: learnerTitle,
+        excerpt: post.guide_items?.excerpt_learner || canonicalExcerpt,
+      };
+    }
   }
 
   return { title: canonicalTitle, excerpt: canonicalExcerpt };
