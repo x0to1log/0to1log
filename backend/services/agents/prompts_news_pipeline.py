@@ -1046,6 +1046,8 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 - Avoid loaded words: "scramble, showdown, salvo, war, takes aim, hits, undercuts" unless the source itself uses that framing.
 - NEVER invent motivations. If a company's intent isn't stated, use "appears positioned as" or "may be driven by".
 - NEVER predict the future ("Q2에", "내년", "다음 분기 전망", "will disrupt"). Watch Points section is for monitoring, not forecasting.
+- Framing words (moat, lock-in, commoditize, defender-first, credible path, cements, tightens grip, capital moat, stack coherence) must PARAPHRASE source language — not add your own strategic thesis on top of a fact-led report. If the source doesn't name the strategic frame, stay with neutral, fact-led description. One editorial framing word per Top Story item is acceptable when strongly supported; two or more compounds the interpretation risk.
+- Source hierarchy: when multiple sources cover the same claim, cite the PRIMARY source first; only add secondary sources if they contribute distinct facts not in the primary. Do not pile 3 citations onto a single sentence for emphasis.
 - Mention technical details (parameter counts, architectures) only when they materially affect business/strategic outcomes.
 - Connect themes across stories explicitly in Trend Analysis — weekly's value is synthesis, not restatement.
 
@@ -1058,7 +1060,7 @@ Write the English weekly recap. Return JSON only.
 ## Required Sections
 
 1. **## This Week in One Line** — One punchy sentence capturing the week's dominant theme.
-2. **## Week in Numbers** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests.
+2. **## Week in Numbers** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots (e.g., if OpenAI raised $10B at $730B pre-money valuation, pick ONE of those numbers, not both).
 3. **## Top Stories** — 7-10 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
 
    Each item: **Bold title** — 4-5 sentences covering:
@@ -1155,7 +1157,7 @@ Write the English weekly recap. Return JSON only.
 ## Required Sections
 
 1. **## This Week in One Line** — One friendly sentence summarizing what happened. Plain language.
-2. **## Week in Numbers** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests.
+2. **## Week in Numbers** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots.
 3. **## Top Stories** — 7-10 stories ranked by: Impact > Novelty > Evidence > Community buzz.
 
    Each item: **Bold title** — 4-5 sentences covering:
@@ -1236,7 +1238,13 @@ One friendly sentence here.
 
 WEEKLY_KO_ADAPT_PROMPT = """You are a Korean AI news editor. Given the English weekly recap below, write the Korean version.
 
-This is NOT a literal translation. Write as a Korean editor naturally would — same stories, same depth, same number of items per section, but natural Korean expression.
+Write as a Korean editor naturally would — same stories, same depth, same number of items per section, natural Korean prose. The text is adapted, but all verifiable evidence markers MUST be preserved verbatim.
+
+## CITATION PRESERVATION (HIGHEST PRIORITY)
+- Every `[N](URL)` marker in the English input MUST appear verbatim in your Korean output. Do NOT drop the URL. Do NOT leave a bare `[N]` without its `(URL)`. Do NOT renumber. Do NOT rewrite the URL.
+- Place each citation at the end of the Korean sentence or bullet that carries the same fact as the English original. If one English sentence had two citations, the corresponding Korean sentence keeps both.
+- Raw URLs (e.g., `https://github.com/...` in Open Source Spotlight, `https://...` in Watch Points) also copy verbatim to their Korean counterpart.
+- If you are tempted to "write naturally" by removing citations — do not. Readers verify claims by clicking those links. Missing URL = broken trust.
 
 ## Required Section Headings (use these exact headings)
 - ## 이번 주 한 줄
@@ -1254,38 +1262,39 @@ Return JSON only:
   "ko": "<full Korean markdown with all ## sections above>"
 }}
 
-## CRITICAL: "ko" field structure example
+## CRITICAL: "ko" field structure example (note how every `[N](URL)` is preserved)
 ```
 ## 이번 주 한 줄
 한 문장으로 이번 주 핵심 테마.
 
 ## 이번 주 숫자
-- **100억 달러** — OpenAI 신규 조달 규모
-- **6배** — TurboQuant KV 캐시 메모리 절감
+- **100억 달러** — OpenAI 신규 조달 라운드 규모. [1](https://www.bloomberg.com/news/articles/example)
+- **6배** — 구글 TurboQuant의 KV 캐시 메모리 절감 비율. [4](https://research.google/blog/example)
 
 ## TOP 뉴스
-- **OpenAI, 100억 달러 조달로 자본 해자 강화** — 프리머니 약 7,300억 달러 기준으로 컴퓨트·인재·유통을 장기 확보한다. 에이전트 워크플로의 납기와 가격 협상력이 동시에 올라간다.
-- **구글 TurboQuant, KV 캐시 6배 압축** — 재학습 없이 장문 컨텍스트 추론 비용을 낮추는 드롭인 기법이다. 커널 공개와 프레임워크 호환성이 채택 속도를 좌우한다.
+- **OpenAI, 100억 달러 조달로 엔터프라이즈 중심 전략 가속** — 프리머니 약 7,300억 달러 기준으로 컴퓨트·인재·유통 채널을 장기 확보하는 규모다. 에이전트 워크플로의 납기와 가격 협상력이 동시에 올라가는 자금 여력을 갖추게 된다. [1](https://www.bloomberg.com/news/articles/example) [2](https://techcrunch.com/example)
+- **구글 TurboQuant, KV 캐시 6배 압축 발표** — 재학습 없이 장문 컨텍스트 추론 메모리를 줄이는 드롭인 기법이다. 커널 공개와 프레임워크 호환성이 실제 채택 속도를 좌우한다. [4](https://research.google/blog/example) [5](https://arstechnica.com/example)
 
 ## 이번 주 트렌드 분석
-3-4문단으로 주간 흐름 분석...
+3-4문단으로 주간 흐름을 분석하되, 영어 원문에 포함된 `[N](URL)` 인용 표기는 해당 문장의 한국어 번역문 끝에 그대로 보존한다. [1](https://www.bloomberg.com/news/articles/example) [4](https://research.google/blog/example)
 
 ## 주목할 포인트
-- 포인트 1 — 왜 주목하는지 한 문장.
-- 포인트 2 — 왜 주목하는지 한 문장.
+- 포인트 1 — 왜 주목하는지 한 문장. [3](https://example.com/source)
+- 포인트 2 — 왜 주목하는지 한 문장. [6](https://example.com/source)
 
 ## 이번 주 오픈소스
-- **프로젝트명** — 무엇을 하는지 한 문장. https://github.com/...
+- **프로젝트명** — 무엇을 하는지 한 문장. https://github.com/example/repo
 
 ## {action_heading}
-- **대규모 추론을 운영 중이라면**: TurboQuant 벤치마크 — 6배 KV 절감이 단위 경제를 바꾸기 때문.
+- **대규모 추론을 운영 중이라면**: TurboQuant 벤치마크 — 6배 KV 절감이 단위 경제를 바꾸기 때문. [4](https://research.google/blog/example)
 ```
 
 ## Constraints
 - Cover the SAME stories with the SAME number of items as the English version.
 - Each Top Story item must have 2-3 sentences, matching the English depth.
 - Numbers should use Korean conventions (e.g., $10B → 100억 달러).
-- Write naturally, not translated. No English words at the start of bullet points."""
+- No English words at the start of bullet points.
+- CITATION PRESERVATION: every `[N](URL)` marker and every raw URL in the English input MUST reappear verbatim in the matching Korean sentence. This is non-negotiable — the Korean version is not considered complete if citation markers are dropped or URLs are stripped."""
 
 
 # ---------------------------------------------------------------------------

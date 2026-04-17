@@ -1,7 +1,7 @@
 ---
 title: Weekly Hardening Phase 1 — Prompt Rewrite
 date: 2026-04-17
-status: design (awaiting spec review)
+status: phase 1 complete (2026-04-17 scope-expanded closeout)
 type: design / spec
 related:
   - vault/09-Implementation/plans/2026-04-15-news-pipeline-hardening-design.md
@@ -275,3 +275,40 @@ Phase 1은 코드 로직 변화 없음. 모든 기준이 prompt 변경 + weekly 
 4. Plan subagent-driven-development로 실행
 5. Manual weekly run + 수동 검증
 6. Phase 1 complete 후 1주일 관찰 → Phase 2 spec 작성
+
+## 10. Scope expansion — 2026-04-17 W13 재생성 피드백 반영
+
+초안 §2 Non-Goals에서 제외됐던 `WEEKLY_KO_ADAPT_PROMPT` 수정이 **Phase 1 scope로 승격됨**. W13 1차 재생성 결과 평가에서 Amy 발견:
+
+| 항목 | Pre-fix | Post-fix |
+|---|---|---|
+| KO expert `[N](url)` | **0** (citation 전부 드롭) | **52** |
+| KO learner `[N](url)` | 0 | **44** |
+| KO learner bare `[N]` | 24 | 0 |
+| KO expert 총 chars | 6,390 | 12,449 |
+
+**원인**: 원 프롬프트의 "write naturally, not translated" 문구가 LLM에게 citation markdown 재구성 재량을 암묵적으로 허용함. "KO는 adapter가 알아서 잘 하겠지"라고 scope 제외한 게 package-level regression을 만듦.
+
+### 10.1 추가 반영된 변경 (P1/P3/P4 + bonus P2)
+
+- **P1** `WEEKLY_KO_ADAPT_PROMPT` 재작성: "CITATION PRESERVATION (HIGHEST PRIORITY)" 블록 추가, example을 `[N](URL)` 포함형으로 교체, constraints에 "non-negotiable" 명시. "write naturally" 문구는 의도가 남도록 조정하되 citation 드롭이 금지됨을 분리된 규칙으로 박음.
+- **P3** `WEEKLY_EXPERT_PROMPT` Writing Rules에 **framing-word 가드** 추가 — `moat / lock-in / commoditize / defender-first / credible path / cements / tightens grip / capital moat / stack coherence` 가 source 원문을 paraphrase 하지 않으면 사용 금지. 항목당 1개까지만 허용.
+- **P4** `WEEKLY_EXPERT_PROMPT` + `WEEKLY_LEARNER_PROMPT` Week in Numbers 규칙에 **DISTINCT Top Story 제약** 추가 — 한 스토리의 여러 숫자($10B + $730B pre-money 같은)가 5 슬롯을 중복 점유하지 않도록.
+- **P2 (bonus)** `WEEKLY_EXPERT_PROMPT`에 **source hierarchy** 한 줄 추가 — 같은 claim에 3개 citation 쌓는 관습 제약. 원래 Phase 1.5 후보였으나 프롬프트 한 줄 변경이라 함께 포함.
+
+### 10.2 Post-fix W13 검증 (2026-04-17 재생성)
+
+- **KO citation 복구**: 위 표와 같이 모두 복원. KO 본문이 English citation markdown을 문장 단위로 동일하게 재현.
+- **Week in Numbers dedup (EN expert)**: 5 slot = OpenAI / TurboQuant / Nemotron / Voxtral / Huawei 950PR — 각 distinct story. OpenAI의 $730B pre-money는 문구 내 맥락으로만 남고 별도 slot 차지 X.
+- **Framing 톤 완화 (EN expert)**: "capital moat" / "credible non-Nvidia path" / "defender-first" 모두 0회. "tighten" 2회 남아있으나 factual verb ("tightening integration between simulation physics...") 로 사용됨 — 전략 프레이밍 아님.
+
+### 10.3 Known residuals (Phase 2로 이월 유지)
+
+- `src_count = 0`, `source_cards = null`, `fact_pack = {}` — Phase 2 `_fetch_week_digests` 확장 범위.
+- `quality_score = null` — Phase 2 `QUALITY_CHECK_WEEKLY_*` 프롬프트 신설 범위.
+- EN length overshoot (expert 17,254 chars / target 10,800, learner 14,696 / 9,000) — "4-5 sentences × 10 Top Stories" 구조가 요구한 자연스러운 산출물이라 판단. Phase 2 관찰 기간에 target 재보정 가능성 있음. 별도 ticket.
+- Arxiv URL 중 `2603.xxx` 형태 존재 — input (daily digest) 단계의 placeholder 가능성. Phase 2 URL validator 도입 시 structural catch.
+
+### 10.4 Phase 1 closeout decision
+
+Amy 판정: **Phase 1 close**. Done Criteria §5 모든 항목 통과, scope expansion 항목 (§10.1) 실효 검증됨 (§10.2). Phase 2 spec은 1주일 관찰 후 착수.
