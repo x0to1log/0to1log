@@ -168,7 +168,7 @@ async def _fetch_week_digests(supabase, week_id: str, locale: str) -> list[dict]
 
     result = (
         supabase.table("news_posts")
-        .select("slug, title, post_type, content_expert, content_learner, published_at, guide_items")
+        .select("slug, title, post_type, content_expert, content_learner, published_at, guide_items, source_cards, source_urls")
         .eq("locale", locale)
         .eq("category", "ai-news")
         .in_("post_type", ["research", "business"])

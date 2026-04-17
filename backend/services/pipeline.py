@@ -1845,6 +1845,24 @@ async def run_weekly_pipeline(
         if not digests_en:
             all_errors.append(f"No EN daily digests for {week_id}")
 
+        # Build URL → tier/kind map from daily source_cards
+        url_meta: dict[str, dict] = {}
+        for d in digests_en + digests_ko:
+            for card in (d.get("source_cards") or []):
+                url = card.get("url", "")
+                if url and url not in url_meta:
+                    url_meta[url] = {
+                        "source_tier": card.get("source_tier", ""),
+                        "source_kind": card.get("source_kind", ""),
+                    }
+        aggregate_urls = set(url_meta.keys())
+
+        # Classify primary vs secondary for LLM reference
+        primary_urls = [u for u, m in url_meta.items()
+                        if (m.get("source_tier") or "").lower() == "primary"]
+        secondary_urls = [u for u, m in url_meta.items()
+                          if (m.get("source_tier") or "").lower() != "primary"]
+
         # Stage: fetch handbook terms
         t0 = time.monotonic()
         week_terms_en: list[dict] = []
@@ -1857,6 +1875,16 @@ async def run_weekly_pipeline(
         await _log_stage(supabase, run_id, "weekly:terms", "success", t0,
                          output_summary=f"en={len(week_terms_en)}, ko={len(week_terms_ko)} terms",
                          post_type="weekly")
+
+        # Build SOURCE REFERENCE header for LLM
+        source_ref_lines = []
+        if primary_urls:
+            source_ref_lines.append("PRIMARY: " + " | ".join(primary_urls[:30]))
+        if secondary_urls:
+            source_ref_lines.append("SECONDARY: " + " | ".join(secondary_urls[:30]))
+        source_ref = ""
+        if source_ref_lines:
+            source_ref = "## SOURCE REFERENCE (for citation priority — cite PRIMARY URLs before SECONDARY)\n" + "\n".join(source_ref_lines) + "\n\n"
 
         # Build per-persona input (EN primary + KO reference)
         persona_inputs: dict[str, str] = {}
@@ -1873,7 +1901,7 @@ async def run_weekly_pipeline(
                 content = d.get(content_key, "")
                 if content:
                     parts.append(f"--- {d['post_type'].upper()} KO ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{content}")
-            persona_inputs[persona] = "\n\n".join(parts)
+            persona_inputs[persona] = source_ref + "\n\n".join(parts)
 
         # Generate per persona: Call 1 (EN from digests) → Call 2 (KO from EN)
         from services.agents.prompts_news_pipeline import get_weekly_ko_prompt
@@ -2003,10 +2031,11 @@ async def run_weekly_pipeline(
             en_learner = _clean_writer_output(learner_data.get("en", ""))
             ko_learner = _clean_writer_output(learner_data.get("ko", ""))
 
-            en_expert, en_expert_cards = _renumber_citations(en_expert)
-            ko_expert, ko_expert_cards = _renumber_citations(ko_expert)
-            en_learner, en_learner_cards = _renumber_citations(en_learner)
-            ko_learner, ko_learner_cards = _renumber_citations(ko_learner)
+            _allowed = aggregate_urls if aggregate_urls else None
+            en_expert, en_expert_cards = _renumber_citations(en_expert, allowed_urls=_allowed)
+            ko_expert, ko_expert_cards = _renumber_citations(ko_expert, allowed_urls=_allowed)
+            en_learner, en_learner_cards = _renumber_citations(en_learner, allowed_urls=_allowed)
+            ko_learner, ko_learner_cards = _renumber_citations(ko_learner, allowed_urls=_allowed)
 
             weekly_source_cards = {
                 "en": _dedup_source_cards((en_expert_cards or []) + (en_learner_cards or [])),
