@@ -2057,7 +2057,7 @@ async def run_weekly_pipeline(
             quality_score = quality_result.get("quality_score")
             quality_flags = quality_result.get("quality_flags")
             content_analysis = quality_result.get("content_analysis")
-            _auto_publish = quality_result.get("auto_publish_eligible", False)  # noqa: F841
+            auto_publish = quality_result.get("auto_publish_eligible", False)
 
             # Save EN + KO rows
             for locale in ("en", "ko"):
@@ -2098,7 +2098,7 @@ async def run_weekly_pipeline(
                     "locale": locale,
                     "category": "ai-news",
                     "post_type": "weekly",
-                    "status": "draft",
+                    "status": "published" if (auto_publish and settings.weekly_auto_publish) else "draft",
                     "content_expert": content_expert,
                     "content_learner": content_learner,
                     "pipeline_batch_id": week_id,
