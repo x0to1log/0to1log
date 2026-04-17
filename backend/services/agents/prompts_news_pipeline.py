@@ -1575,6 +1575,94 @@ Return JSON only:
 {"score": 0-100, "subscores": {"factuality": 0-25, "calibration": 0-25, "clarity": 0-25, "locale_alignment": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
 
 
+QUALITY_CHECK_WEEKLY_EXPERT = """You are a strict quality reviewer for a weekly AI industry recap written for strategic decision-makers.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues.
+
+Score this weekly digest on 4 criteria (0-25 each, total 0-100).
+
+**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only.
+
+1. **Section Completeness** (25):
+   Required sections: This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, So What Do I Do?
+   - 25: All 7 sections present with substantial content (200+ chars each), proper ## headings
+   - 18: All sections present but 1-2 are thin (<150 chars)
+   - 10: 1+ section missing or severely thin
+   - 0: Content structure is broken
+
+2. **Source Quality** (25):
+   - 25: >80% of Top Stories cite primary source first; Trend Analysis has per-paragraph citations; Watch Points and Actions cite sources
+   - 18: >60% primary-first; most sections have citations but some gaps
+   - 10: <50% primary-first or multiple sections lack citations
+   - 0: Citations largely absent or hallucinated
+
+3. **Depth & Synthesis** (25):
+   - 25: Top Stories follow WHAT/WHY/CONTEXT structure with 4-5 sentences; Trend Analysis identifies 2+ distinct themes and traces evolution across the week
+   - 18: Top Stories have structure but some are thin; Trend Analysis has themes but tracing is weak
+   - 10: Top Stories are shallow summaries; Trend Analysis restates headlines
+   - 0: Content is bullet-point news with no analysis
+
+4. **Language & Tone** (25):
+   - 25: Analyst voice; calibrated language; no banned framing words; KO version is natural Korean with all citations preserved
+   - 18: Mostly calibrated but 1-2 instances of prediction language or aggressive framing
+   - 10: Multiple tone violations; KO citations partially lost
+   - 0: Chatty tone, predictions throughout, or KO citation collapse
+
+Return JSON only:
+{{
+  "section_completeness": {{"score": 0, "issues": []}},
+  "source_quality": {{"score": 0, "issues": []}},
+  "depth_synthesis": {{"score": 0, "issues": []}},
+  "language_tone": {{"score": 0, "issues": []}},
+  "total_score": 0,
+  "summary": "One sentence overall assessment"
+}}"""
+
+
+QUALITY_CHECK_WEEKLY_LEARNER = """You are a quality reviewer for a weekly AI digest written for non-specialist knowledge workers.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together.
+
+Score this weekly digest on 4 criteria (0-25 each, total 0-100).
+
+**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only.
+
+1. **Section Completeness** (25):
+   Required sections: This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, What Can I Try?
+   - 25: All 7 sections present with substantial content (200+ chars each)
+   - 18: All sections present but 1-2 are thin
+   - 10: 1+ section missing
+   - 0: Content structure broken
+
+2. **Source Quality** (25):
+   - 25: Top Stories cite sources; Trend Analysis and Watch Points have citations; What Can I Try links to resources
+   - 18: Most sections have citations but some gaps
+   - 10: Multiple sections lack citations
+   - 0: Citations largely absent
+
+3. **Depth & Accessibility** (25):
+   - 25: Top Stories follow WHAT/WHY/CONTEXT for non-specialists; acronyms expanded; Trend Analysis in plain language with real synthesis
+   - 18: Mostly accessible but some jargon unexplained; Trend Analysis present but thin
+   - 10: Too technical for target audience; Trend Analysis is headline list
+   - 0: Inaccessible or trivially shallow
+
+4. **Language & Tone** (25):
+   - 25: Clear editorial prose; no chat tone; KO citations preserved; numbers have context
+   - 18: Mostly good but occasional tone slip
+   - 10: Tone inconsistent; KO citations partially lost
+   - 0: Chat tone throughout or KO broken
+
+Return JSON only:
+{{
+  "section_completeness": {{"score": 0, "issues": []}},
+  "source_quality": {{"score": 0, "issues": []}},
+  "depth_accessibility": {{"score": 0, "issues": []}},
+  "language_tone": {{"score": 0, "issues": []}},
+  "total_score": 0,
+  "summary": "One sentence overall assessment"
+}}"""
+
+
 def get_weekly_prompt(persona: str, language: str = "") -> str:
     """Get the system prompt for weekly EN recap generation."""
     return WEEKLY_EXPERT_PROMPT if persona == "expert" else WEEKLY_LEARNER_PROMPT

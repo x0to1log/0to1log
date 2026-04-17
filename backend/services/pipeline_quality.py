@@ -797,3 +797,150 @@ def validate_citation_urls(body: str, fact_pack: dict) -> dict:
         "citation_count": len(cited_norm),
         "allowed_count": len(allowed),
     }
+
+
+# ---------------------------------------------------------------------------
+# Group 6 — Weekly quality scoring
+# ---------------------------------------------------------------------------
+
+async def _check_weekly_quality(
+    content_expert_en: str,
+    content_learner_en: str,
+    content_expert_ko: str,
+    content_learner_ko: str,
+    source_urls: list[str],
+    supabase,
+    run_id: str,
+    cumulative_usage: dict[str, Any],
+) -> dict[str, Any]:
+    """Score quality of generated weekly digest."""
+    t0 = time.monotonic()
+    from services.agents.prompts_news_pipeline import (
+        QUALITY_CHECK_WEEKLY_EXPERT, QUALITY_CHECK_WEEKLY_LEARNER,
+    )
+
+    if not content_expert_en:
+        logger.warning("Weekly quality check skipped: no expert EN content")
+        await _log_stage(
+            supabase, run_id, "quality:weekly", "skipped", t0,
+            output_summary="No expert content", post_type="weekly",
+        )
+        return {"quality_score": 0, "quality_flags": ["no_expert_content"]}
+
+    client = get_openai_client()
+    model = settings.openai_model_main
+    issues_all: list[str] = []
+    llm_scores: list[int] = []
+
+    # Expert quality check
+    expert_input = f"## English Expert\n\n{content_expert_en}\n\n## Korean Expert\n\n{content_expert_ko}"
+    try:
+        expert_resp = await asyncio.wait_for(
+            client.chat.completions.create(
+                **build_completion_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": QUALITY_CHECK_WEEKLY_EXPERT},
+                        {"role": "user", "content": expert_input},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.2,
+                    max_tokens=2000,
+                )
+            ),
+            timeout=120,
+        )
+        expert_raw = expert_resp.choices[0].message.content or ""
+        expert_usage = extract_usage_metrics(expert_resp, model)
+        cumulative_usage.update(merge_usage_metrics(cumulative_usage, expert_usage))
+        expert_data = parse_ai_json(expert_raw, "weekly-quality-expert")
+        expert_score = expert_data.get("total_score", 0)
+        llm_scores.append(expert_score)
+        for cat in ["section_completeness", "source_quality", "depth_synthesis", "language_tone"]:
+            for issue in (expert_data.get(cat, {}).get("issues") or []):
+                issues_all.append(f"expert:{cat}:{issue}")
+    except Exception as e:
+        logger.warning("Weekly expert quality check failed: %s", e)
+        expert_score = 0
+
+    # Learner quality check
+    if content_learner_en:
+        learner_input = f"## English Learner\n\n{content_learner_en}\n\n## Korean Learner\n\n{content_learner_ko}"
+        try:
+            learner_resp = await asyncio.wait_for(
+                client.chat.completions.create(
+                    **build_completion_kwargs(
+                        model,
+                        messages=[
+                            {"role": "system", "content": QUALITY_CHECK_WEEKLY_LEARNER},
+                            {"role": "user", "content": learner_input},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.2,
+                        max_tokens=2000,
+                    )
+                ),
+                timeout=120,
+            )
+            learner_raw = learner_resp.choices[0].message.content or ""
+            learner_usage = extract_usage_metrics(learner_resp, model)
+            cumulative_usage.update(merge_usage_metrics(cumulative_usage, learner_usage))
+            learner_data = parse_ai_json(learner_raw, "weekly-quality-learner")
+            learner_score = learner_data.get("total_score", 0)
+            llm_scores.append(learner_score)
+            for cat in ["section_completeness", "source_quality", "depth_accessibility", "language_tone"]:
+                for issue in (learner_data.get(cat, {}).get("issues") or []):
+                    issues_all.append(f"learner:{cat}:{issue}")
+        except Exception as e:
+            logger.warning("Weekly learner quality check failed: %s", e)
+
+    # URL validation
+    url_penalty = 0
+    if source_urls:
+        fact_pack_for_validation = {"news_items": [{"url": u} for u in source_urls]}
+        url_result = validate_citation_urls(content_expert_en, fact_pack_for_validation)
+        hallucinated = len(url_result.get("unknown_urls", []))
+        if hallucinated > 0:
+            url_penalty = min(hallucinated * 3, 15)
+            issues_all.append(f"url_validation:{hallucinated} hallucinated URLs (-{url_penalty})")
+
+    # Structural penalties
+    structural_penalty = 0
+    structural_warnings: list[str] = []
+    if len(content_expert_en) < 10000:
+        structural_penalty += 5
+        structural_warnings.append("expert_en_short")
+    if content_expert_ko and len(content_expert_ko) < 6000:
+        structural_penalty += 5
+        structural_warnings.append("expert_ko_short")
+
+    # Final score
+    llm_avg = round(sum(llm_scores) / len(llm_scores)) if llm_scores else 0
+    final_score = max(0, llm_avg - url_penalty - structural_penalty)
+
+    quality_flags = []
+    if url_penalty:
+        quality_flags.append("url_hallucination")
+    if structural_warnings:
+        quality_flags.extend(structural_warnings)
+
+    auto_publish_eligible = final_score >= settings.auto_publish_threshold
+
+    logger.info(
+        "Weekly quality: final=%d (llm_avg=%d, url_penalty=-%d, structural=-%d), eligible=%s",
+        final_score, llm_avg, url_penalty, structural_penalty, auto_publish_eligible,
+    )
+
+    await _log_stage(
+        supabase, run_id, "quality:weekly", "success", t0,
+        output_summary=f"score={final_score} (llm={llm_avg}, url=-{url_penalty}, struct=-{structural_penalty})",
+        post_type="weekly",
+        debug_meta={"quality_score": final_score, "issues": issues_all[:20]},
+    )
+
+    return {
+        "quality_score": final_score,
+        "quality_flags": quality_flags,
+        "content_analysis": {"issues": issues_all[:30]},
+        "auto_publish_eligible": auto_publish_eligible,
+    }

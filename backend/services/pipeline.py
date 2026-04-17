@@ -2042,6 +2042,23 @@ async def run_weekly_pipeline(
                 "ko": _dedup_source_cards((ko_expert_cards or []) + (ko_learner_cards or [])),
             }
 
+            # Quality check
+            from services.pipeline_quality import _check_weekly_quality
+            quality_result = await _check_weekly_quality(
+                content_expert_en=en_expert,
+                content_learner_en=en_learner,
+                content_expert_ko=ko_expert,
+                content_learner_ko=ko_learner,
+                source_urls=list(aggregate_urls) if aggregate_urls else [],
+                supabase=supabase,
+                run_id=run_id,
+                cumulative_usage=cumulative_usage,
+            )
+            quality_score = quality_result.get("quality_score")
+            quality_flags = quality_result.get("quality_flags")
+            content_analysis = quality_result.get("content_analysis")
+            _auto_publish = quality_result.get("auto_publish_eligible", False)  # noqa: F841
+
             # Save EN + KO rows
             for locale in ("en", "ko"):
                 slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
@@ -2090,6 +2107,10 @@ async def run_weekly_pipeline(
                     "guide_items": locale_guide,
                     "source_urls": [c["url"] for c in locale_cards],
                     "source_cards": locale_cards,
+                    "quality_score": quality_score,
+                    "quality_flags": quality_flags,
+                    "content_analysis": content_analysis,
+                    "fact_pack": {},
                 }
 
                 t_save = time.monotonic()
