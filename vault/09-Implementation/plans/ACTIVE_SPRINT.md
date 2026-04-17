@@ -1,10 +1,10 @@
 # ACTIVE SPRINT — Handbook Quality & Content Migration (HB-QM)
 
 > **스프린트 기간:** 2026-04-10 ~ 진행 중
-> **마지막 업데이트:** 2026-04-10 (NP4-Q 클로즈 + HB-QM 선언, sprint/phase 문서 재정비)
+> **마지막 업데이트:** 2026-04-16 (NP-HARDEN mid-sprint ship + HB-MEASURE Phase 1 완료)
 > **목표:** 핸드북 콘텐츠 품질 및 규모 확장 — 138개 전량 재생성 + P0 품질 수정 + SEO 구조화 데이터
-> **이전 스프린트:** NP4-Q (News Pipeline v4 Quality Stabilization) — 2026-04-10 명시적 클로즈, 요약 아래 섹션 참조
-> **설계 참조:** [[plans/2026-03-31-handbook-quality-audit]], [[plans/2026-04-09-handbook-section-redesign]]
+> **이전 스프린트:** [[2026-04-10-np4q-sprint-close|NP4-Q]] (클로즈 2026-04-10)
+> **설계 참조:** [[2026-03-31-handbook-quality-audit]], [[2026-04-09-handbook-section-redesign]], [[2026-04-16-handbook-quality-measurement-plan]]
 
 ---
 
@@ -20,7 +20,7 @@
 
 ### 선택 목표 (여유 있으면)
 
-- [ ] HQ-03 — 구세대 핵심 용어 재생성
+- [ ] HQ-03 — 구세대 핵심 용어 재생성 (HB-MEASURE 베이스라인 결과 기반으로 재우선순위화)
 - [ ] HQ-05 — quality_scores 저장 버그 수정
 - [ ] HQ-12 — 콘텐츠 톤 재설계 (위키 → 기술 블로그)
 - [ ] HQ-13 — term type 재설계 + facet 시스템
@@ -30,16 +30,70 @@
 
 ## Current Doing (active work only)
 
-> **운영 규칙:** Current Doing은 **active work만** 추적. done은 자동으로 제거 (commit hash가 provenance). todo는 Current Doing이 아닌 "남은 태스크" 섹션에. 1주 이상 commit 없는 in_progress는 stale 표시.
+> **운영 규칙:** Current Doing은 **active work만** 추적. done은 자동으로 제거.
+>
+> **2차 상태 (자동 판정):**
+> - `⚠️ stale` — 마지막 매칭 commit 7일+ 경과
+> - `⚠️ ghost` — 시작 후 14일 + 매칭 commit 0건 (drop or restart 결정 필요)
 
 | Task ID | 제목 | 상태 | 시작 | 예상 완료 |
 |---|---|---|---|---|
-| HB-MIGRATE-138 | 138개 published 용어 v4 구조로 전량 regenerate (병렬 ~2시간, 비용 ~$15) | todo | — | — |
-| GPT5-01 | gpt-5 마이그레이션 — classify/merge/ranking (gpt-5-mini) | in_progress (⚠️ stale: last commit `ff8a081` 9일 전) | 2026-04-01 | — |
-| GPT5-01-FIX | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 | in_progress (⚠️ stale: 매칭 commit 없음) | 2026-04-01 | — |
+| HB-MEASURE-02 | Measurement CLI + baseline report (`measure_handbook_quality.py`) | doing | 2026-04-16 | 2026-04-17 |
+| HB-MIGRATE-138 | 138개 published 용어 v4 구조로 전량 regenerate (병렬 ~2시간, ~$15) | todo | — | — |
+| NP-OBSERVE-* | 하드닝 후 4개 long-tail metric 관찰 (~2026-04-30) | doing | 2026-04-16 | 2026-04-30 |
+| GPT5-01 | gpt-5 마이그레이션 — classify/merge/ranking (gpt-5-mini) | doing (⚠️ stale: last commit `ff8a081` 9일 전) | 2026-04-01 | — |
+| GPT5-01-FIX | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 | doing (⚠️ stale: 매칭 commit 없음) | 2026-04-01 | — |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | — | — |
-| README-01 | 프로젝트 README 작성 | ⚠️ ghost (시작 14일 전, 매칭 commit 0건 — drop or restart 결정 필요) | 2026-03-26 | — |
-| UA-02~05 | User Analytics 차트 추가 | ⚠️ stale (시작 14일 전, 매칭 commit 0건 — 상태 확인 필요) | 2026-03-27 | — |
+| README-01 | 프로젝트 README 작성 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건 — drop or restart 결정 필요) | 2026-03-26 | — |
+| UA-02~05 | User Analytics 차트 추가 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건) | 2026-03-27 | — |
+
+---
+
+## 🏆 스프린트 중 완료 (mid-sprint ship)
+
+### News Pipeline Hardening (NP-HARDEN) — 2026-04-15 ~ 2026-04-16
+
+> **설계:** [[2026-04-15-news-pipeline-hardening-design]] + Phase 1/2/3 plans + [[2026-04-15-news-pipeline-failure-measurement]]
+> **회고:** [[2026-04-17-news-pipeline-hardening-retro]]
+> **commits:** 34개 (2일)
+
+**완료:**
+- [x] **NP-HARDEN-01** (Phase 1 Engineering) — `pipeline.py` 3794→2149줄 (-43%), 4-file split, shim re-export로 20+ import 지점 무중단
+- [x] **NP-HARDEN-02** (Phase 2 Reliability) — URL 검증 (3번 revision, `enriched_map` allowlist까지 포함), SEO-spam 도메인 blocklist (47% → 0%), few-shot 예시 Top 2 failure mode (`frontload+overclaim/clarity`, `ko+locale`)
+- [x] **NP-HARDEN-03** (Phase 3 Token Diet) — QUALITY_CHECK 공유 블록 단축 `replace_all` 3블록 → **-1956 tokens** (목표 -1250의 156%)
+- [x] **NP-DIET-01** (API Diet) — 유료 쿼리 24→11, Brave 전량 제거, Exa 12→5, Tavily 중복 2개 제거. 46% API 비용 절감
+- [x] **NP-AUDIT-01** (Post-Phase-3 cleanup) — dead GUIDE 제거 + JSON footer 정리 + citation guard
+
+**드롭된 범위 (재검토 조건 문서화):**
+- PydanticAI 마이그레이션 — JSON 파싱 실패 이슈화 시 재검토
+- 프롬프트 캐싱 — cron 빈도 시간당 1회↑시 재검토
+- Silent failure 로깅 강화 — 빈 배열 발행 시 재검토
+- 7-파일 분리 — 팀/오픈소스화 시 재검토
+
+### Handbook Quality Measurement Phase 1 (HB-MEASURE-01) — 2026-04-16
+
+> **설계:** [[2026-04-16-handbook-quality-measurement-plan]]
+> **패턴:** NP-HARDEN의 measurement-first 접근을 HB에 적용 (30-50% scope 축소 효과 관찰됨)
+
+- [x] **HB-MEASURE-01a** — Config (`handbook_quality_config.py`) — stale/current model list, 8-type architecture/paper requirements, STALE_AGE_DAYS=90, 다국어 regex patterns (`0d9856e`)
+- [x] **HB-MEASURE-01b** — `check_stale_model_comparison` + 테스트 (`746b912`)
+- [x] **HB-MEASURE-01c** — `check_missing_architecture_detail` + 테스트 (`9869c42`)
+- [x] **HB-MEASURE-01d** — `check_missing_paper_reference` + 테스트 (`02c0a6d`)
+- [x] **HB-MEASURE-01e** — `check_dated_claim` + 테스트 (`b2accc6`, 한국어 `년` 정규식 포함)
+- [x] **HB-MEASURE-01f** — `check_stale_age` + 테스트 — check layer 완료 (`117a747`)
+- [x] regex 정교화 — 한국어 `년` 접미사 + architecture keyword 범위 축소 (`ad98092`)
+
+### 핸드북 UX Phase 1 (HB-UX-01~04, 07) — 이전 기간 완료
+
+| Task | Commit | 효과 |
+|------|--------|------|
+| HB-UX-01 | `a744824` | Advanced §3 code block collapsed by default |
+| HB-UX-02 | `7571d36` + `0f7b707` | §5 Production pitfalls callout |
+| HB-UX-03 | `7571d36` | §6 blockquote CSS |
+| HB-UX-04 | `b64e789` | §6 Industry dialogue marker |
+| HB-UX-07 | `42b7ee7` | Math/currency `$` classifier |
+
+> **상세 회고:** [[2026-04-10-handbook-section-redesign-shipped]]
 
 ---
 
@@ -54,14 +108,24 @@
 | HQ-02 | todo | 비기술 용어 archived 처리 | P0 |
 | HQ-11 | todo | SEO 구조화 데이터 — DefinedTerm + FAQPage + BreadcrumbList JSON-LD | P0 |
 
-### HIGH PRIORITY — 핸드북 콘텐츠 품질 (HQ)
+### HIGH PRIORITY — HB-MEASURE Phase 2 (진행 중)
 
-> **설계 문서:** [[plans/2026-03-31-handbook-quality-audit]]
-> **배경:** 2026-03-31 published 138개 중 24개 샘플링 심층 분석에서 도출.
+> **설계:** [[2026-04-16-handbook-quality-measurement-plan]] Task 3~5
 
 | Task | 상태 | 목표 | 우선도 |
 |------|------|------|--------|
-| HQ-03 | todo | 구세대 핵심 용어 재생성 — embedding, reinforcement learning 등 | P1 |
+| HB-MEASURE-02 | doing | `measure_handbook_quality.py` CLI — production DB 돌려 5-check 집계 출력 | P0 |
+| HB-MEASURE-03 | todo | Baseline 저장 — `vault/09-Implementation/plans/measurements/2026-04-16-handbook-baseline.md` | P0 |
+| HB-MEASURE-04 | todo | HB-QUALITY-01 scope 재평가 — baseline 데이터 기준으로 prompt/rubric 작업 우선순위 조정 | P1 |
+
+### HIGH PRIORITY — 핸드북 콘텐츠 품질 (HQ)
+
+> **설계 문서:** [[2026-03-31-handbook-quality-audit]]
+> **배경:** 2026-03-31 published 138개 중 24개 샘플링 심층 분석에서 도출. **HB-MEASURE baseline 결과 수령 후 우선순위 재평가**.
+
+| Task | 상태 | 목표 | 우선도 |
+|------|------|------|--------|
+| HQ-03 | todo | 구세대 핵심 용어 재생성 — embedding, reinforcement learning 등 | P1 (measure 후) |
 | HQ-05 | todo | quality_scores 저장 버그 수정 — 최근 용어에 점수 미기록 원인 파악 | P1 |
 | HQ-12 | todo | 콘텐츠 톤 재설계 — "AI 위키" → "기술 블로그" 전환 | P1 |
 | HQ-13 | todo | term type 재설계 + facet 시스템 — type 8개 + intent/volatility facet | P1 |
@@ -77,82 +141,71 @@
 
 ### HIGH PRIORITY — 핸드북 심화 품질 (HB-QUALITY)
 
+> **의존성:** HB-MEASURE baseline 완료 후 scope/우선순위 재평가. 추측 대신 데이터 기반 scope 결정.
+
 | Task | 상태 | 목표 |
 |------|------|------|
-| HB-QUALITY-01 | todo | Advanced 콘텐츠 깊이 강화 — 벤치마크 수치 필수, 아키텍처 상세, 논문 참조 |
-| HB-QUALITY-02 | todo | 비교표 정확성 — 현재 경쟁 모델과 비교 (2세대 전 모델 금지) |
+| HB-QUALITY-01 | todo (measure 후) | Advanced 콘텐츠 깊이 강화 — 벤치마크 수치 필수, 아키텍처 상세, 논문 참조 |
+| HB-QUALITY-02 | todo (measure 후) | 비교표 정확성 — 현재 경쟁 모델과 비교 (2세대 전 모델 금지) |
 | HB-QUALITY-03 | todo | Exa deep context 트리거 검증 — 최신 용어에서 실제로 작동하는지 확인 |
 | HB-QUALITY-04 | todo | Basic/Advanced 깊이 차이 명확화 — Basic은 비유+사례, Advanced는 수치+코드+논문 |
 
-> **배경 (3/27 gemini-31 기준):** 비교표가 GPT-4o/Gemini 1.0 (현재 경쟁은 GPT-5.2/Claude Opus 4.6), 벤치마크 수치 없음, 정보 "2024 baseline" (현재 2026).
+### HIGH PRIORITY — 핸드북 UX 남은 것
 
-### HIGH PRIORITY — 핸드북 UX 개선 (HB-UX)
+| Task | 상태 | 목표 | 우선도 |
+|------|------|------|--------|
+| HB-UX-06 | todo | §4 Tradeoffs 2-column grid — heading pair 감지 rehype 플러그인 + 2-col CSS | P2 |
 
-> **설계 문서:** [[plans/2026-04-10-handbook-ux-improvements]]
-> **배경:** 2026-04-10 Advanced 페이지 시각 리듬 부족 + 코드 섹션 스크롤 부담 관찰. Basic은 HB-REDESIGN으로 정돈됐지만 Advanced는 단조로움.
+### 뉴스 파이프라인 — 관찰 및 rolling 개선
 
-| Task | 상태 | 목표 | 우선도 | Commit |
-|------|------|------|--------|--------|
-| HB-UX-01 | done | Advanced §3 code block collapsed by default — macOS window 헤더 유지, 펼치기 버튼 (rehypeCodeWindow 옵션 확장, handbook advanced processor에만 scoping) | P1 | `a744824` |
-| HB-UX-02 | done | §5 Production pitfalls callout 스타일링 — rehypeHandbookSectionMarkers 플러그인으로 ul 태그 + 좌측 경고 bar + 연노란 배경 | P1 | `7571d36` + `0f7b707` (프롬프트 bullet 강제) |
-| HB-UX-03 | done | §6 blockquote CSS — 단 effect는 news blockquote에만 (handbook §6는 ul/li 구조라 별도 처리 필요 → HB-UX-04로) | P2 | `7571d36` |
-| HB-UX-04 | done | §6 Industry dialogue marker — rehypeHandbookSectionMarkers 확장 + accent border + italic + bold de-italic + Hero label semantic 수정 (h2→div role=heading) | P1 | `b64e789` |
-| HB-UX-05 | **cancelled** | ~~Advanced 사이드바 체크리스트~~ — 사용자 거부 ("판단할 수 있나요?" 인위적, 콘텐츠 감 부족) | — | — |
-| HB-UX-06 | todo | §4 Tradeoffs 2-column grid — "적합한 경우" / "피해야 할 경우" heading pair 감지 rehype 플러그인 + 2-col CSS | P2 | — |
-| HB-UX-07 | done | Math/currency $ classifier preprocessor — `$P(t_{1:n})$` 같은 inline math가 literal로 렌더되던 문제 fix. 4-rule 분류기로 math vs currency 분기, math만 `$$X$$`로 rewrite → render time fix, no regen | P0 | `42b7ee7` |
-
-**구현 전략:**
-- **Phase 1 ✅ done (commits a744824 → 7571d36 → 0f7b707 → b64e789):** HB-UX-01/02/03/04 — CSS/renderer + 마커 플러그인 + 프롬프트 §5 bullet 강제. 효과 즉시.
-- **Phase 2 (HB-MIGRATE-138과 통합, +1.5h):** HB-UX-06만 남음. 새 rehype plugin (`rehypeHandbookSectionCards`) + §4 프롬프트 heading pair 강제 + regen 필요. 별도 batch 비용 arbitrage 가능.
-
-**HB-UX Phase 1 회고 (2026-04-11):**
-- Playwright 시각 검수가 silent failure 잡음 — HB-UX-03이 commit 시점엔 작동하는 줄 알았으나 §6 콘텐츠가 ul/li 구조라 효과 0. HB-UX-04가 그 fix.
-- §5 pitfalls 프롬프트 format이 free-form text였다가 callout 추가 후 bullet 강제 (`0f7b707`) — UI 변경이 backend prompt 수정을 trigger한 사례.
-- 마커 플러그인 (`rehypeHandbookSectionMarkers`) 패턴이 §5/§6 모두 재사용. 새 추상화 안 만들어도 확장 가능 = 좋은 plugin 설계 신호.
-- **HB-UX-07** — HB-UX-01 시리즈의 두 번째 silent failure 발견 (LLM 페이지 사용자 보고). `singleDollarTextMath: false`가 GPU 통화는 fix했지만 LLM `$P(t_{1:n})$` 같은 inline math를 literal로 깨뜨림. Render-time preprocessor가 둘 다 만족시키는 분기 로직 도입 (4-rule heuristic). 공통 패턴: **하나의 fix가 다른 silent failure를 만들 수 있고, 시각 검수만이 잡을 수 있음**.
-
-### 뉴스 파이프라인 — rolling 개선
+> **관찰 대상:** NP-HARDEN 후 4개 long-tail metric (~2026-04-30까지). 관찰 결과에 따라 튜닝 결정.
 
 | Task | 상태 | 목표 |
 |------|------|------|
+| NP-OBSERVE-01 | doing | Option B Exa 복원 후 business candidate pool 회복 추적 |
+| NP-OBSERVE-02 | doing | `measure_token_usage.py --days 3` runtime token 감소 확인 |
+| NP-OBSERVE-03 | doing | Measurement v2 (2주 후) — frontload+overclaim/ko-locale issue 감소 검증 |
+| NP-OBSERVE-04 | doing | Business digest 길이 패턴 Amy 체감 지속 여부 |
 | NQ-09 | todo | 랭킹에 "어제 발행 뉴스 제목" 전달 — 같은 이벤트 다른 URL 반복 방지 |
 | NQ-15 | todo | Learner 콘텐츠 재설계 — "Expert의 쉬운 버전" 아닌 학습자 관점 재구성 |
 | NQ-21 | todo | GitHub Trending 축소 + 급부상 오픈소스 별도 제공 |
 | NQ-23 | todo | CP 안정화 — semaphore 동시성 제어 + URL canonicalization |
 | NQ-24 | todo | 파이프라인 테스트 전면 재작성 — 현재 계약 기반 mock 테스트 |
-| COLLECT-BRAVE-01 | todo | Brave Search API 수집기 추가 — 무료 티어, 뉴스 필터 |
+| COLLECT-BRAVE-01 | ~~todo~~ cancelled | ~~Brave Search API 수집기 추가~~ — NP-DIET-01에서 Brave 전량 제거하며 의미 상실 |
 
-### GPT-5 마이그레이션 (진행 중)
+### GPT-5 마이그레이션 (stale — 상태 결정 필요)
 
 > **배경:** OpenAI gpt-4.1 deprecation 대비. Allowed: gpt-5, gpt-5-mini, gpt-5-nano.
 > 2026-03-31 한번에 전부 교체 → gpt-5-mini classify 0 picks → revert. 단계별 마이그레이션 전략.
+> **현재:** 9일+ commit 없음. HB-MIGRATE-138 전에 결정 필요 (재생성을 어떤 모델로 할지).
 
 | Task | 상태 | 목표 |
 |------|------|------|
-| GPT5-01 | in_progress (⚠️ stale) | classify/merge/ranking → gpt-5-mini |
-| GPT5-01-FIX | in_progress (⚠️ stale) | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 |
+| GPT5-01 | doing (⚠️ stale) | classify/merge/ranking → gpt-5-mini |
+| GPT5-01-FIX | doing (⚠️ stale) | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 |
 | GPT5-02 | todo | community_summarize → gpt-5-nano |
 | GPT5-03 | todo | Writer digest → gpt-5 |
 | GPT5-04 | todo | 전체 파이프라인 backfill 비교 검증 |
 | GPT5-05 | todo | main 머지 + gpt-4.1 deprecation 대응 완료 |
 
-### User Analytics — Site Analytics 차트
+### User Analytics — Site Analytics 차트 (ghost)
 
-> **설계:** [[plans/2026-03-27-dau-mau-tracking]]
+> **설계:** [[2026-03-27-dau-mau-tracking]]
+> **상태:** 3주+ 진전 없음 — **drop or restart 결정 필요**
 
 | Task | 상태 | 목표 | 우선도 |
 |------|------|------|--------|
 | UA-01 | done | DAU/MAU 숫자 대시보드 표시 (profiles.last_seen_at) | P0 |
-| UA-02 | ⚠️ stale | DAU/MAU 트렌드 차트 | P0 |
-| UA-03 | ⚠️ stale | 유저 페르소나 분포 파이 차트 | P1 |
-| UA-04 | ⚠️ stale | 학습 진행 상세 (read vs learned 비율) | P1 |
-| UA-05 | ⚠️ stale | 댓글 활동량 일별 트렌드 | P1 |
+| UA-02 | ⚠️ ghost | DAU/MAU 트렌드 차트 | P0 |
+| UA-03 | ⚠️ ghost | 유저 페르소나 분포 파이 차트 | P1 |
+| UA-04 | ⚠️ ghost | 학습 진행 상세 (read vs learned 비율) | P1 |
+| UA-05 | ⚠️ ghost | 댓글 활동량 일별 트렌드 | P1 |
 | UA-06 | todo | 퀴즈 정답률 by 포스트 | P2 |
 | UA-07 | todo | 가입→첫 활동 퍼널 | P2 |
 
 ### User Webhook Subscriptions (WEBHOOK-USER-01)
 
-> **설계:** [[plans/2026-03-27-user-webhook-subscriptions]]
+> **설계:** [[2026-03-27-user-webhook-subscriptions]]
 
 | Task | 상태 | 목표 |
 |------|------|------|
@@ -166,7 +219,7 @@
 
 | Task | 상태 | 목표 |
 |------|------|------|
-| README-01 | ⚠️ ghost | 프로젝트 README 작성 — 14일 방치, drop or restart 결정 필요 |
+| README-01 | ⚠️ ghost | 프로젝트 README 작성 — 3주+ 방치, **drop 권장** |
 | COMMUNITY-01 | todo | Reddit/HN/X 반응 수집 (선택) |
 | HANDBOOK-LEVEL-LINK-01 | todo | 페르소나별 핸드북 링크 깊이 |
 | QUALITY-HYBRID-01 | todo | 규칙 기반 + LLM 하이브리드 품질체크 |
@@ -176,17 +229,20 @@
 
 ## 배경 노트 (HB-QM 관련)
 
-### HB-REDESIGN 핵심 (2026-04-10 완료, 참조용)
+### HB-MEASURE 도입 배경 (2026-04-16)
 
-**재설계 트리거:** Basic 13섹션 → 중복 3개, "함께 알면 좋은 용어" 30개 중 27개 orphan link, References level 토글 깜빡임, Basic vs Advanced 차별화 실종.
+**패턴 차용:** NP-HARDEN 2일 동안 **원래 계획의 30-50%가 이미 해결됐거나 필요 없는 것**으로 드러남 (measurement-first 효과). 같은 pattern을 핸드북 품질에 적용. "체감상 stale"을 **숫자로** 측정한 뒤 HQ/HB-QUALITY 스코프 재평가.
 
-**재설계 결과:** Basic 7섹션 + Hero card + References footer + Sidebar checklist. KO/EN 양쪽 완료, Advanced는 Basic body를 context로 받아 verbatim overlap 0건. 어드민 에디터 redesign 필드 편집 + JSON live validation.
+**비목표:**
+- 프롬프트/루브릭 수정 아님 (측정만)
+- LLM-judge 레이어 아님 (생성자와 평가자 분리 원칙)
+- 콘텐츠 backfill 아님 (측정만)
 
-→ 상세: [[12-Journal-&-Decisions/2026-04-10-handbook-section-redesign-shipped]], [[plans/2026-04-09-handbook-section-redesign]]
+**5개 check:** stale_model_comparison, missing_architecture_detail, missing_paper_reference, dated_claim, stale_age
 
 ### HQ-11 SEO 구조화 데이터
 
-**문제:** 핸드북 용어 페이지에 JSON-LD 없음. "RAG란?" 검색에서 리치 스니펫(정의 박스, FAQ) 노출 불가. 검색 유입 경로(C) 차단.
+**문제:** 핸드북 용어 페이지에 JSON-LD 없음. "RAG란?" 검색에서 리치 스니펫(정의 박스, FAQ) 노출 불가.
 
 **구현:** Head.astro에 `DefinedTerm` 스키마 + "주의할 점" 섹션을 `FAQPage`로 변환 + 카테고리 경로 `BreadcrumbList` 추가.
 
@@ -205,73 +261,17 @@
 
 ---
 
-## NP4-Q 스프린트 클로즈 요약 (2026-03-15 ~ 2026-04-10)
-
-**기간:** 27일 | **commits:** 100+ | **완료율:** 100% (핵심 게이트 전부 통과)
-
-### 주요 달성
-
-**Pipeline Architecture (v4):**
-- v4 Pydantic 모델 (2 personas: Expert + Learner, Beginner 제거)
-- Skeleton-map 라우팅 (Research/Business × Expert/Learner = 4 skeleton)
-- Cron 자동화 + E2E 검증 + Backfill 지원
-- News Run + Handbook Run 분리, pipeline_logs 로깅, handbook_quality_scores 테이블
-
-**퀄리티 v2:**
-- 0~100 스코어링, Research/Business 기준 분리
-- LLM 2차 용어 필터링 (gpt-4o-mini)
-- Expert/Learner 양쪽 평가, gpt-4.1-mini, 12000자 truncation (`QUALITY-CHECK-02` ✅ `b1fcf46`, `3661fd6`)
-
-**직접 FastAPI 호출 (`FASTAPI-DIRECT-01` ✅ `c63a5e3`):**
-- AdminAiConfig 컴포넌트 + 4개 에디터 직접 FastAPI 호출 전환
-- Vercel 60s proxy timeout 완전 제거
-
-**뉴스 품질 v7 (NQ-*):**
-- **Done (17):** NQ-02 baseline, NQ-03/05/07 KO skeleton + 페르소나 톤 + Action Items, NQ-05b Expert 약어, NQ-06/06b CP 전면 재설계, NQ-08 랭킹 분리, NQ-10 citation 중복, NQ-11 CP MANDATORY, NQ-12 citation 포맷, NQ-13 multi-source enrichment, NQ-14 citation 번호, NQ-16 classify/merge 분리, NQ-17 health check, NQ-18 CP 스팸 필터, NQ-19 체크포인트, NQ-20 Writer 다중 소스, NQ-22 CP 전면 재설계 (Summarizer + Entity Search + Brave Discussions)
-- **Remaining (5):** NQ-09, NQ-15, NQ-21, NQ-23, NQ-24 → HB-QM으로 이월
-
-**핸드북 재설계 (HB-REDESIGN):**
-- KO/EN Basic 7섹션 + Advanced 7섹션 (11→7 재작성)
-- Hero card + References footer + Sidebar checklist 3개 컴포넌트
-- HB-EDITOR-V2: 어드민 에디터 redesign 필드 편집 + JSON live validation
-- 8개 샘플 용어 차별화 매트릭스 전부 통과
-
-**자동화:**
-- `AUTOPUB-01` ✅ — Quality ≥85 자동 발행 + 2h 리뷰 윈도우 (07:00→09:00 KST) + draft 이메일 알림 + 어드민 dot (`76e3f51`, `74b13b5`, `711c05b`, `6b22647`)
-
-**Weekly Recap:** 백엔드 완료, 프론트 통합만 남음 (→ HB-QM OPTIONAL)
-
-**PROMPT-AUDIT (52개):**
-- **P0 2개:** citation-소스 매핑 해결, URL hallucination 방지
-- **P1 9개:** 섹션 구조 싱크, 토큰 효율, few-shot 개선
-- **P2 40개:** rolling 프롬프트 개선 작업에 자연스럽게 흡수 → **별도 track 종료** (2026-04-10)
-
-### 설계 참조 (NP4-Q 기간)
-
-- [[2026-03-16-daily-digest-design]] — Daily Digest v3/v4 설계
-- [[2026-03-16-weekly-digest-design]] — Weekly Digest 설계
-- [[2026-03-17-news-pipeline-v4-design]] — v4 전환
-- [[2026-03-18-prompt-audit-fixes]] — 프롬프트 감사 52개
-- [[plans/2026-03-25-direct-fastapi-ai-calls]] — FASTAPI-DIRECT
-- [[plans/2026-03-26-news-quality-check-overhaul]] — QUALITY-CHECK
-- [[plans/2026-03-30-merge-classify-design]] — NQ-16
-- [[plans/2026-03-30-multi-source-enrichment]] — NQ-13
-- [[plans/2026-03-31-handbook-quality-audit]] — HQ source
-- [[plans/2026-04-09-handbook-section-redesign]] — HB-REDESIGN master
-- [[12-Journal-&-Decisions/2026-04-10-handbook-section-redesign-shipped]] — 회고
-
----
-
 ## 이전 스프린트 체인
 
-- **HB-QM** (2026-04-10 ~) — **현재**
-- NP4-Q (2026-03-15 ~ 2026-04-10) — 게이트 전부 통과, 100+ commits
+- **HB-QM** (2026-04-10 ~) — **현재** (mid-sprint ship: NP-HARDEN + HB-MEASURE Phase 1)
+- [[2026-04-10-np4q-sprint-close|NP4-Q]] (2026-03-15 ~ 2026-04-10) — 게이트 전부 통과, 100+ commits
 - Phase 3B-SHARE (2026-03-08 ~ 2026-03-13) — 게이트 전체 통과
 - Phase 3A-SEC (2026-03-08 ~ 2026-03-09) — 12개 태스크 완료
 
 ## Related
 
-- [[Phase-Flow]] — Phase 진입/완료 기준 상세
-- [[Phases-Roadmap]] — 5단계 전략 로드맵
-- [[Implementation-Plan]] — 실행 계약 + 운영 원칙
+- [[Phase-Flow]] — Phase 진입/완료 기준 + Phase 3-Intelligence G3i Gate
+- [[Implementation-Plan]] — 실행 계약 + Hard Gates + 상태 규칙
 - [[Checklists-&-DoD]] — 완료 기준 체크리스트
+- [[2026-04-17-news-pipeline-hardening-retro]] — NP-HARDEN 회고
+- [[2026-04-16-handbook-quality-measurement-plan]] — HB-MEASURE 실행 계획

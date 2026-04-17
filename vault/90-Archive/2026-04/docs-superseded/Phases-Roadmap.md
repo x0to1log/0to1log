@@ -1,10 +1,17 @@
 ---
-title: Phases Roadmap
+title: Phases Roadmap (ARCHIVED)
 tags:
-  - core
-  - roadmap
-  - phases
-source: docs/01_Project_Overview.md
+  - archive
+  - superseded
+date_archived: 2026-04-16
+superseded_by: Phase-Flow
+---
+
+> [!warning] ARCHIVED 2026-04-16
+> 이 문서는 [[Phase-Flow]]로 통합되었다. Phase/Gate 관리는 [[Phase-Flow]], 실행 계약은 [[Implementation-Plan]], 현재 스프린트는 [[plans/ACTIVE_SPRINT]]를 참조.
+>
+> **이동 사유:** Roadmap과 Phase-Flow가 **다른 Phase 정의 체계**(1~5 vs 1a/1b/2B/2C/...)를 써서 혼란을 유발. Idea Mine 스타일 3단 문서 분리(Implementation-Plan / Phase-Flow / ACTIVE_SPRINT)로 재편하면서 Roadmap 레이어 제거.
+
 ---
 
 # Phases Roadmap

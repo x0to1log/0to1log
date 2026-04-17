@@ -24,7 +24,7 @@ source: docs/01_Project_Overview.md
 
 ## Related
 - [[Project-Vision]] — 오디언스를 위한 프로젝트 목표
-- [[Phases-Roadmap]] — 오디언스 기능의 단계별 구현
 
 ## See Also
 - [[Persona-System]] — 3단계 페르소나로 오디언스 니즈 대응 (03-Features)
+- [[Phase-Flow]] — 오디언스 기능의 단계별 구현 (09-Implementation)

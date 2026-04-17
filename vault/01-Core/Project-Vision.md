@@ -54,8 +54,8 @@ graph TB
 | **수익화 순서** | SEO 오가닉 → AdSense → 프리미엄 구독 |
 
 ## Related
-- [[Phases-Roadmap]] — 비전을 실현하는 단계별 계획
 - [[Target-Audience]] — 이 비전이 서비스하는 대상
 
 ## See Also
+- [[Phase-Flow]] — 비전을 실현하는 단계별 Phase/Gate (09-Implementation)
 - [[System-Architecture]] — 비전을 구현하는 기술 아키텍처 (02-Architecture)
