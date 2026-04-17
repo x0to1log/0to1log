@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { id, title, slug, category, tags, content_original, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url, guide_items_partial } = body;
+  const { id, title, title_learner, slug, category, tags, content_original, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url, guide_items_partial } = body;
 
   if (!title?.trim()) {
     return new Response(JSON.stringify({ error: 'title is required' }), {
@@ -58,6 +58,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (og_image_url !== undefined) row.og_image_url = og_image_url || null;
   if (content_learner !== undefined) row.content_learner = content_learner || null;
   if (content_expert !== undefined) row.content_expert = content_expert || null;
+  if (title_learner !== undefined) row.title_learner = title_learner || null;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,

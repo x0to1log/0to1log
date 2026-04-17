@@ -146,7 +146,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             rows="1"
             placeholder="Untitled"
             data-title-expert={post?.title || ''}
-            data-title-learner={post?.guide_items?.title_learner || ''}
+            data-title-learner={post?.title_learner || post?.guide_items?.title_learner || ''}
           >{post?.title || ''}</textarea>
 
           <div class="admin-editor-meta">
@@ -637,8 +637,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       if (isBusinessEditor) {
         saveBody.content_learner = personaEditors.learner?.getMarkdown() || '';
         saveBody.content_expert = personaEditors.expert?.getMarkdown() || '';
-        // Persona-specific title/excerpt go into guide_items via partial merge
-        // (preserves pipeline-set fields like sources_expert, quiz_poll_*, etc.)
+        saveBody.title_learner = titleByPersona.learner || null;
         saveBody.guide_items_partial = {
           title_learner: titleByPersona.learner || '',
           excerpt_learner: excerptByPersona.learner || '',
