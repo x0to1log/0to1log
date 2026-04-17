@@ -443,3 +443,26 @@ def test_generate_basic_prompts_require_learner_summary_analogy_and_plain_tone()
     assert "Do not sound like a spec, design doc, benchmark report, or API reference." in GENERATE_BASIC_EN_PROMPT
     assert "avoids design-doc / benchmark / API-reference tone" in GENERATE_BASIC_EN_PROMPT
     assert "skips it when it would feel forced or misleading" in GENERATE_BASIC_EN_PROMPT
+
+
+def test_extracted_term_preserves_confidence_field():
+    """Regression: confidence was in EXTRACT_TERMS_PROMPT output spec but missing
+    from the Pydantic model, causing silent drop and queue never accumulating."""
+    from models.advisor import ExtractedTerm
+
+    payload = {
+        "term": "Borderline Concept",
+        "korean_name": "경계 개념",
+        "reason": "appears in one article",
+        "confidence": "low",
+    }
+    t = ExtractedTerm(**payload)
+    assert t.confidence == "low"
+
+
+def test_extracted_term_defaults_confidence_to_high():
+    """Backwards-compatible: existing callers not passing confidence still work."""
+    from models.advisor import ExtractedTerm
+
+    t = ExtractedTerm(term="Transformer", korean_name="트랜스포머", reason="core concept")
+    assert t.confidence == "high"

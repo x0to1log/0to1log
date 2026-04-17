@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal, Optional
 
 
@@ -249,9 +249,15 @@ class GenerateTermResult(BaseModel):
 # --- Pipeline Auto-Extract Terms ---
 
 class ExtractedTerm(BaseModel):
+    """Term proposed by EXTRACT_TERMS_PROMPT. Schema must match the prompt's
+    output spec — Pydantic defaults would silently drop any drift."""
+
+    model_config = ConfigDict(extra="allow")
+
     term: str
     korean_name: str = ""
     reason: str = ""
+    confidence: Literal["high", "low"] = "high"
 
 
 class ExtractTermsResult(BaseModel):
