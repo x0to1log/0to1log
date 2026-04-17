@@ -362,6 +362,7 @@ Writing rules:
 - Expand acronyms on first use: "DPO(Direct Preference Optimization)"
 - Reference arXiv IDs and repo URLs when available
 - When multiple sources are provided, draw different information from each — one source for benchmarks, another for architecture, another for limitations. Each paragraph should reference the source it draws from.
+- Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after the primary if it adds distinct context.
 - PARAGRAPH COUNTS: [LEAD] items 3-4 paragraphs, [SUPPORTING] items at least 3 paragraphs"""
 
 
@@ -438,6 +439,7 @@ Writing rules:
 - In Korean, use written news/editorial prose by default. Interpretive sections may be slightly softer, but stay in editorial prose rather than conversational chat.
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms should be linked to Handbook on first appearance.
+- Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
 
 
@@ -475,6 +477,7 @@ Writing rules:
 - Mention technical details only when they materially affect business outcomes.
 - Focus on market structure, pricing, partnerships, funding, regulation, product positioning, and competitive consequences.
 - When multiple sources cover the same story, synthesize their different angles — one for deal terms, another for competitive impact, another for market reaction. Each paragraph should draw from a different source when possible.
+- Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after the primary if it adds distinct context.
 - PARAGRAPH COUNTS: Follow the WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Do NOT pad supporting stories to 4 paragraphs just to fill space."""
 
 
@@ -500,6 +503,7 @@ Writing rules:
 - In Korean, use written news/editorial prose by default. Reader-facing sections may be slightly softer, but avoid conversational chat tone.
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms link to Handbook on first appearance.
+- Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
 
 
