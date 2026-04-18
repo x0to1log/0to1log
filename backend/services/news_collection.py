@@ -107,6 +107,17 @@ _OFFICIAL_LOOKUP_STOPWORDS = {
     "confirms", "launches", "announces", "introduces", "released", "release",
 }
 
+# Path patterns that indicate an official source (applied after media/community
+# blocklists, so false positives on media sites are filtered out first).
+# Confidence is "medium" because this is heuristic — explicit DB allowlist
+# entries in official_priority get "high" and rank above this in _source_sort_key.
+_OFFICIAL_PATH_PATTERNS = (
+    "/blog/",
+    "/news/",
+    "/newsroom/",
+    "/research/",
+)
+
 
 def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[str, str]:
     """Classify source provenance metadata using rule-based URL heuristics."""
@@ -139,7 +150,14 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_tier": "primary",
         }
 
-    if "microsoft.com" in hostname and path.startswith("/en-us/research/blog/"):
+    if "microsoft.com" in hostname and any(
+        path.startswith(p) for p in (
+            "/en-us/research/",
+            "/en-us/security/blog/",
+            "/en-us/microsoft-365/blog/",
+            "/en-us/ai/blog/",
+        )
+    ):
         return {
             "source_kind": "official_site",
             "source_confidence": "high",
@@ -217,6 +235,17 @@ def _classify_source_meta(url: str, source: str = "", title: str = "") -> dict[s
             "source_kind": "community",
             "source_confidence": "medium",
             "source_tier": "secondary",
+        }
+
+    # Heuristic: unknown domain with an official-looking path (e.g. shield.ai/news/,
+    # mistral.ai/blog/, cohere.com/blog/). Runs AFTER media_tier + medium/substack
+    # + community checks, so false positives on known secondary domains are filtered.
+    # Confidence is "medium" vs DB-registered official_priority which gets "high".
+    if any(p in path for p in _OFFICIAL_PATH_PATTERNS):
+        return {
+            "source_kind": "official_site",
+            "source_confidence": "medium",
+            "source_tier": "primary",
         }
 
     return {
