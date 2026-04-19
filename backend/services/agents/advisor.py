@@ -1007,6 +1007,9 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
 
     # --- Check 3: Definition structure (-5 if <2 sents, -3 if >5, cap -5) ---
     check3_penalty = 0
+    # Length ceilings tied to prompt spec: 2 sentences hard (3 only if the 3rd is very short).
+    # Typical: ~300 chars EN / ~170 KO. Over-length routes to queue via pipeline warning hook.
+    DEF_CHAR_CEILING = {"ko": 240, "en": 400}
     for locale in ["ko", "en"]:
         defn = data.get(f"definition_{locale}", "") or ""
         if not defn:
@@ -1016,10 +1019,14 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
             sc = _sentence_count(defn)
             if sc < 2:
                 check3_penalty += 5
-                warnings.append(f"definition_{locale}: {sc} sentence(s), need 2-4 (-5)")
-            elif sc > 5:
+                warnings.append(f"definition_{locale}: {sc} sentence(s), need 2 (-5)")
+            elif sc > 3:
                 check3_penalty += 3
-                warnings.append(f"definition_{locale}: {sc} sentences, too long (-3)")
+                warnings.append(f"definition_{locale}: {sc} sentences, over structural limit of 2 (3 only if the 3rd is under ~15 words) (-3)")
+            dlen = len(defn)
+            if dlen > DEF_CHAR_CEILING[locale]:
+                check3_penalty += 3
+                warnings.append(f"definition_{locale}: {dlen} chars exceeds ceiling {DEF_CHAR_CEILING[locale]} — sentences too long, compress clauses (-3)")
     penalty += min(check3_penalty, 5)
 
     # --- Check 4: §5 pitfalls ❌/✅ markers (-5 if missing) ---

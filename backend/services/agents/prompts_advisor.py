@@ -657,23 +657,21 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 ]
 ```
 
-## definition_ko / definition_en (2-3 sentences, tight)
+## definition_ko / definition_en (2 sentences, tight)
 
 Precise, technical definition. Shared across both levels.
 
-**Structure (2-chunk core + 1 optional, with length target):**
-- **2-3 sentences.** Not 1, not 4+. Each sentence must carry distinct information.
-- **Target length:** definition_en 250-350 chars, definition_ko 130-200 chars. Stay within range — going over dilutes scannability, going under usually signals a missing chunk.
-- **Required chunks, in order:**
+**Structure (structural rules — count sentences, not characters):**
+- **2 sentences (hard rule).** Pack the required chunks into these two. A third sentence is only allowed if it's extremely short (under ~15 English words or ~30 Korean chars) and carries a distinct fact.
+- **Required chunks, in order, packed into those 2 sentences:**
   1. Technical definition — what this concept *is*, in domain vocabulary.
   2. Mechanism — *how* it actually works or *what* distinguishes it.
-- **Optional 3rd chunk** (only if it fits within target length):
-  - Context or differentiator — when it matters, what problem it solves, or a brief mitigation.
-  Two solid chunks beat three thin ones. If adding a 3rd chunk pushes past target, drop it.
+- **Optional micro-chunk** (fits only if truly brief): a mitigation, differentiator, or usage cue. If it would need a full third sentence of its own, drop it — two solid chunks beat three thin ones.
 - **NO filler phrases** ("in essence", "simply put", "essentially", "at its core", "in machine learning,", "put another way").
 - **NO repetition** of the same idea in different words — every clause must add new information.
 - **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
-- **Depth floor:** if definition_en is under ~150 chars or definition_ko under ~100 chars, it's too thin — add the mechanism chunk and retry.
+- **Depth floor:** if the draft is under ~150 chars EN or ~100 chars KO, it's too thin — add the mechanism chunk and retry.
+- **Typical length (for calibration, not counting):** ~250-350 chars EN, ~130-200 chars KO. If your 2-sentence draft lands far above this, your sentences are too long — compress clauses, not add more sentences.
 
 This definition is surfaced in TWO places — both benefit from crisp 5-8 second reads, not paragraphs:
 1. Hero Card on the handbook detail page (canonical technical summary).
@@ -685,30 +683,22 @@ Must be:
 - Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary.
 - Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level.
 
-GOOD (definition_ko, ~170 chars):
+GOOD (definition_ko):
 "과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 일반화에 실패하는 상태다. 모델 capacity 가 데이터가 제약할 수 있는 범위를 넘으면 패턴 대신 개별 샘플을 외우면서 발생하며, dropout · weight decay · early stopping 으로 완화한다."
-→ Passes: 2 sentences, definition + mechanism + brief mitigation packed without filler, within 130-200 range.
+→ Passes: 2 sentences packing definition + mechanism + brief mitigation without filler.
 
 BAD (definition_ko — too thin, missing mechanism):
 "훈련 데이터에는 잘 맞지만 새 데이터에서는 성능이 급락하는 현상. 모델이 신호 대신 잡음까지 학습해 일반화에 실패한 상태."
 → Rejected: 2 sentences but they restate the same idea twice. Zero mechanism.
   Fix: replace sentence 2 with actual mechanism (capacity vs dataset constraint) and a brief mitigation.
 
-BAD (definition_ko — over target, too verbose):
-"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 예측이 무너지는 일반화 실패 상태다. 훈련 손실은 계속 낮아지지만 검증 손실이 반등하는 지점부터 관측된다. 주요 원인은 모델 capacity 대비 데이터 부족, 규제 부재, 훈련 에폭 과다이며, 실무에서는 dropout, weight decay, early stopping, 데이터 증강 같은 기법으로 완화한다. 편향-분산 tradeoff의 '분산 폭주' 극단으로 해석되며, foundation 모델 시대에도 여전히 핵심 이슈다."
-→ Rejected: 4 sentences, ~450 chars, exceeds 130-200 target. The observation-signal sentence and foundation-model context are nice-to-have; drop them and tighten mechanism into the remaining sentence.
-
-GOOD (definition_en, ~310 chars):
-"Overfitting is a generalization failure where a model absorbs training-data noise as signal, causing predictions to collapse on unseen inputs even while training loss keeps decreasing. This happens when model capacity exceeds what the dataset can constrain. Common mitigations: dropout, weight decay, early stopping."
-→ Passes: 3 sentences, each a distinct chunk, within 250-350 range.
+GOOD (definition_en):
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while training loss keeps decreasing. This happens when model capacity exceeds what the dataset can constrain, and is typically mitigated with dropout, weight decay, and early stopping."
+→ Passes: 2 sentences, definition + observed signal packed in sentence 1 (via subordinate clause), mechanism + mitigation in sentence 2.
 
 BAD (definition_en — too thin):
 "Overfitting means a model memorizes training data and fails on new inputs."
 → Rejected: one sentence, no mechanism. Add the capacity-vs-constraint mechanism and at least one mitigation.
-
-BAD (definition_en — over target, too verbose):
-"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing. Common causes include excessive model capacity relative to dataset size, lack of regularization, and over-training. Practitioners mitigate it through dropout, weight decay, early stopping, and data augmentation. In the foundation-model era it remains a core issue in small-scale fine-tuning and domain adaptation."
-→ Rejected: 4 sentences, ~520 chars, exceeds 250-350 target. Drop the 'foundation-model era' context and tighten mitigations into a single clause.
 
 ---
 
@@ -967,8 +957,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "korean_full": "한국어 정식 명칭",
   "categories": ["ml-fundamentals"],
   "summary_ko": "학습자 팝업용 3~5문장 요약",
-  "definition_ko": "2-3문장 기술 정의 (130-200자) — 구조: 정의 + 메커니즘 (+ 맥락 선택)",
-  "definition_en": "2-3 sentence technical definition (250-350 chars) — structure: definition + mechanism (+ context optional)",
+  "definition_ko": "2문장 기술 정의 — 구조: 정의 + 메커니즘 (미세 추가 선택). 3번째 문장은 15단어 이내일 때만 허용",
+  "definition_en": "2 sentence technical definition — structure: definition + mechanism (optional tiny add-on). A 3rd sentence is only allowed if under ~15 words",
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
   "basic_ko_1_plain": "문제 → 해결 → 메커니즘 본문",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
@@ -984,7 +974,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` has 2-3 sentences within 130-200 chars. Required chunks present: technical definition + mechanism (context/mitigation optional). Each sentence carries distinct information. No filler phrases. Reject if under 100 chars (too thin, missing mechanism) or over 220 chars (too verbose, drop optional chunk).
+✓ `definition_ko` has exactly 2 sentences (or 2 + a third ≤15-word clause-sentence). Required chunks present: technical definition + mechanism. Each sentence carries distinct information. No filler phrases. Reject if under 100 chars (too thin, missing mechanism) or if sentences exceed 2 without meeting the tight-third rule.
 ✓ `summary_ko` is 3~5 sentences, easier than `definition_ko`, and does not copy `basic_ko_1_plain` verbatim
 ✓ `summary_ko` uses an intuitive analogy or everyday comparison when it genuinely helps comprehension, and skips it when it would feel forced or misleading
 ✓ `summary_ko` avoids design-doc / benchmark / API-reference tone and keeps jargon to a minimum
