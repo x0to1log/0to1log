@@ -264,26 +264,32 @@ def _canonicalize_source_url(url: str) -> str:
 def _enrich_source_passes_quality(payload: dict, source: str) -> tuple[bool, str]:
     """Quality gate for enrich-stage sources. Returns (passes, reason_if_dropped).
 
-    Mirrors collect-stage filters so enrich can't bypass quality checks that
-    collect applies (DRY fix for 2026-04-19 content-farm leakage).
+    Enrich fetches multi-angle coverage for a primary story via Exa
+    find_similar. Multi-source synthesis journalism needs 3-4 angles per
+    story — over-filtering here starves the summary LLM of context.
+
+    Strategy: hard-block only explicit spam + known-noisy patterns. Let
+    unknown-but-media-shaped URLs through. Legitimate secondary media
+    (Gizmodo, CRN, tldr.tech, regional tech blogs) that aren't yet in
+    the curated media_tier DB used to get stuck as analysis/low and
+    filtered out — that was too strict.
 
     Rules:
-    - Drop tier='spam' (matches research_blocklist in _classify_source_meta)
-    - Drop analysis+low (unknown content farms with no authority signal)
+    - Drop tier='spam' (matches research_blocklist DB — curated, explicit)
     - Drop official_repo from exa_enrich (find_similar returns noisy GitHub
-      matches — random user repos that happen to mention a company name)
+      user repos that merely mention a company name; rare legitimate repo
+      would come via merge or _lookup_official_sources instead)
 
+    For actual content farms (introl.com, neuraplus-ai.github.io) add the
+    domain to news_domain_filters as filter_type='research_blocklist'.
     `source` is passed separately because _build_source_payload does not
     include it in the returned payload dict.
     """
     tier = payload.get("source_tier", "")
     kind = payload.get("source_kind", "")
-    confidence = payload.get("source_confidence", "")
 
     if tier == "spam":
         return False, "spam"
-    if kind == "analysis" and confidence == "low":
-        return False, "analysis/low (unknown blog)"
     if kind == "official_repo" and source == "exa_enrich":
         return False, "github.com via find_similar (noisy)"
     return True, ""
