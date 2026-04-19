@@ -1532,6 +1532,73 @@ async def run_daily_pipeline(
     return result
 
 
+def _load_personas_and_frontload_from_db(
+    supabase, batch_id: str,
+) -> tuple[dict[str, dict[str, "PersonaOutput"]], dict[str, dict[str, Any]]]:
+    """Reconstruct per-digest-type PersonaOutput + frontload from existing news_posts rows.
+
+    Used by rerun_from='quality' to re-run QC without regenerating content.
+    Returns:
+        personas_by_type: {"research": {"expert": PersonaOutput, "learner": PersonaOutput}, "business": {...}}
+        frontload_by_type: {"research": {headline, headline_ko, excerpt, excerpt_ko, focus_items, focus_items_ko}, "business": {...}}
+    """
+    from models.news_pipeline import PersonaOutput
+
+    slugs = [
+        f"{batch_id.lower()}-research-digest",
+        f"{batch_id.lower()}-research-digest-ko",
+        f"{batch_id.lower()}-business-digest",
+        f"{batch_id.lower()}-business-digest-ko",
+    ]
+    resp = (
+        supabase.table("news_posts")
+        .select("slug,locale,post_type,content_expert,content_learner,title,excerpt,focus_items,guide_items")
+        .eq("category", "ai-news")
+        .in_("slug", slugs)
+        .execute()
+    )
+    rows = resp.data or []
+
+    # Group rows by digest_type
+    by_type: dict[str, dict[str, dict]] = {}  # {type: {locale: row}}
+    for row in rows:
+        dtype = row.get("post_type")
+        loc = row.get("locale")
+        if dtype in ("research", "business") and loc in ("en", "ko"):
+            by_type.setdefault(dtype, {})[loc] = row
+
+    personas_by_type: dict[str, dict[str, PersonaOutput]] = {}
+    frontload_by_type: dict[str, dict[str, Any]] = {}
+
+    for dtype, by_loc in by_type.items():
+        en_row = by_loc.get("en") or {}
+        ko_row = by_loc.get("ko") or {}
+
+        personas_by_type[dtype] = {
+            "expert": PersonaOutput(
+                en=en_row.get("content_expert") or "",
+                ko=ko_row.get("content_expert") or "",
+            ),
+            "learner": PersonaOutput(
+                en=en_row.get("content_learner") or "",
+                ko=ko_row.get("content_learner") or "",
+            ),
+        }
+
+        # Frontload: EN fields from EN row, KO from KO row, focus_items_ko from KO row's focus_items
+        guide = en_row.get("guide_items") or {}
+        frontload_by_type[dtype] = {
+            "headline": en_row.get("title") or "",
+            "headline_ko": ko_row.get("title") or guide.get("title_learner") or "",
+            "excerpt": en_row.get("excerpt") or "",
+            "excerpt_ko": ko_row.get("excerpt") or guide.get("excerpt_learner") or "",
+            "focus_items": en_row.get("focus_items") or [],
+            "focus_items_ko": ko_row.get("focus_items") or [],
+        }
+
+    return personas_by_type, frontload_by_type
+
+
 async def rerun_pipeline_stage(
     source_run_id: str,
     from_stage: str,

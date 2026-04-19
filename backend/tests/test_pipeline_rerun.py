@@ -10,6 +10,7 @@ from models.news_pipeline import (
     GroupedItem,
     NewsCandidate,
 )
+from services.pipeline import _load_personas_and_frontload_from_db
 
 
 EMPTY_USAGE = {"model_used": "gpt-4o", "input_tokens": 0, "output_tokens": 0, "tokens_used": 0, "cost_usd": 0.0}
@@ -184,3 +185,93 @@ async def test_rerun_pipeline_stage_marks_partial_digest_failure_as_failed():
         for call in log_stage.await_args_list
     )
     assert any(payload.get("status") == "failed" for payload in supabase.pipeline_runs_query.updated_payloads)
+
+
+def test_load_personas_and_frontload_from_db_builds_two_types():
+    """Loader reconstructs PersonaOutput (EN+KO) and frontload for both digest_types from existing news_posts rows."""
+    supabase = MagicMock()
+
+    # Four expected rows: research-EN, research-KO, business-EN, business-KO
+    rows = [
+        {
+            "slug": "2026-04-19-research-digest",
+            "locale": "en",
+            "post_type": "research",
+            "content_expert": "EN expert body",
+            "content_learner": "EN learner body",
+            "title": "Research headline",
+            "excerpt": "Research excerpt",
+            "focus_items": ["a", "b", "c"],
+            "guide_items": {"title_learner": "Research learner title", "excerpt_learner": "Research learner excerpt"},
+        },
+        {
+            "slug": "2026-04-19-research-digest-ko",
+            "locale": "ko",
+            "post_type": "research",
+            "content_expert": "KO expert body",
+            "content_learner": "KO learner body",
+            "title": "Research headline KO",
+            "excerpt": "Research excerpt KO",
+            "focus_items": ["\u3131", "\u3134", "\u3137"],
+            "guide_items": {},
+        },
+        {
+            "slug": "2026-04-19-business-digest",
+            "locale": "en",
+            "post_type": "business",
+            "content_expert": "B-EN expert",
+            "content_learner": "B-EN learner",
+            "title": "Business headline",
+            "excerpt": "Business excerpt",
+            "focus_items": ["x", "y", "z"],
+            "guide_items": {},
+        },
+        {
+            "slug": "2026-04-19-business-digest-ko",
+            "locale": "ko",
+            "post_type": "business",
+            "content_expert": "B-KO expert",
+            "content_learner": "B-KO learner",
+            "title": "Business headline KO",
+            "excerpt": "Business excerpt KO",
+            "focus_items": [],
+            "guide_items": {},
+        },
+    ]
+    supabase.table.return_value.select.return_value.eq.return_value.in_.return_value.execute.return_value.data = rows
+
+    personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, "2026-04-19")
+
+    # Two digest types reconstructed
+    assert set(personas_by_type.keys()) == {"research", "business"}
+    assert set(frontload_by_type.keys()) == {"research", "business"}
+
+    # Research personas merged EN + KO
+    research_personas = personas_by_type["research"]
+    assert research_personas["expert"].en == "EN expert body"
+    assert research_personas["expert"].ko == "KO expert body"
+    assert research_personas["learner"].en == "EN learner body"
+    assert research_personas["learner"].ko == "KO learner body"
+
+    # Business personas
+    assert personas_by_type["business"]["expert"].en == "B-EN expert"
+    assert personas_by_type["business"]["expert"].ko == "B-KO expert"
+
+    # Frontload from EN row, with focus_items_ko from KO row's focus_items
+    research_front = frontload_by_type["research"]
+    assert research_front["headline"] == "Research headline"
+    assert research_front["headline_ko"] == "Research headline KO"
+    assert research_front["excerpt"] == "Research excerpt"
+    assert research_front["excerpt_ko"] == "Research excerpt KO"
+    assert research_front["focus_items"] == ["a", "b", "c"]
+    assert research_front["focus_items_ko"] == ["\u3131", "\u3134", "\u3137"]
+
+
+def test_load_personas_and_frontload_returns_empty_on_missing_rows():
+    """When no news_posts match the batch, the loader returns empty dicts (caller handles)."""
+    supabase = MagicMock()
+    supabase.table.return_value.select.return_value.eq.return_value.in_.return_value.execute.return_value.data = []
+
+    personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, "2026-04-19")
+    assert personas_by_type == {}
+    assert frontload_by_type == {}
