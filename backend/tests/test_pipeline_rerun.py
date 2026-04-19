@@ -275,3 +275,43 @@ def test_load_personas_and_frontload_returns_empty_on_missing_rows():
     personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, "2026-04-19")
     assert personas_by_type == {}
     assert frontload_by_type == {}
+
+
+def test_load_personas_and_frontload_uses_guide_items_fallback_when_ko_row_lacks_title_excerpt():
+    """When ko_row has no title/excerpt, the frontload builder should fall back to en_row's
+    guide_items.title_learner / excerpt_learner. This covers the MEMORY.md-flagged
+    title_learner field's fallback path."""
+    supabase = MagicMock()
+    rows = [
+        {
+            "slug": "2026-04-19-research-digest",
+            "locale": "en",
+            "post_type": "research",
+            "content_expert": "EN expert",
+            "content_learner": "EN learner",
+            "title": "Research EN",
+            "excerpt": "Excerpt EN",
+            "focus_items": ["a"],
+            "guide_items": {"title_learner": "Guide title KO", "excerpt_learner": "Guide excerpt KO"},
+        },
+        {
+            "slug": "2026-04-19-research-digest-ko",
+            "locale": "ko",
+            "post_type": "research",
+            "content_expert": "KO expert",
+            "content_learner": "KO learner",
+            "title": None,  # missing — triggers guide_items fallback
+            "excerpt": None,
+            "focus_items": [],
+            "guide_items": {},
+        },
+    ]
+    supabase.table.return_value.select.return_value.eq.return_value.in_.return_value.execute.return_value.data = rows
+
+    _, frontload_by_type = _load_personas_and_frontload_from_db(supabase, "2026-04-19")
+    research_front = frontload_by_type["research"]
+
+    assert research_front["headline_ko"] == "Guide title KO", \
+        f"expected guide_items.title_learner fallback, got {research_front['headline_ko']!r}"
+    assert research_front["excerpt_ko"] == "Guide excerpt KO", \
+        f"expected guide_items.excerpt_learner fallback, got {research_front['excerpt_ko']!r}"

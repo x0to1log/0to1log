@@ -13,6 +13,7 @@ from core.database import get_supabase
 from models.news_pipeline import (
     ClassificationResult,
     ClassifiedGroup,
+    PersonaOutput,
     PipelineResult,
 )
 from services.agents.advisor import (
@@ -1542,8 +1543,6 @@ def _load_personas_and_frontload_from_db(
         personas_by_type: {"research": {"expert": PersonaOutput, "learner": PersonaOutput}, "business": {...}}
         frontload_by_type: {"research": {headline, headline_ko, excerpt, excerpt_ko, focus_items, focus_items_ko}, "business": {...}}
     """
-    from models.news_pipeline import PersonaOutput
-
     slugs = [
         f"{batch_id.lower()}-research-digest",
         f"{batch_id.lower()}-research-digest-ko",
