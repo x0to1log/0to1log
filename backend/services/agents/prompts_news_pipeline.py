@@ -1867,6 +1867,9 @@ For each group that IS relevant, produce:
    - If all comments are low-quality, off-topic, or just links: pick 0
    - Quotes MUST be copied EXACTLY from the input — do NOT paraphrase, shorten, or combine
 3. **quotes_ko**: Korean translations of the quotes above. Translate the meaning naturally, not word-by-word. Same order as quotes.
+   - **STRICT LENGTH RULE**: `len(quotes_ko) MUST equal len(quotes)`. If you pick 2 quotes, you MUST produce exactly 2 Korean translations. Never return an empty quotes_ko when quotes is non-empty.
+   - If a quote is long, technical, or hard to translate: produce a best-effort natural Korean rendering anyway. Partial or approximate translation is acceptable. Silently skipping is NOT acceptable — the Korean digest will show English text otherwise.
+   - If you truly cannot produce ANY of the translations, return `quotes: []` AND `quotes_ko: []` together (skip the pair entirely). Never keep quotes without matching quotes_ko.
 4. **key_point**: 1 sentence summarizing the main discussion theme (in English)
    - Capture what the community actually cares about, not what the article says
    - If no meaningful discussion exists: null

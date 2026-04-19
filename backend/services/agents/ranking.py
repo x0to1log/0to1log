@@ -537,6 +537,17 @@ async def summarize_community(
             if isinstance(q, str) and len(_clean_quote(q)) > 5 and not _url_pattern.search(_clean_quote(q))
         ]
 
+        # Safety net: if LLM failed to produce matching Korean translations,
+        # truncate quotes to match quotes_ko length. Otherwise English quotes
+        # leak into the Korean digest (digest LLM has no KO quote to use).
+        # Prompt rule demands len(quotes_ko) == len(quotes); this catches drift.
+        if len(quotes_ko) < len(quotes):
+            logger.warning(
+                "Community summarizer: quotes_ko count (%d) < quotes count (%d) for group %s — truncating quotes to prevent English-in-Korean leakage",
+                len(quotes_ko), len(quotes), primary_url[:80],
+            )
+            quotes = quotes[:len(quotes_ko)]
+
         key_point = llm_data.get("key_point")
         if key_point and not isinstance(key_point, str):
             key_point = None
