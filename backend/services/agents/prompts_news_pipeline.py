@@ -1493,7 +1493,10 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (2)
 - **fluency**: Reads like a peer engineer analysis; assertive tone; lead item 3-4 paragraphs; natural and fluent in both EN and KO.
-- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in the `ko` field contains Hangul text (proper nouns like OpenAI / GPT-5.4 may remain in Latin script). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+  - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
+  - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1545,7 +1548,10 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (3)
 - **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting at least 3.
-- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in `ko` field contains Hangul text (proper nouns in Latin script OK). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+  - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
+  - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 - **no_chat_tone**: Korean body avoids spoken "~요" tone and chatty registers; uses editorial news prose throughout.
 
 {_QC_SHARED_SEVERITY_RULES}
@@ -1599,7 +1605,10 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (2)
 - **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons.
-- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in `ko` field contains Hangul text (proper nouns in Latin script OK). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+  - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
+  - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1651,7 +1660,10 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (3)
 - **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; engaging without being condescending.
-- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in `ko` field contains Hangul text (proper nouns in Latin script OK). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+  - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
+  - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 - **no_chat_tone**: Korean body avoids spoken "~요" tone and chatty registers; uses editorial news prose throughout.
 
 {_QC_SHARED_SEVERITY_RULES}
