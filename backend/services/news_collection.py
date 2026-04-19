@@ -261,6 +261,34 @@ def _canonicalize_source_url(url: str) -> str:
     return normalized.geturl()
 
 
+def _enrich_source_passes_quality(payload: dict, source: str) -> tuple[bool, str]:
+    """Quality gate for enrich-stage sources. Returns (passes, reason_if_dropped).
+
+    Mirrors collect-stage filters so enrich can't bypass quality checks that
+    collect applies (DRY fix for 2026-04-19 content-farm leakage).
+
+    Rules:
+    - Drop tier='spam' (matches research_blocklist in _classify_source_meta)
+    - Drop analysis+low (unknown content farms with no authority signal)
+    - Drop official_repo from exa_enrich (find_similar returns noisy GitHub
+      matches — random user repos that happen to mention a company name)
+
+    `source` is passed separately because _build_source_payload does not
+    include it in the returned payload dict.
+    """
+    tier = payload.get("source_tier", "")
+    kind = payload.get("source_kind", "")
+    confidence = payload.get("source_confidence", "")
+
+    if tier == "spam":
+        return False, "spam"
+    if kind == "analysis" and confidence == "low":
+        return False, "analysis/low (unknown blog)"
+    if kind == "official_repo" and source == "exa_enrich":
+        return False, "github.com via find_similar (noisy)"
+    return True, ""
+
+
 def _official_lookup_domains(group_title: str, item_title: str) -> list[str]:
     """Infer likely official domains from group/item titles."""
     text = f"{group_title} {item_title}".lower()
@@ -358,14 +386,20 @@ async def _lookup_official_sources(
                 continue
             if any("\u4e00" <= ch <= "\u9fff" for ch in result_title):
                 continue
-            official_sources.append(
-                _build_source_payload(
-                    url=result.url,
-                    title=result_title,
-                    content=result.text or "",
-                    source="exa_official_lookup",
-                )
+            payload = _build_source_payload(
+                url=result.url,
+                title=result_title,
+                content=result.text or "",
+                source="exa_official_lookup",
             )
+            passes, reason = _enrich_source_passes_quality(payload, "exa_official_lookup")
+            if not passes:
+                logger.info(
+                    "Official lookup drop [%s]: %s for '%s'",
+                    reason, result.url[:80], group.group_title[:40],
+                )
+                continue
+            official_sources.append(payload)
             existing.add(canonical_url)
             if len(official_sources) >= max_sources - 1:
                 return official_sources
@@ -988,14 +1022,20 @@ async def enrich_sources(
                 canonical_url = _canonicalize_source_url(r.url)
                 if canonical_url in seen_source_urls:
                     continue
-                sources.append(
-                    _build_source_payload(
-                        url=r.url,
-                        title=r_title,
-                        content=r.text or "",
-                        source="exa_enrich",
-                    )
+                payload = _build_source_payload(
+                    url=r.url,
+                    title=r_title,
+                    content=r.text or "",
+                    source="exa_enrich",
                 )
+                passes, reason = _enrich_source_passes_quality(payload, "exa_enrich")
+                if not passes:
+                    logger.info(
+                        "Enrich drop [%s]: %s for '%s'",
+                        reason, r.url[:80], group.group_title[:40],
+                    )
+                    continue
+                sources.append(payload)
                 seen_source_urls.add(canonical_url)
         except Exception as e:
             logger.debug("Enrich failed for '%s': %s", group.group_title[:60], e)

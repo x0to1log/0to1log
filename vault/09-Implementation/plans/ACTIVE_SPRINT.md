@@ -41,7 +41,7 @@
 | HB-MEASURE-02 | Measurement CLI + baseline report (`measure_handbook_quality.py`) | doing | 2026-04-16 | 2026-04-17 |
 | HB-MIGRATE-138 | 138개 published 용어 v4 구조로 전량 regenerate (병렬 ~2시간, ~$15) | todo | — | — |
 | NP-OBSERVE-* | 하드닝 후 4개 long-tail metric 관찰 (~2026-04-30) | doing | 2026-04-16 | 2026-04-30 |
-| NP-QUALITY-01 | Collect 단계 노이즈 필터링 — Tavily 쿼리 정제 + non-AI negative keyword filter. Apr 19 run에서 83 후보 중 6건이 명백한 비-AI (게임 패치, 갤럭시폰, 로봇 마라톤 등) | todo | — | — |
+| NP-QUALITY-01 | Enrich 단계 source quality gate — `enrich_sources` / `_lookup_official_sources`의 Exa 결과에 `_classify_source_meta` 기반 필터 적용 (spam drop + analysis/low drop + exa_enrich의 github.com drop). Apr 19 draft 13개 문제 URL 전부 enrich 주입분이었고, collect 단계 필터가 enrich에 복제 안 된 DRY 위반. (원래 scope: Tavily 쿼리 정제 — 효과 제한적이라 drop) | todo | — | — |
 | NP-QUALITY-02 | Classify 프롬프트 quality gate — 무명 1인 GitHub repo 제외 규칙, source authority 기준 명시. Apr 19 draft에 `poseljacob/agentic-video-editor`, 3개의 `*/superpowers` repo 통과 | todo | — | — |
 | NP-QUALITY-03 | URL 유효성 사후 검증 — 생성된 source_cards URL의 HTTPS 여부, 404/redirect 체크. Apr 19 draft의 `http://openai.com/index/introducing-gpt-5-4/` (http 스킴, 정식 여부 의심) 같은 케이스 방지 | todo | — | — |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | — | — |
