@@ -1860,14 +1860,27 @@ Score this weekly digest on 4 criteria (0-25 each, total 0-100).
    - 10: Multiple tone violations; KO citations partially lost
    - 0: Chatty tone, predictions throughout, or KO citation collapse
 
+## Severity
+
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
+
+Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
+
+## Issues
+
+Return ≤5 issues total at the top level (not per-subcategory). **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
+
+Do NOT report: stylistic preferences, optional improvements, editorial choices that aren't wrong, source re-use with valid citations, or subjective critiques.
+
 Return JSON only:
 {{
-  "section_completeness": {{"score": 0, "issues": []}},
-  "source_quality": {{"score": 0, "issues": []}},
-  "depth_synthesis": {{"score": 0, "issues": []}},
-  "language_tone": {{"score": 0, "issues": []}},
+  "section_completeness": {{"score": 0}},
+  "source_quality": {{"score": 0}},
+  "depth_synthesis": {{"score": 0}},
+  "language_tone": {{"score": 0}},
   "total_score": 0,
-  "summary": "One sentence overall assessment"
+  "summary": "One sentence overall assessment",
+  "issues": [{{"severity": "major|minor", "scope": "expert_body|ko|en", "category": "source|locale|structure|clarity|overclaim|fabrication", "message": "..."}}]
 }}"""
 
 
@@ -1904,14 +1917,27 @@ Score this weekly digest on 4 criteria (0-25 each, total 0-100).
    - 10: Tone inconsistent; KO citations partially lost
    - 0: Chat tone throughout or KO broken
 
+## Severity
+
+Mark **major** ONLY for: (1) fabrication/hallucination; (2) broken structure — missing mandatory section, corrupted markdown; (3) hard factual error; (4) locale corruption; (5) source fabrication.
+
+Everything else is **minor**. When unsure, minor.
+
+## Issues
+
+Return ≤5 issues total at the top level (not per-subcategory). Zero is valid.
+
+Do NOT report: stylistic preferences, optional improvements, editorial choices that aren't wrong, or subjective critiques.
+
 Return JSON only:
 {{
-  "section_completeness": {{"score": 0, "issues": []}},
-  "source_quality": {{"score": 0, "issues": []}},
-  "depth_accessibility": {{"score": 0, "issues": []}},
-  "language_tone": {{"score": 0, "issues": []}},
+  "section_completeness": {{"score": 0}},
+  "source_quality": {{"score": 0}},
+  "depth_accessibility": {{"score": 0}},
+  "language_tone": {{"score": 0}},
   "total_score": 0,
-  "summary": "One sentence overall assessment"
+  "summary": "One sentence overall assessment",
+  "issues": [{{"severity": "major|minor", "scope": "learner_body|ko|en", "category": "source|locale|structure|clarity|accessibility", "message": "..."}}]
 }}"""
 
 

@@ -229,21 +229,33 @@ def _apply_issue_penalties_and_caps(
 def _compute_weekly_structure_score(
     en_expert: str, ko_expert: str, en_learner: str, ko_learner: str,
 ) -> int:
-    """Weekly structure score (0-15): 4 bodies × basic markdown checks.
+    """Weekly structure score (0-15): 4 bodies × section + heading counts.
 
-    Deducts for: blank body (-3), no ## section heading (-1), no ### sub-heading (-1).
-    The ### check matters because Top Stories switched to ### <headline> format
-    in 2026-04-20; a body without any ### means the LLM regressed to legacy
-    bullet-inline format.
+    Weekly recap has 7 expected ## sections (This Week in One Line, Week in
+    Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight,
+    So What Do I Do? / What Can I Try?) and Top Stories has 5-7 ### headlines.
+
+    Deductions per body:
+    - blank body: -3
+    - <5 `## ` sections (out of 7 expected): -2
+    - 5-6 `## ` sections: -1
+    - <5 `### ` headings: -1 (Top Stories expected 5-7 items)
+
+    Max loss per body: -4. Total max loss: -16, floored at 0.
     """
     score = 15
     for body in (en_expert, ko_expert, en_learner, ko_learner):
         if not body or not body.strip():
             score -= 3
             continue
-        if "## " not in body:
+        lines = body.splitlines()
+        h2_count = sum(1 for line in lines if line.startswith("## "))
+        if h2_count < 5:
+            score -= 2
+        elif h2_count < 7:
             score -= 1
-        if "### " not in body:
+        h3_count = sum(1 for line in lines if line.startswith("### "))
+        if h3_count < 5:
             score -= 1
     return max(0, score)
 
@@ -1013,6 +1025,7 @@ async def _check_weekly_quality(
     client = get_openai_client()
     model = settings.openai_model_main
     issues_all: list[str] = []
+    structured_issues: list[dict[str, str]] = []
     llm_scores: list[int] = []
 
     # Expert quality check
@@ -1039,9 +1052,18 @@ async def _check_weekly_quality(
         expert_data = parse_ai_json(expert_raw, "weekly-quality-expert")
         expert_score = expert_data.get("total_score", 0)
         llm_scores.append(expert_score)
-        for cat in ["section_completeness", "source_quality", "depth_synthesis", "language_tone"]:
-            for issue in (expert_data.get(cat, {}).get("issues") or []):
-                issues_all.append(f"expert:{cat}:{issue}")
+        # New format (v2): top-level structured issues. Fallback to legacy per-subcat strings.
+        expert_top_issues = expert_data.get("issues") or []
+        if expert_top_issues:
+            expert_issues = _extract_structured_issues(expert_top_issues, "expert_body")
+            structured_issues.extend(expert_issues)
+            for i in expert_issues:
+                issues_all.append(f"expert:{i.get('category', 'unknown')}:{i.get('message', '')}")
+        else:
+            # Legacy fallback: flatten per-subcategory strings (no penalty structure available).
+            for cat in ["section_completeness", "source_quality", "depth_synthesis", "language_tone"]:
+                for issue in (expert_data.get(cat, {}).get("issues") or []):
+                    issues_all.append(f"expert:{cat}:{issue}")
     except Exception as e:
         logger.warning("Weekly expert quality check failed: %s", e)
         expert_score = 0
@@ -1071,9 +1093,16 @@ async def _check_weekly_quality(
             learner_data = parse_ai_json(learner_raw, "weekly-quality-learner")
             learner_score = learner_data.get("total_score", 0)
             llm_scores.append(learner_score)
-            for cat in ["section_completeness", "source_quality", "depth_accessibility", "language_tone"]:
-                for issue in (learner_data.get(cat, {}).get("issues") or []):
-                    issues_all.append(f"learner:{cat}:{issue}")
+            learner_top_issues = learner_data.get("issues") or []
+            if learner_top_issues:
+                learner_issues = _extract_structured_issues(learner_top_issues, "learner_body")
+                structured_issues.extend(learner_issues)
+                for i in learner_issues:
+                    issues_all.append(f"learner:{i.get('category', 'unknown')}:{i.get('message', '')}")
+            else:
+                for cat in ["section_completeness", "source_quality", "depth_accessibility", "language_tone"]:
+                    for issue in (learner_data.get(cat, {}).get("issues") or []):
+                        issues_all.append(f"learner:{cat}:{issue}")
         except Exception as e:
             logger.warning("Weekly learner quality check failed: %s", e)
 
@@ -1111,13 +1140,22 @@ async def _check_weekly_quality(
 
     llm_avg = round(sum(llm_scores) / len(llm_scores)) if llm_scores else 0
     weighted_llm = round(llm_avg * 0.6)
-    final_score = max(0, deterministic_score + weighted_llm - url_penalty - structural_penalty)
+    pre_issue_score = max(0, deterministic_score + weighted_llm - url_penalty - structural_penalty)
+
+    # Issue penalty + score caps (daily parity). Requires structured issues
+    # from v2-format LLM output. Legacy per-subcat flat strings result in
+    # empty structured_issues → no penalty applied (0 impact).
+    final_score, issue_penalty, quality_caps_applied = _apply_issue_penalties_and_caps(
+        pre_issue_score, structured_issues,
+    )
 
     quality_flags = []
     if url_penalty:
         quality_flags.append("url_hallucination")
     if structural_warnings:
         quality_flags.extend(structural_warnings)
+    if quality_caps_applied:
+        quality_flags.extend(quality_caps_applied)
 
     # URL validation gate (daily parity): hallucinated URLs block auto-publish
     # even if score passes threshold. Matches pipeline_quality.py:509.
@@ -1144,13 +1182,17 @@ async def _check_weekly_quality(
         "penalties": {
             "url": url_penalty,
             "structural": structural_penalty,
+            "issue": issue_penalty,
         },
+        "caps_applied": quality_caps_applied,
+        "issue_count": len(structured_issues),
     }
 
     logger.info(
-        "Weekly quality: final=%d (det=%d, llm_weighted=%d, url=-%d, struct=-%d), "
-        "eligible=%s (url_gate_blocked=%s)",
-        final_score, deterministic_score, weighted_llm, url_penalty, structural_penalty,
+        "Weekly quality: final=%d (det=%d, llm_weighted=%d, pre_issue=%d, "
+        "url=-%d, struct=-%d, issue=-%d, caps=%s), eligible=%s (url_gate_blocked=%s)",
+        final_score, deterministic_score, weighted_llm, pre_issue_score,
+        url_penalty, structural_penalty, issue_penalty, quality_caps_applied,
         auto_publish_eligible, url_validation_failed,
     )
 
