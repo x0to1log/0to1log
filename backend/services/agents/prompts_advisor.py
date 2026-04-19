@@ -657,21 +657,23 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 ]
 ```
 
-## definition_ko / definition_en (2 sentences, tight)
+## definition_ko / definition_en (2-3 sentences, tight)
 
 Precise, technical definition. Shared across both levels.
 
 **Structure (structural rules — count sentences, not characters):**
-- **2 sentences (hard rule).** Pack the required chunks into these two. A third sentence is only allowed if it's extremely short (under ~15 English words or ~30 Korean chars) and carries a distinct fact.
-- **Required chunks, in order, packed into those 2 sentences:**
+- **2-3 sentences.** Follow the natural rhythm of each language, not a symmetric rule:
+  - **Korean (definition_ko): 2 sentences is the natural default.** Korean packs more meaning per sentence, so 2 usually covers definition + mechanism. A 3rd sentence only if it adds a distinct fact.
+  - **English (definition_en): 2-3 sentences, 3 is fine.** English tends to spread chunks across sentences naturally. Don't force 2 when 3 reads better.
+- **Required chunks, in order:**
   1. Technical definition — what this concept *is*, in domain vocabulary.
   2. Mechanism — *how* it actually works or *what* distinguishes it.
-- **Optional micro-chunk** (fits only if truly brief): a mitigation, differentiator, or usage cue. If it would need a full third sentence of its own, drop it — two solid chunks beat three thin ones.
+- **Optional 3rd chunk**: a mitigation, differentiator, or usage cue — if it adds new information worth a sentence, include it.
 - **NO filler phrases** ("in essence", "simply put", "essentially", "at its core", "in machine learning,", "put another way").
 - **NO repetition** of the same idea in different words — every clause must add new information.
 - **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
 - **Depth floor:** if the draft is under ~150 chars EN or ~100 chars KO, it's too thin — add the mechanism chunk and retry.
-- **Typical length (for calibration, not counting):** ~250-350 chars EN, ~130-200 chars KO. If your 2-sentence draft lands far above this, your sentences are too long — compress clauses, not add more sentences.
+- **Typical length (for calibration, not counting):** ~250-350 chars EN, ~130-200 chars KO. If your draft lands far above this, your sentences are too long — compress clauses, don't simply cap sentence count.
 
 This definition is surfaced in TWO places — both benefit from crisp 5-8 second reads, not paragraphs:
 1. Hero Card on the handbook detail page (canonical technical summary).
@@ -957,8 +959,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "korean_full": "한국어 정식 명칭",
   "categories": ["ml-fundamentals"],
   "summary_ko": "학습자 팝업용 3~5문장 요약",
-  "definition_ko": "2문장 기술 정의 — 구조: 정의 + 메커니즘 (미세 추가 선택). 3번째 문장은 15단어 이내일 때만 허용",
-  "definition_en": "2 sentence technical definition — structure: definition + mechanism (optional tiny add-on). A 3rd sentence is only allowed if under ~15 words",
+  "definition_ko": "2-3문장 기술 정의 — 구조: 정의 + 메커니즘 (+ 맥락 선택). KO 는 2문장이 자연스러움",
+  "definition_en": "2-3 sentence technical definition — structure: definition + mechanism (+ optional context). EN often reads as 3 sentences; don't force 2",
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
   "basic_ko_1_plain": "문제 → 해결 → 메커니즘 본문",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
@@ -974,7 +976,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` has exactly 2 sentences (or 2 + a third ≤15-word clause-sentence). Required chunks present: technical definition + mechanism. Each sentence carries distinct information. No filler phrases. Reject if under 100 chars (too thin, missing mechanism) or if sentences exceed 2 without meeting the tight-third rule.
+✓ `definition_ko` has 2-3 sentences (KO typically 2, EN typically 3). Required chunks present: technical definition + mechanism (+ optional context). Each sentence carries distinct information. No filler phrases. Reject if under 100 chars (too thin, missing mechanism) or if sentences exceed 3.
 ✓ `summary_ko` is 3~5 sentences, easier than `definition_ko`, and does not copy `basic_ko_1_plain` verbatim
 ✓ `summary_ko` uses an intuitive analogy or everyday comparison when it genuinely helps comprehension, and skips it when it would feel forced or misleading
 ✓ `summary_ko` avoids design-doc / benchmark / API-reference tone and keeps jargon to a minimum
