@@ -1575,6 +1575,8 @@ async def rerun_pipeline_stage(
                   "digest:business:expert", "digest:business:learner",
                   "quality:research", "quality:business",
                   "save:research", "save:business", "summary"],
+        "quality": ["quality:research", "quality:business",
+                    "save:research", "save:business", "summary"],
     }
     stages_to_delete = STAGE_CASCADE.get(from_stage, [])
     # If category filter is set, only delete logs for that category's stages
