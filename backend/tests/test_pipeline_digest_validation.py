@@ -6,6 +6,16 @@ import pytest
 from models.news_pipeline import ClassifiedGroup, GroupedItem, PersonaOutput
 
 
+async def _noop_url_liveness(urls, **kwargs):
+    """Test stub for services.pipeline_quality._validate_urls_live — keeps all URLs live.
+
+    Real function would HEAD-check each URL, which breaks tests that use
+    fake example.com domains. Tests patch _validate_urls_live with this.
+    """
+    url_set = set(urls) if not isinstance(urls, set) else urls
+    return url_set, []
+
+
 def _mock_openai_response(payload: dict, tokens: int = 500):
     response = MagicMock()
     response.choices[0].message.content = json.dumps(payload)
@@ -222,6 +232,7 @@ async def test_generate_digest_aborts_before_save_when_structural_blocker_found(
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock) as quality_mock, \
          patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
@@ -286,6 +297,7 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
          patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
@@ -363,6 +375,7 @@ async def test_generate_digest_includes_source_metadata_labels_in_writer_prompt(
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
          patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
@@ -452,6 +465,7 @@ async def test_generate_digest_saves_source_cards_with_source_metadata():
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
          patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
@@ -540,6 +554,7 @@ async def test_generate_digest_orders_primary_sources_first_in_prompt():
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
          patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
@@ -623,6 +638,7 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
          patch("services.pipeline_digest.settings") as mock_settings:
         mock_settings.openai_model_main = "gpt-4o"
@@ -697,6 +713,7 @@ async def test_generate_digest_surfaces_url_validation_to_fact_pack_and_forces_d
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality",
                new_callable=AsyncMock, return_value=quality_meta_with_failure), \
          patch("services.pipeline_digest.settings") as mock_settings:
@@ -768,6 +785,7 @@ async def test_generate_digest_surfaces_url_validation_pass_state_to_fact_pack()
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality",
                new_callable=AsyncMock, return_value=quality_meta_clean), \
          patch("services.pipeline_digest.settings") as mock_settings:

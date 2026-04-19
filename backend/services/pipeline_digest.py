@@ -810,6 +810,19 @@ async def _generate_digest(
                         "source_confidence": s.get("source_confidence", ""),
                         "source_tier": s.get("source_tier", ""),
                     }
+
+        # NP-QUALITY-03: HEAD-check each URL; drop dead ones from allowlist
+        # so _renumber_citations strips their citations from body automatically.
+        from services.pipeline_quality import _validate_urls_live
+        live_urls, dead_drops = await _validate_urls_live(allowed_urls)
+        if dead_drops:
+            logger.warning(
+                "URL liveness dropped %d of %d URLs for %s: %s",
+                len(dead_drops), len(allowed_urls), digest_type,
+                "; ".join(f"{d['url'][:60]} ({d['reason']})" for d in dead_drops[:5]),
+            )
+        allowed_urls = live_urls
+
         expert_content, expert_source_cards = _renumber_citations(
             expert_content,
             allowed_urls,

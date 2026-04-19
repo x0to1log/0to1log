@@ -760,6 +760,95 @@ def _normalize_url(url: str) -> str:
     return urlunparse((scheme, parsed.netloc.lower(), path, parsed.params, query, fragment))
 
 
+async def _validate_urls_live(
+    urls,
+    timeout: float = 3.0,
+    max_concurrent: int = 20,
+) -> tuple[set[str], list[dict]]:
+    """HEAD-check URLs in parallel. Returns (live_urls, drop_records).
+
+    Complements validate_citation_urls (structural allowlist check) by
+    adding liveness verification: does this URL actually resolve, and does
+    it stay on the same apex domain (no content-farm hijack redirect)?
+
+    Drops on:
+    - 404, 410 (definitively gone)
+    - Connect error / DNS failure / timeout
+    - Redirect to a different apex domain (suspicious)
+
+    Keeps on (benefit of the doubt — don't punish edge cases):
+    - 2xx / 3xx (success or benign same-apex redirect)
+    - 403 (bot blocking — site is alive)
+    - 405 (Method Not Allowed — site doesn't support HEAD)
+    - 5xx (transient server error)
+    - Other 4xx not listed above
+    - Any unexpected exception (network infra issue — fail open)
+
+    On infrastructure failure for ALL URLs (e.g., no network), returns the
+    input set unchanged to avoid blocking the pipeline.
+    """
+    import httpx  # imported here so module-level cost stays zero
+
+    url_list = list(urls) if not isinstance(urls, list) else urls
+    if not url_list:
+        return set(), []
+
+    live: set[str] = set()
+    drops: list[dict] = []
+    sem = asyncio.Semaphore(max_concurrent)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; 0to1log/1.0; +https://0to1log.com)",
+    }
+
+    def _apex(host: str) -> str:
+        parts = (host or "").split(".")
+        return ".".join(parts[-2:]) if len(parts) >= 2 else host
+
+    async def _check(url: str) -> None:
+        async with sem:
+            try:
+                original_apex = _apex((urlparse(url).hostname or "").lower())
+                async with httpx.AsyncClient(
+                    timeout=timeout,
+                    follow_redirects=True,
+                    headers=headers,
+                ) as client:
+                    resp = await client.head(url)
+                    code = resp.status_code
+                    final_apex = _apex((urlparse(str(resp.url)).hostname or "").lower())
+                    if original_apex and final_apex and original_apex != final_apex:
+                        drops.append({
+                            "url": url,
+                            "reason": f"redirect to different apex ({final_apex})",
+                        })
+                        return
+                    if code in (404, 410):
+                        drops.append({"url": url, "reason": f"HTTP {code}"})
+                        return
+                    live.add(url)
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout):
+                drops.append({"url": url, "reason": "timeout/connect error"})
+            except Exception as e:
+                # Fail open on any other exception — don't punish for edge cases
+                logger.debug("URL liveness check exception for %s: %s", url, e)
+                live.add(url)
+
+    t0 = time.monotonic()
+    try:
+        await asyncio.gather(*[_check(u) for u in url_list])
+    except Exception as e:
+        # Network infra failure — return input unchanged
+        logger.warning("URL liveness check failed globally: %s. Returning all URLs unchanged.", e)
+        return set(url_list), []
+
+    elapsed = time.monotonic() - t0
+    logger.info(
+        "URL liveness: %d/%d live, %d dropped in %.2fs",
+        len(live), len(url_list), len(drops), elapsed,
+    )
+    return live, drops
+
+
 def validate_citation_urls(body: str, fact_pack: dict) -> dict:
     """Verify all [N](URL) citations in body refer to URLs in fact_pack.news_items.
 

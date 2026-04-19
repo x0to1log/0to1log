@@ -2106,6 +2106,18 @@ async def run_weekly_pipeline(
             en_learner = _clean_writer_output(learner_data.get("en", ""))
             ko_learner = _clean_writer_output(learner_data.get("ko", ""))
 
+            # NP-QUALITY-03: HEAD-check aggregate URLs; dead ones stripped from
+            # bodies by _renumber_citations via the tightened allowlist.
+            if aggregate_urls:
+                from services.pipeline_quality import _validate_urls_live
+                live_agg, dead_drops = await _validate_urls_live(aggregate_urls)
+                if dead_drops:
+                    logger.warning(
+                        "Weekly URL liveness dropped %d of %d URLs: %s",
+                        len(dead_drops), len(aggregate_urls),
+                        "; ".join(f"{d['url'][:60]} ({d['reason']})" for d in dead_drops[:5]),
+                    )
+                aggregate_urls = live_agg
             _allowed = aggregate_urls if aggregate_urls else None
             en_expert, en_expert_cards = _renumber_citations(en_expert, allowed_urls=_allowed)
             ko_expert, ko_expert_cards = _renumber_citations(ko_expert, allowed_urls=_allowed)
