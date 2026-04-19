@@ -22,7 +22,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
-from services.handbook_validators import validate_term_scope
+from services.handbook_validators import validate_term_scope, validate_korean_name
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
 logger = logging.getLogger(__name__)
@@ -903,6 +903,36 @@ async def _extract_and_create_handbook_terms(
                 any(trigger in w.lower() for trigger in _queue_triggers)
                 for w in warnings
             ) else "draft"
+
+            # Korean name gate (Task C.4): if korean_name looks invented or missing
+            # the required Hangul minimum, queue this term for Amy's manual
+            # Korean-only review. Term body is still saved — only the korean_name
+            # needs fixing, so we don't want to waste the 50+s of body generation.
+            korean_name_final = content_data.get("korean_name", korean_name)
+            korean_ok, korean_reason = validate_korean_name(term_name, korean_name_final)
+            if not korean_ok:
+                term_status = "queued"
+                logger.info(
+                    "Queuing term '%s' for Korean-name review: %s",
+                    term_name, korean_reason,
+                )
+                try:
+                    supabase.table("pipeline_logs").insert({
+                        "run_id": run_id,
+                        "pipeline_type": "handbook.korean_gate",
+                        "status": "queued",
+                        "debug_meta": {
+                            "event": "handbook_korean_name_queued",
+                            "term": term_name,
+                            "korean_name": korean_name_final,
+                            "reason": korean_reason,
+                        },
+                    }).execute()
+                except Exception as _log_err:
+                    logger.warning(
+                        "pipeline_logs insert for queued Korean review failed (non-fatal): %s",
+                        _log_err,
+                    )
 
             try:
                 row = {
