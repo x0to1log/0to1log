@@ -1409,6 +1409,15 @@ Rules:
 - If the marker is absent or the JSON array is empty, return `weekly_quiz_ko: []`.
 - The quiz JSON block is NOT part of the markdown body — do NOT include it in the `ko` field.
 
+## English Meta Block (excerpt + focus_items)
+The user message may also end with a marker `---ENGLISH META (JSON, translate to excerpt_ko + focus_items_ko)---` followed by a JSON object containing `excerpt` (string) and `focus_items` (array of 3 strings). Translate those 1:1:
+
+Rules:
+- `excerpt_ko`: Korean translation of `excerpt`. Natural Korean, same intent, same length range (1-2 sentences).
+- `focus_items_ko`: Korean translations of the 3 `focus_items`, preserving the same order and count.
+- The meta JSON block is NOT part of the markdown body — do NOT include it in the `ko` field.
+- If the marker is absent or the JSON is empty/missing, omit both fields from output (do not emit empty strings or empty arrays as fillers — just skip).
+
 ## Output JSON format
 Return JSON only:
 {{
@@ -1421,6 +1430,12 @@ Return JSON only:
       "answer": "OpenAI",
       "explanation": "OpenAI의 100억 달러 라운드가 이번 주 최대 규모로, Anthropic의 직전 공개 라운드의 약 10배에 해당한다."
     }}
+  ],
+  "excerpt_ko": "전략적 재정렬이 두드러진 한 주: Anthropic은 사이버 모델 접근을 제한했고, Meta는 제품 내장형 AI를 강화했다.",
+  "focus_items_ko": [
+    "Meta Muse Spark 출시로 제품 내장형 AI 재정의",
+    "Anthropic Glasswing이 고위험 사이버 역량 접근 통제",
+    "OpenAI 1220억 달러 조달에 대한 Nvidia 대응 주시"
   ]
 }}
 
