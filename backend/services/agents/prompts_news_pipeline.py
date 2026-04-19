@@ -1106,7 +1106,7 @@ Write the English weekly recap. Return JSON only.
 
 ## Required Sections
 
-1. **## This Week in One Line** — One substantial sentence (or two tightly linked sentences) capturing the week's dominant theme. **Name 2-4 specific events** using subject + verb + result form (e.g., "OpenAI locked in $122B", "Google removed Apache 2.0 licensing friction"), then connect with an em-dash to the thesis they jointly reveal. Avoid abstract noun stacks like "capital density, CPU shifts, regulatory paths" — those feel impressive but tell the reader nothing concrete. Target 200-300 English characters.
+1. **## This Week in One Line** — One substantial sentence (or two tightly linked sentences) capturing the week's dominant theme. **Name 2-4 specific events** using subject + verb + result form (e.g., "OpenAI locked in $122B", "Google removed Apache 2.0 licensing friction"), then connect with an em-dash to the thesis they jointly reveal. Avoid abstract noun stacks like "capital density, CPU shifts, regulatory paths" — those feel impressive but tell the reader nothing concrete. Target 200-300 English characters. **This section does NOT need citations** — those belong in Top Stories and Trend Analysis paragraphs only. This section is a scannable hook, not a sourced claim.
 2. **## Week in Numbers** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots (e.g., if OpenAI raised $10B at $730B pre-money valuation, pick ONE of those numbers, not both).
 3. **## Top Stories** — 5-7 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
 
@@ -1251,7 +1251,7 @@ Write the English weekly recap. Return JSON only.
 
 ## Required Sections
 
-1. **## This Week in One Line** — One substantial sentence (or two tightly linked sentences) summarizing what happened in plain language. **Name 2-4 specific events** with clear subject + verb + result (e.g., "Meta launched a new assistant inside WhatsApp", "Microsoft rolled out three in-house models"), then connect with an em-dash to the everyday implication. Avoid abstract noun stacks. Target 200-300 English characters.
+1. **## This Week in One Line** — One substantial sentence (or two tightly linked sentences) summarizing what happened in plain language. **Name 2-4 specific events** with clear subject + verb + result (e.g., "Meta launched a new assistant inside WhatsApp", "Microsoft rolled out three in-house models"), then connect with an em-dash to the everyday implication. Avoid abstract noun stacks. Target 200-300 English characters. **This section does NOT need citations** — those belong in Top Stories and Trend Analysis paragraphs only.
 2. **## Week in Numbers** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots.
 3. **## Top Stories** — 5-7 stories ranked by: Impact > Novelty > Evidence > Community buzz.
 
