@@ -31,6 +31,7 @@ let allPosts: AdminPostRow[] = [];
 let logDraft = 0;
 let logPublished = 0;
 let logArchived = 0;
+let logWeekly = 0;
 let logTotal = 0;
 
 try {
@@ -45,9 +46,11 @@ try {
   } else {
     allPosts = data ?? [];
     logTotal = allPosts.length;
-    logDraft = allPosts.filter((post) => post.status === 'draft').length;
-    logPublished = allPosts.filter((post) => post.status === 'published').length;
-    logArchived = allPosts.filter((post) => post.status === 'archived').length;
+    // Daily counts exclude weekly (weekly has its own tab regardless of status)
+    logDraft = allPosts.filter((post) => post.status === 'draft' && post.post_type !== 'weekly').length;
+    logPublished = allPosts.filter((post) => post.status === 'published' && post.post_type !== 'weekly').length;
+    logArchived = allPosts.filter((post) => post.status === 'archived' && post.post_type !== 'weekly').length;
+    logWeekly = allPosts.filter((post) => post.post_type === 'weekly').length;
   }
 } catch (error) {
   fetchError = error instanceof Error ? error.message : 'Unknown error';
@@ -131,6 +134,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({logDraft})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({logPublished})</button>
               <button class="admin-filter-btn" data-filter="archived">Archived ({logArchived})</button>
+              <button class="admin-filter-btn" data-filter="weekly">Weekly ({logWeekly})</button>
               <button class="admin-filter-btn" data-filter="all">All ({logTotal})</button>
             </div>
           </div>
@@ -206,6 +210,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                     <li
                       class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
                       data-status={post.status}
+                      data-post-type={post.post_type || ''}
                       data-title={post.title.toLowerCase()}
                       data-locale={post.locale || ''}
                       data-category={post.category || ''}
@@ -481,7 +486,18 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
       let matchCount = 0;
 
       allItems.forEach((item) => {
-        const matchesStatus = currentFilter === 'all' || item.dataset.status === currentFilter;
+        const isWeekly = item.dataset.postType === 'weekly';
+        // Weekly tab: show all weekly regardless of status.
+        // Other tabs (draft/published/archived): show daily only, filtered by status.
+        // All tab: show everything.
+        let matchesStatus = false;
+        if (currentFilter === 'weekly') {
+          matchesStatus = isWeekly;
+        } else if (currentFilter === 'all') {
+          matchesStatus = true;
+        } else {
+          matchesStatus = !isWeekly && item.dataset.status === currentFilter;
+        }
         const matchesQuery = !query || (item.dataset.title || '').includes(query);
         const matchesLocale = !locale || item.dataset.locale === locale;
         const matchesCategory = !category || item.dataset.category === category;
