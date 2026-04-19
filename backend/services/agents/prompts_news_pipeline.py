@@ -1091,13 +1091,36 @@ Write the English weekly recap. Return JSON only.
 6. **## Open Source Spotlight** — 3-5 notable repos mentioned this week. Include GitHub/HuggingFace URLs from the digests. Skip if none.
 7. **## So What Do I Do?** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`. Each point MUST include a `[N](URL)` citation.
 
+## Weekly Quiz (JSON field, not in markdown body)
+Generate exactly 3 multiple-choice questions that let a busy reader self-check whether they caught up on the week.
+
+Expert quiz guidance:
+- Favor questions that test WHY it matters, strategic implication, or competitive context — not pure trivia.
+- Example shapes: "Which of these figures reflects the largest single round closed this week?", "Which company's announcement most directly pressures OpenAI's enterprise pricing?".
+- 3 questions MUST cover 3 DIFFERENT Top Stories. Never pull all questions from a single story.
+- Every fact referenced (number, company name, product name) MUST appear in the daily digests. Zero outside knowledge.
+
+Quiz item format (each of 3 items):
+- `question`: the question text
+- `options`: exactly 4 choices (strings). No "All of the above" or "None". Distractors MUST be plausible — pull them from other Top Stories of the week when possible.
+- `answer`: the correct choice — MUST be a verbatim match of one string in `options`
+- `explanation`: 1-2 sentences grounding the answer in the week's news. May reference which Top Story it came from.
+
 ## Output JSON format
 Return JSON only:
 {{
   "headline": "English headline",
   "en": "<full English markdown with all ## sections above>",
   "week_numbers": [{{"value": "$2B", "label": "short description"}}],
-  "week_tool": {{"name": "Tool Name", "description": "One sentence", "url": "https://..."}}
+  "week_tool": {{"name": "Tool Name", "description": "One sentence", "url": "https://..."}},
+  "weekly_quiz": [
+    {{
+      "question": "Which company closed the largest single round this week?",
+      "options": ["OpenAI", "Anthropic", "xAI", "Mistral"],
+      "answer": "OpenAI",
+      "explanation": "OpenAI's $10B round was this week's largest — roughly 10x Anthropic's last disclosed raise."
+    }}
+  ]
 }}
 
 ## CRITICAL: "en" field structure example
@@ -1139,6 +1162,7 @@ One punchy sentence here.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool. URL MUST appear in the digests.
+- weekly_quiz: exactly 3 items. Each item's `answer` MUST match one of its `options` character-for-character. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
 - If fewer than 3 daily digests are provided, note the limited coverage."""
 
 WEEKLY_LEARNER_PROMPT = """You are the editor of a beginner-friendly AI weekly for non-specialist knowledge workers (PMs, marketers, designers, students, career-switchers).
@@ -1193,13 +1217,37 @@ Write the English weekly recap. Return JSON only.
 6. **## Open Source Spotlight** — 3-5 repos worth exploring. Plain language + who it's for + link from digests. Skip if none.
 7. **## What Can I Try?** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week. Each action MUST include a `[N](URL)` citation.
 
+## Weekly Quiz (JSON field, not in markdown body)
+Generate exactly 3 multiple-choice questions that let a busy reader self-check that they caught up on the week.
+
+Learner quiz guidance:
+- Favor questions that check core facts, key terms, or who-did-what — concepts a non-specialist should now recognize.
+- Example shapes: "Which company announced [product] this week?", "What does [new acronym] stand for?", "What was the main capability [new model] added?".
+- 3 questions MUST cover 3 DIFFERENT Top Stories. Never pull all questions from a single story.
+- When a question is about a technical term, the `explanation` should briefly define the term so the reader walks away having learned it.
+- Every fact referenced MUST appear in the daily digests. Zero outside knowledge.
+
+Quiz item format (each of 3 items):
+- `question`: the question text in plain language. If an acronym appears, expand it on first use inside the question or options.
+- `options`: exactly 4 choices (strings). No "All of the above" or "None". Distractors MUST be plausible — pull them from other Top Stories of the week when possible.
+- `answer`: the correct choice — MUST be a verbatim match of one string in `options`
+- `explanation`: 1-2 sentences. Explain WHY it's correct and give beginner-friendly context (e.g., what the term means, why the company matters).
+
 ## Output JSON format
 Return JSON only:
 {{
   "headline": "English headline",
   "en": "<full English markdown with all ## sections above>",
   "week_numbers": [{{"value": "$2B", "label": "beginner-friendly description"}}],
-  "week_tool": {{"name": "Tool Name", "description": "What it does and how to get started", "url": "https://..."}}
+  "week_tool": {{"name": "Tool Name", "description": "What it does and how to get started", "url": "https://..."}},
+  "weekly_quiz": [
+    {{
+      "question": "Which company released a new open-weight model this week?",
+      "options": ["Meta", "OpenAI", "Anthropic", "Google"],
+      "answer": "Meta",
+      "explanation": "Meta released Llama 4 this week as an open-weight model, meaning the model parameters can be downloaded and run locally — unlike closed models like GPT or Claude."
+    }}
+  ]
 }}
 
 ## CRITICAL: "en" field structure example
@@ -1242,6 +1290,7 @@ One friendly sentence here.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick one tool a learner could try this week. URL MUST appear in the digests.
+- weekly_quiz: exactly 3 items. Each item's `answer` MUST match one of its `options` character-for-character. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
 - If fewer than 3 daily digests are provided, note the limited coverage."""
 
 
@@ -1268,11 +1317,29 @@ Write as a Korean editor naturally would — same stories, same depth, same numb
 - ## 이번 주 오픈소스
 - ## {action_heading}
 
+## Weekly Quiz Adaptation (separate JSON field, not in markdown body)
+The English input may include a `weekly_quiz` array. You MUST produce a Korean version in `weekly_quiz_ko` preserving structure 1:1.
+
+Rules:
+- Same number of items (3). Same order.
+- Translate `question`, every string in `options`, and `explanation` into natural Korean.
+- `answer` in the Korean version MUST be a verbatim match of one string in the Korean `options`. Translate the answer the same way you translated that option, so string equality holds.
+- Do NOT add, remove, or reorder options. Do NOT invent new questions.
+- If the English quiz is missing or empty, return `weekly_quiz_ko: []`.
+
 ## Output JSON format
 Return JSON only:
 {{
   "headline_ko": "한국어 헤드라인",
-  "ko": "<full Korean markdown with all ## sections above>"
+  "ko": "<full Korean markdown with all ## sections above>",
+  "weekly_quiz_ko": [
+    {{
+      "question": "이번 주 가장 큰 단일 라운드를 마감한 회사는?",
+      "options": ["OpenAI", "Anthropic", "xAI", "Mistral"],
+      "answer": "OpenAI",
+      "explanation": "OpenAI의 100억 달러 라운드가 이번 주 최대 규모로, Anthropic의 직전 공개 라운드의 약 10배에 해당한다."
+    }}
+  ]
 }}
 
 ## CRITICAL: "ko" field structure example (note how every `[N](URL)` is preserved)
@@ -1307,7 +1374,8 @@ Return JSON only:
 - Each Top Story item must have 2-3 sentences, matching the English depth.
 - Numbers should use Korean conventions (e.g., $10B → 100억 달러).
 - No English words at the start of bullet points.
-- CITATION PRESERVATION: every `[N](URL)` marker and every raw URL in the English input MUST reappear verbatim in the matching Korean sentence. This is non-negotiable — the Korean version is not considered complete if citation markers are dropped or URLs are stripped."""
+- CITATION PRESERVATION: every `[N](URL)` marker and every raw URL in the English input MUST reappear verbatim in the matching Korean sentence. This is non-negotiable — the Korean version is not considered complete if citation markers are dropped or URLs are stripped.
+- QUIZ ANSWER INTEGRITY: in `weekly_quiz_ko`, each item's `answer` MUST equal one of its `options` character-for-character. If the English answer was "OpenAI" and the Korean option list contains "OpenAI" (proper names stay in Latin script), the Korean `answer` MUST also be "OpenAI", not "오픈AI". Translate consistently across `options` and `answer`."""
 
 
 # ---------------------------------------------------------------------------
