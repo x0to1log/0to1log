@@ -1,5 +1,7 @@
 # Handbook Term Selection Hardening — Implementation Plan
 
+> **Status (as of 2026-04-19):** ✅ **COMPLETE — all four chunks shipped.** See the [Completion & Retro](#completion--retro-2026-04-19) section at the bottom for the commit map, detour story, and deferred items.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close four root-cause gaps in the handbook term selection pipeline so that (1) the queue system actually accumulates items, (2) Korean naming failures are caught at code level, (3) out-of-scope (HR/regulatory) terms are rejected with structured logs, and (4) fabricated compound entities are routed to queue for manual review.
@@ -934,3 +936,100 @@ queue_reason='grounding: ...' for Amy's admin review."
 - [[2026-04-15-news-pipeline-hardening-phase2-plan]] — structural URL hallucination gate was the template for this plan's structural scope/grounding gates.
 - [[ACTIVE_SPRINT]] — HB-QM sprint. Update after Chunk 0 ships.
 - Explore diagnosis in-conversation 2026-04-17 — root cause for queue bug (Pydantic `extra="ignore"` dropping `confidence`).
+
+---
+
+## Completion & Retro (2026-04-19)
+
+All four chunks shipped over a single long working session on 2026-04-19 / 2026-04-20. Summary below by commit, followed by retrospective notes.
+
+### Commit map
+
+**Chunk 0 — queue accumulation fix**
+- `606bfa7` fix(handbook): restore queue routing — add confidence field to ExtractedTerm
+
+**Chunk 0 verify — live confirmation**
+- Not a code commit. Observed in the live pipeline run on 2026-04-17: 4 / 13 newly-extracted terms routed to `status='queued'`, confirming the Pydantic schema fix propagated the `confidence` field through to the pipeline's routing logic.
+
+**Chunk A — scope gate (reject + log)**
+- `1c7766c` feat(handbook): add scope-gate config (blocklists, allowlists, version patterns)
+- `eb1f446` feat(handbook): add validate_term_scope gate (blocklist/regex/product-allowlist)
+- `9015b4c` feat(handbook): add HR/regulatory/corporate-finance exclusions to EXTRACT_TERMS_PROMPT
+- `f78d159` feat(handbook): wire validate_term_scope gate + pipeline_logs rejection entry
+
+**Chunk C — Korean-name gate (queue)**
+- `292b4be` feat(handbook): add Korean-name validator config (Hangul minimum + abbreviation pattern)
+- `99dad16` feat(handbook): add validate_korean_name gate (Hangul minimum + global-name passthrough)
+- `0842aaf` feat(handbook): tighten Korean-name prompt rule — forbid invented phonetic transliterations
+- `975bf36` feat(handbook): wire validate_korean_name into pipeline with queue routing
+
+**Chunk B — entity grounding gate (queue)**
+- `5732eb9` feat(handbook): add validate_term_grounding gate (verbatim match + compound-fabrication signal)
+- `df9b248` feat(handbook): wire validate_term_grounding into pipeline with queue routing
+
+### The detour — definition length & quality judge (not in original scope)
+
+Between Chunks 0 and A, we spent a significant block of session time on **ancillary infrastructure** that the original plan didn't anticipate. The trigger was Amy's test regeneration of the `Agentic UX` term, which surfaced three separate problems:
+
+1. **`definition_en` consistently lands at 500–700 chars** despite every prompt target 250–400. Four iterations of prompt engineering (structural sentence limits, scope-discipline rule, conceptual-vs-algorithmic framing, glossary vs Wikipedia framing, diversified GOOD examples across 6 term categories) moved the distribution only slightly. The final conclusion: **LLM's Wikipedia-style prior for "technical definition" is stronger than any prompt rule; only post-gen LLM rewrite would close the gap**. Deferred to a separate tech-debt memo — `project_handbook_en_def_length.md` in auto-memory.
+
+2. **Quality judge variance of ~69 points for same content** (Agentic UX advanced scored 5, 7, 74 across three runs). Root cause: the judge had only four broad 0-25 dimensions with no anchors, no evidence requirement, and was computing the total itself. Fixed by redesigning the judge into 10 sub-scores × 0-10 with evidence fields (Chain-of-Thought), code-side aggregation (no LLM arithmetic), and `source_grounding` dropped from the advanced rubric since handbook references live in a dedicated field, not inline. Variance dropped to ~15 points — 4.6× improvement.
+
+3. **Quality judge truncation bug** — `_check_handbook_quality` was slicing content at 6000 chars, causing the judge to miss `❌/✅` format markers that often live later in a 15K-char body. Bumped to 12000.
+
+These fixes weren't in the plan but became necessary for the plan's chunks to be evaluable. Leaving them out would have meant shipping the gates without a way to measure their effect on content quality.
+
+### What went well
+
+- **Pydantic schema bug was the correct first target.** Every downstream chunk depended on the queue actually accumulating; if we'd shipped A/B/C first without fixing Chunk 0, `status='queued'` rows would have been dead letters.
+- **3-bucket disposition design (accept / queue / reject+log) held up cleanly under implementation.** Chunk A → reject+log, Chunks B/C → queue. The code mirrored the design without needing mid-flight re-evaluation.
+- **Schema-convention discovery during A.4 paid compound interest.** The implementer noticed `pipeline_logs` uses `pipeline_type` (not `stage`) and places event metadata inside `debug_meta` rather than at the top level. That pattern was reused verbatim by C.4 and B.2 — consistent log shape across three gates enables a single `WHERE pipeline_type IN (...) AND status IN (...)` review query.
+- **Non-fatal logging (try/except around `pipeline_logs.insert`)** prevented a logging-layer failure from taking down the actual pipeline. Lifted directly from news-pipeline-hardening lessons.
+- **Test append pattern.** All validators share `backend/tests/test_handbook_validators.py` — 35 tests across scope / Korean / grounding — so future validator additions have a stable place to land. No test-file proliferation.
+- **Chunks A and C converged on a common structure** (config constants → pure function + TDD → prompt-level mirror → pipeline wire-in). By the time Chunk B was dispatched, the implementer finished B.1 + B.2 in one round with zero back-and-forth — all accumulated convention became free leverage.
+
+### What surprised us
+
+- **Pattern B (compound fabrication) turned out to be rare in actual data.** The 2026-04-17 batch analysis of 4 queued terms (`AI Mode`, `Agentic UX`, `GPT-Rosalind`, `Prism`) found all 4 appeared verbatim in their source articles — i.e., no fabrication in that sample. Chunk B was still implemented as a defensive layer, but its expected firing rate is low. This is an argument for B being the last chunk and deprioritizable if time were tighter.
+- **Chunk 0's live-verify uncovered an orphan-score linking bug** (`handbook_quality_scores.term_id = NULL` for scores written before the corresponding `handbook_terms` row existed). Not in the original plan. Patched inline; probably needs a broader retroactive cleanup pass for older orphans (low priority).
+- **The `term_type` field is assigned AFTER extraction, not during it.** That means the `product_platform_service` auto-reject branch in `validate_term_scope` is currently dormant for the pipeline path — the gate runs before classification, so `term_type=None` is the norm. Dormant, not broken. To activate: either pull classification earlier in the pipeline or add a second-pass gate after classification. Deferred.
+
+### Deferred items
+
+- **Post-gen LLM rewrite for `definition_en`** — sketched in conversation; would close the 5-8 second popup-UX gap Amy flagged as non-negotiable. ~$0.001–0.005 per term, guaranteed target length. Triggered when Amy wants to revive the UX goal.
+- **`term_type`-aware scope gate** — activate the currently-dormant `product_platform_service` branch by either pushing classification earlier or running a post-classify second pass.
+- **Retroactive cleanup for orphan `handbook_quality_scores.term_id`** — one-off SQL job to backfill `term_id` via slug join. Low priority; only matters for admin-UI joins that filter by term.
+- **Admin UI for queue review flow** — `handbook_terms` now produces `status='queued'` rows from two different gates (Korean and grounding). Admin needs a way to surface both + show the reason from `pipeline_logs`. Out of scope per plan's Non-Goals, but blocks Amy from actually reviewing the queue.
+
+### Monitoring — weekly review query
+
+```sql
+SELECT
+  pipeline_type,
+  debug_meta->>'event' AS event,
+  debug_meta->>'term' AS term,
+  debug_meta->>'reason' AS reason,
+  COUNT(*) AS occurrences,
+  MAX(created_at) AS last_seen
+FROM pipeline_logs
+WHERE pipeline_type IN (
+        'handbook.scope_gate',
+        'handbook.korean_gate',
+        'handbook.grounding_gate'
+      )
+  AND created_at >= NOW() - INTERVAL '7 days'
+GROUP BY 1, 2, 3, 4
+ORDER BY occurrences DESC;
+```
+
+Decisions this query drives:
+- If the same `term` shows up repeatedly across runs in `handbook.scope_gate`, review whether the blocklist is too aggressive or the term has crept back in.
+- If `handbook.korean_gate` flags many terms with `korean_name=""`, that's healthy (generation prompt is correctly returning empty instead of inventing transliteration).
+- If `handbook.grounding_gate` has near-zero firings (matches 2026-04-17 finding), we can deprioritize further investment in B and potentially relax the check to reduce false positives.
+
+### Related
+
+Same as above. Companion notes in auto-memory:
+- `project_handbook_en_def_length.md` — the deferred post-gen rewrite tech debt
+- `bug_fact_pack_whitelist.md` — the pattern of "silent field drop via whitelist" surfaced again here in Pydantic form (Chunk 0)
+- `feedback_scope_verification.md` — reinforced; several prompt-iteration rounds could have been shorter had we grep-verified that GOOD examples already hit target length
