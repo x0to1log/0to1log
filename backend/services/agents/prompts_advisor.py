@@ -48,28 +48,16 @@ You are reviewing a project build-log / retrospective. Focus on:
 
 _GENERATE_GUIDE_ITEMS = {
     "ai-news": """\
-    "one_liner": "Define this topic in one clear sentence",
-    "action_item": "Something a developer or PM can try right now",
-    "critical_gotcha": "A hidden limitation or risk behind the headline",
-    "rotating_item": "Choose ONE: market_context (competitive landscape), analogy (everyday comparison), or source_check (credibility assessment)",""",
+""",
 
     "study": """\
-    "one_liner": "Define the core concept in one precise sentence",
-    "action_item": "A concrete next learning step the reader can take",
-    "critical_gotcha": "A common misconception or frequent confusion point",
-    "rotating_item": "Choose ONE: prerequisite (what to learn first), analogy (everyday comparison), or deep_dive (advanced subtlety worth exploring)",""",
+""",
 
     "career": """\
-    "one_liner": "The core message or lesson in one sentence",
-    "action_item": "Specific, applicable career advice the reader can act on this week",
-    "critical_gotcha": "A realistic caveat or 'what they don't tell you' about this topic",
-    "rotating_item": "Choose ONE: industry_context (how this plays out across companies), analogy (everyday comparison), or counterpoint (a valid opposing perspective)",""",
+""",
 
     "project": """\
-    "one_liner": "One-sentence summary of the project and its purpose",
-    "action_item": "Something the reader can try or apply from this project",
-    "critical_gotcha": "A technical pitfall or surprise encountered during the build",
-    "rotating_item": "Choose ONE: alternative (a different approach considered), analogy (everyday comparison), or scale_note (how this would change at larger scale)",""",
+""",
 }
 
 _GENERATE_TEMPLATE = """\
