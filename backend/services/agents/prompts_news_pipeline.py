@@ -19,6 +19,19 @@ An article belongs here ONLY if its core story is a technical artifact or techni
   General developer utilities that merely mention "AI" in the description are NOT open_source.
   Curated lists (awesome-*) are NOT open_source unless they contain runnable code.
   Corporate product launches without public code are NOT open_source — assign to Business/new_tools.
+
+  **Authority signal for GitHub repos:**
+  - Known AI org prefix — auto-pass: facebookresearch/, anthropic-ai/, openai/,
+    huggingface/, meta-llama/, microsoft/, google-deepmind/, google-research/,
+    nvidia/, pytorch/, tensorflow/, langchain-ai/, vllm-project/, ollama/,
+    karpathy/, unsloth/, and similar tier-1 AI organizations.
+  - Personal account (user/repo, unknown org) — REQUIRE ONE OF:
+    * "Stars: 1000+" visible in the candidate snippet, OR
+    * Another candidate in the same batch references this repo (news article
+      or paper mentions the repo URL or owner/name).
+  - Without an authority signal, SKIP the repo even if AI-related.
+    "Trending on github_trending" alone is NOT authority — many thin repos
+    trend briefly without sustained community adoption.
 - **papers**: Research papers, technical reports, or detailed technical analyses from arXiv, conferences, or lab blogs.
   The article's MAIN subject must be a technical contribution (architecture, method, benchmark study, or training insight).
   Industry surveys, market forecasts, analyst reports, and press releases are NOT papers even if they contain numbers.
