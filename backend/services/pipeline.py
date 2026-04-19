@@ -2143,7 +2143,11 @@ async def run_weekly_pipeline(
             )
             quality_score = quality_result.get("quality_score")
             quality_flags = quality_result.get("quality_flags")
-            content_analysis = quality_result.get("content_analysis")
+            # _check_weekly_quality's content_analysis field is internal QC feedback
+            # (issue list). The news_posts.content_analysis column is rendered by the
+            # frontend as user-facing markdown (the 'Core Analysis' section), so the
+            # QC dump must NOT be saved there. QC issues remain available in
+            # pipeline_logs for admin review.
             auto_publish = quality_result.get("auto_publish_eligible", False)
 
             # Save EN + KO rows
@@ -2205,7 +2209,7 @@ async def run_weekly_pipeline(
                     "source_cards": locale_cards,
                     "quality_score": quality_score,
                     "quality_flags": quality_flags,
-                    "content_analysis": content_analysis,
+                    "content_analysis": None,
                     "fact_pack": {},
                 }
 
