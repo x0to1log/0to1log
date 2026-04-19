@@ -50,6 +50,11 @@
 | WEEKLY-V2-GUARD-01 | 퀴즈 검증 가드 + 옵션 셔플 (문제별 독립) — `_validate_and_shuffle_weekly_quiz`, commit `91b9f84` | done | 2026-04-19 | 2026-04-19 |
 | WEEKLY-V2-FE-01 | 본문 하단 퀴즈 3문제 렌더 + 페르소나 탭 연동 — commit `83b7a87` | done | 2026-04-19 | 2026-04-19 |
 | WEEKLY-V2-TEST-01 | 백필 1회 + 셔플 단위 테스트 (1000회 분포 검증) — unit tests `ded105a`, W15 백필 2회 (KO adapter bug fix `1e9fa78`), 12/12 answer∈options | done | 2026-04-19 | 2026-04-19 |
+| CONSOL-A | Dead code 제거 — PromptGuideItems 클래스, advisor 4필드 suggestion, openapi 스키마, NewsprintArticleLayout render 블록, vault docs — [[plans/2026-04-19-weekly-consolidation]] — commits `2a6a5ca` `02c9148` `bd1a8b7` `bb043f0` `1d8ebba` `e848085` | done | 2026-04-19 | 2026-04-19 |
+| CONSOL-B | Admin post_type 드롭다운 'weekly' 옵션 (corruption 방지) — commit `1e47ce3` | done | 2026-04-19 | 2026-04-19 |
+| CONSOL-C | Weekly excerpt + focus_items 자동 생성 (daily 패턴 일치 + TOP 5-7로 축소) — prompt/pipeline/helper + 20 tests — commits `ea1dcf6` `358ff8a` `e052c45` `d8d658f` `d11c6ef` `95f9183` | done | 2026-04-19 | 2026-04-19 |
+| CONSOL-D | W13/W14/W15 백필 실행 — 3 weeks × 2 locale = 6 rows all OK. excerpt/focus_items/weekly_quiz_* 전부 채움. quality 86-90. | done | 2026-04-19 | 2026-04-19 |
+| CONSOL-E | JSONB dead key 정리 — **no-op**. Preflight scan 결과 194 rows 중 dead key 보유 row 0개 (pipeline이 처음부터 해당 키를 DB에 쓰지 않았음). | done | 2026-04-19 | 2026-04-19 |
 | README-01 | 프로젝트 README 작성 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건 — drop or restart 결정 필요) | 2026-03-26 | — |
 | UA-02~05 | User Analytics 차트 추가 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건) | 2026-03-27 | — |
 
