@@ -2126,12 +2126,22 @@ async def run_weekly_pipeline(
             # weekly_quiz_ko.
             import json as _json
             en_quiz = en_data.get("weekly_quiz") or []
-            ko_input = en_content
+            en_excerpt = (en_data.get("excerpt") or "").strip()
+            en_focus = en_data.get("focus_items") or []
+
+            ko_input_parts = [en_content]
             if en_quiz:
-                ko_input += (
-                    "\n\n---ENGLISH WEEKLY QUIZ (JSON, translate to weekly_quiz_ko)---\n"
+                ko_input_parts.append(
+                    "---ENGLISH WEEKLY QUIZ (JSON, translate to weekly_quiz_ko)---\n"
                     + _json.dumps(en_quiz, ensure_ascii=False, indent=2)
                 )
+            if en_excerpt or en_focus:
+                meta = {"excerpt": en_excerpt, "focus_items": en_focus}
+                ko_input_parts.append(
+                    "---ENGLISH META (JSON, translate to excerpt_ko + focus_items_ko)---\n"
+                    + _json.dumps(meta, ensure_ascii=False, indent=2)
+                )
+            ko_input = "\n\n".join(ko_input_parts)
 
             # Call 2: KO adaptation from EN result
             t_ko = time.monotonic()
@@ -2277,6 +2287,20 @@ async def run_weekly_pipeline(
                 expert_quiz = _validate_and_shuffle_weekly_quiz(expert_data.get(quiz_key))
                 learner_quiz = _validate_and_shuffle_weekly_quiz(learner_data.get(quiz_key))
 
+                # Excerpt + focus_items per locale
+                excerpt_key = "excerpt" if locale == "en" else "excerpt_ko"
+                focus_key = "focus_items" if locale == "en" else "focus_items_ko"
+
+                excerpt = (expert_data.get(excerpt_key) or learner_data.get(excerpt_key) or "").strip()
+                excerpt_learner = (learner_data.get(excerpt_key) or "").strip()
+
+                focus_raw = expert_data.get(focus_key) or learner_data.get(focus_key) or []
+                focus_items = _validate_focus_items(focus_raw)
+
+                # Defend against LLM runaway length in excerpt
+                if len(excerpt) > 1000:
+                    excerpt = excerpt[:1000].rstrip() + '\u2026'
+
                 locale_guide = {
                     **guide_items,
                     "week_terms": [
@@ -2289,6 +2313,7 @@ async def run_weekly_pipeline(
                     ],
                     "weekly_quiz_expert": expert_quiz,
                     "weekly_quiz_learner": learner_quiz,
+                    "excerpt_learner": excerpt_learner,
                 }
 
                 locale_cards = weekly_source_cards.get(locale, [])
@@ -2312,6 +2337,8 @@ async def run_weekly_pipeline(
                     "quality_flags": quality_flags,
                     "content_analysis": None,
                     "fact_pack": {},
+                    "excerpt": excerpt or None,
+                    "focus_items": focus_items,
                 }
 
                 t_save = time.monotonic()
