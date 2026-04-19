@@ -1108,7 +1108,7 @@ Write the English weekly recap. Return JSON only.
 
 1. **## This Week in One Line** — One punchy sentence capturing the week's dominant theme.
 2. **## Week in Numbers** — 3-5 key numbers from this week's news. Every number MUST appear verbatim in the daily digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots (e.g., if OpenAI raised $10B at $730B pre-money valuation, pick ONE of those numbers, not both).
-3. **## Top Stories** — 7-10 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
+3. **## Top Stories** — 5-7 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
 
    **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring strategic themes or industry interpretations without a specific triggering event this week belong in Trend Analysis, not Top Stories.
 
@@ -1212,10 +1212,10 @@ Example full output JSON (showing `excerpt` and `focus_items`):
 ```
 
 ## Length Target (approximate — depth > literal count)
-- Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items, English prose averaging ~120-150 chars per sentence)
+- Top Stories: ~4000-6000 chars (4-5 substantive sentences × 5-7 items, English prose averaging ~120-150 chars per sentence)
 - Trend Analysis: 3-4 substantive paragraphs, ~1200-2000 chars total
 - Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~4000-5000 chars combined
-- **Total EN content (en field): aim for 16000+ chars**
+- **Total EN content (en field): aim for 13000+ chars**
 - Principle: depth > length. If the week has thin news (<5 major stories), write shorter rather than pad with weak items. The character numbers are guidance, not a quota.
 
 ## Constraints
@@ -1253,7 +1253,7 @@ Write the English weekly recap. Return JSON only.
 
 1. **## This Week in One Line** — One friendly sentence summarizing what happened. Plain language.
 2. **## Week in Numbers** — 3-5 key numbers with beginner-friendly context. Every number MUST appear in the digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots.
-3. **## Top Stories** — 7-10 stories ranked by: Impact > Novelty > Evidence > Community buzz.
+3. **## Top Stories** — 5-7 stories ranked by: Impact > Novelty > Evidence > Community buzz.
 
    **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring themes or industry commentary without a specific triggering event this week belong in Trend Analysis, not Top Stories.
 
@@ -1358,10 +1358,10 @@ Example full output JSON (showing `excerpt` and `focus_items`):
 ```
 
 ## Length Target (approximate — depth > literal count)
-- Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items)
+- Top Stories: ~4000-6000 chars (4-5 substantive sentences × 5-7 items)
 - Trend Analysis: 3-4 substantive paragraphs, ~1200-2000 chars total
 - Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~3500-4500 chars combined
-- **Total EN content (en field): aim for 13000+ chars**
+- **Total EN content (en field): aim for 10000+ chars**
 - Principle: depth > length. If the week has thin news (<5 major stories), write shorter rather than pad with weak items. The character numbers are guidance, not a quota.
 
 ## Constraints
