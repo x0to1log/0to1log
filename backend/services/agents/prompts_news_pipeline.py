@@ -1318,14 +1318,15 @@ Write as a Korean editor naturally would — same stories, same depth, same numb
 - ## {action_heading}
 
 ## Weekly Quiz Adaptation (separate JSON field, not in markdown body)
-The English input may include a `weekly_quiz` array. You MUST produce a Korean version in `weekly_quiz_ko` preserving structure 1:1.
+The user message may end with an appended block under the marker `---ENGLISH WEEKLY QUIZ (JSON, translate to weekly_quiz_ko)---` followed by a JSON array of 3 quiz items. If that block is present, you MUST produce a Korean version in `weekly_quiz_ko` preserving structure 1:1.
 
 Rules:
-- Same number of items (3). Same order.
+- Same number of items (3). Same order as the English array.
 - Translate `question`, every string in `options`, and `explanation` into natural Korean.
 - `answer` in the Korean version MUST be a verbatim match of one string in the Korean `options`. Translate the answer the same way you translated that option, so string equality holds.
 - Do NOT add, remove, or reorder options. Do NOT invent new questions.
-- If the English quiz is missing or empty, return `weekly_quiz_ko: []`.
+- If the marker is absent or the JSON array is empty, return `weekly_quiz_ko: []`.
+- The quiz JSON block is NOT part of the markdown body — do NOT include it in the `ko` field.
 
 ## Output JSON format
 Return JSON only:

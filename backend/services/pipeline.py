@@ -2020,6 +2020,18 @@ async def run_weekly_pipeline(
                 all_errors.append(f"weekly {persona} EN: empty content")
                 return
 
+            # Append the EN weekly_quiz JSON under a marker so the KO adapter can translate
+            # it 1:1. Without this, the LLM only sees the markdown body and cannot produce
+            # weekly_quiz_ko.
+            import json as _json
+            en_quiz = en_data.get("weekly_quiz") or []
+            ko_input = en_content
+            if en_quiz:
+                ko_input += (
+                    "\n\n---ENGLISH WEEKLY QUIZ (JSON, translate to weekly_quiz_ko)---\n"
+                    + _json.dumps(en_quiz, ensure_ascii=False, indent=2)
+                )
+
             # Call 2: KO adaptation from EN result
             t_ko = time.monotonic()
             ko_prompt = get_weekly_ko_prompt(persona)
@@ -2030,7 +2042,7 @@ async def run_weekly_pipeline(
                             model,
                             messages=[
                                 {"role": "system", "content": ko_prompt},
-                                {"role": "user", "content": en_content},
+                                {"role": "user", "content": ko_input},
                             ],
                             response_format={"type": "json_object"},
                             temperature=0.5,
