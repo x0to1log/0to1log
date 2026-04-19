@@ -18,6 +18,8 @@ interface GuideItems {
   critical_gotcha?: string;
   rotating_item?: string;
   quiz_poll?: QuizPoll | null;
+  weekly_quiz_expert?: QuizPoll[];
+  weekly_quiz_learner?: QuizPoll[];
 }
 
 interface FactPackItem {
@@ -118,7 +120,21 @@ const activeQuiz: QuizPoll | null = (() => {
   return q?.question ? q : null;
 })();
 const hasQuizData = !!(guideItemsAny?.quiz_poll_expert?.question || guideItemsAny?.quiz_poll_learner?.question || guideItemsAny?.quiz_poll?.question);
-const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || hasQuizData);
+
+// Weekly-only: 3-question persona-split quiz list (guide_items.weekly_quiz_{persona})
+const isWeeklyPost = postType === 'weekly';
+const activeWeeklyQuizzes: QuizPoll[] = (() => {
+  if (!isWeeklyPost || !guideItemsAny) return [];
+  const personaKey = `weekly_quiz_${activePersona || 'learner'}`;
+  const list = guideItemsAny[personaKey];
+  return Array.isArray(list) ? list.filter((q: any) => q && q.question) : [];
+})();
+const hasWeeklyQuizData = isWeeklyPost && (
+  (Array.isArray(guideItemsAny?.weekly_quiz_expert) && guideItemsAny!.weekly_quiz_expert!.length > 0) ||
+  (Array.isArray(guideItemsAny?.weekly_quiz_learner) && guideItemsAny!.weekly_quiz_learner!.length > 0)
+);
+
+const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || hasQuizData || hasWeeklyQuizData);
 const hasFactPack = !!factPack?.length;
 const hasAnalysis = !!analysisHtml;
 const hasSources = !!sourceCards?.length;
@@ -130,6 +146,12 @@ const resolvedQuizAnswer = (() => {
   const idx = 'ABCD'.indexOf(activeQuiz.answer);
   return idx >= 0 && idx < activeQuiz.options.length ? activeQuiz.options[idx] : activeQuiz.answer;
 })();
+
+// Helper for weekly quiz answer resolution (same "A"/"B" fallback pattern as daily)
+const resolveQuizAnswer = (quiz: QuizPoll): string => {
+  const idx = 'ABCD'.indexOf(quiz.answer);
+  return idx >= 0 && idx < quiz.options.length ? quiz.options[idx] : quiz.answer;
+};
 
 const personaLabels: Record<string, Record<string, string>> = {
   en: { learner: 'Learner', expert: 'Expert' },
@@ -308,6 +330,9 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
         expert: guideItemsAny?.quiz_poll_expert || null,
         learner: guideItemsAny?.quiz_poll_learner || null,
+      })} data-weekly-quizzes={JSON.stringify({
+        expert: Array.isArray(guideItemsAny?.weekly_quiz_expert) ? guideItemsAny!.weekly_quiz_expert : [],
+        learner: Array.isArray(guideItemsAny?.weekly_quiz_learner) ? guideItemsAny!.weekly_quiz_learner : [],
       })} data-sources={JSON.stringify({
         expert: guideItemsAny?.sources_expert || null,
         learner: guideItemsAny?.sources_learner || null,
@@ -406,6 +431,25 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
             ))}
           </div>
           <p class="newsprint-quiz-explanation" style="display:none;">{activeQuiz.explanation}</p>
+        </div>
+      )}
+
+      {activeWeeklyQuizzes.length > 0 && (
+        <div class="newsprint-guide-block newsprint-guide-weekly-quiz">
+          <span class="newsprint-guide-label">{isKo ? '이번 주 퀴즈' : 'Weekly Quiz'}</span>
+          {activeWeeklyQuizzes.map((quiz: QuizPoll, i: number) => (
+            <div class="newsprint-weekly-quiz-item" data-quiz-index={i} data-quiz-answer={resolveQuizAnswer(quiz)}>
+              <p class="newsprint-quiz-question">
+                <span class="newsprint-weekly-quiz-number">{i + 1}.</span> {quiz.question}
+              </p>
+              <div class="newsprint-quiz-options">
+                {quiz.options.map((opt: string) => (
+                  <button type="button" class="newsprint-quiz-option" data-option={opt}>{opt}</button>
+                ))}
+              </div>
+              <p class="newsprint-quiz-explanation" style="display:none;">{quiz.explanation}</p>
+            </div>
+          ))}
         </div>
       )}
     </aside>
@@ -525,6 +569,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
     const displayMap: Record<string, { title?: string; excerpt?: string }> = JSON.parse(template.dataset.display || '{}');
     const quizMap: Record<string, any> = JSON.parse(template.dataset.quizzes || '{}');
+    const weeklyQuizMap: Record<string, any[]> = JSON.parse(template.dataset.weeklyQuizzes || '{}');
     const sourcesMap: Record<string, any[]> = JSON.parse(template.dataset.sources || '{}');
     const prose = document.querySelector('.newsprint-prose');
     const switcher = document.querySelector<HTMLElement>('.persona-switcher');
@@ -554,6 +599,34 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         ).join('');
       }
       initQuiz();
+    }
+
+    function updateWeeklyQuiz(persona: string) {
+      const container = document.querySelector<HTMLElement>('.newsprint-guide-weekly-quiz');
+      if (!container) return;
+      const quizzes = weeklyQuizMap[persona];
+      if (!Array.isArray(quizzes) || quizzes.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      container.style.display = '';
+      const label = container.querySelector('.newsprint-guide-label');
+      const labelHTML = label ? label.outerHTML : '';
+      const itemsHTML = quizzes.map((quiz: any, i: number) => {
+        const idx = 'ABCD'.indexOf(quiz.answer);
+        const resolvedAnswer = idx >= 0 && idx < quiz.options.length ? quiz.options[idx] : quiz.answer;
+        const safeAnswer = String(resolvedAnswer).replace(/"/g, '&quot;');
+        const optsHTML = quiz.options.map((opt: string) =>
+          `<button type="button" class="newsprint-quiz-option" data-option="${opt.replace(/"/g, '&quot;')}">${opt}</button>`
+        ).join('');
+        return `<div class="newsprint-weekly-quiz-item" data-quiz-index="${i}" data-quiz-answer="${safeAnswer}">
+          <p class="newsprint-quiz-question"><span class="newsprint-weekly-quiz-number">${i + 1}.</span> ${quiz.question}</p>
+          <div class="newsprint-quiz-options">${optsHTML}</div>
+          <p class="newsprint-quiz-explanation" style="display:none;">${quiz.explanation || ''}</p>
+        </div>`;
+      }).join('');
+      container.innerHTML = labelHTML + itemsHTML;
+      initWeeklyQuiz();
     }
 
     function updateSources(persona: string) {
@@ -607,6 +680,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.persona === p));
       updateQuiz(p);
+      updateWeeklyQuiz(p);
       updateSources(p);
       document.querySelector('.newsprint-lead-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       document.dispatchEvent(new CustomEvent('newsprint:article-content-updated', {
@@ -673,7 +747,36 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     });
   }
 
+  function initWeeklyQuiz() {
+    // Each weekly quiz item is independent: its own answer state, no cross-question interference.
+    const items = document.querySelectorAll<HTMLElement>('.newsprint-weekly-quiz-item');
+    items.forEach(item => {
+      const answer = item.dataset.quizAnswer || '';
+      const explanation = item.querySelector<HTMLElement>('.newsprint-quiz-explanation');
+      const options = item.querySelectorAll<HTMLButtonElement>('.newsprint-quiz-option');
+      let answered = false;
+
+      options.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (answered) return;
+          answered = true;
+          const selected = btn.dataset.option || '';
+          const isCorrect = selected === answer;
+          btn.classList.add(isCorrect ? 'newsprint-quiz-option--correct' : 'newsprint-quiz-option--wrong');
+          if (!isCorrect) {
+            options.forEach(b => {
+              if (b.dataset.option === answer) b.classList.add('newsprint-quiz-option--correct');
+            });
+          }
+          options.forEach(b => b.setAttribute('disabled', 'true'));
+          if (explanation) explanation.style.display = '';
+        });
+      });
+    });
+  }
+
   document.addEventListener('astro:page-load', initPersonaSwitcher);
   document.addEventListener('astro:page-load', initQuiz);
+  document.addEventListener('astro:page-load', initWeeklyQuiz);
   initPersonaSwitcher();
 </script>
