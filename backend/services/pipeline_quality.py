@@ -226,6 +226,69 @@ def _apply_issue_penalties_and_caps(
     return final_score, penalty, [label for _, label in ordered_unique]
 
 
+def _compute_weekly_structure_score(
+    en_expert: str, ko_expert: str, en_learner: str, ko_learner: str,
+) -> int:
+    """Weekly structure score (0-15): 4 bodies × basic markdown checks.
+
+    Deducts for: blank body (-3), no ## section heading (-1), no ### sub-heading (-1).
+    The ### check matters because Top Stories switched to ### <headline> format
+    in 2026-04-20; a body without any ### means the LLM regressed to legacy
+    bullet-inline format.
+    """
+    score = 15
+    for body in (en_expert, ko_expert, en_learner, ko_learner):
+        if not body or not body.strip():
+            score -= 3
+            continue
+        if "## " not in body:
+            score -= 1
+        if "### " not in body:
+            score -= 1
+    return max(0, score)
+
+
+def _compute_weekly_traceability_score(
+    en_expert: str, ko_expert: str, en_learner: str, ko_learner: str,
+) -> int:
+    """Weekly citation coverage score (0-15): ratio of paragraphs with [N](URL)
+    markers across all 4 bodies, scaled to 15.
+    """
+    citation_re = re.compile(r"\[\d+\]\(https?://[^)]+\)")
+    paragraphs: list[str] = []
+    for body in (en_expert, ko_expert, en_learner, ko_learner):
+        if body:
+            paragraphs.extend(_body_paragraphs_for_quality(body))
+    if not paragraphs:
+        return 0
+    cited = sum(1 for p in paragraphs if citation_re.search(p))
+    return max(0, min(15, round(15 * cited / len(paragraphs))))
+
+
+def _compute_weekly_locale_score(
+    en_expert: str, ko_expert: str, en_learner: str, ko_learner: str,
+) -> int:
+    """Weekly locale-alignment score (0-10): EN/KO symmetry per persona + KO ###
+    headings must contain Hangul.
+
+    Each persona (expert, learner) evaluated independently.
+    """
+    score = 10
+    hangul_re = re.compile(r"[\u3131-\u318E\uAC00-\uD7A3]")
+    for en, ko in ((en_expert, ko_expert), (en_learner, ko_learner)):
+        if not en.strip() or not ko.strip():
+            score -= 3
+            continue
+        en_sections = [line for line in en.splitlines() if line.startswith("## ")]
+        ko_sections = [line for line in ko.splitlines() if line.startswith("## ")]
+        if abs(len(en_sections) - len(ko_sections)) >= 2:
+            score -= 2
+        ko_headings = [line for line in ko.splitlines() if line.startswith("### ")]
+        if ko_headings and any(not hangul_re.search(line) for line in ko_headings):
+            score -= 2
+    return max(0, score)
+
+
 def _compute_structure_score(personas: dict[str, PersonaOutput]) -> int:
     """Compute a lightweight deterministic structure score out of 15."""
     score = 15
@@ -1034,9 +1097,21 @@ async def _check_weekly_quality(
         structural_penalty += 5
         structural_warnings.append("expert_ko_short")
 
-    # Final score
+    # v2 scoring: deterministic (0-40) + weighted LLM (0-60) — matches daily pattern.
+    structure_score = _compute_weekly_structure_score(
+        content_expert_en, content_expert_ko, content_learner_en, content_learner_ko,
+    )
+    traceability_score = _compute_weekly_traceability_score(
+        content_expert_en, content_expert_ko, content_learner_en, content_learner_ko,
+    )
+    locale_score = _compute_weekly_locale_score(
+        content_expert_en, content_expert_ko, content_learner_en, content_learner_ko,
+    )
+    deterministic_score = structure_score + traceability_score + locale_score
+
     llm_avg = round(sum(llm_scores) / len(llm_scores)) if llm_scores else 0
-    final_score = max(0, llm_avg - url_penalty - structural_penalty)
+    weighted_llm = round(llm_avg * 0.6)
+    final_score = max(0, deterministic_score + weighted_llm - url_penalty - structural_penalty)
 
     quality_flags = []
     if url_penalty:
@@ -1044,18 +1119,55 @@ async def _check_weekly_quality(
     if structural_warnings:
         quality_flags.extend(structural_warnings)
 
-    auto_publish_eligible = final_score >= settings.auto_publish_threshold
+    # URL validation gate (daily parity): hallucinated URLs block auto-publish
+    # even if score passes threshold. Matches pipeline_quality.py:509.
+    url_validation_failed = hallucinated > 0 if source_urls else False
+    if url_validation_failed:
+        quality_flags.append("url_validation_failed")
+
+    auto_publish_eligible = (
+        final_score >= settings.auto_publish_threshold
+        and not url_validation_failed
+    )
+
+    quality_breakdown = {
+        "deterministic": {
+            "structure": structure_score,
+            "traceability": traceability_score,
+            "locale": locale_score,
+            "total": deterministic_score,
+        },
+        "llm": {
+            "weighted": weighted_llm,
+            "raw_avg": llm_avg,
+        },
+        "penalties": {
+            "url": url_penalty,
+            "structural": structural_penalty,
+        },
+    }
 
     logger.info(
-        "Weekly quality: final=%d (llm_avg=%d, url_penalty=-%d, structural=-%d), eligible=%s",
-        final_score, llm_avg, url_penalty, structural_penalty, auto_publish_eligible,
+        "Weekly quality: final=%d (det=%d, llm_weighted=%d, url=-%d, struct=-%d), "
+        "eligible=%s (url_gate_blocked=%s)",
+        final_score, deterministic_score, weighted_llm, url_penalty, structural_penalty,
+        auto_publish_eligible, url_validation_failed,
     )
 
     await _log_stage(
         supabase, run_id, "quality:weekly", "success", t0,
-        output_summary=f"score={final_score} (llm={llm_avg}, url=-{url_penalty}, struct=-{structural_penalty})",
+        output_summary=(
+            f"score={final_score} (det={deterministic_score} [s={structure_score},"
+            f"t={traceability_score},l={locale_score}], llm_w={weighted_llm}, "
+            f"url=-{url_penalty}, struct=-{structural_penalty})"
+        ),
         post_type="weekly",
-        debug_meta={"quality_score": final_score, "issues": issues_all[:20]},
+        debug_meta={
+            "quality_score": final_score,
+            "quality_breakdown": quality_breakdown,
+            "quality_version": "v2",
+            "issues": issues_all[:20],
+        },
     )
 
     return {
@@ -1063,4 +1175,6 @@ async def _check_weekly_quality(
         "quality_flags": quality_flags,
         "content_analysis": {"issues": issues_all[:30]},
         "auto_publish_eligible": auto_publish_eligible,
+        "quality_breakdown": quality_breakdown,
+        "quality_version": "v2",
     }
