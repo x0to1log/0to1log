@@ -1,6 +1,7 @@
 """AI News Pipeline v3 orchestrator."""
 import asyncio
 import logging
+import random
 import re
 import time
 import uuid
@@ -252,6 +253,48 @@ def _dedup_source_cards(sources: list[dict]) -> list[dict]:
         seen.add(url)
         deduped.append({**s, "id": len(deduped) + 1})
     return deduped
+
+
+def _validate_and_shuffle_weekly_quiz(quiz_list: Any) -> list[dict]:
+    """Validate each weekly quiz item and shuffle its options.
+
+    Keeps up to 3 valid items (drops extras). An item is valid when:
+    - It is a dict with non-empty question, 4 string options, and an answer
+    - answer is one of options (verbatim match)
+
+    Each valid item's options are shuffled independently. LLMs tend to
+    place the correct answer at the first option; shuffling evens out
+    the distribution — mirrors the daily quiz shuffle in pipeline_digest.
+    """
+    cleaned: list[dict] = []
+    if not isinstance(quiz_list, list):
+        return cleaned
+    for q in quiz_list[:3]:
+        if not isinstance(q, dict):
+            continue
+        question = str(q.get("question") or "").strip()
+        options_raw = q.get("options")
+        answer = str(q.get("answer") or "").strip()
+        explanation = str(q.get("explanation") or "").strip()
+        if not isinstance(options_raw, list):
+            logger.warning("Weekly quiz item dropped: options not a list")
+            continue
+        options = [str(o).strip() for o in options_raw]
+        if not question or len(options) != 4 or answer not in options:
+            logger.warning(
+                "Weekly quiz item dropped (invalid): q_len=%d options=%d answer_in=%s",
+                len(question), len(options), answer in options,
+            )
+            continue
+        shuffled = list(options)
+        random.shuffle(shuffled)
+        cleaned.append({
+            "question": question,
+            "options": shuffled,
+            "answer": answer,
+            "explanation": explanation,
+        })
+    return cleaned
 
 
 def _slugify(text: str) -> str:
@@ -2098,6 +2141,13 @@ async def run_weekly_pipeline(
 
                 # Terms for this locale
                 terms = week_terms_en if locale == "en" else week_terms_ko
+
+                # Weekly quiz per locale: EN reads `weekly_quiz`, KO reads `weekly_quiz_ko`
+                # (the LLM generates EN quiz in call 1 and translates to KO in call 2).
+                quiz_key = "weekly_quiz" if locale == "en" else "weekly_quiz_ko"
+                expert_quiz = _validate_and_shuffle_weekly_quiz(expert_data.get(quiz_key))
+                learner_quiz = _validate_and_shuffle_weekly_quiz(learner_data.get(quiz_key))
+
                 locale_guide = {
                     **guide_items,
                     "week_terms": [
@@ -2108,6 +2158,8 @@ async def run_weekly_pipeline(
                         }
                         for t in terms[:2]
                     ],
+                    "weekly_quiz_expert": expert_quiz,
+                    "weekly_quiz_learner": learner_quiz,
                 }
 
                 locale_cards = weekly_source_cards.get(locale, [])
