@@ -768,16 +768,17 @@ async def _validate_urls_live(
     """HEAD-check URLs in parallel. Returns (live_urls, drop_records).
 
     Complements validate_citation_urls (structural allowlist check) by
-    adding liveness verification: does this URL actually resolve, and does
-    it stay on the same apex domain (no content-farm hijack redirect)?
+    adding liveness verification: does this URL actually resolve?
 
     Drops on:
     - 404, 410 (definitively gone)
     - Connect error / DNS failure / timeout
-    - Redirect to a different apex domain (suspicious)
 
     Keeps on (benefit of the doubt — don't punish edge cases):
-    - 2xx / 3xx (success or benign same-apex redirect)
+    - 2xx / 3xx (success or redirect — including cross-domain redirects,
+      since brand TLDs like .google redirect between blog.google ↔
+      deepmind.google as normal operation; content-farm escape is
+      already covered by _classify_source_meta tier/kind filters upstream)
     - 403 (bot blocking — site is alive)
     - 405 (Method Not Allowed — site doesn't support HEAD)
     - 5xx (transient server error)
@@ -800,30 +801,17 @@ async def _validate_urls_live(
         "User-Agent": "Mozilla/5.0 (compatible; 0to1log/1.0; +https://0to1log.com)",
     }
 
-    def _apex(host: str) -> str:
-        parts = (host or "").split(".")
-        return ".".join(parts[-2:]) if len(parts) >= 2 else host
-
     async def _check(url: str) -> None:
         async with sem:
             try:
-                original_apex = _apex((urlparse(url).hostname or "").lower())
                 async with httpx.AsyncClient(
                     timeout=timeout,
                     follow_redirects=True,
                     headers=headers,
                 ) as client:
                     resp = await client.head(url)
-                    code = resp.status_code
-                    final_apex = _apex((urlparse(str(resp.url)).hostname or "").lower())
-                    if original_apex and final_apex and original_apex != final_apex:
-                        drops.append({
-                            "url": url,
-                            "reason": f"redirect to different apex ({final_apex})",
-                        })
-                        return
-                    if code in (404, 410):
-                        drops.append({"url": url, "reason": f"HTTP {code}"})
+                    if resp.status_code in (404, 410):
+                        drops.append({"url": url, "reason": f"HTTP {resp.status_code}"})
                         return
                     live.add(url)
             except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout):
