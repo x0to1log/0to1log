@@ -240,7 +240,7 @@ async def cancel_pipeline_run(
 
 class PipelineRerunBody(BaseModel):
     run_id: str
-    from_stage: str  # "classify"|"merge"|"community"|"write"
+    from_stage: str  # "classify"|"merge"|"community"|"write"|"quality"
     batch_id: str  # YYYY-MM-DD
     category: Optional[str] = None  # "research"|"business"|None
 
@@ -254,7 +254,7 @@ async def rerun_pipeline(
     _secret=Depends(verify_cron_secret),
 ):
     """Rerun pipeline from a specific stage using saved checkpoints."""
-    valid_stages = {"classify", "merge", "community", "write"}
+    valid_stages = {"classify", "merge", "community", "write", "quality"}
     if body.from_stage not in valid_stages:
         raise HTTPException(400, f"Invalid from_stage: {body.from_stage}. Must be one of {valid_stages}")
     if body.category and body.category not in ("research", "business"):
