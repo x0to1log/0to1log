@@ -592,7 +592,8 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 
 ## Term Name Fields
 - term_full: English full name (e.g., "Long Short-Term Memory" for LSTM). Same as term if no abbreviation.
-- korean_name: Korean translation or commonly used Korean name. MUST be in Korean, NOT English. BAD: "EDA". GOOD: "탐색적 데이터 분석". If no standard Korean translation exists, use Korean phonetic transcription (e.g., "트랜스포머" for Transformer).
+- korean_name: Korean translation or commonly used Korean name, written in Hangul. If NO standard Korean term exists for this concept, return an **empty string `""`** — do NOT invent a phonetic transliteration of the English word. "인디나스" is NOT a valid korean_name for "Internals"; Korean engineers either write the concept as "내부 구조" or leave it as "Internals". A phonetic form is acceptable only when Korean tech writing genuinely uses it (e.g., "트랜스포머" for Transformer, "파이토치" for PyTorch — both appear regularly in Korean press; "인디나스" does not).
+  - korean_name identical to the English term is allowed ONLY for: versioned model names (e.g., "GPT-5", "Claude 4.6"), all-caps technical abbreviations (e.g., "LSTM", "RAG", "BERT"), and ISO/IEEE-style standards. For every other term, if no real Korean translation exists, return korean_name="" rather than copying the English.
 - korean_full: Korean formal name (e.g., "장단기 기억 네트워크" for LSTM). Same as korean_name if identical.
 
 ## Term Name Few-Shot Examples
@@ -2109,7 +2110,7 @@ existing technical concept entry in the handbook.
 ## Rules
 - Extract 3-10 terms per article — prefer fewer high-quality terms over many borderline ones
 - term: Use the **canonical English name** (the established, widely-recognized form)
-- korean_name: Standard Korean translation
+- korean_name: Standard Korean translation in Hangul. Return empty string `""` if no real Korean term exists — do NOT invent phonetic transliterations. Identical to English is allowed only for versioned models (GPT-5, Claude 4.6), all-caps abbreviations (LSTM, RAG), and ISO/IEEE standards.
 - category: Primary category. One of: cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, data-engineering, infra-hardware, safety-ethics, products-platforms
 - secondary_categories: Optional array of additional categories (for terms that span multiple domains, e.g., Transformer → ["deep-learning", "llm-genai"]). Omit if only one category applies.
 - confidence: Use the 5-point self-check below to decide.
