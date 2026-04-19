@@ -673,13 +673,20 @@ Precise, technical definition. Shared across both levels.
 - **NO repetition** of the same idea in different words — every clause must add new information.
 - **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
 - **Depth floor:** if the draft is under ~150 chars EN or ~100 chars KO, it's too thin — add the mechanism chunk and retry.
-- **Typical length (for calibration, not counting):** ~250-350 chars EN, ~130-200 chars KO. If your draft lands far above this, your sentences are too long — compress clauses, don't simply cap sentence count.
-- **Scope discipline (critical for protocols, specs, architectures):** Definition stays at **"what it is + how it works at a high level"**. Do NOT in the definition:
-  - Enumerate protocol primitives (e.g., listing resources/tools/sampling/elicitation/logging for a protocol)
-  - List all RFC numbers, API endpoints, or draft-spec references
-  - Include parameter tables, field-by-field descriptions, or transport details (STDIO, HTTP/SSE)
-  - Cite section numbers of a spec document
-  These belong in `body_advanced` (Architecture / Formulas / Technical Definition & How It Works sections). If a sentence lists 4+ technical items, you're writing body, not definition — move them.
+- **Typical length (for calibration, not counting):** ~280-400 chars EN, ~150-230 chars KO. Write like a concise academic glossary entry, NOT like a Wikipedia intro paragraph — glossary is essence-first with one mechanism hint, Wikipedia elaborates with architecture, variants, and history.
+- **Scope discipline — no enumeration, no algorithmic detail:** Definition stays at **"what it is + how it works at a conceptual level"**.
+  - **No enumerations** (4+ items of any kind): primitives, pipeline stages, RFC numbers, API endpoints, feature lists, product variants, transport details. These belong in `body_advanced`.
+  - **Conceptual mechanism is OK; algorithmic detail is NOT.** A definition's mechanism clause describes the *idea*, not the computation.
+    - CONCEPTUAL (OK — describes the idea at a level any practitioner can picture):
+      - "a student network learns by imitating the teacher's behavior"
+      - "optimized against a reward model learned from human preferences"
+      - "processes tokens in parallel through self-attention"
+    - ALGORITHMIC (MOVE to body_advanced — describes the computation):
+      - Math ops: "logits are multiplied by a temperature factor", "softmax applied to scaled logits"
+      - Step sequences: "first train the reward model on preference pairs, then run PPO with KL regularization"
+      - Named computational functions inside the definition: `softmax`, `KL-divergence`, `cross-entropy`, `leave-one-out`, `autoregressive next-token prediction`
+      - Process variables: "gradients", "weights update via Adam", "learning rate schedule"
+    - Rule of thumb: if a reader could *implement* the term from your definition, it's too detailed — pull that content into body_advanced.
 
 This definition is surfaced in TWO places — both benefit from crisp 5-8 second reads, not paragraphs:
 1. Hero Card on the handbook detail page (canonical technical summary).
