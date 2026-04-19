@@ -333,8 +333,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "excerpt": "(English) 1-2 sentences that make readers click. MUST differ from both headline and the body's One-Line Summary",
   "excerpt_ko": "(Korean) 제목·한 줄 요약과 모두 다른 1-2문장의 클릭 유도형 요약",
   "tags": ["4-6 English keyword tags: company names, key tech, industry terms, notable tools"],
-  "focus_items": ["Exactly 3 bullets, EN 5-12 words each. P1=what changed, P2=why it matters, P3=what to watch"],
-  "focus_items_ko": ["정확히 3개, 각 15-40자. 1=무엇이 바뀌었나, 2=왜 중요한가, 3=무엇을 지켜볼지"],
+  "focus_items": ["REQUIRED — exactly 3 bullets, EN 5-12 words each. P1=what changed, P2=why it matters, P3=what to watch"],
+  "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나, 2=왜 중요한가, 3=무엇을 지켜볼지. focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
   "en": "<SEE SKELETON BELOW>",
   "ko": "<SEE SKELETON BELOW>",
   "quiz_en": {{"question": "One 4-choice question. Expert=analytical, Learner=factual", "options": ["A","B","C","D"], "answer": "exact text of correct option", "explanation": "Why correct."}},
@@ -564,7 +564,11 @@ Writing rules:
 
 HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headline, excerpt, AND body)
 
-Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it. NEVER predict the future ("Q2에", "내년", "다음 분기"). When unsure, omit rather than fabricate.
+Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it.
+
+**NEVER predict the future or use forward-looking speculation verbs.** Forbidden forms include English ("Expect X to Y", "will disrupt", "is set to become", "poised to", "on track to") AND Korean ("Q2에", "내년", "다음 분기", "예상된다", "전망된다", "~할 것이다"). Use calibrated language instead: "signals", "points toward", "implies", "positions X as", "suggests". When the source itself speculates, attribute explicitly ("Anthropic says it expects …" with `[N](URL)`).
+
+When unsure, omit rather than fabricate.
 
 **Citations**: every `[N](URL)` must reference a URL from the provided source list verbatim. NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation."""
 
