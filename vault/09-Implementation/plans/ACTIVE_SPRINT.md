@@ -41,9 +41,12 @@
 | HB-MEASURE-02 | Measurement CLI + baseline report (`measure_handbook_quality.py`) | doing | 2026-04-16 | 2026-04-17 |
 | HB-MIGRATE-138 | 138개 published 용어 v4 구조로 전량 regenerate (병렬 ~2시간, ~$15) | todo | — | — |
 | NP-OBSERVE-* | 하드닝 후 4개 long-tail metric 관찰 (~2026-04-30) | doing | 2026-04-16 | 2026-04-30 |
-| GPT5-01 | gpt-5 마이그레이션 — classify/merge/ranking (gpt-5-mini) | doing (⚠️ stale: last commit `ff8a081` 9일 전) | 2026-04-01 | — |
-| GPT5-01-FIX | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 | doing (⚠️ stale: 매칭 commit 없음) | 2026-04-01 | — |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | — | — |
+| WEEKLY-V2-PROMPT-01 | Weekly 프롬프트에 `weekly_quiz` JSON 출력 추가 (Expert/Learner) — [[plans/2026-04-19-weekly-content-v2]] | doing | 2026-04-19 | — |
+| WEEKLY-V2-PIPE-01 | `run_weekly_pipeline`에서 guide_items에 weekly_quiz_expert/learner 저장 | todo | — | — |
+| WEEKLY-V2-GUARD-01 | 퀴즈 검증 가드 + 옵션 셔플 (문제별 독립) | todo | — | — |
+| WEEKLY-V2-FE-01 | 본문 하단 퀴즈 3문제 렌더 + 페르소나 탭 연동 | todo | — | — |
+| WEEKLY-V2-TEST-01 | 백필 1회 + 셔플 단위 테스트 (1000회 분포 검증) | todo | — | — |
 | README-01 | 프로젝트 README 작성 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건 — drop or restart 결정 필요) | 2026-03-26 | — |
 | UA-02~05 | User Analytics 차트 추가 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건) | 2026-03-27 | — |
 
@@ -173,20 +176,20 @@
 | NQ-24 | todo | 파이프라인 테스트 전면 재작성 — 현재 계약 기반 mock 테스트 |
 | COLLECT-BRAVE-01 | ~~todo~~ cancelled | ~~Brave Search API 수집기 추가~~ — NP-DIET-01에서 Brave 전량 제거하며 의미 상실 |
 
-### GPT-5 마이그레이션 (stale — 상태 결정 필요)
+### GPT-5 마이그레이션 (완료 — 2026-04-19)
 
 > **배경:** OpenAI gpt-4.1 deprecation 대비. Allowed: gpt-5, gpt-5-mini, gpt-5-nano.
 > 2026-03-31 한번에 전부 교체 → gpt-5-mini classify 0 picks → revert. 단계별 마이그레이션 전략.
-> **현재:** 9일+ commit 없음. HB-MIGRATE-138 전에 결정 필요 (재생성을 어떤 모델로 할지).
+> **결과:** 2026-04-19 기준 전체 마이그레이션 완료. 정확한 종료일/커밋 추후 git log로 보강 필요.
 
 | Task | 상태 | 목표 |
 |------|------|------|
-| GPT5-01 | doing (⚠️ stale) | classify/merge/ranking → gpt-5-mini |
-| GPT5-01-FIX | doing (⚠️ stale) | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 |
-| GPT5-02 | todo | community_summarize → gpt-5-nano |
-| GPT5-03 | todo | Writer digest → gpt-5 |
-| GPT5-04 | todo | 전체 파이프라인 backfill 비교 검증 |
-| GPT5-05 | todo | main 머지 + gpt-4.1 deprecation 대응 완료 |
+| GPT5-01 | done | classify/merge/ranking → gpt-5-mini |
+| GPT5-01-FIX | done | merge 프롬프트 gpt-5 호환 — system→user 데이터 이동 |
+| GPT5-02 | done | community_summarize → gpt-5-nano |
+| GPT5-03 | done | Writer digest → gpt-5 |
+| GPT5-04 | done | 전체 파이프라인 backfill 비교 검증 |
+| GPT5-05 | done | main 머지 + gpt-4.1 deprecation 대응 완료 |
 
 ### User Analytics — Site Analytics 차트 (ghost)
 
