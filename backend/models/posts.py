@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
-from models.common import PromptGuideItems, RelatedNews
+from models.common import RelatedNews
 
 
 class PostDraftListItem(BaseModel):
@@ -42,7 +42,7 @@ class PostDraftDetail(BaseModel):
     content_expert: Optional[str] = None
 
     # Shared structured fields
-    guide_items: Optional[PromptGuideItems] = None
+    guide_items: Optional[dict] = None
     related_news: Optional[RelatedNews] = None
     source_urls: list[str] = []
     news_temperature: Optional[int] = None
@@ -66,7 +66,7 @@ class PostUpdateRequest(BaseModel):
     content_original: Optional[str] = None
     content_learner: Optional[str] = None
     content_expert: Optional[str] = None
-    guide_items: Optional[PromptGuideItems] = None
+    guide_items: Optional[dict] = None
     related_news: Optional[RelatedNews] = None
     tags: Optional[list[str]] = None
 
