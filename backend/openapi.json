@@ -5,38 +5,373 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/cron/news-pipeline": {
+    "/api/admin/ai/advise": {
       "post": {
         "tags": [
-          "cron"
+          "admin-ai"
         ],
-        "summary": "Run News Pipeline",
-        "description": "Trigger daily news pipeline. Returns 202 immediately; runs async.",
-        "operationId": "run_news_pipeline_api_cron_news_pipeline_post",
+        "summary": "Advise",
+        "description": "Run an AI advisor action on the current post.",
+        "operationId": "advise_api_admin_ai_advise_post",
         "parameters": [
           {
-            "name": "x-cron-secret",
+            "name": "authorization",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "X-Cron-Secret"
+              "title": "Authorization"
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAdviseRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "202": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PipelineAcceptedResponse"
+                  "$ref": "#/components/schemas/AiAdviseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/ai/handbook-advise": {
+      "post": {
+        "tags": [
+          "admin-ai"
+        ],
+        "summary": "Handbook Advise",
+        "description": "Run an AI advisor action on a handbook term.\n\nFor 'generate' action: returns 202 + job_id immediately, runs in background.\nFor other actions (seo, review, etc.): runs synchronously as before.",
+        "operationId": "handbook_advise_api_admin_ai_handbook_advise_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandbookAdviseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/ai/handbook-job/{job_id}": {
+      "get": {
+        "tags": [
+          "admin-ai"
+        ],
+        "summary": "Handbook Job Status",
+        "description": "Poll for handbook generate job status.",
+        "operationId": "handbook_job_status_api_admin_ai_handbook_job__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/blog-ai/advise": {
+      "post": {
+        "tags": [
+          "admin-blog-ai"
+        ],
+        "summary": "Blog Advise",
+        "description": "Run a blog AI advisor action.",
+        "operationId": "blog_advise_api_admin_blog_ai_advise_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogAdviseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogAdviseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/blog-ai/translate": {
+      "post": {
+        "tags": [
+          "admin-blog-ai"
+        ],
+        "summary": "Blog Translate",
+        "description": "Translate a blog post and create a new row.",
+        "operationId": "blog_translate_api_admin_blog_ai_translate_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogTranslateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogTranslateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/product-ai/generate": {
+      "post": {
+        "tags": [
+          "admin-product-ai"
+        ],
+        "summary": "Product Generate",
+        "description": "Generate tagline or description for an AI product.",
+        "operationId": "product_generate_api_admin_product_ai_generate_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductGenerateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/ga4-analytics": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Ga4 Analytics",
+        "description": "Fetch GA4 analytics data for the admin dashboard.",
+        "operationId": "get_ga4_analytics_api_admin_ga4_analytics_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 30,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GA4Response"
                 }
               }
             }
           },
           "401": {
-            "description": "Invalid cron secret",
+            "description": "Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin",
             "content": {
               "application/json": {
                 "schema": {
@@ -58,15 +393,86 @@
         }
       }
     },
-    "/api/admin/drafts": {
+    "/api/recommendations/similar": {
       "get": {
         "tags": [
-          "admin"
+          "recommendations"
         ],
-        "summary": "List Drafts",
-        "description": "List all posts with status='draft'.",
-        "operationId": "list_drafts_api_admin_drafts_get",
+        "summary": "Similar Posts",
+        "description": "Return similar posts to the given post_id using vector similarity.",
+        "operationId": "similar_posts_api_recommendations_similar_get",
         "parameters": [
+          {
+            "name": "post_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "title": "Post Id"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(en|ko)$",
+              "default": "en",
+              "title": "Locale"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecommendedPost"
+                  },
+                  "title": "Response Similar Posts Api Recommendations Similar Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recommendations/for-you": {
+      "get": {
+        "tags": [
+          "recommendations"
+        ],
+        "summary": "For You",
+        "description": "Return personalized recommendations. Requires Bearer token.",
+        "operationId": "for_you_api_recommendations_for_you_get",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(en|ko)$",
+              "default": "en",
+              "title": "Locale"
+            }
+          },
           {
             "name": "authorization",
             "in": "header",
@@ -85,29 +491,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostDraftListItem"
+                    "$ref": "#/components/schemas/RecommendedPost"
                   },
-                  "title": "Response List Drafts Api Admin Drafts Get"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not an admin",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "title": "Response For You Api Recommendations For You Get"
                 }
               }
             }
@@ -125,72 +511,48 @@
         }
       }
     },
-    "/api/admin/drafts/{slug}": {
-      "get": {
+    "/api/cron/news-pipeline": {
+      "post": {
         "tags": [
-          "admin"
+          "cron"
         ],
-        "summary": "Get Draft",
-        "description": "Get a single draft by slug with full detail.",
-        "operationId": "get_draft_api_admin_drafts__slug__get",
+        "summary": "Trigger News Pipeline",
+        "description": "Trigger the daily AI news pipeline. Returns 202 immediately.",
+        "operationId": "trigger_news_pipeline_api_cron_news_pipeline_post",
         "parameters": [
           {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Slug"
-            }
-          },
-          {
-            "name": "authorization",
+            "name": "x-cron-secret",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "Authorization"
+              "title": "X-Cron-Secret"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PipelineTriggerBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PostDraftDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not an admin",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Draft not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -207,113 +569,22 @@
         }
       }
     },
-    "/api/admin/posts/{post_id}/publish": {
-      "patch": {
+    "/api/cron/handbook-extract": {
+      "post": {
         "tags": [
-          "admin"
+          "cron"
         ],
-        "summary": "Publish Post",
-        "description": "Change post status from draft to published.",
-        "operationId": "publish_post_api_admin_posts__post_id__publish_patch",
+        "summary": "Trigger Handbook Extraction",
+        "description": "Trigger handbook term extraction from existing news posts. Returns 202 immediately.",
+        "operationId": "trigger_handbook_extraction_api_cron_handbook_extract_post",
         "parameters": [
           {
-            "name": "post_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Post Id"
-            }
-          },
-          {
-            "name": "authorization",
+            "name": "x-cron-secret",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string",
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PostPublishResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not an admin",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Post not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/posts/{post_id}/update": {
-      "patch": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "Update Post",
-        "description": "Update draft content fields.",
-        "operationId": "update_post_api_admin_posts__post_id__update_patch",
-        "parameters": [
-          {
-            "name": "post_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Post Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "title": "Authorization"
+              "title": "X-Cron-Secret"
             }
           }
         ],
@@ -322,7 +593,116 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostUpdateRequest"
+                "$ref": "#/components/schemas/HandbookExtractBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/weekly": {
+      "post": {
+        "tags": [
+          "cron"
+        ],
+        "summary": "Trigger Weekly Pipeline",
+        "description": "Trigger weekly recap generation. Returns 202 immediately.",
+        "operationId": "trigger_weekly_pipeline_api_cron_weekly_post",
+        "parameters": [
+          {
+            "name": "x-cron-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/WeeklyTriggerBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/pipeline-cancel": {
+      "post": {
+        "tags": [
+          "cron"
+        ],
+        "summary": "Cancel Pipeline Run",
+        "description": "Cancel a running pipeline by marking it as failed.",
+        "operationId": "cancel_pipeline_run_api_cron_pipeline_cancel_post",
+        "parameters": [
+          {
+            "name": "x-cron-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineCancelBody"
               }
             }
           }
@@ -332,39 +712,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PostDraftDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not an admin",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Post not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -375,6 +723,135 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/pipeline-rerun": {
+      "post": {
+        "tags": [
+          "cron"
+        ],
+        "summary": "Rerun Pipeline",
+        "description": "Rerun pipeline from a specific stage using saved checkpoints.",
+        "operationId": "rerun_pipeline_api_cron_pipeline_rerun_post",
+        "parameters": [
+          {
+            "name": "x-cron-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineRerunBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/promote-drafts": {
+      "post": {
+        "tags": [
+          "cron"
+        ],
+        "summary": "Trigger Promote Drafts",
+        "description": "Promote today's eligible drafts (score >= threshold) to published.\n\nTriggered by Vercel cron at KST 09:00, after pipeline cron at KST 07:00.\nOnly promotes drafts with fact_pack.auto_publish_eligible=true.",
+        "operationId": "trigger_promote_drafts_api_cron_promote_drafts_post",
+        "parameters": [
+          {
+            "name": "x-cron-secret",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Cron-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PromoteDraftsBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/health": {
+      "get": {
+        "tags": [
+          "cron"
+        ],
+        "summary": "Cron Health",
+        "description": "Health check for cron service.",
+        "operationId": "cron_health_api_cron_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -402,6 +879,309 @@
   },
   "components": {
     "schemas": {
+      "AiAdviseRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "generate",
+              "seo",
+              "review",
+              "factcheck",
+              "deepverify",
+              "conceptcheck",
+              "voicecheck",
+              "retrocheck"
+            ],
+            "title": "Action"
+          },
+          "post_id": {
+            "type": "string",
+            "title": "Post Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt",
+            "default": ""
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "default": ""
+          },
+          "post_type": {
+            "type": "string",
+            "title": "Post Type",
+            "default": ""
+          },
+          "guide_items": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guide Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "post_id",
+          "title",
+          "content",
+          "category"
+        ],
+        "title": "AiAdviseRequest"
+      },
+      "AiAdviseResponse": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "model_used": {
+            "type": "string",
+            "title": "Model Used"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "success",
+          "result",
+          "model_used",
+          "tokens_used"
+        ],
+        "title": "AiAdviseResponse"
+      },
+      "BlogAdviseRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "outline",
+              "draft",
+              "rewrite",
+              "suggest",
+              "review",
+              "generate",
+              "generate_bilingual",
+              "conceptcheck",
+              "voicecheck",
+              "retrocheck"
+            ],
+            "title": "Action"
+          },
+          "post_id": {
+            "type": "string",
+            "title": "Post Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt",
+            "default": ""
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "default": ""
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "post_id",
+          "title",
+          "content",
+          "category"
+        ],
+        "title": "BlogAdviseRequest"
+      },
+      "BlogAdviseResponse": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "model_used": {
+            "type": "string",
+            "title": "Model Used"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "success",
+          "result",
+          "model_used",
+          "tokens_used"
+        ],
+        "title": "BlogAdviseResponse"
+      },
+      "BlogTranslateRequest": {
+        "properties": {
+          "source_post_id": {
+            "type": "string",
+            "title": "Source Post Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_post_id",
+          "title",
+          "content",
+          "category",
+          "locale"
+        ],
+        "title": "BlogTranslateRequest"
+      },
+      "BlogTranslateResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "translated_post_id": {
+            "type": "string",
+            "title": "Translated Post Id"
+          },
+          "translated_slug": {
+            "type": "string",
+            "title": "Translated Slug"
+          },
+          "target_locale": {
+            "type": "string",
+            "title": "Target Locale"
+          },
+          "translation_group_id": {
+            "type": "string",
+            "title": "Translation Group Id"
+          },
+          "model_used": {
+            "type": "string",
+            "title": "Model Used"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "translated_post_id",
+          "translated_slug",
+          "target_locale",
+          "translation_group_id",
+          "model_used",
+          "tokens_used"
+        ],
+        "title": "BlogTranslateResponse"
+      },
       "ErrorResponse": {
         "properties": {
           "detail": {
@@ -416,6 +1196,168 @@
         "title": "ErrorResponse",
         "description": "Standard error response."
       },
+      "GA4CountryRow": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "sessions"
+        ],
+        "title": "GA4CountryRow"
+      },
+      "GA4DailyRow": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "pageviews": {
+            "type": "integer",
+            "title": "Pageviews"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "pageviews"
+        ],
+        "title": "GA4DailyRow"
+      },
+      "GA4PageRow": {
+        "properties": {
+          "page": {
+            "type": "string",
+            "title": "Page"
+          },
+          "pageviews": {
+            "type": "integer",
+            "title": "Pageviews"
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page",
+          "pageviews",
+          "sessions"
+        ],
+        "title": "GA4PageRow"
+      },
+      "GA4Response": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/GA4Summary"
+          },
+          "daily_pageviews": {
+            "items": {
+              "$ref": "#/components/schemas/GA4DailyRow"
+            },
+            "type": "array",
+            "title": "Daily Pageviews"
+          },
+          "top_pages": {
+            "items": {
+              "$ref": "#/components/schemas/GA4PageRow"
+            },
+            "type": "array",
+            "title": "Top Pages"
+          },
+          "traffic_sources": {
+            "items": {
+              "$ref": "#/components/schemas/GA4SourceRow"
+            },
+            "type": "array",
+            "title": "Traffic Sources"
+          },
+          "countries": {
+            "items": {
+              "$ref": "#/components/schemas/GA4CountryRow"
+            },
+            "type": "array",
+            "title": "Countries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start",
+          "period_end",
+          "summary",
+          "daily_pageviews",
+          "top_pages",
+          "traffic_sources",
+          "countries"
+        ],
+        "title": "GA4Response"
+      },
+      "GA4SourceRow": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "sessions"
+        ],
+        "title": "GA4SourceRow"
+      },
+      "GA4Summary": {
+        "properties": {
+          "pageviews": {
+            "type": "integer",
+            "title": "Pageviews",
+            "default": 0
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions",
+            "default": 0
+          },
+          "users": {
+            "type": "integer",
+            "title": "Users",
+            "default": 0
+          },
+          "avg_session_duration": {
+            "type": "number",
+            "title": "Avg Session Duration",
+            "default": 0.0
+          },
+          "bounce_rate": {
+            "type": "number",
+            "title": "Bounce Rate",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "GA4Summary"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -428,6 +1370,150 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HandbookAdviseRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "related_terms",
+              "translate",
+              "generate",
+              "factcheck",
+              "deepverify"
+            ],
+            "title": "Action"
+          },
+          "term_id": {
+            "type": "string",
+            "title": "Term Id"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "korean_name": {
+            "type": "string",
+            "title": "Korean Name",
+            "default": ""
+          },
+          "term_full": {
+            "type": "string",
+            "title": "Term Full",
+            "default": ""
+          },
+          "korean_full": {
+            "type": "string",
+            "title": "Korean Full",
+            "default": ""
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories",
+            "default": []
+          },
+          "summary_ko": {
+            "type": "string",
+            "title": "Summary Ko",
+            "default": ""
+          },
+          "summary_en": {
+            "type": "string",
+            "title": "Summary En",
+            "default": ""
+          },
+          "definition_ko": {
+            "type": "string",
+            "title": "Definition Ko",
+            "default": ""
+          },
+          "definition_en": {
+            "type": "string",
+            "title": "Definition En",
+            "default": ""
+          },
+          "body_basic_ko": {
+            "type": "string",
+            "title": "Body Basic Ko",
+            "default": ""
+          },
+          "body_basic_en": {
+            "type": "string",
+            "title": "Body Basic En",
+            "default": ""
+          },
+          "body_advanced_ko": {
+            "type": "string",
+            "title": "Body Advanced Ko",
+            "default": ""
+          },
+          "body_advanced_en": {
+            "type": "string",
+            "title": "Body Advanced En",
+            "default": ""
+          },
+          "hero_news_context_ko": {
+            "type": "string",
+            "title": "Hero News Context Ko",
+            "default": ""
+          },
+          "hero_news_context_en": {
+            "type": "string",
+            "title": "Hero News Context En",
+            "default": ""
+          },
+          "references_ko": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "References Ko",
+            "default": []
+          },
+          "references_en": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "References En",
+            "default": []
+          },
+          "force_direction": {
+            "type": "string",
+            "title": "Force Direction",
+            "default": ""
+          },
+          "skip_quality_check": {
+            "type": "boolean",
+            "title": "Skip Quality Check",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "term_id",
+          "term"
+        ],
+        "title": "HandbookAdviseRequest"
+      },
+      "HandbookExtractBody": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id"
+        ],
+        "title": "HandbookExtractBody"
       },
       "HealthResponse": {
         "properties": {
@@ -448,617 +1534,235 @@
         "title": "HealthResponse",
         "description": "GET /health response."
       },
-      "PipelineAcceptedResponse": {
+      "PipelineCancelBody": {
         "properties": {
-          "accepted": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "PipelineCancelBody"
+      },
+      "PipelineRerunBody": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "from_stage": {
+            "type": "string",
+            "title": "From Stage"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "from_stage",
+          "batch_id"
+        ],
+        "title": "PipelineRerunBody"
+      },
+      "PipelineTriggerBody": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "resume"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "force": {
             "type": "boolean",
-            "title": "Accepted"
+            "title": "Force",
+            "default": false
           },
-          "message": {
-            "type": "string",
-            "title": "Message"
+          "skip_handbook": {
+            "type": "boolean",
+            "title": "Skip Handbook",
+            "default": false
+          },
+          "is_cron": {
+            "type": "boolean",
+            "title": "Is Cron",
+            "default": false
           }
         },
         "type": "object",
-        "required": [
-          "accepted",
-          "message"
-        ],
-        "title": "PipelineAcceptedResponse",
-        "description": "POST /cron/news-pipeline 202 response."
+        "title": "PipelineTriggerBody"
       },
-      "PostDraftDetail": {
+      "ProductGenerateRequest": {
         "properties": {
-          "id": {
+          "action": {
             "type": "string",
-            "title": "Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "slug": {
-            "type": "string",
-            "title": "Slug"
-          },
-          "category": {
-            "type": "string",
-            "title": "Category"
-          },
-          "post_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "enum": [
+              "generate_from_url",
+              "generate_search_corpus",
+              "pricing_detail",
+              "tagline_en",
+              "tagline_ko",
+              "description_en",
+              "description_ko"
             ],
-            "title": "Post Type"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "locale": {
-            "type": "string",
-            "title": "Locale",
-            "default": "en"
-          },
-          "content_original": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Original"
-          },
-          "has_news": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Has News"
-          },
-          "no_news_notice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "No News Notice"
-          },
-          "recent_fallback": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Recent Fallback"
-          },
-          "content_beginner": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Beginner"
-          },
-          "content_learner": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Learner"
-          },
-          "content_expert": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Expert"
-          },
-          "guide_items": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PromptGuideItems"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "related_news": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RelatedNews"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "source_urls": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Source Urls",
-            "default": []
-          },
-          "news_temperature": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "News Temperature"
-          },
-          "tags": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Tags",
-            "default": []
-          },
-          "pipeline_batch_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pipeline Batch Id"
-          },
-          "translation_group_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Translation Group Id"
-          },
-          "source_post_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Post Id"
-          },
-          "source_post_version": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Post Version"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          },
-          "published_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Published At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "title",
-          "slug",
-          "category",
-          "status"
-        ],
-        "title": "PostDraftDetail",
-        "description": "Draft detail endpoint response \u2014 full view."
-      },
-      "PostDraftListItem": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "slug": {
-            "type": "string",
-            "title": "Slug"
-          },
-          "category": {
-            "type": "string",
-            "title": "Category"
-          },
-          "post_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Post Type"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "news_temperature": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "News Temperature"
-          },
-          "pipeline_batch_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pipeline Batch Id"
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "title",
-          "slug",
-          "category",
-          "status"
-        ],
-        "title": "PostDraftListItem",
-        "description": "Draft list endpoint response item \u2014 summary view."
-      },
-      "PostPublishResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "slug": {
-            "type": "string",
-            "title": "Slug"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "published_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Published At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "slug",
-          "status",
-          "published_at"
-        ],
-        "title": "PostPublishResponse",
-        "description": "PATCH /admin/posts/{id}/publish response."
-      },
-      "PostUpdateRequest": {
-        "properties": {
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "content_original": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Original"
-          },
-          "content_beginner": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Beginner"
-          },
-          "content_learner": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Learner"
-          },
-          "content_expert": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Expert"
-          },
-          "guide_items": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PromptGuideItems"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "related_news": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RelatedNews"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "tags": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tags"
-          }
-        },
-        "type": "object",
-        "title": "PostUpdateRequest",
-        "description": "PATCH /admin/posts/{id}/update request body."
-      },
-      "PromptGuideItems": {
-        "properties": {
-          "one_liner": {
-            "type": "string",
-            "title": "One Liner"
-          },
-          "action_item": {
-            "type": "string",
-            "title": "Action Item"
-          },
-          "critical_gotcha": {
-            "type": "string",
-            "title": "Critical Gotcha"
-          },
-          "rotating_item": {
-            "type": "string",
-            "title": "Rotating Item"
-          },
-          "quiz_poll": {
-            "$ref": "#/components/schemas/QuizPoll"
-          }
-        },
-        "type": "object",
-        "required": [
-          "one_liner",
-          "action_item",
-          "critical_gotcha",
-          "rotating_item",
-          "quiz_poll"
-        ],
-        "title": "PromptGuideItems"
-      },
-      "QuizPoll": {
-        "properties": {
-          "question": {
-            "type": "string",
-            "title": "Question"
-          },
-          "options": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Options"
-          },
-          "answer": {
-            "type": "string",
-            "title": "Answer"
-          },
-          "explanation": {
-            "type": "string",
-            "title": "Explanation"
-          }
-        },
-        "type": "object",
-        "required": [
-          "question",
-          "options",
-          "answer",
-          "explanation"
-        ],
-        "title": "QuizPoll"
-      },
-      "RelatedNews": {
-        "properties": {
-          "big_tech": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RelatedNewsItem"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "industry_biz": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RelatedNewsItem"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "new_tools": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RelatedNewsItem"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "title": "RelatedNews"
-      },
-      "RelatedNewsItem": {
-        "properties": {
-          "title": {
-            "type": "string",
-            "title": "Title"
+            "title": "Action"
           },
           "url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Url"
           },
-          "summary": {
-            "type": "string",
-            "title": "Summary"
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
           }
         },
         "type": "object",
         "required": [
-          "title",
-          "url",
-          "summary"
+          "action"
         ],
-        "title": "RelatedNewsItem"
+        "title": "ProductGenerateRequest"
+      },
+      "ProductGenerateResponse": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ],
+            "title": "Result"
+          },
+          "model_used": {
+            "type": "string",
+            "title": "Model Used"
+          },
+          "tokens_used": {
+            "type": "integer",
+            "title": "Tokens Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "success",
+          "result",
+          "model_used",
+          "tokens_used"
+        ],
+        "title": "ProductGenerateResponse"
+      },
+      "PromoteDraftsBody": {
+        "properties": {
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          }
+        },
+        "type": "object",
+        "title": "PromoteDraftsBody"
+      },
+      "RecommendedPost": {
+        "properties": {
+          "post_id": {
+            "type": "string",
+            "title": "Post Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "post_id",
+          "slug",
+          "title",
+          "category",
+          "score"
+        ],
+        "title": "RecommendedPost"
       },
       "ValidationError": {
         "properties": {
@@ -1099,6 +1803,23 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WeeklyTriggerBody": {
+        "properties": {
+          "week_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Id"
+          }
+        },
+        "type": "object",
+        "title": "WeeklyTriggerBody"
       }
     }
   }
