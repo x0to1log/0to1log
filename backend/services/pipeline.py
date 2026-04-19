@@ -314,6 +314,45 @@ def _validate_focus_items(items: Any) -> list[str]:
     return cleaned
 
 
+_WEEKLY_CITE_RE = re.compile(r"\[\d+\]\(https?://[^)]+\)")
+
+
+def _check_weekly_citation_coverage(body: str, label: str) -> None:
+    """Log warnings for Week in Numbers and Top Stories items without citations.
+
+    Non-blocking: scans the weekly markdown body for items missing `[N](URL)`
+    markers. LLMs occasionally drop citations despite mandatory prompt rules;
+    this guard surfaces the gap without failing the pipeline. Admin can review
+    the post before publish (or re-run the weekly run).
+    """
+    def _extract(heading_variants: list[str]) -> str:
+        for h in heading_variants:
+            pat = r"##\s*" + re.escape(h) + r"\s*\n+(.+?)(?=\n##\s|\Z)"
+            m = re.search(pat, body, re.DOTALL)
+            if m:
+                return m.group(1).strip()
+        return ""
+
+    nums_body = _extract(["Week in Numbers", "이번 주 숫자"])
+    num_bullets = [ln.strip() for ln in nums_body.split("\n") if ln.strip().startswith("-")]
+    num_missing = [i + 1 for i, b in enumerate(num_bullets) if not _WEEKLY_CITE_RE.search(b)]
+
+    top_body = _extract(["Top Stories", "TOP 뉴스"])
+    stories = [s for s in re.split(r"\n(?=###\s)", top_body) if s.strip().startswith("###")]
+    top_missing = [i + 1 for i, s in enumerate(stories) if not _WEEKLY_CITE_RE.search(s)]
+
+    if num_missing:
+        logger.warning(
+            "Weekly %s: Week in Numbers items missing citation at positions %s (%d of %d uncited)",
+            label, num_missing, len(num_missing), len(num_bullets),
+        )
+    if top_missing:
+        logger.warning(
+            "Weekly %s: Top Stories items missing citation at positions %s (%d of %d uncited)",
+            label, top_missing, len(top_missing), len(stories),
+        )
+
+
 def _slugify(text: str) -> str:
     """Generate a URL-safe slug from text."""
     import re
@@ -2434,6 +2473,12 @@ async def run_weekly_pipeline(
             ko_expert, ko_expert_cards = _renumber_citations(ko_expert, allowed_urls=_allowed)
             en_learner, en_learner_cards = _renumber_citations(en_learner, allowed_urls=_allowed)
             ko_learner, ko_learner_cards = _renumber_citations(ko_learner, allowed_urls=_allowed)
+
+            # Post-renumber citation coverage audit (logs-only; admin reviews before publish).
+            _check_weekly_citation_coverage(en_expert, f"{week_id}/en/expert")
+            _check_weekly_citation_coverage(ko_expert, f"{week_id}/ko/expert")
+            _check_weekly_citation_coverage(en_learner, f"{week_id}/en/learner")
+            _check_weekly_citation_coverage(ko_learner, f"{week_id}/ko/learner")
 
             weekly_source_cards = {
                 "en": _dedup_source_cards((en_expert_cards or []) + (en_learner_cards or [])),

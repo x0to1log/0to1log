@@ -1112,6 +1112,8 @@ Write the English weekly recap. Return JSON only.
 
 1. **## This Week in One Line** — One substantial sentence (or two tightly linked sentences) capturing the week's dominant theme. **Name 2-4 specific events** using subject + verb + result form (e.g., "OpenAI locked in $122B", "Google removed Apache 2.0 licensing friction"), then connect with an em-dash to the thesis they jointly reveal. Avoid abstract noun stacks like "capital density, CPU shifts, regulatory paths" — those feel impressive but tell the reader nothing concrete. Target 200-300 English characters. **This section (and only this section) takes NO `[N](URL)` citations** — the one-line hook is scannable copy, not a sourced claim. All other sections (Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, action bullets) keep their normal citation rules. This section is a scannable hook, not a sourced claim.
 2. **## Week in Numbers** — 5-7 key numbers from this week's news. **Aim for the high end (6-7)** when the week has rich numeric data. Every number MUST appear verbatim in the daily digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots (e.g., if OpenAI raised $10B at $730B pre-money valuation, pick ONE of those numbers, not both). Format: `- **<number>** — <one-line context>. [N](URL)` (bold number + em-dash + context + citation). Prefer figures that tell a story (funding, benchmark wins, pricing cuts, adoption, latency) over minor specs.
+
+   **Citation is MANDATORY**: every number MUST end with at least one `[N](URL)` citation where the URL appears in the daily digests. If you cannot find a source URL in the digests for a specific figure, OMIT that figure and choose a different number with a verifiable source. NEVER emit a number line without a citation — an uncited number is a broken line.
 3. **## Top Stories** — 5-7 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
 
    **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring strategic themes or industry interpretations without a specific triggering event this week belong in Trend Analysis, not Top Stories.
@@ -1126,6 +1128,8 @@ Write the English weekly recap. Return JSON only.
    - CONTEXT (comparison to prior state, competitor, or industry baseline)
 
    End paragraphs with `[N](URL)` citing the original source. URLs MUST come from the daily digest content provided in the Input (look for existing `[N](URL)` patterns in the daily digests). NEVER invent URLs. If multiple sources support one item, cite each in a different sentence.
+
+   **Citation is MANDATORY per story**: every Top Story MUST contain at least one `[N](URL)` citation in its body. If the daily digests lack any source URL for a candidate story, OMIT that story and pick a different Top Story with a verifiable source. NEVER emit an uncited story — the `###` heading without a citation in the body is a broken item.
 
 4. **## Trend Analysis** — 3-4 paragraphs connecting the dots.
 
@@ -1264,6 +1268,8 @@ Write the English weekly recap. Return JSON only.
 
 1. **## This Week in One Line** — One substantial sentence (or two tightly linked sentences) summarizing what happened in plain language. **Name 2-4 specific events** with clear subject + verb + result (e.g., "Meta launched a new assistant inside WhatsApp", "Microsoft rolled out three in-house models"), then connect with an em-dash to the everyday implication. Avoid abstract noun stacks. Target 200-300 English characters. **This section (and only this section) takes NO `[N](URL)` citations** — the one-line hook is scannable copy, not a sourced claim. All other sections (Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, action bullets) keep their normal citation rules.
 2. **## Week in Numbers** — 5-7 key numbers with beginner-friendly context. **Aim for the high end (6-7)** when the week has rich numeric data. Every number MUST appear in the digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots. Format: `- **<number>** — <plain-language context>. [N](URL)` (bold number + em-dash + accessible explanation + citation). Prefer figures non-specialists can grasp (funding, user count, price, speed) over technical specs.
+
+   **Citation is MANDATORY**: every number MUST end with at least one `[N](URL)` citation where the URL appears in the digests. If you cannot find a source URL for a specific figure, OMIT that figure and pick a different number with a verifiable source. NEVER emit a number line without a citation.
 3. **## Top Stories** — 5-7 stories ranked by: Impact > Novelty > Evidence > Community buzz.
 
    **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring themes or industry commentary without a specific triggering event this week belong in Trend Analysis, not Top Stories.
@@ -1278,6 +1284,8 @@ Write the English weekly recap. Return JSON only.
    - CONTEXT (for beginners — compare to something familiar, explain why this differs from prior state)
 
    When citing, lead with the primary source (company blog, official announcement, arxiv paper, GitHub repo) before secondary reporting. Define any acronyms on first use. End paragraphs with `[N](URL)` citing the original source. URLs MUST come from the daily digest content provided in the Input (look for existing `[N](URL)` patterns in the daily digests). NEVER invent URLs.
+
+   **Citation is MANDATORY per story**: every Top Story MUST contain at least one `[N](URL)` citation in its body. If the daily digests lack any source URL for a candidate story, OMIT that story and pick a different one. NEVER emit an uncited story.
 
 4. **## Trend Analysis** — 3-4 paragraphs in plain language. "What happened in AI this week and why should I care?"
 
