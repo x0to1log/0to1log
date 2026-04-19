@@ -148,3 +148,21 @@ MAJOR_MODEL_VERSION_PATTERNS: tuple[str, ...] = (
     r"^DeepSeek[- ]",                              # DeepSeek-R1, DeepSeek V3
     r"^(?:GPT|Claude|Gemini|Llama)-?[A-Z][a-z]+",  # GPT-Rosalind, Claude-Code
 )
+
+
+# ============================================================================
+# Korean-name validator config (added 2026-04-19 for Chunk C of selection hardening plan)
+# Drives validate_korean_name() in handbook_validators.py.
+# ============================================================================
+
+# Minimum Hangul syllables required in korean_name when it is non-empty
+# AND not a global-name passthrough. Below this, reject as 'likely not real
+# Korean' (stray labels, mostly-English strings, single-char fragments).
+KOREAN_MIN_HANGUL_CHARS: int = 2
+
+# Regex patterns for terms whose korean_name may legitimately equal the
+# English term (LLM gets instructed to leave these as-is, not translate).
+# Reuses MAJOR_MODEL_VERSION_PATTERNS for versioned-model coverage, plus
+# an all-caps abbreviation pattern for acronym-style terms (LSTM, RAG,
+# BERT, GAN, T5, ...).
+ALL_CAPS_ABBREVIATION_PATTERN: str = r"^[A-Z][A-Z0-9\-]{1,}$"
