@@ -630,23 +630,22 @@ cs-fundamentals, math-statistics, ml-fundamentals, deep-learning, llm-genai, dat
 ]
 ```
 
-## definition_ko / definition_en (2-3 sentences, tight)
+## definition_ko / definition_en (1-2 sentences, encyclopedia-lede style)
 
 Precise, technical definition. Shared across both levels.
 
-**Structure (structural rules — count sentences, not characters):**
-- **2-3 sentences.** Follow the natural rhythm of each language, not a symmetric rule:
-  - **Korean (definition_ko): 2 sentences is the natural default.** Korean packs more meaning per sentence, so 2 usually covers definition + mechanism. A 3rd sentence only if it adds a distinct fact.
-  - **English (definition_en): 2-3 sentences, 3 is fine.** English tends to spread chunks across sentences naturally. Don't force 2 when 3 reads better.
-- **Required chunks, in order:**
+**Structure (1 sentence is the default; 2 is the exception):**
+- **Default: exactly 1 sentence** in encyclopedia-lede style — definition + conceptual mechanism packed via subordinate clauses, commas, and em-dashes. Think Wikipedia's opening line ("X is a Y that does Z through W") rather than an academic abstract with multiple short sentences.
+- **Optional 2nd sentence** allowed ONLY when it contributes a *distinct chunk* that cannot naturally fit in sentence 1 — typical fits are: a key operational context, an important caveat/boundary, or a common pairing — and the total stays within the length target.
+- **Required content in sentence 1:**
   1. Technical definition — what this concept *is*, in domain vocabulary.
-  2. Mechanism — *how* it actually works or *what* distinguishes it.
-- **Optional 3rd chunk**: a mitigation, differentiator, or usage cue — if it adds new information worth a sentence, include it.
+  2. Mechanism hint — *how* it works conceptually (via subordinate clause).
+- **Never split into 3+ sentences.** If you're reaching for a 3rd sentence, you're over-explaining — move that content into `body_advanced`.
 - **NO filler phrases** ("in essence", "simply put", "essentially", "at its core", "in machine learning,", "put another way").
 - **NO repetition** of the same idea in different words — every clause must add new information.
 - **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
-- **Depth floor:** if the draft is under ~150 chars EN or ~100 chars KO, it's too thin — add the mechanism chunk and retry.
-- **Typical length (for calibration, not counting):** ~280-400 chars EN, ~150-230 chars KO. Write like a concise academic glossary entry, NOT like a Wikipedia intro paragraph — glossary is essence-first with one mechanism hint, Wikipedia elaborates with architecture, variants, and history.
+- **Depth floor:** if the draft is under ~150 chars EN or ~100 chars KO, it's too thin — expand the mechanism hint.
+- **Target length:** ~280-420 chars EN, ~150-230 chars KO. Simple terms land closer to the lower bound as 1 sentence; complex terms may use a 2nd sentence and land closer to the upper bound.
 - **Scope discipline — no enumeration, no algorithmic detail:** Definition stays at **"what it is + how it works at a conceptual level"**.
   - **No enumerations** (4+ items of any kind): primitives, pipeline stages, RFC numbers, API endpoints, feature lists, product variants, transport details. These belong in `body_advanced`.
   - **Conceptual mechanism is OK; algorithmic detail is NOT.** A definition's mechanism clause describes the *idea*, not the computation.
@@ -671,44 +670,44 @@ Must be:
 - Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary.
 - Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level.
 
-GOOD (definition_ko — concept):
-"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 일반화에 실패하는 상태다. 모델 capacity 가 데이터가 제약할 수 있는 범위를 넘을 때 패턴 대신 개별 샘플을 외우면서 발생하며, 정규화 기법으로 완화한다."
-→ Passes: 2 sentences, definition + mechanism + high-level mitigation. Does NOT enumerate specific mitigations (dropout/weight decay/early stopping) — those belong in body_advanced.
+GOOD (definition_ko — concept, 1 sentence):
+"과적합은 모델이 훈련 데이터의 잡음까지 학습해 새 데이터에서 일반화에 실패하는 상태로, 모델 capacity 가 데이터가 제약할 수 있는 범위를 넘을 때 발생하며 정규화 기법으로 완화한다."
+→ Passes: 1 sentence with comma-linked clauses. Definition + mechanism + high-level mitigation pointer. Does NOT enumerate specific mitigations (dropout/weight decay/early stopping).
 
 BAD (definition_ko — too thin, missing mechanism):
 "훈련 데이터에는 잘 맞지만 새 데이터에서는 성능이 급락하는 현상. 모델이 신호 대신 잡음까지 학습해 일반화에 실패한 상태."
 → Rejected: 2 sentences but they restate the same idea twice. Zero mechanism.
-  Fix: replace sentence 2 with actual mechanism (capacity vs dataset constraint) and a brief mitigation.
+  Fix: rewrite as a single sentence packing definition + capacity-vs-dataset mechanism + high-level mitigation.
 
-GOOD (definition_en — concept):
-"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while training loss keeps decreasing. It happens when model capacity outpaces what the dataset can constrain, and is prevented through regularization methods applied during training."
-→ Passes: 2 sentences, definition + observed signal (sentence 1), mechanism + high-level mitigation category (sentence 2). Does NOT enumerate specific techniques (dropout/weight decay/early stopping) — those belong in body_advanced.
+GOOD (definition_en — concept, 1 sentence):
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal — training loss keeps decreasing while predictions collapse on unseen inputs — and is prevented through regularization methods applied during training."
+→ Passes: 1 sentence with em-dash aside. Packs definition + observed signal + high-level mitigation without enumerating specific techniques.
 
 BAD (definition_en — too thin):
 "Overfitting means a model memorizes training data and fails on new inputs."
-→ Rejected: one sentence, no mechanism. Add the capacity-vs-constraint mechanism and at least one high-level mitigation pointer.
+→ Rejected: 1 sentence but no mechanism, no mitigation pointer. Add the capacity-vs-constraint mechanism and at least a high-level mitigation reference.
 
-GOOD (definition_en — architecture):
-"Transformer is a neural network architecture built around self-attention that processes sequence tokens in parallel by learning how each token relates to every other token. It replaced RNN-style recurrence with a position-aware attention stack, enabling efficient scaling to billions of parameters and long-range dependency modeling."
-→ Passes: 2 sentences, high-level. Does NOT list encoder/decoder/FFN/multi-head/normalization as separate components — those belong in body_advanced Architecture.
+GOOD (definition_en — architecture, 1 sentence):
+"Transformer is a neural network architecture that processes sequence tokens in parallel through self-attention, replacing RNN-style recurrence with a position-aware attention stack and enabling efficient scaling to billions of parameters with long-range dependency modeling."
+→ Passes: 1 sentence. Definition + mechanism + scaling consequence packed with coordination. Does NOT list encoder/decoder/FFN/multi-head as separate components.
 
-GOOD (definition_en — training technique):
-"Reinforcement Learning from Human Feedback (RLHF) is a post-training alignment technique where a language model optimizes its responses against a reward model learned from human preference comparisons. It steers outputs toward helpful, safe behavior in cases where direct objective functions are hard to specify."
-→ Passes: 2 sentences, high-level. Does NOT list SFT + reward model training + PPO + regularization as a pipeline — those stage details belong in body_advanced's "How It Works" section.
+GOOD (definition_en — training technique, 2 sentences for richer mechanism):
+"Reinforcement Learning from Human Feedback (RLHF) is a post-training alignment technique that optimizes a language model against a reward model learned from human preference comparisons, steering outputs toward helpful behavior where explicit objective functions are impractical to define. It builds on a supervised fine-tuning baseline and applies regularization at the response level to prevent over-optimization against the proxy reward."
+→ Passes: 2 sentences because the second adds a distinct chunk (SFT baseline + response-level regularization caveat) that would overload sentence 1. Does NOT list SFT + reward-model training + PPO as a pipeline.
 
-GOOD (definition_en — protocol/spec):
-"Model Context Protocol (MCP) is an open JSON-RPC standard that lets AI applications connect to external tools and data through a uniform discovery and authorization flow. It replaces one-off, per-tool integrations with a shared protocol so new tools plug into any compliant AI host without custom adapters."
-→ Passes: 2 sentences, high-level. Does NOT list resources/tools/sampling/elicitation/logging primitives or enumerate RFC numbers — those belong in body_advanced Architecture or Formulas section.
+GOOD (definition_en — protocol/spec, 2 sentences for role clarity):
+"Model Context Protocol (MCP) is an open JSON-RPC standard that lets AI applications connect to external tools and data through a uniform discovery-and-authorization flow, replacing one-off per-tool integrations with a shared protocol. It defines three roles — host, client, server — so any compliant AI host can plug in new tools without custom adapter code."
+→ Passes: 2 sentences because the role triple is a distinct chunk — but NO RFC numbers, no primitive lists (resources/tools/sampling/...), no transport details.
 
-GOOD (definition_en — infrastructure tool/library):
-"PyTorch is an open-source deep learning framework that builds computation graphs dynamically at runtime, letting developers define and modify model architectures using standard Python control flow. Its design prioritizes research flexibility and debugging ergonomics over static graph optimization, becoming the dominant framework for modern AI research."
-→ Passes: 2 sentences, high-level. Does NOT list autograd/distributed/mobile/TorchScript/ONNX export as separate features — those belong in body_advanced's "How It Works" or "Tradeoffs" section.
+GOOD (definition_en — infrastructure tool, 1 sentence):
+"PyTorch is an open-source deep learning framework that builds computation graphs dynamically at runtime — letting developers define and modify model architectures with standard Python control flow — prioritizing research flexibility over static graph optimization."
+→ Passes: 1 sentence with em-dash aside. Definition + mechanism + design-philosophy tradeoff. Does NOT list autograd/distributed/TorchScript features.
 
-GOOD (definition_en — product/service):
-"Claude is Anthropic's family of large language models aligned through constitutional AI training, which encodes behavior guidelines explicitly rather than deriving them from preference data alone. It serves as both a chat assistant and a developer API for long-context reasoning and agentic workflows."
-→ Passes: 2 sentences, high-level. Does NOT list variants (Opus/Sonnet/Haiku) or version history (3/3.5/4/4.6) — those belong in body_advanced's architecture or history section.
+GOOD (definition_en — product/service, 2 sentences for surface + distribution):
+"Claude is Anthropic's family of large language models aligned through constitutional AI training, which encodes behavior guidelines as explicit written rules rather than deriving them from preference data alone. It is offered both as a consumer chat assistant and as a developer API for long-context reasoning and agentic workflows."
+→ Passes: 2 sentences because the distribution surface (consumer vs API) is a distinct chunk. Does NOT list variants (Opus/Sonnet/Haiku) or version history.
 
-Pattern across all six GOOD examples: **what it is + how it works at a high level**. NEVER an enumeration of internal components, pipeline stages, primitives, RFCs, features, variants, or named sub-offerings in the definition — no matter the term type.
+Pattern across all six GOOD examples: **1-sentence default (encyclopedia lede), 2 sentences when the 2nd adds a distinct chunk worth its own sentence**. NEVER an enumeration of internal components, pipeline stages, primitives, RFCs, features, variants, or named sub-offerings in the definition — no matter the term type.
 
 ---
 
@@ -967,8 +966,8 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
   "korean_full": "한국어 정식 명칭",
   "categories": ["ml-fundamentals"],
   "summary_ko": "학습자 팝업용 3~5문장 요약",
-  "definition_ko": "2-3문장 기술 정의 — 구조: 정의 + 메커니즘 (+ 맥락 선택). KO 는 2문장이 자연스러움",
-  "definition_en": "2-3 sentence technical definition — structure: definition + mechanism (+ optional context). EN often reads as 3 sentences; don't force 2",
+  "definition_ko": "1문장 백과사전 lede 스타일 (기본) — 정의 + 메커니즘 힌트를 종속절로 묶어 표현. 2문장은 별개 청크 추가 시만",
+  "definition_en": "1-sentence encyclopedia-lede style (default) — pack definition + conceptual mechanism via subordinate clauses. Add 2nd sentence only if it contributes a distinct chunk",
   "hero_news_context_ko": "\\"인용구1\\" → 뜻\\n\\"인용구2\\" → 뜻\\n\\"인용구3\\" → 뜻",
   "basic_ko_1_plain": "문제 → 해결 → 메커니즘 본문",
   "basic_ko_2_example": "- **시나리오1**: 설명\\n- **시나리오2**: 설명\\n- **시나리오3**: 설명",
@@ -984,7 +983,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ```
 
 ## Self-Check (verify before responding)
-✓ `definition_ko` has 2-3 sentences (KO typically 2, EN typically 3). Required chunks present: technical definition + mechanism (+ optional context). Each sentence carries distinct information. No filler phrases. Reject if under 100 chars (too thin, missing mechanism) or if sentences exceed 3.
+✓ `definition_ko` is 1 sentence by default (encyclopedia-lede with comma/em-dash-linked clauses); a 2nd sentence appears only when it adds a distinct chunk. Sentence 1 contains definition + conceptual mechanism hint. No filler phrases. Reject if under 100 chars (too thin) or if the draft runs to 3+ sentences.
 ✓ `summary_ko` is 3~5 sentences, easier than `definition_ko`, and does not copy `basic_ko_1_plain` verbatim
 ✓ `summary_ko` uses an intuitive analogy or everyday comparison when it genuinely helps comprehension, and skips it when it would feel forced or misleading
 ✓ `summary_ko` avoids design-doc / benchmark / API-reference tone and keeps jargon to a minimum
