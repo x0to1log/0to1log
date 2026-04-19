@@ -1724,7 +1724,27 @@ async def rerun_pipeline_stage(
 
             personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, batch_id)
             if not personas_by_type:
-                all_errors.append(f"No news_posts found for batch {batch_id} — cannot rescore")
+                msg = f"No news_posts found for batch {batch_id} — nothing to rescore"
+                all_errors.append(msg)
+                await _log_stage(
+                    supabase, run_id, "summary", "failed", time.monotonic(),
+                    input_summary=f"rerun from {from_stage}" + (f" ({category})" if category else ""),
+                    output_summary="0 rows rescored",
+                    usage=cumulative_usage,
+                    error_message=msg,
+                )
+                supabase.table("pipeline_runs").update({
+                    "status": "failed",
+                    "finished_at": datetime.now(timezone.utc).isoformat(),
+                    "last_error": msg,
+                }).eq("id", run_id).execute()
+                return PipelineResult(
+                    batch_id=batch_id,
+                    status="failed",
+                    posts_created=0,
+                    errors=all_errors,
+                    usage=cumulative_usage,
+                )
 
             for digest_type in ("research", "business"):
                 if category and digest_type != category:
@@ -1749,6 +1769,15 @@ async def rerun_pipeline_stage(
                     )
                 except Exception as e:
                     all_errors.append(f"Quality rescore failed for {digest_type}: {e}")
+                    continue
+
+                if not isinstance(qc_result, dict):
+                    # _check_digest_quality returns a non-dict sentinel (e.g., 0) when it
+                    # early-exits due to missing inputs — skip the update in that case.
+                    all_errors.append(
+                        f"Quality rescore for {digest_type} returned non-dict "
+                        f"({type(qc_result).__name__}) — likely missing expert content; skipping update"
+                    )
                     continue
 
                 score_int = int(qc_result.get("score") or qc_result.get("quality_score") or 0)

@@ -460,3 +460,60 @@ async def test_rerun_from_quality_hydrates_classified_and_community_from_checkpo
         assert isinstance(kwargs["classified"][0], ClassifiedGroup)
         assert "https://example.com/a" in kwargs["community_summary_map"]
         assert isinstance(kwargs["community_summary_map"]["https://example.com/a"], CommunityInsight)
+
+
+@pytest.mark.asyncio
+async def test_rerun_from_quality_with_no_category_filter_rescores_both_types():
+    """When category=None, the quality branch must rescore BOTH research and business.
+    Covers the branch where the category filter is off — previously only the
+    category='research' path was tested."""
+    from services.pipeline import rerun_pipeline_stage
+
+    news_rows = [
+        # research
+        {"slug": "2026-04-19-research-digest", "locale": "en", "post_type": "research",
+         "content_expert": "E", "content_learner": "L", "title": "t", "excerpt": "x",
+         "focus_items": [], "guide_items": {}},
+        {"slug": "2026-04-19-research-digest-ko", "locale": "ko", "post_type": "research",
+         "content_expert": "E-ko", "content_learner": "L-ko", "title": "t-ko", "excerpt": "x-ko",
+         "focus_items": [], "guide_items": {}},
+        # business
+        {"slug": "2026-04-19-business-digest", "locale": "en", "post_type": "business",
+         "content_expert": "EB", "content_learner": "LB", "title": "tb", "excerpt": "xb",
+         "focus_items": [], "guide_items": {}},
+        {"slug": "2026-04-19-business-digest-ko", "locale": "ko", "post_type": "business",
+         "content_expert": "EB-ko", "content_learner": "LB-ko", "title": "tb-ko", "excerpt": "xb-ko",
+         "focus_items": [], "guide_items": {}},
+    ]
+    supabase = _build_supabase_mock_for_quality_rerun(news_rows)
+
+    with patch("services.pipeline.get_supabase", return_value=supabase), \
+         patch("services.pipeline._load_checkpoint", return_value=None), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock) as qc_mock, \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock) as gen_mock, \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock):
+        qc_mock.return_value = {
+            "score": 82, "quality_score": 82,
+            "quality_flags": [], "quality_issues": [],
+            "quality_breakdown": {"total_score": 82},
+        }
+
+        result = await rerun_pipeline_stage(
+            source_run_id="run-1",
+            from_stage="quality",
+            batch_id="2026-04-19",
+            category=None,  # no filter -> both types
+        )
+
+        # Both digest_types rescored
+        assert qc_mock.await_count == 2, f"expected 2 QC calls (research+business), got {qc_mock.await_count}"
+        # Writer still never called
+        assert gen_mock.await_count == 0
+        assert result.status == "success"
+
+        # 4 update() calls (2 digest_types x 2 locales)
+        update_calls = [
+            c for c in supabase.table.return_value.update.call_args_list
+            if c.args and isinstance(c.args[0], dict) and "quality_score" in c.args[0]
+        ]
+        assert len(update_calls) == 4, f"expected 4 locale updates, got {len(update_calls)}"
