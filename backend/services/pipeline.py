@@ -22,6 +22,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
+from services.handbook_validators import validate_term_scope
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
 logger = logging.getLogger(__name__)
@@ -639,6 +640,35 @@ async def _extract_and_create_handbook_terms(
         korean_name = term_info.get("korean_name", "").strip()
         if not term_name:
             continue
+
+        # Scope gate (Task A.4): HR/regulatory/out-of-scope/product-without-allowlist
+        # rejection. Runs before every other filter (beyond the empty-term guard) so
+        # the rejection reason is the earliest, most specific signal we can log.
+        scope_ok, scope_reason = validate_term_scope(
+            term_name,
+            term_type=term_info.get("term_type"),
+        )
+        if not scope_ok:
+            logger.info("Rejecting out-of-scope term '%s': %s", term_name, scope_reason)
+            try:
+                supabase.table("pipeline_logs").insert({
+                    "run_id": run_id,
+                    "pipeline_type": "handbook.scope_gate",
+                    "status": "skipped",
+                    "debug_meta": {
+                        "event": "handbook_term_rejected",
+                        "term": term_name,
+                        "term_type": term_info.get("term_type"),
+                        "reason": scope_reason,
+                    },
+                }).execute()
+            except Exception as _log_err:
+                logger.warning(
+                    "pipeline_logs insert for rejected term failed (non-fatal): %s",
+                    _log_err,
+                )
+            continue
+
         if len(term_name.split()) > 3:
             logger.info("Skipping '%s' — too many words", term_name)
             continue
