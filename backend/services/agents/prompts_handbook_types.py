@@ -907,7 +907,6 @@ Do NOT invent sections that aren't in the content.
 ### Accuracy
 - **factual_correctness**: Claims verifiable against official docs or common technical knowledge
 - **hallucination_absence**: No fabricated benchmarks, product names, paper titles, RFC numbers, or entities
-- **source_grounding**: References point to real, verifiable sources (arxiv, official docs, reputable blogs)
 
 ### Uniqueness
 - **term_differentiation**: Content clearly distinguishes this concept from similar handbook terms
@@ -927,8 +926,7 @@ Do NOT invent sections that aren't in the content.
   }},
   "accuracy": {{
     "factual_correctness":   {{ "evidence": "...", "score": 0 }},
-    "hallucination_absence": {{ "evidence": "...", "score": 0 }},
-    "source_grounding":      {{ "evidence": "...", "score": 0 }}
+    "hallucination_absence": {{ "evidence": "...", "score": 0 }}
   }},
   "uniqueness": {{
     "term_differentiation":   {{ "evidence": "...", "score": 0 }},

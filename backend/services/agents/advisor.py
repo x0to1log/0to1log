@@ -1104,19 +1104,21 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
 
 
 def _aggregate_quality_sub_scores(
-    llm_output: dict, dimension_names: tuple[str, ...],
+    llm_output: dict, dimension_names: tuple[str, ...], max_raw: int = 100,
 ) -> tuple[int | None, dict]:
-    """Aggregate LLM sub-scores into a total 0-100 + per-dimension totals.
+    """Aggregate LLM sub-scores into a normalized 0-100 total + per-dimension totals.
 
     Code (not LLM) computes arithmetic to avoid LLM arithmetic drift.
-    Each sub-score is 0-10. Dimensions sum to 30/30/20/20 = 100 max.
+    Each sub-score is 0-10. `max_raw` is the sum of all possible sub-scores for
+    this rubric (e.g., 9 subs × 10 = 90 for advanced, 10 × 10 = 100 for basic);
+    the raw sum is then rescaled to 0-100 so grade thresholds stay comparable.
 
     Returns (total_0_100, annotated_breakdown) or (None, {}) if output malformed.
     """
     if not isinstance(llm_output, dict):
         return None, {}
     breakdown: dict = {}
-    total = 0
+    raw_total = 0
     any_found = False
     for dim in dimension_names:
         dim_data = llm_output.get(dim)
@@ -1141,18 +1143,28 @@ def _aggregate_quality_sub_scores(
             dim_total += s
             any_found = True
         breakdown[dim] = {**sub_entries, "_subtotal": dim_total}
-        total += dim_total
+        raw_total += dim_total
     if not any_found:
         return None, {}
-    return min(100, total), breakdown
+    if max_raw <= 0:
+        return None, {}
+    normalized = int(round(raw_total * 100 / max_raw))
+    return min(100, normalized), breakdown
 
 
+# Advanced: 3+2+2+2 = 9 subs × 10 = 90 raw max. source_grounding removed
+# because handbook structure stores sources in a dedicated references field,
+# not as inline citations in body_advanced (unlike news digests).
 _ADVANCED_DIMENSIONS = (
     "technical_depth", "accuracy", "uniqueness", "structural_completeness",
 )
+_ADVANCED_MAX_RAW = 90
+
+# Basic: 3+3+2+2 = 10 subs × 10 = 100 raw max.
 _BASIC_DIMENSIONS = (
     "engagement", "accuracy", "uniqueness", "structural_completeness",
 )
+_BASIC_MAX_RAW = 100
 
 
 async def _check_handbook_quality(
@@ -1175,7 +1187,7 @@ async def _check_handbook_quality(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": advanced_content[:6000]},
+                    {"role": "user", "content": advanced_content[:12000]},
                 ],
                 max_tokens=1800,
                 temperature=0,
@@ -1183,7 +1195,7 @@ async def _check_handbook_quality(
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "handbook-quality")
-        total, breakdown = _aggregate_quality_sub_scores(data, _ADVANCED_DIMENSIONS)
+        total, breakdown = _aggregate_quality_sub_scores(data, _ADVANCED_DIMENSIONS, _ADVANCED_MAX_RAW)
         usage = extract_usage_metrics(resp, reasoning_model)
         if total is None:
             logger.warning("Handbook quality check returned malformed sub-scores for '%s'", term)
@@ -1278,7 +1290,7 @@ async def _check_basic_quality(
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "basic-quality")
-        total, breakdown = _aggregate_quality_sub_scores(data, _BASIC_DIMENSIONS)
+        total, breakdown = _aggregate_quality_sub_scores(data, _BASIC_DIMENSIONS, _BASIC_MAX_RAW)
         usage = extract_usage_metrics(resp, reasoning_model)
         if total is None:
             logger.warning("Basic quality check returned malformed sub-scores for '%s'", term)
