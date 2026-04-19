@@ -1194,9 +1194,22 @@ One punchy sentence here.
 - **If you run inference at scale**: benchmark TurboQuant — because 6x KV savings change unit economics.
 ```
 
-Example excerpt and focus_items values:
-- `"excerpt"`: "A strategic reshuffle week: Anthropic gated cyber models while Meta doubled down on product-native AI."
-- `"focus_items"`: ["Meta Muse Spark launch redefines product-native AI", "Anthropic Glasswing gates high-risk cyber capability", "Nvidia response to $122B OpenAI raise emerging"]
+Example full output JSON (showing `excerpt` and `focus_items`):
+```json
+{
+  "headline": "Anthropic Glasswing and Meta Muse Spark redefine the week",
+  "en": "...(full markdown body)...",
+  "excerpt": "A strategic reshuffle week: Anthropic gated cyber models while Meta doubled down on product-native AI.",
+  "focus_items": [
+    "Meta Muse Spark launch redefines product-native AI",
+    "Anthropic Glasswing gates high-risk cyber capability",
+    "Nvidia response to $122B OpenAI raise emerging"
+  ],
+  "week_numbers": [{"value": "$122B", "label": "OpenAI post-money valuation"}],
+  "week_tool": {"name": "Muse Spark", "description": "Meta's product-native AI assistant", "url": "https://example.com"},
+  "weekly_quiz": []
+}
+```
 
 ## Length Target (approximate — depth > literal count)
 - Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items, English prose averaging ~120-150 chars per sentence)
@@ -1327,9 +1340,22 @@ One friendly sentence here.
 1. **Try X**: what to do and why.
 ```
 
-Example excerpt and focus_items values:
-- `"excerpt"`: "Big week in AI: Anthropic tightened access to risky models, Meta launched a new assistant, and OpenAI raised billions."
-- `"focus_items"`: ["Meta launched a new AI assistant inside WhatsApp", "Anthropic limits access to cybersecurity-focused models", "Watch next: how OpenAI uses its new funding"]
+Example full output JSON (showing `excerpt` and `focus_items`):
+```json
+{
+  "headline": "Anthropic, Meta, and OpenAI all made big moves this week",
+  "en": "...(full markdown body)...",
+  "excerpt": "Big week in AI: Anthropic tightened access to risky models, Meta launched a new assistant, and OpenAI raised billions.",
+  "focus_items": [
+    "Meta launched a new AI assistant inside WhatsApp",
+    "Anthropic limits access to cybersecurity-focused models",
+    "Watch next: how OpenAI uses its new funding"
+  ],
+  "week_numbers": [{"value": "$122B", "label": "OpenAI valuation after latest raise"}],
+  "week_tool": {"name": "Meta AI", "description": "Meta's AI assistant now inside WhatsApp", "url": "https://example.com"},
+  "weekly_quiz": []
+}
+```
 
 ## Length Target (approximate — depth > literal count)
 - Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items)
