@@ -2056,6 +2056,10 @@ Given one or more news articles, extract terms that would make strong **standalo
 - Adjective/modifier phrases containing -powered, -driven, -based, -enabled, -oriented anywhere in the term (e.g., "AI-powered tools", "AI-driven efficiencies", "data-driven approach")
 - Ad-hoc compound nouns coined in a specific paper that are NOT established terms (e.g., "warping operation", "self-editing context", "verification-centric agents")
 - Over-specific sub-concepts when the parent term is the real entry (e.g., extract "attention mechanism" not "multi-head attention kernel"; extract "evolutionary algorithm" not "variation operator")
+- HR / business-operations terms (e.g., "acquihire", "headcount reduction", "performance improvement plan", "RIF") — even when they appear in AI-company news, they are not AI concepts
+- Regulatory / compliance standards and their article numbers (e.g., "ISO 42001", "ISO 27001", "SOC 2", "NIST SP 800-53", "GDPR Article 22", "IEEE 802.11") — these are compliance frameworks, not technical concepts to learn
+  - EXCEPTION: landmark AI-specific legislation as a whole concept MAY be included (e.g., "EU AI Act" yes; but "EU AI Act Article 6" no — extract the whole act, not article numbers)
+- Corporate finance terms (e.g., "Series A", "IPO", "valuation multiple", "acquihire") — they appear in AI news but are not AI concepts
 
 ## Name-clash rule (products/companies that share a name with a technical concept)
 
