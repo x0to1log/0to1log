@@ -28,7 +28,7 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 | 모델 | 역할 |
 |---|---|
 | **QuizPoll** | 퀴즈 question/options/answer/explanation |
-| **PromptGuideItems** | 5블록: one_liner, action_item, critical_gotcha, rotating_item, quiz_poll |
+| **guide_items (JSONB)** | daily: persona별 quiz_poll + sources_*. weekly: week_numbers, week_tool, week_terms, weekly_quiz_*, excerpt_learner. PromptGuideItems 클래스는 2026-04-19 제거됨. |
 | **ClassifiedCandidate** | title, url, snippet, category, subcategory, relevance_score, reason |
 | **ClassificationResult** | research list + business list |
 

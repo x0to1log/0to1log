@@ -31,7 +31,7 @@ Supabase PostgreSQL 기반. pgvector 확장 (Phase 3). RLS로 권한 관리.
 | **식별** | `id`, `title`, `slug`, `category`, `post_type`, `status` | Research/Business 구분, draft/published/archived |
 | **페르소나 콘텐츠** | `content_beginner`, `content_learner`, `content_expert` | Business 포스트용 3버전 (MDX) |
 | **단일 콘텐츠** | `content_original` | Research/Type B 포스트용 |
-| **5블록** | `guide_items` (JSONB) | `{one_liner, action_item, critical_gotcha, rotating_item, quiz_poll}` |
+| **가이드 블록** | `guide_items` (JSONB) | daily: `{quiz_poll_expert, quiz_poll_learner, sources_expert, sources_learner, excerpt_learner, title_learner}` · weekly: `{week_numbers, week_tool, week_terms, weekly_quiz_expert, weekly_quiz_learner, excerpt_learner, title_learner}` |
 | **Related News** | `related_news` (JSONB) | `{big_tech, industry_biz, new_tools}` — Business만 |
 | **뉴스 없음** | `no_news_notice`, `recent_fallback` | Research "없음" 공지 |
 | **메타** | `source_urls`, `news_temperature`, `reading_time_min`, `tags` | |
