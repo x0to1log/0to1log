@@ -1154,6 +1154,8 @@ Return JSON only:
 {{
   "headline": "English headline",
   "en": "<full English markdown with all ## sections above>",
+  "excerpt": "1-2 sentences that make readers click. MUST differ from the body's 'This Week in One Line' section. Strategic decision lens for VPs / CTOs / product leads.",
+  "focus_items": ["Exactly 3 bullets, EN 5-12 words each. P1=what shifted this week, P2=why it matters strategically, P3=what to watch next week"],
   "week_numbers": [{{"value": "$2B", "label": "short description"}}],
   "week_tool": {{"name": "Tool Name", "description": "One sentence", "url": "https://..."}},
   "weekly_quiz": [
@@ -1191,6 +1193,10 @@ One punchy sentence here.
 ## So What Do I Do?
 - **If you run inference at scale**: benchmark TurboQuant — because 6x KV savings change unit economics.
 ```
+
+Example excerpt and focus_items values:
+- `"excerpt"`: "A strategic reshuffle week: Anthropic gated cyber models while Meta doubled down on product-native AI."
+- `"focus_items"`: ["Meta Muse Spark launch redefines product-native AI", "Anthropic Glasswing gates high-risk cyber capability", "Nvidia response to $122B OpenAI raise emerging"]
 
 ## Length Target (approximate — depth > literal count)
 - Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items, English prose averaging ~120-150 chars per sentence)
@@ -1281,6 +1287,8 @@ Return JSON only:
 {{
   "headline": "English headline",
   "en": "<full English markdown with all ## sections above>",
+  "excerpt": "1-2 sentences, plain language, click-worthy for non-specialist readers. MUST differ from body's 'This Week in One Line'.",
+  "focus_items": ["Exactly 3 bullets, EN 5-12 words each. P1=what shifted in AI this week, P2=why it matters for general readers, P3=what to watch for"],
   "week_numbers": [{{"value": "$2B", "label": "beginner-friendly description"}}],
   "week_tool": {{"name": "Tool Name", "description": "What it does and how to get started", "url": "https://..."}},
   "weekly_quiz": [
@@ -1318,6 +1326,10 @@ One friendly sentence here.
 ## What Can I Try?
 1. **Try X**: what to do and why.
 ```
+
+Example excerpt and focus_items values:
+- `"excerpt"`: "Big week in AI: Anthropic tightened access to risky models, Meta launched a new assistant, and OpenAI raised billions."
+- `"focus_items"`: ["Meta launched a new AI assistant inside WhatsApp", "Anthropic limits access to cybersecurity-focused models", "Watch next: how OpenAI uses its new funding"]
 
 ## Length Target (approximate — depth > literal count)
 - Top Stories: ~6000-8000 chars (4-5 substantive sentences × 7-10 items)
