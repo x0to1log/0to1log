@@ -87,3 +87,64 @@ PAPER_REFERENCE_PATTERNS: tuple[str, ...] = (
     r"doi\.org/10\.",
     r"et al\.",
 )
+
+
+# ============================================================================
+# Scope gate config (added 2026-04-19 for Chunk A of selection hardening plan)
+# These constants drive the `validate_term_scope()` gate in handbook_validators.py
+# ============================================================================
+
+# Literal term names that should always be rejected as out-of-scope.
+# Amy-curated from manually-archived terms (2026-04-17 batch cleanup retro).
+HR_REGULATORY_BLOCKLIST: frozenset[str] = frozenset({
+    # HR / business-operations
+    "acquihire",
+    "acqui-hire",
+    "headcount",
+    # Specific regulatory standards (general "AI regulation" concepts stay via allowlist)
+    "ISO 42001",
+    "ISO 27001",
+    "SOC 2",
+    "GDPR Article 22",
+})
+
+# Regex patterns for whole families to reject. Easier to maintain than
+# enumerating every ISO/IEC number.
+OUT_OF_SCOPE_REGEX: tuple[str, ...] = (
+    r"^ISO\s*\d+(?:[:\-]\d+)?$",     # any ISO xxxxx, ISO xxx:yyyy
+    r"^IEC\s*\d+",                   # any IEC standard
+    r"^IEEE\s*\d+",                  # any IEEE standard
+    r"^NIST\s*SP\s*\d",              # NIST Special Publications
+    r"^SOC\s*\d",                    # SOC 1/2/3
+)
+
+# Curated exceptions — specific named regulations that ARE in scope for
+# the AI handbook (e.g., landmark AI legislation). Must be an exact match.
+# Start EMPTY — Amy adds as needed. Do NOT try to anticipate.
+IMPORTANT_NON_TECH_ALLOWLIST: frozenset[str] = frozenset({
+    # e.g., "EU AI Act", "AI Safety Institute" — add deliberately when needed
+})
+
+# Major AI product brand names that pass the `product_platform_service`
+# term_type auto-reject. Amy-curated (2026-04-19). Intentionally small —
+# models like ChatGPT/Claude/Gemini tend to be classified as
+# `model_algorithm_family`, not `product_platform_service`, so they don't
+# need to be on this list. This list is for true product brands like Firefly
+# that the LLM classifies as product but Amy wants included.
+MAJOR_AI_PRODUCT_ALLOWLIST: frozenset[str] = frozenset({
+    "Firefly",
+})
+
+# Regex patterns for legitimate versioned-model names. Terms matching these
+# auto-accept scope gate regardless of term_type classification. Covers
+# patterns like "GPT-5.2", "Claude 4.6", "Gemini 3", "Llama 4", "o3".
+MAJOR_MODEL_VERSION_PATTERNS: tuple[str, ...] = (
+    r"^GPT-\d",                                    # GPT-4, GPT-5, GPT-5.2
+    r"^Claude\s+(?:\d+(?:\.\d+)?|\w+(?:\s+\d+(?:\.\d+)?)?)$",  # Claude 4.6, Claude Opus, Claude Sonnet 4.6
+    r"^Gemini\s+\d",                               # Gemini 2, Gemini 3
+    r"^Llama\s+\d",                                # Llama 3, Llama 4
+    r"^Mistral\s+\w+",                             # Mistral Large, Mistral Small
+    r"^o\d",                                       # o1, o3, o4
+    r"^DeepSeek[- ]",                              # DeepSeek-R1, DeepSeek V3
+    r"^(?:GPT|Claude|Gemini|Llama)-?[A-Z][a-z]+",  # GPT-Rosalind, Claude-Code
+)
