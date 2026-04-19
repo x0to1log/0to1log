@@ -22,7 +22,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
 from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
-from services.handbook_validators import validate_term_scope, validate_korean_name
+from services.handbook_validators import validate_term_scope, validate_korean_name, validate_term_grounding
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
 logger = logging.getLogger(__name__)
@@ -931,6 +931,33 @@ async def _extract_and_create_handbook_terms(
                 except Exception as _log_err:
                     logger.warning(
                         "pipeline_logs insert for queued Korean review failed (non-fatal): %s",
+                        _log_err,
+                    )
+
+            # Entity grounding gate (Task B.2): if the term never appears verbatim
+            # in any of the source articles, queue it for Amy's review — may be
+            # legitimately new, may be fabricated from fragments.
+            grounding_ok, grounding_reason = validate_term_grounding(term_name, article_texts)
+            if not grounding_ok:
+                term_status = "queued"
+                logger.info(
+                    "Queuing term '%s' for grounding review: %s",
+                    term_name, grounding_reason,
+                )
+                try:
+                    supabase.table("pipeline_logs").insert({
+                        "run_id": run_id,
+                        "pipeline_type": "handbook.grounding_gate",
+                        "status": "queued",
+                        "debug_meta": {
+                            "event": "handbook_term_ungrounded",
+                            "term": term_name,
+                            "reason": grounding_reason,
+                        },
+                    }).execute()
+                except Exception as _log_err:
+                    logger.warning(
+                        "pipeline_logs insert for ungrounded term failed (non-fatal): %s",
                         _log_err,
                     )
 
