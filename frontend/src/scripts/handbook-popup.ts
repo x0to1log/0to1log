@@ -127,13 +127,16 @@ function buildPopupHtml(data: TermData, slug: string): string {
 
   html += `<div class="handbook-popup-rule"></div>`;
 
-  // Body: learner gets learner summary when available, expert gets definition
+  // Body: learner gets summary (preferred) or basic first section; expert gets definition.
+  // Definition is intentionally NOT a learner fallback — it's technical and breaks learner UX.
   html += `<div class="handbook-popup-content" id="handbook-popup-desc">`;
-  if (isLearner && data.summary) {
-    html += `<p>${esc(data.summary).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`;
-  } else if (isLearner && data.basic_plain) {
-    const section = extractFirstSection(data.basic_plain);
-    html += miniMd(section);
+  if (isLearner) {
+    if (data.summary) {
+      html += `<p>${esc(data.summary).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`;
+    } else if (data.basic_plain) {
+      const section = extractFirstSection(data.basic_plain);
+      html += miniMd(section);
+    }
   } else if (data.definition) {
     html += `<p>${esc(data.definition).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`;
   }
