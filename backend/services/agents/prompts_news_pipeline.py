@@ -1424,222 +1424,261 @@ Return JSON only:
 
 # ---------------------------------------------------------------------------
 # Quality Check Prompts
-# Moved from pipeline.py. Each prompt targets a specific digest_type × persona.
-# A shared severity rubric is injected inline above the JSON schema of every
-# prompt so LLM judges grade major/minor consistently across runs.
+# Rubric pattern adapted from handbook HANDBOOK_QUALITY_CHECK_PROMPT.
+#
+# Key design choices (NP-QUALITY-06):
+# - 0-10 continuous scale per sub-score (4 anchors)
+# - Every sub-score requires evidence (quoted text) + score — no hedging
+# - Code aggregates sub-scores into 0-100 total; LLM does NOT emit total
+# - locale_integrity is an EXPLICIT sub-dimension (not buried in severity)
+#   so English-in-KO leakage is detected systematically, not case-by-case
 # ---------------------------------------------------------------------------
 
-QUALITY_CHECK_RESEARCH_EXPERT = """You are a strict quality reviewer for an AI tech research digest written for senior ML engineers.
+_QC_SHARED_RUBRIC_HEADER = """## Scoring Scale (0-10 per sub-score)
 
-The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
+Apply this 4-anchor scale:
+- **10**: Exemplary — criterion fully met; cite concrete evidence.
+- **7**: Solid — criterion met with minor gaps.
+- **4**: Weak — partial or surface-level adherence; notable gaps.
+- **0**: Missing, contradicts the criterion, or fabricated.
 
-Score this digest on 4 criteria (0-25 each, total 0-100).
+Interpolate for in-between scores (e.g., 8 for "solid with only one small gap").
 
-**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
+## Required Output Format (per sub-score)
 
-Anchor tiers for reference:
+Every sub-score MUST include BOTH:
+1. `evidence`: Quote or describe SPECIFIC content observed — cite exact phrase, section heading, or blockquote text. Empty evidence is invalid — if truly nothing is present, say so explicitly ("section missing", "no blockquote found").
+2. `score`: 0-10 integer anchored in that evidence.
 
-1. **Section Completeness** (25):
-   Required sections: One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters.
-   NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists for that day. Do NOT penalize intentional omissions. But Why It Matters and One-Line Summary are ALWAYS required.
-   - 25: All present sections except One-Line Summary have substantial content (200+ chars each) with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline.
-   - 18: Present sections are adequate but 1 non-summary section is thin (<150 chars), or the One-Line Summary is generic rather than synthetic
-   - 10: 1+ present section is very thin or poorly structured or missing ## headings
-   - 0: Content structure is broken or unrecognizable
+Do NOT output any total or subtotal — code computes aggregates from sub-scores.
+Do NOT hedge ("probably", "seems", "might") — anchor each score to concrete evidence.
+Do NOT invent content that isn't in the input."""
 
-2. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations in body sections. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. If multiple sources are provided for an item, they should appear in different paragraphs. If only one source is provided, using it well is sufficient.
-   - 25: Every body paragraph has [N](URL) citation; all provided sources are utilized; benchmark numbers are attributed
-   - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
-   - 10: Provided sources are ignored or citations grouped at bottom
-   - 0: No inline citations or fabricated URLs
+_QC_SHARED_SEVERITY_RULES = """## Severity (for issues list)
 
-3. **Technical Depth** (25):
-   - 25: Specific numbers (parameter counts, benchmark scores, FLOPs, latency); comparisons to baselines; architecture details
-   - 18: Some specifics but also vague claims ("significantly improved")
-   - 10: Mostly vague; no concrete metrics or comparisons
-   - 0: Contains factual errors or hallucinated benchmarks
-
-4. **Language Quality** (25):
-   - 25: Reads like a peer engineer analysis; assertive tone; each news item is 3-4 paragraphs; natural and fluent
-   - 18: Readable and professional; adequate length but some hedging
-   - 10: Choppy, translation-sounding, or some items are only 1 paragraph
-   - 0: Barely readable or extremely short
-
-## Severity
-
-Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
+Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), English-only `>` blockquote inside KO body, English-only paragraph inside KO body (proper nouns like OpenAI, GPT-5.4 in Latin script are OK), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
 
 Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
 ## Issues
 
-Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
+Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Sub-scores reflect overall quality; issue list flags specific defects only.
 
-Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
-
-Return JSON only:
-{"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "depth": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
+Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques."""
 
 
-QUALITY_CHECK_RESEARCH_LEARNER = """You are a quality reviewer for an AI tech research digest written for beginners and curious developers.
+# ---------------------------------------------------------------------------
 
-The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
+QUALITY_CHECK_RESEARCH_EXPERT = f"""You are a strict quality reviewer for an AI tech research digest written for senior ML engineers.
 
-Score this digest on 4 criteria (0-25 each, total 0-100).
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
 
-**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
+{_QC_SHARED_RUBRIC_HEADER}
 
-Anchor tiers for reference:
+## Sub-dimensions (10 sub-scores grouped into 4 categories)
 
-1. **Section Completeness** (25):
-   Required sections: One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters.
-   NOTE: LLM & SOTA Models, Open Source & Repos, and Research Papers may be intentionally omitted if no relevant news exists. But Why It Matters and One-Line Summary are ALWAYS required.
-   - 25: All present sections except One-Line Summary have substantial content with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline.
-   - 18: Present sections adequate but 1 non-summary section is thin, or the One-Line Summary is generic rather than synthetic
-   - 10: 1+ present section is very thin or missing ## headings
-   - 0: Broken structure
+### Structural Completeness (2)
+- **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — are present with `##` headings. NOTE: LLM & SOTA Models / Open Source & Repos / Research Papers may be intentionally omitted if no relevant news exists (do not penalize). Why It Matters and One-Line Summary are ALWAYS required.
+- **section_depth**: Each present non-summary section has substantial content (~200+ chars); One-Line Summary may be brief if it synthesizes the day's main throughline.
 
-2. **Accessibility** (25):
-   - 25: Technical terms are explained inline on first use; analogies help understanding; jargon is never left unexplained
-   - 18: Most terms explained; 1-2 left without context
-   - 10: Assumes too much prior knowledge; multiple unexplained terms
-   - 0: Written like an expert brief; inaccessible to beginners
+### Source Quality (3)
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
+- **source_utilization**: All provided sources are drawn on across paragraphs — not ignored or piled at bottom.
 
-3. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations in body sections. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
-   - 25: Most paragraphs end with [N](URL) citations; all provided sources are utilized
-   - 18: Most items cite sources; a few paragraphs missing
-   - 10: Provided sources are ignored or citations grouped at bottom
-   - 0: No citations
+### Technical Depth (3)
+- **concrete_specifics**: Real numbers present — parameter counts, benchmark scores, FLOPs, latency figures, context windows. Not "significantly improved" hand-waves.
+- **architectural_detail**: Explains HOW the system works (data flow, algorithm steps, training recipe) — not just WHAT it claims to do.
+- **baseline_comparison**: Benchmark numbers contextualized against named baselines with delta (not standalone).
 
-4. **Language Quality** (25):
-   - 25: Conversational but substantive; lead story 3-4 paragraphs, supporting at least 3; no tutorial/action-plan drift
-   - 18: Readable; mostly appropriate tone; adequate length
-   - 10: Too formal, too casual, or too short
-   - 0: Barely readable
+### Language Quality (2)
+- **fluency**: Reads like a peer engineer analysis; assertive tone; lead item 3-4 paragraphs; natural and fluent in both EN and KO.
+- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in the `ko` field contains Hangul text (proper nouns like OpenAI / GPT-5.4 may remain in Latin script). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
 
-## Severity
+{_QC_SHARED_SEVERITY_RULES}
 
-Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
+## Output JSON (no total score — code aggregates)
 
-Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
-
-## Issues
-
-Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
-
-Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
-
-Return JSON only:
-{"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "sources": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
-
-
-QUALITY_CHECK_BUSINESS_EXPERT = """You are a strict quality reviewer for an AI business digest written for senior decision-makers.
-
-The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
-
-Score this digest on 4 criteria (0-25 each, total 0-100).
-
-**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
-
-Anchor tiers for reference:
-
-1. **Section Completeness** (25):
-   Required sections: One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions.
-   NOTE: Big Tech, Industry & Biz, and New Tools may be omitted if no relevant news exists. But One-Line Summary, Connecting the Dots, and Strategic Decisions are ALWAYS required.
-   - 25: All present sections except One-Line Summary have substantial content (200+ chars each) with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline. Strategic Decisions uses bullet format.
-   - 18: All present but 1 non-summary section is thin, or the One-Line Summary is generic rather than synthetic
-   - 10: Missing a required section (Connecting the Dots or Strategic Decisions) or missing ## headings
-   - 0: Missing 2+ required sections
-
-2. **Source Quality** (25):
-   Expected: per-paragraph [N](URL) citations in body sections. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. If multiple sources are provided, they should appear in different paragraphs. If only one source, using it well is sufficient.
-   - 25: Every body paragraph has [N](URL) citation; all provided sources are utilized; funding amounts and deal terms attributed
-   - 18: Most paragraphs cite sources; 1-2 paragraphs missing citations
-   - 10: Provided sources are ignored or citations grouped at bottom
-   - 0: No inline citations
-
-3. **Analysis Quality** (25):
-   - 25: Connecting the Dots reveals causation between 2+ stories; Strategic Decisions use "If [situation]: [action] -- because [reasoning]. Risk of inaction: [consequence]" format
-   - 18: Analysis exists but surface-level; decisions somewhat generic
-   - 10: Analysis just restates news; decisions are platitudes
-   - 0: No analysis or completely generic
-
-4. **Language Quality** (25):
-   - 25: Reads like a strategic advisor briefing; assertive; each item 3-4 paragraphs; specific comparisons
-   - 18: Professional and readable; adequate length
-   - 10: Choppy or too general; some items only 1 paragraph
-   - 0: Barely readable
-
-SCORING CALIBRATION: Score proportionally. Deduct points per issue but do NOT collapse entire categories to 0 for a single problem. A well-written digest missing one section should score 60-75, not below 40.
-
-## Severity
-
-Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
-
-Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
-
-## Issues
-
-Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
-
-Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
-
-Return JSON only:
-{"score": 0-100, "subscores": {"sections": 0-25, "sources": 0-25, "analysis": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
+{{
+  "structural_completeness": {{
+    "sections_present": {{"evidence": "...", "score": 0}},
+    "section_depth":    {{"evidence": "...", "score": 0}}
+  }},
+  "source_quality": {{
+    "citation_coverage":       {{"evidence": "...", "score": 0}},
+    "primary_source_priority": {{"evidence": "...", "score": 0}},
+    "source_utilization":      {{"evidence": "...", "score": 0}}
+  }},
+  "technical_depth": {{
+    "concrete_specifics":   {{"evidence": "...", "score": 0}},
+    "architectural_detail": {{"evidence": "...", "score": 0}},
+    "baseline_comparison":  {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "fluency":            {{"evidence": "...", "score": 0}},
+    "locale_integrity":   {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "expert_body|ko|en", "category": "source|locale|structure|clarity|overclaim", "message": "..."}}]
+}}"""
 
 
-QUALITY_CHECK_BUSINESS_LEARNER = """You are a quality reviewer for an AI business digest written for general audiences.
+QUALITY_CHECK_RESEARCH_LEARNER = f"""You are a quality reviewer for an AI tech research digest written for beginners and curious developers.
 
-The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues. Do not give full marks when one locale has clear quality problems.
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
 
-Score this digest on 4 criteria (0-25 each, total 0-100).
+{_QC_SHARED_RUBRIC_HEADER}
 
-**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only. Ask "is there any gap I could name?" — if yes, drop to 22.
+## Sub-dimensions (10 sub-scores grouped into 4 categories)
 
-Anchor tiers for reference:
+### Structural Completeness (2)
+- **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — present with `##` headings. LLM & SOTA Models / Open Source & Repos / Research Papers may be omitted if no news (do not penalize). Why It Matters and One-Line Summary ALWAYS required.
+- **section_depth**: Each present section has substantive content; One-Line Summary may be brief if it synthesizes the day's throughline.
 
-1. **Section Completeness** (25):
-   Required sections: One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items.
-   NOTE: Big Tech, Industry & Biz, and New Tools may be omitted if no news. But One-Line Summary, What This Means for You, and Action Items are ALWAYS required.
-   - 25: All present sections except One-Line Summary have substantial content with ## headings. One-Line Summary may be brief if it clearly synthesizes the day's main throughline. Action Items uses numbered list format.
-   - 18: All present but 1 non-summary section is thin, or the One-Line Summary is generic rather than synthetic
-   - 10: Missing a required section or missing ## headings
-   - 0: Missing 2+ required sections
+### Source Quality (2)
+- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Minor gaps acceptable for learner-grade writing.
+- **source_utilization**: Provided sources are drawn on across paragraphs.
 
-2. **Accessibility** (25):
-   - 25: Business concepts explained in relatable terms; industry jargon decoded; examples connect to daily life
-   - 18: Most concepts accessible; 1-2 left unexplained
-   - 10: Assumes business/AI background; jargon heavy
-   - 0: Inaccessible to general audience
+### Accessibility (3)
+- **plain_language_lead**: Each item foregrounds the practical change in plain words before naming technical mechanism (e.g., "processes a full page at once" before "via parallel diffusion decoding").
+- **acronym_expansion**: Every acronym (RAG, DPO, MoE, CLIP, etc.) is expanded in Korean/English form on first use — never dropped raw. Example good: "검색 증강 생성(RAG)" / "Retrieval-Augmented Generation (RAG)".
+- **analogy_quality**: When an analogy is used, it genuinely aids understanding (not forced). Straightforward items may skip analogy without penalty.
 
-3. **Actionability** (25):
-   - 25: Action Items are specific, concrete, numbered (not generic "learn AI"); What This Means for You connects news to real impact in 3-4 paragraphs
-   - 18: Actions exist but some are vague; meaning section is decent
-   - 10: Actions are generic platitudes; meaning section thin
-   - 0: No actionable content or empty sections
+### Language Quality (3)
+- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting at least 3.
+- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in `ko` field contains Hangul text (proper nouns in Latin script OK). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+- **no_chat_tone**: Korean body avoids spoken "~요" tone and chatty registers; uses editorial news prose throughout.
 
-4. **Language Quality** (25):
-   - 25: Friendly but informative; lead story 3-4 paragraphs, supporting at least 3; engaging tone; One-Line Summary may be brief if it clearly synthesizes the day's main throughline. One-Line Summary does not require an inline citation if the body paragraphs are properly cited. All provided sources are utilized
-   - 18: Readable; adequate length; most paragraphs have citations
-   - 10: Too dry, too short, or condescending; citations missing
-   - 0: Barely readable
+{_QC_SHARED_SEVERITY_RULES}
 
-## Severity
+## Output JSON (no total score — code aggregates)
 
-Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
+{{
+  "structural_completeness": {{
+    "sections_present": {{"evidence": "...", "score": 0}},
+    "section_depth":    {{"evidence": "...", "score": 0}}
+  }},
+  "source_quality": {{
+    "citation_coverage":  {{"evidence": "...", "score": 0}},
+    "source_utilization": {{"evidence": "...", "score": 0}}
+  }},
+  "accessibility": {{
+    "plain_language_lead": {{"evidence": "...", "score": 0}},
+    "acronym_expansion":   {{"evidence": "...", "score": 0}},
+    "analogy_quality":     {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "fluency":          {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}},
+    "no_chat_tone":     {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "learner_body|ko|en", "category": "source|locale|structure|clarity|accessibility", "message": "..."}}]
+}}"""
 
-Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
 
-## Issues
+QUALITY_CHECK_BUSINESS_EXPERT = f"""You are a strict quality reviewer for an AI business digest written for senior decision-makers.
 
-Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
 
-Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
+{_QC_SHARED_RUBRIC_HEADER}
 
-Return JSON only:
-{"score": 0-100, "subscores": {"sections": 0-25, "accessibility": 0-25, "actionability": 0-25, "language": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
+## Sub-dimensions (11 sub-scores grouped into 4 categories)
+
+### Structural Completeness (2)
+- **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, Connecting the Dots, Strategic Decisions ALWAYS required.
+- **section_depth**: Each present non-summary section has substantial content (~200+ chars); Strategic Decisions uses bullet format; One-Line Summary may be brief if synthetic.
+
+### Source Quality (3)
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / official announcement) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
+- **source_utilization**: All provided sources drawn on across paragraphs.
+
+### Strategic Analysis (3)
+- **market_signal**: Strategic implication made explicit (competitive shift, market restructure, funding signal, pricing move) — not just event description.
+- **baseline_comparison**: Numbers contextualized against benchmarks/competitors/prior periods ("$122B — ~10x Anthropic's last raise", not standalone "$122B").
+- **prediction_guard**: No forward-looking speculation verbs in body ("will disrupt", "is set to", "expect X to Y"). Calibrated language only ("signals", "points toward", "implies").
+
+### Language Quality (2)
+- **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons.
+- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in `ko` field contains Hangul text (proper nouns in Latin script OK). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+
+{_QC_SHARED_SEVERITY_RULES}
+
+## Output JSON (no total score — code aggregates)
+
+{{
+  "structural_completeness": {{
+    "sections_present": {{"evidence": "...", "score": 0}},
+    "section_depth":    {{"evidence": "...", "score": 0}}
+  }},
+  "source_quality": {{
+    "citation_coverage":       {{"evidence": "...", "score": 0}},
+    "primary_source_priority": {{"evidence": "...", "score": 0}},
+    "source_utilization":      {{"evidence": "...", "score": 0}}
+  }},
+  "strategic_analysis": {{
+    "market_signal":       {{"evidence": "...", "score": 0}},
+    "baseline_comparison": {{"evidence": "...", "score": 0}},
+    "prediction_guard":    {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "fluency":          {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "expert_body|ko|en", "category": "source|locale|structure|overclaim|clarity", "message": "..."}}]
+}}"""
+
+
+QUALITY_CHECK_BUSINESS_LEARNER = f"""You are a quality reviewer for an AI business digest written for general audiences.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
+
+{_QC_SHARED_RUBRIC_HEADER}
+
+## Sub-dimensions (10 sub-scores grouped into 4 categories)
+
+### Structural Completeness (2)
+- **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, What This Means for You, Action Items ALWAYS required.
+- **section_depth**: Each present section has substantive content; Action Items uses numbered list format; One-Line Summary may be brief if synthetic.
+
+### Source Quality (2)
+- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Funding amounts attributed.
+- **source_utilization**: Provided sources drawn on across paragraphs.
+
+### Practical Impact (3)
+- **change_clarity**: Each item foregrounds "what changed" in plain words before broader interpretation or technical detail.
+- **reader_impact**: Every story connects to practical impact for a non-developer reader (career / work / consumer AI experience).
+- **actionable_items**: Action Items are doable by a non-developer this week. BAD: "evaluate vendor lock-in risk", "build multi-agent pipeline". GOOD: "try Meta AI in WhatsApp", "read Anthropic's blog post".
+
+### Language Quality (3)
+- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; engaging without being condescending.
+- **locale_integrity**: KO body is predominantly Korean. Every `>` blockquote in `ko` field contains Hangul text (proper nouns in Latin script OK). No English-only paragraphs or sentences in KO prose. Score 10 if fully clean, 0 if English blockquote/paragraph found in KO.
+- **no_chat_tone**: Korean body avoids spoken "~요" tone and chatty registers; uses editorial news prose throughout.
+
+{_QC_SHARED_SEVERITY_RULES}
+
+## Output JSON (no total score — code aggregates)
+
+{{
+  "structural_completeness": {{
+    "sections_present": {{"evidence": "...", "score": 0}},
+    "section_depth":    {{"evidence": "...", "score": 0}}
+  }},
+  "source_quality": {{
+    "citation_coverage":  {{"evidence": "...", "score": 0}},
+    "source_utilization": {{"evidence": "...", "score": 0}}
+  }},
+  "practical_impact": {{
+    "change_clarity":   {{"evidence": "...", "score": 0}},
+    "reader_impact":    {{"evidence": "...", "score": 0}},
+    "actionable_items": {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "fluency":          {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}},
+    "no_chat_tone":     {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "learner_body|ko|en", "category": "source|locale|structure|accessibility|clarity", "message": "..."}}]
+}}"""
 
 
 QUALITY_CHECK_FRONTLOAD = """You are a strict quality reviewer for digest frontload quality.

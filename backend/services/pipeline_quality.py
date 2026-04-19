@@ -156,6 +156,41 @@ def _extract_structured_issues(raw_issues: Any, default_scope: str) -> list[dict
     return [issue for issue in normalized if issue["message"]]
 
 
+def _aggregate_subscores(data: dict) -> int:
+    """Aggregate nested rubric sub-scores into a single 0-100 total.
+
+    Expected shape (handbook-pattern, adopted for news in NP-QUALITY-06):
+    {
+      "structural_completeness": {
+        "sections_present": {"evidence": "...", "score": 0-10},
+        "section_depth":    {"evidence": "...", "score": 0-10}
+      },
+      "source_quality": { ... },
+      ...
+      "issues": [...]
+    }
+
+    Algorithm: collect every numeric `score` from nested `{evidence, score}`
+    dicts, average over sub-score count, multiply by 10 to normalize to 0-100.
+
+    Returns 0 if no sub-scores found (caller falls back to legacy `data["score"]`).
+    """
+    scores: list[float] = []
+    for group_key, group_val in (data or {}).items():
+        if group_key in {"issues", "score", "subscores"}:
+            continue
+        if not isinstance(group_val, dict):
+            continue
+        for sub_val in group_val.values():
+            if isinstance(sub_val, dict) and isinstance(sub_val.get("score"), (int, float)):
+                # Clamp to 0-10 defensively (LLM should already stay in range)
+                scores.append(max(0.0, min(10.0, float(sub_val["score"]))))
+    if not scores:
+        return 0
+    avg_0_to_10 = sum(scores) / len(scores)
+    return round(avg_0_to_10 * 10)
+
+
 def _apply_issue_penalties_and_caps(
     base_score: int,
     issues: list[dict[str, str]],
@@ -305,7 +340,7 @@ async def _check_digest_quality(
                             {"role": "system", "content": prompt},
                             {"role": "user", "content": content[:20000]},
                         ],
-                        max_tokens=500,
+                        max_tokens=1500,  # rubric with evidence per sub-score is verbose
                         temperature=0,
                         response_format={"type": "json_object"},
                     )
@@ -315,12 +350,20 @@ async def _check_digest_quality(
                     logger.warning("Quality check %s attempt %d: empty response", label, attempt + 1)
                     continue
                 data = parse_ai_json(raw, label)
-                if not data or "score" not in data:
-                    logger.warning("Quality check %s attempt %d: no score in response", label, attempt + 1)
+                if not data:
+                    logger.warning("Quality check %s attempt %d: parse failed", label, attempt + 1)
                     continue
+
+                # New rubric: LLM returns nested sub-scores {group: {sub: {evidence, score}}}.
+                # Code aggregates to 0-100. Fall back to data["score"] for legacy prompts
+                # (frontload still uses old 4×25 format).
+                score = _aggregate_subscores(data)
+                if score == 0 and "score" in data:
+                    score = int(data.get("score", 0))
+
                 usage = extract_usage_metrics(resp, quality_model)
                 issues = _extract_structured_issues(data.get("issues"), default_scope)
-                return int(data.get("score", 0)), data, issues, usage
+                return score, data, issues, usage
             except Exception as e:
                 logger.warning("Quality check %s attempt %d failed: %s", label, attempt + 1, e)
         logger.error("Quality check %s failed after %d attempts", label, max_retries)

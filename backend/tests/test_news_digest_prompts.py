@@ -185,8 +185,10 @@ def test_quality_prompts_allow_brief_uncited_one_line_summary():
     ]
 
     for prompt in prompts:
-        assert "One-Line Summary may be brief if it clearly synthesizes the day's main throughline." in prompt
-        assert "One-Line Summary does not require an inline citation if the body paragraphs are properly cited." in prompt
+        # Rubric v2 (NP-QUALITY-06): phrase kept inline in sub-score descriptions
+        # Accept either full form "may be brief if it synthesizes" or short form
+        # "may be brief if synthetic" depending on persona.
+        assert "One-Line Summary may be brief" in prompt
 
 
 def test_quality_prompts_require_structured_issue_schema():
@@ -199,8 +201,15 @@ def test_quality_prompts_require_structured_issue_schema():
 
     for prompt in prompts:
         assert '"severity": "major|minor"' in prompt
-        assert '"scope": "expert_body|learner_body|frontload|ko|en"' in prompt
-        assert '"category": "source|overclaim|accessibility|locale|structure|clarity"' in prompt
+        # Rubric v2: scope is per-persona subset (expert_body|ko|en or learner_body|ko|en).
+        # Require ko + en at minimum, plus one of expert_body / learner_body.
+        assert '"scope":' in prompt
+        assert "ko|en" in prompt
+        assert ("expert_body" in prompt) or ("learner_body" in prompt)
+        assert '"category":' in prompt
+        # Category enum varies by persona but must include at least source + locale + structure
+        for required_category in ("source", "locale", "structure"):
+            assert required_category in prompt
 
 
 def test_digest_writer_prompt_enforces_frontload_locale_parity():
@@ -246,25 +255,28 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     ]
 
     for prompt in body_prompts:
-        # Severity rubric (header + 5 major categories + minor tiebreaker)
+        # Severity rubric (header + fabrication + locale corruption + hard cap)
         assert "## Severity" in prompt
-        assert "fabrication" in prompt.lower()  # fabrication/hallucination category
+        assert "fabrication" in prompt.lower()
+        assert "locale corruption" in prompt.lower()  # NP-QUALITY-06: explicit locale check
         assert "When unsure" in prompt or "minor" in prompt.lower()  # tiebreaker
         assert "≤3 issues" in prompt or "AT MOST 3" in prompt  # hard cap
         assert "Zero is valid" in prompt or "ZERO issues" in prompt  # anti-invention
-        # Scoring resolution (stops 95-100 saturation on body judges)
-        assert "calibration" in prompt.lower() or "SCORING" in prompt
-        assert "19-21" in prompt  # intermediate tier anchor
-        assert "22-23" in prompt
+        # Rubric v2: 0-10 scale anchors (replaces old 0-25 calibration tier anchors)
+        assert "Scoring Scale" in prompt
+        assert "Exemplary" in prompt  # 10 anchor
+        assert "Solid" in prompt      # 7 anchor
+        assert "Weak" in prompt       # 4 anchor
+        # Evidence requirement (prevents LLM hedging without grounding)
+        assert "evidence" in prompt.lower()
+        assert "score" in prompt.lower()
+        # locale_integrity as explicit sub-dimension (NP-QUALITY-06 key addition)
+        assert "locale_integrity" in prompt
 
-    # Frontload gets severity rubric but NOT scoring calibration: its
-    # distribution is already healthy (49-97 observed) so extra calibration
-    # would over-penalize.
+    # Frontload still uses legacy 4x25 format (not restructured in NP-QUALITY-06)
+    # because its distribution was already healthy.
     assert "## Severity" in QUALITY_CHECK_FRONTLOAD
     assert "≤3 issues" in QUALITY_CHECK_FRONTLOAD or "AT MOST 3" in QUALITY_CHECK_FRONTLOAD
-    # Frontload prompt should NOT have the 25/22-23/19-21 calibration scale
-    # (kept minimal; only the body-persona prompts need that)
-    assert "19-21 solid" not in QUALITY_CHECK_FRONTLOAD
 
 
 def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():
