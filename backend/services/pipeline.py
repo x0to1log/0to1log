@@ -317,13 +317,18 @@ def _validate_focus_items(items: Any) -> list[str]:
 _WEEKLY_CITE_RE = re.compile(r"\[\d+\]\(https?://[^)]+\)")
 
 
-def _check_weekly_citation_coverage(body: str, label: str) -> None:
-    """Log warnings for Week in Numbers and Top Stories items without citations.
+def _check_weekly_citation_coverage(body: str, label: str) -> list[str]:
+    """Check Week in Numbers and Top Stories for items without `[N](URL)` citations.
 
-    Non-blocking: scans the weekly markdown body for items missing `[N](URL)`
-    markers. LLMs occasionally drop citations despite mandatory prompt rules;
-    this guard surfaces the gap without failing the pipeline. Admin can review
-    the post before publish (or re-run the weekly run).
+    Dual surfacing (matches daily pattern):
+    - logger.warning for operational visibility (Railway/CloudWatch)
+    - returns quality_flags strings for news_posts.quality_flags column
+      (admin UI can badge the post)
+
+    Non-blocking: never fails the pipeline — admin reviews before publish
+    or re-runs the weekly.
+
+    Returns list of flag strings (empty if all items are cited).
     """
     def _extract(heading_variants: list[str]) -> str:
         for h in heading_variants:
@@ -341,16 +346,20 @@ def _check_weekly_citation_coverage(body: str, label: str) -> None:
     stories = [s for s in re.split(r"\n(?=###\s)", top_body) if s.strip().startswith("###")]
     top_missing = [i + 1 for i, s in enumerate(stories) if not _WEEKLY_CITE_RE.search(s)]
 
+    flags: list[str] = []
     if num_missing:
         logger.warning(
             "Weekly %s: Week in Numbers items missing citation at positions %s (%d of %d uncited)",
             label, num_missing, len(num_missing), len(num_bullets),
         )
+        flags.append("weekly_numbers_uncited")
     if top_missing:
         logger.warning(
             "Weekly %s: Top Stories items missing citation at positions %s (%d of %d uncited)",
             label, top_missing, len(top_missing), len(stories),
         )
+        flags.append("weekly_stories_uncited")
+    return flags
 
 
 def _slugify(text: str) -> str:
@@ -2474,11 +2483,15 @@ async def run_weekly_pipeline(
             en_learner, en_learner_cards = _renumber_citations(en_learner, allowed_urls=_allowed)
             ko_learner, ko_learner_cards = _renumber_citations(ko_learner, allowed_urls=_allowed)
 
-            # Post-renumber citation coverage audit (logs-only; admin reviews before publish).
-            _check_weekly_citation_coverage(en_expert, f"{week_id}/en/expert")
-            _check_weekly_citation_coverage(ko_expert, f"{week_id}/ko/expert")
-            _check_weekly_citation_coverage(en_learner, f"{week_id}/en/learner")
-            _check_weekly_citation_coverage(ko_learner, f"{week_id}/ko/learner")
+            # Post-renumber citation coverage audit (logs + quality_flags).
+            coverage_flags: set[str] = set()
+            for _body, _label in [
+                (en_expert, f"{week_id}/en/expert"),
+                (ko_expert, f"{week_id}/ko/expert"),
+                (en_learner, f"{week_id}/en/learner"),
+                (ko_learner, f"{week_id}/ko/learner"),
+            ]:
+                coverage_flags.update(_check_weekly_citation_coverage(_body, _label))
 
             weekly_source_cards = {
                 "en": _dedup_source_cards((en_expert_cards or []) + (en_learner_cards or [])),
@@ -2499,6 +2512,11 @@ async def run_weekly_pipeline(
             )
             quality_score = quality_result.get("quality_score")
             quality_flags = quality_result.get("quality_flags")
+            # Merge citation-coverage flags (from _check_weekly_citation_coverage above)
+            # into the post-level quality_flags — surfaces uncited items to admin UI.
+            if coverage_flags:
+                existing_flags = list(quality_flags or [])
+                quality_flags = list(dict.fromkeys(existing_flags + sorted(coverage_flags)))
             # _check_weekly_quality's content_analysis field is internal QC feedback
             # (issue list). The news_posts.content_analysis column is rendered by the
             # frontend as user-facing markdown (the 'Core Analysis' section), so the
