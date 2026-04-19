@@ -49,6 +49,82 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# focus_items_ko fallback
+# ---------------------------------------------------------------------------
+
+async def _translate_focus_items_ko(
+    items_en: list[str],
+    *,
+    digest_type: str,
+) -> tuple[list[str], dict[str, Any]]:
+    """Translate 3 EN focus_items to KO via a cheap gpt-5-mini call.
+
+    Defensive fallback for when the daily writer returns `focus_items` but
+    omits `focus_items_ko` — the QC then flags a major locale gap even
+    though EN was fine. Prompt hardening (REQUIRED marker in the schema)
+    should make this rare, but LLM output is sometimes inconsistent.
+
+    Returns ([], {}) on any failure so the pipeline degrades gracefully
+    (the QC will then surface the missing KO frontload as it would have).
+    """
+    if not items_en or len(items_en) != 3:
+        return [], {}
+
+    import json as _json
+    client = get_openai_client()
+    model = settings.openai_model_light
+
+    system_prompt = (
+        "Translate the 3 English focus_items bullets to Korean. "
+        "Each Korean bullet: 15-40 characters, same order as input, faithful meaning. "
+        "Do not add facts, entities, or numbers that are absent from the English. "
+        "Return JSON only: {\"focus_items_ko\": [\"...\", \"...\", \"...\"]}."
+    )
+    user_prompt = _json.dumps({"focus_items": items_en}, ensure_ascii=False)
+
+    try:
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.2,
+                    max_tokens=400,
+                )
+            ),
+            timeout=30,
+        )
+        data = parse_ai_json(
+            response.choices[0].message.content,
+            f"focus_items_ko_fallback-{digest_type}",
+        )
+        items_ko = data.get("focus_items_ko")
+        if (
+            isinstance(items_ko, list)
+            and len(items_ko) == 3
+            and all(isinstance(x, str) and x.strip() for x in items_ko)
+        ):
+            usage = extract_usage_metrics(response, model)
+            logger.info(
+                "focus_items_ko fallback succeeded for %s: %d chars avg",
+                digest_type,
+                sum(len(x) for x in items_ko) // 3,
+            )
+            return list(items_ko), usage
+        logger.warning(
+            "focus_items_ko fallback returned invalid shape for %s: %r",
+            digest_type, items_ko,
+        )
+    except Exception as e:
+        logger.warning("focus_items_ko fallback failed for %s: %s", digest_type, e)
+    return [], {}
+
+
+# ---------------------------------------------------------------------------
 # Content cleaners
 # ---------------------------------------------------------------------------
 
@@ -707,6 +783,17 @@ async def _generate_digest(
             debug_meta={"blockers": blockers},
         )
         return 0, errors, cumulative_usage
+
+    # Defensive fallback: writer sometimes returns focus_items without focus_items_ko
+    # despite the REQUIRED marker in the prompt. Catch it here with a cheap mini-model
+    # translation so QC sees a symmetric bilingual frontload.
+    if digest_focus_items and not digest_focus_items_ko:
+        translated, translate_usage = await _translate_focus_items_ko(
+            digest_focus_items, digest_type=digest_type,
+        )
+        if translated:
+            digest_focus_items_ko = translated
+            cumulative_usage = merge_usage_metrics(cumulative_usage, translate_usage)
 
     frontload_payload = {
         "headline": digest_headline,

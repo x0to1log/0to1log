@@ -2625,6 +2625,7 @@ from services.pipeline_digest import (  # noqa: E402, F401
     _fix_bold_spacing,
     _map_digest_items_to_group_indexes,
     _strip_empty_sections,
+    _translate_focus_items_ko,
 )
 
 # --- pipeline_quality: (b) re-export only ------------------------------------
