@@ -2623,6 +2623,7 @@ from services.pipeline_digest import (  # noqa: E402, F401
     # (b) re-export only
     _extract_digest_items,
     _fix_bold_spacing,
+    _inject_cp_citations,
     _map_digest_items_to_group_indexes,
     _strip_empty_sections,
     _translate_focus_items_ko,

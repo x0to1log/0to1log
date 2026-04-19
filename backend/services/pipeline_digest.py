@@ -49,6 +49,96 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Community Pulse citation injection
+# ---------------------------------------------------------------------------
+
+_CP_HEADERS = ("## Community Pulse", "## 커뮤니티 반응")
+
+
+def _inject_cp_citations(
+    content: str,
+    community_summary_map: dict[str, "CommunityInsight"],
+) -> str:
+    """Linkify `> — <Label>` attribution lines in the Community Pulse section.
+
+    The writer emits blockquote attributions like `> — Reddit` or `> — Hacker News`,
+    which are un-verifiable without a source URL. This helper post-processes the
+    body: for each `**<source_label>**` block inside the Community Pulse section,
+    it rewrites every matching attribution line to `> — [<Label>](<URL>)` using
+    the URL from `community_summary_map` (keyed by insight.url, with source_label
+    used to identify the block).
+
+    Bilingual: handles both EN (`## Community Pulse`) and KO (`## 커뮤니티 반응`).
+    Non-destructive: if no CP section, no matching block, or no map entry, the
+    content returns unchanged. The writer's exact markdown is preserved byte-for-
+    byte outside of the replaced attribution lines.
+
+    Per-block cursor model: blocks are matched positionally when multiple topics
+    share a source_label. Block header `**Hacker News**` appearing twice in one
+    section pulls the 1st then 2nd URL whose insight.source_label == "Hacker News",
+    in the order they appear in community_summary_map.
+    """
+    if not community_summary_map or not content:
+        return content
+
+    from collections import defaultdict
+
+    label_urls: dict[str, list[str]] = defaultdict(list)
+    for insight in community_summary_map.values():
+        src_label = getattr(insight, "source_label", None)
+        url = getattr(insight, "url", None)
+        if src_label and url:
+            label_urls[src_label].append(url)
+    if not label_urls:
+        return content
+
+    # Attribution pattern: `> — Label` (em-dash or --) with optional trailing space.
+    def _process_section(section_body: str) -> str:
+        cursors = {label: 0 for label in label_urls}
+        out_lines: list[str] = []
+        current_label: str | None = None
+        current_url: str | None = None
+
+        for line in section_body.split("\n"):
+            hdr_m = re.match(r"^\s*(?:-\s+)?\*\*([^*\n]+?)\*\*", line)
+            if hdr_m:
+                lbl = hdr_m.group(1).strip()
+                if lbl in label_urls:
+                    urls = label_urls[lbl]
+                    idx = cursors[lbl]
+                    if idx < len(urls):
+                        current_label = lbl
+                        current_url = urls[idx]
+                        cursors[lbl] = idx + 1
+                    else:
+                        current_label = None
+                        current_url = None
+                else:
+                    current_label = None
+                    current_url = None
+            elif current_label and current_url:
+                attr_pat = re.compile(
+                    rf"^> [\u2014\-]+ {re.escape(current_label)}\s*$"
+                )
+                if attr_pat.match(line):
+                    line = f"> — [{current_label}]({current_url})"
+            out_lines.append(line)
+        return "\n".join(out_lines)
+
+    result = content
+    for header_text in _CP_HEADERS:
+        section_re = re.compile(
+            rf"^({re.escape(header_text)}\s*\n)(.*?)(?=^## |\Z)",
+            re.MULTILINE | re.DOTALL,
+        )
+        result = section_re.sub(
+            lambda m: m.group(1) + _process_section(m.group(2)),
+            result,
+        )
+    return result
+
+
+# ---------------------------------------------------------------------------
 # focus_items_ko fallback
 # ---------------------------------------------------------------------------
 
@@ -920,6 +1010,12 @@ async def _generate_digest(
             allowed_urls,
             source_meta_by_url,
         )
+
+        # Linkify CP blockquote attributions using community_summary_map URLs.
+        # Runs AFTER _renumber_citations so the regex doesn't interact with
+        # body [N](URL) citations (those are in a different format).
+        expert_content = _inject_cp_citations(expert_content, community_summary_map)
+        learner_content = _inject_cp_citations(learner_content, community_summary_map)
         combined_source_cards = _dedup_source_cards(
             (expert_source_cards or []) + (learner_source_cards or [])
         )
