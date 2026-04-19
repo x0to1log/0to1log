@@ -106,7 +106,7 @@ def verify(batch_id: str, in_path: Path) -> int:
     # Criterion 2: no digest:* stages ran in the rerun window (proof writer skipped)
     digest_runs = [log for log in new_logs if str(log["pipeline_type"]).startswith("digest:")]
     if digest_runs:
-        fails.append(f"digest stages re-ran: {[l['pipeline_type'] for l in digest_runs]}")
+        fails.append(f"digest stages re-ran: {[log['pipeline_type'] for log in digest_runs]}")
 
     # Criterion 3: each slug's quality_score + analyzed_at refreshed, both locales
     rows = SB.table("news_posts").select(
