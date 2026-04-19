@@ -137,3 +137,48 @@ def validate_korean_name(term: str, korean_name: str | None) -> tuple[bool, str]
         )
 
     return True, ""
+
+
+def validate_term_grounding(
+    term: str, source_texts: list[str | None],
+) -> tuple[bool, str]:
+    """Verify `term` appears verbatim in at least one of `source_texts`.
+
+    This is a queue-level gate (not a reject gate). Ungrounded terms route
+    to `status='queued'` so Amy can decide whether the term is legitimately
+    new (LLM introducing a concept from general knowledge that the article
+    discussed in other wording) or fabricated from fragments.
+
+    Returns (False, reason) when:
+      - `source_texts` is empty,
+      - `term` is empty,
+      - `term` (case-insensitive) never appears as a contiguous substring, OR
+      - for multi-word `term`, every component word appears individually in
+        sources but the compound phrase itself never does — the canonical
+        'fabricated compound' signal.
+
+    Returns (True, "") when the term is verbatim in the combined source text.
+    """
+    if not source_texts:
+        return False, "no source texts to verify grounding against"
+    term_stripped = term.strip() if term else ""
+    if not term_stripped:
+        return False, "empty term"
+
+    term_lower = term_stripped.lower()
+    combined_lower = "\n".join((s or "").lower() for s in source_texts)
+
+    if term_lower in combined_lower:
+        return True, ""
+
+    words = term_lower.split()
+    if len(words) >= 2:
+        all_words_present = all(w in combined_lower for w in words)
+        if all_words_present:
+            return False, (
+                f"compound term '{term_stripped}' never appears verbatim "
+                "though all component words are individually present in "
+                "sources — likely fabricated from fragments"
+            )
+
+    return False, f"term '{term_stripped}' not found verbatim in any source"

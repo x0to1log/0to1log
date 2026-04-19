@@ -183,3 +183,74 @@ def test_korean_two_hangul_chars_accepts():
     """Exactly at the minimum threshold."""
     ok, _ = validate_korean_name("Some Concept", "개념")
     assert ok is True
+
+
+# --- validate_term_grounding tests (Chunk B) ---
+
+from services.handbook_validators import validate_term_grounding  # noqa: E402
+
+
+def test_grounding_accepts_verbatim_in_source():
+    sources = [
+        "OpenAI announced GPT-5 yesterday. The Frontier team led the work.",
+        "Anthropic's Claude 4.6 is the leading competitor.",
+    ]
+    ok, _ = validate_term_grounding("GPT-5", sources)
+    assert ok is True
+
+
+def test_grounding_is_case_insensitive():
+    ok, _ = validate_term_grounding("gpt-5", ["The GPT-5 model..."])
+    assert ok is True
+
+
+def test_grounding_rejects_fabricated_compound_with_component_words():
+    """All component words present individually, but the compound phrase
+    never appears — the classic 'OpenAI Frontier' fabrication pattern."""
+    sources = [
+        "OpenAI announced a frontier model capable of complex reasoning.",
+        "The frontier of AI research continues to advance with new models.",
+    ]
+    ok, reason = validate_term_grounding("OpenAI Frontier", sources)
+    assert ok is False
+    assert "compound" in reason.lower() or "component" in reason.lower()
+
+
+def test_grounding_rejects_term_missing_entirely():
+    ok, _ = validate_term_grounding(
+        "Quantum Entanglement",
+        ["OpenAI released a new model architecture."],
+    )
+    assert ok is False
+
+
+def test_grounding_accepts_multi_word_verbatim():
+    ok, _ = validate_term_grounding(
+        "retrieval-augmented generation",
+        ["The retrieval-augmented generation approach improves accuracy."],
+    )
+    assert ok is True
+
+
+def test_grounding_rejects_empty_sources():
+    ok, reason = validate_term_grounding("Anything", [])
+    assert ok is False
+    assert "source" in reason.lower() or "empty" in reason.lower()
+
+
+def test_grounding_rejects_empty_term():
+    ok, _ = validate_term_grounding("", ["Any content"])
+    assert ok is False
+
+
+def test_grounding_handles_none_in_source_list():
+    """Source text list may contain None / empty strings defensively."""
+    ok, _ = validate_term_grounding("GPT-5", ["The GPT-5 model...", None, ""])
+    assert ok is True
+
+
+def test_grounding_single_word_missing_rejects():
+    """Single-word term that doesn't appear at all should reject, not fall
+    into the multi-word compound branch."""
+    ok, _ = validate_term_grounding("Quantum", ["Only classical stuff here."])
+    assert ok is False
