@@ -1075,11 +1075,30 @@ async def run_daily_pipeline(
         )
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
 
+        # Fallback: if aggressive dedup rejected every candidate, retry without
+        # the ALREADY COVERED block. Slow news days + overlapping time windows
+        # can trigger false-positive dedup — better to publish 2-3 items than
+        # zero. See vault/09-Implementation/plans notes on 2026-04-19 incident.
+        classify_fallback_used = False
+        if not classification.research_picks and not classification.business_picks:
+            logger.warning(
+                "Classify returned 0 picks with dedup block; retrying without ALREADY COVERED (fallback mode)"
+            )
+            fallback_classification, fallback_usage, fallback_prompt = await classify_candidates(
+                candidates, recent_headlines=None,
+            )
+            cumulative_usage = merge_usage_metrics(cumulative_usage, fallback_usage)
+            classification = fallback_classification
+            classify_user_prompt = fallback_prompt
+            classify_fallback_used = True
+
         # Code-level dedup safety net: even if the LLM ignored the ALREADY COVERED
         # block, drop candidates whose entity tokens (company + product) overlap
         # heavily with recent headlines. This is a deterministic guard.
+        # Skipped in fallback mode — the whole point of fallback is to allow
+        # some overlap rather than publish nothing.
         dedup_dropped: list[str] = []
-        if recent_headlines:
+        if recent_headlines and not classify_fallback_used:
             classification, dedup_dropped = _filter_recent_duplicates(classification, recent_headlines)
             if dedup_dropped:
                 logger.warning("Code-level dedup dropped %d candidate(s): %s",
@@ -1118,6 +1137,7 @@ async def run_daily_pipeline(
                 "warnings": classify_warnings,
                 "dedup_dropped": dedup_dropped,
                 "recent_headlines_count": len(recent_headlines),
+                "fallback_used": classify_fallback_used,
             },
         )
         _save_checkpoint(supabase, run_id, "classify", {
