@@ -46,20 +46,6 @@ You are reviewing a project build-log / retrospective. Focus on:
 # Generate — category-aware guide_items instructions
 # ---------------------------------------------------------------------------
 
-_GENERATE_GUIDE_ITEMS = {
-    "ai-news": """\
-""",
-
-    "study": """\
-""",
-
-    "career": """\
-""",
-
-    "project": """\
-""",
-}
-
 _GENERATE_TEMPLATE = """\
 You are 0to1log's editorial assistant. Given a post's title and body, generate the required metadata fields.
 
@@ -70,7 +56,6 @@ You are 0to1log's editorial assistant. Given a post's title and body, generate t
 ```json
 {{
   "guide_items": {{
-{guide_items_desc}
     "quiz_poll": {{
       "question": "A question testing understanding of the topic",
       "options": ["A", "B", "C", "D"],
@@ -90,7 +75,7 @@ You are 0to1log's editorial assistant. Given a post's title and body, generate t
 ```
 
 ## Rules
-- All 5 guide_items fields must be non-empty
+- guide_items must contain a valid quiz_poll
 - quiz_poll must include question, 3-4 options, answer, and explanation
 - excerpt: 100-200 characters, specific and informative
 - tags: 3-6 relevant terms, mix of broad and specific
@@ -133,10 +118,9 @@ _FOCUS_ITEMS_GUIDANCE = {
 
 def get_generate_prompt(category: str) -> str:
     ctx = CATEGORY_CONTEXT.get(category, CATEGORY_CONTEXT["ai-news"])
-    guide = _GENERATE_GUIDE_ITEMS.get(category, _GENERATE_GUIDE_ITEMS["ai-news"])
     focus = _FOCUS_ITEMS_GUIDANCE.get(category, _FOCUS_ITEMS_GUIDANCE["ai-news"])
     return _GENERATE_TEMPLATE.format(
-        category_context=ctx, guide_items_desc=guide, focus_items_guidance=focus,
+        category_context=ctx, focus_items_guidance=focus,
     )
 
 
