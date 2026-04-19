@@ -298,6 +298,20 @@ def _validate_and_shuffle_weekly_quiz(quiz_list: Any) -> list[dict]:
     return cleaned
 
 
+def _validate_focus_items(items: Any) -> list[str]:
+    """Normalize LLM focus_items output to exactly 3 non-empty strings, else [].
+
+    All-or-nothing by design: a partial focus_items list confuses the sidebar
+    more than missing them entirely.
+    """
+    if not isinstance(items, list) or len(items) != 3:
+        return []
+    cleaned = [str(item).strip() for item in items]
+    if any(not c for c in cleaned):
+        return []
+    return cleaned
+
+
 def _slugify(text: str) -> str:
     """Generate a URL-safe slug from text."""
     import re
