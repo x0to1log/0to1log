@@ -41,12 +41,15 @@
 | HB-MEASURE-02 | Measurement CLI + baseline report (`measure_handbook_quality.py`) | doing | 2026-04-16 | 2026-04-17 |
 | HB-MIGRATE-138 | 138개 published 용어 v4 구조로 전량 regenerate (병렬 ~2시간, ~$15) | todo | — | — |
 | NP-OBSERVE-* | 하드닝 후 4개 long-tail metric 관찰 (~2026-04-30) | doing | 2026-04-16 | 2026-04-30 |
+| NP-QUALITY-01 | Collect 단계 노이즈 필터링 — Tavily 쿼리 정제 + non-AI negative keyword filter. Apr 19 run에서 83 후보 중 6건이 명백한 비-AI (게임 패치, 갤럭시폰, 로봇 마라톤 등) | todo | — | — |
+| NP-QUALITY-02 | Classify 프롬프트 quality gate — 무명 1인 GitHub repo 제외 규칙, source authority 기준 명시. Apr 19 draft에 `poseljacob/agentic-video-editor`, 3개의 `*/superpowers` repo 통과 | todo | — | — |
+| NP-QUALITY-03 | URL 유효성 사후 검증 — 생성된 source_cards URL의 HTTPS 여부, 404/redirect 체크. Apr 19 draft의 `http://openai.com/index/introducing-gpt-5-4/` (http 스킴, 정식 여부 의심) 같은 케이스 방지 | todo | — | — |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | — | — |
-| WEEKLY-V2-PROMPT-01 | Weekly 프롬프트에 `weekly_quiz` JSON 출력 추가 (Expert/Learner) — [[plans/2026-04-19-weekly-content-v2]] | doing | 2026-04-19 | — |
-| WEEKLY-V2-PIPE-01 | `run_weekly_pipeline`에서 guide_items에 weekly_quiz_expert/learner 저장 | todo | — | — |
-| WEEKLY-V2-GUARD-01 | 퀴즈 검증 가드 + 옵션 셔플 (문제별 독립) | todo | — | — |
-| WEEKLY-V2-FE-01 | 본문 하단 퀴즈 3문제 렌더 + 페르소나 탭 연동 | todo | — | — |
-| WEEKLY-V2-TEST-01 | 백필 1회 + 셔플 단위 테스트 (1000회 분포 검증) | todo | — | — |
+| WEEKLY-V2-PROMPT-01 | Weekly 프롬프트에 `weekly_quiz` JSON 출력 추가 (Expert/Learner + KO adapt) — [[plans/2026-04-19-weekly-content-v2]] — commit `00c8d90` | done | 2026-04-19 | 2026-04-19 |
+| WEEKLY-V2-PIPE-01 | `run_weekly_pipeline`에서 guide_items에 weekly_quiz_expert/learner 저장 (locale별 EN/KO 분기) — commit `91b9f84` | done | 2026-04-19 | 2026-04-19 |
+| WEEKLY-V2-GUARD-01 | 퀴즈 검증 가드 + 옵션 셔플 (문제별 독립) — `_validate_and_shuffle_weekly_quiz`, commit `91b9f84` | done | 2026-04-19 | 2026-04-19 |
+| WEEKLY-V2-FE-01 | 본문 하단 퀴즈 3문제 렌더 + 페르소나 탭 연동 — commit `83b7a87` | done | 2026-04-19 | 2026-04-19 |
+| WEEKLY-V2-TEST-01 | 백필 1회 + 셔플 단위 테스트 (1000회 분포 검증) | doing | 2026-04-19 | — |
 | README-01 | 프로젝트 README 작성 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건 — drop or restart 결정 필요) | 2026-03-26 | — |
 | UA-02~05 | User Analytics 차트 추가 | ⚠️ ghost (시작 20일+ 전, 매칭 commit 0건) | 2026-03-27 | — |
 
