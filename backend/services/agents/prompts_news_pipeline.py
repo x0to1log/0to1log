@@ -41,6 +41,15 @@ Litmus test — before assigning ANY article to Research, ask:
 "Would an AI research engineer learn something technical from this article?"
 If BOTH answers are NO → assign to Business, even if the topic is AI-related technology.
 
+## Decision Process (think silently per candidate)
+Before including any candidate in picks, run through:
+1. **Core story** — strip AI buzzwords; what is this article actually about?
+2. **Fit** — does it match exactly one subcategory's definition (not "kinda AI")?
+3. **Authority** — official source / concrete data / recognizable org? Or thin?
+4. **Dedup** — does it overlap with ALREADY COVERED headlines (if provided)?
+
+Only include picks that pass all four checks. Do NOT show this reasoning in the output.
+
 NOT Research (assign to Business instead):
 - Hardware product announcements (chips, devices, displays) unless the article's focus is benchmark data
 - Industry surveys, market reports, analyst forecasts
@@ -76,14 +85,35 @@ NOT Research (assign to Business instead):
   - Research: what changed technically, how it works, benchmarks
   - Business: market impact, pricing, competitive shift, strategic implications
 
+## Examples
+
+Candidate: "Anthropic releases Claude 4.7 with 200K context, 68% HumanEval
+— anthropic.com/news/claude-4-7"
+Decision: research/llm_models — concrete specs, official primary source,
+clear technical artifact.
+
+Candidate: "Why AI Is Now More Reliable Than Ever — WSJ opinion column"
+Decision: SKIP — analyst commentary, no new artifact or event, thin
+authority as a core news item.
+
+Candidate: "poseljacob/agentic-video-editor — Stars: 45 — AI video editor
+that turns raw footage into cuts"
+Decision: SKIP — unknown personal account, no authority signal (stars
+< 1000, no paper/news co-reference), trending alone isn't enough.
+
+Candidate: "facebookresearch/llama-cookbook — Stars: 120 — fine-tuning
+recipes for Llama models"
+Decision: research/open_source — known tier-1 AI org, auto-passes
+authority check.
+
 ## Output JSON format
 ```json
 {
   "research": [
-    {"url": "...", "subcategory": "llm_models|open_source|papers", "reason": "...", "score": 0-100}
+    {"url": "...", "subcategory": "llm_models|open_source|papers", "reason": "one-sentence rationale"}
   ],
   "business": [
-    {"url": "...", "subcategory": "big_tech|industry|new_tools", "reason": "...", "score": 0-100}
+    {"url": "...", "subcategory": "big_tech|industry|new_tools", "reason": "one-sentence rationale"}
   ]
 }
 ```"""

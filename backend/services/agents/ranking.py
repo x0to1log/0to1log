@@ -116,7 +116,6 @@ async def classify_candidates(
                 source=candidate.source,
                 category=category,
                 subcategory=pick.get("subcategory", ""),
-                relevance_score=float(pick.get("score", 0)),
                 reason=pick.get("reason", ""),
             ))
         setattr(result, f"{category}_picks", classified[:8])
@@ -212,7 +211,6 @@ async def merge_classified(
                     items=[GroupedItem(url=pick.url, title=pick.title)],
                     category=category,
                     subcategory=pick.subcategory,
-                    relevance_score=pick.relevance_score,
                     reason=pick.reason,
                 )
                 for pick in picks
@@ -249,7 +247,6 @@ async def merge_classified(
                     items=grouped_items,
                     category=category,
                     subcategory=group_data.get("subcategory", ""),
-                    relevance_score=float(group_data.get("score", 0)),
                     reason=group_data.get("reason", ""),
                 ))
 
@@ -262,7 +259,6 @@ async def merge_classified(
                     items=[GroupedItem(url=pick.url, title=pick.title)],
                     category=category,
                     subcategory=pick.subcategory,
-                    relevance_score=pick.relevance_score,
                     reason=pick.reason,
                 )
                 for pick in picks

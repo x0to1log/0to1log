@@ -23,7 +23,6 @@ def _sample_group() -> list[ClassifiedGroup]:
             items=[GroupedItem(url="https://example.com/story", title="Thinking Machines secures Nvidia compute deal")],
             category="business",
             subcategory="industry",
-            relevance_score=0.9,
             reason="[LEAD] Major",
         )
     ]
@@ -467,7 +466,6 @@ async def test_check_digest_quality_allowlist_includes_all_group_items_not_just_
             ],
             category="business",
             subcategory="industry",
-            relevance_score=0.9,
             reason="[LEAD]",
         )
     ]
@@ -533,7 +531,6 @@ async def test_check_digest_quality_allowlist_includes_enriched_urls():
             items=[GroupedItem(url=GROUP_URL, title="Primary")],
             category="research",
             subcategory="papers",
-            relevance_score=0.9,
             reason="[LEAD]",
         )
     ]

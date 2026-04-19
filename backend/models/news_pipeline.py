@@ -21,7 +21,6 @@ class ClassifiedCandidate(BaseModel):
     source: str = "tavily"
     category: str  # "research" or "business"
     subcategory: str  # e.g., "llm_models", "open_source", "papers", "big_tech", "industry", "new_tools"
-    relevance_score: float = 0.0
     reason: str = ""
 
 
@@ -37,7 +36,6 @@ class ClassifiedGroup(BaseModel):
     items: list[GroupedItem]
     category: str  # "research" or "business"
     subcategory: str
-    relevance_score: float = 0.0
     reason: str = ""
 
     @property

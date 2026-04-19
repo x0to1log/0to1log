@@ -47,7 +47,6 @@ def _sample_group() -> list[ClassifiedGroup]:
             items=[GroupedItem(url="https://example.com/story", title="Sample Story")],
             category="research",
             subcategory="llm_models",
-            relevance_score=0.9,
             reason="Major",
         )
     ]
@@ -60,7 +59,6 @@ def _sample_groups_for_locale_parity() -> list[ClassifiedGroup]:
             items=[GroupedItem(url="https://example.com/microsoft", title="Microsoft launches three in-house MAI models")],
             category="business",
             subcategory="big_tech",
-            relevance_score=0.9,
             reason="Lead",
         ),
         ClassifiedGroup(
@@ -68,7 +66,6 @@ def _sample_groups_for_locale_parity() -> list[ClassifiedGroup]:
             items=[GroupedItem(url="https://example.com/anthropic", title="Anthropic Managed Agents")],
             category="business",
             subcategory="industry",
-            relevance_score=0.8,
             reason="Supporting",
         ),
     ]
