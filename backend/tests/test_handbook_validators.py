@@ -117,3 +117,69 @@ def test_scope_empty_term_rejected():
     ok, reason = validate_term_scope("", term_type="foundational_concept")
     assert ok is False
     assert "empty" in reason.lower()
+
+
+# --- validate_korean_name tests ---
+
+from services.handbook_validators import validate_korean_name  # noqa: E402
+
+
+def test_korean_none_or_empty_is_accepted():
+    ok, _ = validate_korean_name("Attention Mechanism", None)
+    assert ok is True
+    ok, _ = validate_korean_name("Attention Mechanism", "")
+    assert ok is True
+    ok, _ = validate_korean_name("Attention Mechanism", "   ")
+    assert ok is True
+
+
+def test_korean_real_hangul_translation_accepts():
+    ok, _ = validate_korean_name("Attention Mechanism", "어텐션 메커니즘")
+    assert ok is True
+
+
+def test_korean_hangul_with_english_parenthetical_accepts():
+    """'검색 증강 생성(RAG)' style is fine — Hangul above threshold."""
+    ok, _ = validate_korean_name(
+        "Retrieval-Augmented Generation",
+        "검색 증강 생성(RAG)",
+    )
+    assert ok is True
+
+
+def test_korean_identical_to_english_versioned_model_accepts():
+    """GPT-5, Claude 4.6, etc. legitimately stay as English when there's no
+    Korean convention for the specific version string."""
+    for term in ["GPT-5", "GPT-5.2", "Claude 4.6", "Gemini 3", "o3", "DeepSeek-R1"]:
+        ok, reason = validate_korean_name(term, term)
+        assert ok is True, f"{term}: {reason}"
+
+
+def test_korean_identical_to_english_all_caps_acronym_accepts():
+    for term in ["LSTM", "RAG", "BERT", "GAN", "T5"]:
+        ok, reason = validate_korean_name(term, term)
+        assert ok is True, f"{term}: {reason}"
+
+
+def test_korean_identical_to_english_regular_word_rejects():
+    """Non-global-name concepts must not copy English unchanged."""
+    ok, reason = validate_korean_name("Attention Mechanism", "Attention Mechanism")
+    assert ok is False
+    assert "identical" in reason.lower() or "global" in reason.lower()
+
+
+def test_korean_ascii_only_rejects():
+    ok, _ = validate_korean_name("Attention Mechanism", "Attention Meka")
+    assert ok is False
+
+
+def test_korean_single_hangul_char_rejects():
+    """One-character Hangul is not a real translation."""
+    ok, _ = validate_korean_name("Attention Mechanism", "가")
+    assert ok is False
+
+
+def test_korean_two_hangul_chars_accepts():
+    """Exactly at the minimum threshold."""
+    ok, _ = validate_korean_name("Some Concept", "개념")
+    assert ok is True

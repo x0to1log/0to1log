@@ -13,8 +13,10 @@ from __future__ import annotations
 import re
 
 from services.handbook_quality_config import (
+    ALL_CAPS_ABBREVIATION_PATTERN,
     HR_REGULATORY_BLOCKLIST,
     IMPORTANT_NON_TECH_ALLOWLIST,
+    KOREAN_MIN_HANGUL_CHARS,
     MAJOR_AI_PRODUCT_ALLOWLIST,
     MAJOR_MODEL_VERSION_PATTERNS,
     OUT_OF_SCOPE_REGEX,
@@ -72,4 +74,66 @@ def validate_term_scope(
         return False, f"product term_type but '{term_stripped}' not in MAJOR_AI_PRODUCT_ALLOWLIST"
 
     # 7. Default: accept
+    return True, ""
+
+
+_HANGUL_RE = re.compile(r"[\uac00-\ud7af]")
+
+
+def _count_hangul(s: str) -> int:
+    return len(_HANGUL_RE.findall(s))
+
+
+def _matches_global_name_pattern(term: str) -> bool:
+    """True if the term is a legitimate 'keep-as-English' global name:
+    a versioned model (GPT-5, Claude 4.6, ...) OR an all-caps abbreviation
+    (LSTM, RAG, BERT, ...). These have no established Korean form and are
+    commonly written as English in Korean tech press.
+    """
+    for pattern in MAJOR_MODEL_VERSION_PATTERNS:
+        if re.match(pattern, term):
+            return True
+    if re.match(ALL_CAPS_ABBREVIATION_PATTERN, term):
+        return True
+    return False
+
+
+def validate_korean_name(term: str, korean_name: str | None) -> tuple[bool, str]:
+    """Validate that korean_name is a plausible Korean rendering of term.
+
+    Rules (first match wins):
+      1. None / empty / whitespace-only -> accept. (UI shows English only.)
+      2. korean_name identical to term -> accept ONLY if term is a global
+         name pattern (versioned model, all-caps abbreviation).
+      3. Otherwise korean_name MUST contain at least KOREAN_MIN_HANGUL_CHARS
+         Hangul syllables. English copies, stray ASCII, and single-char labels
+         fail this check.
+
+    Does NOT attempt phonetic-transliteration detection — that's impractical
+    without a Korean dictionary. The generation prompt is responsible for
+    steering the LLM away from inventing transliterations; this validator
+    only enforces the structural minimum (Hangul presence, global-name
+    exception, identical-English rejection for non-global terms).
+    """
+    if korean_name is None:
+        return True, ""
+    kn = korean_name.strip()
+    if not kn:
+        return True, ""
+
+    if kn == term.strip():
+        if _matches_global_name_pattern(term):
+            return True, ""
+        return False, (
+            f"korean_name identical to English but term '{term}' is not a "
+            "global-name pattern (versioned model or all-caps abbreviation)"
+        )
+
+    hangul_count = _count_hangul(kn)
+    if hangul_count < KOREAN_MIN_HANGUL_CHARS:
+        return False, (
+            f"korean_name has {hangul_count} Hangul syllable(s), below "
+            f"threshold {KOREAN_MIN_HANGUL_CHARS}"
+        )
+
     return True, ""
