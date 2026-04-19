@@ -13,10 +13,6 @@ interface QuizPoll {
 }
 
 interface GuideItems {
-  one_liner?: string;
-  action_item?: string;
-  critical_gotcha?: string;
-  rotating_item?: string;
   quiz_poll?: QuizPoll | null;
   weekly_quiz_expert?: QuizPoll[];
   weekly_quiz_learner?: QuizPoll[];
@@ -134,7 +130,7 @@ const hasWeeklyQuizData = isWeeklyPost && (
   (Array.isArray(guideItemsAny?.weekly_quiz_learner) && guideItemsAny!.weekly_quiz_learner!.length > 0)
 );
 
-const hasGuideItems = guideItems && (guideItems.one_liner || guideItems.action_item || guideItems.critical_gotcha || guideItems.rotating_item || hasQuizData || hasWeeklyQuizData);
+const hasGuideItems = guideItems && (hasQuizData || hasWeeklyQuizData);
 const hasFactPack = !!factPack?.length;
 const hasAnalysis = !!analysisHtml;
 const hasSources = !!sourceCards?.length;
@@ -392,34 +388,6 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
   {hasGuideItems && (
     <aside class="newsprint-guide-items">
       <h3 class="newsprint-section-title">{isKo ? '한눈에 보기' : 'At a Glance'}</h3>
-
-      {guideItems!.one_liner && (
-        <div class="newsprint-guide-block newsprint-guide-oneliner">
-          <span class="newsprint-guide-label">{isKo ? '한 줄 요약' : 'In One Line'}</span>
-          <p>{guideItems!.one_liner}</p>
-        </div>
-      )}
-
-      {guideItems!.action_item && (
-        <div class="newsprint-guide-block">
-          <span class="newsprint-guide-label">{isKo ? '지금 해볼 수 있는 것' : 'Try This Now'}</span>
-          <p>{guideItems!.action_item}</p>
-        </div>
-      )}
-
-      {guideItems!.critical_gotcha && (
-        <div class="newsprint-guide-block newsprint-guide-gotcha">
-          <span class="newsprint-guide-label">{isKo ? '주의할 점' : 'Watch Out'}</span>
-          <p>{guideItems!.critical_gotcha}</p>
-        </div>
-      )}
-
-      {guideItems!.rotating_item && (
-        <div class="newsprint-guide-block">
-          <span class="newsprint-guide-label">{isKo ? '맥락 노트' : 'Context Note'}</span>
-          <p>{guideItems!.rotating_item}</p>
-        </div>
-      )}
 
       {activeQuiz && (
         <div class="newsprint-guide-block newsprint-guide-quiz" data-quiz-answer={resolvedQuizAnswer}>
