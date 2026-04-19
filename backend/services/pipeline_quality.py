@@ -338,7 +338,7 @@ async def _check_digest_quality(
                         model=quality_model,
                         messages=[
                             {"role": "system", "content": prompt},
-                            {"role": "user", "content": content[:20000]},
+                            {"role": "user", "content": content[:35000]},
                         ],
                         max_tokens=1500,  # rubric with evidence per sub-score is verbose
                         temperature=0,
