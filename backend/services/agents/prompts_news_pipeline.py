@@ -1118,7 +1118,9 @@ Write the English weekly recap. Return JSON only.
 
    **Evidence means**: number of independent primary sources, specificity of disclosed figures, and source strength (official announcement > single-source exclusive report > unnamed sources). Stories supported only by a single secondary report rank lower.
 
-   Each item: **Bold title** — 4-5 sentences covering:
+   **Each item MUST use a `### <headline>` heading** (level-3, same pattern as daily digests). The title is a scannable headline (not a full sentence unless short), stands on its own line, followed by a blank line, then the body as paragraphs. Do NOT use bullet (`-`) for Top Stories; use `###` headings exclusively.
+
+   Each item's body: 4-5 sentences in 1-3 paragraphs covering:
    - WHAT happened (facts + specific numbers)
    - WHY it matters (strategic implication — competitive shift, market restructuring, or investment signal)
    - CONTEXT (comparison to prior state, competitor, or industry baseline)
@@ -1182,8 +1184,13 @@ One punchy sentence here.
 - **6x** — TurboQuant's KV-cache compression
 
 ## Top Stories
-- **OpenAI raises $10B** — 4-5 sentences covering WHAT + WHY + CONTEXT. [1](https://example.com/source)
-- **Google TurboQuant** — 4-5 sentences with at least one citation. [2](https://example.com/source)
+### OpenAI raises $10B
+
+4-5 sentences covering WHAT + WHY + CONTEXT. End paragraph with citation. [1](https://example.com/source)
+
+### Google TurboQuant compresses KV cache 6x
+
+Another 4-5 sentences on the next story. Use multiple paragraphs when helpful for WHAT vs WHY vs CONTEXT structure. [2](https://example.com/source)
 
 ## Trend Analysis
 3-4 paragraphs of substantive synthesis connecting this week's themes...
@@ -1263,7 +1270,9 @@ Write the English weekly recap. Return JSON only.
 
    **Evidence means**: number of independent primary sources, specificity of disclosed figures, and source strength (official announcement > single-source exclusive report > unnamed sources). Stories supported only by a single secondary report rank lower.
 
-   Each item: **Bold title** — 4-5 sentences covering:
+   **Each item MUST use a `### <headline>` heading** (level-3, same pattern as daily digests). The title is a scannable headline (not a full sentence unless short), stands on its own line, followed by a blank line, then the body as paragraphs. Do NOT use bullet (`-`) for Top Stories; use `###` headings exclusively.
+
+   Each item's body: 4-5 sentences in 1-3 paragraphs covering:
    - WHAT happened (facts + specific numbers, in plain language)
    - WHY it matters to a non-specialist (impact on everyday work, career, or consumer AI experience)
    - CONTEXT (for beginners — compare to something familiar, explain why this differs from prior state)
@@ -1328,8 +1337,13 @@ One friendly sentence here.
 - **6x** — TurboQuant makes AI memory 6 times smaller
 
 ## Top Stories
-- **OpenAI raises $10B** — 4-5 sentences covering WHAT + WHY for non-specialists + CONTEXT. [1](https://example.com/source)
-- **Google TurboQuant** — 4-5 sentences in plain language with citation. [2](https://example.com/source)
+### OpenAI raises $10B in new funding
+
+4-5 sentences covering WHAT + WHY for non-specialists + CONTEXT. End with citation. [1](https://example.com/source)
+
+### Google TurboQuant compresses AI memory 6x
+
+4-5 plain-language sentences on the next story. Multiple paragraphs OK for WHAT vs WHY vs CONTEXT. [2](https://example.com/source)
 
 ## Trend Analysis
 3-4 paragraphs of substantive synthesis in plain language...
@@ -1387,7 +1401,8 @@ WEEKLY_KO_ADAPT_PROMPT = """You are a Korean AI news editor. Given the English w
 
 Write as a Korean editor naturally would — same stories, same depth, same number of items per section, natural Korean prose. The text is adapted, but all verifiable evidence markers MUST be preserved verbatim.
 
-## CITATION PRESERVATION (HIGHEST PRIORITY)
+## STRUCTURE PRESERVATION (HIGHEST PRIORITY)
+- Every `### <headline>` heading under `## TOP 뉴스` in the English input MUST become a Korean `### <한국어 헤드라인>` heading in the same position. Same count, same order. Translate each headline to a scannable Korean headline (not a full sentence unless short). Do NOT convert `###` items back into bullet (`-`) list items.
 - Every `[N](URL)` marker in the English input MUST appear verbatim in your Korean output. Do NOT drop the URL. Do NOT leave a bare `[N]` without its `(URL)`. Do NOT renumber. Do NOT rewrite the URL.
 - Place each citation at the end of the Korean sentence or bullet that carries the same fact as the English original. If one English sentence had two citations, the corresponding Korean sentence keeps both.
 - Raw URLs (e.g., `https://github.com/...` in Open Source Spotlight, `https://...` in Watch Points) also copy verbatim to their Korean counterpart.
@@ -1453,8 +1468,13 @@ Return JSON only:
 - **6배** — 구글 TurboQuant의 KV 캐시 메모리 절감 비율. [4](https://research.google/blog/example)
 
 ## TOP 뉴스
-- **OpenAI, 100억 달러 조달로 엔터프라이즈 중심 전략 가속** — 프리머니 약 7,300억 달러 기준으로 컴퓨트·인재·유통 채널을 장기 확보하는 규모다. 에이전트 워크플로의 납기와 가격 협상력이 동시에 올라가는 자금 여력을 갖추게 된다. [1](https://www.bloomberg.com/news/articles/example) [2](https://techcrunch.com/example)
-- **구글 TurboQuant, KV 캐시 6배 압축 발표** — 재학습 없이 장문 컨텍스트 추론 메모리를 줄이는 드롭인 기법이다. 커널 공개와 프레임워크 호환성이 실제 채택 속도를 좌우한다. [4](https://research.google/blog/example) [5](https://arstechnica.com/example)
+### OpenAI, 100억 달러 조달로 엔터프라이즈 중심 전략 가속
+
+프리머니 약 7,300억 달러 기준으로 컴퓨트·인재·유통 채널을 장기 확보하는 규모다. 에이전트 워크플로의 납기와 가격 협상력이 동시에 올라가는 자금 여력을 갖추게 된다. [1](https://www.bloomberg.com/news/articles/example) [2](https://techcrunch.com/example)
+
+### 구글 TurboQuant, KV 캐시 6배 압축 발표
+
+재학습 없이 장문 컨텍스트 추론 메모리를 줄이는 드롭인 기법이다. 커널 공개와 프레임워크 호환성이 실제 채택 속도를 좌우한다. [4](https://research.google/blog/example) [5](https://arstechnica.com/example)
 
 ## 이번 주 트렌드 분석
 3-4문단으로 주간 흐름을 분석하되, 영어 원문에 포함된 `[N](URL)` 인용 표기는 해당 문장의 한국어 번역문 끝에 그대로 보존한다. [1](https://www.bloomberg.com/news/articles/example) [4](https://research.google/blog/example)
