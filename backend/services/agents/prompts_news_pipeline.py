@@ -1552,7 +1552,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
-- **no_chat_tone**: Korean body avoids spoken "~요" tone and chatty registers; uses editorial news prose throughout.
+- **no_chat_tone**: Korean narrative and analysis sections (body paragraphs, Why It Matters, Connecting the Dots) use editorial news prose — avoid spoken "~요" tone and chatty markers like "쉽게 말해" or "궁금하시죠?". Reader-facing action/recommendation sections (Action Items / 지금 할 일, What Can I Try / 시도해볼 것) MAY use polite imperative "~해보세요" or "~하세요" — this is natural Korean for actionable content and not a violation. Score 10 if narrative stays editorial (chat tone allowed only in action sections), 4 if chat tone leaks into body paragraphs, 0 if the whole digest reads like a chatty blog post.
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1664,7 +1664,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
-- **no_chat_tone**: Korean body avoids spoken "~요" tone and chatty registers; uses editorial news prose throughout.
+- **no_chat_tone**: Korean narrative and analysis sections (body paragraphs, Why It Matters, Connecting the Dots) use editorial news prose — avoid spoken "~요" tone and chatty markers like "쉽게 말해" or "궁금하시죠?". Reader-facing action/recommendation sections (Action Items / 지금 할 일, What Can I Try / 시도해볼 것) MAY use polite imperative "~해보세요" or "~하세요" — this is natural Korean for actionable content and not a violation. Score 10 if narrative stays editorial (chat tone allowed only in action sections), 4 if chat tone leaks into body paragraphs, 0 if the whole digest reads like a chatty blog post.
 
 {_QC_SHARED_SEVERITY_RULES}
 
