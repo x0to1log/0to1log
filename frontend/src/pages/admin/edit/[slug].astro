@@ -181,6 +181,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 <option value="" selected={!post?.post_type}>—</option>
                 <option value="research" selected={post?.post_type === 'research'}>Research</option>
                 <option value="business" selected={post?.post_type === 'business'}>Business</option>
+                <option value="weekly"
+                        selected={post?.post_type === 'weekly'}
+                        disabled={post?.post_type !== 'weekly'}>Weekly</option>
               </select>
             </div>
           </div>
