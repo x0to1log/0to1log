@@ -13,6 +13,7 @@ from core.database import get_supabase
 from models.news_pipeline import (
     ClassificationResult,
     ClassifiedGroup,
+    CommunityInsight,
     PersonaOutput,
     PipelineResult,
 )
@@ -1615,7 +1616,7 @@ async def rerun_pipeline_stage(
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
     """
-    from models.news_pipeline import ClassifiedCandidate, ClassificationResult, CommunityInsight, NewsCandidate
+    from models.news_pipeline import ClassifiedCandidate, NewsCandidate
 
     supabase = get_supabase()
     run_id = source_run_id  # Reuse existing run
@@ -1700,6 +1701,108 @@ async def rerun_pipeline_stage(
                 "last_error": msg,
             }).eq("id", source_run_id).execute()
             return PipelineResult(batch_id=batch_id, status="failed", errors=[msg])
+
+        # --- Branch: quality-only rerun (skip writer + collect/enrich chain) ---
+        # When only QC prompts/weights changed, re-score existing news_posts without
+        # regenerating content. Loads merge + community_summarize checkpoints for
+        # structural checks and personas/frontload from news_posts for the LLM scorer.
+        if from_stage == "quality":
+            # Need classification (for structural checks) + community summaries
+            merge_data = _load_checkpoint(supabase, source_run_id, "merge")
+            classification = ClassificationResult()
+            if merge_data:
+                classification.research = [ClassifiedGroup(**g) for g in merge_data.get("research", [])]
+                classification.business = [ClassifiedGroup(**g) for g in merge_data.get("business", [])]
+
+            cs_data = _load_checkpoint(supabase, source_run_id, "community_summarize")
+            community_summary_map: dict[str, CommunityInsight] = {}
+            if cs_data and cs_data.get("summaries"):
+                community_summary_map = {
+                    url: CommunityInsight(**ins_data)
+                    for url, ins_data in cs_data["summaries"].items()
+                }
+
+            personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, batch_id)
+            if not personas_by_type:
+                all_errors.append(f"No news_posts found for batch {batch_id} — cannot rescore")
+
+            for digest_type in ("research", "business"):
+                if category and digest_type != category:
+                    continue
+                if digest_type not in personas_by_type:
+                    continue
+
+                classified_items = getattr(classification, digest_type, []) or []
+                personas = personas_by_type[digest_type]
+                frontload = frontload_by_type.get(digest_type, {})
+
+                try:
+                    qc_result = await _check_digest_quality(
+                        personas=personas,
+                        digest_type=digest_type,
+                        classified=classified_items,
+                        community_summary_map=community_summary_map,
+                        supabase=supabase,
+                        run_id=run_id,
+                        cumulative_usage=cumulative_usage,
+                        frontload=frontload,
+                    )
+                except Exception as e:
+                    all_errors.append(f"Quality rescore failed for {digest_type}: {e}")
+                    continue
+
+                score_int = int(qc_result.get("score") or qc_result.get("quality_score") or 0)
+                flags = qc_result.get("quality_flags") or []
+                content_analysis = {
+                    "scores_breakdown": qc_result.get("quality_breakdown"),
+                    "issues": qc_result.get("quality_issues") or [],
+                }
+                analyzed_at = datetime.now(timezone.utc).isoformat()
+
+                # Update BOTH locale rows for this digest_type.
+                # total_posts counts rows updated (EN + KO = 2 per digest_type). This differs
+                # from _generate_digest's return semantics (which counts digests generated),
+                # but is the honest metric here: we touched 2 rows.
+                for slug in (
+                    f"{batch_id.lower()}-{digest_type}-digest",
+                    f"{batch_id.lower()}-{digest_type}-digest-ko",
+                ):
+                    try:
+                        supabase.table("news_posts").update({
+                            "quality_score": score_int,
+                            "quality_flags": flags,
+                            "content_analysis": content_analysis,
+                            "analyzed_at": analyzed_at,
+                        }).eq("slug", slug).execute()
+                        total_posts += 1
+                    except Exception as e:
+                        all_errors.append(f"Failed to update {slug}: {e}")
+
+            status = "failed" if all_errors else ("success" if total_posts > 0 else "failed")
+
+            # Log summary stage (mirrors daily + non-quality rerun paths)
+            t_summary = time.monotonic()
+            await _log_stage(
+                supabase, run_id, "summary", status, t_summary,
+                input_summary=f"rerun from {from_stage}" + (f" ({category})" if category else ""),
+                output_summary=f"{total_posts} rows rescored",
+                usage=cumulative_usage,
+                error_message="; ".join(all_errors) if all_errors else None,
+            )
+
+            supabase.table("pipeline_runs").update({
+                "status": status,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": "; ".join(all_errors) if all_errors else None,
+            }).eq("id", run_id).execute()
+
+            return PipelineResult(
+                batch_id=batch_id,
+                status=status,
+                posts_created=total_posts,
+                errors=all_errors,
+                usage=cumulative_usage,
+            )
 
         # Load necessary checkpoints
         collect_data = _load_checkpoint(supabase, source_run_id, "collect")

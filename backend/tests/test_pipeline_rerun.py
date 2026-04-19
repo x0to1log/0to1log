@@ -315,3 +315,148 @@ def test_load_personas_and_frontload_uses_guide_items_fallback_when_ko_row_lacks
         f"expected guide_items.title_learner fallback, got {research_front['headline_ko']!r}"
     assert research_front["excerpt_ko"] == "Guide excerpt KO", \
         f"expected guide_items.excerpt_learner fallback, got {research_front['excerpt_ko']!r}"
+
+
+def _build_supabase_mock_for_quality_rerun(news_rows: list, checkpoint_returns=None):
+    """Shared helper: build a MagicMock supabase for quality-rerun tests.
+
+    Sets up:
+      - pipeline_runs claim (.update.eq.neq.execute.data = [{"id": "run-1"}])
+      - published guard (.select.eq.eq.execute.data = [])  — bypass guard
+      - news_posts personas-loader (.select.eq.in_.execute.data = news_rows)
+      - generic update/delete chains return MagicMock (no data check)
+    """
+    supabase = MagicMock()
+    # pipeline_runs claim-and-lock
+    supabase.table.return_value.update.return_value.eq.return_value.neq.return_value.execute.return_value.data = [{"id": "run-1"}]
+    # log-delete path
+    supabase.table.return_value.delete.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+    # news_posts update (quality payload) + final pipeline_runs update
+    supabase.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
+    # news_posts load via loader helper (.select.eq.in_.execute)
+    supabase.table.return_value.select.return_value.eq.return_value.in_.return_value.execute.return_value.data = news_rows
+    # Published guard (.select.eq.eq.execute.data) — must be empty/falsy to bypass
+    supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = []
+    return supabase
+
+
+@pytest.mark.asyncio
+async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
+    """rerun_from='quality' must:
+      1. call _check_digest_quality (not _generate_digest)
+      2. update BOTH locale rows with quality_score, quality_flags, content_analysis, analyzed_at
+      3. return status=success
+    """
+    from services.pipeline import rerun_pipeline_stage
+
+    news_rows = [
+        {"slug": "2026-04-19-research-digest", "locale": "en", "post_type": "research",
+         "content_expert": "E", "content_learner": "L", "title": "t", "excerpt": "x",
+         "focus_items": [], "guide_items": {}},
+        {"slug": "2026-04-19-research-digest-ko", "locale": "ko", "post_type": "research",
+         "content_expert": "E-ko", "content_learner": "L-ko", "title": "t-ko", "excerpt": "x-ko",
+         "focus_items": [], "guide_items": {}},
+    ]
+    supabase = _build_supabase_mock_for_quality_rerun(news_rows)
+
+    with patch("services.pipeline.get_supabase", return_value=supabase), \
+         patch("services.pipeline._load_checkpoint", return_value=None), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock) as qc_mock, \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock) as gen_mock, \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock):
+        qc_mock.return_value = {
+            "score": 84,
+            "quality_score": 84,
+            "quality_flags": [],
+            "quality_issues": [],
+            "quality_breakdown": {"total_score": 84},
+        }
+
+        result = await rerun_pipeline_stage(
+            source_run_id="run-1",
+            from_stage="quality",
+            batch_id="2026-04-19",
+            category="research",
+        )
+
+        assert qc_mock.await_count == 1
+        assert gen_mock.await_count == 0
+        assert result.status == "success"
+
+        update_calls = [
+            c for c in supabase.table.return_value.update.call_args_list
+            if c.args and isinstance(c.args[0], dict) and "quality_score" in c.args[0]
+        ]
+        assert len(update_calls) == 2, f"expected 2 locale updates, got {len(update_calls)}"
+        for c in update_calls:
+            payload = c.args[0]
+            assert payload["quality_score"] == 84
+            assert payload["quality_flags"] == []
+            assert "scores_breakdown" in payload["content_analysis"]
+            assert "analyzed_at" in payload and payload["analyzed_at"]
+
+
+@pytest.mark.asyncio
+async def test_rerun_from_quality_hydrates_classified_and_community_from_checkpoints():
+    """When merge + community_summarize checkpoints are present, the quality branch
+    must hydrate them into ClassifiedGroup / CommunityInsight objects."""
+    from services.pipeline import rerun_pipeline_stage
+
+    news_rows = [
+        {"slug": "2026-04-19-research-digest", "locale": "en", "post_type": "research",
+         "content_expert": "E", "content_learner": "L", "title": "t", "excerpt": "x",
+         "focus_items": [], "guide_items": {}},
+        {"slug": "2026-04-19-research-digest-ko", "locale": "ko", "post_type": "research",
+         "content_expert": "E-ko", "content_learner": "L-ko", "title": "t-ko", "excerpt": "x-ko",
+         "focus_items": [], "guide_items": {}},
+    ]
+    supabase = _build_supabase_mock_for_quality_rerun(news_rows)
+
+    merge_ckpt = {
+        "research": [{
+            "group_title": "Anthropic releases Claude 4.7",
+            "items": [],
+            "category": "research",
+            "subcategory": "llm_models",
+            "reason": "Major release",
+        }],
+        "business": [],
+    }
+    community_ckpt = {
+        "summaries": {
+            "https://example.com/a": {
+                "sentiment": "positive",
+                "quotes": [],
+                "quotes_ko": [],
+            }
+        }
+    }
+
+    def load_ckpt_side_effect(sb, run_id, stage):
+        return {"merge": merge_ckpt, "community_summarize": community_ckpt}.get(stage)
+
+    with patch("services.pipeline.get_supabase", return_value=supabase), \
+         patch("services.pipeline._load_checkpoint", side_effect=load_ckpt_side_effect), \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock) as qc_mock, \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock) as gen_mock, \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock):
+        qc_mock.return_value = {
+            "score": 80, "quality_score": 80,
+            "quality_flags": [], "quality_issues": [],
+            "quality_breakdown": {"total_score": 80},
+        }
+
+        await rerun_pipeline_stage(
+            source_run_id="run-1",
+            from_stage="quality",
+            batch_id="2026-04-19",
+            category="research",
+        )
+
+        assert gen_mock.await_count == 0
+        assert qc_mock.await_count == 1
+        kwargs = qc_mock.await_args.kwargs
+        assert len(kwargs["classified"]) == 1
+        assert isinstance(kwargs["classified"][0], ClassifiedGroup)
+        assert "https://example.com/a" in kwargs["community_summary_map"]
+        assert isinstance(kwargs["community_summary_map"]["https://example.com/a"], CommunityInsight)
