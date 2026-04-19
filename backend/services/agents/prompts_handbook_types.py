@@ -879,22 +879,65 @@ HANDBOOK_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's advanced
 
 Term: "{term}" | Type: {term_type}
 
-Rate the advanced content on:
-- depth
-- accuracy
-- uniqueness
-- completeness
+## Scoring Scale (applies to EVERY sub-score)
+
+Use this 4-anchor scale on a 0-10 continuous range:
+- **10**: Exemplary — criterion fully met with concrete evidence cited.
+- **7**: Solid — criterion met with minor gaps.
+- **4**: Weak — partial or surface-level adherence; notable gaps.
+- **0**: Missing, contradicts the criterion, or fabricated.
+
+## Required Output Format (per sub-score)
+
+For EVERY sub-score you MUST provide BOTH:
+1. `evidence`: Quote or describe SPECIFIC content observed (cite section heading or exact phrase). Empty evidence is not acceptable — if you find nothing, say so explicitly.
+2. `score`: 0-10 integer using the scale above, grounded in the evidence you just cited.
+
+Do NOT output any total or subtotal — code computes aggregates from sub-scores.
+Do NOT hedge ("probably", "seems", "might") — anchor each score to concrete evidence.
+Do NOT invent sections that aren't in the content.
+
+## Sub-dimensions (10 sub-scores)
+
+### Technical Depth
+- **mechanism_clarity**: HOW the system works internally (data flow, algorithm steps, not just WHAT it does)
+- **concrete_specifics**: Real numbers (parameter counts, FLOPs, benchmark results, latency figures) rather than qualitative handwaves
+- **code_or_formula**: Working code or mathematical formulas are present, correct, and relevant to the term
+
+### Accuracy
+- **factual_correctness**: Claims verifiable against official docs or common technical knowledge
+- **hallucination_absence**: No fabricated benchmarks, product names, paper titles, RFC numbers, or entities
+- **source_grounding**: References point to real, verifiable sources (arxiv, official docs, reputable blogs)
+
+### Uniqueness
+- **term_differentiation**: Content clearly distinguishes this concept from similar handbook terms
+- **internal_non_redundancy**: Each section adds new information; no paraphrasing the same idea across sections
+
+### Structural Completeness
+- **required_sections_present**: All expected sections are present with substantive content (not placeholder stubs)
+- **format_compliance**: `❌ Mistake:`/`✅ Fix:` markers in pitfalls, `(prerequisite)`/`(alternative)`/`(extension)` tags in relations, references as structured array
 
 ## Output JSON
+
 {{
-  "score": 0,
-  "breakdown": {{
-    "depth": 0,
-    "accuracy": 0,
-    "uniqueness": 0,
-    "completeness": 0
+  "technical_depth": {{
+    "mechanism_clarity":   {{ "evidence": "...", "score": 0 }},
+    "concrete_specifics":  {{ "evidence": "...", "score": 0 }},
+    "code_or_formula":     {{ "evidence": "...", "score": 0 }}
   }},
-  "summary": "one sentence"
+  "accuracy": {{
+    "factual_correctness":   {{ "evidence": "...", "score": 0 }},
+    "hallucination_absence": {{ "evidence": "...", "score": 0 }},
+    "source_grounding":      {{ "evidence": "...", "score": 0 }}
+  }},
+  "uniqueness": {{
+    "term_differentiation":   {{ "evidence": "...", "score": 0 }},
+    "internal_non_redundancy": {{ "evidence": "...", "score": 0 }}
+  }},
+  "structural_completeness": {{
+    "required_sections_present": {{ "evidence": "...", "score": 0 }},
+    "format_compliance":         {{ "evidence": "...", "score": 0 }}
+  }}
 }}"""
 
 
@@ -931,20 +974,63 @@ BASIC_QUALITY_CHECK_PROMPT = """You are evaluating a handbook term's basic secti
 
 Term: "{term}" | Type: {term_type}
 
-Rate the basic content on:
-- engagement
-- accuracy
-- uniqueness
-- completeness
+## Scoring Scale (applies to EVERY sub-score)
+
+Use this 4-anchor scale on a 0-10 continuous range:
+- **10**: Exemplary — criterion fully met with concrete evidence cited.
+- **7**: Solid — criterion met with minor gaps.
+- **4**: Weak — partial or surface-level adherence; notable gaps.
+- **0**: Missing, contradicts the criterion, or fabricated.
+
+## Required Output Format (per sub-score)
+
+For EVERY sub-score you MUST provide BOTH:
+1. `evidence`: Quote or describe SPECIFIC content observed (cite section heading or exact phrase). Empty evidence is not acceptable — if you find nothing, say so explicitly.
+2. `score`: 0-10 integer using the scale above, grounded in the evidence you just cited.
+
+Do NOT output any total or subtotal — code computes aggregates from sub-scores.
+Do NOT hedge ("probably", "seems", "might") — anchor each score to concrete evidence.
+Do NOT invent sections that aren't in the content.
+
+## Sub-dimensions (10 sub-scores)
+
+### Engagement
+- **plain_language_clarity**: Jargon is explained on first use; no unexplained acronyms; reader-friendly phrasing
+- **analogy_effectiveness**: Analogies clarify the mechanism (not just decorate); they map to the actual concept
+- **reader_hook**: "Why you should care" is concrete and compelling, not generic ("this is important in AI")
+
+### Accuracy
+- **factual_correctness**: Claims verifiable against official docs or common technical knowledge
+- **hallucination_absence**: No fabricated products, benchmarks, or entities (especially in "Examples & Analogies" section)
+- **product_claim_accuracy**: Real products cited match their actual 2026 capabilities; no stale or fabricated product features
+
+### Uniqueness
+- **concept_clarity**: Reader leaves understanding THIS specific concept, not a generic AI summary
+- **non_redundancy**: Sections add distinct information; no paraphrasing the same idea across sections
+
+### Structural Completeness
+- **required_sections_present**: All expected Basic sections present with substantive content
+- **misconceptions_and_conversation**: `❌ Myth:`/`✅ Reality:` in misconceptions, conversation examples feel authentic (not generic)
 
 ## Output JSON
+
 {{
-  "score": 0,
-  "breakdown": {{
-    "engagement": 0,
-    "accuracy": 0,
-    "uniqueness": 0,
-    "completeness": 0
+  "engagement": {{
+    "plain_language_clarity": {{ "evidence": "...", "score": 0 }},
+    "analogy_effectiveness":  {{ "evidence": "...", "score": 0 }},
+    "reader_hook":            {{ "evidence": "...", "score": 0 }}
   }},
-  "summary": "one sentence"
+  "accuracy": {{
+    "factual_correctness":    {{ "evidence": "...", "score": 0 }},
+    "hallucination_absence":  {{ "evidence": "...", "score": 0 }},
+    "product_claim_accuracy": {{ "evidence": "...", "score": 0 }}
+  }},
+  "uniqueness": {{
+    "concept_clarity":  {{ "evidence": "...", "score": 0 }},
+    "non_redundancy":   {{ "evidence": "...", "score": 0 }}
+  }},
+  "structural_completeness": {{
+    "required_sections_present":       {{ "evidence": "...", "score": 0 }},
+    "misconceptions_and_conversation": {{ "evidence": "...", "score": 0 }}
+  }}
 }}"""

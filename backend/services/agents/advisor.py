@@ -1102,11 +1102,68 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
     return min(penalty, 40), warnings
 
 
+def _aggregate_quality_sub_scores(
+    llm_output: dict, dimension_names: tuple[str, ...],
+) -> tuple[int | None, dict]:
+    """Aggregate LLM sub-scores into a total 0-100 + per-dimension totals.
+
+    Code (not LLM) computes arithmetic to avoid LLM arithmetic drift.
+    Each sub-score is 0-10. Dimensions sum to 30/30/20/20 = 100 max.
+
+    Returns (total_0_100, annotated_breakdown) or (None, {}) if output malformed.
+    """
+    if not isinstance(llm_output, dict):
+        return None, {}
+    breakdown: dict = {}
+    total = 0
+    any_found = False
+    for dim in dimension_names:
+        dim_data = llm_output.get(dim)
+        if not isinstance(dim_data, dict):
+            breakdown[dim] = {"_subtotal": 0, "_missing": True}
+            continue
+        dim_total = 0
+        sub_entries: dict = {}
+        for sub_name, sub_val in dim_data.items():
+            if not isinstance(sub_val, dict):
+                continue
+            raw = sub_val.get("score", 0)
+            try:
+                s = int(raw)
+            except (TypeError, ValueError):
+                s = 0
+            s = max(0, min(10, s))
+            sub_entries[sub_name] = {
+                "score": s,
+                "evidence": str(sub_val.get("evidence", ""))[:500],
+            }
+            dim_total += s
+            any_found = True
+        breakdown[dim] = {**sub_entries, "_subtotal": dim_total}
+        total += dim_total
+    if not any_found:
+        return None, {}
+    return min(100, total), breakdown
+
+
+_ADVANCED_DIMENSIONS = (
+    "technical_depth", "accuracy", "uniqueness", "structural_completeness",
+)
+_BASIC_DIMENSIONS = (
+    "engagement", "accuracy", "uniqueness", "structural_completeness",
+)
+
+
 async def _check_handbook_quality(
     term: str, term_type: str, advanced_content: str, client,
 ) -> tuple[int | None, dict, dict]:
     """Score handbook advanced quality. Returns (score, breakdown, usage).
-    Returns (None, {}, {}) on failure — NOT a default score."""
+    Returns (None, {}, {}) on failure — NOT a default score.
+
+    Quality judgment is made by LLM on 10 sub-scores (0-10 each, 4 dimensions).
+    Arithmetic aggregation to a 0-100 total is done in code, not the LLM,
+    to avoid arithmetic drift in the judge output.
+    """
     from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
 
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
@@ -1119,15 +1176,18 @@ async def _check_handbook_quality(
                     {"role": "system", "content": system},
                     {"role": "user", "content": advanced_content[:6000]},
                 ],
-                max_tokens=500,
+                max_tokens=1800,
                 temperature=0,
                 response_format={"type": "json_object"},
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "handbook-quality")
-        score = data.get("score", 50)
+        total, breakdown = _aggregate_quality_sub_scores(data, _ADVANCED_DIMENSIONS)
         usage = extract_usage_metrics(resp, reasoning_model)
-        return score, data, usage
+        if total is None:
+            logger.warning("Handbook quality check returned malformed sub-scores for '%s'", term)
+            return None, {}, usage
+        return total, {"sub_scores": breakdown, "raw": data}, usage
     except Exception as e:
         logger.warning("Handbook quality check failed for '%s': %s", term, e)
         return None, {}, {}
@@ -1193,8 +1253,12 @@ async def _self_critique_basic(
 
 async def _check_basic_quality(
     term: str, term_type: str, basic_content: str, client,
-) -> tuple[int, dict, dict]:
-    """Score handbook basic quality. Returns (score, breakdown, usage)."""
+) -> tuple[int | None, dict, dict]:
+    """Score handbook basic quality. Returns (score, breakdown, usage).
+
+    Same sub-score aggregation pattern as advanced — LLM produces 10 sub-scores
+    with evidence, code computes the total.
+    """
     from services.agents.prompts_handbook_types import BASIC_QUALITY_CHECK_PROMPT
 
     system = BASIC_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
@@ -1207,15 +1271,18 @@ async def _check_basic_quality(
                     {"role": "system", "content": system},
                     {"role": "user", "content": basic_content[:6000]},
                 ],
-                max_tokens=500,
+                max_tokens=1800,
                 temperature=0,
                 response_format={"type": "json_object"},
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "basic-quality")
-        score = data.get("score", 50)
+        total, breakdown = _aggregate_quality_sub_scores(data, _BASIC_DIMENSIONS)
         usage = extract_usage_metrics(resp, reasoning_model)
-        return score, data, usage
+        if total is None:
+            logger.warning("Basic quality check returned malformed sub-scores for '%s'", term)
+            return None, {}, usage
+        return total, {"sub_scores": breakdown, "raw": data}, usage
     except Exception as e:
         logger.warning("Basic quality check failed for '%s': %s", term, e)
         return None, {}, {}
