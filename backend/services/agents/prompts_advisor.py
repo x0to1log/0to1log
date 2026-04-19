@@ -691,36 +691,44 @@ Must be:
 - Distinct from `body_basic §1`: basic uses analogies and everyday language; definition uses technical vocabulary.
 - Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level.
 
-GOOD (definition_ko):
-"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 일반화에 실패하는 상태다. 모델 capacity 가 데이터가 제약할 수 있는 범위를 넘으면 패턴 대신 개별 샘플을 외우면서 발생하며, dropout · weight decay · early stopping 으로 완화한다."
-→ Passes: 2 sentences packing definition + mechanism + brief mitigation without filler.
+GOOD (definition_ko — concept):
+"과적합은 모델이 훈련 데이터의 잡음까지 규칙처럼 학습해 새 데이터에서 일반화에 실패하는 상태다. 모델 capacity 가 데이터가 제약할 수 있는 범위를 넘을 때 패턴 대신 개별 샘플을 외우면서 발생하며, 정규화 기법으로 완화한다."
+→ Passes: 2 sentences, definition + mechanism + high-level mitigation. Does NOT enumerate specific mitigations (dropout/weight decay/early stopping) — those belong in body_advanced.
 
 BAD (definition_ko — too thin, missing mechanism):
 "훈련 데이터에는 잘 맞지만 새 데이터에서는 성능이 급락하는 현상. 모델이 신호 대신 잡음까지 학습해 일반화에 실패한 상태."
 → Rejected: 2 sentences but they restate the same idea twice. Zero mechanism.
   Fix: replace sentence 2 with actual mechanism (capacity vs dataset constraint) and a brief mitigation.
 
-GOOD (definition_en — technique/concept):
-"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while training loss keeps decreasing. This happens when model capacity exceeds what the dataset can constrain, and is typically mitigated with dropout, weight decay, and early stopping."
-→ Passes: 2 sentences, definition + observed signal packed in sentence 1 (via subordinate clause), mechanism + mitigation in sentence 2.
+GOOD (definition_en — concept):
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while training loss keeps decreasing. It happens when model capacity outpaces what the dataset can constrain, and is prevented through regularization methods applied during training."
+→ Passes: 2 sentences, definition + observed signal (sentence 1), mechanism + high-level mitigation category (sentence 2). Does NOT enumerate specific techniques (dropout/weight decay/early stopping) — those belong in body_advanced.
 
 BAD (definition_en — too thin):
 "Overfitting means a model memorizes training data and fails on new inputs."
-→ Rejected: one sentence, no mechanism. Add the capacity-vs-constraint mechanism and at least one mitigation.
+→ Rejected: one sentence, no mechanism. Add the capacity-vs-constraint mechanism and at least one high-level mitigation pointer.
 
-GOOD (definition_en — architecture) — shows how NOT to enumerate internal components:
-"Transformer is a neural network architecture built around self-attention that processes sequence tokens in parallel by learning how each token relates to every other token. It replaced RNN-style recurrence with stacked attention blocks and positional encodings, enabling efficient scaling to billions of parameters and long-range dependency modeling."
-→ Passes: 2 sentences, high-level. Does NOT list encoder/decoder/FFN/multi-head as separate components — those belong in body_advanced Architecture.
+GOOD (definition_en — architecture):
+"Transformer is a neural network architecture built around self-attention that processes sequence tokens in parallel by learning how each token relates to every other token. It replaced RNN-style recurrence with a position-aware attention stack, enabling efficient scaling to billions of parameters and long-range dependency modeling."
+→ Passes: 2 sentences, high-level. Does NOT list encoder/decoder/FFN/multi-head/normalization as separate components — those belong in body_advanced Architecture.
 
-GOOD (definition_en — training technique) — shows how NOT to enumerate pipeline stages:
+GOOD (definition_en — training technique):
 "Reinforcement Learning from Human Feedback (RLHF) is a post-training alignment technique where a language model optimizes its responses against a reward model learned from human preference comparisons. It steers outputs toward helpful, safe behavior in cases where direct objective functions are hard to specify."
 → Passes: 2 sentences, high-level. Does NOT list SFT + reward model training + PPO + regularization as a pipeline — those stage details belong in body_advanced's "How It Works" section.
 
-GOOD (definition_en — protocol/spec) — shows how NOT to enumerate primitives or RFCs:
+GOOD (definition_en — protocol/spec):
 "Model Context Protocol (MCP) is an open JSON-RPC standard that lets AI applications connect to external tools and data through a uniform discovery and authorization flow. It replaces one-off, per-tool integrations with a shared protocol so new tools plug into any compliant AI host without custom adapters."
 → Passes: 2 sentences, high-level. Does NOT list resources/tools/sampling/elicitation/logging primitives or enumerate RFC numbers — those belong in body_advanced Architecture or Formulas section.
 
-Pattern across all four GOOD examples: **what it is + how it works at a high level**. NEVER an enumeration of internal components, pipeline stages, primitives, RFCs, or named sub-features in the definition — no matter the term type.
+GOOD (definition_en — infrastructure tool/library):
+"PyTorch is an open-source deep learning framework that builds computation graphs dynamically at runtime, letting developers define and modify model architectures using standard Python control flow. Its design prioritizes research flexibility and debugging ergonomics over static graph optimization, becoming the dominant framework for modern AI research."
+→ Passes: 2 sentences, high-level. Does NOT list autograd/distributed/mobile/TorchScript/ONNX export as separate features — those belong in body_advanced's "How It Works" or "Tradeoffs" section.
+
+GOOD (definition_en — product/service):
+"Claude is Anthropic's family of large language models aligned through constitutional AI training, which encodes behavior guidelines explicitly rather than deriving them from preference data alone. It serves as both a chat assistant and a developer API for long-context reasoning and agentic workflows."
+→ Passes: 2 sentences, high-level. Does NOT list variants (Opus/Sonnet/Haiku) or version history (3/3.5/4/4.6) — those belong in body_advanced's architecture or history section.
+
+Pattern across all six GOOD examples: **what it is + how it works at a high level**. NEVER an enumeration of internal components, pipeline stages, primitives, RFCs, features, variants, or named sub-offerings in the definition — no matter the term type.
 
 ---
 
