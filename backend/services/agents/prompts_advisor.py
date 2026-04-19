@@ -674,6 +674,12 @@ Precise, technical definition. Shared across both levels.
 - **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
 - **Depth floor:** if the draft is under ~150 chars EN or ~100 chars KO, it's too thin — add the mechanism chunk and retry.
 - **Typical length (for calibration, not counting):** ~250-350 chars EN, ~130-200 chars KO. If your draft lands far above this, your sentences are too long — compress clauses, don't simply cap sentence count.
+- **Scope discipline (critical for protocols, specs, architectures):** Definition stays at **"what it is + how it works at a high level"**. Do NOT in the definition:
+  - Enumerate protocol primitives (e.g., listing resources/tools/sampling/elicitation/logging for a protocol)
+  - List all RFC numbers, API endpoints, or draft-spec references
+  - Include parameter tables, field-by-field descriptions, or transport details (STDIO, HTTP/SSE)
+  - Cite section numbers of a spec document
+  These belong in `body_advanced` (Architecture / Formulas / Technical Definition & How It Works sections). If a sentence lists 4+ technical items, you're writing body, not definition — move them.
 
 This definition is surfaced in TWO places — both benefit from crisp 5-8 second reads, not paragraphs:
 1. Hero Card on the handbook detail page (canonical technical summary).
