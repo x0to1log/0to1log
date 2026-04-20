@@ -344,7 +344,8 @@ def _build_supabase_mock_for_quality_rerun(news_rows: list, checkpoint_returns=N
 async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
     """rerun_from='quality' must:
       1. call _check_digest_quality (not _generate_digest)
-      2. update BOTH locale rows with quality_score, quality_flags, content_analysis, analyzed_at
+      2. update BOTH locale rows with quality_score, quality_flags, content_analysis
+         (news_posts.updated_at is auto-set by Supabase trigger on any UPDATE)
       3. return status=success
     """
     from services.pipeline import rerun_pipeline_stage
@@ -393,7 +394,9 @@ async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
             assert payload["quality_score"] == 84
             assert payload["quality_flags"] == []
             assert "scores_breakdown" in payload["content_analysis"]
-            assert "analyzed_at" in payload and payload["analyzed_at"]
+            # updated_at is trigger-managed by Supabase — we don't send it,
+            # and we verify freshness in the validation script via delta.
+            assert "analyzed_at" not in payload
 
 
 @pytest.mark.asyncio

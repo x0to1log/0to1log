@@ -1834,7 +1834,10 @@ async def rerun_pipeline_stage(
                     "scores_breakdown": qc_result.get("quality_breakdown"),
                     "issues": qc_result.get("quality_issues") or [],
                 }
-                analyzed_at = datetime.now(timezone.utc).isoformat()
+                # news_posts.updated_at is managed by a Supabase trigger, so
+                # we don't set it explicitly — any row-level UPDATE refreshes it.
+                # Freshness of the QC rerun is detectable via updated_at delta
+                # compared to a pre-rerun baseline.
 
                 # Update BOTH locale rows for this digest_type.
                 # total_posts counts rows updated (EN + KO = 2 per digest_type). This differs
@@ -1849,7 +1852,6 @@ async def rerun_pipeline_stage(
                             "quality_score": score_int,
                             "quality_flags": flags,
                             "content_analysis": content_analysis,
-                            "analyzed_at": analyzed_at,
                         }).eq("slug", slug).execute()
                         total_posts += 1
                     except Exception as e:

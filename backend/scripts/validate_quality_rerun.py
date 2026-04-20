@@ -44,7 +44,7 @@ def _sha(text: str | None) -> str:
 def baseline(batch_id: str, out_path: Path) -> int:
     # Preflight: all 4 slugs must exist
     rows = SB.table("news_posts").select(
-        "slug,content_expert,content_learner,analyzed_at,quality_score"
+        "slug,content_expert,content_learner,updated_at,quality_score"
     ).in_("slug", slugs_for(batch_id)).execute().data
     by_slug = {r["slug"]: r for r in rows}
     missing = [s for s in slugs_for(batch_id) if s not in by_slug]
@@ -69,7 +69,7 @@ def baseline(batch_id: str, out_path: Path) -> int:
             slug: {
                 "content_expert_hash": _sha(by_slug[slug].get("content_expert")),
                 "content_learner_hash": _sha(by_slug[slug].get("content_learner")),
-                "analyzed_at": by_slug[slug].get("analyzed_at"),
+                "updated_at": by_slug[slug].get("updated_at"),
                 "quality_score": by_slug[slug].get("quality_score"),
             }
             for slug in slugs_for(batch_id)
@@ -108,9 +108,9 @@ def verify(batch_id: str, in_path: Path) -> int:
     if digest_runs:
         fails.append(f"digest stages re-ran: {[log['pipeline_type'] for log in digest_runs]}")
 
-    # Criterion 3: each slug's quality_score + analyzed_at refreshed, both locales
+    # Criterion 3: each slug's quality_score + updated_at refreshed, both locales
     rows = SB.table("news_posts").select(
-        "slug,quality_score,quality_flags,content_analysis,analyzed_at,"
+        "slug,quality_score,quality_flags,content_analysis,updated_at,"
         "content_expert,content_learner"
     ).in_("slug", slugs_for(batch_id)).execute().data
     by_slug = {r["slug"]: r for r in rows}
@@ -132,12 +132,12 @@ def verify(batch_id: str, in_path: Path) -> int:
         if not (isinstance(ca, dict) and "scores_breakdown" in ca):
             fails.append(f"{slug}: content_analysis missing scores_breakdown")
 
-        # 3c: analyzed_at refreshed (strictly newer than baseline)
-        if not row.get("analyzed_at"):
-            fails.append(f"{slug}: analyzed_at missing after rerun")
-        elif base_slug["analyzed_at"] and row["analyzed_at"] <= base_slug["analyzed_at"]:
-            fails.append(f"{slug}: analyzed_at not refreshed "
-                         f"(was {base_slug['analyzed_at']}, is {row['analyzed_at']})")
+        # 3c: updated_at refreshed (strictly newer than baseline)
+        if not row.get("updated_at"):
+            fails.append(f"{slug}: updated_at missing after rerun")
+        elif base_slug["updated_at"] and row["updated_at"] <= base_slug["updated_at"]:
+            fails.append(f"{slug}: updated_at not refreshed "
+                         f"(was {base_slug['updated_at']}, is {row['updated_at']})")
 
         # 3d: content_expert / content_learner UNCHANGED (writer skipped)
         now_e = _sha(row.get("content_expert"))
