@@ -1827,116 +1827,114 @@ Return JSON only:
 {"score": 0-100, "subscores": {"factuality": 0-25, "calibration": 0-25, "clarity": 0-25, "locale_alignment": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
 
 
-QUALITY_CHECK_WEEKLY_EXPERT = """You are a strict quality reviewer for a weekly AI industry recap written for strategic decision-makers.
+QUALITY_CHECK_WEEKLY_EXPERT = f"""You are a strict quality reviewer for a weekly AI industry recap written for strategic decision-makers (VPs of Engineering, CTOs, AI Product Leads).
 
-The input contains BOTH the English and Korean body for the same persona. Evaluate both together. If either locale is noticeably weaker, reflect that in the score and issues.
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
 
-Score this weekly digest on 4 criteria (0-25 each, total 0-100).
+{_QC_SHARED_RUBRIC_HEADER}
 
-**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only.
+## Sub-dimensions (10 sub-scores grouped into 4 categories)
 
-1. **Section Completeness** (25):
-   Required sections: This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, So What Do I Do?
-   - 25: All 7 sections present with substantial content (200+ chars each), proper ## headings
-   - 18: All sections present but 1-2 are thin (<150 chars)
-   - 10: 1+ section missing or severely thin
-   - 0: Content structure is broken
+### Structural Completeness (2)
+- **sections_present**: Required sections — This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, So What Do I Do? — are present with `##` headings. All 7 are mandatory for expert weekly.
+- **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets. Top Stories has 5-7 `###` items. Trend Analysis is 3-4 paragraphs. One-Line may be brief if it synthesizes the week's main theme.
 
-2. **Source Quality** (25):
-   - 25: >80% of Top Stories cite primary source first; Trend Analysis has per-paragraph citations; Watch Points and Actions cite sources
-   - 18: >60% primary-first; most sections have citations but some gaps
-   - 10: <50% primary-first or multiple sections lack citations
-   - 0: Citations largely absent or hallucinated
+### Source Quality (3)
+- **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and action bullet ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. One-Line and Week-in-Numbers-labels allowed to skip.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo / GitHub) rather than secondary reporting (TechCrunch / Forbes / Bloomberg / Reuters).
+- **source_utilization**: Sources drawn across sections (Top Stories, Trend Analysis, Watch Points) — not ignored or piled in one block.
 
-3. **Depth & Synthesis** (25):
-   - 25: Top Stories follow WHAT/WHY/CONTEXT structure with 4-5 sentences; Trend Analysis identifies 2+ distinct themes and traces evolution across the week
-   - 18: Top Stories have structure but some are thin; Trend Analysis has themes but tracing is weak
-   - 10: Top Stories are shallow summaries; Trend Analysis restates headlines
-   - 0: Content is bullet-point news with no analysis
+### Strategic Synthesis (3)
+- **trend_connection**: Trend Analysis paragraphs connect events into themes and trace evolution (Mon→Fri flow, or cross-story pattern). NOT a headline re-list.
+- **impact_framing**: Each Top Story answers "why it matters for a decision-maker" explicitly — competitive shift, market restructuring, unit-economics implication, or investment signal. Not just WHAT happened.
+- **decision_relevance**: "So What Do I Do?" gives concrete decision points formatted like `- **If [situation]**: [specific action] — because [reasoning]`. Not generic advice like "monitor developments" or "consider adopting AI".
 
-4. **Language & Tone** (25):
-   - 25: Analyst voice; calibrated language; no banned framing words; KO version is natural Korean with all citations preserved
-   - 18: Mostly calibrated but 1-2 instances of prediction language or aggressive framing
-   - 10: Multiple tone violations; KO citations partially lost
-   - 0: Chatty tone, predictions throughout, or KO citation collapse
+### Language Quality (2)
+- **fluency**: Analyst voice — assertive, calibrated, no chat tone. No banned framing words (scramble / showdown / war / cements grip) unless sourced. No predictions ("expect X", "will disrupt").
+- **locale_integrity**: Scan the `ko` field for English content leakage. Concrete rules:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4 in Latin script are OK and do NOT count).
+  - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
+  - Scoring: **10** all pass · **7** one borderline violation · **4** 2-3 violations · **0** any blockquote or paragraph ≥50 chars is English-only.
 
-## Severity
+{_QC_SHARED_SEVERITY_RULES}
 
-Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
+## Output JSON (no total score — code aggregates)
 
-Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
-
-## Issues
-
-Return ≤5 issues total at the top level (not per-subcategory). **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
-
-Do NOT report: stylistic preferences, optional improvements, editorial choices that aren't wrong, source re-use with valid citations, or subjective critiques.
-
-Return JSON only:
 {{
-  "section_completeness": {{"score": 0}},
-  "source_quality": {{"score": 0}},
-  "depth_synthesis": {{"score": 0}},
-  "language_tone": {{"score": 0}},
-  "total_score": 0,
-  "summary": "One sentence overall assessment",
+  "structural_completeness": {{
+    "sections_present": {{"evidence": "...", "score": 0}},
+    "section_depth":    {{"evidence": "...", "score": 0}}
+  }},
+  "source_quality": {{
+    "citation_coverage":       {{"evidence": "...", "score": 0}},
+    "primary_source_priority": {{"evidence": "...", "score": 0}},
+    "source_utilization":      {{"evidence": "...", "score": 0}}
+  }},
+  "strategic_synthesis": {{
+    "trend_connection":  {{"evidence": "...", "score": 0}},
+    "impact_framing":    {{"evidence": "...", "score": 0}},
+    "decision_relevance":{{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "fluency":          {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}}
+  }},
   "issues": [{{"severity": "major|minor", "scope": "expert_body|ko|en", "category": "source|locale|structure|clarity|overclaim|fabrication", "message": "..."}}]
 }}"""
 
 
-QUALITY_CHECK_WEEKLY_LEARNER = """You are a quality reviewer for a weekly AI digest written for non-specialist knowledge workers.
+QUALITY_CHECK_WEEKLY_LEARNER = f"""You are a quality reviewer for a weekly AI digest written for non-specialist knowledge workers (PMs, marketers, designers, students, career-switchers).
 
-The input contains BOTH the English and Korean body for the same persona. Evaluate both together.
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
 
-Score this weekly digest on 4 criteria (0-25 each, total 0-100).
+{_QC_SHARED_RUBRIC_HEADER}
 
-**Scoring calibration** (0-25, use full range): 25 exemplary · 22-23 strong · 19-21 solid · 15-17 acceptable · 10-13 below bar · 5-8 weak · 0-3 broken. Default to 19-22 for typical "good but not exceptional"; reserve 25 for standout only.
+## Sub-dimensions (10 sub-scores grouped into 4 categories)
 
-1. **Section Completeness** (25):
-   Required sections: This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, What Can I Try?
-   - 25: All 7 sections present with substantial content (200+ chars each)
-   - 18: All sections present but 1-2 are thin
-   - 10: 1+ section missing
-   - 0: Content structure broken
+### Structural Completeness (2)
+- **sections_present**: Required sections — This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, What Can I Try? — are present with `##` headings.
+- **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets with beginner-friendly context. Top Stories has 5-7 `###` items.
 
-2. **Source Quality** (25):
-   - 25: Top Stories cite sources; Trend Analysis and Watch Points have citations; What Can I Try links to resources
-   - 18: Most sections have citations but some gaps
-   - 10: Multiple sections lack citations
-   - 0: Citations largely absent
+### Source Quality (3)
+- **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and "What Can I Try" action ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting.
+- **source_utilization**: Sources drawn across sections — not ignored or piled in one block.
 
-3. **Depth & Accessibility** (25):
-   - 25: Top Stories follow WHAT/WHY/CONTEXT for non-specialists; acronyms expanded; Trend Analysis in plain language with real synthesis
-   - 18: Mostly accessible but some jargon unexplained; Trend Analysis present but thin
-   - 10: Too technical for target audience; Trend Analysis is headline list
-   - 0: Inaccessible or trivially shallow
+### Accessibility (3)
+- **plain_language**: Trend Analysis narrates the week's flow in plain language (not jargon-heavy). Reader without AI background can follow the main argument.
+- **acronym_expansion**: All acronyms expanded on first use (e.g., "Retrieval-Augmented Generation (RAG)"). Technical terms have brief explanation or Handbook link.
+- **try_actions**: "What Can I Try?" gives concrete, beginner-approachable actions (a specific tool to try, a paper to read, an experiment to run). Not vague suggestions like "explore more AI" or "stay informed".
 
-4. **Language & Tone** (25):
-   - 25: Clear editorial prose; no chat tone; KO citations preserved; numbers have context
-   - 18: Mostly good but occasional tone slip
-   - 10: Tone inconsistent; KO citations partially lost
-   - 0: Chat tone throughout or KO broken
+### Language Quality (2)
+- **fluency**: Clear editorial news prose — not chat tone ("~요 투"), not lecturing. Numbers have context. Natural in both EN and KO.
+- **locale_integrity**: Scan the `ko` field for English content leakage. Concrete rules:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI in Latin script are OK).
+  - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
+  - Scoring: **10** all pass · **7** one borderline · **4** 2-3 violations · **0** any blockquote or paragraph ≥50 chars is English-only.
 
-## Severity
+{_QC_SHARED_SEVERITY_RULES}
 
-Mark **major** ONLY for: (1) fabrication/hallucination; (2) broken structure — missing mandatory section, corrupted markdown; (3) hard factual error; (4) locale corruption; (5) source fabrication.
+## Output JSON (no total score — code aggregates)
 
-Everything else is **minor**. When unsure, minor.
-
-## Issues
-
-Return ≤5 issues total at the top level (not per-subcategory). Zero is valid.
-
-Do NOT report: stylistic preferences, optional improvements, editorial choices that aren't wrong, or subjective critiques.
-
-Return JSON only:
 {{
-  "section_completeness": {{"score": 0}},
-  "source_quality": {{"score": 0}},
-  "depth_accessibility": {{"score": 0}},
-  "language_tone": {{"score": 0}},
-  "total_score": 0,
-  "summary": "One sentence overall assessment",
+  "structural_completeness": {{
+    "sections_present": {{"evidence": "...", "score": 0}},
+    "section_depth":    {{"evidence": "...", "score": 0}}
+  }},
+  "source_quality": {{
+    "citation_coverage":       {{"evidence": "...", "score": 0}},
+    "primary_source_priority": {{"evidence": "...", "score": 0}},
+    "source_utilization":      {{"evidence": "...", "score": 0}}
+  }},
+  "accessibility": {{
+    "plain_language":    {{"evidence": "...", "score": 0}},
+    "acronym_expansion": {{"evidence": "...", "score": 0}},
+    "try_actions":       {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "fluency":          {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}}
+  }},
   "issues": [{{"severity": "major|minor", "scope": "learner_body|ko|en", "category": "source|locale|structure|clarity|accessibility", "message": "..."}}]
 }}"""
 

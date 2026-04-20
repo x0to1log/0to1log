@@ -1050,9 +1050,12 @@ async def _check_weekly_quality(
         expert_usage = extract_usage_metrics(expert_resp, model)
         cumulative_usage.update(merge_usage_metrics(cumulative_usage, expert_usage))
         expert_data = parse_ai_json(expert_raw, "weekly-quality-expert")
-        expert_score = expert_data.get("total_score", 0)
+        # v2 rubric: code aggregates sub-scores. Fall back to data["total_score"]
+        # (legacy format) or data["score"] for safety.
+        expert_score = _aggregate_subscores(expert_data)
+        if expert_score == 0:
+            expert_score = int(expert_data.get("total_score") or expert_data.get("score") or 0)
         llm_scores.append(expert_score)
-        # New format (v2): top-level structured issues. Fallback to legacy per-subcat strings.
         expert_top_issues = expert_data.get("issues") or []
         if expert_top_issues:
             expert_issues = _extract_structured_issues(expert_top_issues, "expert_body")
@@ -1091,7 +1094,9 @@ async def _check_weekly_quality(
             learner_usage = extract_usage_metrics(learner_resp, model)
             cumulative_usage.update(merge_usage_metrics(cumulative_usage, learner_usage))
             learner_data = parse_ai_json(learner_raw, "weekly-quality-learner")
-            learner_score = learner_data.get("total_score", 0)
+            learner_score = _aggregate_subscores(learner_data)
+            if learner_score == 0:
+                learner_score = int(learner_data.get("total_score") or learner_data.get("score") or 0)
             llm_scores.append(learner_score)
             learner_top_issues = learner_data.get("issues") or []
             if learner_top_issues:
