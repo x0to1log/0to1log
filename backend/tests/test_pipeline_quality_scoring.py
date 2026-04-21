@@ -252,6 +252,126 @@ async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     assert "엔비디아가 Thinking Machines 딜로 AI 인프라 전쟁 승리" in captured_user_prompts[2]
 
 
+@pytest.mark.asyncio
+async def test_check_digest_quality_returns_per_call_breakdowns_for_admin_drill_down():
+    """_check_digest_quality must return expert_breakdown/learner_breakdown/
+    frontload_breakdown — the nested v11 sub-score evidence structure that
+    admin UI renders. These are produced internally (pipeline_quality.py:539-541)
+    but tested explicitly here to guard against accidental removal. (NQ-34)"""
+    from services.pipeline import _check_digest_quality
+
+    personas = {
+        "expert": PersonaOutput(
+            en="## One-Line Summary\nEnglish expert body [1](https://example.com/story)\n\n## Industry & Biz\n\n### Thinking Machines deal\n\nFirst paragraph [1](https://example.com/story)\n\nSecond paragraph [1](https://example.com/story)\n\nThird paragraph [1](https://example.com/story)\n",
+            ko="## 한 줄 요약\n한국어 전문가 본문 [1](https://example.com/story)\n\n## Industry & Biz\n\n### Thinking Machines 딜\n\n첫 문단 [1](https://example.com/story)\n\n둘째 문단 [1](https://example.com/story)\n\n셋째 문단 [1](https://example.com/story)\n",
+        ),
+        "learner": PersonaOutput(
+            en="## One-Line Summary\nEnglish learner body [1](https://example.com/story)\n\n## What This Means for You\n\n### Why it matters\n\nFirst paragraph [1](https://example.com/story)\n\nSecond paragraph [1](https://example.com/story)\n\nThird paragraph [1](https://example.com/story)\n",
+            ko="## 한 줄 요약\n한국어 학습자 본문 [1](https://example.com/story)\n\n## What This Means for You\n\n### 왜 중요한가\n\n첫 문단 [1](https://example.com/story)\n\n둘째 문단 [1](https://example.com/story)\n\n셋째 문단 [1](https://example.com/story)\n",
+        ),
+    }
+    frontload = {
+        "headline": "Nvidia signs Thinking Machines compute deal",
+        "headline_ko": "엔비디아, Thinking Machines 컴퓨트 딜 체결",
+        "excerpt": "Deal lands with industry implications.",
+        "excerpt_ko": "업계 영향과 함께 체결된 딜.",
+        "focus_items": ["Deal signed", "Compute expands", "Watch supply"],
+        "focus_items_ko": ["계약 체결", "컴퓨트 확장", "공급 주목"],
+    }
+
+    # Representative v11 nested sub-score payloads (structure matches what
+    # pipeline_quality.py:539-541 extracts into the *_breakdown fields).
+    expert_payload = {
+        "structural_completeness": {
+            "sections_present": {"evidence": "All required sections present", "score": 10},
+            "paragraph_depth":   {"evidence": "3 paragraphs per section", "score": 9},
+            "subheading_quality": {"evidence": "Subheadings are concrete", "score": 10},
+        },
+        "source_quality": {
+            "citation_density": {"evidence": "Each paragraph cited", "score": 10},
+            "source_diversity": {"evidence": "Single source OK here", "score": 8},
+        },
+        "issues": [],
+    }
+    learner_payload = {
+        "structural_completeness": {
+            "sections_present": {"evidence": "Required sections present", "score": 10},
+            "paragraph_depth":   {"evidence": "Adequate paragraph depth", "score": 9},
+        },
+        "accessibility": {
+            "jargon_handling": {"evidence": "Terms explained inline", "score": 9},
+        },
+        "issues": [],
+    }
+    frontload_payload = {
+        "factuality": {
+            "number_grounding": {"evidence": "No numbers in headline", "score": 10},
+            "entity_grounding": {"evidence": "Entities body-consistent", "score": 10},
+            "claim_grounding":  {"evidence": "Deal claim factual", "score": 10},
+        },
+        "calibration": {
+            "claim_strength":      {"evidence": "Neutral framing", "score": 10},
+            "framing_calibration": {"evidence": "No forward-looking verbs", "score": 10},
+        },
+        "clarity": {
+            "headline_specificity":        {"evidence": "Names both parties", "score": 10},
+            "focus_items_informativeness": {"evidence": "Distinct bullets", "score": 9},
+        },
+        "locale_alignment": {
+            "fact_parity":        {"evidence": "EN/KO facts parity", "score": 10},
+            "entity_parity":      {"evidence": "Entity transliteration aligned", "score": 10},
+            "phrase_naturalness": {"evidence": "KO reads natively", "score": 9},
+        },
+        "issues": [],
+    }
+
+    responses = [
+        _mock_openai_response(expert_payload),
+        _mock_openai_response(learner_payload),
+        _mock_openai_response(frontload_payload),
+    ]
+
+    async def _create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=_sample_group(),
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-drill-down",
+            cumulative_usage={},
+            frontload=frontload,
+        )
+
+    # The 3 breakdown keys are the evidence trail admin UI renders (NQ-34).
+    assert isinstance(result.get("expert_breakdown"), dict)
+    assert isinstance(result.get("learner_breakdown"), dict)
+    assert isinstance(result.get("frontload_breakdown"), dict)
+    assert result["expert_breakdown"], "expert_breakdown must be non-empty"
+    assert result["learner_breakdown"], "learner_breakdown must be non-empty"
+    assert result["frontload_breakdown"], "frontload_breakdown must be non-empty"
+
+    # Verify nested sub-score shape preserved — admin UI reads evidence strings.
+    expert_bd = result["expert_breakdown"]
+    assert "structural_completeness" in expert_bd
+    assert "sections_present" in expert_bd["structural_completeness"]
+    assert expert_bd["structural_completeness"]["sections_present"]["evidence"]
+
+    frontload_bd = result["frontload_breakdown"]
+    assert "locale_alignment" in frontload_bd
+    assert frontload_bd["locale_alignment"]["fact_parity"]["evidence"]
+
+
 # ---------------------------------------------------------------------------
 # Phase 2 — URL Strict Allowlist Validation
 # ---------------------------------------------------------------------------

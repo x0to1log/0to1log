@@ -1141,6 +1141,12 @@ async def _generate_digest(
                 "quality_score": quality_score,
                 "quality_version": quality_meta.get("quality_version", "v1"),
                 "quality_breakdown": quality_meta.get("quality_breakdown", {}),
+                # Per-QC-call v11 sub-score breakdowns with evidence — surfaced in admin drill-down (NQ-34).
+                # ~1-2KB each for evidence strings; JSONB storage is cheap and the explainability
+                # trail is critical for auto-publish decisions.
+                "expert_breakdown": quality_meta.get("expert_breakdown", {}),
+                "learner_breakdown": quality_meta.get("learner_breakdown", {}),
+                "frontload_breakdown": quality_meta.get("frontload_breakdown", {}),
                 "quality_issues": quality_meta.get("quality_issues", []),
                 "quality_caps_applied": quality_meta.get("quality_caps_applied", []),
                 "structural_penalty": quality_meta.get("structural_penalty", 0),
