@@ -324,6 +324,7 @@ def _build_supabase_mock_for_quality_rerun(news_rows: list, checkpoint_returns=N
       - pipeline_runs claim (.update.eq.neq.execute.data = [{"id": "run-1"}])
       - published guard (.select.eq.eq.execute.data = [])  — bypass guard
       - news_posts personas-loader (.select.eq.in_.execute.data = news_rows)
+      - fact_pack read per slug (.select.eq.limit.execute.data = [{"fact_pack": {}}])
       - generic update/delete chains return MagicMock (no data check)
     """
     supabase = MagicMock()
@@ -337,6 +338,8 @@ def _build_supabase_mock_for_quality_rerun(news_rows: list, checkpoint_returns=N
     supabase.table.return_value.select.return_value.eq.return_value.in_.return_value.execute.return_value.data = news_rows
     # Published guard (.select.eq.eq.execute.data) — must be empty/falsy to bypass
     supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value.data = []
+    # fact_pack read per slug (.select.eq.limit.execute) — empty existing fact_pack
+    supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [{"fact_pack": {}}]
     return supabase
 
 
@@ -344,9 +347,11 @@ def _build_supabase_mock_for_quality_rerun(news_rows: list, checkpoint_returns=N
 async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
     """rerun_from='quality' must:
       1. call _check_digest_quality (not _generate_digest)
-      2. update BOTH locale rows with quality_score, quality_flags, content_analysis
+      2. update BOTH locale rows with quality_score, quality_flags, and fact_pack
          (news_posts.updated_at is auto-set by Supabase trigger on any UPDATE)
-      3. return status=success
+      3. NEVER write content_analysis — that's a user-facing markdown column
+         (Core Analysis section); QC data goes into fact_pack (admin/internal)
+      4. return status=success
     """
     from services.pipeline import rerun_pipeline_stage
 
@@ -369,8 +374,14 @@ async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
             "score": 84,
             "quality_score": 84,
             "quality_flags": [],
-            "quality_issues": [],
-            "quality_breakdown": {"total_score": 84},
+            "quality_issues": [{"severity": "minor", "scope": "frontload", "message": "ex"}],
+            "quality_breakdown": {"total_score": 84, "factuality": {}},
+            "quality_version": "v1",
+            "quality_caps_applied": [],
+            "structural_penalty": 0,
+            "structural_warnings": [],
+            "url_validation_failed": False,
+            "url_validation_failures": [],
         }
 
         result = await rerun_pipeline_stage(
@@ -393,9 +404,15 @@ async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
             payload = c.args[0]
             assert payload["quality_score"] == 84
             assert payload["quality_flags"] == []
-            assert "scores_breakdown" in payload["content_analysis"]
-            # updated_at is trigger-managed by Supabase — we don't send it,
-            # and we verify freshness in the validation script via delta.
+            # QC data MUST land in fact_pack (not content_analysis — see docstring)
+            assert "fact_pack" in payload
+            fp = payload["fact_pack"]
+            assert fp["quality_score"] == 84
+            assert fp["quality_breakdown"] == {"total_score": 84, "factuality": {}}
+            assert fp["quality_issues"] == [{"severity": "minor", "scope": "frontload", "message": "ex"}]
+            # content_analysis must NOT be touched — that column is user-facing markdown
+            assert "content_analysis" not in payload
+            # updated_at is trigger-managed by Supabase — we don't send it explicitly
             assert "analyzed_at" not in payload
 
 

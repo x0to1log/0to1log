@@ -1830,14 +1830,16 @@ async def rerun_pipeline_stage(
 
                 score_int = int(qc_result.get("score") or qc_result.get("quality_score") or 0)
                 flags = qc_result.get("quality_flags") or []
-                content_analysis = {
-                    "scores_breakdown": qc_result.get("quality_breakdown"),
-                    "issues": qc_result.get("quality_issues") or [],
-                }
+
                 # news_posts.updated_at is managed by a Supabase trigger, so
                 # we don't set it explicitly — any row-level UPDATE refreshes it.
                 # Freshness of the QC rerun is detectable via updated_at delta
                 # compared to a pre-rerun baseline.
+                #
+                # QC data goes into `fact_pack` (internal/admin), NOT `content_analysis`
+                # (user-facing markdown column rendered as "Core Analysis" — see
+                # comment in weekly save path below around the "_check_weekly_quality's
+                # content_analysis field" note).
 
                 # Update BOTH locale rows for this digest_type.
                 # total_posts counts rows updated (EN + KO = 2 per digest_type). This differs
@@ -1848,10 +1850,47 @@ async def rerun_pipeline_stage(
                     f"{batch_id.lower()}-{digest_type}-digest-ko",
                 ):
                     try:
+                        # Read existing fact_pack to preserve non-QC fields
+                        # (digest_meta / news_items / pre-rerun structural warnings).
+                        existing_row = (
+                            supabase.table("news_posts")
+                            .select("fact_pack")
+                            .eq("slug", slug)
+                            .limit(1)
+                            .execute()
+                            .data
+                        )
+                        existing_fp = (existing_row[0].get("fact_pack") if existing_row else {}) or {}
+                        new_fp = {
+                            **existing_fp,
+                            "quality_score": score_int,
+                            "quality_version": qc_result.get(
+                                "quality_version", existing_fp.get("quality_version", "v1"),
+                            ),
+                            "quality_breakdown": qc_result.get("quality_breakdown", {}),
+                            "quality_issues": qc_result.get("quality_issues", []),
+                            "quality_caps_applied": qc_result.get(
+                                "quality_caps_applied", existing_fp.get("quality_caps_applied", []),
+                            ),
+                            "structural_penalty": qc_result.get(
+                                "structural_penalty", existing_fp.get("structural_penalty", 0),
+                            ),
+                            "structural_warnings": qc_result.get(
+                                "structural_warnings", existing_fp.get("structural_warnings", []),
+                            ),
+                            "url_validation_failed": bool(qc_result.get(
+                                "url_validation_failed",
+                                existing_fp.get("url_validation_failed", False),
+                            )),
+                            "url_validation_failures": qc_result.get(
+                                "url_validation_failures",
+                                existing_fp.get("url_validation_failures", []),
+                            ),
+                        }
                         supabase.table("news_posts").update({
                             "quality_score": score_int,
                             "quality_flags": flags,
-                            "content_analysis": content_analysis,
+                            "fact_pack": new_fp,
                         }).eq("slug", slug).execute()
                         total_posts += 1
                     except Exception as e:
