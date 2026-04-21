@@ -7035,6 +7035,25 @@ body.auth-prompt-open {
   color: var(--color-text);
 }
 
+/* Weekly quiz — multiple questions in one block */
+.newsprint-weekly-quiz-item {
+  padding-top: 1.25rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.newsprint-weekly-quiz-item:first-of-type {
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: none;
+}
+
+.newsprint-weekly-quiz-number {
+  color: var(--color-accent);
+  font-weight: 700;
+  margin-right: 0.15rem;
+}
+
 .newsprint-quiz-options {
   display: flex;
   flex-direction: column;
