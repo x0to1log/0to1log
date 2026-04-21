@@ -1332,6 +1332,33 @@ def _entity_relevance(title: str, thread_title: str, entities: list[str]) -> flo
     return base + boost - penalty
 
 
+def _format_hn_thread_block(
+    story_id: str,
+    hn_title: str,
+    points: int,
+    num_comments: int,
+    comments_text: list[str],
+) -> str:
+    """Build the HN thread_block string with embedded thread URL.
+
+    URL token format: [Hacker News|url=https://...]
+    When story_id is empty we omit the url= token so downstream regexes
+    cleanly see a plain `[Hacker News]` header.
+    """
+    if story_id:
+        header = (
+            f"[Hacker News|url=https://news.ycombinator.com/item?id={story_id}] "
+            f"{hn_title} | {points} points | {num_comments} comments\n"
+        )
+    else:
+        header = f"[Hacker News] {hn_title} | {points} points | {num_comments} comments\n"
+    block = header
+    if comments_text:
+        block += "Top comments:\n"
+        block += "\n".join(f'> "{ct}"' for ct in comments_text)
+    return block
+
+
 async def collect_community_reactions(title: str, url: str, target_date: str | None = None) -> str:
     """Collect community reactions with ACTUAL COMMENT TEXT from HN + Reddit.
 
@@ -1422,10 +1449,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                             comments_text.append(clean)
                         if len(comments_text) >= 3:
                             break
-                thread_block = f"[Hacker News] {hn_title} | {points} points | {num_comments} comments\n"
-                if comments_text:
-                    thread_block += "Top comments:\n"
-                    thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
+                thread_block = _format_hn_thread_block(story_id, hn_title, points, num_comments, comments_text)
                 parts.append(thread_block)
         except Exception as e:
             logger.debug("HN search failed for '%s': %s", title[:40], e)
