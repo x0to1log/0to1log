@@ -1141,7 +1141,29 @@ Write the English weekly recap. Return JSON only.
    Then write 3-4 paragraphs narrating steps 1-3 without showing the numbered reasoning. The goal is substantive synthesis — not headline restatement. **Each paragraph MUST end with at least one `[N](URL)` citation** linking to the Top Story sources that support that theme.
 
 5. **## Watch Points** — 2-3 unresolved storylines. Observations only, no predictions. Each point MUST include a `[N](URL)` citation.
-6. **## Open Source Spotlight** — 3-5 notable repos mentioned this week. Include GitHub/HuggingFace URLs from the digests. Skip if none.
+6. **## Open Source Spotlight** — 3-5 notable repos / models / releases mentioned this week. URLs MUST come from the daily digests. Skip the section if none.
+
+   **Link format (mandatory — readers must identify the project at a glance)**:
+   - GitHub repo: `[owner/repo](https://github.com/owner/repo)`
+     Example: `[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)`
+   - GitHub release / tag: `[owner/repo v<version>](URL)`
+     Example: `[NousResearch/hermes-agent v2026.4.13](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.4.13)`
+   - HuggingFace model/dataset: `[org/name](URL)`
+     Example: `[nvidia/Nemotron-3-Super](https://huggingface.co/nvidia/Nemotron-3-Super)`
+   - arxiv: `[arxiv:XXXX.XXXXX](URL)`
+     Example: `[arxiv:2504.12345](https://arxiv.org/abs/2504.12345)`
+
+   **NEVER use these generic labels** (they hide the actual project):
+   - `[GitHub](URL)` / `[HuggingFace](URL)` / `[link](URL)` / `[repo](URL)`
+   - `[Release](URL)` / `[Paper](URL)` / `[Model](URL)` without the name
+   - Abbreviations like `[HUD]` when actual repo is `hermes-hudui`
+   - Bare autolinks `<https://...>` — use labeled markdown links only
+
+   Each bullet structure:
+   `- **<Project description>** — 1-2 sentence explanation. [owner/repo](URL)`
+
+   Example bullet:
+   `- **MemPalace graph memory** — Drop-in long-conversation memory backed by a graph store; Apache-2.0. [MemPalace/mempalace](https://github.com/MemPalace/mempalace)`
 7. **## So What Do I Do?** — 3-5 concrete decision points. Format: `- **If [situation]**: [specific action] — because [reasoning]`. Each point MUST include a `[N](URL)` citation.
 
 ## Weekly Quiz (JSON field, not in markdown body)
@@ -1297,7 +1319,23 @@ Write the English weekly recap. Return JSON only.
    Then write 3-4 paragraphs narrating steps 1-3 in plain language without showing the numbered reasoning. The goal is substantive synthesis — not headline restatement. **Each paragraph MUST end with at least one `[N](URL)` citation** linking to the Top Story sources that support that theme.
 
 5. **## Watch Points** — 2-3 things to keep an eye on. Frame as: "If you see this keyword next week, here's the context." Each point MUST include a `[N](URL)` citation.
-6. **## Open Source Spotlight** — 3-5 repos worth exploring. Plain language + who it's for + link from digests. Skip if none.
+6. **## Open Source Spotlight** — 3-5 repos / models / releases worth exploring. Plain language (who is it for, what does it do). URLs MUST come from the daily digests. Skip if none.
+
+   **Link format (mandatory)**:
+   - GitHub repo: `[owner/repo](https://github.com/owner/repo)`
+     Example: `[nvidia/TensorRT-LLM](https://github.com/nvidia/TensorRT-LLM)`
+   - GitHub release: `[owner/repo v<version>](URL)`
+   - HuggingFace model: `[org/name](URL)`
+     Example: `[meta-llama/Llama-4-Instruct](https://huggingface.co/meta-llama/Llama-4-Instruct)`
+   - arxiv: `[arxiv:XXXX.XXXXX](URL)`
+
+   **NEVER use**: `[GitHub]` / `[HuggingFace]` / `[Release]` / `[link]` / `[Model]` / `[Paper]` as generic labels — readers can't identify the project. Also NEVER use abbreviated labels (e.g., `[HUD]` instead of `hermes-hudui`) or bare autolinks `<URL>`.
+
+   Each bullet structure:
+   `- **<Short project name>** — 1-2 sentence plain-language explanation + who it's for. [owner/repo](URL)`
+
+   Example:
+   `- **MemPalace** — Long-conversation memory for chat agents using a graph database. Apache-2.0; good for builders who've hit the LLM context-window wall. [MemPalace/mempalace](https://github.com/MemPalace/mempalace)`
 7. **## What Can I Try?** — 3-5 learning actions. Numbered list. Focus on what the reader can do this week. Each action MUST include a `[N](URL)` citation.
 
 ## Weekly Quiz (JSON field, not in markdown body)
