@@ -1820,53 +1820,64 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 }}"""
 
 
-QUALITY_CHECK_FRONTLOAD = """You are a strict quality reviewer for digest frontload quality.
+QUALITY_CHECK_FRONTLOAD = f"""You are a strict quality reviewer for digest frontload quality.
 
-The input contains English and Korean frontload fields for the same digest:
-- headline / headline_ko
-- excerpt / excerpt_ko
-- focus_items / focus_items_ko
+The input contains 6 frontload fields for the same digest — the scannable hook
+that users see BEFORE the body (in card previews, RSS feed, OG tags):
+- `=== EN HEADLINE ===` / `=== KO HEADLINE ===`
+- `=== EN EXCERPT ===` / `=== KO EXCERPT ===`
+- `=== EN FOCUS ITEMS ===` / `=== KO FOCUS ITEMS ===`
 
-Score this frontload on 4 criteria (0-25 each, total 0-100):
+Body markdown is NOT in the input — focus on whether these 6 fields themselves
+are grounded, calibrated, clear, and bilingual-parity.
 
-1. **Factuality** (25):
-   - 25: Claims are grounded in the digest body and do not add unsupported facts
-   - 18: Mostly grounded, but one phrase stretches beyond direct support
-   - 10: Multiple claims overreach beyond the body or source support
-   - 0: Clearly unsupported or misleading
+{_QC_SHARED_RUBRIC_HEADER}
 
-2. **Calibration** (25):
-   - 25: Tone matches source strength; secondary-heavy stories stay fact-led
-   - 18: Mostly calibrated with one slightly overstated phrase
-   - 10: Competitive or strategic framing is too strong for the evidence
-   - 0: Heavily overclaims beyond support
+## Sub-dimensions (10 sub-scores grouped into 4 categories)
 
-3. **Clarity** (25):
-   - 25: Headline, excerpt, and focus items are specific, informative, and non-generic
-   - 18: Mostly clear but slightly crowded or repetitive
-   - 10: Vague, overloaded, or low-information
-   - 0: Confusing or unusable
+### Factuality (3)
+- **number_grounding**: Every number in headline/excerpt/focus_items (revenue, benchmark, user count, funding amount, model size, etc.) is stated so that a reasonable reader would expect to find it in the digest body. **10** all numbers appear exact and self-consistent; **7** one soft number (e.g., "over 1B parameters" vs "1.2B"); **4** one or more numbers look hallucinated or rounded beyond recognition; **0** a specific figure clearly not in scope (e.g., "$12B valuation" with no such figure plausible).
+- **entity_grounding**: Every named entity (company, product, person, paper, dataset) is the same entity in headline/excerpt/focus_items and clearly within the digest's topic set. **10** entities consistent and recognizable; **7** one less-common spelling but same entity; **4** an entity feels out of scope for the digest's apparent theme; **0** a fabricated or wrong-entity name.
+- **claim_grounding**: Non-numeric claims ("OpenAI loses 3 executives", "validates demand for non-GPU compute") are statements the body would be expected to support — not conjecture the headline invents on its own. **10** claims are event-level facts; **7** one interpretive claim but close to a factual paraphrase; **4** speculative claim framed as fact; **0** outright invented claim.
 
-4. **Locale Alignment** (25):
-   - 25: EN and KO communicate the same editorial judgment naturally
-   - 18: Mostly aligned with minor nuance drift
-   - 10: Noticeable mismatch in emphasis or meaning
-   - 0: EN and KO feel like different takes
+### Calibration (2)
+- **claim_strength**: Headline/excerpt don't overstate beyond what a secondary-heavy story can support. **10** tone matches evidence strength (e.g., "files for IPO" for a filing, "reportedly raises" for a leak); **7** one slightly strong phrase but not misleading; **4** competitive/strategic framing stronger than the evidence allows ("dominates", "crushes"); **0** heavy overclaim that rewrites the story.
+- **framing_calibration**: No forward-looking speculation verbs in frontload ("will disrupt", "is set to", "Expect X to Y", "poised to", Korean "~할 것이다", "전망된다"). Observational framing only ("signals", "points to", "implies"). **10** fully observational; **7** one borderline phrase; **4** one clear forward-looking verb; **0** multiple forward-looking predictions.
 
-## Severity
+### Clarity (2)
+- **headline_specificity**: Headline names the actual event/entity/number — not generic ("AI news roundup", "Big AI developments"). An informed reader can tell WHICH story this is from the headline alone. **10** concrete and scannable; **7** specific but slightly dense; **4** vague or keyword-salad; **0** empty or placeholder-tier.
+- **focus_items_informativeness**: Each of the 3 focus_items bullets conveys a distinct concrete point (P1=what changed, P2=why it matters, P3=what to watch). Not redundant with headline, not generic ("Multi-faceted AI developments"). **10** 3 distinct informative bullets; **7** 1 bullet slightly overlaps with headline; **4** 1 generic or redundant bullet; **0** 2+ generic or missing.
 
-Mark **major** ONLY for: (1) fabrication/hallucination — unsupported number/quote/entity/claim; (2) broken structure — missing mandatory section, corrupted markdown, duplicate `###` items; (3) hard factual error — wrong date/company/product; (4) locale corruption — KO-as-English (or reverse), garbled encoding, one locale missing section; (5) source fabrication — `[N](URL)` pointing to URL not in source list.
+### Locale Alignment (3)
+- **fact_parity**: EN and KO carry the SAME numbers, entities, and claims — no additions or omissions. **10** fact-perfect parity; **7** one minor wording difference with same meaning; **4** one fact present in one locale but missing in the other (e.g., "$20B deal" in EN but dropped in KO); **0** substantive factual divergence (e.g., KO adds a number EN doesn't claim).
+- **entity_parity**: EN and KO name the same entities — Korean transliteration is expected (OpenAI → 오픈AI, Cerebras → 세레브라스) but the referent must match. **10** all entities paired; **7** one borderline transliteration but clearly same entity; **4** one entity named in EN but unrecognizable/missing in KO (or vice-versa); **0** clearly different entities surface between locales.
+- **phrase_naturalness**: KO reads as native Korean (not word-for-word translation); EN reads as native English. Neither should feel machine-translated. Both locales use natural headline/bullet conventions of that language. **10** both locales read naturally; **7** one slightly awkward phrase; **4** one locale feels clearly translated; **0** one locale is ungrammatical or garbled.
 
-Everything else is **minor** (stylistic, optional improvements, debatable framing, forward-looking phrasing). When unsure, minor.
+{_QC_SHARED_SEVERITY_RULES}
 
-## Issues
+## Output JSON (no total score — code aggregates)
 
-Return ≤3 issues total. **Zero is valid** when nothing is broken — do not invent issues to justify score. Score reflects overall quality; issue list flags specific defects only.
-
-Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques.
-
-Return JSON only:
-{"score": 0-100, "subscores": {"factuality": 0-25, "calibration": 0-25, "clarity": 0-25, "locale_alignment": 0-25}, "issues": [{"severity": "major|minor", "scope": "expert_body|learner_body|frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "issue1"}]}"""
+{{
+  "factuality": {{
+    "number_grounding": {{"evidence": "...", "score": 0}},
+    "entity_grounding": {{"evidence": "...", "score": 0}},
+    "claim_grounding":  {{"evidence": "...", "score": 0}}
+  }},
+  "calibration": {{
+    "claim_strength":        {{"evidence": "...", "score": 0}},
+    "framing_calibration":   {{"evidence": "...", "score": 0}}
+  }},
+  "clarity": {{
+    "headline_specificity":         {{"evidence": "...", "score": 0}},
+    "focus_items_informativeness":  {{"evidence": "...", "score": 0}}
+  }},
+  "locale_alignment": {{
+    "fact_parity":         {{"evidence": "...", "score": 0}},
+    "entity_parity":       {{"evidence": "...", "score": 0}},
+    "phrase_naturalness":  {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "frontload|ko|en", "category": "source|overclaim|accessibility|locale|structure|clarity", "message": "..."}}]
+}}"""
 
 
 QUALITY_CHECK_WEEKLY_EXPERT = f"""You are a strict quality reviewer for a weekly AI industry recap written for strategic decision-makers (VPs of Engineering, CTOs, AI Product Leads).

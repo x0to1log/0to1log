@@ -429,9 +429,11 @@ async def _check_digest_quality(
                     logger.warning("Quality check %s attempt %d: parse failed", label, attempt + 1)
                     continue
 
-                # New rubric: LLM returns nested sub-scores {group: {sub: {evidence, score}}}.
-                # Code aggregates to 0-100. Fall back to data["score"] for legacy prompts
-                # (frontload still uses old 4×25 format).
+                # v11 rubric: LLM returns nested sub-scores {group: {sub: {evidence, score}}}.
+                # Code aggregates to 0-100. All 3 body+frontload prompts ship on this
+                # contract post-NP-QUALITY-06 + NQ-37. The data["score"] fallback stays
+                # as defense-in-depth — protects against LLM returning legacy single-score
+                # format by accident, never reached on a well-formed response.
                 score = _aggregate_subscores(data)
                 if score == 0 and "score" in data:
                     score = int(data.get("score", 0))

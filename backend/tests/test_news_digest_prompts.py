@@ -244,17 +244,24 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     Without these, LLM judges drift: severity gets applied subjectively and
     body scores saturate at 95-100. Regression guard against accidental
     removal during future prompt edits.
+
+    NQ-37 (2026-04-21): frontload migrated to v11 format, so it's now tested
+    alongside the 4 body prompts on the shared rubric contract. The only
+    difference is frontload has no `locale_integrity` sub-dimension (that's
+    a body-specific check); frontload uses `fact_parity`/`entity_parity`
+    /`phrase_naturalness` for its locale_alignment category instead.
     """
     from services.agents.prompts_news_pipeline import QUALITY_CHECK_FRONTLOAD
 
-    body_prompts = [
+    v11_prompts = [
         QUALITY_CHECK_RESEARCH_EXPERT,
         QUALITY_CHECK_RESEARCH_LEARNER,
         QUALITY_CHECK_BUSINESS_EXPERT,
         QUALITY_CHECK_BUSINESS_LEARNER,
+        QUALITY_CHECK_FRONTLOAD,
     ]
 
-    for prompt in body_prompts:
+    for prompt in v11_prompts:
         # Severity rubric (header + fabrication + locale corruption + hard cap)
         assert "## Severity" in prompt
         assert "fabrication" in prompt.lower()
@@ -270,13 +277,43 @@ def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
         # Evidence requirement (prevents LLM hedging without grounding)
         assert "evidence" in prompt.lower()
         assert "score" in prompt.lower()
-        # locale_integrity as explicit sub-dimension (NP-QUALITY-06 key addition)
-        assert "locale_integrity" in prompt
+        # v11 rubric: no single-number total (code aggregates)
+        assert "no total score" in prompt.lower() or "code aggregates" in prompt.lower()
 
-    # Frontload still uses legacy 4x25 format (not restructured in NP-QUALITY-06)
-    # because its distribution was already healthy.
-    assert "## Severity" in QUALITY_CHECK_FRONTLOAD
-    assert "≤3 issues" in QUALITY_CHECK_FRONTLOAD or "AT MOST 3" in QUALITY_CHECK_FRONTLOAD
+    # Body-specific: locale_integrity sub-dimension (NP-QUALITY-06 key addition)
+    for body in v11_prompts[:4]:
+        assert "locale_integrity" in body
+
+
+def test_frontload_prompt_has_v11_ten_subscores():
+    """NQ-37: frontload QC v11 format — 10 sub-scores grouped into 4 categories
+    (factuality, calibration, clarity, locale_alignment), with evidence required
+    per sub-score and no LLM-emitted total.
+    """
+    from services.agents.prompts_news_pipeline import QUALITY_CHECK_FRONTLOAD
+
+    # 4 category headings
+    assert "### Factuality" in QUALITY_CHECK_FRONTLOAD
+    assert "### Calibration" in QUALITY_CHECK_FRONTLOAD
+    assert "### Clarity" in QUALITY_CHECK_FRONTLOAD
+    assert "### Locale Alignment" in QUALITY_CHECK_FRONTLOAD
+
+    # 10 sub-score keys (body ↔ label text AND JSON output schema)
+    sub_keys = [
+        "number_grounding", "entity_grounding", "claim_grounding",           # factuality (3)
+        "claim_strength", "framing_calibration",                             # calibration (2)
+        "headline_specificity", "focus_items_informativeness",               # clarity (2)
+        "fact_parity", "entity_parity", "phrase_naturalness",                # locale_alignment (3)
+    ]
+    for k in sub_keys:
+        assert k in QUALITY_CHECK_FRONTLOAD, f"missing sub-score key: {k}"
+
+    # Old single-score contract must be gone
+    assert '"score": 0-100' not in QUALITY_CHECK_FRONTLOAD
+    assert '"subscores"' not in QUALITY_CHECK_FRONTLOAD  # old flat subscores block
+
+    # Forward-looking verb guard surfaces in calibration dimension (aligns with writer guard)
+    assert "forward-looking" in QUALITY_CHECK_FRONTLOAD.lower() or "Expect X to Y" in QUALITY_CHECK_FRONTLOAD
 
 
 def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():

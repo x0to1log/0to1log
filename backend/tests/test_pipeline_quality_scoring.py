@@ -28,6 +28,47 @@ def _sample_group() -> list[ClassifiedGroup]:
     ]
 
 
+def test_aggregate_subscores_handles_frontload_v11_schema():
+    """NQ-37: frontload prompt now emits the same nested-subscore shape as
+    the 4 body prompts. _aggregate_subscores must average across all 10
+    sub-scores (3+2+2+3) and normalize to 0-100, without falling back to
+    legacy data["score"]."""
+    from services.pipeline import _aggregate_subscores
+
+    # Representative v11 frontload LLM output — 10 sub-scores, no total
+    data = {
+        "factuality": {
+            "number_grounding": {"evidence": "$510M matches body", "score": 10},
+            "entity_grounding": {"evidence": "Cerebras, OpenAI, AWS all body-consistent", "score": 10},
+            "claim_grounding":  {"evidence": "'files for IPO' is factual", "score": 10},
+        },
+        "calibration": {
+            "claim_strength":      {"evidence": "'capital shift' is mildly editorial", "score": 8},
+            "framing_calibration": {"evidence": "no forward-looking verbs", "score": 10},
+        },
+        "clarity": {
+            "headline_specificity":        {"evidence": "names Cerebras + IPO + OpenAI+AWS", "score": 10},
+            "focus_items_informativeness": {"evidence": "3 distinct bullets, no redundancy", "score": 9},
+        },
+        "locale_alignment": {
+            "fact_parity":        {"evidence": "all numbers and entities paired", "score": 10},
+            "entity_parity":      {"evidence": "세레브라스 = Cerebras transliteration", "score": 10},
+            "phrase_naturalness": {"evidence": "KO reads natively", "score": 9},
+        },
+        "issues": [],
+    }
+
+    score = _aggregate_subscores(data)
+    # avg of [10,10,10,8,10,10,9,10,10,9] = 9.6; *10 → 96
+    assert score == 96
+
+    # Legacy fallback must NOT kick in when sub-scores present
+    assert "score" not in data  # legacy flat score key absent
+    # With `score` field added (defensive), aggregator still prefers sub-scores
+    data_with_legacy = {**data, "score": 50}
+    assert _aggregate_subscores(data_with_legacy) == 96
+
+
 def test_build_quality_payloads_include_ko_and_frontload_fields():
     from services.pipeline import (
         _build_body_quality_payload,

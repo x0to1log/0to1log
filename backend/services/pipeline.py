@@ -2730,6 +2730,7 @@ from services.pipeline_digest import (  # noqa: E402, F401
 
 # --- pipeline_quality: (b) re-export only ------------------------------------
 from services.pipeline_quality import (  # noqa: E402, F401
+    _aggregate_subscores,
     _apply_issue_penalties_and_caps,
     _body_paragraphs_for_quality,
     _build_body_quality_payload,
