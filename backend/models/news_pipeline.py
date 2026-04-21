@@ -56,6 +56,8 @@ class CommunityInsight(BaseModel):
     quotes_ko: list[str] = []  # 0-2 Korean translations of quotes
     key_point: str | None = None  # 1-line discussion summary (English)
     source_label: str = ""  # e.g. "Hacker News 342↑ · 89 comments"
+    hn_url: str | None = None  # Hacker News thread URL (if HN discussion found)
+    reddit_url: str | None = None  # Reddit thread URL (if Reddit discussion found)
 
 
 class ClassificationResult(BaseModel):
