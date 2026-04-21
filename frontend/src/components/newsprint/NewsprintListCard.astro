@@ -38,6 +38,7 @@ const searchText = [title, excerpt, tags?.join(' ')].filter(Boolean).join(' ');
   class={cardClasses}
   data-category={normalizedCategory || 'uncategorized'}
   data-post-type={postType || 'business'}
+  data-post-id={itemId || undefined}
   data-search-text={searchText}
 >
   {categoryLabel && (

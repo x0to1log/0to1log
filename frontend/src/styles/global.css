@@ -2151,6 +2151,16 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   display: none;
 }
 
+/* Multi-headline filter — hide headlines whose type doesn't match active tab */
+.newsprint-headline[data-headline-hidden="true"] {
+  display: none;
+}
+
+/* Hide rest-grid card when the same post is currently shown as a headline */
+.newsprint-card[data-headline-duplicate="true"] {
+  display: none;
+}
+
 .newsprint-headline-kicker {
   display: flex;
   justify-content: space-between;

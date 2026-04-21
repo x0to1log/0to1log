@@ -71,9 +71,12 @@ for (const p of posts) {
   p.display_excerpt = resolved.excerpt;
 }
 
-const headline = posts.find(p => p.post_type === 'business') ?? null;
-const rest = posts.filter(p => p !== headline);
-const railPosts = headline ? rest.slice(0, 4) : posts.slice(0, 4);
+const businessHeadline = posts.find(p => p.post_type === 'business') ?? null;
+const researchHeadline = posts.find(p => p.post_type === 'research') ?? null;
+const weeklyHeadline = posts.find(p => p.post_type === 'weekly') ?? null;
+// Only exclude business headline from grid (research/weekly latest still show in grid on 'All' tab)
+const rest = posts.filter(p => p !== businessHeadline);
+const railPosts = businessHeadline ? rest.slice(0, 4) : posts.slice(0, 4);
 const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('en', 'business') },
   { value: 'research', label: getPostTypeLabel('en', 'research') },
@@ -116,21 +119,53 @@ const searchEmptyMessage = 'No AI news matches that search.';
         linkLabel={t.en['error.retry']}
       />
     ) : posts.length > 0 ? (
-      <div id="news-list-results">
-        {headline && (
+      <div id="news-list-results" data-multi-headline>
+        {businessHeadline && (
           <NewsprintHeadline
-            href={`/en/news/${headline.slug}/`}
-            title={headline.display_title || headline.title}
-            excerpt={headline.display_excerpt || headline.excerpt}
-            category={headline.category}
-            publishedAt={headline.published_at}
-            readingTimeMin={headline.reading_time_min}
-            tags={headline.tags}
+            href={`/en/news/${businessHeadline.slug}/`}
+            title={businessHeadline.display_title || businessHeadline.title}
+            excerpt={businessHeadline.display_excerpt || businessHeadline.excerpt}
+            category={businessHeadline.category}
+            publishedAt={businessHeadline.published_at}
+            readingTimeMin={businessHeadline.reading_time_min}
+            tags={businessHeadline.tags}
             locale="en"
-            isBookmarked={bookmarkedPostIds.has(headline.id)}
-            itemId={headline.id}
+            isBookmarked={bookmarkedPostIds.has(businessHeadline.id)}
+            itemId={businessHeadline.id}
             itemType="news"
-            postType={headline.post_type}
+            postType={businessHeadline.post_type}
+          />
+        )}
+        {researchHeadline && (
+          <NewsprintHeadline
+            href={`/en/news/${researchHeadline.slug}/`}
+            title={researchHeadline.display_title || researchHeadline.title}
+            excerpt={researchHeadline.display_excerpt || researchHeadline.excerpt}
+            category={researchHeadline.category}
+            publishedAt={researchHeadline.published_at}
+            readingTimeMin={researchHeadline.reading_time_min}
+            tags={researchHeadline.tags}
+            locale="en"
+            isBookmarked={bookmarkedPostIds.has(researchHeadline.id)}
+            itemId={researchHeadline.id}
+            itemType="news"
+            postType={researchHeadline.post_type}
+          />
+        )}
+        {weeklyHeadline && (
+          <NewsprintHeadline
+            href={`/en/news/${weeklyHeadline.slug}/`}
+            title={weeklyHeadline.display_title || weeklyHeadline.title}
+            excerpt={weeklyHeadline.display_excerpt || weeklyHeadline.excerpt}
+            category={weeklyHeadline.category}
+            publishedAt={weeklyHeadline.published_at}
+            readingTimeMin={weeklyHeadline.reading_time_min}
+            tags={weeklyHeadline.tags}
+            locale="en"
+            isBookmarked={bookmarkedPostIds.has(weeklyHeadline.id)}
+            itemId={weeklyHeadline.id}
+            itemType="news"
+            postType={weeklyHeadline.post_type}
           />
         )}
 
@@ -185,4 +220,8 @@ const searchEmptyMessage = 'No AI news matches that search.';
 
 <script>
   import '../../../scripts/newsListSearch';
+</script>
+
+<script>
+  import '../../../scripts/newsListMultiHeadline';
 </script>
