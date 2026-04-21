@@ -1,14 +1,15 @@
 """Tests for _inject_cp_citations — post-processing that linkifies
 `> — Hacker News` attribution lines in the Community Pulse section."""
 
-from unittest.mock import MagicMock
-
 
 def _make_insight(*, url: str, source_label: str):
-    insight = MagicMock()
-    insight.url = url
-    insight.source_label = source_label
-    return insight
+    """Build a real CommunityInsight. The `url` arg is the dict KEY in
+    community_summary_map (not an attribute on the model itself)."""
+    from models.news_pipeline import CommunityInsight
+
+    # url is unused here — caller uses it as the map key. Kept for readability.
+    _ = url
+    return CommunityInsight(source_label=source_label)
 
 
 def test_inject_cp_citations_linkifies_single_hn_block_en():
@@ -165,6 +166,54 @@ A story without CP.
     }
     out = _inject_cp_citations(body, cmap)
     assert out == body
+
+
+def test_inject_cp_citations_normalizes_hacker_news_with_upvote_suffix():
+    """Regression test for Apr 21 bug: community_summary_map ships enriched
+    source_label like 'Hacker News 79↑ · 116 comments', but the writer's block
+    header is just `**Hacker News**`. Without normalization the map lookup missed
+    and every `> — Hacker News` stayed raw. Normalization strips the numeric
+    suffix so both sides match."""
+    from services.pipeline import _inject_cp_citations
+
+    body = """## Community Pulse
+
+**Hacker News** (79↑) — Skepticism about LLM math reasoning.
+
+> "They really can't count, that's not how they work at all"
+> — Hacker News
+
+**Hacker News** (58↑) — Debate on language bounds.
+
+> "Many concepts can be represented in language but currently are not."
+> — Hacker News
+"""
+    cmap = {
+        "https://arxiv.org/abs/2604.05716": _make_insight(
+            url="https://arxiv.org/abs/2604.05716",
+            source_label="Hacker News 79↑ · 116 comments",  # enriched
+        ),
+        "https://arxiv.org/abs/2604.10571": _make_insight(
+            url="https://arxiv.org/abs/2604.10571",
+            source_label="Hacker News 58↑ · 34 comments",  # enriched
+        ),
+    }
+    out = _inject_cp_citations(body, cmap)
+    assert "> — [Hacker News](https://arxiv.org/abs/2604.05716)" in out
+    assert "> — [Hacker News](https://arxiv.org/abs/2604.10571)" in out
+    # No raw attributions left
+    assert "> — Hacker News\n" not in out
+
+
+def test_normalize_platform_label_strips_upvote_and_comment_suffix():
+    from services.pipeline_digest import _normalize_platform_label
+
+    assert _normalize_platform_label("Hacker News 79↑ · 116 comments") == "Hacker News"
+    assert _normalize_platform_label("Hacker News 58↑") == "Hacker News"
+    assert _normalize_platform_label("r/OpenAI") == "r/OpenAI"
+    assert _normalize_platform_label("r/OpenAI 1.2K↑ · 500 comments") == "r/OpenAI"
+    assert _normalize_platform_label("Reddit") == "Reddit"
+    assert _normalize_platform_label("") == ""
 
 
 def test_inject_cp_citations_unmatched_label_leaves_attribution_untouched():

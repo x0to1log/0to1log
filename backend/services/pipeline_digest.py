@@ -55,6 +55,27 @@ logger = logging.getLogger(__name__)
 _CP_HEADERS = ("## Community Pulse", "## 커뮤니티 반응")
 
 
+def _normalize_platform_label(src_label: str) -> str:
+    """Strip upvote/comment suffixes from a CommunityInsight.source_label.
+
+    The map's source_label can be enriched (e.g. ``"Hacker News 79↑ · 116 comments"``),
+    but the writer's block header uses the platform root only (``**Hacker News**``)
+    with the count moved into parentheses (``(79↑)``). We strip at the first
+    numeric/separator token so both end up matching.
+
+    Examples:
+        "Hacker News 79↑ · 116 comments" → "Hacker News"
+        "Hacker News 58↑"                → "Hacker News"
+        "r/OpenAI"                       → "r/OpenAI"
+        "Reddit"                         → "Reddit"
+    """
+    if not src_label:
+        return ""
+    # Split at first run of: whitespace + digit (upvote counts) OR whitespace + middot (separator)
+    parts = re.split(r"\s+(?=[\d])|\s+·", src_label, maxsplit=1)
+    return parts[0].strip()
+
+
 def _inject_cp_citations(
     content: str,
     community_summary_map: dict[str, "CommunityInsight"],
@@ -73,22 +94,30 @@ def _inject_cp_citations(
     content returns unchanged. The writer's exact markdown is preserved byte-for-
     byte outside of the replaced attribution lines.
 
+    Label normalization: source_label may carry upvote/comment metadata
+    ("Hacker News 79↑ · 116 comments"); the writer renders only the platform root
+    in the block header and attribution. We normalize both sides to the platform
+    root (see _normalize_platform_label) before matching.
+
     Per-block cursor model: blocks are matched positionally when multiple topics
-    share a source_label. Block header `**Hacker News**` appearing twice in one
-    section pulls the 1st then 2nd URL whose insight.source_label == "Hacker News",
-    in the order they appear in community_summary_map.
+    share a normalized source_label. Block header `**Hacker News**` appearing
+    twice in one section pulls the 1st then 2nd URL whose normalized source_label
+    == "Hacker News", in the order they appear in community_summary_map.
     """
     if not community_summary_map or not content:
         return content
 
     from collections import defaultdict
 
+    # URL is the dict KEY (not an attribute on CommunityInsight — the model doesn't
+    # carry it). Iterate items() to get both sides.
     label_urls: dict[str, list[str]] = defaultdict(list)
-    for insight in community_summary_map.values():
+    for url, insight in community_summary_map.items():
         src_label = getattr(insight, "source_label", None)
-        url = getattr(insight, "url", None)
         if src_label and url:
-            label_urls[src_label].append(url)
+            normalized = _normalize_platform_label(src_label)
+            if normalized:
+                label_urls[normalized].append(url)
     if not label_urls:
         return content
 
