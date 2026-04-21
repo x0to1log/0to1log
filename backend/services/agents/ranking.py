@@ -386,28 +386,50 @@ async def rank_classified(
 # Community Summarizer
 # ---------------------------------------------------------------------------
 
+# --- Community source header regexes ---
+# The `|url=<thread_url>` token is optional for back-compat with checkpoints
+# predating the URL-plumbing change. `\S+?` keeps the URL tight (no spaces).
 _HN_HEADER_RE = re.compile(
-    r"\[Hacker News\]\s*.*?\|\s*([\d,]+)\s*points?\s*\|\s*([\d,]+)\s*comments?"
+    r"\[Hacker News(?:\|url=(\S+?))?\]\s*.*?\|\s*([\d,]+)\s*points?\s*\|\s*([\d,]+)\s*comments?"
 )
 _REDDIT_HEADER_RE = re.compile(
-    r"\[Reddit\s+r/(\S+)\]\s*.*?\|\s*([\d,]+)\s*upvotes?\s*\|\s*([\d,]+)\s*comments?"
+    r"\[Reddit\s+r/(\S+?)(?:\|url=(\S+?))?\]\s*.*?\|\s*([\d,]+)\s*upvotes?\s*\|\s*([\d,]+)\s*comments?"
 )
 
 
-def _parse_source_label(raw_text: str) -> str:
-    """Extract human-readable source label from raw community text (deterministic)."""
+def _parse_source_meta(raw_text: str) -> tuple[str, str | None, str | None]:
+    """Extract (source_label, hn_url, reddit_url) from raw community text.
+
+    Deterministic \u2014 no LLM. URL captures are optional (None when the blob
+    predates the URL-plumbing change in news_collection).
+    """
     parts: list[str] = []
+    hn_url: str | None = None
+    reddit_url: str | None = None
+
     hn = _HN_HEADER_RE.search(raw_text)
     if hn:
-        points = hn.group(1).replace(",", "")
-        comments = hn.group(2).replace(",", "")
+        hn_url = hn.group(1) or None  # group 1 is the URL (optional)
+        points = hn.group(2).replace(",", "")
+        comments = hn.group(3).replace(",", "")
         parts.append(f"Hacker News {points}\u2191 \u00b7 {comments} comments")
+
     rd = _REDDIT_HEADER_RE.search(raw_text)
     if rd:
         sub = rd.group(1)
-        upvotes = rd.group(2).replace(",", "")
+        reddit_url = rd.group(2) or None  # group 2 is the URL (optional)
+        upvotes = rd.group(3).replace(",", "")
         parts.append(f"r/{sub} ({upvotes}\u2191)")
-    return " \u00b7 ".join(parts) if parts else ""
+
+    label = " \u00b7 ".join(parts) if parts else ""
+    return label, hn_url, reddit_url
+
+
+def _parse_source_label(raw_text: str) -> str:
+    """Back-compat wrapper \u2014 returns just the label for callers not yet
+    migrated to _parse_source_meta. Delete after Task 5."""
+    label, _hn, _rd = _parse_source_meta(raw_text)
+    return label
 
 
 async def summarize_community(
