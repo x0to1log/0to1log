@@ -43,7 +43,28 @@ const excludeStages = [
   'summary',  // summary.cost = SUM of all other stages — including it would double-count
 ];
 
-const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data: hbQualityRows }, { data: runsRaw }, { data: weeklyLogs }] = await Promise.all([
+// Paginate handbook logs — can exceed Supabase's default 1000 row cap when manual generation is heavy
+async function fetchAllHandbookLogs() {
+  const pageSize = 1000;
+  const maxPages = 8; // hard ceiling: 8,000 rows
+  const all: any[] = [];
+  for (let page = 0; page < maxPages; page += 1) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const { data } = await sb.from('pipeline_logs')
+      .select('pipeline_type, tokens_used, cost_usd, debug_meta, created_at, run_id')
+      .like('pipeline_type', 'handbook.%')
+      .gte('created_at', filterDate)
+      .order('created_at', { ascending: true })
+      .range(from, to);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
+const [{ data: rawLogs }, { data: qualityLogs }, handbookLogs, { data: hbQualityRows }, { data: runsRaw }, { data: weeklyLogs }] = await Promise.all([
   sb.from('pipeline_logs')
     .select('pipeline_type, tokens_used, cost_usd, debug_meta, created_at, pipeline_runs!inner(id, run_key, status, started_at)')
     .gte('pipeline_runs.started_at', filterDate)
@@ -58,17 +79,12 @@ const [{ data: rawLogs }, { data: qualityLogs }, { data: handbookLogs }, { data:
     .in('pipeline_type', ['quality:research', 'quality:business'])
     .order('created_at', { ascending: true })
     .limit(200),
-  sb.from('pipeline_logs')
-    .select('pipeline_type, tokens_used, cost_usd, debug_meta, created_at, run_id')
-    .like('pipeline_type', 'handbook.%')
-    .gte('created_at', filterDate)
-    .order('created_at', { ascending: true })
-    .limit(500),
+  fetchAllHandbookLogs(),
   sb.from('handbook_quality_scores')
     .select('term_slug, score, term_type, source, created_at')
     .gte('created_at', filterDate)
     .order('created_at', { ascending: false })
-    .limit(50),
+    .limit(1000),
   sb.from('pipeline_runs')
     .select('run_key, status, started_at, finished_at')
     .gte('started_at', filterDate)
