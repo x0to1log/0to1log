@@ -434,8 +434,8 @@ async def summarize_community(
     Returns (url_to_insight_map, usage_metrics).
     """
     # Build per-group community data for LLM
-    # key -> (raw_text, source_label, group_title)
-    group_entries: dict[str, tuple[str, str, str]] = {}
+    # key -> (raw_text, source_label, group_title, hn_url, reddit_url)
+    group_entries: dict[str, tuple[str, str, str, str | None, str | None]] = {}
     for i, group in enumerate(groups):
         raw_parts = []
         for item in group.items:
