@@ -1,0 +1,152 @@
+---
+import {
+  normalizeQualityData,
+  scoreColorClass,
+  severityLabel,
+  type NormalizedQuality,
+} from '../../lib/admin/qualityPanel';
+
+interface Props {
+  factPack: unknown;
+}
+
+const { factPack } = Astro.props;
+const q: NormalizedQuality = normalizeQualityData(factPack);
+
+const aggregateChips = [
+  { label: 'Structure', value: q.aggregates.deterministic.structure, max: 15 },
+  { label: 'Traceability', value: q.aggregates.deterministic.traceability, max: 15 },
+  { label: 'Locale', value: q.aggregates.deterministic.locale, max: 10 },
+  { label: 'Expert Body (wt)', value: q.aggregates.weightedLlm.expert_body, max: 24 },
+  { label: 'Learner Body (wt)', value: q.aggregates.weightedLlm.learner_body, max: 24 },
+  { label: 'Frontload (wt)', value: q.aggregates.weightedLlm.frontload, max: 12 },
+];
+
+const majorIssues = q.issues.filter((i) => i.severity === 'major');
+const minorIssues = q.issues.filter((i) => i.severity === 'minor');
+
+const personaLabels = {
+  expert: 'Expert Body',
+  learner: 'Learner Body',
+  frontload: 'Frontload',
+} as const;
+type PersonaKey = keyof typeof personaLabels;
+const personaOrder: PersonaKey[] = ['expert', 'learner', 'frontload'];
+---
+
+<section class="quality-panel rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+  <header class="flex items-baseline justify-between gap-4 border-b border-gray-100 pb-3">
+    <div>
+      <h3 class="text-lg font-semibold text-gray-900">Quality Analysis</h3>
+      <p class="text-xs text-gray-500">
+        {q.isLegacy
+          ? 'Legacy post (pre-v11 rubric) — aggregate scores only, sub-score evidence not available'
+          : 'v11 rubric — click a category below to see sub-score evidence'}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      {q.score !== null && (
+        <span class={`rounded px-3 py-1 text-lg font-bold ${q.score >= 85 ? 'bg-green-100 text-green-800' : q.score >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+          {q.score}/100
+        </span>
+      )}
+      {q.autoPublishEligible && (
+        <span class="rounded bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200">
+          Auto-publish eligible
+        </span>
+      )}
+    </div>
+  </header>
+
+  <div class="mt-3 flex flex-wrap gap-2">
+    {aggregateChips.map((chip) => (
+      <span class="rounded bg-gray-50 px-2 py-1 text-xs ring-1 ring-gray-200">
+        <span class="text-gray-500">{chip.label}:</span>{' '}
+        <span class="font-medium text-gray-900">{chip.value}/{chip.max}</span>
+      </span>
+    ))}
+  </div>
+
+  {(q.capsApplied.length > 0 || q.structuralPenalty > 0 || q.urlValidationFailed) && (
+    <div class="mt-3 space-y-1 text-xs">
+      {q.capsApplied.map((cap) => (
+        <p class="text-orange-700">Cap applied: <code class="rounded bg-orange-50 px-1">{cap}</code></p>
+      ))}
+      {q.structuralPenalty > 0 && (
+        <p class="text-red-700">
+          Structural penalty: {q.structuralPenalty}
+          {q.structuralWarnings.length > 0 && ` — ${q.structuralWarnings.join('; ')}`}
+        </p>
+      )}
+      {q.urlValidationFailed && (
+        <p class="text-red-700">URL validation failed (auto-publish blocked)</p>
+      )}
+    </div>
+  )}
+
+  {!q.isLegacy && (
+    <div class="mt-4 space-y-2">
+      {personaOrder.map((persona) => {
+        const breakdown = q.breakdowns[persona];
+        if (!breakdown) return null;
+        return (
+          <details class="rounded border border-gray-100 bg-gray-50">
+            <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100">
+              {personaLabels[persona]}
+            </summary>
+            <div class="px-3 pb-3">
+              {Object.entries(breakdown).map(([category, subs]) => (
+                <div class="mt-2">
+                  <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    {category.replace(/_/g, ' ')}
+                  </h4>
+                  <ul class="mt-1 space-y-1">
+                    {Object.entries(subs).map(([subKey, sub]) => (
+                      <li class="flex items-start gap-2 text-xs">
+                        <span class={`inline-block min-w-[3rem] rounded px-1.5 py-0.5 text-center font-mono font-medium ${scoreColorClass(sub.score)}`}>
+                          {sub.score}/10
+                        </span>
+                        <div class="flex-1">
+                          <span class="font-medium text-gray-800">{subKey.replace(/_/g, ' ')}</span>
+                          {sub.evidence && (
+                            <p class="mt-0.5 text-gray-600">{sub.evidence}</p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        );
+      })}
+    </div>
+  )}
+
+  {q.issues.length > 0 && (
+    <div class="mt-4 border-t border-gray-100 pt-3">
+      <h4 class="text-sm font-semibold text-gray-900">
+        Issues ({majorIssues.length} major, {minorIssues.length} minor)
+      </h4>
+      <ul class="mt-2 space-y-1 text-xs">
+        {q.issues.map((issue) => {
+          const { label, className } = severityLabel(issue.severity);
+          return (
+            <li class="flex items-start gap-2">
+              <span class={`inline-block rounded px-1.5 py-0.5 text-center font-medium ${className}`}>
+                {label}
+              </span>
+              <div class="flex-1">
+                <p>
+                  <span class="font-mono text-gray-500">[{issue.scope || '?'}/{issue.category || '?'}]</span>{' '}
+                  <span class="text-gray-800">{issue.message}</span>
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  )}
+</section>
