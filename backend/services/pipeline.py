@@ -1868,6 +1868,18 @@ async def rerun_pipeline_stage(
                                 "quality_version", existing_fp.get("quality_version", "v1"),
                             ),
                             "quality_breakdown": qc_result.get("quality_breakdown", {}),
+                            # Per-QC-call v11 sub-score breakdowns (NQ-34 admin drill-down).
+                            # Rerun MUST overlay these — fresh QC produces new evidence trails.
+                            # Fallback to existing_fp preserves earlier snapshot if fresh rerun lacks them.
+                            "expert_breakdown": qc_result.get(
+                                "expert_breakdown", existing_fp.get("expert_breakdown", {}),
+                            ),
+                            "learner_breakdown": qc_result.get(
+                                "learner_breakdown", existing_fp.get("learner_breakdown", {}),
+                            ),
+                            "frontload_breakdown": qc_result.get(
+                                "frontload_breakdown", existing_fp.get("frontload_breakdown", {}),
+                            ),
                             "quality_issues": qc_result.get("quality_issues", []),
                             "quality_caps_applied": qc_result.get(
                                 "quality_caps_applied", existing_fp.get("quality_caps_applied", []),

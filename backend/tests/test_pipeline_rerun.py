@@ -376,6 +376,10 @@ async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
             "quality_flags": [],
             "quality_issues": [{"severity": "minor", "scope": "frontload", "message": "ex"}],
             "quality_breakdown": {"total_score": 84, "factuality": {}},
+            # NEW: per-QC-call breakdowns (NQ-34)
+            "expert_breakdown": {"structural_completeness": {"sections_present": {"evidence": "e1", "score": 10}}},
+            "learner_breakdown": {"structural_completeness": {"sections_present": {"evidence": "e2", "score": 9}}},
+            "frontload_breakdown": {"factuality": {"number_grounding": {"evidence": "e3", "score": 10}}},
             "quality_version": "v1",
             "quality_caps_applied": [],
             "structural_penalty": 0,
@@ -410,6 +414,13 @@ async def test_rerun_from_quality_skips_digest_generation_and_writes_payload():
             assert fp["quality_score"] == 84
             assert fp["quality_breakdown"] == {"total_score": 84, "factuality": {}}
             assert fp["quality_issues"] == [{"severity": "minor", "scope": "frontload", "message": "ex"}]
+            # Per-call breakdowns for admin drill-down (NQ-34)
+            assert "expert_breakdown" in fp
+            assert "learner_breakdown" in fp
+            assert "frontload_breakdown" in fp
+            assert fp["expert_breakdown"]["structural_completeness"]["sections_present"]["score"] == 10
+            assert fp["learner_breakdown"]["structural_completeness"]["sections_present"]["score"] == 9
+            assert fp["frontload_breakdown"]["factuality"]["number_grounding"]["evidence"] == "e3"
             # content_analysis must NOT be touched — that column is user-facing markdown
             assert "content_analysis" not in payload
             # updated_at is trigger-managed by Supabase — we don't send it explicitly
