@@ -1225,7 +1225,7 @@ Another 4-5 sentences on the next story. Use multiple paragraphs when helpful fo
 - Point 1 — why it matters
 
 ## Open Source Spotlight
-- **Project** — what it does. https://github.com/...
+- **nvidia/TensorRT-LLM** — LLM inference runtime with speculative decoding. [nvidia/TensorRT-LLM](https://github.com/nvidia/TensorRT-LLM)
 
 ## So What Do I Do?
 - **If you run inference at scale**: benchmark TurboQuant — because 6x KV savings change unit economics.
@@ -1402,7 +1402,7 @@ One friendly sentence here.
 - "Keyword" — context you need if you see this next week
 
 ## Open Source Spotlight
-- **Project** — what it does + who it's for. https://github.com/...
+- **MemPalace memory** — Drop-in long-conversation memory for chat agents; Apache-2.0. Good for builders who hit the context-window wall. [MemPalace/mempalace](https://github.com/MemPalace/mempalace)
 
 ## What Can I Try?
 1. **Try X**: what to do and why.
@@ -1534,7 +1534,7 @@ Return JSON only:
 - 포인트 2 — 왜 주목하는지 한 문장. [6](https://example.com/source)
 
 ## 이번 주 오픈소스
-- **프로젝트명** — 무엇을 하는지 한 문장. https://github.com/example/repo
+- **MemPalace 메모리** — 챗 에이전트용 장기 메모리 드롭인; Apache-2.0. 컨텍스트 윈도우 한계에 부딪힌 개발자에게 유용. [MemPalace/mempalace](https://github.com/MemPalace/mempalace)
 
 ## {action_heading}
 - **대규모 추론을 운영 중이라면**: TurboQuant 벤치마크 — 6배 KV 절감이 단위 경제를 바꾸기 때문. [4](https://research.google/blog/example)
