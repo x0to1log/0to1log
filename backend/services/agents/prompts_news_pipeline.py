@@ -1098,7 +1098,6 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 - NEVER invent motivations. If a company's intent isn't stated, use "appears positioned as" or "may be driven by".
 - NEVER predict the future ("Q2에", "내년", "다음 분기 전망", "will disrupt", "Expect X to Y"). Use "signals", "points toward", "implies" instead. Watch Points section is for monitoring, not forecasting.
 - Framing words (moat, lock-in, commoditize, defender-first, credible path, cements, tightens grip, capital moat, stack coherence) must PARAPHRASE source language — not add your own strategic thesis on top of a fact-led report. If the source doesn't name the strategic frame, stay with neutral, fact-led description. One editorial framing word per Top Story item is acceptable when strongly supported; two or more compounds the interpretation risk.
-- Source hierarchy: when multiple sources cover the same story, the reader's FIRST citation must be the most authoritative URL — company blog (openai.com/blog, google.com/blog, microsoft.com/blog, nvidia.com/blog), official announcement, arxiv paper, or GitHub repo. Secondary reporting (TechCrunch, Forbes, CNBC, Ars Technica, Business Insider) goes AFTER the primary if it adds distinct context. Do not pile 3 citations onto a single sentence for emphasis.
 - Mention technical details (parameter counts, architectures) only when they materially affect business/strategic outcomes.
 - Connect themes across stories explicitly in Trend Analysis — weekly's value is synthesis, not restatement.
 
@@ -1114,7 +1113,7 @@ Write the English weekly recap. Return JSON only.
 2. **## Week in Numbers** — 5-7 key numbers from this week's news. **Aim for the high end (6-7)** when the week has rich numeric data. Every number MUST appear verbatim in the daily digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots (e.g., if OpenAI raised $10B at $730B pre-money valuation, pick ONE of those numbers, not both). Format: `- **<number>** — <one-line context>. [N](URL)` (bold number + em-dash + context + citation). Prefer figures that tell a story (funding, benchmark wins, pricing cuts, adoption, latency) over minor specs.
 
    **Citation is MANDATORY**: every number MUST end with at least one `[N](URL)` citation where the URL appears in the daily digests. If you cannot find a source URL in the digests for a specific figure, OMIT that figure and choose a different number with a verifiable source. NEVER emit a number line without a citation — an uncited number is a broken line.
-3. **## Top Stories** — 5-7 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
+3. **## Top Stories** — 7-10 most impactful stories ranked by: Impact > Novelty > Evidence > Community signal.
 
    **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring strategic themes or industry interpretations without a specific triggering event this week belong in Trend Analysis, not Top Stories.
 
@@ -1127,7 +1126,9 @@ Write the English weekly recap. Return JSON only.
    - WHY it matters (strategic implication — competitive shift, market restructuring, or investment signal)
    - CONTEXT (comparison to prior state, competitor, or industry baseline)
 
-   End paragraphs with `[N](URL)` citing the original source. URLs MUST come from the daily digest content provided in the Input (look for existing `[N](URL)` patterns in the daily digests). NEVER invent URLs. If multiple sources support one item, cite each in a different sentence.
+   End paragraphs with `[N](URL)` citing the original source. URLs MUST come from the daily digest content provided in the Input. NEVER invent URLs. If multiple sources support one item, cite each in a different sentence. Do not pile 3 citations onto a single sentence for emphasis.
+
+   **Primary source first**: when multiple sources cover the same story, the FIRST citation must be the most authoritative URL available in the digests — company blog (openai.com/blog, google.com/blog, microsoft.com/blog, nvidia.com/blog), official announcement, arxiv paper, or GitHub repo. Secondary reporting (TechCrunch, Forbes, CNBC, Ars Technica, Business Insider, Bloomberg, Reuters) goes AFTER the primary if it adds distinct context. If only secondary sources exist for a story, use them — don't invent a primary URL.
 
    **Citation is MANDATORY per story**: every Top Story MUST contain at least one `[N](URL)` citation in its body. If the daily digests lack any source URL for a candidate story, OMIT that story and pick a different Top Story with a verifiable source. NEVER emit an uncited story — the `###` heading without a citation in the body is a broken item.
 
@@ -1248,16 +1249,11 @@ Example full output JSON (showing `excerpt` and `focus_items`):
 }
 ```
 
-## Length Target (approximate — depth > literal count)
-- Top Stories: ~4000-6000 chars (4-5 substantive sentences × 5-7 items, English prose averaging ~120-150 chars per sentence)
-- Trend Analysis: 3-4 substantive paragraphs, ~1200-2000 chars total
-- Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~4000-5000 chars combined
-- **Total EN content (en field): aim for 13000+ chars**
-- Principle: depth > length. If the week has thin news (<5 major stories), write shorter rather than pad with weak items. The character numbers are guidance, not a quota.
+## Length Principle
+Depth > length. Each section's structure rules (item counts, sentence counts, paragraph counts) already set the length. If the week has thin news, write shorter rather than pad with weak items.
 
 ## Constraints
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
-- Citations: every `[N](URL)` in your output must reference a URL that already appears in the daily digest content provided.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool. URL MUST appear in the digests.
@@ -1292,7 +1288,7 @@ Write the English weekly recap. Return JSON only.
 2. **## Week in Numbers** — 5-7 key numbers with beginner-friendly context. **Aim for the high end (6-7)** when the week has rich numeric data. Every number MUST appear in the digests. Each number MUST come from a DISTINCT Top Story — do not split one story's figures across multiple slots. Format: `- **<number>** — <plain-language context>. [N](URL)` (bold number + em-dash + accessible explanation + citation). Prefer figures non-specialists can grasp (funding, user count, price, speed) over technical specs.
 
    **Citation is MANDATORY**: every number MUST end with at least one `[N](URL)` citation where the URL appears in the digests. If you cannot find a source URL for a specific figure, OMIT that figure and pick a different number with a verifiable source. NEVER emit a number line without a citation.
-3. **## Top Stories** — 5-7 stories ranked by: Impact > Novelty > Evidence > Community buzz.
+3. **## Top Stories** — 7-10 stories ranked by: Impact > Novelty > Evidence > Community buzz.
 
    **Every Top Story MUST be anchored by a concrete event THIS WEEK** — a launch, release, deal, acquisition, filing, or policy announcement. Recurring themes or industry commentary without a specific triggering event this week belong in Trend Analysis, not Top Stories.
 
@@ -1425,16 +1421,11 @@ Example full output JSON (showing `excerpt` and `focus_items`):
 }
 ```
 
-## Length Target (approximate — depth > literal count)
-- Top Stories: ~4000-6000 chars (4-5 substantive sentences × 5-7 items)
-- Trend Analysis: 3-4 substantive paragraphs, ~1200-2000 chars total
-- Other sections (One-Line + Numbers + Watch Points + Open Source + Actions): ~3500-4500 chars combined
-- **Total EN content (en field): aim for 10000+ chars**
-- Principle: depth > length. If the week has thin news (<5 major stories), write shorter rather than pad with weak items. The character numbers are guidance, not a quota.
+## Length Principle
+Depth > length. Each section's structure rules already set the length. If the week has thin news, write shorter rather than pad with weak items.
 
 ## Constraints
 - Every fact MUST come from the provided daily digests. Zero outside knowledge.
-- Citations: every `[N](URL)` in your output must reference a URL that already appears in the daily digest content provided.
 - Explain technical terms on first use.
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
