@@ -63,3 +63,51 @@ def test_parse_empty_blob():
     assert label == ""
     assert hn_url is None
     assert reddit_url is None
+
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+
+@pytest.mark.asyncio
+async def test_summarize_community_populates_urls_from_parsed_blob():
+    """summarize_community must extract hn_url/reddit_url from embedded
+    url= tokens in community_map blobs and populate CommunityInsight."""
+    from services.agents.ranking import summarize_community
+    from models.news_pipeline import ClassifiedGroup, GroupedItem
+
+    group = ClassifiedGroup(
+        group_title="Test paper",
+        items=[GroupedItem(url="https://arxiv.org/abs/2604.05716", title="Test", subcategory="paper")],
+        category="research",
+        subcategory="paper",
+        reason="test",
+        primary_url="https://arxiv.org/abs/2604.05716",
+    )
+
+    community_map = {
+        "https://arxiv.org/abs/2604.05716": (
+            "[Hacker News|url=https://news.ycombinator.com/item?id=42] "
+            "Paper Title | 79 points | 116 comments\n"
+            "Top comments:\n"
+            '> "interesting"\n'
+        )
+    }
+
+    fake_llm_response = MagicMock()
+    fake_llm_response.choices = [MagicMock()]
+    fake_llm_response.choices[0].message.content = (
+        '{"groups": {"group_0": {"sentiment": "mixed", "quotes": ["interesting"], '
+        '"quotes_ko": ["흥미로움"], "key_point": "discussion"}}}'
+    )
+    fake_llm_response.usage = MagicMock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
+    fake_client = MagicMock()
+    fake_client.chat.completions.create = AsyncMock(return_value=fake_llm_response)
+
+    with patch("services.agents.ranking.get_openai_client", return_value=fake_client):
+        result, _usage = await summarize_community(community_map, [group])
+
+    insight = result["https://arxiv.org/abs/2604.05716"]
+    assert insight.source_label == "Hacker News 79↑ · 116 comments"
+    assert insight.hn_url == "https://news.ycombinator.com/item?id=42"
+    assert insight.reddit_url is None

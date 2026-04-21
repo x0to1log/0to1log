@@ -425,13 +425,6 @@ def _parse_source_meta(raw_text: str) -> tuple[str, str | None, str | None]:
     return label, hn_url, reddit_url
 
 
-def _parse_source_label(raw_text: str) -> str:
-    """Back-compat wrapper \u2014 returns just the label for callers not yet
-    migrated to _parse_source_meta. Delete after Task 5."""
-    label, _hn, _rd = _parse_source_meta(raw_text)
-    return label
-
-
 async def summarize_community(
     community_map: dict[str, str],
     groups: list[ClassifiedGroup],
@@ -453,7 +446,8 @@ async def summarize_community(
         if not raw:
             continue
         key = f"group_{i}"
-        group_entries[key] = (raw, _parse_source_label(raw), group.group_title)
+        label, hn_url, reddit_url = _parse_source_meta(raw)
+        group_entries[key] = (raw, label, group.group_title, hn_url, reddit_url)
 
     # If no community data at all, return empty
     if not group_entries:
@@ -462,7 +456,7 @@ async def summarize_community(
 
     # Build prompt text — include original article title for relevance check
     groups_text_parts = []
-    for key, (raw, _label, gtitle) in group_entries.items():
+    for key, (raw, _label, gtitle, _hn, _rd) in group_entries.items():
         groups_text_parts.append(f"### {key}\nOriginal article: {gtitle}\n{raw}")
     groups_text = "\n\n".join(groups_text_parts)
 
@@ -505,7 +499,7 @@ async def summarize_community(
             # No community data for this group
             continue
 
-        _raw, source_label, _gtitle = group_entries[key]
+        _raw, source_label, _gtitle, hn_url, reddit_url = group_entries[key]
         llm_data = llm_groups.get(key, {})
 
         sentiment = llm_data.get("sentiment")
@@ -580,6 +574,8 @@ async def summarize_community(
             quotes_ko=quotes_ko,
             key_point=key_point,
             source_label=source_label,
+            hn_url=hn_url,
+            reddit_url=reddit_url,
         )
 
     logger.info(
