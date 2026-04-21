@@ -30,17 +30,33 @@ const authSb = (user && accessToken)
     )
   : null;
 
-// Parallel fetch: posts + user data + site content
-const [postsResult, histRes, bmRes, sc] = await Promise.all([
+// Parallel fetch: daily posts + weekly posts (separate queries so weekly always appears) + user data + site content
+// Weekly is published ~1/week; daily is 2/day. Without a separate query, weekly
+// gets pushed out of any single top-N window as posts accumulate.
+const POSTS_FIELDS = 'id, title, slug, category, post_type, published_at, tags, reading_time_min, excerpt, guide_items';
+
+const [dailyRes, weeklyRes, histRes, bmRes, sc] = await Promise.all([
   supabase
     ? supabase
         .from('news_posts')
-        .select('id, title, slug, category, post_type, published_at, tags, reading_time_min, excerpt, guide_items')
+        .select(POSTS_FIELDS)
         .eq('status', 'published')
         .eq('locale', 'ko')
         .eq('category', 'ai-news')
+        .in('post_type', ['business', 'research'])
         .order('published_at', { ascending: false })
-        .limit(50)
+        .limit(100)
+    : Promise.resolve({ data: null, error: null }),
+  supabase
+    ? supabase
+        .from('news_posts')
+        .select(POSTS_FIELDS)
+        .eq('status', 'published')
+        .eq('locale', 'ko')
+        .eq('category', 'ai-news')
+        .eq('post_type', 'weekly')
+        .order('published_at', { ascending: false })
+        .limit(20)
     : Promise.resolve({ data: null, error: null }),
   authSb
     ? authSb.from('reading_history').select('item_id').eq('user_id', user!.id).eq('item_type', 'news')
@@ -54,11 +70,12 @@ const [postsResult, histRes, bmRes, sc] = await Promise.all([
   ),
 ]);
 
-if (postsResult.error) {
-  console.error('[log-list-ko] Supabase error:', postsResult.error.message);
-  fetchError = postsResult.error.message;
+if (dailyRes.error || weeklyRes.error) {
+  const err = dailyRes.error || weeklyRes.error;
+  console.error('[log-list-ko] Supabase error:', err!.message);
+  fetchError = err!.message;
 } else {
-  posts = postsResult.data ?? [];
+  posts = [...(dailyRes.data ?? []), ...(weeklyRes.data ?? [])];
 }
 (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
 (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
