@@ -1153,11 +1153,11 @@ Write the English weekly recap. Return JSON only.
    - arxiv: `[arxiv:XXXX.XXXXX](URL)`
      Example: `[arxiv:2504.12345](https://arxiv.org/abs/2504.12345)`
 
-   **NEVER use these generic labels** (they hide the actual project):
-   - `[GitHub](URL)` / `[HuggingFace](URL)` / `[link](URL)` / `[repo](URL)`
-   - `[Release](URL)` / `[Paper](URL)` / `[Model](URL)` without the name
+   **NEVER use these forms** (they hide the actual project or break the format):
+   - Generic labels: `[GitHub](URL)` / `[HuggingFace](URL)` / `[link](URL)` / `[repo](URL)` / `[Release](URL)` / `[Paper](URL)` / `[Model](URL)`
    - Abbreviations like `[HUD]` when actual repo is `hermes-hudui`
-   - Bare autolinks `<https://...>` — use labeled markdown links only
+   - Bare autolinks: `<https://...>`
+   - **Bare raw URLs without a label**: lines like `- **Name** — description. https://github.com/owner/repo` are NOT acceptable. Every URL MUST be wrapped in `[label](URL)` markdown form so the rendered link has a visible, informative label.
 
    Each bullet structure:
    `- **<Project description>** — 1-2 sentence explanation. [owner/repo](URL)`
@@ -1329,7 +1329,11 @@ Write the English weekly recap. Return JSON only.
      Example: `[meta-llama/Llama-4-Instruct](https://huggingface.co/meta-llama/Llama-4-Instruct)`
    - arxiv: `[arxiv:XXXX.XXXXX](URL)`
 
-   **NEVER use**: `[GitHub]` / `[HuggingFace]` / `[Release]` / `[link]` / `[Model]` / `[Paper]` as generic labels — readers can't identify the project. Also NEVER use abbreviated labels (e.g., `[HUD]` instead of `hermes-hudui`) or bare autolinks `<URL>`.
+   **NEVER use**:
+   - Generic labels: `[GitHub]` / `[HuggingFace]` / `[Release]` / `[link]` / `[Model]` / `[Paper]` — readers can't identify the project.
+   - Abbreviated labels like `[HUD]` when actual repo is `hermes-hudui`.
+   - Bare autolinks `<URL>`.
+   - **Bare raw URLs without a label**: `- **Name** — description. https://github.com/owner/repo` is NOT acceptable. Every URL MUST be wrapped in `[label](URL)` markdown form.
 
    Each bullet structure:
    `- **<Short project name>** — 1-2 sentence plain-language explanation + who it's for. [owner/repo](URL)`
