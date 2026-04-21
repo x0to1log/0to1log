@@ -2495,9 +2495,43 @@ async def run_weekly_pipeline(
             ]:
                 coverage_flags.update(_check_weekly_citation_coverage(_body, _label))
 
+            # Inherit title + publisher from daily source_cards. Daily pipeline already
+            # enriches these via LLM sources; weekly reuses that metadata instead of
+            # leaving publisher/title blank (frontend fallback to hostname otherwise
+            # produces ugly labels like 'Arunbaby' for arunbaby.com).
+            daily_card_meta: dict[str, dict[str, str]] = {}
+            for _d in list(digests_en) + list(digests_ko):
+                for _card in (_d.get("source_cards") or []):
+                    _url = (_card.get("url") or "").strip()
+                    if not _url:
+                        continue
+                    _title = (_card.get("title") or "").strip()
+                    _publisher = (_card.get("publisher") or "").strip()
+                    if _url not in daily_card_meta:
+                        daily_card_meta[_url] = {"title": _title, "publisher": _publisher}
+                    else:
+                        # Prefer first non-empty values seen
+                        existing = daily_card_meta[_url]
+                        if not existing.get("title") and _title:
+                            existing["title"] = _title
+                        if not existing.get("publisher") and _publisher:
+                            existing["publisher"] = _publisher
+
+            def _enrich_weekly_cards(cards: list[dict]) -> list[dict]:
+                enriched = []
+                for c in cards:
+                    url = (c.get("url") or "").strip()
+                    meta = daily_card_meta.get(url, {})
+                    enriched.append({
+                        **c,
+                        "title": c.get("title") or meta.get("title") or "",
+                        "publisher": c.get("publisher") or meta.get("publisher") or _extract_publisher(url),
+                    })
+                return enriched
+
             weekly_source_cards = {
-                "en": _dedup_source_cards((en_expert_cards or []) + (en_learner_cards or [])),
-                "ko": _dedup_source_cards((ko_expert_cards or []) + (ko_learner_cards or [])),
+                "en": _enrich_weekly_cards(_dedup_source_cards((en_expert_cards or []) + (en_learner_cards or []))),
+                "ko": _enrich_weekly_cards(_dedup_source_cards((ko_expert_cards or []) + (ko_learner_cards or []))),
             }
 
             # Quality check
