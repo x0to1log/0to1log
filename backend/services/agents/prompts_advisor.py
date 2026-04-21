@@ -1869,62 +1869,6 @@ Keep the same section keys; only adapt the content perspective.
 Respond in JSON format only."""
 
 
-ADVANCED_NO_CODE_PASS_SUFFIX = """
-
-## Pass-Specific Rule: This pass generates non-code advanced sections only
-
-- Generate ONLY these section keys:
-  - mechanism
-  - formulas / architecture / diagrams
-  - tradeoffs
-  - pitfalls
-  - industry / engineering communication
-  - related terms
-- DO NOT generate the code section in this pass.
-- Omit the `adv_*_3_code` key entirely or return it as an empty string.
-- Do not compensate by pushing code-like content into other sections.
-"""
-
-
-GENERATE_ADVANCED_CODE_SECTION_KO_PROMPT = """\
-You are a technical education writer for 0to1log.
-
-Generate ONLY the Korean advanced section 3 for a handbook term.
-
-Output JSON only:
-{
-  "adv_ko_3_code": "..."
-}
-
-Rules:
-- Return one section only. Do not rewrite other sections.
-- Stay consistent with the provided definition, mechanism, tradeoffs, and references.
-- If `code_mode` is `pseudocode`, write structured pseudocode or algorithmic flow only.
-- If `code_mode` is `real-code`, write realistic runnable-style code with error handling and type hints when natural.
-- Never invent vendor-specific SDK details, parameters, or API surfaces not supported by the provided references/context.
-- If evidence is weak, prefer pseudocode-like structure over fabricated concrete code.
-"""
-
-
-GENERATE_ADVANCED_CODE_SECTION_EN_PROMPT = """\
-You are a technical education writer for 0to1log.
-
-Generate ONLY the English advanced section 3 for a handbook term.
-
-Output JSON only:
-{
-  "adv_en_3_code": "..."
-}
-
-Rules:
-- Return one section only. Do not rewrite other sections.
-- Stay consistent with the provided definition, mechanism, tradeoffs, and references.
-- If `code_mode` is `pseudocode`, write structured pseudocode or algorithmic flow only.
-- If `code_mode` is `real-code`, write realistic runnable-style code with error handling and type hints when natural.
-- Never invent vendor-specific SDK details, parameters, or API surfaces not supported by the provided references/context.
-- If evidence is weak, prefer pseudocode-like structure over fabricated concrete code.
-"""
-
 TERM_GATE_PROMPT = """\
 You are a quality gate for an AI/CS technical handbook. Given a list of candidate terms \
 and the existing handbook terms, decide which candidates should be ACCEPTED for generation, \
