@@ -15,13 +15,15 @@ function applyHeadlineFilter(filterValue: string): void {
   const container = document.querySelector<HTMLElement>('#news-list-results[data-multi-headline]');
   if (!container) return;
 
+  const allHeadlineType = container.dataset.allHeadline || 'business';
   const headlines = container.querySelectorAll<HTMLElement>('.newsprint-headline[data-post-type]');
   const visiblePostIds = new Set<string>();
 
   headlines.forEach((h) => {
     const type = h.dataset.postType || '';
-    // 'all' tab: only business headline. Specific tabs: only matching headline.
-    const show = filterValue === 'all' ? type === 'business' : type === filterValue;
+    // 'all' tab: whichever type the page declared as the "all" headline.
+    // Specific tabs: only matching headline.
+    const show = filterValue === 'all' ? type === allHeadlineType : type === filterValue;
     if (show) {
       h.removeAttribute('data-headline-hidden');
       const postId = h.dataset.postId;

@@ -71,12 +71,28 @@ for (const p of posts) {
   p.display_excerpt = resolved.excerpt;
 }
 
+// Group by publication date, with in-day priority: weekly → business → research
+const TYPE_ORDER: Record<string, number> = { weekly: 0, business: 1, research: 2 };
+const dateKey = (p: any): string => (p?.published_at ?? '').slice(0, 10);
+posts.sort((a, b) => {
+  const d = dateKey(b).localeCompare(dateKey(a));
+  if (d !== 0) return d;
+  return (TYPE_ORDER[a.post_type] ?? 99) - (TYPE_ORDER[b.post_type] ?? 99);
+});
+
 const businessHeadline = posts.find(p => p.post_type === 'business') ?? null;
 const researchHeadline = posts.find(p => p.post_type === 'research') ?? null;
 const weeklyHeadline = posts.find(p => p.post_type === 'weekly') ?? null;
-// Only exclude business headline from grid (research/weekly latest still show in grid on '전체' tab)
-const rest = posts.filter(p => p !== businessHeadline);
-const railPosts = businessHeadline ? rest.slice(0, 4) : posts.slice(0, 4);
+
+// Promote weekly to '전체' headline on days when a weekly was published
+const latestDate = dateKey(posts[0]);
+const latestDayHasWeekly = !!latestDate && posts.some(p => p.post_type === 'weekly' && dateKey(p) === latestDate);
+const allHeadlineType: 'weekly' | 'business' = latestDayHasWeekly ? 'weekly' : 'business';
+const allHeadline = allHeadlineType === 'weekly' ? weeklyHeadline : businessHeadline;
+
+// Only exclude the "전체" headline from grid. Other-type latest posts still appear as grid cards.
+const rest = allHeadline ? posts.filter(p => p !== allHeadline) : posts;
+const railPosts = rest.slice(0, 4);
 const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('ko', 'business') },
   { value: 'research', label: getPostTypeLabel('ko', 'research') },
@@ -119,7 +135,7 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
         linkLabel={t.ko['error.retry']}
       />
     ) : posts.length > 0 ? (
-      <div id="news-list-results" data-multi-headline>
+      <div id="news-list-results" data-multi-headline data-all-headline={allHeadlineType}>
         {businessHeadline && (
           <NewsprintHeadline
             href={`/ko/news/${businessHeadline.slug}/`}
