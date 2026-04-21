@@ -4,6 +4,7 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import AdminAiConfig from '../../../components/admin/AdminAiConfig.astro';
+import QualityPanel from '../../../components/admin/QualityPanel.astro';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
@@ -215,6 +216,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
               </div>
             </div>
           </details>
+
+          {!isNew && post && (
+            <div class="mb-6">
+              <QualityPanel factPack={post.fact_pack} />
+            </div>
+          )}
 
           {hasPersonaContent ? (
             <>
