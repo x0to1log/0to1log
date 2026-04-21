@@ -37,3 +37,36 @@ def test_hn_thread_block_with_no_story_id_omits_url_token():
     )
     assert block.startswith("[Hacker News] Title | 5 points | 0 comments")
     assert "url=" not in block.split("\n")[0]
+
+
+def test_reddit_thread_block_embeds_thread_url():
+    from services.news_collection import _format_reddit_thread_block
+
+    block = _format_reddit_thread_block(
+        permalink="/r/OpenAI/comments/abc123/new_gpt_release/",
+        rd_title="New GPT release",
+        subreddit="OpenAI",
+        score=500,
+        num_comments=120,
+        comments_text=['"hot take"'],
+    )
+    assert block.startswith(
+        "[Reddit r/OpenAI|url=https://www.reddit.com/r/OpenAI/comments/abc123/new_gpt_release/] "
+        "New GPT release | 500 upvotes | 120 comments"
+    )
+    assert "hot take" in block
+
+
+def test_reddit_thread_block_with_no_permalink_omits_url_token():
+    from services.news_collection import _format_reddit_thread_block
+
+    block = _format_reddit_thread_block(
+        permalink="",
+        rd_title="Title",
+        subreddit="AI",
+        score=10,
+        num_comments=0,
+        comments_text=[],
+    )
+    assert block.startswith("[Reddit r/AI] Title | 10 upvotes | 0 comments")
+    assert "url=" not in block.split("\n")[0]

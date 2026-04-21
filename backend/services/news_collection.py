@@ -1359,6 +1359,33 @@ def _format_hn_thread_block(
     return block
 
 
+def _format_reddit_thread_block(
+    permalink: str,
+    rd_title: str,
+    subreddit: str,
+    score: int,
+    num_comments: int,
+    comments_text: list[str],
+) -> str:
+    """Build the Reddit thread_block string with embedded thread URL.
+
+    URL token format: [Reddit r/<sub>|url=https://www.reddit.com<permalink>]
+    When permalink is empty we omit the url= token.
+    """
+    if permalink:
+        header = (
+            f"[Reddit r/{subreddit}|url=https://www.reddit.com{permalink}] "
+            f"{rd_title} | {score} upvotes | {num_comments} comments\n"
+        )
+    else:
+        header = f"[Reddit r/{subreddit}] {rd_title} | {score} upvotes | {num_comments} comments\n"
+    block = header
+    if comments_text:
+        block += "Top comments:\n"
+        block += "\n".join(f'> "{ct}"' for ct in comments_text)
+    return block
+
+
 async def collect_community_reactions(title: str, url: str, target_date: str | None = None) -> str:
     """Collect community reactions with ACTUAL COMMENT TEXT from HN + Reddit.
 
@@ -1580,10 +1607,9 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                                 break
                 except Exception:
                     pass
-                thread_block = f"[Reddit r/{subreddit}] {rd_title} | {score} upvotes | {num_comments} comments\n"
-                if comments_text:
-                    thread_block += "Top comments:\n"
-                    thread_block += "\n".join(f'> "{ct}"' for ct in comments_text)
+                thread_block = _format_reddit_thread_block(
+                    permalink, rd_title, subreddit, score, num_comments, comments_text,
+                )
                 parts.append(thread_block)
         except Exception as e:
             logger.debug("Reddit search failed for '%s': %s", title[:40], e)
