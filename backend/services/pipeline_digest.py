@@ -54,100 +54,135 @@ logger = logging.getLogger(__name__)
 
 _CP_HEADERS = ("## Community Pulse", "## 커뮤니티 반응")
 
+# Block header like `**Hacker News** (79↑)` or `**r/OpenAI** (1.2K↑)`.
+# Captures the label text and the upvote count (digits only; we normalize K suffixes).
+_CP_BLOCK_HEADER_RE = re.compile(
+    r"^\s*(?:-\s+)?\*\*(?P<label>[^*\n]+?)\*\*\s*\(\s*(?P<upvotes>[\d,.]+)(?P<kmult>[Kk]?)\s*↑",
+)
 
-def _normalize_platform_label(src_label: str) -> str:
-    """Strip upvote/comment suffixes from a CommunityInsight.source_label.
+# Attribution line `> — <label>` (em-dash OR double hyphen).
+_CP_ATTR_RE_TMPL = r"^> [—\-]+ {label}\s*$"
 
-    The map's source_label can be enriched (e.g. ``"Hacker News 79↑ · 116 comments"``),
-    but the writer's block header uses the platform root only (``**Hacker News**``)
-    with the count moved into parentheses (``(79↑)``). We strip at the first
-    numeric/separator token so both end up matching.
+# Upvote count inside CommunityInsight.source_label, e.g. "Hacker News 79↑ · 116 comments"
+# or "r/OpenAI (500↑)". Captures the digits/K preceding the ↑ arrow.
+_INSIGHT_UPVOTE_RE = re.compile(r"(\d[\d,.]*)(K)?↑", re.IGNORECASE)
 
-    Examples:
-        "Hacker News 79↑ · 116 comments" → "Hacker News"
-        "Hacker News 58↑"                → "Hacker News"
-        "r/OpenAI"                       → "r/OpenAI"
-        "Reddit"                         → "Reddit"
-    """
-    if not src_label:
-        return ""
-    # Split at first run of: whitespace + digit (upvote counts) OR whitespace + middot (separator)
-    parts = re.split(r"\s+(?=[\d])|\s+·", src_label, maxsplit=1)
-    return parts[0].strip()
+
+def _upvotes_to_int(digits: str, kmult: str) -> int:
+    """'1,203' + '' → 1203;   '1.2' + 'K' → 1200."""
+    try:
+        base = float(digits.replace(",", ""))
+    except ValueError:
+        return -1
+    if kmult and kmult.upper() == "K":
+        base *= 1000
+    return int(round(base))
+
+
+def _insight_hn_upvotes(source_label: str) -> int:
+    """Extract upvote count of the HN thread from an insight's source_label.
+    Returns -1 if not found. Used to match body blocks to insights by count."""
+    # We look at the FIRST ↑ in the label (HN comes before Reddit per _parse_source_meta).
+    if "Hacker News" not in source_label:
+        return -1
+    m = _INSIGHT_UPVOTE_RE.search(source_label)
+    if not m:
+        return -1
+    return _upvotes_to_int(m.group(1), m.group(2) or "")
+
+
+def _insight_reddit_upvotes(source_label: str) -> int:
+    """Extract upvote count of the Reddit thread from an insight's source_label.
+    Returns -1 if not found."""
+    # Look for upvote count AFTER "r/xxx" in the label.
+    m = re.search(r"r/\S+?\s*\(\s*(\d[\d,.]*)(K)?↑", source_label, re.IGNORECASE)
+    if not m:
+        return -1
+    return _upvotes_to_int(m.group(1), m.group(2) or "")
 
 
 def _inject_cp_citations(
     content: str,
     community_summary_map: dict[str, "CommunityInsight"],
 ) -> str:
-    """Linkify `> — <Label>` attribution lines in the Community Pulse section.
+    """Linkify `> — <Label>` attribution lines in the Community Pulse section
+    using thread URLs from each CommunityInsight (hn_url / reddit_url).
 
-    The writer emits blockquote attributions like `> — Reddit` or `> — Hacker News`,
-    which are un-verifiable without a source URL. This helper post-processes the
-    body: for each `**<source_label>**` block inside the Community Pulse section,
-    it rewrites every matching attribution line to `> — [<Label>](<URL>)` using
-    the URL from `community_summary_map` (keyed by insight.url, with source_label
-    used to identify the block).
+    Matching strategy — by upvote count:
+      Body block header `**Hacker News** (79↑)` is paired with the insight
+      whose source_label contains "79↑" and has hn_url populated. This avoids
+      the positional bug (writer can reorder blocks; dict iteration order
+      is independent of body order).
 
-    Bilingual: handles both EN (`## Community Pulse`) and KO (`## 커뮤니티 반응`).
-    Non-destructive: if no CP section, no matching block, or no map entry, the
-    content returns unchanged. The writer's exact markdown is preserved byte-for-
-    byte outside of the replaced attribution lines.
-
-    Label normalization: source_label may carry upvote/comment metadata
-    ("Hacker News 79↑ · 116 comments"); the writer renders only the platform root
-    in the block header and attribution. We normalize both sides to the platform
-    root (see _normalize_platform_label) before matching.
-
-    Per-block cursor model: blocks are matched positionally when multiple topics
-    share a normalized source_label. Block header `**Hacker News**` appearing
-    twice in one section pulls the 1st then 2nd URL whose normalized source_label
-    == "Hacker News", in the order they appear in community_summary_map.
+    Degrades safely:
+      - No CP section → return content unchanged.
+      - Insight has no hn_url/reddit_url (old checkpoint) → attribution stays raw.
+      - Block upvote count doesn't match any insight → attribution stays raw.
+      - Non-CP blockquotes → never touched (only section-scoped).
     """
     if not community_summary_map or not content:
         return content
 
-    from collections import defaultdict
+    # Build per-platform index of (upvote_count, thread_url). First match wins
+    # if two insights happen to share an upvote count (rare; HN/Reddit APIs
+    # return integers in different ranges).
+    hn_index: list[tuple[int, str]] = []       # (upvotes, hn_url)
+    reddit_index: list[tuple[str, int, str]] = []  # (subreddit, upvotes, reddit_url)
 
-    # URL is the dict KEY (not an attribute on CommunityInsight — the model doesn't
-    # carry it). Iterate items() to get both sides.
-    label_urls: dict[str, list[str]] = defaultdict(list)
-    for url, insight in community_summary_map.items():
-        src_label = getattr(insight, "source_label", None)
-        if src_label and url:
-            normalized = _normalize_platform_label(src_label)
-            if normalized:
-                label_urls[normalized].append(url)
-    if not label_urls:
+    for insight in community_summary_map.values():
+        src = getattr(insight, "source_label", "") or ""
+        hn_url = getattr(insight, "hn_url", None)
+        reddit_url = getattr(insight, "reddit_url", None)
+
+        if hn_url:
+            upv = _insight_hn_upvotes(src)
+            if upv >= 0:
+                hn_index.append((upv, hn_url))
+
+        if reddit_url:
+            m_sub = re.search(r"r/(\S+?)(?:\s|\(|$)", src)
+            upv = _insight_reddit_upvotes(src)
+            if m_sub and upv >= 0:
+                reddit_index.append((m_sub.group(1).rstrip(")"), upv, reddit_url))
+
+    if not hn_index and not reddit_index:
         return content
 
-    # Attribution pattern: `> — Label` (em-dash or --) with optional trailing space.
+    def _lookup_url(label: str, upvotes: int) -> str | None:
+        if label == "Hacker News":
+            for upv, url in hn_index:
+                if upv == upvotes:
+                    return url
+            return None
+        # r/<subreddit>
+        m = re.match(r"r/(\S+)", label)
+        if m:
+            sub = m.group(1)
+            for isub, upv, url in reddit_index:
+                if isub == sub and upv == upvotes:
+                    return url
+        return None
+
     def _process_section(section_body: str) -> str:
-        cursors = {label: 0 for label in label_urls}
         out_lines: list[str] = []
         current_label: str | None = None
         current_url: str | None = None
 
         for line in section_body.split("\n"):
-            hdr_m = re.match(r"^\s*(?:-\s+)?\*\*([^*\n]+?)\*\*", line)
-            if hdr_m:
-                lbl = hdr_m.group(1).strip()
-                if lbl in label_urls:
-                    urls = label_urls[lbl]
-                    idx = cursors[lbl]
-                    if idx < len(urls):
-                        current_label = lbl
-                        current_url = urls[idx]
-                        cursors[lbl] = idx + 1
-                    else:
-                        current_label = None
-                        current_url = None
+            hdr = _CP_BLOCK_HEADER_RE.match(line)
+            if hdr:
+                label = hdr.group("label").strip()
+                upvotes = _upvotes_to_int(hdr.group("upvotes"), hdr.group("kmult"))
+                url = _lookup_url(label, upvotes) if upvotes >= 0 else None
+                if url:
+                    current_label = label
+                    current_url = url
                 else:
                     current_label = None
                     current_url = None
             elif current_label and current_url:
                 attr_pat = re.compile(
-                    rf"^> [\u2014\-]+ {re.escape(current_label)}\s*$"
+                    _CP_ATTR_RE_TMPL.format(label=re.escape(current_label))
                 )
                 if attr_pat.match(line):
                     line = f"> — [{current_label}]({current_url})"
