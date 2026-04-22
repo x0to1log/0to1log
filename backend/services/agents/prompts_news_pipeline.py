@@ -404,6 +404,12 @@ Writing rules:
 - Avoid leading with insider shorthand such as FP8, KV cache, policy routing, or similar specialist terms unless the benefit is clear in the same line.
 - Expand acronyms on first use: "DPO(Direct Preference Optimization)"
 - Reference arXiv IDs and repo URLs when available
+- **Arxiv paper items — architectural substance (REQUIRED)**: every arxiv-sourced item MUST include at minimum ONE of the following specifics so the body isn't just an abstract paraphrase:
+  - (a) the algorithm's named core step ("samples N candidate paths, scores via reward model, gradient updates with DPO")
+  - (b) a concrete hyperparameter or architecture dimension from the paper ("1.2B params, 128 experts, top-2 routing", "context window 32K", "LoRA rank 16")
+  - (c) the training-recipe signature (dataset size, optimizer, compute scale)
+  - (d) the evaluation protocol (specific benchmark + metric)
+  A paragraph that only says "the paper proposes X to solve Y" without any of (a)-(d) is too thin — add one.
 - When multiple sources are provided, draw different information from each — one source for benchmarks, another for architecture, another for limitations. Each paragraph should reference the source it draws from.
 - Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after the primary if it adds distinct context.
 - PARAGRAPH COUNTS: [LEAD] items 3-4 paragraphs, [SUPPORTING] items at least 3 paragraphs"""
@@ -571,7 +577,9 @@ Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output M
 
 When unsure, omit rather than fabricate.
 
-**Citations**: every `[N](URL)` must reference a URL from the provided source list verbatim. NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation.
+**Citations**: every `[N](URL)` must reference a URL from the provided source list **verbatim** (copy-paste the exact URL — do not modify the path, do not re-type from memory, do not append fragments). NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation.
+
+**Before submitting, cross-check each `[N](URL)` in the body against the provided source list.** If any URL's domain or path is NOT in the source list — including URLs you "remember" from training data like dataset pages, Wikipedia articles, random blog hosts, or aggregator sites (`aicosoft.com`, `aisecurity-portal.org`, `phemex.com`, etc.) — **delete the citation and either drop the supporting claim or rephrase without citation**. Citations to domains outside the source list are a hard validation failure that blocks publication; the digest will be rejected even if every other quality signal is perfect.
 
 **Attribution must match URL domain.** If your sentence says "X reports", "X confirms", or "according to X", the cited URL MUST be from X's own domain. For syndicated content (e.g., a local paper reprinting an AP or Reuters wire under a different domain like `mrt.com`, `yahoo.com/news`, `msn.com`), name the actual publishing domain — not the wire service. Write "Midland Reporter-Telegram carries AP reporting" or simply "Midland Reporter-Telegram reports" when the URL is `mrt.com`. Do NOT write "Associated Press reports [N](https://www.mrt.com/...)" — readers clicking the citation expect to land on the source you named. Same rule for Reuters, AFP, Bloomberg: only attribute by name when the URL is their own domain."""
 
@@ -589,8 +597,16 @@ FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to
 
 **DO NOT omit from KO what IS in EN:**
 - If EN names a specific person (e.g., "Mira Murati"), KO should too (or use the Korean equivalent "미라 무라티")
-- If EN gives a specific figure, KO must carry the same figure
+- If EN gives a specific figure (number + unit), KO must carry the EXACT same figure — same number, same unit. Missing a single number is a parity failure.
 - If EN names a company, KO names the same company
+
+**Currency unit conversion (HARD RULE — zero-count errors are the most common KO translation bug):**
+- `$X billion` → `X×10억 달러` (X stays as-is, unit becomes `10억`). So `$8.3 billion` = `83억 달러`, NOT `8.3억 달러` (which reads as $830M — a 10× understatement).
+- `$X trillion` → `X조 달러`. So `$1.5 trillion` = `1.5조 달러`.
+- `$X million` → `X×100만 달러` or equivalent. So `$500 million` = `5억 달러`.
+- Before writing any Korean currency figure, count zeros twice: EN `$8.3B` = 8,300,000,000 = 83 × 100,000,000 = `83억 달러`.
+
+**Self-check before submitting frontload**: mentally list every number that appears in `headline` and `excerpt`. Confirm each one appears unchanged in `headline_ko` / `excerpt_ko`. If any is missing or altered, fix it.
 
 **Translation style is flexible. Facts are not.**
 - OK: `headline` = "Meta's AI app climbs charts" → `headline_ko` = "메타 AI 앱, 차트 상승세"
@@ -613,7 +629,7 @@ Learner readers are Korean non-developers. Keep the Korean text Korean.
 
 1. **NEVER insert English connective or filler words mid-sentence**. Banned: "hence", "thus", "so", "and", "but", "however", "therefore", "i.e.", "e.g.", "vs", "via", "or", "also". Use 한국어 connectives only: "그래서", "하지만", "또한", "즉", "예를 들어", "대 (vs.)", "-을 통해".
 
-2. **Technical acronyms and jargon**: on FIRST use, write the Korean meaning FIRST with the acronym in parentheses. Example format: `검색 증강 생성(RAG)`, `명령줄 인터페이스(CLI)`, `쓰기 앞 로그(WAL)`, `모델 컨텍스트 프로토콜(MCP)`. After first mention, the acronym alone is OK. Covers: RAG, CLI, WAL, MCP, ONNX, CPU, GPU, SDK, API, PSNR, SSIM, LPIPS, IPO, CoT, GAN.
+2. **Technical acronyms and jargon**: on FIRST use, write the Korean meaning FIRST with the acronym in parentheses. Example format: `검색 증강 생성(RAG)`, `명령줄 인터페이스(CLI)`, `쓰기 앞 로그(WAL)`, `모델 컨텍스트 프로토콜(MCP)`, `직접 선호도 최적화(DPO)`, `그룹 상대 정책 최적화(GRPO)`, `대형 언어 모델(LLM)`, `전문가 혼합(MoE)`, `단계별 추론(CoT)`. After first mention, the acronym alone is OK. Minimum coverage list: **LLM, RAG, DPO, GRPO, MoE, CoT, CLIP, RLHF, KV, LoRA, CLI, WAL, MCP, ONNX, SDK, API, CPU, GPU, PSNR, SSIM, LPIPS, IPO, GAN**. When in doubt, expand — unexpanded acronyms are the #1 learner-accessibility complaint.
 
 3. **Proper nouns (company, product, person, place) stay in English**: OpenAI, Meta, Google, Anthropic, Nvidia, CoreWeave, GitHub, Hugging Face, Claude Code, ChatGPT — do NOT transliterate these.
 
@@ -1622,7 +1638,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present non-summary section has substantial content (~200+ chars); One-Line Summary may be brief if it synthesizes the day's main throughline.
 
 ### Source Quality (3)
-- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly.
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
 - **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
 - **source_utilization**: All provided sources are drawn on across paragraphs — not ignored or piled at bottom.
 
@@ -1685,7 +1701,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present section has substantive content; One-Line Summary may be brief if it synthesizes the day's throughline.
 
 ### Source Quality (2)
-- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Minor gaps acceptable for learner-grade writing.
+- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Minor gaps acceptable for learner-grade writing. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
 - **source_utilization**: Provided sources are drawn on across paragraphs.
 
 ### Accessibility (3)
@@ -1748,7 +1764,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present non-summary section has substantial content (~200+ chars); Strategic Decisions uses bullet format; One-Line Summary may be brief if synthetic.
 
 ### Source Quality (3)
-- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed.
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
 - **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / official announcement) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
 - **source_utilization**: All provided sources drawn on across paragraphs.
 
@@ -1811,7 +1827,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present section has substantive content; Action Items uses numbered list format; One-Line Summary may be brief if synthetic.
 
 ### Source Quality (2)
-- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Funding amounts attributed.
+- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Funding amounts attributed. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
 - **source_utilization**: Provided sources drawn on across paragraphs.
 
 ### Practical Impact (3)
@@ -1883,7 +1899,7 @@ are grounded, calibrated, clear, and bilingual-parity.
 
 ### Calibration (2)
 - **claim_strength**: Headline/excerpt don't overstate beyond what a secondary-heavy story can support. **10** tone matches evidence strength (e.g., "files for IPO" for a filing, "reportedly raises" for a leak); **7** one slightly strong phrase but not misleading; **4** competitive/strategic framing stronger than the evidence allows ("dominates", "crushes"); **0** heavy overclaim that rewrites the story.
-- **framing_calibration**: No forward-looking speculation verbs in frontload ("will disrupt", "is set to", "Expect X to Y", "poised to", Korean "~할 것이다", "전망된다"). Observational framing only ("signals", "points to", "implies"). **10** fully observational; **7** one borderline phrase; **4** one clear forward-looking verb; **0** multiple forward-looking predictions.
+- **framing_calibration**: No forward-looking speculation verbs in frontload ("will disrupt", "is set to", "Expect X to Y", "poised to", Korean "~할 것이다", "전망된다"). Observational framing only ("signals", "points to", "implies"). **EXEMPT**: focus_item P3 ("what to watch") may use "Watch for X" / "X 주시" / "keep an eye on X" phrasing WHEN X is an observable signal (dataset release, benchmark publication, paper replication, public filing, earnings disclosure) — this is descriptive, not speculative. NOT exempt: watch phrases about prices, market outcomes, competitive wins/losses ("watch for a crash", "watch Nvidia's decline"). **10** fully observational; **7** one borderline phrase; **4** one clear forward-looking verb; **0** multiple forward-looking predictions.
 
 ### Clarity (2)
 - **headline_specificity**: Headline names the actual event/entity/number — not generic ("AI news roundup", "Big AI developments"). An informed reader can tell WHICH story this is from the headline alone. **10** concrete and scannable; **7** specific but slightly dense; **4** vague or keyword-salad; **0** empty or placeholder-tier.
