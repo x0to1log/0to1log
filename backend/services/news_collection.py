@@ -737,17 +737,68 @@ async def _fetch_readme_excerpt(client: httpx.AsyncClient, full_name: str) -> st
     return ""
 
 
+async def _fetch_latest_release(
+    client: httpx.AsyncClient, full_name: str, ref: datetime, max_age_days: int = 7,
+) -> dict | None:
+    """Fetch the most recent release if it was published within max_age_days.
+    Returns None when the repo has no recent release, letting the caller skip
+    the release signal for stale repos. Used to prioritize repos that actually
+    shipped something recently (option B in the GitHub-trending tuning)."""
+    try:
+        resp = await client.get(
+            f"https://api.github.com/repos/{full_name}/releases?per_page=1",
+            headers={"Accept": "application/vnd.github.v3+json"},
+        )
+        if resp.status_code != 200:
+            return None
+        releases = resp.json()
+        if not releases:
+            return None
+        rel = releases[0]
+        pub = rel.get("published_at") or ""
+        if not pub:
+            return None
+        try:
+            rel_dt = datetime.strptime(pub[:10], "%Y-%m-%d")
+        except ValueError:
+            return None
+        ref_naive = ref.replace(tzinfo=None) if ref.tzinfo else ref
+        if (ref_naive - rel_dt).days > max_age_days:
+            return None
+        return {
+            "tag": rel.get("tag_name", "") or rel.get("name", ""),
+            "name": rel.get("name", "") or rel.get("tag_name", ""),
+            "published_at": pub[:10],
+            "body_excerpt": (rel.get("body") or "")[:300],
+            "prerelease": bool(rel.get("prerelease", False)),
+            "html_url": rel.get("html_url", ""),
+        }
+    except Exception:
+        return None
+
+
 async def _collect_github_trending(target_date: str | None = None) -> list[NewsCandidate]:
-    """Collect trending AI/ML repositories from GitHub Search API."""
+    """Collect trending AI/ML repositories from GitHub Search API.
+
+    Tuning (post Apr 19-22 audit: trending picks 0/5 on some days):
+    - `pushed:>` instead of `created:>` — catches active maintenance on mature
+      projects (PyTorch-major-release type events), not just brand-new repos
+    - `stars:>500` instead of `>20` — filters the SEO-spam and joke repos that
+      were choking the candidate pool (was classify ignored most trending items)
+    - `sort=updated` instead of `sort=stars` — prioritize recent activity
+    - Parallel release-detection via `/releases?per_page=1` per repo; when a
+      release is within the 7-day window, its tag/body is appended to the
+      candidate snippet so the classifier sees a newsworthy signal
+    """
     if target_date:
         ref = datetime.strptime(target_date, "%Y-%m-%d")
     else:
         ref = datetime.now(timezone.utc)
-    created_since = (ref - timedelta(days=7)).strftime("%Y-%m-%d")
+    pushed_since = (ref - timedelta(days=7)).strftime("%Y-%m-%d")
     url = "https://api.github.com/search/repositories"
     params = {
-        "q": f"machine-learning OR deep-learning OR LLM OR language-model OR AI-agent created:>{created_since} stars:>20",
-        "sort": "stars",
+        "q": f"machine-learning OR deep-learning OR LLM OR language-model OR AI-agent pushed:>{pushed_since} stars:>500",
+        "sort": "updated",
         "order": "desc",
         "per_page": "10",
     }
@@ -761,16 +812,24 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 
         repos = data.get("items", [])[:10]
 
-        # Fetch README excerpts in parallel
-        async with httpx.AsyncClient(timeout=10.0) as readme_client:
+        # Fetch README excerpts + latest releases in parallel (2 calls per repo).
+        async with httpx.AsyncClient(timeout=10.0) as aux_client:
             readme_tasks = [
-                _fetch_readme_excerpt(readme_client, repo.get("full_name", ""))
+                _fetch_readme_excerpt(aux_client, repo.get("full_name", ""))
                 for repo in repos
             ]
-            readmes = await asyncio.gather(*readme_tasks, return_exceptions=True)
+            release_tasks = [
+                _fetch_latest_release(aux_client, repo.get("full_name", ""), ref)
+                for repo in repos
+            ]
+            readmes, releases = await asyncio.gather(
+                asyncio.gather(*readme_tasks, return_exceptions=True),
+                asyncio.gather(*release_tasks, return_exceptions=True),
+            )
 
         candidates: list[NewsCandidate] = []
-        for repo, readme in zip(repos, readmes):
+        recent_release_count = 0
+        for repo, readme, release in zip(repos, readmes, releases):
             full_name = repo.get("full_name", "")
             description = repo.get("description", "") or ""
             stars = repo.get("stargazers_count", 0)
@@ -780,13 +839,31 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
             if not repo_url:
                 continue
 
-            snippet_parts = [description, f"Stars: {stars:,}"]
+            snippet_parts: list[str] = []
+            release_info = release if isinstance(release, dict) else None
+            if release_info:
+                recent_release_count += 1
+                tag = release_info["tag"] or "latest"
+                snippet_parts.append(f"Released {tag} on {release_info['published_at']}")
+            if description:
+                snippet_parts.append(description)
+            snippet_parts.append(f"Stars: {stars:,}")
             if language:
                 snippet_parts.append(f"Language: {language}")
             snippet = " | ".join(snippet_parts)
 
             readme_text = readme if isinstance(readme, str) else ""
-            raw = f"{description}\n\n{readme_text}".strip() if readme_text else description
+            raw_parts = [description]
+            if readme_text:
+                raw_parts.append(readme_text)
+            if release_info:
+                rel_section = (
+                    f"[Release {release_info['tag']} — {release_info['published_at']}"
+                    f"{' (prerelease)' if release_info['prerelease'] else ''}]\n"
+                    f"{release_info['body_excerpt']}"
+                )
+                raw_parts.append(rel_section)
+            raw = "\n\n".join(p for p in raw_parts if p).strip()
 
             candidates.append(NewsCandidate(
                 title=f"{full_name}: {description[:100]}" if description else full_name,
@@ -796,7 +873,17 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
                 raw_content=raw,
             ))
 
-        logger.info("Collected %d trending repos from GitHub", len(candidates))
+        # Sort so repos with a recent release surface first — classifier sees
+        # "Released X on YYYY-MM-DD ..." in the snippet, which is a stronger
+        # newsworthy signal than raw star count.
+        candidates.sort(
+            key=lambda c: 0 if c.snippet.startswith("Released ") else 1,
+        )
+
+        logger.info(
+            "Collected %d trending repos from GitHub (%d with recent releases)",
+            len(candidates), recent_release_count,
+        )
         return candidates
     except Exception as e:
         logger.warning("GitHub Trending collection failed: %s", e)
