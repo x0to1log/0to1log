@@ -184,7 +184,11 @@ def _aggregate_subscores(data: dict) -> int:
     """
     scores: list[float] = []
     for group_key, group_val in (data or {}).items():
-        if group_key in {"issues", "score", "subscores"}:
+        # `community_pulse` is NQ-40 Phase 2a measurement-only: sub-scores are
+        # collected/persisted via expert_breakdown but excluded from the total
+        # until the 2-week observation window closes (~2026-05-06) and Phase 2b
+        # decides weighting. See vault/09-Implementation/plans/2026-04-22-nq-40-phase-2-cp-quality.md
+        if group_key in {"issues", "score", "subscores", "community_pulse"}:
             continue
         if not isinstance(group_val, dict):
             continue
@@ -370,6 +374,30 @@ def _compute_locale_score(personas: dict[str, PersonaOutput]) -> int:
 # Group 3 — Main quality gate
 # ---------------------------------------------------------------------------
 
+def _log_cp_subscores(digest_type: str, persona_label: str, breakdown: dict[str, Any]) -> None:
+    """Emit one-line log of NQ-40 Phase 2a CP sub-scores for observability.
+
+    Sub-scores live under breakdown["community_pulse"] (LLM-returned structure).
+    Weight=0 during Phase 2a — values don't affect the digest total; the log
+    is the primary observation channel for the 2-week window.
+    """
+    cp = (breakdown or {}).get("community_pulse") or {}
+    if not cp:
+        return
+
+    def _s(key: str) -> str:
+        val = cp.get(key)
+        if isinstance(val, dict) and isinstance(val.get("score"), (int, float)):
+            return str(int(val["score"]))
+        return "n/a"
+
+    logger.info(
+        "cp_quality %s/%s: relevance=%s substance=%s fidelity=%s",
+        digest_type, persona_label,
+        _s("cp_relevance"), _s("cp_substance"), _s("translation_fidelity"),
+    )
+
+
 async def _check_digest_quality(
     personas: dict[str, PersonaOutput],
     digest_type: str,
@@ -488,6 +516,10 @@ async def _check_digest_quality(
     else:
         learner_score, learner_breakdown, learner_issues, learner_usage = (0, {}, [], {})
         frontload_score, frontload_breakdown, frontload_issues, frontload_usage = results[1]
+
+    _log_cp_subscores(digest_type, "expert", expert_breakdown)
+    if learner and (learner.en or learner.ko):
+        _log_cp_subscores(digest_type, "learner", learner_breakdown)
 
     structure_score = _compute_structure_score(personas)
     traceability_score = _compute_traceability_score(personas)

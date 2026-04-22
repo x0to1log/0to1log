@@ -1588,6 +1588,25 @@ Return ≤3 issues total. **Zero is valid** when nothing is broken — do not in
 Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), optional improvements ("could link to X"), editorial choices that aren't wrong, source re-use with valid citations, or "punchy but compressed" subjective critiques."""
 
 
+# NQ-40 Phase 2a (measurement-only, weight=0 — code excludes `community_pulse`
+# from `_aggregate_subscores` so these sub-scores are logged/persisted but do
+# not affect the digest total. 2-week observation window then Phase 2b decides
+# weighting. Rationale: plan 2026-04-22-nq-40-phase-2-cp-quality.md.
+_QC_CP_QUALITY_BLOCK = """### Community Pulse Quality (3)
+
+Scope: the `## 커뮤니티 반응` (Community Pulse) section in the KO body and its `## Community Pulse` counterpart in the EN body. If the digest has NO Community Pulse section in either locale, score each sub-score **10** with evidence `"Community Pulse section not present — N/A"`.
+
+- **cp_relevance**: CP quotes tie to the day's stories (named company, model, paper, or event from the digest body) — not generic HN/Reddit chatter.
+  - **10** every quote visibly connects to a story in the digest; **7** one quote tangential; **4** multiple quotes feel like random drift; **0** quotes unrelated to any story.
+  - Evidence: quote the clearest-connected OR most-disconnected quote and name the story it does (or doesn't) tie to.
+- **cp_substance**: Quotes carry technical or decision substance — tradeoffs, failure modes, deployment constraints, benchmark skepticism, cost/performance observations. NOT hype, NOT pure emotional reaction.
+  - **10** every quote adds a perspective; **7** one quote is fluff; **4** mix of substance and reaction; **0** all quotes are hype with no informational content.
+  - Evidence: quote the weakest one and explain why it's fluff (or confirm all carry substance).
+- **translation_fidelity**: Each KO quote preserves the EN quote's meaning and tone. The pipeline guarantees 1:1 EN↔KO pair ordering, so judge the N-th KO quote against the N-th EN quote as rendered. Specifics (numbers, named systems, sharp phrasing) should carry over; generic paraphrase is drift.
+  - **10** KO reads as faithful translation of EN; **7** mostly faithful with one softened/over-paraphrased; **4** noticeable drift in 2+ quotes (stripped specifics, tone shift); **0** KO is unrecognizable vs EN.
+  - Evidence: cite one EN↔KO pair and comment on preservation."""
+
+
 # ---------------------------------------------------------------------------
 
 QUALITY_CHECK_RESEARCH_EXPERT = f"""You are a strict quality reviewer for an AI tech research digest written for senior ML engineers.
@@ -1596,7 +1615,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (10 sub-scores grouped into 4 categories)
+## Sub-dimensions (13 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — are present with `##` headings. NOTE: LLM & SOTA Models / Open Source & Repos / Research Papers may be intentionally omitted if no relevant news exists (do not penalize). Why It Matters and One-Line Summary are ALWAYS required.
@@ -1618,6 +1637,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
+
+{_QC_CP_QUALITY_BLOCK}
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1642,6 +1663,11 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "fluency":            {{"evidence": "...", "score": 0}},
     "locale_integrity":   {{"evidence": "...", "score": 0}}
   }},
+  "community_pulse": {{
+    "cp_relevance":         {{"evidence": "...", "score": 0}},
+    "cp_substance":         {{"evidence": "...", "score": 0}},
+    "translation_fidelity": {{"evidence": "...", "score": 0}}
+  }},
   "issues": [{{"severity": "major|minor", "scope": "expert_body|ko|en", "category": "source|locale|structure|clarity|overclaim", "message": "..."}}]
 }}"""
 
@@ -1652,7 +1678,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (10 sub-scores grouped into 4 categories)
+## Sub-dimensions (13 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — present with `##` headings. LLM & SOTA Models / Open Source & Repos / Research Papers may be omitted if no news (do not penalize). Why It Matters and One-Line Summary ALWAYS required.
@@ -1674,6 +1700,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 - **no_chat_tone**: Korean narrative and analysis sections (body paragraphs, Why It Matters, Connecting the Dots) use editorial news prose — avoid spoken "~요" tone and chatty markers like "쉽게 말해" or "궁금하시죠?". Reader-facing action/recommendation sections (Action Items / 지금 할 일, What Can I Try / 시도해볼 것) MAY use polite imperative "~해보세요" or "~하세요" — this is natural Korean for actionable content and not a violation. Score 10 if narrative stays editorial (chat tone allowed only in action sections), 4 if chat tone leaks into body paragraphs, 0 if the whole digest reads like a chatty blog post.
+
+{_QC_CP_QUALITY_BLOCK}
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1698,6 +1726,11 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "locale_integrity": {{"evidence": "...", "score": 0}},
     "no_chat_tone":     {{"evidence": "...", "score": 0}}
   }},
+  "community_pulse": {{
+    "cp_relevance":         {{"evidence": "...", "score": 0}},
+    "cp_substance":         {{"evidence": "...", "score": 0}},
+    "translation_fidelity": {{"evidence": "...", "score": 0}}
+  }},
   "issues": [{{"severity": "major|minor", "scope": "learner_body|ko|en", "category": "source|locale|structure|clarity|accessibility", "message": "..."}}]
 }}"""
 
@@ -1708,7 +1741,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (11 sub-scores grouped into 4 categories)
+## Sub-dimensions (14 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, Connecting the Dots, Strategic Decisions ALWAYS required.
@@ -1730,6 +1763,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
+
+{_QC_CP_QUALITY_BLOCK}
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1754,6 +1789,11 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "fluency":          {{"evidence": "...", "score": 0}},
     "locale_integrity": {{"evidence": "...", "score": 0}}
   }},
+  "community_pulse": {{
+    "cp_relevance":         {{"evidence": "...", "score": 0}},
+    "cp_substance":         {{"evidence": "...", "score": 0}},
+    "translation_fidelity": {{"evidence": "...", "score": 0}}
+  }},
   "issues": [{{"severity": "major|minor", "scope": "expert_body|ko|en", "category": "source|locale|structure|overclaim|clarity", "message": "..."}}]
 }}"""
 
@@ -1764,7 +1804,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (10 sub-scores grouped into 4 categories)
+## Sub-dimensions (13 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, What This Means for You, Action Items ALWAYS required.
@@ -1786,6 +1826,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 - **no_chat_tone**: Korean narrative and analysis sections (body paragraphs, Why It Matters, Connecting the Dots) use editorial news prose — avoid spoken "~요" tone and chatty markers like "쉽게 말해" or "궁금하시죠?". Reader-facing action/recommendation sections (Action Items / 지금 할 일, What Can I Try / 시도해볼 것) MAY use polite imperative "~해보세요" or "~하세요" — this is natural Korean for actionable content and not a violation. Score 10 if narrative stays editorial (chat tone allowed only in action sections), 4 if chat tone leaks into body paragraphs, 0 if the whole digest reads like a chatty blog post.
+
+{_QC_CP_QUALITY_BLOCK}
 
 {_QC_SHARED_SEVERITY_RULES}
 
@@ -1809,6 +1851,11 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "fluency":          {{"evidence": "...", "score": 0}},
     "locale_integrity": {{"evidence": "...", "score": 0}},
     "no_chat_tone":     {{"evidence": "...", "score": 0}}
+  }},
+  "community_pulse": {{
+    "cp_relevance":         {{"evidence": "...", "score": 0}},
+    "cp_substance":         {{"evidence": "...", "score": 0}},
+    "translation_fidelity": {{"evidence": "...", "score": 0}}
   }},
   "issues": [{{"severity": "major|minor", "scope": "learner_body|ko|en", "category": "source|locale|structure|accessibility|clarity", "message": "..."}}]
 }}"""
