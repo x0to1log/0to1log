@@ -1845,6 +1845,9 @@ async def rerun_pipeline_stage(
                 # total_posts counts rows updated (EN + KO = 2 per digest_type). This differs
                 # from _generate_digest's return semantics (which counts digests generated),
                 # but is the honest metric here: we touched 2 rows.
+                t_save = time.monotonic()
+                digest_type_posts = 0
+                digest_type_errors: list[str] = []
                 for slug in (
                     f"{batch_id.lower()}-{digest_type}-digest",
                     f"{batch_id.lower()}-{digest_type}-digest-ko",
@@ -1904,9 +1907,29 @@ async def rerun_pipeline_stage(
                             "quality_flags": flags,
                             "fact_pack": new_fp,
                         }).eq("slug", slug).execute()
+                        digest_type_posts += 1
                         total_posts += 1
                     except Exception as e:
-                        all_errors.append(f"Failed to update {slug}: {e}")
+                        msg = f"Failed to update {slug}: {e}"
+                        digest_type_errors.append(msg)
+                        all_errors.append(msg)
+
+                # Emit save:{digest_type} log — mirrors _generate_digest's save log so
+                # pipeline_logs stays consistent across fresh cron / write rerun / quality
+                # rerun paths. Without this, STAGE_CASCADE["quality"] deletes save:* but
+                # never re-creates them, leaving an audit gap for quality-only reruns.
+                await _log_stage(
+                    supabase, run_id, f"save:{digest_type}",
+                    "success" if digest_type_posts > 0 else "failed", t_save,
+                    output_summary=f"{digest_type_posts} rows rescored (score={score_int})",
+                    post_type=digest_type,
+                    error_message="; ".join(digest_type_errors) if digest_type_errors else None,
+                    debug_meta={
+                        "slug_base": f"{batch_id.lower()}-{digest_type}-digest",
+                        "locales": ["en", "ko"],
+                        "rerun_from": "quality",
+                    },
+                )
 
             status = "failed" if all_errors else ("success" if total_posts > 0 else "failed")
 
