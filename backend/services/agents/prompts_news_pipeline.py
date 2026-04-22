@@ -612,7 +612,9 @@ FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to
 **Currency unit conversion (HARD RULE — zero-count errors are the most common KO translation bug):**
 - `$X billion` → `X×10억 달러` (X stays as-is, unit becomes `10억`). So `$8.3 billion` = `83억 달러`, NOT `8.3억 달러` (which reads as $830M — a 10× understatement).
 - `$X trillion` → `X조 달러`. So `$1.5 trillion` = `1.5조 달러`.
-- `$X million` → `X×100만 달러` or equivalent. So `$500 million` = `5억 달러`.
+- `$X million` — use `억` when X ≥ 100, `만` when X < 100:
+  - X < 100: `X,000만 달러` (e.g., `$22M` = `2,200만 달러`, `$50M` = `5,000만 달러`)
+  - X ≥ 100: `(X÷100)억 달러` (e.g., `$150M` = `1.5억 달러` — NOT `5,000만 달러` which = $50M (3× understatement); `$500M` = `5억 달러`; `$750M` = `7.5억 달러`)
 - Before writing any Korean currency figure, count zeros twice: EN `$8.3B` = 8,300,000,000 = 83 × 100,000,000 = `83억 달러`.
 
 **Self-check before submitting frontload**: mentally list every number that appears in `headline` and `excerpt`. Confirm each one appears unchanged in `headline_ko` / `excerpt_ko`. If any is missing or altered, fix it.
@@ -1510,7 +1512,9 @@ Weekly recap aggregates funding, valuations, deal terms from 5 days of business 
   - `$8.3 billion` = `83억 달러` ← NOT `8.3억 달러` (which reads as $830M — 10× understatement)
   - `$122 billion` = `1,220억 달러`
 - `$X trillion` → `X조 달러` (e.g., `$1.5 trillion` = `1.5조 달러`)
-- `$X million` → `X×100만 달러` (e.g., `$500 million` = `5억 달러`, `$50 million` = `5,000만 달러`)
+- `$X million` — use `억` when X ≥ 100, otherwise `만`:
+  - X < 100: `X,000만 달러` (e.g., `$22 million` = `2,200만 달러`, `$50 million` = `5,000만 달러`, `$99 million` = `9,900만 달러`)
+  - X ≥ 100: `(X÷100)억 달러` (e.g., `$150 million` = `1.5억 달러` — NOT `5,000만 달러` which = $50M, 3× understatement; `$250 million` = `2.5억 달러`; `$500 million` = `5억 달러`; `$750 million` = `7.5억 달러`; `$999 million` = `9.99억 달러`)
 
 Before each KO currency figure, expand the zero count mentally:
 `$8.3B = 8,300,000,000 = 83 × 100,000,000 = 83억 달러` ✓
