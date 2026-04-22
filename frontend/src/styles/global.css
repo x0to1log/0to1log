@@ -3255,6 +3255,7 @@ pre {
    Paired with frontend/src/components/admin/QualityPanel.astro and
    scoreColorClass / severityLabel in src/lib/admin/qualityPanel.ts. */
 
+/* Root is a <details> so collapsed state shows only title + score + flag. */
 .admin-quality-panel {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -3263,13 +3264,67 @@ pre {
   box-shadow: 0 1px 2px var(--color-shadow);
 }
 
-.admin-quality-panel-header {
+.admin-quality-panel > summary.admin-quality-panel-header {
+  cursor: pointer;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  list-style: none;
+}
+.admin-quality-panel > summary.admin-quality-panel-header::-webkit-details-marker {
+  display: none;
+}
+.admin-quality-panel[open] > summary.admin-quality-panel-header {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0.25rem;
+}
+
+.admin-quality-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.admin-quality-panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Collapsed-state attention dot — visible even when body is hidden. */
+.admin-quality-panel-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-error) 22%, transparent);
+  color: var(--color-error);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Custom chevron — rotates 180° when open. */
+.admin-quality-panel-toggle {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-muted);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+  margin-left: 0.25rem;
+  margin-bottom: 0.2rem;
+}
+.admin-quality-panel[open] .admin-quality-panel-toggle {
+  transform: rotate(-135deg);
+  margin-bottom: -0.1rem;
 }
 
 .admin-quality-panel-title {
@@ -3282,7 +3337,7 @@ pre {
 .admin-quality-panel-subtitle {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  margin: 0.125rem 0 0;
+  margin: 0 0 0.25rem;
 }
 
 .admin-quality-score-chip {
@@ -3464,11 +3519,16 @@ pre {
   color: var(--color-warning);
 }
 
-.admin-quality-rerun-row {
+/* Rendered inside QualityPanel's details body, at the bottom.
+   Injected via <slot name="footer"> from the news editor. */
+.admin-quality-rerun-footer {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .admin-quality-rerun-status {

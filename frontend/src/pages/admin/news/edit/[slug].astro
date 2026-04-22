@@ -252,23 +252,24 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
 
           {!isNew && post && (
             <div class="mb-6">
-              <QualityPanel factPack={post.fact_pack} />
-              {canRerunQuality && (
-                <div class="admin-quality-rerun-row">
-                  <button
-                    id="btn-rerun-quality"
-                    type="button"
-                    class="admin-btn"
-                    data-slug={pageSlug}
-                    data-run-id={digestRunId}
-                    data-batch-id={digestBatchId}
-                    data-digest-type={digestType}
-                  >
-                    ⟳ Save &amp; re-run quality
-                  </button>
-                  <span id="rerun-quality-status" class="admin-quality-rerun-status"></span>
-                </div>
-              )}
+              <QualityPanel factPack={post.fact_pack}>
+                {canRerunQuality && (
+                  <div slot="footer" class="admin-quality-rerun-footer">
+                    <button
+                      id="btn-rerun-quality"
+                      type="button"
+                      class="admin-btn"
+                      data-slug={pageSlug}
+                      data-run-id={digestRunId}
+                      data-batch-id={digestBatchId}
+                      data-digest-type={digestType}
+                    >
+                      ⟳ Save &amp; re-run quality
+                    </button>
+                    <span id="rerun-quality-status" class="admin-quality-rerun-status"></span>
+                  </div>
+                )}
+              </QualityPanel>
             </div>
           )}
 
