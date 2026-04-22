@@ -1631,7 +1631,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (13 sub-scores grouped into 5 categories)
+## Sub-dimensions (14 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — are present with `##` headings. NOTE: LLM & SOTA Models / Open Source & Repos / Research Papers may be intentionally omitted if no relevant news exists (do not penalize). Why It Matters and One-Line Summary are ALWAYS required.
@@ -1643,12 +1643,13 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **source_utilization**: All provided sources are drawn on across paragraphs — not ignored or piled at bottom.
 
 ### Technical Depth (3)
-- **concrete_specifics**: Real numbers present — parameter counts, benchmark scores, FLOPs, latency figures, context windows. Not "significantly improved" hand-waves.
+- **concrete_specifics**: Real numbers present — parameter counts, benchmark scores, FLOPs, latency figures, context windows. Not "significantly improved" hand-waves. **Internal consistency**: if the same metric appears in multiple sections (One-Line Summary, body, Why It Matters), the values MUST match exactly — no "$122B" in one section and "$100B" in another for the same event.
 - **architectural_detail**: Explains HOW the system works (data flow, algorithm steps, training recipe) — not just WHAT it claims to do.
 - **baseline_comparison**: Benchmark numbers contextualized against named baselines with delta (not standalone).
 
-### Language Quality (2)
-- **fluency**: Reads like a peer engineer analysis; assertive tone; lead item 3-4 paragraphs; natural and fluent in both EN and KO.
+### Language Quality (3)
+- **fluency**: Reads like a peer engineer analysis; assertive tone; lead item 3-4 paragraphs; natural and fluent in both EN and KO. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026", "2026-04") over relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전") — relative time loses meaning once a digest is archived. One borderline relative reference is tolerable; repeated relative time framing across items is not.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe correlation/event ("X enables Y" when sources show "X, and also Y"). Flag stacked promotional adjectives. **10** tone matches evidence throughout; **7** one borderline phrase in a single paragraph; **4** repeated overclaim pattern across ≥2 items; **0** heavy editorializing that misrepresents what sources actually say.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
@@ -1677,6 +1678,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   }},
   "language_quality": {{
     "fluency":            {{"evidence": "...", "score": 0}},
+    "claim_calibration":  {{"evidence": "...", "score": 0}},
     "locale_integrity":   {{"evidence": "...", "score": 0}}
   }},
   "community_pulse": {{
@@ -1694,7 +1696,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (13 sub-scores grouped into 5 categories)
+## Sub-dimensions (14 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — present with `##` headings. LLM & SOTA Models / Open Source & Repos / Research Papers may be omitted if no news (do not penalize). Why It Matters and One-Line Summary ALWAYS required.
@@ -1709,8 +1711,9 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **acronym_expansion**: Every acronym (RAG, DPO, MoE, CLIP, etc.) is expanded in Korean/English form on first use — never dropped raw. Example good: "검색 증강 생성(RAG)" / "Retrieval-Augmented Generation (RAG)".
 - **analogy_quality**: When an analogy is used, it genuinely aids understanding (not forced). Straightforward items may skip analogy without penalty.
 
-### Language Quality (3)
-- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting at least 3.
+### Language Quality (4)
+- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting at least 3. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전") — relative time loses meaning once a digest is archived. One borderline relative reference is tolerable; repeated relative time framing across items is not.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
@@ -1738,9 +1741,10 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "analogy_quality":     {{"evidence": "...", "score": 0}}
   }},
   "language_quality": {{
-    "fluency":          {{"evidence": "...", "score": 0}},
-    "locale_integrity": {{"evidence": "...", "score": 0}},
-    "no_chat_tone":     {{"evidence": "...", "score": 0}}
+    "fluency":           {{"evidence": "...", "score": 0}},
+    "claim_calibration": {{"evidence": "...", "score": 0}},
+    "locale_integrity":  {{"evidence": "...", "score": 0}},
+    "no_chat_tone":      {{"evidence": "...", "score": 0}}
   }},
   "community_pulse": {{
     "cp_relevance":         {{"evidence": "...", "score": 0}},
@@ -1757,7 +1761,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (14 sub-scores grouped into 5 categories)
+## Sub-dimensions (15 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, Connecting the Dots, Strategic Decisions — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, Connecting the Dots, Strategic Decisions ALWAYS required.
@@ -1770,11 +1774,12 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Strategic Analysis (3)
 - **market_signal**: Strategic implication made explicit (competitive shift, market restructure, funding signal, pricing move) — not just event description.
-- **baseline_comparison**: Numbers contextualized against benchmarks/competitors/prior periods ("$122B — ~10x Anthropic's last raise", not standalone "$122B").
+- **baseline_comparison**: Numbers contextualized against benchmarks/competitors/prior periods ("$122B — ~10x Anthropic's last raise", not standalone "$122B"). **Internal consistency**: if the same figure appears in multiple sections (One-Line Summary, body, Strategic Decisions), the values MUST match exactly — flag any mismatch (e.g., "$122B" in One-Line vs "$100B" in body for the same event).
 - **prediction_guard**: No forward-looking speculation verbs in body ("will disrupt", "is set to", "expect X to Y"). Calibrated language only ("signals", "points toward", "implies").
 
-### Language Quality (2)
-- **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons.
+### Language Quality (3)
+- **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Distinct from `prediction_guard` (which targets forward-looking verbs specifically); this targets retrospective/present-tense overclaim. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
@@ -1802,8 +1807,9 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "prediction_guard":    {{"evidence": "...", "score": 0}}
   }},
   "language_quality": {{
-    "fluency":          {{"evidence": "...", "score": 0}},
-    "locale_integrity": {{"evidence": "...", "score": 0}}
+    "fluency":           {{"evidence": "...", "score": 0}},
+    "claim_calibration": {{"evidence": "...", "score": 0}},
+    "locale_integrity":  {{"evidence": "...", "score": 0}}
   }},
   "community_pulse": {{
     "cp_relevance":         {{"evidence": "...", "score": 0}},
@@ -1820,7 +1826,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 {_QC_SHARED_RUBRIC_HEADER}
 
-## Sub-dimensions (13 sub-scores grouped into 5 categories)
+## Sub-dimensions (14 sub-scores grouped into 5 categories)
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, What This Means for You, Action Items ALWAYS required.
@@ -1835,8 +1841,9 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **reader_impact**: Every story connects to practical impact for a non-developer reader (career / work / consumer AI experience).
 - **actionable_items**: Action Items are doable by a non-developer this week. BAD: "evaluate vendor lock-in risk", "build multi-agent pipeline". GOOD: "try Meta AI in WhatsApp", "read Anthropic's blog post".
 
-### Language Quality (3)
-- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; engaging without being condescending.
+### Language Quality (4)
+- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; engaging without being condescending. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
@@ -1864,9 +1871,10 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "actionable_items": {{"evidence": "...", "score": 0}}
   }},
   "language_quality": {{
-    "fluency":          {{"evidence": "...", "score": 0}},
-    "locale_integrity": {{"evidence": "...", "score": 0}},
-    "no_chat_tone":     {{"evidence": "...", "score": 0}}
+    "fluency":           {{"evidence": "...", "score": 0}},
+    "claim_calibration": {{"evidence": "...", "score": 0}},
+    "locale_integrity":  {{"evidence": "...", "score": 0}},
+    "no_chat_tone":      {{"evidence": "...", "score": 0}}
   }},
   "community_pulse": {{
     "cp_relevance":         {{"evidence": "...", "score": 0}},
