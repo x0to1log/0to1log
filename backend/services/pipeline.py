@@ -2690,6 +2690,25 @@ async def run_weekly_pipeline(
                 }
 
                 locale_cards = weekly_source_cards.get(locale, [])
+                # Populate fact_pack with the same v11 shape as daily (quality_score,
+                # breakdowns, issues, caps, URL validation) so the admin QualityPanel
+                # can render weekly posts identically to daily digests.
+                weekly_fact_pack = {
+                    "digest_type": "weekly",
+                    "week_id": week_id,
+                    "quality_score": quality_score,
+                    "quality_version": quality_result.get("quality_version", "v2"),
+                    "quality_breakdown": quality_result.get("quality_breakdown", {}),
+                    "expert_breakdown": quality_result.get("expert_breakdown", {}),
+                    "learner_breakdown": quality_result.get("learner_breakdown", {}),
+                    "quality_issues": quality_result.get("quality_issues", []),
+                    "quality_caps_applied": quality_result.get("quality_caps_applied", []),
+                    "structural_penalty": quality_result.get("structural_penalty", 0),
+                    "structural_warnings": quality_result.get("structural_warnings", []),
+                    "url_validation_failed": bool(quality_result.get("url_validation_failed", False)),
+                    "url_validation_failures": quality_result.get("url_validation_failures", []),
+                    "auto_publish_eligible": auto_publish,
+                }
                 row = {
                     "title": title,
                     "title_learner": title_learner,
@@ -2709,7 +2728,7 @@ async def run_weekly_pipeline(
                     "quality_score": quality_score,
                     "quality_flags": quality_flags,
                     "content_analysis": None,
-                    "fact_pack": {},
+                    "fact_pack": weekly_fact_pack,
                     "excerpt": excerpt or None,
                     "focus_items": focus_items,
                 }

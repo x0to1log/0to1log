@@ -1068,6 +1068,11 @@ async def _check_weekly_quality(
     issues_all: list[str] = []
     structured_issues: list[dict[str, str]] = []
     llm_scores: list[int] = []
+    # Raw parsed data kept at function scope so we can surface sub-scores in
+    # the return dict — mirrors daily's `expert_breakdown`/`learner_breakdown`
+    # so the admin QualityPanel can render weekly the same as daily.
+    expert_data: dict[str, Any] = {}
+    learner_data: dict[str, Any] = {}
 
     # Expert quality check
     expert_input = f"## English Expert\n\n{content_expert_en}\n\n## Korean Expert\n\n{content_expert_ko}"
@@ -1258,6 +1263,17 @@ async def _check_weekly_quality(
         },
     )
 
+    # v11 sub-score surfaces — mirror daily's expert_breakdown/learner_breakdown
+    # so the admin QualityPanel can render weekly the same as daily.
+    # Filter out non-subscore keys ('issues', 'score', 'subscores') the same way
+    # daily does at pipeline_quality.py:578-579.
+    def _extract_subscores(data: dict) -> dict:
+        if not data:
+            return {}
+        if "subscores" in data and isinstance(data["subscores"], dict):
+            return data["subscores"]
+        return {k: v for k, v in data.items() if k not in {"score", "issues", "total_score"}}
+
     return {
         "quality_score": final_score,
         "quality_flags": quality_flags,
@@ -1265,4 +1281,15 @@ async def _check_weekly_quality(
         "auto_publish_eligible": auto_publish_eligible,
         "quality_breakdown": quality_breakdown,
         "quality_version": "v2",
+        "expert_breakdown": _extract_subscores(expert_data),
+        "learner_breakdown": _extract_subscores(learner_data),
+        "quality_issues": structured_issues,
+        "structural_penalty": structural_penalty,
+        "structural_warnings": structural_warnings,
+        "quality_caps_applied": quality_caps_applied,
+        "url_validation_failed": url_validation_failed,
+        "url_validation_failures": (
+            [{"unknown_urls": url_result.get("unknown_urls", [])}]
+            if source_urls and hallucinated > 0 else []
+        ),
     }
