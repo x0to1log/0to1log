@@ -3251,6 +3251,219 @@ pre {
   color: var(--color-accent);
 }
 
+/* QualityPanel (admin news editor) — theme-aware via CSS vars.
+   Paired with frontend/src/components/admin/QualityPanel.astro and
+   scoreColorClass / severityLabel in src/lib/admin/qualityPanel.ts. */
+
+.admin-quality-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  padding: 1rem;
+  box-shadow: 0 1px 2px var(--color-shadow);
+}
+
+.admin-quality-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-quality-panel-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.admin-quality-panel-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin: 0.125rem 0 0;
+}
+
+.admin-quality-score-chip {
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.admin-quality-score-chip--high {
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+  color: var(--color-success);
+}
+.admin-quality-score-chip--mid {
+  background: color-mix(in srgb, var(--color-warning) 22%, transparent);
+  color: var(--color-warning);
+}
+.admin-quality-score-chip--low {
+  background: color-mix(in srgb, var(--color-error) 22%, transparent);
+  color: var(--color-error);
+}
+
+.admin-quality-eligible-badge {
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+  white-space: nowrap;
+}
+
+.admin-quality-chip {
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.admin-quality-chip-label {
+  color: var(--color-text-muted);
+}
+.admin-quality-chip-value {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.admin-quality-alert {
+  font-size: 0.75rem;
+  margin: 0;
+}
+.admin-quality-alert--warning {
+  color: var(--color-warning);
+}
+.admin-quality-alert--error {
+  color: var(--color-error);
+}
+.admin-quality-alert-code {
+  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 0 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.admin-quality-details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+}
+.admin-quality-details-summary {
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  list-style: none;
+}
+.admin-quality-details-summary::-webkit-details-marker {
+  display: none;
+}
+.admin-quality-details-summary:hover {
+  background: var(--color-bg-tertiary);
+}
+.admin-quality-details[open] .admin-quality-details-summary {
+  border-bottom: 1px solid var(--color-border);
+}
+.admin-quality-details-body {
+  padding: 0.25rem 0.75rem 0.75rem;
+}
+
+.admin-quality-category-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  margin: 0.5rem 0 0.25rem;
+}
+
+.admin-quality-subscore {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+.admin-quality-subscore-score {
+  display: inline-block;
+  min-width: 3rem;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  padding: 0.125rem 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.admin-quality-subscore-score--high {
+  background: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
+}
+.admin-quality-subscore-score--mid {
+  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  color: var(--color-warning);
+}
+.admin-quality-subscore-score--low {
+  background: color-mix(in srgb, var(--color-error) 18%, transparent);
+  color: var(--color-error);
+}
+.admin-quality-subscore-label {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.admin-quality-subscore-evidence {
+  color: var(--color-text-secondary);
+  margin: 0.125rem 0 0;
+}
+
+.admin-quality-issues-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-quality-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+.admin-quality-issue-scope {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--color-text-muted);
+}
+.admin-quality-issue-message {
+  color: var(--color-text-primary);
+}
+
+.admin-quality-severity {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  padding: 0.125rem 0.375rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-align: center;
+  flex-shrink: 0;
+}
+.admin-quality-severity--major {
+  background: color-mix(in srgb, var(--color-error) 22%, transparent);
+  color: var(--color-error);
+}
+.admin-quality-severity--minor {
+  background: color-mix(in srgb, var(--color-warning) 22%, transparent);
+  color: var(--color-warning);
+}
+
 .admin-quality-badge {
   font-size: 0.65rem;
   font-weight: 700;

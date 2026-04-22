@@ -114,16 +114,16 @@ export function normalizeQualityData(factPack: unknown): NormalizedQuality {
   };
 }
 
-/** Tailwind color class for a 0-10 sub-score. */
+/** Admin-quality class for a 0-10 sub-score — theme-aware via CSS vars. */
 export function scoreColorClass(score: number): string {
-  if (score >= 8) return 'text-green-600 bg-green-50';
-  if (score >= 4) return 'text-yellow-600 bg-yellow-50';
-  return 'text-red-600 bg-red-50';
+  if (score >= 8) return 'admin-quality-subscore-score admin-quality-subscore-score--high';
+  if (score >= 4) return 'admin-quality-subscore-score admin-quality-subscore-score--mid';
+  return 'admin-quality-subscore-score admin-quality-subscore-score--low';
 }
 
-/** Human label + class for severity chip. */
+/** Human label + class for severity chip — theme-aware via CSS vars. */
 export function severityLabel(s: 'major' | 'minor'): { label: string; className: string } {
   return s === 'major'
-    ? { label: 'Major', className: 'bg-red-100 text-red-800' }
-    : { label: 'Minor', className: 'bg-yellow-100 text-yellow-800' };
+    ? { label: 'Major', className: 'admin-quality-severity admin-quality-severity--major' }
+    : { label: 'Minor', className: 'admin-quality-severity admin-quality-severity--minor' };
 }
