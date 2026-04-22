@@ -1,7 +1,7 @@
 # ACTIVE SPRINT — Handbook Quality & Content Migration (HB-QM)
 
 > **스프린트 기간:** 2026-04-10 ~ 진행 중
-> **마지막 업데이트:** 2026-04-21 (뉴스 파이프라인 **v11** mid-sprint ship: Rubric v2 + Quality Gates + URL Plumbing + rerun_from=quality)
+> **마지막 업데이트:** 2026-04-22 (Apr 21/22 감사 기반 writer+QC rubric 확장, rerun save log 일관성 fix, GitHub trending 튜닝)
 > **목표:** 핸드북 콘텐츠 품질 및 규모 확장 — 138개 전량 재생성 + P0 품질 수정 + SEO 구조화 데이터
 > **이전 스프린트:** [[2026-04-10-np4q-sprint-close|NP4-Q]] (클로즈 2026-04-10)
 > **설계 참조:** [[2026-03-31-handbook-quality-audit]], [[2026-04-09-handbook-section-redesign]], [[2026-04-16-handbook-quality-measurement-plan]], [[2026-04-21-news-pipeline-v11]]
@@ -50,6 +50,7 @@
 | NQ-33 | CommunityInsight HN+Reddit 동시 URL 저장 시 linkify 매칭 정합성 검증 — body block label prefix(`Hacker News` / `r/*`)로 자동 분리되는지 실데이터로 확인 | todo | — | — |
 | NQ-34 | Rubric v2 evidence 필드를 admin UI에 노출 — quality_score sub-score drill-down UX | todo | — | — |
 | NQ-35 | Few-shot 데이터 축적 후 rubric 재교정 — 4주 데이터 확보 시 | todo (4주 후) | — | 2026-05-21 |
+| NQ-42 | Weekly GitHub coverage fallback — 조건부 (daily A+B 튜닝 효과 관찰 후). 현재 weekly `Open Source Spotlight`는 daily digest URL에 100% 종속 (`_fetch_week_digests` at pipeline_persistence.py:163). Apr 19-22 관찰: 주간 유니크 github URL 1개 (요건 3-5 미달). 오늘 `106e845`(pushed:>7d / stars:>500 / release-detection)로 daily 공급 강화 시도. 1-2주 관찰 후 daily 생존율 < 0.7/day 지속되면 아래 중 하나 구현: **옵션 X** — Weekly pipeline에 자체 `_collect_github_weekly` 추가 (`pushed:>30d stars:>500 per_page=20`, release 우선 정렬, 주간 전용 source_list로 Open Source Spotlight 직접 공급). **옵션 Y** — 모든 daily `github_trending` 후보(10/day, digest 미채택 포함)를 새 테이블 `news_candidates_archive`에 축적, weekly가 지난 7일치에서 선별. 의사결정 게이트: 2026-05-06까지 daily 생존율 측정 → 그에 따라 X or Y 선택 or skip | todo (관찰 후) | — | 2026-05-06 |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | — | — |
 | WEEKLY-V2-PROMPT-01 | Weekly 프롬프트에 `weekly_quiz` JSON 출력 추가 (Expert/Learner + KO adapt) — [[plans/2026-04-19-weekly-content-v2]] — commit `00c8d90` | done | 2026-04-19 | 2026-04-19 |
 | WEEKLY-V2-PIPE-01 | `run_weekly_pipeline`에서 guide_items에 weekly_quiz_expert/learner 저장 (locale별 EN/KO 분기) — commit `91b9f84` | done | 2026-04-19 | 2026-04-19 |
