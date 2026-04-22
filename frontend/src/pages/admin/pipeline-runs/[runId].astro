@@ -291,9 +291,9 @@ if (batchId) {
       <section class="pipeline-run-summary-grid">
         <div class="pipeline-run-stat">
           <span class="pipeline-run-stat__label">Stage Count</span>
-          <strong class="pipeline-run-stat__value">{metricText(hasStageLogs ? logs.length : null)}</strong>
+          <strong class="pipeline-run-stat__value">{metricText(hasStageLogs ? costLogs.length : null)}</strong>
           <span class="pipeline-run-stat__detail">
-            {hasStageLogs ? 'Tracked log entries for this run' : 'No stage logs recorded for this run'}
+            {hasStageLogs ? 'Work stages (meta `summary` excluded)' : 'No stage logs recorded for this run'}
           </span>
         </div>
         <div class="pipeline-run-stat">
