@@ -389,7 +389,7 @@ if (topPopular.length > 0) {
     termIds.length > 0 ? sb.from('handbook_terms').select('id, term, slug').in('id', termIds) : { data: [] },
   ]);
   for (const p of (postsRes.data ?? []) as { id: string; title: string; slug: string }[]) {
-    titleMap.set(`post:${p.id}`, { title: p.title, slug: `/admin/edit/${p.slug}` });
+    titleMap.set(`post:${p.id}`, { title: p.title, slug: `/admin/news/edit/${p.slug}` });
   }
   for (const t of (termsRes.data ?? []) as { id: string; term: string; slug: string }[]) {
     titleMap.set(`term:${t.id}`, { title: t.term, slug: `/admin/handbook/edit/${t.slug}` });
@@ -453,7 +453,7 @@ const nonce = Astro.locals.cspNonce || '';
               <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
               <path d="M18 14h-8 M15 18h-5 M10 6h8v4h-8V6Z" />
             </svg>
-            <h3 class="sa-brief-card__title">News</h3>
+            <h3 class="sa-brief-card__title">Paper</h3>
           </div>
           <div class="sa-brief-card__stats">
             <div class="sa-brief-stat">
@@ -629,7 +629,7 @@ const nonce = Astro.locals.cspNonce || '';
             <ul class="sa-recent-list">
               {recentNews.map((p) => (
                 <li class="sa-recent-item">
-                  <a href={`/admin/edit/${p.slug}`} class="sa-recent-item__link">
+                  <a href={`/admin/news/edit/${p.slug}`} class="sa-recent-item__link">
                     <span class="sa-recent-item__title">{p.title}</span>
                     <span class="sa-recent-item__meta">
                       <span class={`sa-badge sa-badge--${p.status}`}>{p.status}</span>
@@ -1168,7 +1168,7 @@ const nonce = Astro.locals.cspNonce || '';
                     )}
                     <span class="sa-popular-item__meta">
                       <span class={`sa-badge sa-badge--${item.type === 'post' ? 'locale' : 'source'}`}>
-                        {item.type === 'post' ? 'News' : 'Handbook'}
+                        {item.type === 'post' ? 'Paper' : 'Handbook'}
                       </span>
                       <span class="sa-popular-item__stats">
                         {item.reads > 0 && <span>{item.reads} reads</span>}

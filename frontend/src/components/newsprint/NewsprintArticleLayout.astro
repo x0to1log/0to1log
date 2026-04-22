@@ -167,7 +167,7 @@ const categoryLabel = getCategoryLabel(locale, category);
 const catColor = getCategoryColorVar(category);
 const nextCategoryLabel = nextPost?.category ? getCategoryLabel(locale, nextPost.category) : null;
 
-const editHref = itemType === 'term' ? `/admin/handbook/edit/${slug}` : `/admin/edit/${slug}`;
+const editHref = itemType === 'term' ? `/admin/handbook/edit/${slug}` : `/admin/news/edit/${slug}`;
 const unpublishApi = itemType === 'term' ? '/api/admin/handbook/status' : '/api/admin/posts/status';
 
 const resolvedBasePath = basePath || `/${locale}/news`;

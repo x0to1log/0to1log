@@ -295,14 +295,14 @@ function relativeTime(dateStr: string): string {
         <div class="admin-quick-actions">
           <a href="/admin/news/" class="admin-btn admin-btn-primary">Check News</a>
           <a href="/admin/handbook/edit/new" class="admin-btn">New Term</a>
-          <a href="/admin/edit/new" class="admin-btn">New Post</a>
+          <a href="/admin/blog/edit/new" class="admin-btn">New Post</a>
         </div>
       </div>
 
       <!-- Stats Grid: Content + Operations -->
       <div class="dashboard-stats-grid">
         <a href="/admin/news/" class="dashboard-stat-card">
-          <div class="dashboard-stat-label">News</div>
+          <div class="dashboard-stat-label">Paper</div>
           <div class="dashboard-stat-value">
             {totalPosts}
             {newsDrafts > 0 && <span class="dashboard-stat-draft">/ {newsDrafts}</span>}
@@ -473,7 +473,7 @@ function relativeTime(dateStr: string): string {
         <h2 class="dashboard-section-title">Quality Score Trend</h2>
         <div class="dashboard-charts-row">
           <div class="dashboard-chart-card">
-            <h3 class="dashboard-chart-label">News</h3>
+            <h3 class="dashboard-chart-label">Paper</h3>
             <div class="dashboard-chart-wrap">
               <canvas id="dash-chart-news-quality"></canvas>
             </div>
@@ -555,7 +555,7 @@ function relativeTime(dateStr: string): string {
             {recentActivity.map((item) => (
               <li class="dashboard-activity-item">
                 <a
-                  href={item.type === 'post' ? `/admin/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
+                  href={item.type === 'post' ? `/admin/news/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
                   class="dashboard-activity-link"
                 >
                   <span class="dashboard-activity-type">{item.type === 'post' ? 'Post' : 'Term'}</span>
@@ -587,7 +587,7 @@ function relativeTime(dateStr: string): string {
             {staleDrafts.map((item) => (
               <li class="dashboard-activity-item">
                 <a
-                  href={item.type === 'post' ? `/admin/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
+                  href={item.type === 'post' ? `/admin/news/edit/${item.slug}` : `/admin/handbook/edit/${item.slug}`}
                   class="dashboard-activity-link"
                 >
                   <span class="dashboard-activity-type">{item.type === 'post' ? 'Post' : 'Term'}</span>

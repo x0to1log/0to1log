@@ -121,7 +121,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
             </svg>
           </button>
           <div>
-            <h1 class="admin-main-title">News</h1>
+            <h1 class="admin-main-title">Paper</h1>
           </div>
         </div>
       </div>
@@ -129,7 +129,6 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
       <div class="admin-list-toolbar">
         <div class="admin-list-toolbar-row">
           <div class="admin-list-toolbar-left">
-            <a href="/admin/edit/new" class="admin-btn admin-btn-primary">New Post</a>
             <div class="admin-filter-tabs">
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({logDraft})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({logPublished})</button>
@@ -223,7 +222,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                       <div class="admin-list-info">
                         <div class="admin-list-title">
                           <a
-                            href={post.status === 'published' ? `/${post.locale ?? 'ko'}/news/${post.slug}/` : `/admin/edit/${post.slug}`}
+                            href={post.status === 'published' ? `/${post.locale ?? 'ko'}/news/${post.slug}/` : `/admin/news/edit/${post.slug}`}
                             target={post.status === 'published' ? '_blank' : undefined}
                             rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
                           >{post.title}</a>
@@ -241,8 +240,8 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                         </div>
                       </div>
                       <div class="admin-list-actions">
-                        <a href={`/admin/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
-                        <a href={`/admin/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
+                        <a href={`/admin/news/edit/${post.slug}`} class="admin-btn admin-btn-success">Edit</a>
+                        <a href={`/admin/news/edit/${post.slug}?mode=preview`} class="admin-btn">Preview</a>
                         {post.status === 'draft' ? (
                           <button class="admin-btn admin-btn-primary" data-action="publish" data-id={post.id}>Publish</button>
                         ) : (

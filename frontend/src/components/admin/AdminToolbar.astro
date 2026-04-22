@@ -5,7 +5,7 @@ interface Props {
   type: 'post' | 'term';
 }
 const { itemId, slug, type } = Astro.props;
-const editHref = type === 'post' ? `/admin/edit/${slug}` : `/admin/handbook/edit/${slug}`;
+const editHref = type === 'post' ? `/admin/news/edit/${slug}` : `/admin/handbook/edit/${slug}`;
 const apiEndpoint = type === 'post' ? '/api/admin/posts/status' : '/api/admin/handbook/status';
 ---
 
