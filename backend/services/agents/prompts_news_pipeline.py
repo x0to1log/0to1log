@@ -358,6 +358,8 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 {HALLUCINATION_GUARD}
 
 {FRONTLOAD_LOCALE_PARITY}
+
+{BODY_LOCALE_PARITY}
 {license_wording_guard}
 
 {ONE_LINE_SUMMARY_RULE}
@@ -370,7 +372,10 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
 6. **Frontload locale parity**: Does `headline_ko` contain any specific number, ranking, allegation, or claim that is NOT in `headline`? Does `excerpt_ko` add any new fact not in `excerpt`? If yes, fix the mismatch before responding — KO is a translation, not a rewrite.
 7. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
-8. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
+8. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?
+9. **Body number parity**: pick 3 currency or benchmark figures from the `en` body. Does each appear in the `ko` body with the same value and correct unit conversion ($X billion = X×10억 달러)? If any mismatch, fix before responding.
+10. **No relative time markers**: scan both `en` and `ko` bodies for "yesterday / last week / recently / 어제 / 지난주 / 최근". Each instance must be replaced with an absolute date reference (e.g., "Apr 20", "2026-04-20"). Relative time is forbidden — digests are archived.
+11. **No overclaim language in body**: scan both locales for "dominates / crushes / revolutionizes / groundbreaking / 장악 / 압도적 / 독점 / 석권". Replace with calibrated alternatives (see Hallucination Guard) unless the phrase is inside a direct source quote.{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
 
 """
 
@@ -382,7 +387,7 @@ RESEARCH_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## LLM & SOTA Models (ko: ## LLM & SOTA Models)** - Newly released or updated models. Cover benchmark deltas, architecture changes, context window, latency, and comparison vs prior baselines.
 - **## Open Source & Repos (ko: ## Open Source & Repos)** - Notable GitHub or Hugging Face projects. Explain what the project does, why developers care, maturity level, and current limitations.
 - **## Research Papers (ko: ## Research Papers)** - Important new papers from arXiv or major labs. Explain the core idea, experimental result, what is genuinely new, and where the paper is weak or incomplete.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 9).
 - **## Why It Matters (ko: ## 왜 중요한가)** - A short closing synthesis. 1-2 paragraphs only. Summarize what changed in today's AI technical landscape overall."""
 
 
@@ -436,7 +441,7 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Big Tech (ko: ## Big Tech)** - Major moves from OpenAI, Google, Microsoft, Meta, etc. Analyze what happened, the strategic rationale, competitive positioning, and market implications.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, acquisitions, partnerships, regulatory changes. Put deal sizes in context and explain what each deal signals strategically.
 - **## New Tools (ko: ## New Tools)** - New AI products or services. Cover pricing model, target market, competitive moat analysis, and threat or opportunity assessment.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 9).
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
   `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence] [N](URL)`
@@ -453,7 +458,7 @@ BUSINESS_LEARNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)**
 - **## Big Tech (ko: ## Big Tech)** - What the big companies did and how it affects your life and work.
 - **## Industry & Biz (ko: ## Industry & Biz)** - Funding, partnerships, and regulations: what changed, what it means, and why you should care.
 - **## New Tools (ko: ## New Tools)** - New AI tools worth knowing: what they do, pricing, who they are for, and whether they seem worth trying.
-- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 9).
 - **## What This Means for You (ko: ## 나에게 주는 의미)** - How today news connects to daily life, career, and work. 3-4 paragraphs.
 - **## Action Items (ko: ## 지금 할 일)** - This section is MANDATORY. Write 3-5 concrete things to do this week as numbered items. Use EXACTLY this format:
   `1. **[Action]**: [what to do in 1-2 sentences]`
@@ -575,6 +580,10 @@ Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output M
 
 **NEVER predict the future or use forward-looking speculation verbs.** Forbidden forms include English ("Expect X to Y", "will disrupt", "is set to become", "poised to", "on track to") AND Korean ("Q2에", "내년", "다음 분기", "예상된다", "전망된다", "~할 것이다"). Use calibrated language instead: "signals", "points toward", "implies", "positions X as", "suggests". When the source itself speculates, attribute explicitly ("Anthropic says it expects …" with `[N](URL)`).
 
+**NEVER use retrospective/present-tense overclaim language** (applies to BODY, not only headline). Forbidden English: "dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading", "takes over", "wipes out", "decimates". Forbidden Korean: "장악", "독점 장악", "완전히 뒤집다", "압도적 우위", "석권", "판을 뒤엎다". Use calibrated alternatives: "leads in X", "signals shift in Y", "positions as front-runner", "outperforms on benchmark Z"; Korean: "앞서간다", "선두에 선다", "주도권을 쥔다", "우위를 보인다". Source-language quotes are OK if attributed directly.
+
+**Absolute-date preference** — always write explicit dates/periods ("Apr 20", "2026-04-20", "Q1 2026", "earlier this week — Apr 17") rather than relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전", "어제"). Reason: digests are archived and read later; "yesterday" loses meaning once the publication date shifts. When a source says "yesterday", translate to the explicit date using the digest's batch-date context.
+
 When unsure, omit rather than fabricate.
 
 **Citations**: every `[N](URL)` must reference a URL from the provided source list **verbatim** (copy-paste the exact URL — do not modify the path, do not re-type from memory, do not append fragments). NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation.
@@ -616,6 +625,26 @@ FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to
 - BAD: `headline` = "Nvidia-backed Thinking Machines unveils gigawatt-scale deal" → `headline_ko` = "엔비디아가 **미라 무라티 신생사**에 거액 베팅" (omits "gigawatt-scale", adds editorial framing)
 
 Before finalizing, check: does every specific claim in `headline_ko`/`excerpt_ko` have a corresponding claim in `headline`/`excerpt`? If not, either add it to EN or remove it from KO. They must match."""
+
+
+BODY_LOCALE_PARITY = """## Body Locale Parity (CRITICAL — applies to the `en` and `ko` body fields)
+
+The KO body is a faithful translation/adaptation of the EN body — NOT an independent rewrite. Facts must match exactly.
+
+**Numbers (strict)**:
+- Every `$X billion` / `$X million` / `$X trillion` in EN must appear in KO with the CORRECT Korean unit conversion (see Frontload rules: `$8.3 billion` = `83억 달러`, NOT `8.3억 달러`; `$500 million` = `5억 달러`; `$1.5 trillion` = `1.5조 달러`). Apply the same `X × 10억` rule from frontload.
+- Percentages, benchmark scores, parameter counts, context windows, token counts: identical values in both locales.
+
+**Entities & quotes**:
+- Same companies, products, people, papers in both locales (Korean transliteration OK: OpenAI → 오픈AI, or keep English).
+- Direct quotes carry matching meaning; the `>` blockquotes in Community Pulse follow the pipeline-provided EN↔KO quote pairs — do not rewrite them.
+
+**Structure**:
+- Same set of `##` sections in both locales. Same set of `###` sub-items. Same `[N](URL)` citation count per paragraph.
+- NEWS sections omitted in EN (no news that category) must also be omitted in KO.
+
+**Self-check before submitting**:
+Pick 3 currency or benchmark figures from the EN body at random. For each, locate the matching sentence in the KO body. Confirm number + unit match with correct conversion. If any fails, fix before submitting."""
 
 
 # NOTE: ONE_LINE_SUMMARY_RULE previously had a definition here (~13 lines)
