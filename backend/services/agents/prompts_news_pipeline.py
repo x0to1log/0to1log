@@ -1145,6 +1145,8 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 - Avoid loaded words: "scramble, showdown, salvo, war, takes aim, hits, undercuts" unless the source itself uses that framing.
 - NEVER invent motivations. If a company's intent isn't stated, use "appears positioned as" or "may be driven by".
 - NEVER predict the future ("Q2에", "내년", "다음 분기 전망", "will disrupt", "Expect X to Y"). Use "signals", "points toward", "implies" instead. Watch Points section is for monitoring, not forecasting.
+- **Retrospective/present-tense overclaim ban (body-wide)**: Do NOT use English ("dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading", "takes over", "wipes out", "decimates") or Korean ("장악", "독점 장악", "완전히 뒤집다", "압도적 우위", "석권", "판을 뒤엎다") anywhere in the body — including Top Stories, Trend Analysis, and So What Do I Do — unless the language appears inside a quoted source. Use calibrated alternatives: "leads in X", "signals shift in Y", "outperforms on benchmark Z", "앞서간다", "선두에 선다", "주도권을 쥔다", "우위를 보인다". This is broader than the frontload-only `scramble/war` ban above and applies to the whole recap.
+- **Absolute date preference**: Use explicit dates ("Apr 17", "Tuesday (Apr 16)", "Wed-Thu") over relative markers ("earlier this week", "yesterday", "recently", "최근", "지난주", "얼마 전"). Weekly recaps are archived and read after the week ends — "earlier this week" loses meaning once the publication date shifts. When citing a daily digest event, pull the specific day from the source.
 - Framing words (moat, lock-in, commoditize, defender-first, credible path, cements, tightens grip, capital moat, stack coherence) must PARAPHRASE source language — not add your own strategic thesis on top of a fact-led report. If the source doesn't name the strategic frame, stay with neutral, fact-led description. One editorial framing word per Top Story item is acceptable when strongly supported; two or more compounds the interpretation risk.
 - Mention technical details (parameter counts, architectures) only when they materially affect business/strategic outcomes.
 - Connect themes across stories explicitly in Trend Analysis — weekly's value is synthesis, not restatement.
@@ -1323,6 +1325,8 @@ After reading: The reader can explain the week's main shift in one sentence AND 
 - Numbers should come with context ("$122B — one of the largest rounds in AI history"), never bare.
 - Technical/business terms linked to Handbook on first appearance (frontend handles rehype).
 - NEVER predict the future ("Expect X to Y", "will disrupt", "is set to become"). Use "signals", "points toward", "implies" instead. Watch Points section is for monitoring, not forecasting.
+- **Retrospective/present-tense overclaim ban (body-wide)**: Do NOT use English ("dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading", "takes over", "wipes out") or Korean ("장악", "독점 장악", "완전히 뒤집다", "압도적 우위", "석권") anywhere in the body — including Top Stories, Trend Analysis, and What Can I Try — unless the language appears inside a quoted source. Use calibrated alternatives: "leads in X", "signals shift", "outperforms on benchmark Z", "앞서간다", "선두에 선다", "주도권을 쥔다", "우위를 보인다".
+- **Absolute date preference**: Use explicit dates ("Apr 17", "Tuesday (Apr 16)", "Wed-Thu") over relative markers ("earlier this week", "yesterday", "recently", "최근", "지난주"). Weekly recaps are archived and read after the week ends — "earlier this week" loses meaning once the publication date shifts.
 
 ## Input
 The full text of this week's daily AI digests (Monday-Friday, Research + Business combined). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
@@ -1496,6 +1500,40 @@ Write as a Korean editor naturally would — same stories, same depth, same numb
 - Place each citation at the end of the Korean sentence or bullet that carries the same fact as the English original. If one English sentence had two citations, the corresponding Korean sentence keeps both.
 - Raw URLs (e.g., `https://github.com/...` in Open Source Spotlight, `https://...` in Watch Points) also copy verbatim to their Korean counterpart.
 - If you are tempted to "write naturally" by removing citations — do not. Readers verify claims by clicking those links. Missing URL = broken trust.
+
+## Currency Unit Conversion (CRITICAL — 100× translation bug is the single most common weekly KO error)
+
+Weekly recap aggregates funding, valuations, deal terms from 5 days of business news. One wrong zero count misreports an event by 10× or 100×. Use these conversions strictly:
+
+- `$X billion` → `X×10억 달러` (X stays as-is, unit becomes `10억`).
+  - `$10 billion` = `100억 달러` ← NOT `10억 달러` (which reads as $1B)
+  - `$8.3 billion` = `83억 달러` ← NOT `8.3억 달러` (which reads as $830M — 10× understatement)
+  - `$122 billion` = `1,220억 달러`
+- `$X trillion` → `X조 달러` (e.g., `$1.5 trillion` = `1.5조 달러`)
+- `$X million` → `X×100만 달러` (e.g., `$500 million` = `5억 달러`, `$50 million` = `5,000만 달러`)
+
+Before each KO currency figure, expand the zero count mentally:
+`$8.3B = 8,300,000,000 = 83 × 100,000,000 = 83억 달러` ✓
+
+**Percentages, benchmark scores, parameter counts, token counts**: identical value in both locales. Do not round or adjust.
+
+## Absolute Date Preservation
+
+- EN dates like "Apr 17", "Tuesday (Apr 16)", "Wed-Thu" MUST stay absolute in KO ("4월 17일", "화요일 (4월 16일)", "수-목").
+- Do NOT reword to relative markers ("earlier this week" → "이번 주 초") — weekly recap is archived; relative time loses meaning once the publication week shifts.
+- If EN uses "this week", keep it bounded in KO ("이번 주") but prefer specific day reference when source provides one.
+
+## Self-Check Before Submitting (MANDATORY)
+
+After drafting the KO markdown, verify:
+
+1. **URLs**: every `[N](URL)` from EN preserved verbatim in the matching KO sentence. No dropped, no renumbered, no edited.
+2. **Numbers (pick 5 at random from EN body)**: find the matching Korean sentence for each. Confirm number + unit match with correct conversion above. A single mismatch = fix before submitting.
+3. **Currency zero-count**: scan every Korean currency figure. For each `X억 달러`, mentally check that expanding the zeros matches the EN source. `83억 달러` = 8.3 billion ✓. `8.3억 달러` = 830 million — if the EN source was $8.3 billion, this is a 10× error.
+4. **Entities**: every company / product / person / paper named in EN appears in KO (Korean transliteration OK: OpenAI → 오픈AI, or keep English).
+5. **Dates**: absolute date references preserved.
+
+If ANY check fails, fix before submitting. An uncorrected 100× currency error is worse than late delivery.
 
 ## Required Section Headings (use these exact headings)
 - ## 이번 주 한 줄
@@ -1987,7 +2025,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets. Top Stories has 5-7 `###` items. Trend Analysis is 3-4 paragraphs. One-Line may be brief if it synthesizes the week's main theme.
 
 ### Source Quality (3)
-- **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and action bullet ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. One-Line and Week-in-Numbers-labels allowed to skip.
+- **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and action bullet ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. One-Line and Week-in-Numbers-labels allowed to skip. **Internal consistency (weekly-specific)**: a single event's figure often appears in Week in Numbers AND Top Stories AND Trend Analysis AND So What Do I Do — all occurrences MUST match exactly. Flag mismatches like "Week in Numbers `$10B`" vs "Top Stories body `$15B`" for the same funding round; or "`$122B valuation`" in One-Line vs "`$100B valuation`" in Top Stories. KO locale currency-unit mismatches (e.g., `$8.3 billion` in EN but `8.3억 달러` = $830M in KO — 10× error) also flag here.
 - **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo / GitHub) rather than secondary reporting (TechCrunch / Forbes / Bloomberg / Reuters).
 - **source_utilization**: Sources drawn across sections (Top Stories, Trend Analysis, Watch Points) — not ignored or piled in one block.
 
@@ -2043,7 +2081,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets with beginner-friendly context. Top Stories has 5-7 `###` items.
 
 ### Source Quality (3)
-- **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and "What Can I Try" action ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`.
+- **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and "What Can I Try" action ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. **Internal consistency (weekly-specific)**: a single event's figure often appears in Week in Numbers AND Top Stories AND Trend Analysis AND "What Can I Try" — all occurrences MUST match exactly. Flag mismatches like "Week in Numbers `$10B`" vs "Top Stories body `$15B`" for the same funding round. KO locale currency-unit mismatches (e.g., `$8.3 billion` in EN but `8.3억 달러` = $830M in KO — 10× error) also flag here.
 - **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting.
 - **source_utilization**: Sources drawn across sections — not ignored or piled in one block.
 
