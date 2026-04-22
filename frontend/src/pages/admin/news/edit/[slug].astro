@@ -62,6 +62,33 @@ if (!isNew) {
   }
 }
 
+// Detect daily-digest slug pattern: YYYY-MM-DD-(research|business)-digest(-ko)?
+// Weekly recap and other post types don't match → rerun button hidden.
+const digestMatch = pageSlug.match(/^(\d{4}-\d{2}-\d{2})-(research|business)-digest(?:-ko)?$/);
+const digestBatchId = digestMatch ? digestMatch[1] : null;
+const digestType = digestMatch ? digestMatch[2] : null;
+
+let digestRunId: string | null = null;
+if (digestBatchId && accessToken) {
+  try {
+    const sbRun = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
+    );
+    const { data: runRow } = await sbRun
+      .from('pipeline_runs')
+      .select('id')
+      .eq('run_key', `news-${digestBatchId}`)
+      .single();
+    digestRunId = runRow?.id ?? null;
+  } catch {
+    digestRunId = null;
+  }
+}
+
+const canRerunQuality = !!(digestBatchId && digestType && digestRunId);
+
 // Content setup: posts with persona content use 2 editors (v4), others use single editor
 const contentLearner = post?.content_learner || '';
 const contentExpert = post?.content_expert || '';
@@ -226,6 +253,22 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           {!isNew && post && (
             <div class="mb-6">
               <QualityPanel factPack={post.fact_pack} />
+              {canRerunQuality && (
+                <div class="admin-quality-rerun-row">
+                  <button
+                    id="btn-rerun-quality"
+                    type="button"
+                    class="admin-btn"
+                    data-slug={pageSlug}
+                    data-run-id={digestRunId}
+                    data-batch-id={digestBatchId}
+                    data-digest-type={digestType}
+                  >
+                    ⟳ Save &amp; re-run quality
+                  </button>
+                  <span id="rerun-quality-status" class="admin-quality-rerun-status"></span>
+                </div>
+              )}
             </div>
           )}
 
@@ -378,6 +421,8 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const btnSave = document.getElementById('btn-save') as HTMLButtonElement | null;
     const btnDelete = document.getElementById('btn-delete') as HTMLButtonElement | null;
     const btnPublishDraft = document.getElementById('btn-publish-draft') as HTMLButtonElement | null;
+    const btnRerun = document.getElementById('btn-rerun-quality') as HTMLButtonElement | null;
+    const rerunStatus = document.getElementById('rerun-quality-status');
     const titleInput = document.getElementById('edit-title') as HTMLTextAreaElement;
     const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
     const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
@@ -397,7 +442,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     let isNewPost = adminData?.dataset.isNew === 'true';
     let currentSlug = slugInput?.value || adminData?.dataset.slug || '';
     const btnManager = createButtonManager(
-      [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit]
+      [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit, btnRerun]
         .filter((b): b is HTMLButtonElement => b instanceof HTMLButtonElement),
     );
     const preview = createPreviewManager({
@@ -1339,6 +1384,86 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       }
       const published = await handlePublish();
       if (!published) btnManager.restore();
+    });
+
+    // --- Save & re-run quality (NQ-40 inline iteration loop) ---
+    function setRerunStatus(text: string, kind: 'idle' | 'running' | 'done' | 'error'): void {
+      if (!rerunStatus) return;
+      rerunStatus.textContent = text;
+      rerunStatus.className = 'admin-quality-rerun-status' +
+        (kind !== 'idle' ? ` admin-quality-rerun-status--${kind}` : '');
+    }
+
+    btnRerun?.addEventListener('click', async () => {
+      if (btnManager.isPending) return;
+      const slug = btnRerun.dataset.slug || '';
+      const runId = btnRerun.dataset.runId || '';
+      const batchId = btnRerun.dataset.batchId || '';
+      if (!slug || !runId || !batchId) {
+        setRerunStatus('Missing run metadata — try refresh', 'error');
+        return;
+      }
+
+      btnManager.begin(btnRerun, 'Saving...');
+      setRerunStatus('Saving content…', 'running');
+
+      // Save current editor content so the rerun reads the latest version
+      const saved = await handleSave({ showFeedback: false, redirectOnCreate: false });
+      if (!saved) {
+        btnManager.restore();
+        setRerunStatus('Save failed — see toast', 'error');
+        return;
+      }
+
+      // Record pre-rerun updated_at so the poll can tell when QC finished
+      let preUpdatedAt: string | null = null;
+      try {
+        const pre = await fetch(`/api/admin/posts/quality-status?slug=${encodeURIComponent(slug)}`);
+        if (pre.ok) {
+          preUpdatedAt = (await pre.json()).updated_at || null;
+        }
+      } catch { /* best effort */ }
+
+      btnManager.setLabel(btnRerun, 'Running quality…');
+      setRerunStatus('Quality rerun started (30–90s)…', 'running');
+
+      try {
+        const res = await fetch('/api/admin/pipeline-rerun', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            run_id: runId,
+            from_stage: 'quality',
+            batch_id: batchId,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(err.slice(0, 120));
+        }
+      } catch (err) {
+        btnManager.restore();
+        setRerunStatus(`Rerun trigger failed: ${err instanceof Error ? err.message : 'unknown'}`, 'error');
+        return;
+      }
+
+      // Poll updated_at every 5s, max 24 attempts (2 minutes)
+      for (let attempt = 1; attempt <= 24; attempt += 1) {
+        await new Promise((r) => setTimeout(r, 5000));
+        try {
+          const res = await fetch(`/api/admin/posts/quality-status?slug=${encodeURIComponent(slug)}`);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.updated_at && data.updated_at !== preUpdatedAt) {
+            setRerunStatus(`Done — new score ${data.quality_score}. Reloading…`, 'done');
+            setTimeout(() => window.location.reload(), 800);
+            return;
+          }
+        } catch { /* keep polling */ }
+      }
+
+      btnManager.restore();
+      setRerunStatus('Timed out — check pipeline runs page', 'error');
     });
 
     // --- Character / word count ---

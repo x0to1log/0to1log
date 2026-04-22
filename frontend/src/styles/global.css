@@ -3464,6 +3464,27 @@ pre {
   color: var(--color-warning);
 }
 
+.admin-quality-rerun-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.admin-quality-rerun-status {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.admin-quality-rerun-status--running {
+  color: var(--color-warning);
+}
+.admin-quality-rerun-status--done {
+  color: var(--color-success);
+}
+.admin-quality-rerun-status--error {
+  color: var(--color-error);
+}
+
 .admin-quality-badge {
   font-size: 0.65rem;
   font-weight: 700;
