@@ -93,8 +93,13 @@ def test_build_quality_payloads_include_ko_and_frontload_fields():
         }
     )
 
-    assert "=== EN ===" in body_payload
-    assert "=== KO ===" in body_payload
+    assert "=== EN BODY" in body_payload
+    assert "=== KO BODY" in body_payload
+    # Locale scope anchors — Apr 22 regression fix: judge was confusing EN
+    # blockquotes as KO locale violations. Explicit scope labels tell the
+    # rubric to scan only the KO section for locale_integrity.
+    assert "scan only for en-scoped" in body_payload
+    assert "scan THIS section" in body_payload
     assert "한국어 본문" in body_payload
     assert "English headline" in frontload_payload
     assert "한국어 제목" in frontload_payload

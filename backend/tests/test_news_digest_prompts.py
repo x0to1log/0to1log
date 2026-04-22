@@ -322,3 +322,115 @@ def test_learner_title_strategy_keeps_ko_body_editorial_not_conversational():
     assert "Use readable editorial news prose, not chatty spoken copy." in prompt
     assert "News sections should default to concise editorial 기사체." in prompt
     assert "친근체 (-에요/-습니다), unchanged." not in prompt
+
+
+def test_locale_integrity_exempts_cp_attribution_lines():
+    """Apr 22 bug: CP post-processor adds `> — [Hacker News](URL)` attribution lines
+    after quotes. These are `>` blockquote lines with no Hangul, triggering false
+    MAJOR locale_integrity violations. Rubric must explicitly exempt them.
+    All 4 daily body prompts + 2 weekly prompts (6 total) share the locale check."""
+    v11_prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+    ]
+    for prompt in v11_prompts:
+        # Must mention the exemption for attribution lines
+        assert "EXEMPT" in prompt
+        assert "attribution lines" in prompt
+        # Must reference the two attribution formats that CP post-processing produces
+        assert "> — <Label>" in prompt or "> — [<Label>]" in prompt
+
+
+def test_locale_integrity_anchors_scope_to_ko_body_marker():
+    """Apr 22 regression (2nd kind): judge confused EN body English blockquotes
+    as KO locale violations. Rubric must explicitly tell the judge to scan
+    ONLY the `=== KO BODY ===` section — Apr 22 rerun showed the judge
+    quoting EN body content in a 'KO locale violation' report.
+    The scope anchor aligns with _build_body_quality_payload's explicit
+    section labels."""
+    v11_prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+    ]
+    for prompt in v11_prompts:
+        # Scope anchor — must tell judge to scan ONLY below the KO BODY marker
+        assert "=== KO BODY ===" in prompt
+        # EN body English quotes must be explicitly marked as acceptable
+        assert "=== EN BODY ===" in prompt
+        assert "MUST be ignored" in prompt or "ignore" in prompt.lower()
+        # Self-verify clause — judge must confirm evidence is a substring of KO
+        # BODY before reporting. Apr 22 rerun: even with scope anchor alone,
+        # judge hallucinated EN quotes as KO violations. Self-verify forces
+        # the judge to find the text in KO BODY literally or score 10.
+        assert "SELF-VERIFY" in prompt
+        assert "substring" in prompt
+        assert "score 10" in prompt or "is NOT a violation" in prompt
+
+
+def test_locale_integrity_exempts_community_pulse_section():
+    """Phase 1 of NQ-40: summarize_community now validates quotes_ko at
+    generation time (_has_hangul filter + mini-model retranslate), so the
+    CP section is code-guaranteed Korean. Rubric must mark the CP section
+    as EXEMPT from locale_integrity scanning to prevent judge over-reach
+    on content the code already vouches for."""
+    v11_prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+    ]
+    for prompt in v11_prompts:
+        assert "ALSO EXEMPT" in prompt
+        assert "커뮤니티 반응" in prompt  # KO header name must be in the exemption
+        assert "Community Pulse" in prompt  # English name for clarity
+        # Reason must be stated so judge understands why to skip
+        assert "code-validated" in prompt or "_has_hangul" in prompt or "summarize_community" in prompt
+
+
+def test_business_expert_strategic_decisions_requires_citations():
+    """Apr 22 bug: Business expert Strategic Decisions section shipped 5 bullets
+    with 0 citations — strategic guidance without sources reads as editorial.
+    Writer prompt must explicitly require [N](URL) on every bullet."""
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "## Strategic Decisions" in prompt
+    # Format line must now include `[N](URL)` at end
+    assert "[consequence] [N](URL)" in prompt
+    # Explicit rule about citing
+    assert "Every bullet MUST end with `[N](URL)`" in prompt
+    # Example must demonstrate a citation at the end
+    assert "https://openai.com/blog" in prompt  # example URL in the sample
+
+
+def test_hallucination_guard_enforces_attribution_url_domain_match():
+    """Apr 22 bug: 'Associated Press reports [4](https://www.mrt.com/...)' —
+    attribution named AP but URL points to a local paper (mrt.com) that syndicates
+    AP content. HALLUCINATION_GUARD must require attribution phrase to match URL
+    domain. Applies to every daily + weekly writer prompt."""
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "Attribution must match URL domain" in prompt
+    # Mention of syndication handling
+    assert "syndicat" in prompt.lower()
+    # The wire services that commonly trigger this (examples in the rule)
+    assert "Reuters" in prompt or "AP" in prompt or "Associated Press" in prompt
+
+
+def test_focus_items_p2_bullet_forbids_evaluative_phrasing():
+    """Apr 22 bug: focus_items bullet 2 used 'Raises bar for creative and marketing
+    workflows' — evaluative, press-release tone. Writer prompt must give explicit
+    guidance for bullet 2 to use objective mechanism/consequence phrasing instead
+    of evaluative verbs."""
+    prompt = get_digest_prompt("business", "expert", [])
+
+    # Explicit forbidden verbs + preferred alternatives
+    assert "raises bar" in prompt.lower()
+    assert "transforms" in prompt.lower()
+    # Preferred alternatives shown
+    assert "enables X" in prompt or "enables " in prompt
+    # P2 role must be clarified as objective consequence, not evaluation
+    assert "objective consequence" in prompt or "not evaluation" in prompt.lower() or "not prediction" in prompt.lower()

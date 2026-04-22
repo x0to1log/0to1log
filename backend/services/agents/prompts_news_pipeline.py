@@ -333,8 +333,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "excerpt": "(English) 1-2 sentences that make readers click. MUST differ from both headline and the body's One-Line Summary",
   "excerpt_ko": "(Korean) 제목·한 줄 요약과 모두 다른 1-2문장의 클릭 유도형 요약",
   "tags": ["4-6 English keyword tags: company names, key tech, industry terms, notable tools"],
-  "focus_items": ["REQUIRED — exactly 3 bullets, EN 5-12 words each. P1=what changed, P2=why it matters, P3=what to watch"],
-  "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나, 2=왜 중요한가, 3=무엇을 지켜볼지. focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
+  "focus_items": ["REQUIRED — exactly 3 bullets, EN 5-12 words each. P1=what changed (factual event or announcement). P2=why it matters (objective consequence or mechanism — prefer 'enables X', 'reduces Y', 'shifts Z' over evaluative/press-release phrasing like 'raises bar', 'transforms', 'redefines', 'sets new standard'). P3=what to watch (forward indicator, not prediction)."],
+  "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나 (사실 기반). 2=왜 중요한가 (객관적 영향이나 메커니즘 — '표준 상향', '판도 바꿈' 같은 평가형 대신 '~를 가능케 함', '~비용 절감', '~축 이동' 같은 구체 표현). 3=무엇을 지켜볼지 (전망 아닌 관찰 지표). focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
   "en": "<SEE SKELETON BELOW>",
   "ko": "<SEE SKELETON BELOW>",
   "quiz_en": {{"question": "One 4-choice question. Expert=analytical, Learner=factual", "options": ["A","B","C","D"], "answer": "exact text of correct option", "explanation": "Why correct."}},
@@ -433,8 +433,9 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 15).
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
-  `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence]`
-  Example: `- **If you rely on OpenAI APIs**: evaluate alternative providers this quarter — because vendor concentration risk is rising. Risk of inaction: 100% dependency on a single provider's pricing decisions.`"""
+  `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence] [N](URL)`
+  **Every bullet MUST end with `[N](URL)` citing the Top Story or announcement that justifies the recommendation.** Strategic guidance without a source is editorial opinion — readers need to verify the trigger event. Use the same citation numbering as the body sections (reuse existing `[N]` if it references the same story).
+  Example: `- **If you rely on OpenAI APIs**: evaluate alternative providers this quarter — because vendor concentration risk is rising. Risk of inaction: 100% dependency on a single provider's pricing decisions. [1](https://openai.com/blog/announcement)`"""
 
 
 # NOTE: BUSINESS_EXPERT_GUIDE previously had a definition here that was
@@ -570,7 +571,9 @@ Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output M
 
 When unsure, omit rather than fabricate.
 
-**Citations**: every `[N](URL)` must reference a URL from the provided source list verbatim. NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation."""
+**Citations**: every `[N](URL)` must reference a URL from the provided source list verbatim. NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation.
+
+**Attribution must match URL domain.** If your sentence says "X reports", "X confirms", or "according to X", the cited URL MUST be from X's own domain. For syndicated content (e.g., a local paper reprinting an AP or Reuters wire under a different domain like `mrt.com`, `yahoo.com/news`, `msn.com`), name the actual publishing domain — not the wire service. Write "Midland Reporter-Telegram carries AP reporting" or simply "Midland Reporter-Telegram reports" when the URL is `mrt.com`. Do NOT write "Associated Press reports [N](https://www.mrt.com/...)" — readers clicking the citation expect to land on the source you named. Same rule for Reuters, AFP, Bloomberg: only attribute by name when the URL is their own domain."""
 
 
 FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to headline/headline_ko AND excerpt/excerpt_ko)
@@ -1611,8 +1614,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (2)
 - **fluency**: Reads like a peer engineer analysis; assertive tone; lead item 3-4 paragraphs; natural and fluent in both EN and KO.
-- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
-  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+- **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 
@@ -1666,8 +1669,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (3)
 - **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting at least 3.
-- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
-  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+- **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 - **no_chat_tone**: Korean narrative and analysis sections (body paragraphs, Why It Matters, Connecting the Dots) use editorial news prose — avoid spoken "~요" tone and chatty markers like "쉽게 말해" or "궁금하시죠?". Reader-facing action/recommendation sections (Action Items / 지금 할 일, What Can I Try / 시도해볼 것) MAY use polite imperative "~해보세요" or "~하세요" — this is natural Korean for actionable content and not a violation. Score 10 if narrative stays editorial (chat tone allowed only in action sections), 4 if chat tone leaks into body paragraphs, 0 if the whole digest reads like a chatty blog post.
@@ -1723,8 +1726,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (2)
 - **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons.
-- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
-  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+- **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 
@@ -1778,8 +1781,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (3)
 - **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; engaging without being condescending.
-- **locale_integrity**: Scan the `ko` field for English content leakage. Apply concrete rules:
-  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count).
+- **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** if all blockquotes and paragraphs pass. **7** if exactly 1 borderline violation (e.g., one short English phrase inside a longer Korean sentence). **4** if 2-3 violations. **0** if any `>` blockquote is 100% ASCII (≥10 chars, no Hangul) or any paragraph ≥50 chars is English-only.
 - **no_chat_tone**: Korean narrative and analysis sections (body paragraphs, Why It Matters, Connecting the Dots) use editorial news prose — avoid spoken "~요" tone and chatty markers like "쉽게 말해" or "궁금하시죠?". Reader-facing action/recommendation sections (Action Items / 지금 할 일, What Can I Try / 시도해볼 것) MAY use polite imperative "~해보세요" or "~하세요" — this is natural Korean for actionable content and not a violation. Score 10 if narrative stays editorial (chat tone allowed only in action sections), 4 if chat tone leaks into body paragraphs, 0 if the whole digest reads like a chatty blog post.
@@ -1895,8 +1898,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (2)
 - **fluency**: Analyst voice — assertive, calibrated, no chat tone. No banned framing words (scramble / showdown / war / cements grip) unless sourced. No predictions ("expect X", "will disrupt").
-- **locale_integrity**: Scan the `ko` field for English content leakage. Concrete rules:
-  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4 in Latin script are OK and do NOT count).
+- **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Concrete rules apply to the KO section only:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** all pass · **7** one borderline violation · **4** 2-3 violations · **0** any blockquote or paragraph ≥50 chars is English-only.
 
@@ -1951,8 +1954,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (2)
 - **fluency**: Clear editorial news prose — not chat tone ("~요 투"), not lecturing. Numbers have context. Natural in both EN and KO.
-- **locale_integrity**: Scan the `ko` field for English content leakage. Concrete rules:
-  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI in Latin script are OK).
+- **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Concrete rules apply to the KO section only:
+  - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI in Latin script are OK). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **ALSO EXEMPT**: all content inside the `## 커뮤니티 반응` (Community Pulse) section — its quotes are code-validated (`_has_hangul` filter + mini-model retranslation in `summarize_community`), so any English there is either attribution or an already-dropped pair, never a real leak.
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
   - Scoring: **10** all pass · **7** one borderline · **4** 2-3 violations · **0** any blockquote or paragraph ≥50 chars is English-only.
 

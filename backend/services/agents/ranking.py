@@ -12,7 +12,13 @@ from models.news_pipeline import (
     GroupedItem,
     NewsCandidate,
 )
-from services.agents.client import build_completion_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
+from services.agents.client import (
+    build_completion_kwargs,
+    extract_usage_metrics,
+    get_openai_client,
+    merge_usage_metrics,
+    parse_ai_json,
+)
 from services.agents.prompts_news_pipeline import (
     CLASSIFICATION_SYSTEM_PROMPT,
     COMMUNITY_SUMMARIZER_SYSTEM,
@@ -23,6 +29,72 @@ from services.agents.prompts_news_pipeline import (
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
+
+
+def _has_hangul(text: str | None) -> bool:
+    """Return True if the string contains at least one Hangul syllable (U+AC00-U+D7AF)."""
+    if not text:
+        return False
+    return any('가' <= c <= '힯' for c in text)
+
+
+async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str], dict[str, Any]]:
+    """Batch-translate EN community quotes to KO via gpt-5-mini.
+
+    Fallback for summarize_community when an LLM-returned `quotes_ko` entry
+    lacks Hangul (English leak into the Korean field). Called with only the
+    EN quotes whose paired KO translation failed the Hangul check; returns
+    Korean translations in the same order. On any failure returns ([], {}).
+    """
+    if not quotes_en:
+        return [], {}
+
+    import json as _json
+    client = get_openai_client()
+    model = settings.openai_model_light
+
+    system_prompt = (
+        "Translate each English community forum quote into natural Korean. "
+        "Preserve the speaker's meaning and tone; do not abridge or editorialize. "
+        f"Return JSON only: {{\"quotes_ko\": [\"번역1\", ...]}} — exactly "
+        f"{len(quotes_en)} items in the same order as input."
+    )
+    user_prompt = _json.dumps({"quotes": quotes_en}, ensure_ascii=False)
+
+    try:
+        response = await client.chat.completions.create(
+            **build_completion_kwargs(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=800,
+                temperature=0.2,
+            )
+        )
+    except Exception as e:
+        logger.warning("quotes_ko retranslate LLM call failed: %s", e)
+        return [], {}
+
+    raw = response.choices[0].message.content or ""
+    try:
+        data = parse_ai_json(raw, "quotes_ko_retranslate")
+    except Exception as e:
+        logger.warning("quotes_ko retranslate JSON parse failed: %s", e)
+        return [], {}
+    if not isinstance(data, dict):
+        return [], {}
+    translated = data.get("quotes_ko") or []
+    if not isinstance(translated, list) or len(translated) != len(quotes_en):
+        logger.warning(
+            "quotes_ko retranslate returned %d items, expected %d",
+            len(translated) if isinstance(translated, list) else 0,
+            len(quotes_en),
+        )
+        return [], {}
+    usage = extract_usage_metrics(response, model)
+    return [str(q) if isinstance(q, str) else "" for q in translated], usage
 
 
 async def classify_candidates(
@@ -553,16 +625,37 @@ async def summarize_community(
             if isinstance(q, str) and len(_clean_quote(q)) > 5 and not _url_pattern.search(_clean_quote(q))
         ]
 
-        # Safety net: if LLM failed to produce matching Korean translations,
-        # truncate quotes to match quotes_ko length. Otherwise English quotes
-        # leak into the Korean digest (digest LLM has no KO quote to use).
-        # Prompt rule demands len(quotes_ko) == len(quotes); this catches drift.
-        if len(quotes_ko) < len(quotes):
+        # Hangul validation + targeted retranslation (NQ-40 Phase 1).
+        # LLM sometimes leaves English in `quotes_ko` field — pair each KO
+        # entry with its EN source by index and retry-translate any entry
+        # lacking Hangul via a mini-model batch call. Entries that still
+        # fail after retry are dropped along with their EN partner to keep
+        # quotes/quotes_ko in 1:1 sync.
+        pairs: list[tuple[str, str]] = list(zip(quotes, quotes_ko))
+        bad_indices = [i for i, (_en, ko) in enumerate(pairs) if not _has_hangul(ko)]
+        if bad_indices:
+            en_batch = [pairs[i][0] for i in bad_indices]
+            retranslated, retry_usage = await _retranslate_quotes_ko_async(en_batch)
+            usage = merge_usage_metrics(usage, retry_usage) if retry_usage else usage
+            if len(retranslated) == len(bad_indices):
+                for orig_idx, new_ko in zip(bad_indices, retranslated):
+                    cleaned = _clean_quote(new_ko) if isinstance(new_ko, str) else ""
+                    if _has_hangul(cleaned):
+                        pairs[orig_idx] = (pairs[orig_idx][0], cleaned)
+            else:
+                logger.info(
+                    "quotes_ko retranslation unavailable for group %s — falling back to drop",
+                    primary_url[:80],
+                )
+        valid_pairs = [(en, ko) for en, ko in pairs if _has_hangul(ko)]
+        if len(valid_pairs) < len(pairs):
             logger.warning(
-                "Community summarizer: quotes_ko count (%d) < quotes count (%d) for group %s — truncating quotes to prevent English-in-Korean leakage",
-                len(quotes_ko), len(quotes), primary_url[:80],
+                "Community summarizer: dropped %d quote pair(s) for group %s "
+                "(English in quotes_ko even after retranslation)",
+                len(pairs) - len(valid_pairs), primary_url[:80],
             )
-            quotes = quotes[:len(quotes_ko)]
+        quotes = [en for en, _ko in valid_pairs]
+        quotes_ko = [ko for _en, ko in valid_pairs]
 
         key_point = llm_data.get("key_point")
         if key_point and not isinstance(key_point, str):

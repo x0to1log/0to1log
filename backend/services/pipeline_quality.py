@@ -66,12 +66,19 @@ def _body_paragraphs_for_quality(content: str) -> list[str]:
 
 
 def _build_body_quality_payload(persona_name: str, persona_output: PersonaOutput) -> str:
-    """Build a bilingual body-scoring payload for one persona."""
+    """Build a bilingual body-scoring payload for one persona.
+
+    Payload has explicit SCOPE boundaries so the LLM judge evaluates each
+    locale independently — Apr 22 regression: judge saw English blockquotes
+    in the EN section and flagged them as KO locale_integrity violations.
+    The `scan-this` / `do-not-scan` labels anchor the locale_integrity rule
+    to the KO section only.
+    """
     return (
         f"Persona: {persona_name}\n\n"
-        "=== EN ===\n"
+        "=== EN BODY — scan only for en-scoped issues; English quotes here are expected ===\n"
         f"{persona_output.en.strip()}\n\n"
-        "=== KO ===\n"
+        "=== KO BODY — scan THIS section (and only this section) for locale_integrity (English leakage into Korean) ===\n"
         f"{persona_output.ko.strip()}"
     ).strip()
 
