@@ -105,9 +105,9 @@ try {
     sb.from('pipeline_logs')
       .select('debug_meta, pipeline_type, pipeline_runs!inner(run_key, started_at)')
       .gte('pipeline_runs.started_at', thirtyDaysAgo)
-      .in('pipeline_type', ['quality:research', 'quality:business'])
+      .in('pipeline_type', ['quality:research', 'quality:business', 'quality:weekly'])
       .order('created_at', { ascending: true })
-      .limit(100),
+      .limit(150),
     sb.from('pipeline_logs')
       .select('debug_meta, pipeline_type, created_at')
       .eq('pipeline_type', 'handbook.quality_check')
@@ -152,7 +152,15 @@ try {
 
   totalProducts = productsRes.count ?? 0;
 
-  // News quality chart data
+  // Convert ISO week (e.g. 2026-W15) to the Monday of that week
+  function isoWeekToMonday(year: number, week: number): Date {
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Dow = jan4.getUTCDay() || 7;
+    const firstMonday = new Date(jan4.getTime() - (jan4Dow - 1) * 86400000);
+    return new Date(firstMonday.getTime() + (week - 1) * 7 * 86400000);
+  }
+
+  // News quality chart data (research / business / weekly)
   for (const q of (newsQualityRes.data ?? []) as any[]) {
     const meta = (q.debug_meta ?? {}) as Record<string, unknown>;
     const score = typeof meta.quality_score === 'number' ? meta.quality_score : typeof meta.score === 'number' ? meta.score : null;
@@ -160,12 +168,28 @@ try {
     // Use run_key date (news target date), not started_at (pipeline execution time)
     const runKey = q.pipeline_runs.run_key || '';
     const dateMatch = runKey.match(/(\d{4}-\d{2}-\d{2})/);
-    const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.pipeline_runs.started_at);
+    const weekMatch = runKey.match(/^weekly-(\d{4})-W(\d{1,2})$/);
+    let d: Date;
+    let sortKey: string;
+    let label: string;
+    if (dateMatch) {
+      d = new Date(dateMatch[1] + 'T00:00:00');
+      sortKey = dateMatch[1];
+      label = `${d.getMonth() + 1}/${d.getDate()}`;
+    } else if (weekMatch) {
+      d = isoWeekToMonday(parseInt(weekMatch[1], 10), parseInt(weekMatch[2], 10));
+      sortKey = d.toISOString().slice(0, 10);
+      label = `W${weekMatch[2]}`;
+    } else {
+      d = new Date(q.pipeline_runs.started_at);
+      sortKey = q.pipeline_runs.started_at;
+      label = `${d.getMonth() + 1}/${d.getDate()}`;
+    }
     newsQualityData.push({
-      label: `${d.getMonth() + 1}/${d.getDate()}`,
+      label,
       score,
       type: q.pipeline_type.replace('quality:', ''),
-      _sortKey: dateMatch ? dateMatch[1] : q.pipeline_runs.started_at,
+      _sortKey: sortKey,
     });
   }
   newsQualityData.sort((a, b) => a._sortKey.localeCompare(b._sortKey));
@@ -1368,27 +1392,49 @@ function relativeTime(dateStr: string): string {
     if (newsCanvas) {
       var research = newsQualityData.filter(function(d) { return d.type === 'research'; });
       var business = newsQualityData.filter(function(d) { return d.type === 'business'; });
+      var weekly = newsQualityData.filter(function(d) { return d.type === 'weekly'; });
 
-      if (research.length === 0 && business.length === 0) {
+      if (research.length === 0 && business.length === 0 && weekly.length === 0) {
         newsCanvas.parentElement.innerHTML = '<p style="color:' + textColor + ';font-size:0.82rem;text-align:center;padding:2rem 0">No data yet</p>';
       } else {
+        // Unified x-axis: union of all sort keys, sorted chronologically
+        var keyMap = {};
+        newsQualityData.forEach(function(d) { keyMap[d._sortKey] = d.label; });
+        var sortKeys = Object.keys(keyMap).sort();
+        var labels = sortKeys.map(function(k) { return keyMap[k]; });
+
+        // Align each series against the unified axis — missing points become null (chart skips)
+        function alignSeries(series) {
+          var byKey = {};
+          series.forEach(function(d) { byKey[d._sortKey] = d.score; });
+          return sortKeys.map(function(k) { return byKey[k] != null ? byKey[k] : null; });
+        }
+
         var datasets = [];
         if (research.length > 0) {
           datasets.push({
-            label: 'Research', data: research.map(function(d) { return d.score; }),
+            label: 'Research', data: alignSeries(research),
             borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            fill: false, tension: 0.3, pointRadius: 3,
+            fill: false, tension: 0.3, pointRadius: 3, spanGaps: true,
           });
         }
         if (business.length > 0) {
           datasets.push({
-            label: 'Business', data: business.map(function(d) { return d.score; }),
+            label: 'Business', data: alignSeries(business),
             borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            fill: false, tension: 0.3, pointRadius: 3,
+            fill: false, tension: 0.3, pointRadius: 3, spanGaps: true,
           });
         }
-        var labels = (research.length >= business.length ? research : business).map(function(d) { return d.label; });
-        var allScores = research.map(function(d) { return d.score; }).concat(business.map(function(d) { return d.score; }));
+        if (weekly.length > 0) {
+          datasets.push({
+            label: 'Weekly', data: alignSeries(weekly),
+            borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            fill: false, tension: 0, pointRadius: 6, pointStyle: 'rectRot',
+            borderDash: [4, 4], spanGaps: true,
+          });
+        }
+
+        var allScores = newsQualityData.map(function(d) { return d.score; });
         var minScore = allScores.length ? Math.max(50, Math.floor((Math.min.apply(null, allScores) - 10) / 10) * 10) : 50;
 
         new Chart(newsCanvas, {
