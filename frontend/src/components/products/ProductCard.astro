@@ -12,14 +12,17 @@ interface Props {
   locale: 'en' | 'ko';
   searchText?: string;
   categoryId: string;
+  secondaryCategories?: string[] | null;
   viewCount: number;
   productId?: string;
 }
 
 const {
   href, name, tagline, logoUrl, thumbnailUrl, demoMediaFirst,
-  pricing, platform, koreanSupport, locale, searchText, categoryId, viewCount, productId,
+  pricing, platform, koreanSupport, locale, searchText, categoryId, secondaryCategories, viewCount, productId,
 } = Astro.props;
+
+const secondaryAttr = (secondaryCategories ?? []).filter((c) => c && c !== categoryId).join(',');
 
 const pricingLabel: Record<string, string> = {
   free: locale === 'ko' ? '무료' : 'Free',
@@ -38,7 +41,7 @@ const formatViews = (n: number) => {
 };
 ---
 
-<a href={href} class="product-card" data-search-text={searchText} data-category={categoryId}>
+<a href={href} class="product-card" data-search-text={searchText} data-category={categoryId} data-secondary-categories={secondaryAttr}>
   <div class="product-card-thumbnail">
     {imageUrl ? (
       <img src={imageUrl} alt={name} class="product-card-thumb-img" loading="lazy" />

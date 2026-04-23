@@ -87,6 +87,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
                   locale={locale}
                   searchText={buildSearchText(product)}
                   categoryId={product.primary_category}
+                  secondaryCategories={product.secondary_categories}
                   viewCount={product.view_count}
                   productId={product.id}
                 />
@@ -113,6 +114,7 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
           locale={locale}
           searchText={buildSearchText(product)}
           categoryId={product.primary_category}
+          secondaryCategories={product.secondary_categories}
           viewCount={product.view_count}
           productId={product.id}
         />
@@ -192,8 +194,13 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       cards.forEach((card) => {
         const text = card.dataset.searchText ?? '';
         const cat = card.dataset.category ?? '';
+        const secondaryStr = card.dataset.secondaryCategories ?? '';
+        const secondary = secondaryStr ? secondaryStr.split(',').filter(Boolean) : [];
 
-        const matchesCategory = currentCategory === 'all' || cat === currentCategory;
+        const matchesCategory =
+          currentCategory === 'all' ||
+          cat === currentCategory ||
+          secondary.includes(currentCategory);
         const matchesSearch = !q || text.includes(q);
         const visible = matchesCategory && matchesSearch;
 

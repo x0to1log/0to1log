@@ -29,6 +29,7 @@ export interface ProductCardData {
   platform: string[] | null;
   korean_support: boolean;
   primary_category: string;
+  secondary_categories: string[] | null;
   featured: boolean;
   featured_order: number | null;
   demo_media: Array<{ type: string; url: string }> | null;
@@ -114,7 +115,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, featured, featured_order, demo_media, view_count, sort_order, tags, difficulty, search_corpus';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, difficulty, search_corpus';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {

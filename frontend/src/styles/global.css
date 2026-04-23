@@ -12487,6 +12487,18 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: var(--color-accent);
 }
 
+.product-detail-chip--category-secondary {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.product-detail-chip--category-secondary:hover {
+  color: var(--color-text-secondary);
+}
+
 .product-detail-chip--accent {
   color: var(--color-accent);
   background: var(--color-accent-subtle);

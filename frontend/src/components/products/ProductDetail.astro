@@ -147,14 +147,21 @@ const adminActionCopy = locale === 'ko'
     </div>
   </header>
 
-  <!-- ② Tags 행: category + tags -->
-  {(product.primary_category || (product.tags && product.tags.length > 0)) && (
+  <!-- ② Tags 행: primary + secondary + tags -->
+  {(product.primary_category || (product.secondary_categories && product.secondary_categories.length > 0) || (product.tags && product.tags.length > 0)) && (
     <div class="product-detail-tags-row">
       {product.primary_category && (
         <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
           {product.primary_category}
         </a>
       )}
+      {product.secondary_categories && product.secondary_categories
+        .filter((c) => c && c !== product.primary_category)
+        .map((cat) => (
+          <a href={`/${locale}/products/?cat=${cat}`} class="product-detail-chip product-detail-chip--category-secondary">
+            {cat}
+          </a>
+        ))}
       {product.tags && product.tags.map((tag) => (
         <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
       ))}
