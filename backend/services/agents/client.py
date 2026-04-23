@@ -87,7 +87,10 @@ def _apply_gpt5_compat(kwargs: dict, model: str) -> dict:
     elif _uses_max_completion_tokens(model) and "max_completion_tokens" in kwargs:
         kwargs["max_completion_tokens"] = kwargs["max_completion_tokens"] * 3
 
-    # gpt-5 and o-series don't support temperature
+    # gpt-5/o-series: API rejects temperature. Strip it so legacy callers
+    # (passing temperature=X through compat_create_kwargs' **kwargs) don't
+    # cause 400 errors. build_completion_kwargs already refuses temperature
+    # at its signature; this is defense-in-depth for the compat entry point.
     if is_o_series(model) or model.startswith("gpt-5"):
         kwargs.pop("temperature", None)
 
@@ -111,20 +114,19 @@ def build_completion_kwargs(
     model: str,
     messages: list[dict],
     max_tokens: int,
-    temperature: float = 0.3,
     response_format: dict | None = None,
     reasoning_effort: str | None = None,
     service_tier: str | None = None,
     verbosity: str | None = None,
     prompt_cache_key: str | None = None,
 ) -> dict:
-    """Build kwargs for chat.completions.create, handling model differences."""
+    """Build kwargs for chat.completions.create for gpt-5 family.
+
+    Note: `temperature` is not accepted because gpt-5/o-series strip it.
+    If we ever re-introduce a non-reasoning model family, re-add it here.
+    """
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
-    if _uses_max_completion_tokens(model):
-        kwargs["max_completion_tokens"] = max_tokens
-    else:
-        kwargs["max_tokens"] = max_tokens
-    kwargs["temperature"] = temperature
+    kwargs["max_completion_tokens"] = max_tokens  # all production models are gpt-5 family
     if response_format:
         kwargs["response_format"] = response_format
     if reasoning_effort is not None:
