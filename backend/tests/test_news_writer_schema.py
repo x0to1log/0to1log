@@ -21,9 +21,17 @@ def _valid_output_payload() -> dict:
         "tags": ["ai"],
         "focus_items": ["foo"],
         "focus_items_ko": ["푸"],
-        "quiz": {
-            "en": {"q": "Q?", "a": "A", "options": ["A", "B", "C", "D"]},
-            "ko": {"q": "Q?", "a": "A", "options": ["A", "B", "C", "D"]},
+        "quiz_en": {
+            "question": "What happened?",
+            "answer": "A",
+            "options": ["A", "B", "C", "D"],
+            "explanation": "Because A.",
+        },
+        "quiz_ko": {
+            "question": "무엇이 일어났나?",
+            "answer": "가",
+            "options": ["가", "나", "다", "라"],
+            "explanation": "가 맞습니다.",
         },
     }
 
@@ -70,3 +78,20 @@ def test_build_schema_dedupes_allowlist_preserving_order():
 def test_build_schema_with_empty_allowlist_raises():
     with pytest.raises(ValueError):
         build_news_writer_json_schema([])
+
+
+def test_schema_quiz_uses_top_level_quiz_en_quiz_ko():
+    """Parser reads data.get('quiz_en') — schema must not nest under 'quiz'."""
+    schema = build_news_writer_json_schema(["https://a.com"])
+    props = schema["schema"]["properties"]
+    assert "quiz_en" in props
+    assert "quiz_ko" in props
+    assert "quiz" not in props
+    assert set(schema["schema"]["required"]) >= {"quiz_en", "quiz_ko"}
+
+
+def test_schema_quiz_fields_match_parser_contract():
+    """Fields must be question/answer/options/explanation (not q/a)."""
+    schema = build_news_writer_json_schema(["https://a.com"])
+    quiz_props = schema["schema"]["properties"]["quiz_en"]["properties"]
+    assert set(quiz_props) == {"question", "answer", "options", "explanation"}

@@ -5,6 +5,13 @@ mode rejects responses where ``citations[].url`` is not in the enum — that
 enum is built from the fact_pack allowlist. Body text references citations
 by ``[CITE_N]`` placeholder rather than inline ``[N](URL)``; substitution
 happens in ``services.agents.citation_substitution``.
+
+Quiz contract: ``quiz_en`` and ``quiz_ko`` are separate top-level fields
+matching the existing parser (``pipeline_digest.py`` line 764+ reads
+``data.get("quiz_en")`` / ``data.get("quiz_ko")``) and downstream
+``guide_items.quiz_poll_{persona}`` shape which uses ``question / answer
+/ options / explanation``. Keeping the old contract avoids a destructive
+rename of the DB-facing quiz shape.
 """
 from __future__ import annotations
 
@@ -26,14 +33,10 @@ class Citation(BaseModel):
 
 
 class QuizOneLocale(BaseModel):
-    q: str
-    a: str
+    question: str
+    answer: str
     options: list[str] = Field(min_length=4, max_length=4)
-
-
-class QuizBlock(BaseModel):
-    en: QuizOneLocale
-    ko: QuizOneLocale
+    explanation: str = ""
 
 
 class NewsWriterOutput(BaseModel):
@@ -47,7 +50,8 @@ class NewsWriterOutput(BaseModel):
     tags: list[str]
     focus_items: list[str]
     focus_items_ko: list[str]
-    quiz: QuizBlock
+    quiz_en: QuizOneLocale
+    quiz_ko: QuizOneLocale
 
 
 def build_news_writer_json_schema(allowlist_urls: list[str]) -> dict[str, Any]:
@@ -79,7 +83,8 @@ def build_news_writer_json_schema(allowlist_urls: list[str]) -> dict[str, Any]:
             "required": [
                 "headline", "headline_ko", "excerpt", "excerpt_ko",
                 "en", "ko", "citations",
-                "tags", "focus_items", "focus_items_ko", "quiz",
+                "tags", "focus_items", "focus_items_ko",
+                "quiz_en", "quiz_ko",
             ],
             "properties": {
                 "headline": {"type": "string"},
@@ -103,15 +108,8 @@ def build_news_writer_json_schema(allowlist_urls: list[str]) -> dict[str, Any]:
                 "tags": {"type": "array", "items": {"type": "string"}},
                 "focus_items": {"type": "array", "items": {"type": "string"}},
                 "focus_items_ko": {"type": "array", "items": {"type": "string"}},
-                "quiz": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["en", "ko"],
-                    "properties": {
-                        "en": _quiz_locale_schema(),
-                        "ko": _quiz_locale_schema(),
-                    },
-                },
+                "quiz_en": _quiz_locale_schema(),
+                "quiz_ko": _quiz_locale_schema(),
             },
         },
     }
@@ -121,15 +119,18 @@ def _quiz_locale_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["q", "a", "options"],
+        # `explanation` is required by strict schema (OpenAI strict mode
+        # requires all properties to be required), but writer can emit "".
+        "required": ["question", "answer", "options", "explanation"],
         "properties": {
-            "q": {"type": "string"},
-            "a": {"type": "string"},
+            "question": {"type": "string"},
+            "answer": {"type": "string"},
             "options": {
                 "type": "array",
                 "items": {"type": "string"},
                 "minItems": 4,
                 "maxItems": 4,
             },
+            "explanation": {"type": "string"},
         },
     }

@@ -141,8 +141,8 @@ def test_issue_penalty_cap_activates_with_piped_scope():
         issues=normalized,
     )
     assert penalty == 5
-    assert "frontload_overclaim_cap_89" in caps
-    assert final_score == 89
+    assert "frontload_overclaim_cap_84" in caps
+    assert final_score == 84
 
 
 def test_issue_penalty_and_caps_are_deterministic():
@@ -167,8 +167,8 @@ def test_issue_penalty_and_caps_are_deterministic():
     )
 
     assert penalty == 7
-    assert "frontload_overclaim_cap_89" in caps
-    assert final_score == 89
+    assert "frontload_overclaim_cap_84" in caps
+    assert final_score == 84
 
 
 @pytest.mark.asyncio
@@ -249,9 +249,9 @@ async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
             frontload=frontload,
         )
 
-    assert result["score"] == 89
+    assert result["score"] == 84
     assert result["issue_penalty"] == 5
-    assert "frontload_overclaim_cap_89" in result["quality_caps_applied"]
+    assert "frontload_overclaim_cap_84" in result["quality_caps_applied"]
     assert any("한국어 전문가 본문" in prompt for prompt in captured_user_prompts[:2])
     assert "AI infrastructure war" in captured_user_prompts[2]
     assert "엔비디아가 Thinking Machines 딜로 AI 인프라 전쟁 승리" in captured_user_prompts[2]

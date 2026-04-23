@@ -218,9 +218,14 @@ def _apply_issue_penalties_and_caps(
             if category in {"source", "factuality", "fabrication"}:
                 caps.append((84, "major_source_cap_84"))
             if scope == "frontload" and category in {"overclaim", "calibration", "clarity"}:
-                caps.append((89, "frontload_overclaim_cap_89"))
+                # Below auto_publish_threshold (85) so the cap actually blocks
+                # auto-publish rather than just nominally flagging the issue.
+                caps.append((84, "frontload_overclaim_cap_84"))
             if category == "locale" or scope == "ko":
-                caps.append((89, "locale_quality_cap_89"))
+                # Below auto_publish_threshold (85). Locale leakage (e.g.,
+                # English in KO body, Apr 19 Community Pulse incident) is a
+                # hard failure for reader trust — should never auto-publish.
+                caps.append((84, "locale_quality_cap_84"))
             if scope == "learner_body" and category == "accessibility":
                 caps.append((92, "learner_accessibility_cap_92"))
         else:
