@@ -79,6 +79,7 @@ def build_completion_kwargs(
     max_tokens: int,
     temperature: float = 0.3,
     response_format: dict | None = None,
+    reasoning_effort: str | None = None,
 ) -> dict:
     """Build kwargs for chat.completions.create, handling model differences."""
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
@@ -89,6 +90,8 @@ def build_completion_kwargs(
     kwargs["temperature"] = temperature
     if response_format:
         kwargs["response_format"] = response_format
+    if reasoning_effort is not None:
+        kwargs["reasoning_effort"] = reasoning_effort
     return _apply_gpt5_compat(kwargs, model)
 
 
