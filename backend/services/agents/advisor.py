@@ -494,6 +494,7 @@ async def _run_related_terms(req: HandbookAdviseRequest, client, model: str) -> 
             ],
             response_format={"type": "json_object"},
             max_tokens=2048,
+            prompt_cache_key="hb-related-terms",
         )
     )
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-related_terms")
@@ -578,6 +579,7 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
             ],
             response_format={"type": "json_object"},
             max_tokens=4096,
+            prompt_cache_key="hb-translate",
         )
     )
     data = parse_ai_json(resp.choices[0].message.content, "Handbook-translate")
@@ -864,6 +866,7 @@ async def _classify_term_type(
                 ],
                 max_tokens=200,
                 response_format={"type": "json_object"},
+                prompt_cache_key="hb-classify",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-classify")
@@ -1777,6 +1780,7 @@ async def _extract_novel_entities(
                 ],
                 response_format={"type": "json_object"},
                 max_tokens=500,
+                prompt_cache_key="hb-extract-novel",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "entity-extract")
@@ -3035,6 +3039,7 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
             ],
             response_format={"type": "json_object"},
             max_tokens=2048,
+            prompt_cache_key="hb-extract-terms",
         )
     )
     data = parse_ai_json(resp.choices[0].message.content, "Extract-terms")
@@ -3081,6 +3086,7 @@ async def gate_candidate_terms(
                 ],
                 max_tokens=1000,
                 response_format={"type": "json_object"},
+                prompt_cache_key="hb-gate",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-gate")
