@@ -78,13 +78,6 @@ def _apply_gpt5_compat(kwargs: dict, model: str) -> dict:
     elif _uses_max_completion_tokens(model) and "max_completion_tokens" in kwargs:
         kwargs["max_completion_tokens"] = kwargs["max_completion_tokens"] * 3
 
-    # gpt-5/o-series: API rejects temperature. Strip it so legacy callers
-    # (passing temperature=X through compat_create_kwargs' **kwargs) don't
-    # cause 400 errors. build_completion_kwargs already refuses temperature
-    # at its signature; this is defense-in-depth for the compat entry point.
-    if is_o_series(model) or model.startswith("gpt-5"):
-        kwargs.pop("temperature", None)
-
     # gpt-5: reduce reasoning effort to save tokens for actual output
     if model.startswith("gpt-5") and "reasoning_effort" not in kwargs:
         kwargs["reasoning_effort"] = "low"
@@ -113,8 +106,8 @@ def build_completion_kwargs(
 ) -> dict:
     """Build kwargs for chat.completions.create for gpt-5 family.
 
-    Note: `temperature` is not accepted because gpt-5/o-series strip it.
-    If we ever re-introduce a non-reasoning model family, re-add it here.
+    Note: `temperature` is not accepted — gpt-5/o-series reject it at the API.
+    If a non-reasoning model family is re-introduced, re-add the parameter here.
     """
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
     kwargs["max_completion_tokens"] = max_tokens  # all production models are gpt-5 family
