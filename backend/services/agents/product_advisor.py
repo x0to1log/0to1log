@@ -626,7 +626,7 @@ async def _generate_en_profile(
     parts = []
     if facts:
         parts.append(f"## Extracted Facts\n{json.dumps(facts, indent=2, ensure_ascii=False)}")
-    parts.append(f"## Raw Source (additional context)\n{(page_content or '(not available)')[:2000]}")
+    parts.append(f"## Raw Source (additional context)\n{page_content or '(not available)'}")
     parts.append(f"## Reviews & User Experiences\n{review_content or '(not available)'}")
     user_content = "\n\n".join(parts)
     resp = await client.chat.completions.create(
