@@ -681,14 +681,19 @@ async def _generate_digest(
                                     "json_schema": writer_schema,
                                 },
                                 max_tokens=24000,
+                                # 2026-04-23 A/B: research expert benefits
+                                # clearly (30 vs 17 cites on multi-paper
+                                # synthesis); business ~tied. Chose uniform
+                                # "high" for simplicity + consistency —
+                                # ~$2/month over mixed config.
                                 reasoning_effort="high",
                                 service_tier="flex",
                                 prompt_cache_key=f"digest-{digest_type}-{persona_name}",
                             )
                         ),
                         # Flex: 15-min headroom per OpenAI guidance. Accommodates
-                        # high-reasoning writer (typically 3-5 min) plus queue time
-                        # on flex tier.
+                        # high-reasoning writer (typically 3-5 min) plus queue
+                        # time on flex tier.
                         timeout=900,
                     )
 
