@@ -66,13 +66,12 @@ def _uses_max_completion_tokens(model: str) -> bool:
 
 
 def _apply_gpt5_compat(kwargs: dict, model: str) -> dict:
-    """Apply gpt-5/o-series compatibility to kwargs.
+    """Apply gpt-5 compatibility: 3x token headroom for reasoning + low default effort.
 
-    gpt-5 is a reasoning model — reasoning tokens consume max_completion_tokens.
-    Without enough headroom, reasoning uses all tokens and output is empty.
-    Fix: multiply token budget by 3x and set reasoning_effort=low.
+    Two token paths to handle:
+    1. compat_create_kwargs caller passed max_tokens → pop + rename + 3x.
+    2. build_completion_kwargs caller already set max_completion_tokens → 3x in place.
     """
-    # max_tokens → max_completion_tokens (with 3x headroom for reasoning)
     if _uses_max_completion_tokens(model) and "max_tokens" in kwargs:
         original = kwargs.pop("max_tokens")
         kwargs["max_completion_tokens"] = original * 3
