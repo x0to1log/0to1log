@@ -1310,7 +1310,14 @@ Depth > length. Each section's structure rules (item counts, sentence counts, pa
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool. URL MUST appear in the digests.
 - weekly_quiz: exactly 3 items. Each item's `answer` MUST match one of its `options` character-for-character. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
-- If fewer than 3 daily digests are provided, note the limited coverage."""
+- If fewer than 3 daily digests are provided, note the limited coverage.
+
+## FINAL CHECKLIST (verify before responding)
+
+Weekly has more paragraphs + more cross-section number repetition than daily — these two checks target weekly-unique risks.
+
+1. **Top Stories citation density**: For EACH `###` item, walk through its body paragraphs. Every body paragraph MUST end with `[N](URL)`. Uncited body paragraphs in Top Stories = broken items — fix before responding.
+2. **Cross-section number consistency**: Pick 3 numbers that appear in 2 or more sections (e.g., same funding figure in Week in Numbers + Top Stories body + Trend Analysis). Confirm identical value in each section. "$10B in Week in Numbers" vs "$15B in Top Stories body" for the same event = flag and fix."""
 
 WEEKLY_LEARNER_PROMPT = """You are the editor of a beginner-friendly AI weekly for non-specialist knowledge workers (PMs, marketers, designers, students, career-switchers).
 
@@ -1320,7 +1327,13 @@ After reading: The reader can explain the week's main shift in one sentence AND 
 ## Writing Rules (Learner)
 - Tone: clear editorial news prose. Reportorial + explanatory. Not chatty, not lecturing.
 - Foreground the concrete change BEFORE naming the technical mechanism ("The model now handles hour-long videos" before "via 2-bit KV cache compression").
-- When introducing ANY acronym, expand on first use: "검색 증강 생성(RAG)" in KO / "Retrieval-Augmented Generation (RAG)" in EN.
+- **Acronym expansion on first use** (#1 learner-accessibility complaint — unexpanded acronyms). Any domain-specific acronym needs Korean expansion on first mention. Categories to watch:
+  - ML/AI methods & architectures (e.g., LLM, RAG, MoE, DPO, CoT, RLHF)
+  - Hardware & compute units (e.g., TPU, H100, MTIA, GW = gigawatt, TW)
+  - Benchmarks & evaluations (e.g., SWE-bench, MMLU, GPQA, HumanEval)
+  - Protocols & standards (e.g., MCP, ONNX, WAL, SDK)
+  - Business terms when specialized (e.g., ARR, MRR, P/E)
+  Format: "검색 증강 생성(RAG)" in KO / "Retrieval-Augmented Generation (RAG)" in EN. Examples above are illustrative, not exhaustive — when in doubt, expand. Proper nouns (company/product/person names like OpenAI, Meta, GitHub, ChatGPT) stay in original form — do NOT transliterate.
 - Use analogies when they aid comprehension ("like running a mini datacenter in your pocket"); skip when story is straightforward.
 - Connect to readers' life/work where natural ("이게 일상화되면 회사에서 쓰는 챗봇이 더 빨라진다") — but don't force it.
 - Never use chat tone ("~요 투"). Use editorial news prose throughout.
@@ -1485,7 +1498,14 @@ Depth > length. Each section's structure rules already set the length. If the we
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick one tool a learner could try this week. URL MUST appear in the digests.
 - weekly_quiz: exactly 3 items. Each item's `answer` MUST match one of its `options` character-for-character. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
-- If fewer than 3 daily digests are provided, note the limited coverage."""
+- If fewer than 3 daily digests are provided, note the limited coverage.
+
+## FINAL CHECKLIST (verify before responding)
+
+Weekly has more paragraphs + more cross-section number repetition than daily — these two checks target weekly-unique risks.
+
+1. **Top Stories citation density**: For EACH `###` item, walk through its body paragraphs. Every body paragraph MUST end with `[N](URL)`. Uncited body paragraphs in Top Stories = broken items — fix before responding.
+2. **Cross-section number consistency**: Pick 3 numbers that appear in 2 or more sections (e.g., same funding figure in Week in Numbers + Top Stories body + Trend Analysis). Confirm identical value in each section."""
 
 
 # ---------------------------------------------------------------------------
