@@ -1098,12 +1098,47 @@ async def _generate_digest(
         (persona_sources.get("expert") or []) +
         (persona_sources.get("learner") or [])
     )
+    _group_by_url = {group.primary_url: group for group in classified}
+
+    def _news_items_from_source_cards(
+        source_cards: list[dict],
+    ) -> list[dict]:
+        """Build fact_pack.news_items from citations actually present in body.
+
+        `source_cards` (produced by _renumber_citations) is the set of URLs
+        that survived live-check + allowlist. Include every one so readers
+        and admin tools see the full cited set — primary + enriched both.
+        Falls back to primary_urls if the body had no citations at all.
+        """
+        if source_cards:
+            items: list[dict] = []
+            for card in source_cards:
+                url = card.get("url") if isinstance(card, dict) else None
+                if not url:
+                    continue
+                group = _group_by_url.get(url)
+                if group is not None:
+                    items.append({
+                        "title": group.group_title,
+                        "url": url,
+                        "subcategory": group.subcategory,
+                    })
+                else:
+                    items.append({
+                        "title": "",
+                        "url": url,
+                        "subcategory": "enriched",
+                    })
+            return items
+        return [
+            {"title": g.group_title, "url": g.primary_url, "subcategory": g.subcategory}
+            for g in classified
+        ]
+
     digest_meta = {
         "digest_type": digest_type,
-        "news_items": [
-            {"title": group.group_title, "url": group.primary_url, "subcategory": group.subcategory}
-            for group in classified
-        ],
+        # Placeholder — overridden per-locale below using combined_source_cards.
+        "news_items": _news_items_from_source_cards([]),
     }
 
     fallback_title = classified[0].group_title if classified else ""
@@ -1236,6 +1271,7 @@ async def _generate_digest(
             ),
             "fact_pack": {
                 **digest_meta,
+                "news_items": _news_items_from_source_cards(combined_source_cards),
                 "quality_score": quality_score,
                 "quality_version": quality_meta.get("quality_version", "v1"),
                 "quality_breakdown": quality_meta.get("quality_breakdown", {}),
