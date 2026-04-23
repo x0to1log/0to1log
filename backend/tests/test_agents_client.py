@@ -105,3 +105,34 @@ async def test_with_flex_retry_succeeds_on_first_try():
     out = await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
     assert out is mock_ok
     assert fn.call_count == 1
+
+
+def test_build_completion_kwargs_passes_prompt_cache_key():
+    out = build_completion_kwargs(
+        model="gpt-5",
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=1000,
+        prompt_cache_key="digest-research-expert",
+    )
+    assert out["prompt_cache_key"] == "digest-research-expert"
+
+
+def test_build_completion_kwargs_omits_prompt_cache_key_when_none():
+    out = build_completion_kwargs(
+        model="gpt-5",
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=1000,
+    )
+    assert "prompt_cache_key" not in out
+
+
+def test_build_completion_kwargs_passes_service_tier_and_cache_key_together():
+    out = build_completion_kwargs(
+        model="gpt-5",
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=1000,
+        service_tier="flex",
+        prompt_cache_key="digest-business-learner",
+    )
+    assert out["service_tier"] == "flex"
+    assert out["prompt_cache_key"] == "digest-business-learner"
