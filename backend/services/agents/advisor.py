@@ -296,6 +296,12 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
     resp1 = await client.chat.completions.create(**step1_kwargs)
     claims_data = parse_ai_json(resp1.choices[0].message.content, "DeepVerify-extract")
     total_tokens += resp1.usage.completion_tokens if resp1.usage else 0
+    usage1 = extract_usage_metrics(resp1, model)
+    _log_advisor_call(
+        "advisor.deepverify.step1",
+        usage1,
+        extra_meta={"post_id": getattr(req, "post_id", None)} if getattr(req, "post_id", None) else None,
+    )
     claims = claims_data.get("claims", [])
 
     if not claims:
@@ -383,6 +389,12 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
     resp2 = await client.chat.completions.create(**step2_kwargs)
     verify_data = parse_ai_json(resp2.choices[0].message.content, "DeepVerify-verify")
     total_tokens += resp2.usage.completion_tokens if resp2.usage else 0
+    usage2 = extract_usage_metrics(resp2, model)
+    _log_advisor_call(
+        "advisor.deepverify.step2",
+        usage2,
+        extra_meta={"post_id": getattr(req, "post_id", None)} if getattr(req, "post_id", None) else None,
+    )
 
     # Merge broken links into result
     verify_data["broken_links"] = broken_links

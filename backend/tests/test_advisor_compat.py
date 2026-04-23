@@ -267,3 +267,89 @@ async def test_run_advise_logs_post_id_in_extra_meta():
     extra_meta = call_kwargs.get("extra_meta") or (call_args[2] if len(call_args) > 2 else None)
     assert extra_meta is not None
     assert extra_meta.get("post_id") == "news-2026-04-23-abc"
+
+
+@pytest.mark.asyncio
+async def test_run_deep_verify_logs_step1_on_empty_claims_path():
+    """Empty-claims short-circuit: step1 runs and logs, step2 is skipped.
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from services.agents import advisor
+    from models.advisor import AiAdviseRequest
+
+    def _mk_resp(content):
+        r = MagicMock()
+        r.choices = [MagicMock(message=MagicMock(content=content))]
+        r.usage = MagicMock(
+            completion_tokens=10, prompt_tokens=100, total_tokens=110,
+            prompt_tokens_details=MagicMock(cached_tokens=0),
+            completion_tokens_details=MagicMock(reasoning_tokens=5),
+        )
+        r.service_tier = "flex"
+        return r
+
+    step1_resp = _mk_resp('{"claims": []}')  # empty -> step2 skipped
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=[step1_resp])
+
+    req = AiAdviseRequest(
+        action="deepverify", post_id="test-1", title="t", content="c", category="study",
+    )
+
+    with patch("services.agents.advisor.get_openai_client", return_value=mock_client), \
+         patch("services.agents.advisor._log_advisor_call") as mock_log:
+        await advisor.run_deep_verify(req)
+
+    # Empty-claims path: step1 logged, step2 skipped
+    assert mock_log.call_count == 1
+    assert mock_log.call_args_list[0][0][0] == "advisor.deepverify.step1"
+
+
+@pytest.mark.asyncio
+async def test_run_deep_verify_logs_both_steps_when_claims_present():
+    """Non-empty claims path: both step1 and step2 log with distinct types.
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from services.agents import advisor
+    from models.advisor import AiAdviseRequest
+
+    def _mk_resp(content):
+        r = MagicMock()
+        r.choices = [MagicMock(message=MagicMock(content=content))]
+        r.usage = MagicMock(
+            completion_tokens=10, prompt_tokens=100, total_tokens=110,
+            prompt_tokens_details=MagicMock(cached_tokens=0),
+            completion_tokens_details=MagicMock(reasoning_tokens=5),
+        )
+        r.service_tier = "flex"
+        return r
+
+    step1_resp = _mk_resp('{"claims": [{"claim": "test claim"}]}')
+    step2_resp = _mk_resp(
+        '{"claims": [{"claim": "test claim", "verdict": "supported", '
+        '"confidence": "high"}], "overall_confidence": "high", '
+        '"confidence_reason": "well-sourced"}'
+    )
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=[step1_resp, step2_resp])
+
+    req = AiAdviseRequest(
+        action="deepverify", post_id="test-1", title="t",
+        content="no urls to check", category="study",
+    )
+
+    with patch("services.agents.advisor.get_openai_client", return_value=mock_client), \
+         patch("services.agents.advisor._log_advisor_call") as mock_log, \
+         patch("services.agents.advisor._extract_urls_from_content", return_value=[]), \
+         patch("services.agents.advisor.settings") as mock_settings:
+        mock_settings.tavily_api_key = None
+        mock_settings.exa_api_key = None
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+        await advisor.run_deep_verify(req)
+
+    stages = [c[0][0] for c in mock_log.call_args_list]
+    assert stages == ["advisor.deepverify.step1", "advisor.deepverify.step2"]
