@@ -2150,6 +2150,8 @@ async def _run_generate_term(
             }
             if usage.get("cached_tokens") is not None:
                 meta["cached_tokens"] = usage["cached_tokens"]
+            if usage.get("reasoning_tokens") is not None:
+                meta["reasoning_tokens"] = usage["reasoning_tokens"]
             if usage.get("service_tier"):
                 meta["service_tier"] = usage["service_tier"]
             if extra_meta:

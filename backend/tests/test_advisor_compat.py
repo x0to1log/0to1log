@@ -91,3 +91,21 @@ def test_handbook_writer_call_site_uses_flex(cache_key):
         f"{cache_key} call site is missing service_tier='flex'. "
         f"Expected within several lines of the prompt_cache_key literal."
     )
+
+
+def test_log_handbook_stage_includes_reasoning_tokens():
+    """_log_handbook_stage should record reasoning_tokens alongside
+    cached_tokens and service_tier. extract_usage_metrics already returns it.
+    Needed for Phase-2 reasoning_effort A/B measurement.
+    """
+    from pathlib import Path
+
+    src = Path("services/agents/advisor.py").read_text(encoding="utf-8")
+    marker = "def _log_handbook_stage("
+    idx = src.find(marker)
+    assert idx != -1
+    body = src[idx:idx + 800]
+    assert "reasoning_tokens" in body, (
+        "_log_handbook_stage does not record reasoning_tokens — "
+        "extract_usage_metrics returns it but it gets dropped."
+    )
