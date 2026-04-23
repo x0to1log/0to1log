@@ -16,6 +16,7 @@ class ProductGenerateRequest(BaseModel):
     ]
     url: str | None = None
     name: str | None = None
+    slug: str | None = None
     context: str | None = None  # optional existing content for context
 
 

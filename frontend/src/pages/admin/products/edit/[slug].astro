@@ -1227,7 +1227,8 @@ const isFeatured = product?.featured ?? false;
           method: 'POST',
           headers: _aiH,
           body: JSON.stringify((() => {
-            const fetchBody = { action, url, name };
+            const slug = document.getElementById('field-slug')?.value.trim() || null;
+            const fetchBody = { action, url, name, slug };
             if (action === 'generate_search_corpus') {
               const parts = [
                 `Category: ${document.getElementById('field-category')?.value || ''}`,

@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import time
 from urllib.parse import urlparse
 
 from core.config import settings
@@ -10,6 +11,9 @@ from models.product_advisor import ProductGenerateRequest
 from services.agents.client import get_openai_client, extract_usage_metrics, parse_ai_json, compat_create_kwargs
 
 logger = logging.getLogger(__name__)
+
+# Bump this when any generation prompt changes materially.
+PROMPT_VERSION = "2026-04-23-v1"
 
 PROFILE_EN_SYSTEM = """You are an editorial writer for 0to1log, an AI product curation magazine.
 Given a product page's content, produce a JSON profile that helps readers understand what this product does and why it matters.
@@ -583,6 +587,38 @@ def _resolve_logo_url(url: str) -> str | None:
         return None
 
 
+async def _log_generation(
+    product_slug: str | None,
+    action: str,
+    prompt_version: str,
+    model_used: str,
+    tokens_used: int,
+    duration_ms: int,
+    success: bool,
+    error_message: str | None,
+    facts: dict | None,
+    validation_warnings: list[str] | None,
+) -> None:
+    """Insert a row into product_generation_logs. Never raises."""
+    try:
+        from core.database import get_supabase
+        sb = get_supabase()
+        sb.table("product_generation_logs").insert({
+            "product_slug": product_slug,
+            "action": action,
+            "prompt_version": prompt_version,
+            "model_used": model_used,
+            "tokens_used": tokens_used,
+            "duration_ms": duration_ms,
+            "success": success,
+            "error_message": error_message,
+            "facts": facts,
+            "validation_warnings": validation_warnings,
+        }).execute()
+    except Exception as e:
+        logger.warning("Failed to log product generation: %s", e)
+
+
 # Buzzword blocklist for taglines — ordered by frequency
 _TAGLINE_BUZZWORDS = (
     "ai-powered", "revolutionary", "cutting-edge", "game-changing",
@@ -775,6 +811,7 @@ async def _generate_enrichment(
 async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict, str, int]:
     """Run a product AI generation action. Returns (result, model_used, tokens_used)."""
     client = get_openai_client()
+    start_time = time.monotonic()
 
     if body.action == "generate_from_url":
         product_name = body.name or body.url or ""
@@ -833,6 +870,18 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                 logger.info("EN profile recovered with gpt-5-mini fallback")
             except Exception as e2:
                 logger.error("EN profile fallback also failed: %s", e2)
+                await _log_generation(
+                    product_slug=body.slug,
+                    action=body.action,
+                    prompt_version=PROMPT_VERSION,
+                    model_used="multiple",
+                    tokens_used=total_tokens,
+                    duration_ms=int((time.monotonic() - start_time) * 1000),
+                    success=False,
+                    error_message=str(e2),
+                    facts=facts if isinstance(facts, dict) else None,
+                    validation_warnings=None,
+                )
                 raise
 
         # Step 3+4+5: KO profile + enrichment + search corpus (parallel, gpt-5-mini)
@@ -909,6 +958,20 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         result["_validation_warnings"] = _check_profile_format(result)
         if result["_validation_warnings"]:
             logger.info("Profile validation warnings: %s", result["_validation_warnings"])
+
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+        await _log_generation(
+            product_slug=body.slug,
+            action=body.action,
+            prompt_version=PROMPT_VERSION,
+            model_used=settings.openai_model_main,
+            tokens_used=total_tokens,
+            duration_ms=duration_ms,
+            success=True,
+            error_message=None,
+            facts=facts if isinstance(facts, dict) else None,
+            validation_warnings=result.get("_validation_warnings"),
+        )
 
         return result, settings.openai_model_main, total_tokens
 
