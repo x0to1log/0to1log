@@ -1,5 +1,27 @@
 """Tests for services.agents.client gpt-5 compat + kwarg builder."""
-from services.agents.client import _apply_gpt5_compat, build_completion_kwargs
+from unittest.mock import AsyncMock, MagicMock
+
+import openai
+import pytest
+
+from services.agents.client import (
+    _apply_gpt5_compat,
+    build_completion_kwargs,
+    with_flex_retry,
+)
+
+
+def _fake_rate_limit_error(msg: str = "resource unavailable") -> openai.RateLimitError:
+    """Build a RateLimitError without hitting the real API.
+
+    The SDK constructor requires an httpx.Response-like object, so we use
+    MagicMock (which auto-provides any attribute access including .request).
+    """
+    return openai.RateLimitError(
+        message=msg,
+        response=MagicMock(status_code=429),
+        body={"error": {"type": "requests"}},
+    )
 
 
 def test_gpt5_default_reasoning_effort_is_low():
@@ -41,3 +63,45 @@ def test_build_completion_kwargs_defaults_reasoning_effort_on_gpt5():
     )
     # Still gets the default "low" injected by _apply_gpt5_compat
     assert out["reasoning_effort"] == "low"
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_succeeds_after_one_429():
+    """First call 429s, second succeeds — returns the success response."""
+    mock_ok = MagicMock(choices=[MagicMock()])
+    fn = AsyncMock(side_effect=[_fake_rate_limit_error(), mock_ok])
+    out = await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert out is mock_ok
+    assert fn.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_gives_up_after_max_attempts():
+    err = _fake_rate_limit_error()
+    fn = AsyncMock(side_effect=[err, err, err])
+    with pytest.raises(openai.RateLimitError):
+        await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert fn.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_passes_through_non_rate_limit_errors():
+    """BadRequestError (strict-schema reject) must NOT be retried."""
+    bad_req = openai.BadRequestError(
+        message="schema invalid",
+        response=MagicMock(status_code=400),
+        body={"error": {"type": "invalid_request"}},
+    )
+    fn = AsyncMock(side_effect=[bad_req])
+    with pytest.raises(openai.BadRequestError):
+        await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert fn.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_succeeds_on_first_try():
+    mock_ok = MagicMock()
+    fn = AsyncMock(return_value=mock_ok)
+    out = await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert out is mock_ok
+    assert fn.call_count == 1

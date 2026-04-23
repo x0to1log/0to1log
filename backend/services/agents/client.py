@@ -1,14 +1,48 @@
+import asyncio
 import json
 import logging
 import re
 from decimal import Decimal
-from typing import Any
+from typing import Any, Awaitable, Callable, TypeVar
 
+import openai
 from openai import AsyncOpenAI
 
 from core.config import settings
 
 logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
+
+
+async def with_flex_retry(
+    fn: Callable[[], Awaitable[_T]],
+    *,
+    max_attempts: int = 3,
+    base_delay: float = 2.0,
+) -> _T:
+    """Retry an OpenAI call on 429 resource-unavailable (flex-tier capacity).
+
+    Exponential backoff: base_delay, 2*base_delay, 4*base_delay, ... Only
+    retries openai.RateLimitError; every other exception (BadRequestError
+    from strict-schema validation, timeouts, auth errors) passes through
+    unchanged. Per OpenAI flex docs, 429 on flex tier is not charged, so
+    retrying is free.
+    """
+    for attempt in range(max_attempts):
+        try:
+            return await fn()
+        except openai.RateLimitError as e:
+            if attempt == max_attempts - 1:
+                raise
+            delay = base_delay * (2 ** attempt)
+            logger.warning(
+                "flex 429 (attempt %d/%d) — backing off %.1fs: %s",
+                attempt + 1, max_attempts, delay, e,
+            )
+            await asyncio.sleep(delay)
+    # Unreachable — the final attempt either returns or re-raises
+    raise RuntimeError("with_flex_retry: loop exited without returning or raising")
 OPENAI_MODEL_PRICING_PER_1M = {
     "gpt-4o": {"input": Decimal("2.50"), "output": Decimal("10.00")},
     "gpt-4o-mini": {"input": Decimal("0.15"), "output": Decimal("0.60")},
