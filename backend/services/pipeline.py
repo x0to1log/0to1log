@@ -22,7 +22,7 @@ from services.agents.advisor import (
     gate_candidate_terms,
     generate_term_content,
 )
-from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
+from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
 from services.handbook_validators import validate_term_scope, validate_korean_name, validate_term_grounding
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
@@ -2408,20 +2408,24 @@ async def run_weekly_pipeline(
             t_en = time.monotonic()
             system_prompt = get_weekly_prompt(persona)
             try:
-                en_response = await asyncio.wait_for(
-                    client.chat.completions.create(
-                        **compat_create_kwargs(
-                            model,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": daily_text},
-                            ],
-                            response_format={"type": "json_object"},
-                            max_tokens=16000,
-                        )
-                    ),
-                    timeout=240,
-                )
+                async def _weekly_en_call() -> Any:
+                    return await asyncio.wait_for(
+                        client.chat.completions.create(
+                            **compat_create_kwargs(
+                                model,
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": daily_text},
+                                ],
+                                response_format={"type": "json_object"},
+                                max_tokens=16000,
+                                service_tier="flex",
+                            )
+                        ),
+                        timeout=900,  # flex: 15-min headroom
+                    )
+
+                en_response = await with_flex_retry(_weekly_en_call)
                 en_raw = en_response.choices[0].message.content or ""
                 en_usage = extract_usage_metrics(en_response, model)
                 cumulative_usage.update(merge_usage_metrics(cumulative_usage, en_usage))
@@ -2472,20 +2476,24 @@ async def run_weekly_pipeline(
             t_ko = time.monotonic()
             ko_prompt = get_weekly_ko_prompt(persona)
             try:
-                ko_response = await asyncio.wait_for(
-                    client.chat.completions.create(
-                        **compat_create_kwargs(
-                            model,
-                            messages=[
-                                {"role": "system", "content": ko_prompt},
-                                {"role": "user", "content": ko_input},
-                            ],
-                            response_format={"type": "json_object"},
-                            max_tokens=16000,
-                        )
-                    ),
-                    timeout=180,
-                )
+                async def _weekly_ko_call() -> Any:
+                    return await asyncio.wait_for(
+                        client.chat.completions.create(
+                            **compat_create_kwargs(
+                                model,
+                                messages=[
+                                    {"role": "system", "content": ko_prompt},
+                                    {"role": "user", "content": ko_input},
+                                ],
+                                response_format={"type": "json_object"},
+                                max_tokens=16000,
+                                service_tier="flex",
+                            )
+                        ),
+                        timeout=900,  # flex: 15-min headroom
+                    )
+
+                ko_response = await with_flex_retry(_weekly_ko_call)
                 ko_raw = ko_response.choices[0].message.content or ""
                 ko_usage = extract_usage_metrics(ko_response, model)
                 cumulative_usage.update(merge_usage_metrics(cumulative_usage, ko_usage))
