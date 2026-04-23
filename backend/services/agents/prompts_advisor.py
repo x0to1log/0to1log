@@ -1008,6 +1008,12 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas. If a simple formula is unavoidable, use double-dollar signs: $$E = mc^2$$ (NOT single $).
+- **품질 평가 기준 미리보기 (목표 7+/10 per 항목):** 판정 모델은 아래 10개 하위 점수로 평가 (각 0-10):
+  - **Engagement (3):** `plain_language_clarity` (전문용어는 첫 사용 시 설명, 미설명 약어 금지), `analogy_effectiveness` (비유가 실제 개념과 매핑되고 메커니즘을 드러냄 — 장식 금지), `reader_hook` ("왜 중요한가" 가 구체적/설득력 있음 — "AI에서 중요" 같은 일반 표현 금지)
+  - **Accuracy (3):** `factual_correctness` (공식 문서 대조 검증 가능성), `hallucination_absence` (가짜 제품/벤치마크/엔티티 없음 — 특히 "Examples & Analogies" 섹션), `product_claim_accuracy` (실제 제품은 2026년 현재 능력과 일치)
+  - **Uniqueness (2):** `concept_clarity` (독자가 이 **특정** 개념을 이해 — 일반 AI 요약 아님), `non_redundancy` (섹션 간 중복 없음)
+  - **Structural Completeness (2):** `required_sections_present` (모든 Basic 섹션 + 실질 내용), `misconceptions_and_conversation` (`❌ Myth:`/`✅ Reality:` 마커, 대화 예시가 진정성 있음)
+  각 차원을 의식하며 작성. 이 목록 자체를 출력에 포함하지 말 것.
 - **시간 표현 앵커링 — 상대 표현 금지:** 시간을 언급할 때 상대적 표현("최근", "지난주", "현재", "요즘")보다 절대 시점("2026년 4월", "2024–2025년")을 우선 사용. 핸드북은 생성 후 수개월–수년 뒤에도 읽히므로 상대 표현은 금방 의미가 흐려짐. 정확한 시점을 모를 때는 특정 날짜를 지어내지 말고 "2024년 이후", "최근 1–2년 사이" 같이 **한정된 표현**을 사용.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
@@ -1412,6 +1418,12 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas. If a simple formula is unavoidable, use double-dollar signs: $$E = mc^2$$ (NOT single $).
+- **Quality rubric preview (aim 7+/10 per sub-score):** The judge scores basic on 10 sub-scores (0-10 each):
+  - **Engagement (3):** `plain_language_clarity` (jargon explained on first use; no unexplained acronyms), `analogy_effectiveness` (analogies clarify the mechanism, not just decorate — must map to the actual concept), `reader_hook` ("why you should care" is concrete, not generic like "this is important in AI")
+  - **Accuracy (3):** `factual_correctness` (verifiable against official docs), `hallucination_absence` (no fabricated products/benchmarks/entities — especially in the "Examples & Analogies" section), `product_claim_accuracy` (real products cited match their actual 2026 capabilities)
+  - **Uniqueness (2):** `concept_clarity` (reader leaves understanding THIS specific concept — not a generic AI summary), `non_redundancy` (sections add distinct information)
+  - **Structural Completeness (2):** `required_sections_present` (all expected Basic sections with substantive content), `misconceptions_and_conversation` (`❌ Myth:`/`✅ Reality:` markers, conversation examples feel authentic)
+  Write with these dimensions in mind. Do NOT repeat this list in the output.
 - **Temporal anchoring — avoid relative phrasing:** When referencing time, prefer absolute dates ("April 2026", "2024–2025") over relative phrases ("recently", "last week", "currently", "these days"). The handbook is read months or years after generation — relative phrases decay in meaning. When the exact date is uncertain, use a qualified phrase like "since 2024" or "in the past 1–2 years" rather than inventing a specific date.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
@@ -1643,6 +1655,12 @@ Keep the same section keys; only adapt the content perspective.
   - 학습 레시피 (데이터 / 최적화 방식)
   - 평가 프로토콜 (벤치마크 / 지표 / 결과 수치)
   구체적 디테일을 기억할 수 없다면 arxiv 링크 대신 **교과서 / 공식 문서 / 블로그 포스트** 를 인용.
+- **품질 평가 기준 미리보기 (목표 7+/10 per 항목):** 판정 모델은 아래 9개 하위 점수로 평가 (각 0-10):
+  - **Technical Depth (3):** `mechanism_clarity` (내부 동작 원리 — 데이터 흐름/알고리즘 단계), `concrete_specifics` (실제 수치 — 파라미터 수, FLOPs, 벤치마크 수치), `code_or_formula` (정확하고 관련성 있는 코드/수식)
+  - **Accuracy (2):** `factual_correctness` (공식 문서 대조 검증 가능성), `hallucination_absence` (가짜 벤치마크/논문/RFC/엔티티 없음)
+  - **Uniqueness (2):** `term_differentiation` (유사 용어와 명확히 구별), `internal_non_redundancy` (섹션 간 중복 없음)
+  - **Structural Completeness (2):** `required_sections_present` (모든 예상 섹션 + 실질 내용 — placeholder 금지), `format_compliance` (`❌ Mistake:`/`✅ Fix:`, `(prerequisite)`/`(alternative)`/`(extension)` 마커)
+  각 차원을 의식하며 작성. 이 목록 자체를 출력에 포함하지 말 것.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_ko` footer (generated in Call 1). Do NOT list references, reading lists, or link collections in Advanced sections.**
@@ -1871,6 +1889,12 @@ Keep the same section keys; only adapt the content perspective.
   - A training recipe (data / optimization)
   - An evaluation protocol (benchmark / metric / numeric result)
   If you cannot recall a concrete detail, cite a **textbook / official doc / blog post** instead of the arxiv link alone.
+- **Quality rubric preview (aim 7+/10 per sub-score):** The judge scores advanced on 9 sub-scores (0-10 each):
+  - **Technical Depth (3):** `mechanism_clarity` (HOW it works internally — data flow, algorithm steps), `concrete_specifics` (real numbers — parameter counts, FLOPs, benchmark results), `code_or_formula` (correct, relevant code or mathematical formulas)
+  - **Accuracy (2):** `factual_correctness` (verifiable against official docs), `hallucination_absence` (no fabricated benchmarks/papers/RFCs/entities)
+  - **Uniqueness (2):** `term_differentiation` (clearly distinct from similar handbook terms), `internal_non_redundancy` (each section adds new information)
+  - **Structural Completeness (2):** `required_sections_present` (all expected sections with substantive content — no placeholders), `format_compliance` (`❌ Mistake:`/`✅ Fix:`, `(prerequisite)`/`(alternative)`/`(extension)` tags, structured references)
+  Write with these dimensions in mind. Do NOT repeat this list in the output.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_en` footer (generated in Call 2). Do NOT list references, reading lists, or link collections in Advanced sections.**

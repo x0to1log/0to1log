@@ -1,6 +1,6 @@
 # GPT-5 Efficiency Overhaul — Results (2026-04-23)
 
-**TL;DR**: Writer + QC 일일 비용 ~34% 감소 ($0.50 → $0.33), citation density 3-6x 회복, 품질 점수 유지 (91-97). 프롬프트 캐싱 평균 50% 적중. URL hallucination은 schema enum으로 API 레벨 차단.
+**TL;DR**: Writer + QC 일일 비용 **$0.50 → $0.33 (-34%)**. 중간에 high reasoning만 올렸을 때 $0.86까지 튀었던 걸 flex + cache로 상쇄. Citation density 3-6x 회복, 품질 점수 유지. 프롬프트 캐싱 평균 52% 적중. URL hallucination은 schema enum으로 API 레벨 차단.
 
 ---
 
@@ -43,7 +43,19 @@ Apr 22 원래 발행본이 오토퍼블리시 실패 — `fact_pack.url_validati
 
 ## 결과 — 비용
 
-실측 (Apr 21/22/23 모두 final config: `reasoning=high + flex + cache + liveness-off`):
+### 3-stage 변화 (중요한 교훈 있음)
+
+Cost 최적화는 한 번에 일어난 게 아니라 3 phase로 진행됐고, 중간 "블립"이 있었어:
+
+| Phase | Config | Writer 4건 | QC | **Total** | vs baseline |
+|-------|--------|-----------|----|-----------|-------------|
+| **(1) Baseline** | low reasoning, standard, liveness ON | $0.47 | $0.03 | **$0.50/day** | — |
+| **(2) High reasoning 블립** | high reasoning, standard rate, flex 아직 없음 | $0.82 | $0.04 | **~$0.86/day** | **+72%** |
+| **(3) Final config** | high + flex + cache + liveness off | $0.31-0.33 | $0.02 | **$0.33-0.35/day** | **-34%** |
+
+**핵심 교훈**: Phase (2)가 보여주듯 reasoning_effort=high 만 올리면 writer 비용이 **72% 급증** ($0.50 → $0.86). Flex (50% 할인) + prompt caching 없이 high 쓰면 월 ~$26가 나와. Flex + cache가 high의 추가 비용을 완전히 상쇄하고도 남아.
+
+### 최종 실측 (Apr 21/22/23 all final config)
 
 | Date | Writer 4건 | QC 2건 | **Total** | vs baseline |
 |------|-----------|--------|-----------|-------------|
@@ -51,9 +63,7 @@ Apr 22 원래 발행본이 오토퍼블리시 실패 — `fact_pack.url_validati
 | Apr 22 | $0.31 | $0.02 | **$0.33** | -34% |
 | Apr 23 | $0.33 | $0.02 | **$0.35** | -30% |
 
-Baseline (Apr 21 pre-optimization): writer $0.47 + QC $0.03 ≈ **$0.50/day**
-
-월 환산: $15/month → **$10/month** (연 $60 절감).
+월 환산: **$15 (baseline) → $26 (high만) → $10 (final)**. 연 $60 절감 (baseline 대비), 연 $192 절감 (high만 적용했을 때 대비).
 
 Flex 할인과 reasoning_effort=high 상승분을 상쇄한 건 **프롬프트 캐싱 + 24h extended retention**.
 
@@ -195,6 +205,7 @@ Medium에서 +5점 나온 것도 이 특성 때문 — 깊은 reasoning보다 si
 3. **`prompt_cache_key`는 low-hanging fruit**: Code 5줄 추가, 비용 30% 절감 효과. Extended retention(24h)가 daily cron과 궁합 매우 좋음.
 4. **Single source of truth 원칙**: 비용 계산을 두 곳에 두면 drift 필연. 한 함수에서만.
 5. **1-sample A/B는 신호가 약하다**: Business medium +5점은 variance일 수 있음. 복잡도-이득 trade에서 단순성이 이김.
+6. **"Quality 올리는 knob 하나만 돌리면 위험"**: reasoning_effort=high를 flex/cache 없이 먼저 적용했을 때 비용 +72%. 품질 조정은 항상 **비용 최적화 knob (flex, cache)과 함께 패키징**해서 배포. 따로 가면 중간 상태에서 과금 폭탄.
 
 ## Follow-up
 
