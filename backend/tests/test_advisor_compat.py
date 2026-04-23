@@ -109,3 +109,86 @@ def test_log_handbook_stage_includes_reasoning_tokens():
         "_log_handbook_stage does not record reasoning_tokens — "
         "extract_usage_metrics returns it but it gets dropped."
     )
+
+
+def test_log_advisor_call_helper_exists_and_is_callable():
+    """advisor.py should expose _log_advisor_call(stage, usage, extra_meta)
+    as a module-level helper for run_advise / run_deep_verify logging.
+    """
+    from services.agents import advisor
+
+    assert hasattr(advisor, "_log_advisor_call")
+    assert callable(advisor._log_advisor_call)
+
+
+def test_log_advisor_call_writes_all_tier_and_token_fields():
+    """When tier/cached/reasoning are present, they appear in debug_meta."""
+    from unittest.mock import MagicMock, patch
+
+    from services.agents import advisor
+
+    fake_table = MagicMock()
+    fake_supabase = MagicMock()
+    fake_supabase.table.return_value = fake_table
+
+    usage = {
+        "model_used": "gpt-5-mini",
+        "input_tokens": 1500,
+        "output_tokens": 200,
+        "cached_tokens": 1024,
+        "reasoning_tokens": 140,
+        "tokens_used": 1700,
+        "cost_usd": 0.0008,
+        "service_tier": "flex",
+    }
+
+    with patch("services.agents.advisor.get_supabase", return_value=fake_supabase):
+        advisor._log_advisor_call("advisor.review", usage, extra_meta={"post_id": "abc"})
+
+    fake_table.insert.assert_called_once()
+    payload = fake_table.insert.call_args[0][0]
+    assert payload["pipeline_type"] == "advisor.review"
+    assert payload["tokens_used"] == 1700
+    assert payload["cost_usd"] == 0.0008
+    meta = payload["debug_meta"]
+    assert meta["cached_tokens"] == 1024
+    assert meta["reasoning_tokens"] == 140
+    assert meta["service_tier"] == "flex"
+    assert meta["post_id"] == "abc"
+
+
+def test_log_advisor_call_handles_missing_supabase():
+    """If get_supabase() returns None (test env without credentials),
+    _log_advisor_call must no-op silently.
+    """
+    from unittest.mock import patch
+
+    from services.agents import advisor
+
+    usage = {"model_used": "gpt-5-mini", "input_tokens": 1, "output_tokens": 1,
+             "tokens_used": 2, "cost_usd": 0.0}
+
+    with patch("services.agents.advisor.get_supabase", return_value=None):
+        # Should NOT raise
+        advisor._log_advisor_call("advisor.review", usage)
+
+
+def test_log_advisor_call_swallows_supabase_errors():
+    """If the insert raises, _log_advisor_call must log-and-continue,
+    not propagate — admin editor should never fail due to a logging bug.
+    """
+    from unittest.mock import MagicMock, patch
+
+    from services.agents import advisor
+
+    fake_table = MagicMock()
+    fake_table.insert.side_effect = RuntimeError("db down")
+    fake_supabase = MagicMock()
+    fake_supabase.table.return_value = fake_table
+
+    usage = {"model_used": "gpt-5-mini", "input_tokens": 1, "output_tokens": 1,
+             "tokens_used": 2, "cost_usd": 0.0}
+
+    with patch("services.agents.advisor.get_supabase", return_value=fake_supabase):
+        # Should NOT raise
+        advisor._log_advisor_call("advisor.review", usage)

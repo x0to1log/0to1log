@@ -146,6 +146,56 @@ def _build_seo_user_prompt(req: AiAdviseRequest) -> str:
     return "\n".join(p for p in parts if p is not None)
 
 
+def _log_advisor_call(
+    stage: str,
+    usage: dict,
+    extra_meta: dict | None = None,
+) -> None:
+    """Log one admin-editor advisor call to pipeline_logs. Never raises.
+
+    Parallels _log_handbook_stage but lives at module scope so
+    run_advise / run_deep_verify can share it (blog_advisor has its
+    own helper with a distinct pipeline_type prefix).
+
+    stage:
+        'advisor.<action>' for news editor actions
+        'advisor.deepverify.step1' / 'advisor.deepverify.step2'
+
+    Fields recorded mirror _log_handbook_stage so admin analytics can
+    treat handbook and advisor logs uniformly: tokens_used / cost_usd
+    on the row, plus input/output/cached/reasoning_tokens + service_tier
+    on debug_meta. Guard on `is not None` for cached/reasoning so zero
+    values (minimal reasoning / no cache hit) still surface.
+    """
+    supabase = get_supabase()
+    if not supabase:
+        return
+    try:
+        meta = {
+            "source": "manual",
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+        }
+        if usage.get("cached_tokens") is not None:
+            meta["cached_tokens"] = usage["cached_tokens"]
+        if usage.get("reasoning_tokens") is not None:
+            meta["reasoning_tokens"] = usage["reasoning_tokens"]
+        if usage.get("service_tier"):
+            meta["service_tier"] = usage["service_tier"]
+        if extra_meta:
+            meta.update(extra_meta)
+        supabase.table("pipeline_logs").insert({
+            "pipeline_type": stage,
+            "status": "success",
+            "model_used": usage.get("model_used"),
+            "tokens_used": usage.get("tokens_used"),
+            "cost_usd": usage.get("cost_usd"),
+            "debug_meta": meta,
+        }).execute()
+    except Exception as e:
+        logger.warning("Failed to log advisor %s stage: %s", stage, e)
+
+
 async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
     """Run an advisor action. Returns (result_dict, model_name, tokens_used)."""
     config = ACTION_CONFIG[req.action]
