@@ -2120,9 +2120,11 @@ async def _run_generate_term(
                 "source": source,
                 "input_tokens": usage.get("input_tokens"),
                 "output_tokens": usage.get("output_tokens"),
-                "cached_tokens": usage.get("cached_tokens"),
-                "service_tier": usage.get("service_tier"),
             }
+            if usage.get("cached_tokens") is not None:
+                meta["cached_tokens"] = usage["cached_tokens"]
+            if usage.get("service_tier"):
+                meta["service_tier"] = usage["service_tier"]
             if extra_meta:
                 meta.update(extra_meta)
             supabase.table("pipeline_logs").insert({
