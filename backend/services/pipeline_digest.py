@@ -34,6 +34,7 @@ from services.agents.client import (
     get_openai_client,
     merge_usage_metrics,
     parse_ai_json,
+    with_flex_retry,
 )
 from services.agents.prompts_news_pipeline import get_digest_prompt
 from services.agents.schemas.news_writer import build_news_writer_json_schema
@@ -667,24 +668,31 @@ async def _generate_digest(
 
         for attempt in range(MAX_DIGEST_RETRIES + 1):
             try:
-                response = await asyncio.wait_for(
-                    client.chat.completions.create(
-                        **compat_create_kwargs(
-                            model,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            response_format={
-                                "type": "json_schema",
-                                "json_schema": writer_schema,
-                            },
-                            max_tokens=24000,
-                            reasoning_effort="high",
-                        )
-                    ),
-                    timeout=480,  # 8 minutes: high reasoning effort is 2-3x slower
-                )
+                async def _writer_call() -> Any:
+                    return await asyncio.wait_for(
+                        client.chat.completions.create(
+                            **compat_create_kwargs(
+                                model,
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt},
+                                ],
+                                response_format={
+                                    "type": "json_schema",
+                                    "json_schema": writer_schema,
+                                },
+                                max_tokens=24000,
+                                reasoning_effort="high",
+                                service_tier="flex",
+                            )
+                        ),
+                        # Flex: 15-min headroom per OpenAI guidance. Accommodates
+                        # high-reasoning writer (typically 3-5 min) plus queue time
+                        # on flex tier.
+                        timeout=900,
+                    )
+
+                response = await with_flex_retry(_writer_call)
                 data = parse_ai_json(
                     response.choices[0].message.content,
                     f"Digest-{digest_type}-{persona_name}",
@@ -777,20 +785,24 @@ async def _generate_digest(
                             "The English version already exists. Return JSON: "
                             "{{\"ko\": \"...[CITE_1]...\"}}"
                         )
-                        ko_resp = await asyncio.wait_for(
-                            client.chat.completions.create(
-                                **compat_create_kwargs(
-                                    model,
-                                    messages=[
-                                        {"role": "system", "content": ko_system},
-                                        {"role": "user", "content": user_prompt},
-                                    ],
-                                    response_format={"type": "json_object"},
-                                    max_tokens=8000,
-                                )
-                            ),
-                            timeout=120,  # 2 minutes for recovery
-                        )
+                        async def _ko_recovery_call() -> Any:
+                            return await asyncio.wait_for(
+                                client.chat.completions.create(
+                                    **compat_create_kwargs(
+                                        model,
+                                        messages=[
+                                            {"role": "system", "content": ko_system},
+                                            {"role": "user", "content": user_prompt},
+                                        ],
+                                        response_format={"type": "json_object"},
+                                        max_tokens=8000,
+                                        service_tier="flex",
+                                    )
+                                ),
+                                timeout=300,  # flex recovery: 5-min headroom
+                            )
+
+                        ko_resp = await with_flex_retry(_ko_recovery_call)
                         ko_data = parse_ai_json(
                             ko_resp.choices[0].message.content,
                             f"Digest-{digest_type}-{persona_name}-ko-recovery",
@@ -833,20 +845,24 @@ async def _generate_digest(
                             "The Korean version already exists. Return JSON: "
                             "{{\"en\": \"...[CITE_1]...\"}}"
                         )
-                        en_resp = await asyncio.wait_for(
-                            client.chat.completions.create(
-                                **compat_create_kwargs(
-                                    model,
-                                    messages=[
-                                        {"role": "system", "content": en_system},
-                                        {"role": "user", "content": user_prompt},
-                                    ],
-                                    response_format={"type": "json_object"},
-                                    max_tokens=8000,
-                                )
-                            ),
-                            timeout=120,
-                        )
+                        async def _en_recovery_call() -> Any:
+                            return await asyncio.wait_for(
+                                client.chat.completions.create(
+                                    **compat_create_kwargs(
+                                        model,
+                                        messages=[
+                                            {"role": "system", "content": en_system},
+                                            {"role": "user", "content": user_prompt},
+                                        ],
+                                        response_format={"type": "json_object"},
+                                        max_tokens=8000,
+                                        service_tier="flex",
+                                    )
+                                ),
+                                timeout=300,  # flex recovery: 5-min headroom
+                            )
+
+                        en_resp = await with_flex_retry(_en_recovery_call)
                         en_data = parse_ai_json(
                             en_resp.choices[0].message.content,
                             f"Digest-{digest_type}-{persona_name}-en-recovery",
@@ -972,21 +988,24 @@ async def _generate_digest(
                     "Regenerate the English content so every `###` heading and body line is fully English. "
                     "Do not include Korean text in the English output. Return JSON: {{\"en\": \"...\"}}"
                 )
-                en_resp = await asyncio.wait_for(
-                    client.chat.completions.create(
-                        **compat_create_kwargs(
-                            model,
-                            messages=[
-                                {"role": "system", "content": en_system},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            response_format={"type": "json_object"},
-                            temperature=0.4,
-                            max_tokens=8000,
-                        )
-                    ),
-                    timeout=120,
-                )
+                async def _en_heading_recovery_call() -> Any:
+                    return await asyncio.wait_for(
+                        client.chat.completions.create(
+                            **compat_create_kwargs(
+                                model,
+                                messages=[
+                                    {"role": "system", "content": en_system},
+                                    {"role": "user", "content": user_prompt},
+                                ],
+                                response_format={"type": "json_object"},
+                                max_tokens=8000,
+                                service_tier="flex",
+                            )
+                        ),
+                        timeout=300,  # flex recovery: 5-min headroom
+                    )
+
+                en_resp = await with_flex_retry(_en_heading_recovery_call)
                 en_data = parse_ai_json(
                     en_resp.choices[0].message.content,
                     f"Digest-{digest_type}-{persona_name}-en-heading-recovery",
