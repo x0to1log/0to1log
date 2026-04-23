@@ -340,8 +340,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나 (사실 기반). 2=왜 중요한가 (객관적 영향이나 메커니즘 — '표준 상향', '판도 바꿈' 같은 평가형 대신 '~를 가능케 함', '~비용 절감', '~축 이동' 같은 구체 표현). 3=무엇을 지켜볼지 (전망 아닌 관찰 지표). focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
   "en": "<SEE SKELETON BELOW>",
   "ko": "<SEE SKELETON BELOW>",
-  "quiz_en": {{"question": "One 4-choice question. Expert=analytical, Learner=factual", "options": ["A","B","C","D"], "answer": "exact text of correct option", "explanation": "Why correct."}},
-  "quiz_ko": {{"question": "오늘 뉴스 기반 4지선다 1문제. 전문가=분석형, 학습자=사실형", "options": ["가","나","다","라"], "answer": "정답 옵션의 정확한 텍스트", "explanation": "정답 해설"}},
+  "quiz_en": {{"question": "One 4-choice question. Expert=analytical, Learner=factual", "options": ["Full text of choice 1", "Full text of choice 2", "Full text of choice 3", "Full text of choice 4"], "answer": "<VERBATIM COPY of the correct options[i] string — NOT the letter A/B/C/D, NOT the index 0/1/2/3. If answer != any options[i] verbatim, the quiz is dropped.>", "explanation": "Why correct."}},
+  "quiz_ko": {{"question": "오늘 뉴스 기반 4지선다 1문제. 전문가=분석형, 학습자=사실형", "options": ["선택지 1 전문", "선택지 2 전문", "선택지 3 전문", "선택지 4 전문"], "answer": "<options 배열의 정답 문자열을 그대로 복사 — '가'/'나' 같은 letter NO, 0/1/2/3 같은 index NO. options 중 하나와 정확히 일치해야 하며, 아니면 quiz 전체가 drop됨.>", "explanation": "정답 해설"}},
   "sources": [
     {{"id": 1, "url": "https://full-url", "title": "Original article or paper title"}}
   ]

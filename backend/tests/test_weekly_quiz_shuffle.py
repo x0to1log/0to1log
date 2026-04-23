@@ -11,7 +11,61 @@ Covers:
 
 from collections import Counter
 
-from services.pipeline import _validate_and_shuffle_weekly_quiz
+from services.pipeline import (
+    _validate_and_shuffle_quiz_item,
+    _validate_and_shuffle_weekly_quiz,
+)
+
+
+class TestSingleItemValidator:
+    """Covers the single-item helper that both daily and weekly use."""
+
+    def _valid(self) -> dict:
+        return {
+            "question": "Which model?",
+            "options": ["GPT-5", "Claude", "Gemini", "Llama"],
+            "answer": "Claude",
+            "explanation": "Anthropic released Claude.",
+        }
+
+    def test_valid_item_passes_and_preserves_answer_text(self):
+        out = _validate_and_shuffle_quiz_item(self._valid())
+        assert out is not None
+        assert out["answer"] == "Claude"
+        assert "Claude" in out["options"]
+        assert set(out["options"]) == {"GPT-5", "Claude", "Gemini", "Llama"}
+
+    def test_letter_form_answer_rejected(self):
+        """answer='A' must fail — letter doesn't match any option text."""
+        item = self._valid()
+        item["answer"] = "A"
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_index_form_answer_rejected(self):
+        item = self._valid()
+        item["answer"] = "0"
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_paraphrased_answer_rejected(self):
+        """Answer must be verbatim — 'claude' lowercase fails vs 'Claude'."""
+        item = self._valid()
+        item["answer"] = "claude"
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_wrong_option_count_rejected(self):
+        item = self._valid()
+        item["options"] = ["A", "B", "C"]
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_empty_question_rejected(self):
+        item = self._valid()
+        item["question"] = ""
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_non_dict_returns_none(self):
+        assert _validate_and_shuffle_quiz_item(None) is None
+        assert _validate_and_shuffle_quiz_item("string") is None
+        assert _validate_and_shuffle_quiz_item([1, 2]) is None
 
 
 def _make_valid_item(question: str = "Q", answer: str = "B") -> dict:

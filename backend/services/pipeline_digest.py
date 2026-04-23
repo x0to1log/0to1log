@@ -1326,17 +1326,17 @@ async def _generate_digest(
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
 
-        # Build guide_items with persona-specific quizzes and code-extracted sources
-        import random as _random
+        # Build guide_items with persona-specific quizzes and code-extracted sources.
+        # Quiz validation (_validate_and_shuffle_quiz_item): requires answer to
+        # be verbatim text of one of options — drops letter-form answers ("A")
+        # that would silently break after shuffle.
+        from services.pipeline import _validate_and_shuffle_quiz_item
         guide_items: dict[str, Any] = {}
         for pname in ("expert", "learner"):
-            quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
-            if quiz and isinstance(quiz, dict) and quiz.get("options") and quiz.get("answer"):
-                # Shuffle quiz options so answer isn't always A/B
-                options = list(quiz["options"])
-                answer = quiz["answer"]
-                _random.shuffle(options)
-                quiz = {**quiz, "options": options, "answer": answer}
+            raw_quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
+            quiz = _validate_and_shuffle_quiz_item(
+                raw_quiz, label=f"Daily quiz {digest_type}/{pname}/{locale}"
+            )
             if quiz:
                 guide_items[f"quiz_poll_{pname}"] = quiz
         # Use code-extracted source_cards with LLM-generated titles merged in

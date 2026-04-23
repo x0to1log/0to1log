@@ -258,45 +258,58 @@ def _dedup_source_cards(sources: list[dict]) -> list[dict]:
     return deduped
 
 
-def _validate_and_shuffle_weekly_quiz(quiz_list: Any) -> list[dict]:
-    """Validate each weekly quiz item and shuffle its options.
+def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | None:
+    """Validate a single quiz item + shuffle options. Return None if invalid.
 
-    Keeps up to 3 valid items (drops extras). An item is valid when:
+    An item is valid when:
     - It is a dict with non-empty question, 4 string options, and an answer
-    - answer is one of options (verbatim match)
+    - ``answer`` is one of ``options`` (verbatim text match — NOT a letter
+      like "A"/"B", NOT a position index). Letter-form answers silently
+      break after options get shuffled: the string "A" no longer points to
+      the originally-correct choice, producing incorrect frontend display.
 
-    Each valid item's options are shuffled independently. LLMs tend to
-    place the correct answer at the first option; shuffling evens out
-    the distribution — mirrors the daily quiz shuffle in pipeline_digest.
+    Options are shuffled to even out the answer-position distribution
+    (LLMs tend to place correct answer first).
+    """
+    if not isinstance(raw, dict):
+        return None
+    question = str(raw.get("question") or "").strip()
+    options_raw = raw.get("options")
+    answer = str(raw.get("answer") or "").strip()
+    explanation = str(raw.get("explanation") or "").strip()
+    if not isinstance(options_raw, list):
+        logger.warning("%s dropped: options not a list", label)
+        return None
+    options = [str(o).strip() for o in options_raw]
+    if not question or len(options) != 4 or answer not in options:
+        logger.warning(
+            "%s dropped (invalid): q_len=%d options=%d answer_in=%s answer=%r",
+            label, len(question), len(options), answer in options, answer[:40],
+        )
+        return None
+    shuffled = list(options)
+    random.shuffle(shuffled)
+    return {
+        "question": question,
+        "options": shuffled,
+        "answer": answer,
+        "explanation": explanation,
+    }
+
+
+def _validate_and_shuffle_weekly_quiz(quiz_list: Any) -> list[dict]:
+    """Validate each weekly quiz item (up to 3) and shuffle options.
+
+    Wraps ``_validate_and_shuffle_quiz_item`` over a list. Drops invalid
+    items; keeps first 3 valid.
     """
     cleaned: list[dict] = []
     if not isinstance(quiz_list, list):
         return cleaned
-    for q in quiz_list[:3]:
-        if not isinstance(q, dict):
-            continue
-        question = str(q.get("question") or "").strip()
-        options_raw = q.get("options")
-        answer = str(q.get("answer") or "").strip()
-        explanation = str(q.get("explanation") or "").strip()
-        if not isinstance(options_raw, list):
-            logger.warning("Weekly quiz item dropped: options not a list")
-            continue
-        options = [str(o).strip() for o in options_raw]
-        if not question or len(options) != 4 or answer not in options:
-            logger.warning(
-                "Weekly quiz item dropped (invalid): q_len=%d options=%d answer_in=%s",
-                len(question), len(options), answer in options,
-            )
-            continue
-        shuffled = list(options)
-        random.shuffle(shuffled)
-        cleaned.append({
-            "question": question,
-            "options": shuffled,
-            "answer": answer,
-            "explanation": explanation,
-        })
+    for i, q in enumerate(quiz_list[:3]):
+        item = _validate_and_shuffle_quiz_item(q, label=f"Weekly quiz [{i}]")
+        if item is not None:
+            cleaned.append(item)
     return cleaned
 
 
@@ -2283,6 +2296,148 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
 # WEEKLY RECAP PIPELINE
 # ──────────────────────────────────────────────
 
+async def _generate_weekly_persona_content(
+    *,
+    persona: str,
+    daily_text: str,
+    client,
+    model: str,
+    supabase,
+    run_id: str,
+    cumulative_usage: dict,
+    all_errors: list,
+) -> dict | None:
+    """Generate one persona's weekly EN + KO content (standalone helper).
+
+    Extracted from run_weekly_pipeline's nested closure so the admin regen
+    endpoint can call it for a single persona. Returns {**en_data, **ko_data}
+    on EN success (KO failure leaves ko_data empty); returns None if EN failed
+    or input was empty.
+
+    Mutates cumulative_usage and all_errors in place — matches the original
+    closure semantics so run_weekly_pipeline can call this identically.
+    """
+    from services.agents.prompts_news_pipeline import get_weekly_prompt, get_weekly_ko_prompt
+
+    if not daily_text:
+        return None
+
+    # Call 1: EN generation from daily digests
+    t_en = time.monotonic()
+    system_prompt = get_weekly_prompt(persona)
+    try:
+        async def _weekly_en_call() -> Any:
+            return await asyncio.wait_for(
+                client.chat.completions.create(
+                    **compat_create_kwargs(
+                        model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": daily_text},
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=24000,
+                        reasoning_effort="high",
+                        service_tier="flex",
+                        prompt_cache_key=f"weekly-{persona}-en",
+                    )
+                ),
+                timeout=900,  # flex: 15-min headroom
+            )
+
+        en_response = await with_flex_retry(_weekly_en_call)
+        en_raw = en_response.choices[0].message.content or ""
+        en_usage = extract_usage_metrics(en_response, model)
+        cumulative_usage.update(merge_usage_metrics(cumulative_usage, en_usage))
+        en_data = parse_ai_json(en_raw, f"weekly-{persona}-en")
+
+        await _log_stage(
+            supabase, run_id, f"weekly:{persona}:en", "success", t_en,
+            output_summary=f"en={len(en_data.get('en', ''))}c",
+            usage=en_usage, post_type="weekly",
+        )
+    except Exception as e:
+        logger.warning("Weekly %s EN failed: %s", persona, e)
+        all_errors.append(f"weekly {persona} EN: {e}")
+        await _log_stage(
+            supabase, run_id, f"weekly:{persona}:en", "failed", t_en,
+            error_message=str(e), post_type="weekly",
+        )
+        return None
+
+    en_content = en_data.get("en", "")
+    if not en_content.strip():
+        all_errors.append(f"weekly {persona} EN: empty content")
+        return None
+
+    # Append the EN weekly_quiz JSON under a marker so the KO adapter can translate
+    # it 1:1. Without this, the LLM only sees the markdown body and cannot produce
+    # weekly_quiz_ko.
+    import json as _json
+    en_quiz = en_data.get("weekly_quiz") or []
+    en_excerpt = (en_data.get("excerpt") or "").strip()
+    en_focus = en_data.get("focus_items") or []
+
+    ko_input_parts = [en_content]
+    if en_quiz:
+        ko_input_parts.append(
+            "---ENGLISH WEEKLY QUIZ (JSON, translate to weekly_quiz_ko)---\n"
+            + _json.dumps(en_quiz, ensure_ascii=False, indent=2)
+        )
+    if en_excerpt or en_focus:
+        meta = {"excerpt": en_excerpt, "focus_items": en_focus}
+        ko_input_parts.append(
+            "---ENGLISH META (JSON, translate to excerpt_ko + focus_items_ko)---\n"
+            + _json.dumps(meta, ensure_ascii=False, indent=2)
+        )
+    ko_input = "\n\n".join(ko_input_parts)
+
+    # Call 2: KO adaptation from EN result
+    t_ko = time.monotonic()
+    ko_prompt = get_weekly_ko_prompt(persona)
+    ko_data: dict = {}
+    try:
+        async def _weekly_ko_call() -> Any:
+            return await asyncio.wait_for(
+                client.chat.completions.create(
+                    **compat_create_kwargs(
+                        model,
+                        messages=[
+                            {"role": "system", "content": ko_prompt},
+                            {"role": "user", "content": ko_input},
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=24000,
+                        reasoning_effort="high",
+                        service_tier="flex",
+                        prompt_cache_key=f"weekly-{persona}-ko",
+                    )
+                ),
+                timeout=900,
+            )
+
+        ko_response = await with_flex_retry(_weekly_ko_call)
+        ko_raw = ko_response.choices[0].message.content or ""
+        ko_usage = extract_usage_metrics(ko_response, model)
+        cumulative_usage.update(merge_usage_metrics(cumulative_usage, ko_usage))
+        ko_data = parse_ai_json(ko_raw, f"weekly-{persona}-ko")
+
+        await _log_stage(
+            supabase, run_id, f"weekly:{persona}:ko", "success", t_ko,
+            output_summary=f"ko={len(ko_data.get('ko', ''))}c",
+            usage=ko_usage, post_type="weekly",
+        )
+    except Exception as e:
+        logger.warning("Weekly %s KO failed: %s", persona, e)
+        all_errors.append(f"weekly {persona} KO: {e}")
+        await _log_stage(
+            supabase, run_id, f"weekly:{persona}:ko", "failed", t_ko,
+            error_message=str(e), post_type="weekly",
+        )
+
+    return {**en_data, **ko_data}
+
+
 async def run_weekly_pipeline(
     week_id: str | None = None,
 ) -> PipelineResult:
@@ -2402,136 +2557,29 @@ async def run_weekly_pipeline(
                     parts.append(f"--- {d['post_type'].upper()} KO ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{content}")
             persona_inputs[persona] = source_ref + "\n\n".join(parts)
 
-        # Generate per persona: Call 1 (EN from digests) → Call 2 (KO from EN)
-        from services.agents.prompts_news_pipeline import get_weekly_ko_prompt
+        # Generate per persona via the extracted module-level helper, so the
+        # admin regen endpoint can reuse the exact same logic for a single persona.
         persona_results: dict[str, dict] = {}
         client = get_openai_client()
         model = settings.openai_model_main
 
-        async def _gen_weekly_persona(persona: str) -> None:
-            daily_text = persona_inputs.get(persona, "")
-            if not daily_text:
-                return
-
-            # Call 1: EN generation from daily digests
-            t_en = time.monotonic()
-            system_prompt = get_weekly_prompt(persona)
-            try:
-                async def _weekly_en_call() -> Any:
-                    return await asyncio.wait_for(
-                        client.chat.completions.create(
-                            **compat_create_kwargs(
-                                model,
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": daily_text},
-                                ],
-                                response_format={"type": "json_object"},
-                                max_tokens=24000,
-                                reasoning_effort="high",
-                                service_tier="flex",
-                                prompt_cache_key=f"weekly-{persona}-en",
-                            )
-                        ),
-                        timeout=900,  # flex: 15-min headroom
-                    )
-
-                en_response = await with_flex_retry(_weekly_en_call)
-                en_raw = en_response.choices[0].message.content or ""
-                en_usage = extract_usage_metrics(en_response, model)
-                cumulative_usage.update(merge_usage_metrics(cumulative_usage, en_usage))
-                en_data = parse_ai_json(en_raw, f"weekly-{persona}-en")
-
-                await _log_stage(
-                    supabase, run_id, f"weekly:{persona}:en", "success", t_en,
-                    output_summary=f"en={len(en_data.get('en', ''))}c",
-                    usage=en_usage, post_type="weekly",
-                )
-            except Exception as e:
-                logger.warning("Weekly %s EN failed: %s", persona, e)
-                all_errors.append(f"weekly {persona} EN: {e}")
-                await _log_stage(
-                    supabase, run_id, f"weekly:{persona}:en", "failed", t_en,
-                    error_message=str(e), post_type="weekly",
-                )
-                return
-
-            en_content = en_data.get("en", "")
-            if not en_content.strip():
-                all_errors.append(f"weekly {persona} EN: empty content")
-                return
-
-            # Append the EN weekly_quiz JSON under a marker so the KO adapter can translate
-            # it 1:1. Without this, the LLM only sees the markdown body and cannot produce
-            # weekly_quiz_ko.
-            import json as _json
-            en_quiz = en_data.get("weekly_quiz") or []
-            en_excerpt = (en_data.get("excerpt") or "").strip()
-            en_focus = en_data.get("focus_items") or []
-
-            ko_input_parts = [en_content]
-            if en_quiz:
-                ko_input_parts.append(
-                    "---ENGLISH WEEKLY QUIZ (JSON, translate to weekly_quiz_ko)---\n"
-                    + _json.dumps(en_quiz, ensure_ascii=False, indent=2)
-                )
-            if en_excerpt or en_focus:
-                meta = {"excerpt": en_excerpt, "focus_items": en_focus}
-                ko_input_parts.append(
-                    "---ENGLISH META (JSON, translate to excerpt_ko + focus_items_ko)---\n"
-                    + _json.dumps(meta, ensure_ascii=False, indent=2)
-                )
-            ko_input = "\n\n".join(ko_input_parts)
-
-            # Call 2: KO adaptation from EN result
-            t_ko = time.monotonic()
-            ko_prompt = get_weekly_ko_prompt(persona)
-            try:
-                async def _weekly_ko_call() -> Any:
-                    return await asyncio.wait_for(
-                        client.chat.completions.create(
-                            **compat_create_kwargs(
-                                model,
-                                messages=[
-                                    {"role": "system", "content": ko_prompt},
-                                    {"role": "user", "content": ko_input},
-                                ],
-                                response_format={"type": "json_object"},
-                                max_tokens=24000,
-                                reasoning_effort="high",
-                                service_tier="flex",
-                                prompt_cache_key=f"weekly-{persona}-ko",
-                            )
-                        ),
-                        timeout=900,  # flex: 15-min headroom
-                    )
-
-                ko_response = await with_flex_retry(_weekly_ko_call)
-                ko_raw = ko_response.choices[0].message.content or ""
-                ko_usage = extract_usage_metrics(ko_response, model)
-                cumulative_usage.update(merge_usage_metrics(cumulative_usage, ko_usage))
-                ko_data = parse_ai_json(ko_raw, f"weekly-{persona}-ko")
-
-                await _log_stage(
-                    supabase, run_id, f"weekly:{persona}:ko", "success", t_ko,
-                    output_summary=f"ko={len(ko_data.get('ko', ''))}c",
-                    usage=ko_usage, post_type="weekly",
-                )
-            except Exception as e:
-                logger.warning("Weekly %s KO failed: %s", persona, e)
-                all_errors.append(f"weekly {persona} KO: {e}")
-                ko_data = {}
-                await _log_stage(
-                    supabase, run_id, f"weekly:{persona}:ko", "failed", t_ko,
-                    error_message=str(e), post_type="weekly",
-                )
-
-            # Merge EN + KO results
-            persona_results[persona] = {**en_data, **ko_data}
+        async def _gen_and_collect(persona: str) -> None:
+            result = await _generate_weekly_persona_content(
+                persona=persona,
+                daily_text=persona_inputs.get(persona, ""),
+                client=client,
+                model=model,
+                supabase=supabase,
+                run_id=run_id,
+                cumulative_usage=cumulative_usage,
+                all_errors=all_errors,
+            )
+            if result is not None:
+                persona_results[persona] = result
 
         await asyncio.gather(
-            _gen_weekly_persona("expert"),
-            _gen_weekly_persona("learner"),
+            _gen_and_collect("expert"),
+            _gen_and_collect("learner"),
         )
 
         if not persona_results:
