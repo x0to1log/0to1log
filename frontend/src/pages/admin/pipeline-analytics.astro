@@ -265,11 +265,12 @@ const durationData = pipelineRuns
   })
   .sort((a, b) => a._sortKey.localeCompare(b._sortKey));
 
-// Token totals per stage for donut chart
+// Token totals per stage for donut chart — preserve pipeline execution order
+// (stackedData follows stageNames: collect → classify → ... → quality).
+// Legend then shows the data-flow order; same-group color pairs stay adjacent.
 const tokenTotals = stackedData
   .map((s) => ({ label: s.label, total: s.tokens.reduce((sum, t) => sum + t, 0) }))
-  .filter((s) => s.total > 0)
-  .sort((a, b) => b.total - a.total);
+  .filter((s) => s.total > 0);
 
 const chartData = {
   runLabels: dateGroups.map((dg) => {
@@ -868,14 +869,15 @@ const nonce = Astro.locals.cspNonce || '';
     // Quality (purple): QC checks
     // Other (pink): one-off stages
     var stageColorMap = {
-      // ── Infra (distinct neutrals across slate/zinc/stone — low visual weight, they're cheap)
-      'Collect':           '#cbd5e1', // slate-300
-      'Classify':          '#64748b', // slate-500
-      'Merge':             '#334155', // slate-700
-      'Community':         '#a8a29e', // stone-400
-      'Community Summary': '#78716c', // stone-500
-      'Ranking':           '#52525b', // zinc-600
-      'Enrich':            '#a1a1aa', // zinc-400
+      // ── Infra (distinct hues to prevent donut legend chip overlap;
+      //    hue space avoids blue/orange/violet used by Research/Business/Quality)
+      'Collect':           '#64748b', // slate-500  (neutral start)
+      'Classify':          '#e11d48', // rose-600
+      'Merge':             '#0e7490', // cyan-700
+      'Community':         '#ec4899', // pink-500
+      'Community Summary': '#eab308', // yellow-500
+      'Ranking':           '#92400e', // amber-800 (brown)
+      'Enrich':            '#a3a3a3', // neutral-400 (neutral end)
       // ── Research (cool blue — clear contrast with orange)
       'Research Expert':   '#3b82f6', // blue-500
       'Research Learner':  '#93c5fd', // blue-300
