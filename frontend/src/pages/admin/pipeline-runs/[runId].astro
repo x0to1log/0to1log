@@ -147,6 +147,14 @@ try {
 const raw_error = run?.last_error || '';
 const normalizedError = formatPipelineError(raw_error);
 const tone = statusTone(run?.status);
+
+// Detect weekly run so we can swap the "Rerun from..." menu to weekly-specific
+// options. Matches both `weekly-2026-W16` (full run) and
+// `weekly-regen-2026-W16-expert-1234567890` (per-persona regen). Daily runs
+// use `news-2026-04-23` which won't match.
+const weeklyRunMatch = (run?.run_key ?? '').match(/weekly(?:-regen)?-(\d{4}-W\d{2})/);
+const isWeeklyRun = !!weeklyRunMatch;
+const weeklyWeekId = weeklyRunMatch ? weeklyRunMatch[1] : '';
 const hasStageLogs = logs.length > 0;
 // Exclude 'summary' from totals — it's a cumulative duplicate of all other stage costs
 const costLogs = logs.filter((log) => log.pipeline_type !== 'summary');
@@ -255,19 +263,38 @@ if (batchId) {
               <a href="/admin/pipeline-runs" class="pipeline-run-hero__back">Back to runs</a>
               {(tone === 'success' || tone === 'failed') && (
                 <div class="pipeline-rerun-dropdown">
-                  <button class="pipeline-rerun-btn" data-run-id={runId} data-run-key={run?.run_key ?? ''}>
+                  <button
+                    class="pipeline-rerun-btn"
+                    data-run-id={runId}
+                    data-run-key={run?.run_key ?? ''}
+                    data-weekly={isWeeklyRun ? 'true' : 'false'}
+                    data-week-id={weeklyWeekId}
+                  >
                     Rerun from...
                   </button>
                   <div class="pipeline-rerun-menu" id="rerun-menu" style="display:none;">
-                    <button class="pipeline-rerun-option" data-stage="quality" data-category="research">Quality only: Research</button>
-                    <button class="pipeline-rerun-option" data-stage="quality" data-category="business">Quality only: Business</button>
-                    <button class="pipeline-rerun-option" data-stage="quality">Quality only: Both</button>
-                    <button class="pipeline-rerun-option" data-stage="write" data-category="research">Write: Research only</button>
-                    <button class="pipeline-rerun-option" data-stage="write" data-category="business">Write: Business only</button>
-                    <button class="pipeline-rerun-option" data-stage="write">Write: Both</button>
-                    <button class="pipeline-rerun-option" data-stage="community">From Community</button>
-                    <button class="pipeline-rerun-option" data-stage="merge">From Merge</button>
-                    <button class="pipeline-rerun-option" data-stage="classify">From Classify</button>
+                    {isWeeklyRun ? (
+                      <>
+                        <button class="pipeline-rerun-option" data-stage="weekly-regen" data-persona="expert">
+                          Regenerate Expert (5–10 min)
+                        </button>
+                        <button class="pipeline-rerun-option" data-stage="weekly-regen" data-persona="learner">
+                          Regenerate Learner (5–10 min)
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button class="pipeline-rerun-option" data-stage="quality" data-category="research">Quality only: Research</button>
+                        <button class="pipeline-rerun-option" data-stage="quality" data-category="business">Quality only: Business</button>
+                        <button class="pipeline-rerun-option" data-stage="quality">Quality only: Both</button>
+                        <button class="pipeline-rerun-option" data-stage="write" data-category="research">Write: Research only</button>
+                        <button class="pipeline-rerun-option" data-stage="write" data-category="business">Write: Business only</button>
+                        <button class="pipeline-rerun-option" data-stage="write">Write: Both</button>
+                        <button class="pipeline-rerun-option" data-stage="community">From Community</button>
+                        <button class="pipeline-rerun-option" data-stage="merge">From Merge</button>
+                        <button class="pipeline-rerun-option" data-stage="classify">From Classify</button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -633,13 +660,60 @@ if (batchId) {
 
     var runId = btn.getAttribute('data-run-id');
     var runKey = btn.getAttribute('data-run-key');
-    // Extract batch_id from run_key (e.g., "news-2026-03-31" -> "2026-03-31")
+    var isWeekly = btn.getAttribute('data-weekly') === 'true';
+    var weekId = btn.getAttribute('data-week-id') || '';
+    // Extract batch_id from run_key for daily (e.g., "news-2026-03-31" -> "2026-03-31")
     var batchMatch = runKey.match(/(\d{4}-\d{2}-\d{2})/);
     var batchId = batchMatch ? batchMatch[1] : '';
 
     menu.querySelectorAll('.pipeline-rerun-option').forEach(function(opt) {
       opt.addEventListener('click', function() {
         var stage = opt.getAttribute('data-stage');
+
+        // Weekly per-persona regen: separate backend endpoint, synchronous (5-10 min)
+        if (stage === 'weekly-regen') {
+          var persona = opt.getAttribute('data-persona') || '';
+          if (!weekId || !persona) {
+            alert('Missing week id or persona');
+            return;
+          }
+          if (!confirm(
+            'Regenerate ' + persona + ' for ' + weekId + '?\n\n' +
+            'Overwrites just the ' + persona + ' content on both EN + KO rows, ' +
+            'recomputes quality, takes 5-10 minutes. Other persona stays intact.'
+          )) return;
+
+          menu.style.display = 'none';
+          opt.textContent = 'Running ' + persona + '... (5-10 min, do not close)';
+          opt.disabled = true;
+          fetch('/api/admin/weekly/regenerate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ week_id: weekId, persona: persona }),
+          })
+          .then(function(res) {
+            return res.json().then(function(data) { return { ok: res.ok, status: res.status, data: data }; });
+          })
+          .then(function(r) {
+            if (!r.ok) {
+              if (r.status === 504) {
+                alert('Proxy timeout — backend may still be running. Refresh in 2-3 min.');
+              } else {
+                alert('Regen failed: ' + (r.data.detail || r.data.error || 'HTTP ' + r.status));
+              }
+              return;
+            }
+            var score = r.data && r.data.quality_score;
+            alert('Done — ' + persona + ' regenerated' + (score != null ? ', score ' + score : '') + '. Reloading.');
+            window.location.reload();
+          })
+          .catch(function(err) {
+            alert('Request failed: ' + err.message + '\nBackend may still be running — refresh in 5 min.');
+          });
+          return;
+        }
+
+        // Daily rerun (existing path)
         var category = opt.getAttribute('data-category') || null;
         var label = category ? stage + ' (' + category + ')' : stage;
 
