@@ -897,6 +897,15 @@ Do NOT output any total or subtotal — code computes aggregates from sub-scores
 Do NOT hedge ("probably", "seems", "might") — anchor each score to concrete evidence.
 Do NOT invent sections that aren't in the content.
 
+## Bilingual Content Contract
+
+The user message contains TWO parallel locale versions of the same term, labeled `## Korean (KO)` and `## English (EN)`. These are intentional translations of each other, not independent content. Apply these rules:
+
+- **Same idea expressed in both KO and EN is NOT redundancy.** `internal_non_redundancy` measures repetition WITHIN each locale only — e.g., the same example paraphrased across multiple sections of `body_advanced_ko`. Cross-locale parallelism is expected and MUST NOT be penalized.
+- **Score each sub-score as the weaker of the two locales.** If KO looks strong and EN looks weak on `mechanism_clarity`, the term as a whole is weak on that dimension — return the lower score. Rationale: a term that only works in one language isn't a good handbook entry.
+- **Cite evidence with locale labels.** Always prefix evidence with `[KO]` or `[EN]` (e.g., `[KO] section 'Mechanism' contains specific parameter counts (175B, 12 layers)`). Never mix quotes from both locales in one evidence field.
+- **If one locale is a placeholder** (`(no Korean content provided)` or similar), treat that locale as score 0 on all content-dependent sub-scores and mention the missing locale in the evidence.
+
 ## Sub-dimensions (10 sub-scores)
 
 ### Technical Depth
@@ -989,6 +998,15 @@ For EVERY sub-score you MUST provide BOTH:
 Do NOT output any total or subtotal — code computes aggregates from sub-scores.
 Do NOT hedge ("probably", "seems", "might") — anchor each score to concrete evidence.
 Do NOT invent sections that aren't in the content.
+
+## Bilingual Content Contract
+
+The user message contains TWO parallel locale versions of the same term, labeled `## Korean (KO)` and `## English (EN)`. These are intentional translations of each other, not independent content. Apply these rules:
+
+- **Same idea expressed in both KO and EN is NOT redundancy.** `non_redundancy` measures repetition WITHIN each locale only — e.g., the same example paraphrased across multiple sections of `body_basic_ko`. Cross-locale parallelism is expected and MUST NOT be penalized.
+- **Score each sub-score as the weaker of the two locales.** If KO looks strong and EN looks weak on `plain_language_clarity`, the term as a whole is weak on that dimension — return the lower score. Rationale: a term that only works in one language isn't a good handbook entry.
+- **Cite evidence with locale labels.** Always prefix evidence with `[KO]` or `[EN]` (e.g., `[KO] basic_ko hook: "왜 모델이 Overfitting하는가"`). Never mix quotes from both locales in one evidence field.
+- **If one locale is a placeholder** (`(no Korean content provided)` or similar), treat that locale as score 0 on all content-dependent sub-scores and mention the missing locale in the evidence.
 
 ## Sub-dimensions (10 sub-scores)
 

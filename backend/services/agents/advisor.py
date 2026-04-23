@@ -1237,6 +1237,23 @@ _BASIC_DIMENSIONS = (
 _BASIC_MAX_RAW = 100
 
 
+def _build_bilingual_judge_content(ko_body: str, en_body: str) -> str:
+    """Construct a labeled user message for the bilingual quality judge.
+
+    The judge sees KO and EN content as two parallel locale versions of the
+    same term. Labels are required so the judge's Bilingual Content Contract
+    (see HANDBOOK_QUALITY_CHECK_PROMPT / BASIC_QUALITY_CHECK_PROMPT) can
+    reference "the KO section" / "the EN section" meaningfully.
+
+    Missing locales are preserved as explicit placeholders so the judge can
+    downscore the missing-language sub-scores instead of silently treating
+    them as "present but empty".
+    """
+    ko_section = ko_body.strip() if ko_body and ko_body.strip() else "(no Korean content provided)"
+    en_section = en_body.strip() if en_body and en_body.strip() else "(no English content provided)"
+    return f"## Korean (KO)\n\n{ko_section}\n\n## English (EN)\n\n{en_section}"
+
+
 async def _check_handbook_quality(
     term: str, term_type: str, advanced_content: str, client,
 ) -> tuple[int | None, dict, dict]:
@@ -2807,7 +2824,10 @@ async def _run_generate_term(
 
     if not req.skip_quality_check:
         # Advanced semantic check
-        adv_combined = f"{data.get('body_advanced_ko', '')}\n\n{data.get('body_advanced_en', '')}"
+        adv_combined = _build_bilingual_judge_content(
+            data.get("body_advanced_ko", ""),
+            data.get("body_advanced_en", ""),
+        )
         if adv_combined.strip():
             try:
                 semantic_score, semantic_breakdown, quality_usage = await _check_handbook_quality(
@@ -2822,7 +2842,10 @@ async def _run_generate_term(
                 logger.warning("Advanced quality check failed for '%s': %s", req.term, e)
 
         # Basic semantic check
-        basic_combined = f"{data.get('body_basic_ko', '')}\n\n{data.get('body_basic_en', '')}"
+        basic_combined = _build_bilingual_judge_content(
+            data.get("body_basic_ko", ""),
+            data.get("body_basic_en", ""),
+        )
         if basic_combined.strip():
             try:
                 basic_semantic_score, basic_semantic_breakdown, basic_quality_usage = (
