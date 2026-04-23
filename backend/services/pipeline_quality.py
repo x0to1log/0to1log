@@ -1063,7 +1063,7 @@ async def _check_weekly_quality(
         return {"quality_score": 0, "quality_flags": ["no_expert_content"]}
 
     client = get_openai_client()
-    model = settings.openai_model_main
+    model = settings.openai_model_reasoning  # gpt-5-mini — match daily quality
     issues_all: list[str] = []
     structured_issues: list[dict[str, str]] = []
     llm_scores: list[int] = []
