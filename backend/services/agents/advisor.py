@@ -1188,6 +1188,7 @@ async def _check_handbook_quality(
                 max_tokens=1800,
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-quality-advanced",
+                service_tier="flex",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "handbook-quality")
@@ -1234,6 +1235,7 @@ async def _self_critique_basic(
                 max_tokens=1500,
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-critique-basic",
+                service_tier="flex",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "basic-self-critique")
@@ -1283,6 +1285,7 @@ async def _check_basic_quality(
                 max_tokens=1800,
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-quality-basic",
+                service_tier="flex",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "basic-quality")
