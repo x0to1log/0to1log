@@ -453,7 +453,6 @@ async def _check_digest_quality(
                         max_tokens=1500,  # rubric with evidence per sub-score is verbose
                         response_format={"type": "json_object"},
                         service_tier="flex",
-                        verbosity="low",
                         prompt_cache_key=f"qc-{label}",
                     )
                 )
@@ -1091,7 +1090,6 @@ async def _check_weekly_quality(
                     temperature=0.2,
                     max_tokens=2000,
                     service_tier="flex",
-                    verbosity="low",
                     prompt_cache_key="qc-weekly-expert",
                 )
             ),
@@ -1138,7 +1136,6 @@ async def _check_weekly_quality(
                         temperature=0.2,
                         max_tokens=2000,
                         service_tier="flex",
-                        verbosity="low",
                         prompt_cache_key="qc-weekly-learner",
                     )
                 ),
