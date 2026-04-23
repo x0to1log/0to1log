@@ -394,16 +394,16 @@ def test_locale_integrity_exempts_community_pulse_section():
 def test_business_expert_strategic_decisions_requires_citations():
     """Apr 22 bug: Business expert Strategic Decisions section shipped 5 bullets
     with 0 citations — strategic guidance without sources reads as editorial.
-    Writer prompt must explicitly require [N](URL) on every bullet."""
+    Writer prompt must explicitly require a citation placeholder on every bullet."""
     prompt = get_digest_prompt("business", "expert", [])
 
     assert "## Strategic Decisions" in prompt
-    # Format line must now include `[N](URL)` at end
-    assert "[consequence] [N](URL)" in prompt
+    # Format line must now include `[CITE_N]` at end (Apr 23 migration)
+    assert "[consequence] [CITE_N]" in prompt
     # Explicit rule about citing
-    assert "Every bullet MUST end with `[N](URL)`" in prompt
+    assert "Every bullet MUST end with `[CITE_N]`" in prompt
     # Example must demonstrate a citation at the end
-    assert "https://openai.com/blog" in prompt  # example URL in the sample
+    assert "https://openai.com/blog" in prompt  # example URL in the citations[] sample
 
 
 def test_hallucination_guard_enforces_attribution_url_domain_match():

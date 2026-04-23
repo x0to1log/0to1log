@@ -176,8 +176,10 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: Cite at the END of each paragraph with the source(s) used. Format: `...content. [1](URL)`
-   - Use [N](URL) format where N is any number. Use different citations in different paragraphs when multiple sources are provided.
+1. CITATION FORMAT: Cite at the END of each paragraph using the placeholder `[CITE_N]`. Format: `...content. [CITE_1]`
+   - Use `[CITE_N]` format where N is a 1-indexed integer. Use different N values across paragraphs when multiple sources are provided.
+   - Emit a separate `citations` array: `[{{"n": 1, "url": "<exact URL from source list>"}}, ...]`. The API enforces that every `url` is in the provided allowlist.
+   - NEVER write inline `[N](URL)` markdown links in the body. The post-processor rejects them.
    - One-Line Summary does NOT need citations.
    - Do NOT group sources at the bottom. Do NOT use "[Source Title](URL)" format.
 2. Use concrete numbers and data - no vague statements.
@@ -189,8 +191,9 @@ Return a JSON object with "en" and "ko" keys, each containing full markdown cont
 ## Output JSON format
 ```json
 {{
-  "en": "## Section 1\\nEnglish content...\\n\\n## Section 2\\n...",
-  "ko": "## 섹션 1\\n한국어 콘텐츠...\\n\\n## 섹션 2\\n..."
+  "en": "## Section 1\\nEnglish content... [CITE_1]\\n\\n## Section 2\\n...",
+  "ko": "## 섹션 1\\n한국어 콘텐츠... [CITE_1]\\n\\n## 섹션 2\\n...",
+  "citations": [{{"n": 1, "url": "https://example.com/article"}}]
 }}
 ```"""
 
@@ -293,7 +296,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {sections_description}
 
 ## Writing Rules
-1. CITATION FORMAT: cite at the END of every paragraph using `[N](URL)`. Use different citations across paragraphs when multiple sources exist. One-Line Summary needs no citation. Do NOT group sources at the bottom. Do NOT use `[Title](URL)` format.
+1. CITATION FORMAT: cite at the END of every paragraph using the placeholder `[CITE_N]` where N is a 1-indexed integer. Use different N values across paragraphs when multiple sources exist. Emit a separate `citations` array `[{{"n": 1, "url": "<exact URL from source list>"}}, ...]`; the API rejects any url outside the allowlist. NEVER write inline `[N](URL)` markdown links in the body — the post-processor rejects them. One-Line Summary needs no citation. Do NOT group sources at the bottom. Do NOT use `[Title](URL)` format.
 2. Use concrete numbers and data — no vague statements.
 {english_field_purity_rule}
 {learner_opening_rule}
@@ -351,7 +354,7 @@ Your "en" and "ko" values MUST follow the skeleton below. Replace content but ke
 
 {skeleton}
 
-IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, `###` sub-heading/body separation, blank lines after headings, citation format `[N](URL)`, paragraph count, and formatting MUST match this structure exactly.
+IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be based on the news items provided. But the section headers, `###` sub-heading/body separation, blank lines after headings, citation placeholder format `[CITE_N]` at paragraph end, paragraph count, and formatting MUST match this structure exactly. The placeholders resolve to `[N](URL)` after the API returns — the body you emit contains only `[CITE_N]` tokens and the `citations` array holds the URLs.
 
 {title_strategy}
 
@@ -365,7 +368,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 {ONE_LINE_SUMMARY_RULE}
 {learner_ko_rule}
 ## FINAL CHECKLIST (verify before responding)
-1. Citations: Does every paragraph end with at least one [N](URL) citation?
+1. Citations: Does every paragraph end with at least one `[CITE_N]` placeholder? Does every `[CITE_N]` in the body have a matching entry in the `citations` array? Does every `citations[].url` come from the provided source list verbatim?
 2. **Sub-item count match**: Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)
 3. Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
@@ -444,9 +447,9 @@ BUSINESS_EXPERT_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** 
 - **## Community Pulse (ko: ## 커뮤니티 반응)** - MANDATORY when community data is provided in the input. Format: `**r/subreddit** (N upvotes) — sentiment summary in one line.` Then 1-2 direct quotes as blockquotes. Follow Community Pulse Rules (rule 9).
 - **## Connecting the Dots (ko: ## 흐름 연결)** - Strategic pattern analysis: why these things happen simultaneously, what market forces are driving them, and what this signals for the next 3-6 months.
 - **## Strategic Decisions (ko: ## 전략 판단)** - Write 3-5 concrete decisions as bullet points. This section is MANDATORY. Use EXACTLY this format for each bullet:
-  `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence] [N](URL)`
-  **Every bullet MUST end with `[N](URL)` citing the Top Story or announcement that justifies the recommendation.** Strategic guidance without a source is editorial opinion — readers need to verify the trigger event. Use the same citation numbering as the body sections (reuse existing `[N]` if it references the same story).
-  Example: `- **If you rely on OpenAI APIs**: evaluate alternative providers this quarter — because vendor concentration risk is rising. Risk of inaction: 100% dependency on a single provider's pricing decisions. [1](https://openai.com/blog/announcement)`"""
+  `- **If [situation]**: [action] by [timeframe] — because [reasoning]. Risk of inaction: [consequence] [CITE_N]`
+  **Every bullet MUST end with `[CITE_N]` citing the Top Story or announcement that justifies the recommendation.** Strategic guidance without a source is editorial opinion — readers need to verify the trigger event. Use the same citation numbering as the body sections (reuse existing N values when referencing the same story; the `citations` array holds each URL once).
+  Example body: `- **If you rely on OpenAI APIs**: evaluate alternative providers this quarter — because vendor concentration risk is rising. Risk of inaction: 100% dependency on a single provider's pricing decisions. [CITE_1]` (the matching citations entry: `{"n": 1, "url": "https://openai.com/blog/announcement"}`)"""
 
 
 # NOTE: BUSINESS_EXPERT_GUIDE previously had a definition here that was
@@ -578,7 +581,7 @@ HALLUCINATION_GUARD = """## Hallucination Guard (CRITICAL — applies to headlin
 
 Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output MUST appear in the source articles provided. NEVER invent quotes, statistics, prices, dates, or motivations. NEVER attribute intent to a company unless the source explicitly states it.
 
-**NEVER predict the future or use forward-looking speculation verbs.** Forbidden forms include English ("Expect X to Y", "will disrupt", "is set to become", "poised to", "on track to") AND Korean ("Q2에", "내년", "다음 분기", "예상된다", "전망된다", "~할 것이다"). Use calibrated language instead: "signals", "points toward", "implies", "positions X as", "suggests". When the source itself speculates, attribute explicitly ("Anthropic says it expects …" with `[N](URL)`).
+**NEVER predict the future or use forward-looking speculation verbs.** Forbidden forms include English ("Expect X to Y", "will disrupt", "is set to become", "poised to", "on track to") AND Korean ("Q2에", "내년", "다음 분기", "예상된다", "전망된다", "~할 것이다"). Use calibrated language instead: "signals", "points toward", "implies", "positions X as", "suggests". When the source itself speculates, attribute explicitly ("Anthropic says it expects …" with `[CITE_N]`).
 
 **NEVER use retrospective/present-tense overclaim language** (applies to BODY, not only headline). Forbidden English: "dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading", "takes over", "wipes out", "decimates". Forbidden Korean: "장악", "독점 장악", "완전히 뒤집다", "압도적 우위", "석권", "판을 뒤엎다". Use calibrated alternatives: "leads in X", "signals shift in Y", "positions as front-runner", "outperforms on benchmark Z"; Korean: "앞서간다", "선두에 선다", "주도권을 쥔다", "우위를 보인다". Source-language quotes are OK if attributed directly.
 
@@ -586,9 +589,13 @@ Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output M
 
 When unsure, omit rather than fabricate.
 
-**Citations**: every `[N](URL)` must reference a URL from the provided source list **verbatim** (copy-paste the exact URL — do not modify the path, do not re-type from memory, do not append fragments). NEVER invent URLs, guess domains, or fabricate article paths. If a claim has no supporting source URL, drop the claim rather than the citation.
-
-**Before submitting, cross-check each `[N](URL)` in the body against the provided source list.** If any URL's domain or path is NOT in the source list — including URLs you "remember" from training data like dataset pages, Wikipedia articles, random blog hosts, or aggregator sites (`aicosoft.com`, `aisecurity-portal.org`, `phemex.com`, etc.) — **delete the citation and either drop the supporting claim or rephrase without citation**. Citations to domains outside the source list are a hard validation failure that blocks publication; the digest will be rejected even if every other quality signal is perfect.
+**Citations — MANDATORY two-part format (strict schema enforces this)**:
+- In the body (`en` and `ko` fields): reference sources using the placeholder form `[CITE_N]` where N is a 1-indexed integer. Example: "Foo shipped bar [CITE_1] yesterday [CITE_2]."
+- NEVER write inline markdown links like `[1](https://...)` anywhere in the body. The post-processor rejects them and the output is invalidated.
+- Emit a separate `citations` array of `{"n": <int>, "url": "<exact URL>"}` objects. Example: `"citations": [{"n": 1, "url": "https://techcrunch.com/2026/04/23/foo-launch"}, {"n": 2, "url": "https://www.reuters.com/markets/bar-report"}]`.
+- The `url` field is constrained by the API to the allowlist of source URLs you were given. Any URL not in the allowlist causes a schema validation failure and a retry. Save tokens: **copy URLs verbatim from the source list — do NOT re-type them, do NOT fill in from memory**.
+- Every `[CITE_N]` placeholder must have a matching entry in `citations`. Unused citations entries are tolerated but wasteful — only include URLs you actually reference.
+- If a claim has no supporting URL in the source list, drop the claim or rephrase without citation. Do NOT invent a URL or synthesize one to "fit" a claim.
 
 **Attribution must match URL domain.** If your sentence says "X reports", "X confirms", or "according to X", the cited URL MUST be from X's own domain. For syndicated content (e.g., a local paper reprinting an AP or Reuters wire under a different domain like `mrt.com`, `yahoo.com/news`, `msn.com`), name the actual publishing domain — not the wire service. Write "Midland Reporter-Telegram carries AP reporting" or simply "Midland Reporter-Telegram reports" when the URL is `mrt.com`. Do NOT write "Associated Press reports [N](https://www.mrt.com/...)" — readers clicking the citation expect to land on the source you named. Same rule for Reuters, AFP, Bloomberg: only attribute by name when the URL is their own domain."""
 
@@ -642,7 +649,7 @@ The KO body is a faithful translation/adaptation of the EN body — NOT an indep
 - Direct quotes carry matching meaning; the `>` blockquotes in Community Pulse follow the pipeline-provided EN↔KO quote pairs — do not rewrite them.
 
 **Structure**:
-- Same set of `##` sections in both locales. Same set of `###` sub-items. Same `[N](URL)` citation count per paragraph.
+- Same set of `##` sections in both locales. Same set of `###` sub-items. Same `[CITE_N]` placeholder count per paragraph (both locales reference the same citations[] array — no locale-specific URLs).
 - NEWS sections omitted in EN (no news that category) must also be omitted in KO.
 
 **Self-check before submitting**:
@@ -702,12 +709,12 @@ OpenAI simultaneously plans to double its workforce from 4,500 to over 8,000. Th
 ## Industry & Biz
 ### Oracle Launches Fusion Agentic Applications
 
-[3 paragraphs, each ending with [N](URL)...]
+[3 paragraphs, each ending with [CITE_N]...]
 
 ## New Tools
 ### Cloudflare Dynamic Workers
 
-[3 paragraphs, each ending with [N](URL)...]
+[3 paragraphs, each ending with [CITE_N]...]
 
 ## Community Pulse
 
@@ -744,12 +751,12 @@ Runway, Pika 등은 비디오 생성에 계속 투자하지만, OpenAI는 소비
 ## Industry & Biz
 ### 오라클, 에이전트 기반 퓨전 앱 출시
 
-[3문단 — 사업적 맥락, 경쟁 분석, 실무 시사점. 각 문단 끝에 [N](URL)]
+[3문단 — 사업적 맥락, 경쟁 분석, 실무 시사점. 각 문단 끝에 [CITE_N]]
 
 ## New Tools
 ### Cloudflare 다이내믹 워커스: AI 추론 콜드스타트 100배 개선
 
-[3문단 — 기술 설명, 기존 대비 차별점, 실무 활용. 각 문단 끝에 [N](URL)]
+[3문단 — 기술 설명, 기존 대비 차별점, 실무 활용. 각 문단 끝에 [CITE_N]]
 
 ## 커뮤니티 반응
 
@@ -788,12 +795,12 @@ The expansion targets research, engineering, and product roles. As AI models get
 ## Industry & Biz
 ### U.S. National AI Policy Framework
 
-[3 paragraphs, plain language, each ending with [N](URL)...]
+[3 paragraphs, plain language, each ending with [CITE_N]...]
 
 ## New Tools
 ### Cloudflare Dynamic Workers: Faster AI for Everyone
 
-[3 paragraphs explaining what it does and why you should care, each ending with [N](URL)...]
+[3 paragraphs explaining what it does and why you should care, each ending with [CITE_N]...]
 
 ## Community Pulse
 
@@ -831,12 +838,12 @@ ChatGPT와 DALL-E로 유명한 OpenAI가 직원을 4,500명에서 8,000명 이�
 ## Industry & Biz
 ### 미국 국가 AI 정책 프레임워크: 무엇이 달라지나
 
-[3문단 — 쉬운 설명, 일상 영향, 실용 시사점. 각 문단 끝에 [N](URL)]
+[3문단 — 쉬운 설명, 일상 영향, 실용 시사점. 각 문단 끝에 [CITE_N]]
 
 ## New Tools
 ### Cloudflare 다이내믹 워커스: 누구나 빠른 AI를 쓸 수 있게
 
-[3문단 — 쉬운 설명, 왜 중요한지, 활용 방법. 각 문단 끝에 [N](URL)]
+[3문단 — 쉬운 설명, 왜 중요한지, 활용 방법. 각 문단 끝에 [CITE_N]]
 
 ## 커뮤니티 반응
 
@@ -887,7 +894,7 @@ The approach requires 3x inference passes per query, which increases latency. Pr
 ## Open Source & Repos
 ### WildWorld Dataset
 
-[3 paragraphs, each ending with [N](URL)...]
+[3 paragraphs, each ending with [CITE_N]...]
 
 ## Community Pulse
 
@@ -928,7 +935,7 @@ HaluEval 벤치마크에서 8B 모델로 91.2% 환각 탐지 정확도를 달성
 ## Open Source & Repos
 ### WildWorld: AI 훈련용 비디오 게임 데이터셋
 
-[3문단 — 프로젝트 설명, 개발자 관심 이유, 한계. 각 문단 끝에 [N](URL)]
+[3문단 — 프로젝트 설명, 개발자 관심 이유, 한계. 각 문단 끝에 [CITE_N]]
 
 ## 커뮤니티 반응
 
@@ -968,7 +975,7 @@ The clever part: each agent only sees part of the information, so they cannot ju
 ## Open Source & Repos
 ### WildWorld: A Video Game Dataset for AI Training
 
-[3 paragraphs in plain language, explaining what it is and why it matters, each ending with [N](URL)...]
+[3 paragraphs in plain language, explaining what it is and why it matters, each ending with [CITE_N]...]
 
 ## Community Pulse
 
@@ -998,7 +1005,7 @@ The clever part: each agent only sees part of the information, so they cannot ju
 
 ### MARCH: AI가 서로 사실을 확인하는 팩트체크 시스템
 
-[2문단 — 비유 먼저("뉴스룸의 기자·편집자·팩트체커"), 핵심 결과. 각 문단 끝에 [N](URL)]
+[2문단 — 비유 먼저("뉴스룸의 기자·편집자·팩트체커"), 핵심 결과. 각 문단 끝에 [CITE_N]]
 
 ## 커뮤니티 반응
 
