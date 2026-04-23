@@ -57,3 +57,37 @@ def test_deep_verify_step2_uses_distinct_cache_key():
 
     src = inspect.getsource(advisor.run_deep_verify)
     assert 'prompt_cache_key="advisor-deepverify-step2"' in src
+
+@pytest.mark.parametrize("cache_key", [
+    "hb-generate-basic",
+    "hb-generate-en-basic",
+    "hb-generate-advanced",
+    "hb-generate-en-advanced",
+    "hb-regen-basic",
+    "hb-regen-en-basic",
+    "hb-regen-advanced",
+    "hb-regen-en-advanced",
+])
+def test_handbook_writer_call_site_uses_flex(cache_key):
+    """Every handbook writer/regen compat_create_kwargs call should pair
+    reasoning_effort='high' + prompt_cache_key with service_tier='flex',
+    matching the daily news writer pattern.
+
+    Verified by source inspection — the call is far enough inside nested
+    functions that mock-based verification would be brittle.
+    """
+    from pathlib import Path
+
+    src = Path("services/agents/advisor.py").read_text(encoding="utf-8")
+    # Find the block containing this cache_key literal
+    marker = f'prompt_cache_key="{cache_key}"'
+    idx = src.find(marker)
+    assert idx != -1, f"cache_key {cache_key!r} not found in advisor.py"
+    # Look at the surrounding lines for service_tier="flex"
+    block_start = max(0, idx - 600)
+    block_end = min(len(src), idx + 200)
+    block = src[block_start:block_end]
+    assert 'service_tier="flex"' in block, (
+        f"{cache_key} call site is missing service_tier='flex'. "
+        f"Expected within several lines of the prompt_cache_key literal."
+    )

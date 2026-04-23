@@ -2203,6 +2203,7 @@ async def _run_generate_term(
                 max_tokens=16000,
                 prompt_cache_key="hb-generate-basic",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         )
         basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
@@ -2379,6 +2380,7 @@ async def _run_generate_term(
                 max_tokens=16000,
                 prompt_cache_key="hb-generate-en-basic",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         ),
         client.chat.completions.create(
@@ -2392,6 +2394,7 @@ async def _run_generate_term(
                 max_tokens=16000,
                 prompt_cache_key="hb-generate-advanced",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         ),
     )
@@ -2455,6 +2458,7 @@ async def _run_generate_term(
             max_tokens=16000,
             prompt_cache_key="hb-generate-en-advanced",
             reasoning_effort="high",
+            service_tier="flex",
         )
     )
     basic_critique_task = _self_critique_basic(
@@ -2497,6 +2501,7 @@ async def _run_generate_term(
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-regen-basic",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         )
         improved_basic = parse_ai_json(resp1b.choices[0].message.content, "Handbook-basic-ko-improved")
@@ -2521,6 +2526,7 @@ async def _run_generate_term(
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-regen-en-basic",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         )
         en_basic_data = parse_ai_json(resp2b.choices[0].message.content, "Handbook-basic-en-improved")
@@ -2570,6 +2576,7 @@ async def _run_generate_term(
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-regen-advanced",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         )
         advanced_ko_data = parse_ai_json(resp3b.choices[0].message.content, "Handbook-adv-ko-improved")
@@ -2609,6 +2616,7 @@ async def _run_generate_term(
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-regen-en-advanced",
                 reasoning_effort="high",
+                service_tier="flex",
             )
         )
         advanced_en_data = parse_ai_json(resp4b.choices[0].message.content, "Handbook-adv-en-improved")
