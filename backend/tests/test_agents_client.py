@@ -1,11 +1,11 @@
-"""Tests for services.agents.client gpt-5 compat + kwarg builder."""
+"""Tests for services.agents.client kwargs builder + flex retry."""
 from unittest.mock import AsyncMock, MagicMock
 
 import openai
 import pytest
 
 from services.agents.client import (
-    _apply_gpt5_compat,
+    _apply_gpt5_kwargs,
     build_completion_kwargs,
     with_flex_retry,
 )
@@ -26,14 +26,14 @@ def _fake_rate_limit_error(msg: str = "resource unavailable") -> openai.RateLimi
 
 def test_gpt5_default_reasoning_effort_is_low():
     kwargs = {"model": "gpt-5", "max_tokens": 1000}
-    out = _apply_gpt5_compat(kwargs, "gpt-5")
+    out = _apply_gpt5_kwargs(kwargs, "gpt-5")
     assert out["reasoning_effort"] == "low"
     assert out["max_completion_tokens"] == 3000
 
 
 def test_gpt5_caller_can_override_reasoning_effort_to_high():
     kwargs = {"model": "gpt-5", "max_tokens": 1000, "reasoning_effort": "high"}
-    out = _apply_gpt5_compat(kwargs, "gpt-5")
+    out = _apply_gpt5_kwargs(kwargs, "gpt-5")
     assert out["reasoning_effort"] == "high"
 
 
@@ -53,7 +53,7 @@ def test_build_completion_kwargs_defaults_reasoning_effort_on_gpt5():
         messages=[{"role": "user", "content": "x"}],
         max_tokens=1000,
     )
-    # Still gets the default "low" injected by _apply_gpt5_compat
+    # Still gets the default "low" injected by _apply_gpt5_kwargs
     assert out["reasoning_effort"] == "low"
 
 

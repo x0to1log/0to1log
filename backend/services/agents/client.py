@@ -55,43 +55,31 @@ def get_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=settings.openai_api_key, timeout=300.0)
 
 
-def is_o_series(model: str) -> bool:
-    """Check if model is an o-series reasoning model (o1, o3, o4-mini, etc.)."""
-    return model.startswith("o1") or model.startswith("o3") or model.startswith("o4")
+def _apply_gpt5_kwargs(kwargs: dict, model: str) -> dict:
+    """Apply gpt-5 adjustments: 3x token headroom for reasoning + default low effort.
 
-
-def _uses_max_completion_tokens(model: str) -> bool:
-    """Models that require max_completion_tokens instead of max_tokens."""
-    return is_o_series(model) or model.startswith("gpt-5")
-
-
-def _apply_gpt5_compat(kwargs: dict, model: str) -> dict:
-    """Apply gpt-5 compatibility: 3x token headroom for reasoning + low default effort.
-
-    Two token paths to handle:
-    1. compat_create_kwargs caller passed max_tokens → pop + rename + 3x.
-    2. build_completion_kwargs caller already set max_completion_tokens → 3x in place.
+    gpt-5 is a reasoning model. Reasoning tokens consume the output budget;
+    without headroom the final answer can be empty. Two entry points hit this:
+      - compat_create_kwargs passes `max_tokens` → pop + rename + 3x.
+      - build_completion_kwargs sets `max_completion_tokens` directly → 3x in place.
+    No-op for non-gpt-5 models (none in production, but keeps this safe for tests).
     """
-    if _uses_max_completion_tokens(model) and "max_tokens" in kwargs:
-        original = kwargs.pop("max_tokens")
-        kwargs["max_completion_tokens"] = original * 3
-    elif _uses_max_completion_tokens(model) and "max_completion_tokens" in kwargs:
+    if not model.startswith("gpt-5"):
+        return kwargs
+
+    if "max_tokens" in kwargs:
+        kwargs["max_completion_tokens"] = kwargs.pop("max_tokens") * 3
+    elif "max_completion_tokens" in kwargs:
         kwargs["max_completion_tokens"] = kwargs["max_completion_tokens"] * 3
 
-    # gpt-5: reduce reasoning effort to save tokens for actual output
-    if model.startswith("gpt-5") and "reasoning_effort" not in kwargs:
-        kwargs["reasoning_effort"] = "low"
-
+    kwargs.setdefault("reasoning_effort", "low")
     return kwargs
 
 
 def compat_create_kwargs(model: str, **kwargs) -> dict:
-    """Make chat.completions.create kwargs compatible with gpt-5/o-series.
-
-    Use for direct API calls that don't go through build_completion_kwargs.
-    """
+    """Build chat.completions.create kwargs for direct callers (gpt-5 family)."""
     kwargs["model"] = model
-    return _apply_gpt5_compat(kwargs, model)
+    return _apply_gpt5_kwargs(kwargs, model)
 
 
 def build_completion_kwargs(
@@ -104,10 +92,9 @@ def build_completion_kwargs(
     verbosity: str | None = None,
     prompt_cache_key: str | None = None,
 ) -> dict:
-    """Build kwargs for chat.completions.create for gpt-5 family.
+    """Build chat.completions.create kwargs for gpt-5 family.
 
-    Note: `temperature` is not accepted — gpt-5/o-series reject it at the API.
-    If a non-reasoning model family is re-introduced, re-add the parameter here.
+    `temperature` is intentionally not accepted — gpt-5 rejects it at the API.
     """
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
     kwargs["max_completion_tokens"] = max_tokens  # all production models are gpt-5 family
@@ -121,7 +108,7 @@ def build_completion_kwargs(
         kwargs["verbosity"] = verbosity
     if prompt_cache_key is not None:
         kwargs["prompt_cache_key"] = prompt_cache_key
-    return _apply_gpt5_compat(kwargs, model)
+    return _apply_gpt5_kwargs(kwargs, model)
 
 
 def _resolve_pricing_key(model_name: str | None) -> str | None:
@@ -131,7 +118,7 @@ def _resolve_pricing_key(model_name: str | None) -> str | None:
     if model_name in OPENAI_MODEL_PRICING_PER_1M:
         return model_name
 
-    # Match longest key first to avoid e.g. "gpt-4o-mini" matching "gpt-4o"
+    # Match longest key first so "gpt-5-mini" wins over "gpt-5" for a model like "gpt-5-mini-2025-xx".
     for candidate in sorted(OPENAI_MODEL_PRICING_PER_1M, key=len, reverse=True):
         if model_name.startswith(candidate):
             return candidate
