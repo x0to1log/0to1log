@@ -1634,6 +1634,9 @@ Keep the same section keys; only adapt the content perspective.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - **시간 표현 앵커링 — 상대 표현 금지:** 시간을 언급할 때 상대적 표현("최근", "지난주", "현재", "요즘")보다 절대 시점("2026년 4월", "2024–2025년")을 우선 사용. 핸드북은 생성 후 수개월–수년 뒤에도 읽히므로 상대 표현은 금방 의미가 흐려짐. 정확한 시점을 모를 때는 특정 날짜를 지어내지 말고 "2024년 이후", "최근 1–2년 사이" 같이 **한정된 표현**을 사용.
+- **주장 보정 (claim calibration):**
+  - "혁명적", "획기적", "게임 체인저", "패러다임 전환" 같은 과장 표현은 본문에 **구체적인 인용 (논문/데이터/출처)** 이 같은 문장에 있지 않으면 사용 금지.
+  - 미래 예측 표현 ("앞으로 대체할", "곧 주류가 될", "지배적 기술이 될 것이다") 은 **명시적으로 예측임을 드러내고** 근거 ("X 추세 기준", "Y 논문 결과에 따르면") 를 같은 문장에 포함. 미래 전망을 현재 사실처럼 기술 금지.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_ko` footer (generated in Call 1). Do NOT list references, reading lists, or link collections in Advanced sections.**
@@ -1853,6 +1856,9 @@ Keep the same section keys; only adapt the content perspective.
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - **Temporal anchoring — avoid relative phrasing:** When referencing time, prefer absolute dates ("April 2026", "2024–2025") over relative phrases ("recently", "last week", "currently", "these days"). The handbook is read months or years after generation — relative phrases decay in meaning. When the exact date is uncertain, use a qualified phrase like "since 2024" or "in the past 1–2 years" rather than inventing a specific date.
+- **Claim calibration:**
+  - Avoid overclaim words ("revolution", "revolutionary", "breakthrough", "game-changer", "paradigm shift") unless the claim is backed by a **specific citation (paper/data/source)** in the same sentence.
+  - Predictions / forward-looking claims ("will disrupt", "is set to", "expected to dominate") must be **explicitly framed as prediction**, with the basis ("based on X trend", "per Y paper's results") in the same sentence. Do not present future projections as current facts.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_en` footer (generated in Call 2). Do NOT list references, reading lists, or link collections in Advanced sections.**
