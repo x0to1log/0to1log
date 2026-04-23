@@ -2415,7 +2415,6 @@ async def run_weekly_pipeline(
                                 {"role": "user", "content": daily_text},
                             ],
                             response_format={"type": "json_object"},
-                            temperature=0.5,
                             max_tokens=16000,
                         )
                     ),
@@ -2480,7 +2479,6 @@ async def run_weekly_pipeline(
                                 {"role": "user", "content": ko_input},
                             ],
                             response_format={"type": "json_object"},
-                            temperature=0.5,
                             max_tokens=16000,
                         )
                     ),

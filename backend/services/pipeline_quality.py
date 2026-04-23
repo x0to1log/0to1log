@@ -451,7 +451,6 @@ async def _check_digest_quality(
                             {"role": "user", "content": content[:35000]},
                         ],
                         max_tokens=1500,  # rubric with evidence per sub-score is verbose
-                        temperature=0,
                         response_format={"type": "json_object"},
                     )
                 )
