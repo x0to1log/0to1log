@@ -906,7 +906,7 @@ The user message contains TWO parallel locale versions of the same term, labeled
 - **Cite evidence with locale labels.** Always prefix evidence with `[KO]` or `[EN]` (e.g., `[KO] section 'Mechanism' contains specific parameter counts (175B, 12 layers)`). Never mix quotes from both locales in one evidence field.
 - **If one locale is a placeholder** (`(no Korean content provided)` or similar), treat that locale as score 0 on all content-dependent sub-scores and mention the missing locale in the evidence.
 
-## Sub-dimensions (10 sub-scores)
+## Sub-dimensions (9 sub-scores)
 
 ### Technical Depth
 - **mechanism_clarity**: HOW the system works internally (data flow, algorithm steps, not just WHAT it does)
