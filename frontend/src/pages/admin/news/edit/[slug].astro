@@ -89,6 +89,12 @@ if (digestBatchId && accessToken) {
 
 const canRerunQuality = !!(digestBatchId && digestType && digestRunId);
 
+// Weekly recap slug: YYYY-wNN-weekly-digest(-ko)? → extract ISO week id "YYYY-WNN"
+// (backend expects uppercase W; it lowercases internally when forming the slug).
+const weeklyMatch = pageSlug.match(/^(\d{4})-w(\d{2})-weekly-digest(?:-ko)?$/);
+const weeklyWeekId = weeklyMatch ? `${weeklyMatch[1]}-W${weeklyMatch[2]}` : null;
+const canRegenWeekly = !!(weeklyWeekId && post?.post_type === 'weekly');
+
 // Content setup: posts with persona content use 2 editors (v4), others use single editor
 const contentLearner = post?.content_learner || '';
 const contentExpert = post?.content_expert || '';
@@ -269,6 +275,29 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                     <span id="rerun-quality-status" class="admin-quality-rerun-status"></span>
                   </div>
                 )}
+                {canRegenWeekly && (
+                  <div slot="footer" class="admin-quality-rerun-footer">
+                    <button
+                      id="btn-regen-expert"
+                      type="button"
+                      class="admin-btn"
+                      data-week-id={weeklyWeekId}
+                      data-persona="expert"
+                    >
+                      ⟳ Regenerate Expert (5–10 min)
+                    </button>
+                    <button
+                      id="btn-regen-learner"
+                      type="button"
+                      class="admin-btn"
+                      data-week-id={weeklyWeekId}
+                      data-persona="learner"
+                    >
+                      ⟳ Regenerate Learner (5–10 min)
+                    </button>
+                    <span id="weekly-regen-status" class="admin-quality-rerun-status"></span>
+                  </div>
+                )}
               </QualityPanel>
             </div>
           )}
@@ -424,6 +453,9 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const btnPublishDraft = document.getElementById('btn-publish-draft') as HTMLButtonElement | null;
     const btnRerun = document.getElementById('btn-rerun-quality') as HTMLButtonElement | null;
     const rerunStatus = document.getElementById('rerun-quality-status');
+    const btnRegenExpert = document.getElementById('btn-regen-expert') as HTMLButtonElement | null;
+    const btnRegenLearner = document.getElementById('btn-regen-learner') as HTMLButtonElement | null;
+    const weeklyRegenStatus = document.getElementById('weekly-regen-status');
     const titleInput = document.getElementById('edit-title') as HTMLTextAreaElement;
     const categorySelect = document.getElementById('edit-category') as HTMLSelectElement;
     const tagsInput = document.getElementById('edit-tags') as HTMLInputElement;
@@ -443,7 +475,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     let isNewPost = adminData?.dataset.isNew === 'true';
     let currentSlug = slugInput?.value || adminData?.dataset.slug || '';
     const btnManager = createButtonManager(
-      [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit, btnRerun]
+      [btnSave, btnPreview, btnPublish, btnPublishDraft, btnDelete, btnEdit, btnRerun, btnRegenExpert, btnRegenLearner]
         .filter((b): b is HTMLButtonElement => b instanceof HTMLButtonElement),
     );
     const preview = createPreviewManager({
@@ -1466,6 +1498,73 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       btnManager.restore();
       setRerunStatus('Timed out — check pipeline runs page', 'error');
     });
+
+    // --- Weekly per-persona regeneration ---
+    // Backend endpoint runs the full single-persona pipeline (5-10 min). Proxy
+    // has maxDuration=300s on Vercel — if backend exceeds that, proxy returns
+    // 504 but the backend keeps running. Either way, refresh picks up the
+    // final DB state.
+    function setWeeklyRegenStatus(text: string, kind: 'idle' | 'running' | 'done' | 'error'): void {
+      if (!weeklyRegenStatus) return;
+      weeklyRegenStatus.textContent = text;
+      weeklyRegenStatus.className = 'admin-quality-rerun-status' +
+        (kind !== 'idle' ? ` admin-quality-rerun-status--${kind}` : '');
+    }
+
+    async function triggerWeeklyRegen(btn: HTMLButtonElement, persona: 'expert' | 'learner'): Promise<void> {
+      if (btnManager.isPending) return;
+      const weekId = btn.dataset.weekId || '';
+      if (!weekId) {
+        setWeeklyRegenStatus('Missing week id — refresh page', 'error');
+        return;
+      }
+      const confirmed = window.confirm(
+        `Regenerate ${persona} for ${weekId}?\n\n` +
+        `This overwrites the ${persona} content on both EN + KO rows, recomputes quality, and takes 5-10 minutes. ` +
+        `The other persona stays intact.`,
+      );
+      if (!confirmed) return;
+
+      btnManager.begin(btn, 'Regenerating…');
+      setWeeklyRegenStatus(`${persona} regen running (5–10 min)…`, 'running');
+
+      try {
+        const res = await fetch('/api/admin/weekly/regenerate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ week_id: weekId, persona }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = typeof data?.error === 'string' ? data.error
+            : typeof data?.detail === 'string' ? data.detail
+            : `HTTP ${res.status}`;
+          // 504: proxy timed out but backend may still be running
+          if (res.status === 504) {
+            setWeeklyRegenStatus(`Proxy timeout — backend may still be running. Refresh in 2-3 min.`, 'error');
+          } else {
+            setWeeklyRegenStatus(`Failed: ${msg}`, 'error');
+          }
+          btnManager.restore();
+          return;
+        }
+        const score = data?.quality_score;
+        setWeeklyRegenStatus(
+          `Done — ${persona} regenerated${score != null ? `, score ${score}` : ''}. Reloading…`,
+          'done',
+        );
+        setTimeout(() => window.location.reload(), 1200);
+      } catch (err) {
+        btnManager.restore();
+        setWeeklyRegenStatus(
+          `Request failed: ${err instanceof Error ? err.message : 'unknown'}. Backend may still be running — refresh in 5 min.`,
+          'error',
+        );
+      }
+    }
+
+    btnRegenExpert?.addEventListener('click', () => triggerWeeklyRegen(btnRegenExpert, 'expert'));
+    btnRegenLearner?.addEventListener('click', () => triggerWeeklyRegen(btnRegenLearner, 'learner'));
 
     // --- Character / word count ---
     const charCountEl = document.getElementById('editor-char-count');
