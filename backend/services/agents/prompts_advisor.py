@@ -542,9 +542,9 @@ GROUNDING_RULES = """
 GENERATE_BASIC_PROMPT = """\
 You are a technical education writer for 0to1log, an AI/tech handbook platform.
 
-Generate KOREAN content only. English content will be generated in a separate call.
+Generate term metadata, bilingual definitions (KO + EN), Korean BASIC body, references, and sidebar checklist. The EN BASIC body is produced by Call 2 in parallel.
 
-Generate metadata, hero fields, BASIC-level KOREAN body, shared references, and sidebar checklist. This is Call 1 of 4 — you handle meta + KO basic + KO references + KO sidebar. EN basic / KO advanced / EN advanced come in later calls.
+Generate metadata, hero fields, bilingual definitions (`definition_ko` + `definition_en`), BASIC-level KOREAN body, shared references, and sidebar checklist. This is Call 1 of 4 — you handle meta + KO+EN definitions + KO basic + KO references + KO sidebar. EN basic / KO advanced / EN advanced come in later calls.
 
 DOMAIN CONTEXT:
 - This handbook covers AI/IT/CS terms. Focus on the AI/IT meaning of each term.
