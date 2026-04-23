@@ -45,7 +45,6 @@ async def extract_facts(
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.1,
                     max_tokens=4096,
                 )
             )

@@ -58,21 +58,18 @@ ACTION_CONFIG = {
         "model_attr": "openai_model_main",
         "prompt_fn": get_generate_prompt,
         "max_tokens": 4096,
-        "temperature": 0.3,
         "validator": GenerateResult,
     },
     "seo": {
         "model_attr": "openai_model_light",
         "prompt_fn": get_seo_prompt,
         "max_tokens": 2048,
-        "temperature": 0.5,
         "validator": SeoResult,
     },
     "review": {
         "model_attr": "openai_model_reasoning",
         "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
-        "temperature": 0.2,
         "reasoning_effort": "medium",
         "validator": ReviewResult,
     },
@@ -80,7 +77,6 @@ ACTION_CONFIG = {
         "model_attr": "openai_model_reasoning",
         "prompt": FACTCHECK_SYSTEM_PROMPT,
         "max_tokens": 4096,
-        "temperature": 0.2,
         "reasoning_effort": "medium",
         "validator": FactcheckResult,
     },
@@ -88,7 +84,6 @@ ACTION_CONFIG = {
         "model_attr": "openai_model_reasoning",
         "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
-        "temperature": 0.2,
         "reasoning_effort": "medium",
         "validator": ConceptCheckResult,
     },
@@ -96,7 +91,6 @@ ACTION_CONFIG = {
         "model_attr": "openai_model_reasoning",
         "prompt": VOICECHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
-        "temperature": 0.3,
         "reasoning_effort": "medium",
         "validator": VoiceCheckResult,
     },
@@ -104,7 +98,6 @@ ACTION_CONFIG = {
         "model_attr": "openai_model_reasoning",
         "prompt": RETROCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
-        "temperature": 0.2,
         "reasoning_effort": "medium",
         "validator": RetroCheckResult,
     },
@@ -169,7 +162,6 @@ async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
             {"role": "user", "content": user_prompt},
         ],
         max_tokens=config["max_tokens"],
-        temperature=config["temperature"],
         response_format={"type": "json_object"},
     )
     if config.get("reasoning_effort"):
@@ -228,7 +220,6 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
             {"role": "user", "content": user_prompt},
         ],
         max_tokens=2048,
-        temperature=0.1,
         response_format={"type": "json_object"},
     )
     step1_kwargs["reasoning_effort"] = "medium"
@@ -314,7 +305,6 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
             {"role": "user", "content": verify_prompt},
         ],
         max_tokens=4096,
-        temperature=0.1,
         response_format={"type": "json_object"},
     )
     step2_kwargs["reasoning_effort"] = "medium"
@@ -492,7 +482,6 @@ async def _run_related_terms(req: HandbookAdviseRequest, client, model: str) -> 
                 {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.3,
             max_tokens=2048,
         )
     )
@@ -577,7 +566,6 @@ async def _run_translate(req: HandbookAdviseRequest, client, model: str) -> tupl
                 {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.2,
             max_tokens=4096,
         )
     )
@@ -864,7 +852,6 @@ async def _classify_term_type(
                     {"role": "user", "content": user_msg},
                 ],
                 max_tokens=200,
-                temperature=0,
                 response_format={"type": "json_object"},
             )
         )
@@ -925,7 +912,6 @@ async def _self_critique_advanced(
                     {"role": "user", "content": advanced_content[:8000]},
                 ],
                 max_tokens=2000,
-                temperature=0.2,
                 response_format={"type": "json_object"},
             )
         )
@@ -1185,7 +1171,6 @@ async def _check_handbook_quality(
                     {"role": "user", "content": advanced_content[:12000]},
                 ],
                 max_tokens=1800,
-                temperature=0,
                 response_format={"type": "json_object"},
             )
         )
@@ -1231,7 +1216,6 @@ async def _self_critique_basic(
                     {"role": "user", "content": combined[:6000]},
                 ],
                 max_tokens=1500,
-                temperature=0.2,
                 response_format={"type": "json_object"},
             )
         )
@@ -1280,7 +1264,6 @@ async def _check_basic_quality(
                     {"role": "user", "content": basic_content[:6000]},
                 ],
                 max_tokens=1800,
-                temperature=0,
                 response_format={"type": "json_object"},
             )
         )
@@ -1779,7 +1762,6 @@ async def _extract_novel_entities(
                 ],
                 response_format={"type": "json_object"},
                 max_tokens=500,
-                temperature=0,
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "entity-extract")
@@ -2187,7 +2169,6 @@ async def _run_generate_term(
                     {"role": "user", "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.3,
                 max_tokens=16000,
             )
         )
@@ -2362,7 +2343,6 @@ async def _run_generate_term(
                     {"role": "user", "content": en_basic_prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.3,
                 max_tokens=16000,
             )
         ),
@@ -2374,7 +2354,6 @@ async def _run_generate_term(
                     {"role": "user", "content": advanced_prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.3,
                 max_tokens=16000,
             )
         ),
@@ -2436,7 +2415,6 @@ async def _run_generate_term(
                 {"role": "user", "content": advanced_en_prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.3,
             max_tokens=16000,
         )
     )
@@ -2476,7 +2454,7 @@ async def _run_generate_term(
                     {"role": "system", "content": improved_ko_system},
                     {"role": "user", "content": user_prompt},
                 ],
-                max_tokens=16000, temperature=0.35,
+                max_tokens=16000,
                 response_format={"type": "json_object"},
             )
         )
@@ -2498,7 +2476,7 @@ async def _run_generate_term(
                     {"role": "system", "content": improved_en_system},
                     {"role": "user", "content": en_basic_prompt},
                 ],
-                max_tokens=16000, temperature=0.35,
+                max_tokens=16000,
                 response_format={"type": "json_object"},
             )
         )
@@ -2545,7 +2523,7 @@ async def _run_generate_term(
                     {"role": "system", "content": improved_system},
                     {"role": "user", "content": advanced_prompt},
                 ],
-                max_tokens=16000, temperature=0.35,
+                max_tokens=16000,
                 response_format={"type": "json_object"},
             )
         )
@@ -2582,7 +2560,7 @@ async def _run_generate_term(
                     {"role": "system", "content": improved_en_adv_system},
                     {"role": "user", "content": advanced_prompt},
                 ],
-                max_tokens=16000, temperature=0.35,
+                max_tokens=16000,
                 response_format={"type": "json_object"},
             )
         )
@@ -3029,7 +3007,6 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
                 {"role": "user", "content": preview},
             ],
             response_format={"type": "json_object"},
-            temperature=0.2,
             max_tokens=2048,
         )
     )
@@ -3076,7 +3053,6 @@ async def gate_candidate_terms(
                     {"role": "user", "content": user_msg},
                 ],
                 max_tokens=1000,
-                temperature=0,
                 response_format={"type": "json_object"},
             )
         )

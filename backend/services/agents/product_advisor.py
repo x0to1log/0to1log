@@ -517,7 +517,6 @@ async def _extract_product_facts(
                     {"role": "user", "content": user_content},
                 ],
                 max_tokens=500,
-                temperature=0.1,
                 response_format={"type": "json_object"},
             ),
         )
@@ -682,7 +681,6 @@ async def _classify_product(name: str, url: str, facts: dict, client, model: str
                     {"role": "user", "content": user_content},
                 ],
                 max_tokens=200,
-                temperature=0.2,
                 response_format={"type": "json_object"},
             ),
         )
@@ -720,7 +718,6 @@ async def _generate_en_profile(
                 {"role": "user", "content": user_content},
             ],
             max_tokens=2000,
-            temperature=0.4,
             response_format={"type": "json_object"},
         ),
     )
@@ -761,7 +758,6 @@ async def _generate_ko_profile(
                 {"role": "user", "content": f"English profile for reference:\n\n{en_summary}"},
             ],
             max_tokens=1500,
-            temperature=0.5,
             response_format={"type": "json_object"},
         ),
     )
@@ -798,7 +794,6 @@ async def _generate_enrichment(
                 {"role": "user", "content": user_content},
             ],
             max_tokens=2000,
-            temperature=0.5,
             response_format={"type": "json_object"},
         ),
     )
@@ -904,7 +899,6 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
                     {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
                 ],
                 max_tokens=800,
-                temperature=0.7,
             ),
         )
 
@@ -1096,7 +1090,6 @@ Respond with JSON only."""
                     {"role": "user", "content": user_content},
                 ],
                 max_tokens=800,
-                temperature=0.3,
             ),
         )
         raw = response.choices[0].message.content or ""
@@ -1126,7 +1119,6 @@ Respond with JSON only."""
                     {"role": "user", "content": user_content},
                 ],
                 max_tokens=800,
-                temperature=0.7,
             ),
         )
         raw = response.choices[0].message.content or ""
@@ -1159,7 +1151,6 @@ Respond with JSON only."""
                 {"role": "user", "content": user_content},
             ],
             max_tokens=512,
-            temperature=0.6,
         ),
     )
     raw = response.choices[0].message.content or ""

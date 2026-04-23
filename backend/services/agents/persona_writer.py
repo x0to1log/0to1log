@@ -92,7 +92,6 @@ async def write_persona(
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.4,
                     max_tokens=32000,
                 )
             )

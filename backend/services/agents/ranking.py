@@ -70,7 +70,6 @@ async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str],
                     {"role": "user", "content": user_prompt},
                 ],
                 max_tokens=800,
-                temperature=0.2,
             )
         )
     except Exception as e:
@@ -150,7 +149,6 @@ async def classify_candidates(
                         {"role": "user", "content": user_prompt},
                     ],
                     max_tokens=4096,
-                    temperature=0.2,
                     response_format={"type": "json_object"},
                 )
             )
@@ -261,7 +259,6 @@ async def merge_classified(
                         {"role": "user", "content": user_content},
                     ],
                     max_tokens=4096,
-                    temperature=0.1,
                     response_format={"type": "json_object"},
                 )
             )
@@ -404,7 +401,6 @@ async def rank_classified(
                         {"role": "user", "content": "Rank these items."},
                     ],
                     max_tokens=256,
-                    temperature=0,
                     response_format={"type": "json_object"},
                 )
             )
@@ -543,7 +539,6 @@ async def summarize_community(
             {"role": "user", "content": user_content},
         ],
         max_tokens=2000,
-        temperature=0.2,
     )
 
     data = None
