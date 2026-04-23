@@ -75,3 +75,22 @@ def test_build_completion_kwargs_omits_service_tier_for_non_gpt5():
         max_tokens=100,
     )
     assert "service_tier" not in kwargs
+
+
+def test_build_completion_kwargs_forwards_verbosity():
+    kwargs = build_completion_kwargs(
+        "gpt-5-mini",
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=100,
+        verbosity="low",
+    )
+    assert kwargs["verbosity"] == "low"
+
+
+def test_build_completion_kwargs_omits_verbosity_when_none():
+    kwargs = build_completion_kwargs(
+        "gpt-5-mini",
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=100,
+    )
+    assert "verbosity" not in kwargs

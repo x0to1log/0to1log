@@ -81,6 +81,7 @@ def build_completion_kwargs(
     response_format: dict | None = None,
     reasoning_effort: str | None = None,
     service_tier: str | None = None,
+    verbosity: str | None = None,
 ) -> dict:
     """Build kwargs for chat.completions.create, handling model differences."""
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
@@ -95,6 +96,8 @@ def build_completion_kwargs(
         kwargs["reasoning_effort"] = reasoning_effort
     if service_tier is not None:
         kwargs["service_tier"] = service_tier
+    if verbosity is not None:
+        kwargs["verbosity"] = verbosity
     return _apply_gpt5_compat(kwargs, model)
 
 
