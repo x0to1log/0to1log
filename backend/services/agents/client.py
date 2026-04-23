@@ -157,20 +157,50 @@ def estimate_openai_cost_usd(
     model_name: str | None,
     input_tokens: int,
     output_tokens: int,
+    cached_tokens: int = 0,
+    service_tier: str | None = None,
 ) -> float | None:
+    """Estimate cost of an OpenAI call, accounting for cache + service tier.
+
+    Pricing rules:
+    - Standard input: pricing["input"] per 1M tokens.
+    - Cached input: 10% of standard input (OpenAI auto-discount, applied to
+      tokens reported in response.usage.prompt_tokens_details.cached_tokens).
+    - Standard output: pricing["output"] per 1M tokens.
+    - service_tier="flex": 50% of standard rates on both input and output
+      (Batch API rates). Discounts stack multiplicatively with cache.
+    - service_tier in {None, "auto", "default", "priority", "scale"} or
+      anything else: full standard rate. "priority" is actually a premium
+      tier but we don't track the uplift — treat as standard for now.
+
+    Returns None if the model isn't in the pricing table.
+    """
     pricing_key = _resolve_pricing_key(model_name)
     if not pricing_key:
         return None
 
     pricing = OPENAI_MODEL_PRICING_PER_1M[pricing_key]
-    total = (
-        (Decimal(input_tokens) * pricing["input"])
-        + (Decimal(output_tokens) * pricing["output"])
-    ) / Decimal(1_000_000)
+    tier_multiplier = Decimal("0.5") if service_tier == "flex" else Decimal("1.0")
+    cached = max(0, int(cached_tokens or 0))
+    fresh_input = max(0, int(input_tokens) - cached)
+
+    fresh_input_cost = Decimal(fresh_input) * pricing["input"] * tier_multiplier
+    cached_input_cost = Decimal(cached) * pricing["input"] * Decimal("0.1") * tier_multiplier
+    output_cost = Decimal(int(output_tokens)) * pricing["output"] * tier_multiplier
+
+    total = (fresh_input_cost + cached_input_cost + output_cost) / Decimal(1_000_000)
     return float(total)
 
 
 def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, Any]:
+    """Extract tokens + cost from an OpenAI chat-completions response.
+
+    Auto-detects ``response.service_tier`` (echoed back by the API — shows
+    which tier actually served the request, not just what was requested)
+    and feeds it into the cost estimate along with cached_tokens. Returns
+    a dict with input_tokens, output_tokens, cached_tokens, tokens_used,
+    cost_usd, model_used, service_tier.
+    """
     usage = getattr(response, "usage", None)
     prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
     completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
@@ -184,13 +214,24 @@ def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, An
     details = getattr(usage, "prompt_tokens_details", None)
     cached_tokens = int(getattr(details, "cached_tokens", 0) or 0)
 
+    # response.service_tier is the tier that actually served the request.
+    # May be absent in older SDK mocks → treat as unknown → standard rate.
+    service_tier = getattr(response, "service_tier", None)
+
     return {
         "model_used": model_name,
         "input_tokens": prompt_tokens,
         "output_tokens": completion_tokens,
         "cached_tokens": cached_tokens,
         "tokens_used": total_tokens,
-        "cost_usd": estimate_openai_cost_usd(model_name, prompt_tokens, completion_tokens),
+        "service_tier": service_tier,
+        "cost_usd": estimate_openai_cost_usd(
+            model_name,
+            prompt_tokens,
+            completion_tokens,
+            cached_tokens=cached_tokens,
+            service_tier=service_tier,
+        ),
     }
 
 
