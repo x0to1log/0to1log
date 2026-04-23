@@ -85,6 +85,8 @@ BLOG_ACTION_CONFIG = {
         "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "blog-advisor-review",
         "validator": ReviewResult,
     },
     "conceptcheck": {
@@ -92,6 +94,8 @@ BLOG_ACTION_CONFIG = {
         "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "blog-advisor-conceptcheck",
         "validator": ConceptCheckResult,
     },
     "voicecheck": {
@@ -99,6 +103,8 @@ BLOG_ACTION_CONFIG = {
         "prompt": VOICECHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "blog-advisor-voicecheck",
         "validator": VoiceCheckResult,
     },
     "retrocheck": {
@@ -106,6 +112,8 @@ BLOG_ACTION_CONFIG = {
         "prompt": RETROCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "blog-advisor-retrocheck",
         "validator": RetroCheckResult,
     },
 }
@@ -150,8 +158,9 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
     logger.info("Blog advisor [%s] starting with model=%s, locale=%s", req.action, model, req.locale)
 
     extra = {}
-    if config.get("reasoning_effort"):
-        extra["reasoning_effort"] = config["reasoning_effort"]
+    for key in ("reasoning_effort", "service_tier", "prompt_cache_key", "verbosity"):
+        if config.get(key):
+            extra[key] = config[key]
 
     response = await client.chat.completions.create(
         **compat_create_kwargs(

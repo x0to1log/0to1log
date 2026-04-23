@@ -232,8 +232,10 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
         ],
         max_tokens=2048,
         response_format={"type": "json_object"},
+        reasoning_effort="medium",
+        service_tier="flex",
+        prompt_cache_key="advisor-deepverify-step1",
     )
-    step1_kwargs["reasoning_effort"] = "medium"
     resp1 = await client.chat.completions.create(**step1_kwargs)
     claims_data = parse_ai_json(resp1.choices[0].message.content, "DeepVerify-extract")
     total_tokens += resp1.usage.completion_tokens if resp1.usage else 0
@@ -317,8 +319,10 @@ async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
         ],
         max_tokens=4096,
         response_format={"type": "json_object"},
+        reasoning_effort="medium",
+        service_tier="flex",
+        prompt_cache_key="advisor-deepverify-step2",
     )
-    step2_kwargs["reasoning_effort"] = "medium"
     resp2 = await client.chat.completions.create(**step2_kwargs)
     verify_data = parse_ai_json(resp2.choices[0].message.content, "DeepVerify-verify")
     total_tokens += resp2.usage.completion_tokens if resp2.usage else 0

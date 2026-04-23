@@ -29,3 +29,31 @@ def test_generate_and_seo_stay_on_standard_tier():
     """
     assert "service_tier" not in ACTION_CONFIG["generate"]
     assert "service_tier" not in ACTION_CONFIG["seo"]
+
+
+def test_deep_verify_step1_uses_flex_and_cache_key():
+    """run_deep_verify step1 (claim extraction) should route through flex
+    with prompt_cache_key='advisor-deepverify-step1'. Verified by source
+    inspection — the call site is a direct client.chat.completions.create,
+    not dispatched through ACTION_CONFIG.
+    """
+    import inspect
+
+    from services.agents import advisor
+
+    src = inspect.getsource(advisor.run_deep_verify)
+    assert 'prompt_cache_key="advisor-deepverify-step1"' in src
+    assert 'service_tier="flex"' in src
+
+
+def test_deep_verify_step2_uses_distinct_cache_key():
+    """run_deep_verify step2 — same flex pattern with a distinct cache
+    key since the system prompt (DEEPVERIFY_VERIFY_PROMPT) differs from
+    step1's DEEPVERIFY_CLAIM_EXTRACT_PROMPT.
+    """
+    import inspect
+
+    from services.agents import advisor
+
+    src = inspect.getsource(advisor.run_deep_verify)
+    assert 'prompt_cache_key="advisor-deepverify-step2"' in src
