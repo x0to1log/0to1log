@@ -1059,7 +1059,7 @@ async def _check_weekly_quality(
     if not content_expert_en:
         logger.warning("Weekly quality check skipped: no expert EN content")
         await _log_stage(
-            supabase, run_id, "quality:weekly", "skipped", t0,
+            supabase, run_id, "weekly:quality", "skipped", t0,
             output_summary="No expert content", post_type="weekly",
         )
         return {"quality_score": 0, "quality_flags": ["no_expert_content"]}
@@ -1074,6 +1074,12 @@ async def _check_weekly_quality(
     # so the admin QualityPanel can render weekly the same as daily.
     expert_data: dict[str, Any] = {}
     learner_data: dict[str, Any] = {}
+    # Usage dicts hoisted to function scope so the final _log_stage can merge
+    # them into `merged_quality_usage` even if one try-block failed. Matches
+    # daily's pattern in _check_digest_quality where merged_quality_usage is
+    # passed to _log_stage so pipeline_logs.cost_usd gets populated.
+    expert_usage: dict[str, Any] = {}
+    learner_usage: dict[str, Any] = {}
 
     # Expert quality check
     expert_input = f"## English Expert\n\n{content_expert_en}\n\n## Korean Expert\n\n{content_expert_ko}"
@@ -1087,7 +1093,6 @@ async def _check_weekly_quality(
                         {"role": "user", "content": expert_input},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.2,
                     max_tokens=2000,
                     service_tier="flex",
                     prompt_cache_key="qc-weekly-expert",
@@ -1133,7 +1138,6 @@ async def _check_weekly_quality(
                             {"role": "user", "content": learner_input},
                         ],
                         response_format={"type": "json_object"},
-                        temperature=0.2,
                         max_tokens=2000,
                         service_tier="flex",
                         prompt_cache_key="qc-weekly-learner",
@@ -1252,13 +1256,19 @@ async def _check_weekly_quality(
         auto_publish_eligible, url_validation_failed,
     )
 
+    # Merge expert+learner usage so _log_stage populates pipeline_logs.cost_usd
+    # (daily parity — see _check_digest_quality:630). Stage name uses
+    # `weekly:` prefix so admin pipeline-analytics's `pipeline_type LIKE 'weekly:%'`
+    # filter picks it up; historical rows named `quality:weekly` predate this fix.
+    merged_quality_usage = merge_usage_metrics(expert_usage, learner_usage)
     await _log_stage(
-        supabase, run_id, "quality:weekly", "success", t0,
+        supabase, run_id, "weekly:quality", "success", t0,
         output_summary=(
             f"score={final_score} (det={deterministic_score} [s={structure_score},"
             f"t={traceability_score},l={locale_score}], llm_w={weighted_llm}, "
             f"url=-{url_penalty}, struct=-{structural_penalty})"
         ),
+        usage=merged_quality_usage,
         post_type="weekly",
         debug_meta={
             "quality_score": final_score,
