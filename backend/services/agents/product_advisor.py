@@ -98,7 +98,9 @@ Given the English profile of a product, write the Korean version of specific fie
 1. **name_ko** (string or null): Korean transliteration ONLY if commonly used in Korean tech community.
    - "미드저니" for Midjourney, "클로드" for Claude, "제미나이" for Gemini, "퍼플렉시티" for Perplexity
    - null for ChatGPT, Cursor, GitHub Copilot (Koreans use the English name as-is)
-   - When in doubt, prefer providing a transliteration over null — Korean readers appreciate it
+   - null for short names, acronyms, or alphanumeric names like "n8n", "v0", "GPT-5", "Bun", "Deno"
+     (Koreans keep these in original form — do NOT force letter-by-letter transliteration)
+   - When in doubt for a regular multi-syllable English brand, prefer providing a transliteration
 
 2. **tagline_ko** (string): Natural Korean tagline, NOT a translation of the English one.
 
@@ -488,6 +490,100 @@ async def _search_brave_product(name: str, url: str) -> str:
         return ""
 
 
+async def _fetch_pricing_sources(name: str, url: str) -> str:
+    """Gather pricing info from 3 parallel sources. Returns merged labeled text (max 6000 chars).
+
+    - A. Direct crawl of {url}/pricing (Tavily raw_content)
+    - B. Brave web search for official pricing page (cross-domain OK)
+    - C. Tavily general search (fallback)
+
+    Shared by both `generate_from_url` (for fact extraction) and the
+    standalone `pricing_detail` action.
+    """
+    loop = asyncio.get_event_loop()
+
+    async def _crawl_pricing_url() -> str:
+        if not url or not settings.tavily_api_key:
+            return ""
+        try:
+            from tavily import TavilyClient
+            tavily = TavilyClient(api_key=settings.tavily_api_key)
+            base = url.rstrip("/")
+            pricing_url = f"{base}/pricing"
+            result = await loop.run_in_executor(
+                None,
+                lambda: tavily.search(pricing_url, max_results=1, include_raw_content=True),
+            )
+            for r in result.get("results", []):
+                raw = r.get("raw_content") or r.get("content") or ""
+                if raw:
+                    return f"## Source: Direct pricing page crawl ({pricing_url})\n\n{raw[:3000]}"
+        except Exception as e:
+            logger.debug("Direct pricing crawl failed for %s: %s", url, e)
+        return ""
+
+    async def _brave_pricing_search() -> str:
+        if not settings.brave_api_key or not name:
+            return ""
+        try:
+            import httpx
+            query = f'"{name}" pricing plans cost monthly'
+            async with httpx.AsyncClient(timeout=10) as http:
+                resp = await http.get(
+                    "https://api.search.brave.com/res/v1/web/search",
+                    params={"q": query, "count": 3},
+                    headers={"X-Subscription-Token": settings.brave_api_key, "Accept": "application/json"},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+            results = data.get("web", {}).get("results", [])
+            if not results:
+                return ""
+            parts = []
+            for r in results[:3]:
+                title = r.get("title", "")
+                r_url = r.get("url", "")
+                desc = r.get("description", "")[:600]
+                extra = r.get("extra_snippets", [])
+                snippet = "\n".join(extra[:2]) if extra else desc
+                parts.append(f"[{title}]({r_url})\n{snippet}")
+            return "## Source: Brave Search (official pricing)\n\n" + "\n\n".join(parts)
+        except Exception as e:
+            logger.debug("Brave pricing search failed for %s: %s", name, e)
+        return ""
+
+    async def _tavily_pricing_search() -> str:
+        if not settings.tavily_api_key or not name:
+            return ""
+        try:
+            from tavily import TavilyClient
+            tavily = TavilyClient(api_key=settings.tavily_api_key)
+            results = await loop.run_in_executor(
+                None,
+                lambda: tavily.search(
+                    f"{name} pricing plans cost",
+                    max_results=3,
+                    include_raw_content=True,
+                ),
+            )
+            parts = []
+            for r in results.get("results", []):
+                raw = r.get("raw_content") or r.get("content") or ""
+                if raw:
+                    parts.append(raw[:2000])
+            if parts:
+                return "## Source: Tavily Search (general pricing info)\n\n" + "\n\n".join(parts)
+        except Exception as e:
+            logger.debug("Tavily pricing search failed for %s: %s", name, e)
+        return ""
+
+    crawl_result, brave_result, tavily_result = await asyncio.gather(
+        _crawl_pricing_url(), _brave_pricing_search(), _tavily_pricing_search(),
+    )
+    pricing_parts = [p for p in [crawl_result, brave_result, tavily_result] if p]
+    return "\n\n---\n\n".join(pricing_parts)[:6000]
+
+
 async def _extract_product_facts(
     name: str, url: str, sources: dict[str, str],
     client, model: str,
@@ -498,6 +594,7 @@ async def _extract_product_facts(
         "homepage": "## Homepage Content",
         "features": "## Features Page Content",
         "brave": "## Technical References (Brave Search)",
+        "pricing": "## Pricing Sources",
     }
     for key, label in label_map.items():
         if sources.get(key):
@@ -505,7 +602,7 @@ async def _extract_product_facts(
     if not source_text_parts:
         return {}, 0
 
-    combined = "\n\n---\n\n".join(source_text_parts)[:8000]
+    combined = "\n\n---\n\n".join(source_text_parts)[:12000]  # 4 sources × ~3000 = 12000
     user_content = f"Product: {name}\nURL: {url}\n\n{combined}"
 
     try:
@@ -816,12 +913,13 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
     if body.action == "generate_from_url":
         product_name = body.name or body.url or ""
 
-        # Step 0: 4-source parallel search
-        page_content, features_content, brave_content, review_content = await asyncio.gather(
+        # Step 0: 5-source parallel search (homepage, features page, Brave tech, reviews, pricing)
+        page_content, features_content, brave_content, review_content, pricing_content = await asyncio.gather(
             _fetch_page_content(body.url or ""),
             _fetch_features_content(body.url or ""),
             _search_brave_product(product_name, body.url or ""),
             _fetch_review_content(product_name),
+            _fetch_pricing_sources(product_name, body.url or ""),
         )
 
         # Step 0.5: Fact extraction (gpt-5-nano)
@@ -832,15 +930,18 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             sources["features"] = features_content
         if brave_content:
             sources["brave"] = brave_content
+        if pricing_content:
+            sources["pricing"] = pricing_content
         facts, facts_tokens = await _extract_product_facts(
             product_name, body.url or "", sources,
             client, settings.openai_model_nano,
         )
         total_tokens = facts_tokens
-        logger.info("Facts extracted: %d specs, %d features, pricing=%s",
+        logger.info("Facts extracted: %d specs, %d features, pricing=%s, pricing_source=%s",
                      len(facts.get("technical_specs", [])),
                      len(facts.get("unique_features", [])),
-                     "yes" if facts.get("pricing_tiers") else "no")
+                     "yes" if facts.get("pricing_tiers") else "no",
+                     "yes" if pricing_content else "no")
 
         # Step 1: Classify product (gpt-5-nano, uses facts)
         classification = await _classify_product(
@@ -948,8 +1049,10 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         if classification.get("primary_category"):
             result["primary_category"] = classification["primary_category"]
 
-        # Post-processing: assistants should not have "platform" in secondary
-        if result.get("primary_category") == "assistant":
+        # Post-processing: "platform" as secondary only makes sense when the product
+        # itself IS a platform (Replicate, HuggingFace Inference, AWS Bedrock).
+        # For assistants/coding/workflow/etc. products, having an API ≠ being a platform.
+        if result.get("primary_category") != "platform":
             sc = result.get("secondary_categories", [])
             result["secondary_categories"] = [c for c in sc if c != "platform"]
 
@@ -977,94 +1080,9 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
     if body.action == "pricing_detail":
         model = settings.openai_model_light
         product_name = body.name or body.url or ""
-        loop = asyncio.get_event_loop()
 
-        # --- 3-source parallel pricing search ---
-
-        async def _crawl_pricing_url() -> str:
-            """Step A: Direct crawl of {url}/pricing via Tavily."""
-            if not body.url or not settings.tavily_api_key:
-                return ""
-            try:
-                from tavily import TavilyClient
-                tavily = TavilyClient(api_key=settings.tavily_api_key)
-                base = body.url.rstrip("/")
-                pricing_url = f"{base}/pricing"
-                result = await loop.run_in_executor(
-                    None,
-                    lambda: tavily.search(pricing_url, max_results=1, include_raw_content=True),
-                )
-                for r in result.get("results", []):
-                    raw = r.get("raw_content") or r.get("content") or ""
-                    if raw:
-                        return f"## Source: Direct pricing page crawl ({pricing_url})\n\n{raw[:3000]}"
-            except Exception as e:
-                logger.debug("Direct pricing crawl failed for %s: %s", body.url, e)
-            return ""
-
-        async def _brave_pricing_search() -> str:
-            """Step B: Brave web search for pricing page (no site: restriction for cross-domain pricing)."""
-            if not settings.brave_api_key:
-                return ""
-            try:
-                import httpx
-                query = f'"{product_name}" pricing plans cost monthly'
-                async with httpx.AsyncClient(timeout=10) as http:
-                    resp = await http.get(
-                        "https://api.search.brave.com/res/v1/web/search",
-                        params={"q": query, "count": 3},
-                        headers={"X-Subscription-Token": settings.brave_api_key, "Accept": "application/json"},
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                results = data.get("web", {}).get("results", [])
-                if not results:
-                    return ""
-                parts = []
-                for r in results[:3]:
-                    title = r.get("title", "")
-                    url = r.get("url", "")
-                    desc = r.get("description", "")[:600]
-                    extra = r.get("extra_snippets", [])
-                    snippet = "\n".join(extra[:2]) if extra else desc
-                    parts.append(f"[{title}]({url})\n{snippet}")
-                return "## Source: Brave Search (official pricing)\n\n" + "\n\n".join(parts)
-            except Exception as e:
-                logger.debug("Brave pricing search failed for %s: %s", product_name, e)
-            return ""
-
-        async def _tavily_pricing_search() -> str:
-            """Step C: Tavily general search (fallback)."""
-            if not settings.tavily_api_key:
-                return ""
-            try:
-                from tavily import TavilyClient
-                tavily = TavilyClient(api_key=settings.tavily_api_key)
-                results = await loop.run_in_executor(
-                    None,
-                    lambda: tavily.search(
-                        f"{product_name} pricing plans cost",
-                        max_results=3,
-                        include_raw_content=True,
-                    ),
-                )
-                parts = []
-                for r in results.get("results", []):
-                    raw = r.get("raw_content") or r.get("content") or ""
-                    if raw:
-                        parts.append(raw[:2000])
-                if parts:
-                    return "## Source: Tavily Search (general pricing info)\n\n" + "\n\n".join(parts)
-            except Exception as e:
-                logger.debug("Tavily pricing search failed for %s: %s", product_name, e)
-            return ""
-
-        # Run A+B+C in parallel, merge non-empty results
-        crawl_result, brave_result, tavily_result = await asyncio.gather(
-            _crawl_pricing_url(), _brave_pricing_search(), _tavily_pricing_search(),
-        )
-        pricing_parts = [p for p in [crawl_result, brave_result, tavily_result] if p]
-        pricing_context = "\n\n---\n\n".join(pricing_parts)[:6000]
+        # Shared helper (also used by generate_from_url)
+        pricing_context = await _fetch_pricing_sources(product_name, body.url or "")
 
         system = """You research and verify product pricing information.
 Given a product name and pricing page content, produce a JSON object with:
