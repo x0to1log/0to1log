@@ -1196,3 +1196,33 @@ These are NOT tasks to execute now. They are documented so future-you knows the 
 - **2026-04-23**: Plan created. Root cause of Apr 23 research bypass: manual script set `auto_publish_eligible=True + status=published` with a hardcoded marker-based strip that missed actual hallucinated URLs (`liner.com`, `axiomlogica.com`). The existing Level 0 gate was SOUND; it was bypassed by me. Lesson: any manual publish override should re-run `validate_citation_urls` as a pre-flight.
 - **2026-04-23**: Chose strict json_schema + enum over tool-call citation API because it keeps output shape closest to current (single JSON response, no tool round-trips) while giving API-level URL enforcement.
 - **2026-04-23**: Deferred weekly migration. Daily is the higher-volume / higher-risk surface; weekly gets the fix fast-follow once the pattern is proven.
+
+## Phase 2 Results (2026-04-23)
+
+Re-ran `rerun_pipeline_stage(from_stage="write")` on the Apr 23 source_run_id after Phase 1+2 code changes.
+
+**Finding: the original "hallucination" was partially mis-diagnosed.**
+
+| URL class | Apr 23 body | Actually hallucinated? | New writer behavior |
+|---|---|---|---|
+| `arxiv.org/abs/2604.19321` | yes | yes (ID doesn't exist) | stripped by `_renumber_citations` ✓ |
+| `axiomlogica.com/...` | yes (old) | yes (domain doesn't exist) | stripped by `_renumber_citations` ✓ |
+| `liner.com/review/...` (×7) | yes | **no — real enriched source** | kept (in schema enum) |
+| `openai.com/index/...` | yes | **no — real enriched source** | kept |
+
+The `_renumber_citations` allowlist (body post-processor) was already catching genuinely-invented URLs (`axiomlogica.com`, fake arxiv IDs). The writer hasn't stopped reaching for liner.com-style URLs because those are **legitimately** in the enriched source pool; strict schema correctly allows them.
+
+**Real bug surfaced: `fact_pack.news_items` schema mismatch.**
+- Before: `news_items = [{url: group.primary_url} for group in classified]` — only 4 primary URLs per digest
+- Body was always wider (2 primary + 7 enriched for research/expert)
+- Any post-hoc tool that trusted `fact_pack.news_items` as the allowlist (e.g., my `publish_apr23.py` bypass) would mis-flag legitimate enriched citations as "unknown URLs"
+
+**Fix (commit 491a89f)**: `fact_pack.news_items` now built from `combined_source_cards` (URLs actually in body after `_renumber_citations`). Primary URLs keep their group title/subcategory; enriched URLs get `subcategory="enriched"`. Post-backfill inspection: `Body URLs NOT in fact_pack.news_items: 0` across all 4 Apr 23 posts.
+
+**Phase 1+2 net effect**:
+- `reasoning_effort="high"` for writer (vs low default) — reduces hallucination rate but not measured quantitatively (baseline skipped per plan decision)
+- Strict schema + enum (classified + enriched URLs) — API-level defense against NEW hallucinations
+- `[CITE_N]` placeholder + substitution — forces writer into a two-field contract (body + citations[]); substitution raises on inline-URL regression
+- `fact_pack.news_items` = actually cited URLs — admin/audit tools match reality
+
+Level 0 gate (`promote_drafts` + `url_validation_failed → auto_publish_eligible=False`) was not touched; remains the last-line defense. `pipeline_quality.py:623-625` (daily) and `:1215-1249` (weekly) still enforce it.
