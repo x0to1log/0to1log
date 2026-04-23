@@ -2438,6 +2438,252 @@ async def _generate_weekly_persona_content(
     return {**en_data, **ko_data}
 
 
+async def regenerate_weekly_persona(week_id: str, persona: str) -> dict:
+    """Regenerate ONE persona's weekly content + update existing posts.
+
+    Called from POST /api/admin/weekly/regenerate to recover from partial-save
+    cases where one persona failed during the full weekly pipeline. Fetches
+    digests, rebuilds the persona input, runs the same LLM generation helper
+    used by run_weekly_pipeline, and overwrites just the target persona's
+    fields on the existing news_posts rows (en + ko).
+
+    Quality score is recomputed against the combined (new persona + other
+    persona's existing) content so the merged state is properly scored.
+
+    Raises ValueError for bad args, RuntimeError for pipeline failures.
+    """
+    import uuid as _uuid
+
+    if persona not in ("expert", "learner"):
+        raise ValueError(f"persona must be 'expert' or 'learner', got {persona!r}")
+
+    supabase = get_supabase()
+    if not supabase:
+        raise RuntimeError("Supabase not configured")
+
+    # pipeline_runs row for observability — timestamp suffix keeps run_key unique
+    # across multiple regen attempts for the same week+persona.
+    run_id = str(_uuid.uuid4())
+    run_key = f"weekly-regen-{week_id}-{persona}-{int(time.time())}"
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        supabase.table("pipeline_runs").insert({
+            "id": run_id,
+            "run_key": run_key,
+            "status": "running",
+            "started_at": started_at,
+        }).execute()
+    except Exception as e:
+        logger.warning("Failed to create pipeline_runs row for regen: %s", e)
+
+    cumulative_usage: dict[str, Any] = {}
+    all_errors: list[str] = []
+
+    try:
+        # Fetch digests (same source as run_weekly_pipeline)
+        t_fetch = time.monotonic()
+        digests_en = await _fetch_week_digests(supabase, week_id, "en")
+        digests_ko = await _fetch_week_digests(supabase, week_id, "ko")
+        if not digests_en:
+            raise RuntimeError(f"No EN daily digests found for week {week_id}")
+        await _log_stage(supabase, run_id, "weekly:fetch", "success", t_fetch,
+                         output_summary=f"en={len(digests_en)}, ko={len(digests_ko)}",
+                         post_type="weekly")
+
+        # Build persona input (mirrors run_weekly_pipeline's source_ref + digests concat)
+        url_meta: dict[str, dict] = {}
+        for d in digests_en + digests_ko:
+            for card in (d.get("source_cards") or []):
+                url = card.get("url", "")
+                if url and url not in url_meta:
+                    url_meta[url] = {"source_tier": card.get("source_tier", "")}
+        primary_urls = [u for u, m in url_meta.items() if (m.get("source_tier") or "").lower() == "primary"]
+        secondary_urls = [u for u, m in url_meta.items() if (m.get("source_tier") or "").lower() != "primary"]
+        source_ref_lines = []
+        if primary_urls:
+            source_ref_lines.append("PRIMARY: " + " | ".join(primary_urls[:30]))
+        if secondary_urls:
+            source_ref_lines.append("SECONDARY: " + " | ".join(secondary_urls[:30]))
+        source_ref = ""
+        if source_ref_lines:
+            source_ref = "## SOURCE REFERENCE (for citation priority — cite PRIMARY URLs before SECONDARY)\n" + "\n".join(source_ref_lines) + "\n\n"
+
+        content_key = f"content_{persona}"
+        parts = []
+        for d in digests_en:
+            c = d.get(content_key, "")
+            if c:
+                parts.append(f"--- {d['post_type'].upper()} EN ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{c}")
+        for d in digests_ko:
+            c = d.get(content_key, "")
+            if c:
+                parts.append(f"--- {d['post_type'].upper()} KO ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{c}")
+        daily_text = source_ref + "\n\n".join(parts)
+
+        # Generate ONE persona
+        client = get_openai_client()
+        model = settings.openai_model_main
+        result = await _generate_weekly_persona_content(
+            persona=persona,
+            daily_text=daily_text,
+            client=client,
+            model=model,
+            supabase=supabase,
+            run_id=run_id,
+            cumulative_usage=cumulative_usage,
+            all_errors=all_errors,
+        )
+        if result is None:
+            raise RuntimeError(f"weekly {persona} generation failed: {'; '.join(all_errors)}")
+
+        # Clean the content same way run_weekly_pipeline does
+        new_en = _clean_writer_output(result.get("en", ""))
+        new_ko = _clean_writer_output(result.get("ko", ""))
+        new_headline = result.get("headline") or f"AI Weekly — {week_id}"
+        new_headline_ko = result.get("headline_ko") or new_headline
+        new_quiz_en = _validate_and_shuffle_weekly_quiz(result.get("weekly_quiz"))
+        new_quiz_ko = _validate_and_shuffle_weekly_quiz(result.get("weekly_quiz_ko"))
+        new_excerpt_en = (result.get("excerpt") or "").strip()
+        new_excerpt_ko = (result.get("excerpt_ko") or "").strip()
+        new_focus_en = _validate_focus_items(result.get("focus_items") or [])
+        new_focus_ko = _validate_focus_items(result.get("focus_items_ko") or [])
+
+        # Fetch existing rows so we can preserve the other persona's content
+        en_slug = f"{week_id.lower()}-weekly-digest"
+        ko_slug = f"{week_id.lower()}-weekly-digest-ko"
+        existing_en_rows = supabase.table("news_posts").select("*").eq("slug", en_slug).eq("locale", "en").limit(1).execute()
+        existing_ko_rows = supabase.table("news_posts").select("*").eq("slug", ko_slug).eq("locale", "ko").limit(1).execute()
+        if not existing_en_rows.data or not existing_ko_rows.data:
+            raise RuntimeError(f"Existing weekly rows not found for {week_id} — run full pipeline first")
+        en_row = existing_en_rows.data[0]
+        ko_row = existing_ko_rows.data[0]
+
+        # Merge quality inputs: target persona gets new content, other stays
+        if persona == "expert":
+            merged_expert_en = new_en
+            merged_expert_ko = new_ko
+            merged_learner_en = en_row.get("content_learner") or ""
+            merged_learner_ko = ko_row.get("content_learner") or ""
+        else:
+            merged_expert_en = en_row.get("content_expert") or ""
+            merged_expert_ko = ko_row.get("content_expert") or ""
+            merged_learner_en = new_en
+            merged_learner_ko = new_ko
+
+        # Recompute quality against merged content (imports inside to avoid cycle)
+        from services.pipeline_quality import _check_weekly_quality
+        aggregate_urls = list(url_meta.keys())
+        quality_result = await _check_weekly_quality(
+            content_expert_en=merged_expert_en,
+            content_learner_en=merged_learner_en,
+            content_expert_ko=merged_expert_ko,
+            content_learner_ko=merged_learner_ko,
+            source_urls=aggregate_urls,
+            supabase=supabase,
+            run_id=run_id,
+            cumulative_usage=cumulative_usage,
+        )
+
+        # Build per-locale update dict — overwrite ONLY this persona's fields.
+        # guide_items has weekly_quiz_{persona}; other keys (week_numbers,
+        # week_tool, week_terms, excerpt_learner, weekly_quiz_{other}) stay intact.
+        quiz_key = f"weekly_quiz_{persona}"
+
+        def _updated_guide(existing_guide: dict, new_quiz: list, locale: str) -> dict:
+            g = dict(existing_guide or {})
+            g[quiz_key] = new_quiz
+            if persona == "learner":
+                g["excerpt_learner"] = new_excerpt_en if locale == "en" else new_excerpt_ko
+            return g
+
+        en_update: dict[str, Any] = {
+            f"content_{persona}": new_en,
+            "guide_items": _updated_guide(en_row.get("guide_items"), new_quiz_en, "en"),
+            "quality_score": quality_result.get("quality_score"),
+            "quality_flags": quality_result.get("quality_flags"),
+        }
+        ko_update: dict[str, Any] = {
+            f"content_{persona}": new_ko,
+            "guide_items": _updated_guide(ko_row.get("guide_items"), new_quiz_ko, "ko"),
+            "quality_score": quality_result.get("quality_score"),
+            "quality_flags": quality_result.get("quality_flags"),
+        }
+
+        # Titles: persona=expert drives `title`, persona=learner drives `title_learner`.
+        # Only overwrite the one owned by this persona.
+        if persona == "expert":
+            en_update["title"] = new_headline
+            ko_update["title"] = new_headline_ko
+            # Row-level excerpt + focus_items are the expert's (per save code)
+            if new_excerpt_en:
+                en_update["excerpt"] = new_excerpt_en[:1000]
+            if new_excerpt_ko:
+                ko_update["excerpt"] = new_excerpt_ko[:1000]
+            en_update["focus_items"] = new_focus_en
+            ko_update["focus_items"] = new_focus_ko
+        else:
+            en_update["title_learner"] = new_headline
+            ko_update["title_learner"] = new_headline_ko
+
+        # Refresh fact_pack quality fields so the admin QualityPanel reflects the
+        # merged state. Preserve other fact_pack keys.
+        def _updated_fact_pack(existing_fp: dict) -> dict:
+            fp = dict(existing_fp or {})
+            fp.update({
+                "quality_score": quality_result.get("quality_score"),
+                "quality_version": quality_result.get("quality_version", "v2"),
+                "quality_breakdown": quality_result.get("quality_breakdown", {}),
+                "expert_breakdown": quality_result.get("expert_breakdown", {}),
+                "learner_breakdown": quality_result.get("learner_breakdown", {}),
+                "quality_issues": quality_result.get("quality_issues", []),
+                "quality_caps_applied": quality_result.get("quality_caps_applied", []),
+                "structural_penalty": quality_result.get("structural_penalty", 0),
+                "structural_warnings": quality_result.get("structural_warnings", []),
+                "url_validation_failed": bool(quality_result.get("url_validation_failed", False)),
+                "url_validation_failures": quality_result.get("url_validation_failures", []),
+            })
+            return fp
+        en_update["fact_pack"] = _updated_fact_pack(en_row.get("fact_pack"))
+        ko_update["fact_pack"] = _updated_fact_pack(ko_row.get("fact_pack"))
+
+        # Persist to DB
+        t_save = time.monotonic()
+        supabase.table("news_posts").update(en_update).eq("id", en_row["id"]).execute()
+        supabase.table("news_posts").update(ko_update).eq("id", ko_row["id"]).execute()
+        await _log_stage(supabase, run_id, f"weekly:regen:save:{persona}", "success", t_save,
+                         output_summary=f"updated {en_slug} + {ko_slug}", post_type="weekly")
+
+        # Mark pipeline run complete
+        supabase.table("pipeline_runs").update({
+            "status": "success",
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", run_id).execute()
+
+        return {
+            "status": "success",
+            "run_id": run_id,
+            "week_id": week_id,
+            "persona": persona,
+            "quality_score": quality_result.get("quality_score"),
+            "quality_flags": quality_result.get("quality_flags"),
+            "en_chars": len(new_en),
+            "ko_chars": len(new_ko),
+            "cost_usd": cumulative_usage.get("cost_usd"),
+            "tokens_used": cumulative_usage.get("tokens_used"),
+        }
+    except Exception as e:
+        logger.exception("Weekly regen failed for %s / %s", week_id, persona)
+        try:
+            supabase.table("pipeline_runs").update({
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": str(e)[:500],
+            }).eq("id", run_id).execute()
+        except Exception:
+            pass
+        raise
+
+
 async def run_weekly_pipeline(
     week_id: str | None = None,
 ) -> PipelineResult:
@@ -2445,8 +2691,6 @@ async def run_weekly_pipeline(
 
     Flow: fetch EN+KO dailies -> LLM generates EN+KO simultaneously (like daily) -> save drafts.
     """
-    from services.agents.prompts_news_pipeline import get_weekly_prompt
-
     if week_id is None:
         last_week = datetime.strptime(today_kst(), "%Y-%m-%d").date() - timedelta(days=7)
         week_id = _iso_week_id(last_week)

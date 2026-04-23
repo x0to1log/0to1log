@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 
 from core.config import settings
 from core.rate_limit import limiter
-from routers import admin_ai, admin_blog_ai, admin_ga4, admin_product_ai, cron
+from routers import admin_ai, admin_blog_ai, admin_ga4, admin_product_ai, admin_weekly, cron
 from routers.recommendations import router as recommendations_router
 from models.posts import HealthResponse
 
@@ -32,6 +32,7 @@ app.include_router(admin_ai.router, prefix="/api")
 app.include_router(admin_blog_ai.router, prefix="/api")
 app.include_router(admin_product_ai.router, prefix="/api")
 app.include_router(admin_ga4.router, prefix="/api")
+app.include_router(admin_weekly.router, prefix="/api")
 app.include_router(recommendations_router, prefix="/api")
 app.include_router(cron.router, prefix="/api")
 
