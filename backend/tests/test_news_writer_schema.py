@@ -33,6 +33,9 @@ def _valid_output_payload() -> dict:
             "options": ["가", "나", "다", "라"],
             "explanation": "가 맞습니다.",
         },
+        "sources": [
+            {"id": 1, "url": "https://example.com/a", "title": "Primary source"}
+        ],
     }
 
 
@@ -95,3 +98,28 @@ def test_schema_quiz_fields_match_parser_contract():
     schema = build_news_writer_json_schema(["https://a.com"])
     quiz_props = schema["schema"]["properties"]["quiz_en"]["properties"]
     assert set(quiz_props) == {"question", "answer", "options", "explanation"}
+
+
+def test_schema_includes_sources_required():
+    """Writer must emit sources[] for title/publisher metadata.
+
+    Without this, pipeline_digest.py:761 reads None and source cards
+    fall back to URL hostname labels (e.g., 'Arunbaby' for arunbaby.com).
+    """
+    schema = build_news_writer_json_schema(["https://a.com"])
+    props = schema["schema"]["properties"]
+    assert "sources" in props
+    assert "sources" in schema["schema"]["required"]
+    source_item = props["sources"]["items"]
+    assert set(source_item["required"]) == {"id", "url", "title"}
+    assert source_item["additionalProperties"] is False
+
+
+def test_sources_empty_list_allowed():
+    """Edge case: digest with zero citations should still satisfy schema."""
+    payload = _valid_output_payload()
+    payload["sources"] = []
+    payload["citations"] = []
+    payload["en"] = "No citations needed."
+    payload["ko"] = "인용 없음."
+    NewsWriterOutput(**payload)

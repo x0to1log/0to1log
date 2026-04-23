@@ -39,6 +39,21 @@ class QuizOneLocale(BaseModel):
     explanation: str = ""
 
 
+class SourceEntry(BaseModel):
+    """Writer-supplied source card metadata.
+
+    Post-processing (``pipeline_digest._fill_source_titles``) merges this
+    with the URLs extracted from body citations to produce the final
+    source_cards saved to DB. Without writer-supplied ``title``, the
+    frontend falls back to the URL hostname, producing ugly labels like
+    "Arunbaby" for arunbaby.com.
+    """
+
+    id: int = Field(ge=1, le=50)
+    url: str = Field(min_length=1)
+    title: str = ""
+
+
 class NewsWriterOutput(BaseModel):
     headline: str
     headline_ko: str
@@ -52,6 +67,7 @@ class NewsWriterOutput(BaseModel):
     focus_items_ko: list[str]
     quiz_en: QuizOneLocale
     quiz_ko: QuizOneLocale
+    sources: list[SourceEntry]
 
 
 def build_news_writer_json_schema(allowlist_urls: list[str]) -> dict[str, Any]:
@@ -85,6 +101,7 @@ def build_news_writer_json_schema(allowlist_urls: list[str]) -> dict[str, Any]:
                 "en", "ko", "citations",
                 "tags", "focus_items", "focus_items_ko",
                 "quiz_en", "quiz_ko",
+                "sources",
             ],
             "properties": {
                 "headline": {"type": "string"},
@@ -110,6 +127,19 @@ def build_news_writer_json_schema(allowlist_urls: list[str]) -> dict[str, Any]:
                 "focus_items_ko": {"type": "array", "items": {"type": "string"}},
                 "quiz_en": _quiz_locale_schema(),
                 "quiz_ko": _quiz_locale_schema(),
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["id", "url", "title"],
+                        "properties": {
+                            "id": {"type": "integer", "minimum": 1, "maximum": 50},
+                            "url": {"type": "string"},
+                            "title": {"type": "string"},
+                        },
+                    },
+                },
             },
         },
     }

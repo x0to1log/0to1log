@@ -371,12 +371,14 @@ def test_locale_integrity_anchors_scope_to_ko_body_marker():
         assert "score 10" in prompt or "is NOT a violation" in prompt
 
 
-def test_locale_integrity_exempts_community_pulse_section():
-    """Phase 1 of NQ-40: summarize_community now validates quotes_ko at
-    generation time (_has_hangul filter + mini-model retranslate), so the
-    CP section is code-guaranteed Korean. Rubric must mark the CP section
-    as EXEMPT from locale_integrity scanning to prevent judge over-reach
-    on content the code already vouches for."""
+def test_locale_integrity_keeps_cp_body_in_scope():
+    """2026-04-24: narrowed the CP exemption after external review flagged
+    it as single-layer defense. Attribution lines stay exempt (they're
+    CP-post-processor citation markers with no Korean body content), but
+    Community Pulse blockquote bodies + prose paragraphs stay subject to
+    the Hangul rule — code retranslation is the primary defense, rubric
+    is the secondary catch. Apr 19 incident is the canonical failure mode
+    this guards against."""
     v11_prompts = [
         QUALITY_CHECK_RESEARCH_EXPERT,
         QUALITY_CHECK_RESEARCH_LEARNER,
@@ -384,9 +386,14 @@ def test_locale_integrity_exempts_community_pulse_section():
         QUALITY_CHECK_BUSINESS_LEARNER,
     ]
     for prompt in v11_prompts:
-        assert "ALSO EXEMPT" in prompt
-        assert "커뮤니티 반응" in prompt  # KO header name must be in the exemption
-        assert "Community Pulse" in prompt  # English name for clarity
+        # CP section body must be NOT exempt — old "ALSO EXEMPT: all content
+        # inside ## 커뮤니티 반응" clause has been removed.
+        assert "ALSO EXEMPT" not in prompt
+        assert "NOT EXEMPT" in prompt
+        assert "커뮤니티 반응" in prompt
+        assert "Community Pulse" in prompt
+        # Attribution-only exemption must remain
+        assert "attribution lines" in prompt
         # Reason must be stated so judge understands why to skip
         assert "code-validated" in prompt or "_has_hangul" in prompt or "summarize_community" in prompt
 
