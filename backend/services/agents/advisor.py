@@ -71,6 +71,8 @@ ACTION_CONFIG = {
         "prompt_fn": get_review_prompt,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "advisor-review",
         "validator": ReviewResult,
     },
     "factcheck": {
@@ -78,6 +80,8 @@ ACTION_CONFIG = {
         "prompt": FACTCHECK_SYSTEM_PROMPT,
         "max_tokens": 4096,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "advisor-factcheck",
         "validator": FactcheckResult,
     },
     "conceptcheck": {
@@ -85,6 +89,8 @@ ACTION_CONFIG = {
         "prompt": CONCEPTCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "advisor-conceptcheck",
         "validator": ConceptCheckResult,
     },
     "voicecheck": {
@@ -92,6 +98,8 @@ ACTION_CONFIG = {
         "prompt": VOICECHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "advisor-voicecheck",
         "validator": VoiceCheckResult,
     },
     "retrocheck": {
@@ -99,6 +107,8 @@ ACTION_CONFIG = {
         "prompt": RETROCHECK_SYSTEM_PROMPT,
         "max_tokens": 2048,
         "reasoning_effort": "medium",
+        "service_tier": "flex",
+        "prompt_cache_key": "advisor-retrocheck",
         "validator": RetroCheckResult,
     },
 }
@@ -164,8 +174,9 @@ async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
         max_tokens=config["max_tokens"],
         response_format={"type": "json_object"},
     )
-    if config.get("reasoning_effort"):
-        completion_kwargs["reasoning_effort"] = config["reasoning_effort"]
+    for key in ("reasoning_effort", "service_tier", "prompt_cache_key", "verbosity"):
+        if config.get(key):
+            completion_kwargs[key] = config[key]
     response = await client.chat.completions.create(**completion_kwargs)
 
     raw = response.choices[0].message.content
@@ -913,6 +924,7 @@ async def _self_critique_advanced(
                 ],
                 max_tokens=2000,
                 response_format={"type": "json_object"},
+                prompt_cache_key="hb-critique-advanced",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "self-critique")
