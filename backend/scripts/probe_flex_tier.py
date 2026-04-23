@@ -1,7 +1,11 @@
-"""One-shot probe: does service_tier='flex' work with our GPT-5 models?
+"""Probes for GPT-5 API parameter support.
 
 Usage (from backend/): python -m scripts.probe_flex_tier
 Reads OPENAI_API_KEY from backend/.env. Does NOT touch DB.
+
+Probes:
+  - service_tier="flex" (cheaper async tier)
+  - verbosity="low" (trim chattiness on JSON outputs)
 """
 import asyncio
 import os
@@ -12,14 +16,12 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 
-# Load backend/.env regardless of cwd
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 MODELS = ["gpt-5", "gpt-5-mini", "gpt-5-nano"]
 
 
-async def probe(model: str) -> tuple[str, str, int | None]:
-    client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"], timeout=60.0)
+async def probe_flex(client: AsyncOpenAI, model: str) -> tuple[str, str, str, int | None]:
     try:
         resp = await client.chat.completions.create(
             model=model,
@@ -28,20 +30,40 @@ async def probe(model: str) -> tuple[str, str, int | None]:
             service_tier="flex",
             reasoning_effort="low",
         )
-        return (model, "ok", resp.usage.total_tokens)
+        return (model, "service_tier=flex", "ok", resp.usage.total_tokens)
     except Exception as e:
-        return (model, f"ERROR: {type(e).__name__}: {str(e)[:200]}", None)
+        return (model, "service_tier=flex", f"ERROR: {type(e).__name__}: {str(e)[:150]}", None)
+
+
+async def probe_verbosity(client: AsyncOpenAI, model: str) -> tuple[str, str, str, int | None]:
+    try:
+        resp = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "Reply with the single word: ok"}],
+            max_completion_tokens=20,
+            verbosity="low",
+            reasoning_effort="low",
+        )
+        return (model, "verbosity=low", "ok", resp.usage.total_tokens)
+    except Exception as e:
+        return (model, "verbosity=low", f"ERROR: {type(e).__name__}: {str(e)[:150]}", None)
 
 
 async def main():
-    results = await asyncio.gather(*(probe(m) for m in MODELS))
-    print(f"\n{'Model':<15} {'Result':<70} {'Tokens'}")
-    print("-" * 100)
-    for model, status, tokens in results:
-        print(f"{model:<15} {status[:70]:<70} {tokens or '-'}")
-    failures = [r for r in results if not r[1].startswith("ok")]
+    client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"], timeout=60.0)
+    tasks = []
+    for m in MODELS:
+        tasks.append(probe_flex(client, m))
+        tasks.append(probe_verbosity(client, m))
+    results = await asyncio.gather(*tasks)
+
+    print(f"\n{'Model':<13} {'Probe':<22} {'Result':<60} {'Tokens'}")
+    print("-" * 105)
+    for model, probe, status, tokens in results:
+        print(f"{model:<13} {probe:<22} {status[:60]:<60} {tokens or '-'}")
+    failures = [r for r in results if not r[2].startswith("ok")]
     print()
-    print(f"Result: {len(results) - len(failures)} of {len(results)} models accept service_tier='flex'")
+    print(f"Result: {len(results) - len(failures)} of {len(results)} probes succeeded")
     sys.exit(1 if failures else 0)
 
 
