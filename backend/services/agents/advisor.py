@@ -928,6 +928,7 @@ async def _self_critique_advanced(
                 max_tokens=2000,
                 response_format={"type": "json_object"},
                 prompt_cache_key="hb-critique-advanced",
+                service_tier="flex",
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "self-critique")
