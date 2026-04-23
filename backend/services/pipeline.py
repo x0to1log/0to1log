@@ -2420,6 +2420,7 @@ async def run_weekly_pipeline(
                                 response_format={"type": "json_object"},
                                 max_tokens=16000,
                                 service_tier="flex",
+                                prompt_cache_key=f"weekly-{persona}-en",
                             )
                         ),
                         timeout=900,  # flex: 15-min headroom
@@ -2488,6 +2489,7 @@ async def run_weekly_pipeline(
                                 response_format={"type": "json_object"},
                                 max_tokens=16000,
                                 service_tier="flex",
+                                prompt_cache_key=f"weekly-{persona}-ko",
                             )
                         ),
                         timeout=900,  # flex: 15-min headroom

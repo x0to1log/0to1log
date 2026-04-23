@@ -454,6 +454,7 @@ async def _check_digest_quality(
                         response_format={"type": "json_object"},
                         service_tier="flex",
                         verbosity="low",
+                        prompt_cache_key=f"qc-{label}",
                     )
                 )
                 raw = resp.choices[0].message.content
@@ -1091,6 +1092,7 @@ async def _check_weekly_quality(
                     max_tokens=2000,
                     service_tier="flex",
                     verbosity="low",
+                    prompt_cache_key="qc-weekly-expert",
                 )
             ),
             timeout=120,
@@ -1137,6 +1139,7 @@ async def _check_weekly_quality(
                         max_tokens=2000,
                         service_tier="flex",
                         verbosity="low",
+                        prompt_cache_key="qc-weekly-learner",
                     )
                 ),
                 timeout=120,

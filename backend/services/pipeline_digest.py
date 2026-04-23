@@ -684,6 +684,7 @@ async def _generate_digest(
                                 max_tokens=24000,
                                 reasoning_effort="high",
                                 service_tier="flex",
+                                prompt_cache_key=f"digest-{digest_type}-{persona_name}",
                             )
                         ),
                         # Flex: 15-min headroom per OpenAI guidance. Accommodates
@@ -797,6 +798,7 @@ async def _generate_digest(
                                         response_format={"type": "json_object"},
                                         max_tokens=8000,
                                         service_tier="flex",
+                                        prompt_cache_key=f"digest-{digest_type}-{persona_name}-ko-recovery",
                                     )
                                 ),
                                 timeout=300,  # flex recovery: 5-min headroom
@@ -857,6 +859,7 @@ async def _generate_digest(
                                         response_format={"type": "json_object"},
                                         max_tokens=8000,
                                         service_tier="flex",
+                                        prompt_cache_key=f"digest-{digest_type}-{persona_name}-en-recovery",
                                     )
                                 ),
                                 timeout=300,  # flex recovery: 5-min headroom
@@ -1000,6 +1003,7 @@ async def _generate_digest(
                                 response_format={"type": "json_object"},
                                 max_tokens=8000,
                                 service_tier="flex",
+                                prompt_cache_key=f"digest-{digest_type}-{persona_name}-en-heading-recovery",
                             )
                         ),
                         timeout=300,  # flex recovery: 5-min headroom
