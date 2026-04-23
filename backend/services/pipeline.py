@@ -486,6 +486,11 @@ async def _log_stage(
         meta["output_tokens"] = usage["output_tokens"]
     if usage.get("cached_tokens"):
         meta["cached_tokens"] = usage["cached_tokens"]
+    # reasoning_tokens is a subset of output_tokens. Surfacing it exposes
+    # how much of the output is internal "thinking" vs visible content —
+    # useful for reasoning_effort tuning decisions.
+    if usage.get("reasoning_tokens"):
+        meta["reasoning_tokens"] = usage["reasoning_tokens"]
     # service_tier: what actually served the request (echoed in response).
     # Stored for cost audits + backfills.
     if usage.get("service_tier"):

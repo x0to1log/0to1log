@@ -13,16 +13,23 @@ def _resp(
     completion: int,
     cached: int | None,
     service_tier: str | None = None,
+    reasoning: int | None = None,
 ) -> SimpleNamespace:
     details = None
     if cached is not None:
         details = SimpleNamespace(cached_tokens=cached)
-    usage = SimpleNamespace(
-        prompt_tokens=prompt,
-        completion_tokens=completion,
-        total_tokens=prompt + completion,
-        prompt_tokens_details=details,
-    )
+    completion_details = None
+    if reasoning is not None:
+        completion_details = SimpleNamespace(reasoning_tokens=reasoning)
+    usage_kwargs: dict = {
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "total_tokens": prompt + completion,
+        "prompt_tokens_details": details,
+    }
+    if completion_details is not None:
+        usage_kwargs["completion_tokens_details"] = completion_details
+    usage = SimpleNamespace(**usage_kwargs)
     # Only attach service_tier attribute if provided — some older mocks
     # won't have it, and extract_usage_metrics must handle that.
     if service_tier is not None:
@@ -48,6 +55,25 @@ def test_extract_usage_metrics_cached_tokens_zero_when_field_missing():
     resp = SimpleNamespace(usage=usage)
     metrics = extract_usage_metrics(resp, "gpt-5")
     assert metrics["cached_tokens"] == 0
+
+
+def test_extract_usage_metrics_reads_reasoning_tokens():
+    metrics = extract_usage_metrics(
+        _resp(1000, 500, cached=None, reasoning=200), "gpt-5"
+    )
+    assert metrics["reasoning_tokens"] == 200
+
+
+def test_extract_usage_metrics_reasoning_tokens_zero_when_missing():
+    metrics = extract_usage_metrics(_resp(1000, 500, cached=None), "gpt-5")
+    assert metrics["reasoning_tokens"] == 0
+
+
+def test_merge_usage_metrics_sums_reasoning_tokens():
+    left = {"reasoning_tokens": 100, "input_tokens": 0, "output_tokens": 0}
+    right = {"reasoning_tokens": 250, "input_tokens": 0, "output_tokens": 0}
+    merged = merge_usage_metrics(left, right)
+    assert merged["reasoning_tokens"] == 350
 
 
 def test_merge_usage_metrics_sums_cached_tokens():

@@ -36,7 +36,7 @@ def fetch_logs(sb, run_id: str) -> list[dict]:
 
 def summarize(logs: list[dict]) -> None:
     per_stage: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"input": 0, "cached": 0, "output": 0, "calls": 0, "cost_cents": 0}
+        lambda: {"input": 0, "cached": 0, "output": 0, "reasoning": 0, "calls": 0, "cost_cents": 0}
     )
     for row in logs:
         debug = row.get("debug_meta") or {}
@@ -44,40 +44,51 @@ def summarize(logs: list[dict]) -> None:
         input_tok = int(debug.get("input_tokens") or 0)
         output_tok = int(debug.get("output_tokens") or 0)
         cached_tok = int(debug.get("cached_tokens") or 0)
+        reasoning_tok = int(debug.get("reasoning_tokens") or 0)
         cost = row.get("cost_usd")
         cost_cents = int(round(float(cost) * 100)) if cost is not None else 0
 
         per_stage[stage]["input"] += input_tok
         per_stage[stage]["output"] += output_tok
         per_stage[stage]["cached"] += cached_tok
+        per_stage[stage]["reasoning"] += reasoning_tok
         per_stage[stage]["cost_cents"] += cost_cents
         per_stage[stage]["calls"] += 1
 
-    header = f"{'Stage':<42} {'Calls':>5} {'Input':>10} {'Cached':>10} {'Hit%':>5} {'Output':>10} {'Cost':>7}"
+    header = (
+        f"{'Stage':<42} {'Calls':>5} {'Input':>10} {'Cached':>10} {'Hit%':>5} "
+        f"{'Output':>10} {'Reason':>8} {'R%':>5} {'Cost':>7}"
+    )
     print(header)
     print("-" * len(header))
     total_input = 0
     total_cached = 0
     total_output = 0
+    total_reasoning = 0
     total_cost = 0
     for stage in sorted(per_stage):
         s = per_stage[stage]
-        pct = (s["cached"] / s["input"] * 100) if s["input"] else 0.0
+        cache_pct = (s["cached"] / s["input"] * 100) if s["input"] else 0.0
+        reason_pct = (s["reasoning"] / s["output"] * 100) if s["output"] else 0.0
         cost_dollars = s["cost_cents"] / 100
         print(
             f"{stage:<42} {s['calls']:>5} {s['input']:>10,} {s['cached']:>10,} "
-            f"{pct:>4.1f}% {s['output']:>10,} ${cost_dollars:>6.2f}"
+            f"{cache_pct:>4.1f}% {s['output']:>10,} {s['reasoning']:>8,} "
+            f"{reason_pct:>4.1f}% ${cost_dollars:>6.2f}"
         )
         total_input += s["input"]
         total_cached += s["cached"]
         total_output += s["output"]
+        total_reasoning += s["reasoning"]
         total_cost += s["cost_cents"]
 
     print("-" * len(header))
-    total_pct = (total_cached / total_input * 100) if total_input else 0.0
+    total_cache_pct = (total_cached / total_input * 100) if total_input else 0.0
+    total_reason_pct = (total_reasoning / total_output * 100) if total_output else 0.0
     print(
         f"{'TOTAL':<42} {len(logs):>5} {total_input:>10,} {total_cached:>10,} "
-        f"{total_pct:>4.1f}% {total_output:>10,} ${total_cost/100:>6.2f}"
+        f"{total_cache_pct:>4.1f}% {total_output:>10,} {total_reasoning:>8,} "
+        f"{total_reason_pct:>4.1f}% ${total_cost/100:>6.2f}"
     )
 
 

@@ -187,6 +187,13 @@ def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, An
     details = getattr(usage, "prompt_tokens_details", None)
     cached_tokens = int(getattr(details, "cached_tokens", 0) or 0)
 
+    # reasoning_tokens is a SUBSET of completion_tokens — OpenAI bills them
+    # at the output rate (no separate line), but surfacing them lets us see
+    # how much of the writer's output is "thinking" vs visible content.
+    # Useful for deciding reasoning_effort trade-offs empirically.
+    completion_details = getattr(usage, "completion_tokens_details", None)
+    reasoning_tokens = int(getattr(completion_details, "reasoning_tokens", 0) or 0)
+
     # response.service_tier is the tier that actually served the request.
     # May be absent in older SDK mocks → treat as unknown → standard rate.
     service_tier = getattr(response, "service_tier", None)
@@ -196,6 +203,7 @@ def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, An
         "input_tokens": prompt_tokens,
         "output_tokens": completion_tokens,
         "cached_tokens": cached_tokens,
+        "reasoning_tokens": reasoning_tokens,
         "tokens_used": total_tokens,
         "service_tier": service_tier,
         "cost_usd": estimate_openai_cost_usd(
@@ -235,6 +243,7 @@ def merge_usage_metrics(
         "input_tokens": int(left.get("input_tokens", 0) or 0) + int(right.get("input_tokens", 0) or 0),
         "output_tokens": int(left.get("output_tokens", 0) or 0) + int(right.get("output_tokens", 0) or 0),
         "cached_tokens": int(left.get("cached_tokens", 0) or 0) + int(right.get("cached_tokens", 0) or 0),
+        "reasoning_tokens": int(left.get("reasoning_tokens", 0) or 0) + int(right.get("reasoning_tokens", 0) or 0),
         "tokens_used": int(left.get("tokens_used", 0) or 0) + int(right.get("tokens_used", 0) or 0),
         "cost_usd": merged_cost,
     }

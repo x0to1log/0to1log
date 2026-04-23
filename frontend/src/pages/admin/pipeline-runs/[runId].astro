@@ -479,6 +479,28 @@ if (batchId) {
                           </span>
                         </span>
                       )}
+                      {typeof debugMetaObject(log).reasoning_tokens === 'number' && (debugMetaObject(log).reasoning_tokens as number) > 0 && (
+                        <span class="pipeline-stage-chip" title="Reasoning tokens (subset of Out, billed at output rate)">
+                          <span class="pipeline-stage-chip__label">Reasoning</span>
+                          <span class="pipeline-stage-chip__value">
+                            {(debugMetaObject(log).reasoning_tokens as number).toLocaleString()}
+                          </span>
+                        </span>
+                      )}
+                      {typeof debugMetaObject(log).cached_tokens === 'number' && (debugMetaObject(log).cached_tokens as number) > 0 && (
+                        <span class="pipeline-stage-chip" title="Cached input tokens (billed at 10% of input rate)">
+                          <span class="pipeline-stage-chip__label">Cached</span>
+                          <span class="pipeline-stage-chip__value">
+                            {(debugMetaObject(log).cached_tokens as number).toLocaleString()}
+                          </span>
+                        </span>
+                      )}
+                      {typeof debugMetaObject(log).service_tier === 'string' && debugMetaObject(log).service_tier === 'flex' && (
+                        <span class="pipeline-stage-chip" title="Served at flex tier (50% discount)">
+                          <span class="pipeline-stage-chip__label">Tier</span>
+                          <span class="pipeline-stage-chip__value">flex</span>
+                        </span>
+                      )}
                       <span class="pipeline-stage-chip">
                         <span class="pipeline-stage-chip__label">Cost</span>
                         <span class="pipeline-stage-chip__value">
