@@ -140,7 +140,6 @@ async def _one_call(
             {"role": "user", "content": payload[:35000]},
         ],
         max_tokens=2000,
-        temperature=0.2,
         response_format={"type": "json_object"},
         reasoning_effort="low",
         service_tier="flex",
