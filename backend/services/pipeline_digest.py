@@ -642,11 +642,11 @@ async def _generate_digest(
                                 {"role": "user", "content": user_prompt},
                             ],
                             response_format={"type": "json_object"},
-                            temperature=0.4,
                             max_tokens=24000,
+                            reasoning_effort="high",
                         )
                     ),
-                    timeout=240,  # 4 minutes max per digest call
+                    timeout=480,  # 8 minutes: high reasoning effort is 2-3x slower
                 )
                 data = parse_ai_json(
                     response.choices[0].message.content,
