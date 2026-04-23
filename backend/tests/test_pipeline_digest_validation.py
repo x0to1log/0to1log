@@ -16,9 +16,43 @@ async def _noop_url_liveness(urls, **kwargs):
     return url_set, []
 
 
+_CITE_LEGACY_RE = __import__("re").compile(r"\[(\d+)\]\((https?://[^)\s]+)\)")
+
+
+def _legacy_body_to_cite_n(body: str) -> tuple[str, dict[int, str]]:
+    """Convert legacy `[N](URL)` inline citations to `[CITE_N]` + a mapping.
+
+    After the 2026-04-23 writer migration the LLM emits [CITE_N] placeholders
+    plus a citations[] sidecar. This helper lets existing test fixtures keep
+    the older [N](URL) shape — we rewrite them on the fly to the new contract.
+    """
+    urls: dict[int, str] = {}
+
+    def _sub(m):
+        n = int(m.group(1))
+        urls[n] = m.group(2)
+        return f"[CITE_{n}]"
+
+    return _CITE_LEGACY_RE.sub(_sub, body or ""), urls
+
+
 def _mock_openai_response(payload: dict, tokens: int = 500):
+    # Auto-migrate any legacy `[N](URL)` bodies in the mock payload to the new
+    # [CITE_N] + citations[] contract that _generate_digest now expects.
+    combined: dict[int, str] = {}
+    migrated = dict(payload)
+    for field in ("en", "ko"):
+        if migrated.get(field):
+            new_body, urls = _legacy_body_to_cite_n(migrated[field])
+            migrated[field] = new_body
+            for n, u in urls.items():
+                combined.setdefault(n, u)
+    if combined and "citations" not in migrated:
+        migrated["citations"] = [
+            {"n": n, "url": combined[n]} for n in sorted(combined)
+        ]
     response = MagicMock()
-    response.choices[0].message.content = json.dumps(payload)
+    response.choices[0].message.content = json.dumps(migrated)
     response.usage = MagicMock()
     response.usage.prompt_tokens = 1000
     response.usage.completion_tokens = tokens

@@ -16,11 +16,17 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+import openai
+
 from core.config import settings
 from models.news_pipeline import (
     ClassifiedGroup,
     CommunityInsight,
     PersonaOutput,
+)
+from services.agents.citation_substitution import (
+    CitationSubstitutionError,
+    apply_citations,
 )
 from services.agents.client import (
     compat_create_kwargs,
@@ -30,6 +36,7 @@ from services.agents.client import (
     parse_ai_json,
 )
 from services.agents.prompts_news_pipeline import get_digest_prompt
+from services.agents.schemas.news_writer import build_news_writer_json_schema
 
 # Helpers that remain in pipeline.py — safe to import because they are defined
 # near the top of pipeline.py (before the re-export block at the bottom).
@@ -605,6 +612,33 @@ async def _generate_digest(
             + "\n\n".join(cp_entries)
         )
 
+    # Build URL allowlist matching pipeline_quality._check_digest_quality (line 588+):
+    # every group.items[].url + every enriched_map anchor/related URL. The strict
+    # json_schema uses this as an enum, so the API rejects any URL the writer
+    # emits that isn't in the allowlist — writer hallucination is blocked at the
+    # API layer, not after the fact.
+    allowlist_urls: list[str] = []
+    for group in classified:
+        for item in (group.items or []):
+            if getattr(item, "url", None):
+                allowlist_urls.append(item.url)
+    for anchor_url, enriched_list in (_enriched or {}).items():
+        if anchor_url:
+            allowlist_urls.append(anchor_url)
+        for entry in (enriched_list or []):
+            url = entry.get("url") if isinstance(entry, dict) else None
+            if url:
+                allowlist_urls.append(url)
+
+    if not allowlist_urls:
+        logger.error(
+            "Cannot build strict writer schema for %s: no URLs in classified+enriched",
+            digest_type,
+        )
+        return 0, [f"{digest_type}: empty URL allowlist"], {}
+
+    writer_schema = build_news_writer_json_schema(allowlist_urls)
+
     # Generate personas
     client = get_openai_client()
     model = settings.openai_model_main
@@ -641,7 +675,10 @@ async def _generate_digest(
                                 {"role": "system", "content": system_prompt},
                                 {"role": "user", "content": user_prompt},
                             ],
-                            response_format={"type": "json_object"},
+                            response_format={
+                                "type": "json_schema",
+                                "json_schema": writer_schema,
+                            },
                             max_tokens=24000,
                             reasoning_effort="high",
                         )
@@ -652,9 +689,23 @@ async def _generate_digest(
                     response.choices[0].message.content,
                     f"Digest-{digest_type}-{persona_name}",
                 )
+                # Writer emits [CITE_N] placeholders + citations[] sidecar.
+                # Strict schema enum guarantees every url is in the allowlist.
+                first_call_citations = data.get("citations") or []
+                try:
+                    body_en = apply_citations(data.get("en", ""), first_call_citations)
+                    body_ko = apply_citations(data.get("ko", ""), first_call_citations)
+                except CitationSubstitutionError as sub_err:
+                    logger.warning(
+                        "Citation substitution failed for %s/%s attempt %d: %s",
+                        digest_type, persona_name, attempt, sub_err,
+                    )
+                    if attempt < MAX_DIGEST_RETRIES:
+                        continue
+                    raise
                 persona_output = PersonaOutput(
-                    en=_clean_writer_output(data.get("en", "")),
-                    ko=_clean_writer_output(data.get("ko", "")),
+                    en=_clean_writer_output(body_en),
+                    ko=_clean_writer_output(body_ko),
                 )
 
                 # Capture metadata from first persona (expert)
@@ -721,8 +772,10 @@ async def _generate_digest(
                     try:
                         ko_system = (
                             f"{system_prompt}\n\n"
-                            "IMPORTANT: Generate ONLY the Korean (ko) content. "
-                            "The English version already exists. Return JSON: {{\"ko\": \"...\"}}"
+                            "IMPORTANT: Generate ONLY the Korean (ko) content using [CITE_N] "
+                            "placeholders that match the citations array from the main output. "
+                            "The English version already exists. Return JSON: "
+                            "{{\"ko\": \"...[CITE_1]...\"}}"
                         )
                         ko_resp = await asyncio.wait_for(
                             client.chat.completions.create(
@@ -733,7 +786,6 @@ async def _generate_digest(
                                         {"role": "user", "content": user_prompt},
                                     ],
                                     response_format={"type": "json_object"},
-                                    temperature=0.4,
                                     max_tokens=8000,
                                 )
                             ),
@@ -745,8 +797,19 @@ async def _generate_digest(
                         )
                         ko_usage = extract_usage_metrics(ko_resp, model)
                         cumulative_usage = merge_usage_metrics(cumulative_usage, ko_usage)
-                        recovered_ko = ko_data.get("ko", "")
-                        if recovered_ko.strip():
+                        recovered_ko_raw = ko_data.get("ko", "")
+                        if recovered_ko_raw.strip():
+                            try:
+                                recovered_ko = apply_citations(recovered_ko_raw, first_call_citations)
+                            except CitationSubstitutionError as sub_err:
+                                logger.warning(
+                                    "KO recovery substitution failed for %s %s: %s",
+                                    digest_type, persona_name, sub_err,
+                                )
+                                recovered_ko = ""
+                        else:
+                            recovered_ko = ""
+                        if recovered_ko:
                             persona_output = PersonaOutput(en=persona_output.en, ko=recovered_ko)
                             ko_recovered = True
                             logger.info(
@@ -765,8 +828,10 @@ async def _generate_digest(
                     try:
                         en_system = (
                             f"{system_prompt}\n\n"
-                            "IMPORTANT: Generate ONLY the English (en) content. "
-                            "The Korean version already exists. Return JSON: {{\"en\": \"...\"}}"
+                            "IMPORTANT: Generate ONLY the English (en) content using [CITE_N] "
+                            "placeholders that match the citations array from the main output. "
+                            "The Korean version already exists. Return JSON: "
+                            "{{\"en\": \"...[CITE_1]...\"}}"
                         )
                         en_resp = await asyncio.wait_for(
                             client.chat.completions.create(
@@ -777,7 +842,6 @@ async def _generate_digest(
                                         {"role": "user", "content": user_prompt},
                                     ],
                                     response_format={"type": "json_object"},
-                                    temperature=0.4,
                                     max_tokens=8000,
                                 )
                             ),
@@ -789,8 +853,19 @@ async def _generate_digest(
                         )
                         en_usage = extract_usage_metrics(en_resp, model)
                         cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
-                        recovered_en = en_data.get("en", "")
-                        if recovered_en.strip():
+                        recovered_en_raw = en_data.get("en", "")
+                        if recovered_en_raw.strip():
+                            try:
+                                recovered_en = apply_citations(recovered_en_raw, first_call_citations)
+                            except CitationSubstitutionError as sub_err:
+                                logger.warning(
+                                    "EN recovery substitution failed for %s %s: %s",
+                                    digest_type, persona_name, sub_err,
+                                )
+                                recovered_en = ""
+                        else:
+                            recovered_en = ""
+                        if recovered_en:
                             persona_output = PersonaOutput(en=recovered_en, ko=persona_output.ko)
                             en_recovered = True
                             logger.info(
@@ -820,6 +895,29 @@ async def _generate_digest(
                     },
                 )
                 break  # success — no more retries
+
+            except openai.BadRequestError as schema_err:
+                # Strict json_schema validation failed (after OpenAI's own 2
+                # internal retries). Log details and retry the whole call —
+                # the next attempt might produce a compliant response.
+                logger.warning(
+                    "Writer strict-schema rejection on %s %s attempt %d: %s",
+                    digest_type, persona_name, attempt + 1, schema_err,
+                )
+                if attempt == MAX_DIGEST_RETRIES:
+                    error_msg = (
+                        f"{digest_type} {persona_name} digest failed after "
+                        f"{attempt + 1} attempts (schema): {schema_err}"
+                    )
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    await _log_stage(
+                        supabase, run_id,
+                        f"digest:{digest_type}:{persona_name}", "failed", t_p,
+                        error_message=error_msg, post_type=digest_type,
+                        attempt=attempt + 1,
+                        debug_meta={"attempt": attempt + 1, "reason": "strict_schema_reject"},
+                    )
 
             except Exception as e:
                 logger.warning(
