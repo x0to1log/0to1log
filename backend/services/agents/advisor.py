@@ -2120,6 +2120,8 @@ async def _run_generate_term(
                 "source": source,
                 "input_tokens": usage.get("input_tokens"),
                 "output_tokens": usage.get("output_tokens"),
+                "cached_tokens": usage.get("cached_tokens"),
+                "service_tier": usage.get("service_tier"),
             }
             if extra_meta:
                 meta.update(extra_meta)
