@@ -2026,7 +2026,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, So What Do I Do? — are present with `##` headings. All 7 are mandatory for expert weekly.
-- **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets. Top Stories has 5-7 `###` items. Trend Analysis is 3-4 paragraphs. One-Line may be brief if it synthesizes the week's main theme.
+- **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets. Top Stories has 7-10 `###` items (matches the writer contract — weekly aggregates a week of daily digests, so a richer top-story list is expected vs. daily's 4-5). Trend Analysis is 3-4 paragraphs. One-Line may be brief if it synthesizes the week's main theme.
 
 ### Source Quality (3)
 - **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and action bullet ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. One-Line and Week-in-Numbers-labels allowed to skip. **Internal consistency (weekly-specific)**: a single event's figure often appears in Week in Numbers AND Top Stories AND Trend Analysis AND So What Do I Do — all occurrences MUST match exactly. Flag mismatches like "Week in Numbers `$10B`" vs "Top Stories body `$15B`" for the same funding round; or "`$122B valuation`" in One-Line vs "`$100B valuation`" in Top Stories. KO locale currency-unit mismatches (e.g., `$8.3 billion` in EN but `8.3억 달러` = $830M in KO — 10× error) also flag here.
@@ -2082,7 +2082,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — This Week in One Line, Week in Numbers, Top Stories, Trend Analysis, Watch Points, Open Source Spotlight, What Can I Try? — are present with `##` headings.
-- **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets with beginner-friendly context. Top Stories has 5-7 `###` items.
+- **section_depth**: Each non-summary section has substantial content (~200+ chars). Week in Numbers has 5-7 bullets with beginner-friendly context. Top Stories has 7-10 `###` items (matches the writer contract — weekly aggregates a week of daily digests, so a richer top-story list is expected vs. daily's 4-5).
 
 ### Source Quality (3)
 - **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and "What Can I Try" action ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. **Internal consistency (weekly-specific)**: a single event's figure often appears in Week in Numbers AND Top Stories AND Trend Analysis AND "What Can I Try" — all occurrences MUST match exactly. Flag mismatches like "Week in Numbers `$10B`" vs "Top Stories body `$15B`" for the same funding round. KO locale currency-unit mismatches (e.g., `$8.3 billion` in EN but `8.3억 달러` = $830M in KO — 10× error) also flag here.
