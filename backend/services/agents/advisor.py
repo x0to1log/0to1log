@@ -241,6 +241,13 @@ async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
         logger.warning("Advisor [%s] validation soft-fail: %s", req.action, e)
         # Return raw data anyway — partial results are still useful
 
+    usage = extract_usage_metrics(response, model)
+    _log_advisor_call(
+        f"advisor.{req.action}",
+        usage,
+        extra_meta={"post_id": req.post_id} if getattr(req, "post_id", None) else None,
+    )
+
     logger.info("Advisor [%s] completed, tokens=%d", req.action, tokens)
     return data, model, tokens
 

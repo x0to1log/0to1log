@@ -192,3 +192,78 @@ def test_log_advisor_call_swallows_supabase_errors():
     with patch("services.agents.advisor.get_supabase", return_value=fake_supabase):
         # Should NOT raise
         advisor._log_advisor_call("advisor.review", usage)
+
+
+@pytest.mark.asyncio
+async def test_run_advise_logs_to_pipeline_logs():
+    """run_advise should call _log_advisor_call with pipeline_type='advisor.<action>'
+    after a successful OpenAI call.
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from services.agents import advisor
+    from models.advisor import AiAdviseRequest
+
+    # Mock OpenAI response
+    mock_resp = MagicMock()
+    mock_resp.choices = [MagicMock(message=MagicMock(content='{"score": 8, "comments": []}'))]
+    mock_resp.usage = MagicMock(
+        completion_tokens=42, prompt_tokens=100, total_tokens=142,
+        prompt_tokens_details=MagicMock(cached_tokens=0),
+        completion_tokens_details=MagicMock(reasoning_tokens=20),
+    )
+    mock_resp.service_tier = "flex"
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_resp)
+
+    req = AiAdviseRequest(
+        action="review", post_id="test-1", title="t", content="c", category="study",
+    )
+
+    with patch("services.agents.advisor.get_openai_client", return_value=mock_client), \
+         patch("services.agents.advisor._log_advisor_call") as mock_log:
+        await advisor.run_advise(req)
+
+    mock_log.assert_called_once()
+    stage_arg = mock_log.call_args[0][0]
+    assert stage_arg == "advisor.review"
+
+
+@pytest.mark.asyncio
+async def test_run_advise_logs_post_id_in_extra_meta():
+    """post_id should flow through to debug_meta as extra context for
+    tracing which post a given review/factcheck was for.
+    """
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from services.agents import advisor
+    from models.advisor import AiAdviseRequest
+
+    mock_resp = MagicMock()
+    mock_resp.choices = [MagicMock(message=MagicMock(content='{"score": 8, "comments": []}'))]
+    mock_resp.usage = MagicMock(
+        completion_tokens=42, prompt_tokens=100, total_tokens=142,
+        prompt_tokens_details=MagicMock(cached_tokens=0),
+        completion_tokens_details=MagicMock(reasoning_tokens=20),
+    )
+    mock_resp.service_tier = "flex"
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_resp)
+
+    req = AiAdviseRequest(
+        action="factcheck", post_id="news-2026-04-23-abc", title="t", content="c",
+        category="study",
+    )
+
+    with patch("services.agents.advisor.get_openai_client", return_value=mock_client), \
+         patch("services.agents.advisor._log_advisor_call") as mock_log:
+        await advisor.run_advise(req)
+
+    # Third positional arg is extra_meta (or keyword 'extra_meta')
+    call_kwargs = mock_log.call_args.kwargs
+    call_args = mock_log.call_args.args
+    extra_meta = call_kwargs.get("extra_meta") or (call_args[2] if len(call_args) > 2 else None)
+    assert extra_meta is not None
+    assert extra_meta.get("post_id") == "news-2026-04-23-abc"
