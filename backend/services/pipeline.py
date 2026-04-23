@@ -484,6 +484,8 @@ async def _log_stage(
         meta["input_tokens"] = usage["input_tokens"]
     if usage.get("output_tokens"):
         meta["output_tokens"] = usage["output_tokens"]
+    if usage.get("cached_tokens"):
+        meta["cached_tokens"] = usage["cached_tokens"]
 
     # Build log row, omitting None values to let DB defaults apply
     # (attempt is NOT NULL DEFAULT 0, debug_meta is NOT NULL DEFAULT '{}')
