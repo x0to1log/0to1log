@@ -51,6 +51,13 @@ async function nextWithCsp(next: () => Promise<Response>, nonce: string): Promis
   rewrittenResponse.headers.set('Content-Security-Policy', buildCspHeader(nonce));
   return rewrittenResponse;
 }
+// Access cookie lifetime (1 day) — exceeds the JWT's own expiry (1h default) on
+// purpose so that after inactivity the cookie is still present and the middleware
+// can use the refresh token instead of forcing a full re-login. Security is
+// maintained because every request re-validates via supabase.auth.getUser + refresh.
+const ACCESS_COOKIE_MAX_AGE = 86400;
+const REFRESH_COOKIE_MAX_AGE = 604800;
+
 async function validateToken(
   cookies: any,
   supabaseUrl: string,
@@ -59,25 +66,32 @@ async function validateToken(
   const accessToken = cookies.get('sb-access-token')?.value;
   const refreshToken = cookies.get('sb-refresh-token')?.value;
 
-  if (!accessToken) return null;
+  // Both missing → truly logged out
+  if (!accessToken && !refreshToken) return null;
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
 
-  if (!error && user) {
-    return { user, accessToken };
+  // Fast path: access token present and still valid
+  if (accessToken) {
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+    if (!error && user) {
+      return { user, accessToken };
+    }
   }
 
-  // Try refresh
+  // Fall through to refresh — covers both "JWT expired" and "access cookie
+  // was lost after inactivity" cases. Without this, browsers dropping the
+  // access cookie (maxAge expiry) would force a full re-login even though
+  // the 7-day refresh token is still valid.
   if (refreshToken) {
     const { data: refreshData, error: refreshError } =
       await supabase.auth.refreshSession({ refresh_token: refreshToken });
     if (!refreshError && refreshData.session) {
       cookies.set('sb-access-token', refreshData.session.access_token, {
-        path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: 3600,
+        path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: ACCESS_COOKIE_MAX_AGE,
       });
       cookies.set('sb-refresh-token', refreshData.session.refresh_token, {
-        path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: 604800,
+        path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: REFRESH_COOKIE_MAX_AGE,
       });
       return {
         user: refreshData.session.user,

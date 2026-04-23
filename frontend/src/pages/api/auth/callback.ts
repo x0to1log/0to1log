@@ -46,14 +46,14 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     httpOnly: true,
     secure: isSecure,
     sameSite: 'lax',
-    maxAge: 3600,
+    maxAge: 86400, // 1 day — outlives JWT exp so middleware can refresh after inactivity
   });
   cookies.set('sb-refresh-token', data.session.refresh_token, {
     path: '/',
     httpOnly: true,
     secure: isSecure,
     sameSite: 'lax',
-    maxAge: 604800,
+    maxAge: 604800, // 7 days
   });
   // Clear stale user extras cache from previous session
   cookies.delete('user-extras-cache', { path: '/' });
@@ -87,7 +87,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       httpOnly: true,
       secure: isSecure,
       sameSite: 'lax',
-      maxAge: 3600, // 1 hour
+      maxAge: 86400, // 1 day — outlives JWT exp so middleware can refresh after inactivity
     });
 
     cookies.set('sb-refresh-token', refresh_token, {
