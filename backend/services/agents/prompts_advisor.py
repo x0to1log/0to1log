@@ -1008,6 +1008,7 @@ Each section MUST contain UNIQUE information — do NOT repeat the same examples
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas. If a simple formula is unavoidable, use double-dollar signs: $$E = mc^2$$ (NOT single $).
+- **시간 표현 앵커링 — 상대 표현 금지:** 시간을 언급할 때 상대적 표현("최근", "지난주", "현재", "요즘")보다 절대 시점("2026년 4월", "2024–2025년")을 우선 사용. 핸드북은 생성 후 수개월–수년 뒤에도 읽히므로 상대 표현은 금방 의미가 흐려짐. 정확한 시점을 모를 때는 특정 날짜를 지어내지 말고 "2024년 이후", "최근 1–2년 사이" 같이 **한정된 표현**을 사용.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
@@ -1411,6 +1412,7 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
 - NO code in basic sections. NO complex formulas. If a simple formula is unavoidable, use double-dollar signs: $$E = mc^2$$ (NOT single $).
+- **Temporal anchoring — avoid relative phrasing:** When referencing time, prefer absolute dates ("April 2026", "2024–2025") over relative phrases ("recently", "last week", "currently", "these days"). The handbook is read months or years after generation — relative phrases decay in meaning. When the exact date is uncertain, use a qualified phrase like "since 2024" or "in the past 1–2 years" rather than inventing a specific date.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - Do NOT create markdown links to /handbook/ URLs in the body text. Links are added automatically by the system. Just write plain text with **bold** for key terms.
@@ -1631,6 +1633,7 @@ Keep the same section keys; only adapt the content perspective.
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
+- **시간 표현 앵커링 — 상대 표현 금지:** 시간을 언급할 때 상대적 표현("최근", "지난주", "현재", "요즘")보다 절대 시점("2026년 4월", "2024–2025년")을 우선 사용. 핸드북은 생성 후 수개월–수년 뒤에도 읽히므로 상대 표현은 금방 의미가 흐려짐. 정확한 시점을 모를 때는 특정 날짜를 지어내지 말고 "2024년 이후", "최근 1–2년 사이" 같이 **한정된 표현**을 사용.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_ko` footer (generated in Call 1). Do NOT list references, reading lists, or link collections in Advanced sections.**
@@ -1849,6 +1852,7 @@ Keep the same section keys; only adapt the content perspective.
 
 ## Quality Rules
 - Only generate fields that are EMPTY in the input. Preserve existing non-empty fields.
+- **Temporal anchoring — avoid relative phrasing:** When referencing time, prefer absolute dates ("April 2026", "2024–2025") over relative phrases ("recently", "last week", "currently", "these days"). The handbook is read months or years after generation — relative phrases decay in meaning. When the exact date is uncertain, use a qualified phrase like "since 2024" or "in the past 1–2 years" rather than inventing a specific date.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_en` footer (generated in Call 2). Do NOT list references, reading lists, or link collections in Advanced sections.**
