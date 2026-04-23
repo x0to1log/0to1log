@@ -44,17 +44,9 @@ async def with_flex_retry(
     # Unreachable — the final attempt either returns or re-raises
     raise RuntimeError("with_flex_retry: loop exited without returning or raising")
 OPENAI_MODEL_PRICING_PER_1M = {
-    "gpt-4o": {"input": Decimal("2.50"), "output": Decimal("10.00")},
-    "gpt-4o-mini": {"input": Decimal("0.15"), "output": Decimal("0.60")},
-    "gpt-4.1": {"input": Decimal("2.00"), "output": Decimal("8.00")},
-    "gpt-4.1-mini": {"input": Decimal("0.40"), "output": Decimal("1.60")},
-    "gpt-4.1-nano": {"input": Decimal("0.10"), "output": Decimal("0.40")},
     "gpt-5": {"input": Decimal("2.00"), "output": Decimal("8.00")},
     "gpt-5-mini": {"input": Decimal("0.25"), "output": Decimal("2.00")},
     "gpt-5-nano": {"input": Decimal("0.05"), "output": Decimal("0.40")},
-    "o4-mini": {"input": Decimal("1.10"), "output": Decimal("4.40")},
-    "o3": {"input": Decimal("2.00"), "output": Decimal("8.00")},
-    "o3-mini": {"input": Decimal("1.10"), "output": Decimal("4.40")},
 }
 
 
