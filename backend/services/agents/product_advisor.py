@@ -767,7 +767,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         category_guide = build_product_category_guide(classification)
         logger.info("Product classified: %s", classification)
 
-        # Step 2: Generate EN profile (gpt-5, receives facts + raw source + reviews)
+        # Step 2: Generate EN profile (gpt-5, with gpt-5-mini fallback; hard-fail if both fail)
         en_system = PROFILE_EN_SYSTEM + "\n\n" + category_guide + "\n\n" + PRODUCT_GROUNDING_RULES
         try:
             en_profile, en_tokens = await _generate_en_profile(
@@ -776,8 +776,17 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             )
             total_tokens += en_tokens
         except Exception as e:
-            logger.error("EN profile generation failed: %s", e)
-            en_profile = {}
+            logger.warning("EN profile gpt-5 failed: %s, retrying with gpt-5-mini", e)
+            try:
+                en_profile, en_tokens = await _generate_en_profile(
+                    facts, page_content, review_content, en_system,
+                    client, settings.openai_model_light,
+                )
+                total_tokens += en_tokens
+                logger.info("EN profile recovered with gpt-5-mini fallback")
+            except Exception as e2:
+                logger.error("EN profile fallback also failed: %s", e2)
+                raise
 
         # Step 3+4+5: KO profile + enrichment + search corpus (parallel, gpt-5-mini)
         corpus_context = "\n".join([
