@@ -518,6 +518,7 @@ async def _extract_product_facts(
                 ],
                 max_tokens=500,
                 response_format={"type": "json_object"},
+                prompt_cache_key="product-extract-facts",
             ),
         )
         metrics = extract_usage_metrics(resp, model)
@@ -682,6 +683,7 @@ async def _classify_product(name: str, url: str, facts: dict, client, model: str
                 ],
                 max_tokens=200,
                 response_format={"type": "json_object"},
+                prompt_cache_key="product-classify",
             ),
         )
         metrics = extract_usage_metrics(resp, model)
@@ -719,6 +721,7 @@ async def _generate_en_profile(
             ],
             max_tokens=2000,
             response_format={"type": "json_object"},
+            prompt_cache_key="product-en-profile",
         ),
     )
     metrics = extract_usage_metrics(resp, model)
@@ -759,6 +762,7 @@ async def _generate_ko_profile(
             ],
             max_tokens=1500,
             response_format={"type": "json_object"},
+            prompt_cache_key="product-ko-profile",
         ),
     )
     metrics = extract_usage_metrics(resp, model)
@@ -795,6 +799,7 @@ async def _generate_enrichment(
             ],
             max_tokens=2000,
             response_format={"type": "json_object"},
+            prompt_cache_key="product-enrichment",
         ),
     )
     metrics = extract_usage_metrics(resp, model)
