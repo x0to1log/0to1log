@@ -2698,7 +2698,7 @@ async def _run_generate_term(
                 model,
                 messages=[
                     {"role": "system", "content": improved_en_adv_system},
-                    {"role": "user", "content": advanced_prompt},
+                    {"role": "user", "content": advanced_en_prompt},
                 ],
                 max_tokens=16000,
                 response_format={"type": "json_object"},

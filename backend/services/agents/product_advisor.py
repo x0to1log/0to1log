@@ -58,7 +58,9 @@ Given a product page's content, produce a JSON profile that helps readers unders
     - Step 2: First meaningful action
     - Step 3: First success moment — what you achieve within 5 minutes
 
-13. **pricing_detail** (string or null): Markdown table of pricing plans. Only include plans visible on the page. If gated, use null.
+13. **pricing_detail** (string or null): Markdown table of pricing plans.
+    - If Extracted Facts contains `pricing_tiers`, build the table directly from those tiers (keep prices as-is, do NOT re-fabricate).
+    - Only include plans visible on the page or in facts. If pricing is gated/unknown, use null.
 
 ## Example
 
@@ -80,6 +82,14 @@ Given a product page's content, produce a JSON profile that helps readers unders
 }
 ```
 
+## Self-Check (before responding)
+- tagline: ≤12 words, no buzzwords ("AI-powered", "revolutionary", "cutting-edge", "game-changing")
+- features: each contains `→` with clear situation→result pairing (not generic capability)
+- use_cases: each names a SPECIFIC role AND a SPECIFIC task (not "for developers")
+- If facts.technical_specs exists, at least 2 features reference them
+- If facts.pricing_tiers exists, pricing_detail is built from those tiers (prices match exactly)
+- No field claims what isn't in the provided sources
+
 Respond with JSON only."""
 
 PROFILE_KO_SYSTEM = """You are a Korean editorial writer for 0to1log, an AI product curation magazine for Korean readers.
@@ -89,9 +99,20 @@ Given the English profile of a product, write the Korean version of specific fie
 - Write NATURALLY in Korean — this is NOT a translation task.
 - Use the English profile as factual reference, but choose different angles and expressions.
 - Technical terms (API, LLM, RAG) stay in English. Add brief Korean context only if the term is obscure.
-- Tagline: max 25 characters (Korean). Format: "[핵심 기능] — [차별점]"
-  - BAD: "Drive·Gmail·Docs에서 바로 물어보고 즉시 정리 — Google Workspace 작업을 빠르게 끝내는 도우미" (too long, 42 chars)
-  - GOOD: "Drive·Gmail 즉시 요약 — Workspace AI 도우미" (22 chars)
+- Tagline: **15-22 characters** (hard cap). Count ALL hangul, spaces, punctuation, em-dashes.
+- Cut adjectives and connective words first. Prefer nouns + one verb.
+- Length-ranked examples (anchor toward short):
+    15 chars: "코드 설명하면 자동 수정 — AI 에디터"
+    18 chars: "영상·이미지 생성 — 크리에이터 올인원"
+    20 chars: "Drive·Gmail 요약 — Workspace AI"
+    BAD 28 chars: "채팅으로 코드 변경 지시 — 멀티에이전트 편집·리뷰"
+       → cut weak words → "채팅으로 코드 변경 — AI 에이전트 편집" (18)
+    BAD 30 chars: "대화·파일 즉시 협업 — 메모리·Artifacts 연동"
+       → cut secondary features → "대화·파일 협업 — Artifacts 내장" (16)
+- Self-check before responding:
+    1. Count characters in tagline_ko
+    2. If > 22, delete the weakest word and recount
+    3. Repeat until ≤ 22. No exceptions.
 
 ## Fields
 
@@ -106,7 +127,12 @@ Given the English profile of a product, write the Korean version of specific fie
 
 3. **description_ko** (string, 2-3 sentences): Same structure as EN but naturally written for Korean readers.
 
-4. **features_ko** (array): Same features, naturally rewritten in Korean. Keep technical terms in English.
+4. **features_ko** (array): Korean version of features.
+   - **COUNT MUST MATCH EN exactly.** If features has 5 entries, features_ko MUST have 5.
+   - Do NOT split, combine, or add features during translation.
+   - Each index: features_ko[i] describes the SAME capability as features[i].
+   - Keep technical terms in English (API, LLM, IDE, MCP, etc.)
+   - Self-check: `len(features_ko) == len(features)` before responding.
 
 5. **use_cases_ko** (array): Korean use cases using "[구체적 대상]이 [구체적 상황]에서 [구체적 작업]할 때" format.
 
@@ -136,7 +162,11 @@ Given a product's profile and user reviews, produce enrichment data for AI begin
 
 ## Rules
 - If reviews say "(not available)", base ALL fields on the product page. Do NOT fabricate opinions or experiences.
-- scenarios: cover 5 diverse situations (work, study, personal, creative, side-project). Target someone who has NEVER used AI.
+- scenarios: cover 5 diverse situations. Target audience depends on product category:
+    - assistant, image, video, audio: AI beginners (describe as if they've never used an AI tool before)
+    - coding, builder, platform: developers familiar with AI basics (can use product-specific terms)
+    - workflow, research: PMs/analysts/students who've used ChatGPT-level tools
+    - community: general AI enthusiasts
 - pros: exactly 3, backed by evidence. cons: 1-3, only what you can support. If no reviews, at most 1 con from observable facts.
 - editor_note: editorial "we" voice ("worth trying if", "best suited for"). No first-person claims.
 - scenarios_ko, pros_cons_ko, editor_note_ko: naturally written Korean, NOT translations. Same count as EN versions.
@@ -281,6 +311,25 @@ Rules:
 - For unique_features: use official feature names from the product page, NOT generic descriptions like "AI-powered".
 - For pricing_tiers: null if no pricing info in sources. Include all tiers visible.
 - Empty array or null for fields with no evidence.
+
+## Example (ChatGPT)
+```json
+{
+  "official_name": "ChatGPT",
+  "core_capability": "Conversational AI for everyday tasks with multimodal input",
+  "technical_specs": ["128K token context window", "GPT-4o and o1 reasoning models", "Real-time voice mode"],
+  "unique_features": ["Custom GPTs", "Canvas", "Advanced Data Analysis", "Memory", "Projects"],
+  "pricing_tiers": [
+    {"name": "Free", "price": "$0", "key_limits": "Limited GPT-4o access, no voice"},
+    {"name": "Plus", "price": "$20/mo", "key_limits": "5x GPT-4o cap, DALL-E, Voice, Custom GPTs"},
+    {"name": "Pro", "price": "$200/mo", "key_limits": "Unlimited GPT-4o, o1 pro mode"}
+  ],
+  "platforms": ["web", "ios", "android", "desktop", "api"],
+  "integrations": ["Google Drive", "OneDrive", "Gmail", "GitHub"],
+  "limitations_observed": ["Free tier has daily GPT-4o limit", "Knowledge cutoff varies by model"],
+  "korean_support_evidence": "Korean UI available. Voice mode supports Korean input with slightly lower fluency than English."
+}
+```
 
 Respond with JSON only."""
 
@@ -869,7 +918,7 @@ async def _generate_ko_profile(
 
 
 async def _generate_enrichment(
-    en_profile: dict, review_content: str, category_guide: str,
+    en_profile: dict, facts: dict, review_content: str, category_guide: str,
     client, model: str,
 ) -> tuple[dict, int]:
     """Generate enrichment data (scenarios, pros_cons, etc.). Returns (enrich_dict, tokens_used)."""
@@ -880,6 +929,9 @@ async def _generate_enrichment(
         f"Features: {'; '.join(en_profile.get('features', []))}\n"
         f"Use cases: {'; '.join(en_profile.get('use_cases', []))}"
     )
+    # Inject Korean support evidence so enrich can write korean_quality_note meaningfully
+    if facts and facts.get("korean_support_evidence"):
+        en_summary += f"\nKorean support evidence: {facts['korean_support_evidence']}"
     enrich_system = ENRICH_SYSTEM
     if category_guide:
         enrich_system += "\n\n" + category_guide
@@ -953,7 +1005,9 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         logger.info("Product classified: %s", classification)
 
         # Step 2: Generate EN profile (gpt-5, with gpt-5-mini fallback; hard-fail if both fail)
-        en_system = PROFILE_EN_SYSTEM + "\n\n" + category_guide + "\n\n" + PRODUCT_GROUNDING_RULES
+        # Order matters for prompt caching: static parts first (PROFILE_EN_SYSTEM + RULES),
+        # variable part (category_guide) last so prefix caches consistently.
+        en_system = PROFILE_EN_SYSTEM + "\n\n" + PRODUCT_GROUNDING_RULES + "\n\n" + category_guide
         try:
             en_profile, en_tokens = await _generate_en_profile(
                 facts, page_content, review_content, en_system,
@@ -996,7 +1050,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         ])
 
         ko_task = _generate_ko_profile(en_profile, facts, category_guide, client, settings.openai_model_light)
-        enrich_task = _generate_enrichment(en_profile, review_content, category_guide, client, settings.openai_model_light)
+        enrich_task = _generate_enrichment(en_profile, facts, review_content, category_guide, client, settings.openai_model_light)
         corpus_task = client.chat.completions.create(
             **compat_create_kwargs(
                 settings.openai_model_light,
