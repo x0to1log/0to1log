@@ -1637,6 +1637,12 @@ Keep the same section keys; only adapt the content perspective.
 - **주장 보정 (claim calibration):**
   - "혁명적", "획기적", "게임 체인저", "패러다임 전환" 같은 과장 표현은 본문에 **구체적인 인용 (논문/데이터/출처)** 이 같은 문장에 있지 않으면 사용 금지.
   - 미래 예측 표현 ("앞으로 대체할", "곧 주류가 될", "지배적 기술이 될 것이다") 은 **명시적으로 예측임을 드러내고** 근거 ("X 추세 기준", "Y 논문 결과에 따르면") 를 같은 문장에 포함. 미래 전망을 현재 사실처럼 기술 금지.
+- **arxiv 인용 시 구체성 요구:** advanced_ko 본문에서 arxiv 논문 (또는 doi / paperswithcode 링크) 을 인용하면, 해당 논문에서 **abstract 를 paraphrase 하는 것 이상** — 아래 중 **최소 하나의 구체적인 디테일** 을 함께 제시:
+  - 알고리즘의 구체적 step / 핵심 수식
+  - 하이퍼파라미터 또는 아키텍처 선택
+  - 학습 레시피 (데이터 / 최적화 방식)
+  - 평가 프로토콜 (벤치마크 / 지표 / 결과 수치)
+  구체적 디테일을 기억할 수 없다면 arxiv 링크 대신 **교과서 / 공식 문서 / 블로그 포스트** 를 인용.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_ko` footer (generated in Call 1). Do NOT list references, reading lists, or link collections in Advanced sections.**
@@ -1859,6 +1865,12 @@ Keep the same section keys; only adapt the content perspective.
 - **Claim calibration:**
   - Avoid overclaim words ("revolution", "revolutionary", "breakthrough", "game-changer", "paradigm shift") unless the claim is backed by a **specific citation (paper/data/source)** in the same sentence.
   - Predictions / forward-looking claims ("will disrupt", "is set to", "expected to dominate") must be **explicitly framed as prediction**, with the basis ("based on X trend", "per Y paper's results") in the same sentence. Do not present future projections as current facts.
+- **ArXiv depth requirement:** When advanced_en cites an arxiv paper (or doi / paperswithcode link), go **beyond an abstract paraphrase** — include **at least ONE concrete detail** from the paper:
+  - A specific algorithm step or key equation
+  - A hyperparameter or architectural choice
+  - A training recipe (data / optimization)
+  - An evaluation protocol (benchmark / metric / numeric result)
+  If you cannot recall a concrete detail, cite a **textbook / official doc / blog post** instead of the arxiv link alone.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
 - **References go in `references_en` footer (generated in Call 2). Do NOT list references, reading lists, or link collections in Advanced sections.**
