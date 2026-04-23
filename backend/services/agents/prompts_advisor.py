@@ -1659,7 +1659,7 @@ Keep the same section keys; only adapt the content perspective.
   - **Technical Depth (3):** `mechanism_clarity` (내부 동작 원리 — 데이터 흐름/알고리즘 단계), `concrete_specifics` (실제 수치 — 파라미터 수, FLOPs, 벤치마크 수치), `code_or_formula` (정확하고 관련성 있는 코드/수식)
   - **Accuracy (2):** `factual_correctness` (공식 문서 대조 검증 가능성), `hallucination_absence` (가짜 벤치마크/논문/RFC/엔티티 없음)
   - **Uniqueness (2):** `term_differentiation` (유사 용어와 명확히 구별), `internal_non_redundancy` (섹션 간 중복 없음)
-  - **Structural Completeness (2):** `required_sections_present` (모든 예상 섹션 + 실질 내용 — placeholder 금지), `format_compliance` (`❌ Mistake:`/`✅ Fix:`, `(prerequisite)`/`(alternative)`/`(extension)` 마커)
+  - **Structural Completeness (2):** `required_sections_present` (모든 예상 섹션 + 실질 내용 — placeholder 금지), `format_compliance` (`❌ Mistake:`/`✅ Fix:` 마커, `(prerequisite)`/`(alternative)`/`(extension)` 태그 — references 배열은 평가 대상 아님)
   각 차원을 의식하며 작성. 이 목록 자체를 출력에 포함하지 말 것.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.
@@ -1893,7 +1893,7 @@ Keep the same section keys; only adapt the content perspective.
   - **Technical Depth (3):** `mechanism_clarity` (HOW it works internally — data flow, algorithm steps), `concrete_specifics` (real numbers — parameter counts, FLOPs, benchmark results), `code_or_formula` (correct, relevant code or mathematical formulas)
   - **Accuracy (2):** `factual_correctness` (verifiable against official docs), `hallucination_absence` (no fabricated benchmarks/papers/RFCs/entities)
   - **Uniqueness (2):** `term_differentiation` (clearly distinct from similar handbook terms), `internal_non_redundancy` (each section adds new information)
-  - **Structural Completeness (2):** `required_sections_present` (all expected sections with substantive content — no placeholders), `format_compliance` (`❌ Mistake:`/`✅ Fix:`, `(prerequisite)`/`(alternative)`/`(extension)` tags, structured references)
+  - **Structural Completeness (2):** `required_sections_present` (all expected sections with substantive content — no placeholders), `format_compliance` (`❌ Mistake:`/`✅ Fix:` markers, `(prerequisite)`/`(alternative)`/`(extension)` tags — references array is not part of evaluated content)
   Write with these dimensions in mind. Do NOT repeat this list in the output.
 - FACTUAL ACCURACY: Only include examples you are confident about. If unsure, do NOT claim it.
 - NO REPETITION across sections: each section must add NEW information.

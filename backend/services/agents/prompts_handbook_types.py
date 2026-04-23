@@ -914,7 +914,7 @@ Do NOT invent sections that aren't in the content.
 
 ### Structural Completeness
 - **required_sections_present**: All expected sections are present with substantive content (not placeholder stubs)
-- **format_compliance**: `❌ Mistake:`/`✅ Fix:` markers in pitfalls, `(prerequisite)`/`(alternative)`/`(extension)` tags in relations, references as structured array
+- **format_compliance**: `❌ Mistake:`/`✅ Fix:` markers in the Pitfalls section, `(prerequisite)`/`(alternative)`/`(extension)` tags in the Relations section. (References array is NOT part of the submitted content — do not score its structure.)
 
 ## Output JSON
 
