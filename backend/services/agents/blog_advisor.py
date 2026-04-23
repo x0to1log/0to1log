@@ -22,7 +22,12 @@ from models.advisor import (
     VoiceCheckResult,
     RetroCheckResult,
 )
-from services.agents.client import get_openai_client, parse_ai_json, compat_create_kwargs
+from services.agents.client import (
+    compat_create_kwargs,
+    extract_usage_metrics,
+    get_openai_client,
+    parse_ai_json,
+)
 from services.agents.prompts_blog_advisor import (
     get_outline_prompt,
     get_draft_prompt,
@@ -134,6 +139,49 @@ def _build_blog_user_prompt(req: BlogAdviseRequest) -> str:
     return "\n".join(p for p in parts if p is not None)
 
 
+def _log_blog_advisor_call(
+    stage: str,
+    usage: dict,
+    extra_meta: dict | None = None,
+) -> None:
+    """Log one blog-editor advisor call to pipeline_logs. Never raises.
+
+    stage: 'blog-advisor.<action>' — distinct prefix from handbook's
+    'handbook.*' and news advisor's 'advisor.*' so admin analytics
+    can split traffic cleanly.
+
+    Mirrors _log_advisor_call in advisor.py (same field shape), with
+    source='manual' baseline since blog editor is always manual.
+    """
+    supabase = get_supabase()
+    if not supabase:
+        return
+    try:
+        meta = {
+            "source": "manual",
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+        }
+        if usage.get("cached_tokens") is not None:
+            meta["cached_tokens"] = usage["cached_tokens"]
+        if usage.get("reasoning_tokens") is not None:
+            meta["reasoning_tokens"] = usage["reasoning_tokens"]
+        if usage.get("service_tier"):
+            meta["service_tier"] = usage["service_tier"]
+        if extra_meta:
+            meta.update(extra_meta)
+        supabase.table("pipeline_logs").insert({
+            "pipeline_type": stage,
+            "status": "success",
+            "model_used": usage.get("model_used"),
+            "tokens_used": usage.get("tokens_used"),
+            "cost_usd": usage.get("cost_usd"),
+            "debug_meta": meta,
+        }).execute()
+    except Exception as e:
+        logger.warning("Failed to log blog advisor %s stage: %s", stage, e)
+
+
 async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
     """Run a blog advisor action. Returns (result_dict, model_name, tokens_used)."""
     if req.action == "generate_bilingual":
@@ -191,6 +239,13 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
                 data = sanitized.model_dump()
             except Exception:
                 pass  # keep raw data as last resort
+
+    usage = extract_usage_metrics(response, model)
+    _log_blog_advisor_call(
+        f"blog-advisor.{req.action}",
+        usage,
+        extra_meta={"post_id": req.post_id} if getattr(req, "post_id", None) else None,
+    )
 
     logger.info("Blog advisor [%s] completed, tokens=%d", req.action, tokens)
     return data, model, tokens
