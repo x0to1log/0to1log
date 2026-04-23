@@ -863,9 +863,37 @@ Compare. If medium is clearly better (quality_score +3 or more, subjective impro
 - **2026-04-23**: Chose flex over batch for writers — batch 24h turnaround breaks daily cron SLA, flex keeps minutes-scale latency with the same 50% discount.
 - **2026-04-23**: Chose to thread `prompt_cache_key` through helpers first and measure BEFORE attempting prompt restructure. OpenAI caching is opportunistic at minute-scale TTL — may suffice for repeated same-day calls without restructuring. Task 2.5 gated by Task 2.4 measurement.
 
-## Phase 2 Cache Baseline
+## Phase 2 Cache Baseline (2026-04-23, pre-migration)
 
-*(To be filled in when Task 2.3 runs. Record per-stage prompt_tokens, cached_tokens, hit % for Apr 23 rerun — the last run before flex + keys deployed.)*
+Run `e1a54ea8-364a-4290-8433-e56d20016f5f` — Apr 23 rerun before flex + prompt_cache_key deploy.
+
+```
+Stage                                      Calls      Input     Cached  Hit%     Output    Cost
+-----------------------------------------------------------------------------------------------
+classify                                       1     15,199          0  0.0%      1,359 $  0.01
+community_summarize                            1        826          0  0.0%        387 $  0.00
+digest:business:expert                         1     38,638          0  0.0%     18,152 $  0.22
+digest:business:learner                        1     39,199          0  0.0%     17,611 $  0.22
+digest:research:expert                         1     33,396          0  0.0%     14,301 $  0.18
+digest:research:learner                        1     34,199          0  0.0%     15,952 $  0.20
+merge                                          1      6,712          0  0.0%      1,922 $  0.01
+quality:business                               1     17,463          0  0.0%      5,395 $  0.02
+quality:research                               1     17,977          0  0.0%      5,564 $  0.02
+ranking                                        1        783          0  0.0%        770 $  0.00
+summary                                        1    145,432          0  0.0%     66,016 $  0.82  ← rolled-up, not a real call
+-----------------------------------------------------------------------------------------------
+Real per-run cost (excluding summary rollup): ~$0.88
+```
+
+**Observations:**
+- **0% cache hit rate across every stage** — as expected pre-migration. No `prompt_cache_key` was set; automatic caching on same-day repeats apparently hadn't triggered either (cache TTL 5-10 min, writer calls take 3-5 min each, so cache was evicted before the next writer call).
+- Writer dominates cost: 4 × ~0.20 = $0.82 (~93% of daily run cost).
+- QC on gpt-5-mini + flex is already trivial: $0.04 total.
+
+**Projected savings after Phase 1 + 2:**
+- Flex tier alone (Phase 1): writer cost ~50% off → $0.41 instead of $0.82.
+- Prompt caching (Phase 2, IF hits land): additional 30-60% off on input tokens ($0.29 input → $0.12-0.20). Net +$0.10-0.17 per day.
+- Combined target: ~$0.44 → $0.30-0.35 per run. ~60% reduction vs baseline.
 
 ## Phase 2 Cache After Migration
 
