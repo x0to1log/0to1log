@@ -138,10 +138,14 @@ def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, An
         else prompt_tokens + completion_tokens
     )
 
+    details = getattr(usage, "prompt_tokens_details", None)
+    cached_tokens = int(getattr(details, "cached_tokens", 0) or 0)
+
     return {
         "model_used": model_name,
         "input_tokens": prompt_tokens,
         "output_tokens": completion_tokens,
+        "cached_tokens": cached_tokens,
         "tokens_used": total_tokens,
         "cost_usd": estimate_openai_cost_usd(model_name, prompt_tokens, completion_tokens),
     }
@@ -173,6 +177,7 @@ def merge_usage_metrics(
         "model_used": merged_model,
         "input_tokens": int(left.get("input_tokens", 0) or 0) + int(right.get("input_tokens", 0) or 0),
         "output_tokens": int(left.get("output_tokens", 0) or 0) + int(right.get("output_tokens", 0) or 0),
+        "cached_tokens": int(left.get("cached_tokens", 0) or 0) + int(right.get("cached_tokens", 0) or 0),
         "tokens_used": int(left.get("tokens_used", 0) or 0) + int(right.get("tokens_used", 0) or 0),
         "cost_usd": merged_cost,
     }
