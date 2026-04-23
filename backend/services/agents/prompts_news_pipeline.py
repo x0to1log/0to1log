@@ -1623,7 +1623,7 @@ Return JSON only:
 
 ## Constraints
 - Cover the SAME stories with the SAME number of items as the English version.
-- Each Top Story item must have 2-3 sentences, matching the English depth.
+- Each Top Story item matches the English depth exactly — same sentence count, same paragraph count, same information density as the EN body (EN writer produces 4-5 sentences in 1-3 paragraphs per item). Do NOT compress or drop sentences in translation.
 - Numbers should use Korean conventions (e.g., $10B → 100억 달러).
 - No English words at the start of bullet points.
 - CITATION PRESERVATION: every `[N](URL)` marker and every raw URL in the English input MUST reappear verbatim in the matching Korean sentence. This is non-negotiable — the Korean version is not considered complete if citation markers are dropped or URLs are stripped.
