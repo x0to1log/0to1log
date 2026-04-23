@@ -689,7 +689,7 @@ if (batchId) {
           fetch('/api/admin/weekly/regenerate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ week_id: weekId, persona: persona }),
+            body: JSON.stringify({ week_id: weekId, persona: persona, run_id: runId }),
           })
           .then(function(res) {
             return res.json().then(function(data) { return { ok: res.ok, status: res.status, data: data }; });

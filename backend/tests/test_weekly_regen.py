@@ -68,7 +68,29 @@ def test_regenerate_endpoint_happy_path_calls_helper():
             )
             assert resp.status_code == 200
             assert resp.json() == fake_result
-            mock_fn.assert_awaited_once_with("2026-W16", "expert")
+            mock_fn.assert_awaited_once_with("2026-W16", "expert", run_id=None)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_regenerate_endpoint_forwards_run_id_when_present():
+    """When the dropdown passes run_id, it flows through to the helper so
+    new stages append to the original run instead of creating a new one."""
+    from main import app
+    app.dependency_overrides[require_admin] = _admin_ok
+    fake_result = {"status": "success", "run_id": "orig-run-id", "quality_score": 88}
+    try:
+        with patch(
+            "routers.admin_weekly.regenerate_weekly_persona",
+            new=AsyncMock(return_value=fake_result),
+        ) as mock_fn:
+            client = TestClient(app)
+            resp = client.post(
+                "/api/admin/weekly/regenerate",
+                json={"week_id": "2026-W16", "persona": "learner", "run_id": "orig-run-id"},
+            )
+            assert resp.status_code == 200
+            mock_fn.assert_awaited_once_with("2026-W16", "learner", run_id="orig-run-id")
     finally:
         app.dependency_overrides.clear()
 

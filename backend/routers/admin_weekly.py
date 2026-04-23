@@ -17,10 +17,17 @@ router = APIRouter(prefix="/admin/weekly", tags=["admin-weekly"])
 class WeeklyRegenBody(BaseModel):
     week_id: str = Field(..., description="ISO week id, e.g. '2026-W16'")
     persona: str = Field(..., description="'expert' or 'learner'")
+    run_id: str | None = Field(
+        None,
+        description="Optional existing pipeline_runs.id to reuse. When the regen "
+                    "is triggered from the pipeline-runs detail page we pass the "
+                    "original run's id so new stages append to the same card "
+                    "instead of spawning a new run row.",
+    )
 
 
 @router.post("/regenerate")
-@limiter.limit("3/minute")
+@limiter.limit("10/minute")
 async def regenerate_persona(
     request: Request,
     body: WeeklyRegenBody,
@@ -31,10 +38,11 @@ async def regenerate_persona(
     Synchronous — waits for the full regen (5-10 min). Uses the same LLM helper
     as run_weekly_pipeline so the generated content is identical in shape to a
     normal run, but only the specified persona's fields are overwritten on the
-    existing news_posts rows.
+    existing news_posts rows. When `run_id` is provided, stages append to that
+    run (mirrors daily's pipeline-rerun UX).
     """
     try:
-        return await regenerate_weekly_persona(body.week_id, body.persona)
+        return await regenerate_weekly_persona(body.week_id, body.persona, run_id=body.run_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:

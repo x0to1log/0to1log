@@ -2438,7 +2438,11 @@ async def _generate_weekly_persona_content(
     return {**en_data, **ko_data}
 
 
-async def regenerate_weekly_persona(week_id: str, persona: str) -> dict:
+async def regenerate_weekly_persona(
+    week_id: str,
+    persona: str,
+    run_id: str | None = None,
+) -> dict:
     """Regenerate ONE persona's weekly content + update existing posts.
 
     Called from POST /api/admin/weekly/regenerate to recover from partial-save
@@ -2449,6 +2453,11 @@ async def regenerate_weekly_persona(week_id: str, persona: str) -> dict:
 
     Quality score is recomputed against the combined (new persona + other
     persona's existing) content so the merged state is properly scored.
+
+    run_id: if provided, reuse the existing pipeline_runs row (daily rerun
+        pattern — new stages append to the same run, visible in the runs UI
+        as "failed → running → success" on the original card). If None,
+        creates a fresh regen run for standalone/CLI invocations.
 
     Raises ValueError for bad args, RuntimeError for pipeline failures.
     """
@@ -2461,20 +2470,33 @@ async def regenerate_weekly_persona(week_id: str, persona: str) -> dict:
     if not supabase:
         raise RuntimeError("Supabase not configured")
 
-    # pipeline_runs row for observability — timestamp suffix keeps run_key unique
-    # across multiple regen attempts for the same week+persona.
-    run_id = str(_uuid.uuid4())
-    run_key = f"weekly-regen-{week_id}-{persona}-{int(time.time())}"
-    started_at = datetime.now(timezone.utc).isoformat()
-    try:
-        supabase.table("pipeline_runs").insert({
-            "id": run_id,
-            "run_key": run_key,
-            "status": "running",
-            "started_at": started_at,
-        }).execute()
-    except Exception as e:
-        logger.warning("Failed to create pipeline_runs row for regen: %s", e)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    if run_id:
+        # Reuse existing run — flip back to running, clear stale finish fields.
+        # This matches daily's pipeline-rerun flow where a failed run becomes
+        # running again and the UI shows stages appending to the same card.
+        try:
+            supabase.table("pipeline_runs").update({
+                "status": "running",
+                "finished_at": None,
+                "last_error": None,
+            }).eq("id", run_id).execute()
+        except Exception as e:
+            logger.warning("Failed to reopen pipeline_runs row %s for regen: %s", run_id, e)
+    else:
+        # Standalone invocation (e.g., CLI) — create a fresh run row so stages
+        # still have somewhere to log.
+        run_id = str(_uuid.uuid4())
+        run_key = f"weekly-regen-{week_id}-{persona}-{int(time.time())}"
+        try:
+            supabase.table("pipeline_runs").insert({
+                "id": run_id,
+                "run_key": run_key,
+                "status": "running",
+                "started_at": now_iso,
+            }).execute()
+        except Exception as e:
+            logger.warning("Failed to create pipeline_runs row for regen: %s", e)
 
     cumulative_usage: dict[str, Any] = {}
     all_errors: list[str] = []
