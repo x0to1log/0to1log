@@ -136,7 +136,7 @@ async def classify_candidates(
         )
 
     client = get_openai_client()
-    model = settings.openai_model_light  # gpt-4.1-mini (o4-mini returns empty responses for classification)
+    model = settings.openai_model_light  # gpt-5-mini (kept as reminder: light = mini tier, not nano)
     usage: dict[str, Any] = {}
 
     for attempt in range(MAX_RETRIES + 1):

@@ -1192,7 +1192,7 @@ async def _self_critique_basic(
     client, model: str,
     reference_context: str = "",
 ) -> tuple[bool, bool, str, str, int, int, dict]:
-    """Self-critique basic KO+EN content in one call (gpt-4.1-mini).
+    """Self-critique basic KO+EN content in one call (gpt-5-mini).
 
     Returns (ko_needs, en_needs, ko_feedback, en_feedback,
              ko_score, en_score, usage).
@@ -2994,7 +2994,7 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
     client = get_openai_client()
     model = getattr(settings, "openai_model_nano")
 
-    # Truncate to first 24000 chars for extraction (gpt-4.1-mini supports 128K)
+    # Truncate to first 24000 chars for extraction (gpt-5-nano supports 128K)
     preview = content[:24000]
     if len(content) > 24000:
         preview += "\n[... truncated]"
