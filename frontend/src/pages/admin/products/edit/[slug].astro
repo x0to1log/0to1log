@@ -502,6 +502,7 @@ const isFeatured = product?.featured ?? false;
             <span class="ai-btn-model">gpt-5-mini</span>
           </button>
         </div>
+        <ul id="ai-validation-warnings" class="admin-ai-warnings" hidden></ul>
         <div id="ai-loading" class="admin-ai-loading" hidden>
           <span class="ai-spinner"></span>
           <span id="ai-loading-text">Generating…</span>
@@ -1502,6 +1503,19 @@ const isFeatured = product?.featured ?? false;
         // Auto-set verified_at to today
         const vEl = document.getElementById('field-verified-at');
         if (vEl && !vEl.value) vEl.value = new Date().toISOString().slice(0, 10);
+        // Show validation warnings if AI output has any
+        const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const warnings = parsed._validation_warnings || [];
+        const warnBox = document.getElementById('ai-validation-warnings');
+        if (warnBox) {
+          if (warnings.length) {
+            warnBox.innerHTML = warnings.map(w => `<li>⚠️ ${esc(w)}</li>`).join('');
+            warnBox.hidden = false;
+          } else {
+            warnBox.hidden = true;
+            warnBox.innerHTML = '';
+          }
+        }
       } catch {
         const el = document.getElementById('field-tagline');
         if (el) el.value = resultText;

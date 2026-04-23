@@ -583,6 +583,53 @@ def _resolve_logo_url(url: str) -> str | None:
         return None
 
 
+# Buzzword blocklist for taglines — ordered by frequency
+_TAGLINE_BUZZWORDS = (
+    "ai-powered", "revolutionary", "cutting-edge", "game-changing",
+    "innovative", "industry-leading", "next-generation", "state-of-the-art",
+)
+
+
+def _check_profile_format(profile: dict) -> list[str]:
+    """Deterministic format checks — no LLM. Returns list of warning strings."""
+    warnings: list[str] = []
+
+    tagline = (profile.get("tagline") or "").strip()
+    if tagline:
+        words = tagline.split()
+        if len(words) > 12:
+            warnings.append(f"tagline exceeds 12 words ({len(words)})")
+        lower = tagline.lower()
+        hits = [w for w in _TAGLINE_BUZZWORDS if w in lower]
+        if hits:
+            warnings.append(f"tagline contains buzzword: {', '.join(hits)}")
+
+    tagline_ko = (profile.get("tagline_ko") or "").strip()
+    if tagline_ko and len(tagline_ko) > 25:
+        warnings.append(f"tagline_ko exceeds 25 chars ({len(tagline_ko)})")
+
+    features = profile.get("features") or []
+    if not (3 <= len(features) <= 5):
+        warnings.append(f"features count off (got {len(features)}, expected 3-5)")
+    for f in features:
+        if isinstance(f, str) and "→" not in f:
+            warnings.append(f"feature missing → pattern: {f[:60]}")
+
+    features_ko = profile.get("features_ko") or []
+    if features and features_ko and len(features) != len(features_ko):
+        warnings.append(f"features EN/KO count mismatch ({len(features)} vs {len(features_ko)})")
+
+    if profile.get("pricing_detail") is None and profile.get("pricing") in ("freemium", "paid", "enterprise"):
+        warnings.append("pricing is not free but pricing_detail is null")
+
+    primary = profile.get("primary_category")
+    secondary = profile.get("secondary_categories") or []
+    if primary in secondary:
+        warnings.append(f"primary_category '{primary}' duplicated in secondary_categories")
+
+    return warnings
+
+
 async def _classify_product(name: str, url: str, facts: dict, client, model: str) -> dict:
     """Classify product into category, nature, audience, and differentiator."""
     if facts:
@@ -857,6 +904,11 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         if result.get("primary_category") == "assistant":
             sc = result.get("secondary_categories", [])
             result["secondary_categories"] = [c for c in sc if c != "platform"]
+
+        # Deterministic format validation (no LLM cost)
+        result["_validation_warnings"] = _check_profile_format(result)
+        if result["_validation_warnings"]:
+            logger.info("Profile validation warnings: %s", result["_validation_warnings"])
 
         return result, settings.openai_model_main, total_tokens
 
