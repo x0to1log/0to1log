@@ -1194,7 +1194,9 @@ async def _generate_digest(
 
         # Post-process: renumber citations sequentially by URL appearance order
         # LLM may reset [1] per section — this forces global sequential numbering.
-        # Also strip hallucinated URLs (citations pointing to URLs not in source set).
+        # Also strip URLs not in the writer's source set (defense-in-depth —
+        # the writer's strict json_schema already enums citations[].url to this
+        # same set, so in the happy path nothing gets stripped here).
         allowed_urls: set[str] = set(raw_content_map.keys())
         source_meta_by_url: dict[str, dict[str, str]] = {}
         for url, sources in (enriched_map or {}).items():
@@ -1208,17 +1210,16 @@ async def _generate_digest(
                         "source_tier": s.get("source_tier", ""),
                     }
 
-        # NP-QUALITY-03: HEAD-check each URL; drop dead ones from allowlist
-        # so _renumber_citations strips their citations from body automatically.
-        from services.pipeline_quality import _validate_urls_live
-        live_urls, dead_drops = await _validate_urls_live(allowed_urls)
-        if dead_drops:
-            logger.warning(
-                "URL liveness dropped %d of %d URLs for %s: %s",
-                len(dead_drops), len(allowed_urls), digest_type,
-                "; ".join(f"{d['url'][:60]} ({d['reason']})" for d in dead_drops[:5]),
-            )
-        allowed_urls = live_urls
+        # Historical note (2026-04-23 removed): previously we HEAD-checked each
+        # URL here via _validate_urls_live and dropped dead ones from the
+        # allowlist. This was defense against writer hallucinating URLs — but
+        # the writer's strict json_schema + citations[].url enum (added today)
+        # already rules that out at the API boundary. In practice the HEAD
+        # check produced high false-positive rates (70-85% of URLs flagged as
+        # timeout/connect on arxiv, github, etc.) and destroyed legitimate
+        # citations. If a site genuinely goes 404 between write and read, the
+        # reader clicks through and sees 404 — minor UX loss, far outweighed
+        # by the citation density we gain back.
 
         expert_content, expert_source_cards = _renumber_citations(
             expert_content,

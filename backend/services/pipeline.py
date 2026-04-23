@@ -2555,18 +2555,12 @@ async def run_weekly_pipeline(
             en_learner = _clean_writer_output(learner_data.get("en", ""))
             ko_learner = _clean_writer_output(learner_data.get("ko", ""))
 
-            # NP-QUALITY-03: HEAD-check aggregate URLs; dead ones stripped from
-            # bodies by _renumber_citations via the tightened allowlist.
-            if aggregate_urls:
-                from services.pipeline_quality import _validate_urls_live
-                live_agg, dead_drops = await _validate_urls_live(aggregate_urls)
-                if dead_drops:
-                    logger.warning(
-                        "Weekly URL liveness dropped %d of %d URLs: %s",
-                        len(dead_drops), len(aggregate_urls),
-                        "; ".join(f"{d['url'][:60]} ({d['reason']})" for d in dead_drops[:5]),
-                    )
-                aggregate_urls = live_agg
+            # Historical note (2026-04-23): dropped HEAD-check of aggregate URLs.
+            # It was catching legitimate slow sites (arxiv, github, major news)
+            # as "dead" via timeout and stripping real citations from the body.
+            # Daily pipeline already hardened by writer's strict json_schema;
+            # weekly inherits URLs from those daily digests, so the URLs are
+            # provenance-validated. Rare post-publish 404s are a minor UX loss.
             _allowed = aggregate_urls if aggregate_urls else None
             en_expert, en_expert_cards = _renumber_citations(en_expert, allowed_urls=_allowed)
             ko_expert, ko_expert_cards = _renumber_citations(ko_expert, allowed_urls=_allowed)
