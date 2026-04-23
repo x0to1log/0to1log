@@ -2427,7 +2427,8 @@ async def run_weekly_pipeline(
                                     {"role": "user", "content": daily_text},
                                 ],
                                 response_format={"type": "json_object"},
-                                max_tokens=16000,
+                                max_tokens=24000,
+                                reasoning_effort="high",
                                 service_tier="flex",
                                 prompt_cache_key=f"weekly-{persona}-en",
                             )
@@ -2496,7 +2497,8 @@ async def run_weekly_pipeline(
                                     {"role": "user", "content": ko_input},
                                 ],
                                 response_format={"type": "json_object"},
-                                max_tokens=16000,
+                                max_tokens=24000,
+                                reasoning_effort="high",
                                 service_tier="flex",
                                 prompt_cache_key=f"weekly-{persona}-ko",
                             )
