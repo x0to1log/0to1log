@@ -486,6 +486,10 @@ async def _log_stage(
         meta["output_tokens"] = usage["output_tokens"]
     if usage.get("cached_tokens"):
         meta["cached_tokens"] = usage["cached_tokens"]
+    # service_tier: what actually served the request (echoed in response).
+    # Stored for cost audits + backfills.
+    if usage.get("service_tier"):
+        meta["service_tier"] = usage["service_tier"]
 
     # Build log row, omitting None values to let DB defaults apply
     # (attempt is NOT NULL DEFAULT 0, debug_meta is NOT NULL DEFAULT '{}')
