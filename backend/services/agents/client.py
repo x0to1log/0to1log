@@ -21,13 +21,22 @@ async def with_flex_retry(
     max_attempts: int = 3,
     base_delay: float = 2.0,
 ) -> _T:
-    """Retry an OpenAI call on 429 resource-unavailable (flex-tier capacity).
+    """Retry OpenAI calls on transient errors (429 rate-limit + 5xx upstream).
 
-    Exponential backoff: base_delay, 2*base_delay, 4*base_delay, ... Only
-    retries openai.RateLimitError; every other exception (BadRequestError
-    from strict-schema validation, timeouts, auth errors) passes through
-    unchanged. Per OpenAI flex docs, 429 on flex tier is not charged, so
-    retrying is free.
+    Exponential backoff: base_delay, 2*base_delay, 4*base_delay.
+
+    Retried:
+    - ``openai.RateLimitError`` (HTTP 429) — flex-tier capacity, not charged
+    - ``openai.APIStatusError`` with status >= 500 (502/503/504) — Cloudflare
+      / OpenAI upstream outages. Apr 24 news pipeline hit this when Cloudflare
+      returned 502 for ~1 hour; our previous single-exception handling only
+      covered 429, so the outer retry loop hit the same outage repeatedly.
+
+    NOT retried (passed through):
+    - ``openai.BadRequestError`` (HTTP 400) — strict-schema validation fail
+    - Other ``APIStatusError`` with 4xx — auth/permission/quota issues
+    - Timeouts and network errors caught by ``asyncio.wait_for`` wrappers
+    - Any non-``APIStatusError`` exception
     """
     for attempt in range(max_attempts):
         try:
@@ -39,6 +48,23 @@ async def with_flex_retry(
             logger.warning(
                 "flex 429 (attempt %d/%d) — backing off %.1fs: %s",
                 attempt + 1, max_attempts, delay, e,
+            )
+            await asyncio.sleep(delay)
+        except openai.APIStatusError as e:
+            # 5xx = transient upstream (Cloudflare 502, OpenAI 503, etc.) — retry.
+            # 4xx = client error (bad schema, auth) — re-raise.
+            status = getattr(e, "status_code", None)
+            if status is None:
+                resp = getattr(e, "response", None)
+                status = getattr(resp, "status_code", 0) if resp is not None else 0
+            if status < 500:
+                raise
+            if attempt == max_attempts - 1:
+                raise
+            delay = base_delay * (2 ** attempt)
+            logger.warning(
+                "openai 5xx (status=%d, attempt %d/%d) — backing off %.1fs: %s",
+                status, attempt + 1, max_attempts, delay, e,
             )
             await asyncio.sleep(delay)
     # Unreachable — the final attempt either returns or re-raises

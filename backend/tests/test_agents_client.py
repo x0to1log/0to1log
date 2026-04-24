@@ -99,6 +99,62 @@ async def test_with_flex_retry_succeeds_on_first_try():
     assert fn.call_count == 1
 
 
+def _fake_5xx_error(status: int, msg: str = "upstream bad gateway") -> openai.APIStatusError:
+    """Build an APIStatusError (parent of RateLimitError, BadRequestError, etc.).
+
+    Simulates Cloudflare 502 / OpenAI 503 transient upstream errors —
+    these were the cause of Apr 24 news pipeline failure.
+    """
+    return openai.APIStatusError(
+        message=msg,
+        response=MagicMock(status_code=status),
+        body={"error": {"type": "origin_error"}},
+    )
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_succeeds_after_one_502():
+    """Cloudflare 502 Bad Gateway — retry after backoff."""
+    mock_ok = MagicMock()
+    fn = AsyncMock(side_effect=[_fake_5xx_error(502), mock_ok])
+    out = await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert out is mock_ok
+    assert fn.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_succeeds_after_503_and_504():
+    """Multiple transient 5xx recover with retries."""
+    mock_ok = MagicMock()
+    fn = AsyncMock(side_effect=[_fake_5xx_error(503), _fake_5xx_error(504), mock_ok])
+    out = await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert out is mock_ok
+    assert fn.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_gives_up_after_3_5xx_failures():
+    err = _fake_5xx_error(502)
+    fn = AsyncMock(side_effect=[err, err, err])
+    with pytest.raises(openai.APIStatusError):
+        await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert fn.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_with_flex_retry_does_not_retry_4xx():
+    """Non-rate-limit 4xx (403, 404) should pass through — client-side errors."""
+    err_403 = openai.APIStatusError(
+        message="forbidden",
+        response=MagicMock(status_code=403),
+        body={"error": {"type": "authentication"}},
+    )
+    fn = AsyncMock(side_effect=[err_403])
+    with pytest.raises(openai.APIStatusError):
+        await with_flex_retry(fn, max_attempts=3, base_delay=0.01)
+    assert fn.call_count == 1  # no retry
+
+
 def test_build_completion_kwargs_passes_prompt_cache_key():
     out = build_completion_kwargs(
         model="gpt-5",
