@@ -93,22 +93,79 @@ const [{ data: rawLogs }, { data: qualityLogs }, handbookLogs, { data: hbQuality
     .not('run_key', 'like', 'rerun-%')
     .order('started_at', { ascending: true })
     .limit(100),
-  // Weekly pipeline logs (separate from news)
+  // Weekly pipeline logs (separate from news) + quality:weekly for score trend
   sb.from('pipeline_logs')
-    .select('cost_usd, tokens_used')
-    .like('pipeline_type', 'weekly:%')
-    .gte('created_at', filterDate),
+    .select('pipeline_type, cost_usd, tokens_used, debug_meta, pipeline_runs!inner(run_key, started_at)')
+    .or('pipeline_type.like.weekly:%,pipeline_type.eq.quality:weekly')
+    .gte('pipeline_runs.started_at', filterDate)
+    .limit(500),
 ]);
 
 // ─── Weekly Stats ───────────────────────────────────────────
-const weeklyRows = (weeklyLogs ?? []) as { cost_usd: number | string | null; tokens_used: number | null }[];
-const weeklyCost = weeklyRows.reduce((sum, r) => {
-  const v = r.cost_usd;
-  if (v === null || v === undefined || v === '') return sum;
-  return sum + Number.parseFloat(String(v));
-}, 0);
+type WeeklyLog = {
+  pipeline_type: string;
+  cost_usd: number | string | null;
+  tokens_used: number | null;
+  debug_meta: Record<string, unknown> | null;
+  pipeline_runs: { run_key: string; started_at: string };
+};
+const weeklyRows = (weeklyLogs ?? []) as unknown as WeeklyLog[];
+
+// Summary card totals — include cost from ALL weekly:* + quality:weekly logs
+const weeklyCost = weeklyRows.reduce((sum, r) => sum + parseCostInline(r.cost_usd), 0);
 const weeklyTokens = weeklyRows.reduce((sum, r) => sum + (r.tokens_used ?? 0), 0);
-const weeklyRunCount = weeklyRows.length > 0 ? 1 : 0; // weekly is 1 run with many logs
+
+// Convert ISO week (e.g. 2026-W15) to the Monday of that week — for sortKey parity with daily runs
+function isoWeekToMonday(year: number, week: number): Date {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Dow = jan4.getUTCDay() || 7;
+  const firstMonday = new Date(jan4.getTime() - (jan4Dow - 1) * 86400000);
+  return new Date(firstMonday.getTime() + (week - 1) * 7 * 86400000);
+}
+
+// parseCostInline lives here because helpers aren't defined yet at this line
+function parseCostInline(value: number | string | null): number {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = Number.parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+// Group weekly logs by run_key (weekly-YYYY-Www) for per-run cost + quality
+type WeeklyRunGroup = {
+  runKey: string;
+  sortKey: string;   // ISO date string for Monday of that week
+  label: string;     // "Wnn"
+  totalCost: number;
+  qualityScore: number | null;
+};
+const weeklyRunMap = new Map<string, WeeklyRunGroup>();
+for (const row of weeklyRows) {
+  const runKey = row.pipeline_runs.run_key;
+  const weekMatch = runKey.match(/^weekly-(\d{4})-W(\d{1,2})$/);
+  if (!weekMatch) continue; // only bucket logs that live under a weekly run
+  if (!weeklyRunMap.has(runKey)) {
+    const year = parseInt(weekMatch[1], 10);
+    const week = parseInt(weekMatch[2], 10);
+    weeklyRunMap.set(runKey, {
+      runKey,
+      sortKey: isoWeekToMonday(year, week).toISOString().slice(0, 10),
+      label: `W${weekMatch[2]}`,
+      totalCost: 0,
+      qualityScore: null,
+    });
+  }
+  const group = weeklyRunMap.get(runKey)!;
+  group.totalCost += parseCostInline(row.cost_usd);
+  if (row.pipeline_type === 'quality:weekly') {
+    const meta = (row.debug_meta ?? {}) as Record<string, unknown>;
+    const score = typeof meta.quality_score === 'number' ? meta.quality_score : null;
+    if (score !== null) group.qualityScore = score;
+  }
+}
+const weeklyRunGroups = Array.from(weeklyRunMap.values()).sort(
+  (a, b) => a.sortKey.localeCompare(b.sortKey),
+);
+const weeklyRunCount = weeklyRunGroups.length;
 
 // ─── Helpers ─────────────────────────────────────────────────
 function parseCost(value: number | string | null): number {
@@ -272,12 +329,38 @@ const tokenTotals = stackedData
   .map((s) => ({ label: s.label, total: s.tokens.reduce((sum, t) => sum + t, 0) }))
   .filter((s) => s.total > 0);
 
+// Daily runs as {sortKey, label, cost} so weekly can be aligned on unified x-axis
+const dailyRunPoints = dateGroups.map((dg) => {
+  const d = new Date(dg.date);
+  return {
+    sortKey: dg.date, // YYYY-MM-DD
+    label: `${d.getMonth() + 1}/${d.getDate()}`,
+    cost: Number(dg.totalCost.toFixed(4)),
+  };
+});
+
+// Quality research/business points as {sortKey, label, score} for unified x-axis alignment
+function qualityPoints(type: string) {
+  return qualityEntries.filter((q) => q.type === type).map((q) => {
+    const dateMatch = q.runKey.match(/(\d{4}-\d{2}-\d{2})/);
+    const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.startedAt);
+    return {
+      sortKey: dateMatch ? dateMatch[1] : q.startedAt.slice(0, 10),
+      label: `${d.getMonth() + 1}/${d.getDate()}`,
+      score: q.score,
+    };
+  });
+}
+
 const chartData = {
-  runLabels: dateGroups.map((dg) => {
-    const d = new Date(dg.date);
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  }),
-  totalCosts: dateGroups.map((dg) => Number(dg.totalCost.toFixed(4))),
+  runLabels: dailyRunPoints.map((p) => p.label),
+  totalCosts: dailyRunPoints.map((p) => p.cost),
+  dailyCostPoints: dailyRunPoints,
+  weeklyCostPoints: weeklyRunGroups.map((w) => ({
+    sortKey: w.sortKey,
+    label: w.label,
+    cost: Number(w.totalCost.toFixed(4)),
+  })),
   stacked: stackedData.map((s) => ({
     label: s.label,
     costs: s.costs.map((c) => Number(c.toFixed(6))),
@@ -288,18 +371,11 @@ const chartData = {
     values: tokenTotals.map((s) => s.total),
   },
   quality: {
-    research: qualityEntries.filter((q) => q.type === 'research').map((q) => q.score),
-    business: qualityEntries.filter((q) => q.type === 'business').map((q) => q.score),
-    researchLabels: qualityEntries.filter((q) => q.type === 'research').map((q) => {
-      const dateMatch = q.runKey.match(/(\d{4}-\d{2}-\d{2})/);
-      const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.startedAt);
-      return `${d.getMonth() + 1}/${d.getDate()}`;
-    }),
-    businessLabels: qualityEntries.filter((q) => q.type === 'business').map((q) => {
-      const dateMatch = q.runKey.match(/(\d{4}-\d{2}-\d{2})/);
-      const d = dateMatch ? new Date(dateMatch[1] + 'T00:00:00') : new Date(q.startedAt);
-      return `${d.getMonth() + 1}/${d.getDate()}`;
-    }),
+    researchPoints: qualityPoints('research'),
+    businessPoints: qualityPoints('business'),
+    weeklyPoints: weeklyRunGroups
+      .filter((w) => w.qualityScore !== null)
+      .map((w) => ({ sortKey: w.sortKey, label: w.label, score: w.qualityScore as number })),
   },
   duration: {
     labels: durationData.map((d) => d.label),
@@ -893,27 +969,51 @@ const nonce = Astro.locals.cspNonce || '';
       x: { ticks: { color: textColor, maxRotation: 45 }, grid: { color: gridColor } },
     };
 
-    new Chart(document.getElementById('chart-total-cost'), {
-      type: 'line',
-      data: {
-        labels: chartData.runLabels,
-        datasets: [{
-          label: 'Total Cost ($)',
-          data: chartData.totalCosts,
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99, 102, 241, 0.1)',
-          fill: true, tension: 0.3, pointRadius: 4,
-        }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          ...commonScales,
-          y: { ticks: { color: textColor, callback: function(v) { return '$' + Number(v).toFixed(2); } }, grid: { color: gridColor } },
+    // Total Cost per Run — daily news + weekly on unified x-axis
+    (function() {
+      var daily = chartData.dailyCostPoints || [];
+      var weekly = chartData.weeklyCostPoints || [];
+      // Union of sort keys, sorted chronologically
+      var keyMap = {};
+      daily.forEach(function(p) { keyMap[p.sortKey] = p.label; });
+      weekly.forEach(function(p) { if (!keyMap[p.sortKey]) keyMap[p.sortKey] = p.label; });
+      var sortKeys = Object.keys(keyMap).sort();
+      var labels = sortKeys.map(function(k) { return keyMap[k]; });
+      function align(points) {
+        var byKey = {};
+        points.forEach(function(p) { byKey[p.sortKey] = p.cost; });
+        return sortKeys.map(function(k) { return byKey[k] != null ? byKey[k] : null; });
+      }
+      var datasets = [{
+        label: 'Daily',
+        data: align(daily),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        fill: true, tension: 0.3, pointRadius: 4, spanGaps: true,
+      }];
+      if (weekly.length > 0) {
+        datasets.push({
+          label: 'Weekly',
+          data: align(weekly),
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+          fill: false, tension: 0, pointRadius: 6, pointStyle: 'rectRot',
+          borderDash: [4, 4], spanGaps: true,
+        });
+      }
+      new Chart(document.getElementById('chart-total-cost'), {
+        type: 'line',
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+          scales: {
+            ...commonScales,
+            y: { ticks: { color: textColor, callback: function(v) { return '$' + Number(v).toFixed(2); } }, grid: { color: gridColor } },
+          },
         },
-      },
-    });
+      });
+    })();
 
     new Chart(document.getElementById('chart-stacked-cost'), {
       type: 'bar',
@@ -1027,47 +1127,69 @@ const nonce = Astro.locals.cspNonce || '';
       });
     }
 
-    var qualityDatasets = [];
-    if (chartData.quality.research.length > 0) {
-      qualityDatasets.push({
-        label: 'Research', data: chartData.quality.research,
-        borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        fill: false, tension: 0.3, pointRadius: 4,
-      });
-    }
-    if (chartData.quality.business.length > 0) {
-      qualityDatasets.push({
-        label: 'Business', data: chartData.quality.business,
-        borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        fill: false, tension: 0.3, pointRadius: 4,
-      });
-    }
-    var qualityLabels = chartData.quality.researchLabels.length >= chartData.quality.businessLabels.length
-      ? chartData.quality.researchLabels : chartData.quality.businessLabels;
+    // Quality Score Trend — research / business / weekly on unified x-axis
+    (function() {
+      var research = chartData.quality.researchPoints || [];
+      var business = chartData.quality.businessPoints || [];
+      var weekly = chartData.quality.weeklyPoints || [];
+      // Union of sort keys
+      var keyMap = {};
+      research.forEach(function(p) { keyMap[p.sortKey] = p.label; });
+      business.forEach(function(p) { if (!keyMap[p.sortKey]) keyMap[p.sortKey] = p.label; });
+      weekly.forEach(function(p) { if (!keyMap[p.sortKey]) keyMap[p.sortKey] = p.label; });
+      var sortKeys = Object.keys(keyMap).sort();
+      var labels = sortKeys.map(function(k) { return keyMap[k]; });
+      function align(points) {
+        var byKey = {};
+        points.forEach(function(p) { byKey[p.sortKey] = p.score; });
+        return sortKeys.map(function(k) { return byKey[k] != null ? byKey[k] : null; });
+      }
+      var qualityDatasets = [];
+      if (research.length > 0) {
+        qualityDatasets.push({
+          label: 'Research', data: align(research),
+          borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: false, tension: 0.3, pointRadius: 4, spanGaps: true,
+        });
+      }
+      if (business.length > 0) {
+        qualityDatasets.push({
+          label: 'Business', data: align(business),
+          borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)',
+          fill: false, tension: 0.3, pointRadius: 4, spanGaps: true,
+        });
+      }
+      if (weekly.length > 0) {
+        qualityDatasets.push({
+          label: 'Weekly', data: align(weekly),
+          borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.15)',
+          fill: false, tension: 0, pointRadius: 6, pointStyle: 'rectRot',
+          borderDash: [4, 4], spanGaps: true,
+        });
+      }
+      var allScores = [].concat(
+        research.map(function(p) { return p.score; }),
+        business.map(function(p) { return p.score; }),
+        weekly.map(function(p) { return p.score; }),
+      ).filter(function(v) { return v > 0; });
+      var minScore = allScores.length ? Math.max(50, Math.floor((Math.min.apply(null, allScores) - 10) / 10) * 10) : 50;
 
-    new Chart(document.getElementById('chart-quality'), {
-      type: 'line',
-      data: {
-        labels: qualityLabels,
-        datasets: qualityDatasets.length > 0 ? qualityDatasets : [{ label: 'No data', data: [], borderColor: '#ccc' }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
-        scales: {
-          ...commonScales,
-          y: {
-            min: (function() {
-              var all = [].concat(chartData.quality.research, chartData.quality.business).filter(function(v) { return v > 0; });
-              return all.length ? Math.max(50, Math.floor((Math.min.apply(null, all) - 10) / 10) * 10) : 50;
-            })(),
-            max: 100,
-            ticks: { color: textColor, stepSize: 10 },
-            grid: { color: gridColor },
+      new Chart(document.getElementById('chart-quality'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: qualityDatasets.length > 0 ? qualityDatasets : [{ label: 'No data', data: [], borderColor: '#ccc' }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, boxWidth: 12 } } },
+          scales: {
+            ...commonScales,
+            y: { min: minScore, max: 100, ticks: { color: textColor, stepSize: 10 }, grid: { color: gridColor } },
           },
         },
-      },
-    });
+      });
+    })();
 
     // ─── Handbook Charts ──────────────────────────
     var hbColorMap = {
