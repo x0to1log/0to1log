@@ -1383,12 +1383,17 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         if classification.get("primary_category"):
             result["primary_category"] = classification["primary_category"]
 
-        # Post-processing: "platform" as secondary only makes sense when the product
-        # itself IS a platform (Replicate, HuggingFace Inference, AWS Bedrock).
-        # For assistants/coding/workflow/etc. products, having an API ≠ being a platform.
-        if result.get("primary_category") != "platform":
-            sc = result.get("secondary_categories", [])
-            result["secondary_categories"] = [c for c in sc if c != "platform"]
+        # Post-processing on secondary_categories:
+        # 1. Drop the primary_category itself (classify sometimes returns it in both).
+        # 2. Drop "platform" unless the product IS a platform (Replicate, HF Inference,
+        #    AWS Bedrock). Having an API ≠ being a platform.
+        primary = result.get("primary_category")
+        if primary:
+            sc = result.get("secondary_categories") or []
+            cleaned = [c for c in sc if c and c != primary]
+            if primary != "platform":
+                cleaned = [c for c in cleaned if c != "platform"]
+            result["secondary_categories"] = cleaned
 
         # Deterministic format validation (no LLM cost)
         result["_validation_warnings"] = _check_profile_format(result)
