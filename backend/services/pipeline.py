@@ -3012,21 +3012,6 @@ async def run_weekly_pipeline(
                 if len(excerpt) > 1000:
                     excerpt = excerpt[:1000].rstrip() + '\u2026'
 
-                locale_guide = {
-                    **guide_items,
-                    "week_terms": [
-                        {
-                            "slug": t["slug"],
-                            "term": t.get("korean_name" if locale == "ko" else "term") or t.get("term", ""),
-                            "definition": t.get(f"definition_{locale}", ""),
-                        }
-                        for t in terms[:2]
-                    ],
-                    "weekly_quiz_expert": expert_quiz,
-                    "weekly_quiz_learner": learner_quiz,
-                    "excerpt_learner": excerpt_learner,
-                }
-
                 locale_cards = weekly_source_cards.get(locale, [])
                 # Populate fact_pack with the same v11 shape as daily (quality_score,
                 # breakdowns, issues, caps, URL validation) so the admin QualityPanel
@@ -3047,16 +3032,52 @@ async def run_weekly_pipeline(
                     "url_validation_failures": quality_result.get("url_validation_failures", []),
                     "auto_publish_eligible": auto_publish,
                 }
-                row = {
-                    "title": title,
-                    "title_learner": title_learner,
+
+                # Daily parity (pipeline_digest.py:1284-1289): only include
+                # persona-derived fields when this run actually produced content
+                # for them, so a failed persona's previous DB values are preserved.
+                # Without this gate, a half-failed full rerun wipes out the
+                # successful-persona content from the prior run.
+                expert_ok = bool(content_expert)
+                learner_ok = bool(content_learner)
+
+                # Fetch existing guide_items so we can merge instead of replacing
+                # when one persona failed. JSONB is stored as a whole blob, so
+                # writing a new dict would drop the failed persona's keys.
+                existing_guide: dict[str, Any] = {}
+                if not (expert_ok and learner_ok):
+                    try:
+                        _existing = supabase.table("news_posts").select("guide_items").eq("slug", slug).eq("locale", locale).limit(1).execute()
+                        if _existing.data:
+                            existing_guide = _existing.data[0].get("guide_items") or {}
+                    except Exception as e:
+                        logger.warning("Failed to fetch existing guide_items for %s/%s: %s", slug, locale, e)
+
+                locale_guide = {
+                    **existing_guide,  # preserve any keys not overwritten below
+                    **guide_items,     # shared: week_numbers, week_tool
+                    "week_terms": [
+                        {
+                            "slug": t["slug"],
+                            "term": t.get("korean_name" if locale == "ko" else "term") or t.get("term", ""),
+                            "definition": t.get(f"definition_{locale}", ""),
+                        }
+                        for t in terms[:2]
+                    ],
+                }
+                if expert_ok:
+                    locale_guide["weekly_quiz_expert"] = expert_quiz
+                if learner_ok:
+                    locale_guide["weekly_quiz_learner"] = learner_quiz
+                    locale_guide["excerpt_learner"] = excerpt_learner
+
+                # Always-set fields (shared / not persona-derived)
+                row: dict[str, Any] = {
                     "slug": slug,
                     "locale": locale,
                     "category": "ai-news",
                     "post_type": "weekly",
                     "status": "published" if (auto_publish and settings.weekly_auto_publish) else "draft",
-                    "content_expert": content_expert,
-                    "content_learner": content_learner,
                     "pipeline_batch_id": week_id,
                     "published_at": published_at,
                     "reading_time_min": reading_time,
@@ -3067,9 +3088,17 @@ async def run_weekly_pipeline(
                     "quality_flags": quality_flags,
                     "content_analysis": None,
                     "fact_pack": weekly_fact_pack,
-                    "excerpt": excerpt or None,
-                    "focus_items": focus_items,
                 }
+                # Per-persona fields — omit when the persona failed so the existing
+                # DB value stays intact.
+                if expert_ok:
+                    row["content_expert"] = content_expert
+                    row["title"] = title
+                    row["excerpt"] = excerpt or None
+                    row["focus_items"] = focus_items
+                if learner_ok:
+                    row["content_learner"] = content_learner
+                    row["title_learner"] = title_learner
 
                 t_save = time.monotonic()
                 try:
