@@ -504,14 +504,17 @@ Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10
      0 = "for everyone"
 
 ## Dimension 2: Factual Grounding
+**Important: "null" or "(not set)" is HONEST — score 8 for honest empty. Only penalize hallucination or contradictions.**
 - facts_coverage: did technical_specs/unique_features (from the profile's facts block) get reflected in features?
     10 = 2+ specs visible in features
-     5 = 1 spec visible
-     0 = ignored entirely
-- pricing_integrity: is pricing_detail consistent (no fabricated numbers, matches declared pricing tier)?
-    10 = concrete tiers with prices, consistent with pricing label
-     5 = partial/rough
-     0 = contradictory (e.g. pricing=freemium but only paid tiers shown) or fabricated
+     8 = facts block is empty — nothing to cover (honest)
+     5 = 1 spec visible out of 2+ available
+     0 = facts had specs but features ignored them entirely
+- pricing_integrity: does pricing label match pricing_detail content?
+    10 = pricing label matches pricing_detail tiers exactly (free/freemium/paid/enterprise mapping sound)
+     8 = pricing = null AND pricing_detail = "(not set)" — honest about unknown pricing
+     5 = partial alignment (minor inconsistency)
+     0 = contradictory (e.g., pricing="freemium" but pricing_detail has NO $0 tier) or fabricated prices
 
 ## Dimension 3: Editorial Voice
 - description_tone: editorial clarity vs marketing copy
