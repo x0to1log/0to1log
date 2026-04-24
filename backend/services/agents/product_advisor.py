@@ -1173,8 +1173,13 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
     editor_note = profile.get("editor_note") or ""
     description = profile.get("description_en") or ""
     pricing = profile.get("pricing")
-    pricing_detail = profile.get("pricing_detail")
+    pricing_detail = profile.get("pricing_detail") or ""
     tech_specs = (facts or {}).get("technical_specs") or []
+
+    # Show actual pricing_detail content (capped) so judge can evaluate
+    # pricing_integrity meaningfully — without this, judge always flags
+    # "no concrete tiers" as top_issue even when tiers are present.
+    pricing_block = pricing_detail[:800] if pricing_detail else "(not set)"
 
     parts = [
         f"tagline: {profile.get('tagline', '')}",
@@ -1186,7 +1191,8 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
         f"features_ko[0]: {_first(features_ko)}",
         f"use_case[0]: {_first(use_cases)}",
         f"editor_note: {editor_note[:200]}",
-        f"pricing: {pricing}  pricing_detail set: {pricing_detail is not None}",
+        f"pricing: {pricing}",
+        f"pricing_detail:\n{pricing_block}",
         f"facts.technical_specs: {tech_specs[:3]}",
     ]
     return "\n".join(parts)
