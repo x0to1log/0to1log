@@ -1505,12 +1505,18 @@ async def run_daily_pipeline(
         })
 
         # Stage: ranking (Lead/Supporting assignment per category)
+        # Filter community_map by summarizer's relevance signal — off-topic
+        # threads (sentiment=null) would otherwise influence ranking via their
+        # upvote counts (external review 2026-04-24 P1-1).
         t0 = time.monotonic()
+        filtered_community_map = _filter_community_map_by_summary(
+            community_map, community_summary_map,
+        )
         research_ranked, research_rank_usage = await rank_classified(
-            classification.research, "research", community_map,
+            classification.research, "research", filtered_community_map,
         )
         business_ranked, business_rank_usage = await rank_classified(
-            classification.business, "business", community_map,
+            classification.business, "business", filtered_community_map,
         )
         classification.research = research_ranked
         classification.business = business_ranked
