@@ -111,9 +111,29 @@ def test_digest_prompt_requires_english_only_subheadings_and_checklist():
     prompt = get_digest_prompt("research", "expert", [])
 
     assert "**EN `###` headings**: MUST be English-only." in prompt
-    assert "Good: `### ClawBench: Agent performance on everyday web tasks`" in prompt
-    assert "Bad: `### ClawBench: 실사용 웹 과제에서의 에이전트 성능 점검`" in prompt
+    assert "### ClawBench: Agent performance on everyday web tasks" in prompt
     assert "Does the `en` field contain any Hangul in the headline, excerpt, `###` headings, or body?" in prompt
+
+
+def test_en_heading_has_three_transformation_rules():
+    """Apr 24 regression: Business Expert pasted source article titles verbatim
+    (publisher suffix `- TechCrunch`, 147-char press-release sprawl, Title Case).
+    Prompt must show all three failure modes as bad/good contrastive examples
+    (per prompt-engineering-patterns 'Show, Don't Tell')."""
+    prompt = get_digest_prompt("business", "expert", [])
+
+    # Rule 1: publisher suffix stripping — concrete transformation shown
+    assert "Sierra acquires YC-backed Fragment to expand agent development" in prompt
+    assert "Strip publisher suffix" in prompt
+    # Rule 2: press-release sprawl compression
+    assert "Press-release sprawl" in prompt or "press-release sprawl" in prompt
+    assert "Resolve AI raises $40M at $1.5B" in prompt
+    # Rule 3: Title Case → sentence case
+    assert "Editorial voice, not Title Case" in prompt
+    # Checklist has the 3-failure-mode scan
+    assert "Publisher suffix present" in prompt
+    assert "press release" in prompt.lower()
+    assert "Title Case" in prompt
 
 
 def test_classification_prompt_allows_cross_category_overlap_for_dual_significance():

@@ -318,7 +318,29 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
    Second paragraph, ending with [CITE_2]
    ```
    **KO `###` headings**: MUST contain Korean text. Use format `영문 고유명: 한국어 설명`. For papers, write a short Korean descriptive title — NEVER copy the full English paper title. Include the original English title in the body's first sentence if needed. Example: `### UNLOCK: 훈련 없이 모델 간 능력 이식` (O), `### The Master Key Hypothesis: Unlocking Cross-Model Capability Transfer via Linear Subspace Alignment` (X).
-   **EN `###` headings**: MUST be English-only. Good: `### ClawBench: Agent performance on everyday web tasks`. Bad: `### ClawBench: 실사용 웹 과제에서의 에이전트 성능 점검`. Keep explanation in the first English sentence after the heading, not inside the heading.
+   **EN `###` headings**: MUST be English-only. **Rewrite the source article title as an editorial headline — do NOT copy it verbatim.** Three structural rules:
+
+   **(1) Strip publisher suffix.** The publisher shows in the citation URL, not the heading.
+   - ❌ `### Bret Taylor's Sierra buys YC-backed AI startup Fragment - TechCrunch`
+   - ✅ `### Sierra acquires YC-backed Fragment to expand agent development`
+   - ❌ `### AI Overviews are coming to your Gmail at work - TechCrunch`
+   - ✅ `### AI Overviews come to Gmail at work`
+
+   **(2) Press-release sprawl → editorial compress.** If the source title reads like a full announcement (clauses chained with "and", "to advance", "amid"), extract the core event. Details go in the body's first sentence.
+   - ❌ `### Resolve AI announces Series A Extension at a $1.5B valuation and launches Resolve AI Labs to advance AI systems for complex production environments`
+   - ✅ `### Resolve AI raises $40M at $1.5B, launches Resolve AI Labs`
+   - ❌ `### Meta To Lay Off 10% Of Workforce Amid Ongoing AI Push`
+   - ✅ `### Meta to lay off 10% of staff amid AI spend`
+
+   **(3) Editorial voice, not Title Case.** Source headlines in Title Case read as ad copy. Use sentence case with subject + verb + result, matching the editorial tone of your body.
+   - ❌ `### OpenAI Launches GPT-5.5 In Global Rollout For Enterprise` (Title Case)
+   - ✅ `### OpenAI releases GPT-5.5 with enterprise rollout`
+
+   Other examples of good editorial headings:
+   - `### ClawBench: Agent performance on everyday web tasks`
+   - `### UNLOCK: Cross-model capability transfer without training`
+
+   Keep explanation + original article title in the first English sentence after the heading, not inside the heading.
    Use **bold** for key terms/companies/numbers and `>` blockquotes for direct source quotes.
 8. MATH FORMULAS: use `$$...$$` for ALL math expressions. NEVER use single `$...$` (it conflicts with currency like $2B).
 9. COMMUNITY PULSE: write a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
@@ -375,7 +397,11 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
 6. **Frontload locale parity**: Does `headline_ko` contain any specific number, ranking, allegation, or claim that is NOT in `headline`? Does `excerpt_ko` add any new fact not in `excerpt`? If yes, fix the mismatch before responding — KO is a translation, not a rewrite.
 7. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
-8. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph?
+8. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph? **EN heading transformation check**: for each EN `###`, scan for these 3 failure modes and fix:
+   (a) Publisher suffix present (` - TechCrunch`, `- Deadline`, `| Reuters`, ` - The Verge`, ` - Bloomberg`) → strip it
+   (b) Reads like a press release (multiple clauses joined with "and" / "to advance" / "amid"; or copies a full funding-announcement sentence) → compress to core event + subject-verb-result
+   (c) Title Case ("AI Overviews Are Coming", "To Lay Off Workers") → convert to sentence case
+   Apr 24 regression examples: "Bret Taylor's Sierra buys YC-backed AI startup Fragment - TechCrunch" should be "Sierra acquires YC-backed Fragment to expand agent development"; "Resolve AI announces Series A Extension at a $1.5B valuation and launches Resolve AI Labs to advance AI systems for complex production environments" should be "Resolve AI raises $40M at $1.5B, launches Resolve AI Labs".
 9. **Body number parity**: pick 3 currency or benchmark figures from the `en` body. Does each appear in the `ko` body with the same value and correct unit conversion ($X billion = X×10억 달러)? If any mismatch, fix before responding.
 10. **No relative time markers**: scan both `en` and `ko` bodies for "yesterday / last week / recently / 어제 / 지난주 / 최근". Each instance must be replaced with an absolute date reference (e.g., "Apr 20", "2026-04-20"). Relative time is forbidden — digests are archived.
 11. **No overclaim language in body**: scan both locales for "dominates / crushes / revolutionizes / groundbreaking / 장악 / 압도적 / 독점 / 석권". Replace with calibrated alternatives (see Hallucination Guard) unless the phrase is inside a direct source quote.{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
