@@ -560,18 +560,25 @@ async def _search_brave_product(name: str, url: str) -> str:
 
 
 async def _fetch_pricing_sources(name: str, url: str) -> str:
-    """Gather pricing info from 3 parallel sources. Returns merged labeled text (max 6000 chars).
+    """Gather pricing info from 3 parallel sources, filter noise, tier-label.
 
-    - A. Direct crawl of {url}/pricing (Tavily raw_content)
-    - B. Brave web search for official pricing page (cross-domain OK)
-    - C. Tavily general search (fallback)
+    Returns merged labeled text (max 6000 chars) with explicit PRIMARY / SECONDARY
+    sections. Fact extraction uses the labels to weight trust.
 
-    Shared by both `generate_from_url` (for fact extraction) and the
-    standalone `pricing_detail` action.
+    Sources:
+      A. Tavily direct crawl of {url}/pricing (always PRIMARY if raw_content found)
+      B. Brave site:{root_domain} query → PRIMARY; falls back to open query if empty
+      C. Tavily general search → mixed, filtered + tier-classified per result
+
+    Filtering:
+      - _is_blocked_pricing_source → drop .edu/.gov/forum/opinion domains
+      - _is_relevant_pricing_result → drop results not mentioning product+pricing
     """
     loop = asyncio.get_event_loop()
+    root_domain = _extract_root_domain(url)
 
     async def _crawl_pricing_url() -> str:
+        """A. Direct crawl. Always PRIMARY when content retrieved."""
         if not url or not settings.tavily_api_key:
             return ""
         try:
@@ -586,44 +593,67 @@ async def _fetch_pricing_sources(name: str, url: str) -> str:
             for r in result.get("results", []):
                 raw = r.get("raw_content") or r.get("content") or ""
                 if raw:
-                    return f"## Source: Direct pricing page crawl ({pricing_url})\n\n{raw[:3000]}"
+                    return f"[PRIMARY] Direct crawl ({pricing_url}):\n{raw[:3000]}"
         except Exception as e:
             logger.debug("Direct pricing crawl failed for %s: %s", url, e)
         return ""
 
-    async def _brave_pricing_search() -> str:
+    async def _brave_pricing_search() -> tuple[list[str], list[str]]:
+        """B. Brave. Try site:domain first; fall back to open query.
+        Returns (primary_snippets, secondary_snippets).
+        """
         if not settings.brave_api_key or not name:
-            return ""
-        try:
-            import httpx
-            query = f'"{name}" pricing plans cost monthly'
-            async with httpx.AsyncClient(timeout=10) as http:
-                resp = await http.get(
-                    "https://api.search.brave.com/res/v1/web/search",
-                    params={"q": query, "count": 3},
-                    headers={"X-Subscription-Token": settings.brave_api_key, "Accept": "application/json"},
-                )
-                resp.raise_for_status()
-                data = resp.json()
-            results = data.get("web", {}).get("results", [])
-            if not results:
-                return ""
-            parts = []
-            for r in results[:3]:
-                title = r.get("title", "")
-                r_url = r.get("url", "")
-                desc = r.get("description", "")[:600]
-                extra = r.get("extra_snippets", [])
-                snippet = "\n".join(extra[:2]) if extra else desc
-                parts.append(f"[{title}]({r_url})\n{snippet}")
-            return "## Source: Brave Search (official pricing)\n\n" + "\n\n".join(parts)
-        except Exception as e:
-            logger.debug("Brave pricing search failed for %s: %s", name, e)
-        return ""
+            return [], []
+        primary: list[str] = []
+        secondary: list[str] = []
 
-    async def _tavily_pricing_search() -> str:
+        async def _run_brave(q: str) -> list[dict]:
+            try:
+                import httpx
+                async with httpx.AsyncClient(timeout=10) as http:
+                    resp = await http.get(
+                        "https://api.search.brave.com/res/v1/web/search",
+                        params={"q": q, "count": 5},
+                        headers={"X-Subscription-Token": settings.brave_api_key, "Accept": "application/json"},
+                    )
+                    resp.raise_for_status()
+                    return resp.json().get("web", {}).get("results", [])
+            except Exception as e:
+                logger.debug("Brave pricing query failed (%s): %s", q, e)
+                return []
+
+        # 1st attempt: domain-anchored
+        results: list[dict] = []
+        if root_domain:
+            results = await _run_brave(f'"{name}" pricing plans site:{root_domain}')
+        # Fallback: open query (filtering compensates for lack of site anchor)
+        if not results:
+            results = await _run_brave(f'"{name}" pricing plans cost monthly')
+
+        for r in results[:5]:
+            r_url = r.get("url", "")
+            if _is_blocked_pricing_source(r_url):
+                logger.debug("Brave pricing: blocked %s", r_url)
+                continue
+            title = r.get("title", "")
+            desc = r.get("description", "")[:600]
+            extra = r.get("extra_snippets", []) or []
+            snippet_body = "\n".join(extra[:2]) if extra else desc
+            if not _is_relevant_pricing_result(title, snippet_body, name):
+                logger.debug("Brave pricing: off-topic %s — %s", r_url, title[:80])
+                continue
+            rendered = f"[{title}]({r_url})\n{snippet_body}"
+            tier = _classify_pricing_tier(r_url, root_domain)
+            (primary if tier == "primary" else secondary).append(rendered)
+
+        return primary, secondary
+
+    async def _tavily_pricing_search() -> tuple[list[str], list[str]]:
+        """C. Tavily general. Filtered + tier-classified."""
         if not settings.tavily_api_key or not name:
-            return ""
+            return [], []
+        primary: list[str] = []
+        secondary: list[str] = []
         try:
             from tavily import TavilyClient
             tavily = TavilyClient(api_key=settings.tavily_api_key)
@@ -631,26 +661,58 @@ async def _fetch_pricing_sources(name: str, url: str) -> str:
                 None,
                 lambda: tavily.search(
                     f"{name} pricing plans cost",
-                    max_results=3,
+                    max_results=5,
                     include_raw_content=True,
                 ),
             )
-            parts = []
             for r in results.get("results", []):
+                r_url = r.get("url", "")
+                if _is_blocked_pricing_source(r_url):
+                    continue
+                title = r.get("title", "")
                 raw = r.get("raw_content") or r.get("content") or ""
-                if raw:
-                    parts.append(raw[:2000])
-            if parts:
-                return "## Source: Tavily Search (general pricing info)\n\n" + "\n\n".join(parts)
+                if not raw:
+                    continue
+                if not _is_relevant_pricing_result(title, raw[:400], name):
+                    continue
+                tier = _classify_pricing_tier(r_url, root_domain)
+                rendered = f"[{title}]({r_url})\n{raw[:2000]}"
+                (primary if tier == "primary" else secondary).append(rendered)
         except Exception as e:
             logger.debug("Tavily pricing search failed for %s: %s", name, e)
-        return ""
+        return primary, secondary
 
-    crawl_result, brave_result, tavily_result = await asyncio.gather(
+    # Run A+B+C in parallel
+    crawl_result, (brave_primary, brave_secondary), (tavily_primary, tavily_secondary) = await asyncio.gather(
         _crawl_pricing_url(), _brave_pricing_search(), _tavily_pricing_search(),
     )
-    pricing_parts = [p for p in [crawl_result, brave_result, tavily_result] if p]
-    return "\n\n---\n\n".join(pricing_parts)[:6000]
+
+    primary_parts: list[str] = []
+    if crawl_result:
+        primary_parts.append(crawl_result)
+    primary_parts.extend(brave_primary)
+    primary_parts.extend(tavily_primary)
+
+    secondary_parts: list[str] = brave_secondary + tavily_secondary
+
+    sections: list[str] = []
+    if primary_parts:
+        sections.append(
+            "### PRIMARY (product-domain pricing — trust for pricing_tiers)\n\n"
+            + "\n\n".join(primary_parts)
+        )
+    if secondary_parts:
+        sections.append(
+            "### SECONDARY (third-party context — do NOT extract pricing_tiers from these)\n\n"
+            + "\n\n".join(secondary_parts)
+        )
+
+    merged = "\n\n---\n\n".join(sections)[:6000]
+    logger.info(
+        "Pricing sources for %s: primary=%d, secondary=%d, total_chars=%d",
+        name, len(primary_parts), len(secondary_parts), len(merged),
+    )
+    return merged
 
 
 async def _extract_product_facts(
