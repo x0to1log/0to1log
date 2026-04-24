@@ -497,6 +497,27 @@ def _load_checkpoint(supabase, run_id: str, stage: str) -> dict | None:
         return None
 
 
+def _filter_community_map_by_summary(
+    community_map: dict[str, str],
+    community_summary_map: dict[str, "CommunityInsight"],
+) -> dict[str, str]:
+    """Drop community_map entries whose summarizer marked the thread as
+    irrelevant to the source article (sentiment=null). Without this filter,
+    irrelevant high-upvote threads still influence ranking via their upvote
+    counts. Graceful degradation: if summary_map is empty (summarizer
+    failed entirely), pass community_map through unchanged — ranking
+    operates on best-available data rather than nothing.
+    """
+    if not community_summary_map:
+        return community_map
+    return {
+        url: raw
+        for url, raw in community_map.items()
+        if (ins := community_summary_map.get(url)) is not None
+        and ins.sentiment is not None
+    }
+
+
 async def _log_stage(
     supabase,
     run_id: str,
@@ -2102,8 +2123,11 @@ async def rerun_pipeline_stage(
 
             # Rank
             t0 = time.monotonic()
-            r_ranked, r_usage = await rank_classified(classification.research, "research", community_map)
-            b_ranked, b_usage = await rank_classified(classification.business, "business", community_map)
+            filtered_community_map = _filter_community_map_by_summary(
+                community_map, community_summary_map,
+            )
+            r_ranked, r_usage = await rank_classified(classification.research, "research", filtered_community_map)
+            b_ranked, b_usage = await rank_classified(classification.business, "business", filtered_community_map)
             classification.research = r_ranked
             classification.business = b_ranked
             rank_usage = merge_usage_metrics(r_usage, b_usage)
