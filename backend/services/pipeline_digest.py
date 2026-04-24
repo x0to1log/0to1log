@@ -259,6 +259,14 @@ def _build_cp_data_entry(
 
     parts = [f"Topic: {group.group_title}"]
     parts.append(f"Platform: {insight.source_label}")
+    # URL plumbing: writer uses these to emit **[Platform](URL)** block headers
+    # and > — [Platform](URL) attributions directly. Lines omitted when insight
+    # predates the URL-plumbing feature (Apr 21 plan) — writer then falls back
+    # to bare text and the post-processor linkifies later.
+    if getattr(insight, "hn_url", None):
+        parts.append(f"HackerNewsURL: {insight.hn_url}")
+    if getattr(insight, "reddit_url", None):
+        parts.append(f"RedditURL: {insight.reddit_url}")
     parts.append(f"Sentiment: {insight.sentiment}")
     if has_quotes:
         parts.append(f"HasQuotes: yes — emit {len(clean_quotes)} blockquote(s) below")

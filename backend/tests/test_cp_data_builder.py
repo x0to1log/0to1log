@@ -118,7 +118,7 @@ def test_cp_entry_sanitizes_curly_quote_marks():
     # Use chr() for curly quotes: U+201C and U+201D
     curly_left = chr(0x201C)   # left double quotation mark
     curly_right = chr(0x201D)  # right double quotation mark
-    
+
     insight = CommunityInsight(
         source_label="Hacker News 5↑",
         # Outer wrappers are curly double quotes
@@ -133,3 +133,72 @@ def test_cp_entry_sanitizes_curly_quote_marks():
     assert 'English quote 1: "real quote with curly wrap"' in entry
     # The raw curly chars must NOT leak through as outer wrappers
     assert ('English quote 1: ' + curly_left + '"real quote with curly wrap"' + curly_right) not in entry
+
+
+def test_cp_entry_includes_hn_url_when_present():
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="Hacker News 79↑ · 116 comments",
+        quotes=["a real quote over ten chars"],
+        quotes_ko=["열 글자 이상 실제 인용"],
+        key_point="discussion",
+        hn_url="https://news.ycombinator.com/item?id=42",
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    assert "HackerNewsURL: https://news.ycombinator.com/item?id=42" in entry
+    # No RedditURL line when reddit_url is None
+    assert "RedditURL:" not in entry
+
+
+def test_cp_entry_includes_reddit_url_when_present():
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="r/OpenAI (500↑)",
+        quotes=["a real quote over ten chars"],
+        quotes_ko=["열 글자 이상 실제 인용"],
+        key_point="discussion",
+        reddit_url="https://www.reddit.com/r/OpenAI/comments/abc/t/",
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    assert "RedditURL: https://www.reddit.com/r/OpenAI/comments/abc/t/" in entry
+    assert "HackerNewsURL:" not in entry
+
+
+def test_cp_entry_includes_both_urls_when_present():
+    """Multi-platform insight (e.g. GPT-5.5 story had both HN + r/OpenAI)."""
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="Hacker News 1041↑ · 689 comments · r/OpenAI (642↑)",
+        quotes=["guardrails quote over ten chars", "pricing quote over ten chars"],
+        quotes_ko=["안전장치 인용", "가격 인용"],
+        key_point="discussion",
+        hn_url="https://news.ycombinator.com/item?id=47879092",
+        reddit_url="https://www.reddit.com/r/OpenAI/comments/1stqlnh/x/",
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    assert "HackerNewsURL: https://news.ycombinator.com/item?id=47879092" in entry
+    assert "RedditURL: https://www.reddit.com/r/OpenAI/comments/1stqlnh/x/" in entry
+
+
+def test_cp_entry_without_urls_works_for_old_checkpoints():
+    """Insights hydrated from pre-plumbing checkpoints (Apr 21 and before) have
+    no hn_url / reddit_url — entry should still build, just without URL lines."""
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="Hacker News 5↑",
+        quotes=["an old-checkpoint quote"],
+        quotes_ko=["구 체크포인트 인용"],
+        key_point="discussion",
+        # hn_url and reddit_url default to None
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    assert "HackerNewsURL:" not in entry
+    assert "RedditURL:" not in entry
