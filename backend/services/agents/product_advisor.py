@@ -74,6 +74,15 @@ Given a product page's content, produce a JSON profile that helps readers unders
    Source material says: "The industry-leading workflow automation platform for modern teams."
    → Editorial: "Connects 400+ apps in a visual canvas with optional JavaScript for the edge cases. Self-host it for free or use the cloud tier — both give you the same 400 integrations."
 
+   Source material says: "Empower your voice with the most advanced AI audio platform."
+   → Editorial: "Clones a voice from 30 seconds of sample and dubs a 10-minute video into 29 languages. Podcasters and creators use it to localize back-catalog episodes and build voice agents over a REST API."
+
+   Source material says: "Revolutionary AI image generation that transforms your creative workflow."
+   → Editorial: "Type a scene and get four 1024×1024 variations in ~60 seconds. Designers use it for concept art, storyboards, and stock-ready ad mockups; commercial-safe model trained on licensed data."
+
+   Source material says: "The game-changing no-code platform that empowers builders to ship faster."
+   → Editorial: "Describe an app in chat and get a working React project with auth, database, and Stripe wired up. Export to GitHub when you want to leave the chat and edit code directly."
+
    Pattern to apply:
    - Strip every banned word
    - Replace abstract verbs ("transform", "empower") with concrete ones ("drafts", "generates", "connects", "turns … into …")
@@ -1242,11 +1251,10 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
         f"tagline: {profile.get('tagline', '')}",
         f"tagline_ko ({len(tagline_ko)} chars): {tagline_ko}",
         f"description: {description[:300]}",
-        f"feature[0]: {_first(features)}",
-        f"feature[1]: {_first(features[1:]) if len(features) > 1 else ''}",
-        f"features count: EN={len(features)} KO={len(features_ko)}",
-        f"features_ko[0]: {_first(features_ko)}",
-        f"features_ko[1]: {_first(features_ko[1:]) if len(features_ko) > 1 else ''}",
+        f"features (EN, {len(features)} items):",
+        *[f"  [{i}] {f}" for i, f in enumerate(features[:5])],
+        f"features_ko ({len(features_ko)} items — MUST equal EN count of {len(features)}):",
+        *[f"  [{i}] {f}" for i, f in enumerate(features_ko[:5])],
         f"use_case[0]: {_first(use_cases)}",
         f"editor_note: {editor_note[:200]}",
         f"pricing: {pricing}",
