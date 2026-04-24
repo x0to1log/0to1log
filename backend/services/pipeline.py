@@ -235,6 +235,32 @@ def _renumber_citations(
         return f"[{new_num}]({url})"
 
     renumbered = citation_re.sub(_replace, content)
+
+    # Defense-in-depth: LLM sometimes emits placeholder literals like `[N](URL)`
+    # or `[CITE_N](URL)` where it was supposed to substitute an integer. Those
+    # render in markdown as links with broken anchor text ("N"). Detect any
+    # remaining bracketed-non-digit citations and either (a) renumber if the
+    # URL is already in source_cards, or (b) strip with a warning.
+    placeholder_re = re.compile(r'\[([^\]\d]+)\]\(([^)]+)\)')
+    placeholder_hits: list[str] = []
+    def _replace_placeholder(m: re.Match) -> str:
+        placeholder, url = m.group(1), m.group(2)
+        placeholder_hits.append(placeholder)
+        if not _is_allowed(url):
+            stripped_urls.append(url)
+            return ""
+        # Allowed URL with non-digit placeholder — try to map to an existing
+        # source card (same URL already renumbered) or assign a new number.
+        new_num = _assign(url)
+        return f"[{new_num}]({url})"
+    renumbered = placeholder_re.sub(_replace_placeholder, renumbered)
+    if placeholder_hits:
+        logger.warning(
+            "Recovered %d citation(s) with non-digit placeholder (LLM literal-N bug): %s",
+            len(placeholder_hits),
+            ", ".join(sorted(set(placeholder_hits)))[:200],
+        )
+
     if stripped_urls:
         logger.warning(
             "Stripped %d hallucinated citation(s): %s",

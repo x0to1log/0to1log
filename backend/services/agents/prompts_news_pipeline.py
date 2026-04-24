@@ -1189,6 +1189,14 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 ## Input
 The full text of this week's daily AI digests (Monday-Sunday, Research + Business combined — 7 days, weekend included). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
 
+## Citation placeholder convention (STRICT — prevents broken links)
+Throughout this prompt the pattern `[N](URL)` is a PLACEHOLDER where `N` stands for a sequential integer (1, 2, 3, ...). You MUST emit actual digits. NEVER write the literal letter `N`.
+
+- Correct: `[1](https://openai.com/...)`, `[2](https://arxiv.org/...)`, `[3](https://github.com/...)`
+- WRONG: `[N](https://openai.com/...)` — the letter N renders as broken "N" link text in the admin UI.
+
+Same URL → same number (reuse `[1]` wherever that URL is cited). The post-processor renumbers URLs by first-appearance order after the response is parsed, so any sequential integers you pick are fine as long as they are digits.
+
 ## Output
 Write the English weekly recap. Return JSON only.
 
@@ -1378,6 +1386,14 @@ After reading: The reader can explain the week's main shift in one sentence AND 
 
 ## Input
 The full text of this week's daily AI digests (Monday-Sunday, Research + Business combined — 7 days, weekend included). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
+
+## Citation placeholder convention (STRICT — prevents broken links)
+Throughout this prompt the pattern `[N](URL)` is a PLACEHOLDER where `N` stands for a sequential integer (1, 2, 3, ...). You MUST emit actual digits. NEVER write the literal letter `N`.
+
+- Correct: `[1](https://openai.com/...)`, `[2](https://arxiv.org/...)`, `[3](https://github.com/...)`
+- WRONG: `[N](https://openai.com/...)` — the letter N renders as broken "N" link text in the admin UI.
+
+Same URL → same number (reuse `[1]` wherever that URL is cited). The post-processor renumbers URLs by first-appearance order after the response is parsed, so any sequential integers you pick are fine as long as they are digits.
 
 ## Output
 Write the English weekly recap. Return JSON only.
