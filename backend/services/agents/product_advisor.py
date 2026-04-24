@@ -15,6 +15,26 @@ logger = logging.getLogger(__name__)
 # Bump this when any generation prompt changes materially.
 PROMPT_VERSION = "2026-04-23-v1"
 
+# --- Pricing source filtering ---
+# Domains/paths to exclude from pricing search results. Educational, forum,
+# and opinion-blog sources are OFF-topic for product pricing even when they
+# mention the product + "pricing". See 2026-04-24 Northeastern incident.
+PRICING_DOMAIN_BLOCKLIST = (
+    ".edu", ".gov",
+    "/students/", "/faculty/", "/university/", "/college/",
+    "reddit.com", "medium.com", "substack.com", "quora.com",
+    "coursera.org", "udemy.com", "skillshare.com",
+)
+
+# Any of these must appear in a pricing result's title+description for it
+# to be considered on-topic. Prevents "Claude for Education" pages from
+# being classified as pricing pages just because they mention Claude.
+PRICING_KEYWORDS = (
+    "price", "pricing", "plan", "tier", "subscription",
+    "$", "/mo", "/month", "per month", "per year",
+    "free tier", "paid", "premium",
+)
+
 PROFILE_EN_SYSTEM = """You are an editorial writer for 0to1log, an AI product curation magazine.
 Given a product page's content, produce a JSON profile that helps readers understand what this product does and why it matters.
 
@@ -731,6 +751,51 @@ def _resolve_logo_url(url: str) -> str | None:
         return f"https://logo.clearbit.com/{domain}"
     except Exception:
         return None
+
+
+def _extract_root_domain(url: str) -> str:
+    """Extract hostname for same-domain matching.
+
+    "https://claude.ai/new" → "claude.ai"
+    "https://www.cursor.com/pricing" → "cursor.com"
+    """
+    if not url:
+        return ""
+    try:
+        host = urlparse(url).netloc.lower()
+        if host.startswith("www."):
+            host = host[4:]
+        return host
+    except Exception:
+        return ""
+
+
+def _is_blocked_pricing_source(result_url: str) -> bool:
+    """True if URL matches any PRICING_DOMAIN_BLOCKLIST pattern."""
+    if not result_url:
+        return False
+    low = result_url.lower()
+    return any(bad in low for bad in PRICING_DOMAIN_BLOCKLIST)
+
+
+def _is_relevant_pricing_result(title: str, snippet: str, product_name: str) -> bool:
+    """Result is relevant only if title+snippet mention product AND a pricing keyword."""
+    text = f"{title} {snippet}".lower()
+    has_product = product_name.lower() in text if product_name else True
+    has_pricing = any(kw in text for kw in PRICING_KEYWORDS)
+    return has_product and has_pricing
+
+
+def _classify_pricing_tier(result_url: str, product_root_domain: str) -> str:
+    """Return 'primary' when result is on the product's own domain, 'secondary' otherwise."""
+    if not product_root_domain:
+        return "secondary"
+    result_host = _extract_root_domain(result_url)
+    if not result_host:
+        return "secondary"
+    if result_host == product_root_domain or result_host.endswith("." + product_root_domain):
+        return "primary"
+    return "secondary"
 
 
 async def _log_generation(
