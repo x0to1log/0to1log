@@ -3052,9 +3052,30 @@ async def run_weekly_pipeline(
             # pipeline_logs for admin review.
             auto_publish = quality_result.get("auto_publish_eligible", False)
 
+            # translation_group_id pairs the en + ko rows so the frontend
+            # locale-toggle can look up the sibling by group_id (daily parity —
+            # pipeline_digest.py:1143). Without this both rows get NULL and
+            # clicking the language switcher 404s. Re-use the existing group_id
+            # on re-runs so the pairing stays stable across regens.
+            en_slug = f"{week_id.lower()}-weekly-digest"
+            ko_slug = f"{week_id.lower()}-weekly-digest-ko"
+            weekly_group_id: str | None = None
+            try:
+                _existing = supabase.table("news_posts").select("translation_group_id").in_(
+                    "slug", [en_slug, ko_slug],
+                ).execute()
+                for row in (_existing.data or []):
+                    if row.get("translation_group_id"):
+                        weekly_group_id = row["translation_group_id"]
+                        break
+            except Exception as e:
+                logger.warning("Failed to look up existing translation_group_id for %s: %s", week_id, e)
+            if not weekly_group_id:
+                weekly_group_id = str(uuid.uuid4())
+
             # Save EN + KO rows
             for locale in ("en", "ko"):
-                slug = f"{week_id.lower()}-weekly-digest" if locale == "en" else f"{week_id.lower()}-weekly-digest-ko"
+                slug = en_slug if locale == "en" else ko_slug
                 title = headline_en if locale == "en" else headline_ko
                 title_learner = headline_learner_en if locale == "en" else headline_learner_ko
 
@@ -3159,6 +3180,7 @@ async def run_weekly_pipeline(
                     "post_type": "weekly",
                     "status": "published" if (auto_publish and settings.weekly_auto_publish) else "draft",
                     "pipeline_batch_id": week_id,
+                    "translation_group_id": weekly_group_id,
                     "published_at": published_at,
                     "reading_time_min": reading_time,
                     "guide_items": locale_guide,
