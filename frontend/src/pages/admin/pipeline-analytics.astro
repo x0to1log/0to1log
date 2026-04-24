@@ -162,10 +162,20 @@ for (const row of weeklyRows) {
     if (score !== null) group.qualityScore = score;
   }
 }
-const weeklyRunGroups = Array.from(weeklyRunMap.values()).sort(
+// All weekly runs that landed in the execution window (summary-card basis)
+const weeklyRunGroupsAll = Array.from(weeklyRunMap.values()).sort(
   (a, b) => a.sortKey.localeCompare(b.sortKey),
 );
-const weeklyRunCount = weeklyRunGroups.length;
+const weeklyRunCount = weeklyRunGroupsAll.length;
+
+// For charts: keep only weekly points whose *Monday* falls within the filter
+// window. Backfill runs (multiple past weeks executed on the same day) have
+// sortKeys = each week's actual Monday, which can predate the filter window
+// by weeks. Rendering those would pull the chart's x-axis left and visually
+// disconnect weekly points from the daily cluster. Summary cards still count
+// all execution-window runs above, so cost/$X stays visible.
+const filterDateStr = filterDate.slice(0, 10);
+const weeklyRunGroups = weeklyRunGroupsAll.filter((w) => w.sortKey >= filterDateStr);
 
 // ─── Helpers ─────────────────────────────────────────────────
 function parseCost(value: number | string | null): number {
