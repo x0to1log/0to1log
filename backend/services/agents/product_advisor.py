@@ -463,6 +463,74 @@ PRODUCT_GROUNDING_RULES = """## Factual Grounding (MANDATORY)
 6. For korean_support: only set true if Korean UI or documentation is explicitly mentioned."""
 
 
+PRODUCT_QUALITY_RUBRIC = """You are a quality reviewer for 0to1log AI product profiles.
+Score the given profile on 4 dimensions, each with 2-3 sub-scores (0-10).
+Return JSON only.
+
+## Dimension 1: Specificity (the 0to1log trademark)
+- tagline_specificity: concrete outcome vs vague capability
+    10 = "Turn screenshot into React code" (specific action + output)
+     5 = "AI coding assistant for developers" (vague)
+     0 = "Revolutionary AI platform" (buzzword)
+- feature_specificity: [situation]→[result] with numbers/concrete terms
+    10 = "Paste 50-page PDF → get 5-bullet summary in 30s"
+     5 = "Upload document → get summary"
+     0 = "Advanced AI technology"
+- use_case_specificity: specific role + specific task + specific context
+    10 = "freelance designer producing 20 mockups for e-commerce client"
+     5 = "designers creating mockups"
+     0 = "for everyone"
+
+## Dimension 2: Factual Grounding
+- facts_coverage: did technical_specs/unique_features (from the profile's facts block) get reflected in features?
+    10 = 2+ specs visible in features
+     5 = 1 spec visible
+     0 = ignored entirely
+- pricing_integrity: is pricing_detail consistent (no fabricated numbers, matches declared pricing tier)?
+    10 = concrete tiers with prices or null when gated
+     5 = partial/rough
+     0 = contradictory or fabricated
+
+## Dimension 3: Editorial Voice
+- description_tone: editorial clarity vs marketing copy
+    10 = reads like a review, concrete
+     5 = mix of editorial + marketing
+     0 = full buzzword marketing ("revolutionary", "cutting-edge")
+- editor_note_voice: editorial "we recommend" vs first-person claim
+    10 = editorial "we" voice throughout
+     5 = borderline
+     0 = fabricated first-person ("my go-to")
+
+## Dimension 4: Bilingual Quality
+- ko_naturalness: natural Korean vs translation-flavored
+    10 = reads like Korean tech writing
+     5 = some translation feel
+     0 = literal word-for-word
+- ko_length_compliance: tagline_ko ≤ 22 chars AND features_ko count == features count
+    10 = both constraints met
+     5 = one violated
+     0 = both violated
+
+## Output JSON (exact shape)
+{
+  "specificity": {
+    "score": 0-10,
+    "sub": {"tagline_specificity": N, "feature_specificity": N, "use_case_specificity": N},
+    "evidence": "one-line concrete quote from profile"
+  },
+  "grounding": {"score": 0-10, "sub": {"facts_coverage": N, "pricing_integrity": N}, "evidence": "..."},
+  "voice": {"score": 0-10, "sub": {"description_tone": N, "editor_note_voice": N}, "evidence": "..."},
+  "bilingual": {"score": 0-10, "sub": {"ko_naturalness": N, "ko_length_compliance": N}, "evidence": "..."},
+  "overall_score": 0-100,
+  "top_issue": "one short sentence naming the most critical flaw, or null if everything passes"
+}
+
+`score` per dimension = average of its sub-scores (round to 1 decimal).
+`overall_score` = round(mean of 4 dimension scores * 10).
+
+Respond with JSON only."""
+
+
 async def _fetch_page_content(url: str) -> str:
     """Fetch product page content using Tavily, with Exa fallback."""
     if not url:
@@ -876,6 +944,8 @@ async def _log_generation(
     error_message: str | None,
     facts: dict | None,
     validation_warnings: list[str] | None,
+    quality_score: int | None = None,
+    quality_breakdown: dict | None = None,
 ) -> None:
     """Insert a row into product_generation_logs. Never raises."""
     try:
@@ -892,6 +962,8 @@ async def _log_generation(
             "error_message": error_message,
             "facts": facts,
             "validation_warnings": validation_warnings,
+            "quality_score": quality_score,
+            "quality_breakdown": quality_breakdown,
         }).execute()
     except Exception as e:
         logger.warning("Failed to log product generation: %s", e)
@@ -1089,6 +1161,76 @@ async def _generate_enrichment(
     return result, metrics["tokens_used"]
 
 
+def _build_quality_summary(profile: dict, facts: dict) -> str:
+    """Compact summary for the judge. Full profile would be token-wasteful."""
+    def _first(xs, default=""):
+        return xs[0] if xs else default
+
+    features = profile.get("features") or []
+    features_ko = profile.get("features_ko") or []
+    use_cases = profile.get("use_cases") or []
+    tagline_ko = profile.get("tagline_ko") or ""
+    editor_note = profile.get("editor_note") or ""
+    description = profile.get("description_en") or ""
+    pricing = profile.get("pricing")
+    pricing_detail = profile.get("pricing_detail")
+    tech_specs = (facts or {}).get("technical_specs") or []
+
+    parts = [
+        f"tagline: {profile.get('tagline', '')}",
+        f"tagline_ko ({len(tagline_ko)} chars): {tagline_ko}",
+        f"description: {description[:300]}",
+        f"feature[0]: {_first(features)}",
+        f"feature[1]: {_first(features[1:]) if len(features) > 1 else ''}",
+        f"features count: EN={len(features)} KO={len(features_ko)}",
+        f"features_ko[0]: {_first(features_ko)}",
+        f"use_case[0]: {_first(use_cases)}",
+        f"editor_note: {editor_note[:200]}",
+        f"pricing: {pricing}  pricing_detail set: {pricing_detail is not None}",
+        f"facts.technical_specs: {tech_specs[:3]}",
+    ]
+    return "\n".join(parts)
+
+
+async def _score_profile(
+    profile: dict, facts: dict, client, model: str,
+) -> tuple[dict, int]:
+    """Score a generated profile against PRODUCT_QUALITY_RUBRIC.
+
+    Returns (score_dict, tokens_used). Never raises — on failure returns
+    ({}, 0) so generation flow is never blocked by scoring.
+    """
+    if not profile:
+        return {}, 0
+    summary = _build_quality_summary(profile, facts or {})
+    try:
+        resp = await client.chat.completions.create(
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": PRODUCT_QUALITY_RUBRIC},
+                    {"role": "user", "content": summary},
+                ],
+                max_tokens=1500,
+                response_format={"type": "json_object"},
+                prompt_cache_key="product-quality-rubric",
+            ),
+        )
+        metrics = extract_usage_metrics(resp, model)
+        raw = resp.choices[0].message.content or ""
+        score = parse_ai_json(raw, "product_quality_score")
+        if isinstance(score, dict) and score.get("overall_score") is not None:
+            if score["overall_score"] < 70:
+                logger.warning(
+                    "Low product quality score: %s — top_issue: %s",
+                    score["overall_score"], score.get("top_issue"),
+                )
+        return score or {}, metrics["tokens_used"]
+    except Exception as e:
+        logger.warning("Quality scoring failed: %s", e)
+        return {}, 0
+
+
 async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict, str, int]:
     """Run a product AI generation action. Returns (result, model_used, tokens_used)."""
     client = get_openai_client()
@@ -1247,6 +1389,17 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         if result["_validation_warnings"]:
             logger.info("Profile validation warnings: %s", result["_validation_warnings"])
 
+        # LLM-as-judge quality scoring (gpt-5-nano, ~$0.0001/product, non-blocking)
+        quality_score, score_tokens = await _score_profile(
+            result, facts, client, settings.openai_model_nano,
+        )
+        total_tokens += score_tokens
+        result["_quality_score"] = quality_score
+        overall = quality_score.get("overall_score") if isinstance(quality_score, dict) else None
+        if overall is not None:
+            logger.info("Product quality score: %s/100 (top_issue: %s)",
+                         overall, quality_score.get("top_issue"))
+
         duration_ms = int((time.monotonic() - start_time) * 1000)
         await _log_generation(
             product_slug=body.slug,
@@ -1259,6 +1412,8 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             error_message=None,
             facts=facts if isinstance(facts, dict) else None,
             validation_warnings=result.get("_validation_warnings"),
+            quality_score=overall,
+            quality_breakdown=quality_score if isinstance(quality_score, dict) else None,
         )
 
         return result, settings.openai_model_main, total_tokens
