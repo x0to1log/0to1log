@@ -47,12 +47,25 @@ Given a product page's content, produce a JSON profile that helps readers unders
    - BAD: "AI-powered tool for developers" (vague, could be anything)
    - GOOD: "Turn any screenshot into production React code" (specific, shows value)
 
-3. **description_en** (string, 2-3 sentences):
-   - Sentence 1: How this tool changes your daily workflow (not "AI-powered platform that...")
+3. **description_en** (string, 2-3 sentences): **Write as an editor, NOT as marketing.**
+   - Sentence 1: How this tool changes your daily workflow. Start with a concrete action verb.
    - Sentence 2: Who uses it and for what specific task
    - Sentence 3 (optional): Key differentiator vs alternatives
+   - Tone: like a trusted review site. Concrete verbs, real outcomes, measurable scale.
+   - BAD (marketing): "The AI-powered platform that transforms how teams collaborate with cutting-edge intelligence."
+   - BAD (vendor copy): "Empower your team with the most advanced AI assistant for seamless productivity."
+   - GOOD (editorial): "Drop in meeting transcripts and get a standup deck in one prompt — handles Google Workspace, Slack, and Chrome natively. Used by PMs and founders who draft 10+ documents a week."
+   - BANNED WORDS: "empower", "transform", "seamless", "cutting-edge", "revolutionary", "game-changing", "industry-leading", "next-generation", "state-of-the-art", "robust", "innovative", "leverage", "unleash".
 
 4. **pricing** (one of: "free", "freemium", "paid", "enterprise", or null)
+   - **MUST match the pricing_tiers in facts (and your pricing_detail output):**
+     - All tiers free ($0 only) → "free"
+     - At least one $0 / Free tier AND at least one paid tier → "freemium"
+     - Only paid tiers (no free at all) → "paid"
+     - Only enterprise / contact-for-quote (no public prices) → "enterprise"
+     - No pricing info anywhere → null
+   - If you label "freemium" but pricing_detail has no $0 / Free tier, that's an error.
+     Either change the label to "paid" or add the free tier to pricing_detail.
 
 5. **platform** (array of: "web", "ios", "android", "api", "desktop"): Infer from download links, app store badges, API docs.
 
@@ -103,11 +116,13 @@ Given a product page's content, produce a JSON profile that helps readers unders
 ```
 
 ## Self-Check (before responding)
-- tagline: ≤12 words, no buzzwords ("AI-powered", "revolutionary", "cutting-edge", "game-changing")
+- tagline: ≤12 words, no buzzwords
+- description: NO banned words ("empower", "transform", "seamless", "cutting-edge", "leverage", etc.). Reads like an editor review, not a marketing page.
 - features: each contains `→` with clear situation→result pairing (not generic capability)
 - use_cases: each names a SPECIFIC role AND a SPECIFIC task (not "for developers")
 - If facts.technical_specs exists, at least 2 features reference them
 - If facts.pricing_tiers exists, pricing_detail is built from those tiers (prices match exactly)
+- pricing label matches pricing_detail (see rule under field 4)
 - No field claims what isn't in the provided sources
 
 Respond with JSON only."""
@@ -327,8 +342,15 @@ Return JSON:
 
 Rules:
 - ONLY include facts explicitly stated in the provided sources.
-- For technical_specs: numbers matter — context window size, model count, supported language count, etc.
-- For unique_features: use official feature names from the product page, NOT generic descriptions like "AI-powered".
+- **technical_specs = numeric/technical capabilities** — NOT pricing, NOT feature names.
+    GOOD: "200K token context window", "Supports 26 LLMs", "API rate limit 60 req/min", "Available in 29 languages"
+    BAD:  "$20/mo Pro plan" (that's pricing — goes in pricing_tiers)
+    BAD:  "Custom GPTs" (that's a named feature — goes in unique_features)
+- **unique_features = named product features** that distinguish from competitors.
+    GOOD: "Artifacts", "Deep Research", "Cowork", "Agent Composer", "@-mention context"
+    BAD:  "AI-powered code completion" (generic, not a named feature)
+    BAD:  "128K context" (that's a spec — goes in technical_specs)
+- Do NOT put pricing information in technical_specs. Pricing goes in pricing_tiers ONLY.
 - For pricing_tiers: extract ONLY from sources labeled PRIMARY. If sources are
   labeled "### PRIMARY" and "### SECONDARY", PRIMARY contains the product's own
   pricing page (trusted). SECONDARY is third-party context (blogs, reviews,
