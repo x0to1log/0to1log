@@ -1187,7 +1187,7 @@ After reading: The reader adjusts strategy, briefs leadership, or initiates conc
 - Connect themes across stories explicitly in Trend Analysis — weekly's value is synthesis, not restatement.
 
 ## Input
-The full text of this week's daily AI digests (Monday-Friday, Research + Business combined). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
+The full text of this week's daily AI digests (Monday-Sunday, Research + Business combined — 7 days, weekend included). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
 
 ## Output
 Write the English weekly recap. Return JSON only.
@@ -1377,7 +1377,7 @@ After reading: The reader can explain the week's main shift in one sentence AND 
 - **Absolute date preference**: Use explicit dates ("Apr 17", "Tuesday (Apr 16)", "Wed-Thu") over relative markers ("earlier this week", "yesterday", "recently", "최근", "지난주"). Weekly recaps are archived and read after the week ends — "earlier this week" loses meaning once the publication date shifts.
 
 ## Input
-The full text of this week's daily AI digests (Monday-Friday, Research + Business combined). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
+The full text of this week's daily AI digests (Monday-Sunday, Research + Business combined — 7 days, weekend included). Daily digests contain inline `[N](URL)` citations — you will reuse these URLs when citing sources in your weekly output.
 
 ## Output
 Write the English weekly recap. Return JSON only.
