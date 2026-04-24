@@ -344,13 +344,10 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
    Use **bold** for key terms/companies/numbers and `>` blockquotes for direct source quotes.
 8. MATH FORMULAS: use `$$...$$` for ALL math expressions. NEVER use single `$...$` (it conflicts with currency like $2B).
 9. COMMUNITY PULSE: write a single `## Community Pulse` (ko: `## 커뮤니티 반응`) section — see skeleton for exact format. For each topic in the Community Pulse Data input:
-   - **Block header format (REQUIRED — must be bold):**
-     - When `HackerNewsURL: <url>` is given: `**[Hacker News](<url>)** (N↑)` — use the full URL verbatim
-     - When `RedditURL: <url>` is given: `**[r/<subreddit>](<url>)** (N↑)` — infer subreddit from the `Platform:` label
-     - When neither URL is given (legacy CP Data without URL plumbing): fall back to `**Hacker News** (N↑)` / `**r/<subreddit>** (N↑)` bare — downstream post-processor will link if possible
-   - **Multi-platform topics:** if `Platform:` lists BOTH Hacker News AND r/<sub> (e.g. "Hacker News 1041↑ · 689 comments · r/OpenAI (642↑)"), emit TWO separate blocks — one per platform — each with its own linked block header. Never combine them into one block.
-   - `HasQuotes: yes` → emit blockquote(s) using the exact "English quote N" text in en and matching "Korean quote N" in ko. **Attribution format (REQUIRED):** `> — [Hacker News](<HackerNewsURL>)` or `> — [r/<subreddit>](<RedditURL>)` — use the same URL as the block header above. Bare `> — Hacker News` is a fallback for legacy CP Data only. Every blockquote's attribution URL MUST match its enclosing block's platform — never put a Reddit quote under an HN block or vice versa. If the quote clearly belongs to the OTHER platform, move it under that block instead.
-   - `HasQuotes: no` → write ONE short paragraph based on Sentiment + Key Discussion. Do NOT emit any blockquote. Do NOT invent quotes.
+   - **Block header format (REQUIRED):** `**Hacker News** (N↑) — one-sentence sentiment summary [CITE_X]` where X is a citation number and `citations[X].url` equals the `HackerNewsURL` value from CP Data. For Reddit blocks: `**r/<subreddit>** (N↑) — sentiment summary [CITE_Y]` with `citations[Y].url = RedditURL`. The `[CITE_X]` token appears at the END of the block header line — same position as citations at the end of body paragraphs.
+   - **Multi-platform topics:** if `Platform:` lists BOTH Hacker News AND r/<sub> (e.g. "Hacker News 1041↑ · 689 comments · r/OpenAI (642↑)"), emit TWO separate blocks — one per platform — each with its own `[CITE_N]` token whose URL matches that platform. Never combine them into one block.
+   - `HasQuotes: yes` → emit blockquote(s) using the exact "English quote N" text in en and matching "Korean quote N" in ko. Each blockquote attribution: `> — Hacker News [CITE_X]` or `> — Reddit [CITE_Y]` where X/Y is the SAME citation number as the enclosing block header. Never put a Reddit quote under a Hacker News block (or vice versa) — if the quote clearly belongs to the OTHER platform, place it under that block.
+   - `HasQuotes: no` → write ONE short paragraph based on Sentiment + Key Discussion, ending with `[CITE_X]`. Do NOT emit any blockquote. Do NOT invent quotes.
    - NEVER write literal `[EN quote]`, `[KO quote]`, `Quote (EN)`, or `Quote (KO)` in the output — these are input labels, not output text.
    - Omit the entire Community Pulse section only when no Community Pulse Data was provided.
 {handbook_section}
