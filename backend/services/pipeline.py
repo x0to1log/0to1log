@@ -2528,7 +2528,8 @@ async def regenerate_weekly_persona(
         f"weekly:{persona}:en",
         f"weekly:{persona}:ko",
         "weekly:quality",
-        f"weekly:regen:save:{persona}",
+        "weekly:save:en",
+        "weekly:save:ko",
     ]
     try:
         for st in stages_to_clear:
@@ -2723,12 +2724,19 @@ async def regenerate_weekly_persona(
         en_update["fact_pack"] = _updated_fact_pack(en_row.get("fact_pack"))
         ko_update["fact_pack"] = _updated_fact_pack(ko_row.get("fact_pack"))
 
-        # Persist to DB
-        t_save = time.monotonic()
+        # Persist to DB — log under the same weekly:save:{locale} stage names
+        # as a full run (daily parity). The stages_to_clear step above deleted
+        # any prior save entries so the timeline stays at the normal count.
+        t_save_en = time.monotonic()
         supabase.table("news_posts").update(en_update).eq("id", en_row["id"]).execute()
+        await _log_stage(supabase, run_id, "weekly:save:en", "success", t_save_en,
+                         output_summary=f"updated {en_slug} ({persona} regen)",
+                         post_type="weekly", locale="en")
+        t_save_ko = time.monotonic()
         supabase.table("news_posts").update(ko_update).eq("id", ko_row["id"]).execute()
-        await _log_stage(supabase, run_id, f"weekly:regen:save:{persona}", "success", t_save,
-                         output_summary=f"updated {en_slug} + {ko_slug}", post_type="weekly")
+        await _log_stage(supabase, run_id, "weekly:save:ko", "success", t_save_ko,
+                         output_summary=f"updated {ko_slug} ({persona} regen)",
+                         post_type="weekly", locale="ko")
 
         # Mark pipeline run complete
         supabase.table("pipeline_runs").update({
