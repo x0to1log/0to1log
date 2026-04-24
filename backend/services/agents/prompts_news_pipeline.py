@@ -1791,7 +1791,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present non-summary section has substantial content (~200+ chars); One-Line Summary may be brief if it synthesizes the day's main throughline.
 
 ### Source Quality (3)
-- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its block headers use `**[Platform](URL)** (N↑)` and its quotes use `> — [Platform](URL)` attribution, NOT inline `[N](URL)` placeholders. Do NOT penalize CP blocks for missing inline citations. Do NOT penalize CP attributions for having a link — that IS the format.
 - **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
 - **source_utilization**: All provided sources are drawn on across paragraphs — not ignored or piled at bottom.
 
@@ -1856,7 +1856,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present section has substantive content; One-Line Summary may be brief if it synthesizes the day's throughline.
 
 ### Source Quality (2)
-- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Minor gaps acceptable for learner-grade writing. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
+- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Minor gaps acceptable for learner-grade writing. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its block headers use `**[Platform](URL)** (N↑)` and its quotes use `> — [Platform](URL)` attribution, NOT inline `[N](URL)` placeholders. Do NOT penalize CP blocks for missing inline citations. Do NOT penalize CP attributions for having a link — that IS the format.
 - **source_utilization**: Provided sources are drawn on across paragraphs.
 
 ### Accessibility (3)
@@ -1921,7 +1921,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present non-summary section has substantial content (~200+ chars); Strategic Decisions uses bullet format; One-Line Summary may be brief if synthetic.
 
 ### Source Quality (3)
-- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its block headers use `**[Platform](URL)** (N↑)` and its quotes use `> — [Platform](URL)` attribution, NOT inline `[N](URL)` placeholders. Do NOT penalize CP blocks for missing inline citations. Do NOT penalize CP attributions for having a link — that IS the format.
 - **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / official announcement) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
 - **source_utilization**: All provided sources drawn on across paragraphs.
 
@@ -1986,7 +1986,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present section has substantive content; Action Items uses numbered list format; One-Line Summary may be brief if synthetic.
 
 ### Source Quality (2)
-- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Funding amounts attributed. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its quotes use a separate `> — [Source](URL)` attribution format at the end of the blockquote, NOT inline `[N](URL)`. Do NOT penalize CP blockquotes for missing inline citations.
+- **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Funding amounts attributed. **EXEMPT**: the `## 커뮤니티 반응` (Community Pulse) section — its block headers use `**[Platform](URL)** (N↑)` and its quotes use `> — [Platform](URL)` attribution, NOT inline `[N](URL)` placeholders. Do NOT penalize CP blocks for missing inline citations. Do NOT penalize CP attributions for having a link — that IS the format.
 - **source_utilization**: Provided sources drawn on across paragraphs.
 
 ### Practical Impact (3)
