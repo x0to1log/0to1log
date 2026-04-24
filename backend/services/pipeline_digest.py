@@ -350,6 +350,41 @@ def _build_cp_data_entry(
 # focus_items_ko fallback
 # ---------------------------------------------------------------------------
 
+
+def _build_writer_url_allowlist(
+    classified: "list[ClassifiedGroup]",
+    community_summary_map: "dict[str, CommunityInsight] | None",
+    enriched_map: "dict[str, list[dict]] | None",
+) -> list[str]:
+    """Build the URL allowlist used by the writer's strict json_schema enum.
+
+    Includes:
+    - Every classified group's item URLs (primary articles)
+    - Every enriched_map anchor + related URL (post-classify expanded sources)
+    - Every CommunityInsight's hn_url / reddit_url (so CP [CITE_N] citations
+      point at thread URLs the writer was given in CP Data — prevents
+      schema rejection on valid CP references)
+    """
+    allowlist: list[str] = []
+    for group in classified:
+        for item in (group.items or []):
+            if getattr(item, "url", None):
+                allowlist.append(item.url)
+    for anchor_url, enriched_list in (enriched_map or {}).items():
+        if anchor_url:
+            allowlist.append(anchor_url)
+        for entry in (enriched_list or []):
+            url = entry.get("url") if isinstance(entry, dict) else None
+            if url:
+                allowlist.append(url)
+    for insight in (community_summary_map or {}).values():
+        if getattr(insight, "hn_url", None):
+            allowlist.append(insight.hn_url)
+        if getattr(insight, "reddit_url", None):
+            allowlist.append(insight.reddit_url)
+    return allowlist
+
+
 async def _translate_focus_items_ko(
     items_en: list[str],
     *,
@@ -709,22 +744,12 @@ async def _generate_digest(
         )
 
     # Build URL allowlist matching pipeline_quality._check_digest_quality (line 588+):
-    # every group.items[].url + every enriched_map anchor/related URL. The strict
-    # json_schema uses this as an enum, so the API rejects any URL the writer
-    # emits that isn't in the allowlist — writer hallucination is blocked at the
-    # API layer, not after the fact.
-    allowlist_urls: list[str] = []
-    for group in classified:
-        for item in (group.items or []):
-            if getattr(item, "url", None):
-                allowlist_urls.append(item.url)
-    for anchor_url, enriched_list in (_enriched or {}).items():
-        if anchor_url:
-            allowlist_urls.append(anchor_url)
-        for entry in (enriched_list or []):
-            url = entry.get("url") if isinstance(entry, dict) else None
-            if url:
-                allowlist_urls.append(url)
+    # every group.items[].url + every enriched_map anchor/related URL + every
+    # CommunityInsight's hn_url/reddit_url. The strict json_schema uses this as
+    # an enum, so the API rejects any URL the writer emits that isn't in the
+    # allowlist — writer hallucination is blocked at the API layer, not after
+    # the fact.
+    allowlist_urls = _build_writer_url_allowlist(classified, community_summary_map, _enriched)
 
     if not allowlist_urls:
         logger.error(
