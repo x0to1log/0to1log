@@ -7,8 +7,14 @@ import time
 from urllib.parse import urlparse
 
 from core.config import settings
-from models.product_advisor import ProductGenerateRequest
-from services.agents.client import get_openai_client, extract_usage_metrics, parse_ai_json, compat_create_kwargs
+from models.product_advisor import ProductGenerateRequest, ProductProfileEN, ProductProfileKO
+from services.agents.client import (
+    compat_create_kwargs,
+    extract_usage_metrics,
+    get_openai_client,
+    parse_ai_json,
+    pydantic_to_strict_response_format,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +58,27 @@ Given a product page's content, produce a JSON profile that helps readers unders
    - Sentence 2: Who uses it and for what specific task
    - Sentence 3 (optional): Key differentiator vs alternatives
    - Tone: like a trusted review site. Concrete verbs, real outcomes, measurable scale.
-   - BAD (marketing): "The AI-powered platform that transforms how teams collaborate with cutting-edge intelligence."
-   - BAD (vendor copy): "Empower your team with the most advanced AI assistant for seamless productivity."
-   - GOOD (editorial): "Drop in meeting transcripts and get a standup deck in one prompt — handles Google Workspace, Slack, and Chrome natively. Used by PMs and founders who draft 10+ documents a week."
    - BANNED WORDS: "empower", "transform", "seamless", "cutting-edge", "revolutionary", "game-changing", "industry-leading", "next-generation", "state-of-the-art", "robust", "innovative", "leverage", "unleash".
+
+   ### Transformation examples (how to rewrite marketing into editorial)
+
+   Source material says: "Revolutionary AI that empowers teams to transform productivity seamlessly across every workflow."
+   → Editorial: "Drafts emails, summarizes long Slack threads, and generates slides from a prompt. Used by product teams who handle 20+ docs a week across Slack, Docs, and Gmail."
+
+   Source material says: "Unleash the power of cutting-edge AI to revolutionize how you write code."
+   → Editorial: "Type a plain-English comment and the function appears below. Understands context across your whole repo, supports 26 languages, and works inside VS Code with all your extensions intact."
+
+   Source material says: "Empower creators with state-of-the-art text-to-video generation."
+   → Editorial: "Turns a text prompt into a 10-second cinematic clip in under 2 minutes. Creators use it for TikTok hooks, ad mockups, and storyboard tests — no footage or license required."
+
+   Source material says: "The industry-leading workflow automation platform for modern teams."
+   → Editorial: "Connects 400+ apps in a visual canvas with optional JavaScript for the edge cases. Self-host it for free or use the cloud tier — both give you the same 400 integrations."
+
+   Pattern to apply:
+   - Strip every banned word
+   - Replace abstract verbs ("transform", "empower") with concrete ones ("drafts", "generates", "connects", "turns … into …")
+   - Add measurable specifics: counts, durations, named integrations, named user roles
+   - If source only has buzzwords, infer the concrete action from features and write from that
 
 4. **pricing** (one of: "free", "freemium", "paid", "enterprise", or null)
    - **MUST match the pricing_tiers in facts (and your pricing_detail output):**
@@ -1100,7 +1123,9 @@ async def _generate_en_profile(
                 {"role": "user", "content": user_content},
             ],
             max_tokens=2000,
-            response_format={"type": "json_object"},
+            response_format=pydantic_to_strict_response_format(
+                ProductProfileEN, "product_profile_en"
+            ),
             prompt_cache_key="product-en-profile",
         ),
     )
@@ -1141,7 +1166,9 @@ async def _generate_ko_profile(
                 {"role": "user", "content": f"English profile for reference:\n\n{en_summary}"},
             ],
             max_tokens=1500,
-            response_format={"type": "json_object"},
+            response_format=pydantic_to_strict_response_format(
+                ProductProfileKO, "product_profile_ko"
+            ),
             prompt_cache_key="product-ko-profile",
         ),
     )

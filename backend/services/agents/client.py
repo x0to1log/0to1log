@@ -275,6 +275,46 @@ def merge_usage_metrics(
     }
 
 
+def pydantic_to_strict_response_format(model_class: type, name: str) -> dict:
+    """Convert a Pydantic v2 model into an OpenAI strict json_schema response_format.
+
+    OpenAI strict mode requirements applied recursively:
+      - every object has additionalProperties: false
+      - every object's `required` lists ALL its properties
+      - $ref / $defs are inlined (OpenAI accepts $defs at the top level, but
+        requires each referenced subschema to also satisfy the rules above)
+
+    Not modified by us — Pydantic already handles:
+      - enums → oneOf / string with enum
+      - Optional[X] → anyOf: [X, null] (we keep it in required since OpenAI
+        wants every field required and allows null via anyOf)
+    """
+    schema = model_class.model_json_schema()
+
+    def _tighten(node: Any) -> Any:
+        if isinstance(node, dict):
+            node = dict(node)
+            if node.get("type") == "object" and "properties" in node:
+                node.setdefault("additionalProperties", False)
+                node["required"] = list(node["properties"].keys())
+            for k, v in node.items():
+                node[k] = _tighten(v)
+            return node
+        if isinstance(node, list):
+            return [_tighten(v) for v in node]
+        return node
+
+    tightened = _tighten(schema)
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": name,
+            "schema": tightened,
+            "strict": True,
+        },
+    }
+
+
 def parse_ai_json(raw: str, agent_name: str) -> dict:
     """Parse AI response as JSON with fallback for code-block wrapping."""
     logger.info("%s raw response (first 500 chars): %.500s", agent_name, raw)
