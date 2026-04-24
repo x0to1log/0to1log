@@ -150,6 +150,8 @@ async def classify_candidates(
                     ],
                     max_tokens=4096,
                     response_format={"type": "json_object"},
+                    service_tier="flex",
+                    prompt_cache_key="classify-candidates",
                 )
             )
             raw = response.choices[0].message.content
@@ -260,6 +262,8 @@ async def merge_classified(
                     ],
                     max_tokens=4096,
                     response_format={"type": "json_object"},
+                    service_tier="flex",
+                    prompt_cache_key="merge-classified",
                 )
             )
             data = parse_ai_json(response.choices[0].message.content, "Merge")
@@ -402,6 +406,8 @@ async def rank_classified(
                     ],
                     max_tokens=256,
                     response_format={"type": "json_object"},
+                    service_tier="flex",
+                    prompt_cache_key=f"rank-{category}",
                 )
             )
             data = parse_ai_json(response.choices[0].message.content, f"Ranking-{category}")
@@ -539,6 +545,8 @@ async def summarize_community(
             {"role": "user", "content": user_content},
         ],
         max_tokens=2000,
+        service_tier="flex",
+        prompt_cache_key="community-summarize",
     )
 
     data = None
