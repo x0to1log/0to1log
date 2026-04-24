@@ -464,8 +464,8 @@ PRODUCT_GROUNDING_RULES = """## Factual Grounding (MANDATORY)
 
 
 PRODUCT_QUALITY_RUBRIC = """You are a quality reviewer for 0to1log AI product profiles.
-Score the given profile on 4 dimensions, each with 2-3 sub-scores (0-10).
-Return JSON only.
+Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10 int).
+**Return ONLY sub-scores with evidence. Do NOT compute dimension averages or overall_score — we aggregate in code.**
 
 ## Dimension 1: Specificity (the 0to1log trademark)
 - tagline_specificity: concrete outcome vs vague capability
@@ -487,9 +487,9 @@ Return JSON only.
      5 = 1 spec visible
      0 = ignored entirely
 - pricing_integrity: is pricing_detail consistent (no fabricated numbers, matches declared pricing tier)?
-    10 = concrete tiers with prices or null when gated
+    10 = concrete tiers with prices, consistent with pricing label
      5 = partial/rough
-     0 = contradictory or fabricated
+     0 = contradictory (e.g. pricing=freemium but only paid tiers shown) or fabricated
 
 ## Dimension 3: Editorial Voice
 - description_tone: editorial clarity vs marketing copy
@@ -506,32 +506,32 @@ Return JSON only.
     10 = reads like Korean tech writing
      5 = some translation feel
      0 = literal word-for-word
-- ko_length_compliance: tagline_ko ≤ 22 chars AND features_ko count == features count
+- ko_length_compliance: tagline_ko ≤ 22 chars AND features_ko count == features count (see `features count: EN=N KO=M` line in the summary)
     10 = both constraints met
      5 = one violated
      0 = both violated
 
-## Output JSON (exact shape)
+## Output JSON (EXACT shape — no score fields on dimensions, no overall_score)
 {
   "specificity": {
-    "score": 0-10,
-    "sub": {"tagline_specificity": N, "feature_specificity": N, "use_case_specificity": N},
-    "evidence": "one-line concrete quote from profile"
+    "tagline_specificity": {"evidence": "quote from tagline", "score": 0-10},
+    "feature_specificity": {"evidence": "quote from feature[0]", "score": 0-10},
+    "use_case_specificity": {"evidence": "quote from use_case[0]", "score": 0-10}
   },
-  "grounding": {"score": 0-10, "sub": {"facts_coverage": N, "pricing_integrity": N}, "evidence": "..."},
-  "voice": {"score": 0-10, "sub": {"description_tone": N, "editor_note_voice": N}, "evidence": "..."},
-  "bilingual": {"score": 0-10, "sub": {"ko_naturalness": N, "ko_length_compliance": N}, "evidence": "..."},
-  "overall_score": integer 0-100 (NOT 0-10),
+  "grounding": {
+    "facts_coverage": {"evidence": "which specs appear in features", "score": 0-10},
+    "pricing_integrity": {"evidence": "pricing label vs pricing_detail check", "score": 0-10}
+  },
+  "voice": {
+    "description_tone": {"evidence": "quote from description", "score": 0-10},
+    "editor_note_voice": {"evidence": "quote from editor_note", "score": 0-10}
+  },
+  "bilingual": {
+    "ko_naturalness": {"evidence": "quote from tagline_ko or features_ko", "score": 0-10},
+    "ko_length_compliance": {"evidence": "char count + list count statement", "score": 0-10}
+  },
   "top_issue": "one short sentence naming the most critical flaw, or null if everything passes"
 }
-
-## Scoring math (IMPORTANT — do this explicitly)
-1. Each sub-score: 0-10 integer.
-2. Per-dimension `score`: average of its sub-scores, round to 1 decimal (still 0-10 scale).
-3. `overall_score`: MUST be on 0-100 scale.
-   Formula: round((specificity + grounding + voice + bilingual) / 4 * 10)
-   Example: if dims are 8.0, 7.5, 5.0, 10.0 → mean = 7.625 → overall_score = 76
-   Do NOT return overall_score as 7.6 — always multiply by 10 to get 0-100.
 
 Respond with JSON only."""
 
@@ -1194,6 +1194,7 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
         f"feature[1]: {_first(features[1:]) if len(features) > 1 else ''}",
         f"features count: EN={len(features)} KO={len(features_ko)}",
         f"features_ko[0]: {_first(features_ko)}",
+        f"features_ko[1]: {_first(features_ko[1:]) if len(features_ko) > 1 else ''}",
         f"use_case[0]: {_first(use_cases)}",
         f"editor_note: {editor_note[:200]}",
         f"pricing: {pricing}",
@@ -1203,13 +1204,51 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
     return "\n".join(parts)
 
 
+_QUALITY_DIMENSIONS = ("specificity", "grounding", "voice", "bilingual")
+
+
+def _aggregate_quality_score(data: dict) -> int:
+    """Compute overall_score (0-100 int) from LLM-provided sub-scores.
+
+    Mirrors pipeline_quality._aggregate_subscores pattern: LLM returns only
+    sub-scores with evidence, Python computes dim averages and overall score.
+    Mutates `data` to inject per-dimension `score` (rounded 1 decimal).
+    Returns 0 if no valid sub-scores.
+    """
+    if not isinstance(data, dict):
+        return 0
+    dim_scores: list[float] = []
+    for dim in _QUALITY_DIMENSIONS:
+        dim_data = data.get(dim)
+        if not isinstance(dim_data, dict):
+            continue
+        sub_scores: list[float] = []
+        for sub_val in dim_data.values():
+            if isinstance(sub_val, dict) and isinstance(sub_val.get("score"), (int, float)):
+                clamped = max(0.0, min(10.0, float(sub_val["score"])))
+                sub_scores.append(clamped)
+        if sub_scores:
+            dim_avg = round(sum(sub_scores) / len(sub_scores), 1)
+            dim_data["score"] = dim_avg
+            dim_scores.append(dim_avg)
+    if not dim_scores:
+        return 0
+    # Each dimension equal weight (prevents specificity — 3 subs — from outweighing
+    # voice/bilingual — 2 subs each)
+    overall = int(round((sum(dim_scores) / len(dim_scores)) * 10))
+    data["overall_score"] = overall
+    return overall
+
+
 async def _score_profile(
     profile: dict, facts: dict, client, model: str,
 ) -> tuple[dict, int]:
     """Score a generated profile against PRODUCT_QUALITY_RUBRIC.
 
     Returns (score_dict, tokens_used). Never raises — on failure returns
-    ({}, 0) so generation flow is never blocked by scoring.
+    ({}, 0) so generation flow is never blocked by scoring. Aggregation
+    is done in Python (see _aggregate_quality_score) — LLM just provides
+    sub-scores + evidence + top_issue.
     """
     if not profile:
         return {}, 0
@@ -1231,18 +1270,12 @@ async def _score_profile(
         raw = resp.choices[0].message.content or ""
         score = parse_ai_json(raw, "product_quality_score")
         if isinstance(score, dict):
-            # Defensive normalization: LLM sometimes returns 0-10 instead of 0-100
-            # despite the prompt. If overall_score <= 10, assume it's on 0-10 scale.
-            overall = score.get("overall_score")
-            if isinstance(overall, (int, float)) and overall <= 10:
-                overall = overall * 10
-            if overall is not None:
-                score["overall_score"] = int(round(float(overall)))
-                if score["overall_score"] < 70:
-                    logger.warning(
-                        "Low product quality score: %s — top_issue: %s",
-                        score["overall_score"], score.get("top_issue"),
-                    )
+            overall = _aggregate_quality_score(score)
+            if overall and overall < 70:
+                logger.warning(
+                    "Low product quality score: %d — top_issue: %s",
+                    overall, score.get("top_issue"),
+                )
         return score or {}, metrics["tokens_used"]
     except Exception as e:
         logger.warning("Quality scoring failed: %s", e)
