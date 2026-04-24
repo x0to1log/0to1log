@@ -214,7 +214,7 @@ def _inject_cp_citations(
 # CP Data input builder (per-topic entry passed to writer prompt)
 # ---------------------------------------------------------------------------
 
-_CP_QUOTE_MARKS = '"""''\''
+_CP_QUOTE_MARKS = '"' + chr(0x201C) + chr(0x201D) + '\'' + chr(0x2018) + chr(0x2019)
 _CP_URL_PAT = re.compile(
     r"(?:https?://|\b(?:github|arxiv|twitter|x|youtu|youtube|medium|reddit|huggingface|paperswithcode|openai|anthropic|deepmind)\.(?:com|org|be)/)",
     re.IGNORECASE,
