@@ -1794,6 +1794,14 @@ async def rerun_pipeline_stage(
                     for url, ins_data in cs_data["summaries"].items()
                 }
 
+            # Load enrich checkpoint so URL allowlist includes enriched/related
+            # URLs the writer was shown. Without this, body citations to enriched
+            # URLs get flagged as "unknown" → false-positive url_validation_failed.
+            enrich_data = _load_checkpoint(supabase, source_run_id, "enrich")
+            enriched_map: dict[str, list[dict[str, Any]]] = (
+                (enrich_data or {}).get("enriched_map") or {}
+            )
+
             personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, batch_id)
             if not personas_by_type:
                 msg = f"No news_posts found for batch {batch_id} — nothing to rescore"
@@ -1838,6 +1846,7 @@ async def rerun_pipeline_stage(
                         run_id=run_id,
                         cumulative_usage=cumulative_usage,
                         frontload=frontload,
+                        enriched_map=enriched_map,
                     )
                 except Exception as e:
                     all_errors.append(f"Quality rescore failed for {digest_type}: {e}")
