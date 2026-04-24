@@ -2481,15 +2481,27 @@ async def regenerate_weekly_persona(
 
     now_iso = datetime.now(timezone.utc).isoformat()
     if run_id:
-        # Reuse existing run — flip back to running, clear stale finish fields.
-        # This matches daily's pipeline-rerun flow where a failed run becomes
-        # running again and the UI shows stages appending to the same card.
+        # Reuse existing run — flip back to running via compare-and-set lock so
+        # a double-click can't spawn two concurrent regens on the same card.
+        # Matches daily's rerun_pipeline_stage (pipeline.py:1728-1738).
         try:
-            supabase.table("pipeline_runs").update({
-                "status": "running",
-                "finished_at": None,
-                "last_error": None,
-            }).eq("id", run_id).execute()
+            claim = (
+                supabase.table("pipeline_runs")
+                .update({
+                    "status": "running",
+                    "started_at": now_iso,
+                    "finished_at": None,
+                    "last_error": None,
+                })
+                .eq("id", run_id)
+                .neq("status", "running")
+                .execute()
+            )
+            if not claim.data:
+                logger.warning("Weekly regen rejected — run %s is already running", run_id)
+                raise RuntimeError("Another regen is already running for this week")
+        except RuntimeError:
+            raise
         except Exception as e:
             logger.warning("Failed to reopen pipeline_runs row %s for regen: %s", run_id, e)
     else:
@@ -2506,6 +2518,40 @@ async def regenerate_weekly_persona(
             }).execute()
         except Exception as e:
             logger.warning("Failed to create pipeline_runs row for regen: %s", e)
+
+    # Delete pipeline_logs rows we're about to re-create so the stage timeline
+    # shows only the fresh regen instead of stacking old+new entries. Matches
+    # daily's rerun_pipeline_stage (pipeline.py:1753-1754). Non-target persona's
+    # writer logs and the old save:en/save:ko rows are preserved as history.
+    stages_to_clear = [
+        "weekly:fetch",
+        f"weekly:{persona}:en",
+        f"weekly:{persona}:ko",
+        "weekly:quality",
+        f"weekly:regen:save:{persona}",
+    ]
+    try:
+        for st in stages_to_clear:
+            supabase.table("pipeline_logs").delete().eq("run_id", run_id).eq("pipeline_type", st).execute()
+    except Exception as e:
+        logger.warning("Failed to clear prior regen stage logs for %s: %s", run_id, e)
+
+    # Publish guard (daily parity — pipeline.py:1763-1768): refuse to overwrite
+    # an already-published weekly post. Admin must unpublish first to regen.
+    try:
+        pub = supabase.table("news_posts").select("slug,status").eq(
+            "pipeline_batch_id", week_id,
+        ).eq("status", "published").execute()
+        if pub.data:
+            slugs = ", ".join(r["slug"] for r in pub.data)
+            raise RuntimeError(
+                f"Cannot regenerate: {len(pub.data)} published weekly post(s) "
+                f"exist for {week_id} ({slugs}). Unpublish first."
+            )
+    except RuntimeError:
+        raise
+    except Exception as e:
+        logger.warning("Publish guard check failed (allowing regen): %s", e)
 
     cumulative_usage: dict[str, Any] = {}
     all_errors: list[str] = []
