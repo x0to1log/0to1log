@@ -521,12 +521,17 @@ Return JSON only.
   "grounding": {"score": 0-10, "sub": {"facts_coverage": N, "pricing_integrity": N}, "evidence": "..."},
   "voice": {"score": 0-10, "sub": {"description_tone": N, "editor_note_voice": N}, "evidence": "..."},
   "bilingual": {"score": 0-10, "sub": {"ko_naturalness": N, "ko_length_compliance": N}, "evidence": "..."},
-  "overall_score": 0-100,
+  "overall_score": integer 0-100 (NOT 0-10),
   "top_issue": "one short sentence naming the most critical flaw, or null if everything passes"
 }
 
-`score` per dimension = average of its sub-scores (round to 1 decimal).
-`overall_score` = round(mean of 4 dimension scores * 10).
+## Scoring math (IMPORTANT — do this explicitly)
+1. Each sub-score: 0-10 integer.
+2. Per-dimension `score`: average of its sub-scores, round to 1 decimal (still 0-10 scale).
+3. `overall_score`: MUST be on 0-100 scale.
+   Formula: round((specificity + grounding + voice + bilingual) / 4 * 10)
+   Example: if dims are 8.0, 7.5, 5.0, 10.0 → mean = 7.625 → overall_score = 76
+   Do NOT return overall_score as 7.6 — always multiply by 10 to get 0-100.
 
 Respond with JSON only."""
 
@@ -1225,12 +1230,19 @@ async def _score_profile(
         metrics = extract_usage_metrics(resp, model)
         raw = resp.choices[0].message.content or ""
         score = parse_ai_json(raw, "product_quality_score")
-        if isinstance(score, dict) and score.get("overall_score") is not None:
-            if score["overall_score"] < 70:
-                logger.warning(
-                    "Low product quality score: %s — top_issue: %s",
-                    score["overall_score"], score.get("top_issue"),
-                )
+        if isinstance(score, dict):
+            # Defensive normalization: LLM sometimes returns 0-10 instead of 0-100
+            # despite the prompt. If overall_score <= 10, assume it's on 0-10 scale.
+            overall = score.get("overall_score")
+            if isinstance(overall, (int, float)) and overall <= 10:
+                overall = overall * 10
+            if overall is not None:
+                score["overall_score"] = int(round(float(overall)))
+                if score["overall_score"] < 70:
+                    logger.warning(
+                        "Low product quality score: %s — top_issue: %s",
+                        score["overall_score"], score.get("top_issue"),
+                    )
         return score or {}, metrics["tokens_used"]
     except Exception as e:
         logger.warning("Quality scoring failed: %s", e)
