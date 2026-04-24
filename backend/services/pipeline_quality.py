@@ -27,6 +27,7 @@ from services.agents.client import (
     get_openai_client,
     merge_usage_metrics,
     parse_ai_json,
+    with_flex_retry,
 )
 
 # _log_stage remains in pipeline.py (defined early, before re-export block).
@@ -1089,22 +1090,25 @@ async def _check_weekly_quality(
     # Expert quality check
     expert_input = f"## English Expert\n\n{content_expert_en}\n\n## Korean Expert\n\n{content_expert_ko}"
     try:
-        expert_resp = await asyncio.wait_for(
-            client.chat.completions.create(
-                **build_completion_kwargs(
-                    model,
-                    messages=[
-                        {"role": "system", "content": QUALITY_CHECK_WEEKLY_EXPERT},
-                        {"role": "user", "content": expert_input},
-                    ],
-                    response_format={"type": "json_object"},
-                    max_tokens=2000,
-                    service_tier="flex",
-                    prompt_cache_key="qc-weekly-expert",
-                )
-            ),
-            timeout=120,
-        )
+        async def _weekly_qc_expert_call() -> Any:
+            return await asyncio.wait_for(
+                client.chat.completions.create(
+                    **build_completion_kwargs(
+                        model,
+                        messages=[
+                            {"role": "system", "content": QUALITY_CHECK_WEEKLY_EXPERT},
+                            {"role": "user", "content": expert_input},
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=2000,
+                        service_tier="flex",
+                        prompt_cache_key="qc-weekly-expert",
+                    )
+                ),
+                timeout=120,
+            )
+
+        expert_resp = await with_flex_retry(_weekly_qc_expert_call)
         expert_raw = expert_resp.choices[0].message.content or ""
         expert_usage = extract_usage_metrics(expert_resp, model)
         cumulative_usage.update(merge_usage_metrics(cumulative_usage, expert_usage))
@@ -1134,22 +1138,25 @@ async def _check_weekly_quality(
     if content_learner_en:
         learner_input = f"## English Learner\n\n{content_learner_en}\n\n## Korean Learner\n\n{content_learner_ko}"
         try:
-            learner_resp = await asyncio.wait_for(
-                client.chat.completions.create(
-                    **build_completion_kwargs(
-                        model,
-                        messages=[
-                            {"role": "system", "content": QUALITY_CHECK_WEEKLY_LEARNER},
-                            {"role": "user", "content": learner_input},
-                        ],
-                        response_format={"type": "json_object"},
-                        max_tokens=2000,
-                        service_tier="flex",
-                        prompt_cache_key="qc-weekly-learner",
-                    )
-                ),
-                timeout=120,
-            )
+            async def _weekly_qc_learner_call() -> Any:
+                return await asyncio.wait_for(
+                    client.chat.completions.create(
+                        **build_completion_kwargs(
+                            model,
+                            messages=[
+                                {"role": "system", "content": QUALITY_CHECK_WEEKLY_LEARNER},
+                                {"role": "user", "content": learner_input},
+                            ],
+                            response_format={"type": "json_object"},
+                            max_tokens=2000,
+                            service_tier="flex",
+                            prompt_cache_key="qc-weekly-learner",
+                        )
+                    ),
+                    timeout=120,
+                )
+
+            learner_resp = await with_flex_retry(_weekly_qc_learner_call)
             learner_raw = learner_resp.choices[0].message.content or ""
             learner_usage = extract_usage_metrics(learner_resp, model)
             cumulative_usage.update(merge_usage_metrics(cumulative_usage, learner_usage))
