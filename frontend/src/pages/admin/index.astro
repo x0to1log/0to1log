@@ -152,12 +152,15 @@ try {
 
   totalProducts = productsRes.count ?? 0;
 
-  // Convert ISO week (e.g. 2026-W15) to the Monday of that week
-  function isoWeekToMonday(year: number, week: number): Date {
+  // Convert ISO week (e.g. 2026-W15) to the SUNDAY-END of that week.
+  // Weekly recaps cover Mon-Sun of the named week and are published after
+  // the week ends, so anchoring on Sunday matches how users think about
+  // "the W15 recap" — e.g. W15 2026 ends Sun 4/12.
+  function isoWeekToSundayEnd(year: number, week: number): Date {
     const jan4 = new Date(Date.UTC(year, 0, 4));
     const jan4Dow = jan4.getUTCDay() || 7;
     const firstMonday = new Date(jan4.getTime() - (jan4Dow - 1) * 86400000);
-    return new Date(firstMonday.getTime() + (week - 1) * 7 * 86400000);
+    return new Date(firstMonday.getTime() + ((week - 1) * 7 + 6) * 86400000);
   }
 
   // News quality chart data (research / business / weekly)
@@ -177,7 +180,7 @@ try {
       sortKey = dateMatch[1];
       label = `${d.getMonth() + 1}/${d.getDate()}`;
     } else if (weekMatch) {
-      d = isoWeekToMonday(parseInt(weekMatch[1], 10), parseInt(weekMatch[2], 10));
+      d = isoWeekToSundayEnd(parseInt(weekMatch[1], 10), parseInt(weekMatch[2], 10));
       sortKey = d.toISOString().slice(0, 10);
       label = `W${weekMatch[2]}`;
     } else {

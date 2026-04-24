@@ -115,12 +115,17 @@ const weeklyRows = (weeklyLogs ?? []) as unknown as WeeklyLog[];
 const weeklyCost = weeklyRows.reduce((sum, r) => sum + parseCostInline(r.cost_usd), 0);
 const weeklyTokens = weeklyRows.reduce((sum, r) => sum + (r.tokens_used ?? 0), 0);
 
-// Convert ISO week (e.g. 2026-W15) to the Monday of that week — for sortKey parity with daily runs
-function isoWeekToMonday(year: number, week: number): Date {
+// Convert ISO week (e.g. 2026-W15) to the SUNDAY-END of that week.
+// Weekly recaps cover Mon-Sun of the named week and are published after
+// the week ends, so anchoring on Sunday matches how users think about
+// "the W15 recap" — e.g. W15 2026 ends Sun 4/12, that's when the week's
+// content is complete and what the recap summarizes.
+function isoWeekToSundayEnd(year: number, week: number): Date {
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const jan4Dow = jan4.getUTCDay() || 7;
   const firstMonday = new Date(jan4.getTime() - (jan4Dow - 1) * 86400000);
-  return new Date(firstMonday.getTime() + (week - 1) * 7 * 86400000);
+  // Week N Monday, then +6 days to reach Sunday end
+  return new Date(firstMonday.getTime() + ((week - 1) * 7 + 6) * 86400000);
 }
 
 // parseCostInline lives here because helpers aren't defined yet at this line
@@ -148,7 +153,7 @@ for (const row of weeklyRows) {
     const week = parseInt(weekMatch[2], 10);
     weeklyRunMap.set(runKey, {
       runKey,
-      sortKey: isoWeekToMonday(year, week).toISOString().slice(0, 10),
+      sortKey: isoWeekToSundayEnd(year, week).toISOString().slice(0, 10),
       label: `W${weekMatch[2]}`,
       totalCost: 0,
       qualityScore: null,
