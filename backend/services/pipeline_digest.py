@@ -211,6 +211,69 @@ def _inject_cp_citations(
 
 
 # ---------------------------------------------------------------------------
+# CP Data input builder (per-topic entry passed to writer prompt)
+# ---------------------------------------------------------------------------
+
+_CP_QUOTE_MARKS = '"""''\''
+_CP_URL_PAT = re.compile(
+    r"(?:https?://|\b(?:github|arxiv|twitter|x|youtu|youtube|medium|reddit|huggingface|paperswithcode|openai|anthropic|deepmind)\.(?:com|org|be)/)",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_cp_quote(q: str) -> str | None:
+    """Strip surrounding quote marks up to 3 layers; reject quotes containing URLs
+    or shorter than 10 chars (likely garbage or link-only comments)."""
+    if not isinstance(q, str):
+        return None
+    s = q.strip()
+    for _ in range(3):
+        if len(s) >= 2 and s[0] in _CP_QUOTE_MARKS and s[-1] in _CP_QUOTE_MARKS:
+            s = s[1:-1].strip()
+        else:
+            break
+    if len(s) < 10 or _CP_URL_PAT.search(s):
+        return None
+    return s
+
+
+def _build_cp_data_entry(
+    group: "ClassifiedGroup",
+    insight: "CommunityInsight | None",
+) -> str | None:
+    """Build the CP Data block for a single topic (primary_url → insight).
+
+    Returns None when the insight is missing or has neither quotes nor key_point
+    (nothing meaningful to render in CP).
+    """
+    if insight is None:
+        return None
+    if not (insight.quotes or insight.key_point):
+        return None
+
+    clean_quotes = [s for q in (insight.quotes or []) if (s := _sanitize_cp_quote(q))]
+    clean_quotes_ko = [s for q in (insight.quotes_ko or []) if (s := _sanitize_cp_quote(q))]
+    # Align lengths: quotes_ko should match quotes count (writer expects 1:1 mapping)
+    clean_quotes_ko = clean_quotes_ko[:len(clean_quotes)]
+    has_quotes = bool(clean_quotes)
+
+    parts = [f"Topic: {group.group_title}"]
+    parts.append(f"Platform: {insight.source_label}")
+    parts.append(f"Sentiment: {insight.sentiment}")
+    if has_quotes:
+        parts.append(f"HasQuotes: yes — emit {len(clean_quotes)} blockquote(s) below")
+        for i, q in enumerate(clean_quotes, start=1):
+            parts.append(f'English quote {i}: "{q}"')
+        for i, q in enumerate(clean_quotes_ko, start=1):
+            parts.append(f'Korean quote {i} (translation of English quote {i}): "{q}"')
+    else:
+        parts.append("HasQuotes: no — DO NOT emit any blockquote for this topic, write key point as a regular paragraph only")
+    if insight.key_point:
+        parts.append(f"Key Discussion: {insight.key_point}")
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # focus_items_ko fallback
 # ---------------------------------------------------------------------------
 
@@ -553,52 +616,12 @@ async def _generate_digest(
     # Defensive cleanup: insights loaded from older checkpoints may still contain
     # quotes wrapped in surrounding quote marks and/or scheme-less URLs. We clean
     # at point-of-use so both new summaries AND legacy checkpoint data are safe.
-    import re as _re
-    _quote_marks = '"\u201C\u201D\u2018\u2019\''
-    _url_pat = _re.compile(
-        r"(?:https?://|\b(?:github|arxiv|twitter|x|youtu|youtube|medium|reddit|huggingface|paperswithcode|openai|anthropic|deepmind)\.(?:com|org|be)/)",
-        _re.IGNORECASE,
-    )
-
-    def _sanitize_quote(q: str) -> str | None:
-        """Strip surrounding quote marks; reject if quote contains a URL."""
-        if not isinstance(q, str):
-            return None
-        s = q.strip()
-        for _ in range(3):
-            if len(s) >= 2 and s[0] in _quote_marks and s[-1] in _quote_marks:
-                s = s[1:-1].strip()
-            else:
-                break
-        if len(s) < 10 or _url_pat.search(s):
-            return None
-        return s
-
-    cp_entries = []
+    cp_entries: list[str] = []
     for group in classified:
         insight = community_summary_map.get(group.primary_url)
-        if not insight or not (insight.quotes or insight.key_point):
-            continue
-        # Sanitize quotes defensively (handles both fresh and checkpoint-loaded data)
-        clean_quotes = [s for q in (insight.quotes or []) if (s := _sanitize_quote(q))]
-        clean_quotes_ko = [s for q in (insight.quotes_ko or []) if (s := _sanitize_quote(q))]
-        # Align lengths: quotes_ko should match quotes count (Writer expects 1:1 mapping)
-        clean_quotes_ko = clean_quotes_ko[:len(clean_quotes)]
-        has_quotes = bool(clean_quotes)
-        parts = [f"Topic: {group.group_title}"]
-        parts.append(f"Platform: {insight.source_label}")
-        parts.append(f"Sentiment: {insight.sentiment}")
-        if has_quotes:
-            parts.append(f"HasQuotes: yes — emit {len(clean_quotes)} blockquote(s) below")
-            for i, q in enumerate(clean_quotes, start=1):
-                parts.append(f'English quote {i}: "{q}"')
-            for i, q in enumerate(clean_quotes_ko, start=1):
-                parts.append(f'Korean quote {i} (translation of English quote {i}): "{q}"')
-        else:
-            parts.append("HasQuotes: no — DO NOT emit any blockquote for this topic, write key point as a regular paragraph only")
-        if insight.key_point:
-            parts.append(f"Key Discussion: {insight.key_point}")
-        cp_entries.append("\n".join(parts))
+        entry = _build_cp_data_entry(group, insight)
+        if entry is not None:
+            cp_entries.append(entry)
 
     user_prompt = "\n\n---\n\n".join(news_items)
     if cp_entries:

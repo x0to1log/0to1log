@@ -3234,6 +3234,7 @@ from services.pipeline_digest import (  # noqa: E402, F401
     _clean_writer_output,
     _generate_digest,
     # (b) re-export only
+    _build_cp_data_entry,
     _extract_digest_items,
     _fix_bold_spacing,
     _inject_cp_citations,
