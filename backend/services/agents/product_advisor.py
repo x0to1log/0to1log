@@ -329,7 +329,12 @@ Rules:
 - ONLY include facts explicitly stated in the provided sources.
 - For technical_specs: numbers matter — context window size, model count, supported language count, etc.
 - For unique_features: use official feature names from the product page, NOT generic descriptions like "AI-powered".
-- For pricing_tiers: null if no pricing info in sources. Include all tiers visible.
+- For pricing_tiers: extract ONLY from sources labeled PRIMARY. If sources are
+  labeled "### PRIMARY" and "### SECONDARY", PRIMARY contains the product's own
+  pricing page (trusted). SECONDARY is third-party context (blogs, reviews,
+  university pages) — do NOT extract pricing_tiers from SECONDARY even when it
+  quotes prices. If only SECONDARY exists and PRIMARY is empty, set
+  pricing_tiers=null. Include all tiers visible in PRIMARY.
 - Empty array or null for fields with no evidence.
 
 ## Example (ChatGPT)
