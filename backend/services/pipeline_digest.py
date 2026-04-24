@@ -75,6 +75,15 @@ _CP_ATTR_RE_TMPL = r"^> [—\-]+ {label}\s*$"
 # or "r/OpenAI (500↑)". Captures the digits/K preceding the ↑ arrow.
 _INSIGHT_UPVOTE_RE = re.compile(r"(\d[\d,.]*)(K)?↑", re.IGNORECASE)
 
+# Already-linked block header: **[Label](url)** (N↑) — must be checked BEFORE
+# the plain _CP_BLOCK_HEADER_RE, otherwise the bare-header regex would match the
+# inner `[Label](url)` text and produce **[[Label](url)](url)** corruption.
+_CP_LINKED_HEADER_RE = re.compile(
+    r"^\s*(?:-\s+)?\*\*\[(?P<label>[^\]]+)\]\((?P<url>https?://[^)]+)\)\*\*\s*\(\s*(?P<upvotes>[\d,.]+)(?P<kmult>[Kk]?)\s*↑",
+)
+# Already-linked attribution: > — [Label](url)
+_CP_LINKED_ATTR_RE = re.compile(r"^>\s+[—\-]+\s+\[[^\]]+\]\(https?://[^)]+\)\s*$")
+
 
 def _upvotes_to_int(digits: str, kmult: str) -> int:
     """'1,203' + '' → 1203;   '1.2' + 'K' → 1200."""
@@ -177,23 +186,51 @@ def _inject_cp_citations(
         current_url: str | None = None
 
         for line in section_body.split("\n"):
+            # Case 1: already-linked block header — leave alone, use its URL for
+            # any bare attributions that follow.
+            linked_hdr = _CP_LINKED_HEADER_RE.match(line)
+            if linked_hdr:
+                current_label = linked_hdr.group("label").strip()
+                current_url = linked_hdr.group("url").strip()
+                out_lines.append(line)
+                continue
+
+            # Case 2: bare block header — try to linkify it AND use URL for attributions.
             hdr = _CP_BLOCK_HEADER_RE.match(line)
             if hdr:
                 label = hdr.group("label").strip()
                 upvotes = _upvotes_to_int(hdr.group("upvotes"), hdr.group("kmult"))
                 url = _lookup_url(label, upvotes) if upvotes >= 0 else None
                 if url:
+                    # Linkify the bold label in place, preserve the rest of the line
+                    # (upvote parens, dash, summary text).
+                    line = re.sub(
+                        r"\*\*" + re.escape(label) + r"\*\*",
+                        f"**[{label}]({url})**",
+                        line,
+                        count=1,
+                    )
                     current_label = label
                     current_url = url
                 else:
                     current_label = None
                     current_url = None
-            elif current_label and current_url:
+                out_lines.append(line)
+                continue
+
+            # Case 3: already-linked attribution — leave alone (idempotent).
+            if _CP_LINKED_ATTR_RE.match(line):
+                out_lines.append(line)
+                continue
+
+            # Case 4: bare attribution line under a known block — linkify it.
+            if current_label and current_url:
                 attr_pat = re.compile(
                     _CP_ATTR_RE_TMPL.format(label=re.escape(current_label))
                 )
                 if attr_pat.match(line):
                     line = f"> — [{current_label}]({current_url})"
+
             out_lines.append(line)
         return "\n".join(out_lines)
 
