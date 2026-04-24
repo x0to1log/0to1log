@@ -337,3 +337,65 @@ def test_inject_handles_partial_writer_compliance():
     assert "**[Hacker News](https://news.ycombinator.com/item?id=42)** (79↑)" in out
     # Attribution stays linked (not double-linked)
     assert out.count("> — [Hacker News](https://news.ycombinator.com/item?id=42)") == 1
+
+
+def test_inject_case1_overrides_writer_url_when_mismatched_with_index():
+    """If writer emits a linked block header with a URL that doesn't match
+    the insight's hn_url for the same upvote count, the post-processor
+    must override the writer's URL with the authoritative insight URL.
+    This prevents silent corruption from LLM typos or hallucinations.
+
+    Simpler-scope approach (header-only): only the block header is rewritten.
+    An already-linked attribution with the wrong URL is left alone (deferred
+    scope — see code comment in Case 1).  A bare attribution DOES pick up the
+    corrected current_url from the overridden header."""
+    from services.pipeline import _inject_cp_citations
+    from models.news_pipeline import CommunityInsight
+
+    body = """## Community Pulse
+
+**[Hacker News](https://news.ycombinator.com/item?id=WRONG)** (79↑) — discussion.
+
+> "quote A over ten chars"
+> — [Hacker News](https://news.ycombinator.com/item?id=WRONG)
+
+> "quote B over ten chars"
+> — Hacker News
+"""
+    cmap = {
+        "https://arxiv.org/abs/X": CommunityInsight(
+            source_label="Hacker News 79↑ · 116 comments",
+            hn_url="https://news.ycombinator.com/item?id=42",
+        ),
+    }
+    out = _inject_cp_citations(body, cmap)
+    # Header's wrong URL rewritten to authoritative URL
+    assert "**[Hacker News](https://news.ycombinator.com/item?id=42)** (79↑)" in out
+    # Bare attribution (quote B) picks up the corrected current_url
+    assert "> — [Hacker News](https://news.ycombinator.com/item?id=42)" in out
+    # Quote A's attribution (already-linked, wrong URL) is left alone — deferred scope
+    assert "> — [Hacker News](https://news.ycombinator.com/item?id=WRONG)" in out
+
+
+def test_inject_case1_keeps_writer_url_when_matches_index():
+    """If writer-emitted URL matches the insight's authoritative URL,
+    no override — the line passes through unchanged (idempotency)."""
+    from services.pipeline import _inject_cp_citations
+    from models.news_pipeline import CommunityInsight
+
+    body = """## Community Pulse
+
+**[Hacker News](https://news.ycombinator.com/item?id=42)** (79↑) — discussion.
+
+> "quote over ten chars"
+> — [Hacker News](https://news.ycombinator.com/item?id=42)
+"""
+    cmap = {
+        "https://arxiv.org/abs/X": CommunityInsight(
+            source_label="Hacker News 79↑ · 116 comments",
+            hn_url="https://news.ycombinator.com/item?id=42",
+        ),
+    }
+    out = _inject_cp_citations(body, cmap)
+    # No rewrites — URL already matches
+    assert out == body

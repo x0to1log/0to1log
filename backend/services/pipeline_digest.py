@@ -186,12 +186,40 @@ def _inject_cp_citations(
         current_url: str | None = None
 
         for line in section_body.split("\n"):
-            # Case 1: already-linked block header — leave alone, use its URL for
-            # any bare attributions that follow.
+            # Case 1: already-linked block header. Validate the writer-emitted URL
+            # against the insight index — LLMs occasionally emit wrong URLs (typos,
+            # off-by-one hallucinations), and silent propagation to bare attributions
+            # below is worse than visible correction. If mismatched, overwrite the
+            # header's URL with the authoritative one and warn.
             linked_hdr = _CP_LINKED_HEADER_RE.match(line)
             if linked_hdr:
-                current_label = linked_hdr.group("label").strip()
-                current_url = linked_hdr.group("url").strip()
+                label = linked_hdr.group("label").strip()
+                writer_url = linked_hdr.group("url").strip()
+                upvotes = _upvotes_to_int(
+                    linked_hdr.group("upvotes"), linked_hdr.group("kmult")
+                )
+                authoritative_url = (
+                    _lookup_url(label, upvotes) if upvotes >= 0 else None
+                )
+                if authoritative_url and authoritative_url != writer_url:
+                    logger.warning(
+                        "CP linkify: writer emitted wrong URL for %s (%d↑) — "
+                        "rewriting '%s' → '%s'",
+                        label, upvotes, writer_url, authoritative_url,
+                    )
+                    line = line.replace(
+                        f"({writer_url})", f"({authoritative_url})", 1
+                    )
+                    current_url = authoritative_url
+                else:
+                    # No authoritative URL available (e.g. old checkpoint with no
+                    # hn_url/reddit_url) OR URLs match — trust writer's output.
+                    # NOTE (deferred scope): already-linked attributions below
+                    # that point at a mismatched URL are NOT overwritten here —
+                    # the first-pass fix handles header only. If it becomes an
+                    # issue, extend Case 3 symmetrically.
+                    current_url = writer_url
+                current_label = label
                 out_lines.append(line)
                 continue
 
