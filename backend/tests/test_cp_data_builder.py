@@ -82,7 +82,9 @@ def test_cp_entry_sanitizes_surrounding_quote_marks():
     insight = CommunityInsight(
         source_label="Hacker News 79↑ · 25 comments",
         quotes=['"real quote with wrapping"'],
-        quotes_ko=['"실제 인용 감쌈"'],
+        # KO needs ≥ 10 chars after wrapping strip to pass _sanitize_cp_quote;
+        # also needs to be paired (EN + KO both pass) per the strict-pairing rule.
+        quotes_ko=['"실제 인용을 감싸는 따옴표 검증용 한국어 텍스트"'],
         key_point="k",
     )
     entry = _build_cp_data_entry(_make_group(), insight)
@@ -283,6 +285,77 @@ def test_cp_entry_handles_K_suffix_in_upvotes():
         key_point="x",
     )
     assert _build_cp_data_entry(_make_group(), insight) is not None
+
+
+def test_cp_entry_drops_unpaired_en_quote_when_ko_missing():
+    """KO quote count alignment (external review P2, 2026-04-25): if EN has 2
+    quotes but KO has 1 (or one KO sanitized away), drop the unpaired EN to
+    keep strict 1:1 pairing. Sending unpaired EN to the writer means it can't
+    render the KO body for that quote and may invent a translation."""
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="Hacker News 79↑ · 25 comments",
+        sentiment="mixed",
+        quotes=[
+            "first paired quote with substance and over ten chars",
+            "second EN quote with no KO partner over ten chars",
+        ],
+        quotes_ko=[
+            "첫 번째 짝맞춰진 인용 의미있게 충분한 길이",
+            # No second KO entry — should drop the second EN.
+        ],
+        key_point="Discussion",
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    # Only the first paired quote survives
+    assert "HasQuotes: yes — emit 1 blockquote(s) below" in entry
+    assert 'English quote 1: "first paired quote with substance and over ten chars"' in entry
+    assert "second EN quote with no KO partner" not in entry
+
+
+def test_cp_entry_drops_pair_when_ko_quote_sanitized_away():
+    """If KO quote contains a URL or is too short, _sanitize_cp_quote returns
+    None — the corresponding EN must also drop, even when EN passes."""
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="Hacker News 79↑ · 25 comments",
+        sentiment="mixed",
+        quotes=[
+            "valid EN quote with substance over ten chars",
+            "another valid EN quote with substance over ten chars",
+        ],
+        quotes_ko=[
+            "유효한 한국어 인용 의미있게 충분한 길이",
+            # Second KO contains URL → sanitize returns None → both i=1 dropped
+            "URL 포함 https://example.com 잘못된 인용",
+        ],
+        key_point="Discussion",
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    assert "HasQuotes: yes — emit 1 blockquote(s) below" in entry
+    assert "another valid EN quote" not in entry
+
+
+def test_cp_entry_falls_back_to_no_quotes_when_no_pairs_survive():
+    """If every EN/KO pair fails sanitization, fall back to HasQuotes: no
+    (paragraph from key_point) instead of leaving an inconsistent state."""
+    from services.pipeline import _build_cp_data_entry
+
+    insight = CommunityInsight(
+        source_label="Hacker News 79↑ · 25 comments",
+        sentiment="negative",
+        quotes=["short"],            # too short — sanitize returns None
+        quotes_ko=["짧음"],          # too short — sanitize returns None
+        key_point="Users complained",
+    )
+    entry = _build_cp_data_entry(_make_group(), insight)
+    assert entry is not None
+    assert "HasQuotes: no" in entry
+    assert "Key Discussion: Users complained" in entry
 
 
 def test_cp_entry_drops_empty_source_label():

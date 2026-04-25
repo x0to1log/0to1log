@@ -156,7 +156,7 @@ async def classify_candidates(
             )
             raw = response.choices[0].message.content
             data = parse_ai_json(raw, "Classification")
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             break
         except Exception as e:
             logger.warning("Classification attempt %d failed: %s", attempt + 1, e)
@@ -267,7 +267,7 @@ async def merge_classified(
                 )
             )
             data = parse_ai_json(response.choices[0].message.content, "Merge")
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             break
         except Exception as e:
             logger.warning("Merge attempt %d failed: %s", attempt + 1, e)
@@ -411,7 +411,7 @@ async def rank_classified(
                 )
             )
             data = parse_ai_json(response.choices[0].message.content, f"Ranking-{category}")
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             break
         except Exception as e:
             logger.warning("Ranking attempt %d for %s failed: %s", attempt + 1, category, e)
@@ -545,6 +545,11 @@ async def summarize_community(
             {"role": "user", "content": user_content},
         ],
         max_tokens=2000,
+        # JSON mode — without this, the prompt asks for JSON but the model can
+        # wrap it in prose ("Here is the JSON: {...}") on rare runs. parse_ai_json
+        # then fails and we drop the entire CP map after retries (external review
+        # P2, 2026-04-25). Other LLM call sites in this file use json_object.
+        response_format={"type": "json_object"},
         service_tier="flex",
         prompt_cache_key="community-summarize",
     )
@@ -553,7 +558,7 @@ async def summarize_community(
     for attempt in range(MAX_RETRIES + 1):
         try:
             response = await client.chat.completions.create(**kwargs)
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             raw_output = response.choices[0].message.content or ""
             data = parse_ai_json(raw_output, "CommunitySummarizer")
             break

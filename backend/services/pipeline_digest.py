@@ -137,10 +137,24 @@ def _build_cp_data_entry(
     if not _has_strong_community_signal(getattr(insight, "source_label", "") or ""):
         return None
 
-    clean_quotes = [s for q in (insight.quotes or []) if (s := _sanitize_cp_quote(q))]
-    clean_quotes_ko = [s for q in (insight.quotes_ko or []) if (s := _sanitize_cp_quote(q))]
-    # Align lengths: quotes_ko should match quotes count (writer expects 1:1 mapping)
-    clean_quotes_ko = clean_quotes_ko[:len(clean_quotes)]
+    # Pair-aligned sanitization: writer expects strict 1:1 mapping between
+    # English quote N and Korean quote N (CP rendering uses the index pairing).
+    # If only one side passes sanitization for a given index, drop both — sending
+    # an unpaired EN quote to the writer means it can't render the KO body
+    # (or it'll invent a translation, defeating quote fidelity). Earlier code
+    # truncated quotes_ko to len(clean_quotes), which left the EN-only-passed
+    # case still mismatched (EN=2, KO=1 → 2 EN lines + 1 KO line emitted to
+    # writer). External review P2, 2026-04-25.
+    raw_en = list(insight.quotes or [])
+    raw_ko = list(insight.quotes_ko or [])
+    clean_quotes: list[str] = []
+    clean_quotes_ko: list[str] = []
+    for i in range(min(len(raw_en), len(raw_ko))):
+        en = _sanitize_cp_quote(raw_en[i])
+        ko = _sanitize_cp_quote(raw_ko[i])
+        if en and ko:
+            clean_quotes.append(en)
+            clean_quotes_ko.append(ko)
     has_quotes = bool(clean_quotes)
 
     parts = [f"Topic: {group.group_title}"]
@@ -887,7 +901,7 @@ async def _generate_digest(
                         persona_quizzes[persona_name]["en"] = quiz_en
                     if isinstance(quiz_ko, dict) and quiz_ko.get("question"):
                         persona_quizzes[persona_name]["ko"] = quiz_ko
-                usage = extract_usage_metrics(response, model)
+                usage = extract_usage_metrics(response, model, requested_service_tier="flex")
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
                 # Recover missing locale: re-generate missing side
@@ -931,7 +945,7 @@ async def _generate_digest(
                             ko_resp.choices[0].message.content,
                             f"Digest-{digest_type}-{persona_name}-ko-recovery",
                         )
-                        ko_usage = extract_usage_metrics(ko_resp, model)
+                        ko_usage = extract_usage_metrics(ko_resp, model, requested_service_tier="flex")
                         cumulative_usage = merge_usage_metrics(cumulative_usage, ko_usage)
                         recovered_ko_raw = ko_data.get("ko", "")
                         if recovered_ko_raw.strip():
@@ -992,7 +1006,7 @@ async def _generate_digest(
                             en_resp.choices[0].message.content,
                             f"Digest-{digest_type}-{persona_name}-en-recovery",
                         )
-                        en_usage = extract_usage_metrics(en_resp, model)
+                        en_usage = extract_usage_metrics(en_resp, model, requested_service_tier="flex")
                         cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
                         recovered_en_raw = en_data.get("en", "")
                         if recovered_en_raw.strip():
@@ -1136,7 +1150,7 @@ async def _generate_digest(
                     en_resp.choices[0].message.content,
                     f"Digest-{digest_type}-{persona_name}-en-heading-recovery",
                 )
-                en_usage = extract_usage_metrics(en_resp, model)
+                en_usage = extract_usage_metrics(en_resp, model, requested_service_tier="flex")
                 cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
                 recovered_en = _clean_writer_output(en_data.get("en", ""))
                 if recovered_en.strip():
