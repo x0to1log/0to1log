@@ -83,18 +83,58 @@ def _sanitize_cp_quote(q: str) -> str | None:
     return s
 
 
+# Min thresholds — if a community thread has fewer than this many upvotes
+# AND fewer than this many comments, it's noise (e.g. HN 6↑ · 1 comments
+# from Apr 24 Meta layoff: a single off-the-cuff comment that admits to
+# not reading the article). Including it as "community pulse" implies a
+# broader reaction that doesn't exist. Either signal alone is enough to
+# keep — high upvotes (broad approval) OR many comments (active debate).
+_CP_MIN_UPVOTES = 50
+_CP_MIN_COMMENTS = 10
+
+
+def _has_strong_community_signal(source_label: str) -> bool:
+    """Check if any platform in the insight's source_label exceeds the
+    minimum upvote OR comment threshold. Returns False for low-signal threads
+    that should be excluded from CP. Empty/unparsable label → False (defensive).
+    """
+    if not source_label:
+        return False
+
+    max_upvotes = 0
+    for digits, k in re.findall(r"(\d[\d,.]*)([Kk])?↑", source_label):
+        try:
+            n = float(digits.replace(",", ""))
+        except ValueError:
+            continue
+        if k.upper() == "K":
+            n *= 1000
+        max_upvotes = max(max_upvotes, int(n))
+
+    max_comments = 0
+    for digits in re.findall(r"(\d[\d,.]*)\s*comments", source_label):
+        try:
+            max_comments = max(max_comments, int(float(digits.replace(",", ""))))
+        except ValueError:
+            continue
+
+    return max_upvotes >= _CP_MIN_UPVOTES or max_comments >= _CP_MIN_COMMENTS
+
+
 def _build_cp_data_entry(
     group: "ClassifiedGroup",
     insight: "CommunityInsight | None",
 ) -> str | None:
     """Build the CP Data block for a single topic (primary_url → insight).
 
-    Returns None when the insight is missing or has neither quotes nor key_point
-    (nothing meaningful to render in CP).
+    Returns None when the insight is missing, has neither quotes nor key_point,
+    or fails the minimum community-signal threshold (noise filter).
     """
     if insight is None:
         return None
     if not (insight.quotes or insight.key_point):
+        return None
+    if not _has_strong_community_signal(getattr(insight, "source_label", "") or ""):
         return None
 
     clean_quotes = [s for q in (insight.quotes or []) if (s := _sanitize_cp_quote(q))]
