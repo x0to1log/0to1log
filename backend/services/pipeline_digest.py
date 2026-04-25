@@ -248,6 +248,18 @@ def _linkify_cp_section(
     if not community_summary_map or not body:
         return body
 
+    # Normalize the writer's broken bold-link split shape into the canonical
+    # linked form. Writer occasionally emits `**[Label]** (URL) (N↑)` — bold
+    # wraps the bracketed label, then a SEPARATE parens carries the URL —
+    # which is broken markdown (not a clickable link). Merge into the proper
+    # `**[Label](URL)** (N↑)` form so the rest of the linkifier sees a
+    # already-linked header and passes through correctly.
+    body = re.sub(
+        r"\*\*\[([^\]]+)\]\*\*\s+\((https?://[^)\s]+)\)\s+\(",
+        r"**[\1](\2)** (",
+        body,
+    )
+
     # Build platform → upvote → URL indexes.
     hn_index: list[tuple[int, str]] = []
     reddit_index: list[tuple[str, int, str]] = []
