@@ -166,6 +166,193 @@ def _build_writer_url_allowlist(
     return allowlist
 
 
+# ---------------------------------------------------------------------------
+# CP Section linkifier — post-process writer output to inject thread URLs.
+#
+# Writer reliably emits a stable shape after the 2026-04-25 prompt rewrite:
+#   **Hacker News** (1041↑) — sentiment summary
+#   > "quote text"
+#   > — Hacker News
+# But the writer does NOT emit the [CITE_N] tokens for CP (only for body),
+# despite rule 9 asking for it. Rather than fight model behavior, we let the
+# writer emit the predictable bare shape and post-process: convert bold labels
+# into bold-link form using thread URLs from CommunityInsight.hn_url /
+# reddit_url, matched by upvote count. Idempotent — already-linked headers
+# pass through unchanged. Degrades safely — unmatched blocks stay raw.
+# ---------------------------------------------------------------------------
+
+_CP_SECTION_HEADERS = ("## Community Pulse", "## 커뮤니티 반응")
+
+# Bare bold block header: **Label** (N↑) — summary
+_CP_BARE_HEADER_RE = re.compile(
+    r"^\s*(?:-\s+)?\*\*(?P<label>[^*\n\[\]]+?)\*\*\s*\(\s*(?P<upvotes>[\d,.]+)(?P<kmult>[Kk]?)\s*↑",
+)
+# Already-linked block header: **[Label](url)** (N↑)
+_CP_LINKED_HEADER_RE = re.compile(
+    r"^\s*(?:-\s+)?\*\*\[(?P<label>[^\]]+)\]\((?P<url>https?://[^)]+)\)\*\*\s*\(",
+)
+# Already-linked attribution: > — [Label](url)
+_CP_LINKED_ATTR_RE = re.compile(
+    r"^>\s+[—\-]+\s+\[[^\]]+\]\(https?://[^)]+\)\s*$",
+)
+
+
+def _upvotes_to_int(digits: str, kmult: str) -> int:
+    try:
+        base = float(digits.replace(",", ""))
+    except ValueError:
+        return -1
+    if kmult and kmult.upper() == "K":
+        base *= 1000
+    return int(round(base))
+
+
+def _insight_hn_upvotes(source_label: str) -> int:
+    """Extract HN upvote count from CommunityInsight.source_label.
+    Example: 'Hacker News 1041↑ · 689 comments · r/OpenAI (642↑)' → 1041"""
+    if "Hacker News" not in source_label:
+        return -1
+    m = re.search(r"Hacker News\s+(\d[\d,.]*)([Kk])?↑", source_label)
+    if not m:
+        return -1
+    return _upvotes_to_int(m.group(1), m.group(2) or "")
+
+
+def _insight_reddit_upvotes(source_label: str) -> int:
+    """Extract Reddit upvote count from CommunityInsight.source_label.
+    Example: 'r/OpenAI (642↑)' → 642"""
+    m = re.search(r"r/\S+?\s*\(\s*(\d[\d,.]*)([Kk])?↑", source_label, re.IGNORECASE)
+    if not m:
+        return -1
+    return _upvotes_to_int(m.group(1), m.group(2) or "")
+
+
+def _linkify_cp_section(
+    body: str,
+    community_summary_map: "dict[str, CommunityInsight] | None",
+) -> str:
+    """Convert bare CP block headers and attributions into bold-link markdown
+    using thread URLs from the insight map. Match by upvote count.
+
+    Visual transformation:
+        **Hacker News** (1041↑) — summary  →  **[Hacker News](hn_url)** (1041↑) — summary
+        > — Hacker News                    →  > — [Hacker News](hn_url)
+
+    Same for r/<sub> blocks using reddit_url. Reddit attribution lines may use
+    either the subreddit name (`> — r/OpenAI`) or the generic platform name
+    (`> — Reddit`); both are supported.
+
+    Idempotent on already-linked content. Degrades safely when no insight has
+    a matching upvote count.
+    """
+    if not community_summary_map or not body:
+        return body
+
+    # Build platform → upvote → URL indexes.
+    hn_index: list[tuple[int, str]] = []
+    reddit_index: list[tuple[str, int, str]] = []
+    for insight in community_summary_map.values():
+        src = getattr(insight, "source_label", "") or ""
+        hn_url = getattr(insight, "hn_url", None)
+        reddit_url = getattr(insight, "reddit_url", None)
+        if hn_url:
+            upv = _insight_hn_upvotes(src)
+            if upv >= 0:
+                hn_index.append((upv, hn_url))
+        if reddit_url:
+            sub_match = re.search(r"r/(\S+?)(?:\s|\(|$)", src)
+            upv = _insight_reddit_upvotes(src)
+            if sub_match and upv >= 0:
+                reddit_index.append((sub_match.group(1).rstrip(")"), upv, reddit_url))
+
+    if not hn_index and not reddit_index:
+        return body
+
+    def _lookup_url(label: str, upvotes: int) -> str | None:
+        if label == "Hacker News":
+            for upv, url in hn_index:
+                if upv == upvotes:
+                    return url
+            return None
+        m = re.match(r"r/(\S+)", label)
+        if m:
+            sub = m.group(1)
+            for isub, upv, url in reddit_index:
+                if isub == sub and upv == upvotes:
+                    return url
+        return None
+
+    def _process_section(section: str) -> str:
+        out_lines: list[str] = []
+        current_label: str | None = None
+        current_url: str | None = None
+
+        for line in section.split("\n"):
+            # Already-linked block header → record label/url and pass through.
+            linked_hdr = _CP_LINKED_HEADER_RE.match(line)
+            if linked_hdr:
+                current_label = linked_hdr.group("label").strip()
+                current_url = linked_hdr.group("url").strip()
+                out_lines.append(line)
+                continue
+
+            # Bare bold block header → linkify in place.
+            hdr = _CP_BARE_HEADER_RE.match(line)
+            if hdr:
+                label = hdr.group("label").strip()
+                upvotes = _upvotes_to_int(hdr.group("upvotes"), hdr.group("kmult"))
+                url = _lookup_url(label, upvotes) if upvotes >= 0 else None
+                if url:
+                    line = re.sub(
+                        r"\*\*" + re.escape(label) + r"\*\*",
+                        f"**[{label}]({url})**",
+                        line,
+                        count=1,
+                    )
+                    current_label = label
+                    current_url = url
+                else:
+                    current_label = None
+                    current_url = None
+                out_lines.append(line)
+                continue
+
+            # Already-linked attribution → pass through.
+            if _CP_LINKED_ATTR_RE.match(line):
+                out_lines.append(line)
+                continue
+
+            # Bare attribution under a known block — try several label variants.
+            if current_label and current_url:
+                # Patterns the writer commonly emits for attribution:
+                #   > — Hacker News           (HN block)
+                #   > — Reddit                (r/* block; writer often uses generic)
+                #   > — r/OpenAI              (r/* block; writer sometimes uses sub name)
+                candidates = [current_label]
+                if current_label.startswith("r/"):
+                    candidates.append("Reddit")
+                for cand in candidates:
+                    pat = re.compile(rf"^>\s+[—\-]+\s+{re.escape(cand)}\s*$")
+                    if pat.match(line):
+                        line = f"> — [{current_label}]({current_url})"
+                        break
+
+            out_lines.append(line)
+        return "\n".join(out_lines)
+
+    result = body
+    for section_header in _CP_SECTION_HEADERS:
+        section_re = re.compile(
+            rf"^({re.escape(section_header)}\s*\n)(.*?)(?=^## |\Z)",
+            re.MULTILINE | re.DOTALL,
+        )
+        result = section_re.sub(
+            lambda m: m.group(1) + _process_section(m.group(2)),
+            result,
+        )
+    return result
+
+
 async def _translate_focus_items_ko(
     items_en: list[str],
     *,
@@ -619,8 +806,8 @@ async def _generate_digest(
                         continue
                     raise
                 persona_output = PersonaOutput(
-                    en=_clean_writer_output(body_en),
-                    ko=_clean_writer_output(body_ko),
+                    en=_linkify_cp_section(_clean_writer_output(body_en), community_summary_map),
+                    ko=_linkify_cp_section(_clean_writer_output(body_ko), community_summary_map),
                 )
 
                 # Capture metadata from first persona (expert)
