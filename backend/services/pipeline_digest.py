@@ -191,12 +191,6 @@ _CP_BARE_HEADER_RE = re.compile(
 _CP_LINKED_HEADER_RE = re.compile(
     r"^\s*(?:-\s+)?\*\*\[(?P<label>[^\]]+)\]\((?P<url>https?://[^)]+)\)\*\*\s*\(",
 )
-# Already-linked attribution: > — [Label](url)
-_CP_LINKED_ATTR_RE = re.compile(
-    r"^>\s+[—\-]+\s+\[[^\]]+\]\(https?://[^)]+\)\s*$",
-)
-
-
 def _upvotes_to_int(digits: str, kmult: str) -> int:
     try:
         base = float(digits.replace(",", ""))
@@ -296,15 +290,10 @@ def _linkify_cp_section(
 
     def _process_section(section: str) -> str:
         out_lines: list[str] = []
-        current_label: str | None = None
-        current_url: str | None = None
 
         for line in section.split("\n"):
-            # Already-linked block header → record label/url and pass through.
-            linked_hdr = _CP_LINKED_HEADER_RE.match(line)
-            if linked_hdr:
-                current_label = linked_hdr.group("label").strip()
-                current_url = linked_hdr.group("url").strip()
+            # Already-linked block header → pass through unchanged.
+            if _CP_LINKED_HEADER_RE.match(line):
                 out_lines.append(line)
                 continue
 
@@ -321,33 +310,21 @@ def _linkify_cp_section(
                         line,
                         count=1,
                     )
-                    current_label = label
-                    current_url = url
-                else:
-                    current_label = None
-                    current_url = None
                 out_lines.append(line)
                 continue
 
-            # Already-linked attribution → pass through.
-            if _CP_LINKED_ATTR_RE.match(line):
-                out_lines.append(line)
-                continue
-
-            # Bare attribution under a known block — try several label variants.
-            if current_label and current_url:
-                # Patterns the writer commonly emits for attribution:
-                #   > — Hacker News           (HN block)
-                #   > — Reddit                (r/* block; writer often uses generic)
-                #   > — r/OpenAI              (r/* block; writer sometimes uses sub name)
-                candidates = [current_label]
-                if current_label.startswith("r/"):
-                    candidates.append("Reddit")
-                for cand in candidates:
-                    pat = re.compile(rf"^>\s+[—\-]+\s+{re.escape(cand)}\s*$")
-                    if pat.match(line):
-                        line = f"> — [{current_label}]({current_url})"
-                        break
+            # Editorial choice (2026-04-25): link only on the block header,
+            # not on attribution lines. Block header is the entry point to the
+            # discussion thread; repeating the same clickable URL on each
+            # blockquote attribution is visual noise. If a previous linkifier
+            # version (or the writer) emitted a linked attribution, un-link it
+            # back to bare text. Block header link remains the single source.
+            attr_with_link = re.match(
+                r"^(>\s+[—\-]+\s+)\[([^\]]+)\]\(https?://[^)]+\)\s*$",
+                line,
+            )
+            if attr_with_link:
+                line = attr_with_link.group(1) + attr_with_link.group(2)
 
             out_lines.append(line)
         return "\n".join(out_lines)
