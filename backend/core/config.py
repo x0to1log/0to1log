@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     cors_origins: str = '["https://0to1log.com","https://www.0to1log.com"]'
     buttondown_api_key: str = ""
     weekly_email_enabled: bool = False
-    weekly_auto_publish: bool = False
+    weekly_auto_publish: bool = True
 
 
 settings = Settings()

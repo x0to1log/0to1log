@@ -7,6 +7,10 @@
     {
       "path": "/api/trigger-promote",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/trigger-weekly",
+      "schedule": "0 1 * * 1"
     }
   ],
   "headers": [

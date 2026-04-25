@@ -3103,6 +3103,10 @@ async def run_weekly_pipeline(
             if not weekly_group_id:
                 weekly_group_id = str(uuid.uuid4())
 
+            # Track which rows actually flipped to published this run so we can
+            # fire one webhook batch after the loop (CDN warm + ISR revalidate).
+            published_slugs: list[str] = []
+
             # Save EN + KO rows
             for locale in ("en", "ko"):
                 slug = en_slug if locale == "en" else ko_slug
@@ -3240,12 +3244,24 @@ async def run_weekly_pipeline(
                     else:
                         supabase.table("news_posts").insert(row).execute()
                     total_posts += 1
+                    if row["status"] == "published":
+                        published_slugs.append(slug)
                     await _log_stage(supabase, run_id, f"weekly:save:{locale}", "success", t_save,
-                                     output_summary=f"saved {slug}", post_type="weekly", locale=locale)
+                                     output_summary=f"saved {slug} ({row['status']})", post_type="weekly", locale=locale)
                 except Exception as e:
                     all_errors.append(f"Save weekly {locale}: {e}")
                     await _log_stage(supabase, run_id, f"weekly:save:{locale}", "failed", t_save,
                                      error_message=str(e), post_type="weekly", locale=locale)
+
+            # Fire webhook → Astro /api/internal/notify-publish → ISR revalidation
+            # + CDN warm. Mirrors daily's promote_drafts behavior; without this
+            # the auto-published page may stay in stale CDN cache for up to swr=300s.
+            if published_slugs:
+                from services.pipeline_persistence import _notify_auto_publish
+                try:
+                    await _notify_auto_publish(published_slugs)
+                except Exception as e:
+                    logger.warning("Weekly auto-publish notification failed: %s", e)
 
         # Buttondown email (disabled by default)
         if settings.weekly_email_enabled and total_posts > 0:
