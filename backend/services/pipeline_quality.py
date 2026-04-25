@@ -593,6 +593,10 @@ async def _check_digest_quality(
     #   (1) Every item URL across all classified groups (group.items[*].url)
     #   (2) Every enriched/related URL (enriched_map values) — added post-classify,
     #       used by writer prompt. Without (2), enrichment URLs trigger false positives.
+    #   (3) Every CommunityInsight thread URL (hn_url / reddit_url) — Community
+    #       Pulse block headers emit `**[Hacker News](thread_url)**` after the
+    #       linkifier post-process. Without (3), CP thread URLs trigger false-
+    #       positive url_validation_failed flag (see 2026-04-25 fix).
     allowed_items: list[dict[str, str]] = []
     for g in classified:
         for item in (g.items or []):
@@ -605,6 +609,13 @@ async def _check_digest_quality(
             url = entry.get("url") if isinstance(entry, dict) else None
             if url:
                 allowed_items.append({"url": url, "title": "enriched_related"})
+    for insight in (community_summary_map or {}).values():
+        hn_url = getattr(insight, "hn_url", None)
+        if hn_url:
+            allowed_items.append({"url": hn_url, "title": "cp_hn_thread"})
+        reddit_url = getattr(insight, "reddit_url", None)
+        if reddit_url:
+            allowed_items.append({"url": reddit_url, "title": "cp_reddit_thread"})
     fact_pack_for_validation = {"news_items": allowed_items}
     url_validation_failures: list[dict[str, Any]] = []
     for persona_name, persona_output in personas.items():
