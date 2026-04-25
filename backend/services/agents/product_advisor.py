@@ -419,6 +419,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: sign up (free tier). Step 3: first 'wow' moment — describe a concrete result the user sees",
         "tagline_rule": "Lead with what the user DOES, not what the AI IS. BAD: 'Advanced AI assistant'. GOOD: 'Ask anything, get answers with sources and files'",
         "anti_patterns": "Do not say 'powered by GPT/Claude'. Avoid comparing to other assistants unless it's a key differentiator.",
+        "banned_phrases": ["next-generation AI", "advanced reasoning", "human-like conversation", "smart assistant", "AI companion"],
+        "transformations": [
+            {
+                "before": "Advanced AI assistant powered by next-generation models for human-like conversation.",
+                "after": "Drag a 200-page PDF into chat and ask questions — answers cite the page they came from. Supports voice input, image uploads, and a 200K-token context window.",
+            },
+            {
+                "before": "Empower your team with the smartest AI companion ever built.",
+                "after": "A startup founder using one chat thread to draft investor emails, summarize 30-page contracts, and convert handwritten whiteboard photos into structured notes.",
+            },
+        ],
     },
     "image": {
         "feature_focus": "Output quality/resolution, style diversity, editing capabilities (inpainting, outpainting, upscale), input types (text/image/sketch), generation speed",
@@ -426,6 +437,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: access method (web/Discord/API). Step 3: first generated image with approximate wait time",
         "tagline_rule": "Lead with the creative outcome. BAD: 'AI image generator'. GOOD: 'Turn a text prompt into publication-quality art in 60 seconds'",
         "anti_patterns": "Do not omit output resolution or watermark policy. Mention style control options.",
+        "banned_phrases": ["stunning visuals", "creative power", "unleash your imagination", "breathtaking imagery", "limitless creativity"],
+        "transformations": [
+            {
+                "before": "Unleash your imagination with stunning AI-generated visuals.",
+                "after": "Type a scene and get four 1024×1024 variations in ~60 seconds. Designers use it for concept art, ad mockups, and storyboards; commercial-safe model trained on licensed data.",
+            },
+            {
+                "before": "Empowers creators to make breathtaking imagery effortlessly.",
+                "after": "An indie game studio generating 50 character-concept variations in one afternoon to pitch to publishers — without paying for a concept artist.",
+            },
+        ],
     },
     "video": {
         "feature_focus": "Output resolution and duration, rendering time, style/motion control, input types (text/image/video), watermark policy, export formats",
@@ -433,6 +455,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: access method. Step 3: first video clip with approximate render time",
         "tagline_rule": "Lead with the creation outcome. BAD: 'AI video platform'. GOOD: 'Turn a text prompt into a cinematic 10-second clip'",
         "anti_patterns": "Do not omit rendering time, output duration limits, or resolution caps.",
+        "banned_phrases": ["Hollywood-quality", "cinematic excellence", "professional-grade footage", "next-level video"],
+        "transformations": [
+            {
+                "before": "Hollywood-quality AI video at the speed of your imagination.",
+                "after": "Type a scene and get a 10-second 1080p clip in under 2 minutes. Image-to-video and video-to-video modes both supported; max 16 seconds per clip on Pro.",
+            },
+            {
+                "before": "Empower creators to ship cinematic content effortlessly.",
+                "after": "A TikTok marketer producing five 8-second hooks for a campaign in one morning — text-to-video for the cold open, image-to-video to animate brand stills.",
+            },
+        ],
     },
     "audio": {
         "feature_focus": "Voice quality/naturalness, supported languages, voice cloning capabilities, real-time vs batch, audio format support, latency",
@@ -440,6 +473,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: access method. Step 3: first audio output with quality description",
         "tagline_rule": "Lead with the audio outcome. BAD: 'AI voice tool'. GOOD: 'Clone any voice and generate natural speech in 29 languages'",
         "anti_patterns": "Do not omit supported languages or voice quality limitations.",
+        "banned_phrases": ["studio-quality sound", "lifelike voices", "natural-sounding speech", "ultra-realistic audio"],
+        "transformations": [
+            {
+                "before": "Studio-quality AI voices that sound truly lifelike.",
+                "after": "Clone a voice from 30 seconds of sample and dub a 10-minute video into 29 languages. Real-time API streams under 400ms; batch mode renders an hour of audio in ~3 minutes.",
+            },
+            {
+                "before": "Bring your content to life with natural-sounding AI speech.",
+                "after": "A podcaster localizing back-catalog episodes into Spanish and Korean — uploads the English MP3, picks the target voice, gets back a dubbed file with matched cadence.",
+            },
+        ],
     },
     "coding": {
         "feature_focus": "Supported languages/frameworks, IDE integration method (extension/standalone/fork), code completion quality, context awareness (codebase-wide or file-level), diff/refactor capabilities",
@@ -447,6 +491,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: installation method, not just 'sign up'. Step 3: coding 'aha' moment — describe the first generated/fixed code",
         "tagline_rule": "Lead with the coding action. BAD: 'AI coding assistant for developers'. GOOD: 'Edit code by describing changes in plain English'",
         "anti_patterns": "Do not say 'AI-powered IDE'. Mention specific model support (GPT-4o, Claude, etc.) if available.",
+        "banned_phrases": ["10x developer", "ship faster", "supercharge your workflow", "developer productivity"],
+        "transformations": [
+            {
+                "before": "Supercharge your workflow and ship 10x faster with AI.",
+                "after": "Type a comment in plain English and the function appears below. Understands context across your whole repo, supports 26 languages, runs inside VS Code with all your extensions intact.",
+            },
+            {
+                "before": "AI-powered IDE for the next generation of developers.",
+                "after": "A backend engineer refactoring a 3-year-old Django codebase across 50 files in a day — selects a model, asks 'rename this field everywhere it's used', reviews the diff, ships.",
+            },
+        ],
     },
     "workflow": {
         "feature_focus": "Number of app integrations, trigger types (webhook/cron/event), self-host option, visual builder quality, code extensibility, execution limits",
@@ -454,6 +509,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: sign up or self-host command. Step 3: first automation running end-to-end",
         "tagline_rule": "Lead with the automation outcome. BAD: 'AI workflow automation'. GOOD: 'Connect 400+ apps in visual workflows — no code for simple, full JS for complex'",
         "anti_patterns": "Do not omit execution limits or pricing tier differences. Mention self-host option if available.",
+        "banned_phrases": ["modern workflows", "streamline operations", "boost productivity", "frictionless automation"],
+        "transformations": [
+            {
+                "before": "Streamline operations and boost productivity with frictionless automation.",
+                "after": "Connects 400+ apps in a visual canvas with optional JavaScript for the edge cases. Self-host for free or use the cloud tier — both expose the same 400 integrations.",
+            },
+            {
+                "before": "The industry-leading workflow platform for modern teams.",
+                "after": "A two-person ops team running nightly cron jobs that pull Stripe invoices, enrich them via OpenAI, and post a daily revenue summary into Slack — built without writing backend code.",
+            },
+        ],
     },
     "builder": {
         "feature_focus": "No-code/low-code level, deployment options (hosted/self-host), template library, supported AI models, database integration, collaboration features",
@@ -461,6 +527,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: sign up or install. Step 3: first deployed app or working prototype",
         "tagline_rule": "Lead with what gets built. BAD: 'No-code AI app builder'. GOOD: 'Build and deploy an AI chatbot in 10 minutes without writing code'",
         "anti_patterns": "Do not conflate no-code and low-code. Be specific about what requires coding.",
+        "banned_phrases": ["ship in minutes", "anyone can build", "limitless possibilities", "build without limits"],
+        "transformations": [
+            {
+                "before": "The game-changing no-code platform that empowers anyone to ship in minutes.",
+                "after": "Describe an app in chat and get a working React project with auth, Postgres, and Stripe wired up. Export to GitHub when you want to leave the chat and edit code directly.",
+            },
+            {
+                "before": "Unleash limitless possibilities with our AI app builder.",
+                "after": "A solo founder validating a SaaS idea in one weekend — describes the schema, gets a working prototype with login and a paid tier live on a custom domain by Sunday night.",
+            },
+        ],
     },
     "platform": {
         "feature_focus": "Available models/services, API design (REST/SDK/GraphQL), latency/throughput SLA, pricing model (per-token/per-request/seat), security certifications, region availability",
@@ -468,6 +545,21 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: API key or account setup. Step 3: first successful API call with response",
         "tagline_rule": "Lead with the developer value. BAD: 'AI platform for enterprise'. GOOD: 'Access 50+ AI models through one unified API with guaranteed uptime'",
         "anti_patterns": "Do not use marketing language ('enterprise-grade', 'cutting-edge'). Include specific model names and pricing if available.",
+        "banned_phrases": ["enterprise-grade", "modern teams", "scalable infrastructure", "production-ready AI", "robust platform", "mission-critical"],
+        "transformations": [
+            {
+                "before": "Enterprise-grade, production-ready AI infrastructure for modern teams.",
+                "after": "Deploy 50+ open-source models behind one OpenAI-compatible API with predictable per-token pricing. SOC 2 certified; us-east, eu-west, and ap-northeast regions.",
+            },
+            {
+                "before": "Robust hosting for cutting-edge AI models at scale.",
+                "after": "Push a Hugging Face model URL and get a production endpoint with auto-scaling and a usage dashboard in about 3 minutes — no Kubernetes config required.",
+            },
+            {
+                "before": "Empowering enterprises with mission-critical AI.",
+                "after": "A 5-person ML team serving Llama 3 to 50K daily users without managing GPU instances — pay per token, scale to zero on idle, swap models with one config change.",
+            },
+        ],
     },
     "research": {
         "feature_focus": "Paper access scope (arXiv/PubMed/all), search quality (semantic vs keyword), citation tools, summarization quality, full-text availability",
@@ -475,6 +567,21 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: sign up. Step 3: first useful paper found or summary generated",
         "tagline_rule": "Lead with the research outcome. BAD: 'AI research tool'. GOOD: 'Find and summarize relevant papers from 200M+ articles in seconds'",
         "anti_patterns": "Do not overstate paper coverage. Be specific about which databases are indexed.",
+        "banned_phrases": ["groundbreaking research", "academic excellence", "comprehensive database", "scholarly insights", "cutting-edge research tool"],
+        "transformations": [
+            {
+                "before": "A groundbreaking AI research tool with a comprehensive scholarly database.",
+                "after": "Search 200M+ papers across arXiv, PubMed, and ACL with semantic queries — get auto-extracted findings, methods, and limitations in 5 seconds, with citation export to BibTeX.",
+            },
+            {
+                "before": "Empowering academics with cutting-edge research insights.",
+                "after": "Ask 'what are the failure modes of RLHF?' and get 10 relevant papers with the failure modes pulled into a side-by-side comparison table — sortable by year and citation count.",
+            },
+            {
+                "before": "Accelerate scholarly excellence with AI-powered discovery.",
+                "after": "A PhD student writing a thesis literature review — finds 30 relevant papers across 5 databases in one evening, exports the citations, and pastes the auto-generated summary table into Notion.",
+            },
+        ],
     },
     "community": {
         "feature_focus": "Active user count, content types (posts/tools/datasets/models), curation method (algorithmic/editorial), contribution model, API access",
@@ -482,6 +589,17 @@ CATEGORY_GUIDES = {
         "getting_started_note": "Step 1: create account. Step 3: first useful resource discovered or shared",
         "tagline_rule": "Lead with what users find or do. BAD: 'AI community platform'. GOOD: 'Discover, share, and deploy 500K+ open-source AI models'",
         "anti_patterns": "Do not inflate user numbers. Be specific about what type of community it is.",
+        "banned_phrases": ["vibrant community", "thriving ecosystem", "passionate creators", "world-class community"],
+        "transformations": [
+            {
+                "before": "Join a vibrant, thriving community of passionate AI creators.",
+                "after": "Browse 500K+ open-source models, 100K datasets, and 200K demo Spaces — fork any of them with one click, deploy to a hosted endpoint, or pull weights into your own training run.",
+            },
+            {
+                "before": "The world-class community for AI enthusiasts everywhere.",
+                "after": "An ML engineer evaluating which 7B chat model to fine-tune for a customer-service bot — compares 12 candidates by community downloads, reads the model cards, runs each in a hosted Space before committing.",
+            },
+        ],
     },
 }
 
@@ -505,7 +623,29 @@ def build_product_category_guide(classification: dict) -> str:
         f"Tagline: {guide['tagline_rule']}",
         f"Avoid: {guide['anti_patterns']}",
     ])
-    return "\n".join(parts)
+
+    # Category-specific banned phrases (in addition to global BANNED WORDS)
+    banned = guide.get("banned_phrases") or []
+    if banned:
+        quoted = ", ".join(f'"{p}"' for p in banned)
+        parts.append(
+            f"Category-specific banned phrases (in addition to the global BANNED WORDS list): {quoted}"
+        )
+
+    # Category-specific BEFORE→AFTER transformations
+    transformations = guide.get("transformations") or []
+    if transformations:
+        parts.append("")
+        parts.append(f"### {category} transformation examples (apply this voice)")
+        for t in transformations:
+            before = t.get("before", "")
+            after = t.get("after", "")
+            if before and after:
+                parts.append(f'BEFORE: "{before}"')
+                parts.append(f'AFTER:  "{after}"')
+                parts.append("")
+
+    return "\n".join(parts).rstrip()
 
 
 PRODUCT_GROUNDING_RULES = """## Factual Grounding (MANDATORY)
@@ -549,14 +689,29 @@ Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10
      0 = contradictory (e.g., pricing="freemium" but pricing_detail has NO $0 tier) or fabricated prices
 
 ## Dimension 3: Editorial Voice
+**Important: 0to1log's editorial voice is third-person, conditional, and concrete — NOT "we recommend" pronoun voice. Score against the patterns below, not against a generic "marketing-vs-editorial" gut check.**
+
 - description_tone: editorial clarity vs marketing copy
-    10 = reads like a review, concrete
-     5 = mix of editorial + marketing
-     0 = full buzzword marketing ("revolutionary", "cutting-edge")
-- editor_note_voice: editorial "we recommend" vs first-person claim
-    10 = editorial "we" voice throughout
-     5 = borderline
-     0 = fabricated first-person ("my go-to")
+    10 = concrete actions + specifics + zero buzzwords. Starts with an action verb ("Deploy...", "Search...", "Generate...", "Type..."). Names what the user DOES and what they get back. May include numbers, named features, or comparisons.
+       Example 10: "Search across 200M+ papers and skim one-sentence TLDRs instead of long abstracts. Researchers use it to find related work, save citations to a Library, and follow AI-curated Research Feeds to stay current."
+       Example 10: "Deploy a model or app to Spaces and get a hosted endpoint and shareable demo without managing infrastructure."
+     5 = mostly concrete but contains 1 promotional phrase or vague claim ("differentiators include...", "industry-standard", "powerful tooling") — OR generic verbs without specifics ("provides", "enables", "offers").
+     0 = ≥2 BANNED WORDS or hyperbolic marketing tone ("revolutionary", "cutting-edge", "empower", "transform", "unleash", "next-generation").
+
+- editor_note_voice: third-person editorial guidance with a conditional recommendation
+    **Canonical 0to1log patterns (all score 10):**
+    - "Worth trying if [condition]; best suited for [audience]"
+    - "Useful when [situation]; less ideal for [other audience]"
+    - "Stand-out for [strength]; weaker on [limitation]"
+    - "We recommend [audience] try [action]" (also valid, but NOT required)
+
+    10 = third-person editorial guidance that names a SPECIFIC condition AND a SPECIFIC audience (or limitation). The reader can self-select in or out.
+       Example 10: "Worth trying if your team needs a low-friction way to publish model demos and get an API endpoint quickly; best suited for ML engineers who can invest a little time configuring org policies and quotas."
+       Example 10: "Useful when you need to shortlist literature quickly or keep project-specific feeds for ongoing discovery; best suited for researchers who can organize papers into Library folders and tolerate partial TLDR coverage."
+     5 = generic positive blurb without a conditional or audience anchor ("Great tool for productivity", "Highly recommended for everyone").
+     0 = first-person personal claim ("my go-to", "I love this", "I use it daily") OR pure marketing ("the best AI assistant", "world-class platform").
+
+    **Do NOT penalize the absence of "we" — the canonical 0to1log voice is third-person conditional ("Worth trying if..."). Only penalize first-person personal claims or marketing copy.**
 
 ## Dimension 4: Bilingual Quality
 - ko_naturalness: natural Korean vs translation-flavored
@@ -1247,16 +1402,22 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
     # "no concrete tiers" as top_issue even when tiers are present.
     pricing_block = pricing_detail[:800] if pricing_detail else "(not set)"
 
+    # Caps sized to fit the canonical max output without truncation:
+    # - description: 2-3 sentences, typical 200-400 chars → 700 cap
+    # - editor_note: typical 200-400 chars → 500 cap
+    # Truncation here previously caused the judge to score data integrity
+    # dims (e.g. ko_length_compliance) low because mid-word cuts looked
+    # like real data corruption.
     parts = [
         f"tagline: {profile.get('tagline', '')}",
         f"tagline_ko ({len(tagline_ko)} chars): {tagline_ko}",
-        f"description: {description[:300]}",
+        f"description: {description[:700]}",
         f"features (EN, {len(features)} items):",
         *[f"  [{i}] {f}" for i, f in enumerate(features[:5])],
         f"features_ko ({len(features_ko)} items — MUST equal EN count of {len(features)}):",
         *[f"  [{i}] {f}" for i, f in enumerate(features_ko[:5])],
         f"use_case[0]: {_first(use_cases)}",
-        f"editor_note: {editor_note[:200]}",
+        f"editor_note: {editor_note[:500]}",
         f"pricing: {pricing}",
         f"pricing_detail:\n{pricing_block}",
         f"facts.technical_specs: {tech_specs[:3]}",
