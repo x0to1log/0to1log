@@ -10,6 +10,66 @@
 
 ---
 
+## Plan Revisions (2026-04-26 review feedback)
+
+Five design errors found in the v1 plan during review. **Implementer must apply these revisions to the affected tasks below — they override the original task text.**
+
+### R1 — Task 1 hydration over-attributed legacy quotes (FIXED)
+v1 placed all multi-platform legacy quotes under the higher-upvote thread. That invents per-quote provenance the legacy data never had. **Already fixed in commit `f19ec05`** — multi-platform legacy hydration now returns both threads with EMPTY quotes; downstream renders key_point only via the HasQuotes:no path. Single-platform legacy still keeps quotes (provenance unambiguous).
+
+### R2 — Task 2 has hidden behavior change; merge into Task 4
+v1 Task 2 alone expands top_n from 5-10 to 30. That's NOT "no behavior change" — until Task 4 plugs in the relevance filter, the summarizer receives 30 raw comments per platform → 6× larger blob → token budget pressure + noise. **Drop Task 2 as a standalone task. Move the top-N expansion into Task 4** (combined with the relevance filter wire-up so it ships atomically).
+
+### R3 — Task 3 fallback semantics are inverted
+v1 Task 3 has the relevance filter return top-3 voted when the LLM returns `selected_indexes: []`. That defeats the whole purpose: Apr 25 DeepSeek = LLM correctly judging "everything is off-topic" — falling back to top-3 re-introduces the political flame wars we want to filter out.
+
+**Correct semantics:**
+- **API failure** (network, parse error, retry exhausted) → fail-OPEN: return `candidates[:max_pick]` (preserve top-N voted ordering — better degraded data than no data when the LLM is unreachable)
+- **Valid LLM response with `selected_indexes: []`** → fail-CLOSED: return `[]` (LLM judged correctly that nothing is on-topic; let the summarizer's sentiment=null path drop the section, which is the intended behavior)
+
+Update `_filter_relevant_comments` accordingly. Update tests to cover both branches separately. Specifically: the v1 test `test_filter_falls_back_when_zero_selected` must FLIP — assert `result == []`, not `result == candidates[:3]`.
+
+### R4 — Task 5 ranking still receives raw blob with off-topic platform text
+v1 Task 5 only updates the per-entry filter (`_filter_community_map_by_summary`) to recognize "any thread relevant → keep entry". But when a multi-platform group has one relevant + one off-topic platform, the WHOLE raw blob (containing both) is still passed to ranking. Ranking parses upvote signal from raw text and counts upvotes from the off-topic platform too — undermining the relevance filter.
+
+**Correct fix (add to Task 5):** when a multi-platform insight has one off-topic thread, strip that platform's section from the blob before passing to ranking. Implementation:
+- New helper `_redact_offtopic_sections(raw_blob, insight) -> str` that removes `[Hacker News|url=...]` and `[Reddit r/sub|url=...]` sections whose platform's thread has `sentiment=None`
+- Apply in `_filter_community_map_by_summary` (or in caller before ranking)
+- Tests: blob with HN sentiment=mixed + Reddit sentiment=None → output blob has only HN section
+
+### R5 — Task 6 missing consumer updates (allowlist + linkifier + QC)
+v1 Task 6 only updates `_build_cp_data_entries`. But three other consumers also read flat `hn_url`/`reddit_url` and depend on upvote-matching logic:
+- `_build_writer_url_allowlist` (pipeline_digest.py:135) — must read URLs from `insight.synthesized_threads()`
+- `_linkify_cp_section` (pipeline_digest.py:264) — must build hn_index / reddit_index from threads, not flat fields
+- `_check_digest_quality` URL allowlist (pipeline_quality.py:591) — same pattern
+
+**Add subtasks 6b, 6c, 6d** (or split into Tasks 6, 7, 8, 9). Each is small (~20-30 LOC) but missing them means the CP section won't actually render correctly even after Task 6 ships.
+
+### R6 — Already-resolved items confirmed
+P1-1 ranking filter (pipeline.py:1508), summarizer JSON mode (ranking.py:541), EN/KO quote pair alignment (pipeline_digest.py:140), thread URL in QC allowlist (pipeline_quality.py:591) — all present in code. v1 plan correctly accounts for these. No action.
+
+---
+
+### Renumbered task ordering (post-revision)
+
+| # | Task | Status |
+|---|---|---|
+| 1 | ThreadInfo + CommunityInsight.threads + hydration | DONE (`dbd8942` + `f19ec05`) |
+| 2 | (was top-N expansion) | DROPPED — folded into Task 4 |
+| 3 | filter_relevant_comments helper (gpt-5-nano) — with R3 fallback fix | pending |
+| 4 | summarize_community per-platform + top-N expansion (R2) | pending |
+| 5 | _filter_community_map_by_summary uses synthesized_threads + R4 redaction | pending |
+| 6 | _build_cp_data_entries (per-thread) | pending |
+| 6b | _build_writer_url_allowlist reads from threads (R5) | pending |
+| 6c | _linkify_cp_section reads URLs from threads (R5) | pending |
+| 6d | _check_digest_quality allowlist reads from threads (R5) | pending |
+| 7 | Drop multi-platform split rule from prompt rule 9 | pending |
+| 8 | Apr 26+ cron verification + journal | pending |
+
+The original Task 2-8 sections below remain as reference but apply the revisions above before implementation.
+
+---
+
 ## Prerequisite context
 
 - **Repo:** `c:\Users\amy\Desktop\0to1log` on `main` (main-only workflow per CLAUDE.md — no feature branches)
