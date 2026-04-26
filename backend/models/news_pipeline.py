@@ -84,9 +84,21 @@ class CommunityInsight(BaseModel):
 
     def synthesized_threads(self) -> list[ThreadInfo]:
         """Return per-platform threads, synthesizing from legacy fields if needed.
-        New checkpoints set `threads` directly; old ones derive from the flat
-        fields. Quotes from legacy data are placed under the dominant (higher-
-        upvote) thread since legacy data has no per-quote provenance."""
+
+        New checkpoints set `threads` directly. Legacy checkpoints derive from
+        flat fields. Quote-to-thread assignment respects provenance:
+
+        - Single-platform legacy (only one of hn_url / reddit_url set): the
+          quote provenance is unambiguous, so legacy quotes are placed on the
+          single thread.
+        - Multi-platform legacy (BOTH urls set): the legacy summarizer mixed
+          quotes from both platforms with no per-quote tag — we don't know
+          which quote came from which platform. Both threads are returned with
+          EMPTY quotes; downstream renders the key_point only (HasQuotes: no
+          path). This is the conservative choice — better to lose blockquote
+          rendering for ambiguous legacy data than to invent provenance and
+          attribute a quote to the wrong source.
+        """
         if self.threads:
             return self.threads
 
@@ -105,7 +117,7 @@ class CommunityInsight(BaseModel):
                 upvotes=hn_upvotes,
                 comments=hn_comments,
                 sentiment=self.sentiment,
-                quotes=[],     # placeholder; quotes assigned to dominant below
+                quotes=[],     # set below for single-platform case
                 quotes_ko=[],
                 key_point=self.key_point,
             ))
@@ -127,11 +139,15 @@ class CommunityInsight(BaseModel):
                 key_point=self.key_point,
             ))
 
-        # Place all legacy quotes under the dominant (highest-upvote) thread
-        if derived and (self.quotes or self.quotes_ko):
-            derived.sort(key=lambda t: t.upvotes, reverse=True)
+        # Provenance-aware quote assignment for legacy data.
+        if len(derived) == 1 and (self.quotes or self.quotes_ko):
+            # Single-platform legacy: quote provenance is unambiguous.
             derived[0].quotes = list(self.quotes or [])
             derived[0].quotes_ko = list(self.quotes_ko or [])
+        # Multi-platform legacy (len(derived) == 2): leave both with empty
+        # quotes. Legacy data has no per-quote platform tag — attributing
+        # quotes to a "dominant" thread would invent provenance. Downstream
+        # falls back to key_point-only rendering (HasQuotes: no path).
 
         return derived
 
