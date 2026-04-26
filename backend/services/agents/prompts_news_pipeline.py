@@ -1282,7 +1282,7 @@ Expert quiz guidance:
 Quiz item format (each of 3 items):
 - `question`: the question text
 - `options`: exactly 4 choices (strings). No "All of the above" or "None". Distractors MUST be plausible — pull them from other Top Stories of the week when possible.
-- `answer`: the correct choice — MUST be a verbatim match of one string in `options`
+- `answer_index`: integer 0-3 — the position of the correct choice in `options` (0=first, 1=second, 2=third, 3=fourth)
 - `explanation`: 1-2 sentences grounding the answer in the week's news. May reference which Top Story it came from.
 
 ## Output JSON format
@@ -1477,7 +1477,7 @@ Learner quiz guidance:
 Quiz item format (each of 3 items):
 - `question`: the question text in plain language. If an acronym appears, expand it on first use inside the question or options.
 - `options`: exactly 4 choices (strings). No "All of the above" or "None". Distractors MUST be plausible — pull them from other Top Stories of the week when possible.
-- `answer`: the correct choice — MUST be a verbatim match of one string in `options`
+- `answer_index`: integer 0-3 — the position of the correct choice in `options` (0=first, 1=second, 2=third, 3=fourth)
 - `explanation`: 1-2 sentences. Explain WHY it's correct and give beginner-friendly context (e.g., what the term means, why the company matters).
 
 ## Output JSON format
@@ -1633,7 +1633,7 @@ The user message may end with an appended block under the marker `---ENGLISH WEE
 Rules:
 - Same number of items (3). Same order as the English array.
 - Translate `question`, every string in `options`, and `explanation` into natural Korean.
-- `answer` in the Korean version MUST be a verbatim match of one string in the Korean `options`. Translate the answer the same way you translated that option, so string equality holds.
+- `answer_index` in the Korean version MUST be the same 0-3 integer as the corresponding English item. The index points at a position in `options` — translate the options text consistently with the question, but the integer index does not change.
 - Do NOT add, remove, or reorder options. Do NOT invent new questions.
 - If the marker is absent or the JSON array is empty, return `weekly_quiz_ko: []`.
 - The quiz JSON block is NOT part of the markdown body — do NOT include it in the `ko` field.
