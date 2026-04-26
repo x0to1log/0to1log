@@ -1565,7 +1565,15 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                         text = c.get("comment_text", "")
                         clean = _re.sub(r"<[^>]+>", " ", text).strip()
                         clean = _html.unescape(clean)
-                        clean = _re.sub(r"\s+", " ", clean)
+                        # Voice normalization: HN convention uses `> ` to quote
+                        # another comment. Strip those lines so only this
+                        # commenter's own words flow downstream — eliminates
+                        # quote-pollution like the Apr 26 "Who are you quoting?"
+                        # leak (thread 47892074). Meta-only replies fall below
+                        # the 50-char gate after stripping and self-drop.
+                        lines = [ln for ln in clean.splitlines() if not ln.lstrip().startswith(">")]
+                        clean = " ".join(lines)
+                        clean = _re.sub(r"\s+", " ", clean).strip()
                         if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
                             comments_text.append(clean)
                         if len(comments_text) >= HN_COMMENTS_TOP_N:
