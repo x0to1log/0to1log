@@ -146,6 +146,10 @@ def test_quiz_schema_uses_answer_index():
     assert ai_prop["maximum"] == 3
     assert "answer" not in props
 
+    options_prop = props["options"]
+    assert options_prop["minItems"] == 4
+    assert options_prop["maxItems"] == 4
+
 
 def test_quiz_pydantic_model_uses_answer_index():
     """QuizOneLocale Pydantic model accepts answer_index, rejects out-of-range."""
@@ -173,6 +177,31 @@ def test_quiz_pydantic_model_uses_answer_index():
         QuizOneLocale(
             question="Q",
             answer_index=-1,
+            options=["a", "b", "c", "d"],
+            explanation="",
+        )
+
+
+def test_quiz_pydantic_model_rejects_bool_answer_index():
+    """isinstance(True, int) is True in Python — Pydantic v2 default coerces.
+    Defense-in-depth: explicitly reject booleans at the model level so the
+    pipeline validator's runtime guard isn't the only protection."""
+    from services.agents.schemas.news_writer import QuizOneLocale
+    from pydantic import ValidationError
+    import pytest as _pytest
+
+    with _pytest.raises(ValidationError):
+        QuizOneLocale(
+            question="Q",
+            answer_index=True,
+            options=["a", "b", "c", "d"],
+            explanation="",
+        )
+
+    with _pytest.raises(ValidationError):
+        QuizOneLocale(
+            question="Q",
+            answer_index=False,
             options=["a", "b", "c", "d"],
             explanation="",
         )

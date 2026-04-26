@@ -43,6 +43,16 @@ class QuizOneLocale(BaseModel):
     options: list[str] = Field(min_length=4, max_length=4)
     explanation: str = ""
 
+    @field_validator("answer_index", mode="before")
+    @classmethod
+    def reject_bool(cls, v: Any) -> Any:
+        # isinstance(True, int) is True in Python. Pydantic v2 default
+        # mode coerces bool -> int silently, which would map True/False
+        # to options[1]/options[0]. Reject explicitly.
+        if isinstance(v, bool):
+            raise ValueError("answer_index must be an integer, not a bool")
+        return v
+
 
 class SourceEntry(BaseModel):
     """Writer-supplied source card metadata.
