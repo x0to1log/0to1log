@@ -111,17 +111,32 @@ class TestSingleItemValidator:
         assert out["answer"] == "B"
 
     def test_answer_index_takes_precedence_over_legacy_answer(self):
-        """If both present, answer_index wins — it's the canonical form."""
+        """If both present, answer_index wins.
+
+        The legacy `answer` field is set to a value NOT in options — a
+        "legacy first" buggy implementation would either drop the item
+        (legacy text fails the `answer in options` check) or return the
+        bad text. Both fail the assertion below."""
         item = {
             "question": "Q",
             "options": ["A", "B", "C", "D"],
             "answer_index": 2,
-            "answer": "B",
+            "answer": "NOT_IN_OPTIONS",
             "explanation": "",
         }
         out = _validate_and_shuffle_quiz_item(item)
         assert out is not None
         assert out["answer"] == "C"
+
+    def test_answer_index_boolean_rejected(self):
+        """isinstance(True, int) is True in Python — explicit guard required."""
+        item = {
+            "question": "Q",
+            "options": ["A", "B", "C", "D"],
+            "answer_index": True,
+            "explanation": "",
+        }
+        assert _validate_and_shuffle_quiz_item(item) is None
 
 
 def _make_valid_item(question: str = "Q", answer: str = "B") -> dict:

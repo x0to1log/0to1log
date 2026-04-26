@@ -312,25 +312,25 @@ def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | Non
     options_raw = raw.get("options")
     explanation = str(raw.get("explanation") or "").strip()
     if not isinstance(options_raw, list):
-        logger.warning("%s dropped: options not a list", label)
+        logger.warning("%s dropped: options not a list q=%r", label, question[:60])
         return None
     options = [str(o).strip() for o in options_raw]
     if not question or len(options) != 4:
         logger.warning(
-            "%s dropped (invalid): q_len=%d options=%d",
-            label, len(question), len(options),
+            "%s dropped (invalid): q_len=%d options=%d q=%r",
+            label, len(question), len(options), question[:60],
         )
         return None
 
     answer: str | None = None
     if "answer_index" in raw:
         idx = raw.get("answer_index")
-        if isinstance(idx, int) and 0 <= idx < len(options):
+        if isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(options):
             answer = options[idx]
         else:
             logger.warning(
-                "%s dropped: answer_index out of range or wrong type: %r",
-                label, idx,
+                "%s dropped: answer_index out of range or wrong type: idx=%r q=%r",
+                label, idx, question[:60],
             )
             return None
 
@@ -340,8 +340,8 @@ def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | Non
             answer = legacy_answer
         else:
             logger.warning(
-                "%s dropped (legacy answer not in options): answer=%r options_count=%d",
-                label, legacy_answer[:60], len(options),
+                "%s dropped (legacy answer not in options): answer=%r q=%r options_count=%d",
+                label, legacy_answer[:60], question[:60], len(options),
             )
             return None
 
