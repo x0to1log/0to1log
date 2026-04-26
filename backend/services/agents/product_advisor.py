@@ -668,10 +668,20 @@ PRODUCT_GROUNDING_RULES = """## Factual Grounding (MANDATORY)
 
 PRODUCT_QUALITY_RUBRIC = """You are a quality reviewer for 0to1log AI product profiles.
 Score the given profile on the SUBJECTIVE sub-scores below (0-10 int each).
-**Return ONLY sub-scores with evidence. Do NOT compute averages or overall_score — Python aggregates.**
+**Return ONLY sub-scores with evidence + reasoning + score. Do NOT compute averages or overall_score — Python aggregates.**
 
 **Mechanical sub-scores (facts_coverage, pricing_integrity, banned_words, ko_length_compliance, ko_completeness)
 are computed deterministically in Python. Do NOT include them — anything you emit for those is overwritten.**
+
+## How to score (chain-of-thought)
+For EACH sub-score, you MUST emit three fields in this order:
+1. **evidence**: a direct quote from the profile field being judged.
+2. **reasoning**: ONE short sentence comparing the evidence to the rubric anchors (10/5/0).
+   Format: "Compared to rubric: [criterion summary]. Evidence shows [observation]. Therefore: [score]."
+3. **score**: 0-10 integer that follows from your reasoning.
+
+If your reasoning and your score disagree, the score is wrong — fix it. Reasoning forces
+you to read the rubric anchors before committing to a number.
 
 ## Dimension 1: Specificity (the 0to1log trademark)
 - tagline_specificity: concrete outcome vs vague capability
@@ -724,19 +734,23 @@ are computed deterministically in Python. Do NOT include them — anything you e
 
 (ko_length_compliance and ko_completeness are computed in Python — do not include them.)
 
-## Output JSON (EXACT shape — only the subjective sub-scores, no other keys)
+## Output JSON (EXACT shape — every sub-score has evidence + reasoning + score)
 {
   "specificity": {
-    "tagline_specificity": {"evidence": "quote from tagline", "score": 0-10},
-    "feature_specificity": {"evidence": "quote from feature[0]", "score": 0-10},
-    "use_case_specificity": {"evidence": "quote from use_case[0]", "score": 0-10}
+    "tagline_specificity": {
+      "evidence": "Generate full songs from a text prompt or reference audio",
+      "reasoning": "Compared to rubric: 10 = specific action+output. Evidence shows concrete verb 'Generate', concrete output 'full songs', and named input formats. Matches the 10 anchor. Therefore: 10.",
+      "score": 10
+    },
+    "feature_specificity": {"evidence": "...", "reasoning": "...", "score": 0-10},
+    "use_case_specificity": {"evidence": "...", "reasoning": "...", "score": 0-10}
   },
   "voice": {
-    "description_tone": {"evidence": "quote from description", "score": 0-10},
-    "editor_note_voice": {"evidence": "quote from editor_note", "score": 0-10}
+    "description_tone": {"evidence": "...", "reasoning": "...", "score": 0-10},
+    "editor_note_voice": {"evidence": "...", "reasoning": "...", "score": 0-10}
   },
   "bilingual": {
-    "ko_naturalness": {"evidence": "quote from tagline_ko or features_ko", "score": 0-10}
+    "ko_naturalness": {"evidence": "...", "reasoning": "...", "score": 0-10}
   },
   "top_issue": "one short sentence naming the most critical flaw, or null if everything passes"
 }
@@ -1519,7 +1533,7 @@ async def _score_profile(
                     {"role": "system", "content": PRODUCT_QUALITY_RUBRIC},
                     {"role": "user", "content": summary},
                 ],
-                max_tokens=1500,
+                max_tokens=2500,
                 response_format={"type": "json_object"},
                 prompt_cache_key="product-quality-rubric",
             ),
