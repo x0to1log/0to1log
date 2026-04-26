@@ -15,6 +15,10 @@ from services.agents.client import (
     parse_ai_json,
     pydantic_to_strict_response_format,
 )
+from services.agents.product_validators import (
+    critical_generation_issues,
+    run_all_python_validators,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -663,8 +667,11 @@ PRODUCT_GROUNDING_RULES = """## Factual Grounding (MANDATORY)
 
 
 PRODUCT_QUALITY_RUBRIC = """You are a quality reviewer for 0to1log AI product profiles.
-Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10 int).
-**Return ONLY sub-scores with evidence. Do NOT compute dimension averages or overall_score — we aggregate in code.**
+Score the given profile on the SUBJECTIVE sub-scores below (0-10 int each).
+**Return ONLY sub-scores with evidence. Do NOT compute averages or overall_score — Python aggregates.**
+
+**Mechanical sub-scores (facts_coverage, pricing_integrity, banned_words, ko_length_compliance, ko_completeness)
+are computed deterministically in Python. Do NOT include them — anything you emit for those is overwritten.**
 
 ## Dimension 1: Specificity (the 0to1log trademark)
 - tagline_specificity: concrete outcome vs vague capability
@@ -681,17 +688,8 @@ Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10
      0 = "for everyone"
 
 ## Dimension 2: Factual Grounding
-**Important: "null" or "(not set)" is HONEST — score 8 for honest empty. Only penalize hallucination or contradictions.**
-- facts_coverage: did technical_specs/unique_features (from the profile's facts block) get reflected in features?
-    10 = 2+ specs visible in features
-     8 = facts block is empty — nothing to cover (honest)
-     5 = 1 spec visible out of 2+ available
-     0 = facts had specs but features ignored them entirely
-- pricing_integrity: does pricing label match pricing_detail content?
-    10 = pricing label matches pricing_detail tiers exactly (free/freemium/paid/enterprise mapping sound)
-     8 = pricing = null AND pricing_detail = "(not set)" — honest about unknown pricing
-     5 = partial alignment (minor inconsistency)
-     0 = contradictory (e.g., pricing="freemium" but pricing_detail has NO $0 tier) or fabricated prices
+**SKIPPED — facts_coverage, pricing_integrity, banned_words are all computed in Python.**
+**Do NOT include a "grounding" key in your output.**
 
 ## Dimension 3: Editorial Voice
 **Important: 0to1log's editorial voice is third-person, conditional, and concrete — NOT "we recommend" pronoun voice. Score against the patterns below, not against a generic "marketing-vs-editorial" gut check.**
@@ -723,26 +721,22 @@ Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10
     10 = reads like Korean tech writing
      5 = some translation feel
      0 = literal word-for-word
-- ko_length_compliance: **THIS SUB-SCORE IS COMPUTED IN PYTHON, NOT BY YOU.** Emit any reasonable placeholder (e.g., score=10, evidence="auto"). The runtime overwrites your value with a deterministic check (tagline_ko ≤ 22 chars AND features_ko count == features count) before aggregation.
 
-## Output JSON (EXACT shape — no score fields on dimensions, no overall_score)
+(ko_length_compliance and ko_completeness are computed in Python — do not include them.)
+
+## Output JSON (EXACT shape — only the subjective sub-scores, no other keys)
 {
   "specificity": {
     "tagline_specificity": {"evidence": "quote from tagline", "score": 0-10},
     "feature_specificity": {"evidence": "quote from feature[0]", "score": 0-10},
     "use_case_specificity": {"evidence": "quote from use_case[0]", "score": 0-10}
   },
-  "grounding": {
-    "facts_coverage": {"evidence": "which specs appear in features", "score": 0-10},
-    "pricing_integrity": {"evidence": "pricing label vs pricing_detail check", "score": 0-10}
-  },
   "voice": {
     "description_tone": {"evidence": "quote from description", "score": 0-10},
     "editor_note_voice": {"evidence": "quote from editor_note", "score": 0-10}
   },
   "bilingual": {
-    "ko_naturalness": {"evidence": "quote from tagline_ko or features_ko", "score": 0-10},
-    "ko_length_compliance": {"evidence": "char count + list count statement", "score": 0-10}
+    "ko_naturalness": {"evidence": "quote from tagline_ko or features_ko", "score": 0-10}
   },
   "top_issue": "one short sentence naming the most critical flaw, or null if everything passes"
 }
@@ -1430,45 +1424,37 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
 _QUALITY_DIMENSIONS = ("specificity", "grounding", "voice", "bilingual")
 
 
-def _override_ko_length_compliance(score_data: dict, profile: dict) -> None:
-    """Replace LLM's ko_length_compliance sub-score with a deterministic check.
+def _merge_python_validators(score_data: dict, profile: dict, facts: dict) -> None:
+    """Insert deterministic Python sub-scores into the LLM's score dict.
 
-    The constraint (tagline_ko ≤ 22 chars AND features_ko count == features count)
-    is purely mechanical, but the LLM judge has shown nondeterminism here —
-    occasionally scoring 0 with evidence that contradicts the score (e.g.,
-    "21 chars; counts match" → score 0). Python computes the truth and
-    overwrites whatever the LLM said.
+    The hybrid scoring system reserves the LLM for purely subjective
+    sub-scores (specificity grading, voice judgment, ko_naturalness) and
+    computes everything mechanical in Python. This eliminates judge
+    nondeterminism for ~half of the rubric and surfaces actionable bugs
+    (e.g., pricing_detail_ko verbatim copy of EN) at scoring time.
 
-    Mutates `score_data` in place.
+    Mutates `score_data` in place to add a fully-populated `grounding`
+    dimension and to fill bilingual.ko_length_compliance + ko_completeness.
     """
     if not isinstance(score_data, dict):
         return
+
+    py = run_all_python_validators(profile, facts or {})
+
+    # grounding is 100% Python — overwrite whatever LLM emitted
+    score_data["grounding"] = {
+        "facts_coverage": py["facts_coverage"],
+        "pricing_integrity": py["pricing_integrity"],
+        "banned_words": py["banned_words"],
+    }
+
+    # bilingual is mixed: ko_naturalness from LLM, the rest from Python
     bilingual = score_data.get("bilingual")
     if not isinstance(bilingual, dict):
-        return
-
-    tagline_ko = profile.get("tagline_ko") or ""
-    features = profile.get("features") or []
-    features_ko = profile.get("features_ko") or []
-    tag_len = len(tagline_ko)
-    tag_ok = tag_len <= 22
-    cnt_ok = len(features) == len(features_ko)
-
-    if tag_ok and cnt_ok:
-        score, label = 10, "both met"
-    elif tag_ok ^ cnt_ok:
-        score, label = 5, "one violated"
-    else:
-        score, label = 0, "both violated"
-
-    bilingual["ko_length_compliance"] = {
-        "score": score,
-        "evidence": (
-            f"tagline_ko={tag_len} chars (limit 22, {'OK' if tag_ok else 'OVER'}); "
-            f"features_ko count={len(features_ko)} vs features count={len(features)} "
-            f"({'match' if cnt_ok else 'mismatch'}) — {label} [computed in Python]"
-        ),
-    }
+        bilingual = {}
+        score_data["bilingual"] = bilingual
+    bilingual["ko_length_compliance"] = py["ko_length_compliance"]
+    bilingual["ko_completeness"] = py["ko_completeness"]
 
 
 def _aggregate_quality_score(data: dict) -> int:
@@ -1507,16 +1493,24 @@ def _aggregate_quality_score(data: dict) -> int:
 async def _score_profile(
     profile: dict, facts: dict, client, model: str,
 ) -> tuple[dict, int]:
-    """Score a generated profile against PRODUCT_QUALITY_RUBRIC.
+    """Hybrid scoring: Python validators for mechanical sub-scores + LLM for subjective.
 
-    Returns (score_dict, tokens_used). Never raises — on failure returns
-    ({}, 0) so generation flow is never blocked by scoring. Aggregation
-    is done in Python (see _aggregate_quality_score) — LLM just provides
-    sub-scores + evidence + top_issue.
+    Returns (score_dict, tokens_used). Never raises — on failure the LLM
+    portion degrades to empty, but Python sub-scores still populate.
+
+    Aggregation is done in Python (_aggregate_quality_score). LLM provides
+    only the 6 subjective sub-scores (specificity x3, voice x2, ko_naturalness).
+    Python provides 5 mechanical sub-scores (grounding x3 + ko_length +
+    ko_completeness). Same content → same Python sub-scores → variance
+    from rescoring drops sharply.
     """
     if not profile:
         return {}, 0
+
     summary = _build_quality_summary(profile, facts or {})
+    score: dict = {}
+    tokens_used = 0
+
     try:
         resp = await client.chat.completions.create(
             **compat_create_kwargs(
@@ -1531,20 +1525,24 @@ async def _score_profile(
             ),
         )
         metrics = extract_usage_metrics(resp, model)
+        tokens_used = metrics["tokens_used"]
         raw = resp.choices[0].message.content or ""
-        score = parse_ai_json(raw, "product_quality_score")
-        if isinstance(score, dict):
-            _override_ko_length_compliance(score, profile)
-            overall = _aggregate_quality_score(score)
-            if overall and overall < 70:
-                logger.warning(
-                    "Low product quality score: %d — top_issue: %s",
-                    overall, score.get("top_issue"),
-                )
-        return score or {}, metrics["tokens_used"]
+        parsed = parse_ai_json(raw, "product_quality_score")
+        if isinstance(parsed, dict):
+            score = parsed
     except Exception as e:
-        logger.warning("Quality scoring failed: %s", e)
-        return {}, 0
+        logger.warning("LLM quality scoring failed (Python sub-scores still apply): %s", e)
+
+    # Always merge Python validators — even if LLM call failed, mechanical
+    # sub-scores will populate what they can.
+    _merge_python_validators(score, profile, facts or {})
+    overall = _aggregate_quality_score(score)
+    if overall and overall < 70:
+        logger.warning(
+            "Low product quality score: %d — top_issue: %s",
+            overall, score.get("top_issue"),
+        )
+    return score, tokens_used
 
 
 async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict, str, int]:
@@ -1706,7 +1704,22 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             result["secondary_categories"] = cleaned
 
         # Deterministic format validation (no LLM cost)
-        result["_validation_warnings"] = _check_profile_format(result)
+        format_warnings = _check_profile_format(result)
+
+        # Generation-time content validators — catches issues like
+        # pricing_detail_ko being a verbatim copy of pricing_detail before
+        # the row is written to the DB. Surfaces in the same warnings
+        # channel so admins see them in pipeline logs.
+        gen_issues = critical_generation_issues(result)
+        if gen_issues:
+            logger.warning(
+                "Critical generation issues for %s: %s",
+                body.slug or product_name, gen_issues,
+            )
+
+        result["_validation_warnings"] = format_warnings + [
+            f"[critical] {issue}" for issue in gen_issues
+        ]
         if result["_validation_warnings"]:
             logger.info("Profile validation warnings: %s", result["_validation_warnings"])
 
