@@ -67,6 +67,62 @@ class TestSingleItemValidator:
         assert _validate_and_shuffle_quiz_item("string") is None
         assert _validate_and_shuffle_quiz_item([1, 2]) is None
 
+    def test_answer_index_form_accepted(self):
+        """New contract: writer emits answer_index 0-3, validator resolves text."""
+        item = {
+            "question": "Which model?",
+            "options": ["GPT-5", "Claude", "Gemini", "Llama"],
+            "answer_index": 1,
+            "explanation": "Anthropic released Claude.",
+        }
+        out = _validate_and_shuffle_quiz_item(item)
+        assert out is not None
+        assert out["answer"] == "Claude"
+        assert "Claude" in out["options"]
+
+    def test_answer_index_out_of_range_rejected(self):
+        item = {
+            "question": "Q",
+            "options": ["A", "B", "C", "D"],
+            "answer_index": 7,
+            "explanation": "",
+        }
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_answer_index_negative_rejected(self):
+        item = {
+            "question": "Q",
+            "options": ["A", "B", "C", "D"],
+            "answer_index": -1,
+            "explanation": "",
+        }
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_legacy_answer_text_still_accepted(self):
+        """Backward-compat for old checkpoints / pre-migration weekly writer."""
+        item = {
+            "question": "Q",
+            "options": ["A", "B", "C", "D"],
+            "answer": "B",
+            "explanation": "",
+        }
+        out = _validate_and_shuffle_quiz_item(item)
+        assert out is not None
+        assert out["answer"] == "B"
+
+    def test_answer_index_takes_precedence_over_legacy_answer(self):
+        """If both present, answer_index wins — it's the canonical form."""
+        item = {
+            "question": "Q",
+            "options": ["A", "B", "C", "D"],
+            "answer_index": 2,
+            "answer": "B",
+            "explanation": "",
+        }
+        out = _validate_and_shuffle_quiz_item(item)
+        assert out is not None
+        assert out["answer"] == "C"
+
 
 def _make_valid_item(question: str = "Q", answer: str = "B") -> dict:
     return {

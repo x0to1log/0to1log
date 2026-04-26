@@ -293,32 +293,58 @@ def _dedup_source_cards(sources: list[dict]) -> list[dict]:
 def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | None:
     """Validate a single quiz item + shuffle options. Return None if invalid.
 
-    An item is valid when:
-    - It is a dict with non-empty question, 4 string options, and an answer
-    - ``answer`` is one of ``options`` (verbatim text match — NOT a letter
-      like "A"/"B", NOT a position index). Letter-form answers silently
-      break after options get shuffled: the string "A" no longer points to
-      the originally-correct choice, producing incorrect frontend display.
+    Canonical contract (post-2026-04-26): writer emits ``answer_index``
+    (integer 0-3 referencing ``options``). Strict json_schema enforces
+    the range, so the cross-field invariant ``answer ∈ options`` becomes
+    structurally guaranteed.
 
-    Options are shuffled to even out the answer-position distribution
-    (LLMs tend to place correct answer first).
+    Legacy contract: writer emits ``answer`` as a verbatim text copy of
+    one of the options. Kept for backward-compat with old checkpoints
+    and pre-migration weekly writer. Will be removed after both daily
+    and weekly prompts ship the new shape (deferred cleanup).
+
+    If both ``answer_index`` and ``answer`` are present, ``answer_index``
+    wins — it's the canonical form.
     """
     if not isinstance(raw, dict):
         return None
     question = str(raw.get("question") or "").strip()
     options_raw = raw.get("options")
-    answer = str(raw.get("answer") or "").strip()
     explanation = str(raw.get("explanation") or "").strip()
     if not isinstance(options_raw, list):
         logger.warning("%s dropped: options not a list", label)
         return None
     options = [str(o).strip() for o in options_raw]
-    if not question or len(options) != 4 or answer not in options:
+    if not question or len(options) != 4:
         logger.warning(
-            "%s dropped (invalid): q_len=%d options=%d answer_in=%s answer=%r",
-            label, len(question), len(options), answer in options, answer[:40],
+            "%s dropped (invalid): q_len=%d options=%d",
+            label, len(question), len(options),
         )
         return None
+
+    answer: str | None = None
+    if "answer_index" in raw:
+        idx = raw.get("answer_index")
+        if isinstance(idx, int) and 0 <= idx < len(options):
+            answer = options[idx]
+        else:
+            logger.warning(
+                "%s dropped: answer_index out of range or wrong type: %r",
+                label, idx,
+            )
+            return None
+
+    if answer is None:
+        legacy_answer = str(raw.get("answer") or "").strip()
+        if legacy_answer and legacy_answer in options:
+            answer = legacy_answer
+        else:
+            logger.warning(
+                "%s dropped (legacy answer not in options): answer=%r options_count=%d",
+                label, legacy_answer[:60], len(options),
+            )
+            return None
+
     shuffled = list(options)
     random.shuffle(shuffled)
     return {
