@@ -19,9 +19,33 @@ def _mock_openai_response(data: dict, tokens: int = 300):
 
 
 SAMPLE_CANDIDATES = [
-    NewsCandidate(title="GPT-5 Released", url="https://a.com/1", snippet="Major model release", source="tavily"),
-    NewsCandidate(title="AI Startup raises $500M", url="https://b.com/2", snippet="Funding round", source="tavily"),
-    NewsCandidate(title="New transformer paper", url="https://c.com/3", snippet="Architecture improvement", source="tavily"),
+    NewsCandidate(
+        title="GPT-5 Released",
+        url="https://a.com/1",
+        snippet="Major model release",
+        source="tavily",
+        source_kind="official_site",
+        source_confidence="high",
+        source_tier="primary",
+    ),
+    NewsCandidate(
+        title="AI Startup raises $500M",
+        url="https://b.com/2",
+        snippet="Funding round",
+        source="tavily",
+        source_kind="media",
+        source_confidence="high",
+        source_tier="secondary",
+    ),
+    NewsCandidate(
+        title="New transformer paper",
+        url="https://c.com/3",
+        snippet="Architecture improvement",
+        source="tavily",
+        source_kind="paper",
+        source_confidence="high",
+        source_tier="primary",
+    ),
 ]
 
 
@@ -63,6 +87,139 @@ async def test_classify_candidates_returns_multiple_picks_and_prompt():
     assert any(c.url == "https://a.com/1" for c in result.business_picks)
     assert "[1] GPT-5 Released" in user_prompt
     assert usage["tokens_used"] > 0
+
+
+@pytest.mark.asyncio
+async def test_classify_candidates_prompt_includes_source_provenance():
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
+
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
+         patch("services.agents.ranking.settings") as mock_settings:
+        mock_settings.openai_model_light = "gpt-4o"
+
+        from services.agents.ranking import classify_candidates
+        _, _, user_prompt = await classify_candidates(SAMPLE_CANDIDATES)
+
+    assert "Source tier: primary" in user_prompt
+    assert "Source kind: paper" in user_prompt
+    assert "Source confidence: high" in user_prompt
+
+
+@pytest.mark.asyncio
+async def test_classify_candidates_debug_records_raw_and_invalid_url_picks():
+    response = {
+        "research": [
+            {"url": "https://missing.example/paper", "subcategory": "papers", "reason": "Not in pool"},
+            {"url": "https://c.com/3", "subcategory": "papers", "reason": "In pool"},
+        ],
+        "business": [],
+    }
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create.return_value = _mock_openai_response(response)
+
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
+         patch("services.agents.ranking.settings") as mock_settings:
+        mock_settings.openai_model_light = "gpt-4o"
+
+        from services.agents.ranking import classify_candidates
+        result, _, _ = await classify_candidates(SAMPLE_CANDIDATES)
+
+    assert len(result.research_picks) == 1
+    assert result.classification_debug["raw_picks"] == response
+    assert result.classification_debug["invalid_url_picks"] == [
+        {
+            "category": "research",
+            "url": "https://missing.example/paper",
+            "reason": "URL not found in candidate pool",
+        }
+    ]
+
+
+def test_emergency_classification_selects_research_and_business_picks():
+    from services.agents.ranking import build_emergency_classification
+
+    result, meta = build_emergency_classification(SAMPLE_CANDIDATES)
+
+    assert result.research_picks
+    assert result.business_picks
+    assert result.research_picks[0].subcategory in {"llm_models", "papers", "open_source"}
+    assert result.business_picks[0].subcategory in {"big_tech", "industry", "new_tools"}
+    assert meta["mode"] == "classification_zero_emergency"
+    assert meta["research_selected"] == len(result.research_picks)
+    assert meta["business_selected"] == len(result.business_picks)
+
+
+def test_emergency_classification_caps_papers_when_other_research_signals_exist():
+    from services.agents.ranking import build_emergency_classification
+
+    candidates = [
+        NewsCandidate(
+            title=f"Paper {i}: LLM benchmark architecture study",
+            url=f"https://arxiv.org/abs/2604.{i:05d}",
+            snippet="LLM benchmark architecture paper with training data and evaluation.",
+            source="arxiv",
+            source_kind="paper",
+            source_confidence="high",
+            source_tier="primary",
+        )
+        for i in range(4)
+    ] + [
+        NewsCandidate(
+            title="Qwen3.6-27B beats larger predecessor on coding benchmarks",
+            url="https://the-decoder.com/qwen36-27b",
+            snippet="Alibaba released a dense open-weight model with benchmark gains.",
+            source="exa",
+            source_kind="media",
+            source_confidence="high",
+            source_tier="secondary",
+        ),
+        NewsCandidate(
+            title="NousResearch/hermes-agent: The agent that grows with you",
+            url="https://github.com/NousResearch/hermes-agent",
+            snippet="AI agent framework | Stars: 116,660 | Language: Python",
+            source="github_trending",
+            source_kind="official_repo",
+            source_confidence="medium",
+            source_tier="primary",
+        ),
+    ]
+
+    result, _ = build_emergency_classification(candidates)
+
+    subcategories = [pick.subcategory for pick in result.research_picks]
+    assert subcategories.count("papers") <= 2
+    assert "llm_models" in subcategories
+    assert "open_source" in subcategories
+
+
+def test_emergency_business_subcategory_treats_raise_and_merging_as_industry():
+    from services.agents.ranking import build_emergency_classification
+
+    candidates = [
+        NewsCandidate(
+            title="Two founders raise a $5.1 million pre-seed for an AI social network",
+            url="https://techcrunch.com/example-raise",
+            snippet="Funding round for an AI product.",
+            source="tavily",
+            source_kind="media",
+            source_confidence="high",
+            source_tier="secondary",
+        ),
+        NewsCandidate(
+            title="Why Cohere is merging with Aleph Alpha",
+            url="https://techcrunch.com/example-merging",
+            snippet="AI companies combine in a transatlantic deal.",
+            source="tavily",
+            source_kind="media",
+            source_confidence="high",
+            source_tier="secondary",
+        ),
+    ]
+
+    result, _ = build_emergency_classification(candidates)
+
+    assert {pick.subcategory for pick in result.business_picks} == {"industry"}
 
 
 @pytest.mark.asyncio

@@ -23,7 +23,13 @@ from services.agents.advisor import (
     generate_term_content,
 )
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
-from services.agents.ranking import classify_candidates, merge_classified, rank_classified, summarize_community
+from services.agents.ranking import (
+    build_emergency_classification,
+    classify_candidates,
+    merge_classified,
+    rank_classified,
+    summarize_community,
+)
 from services.handbook_validators import validate_term_scope, validate_korean_name, validate_term_grounding
 from services.news_collection import collect_community_reactions, collect_news, enrich_sources
 
@@ -1357,6 +1363,25 @@ async def run_daily_pipeline(
             classify_user_prompt = fallback_prompt
             classify_fallback_used = True
 
+        classify_emergency_used = False
+        classify_emergency_meta: dict[str, Any] = {}
+        if not classification.research_picks and not classification.business_picks:
+            classification, classify_emergency_meta = build_emergency_classification(candidates)
+            classify_emergency_used = bool(
+                classification.research_picks or classification.business_picks
+            )
+            if classify_emergency_used:
+                logger.warning(
+                    "Emergency classification fallback selected %d research and %d business picks",
+                    len(classification.research_picks),
+                    len(classification.business_picks),
+                )
+            else:
+                logger.error(
+                    "Emergency classification fallback found no publishable picks from %d candidates",
+                    len(candidates),
+                )
+
         # Code-level dedup safety net: even if the LLM ignored the ALREADY COVERED
         # block, drop candidates whose entity tokens (company + product) overlap
         # heavily with recent headlines. This is a deterministic guard.
@@ -1403,11 +1428,17 @@ async def run_daily_pipeline(
                 "dedup_dropped": dedup_dropped,
                 "recent_headlines_count": len(recent_headlines),
                 "fallback_used": classify_fallback_used,
+                "emergency_fallback_used": classify_emergency_used,
+                "emergency_meta": classify_emergency_meta,
+                "classification_debug": classification.classification_debug,
             },
         )
         _save_checkpoint(supabase, run_id, "classify", {
             "research_picks": [c.model_dump() for c in classification.research_picks],
             "business_picks": [c.model_dump() for c in classification.business_picks],
+            "fallback_used": classify_fallback_used,
+            "emergency_fallback_used": classify_emergency_used,
+            "classification_debug": classification.classification_debug,
         })
 
         # Stage: merge (group same-event articles from full candidate pool)

@@ -218,6 +218,16 @@ def test_extract_usage_metrics_without_service_tier_attr_defaults_standard():
     assert _close(metrics["cost_usd"], 2.25)
 
 
+def test_extract_usage_metrics_uses_requested_tier_when_response_omits_it():
+    metrics = extract_usage_metrics(
+        _resp(1_000_000, 1_000_000, cached=None),
+        "gpt-5-mini",
+        requested_service_tier="flex",
+    )
+    assert metrics["service_tier"] == "flex"
+    assert _close(metrics["cost_usd"], 1.125)
+
+
 def test_extract_usage_metrics_applies_cached_discount_end_to_end():
     # 1M input 90% cached, 0 output, standard tier
     # fresh = 100K * $0.25/M = $0.025

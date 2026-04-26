@@ -239,6 +239,59 @@ async def test_pipeline_no_research_creates_2_posts():
 
 
 @pytest.mark.asyncio
+async def test_pipeline_uses_emergency_classification_after_zero_pick_retry():
+    """If both LLM classify attempts return zero picks, code fallback keeps draft generation alive."""
+    empty_classification = ClassificationResult()
+    classify_mock = AsyncMock(side_effect=[
+        (empty_classification, EMPTY_USAGE, "prompt with dedup"),
+        (empty_classification, EMPTY_USAGE, "prompt without dedup"),
+    ])
+    merge_mock = AsyncMock(return_value=(SAMPLE_MERGED_RESULT, EMPTY_USAGE))
+
+    candidates = [
+        NewsCandidate(
+            title="OpenAI releases GPT-5 with 1M context and benchmark gains",
+            url="https://openai.com/news/gpt-5",
+            snippet="Official model release with 1M context and benchmark details.",
+            source="exa",
+            source_kind="official_site",
+            source_confidence="high",
+            source_tier="primary",
+        ),
+        NewsCandidate(
+            title="AI startup raises $500M to build enterprise agents",
+            url="https://techcrunch.com/ai-startup-raises-500m",
+            snippet="$500M funding round for enterprise agent platform.",
+            source="tavily",
+            source_kind="media",
+            source_confidence="high",
+            source_tier="secondary",
+        ),
+    ]
+
+    with patch("services.pipeline.get_supabase", return_value=_Supabase()), \
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(candidates, SAMPLE_COLLECT_META)), \
+         patch("services.pipeline.classify_candidates", classify_mock), \
+         patch("services.pipeline.merge_classified", merge_mock), \
+         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="community raw"), \
+         patch("services.pipeline.summarize_community", new_callable=AsyncMock, return_value=(_community_summary_map(), EMPTY_USAGE)), \
+         patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
+         patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
+        from services.pipeline import run_daily_pipeline
+
+        result = await run_daily_pipeline()
+
+    emergency_classification = merge_mock.await_args.args[0]
+    assert classify_mock.await_count == 2
+    assert emergency_classification.research_picks
+    assert emergency_classification.business_picks
+    assert emergency_classification.classification_debug["emergency_fallback_used"] is True
+    assert result.posts_created == 4
+
+
+@pytest.mark.asyncio
 async def test_pipeline_no_candidates_returns_zero_posts():
     """Empty collect result returns 0 posts without error."""
     with patch("services.pipeline.get_supabase", return_value=_Supabase()), \

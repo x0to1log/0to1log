@@ -159,6 +159,7 @@ class ClassificationResult(BaseModel):
     # Flat picks from classify step (before merge)
     research_picks: list[ClassifiedCandidate] = []
     business_picks: list[ClassifiedCandidate] = []
+    classification_debug: dict = Field(default_factory=dict)
 
 
 class FactClaim(BaseModel):

@@ -2,6 +2,7 @@
 import logging
 import re
 from typing import Any
+from urllib.parse import urlparse
 
 from core.config import settings
 from models.news_pipeline import (
@@ -29,6 +30,351 @@ from services.agents.prompts_news_pipeline import (
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
+
+
+_TRUSTED_MEDIA_DOMAINS = (
+    "reuters.com",
+    "bloomberg.com",
+    "techcrunch.com",
+    "theverge.com",
+    "cnbc.com",
+    "wsj.com",
+    "businessinsider.com",
+    "axios.com",
+    "ft.com",
+    "the-decoder.com",
+    "venturebeat.com",
+    "semianalysis.com",
+    "technologyreview.com",
+    "scmp.com",
+)
+
+_BIG_TECH_TERMS = (
+    "openai",
+    "anthropic",
+    "google",
+    "deepmind",
+    "microsoft",
+    "meta",
+    "apple",
+    "amazon",
+    "aws",
+    "nvidia",
+    "xai",
+    "deepseek",
+    "qwen",
+    "alibaba",
+)
+
+_RESEARCH_TERMS = (
+    "model",
+    "llm",
+    "benchmark",
+    "parameter",
+    "context",
+    "weights",
+    "open-weight",
+    "open source",
+    "architecture",
+    "paper",
+    "arxiv",
+    "dataset",
+    "inference",
+    "training",
+    "fine-tuning",
+    "agent",
+    "sota",
+)
+
+_BUSINESS_TERMS = (
+    "raises",
+    "raise",
+    "raised",
+    "funding",
+    "valuation",
+    "acquires",
+    "acquisition",
+    "merger",
+    "merging",
+    "ipo",
+    "partnership",
+    "launches",
+    "released",
+    "rolls out",
+    "regulation",
+    "lawsuit",
+    "investigation",
+    "chip",
+    "revenue",
+    "enterprise",
+)
+
+
+def _candidate_domain(url: str) -> str:
+    return (urlparse(url).hostname or "").lower().removeprefix("www.")
+
+
+def _candidate_text(candidate: NewsCandidate) -> str:
+    return f"{candidate.title} {candidate.snippet}".lower()
+
+
+def _is_probably_index_page(candidate: NewsCandidate) -> bool:
+    """Filter category/homepage results that should not become a digest lead."""
+    parsed = urlparse(candidate.url)
+    path = parsed.path.lower().rstrip("/")
+    title = candidate.title.lower()
+    if path in {"", "/", "/news", "/blog", "/articles", "/category/artificial-intelligence"}:
+        return True
+    index_markers = (
+        "newsroom | product",
+        "latest articles",
+        "topics/artificial-intelligence",
+        "category/artificial-intelligence",
+        "open source ai - fully open weights",
+    )
+    return any(marker in title for marker in index_markers)
+
+
+def _stars(candidate: NewsCandidate) -> int:
+    match = re.search(r"stars:\s*([\d,]+)", candidate.snippet, flags=re.IGNORECASE)
+    return int(match.group(1).replace(",", "")) if match else 0
+
+
+def _known_ai_org_repo(candidate: NewsCandidate) -> bool:
+    title = candidate.title.lower()
+    return any(
+        title.startswith(prefix)
+        for prefix in (
+            "openai/",
+            "anthropic-ai/",
+            "facebookresearch/",
+            "meta-llama/",
+            "microsoft/",
+            "google-deepmind/",
+            "google-research/",
+            "nvidia/",
+            "huggingface/",
+            "pytorch/",
+            "tensorflow/",
+            "langchain-ai/",
+            "vllm-project/",
+            "ollama/",
+            "karpathy/",
+            "unsloth/",
+            "nousresearch/",
+            "qualcomm/",
+            "catboost/",
+        )
+    )
+
+
+def _classify_research_subcategory(candidate: NewsCandidate) -> str:
+    text = _candidate_text(candidate)
+    domain = _candidate_domain(candidate.url)
+    kind = (candidate.source_kind or "").lower()
+    if kind == "paper" or "arxiv.org" in domain:
+        return "papers"
+    if kind == "official_repo" or "github.com" in domain:
+        return "open_source"
+    if any(term in text for term in ("model", "llm", "benchmark", "parameter", "weights", "context")):
+        return "llm_models"
+    return "papers"
+
+
+def _classify_business_subcategory(candidate: NewsCandidate) -> str:
+    text = _candidate_text(candidate)
+    if any(term in text for term in ("funding", "raises", "raise", "raised", "valuation", "acquires", "acquisition", "merger", "merging", "ipo", "regulation", "lawsuit", "investigation", "chip")):
+        return "industry"
+    if any(term in text for term in _BIG_TECH_TERMS):
+        return "big_tech"
+    return "new_tools"
+
+
+def _research_score(candidate: NewsCandidate) -> int:
+    if _is_probably_index_page(candidate):
+        return -100
+    text = _candidate_text(candidate)
+    domain = _candidate_domain(candidate.url)
+    kind = (candidate.source_kind or "").lower()
+    tier = (candidate.source_tier or "").lower()
+    confidence = (candidate.source_confidence or "").lower()
+
+    score = 0
+    if tier == "primary":
+        score += 4
+    if confidence == "high":
+        score += 2
+    if kind == "paper" or "arxiv.org" in domain:
+        score += 9
+    elif kind == "official_repo" or "github.com" in domain:
+        score += 5
+        if _known_ai_org_repo(candidate) or _stars(candidate) >= 1000:
+            score += 4
+    elif kind in {"official_site", "official_platform_asset", "research_primary"}:
+        score += 5
+
+    score += sum(1 for term in _RESEARCH_TERMS if term in text)
+    if re.search(r"\b\d+(?:\.\d+)?\s*(b|m|k|%|tokens?|context|parameters?)\b", text):
+        score += 2
+    if kind in {"media", "analysis"} and score < 7:
+        score -= 3
+    return score
+
+
+def _business_score(candidate: NewsCandidate) -> int:
+    if _is_probably_index_page(candidate):
+        return -100
+    text = _candidate_text(candidate)
+    domain = _candidate_domain(candidate.url)
+    kind = (candidate.source_kind or "").lower()
+    confidence = (candidate.source_confidence or "").lower()
+    tier = (candidate.source_tier or "").lower()
+
+    score = 0
+    if any(domain.endswith(d) for d in _TRUSTED_MEDIA_DOMAINS):
+        score += 5
+    if kind in {"media", "official_site"}:
+        score += 3
+    if confidence == "high":
+        score += 2
+    if tier == "primary" and kind == "official_site":
+        score += 2
+    score += sum(1 for term in _BUSINESS_TERMS if term in text)
+    if any(term in text for term in _BIG_TECH_TERMS):
+        score += 2
+    if re.search(r"\$[\d,.]+\s*(billion|million|bn|m|b)?|\b\d+(?:\.\d+)?\s*(billion|million|%)\b", text):
+        score += 2
+    if kind in {"paper", "official_repo"} and score < 7:
+        score -= 3
+    return score
+
+
+def _format_classification_candidate(index: int, candidate: NewsCandidate) -> str:
+    return (
+        f"[{index}] {candidate.title}\n"
+        f"    URL: {candidate.url}\n"
+        f"    Source: {candidate.source}\n"
+        f"    Source tier: {candidate.source_tier or 'unknown'}\n"
+        f"    Source kind: {candidate.source_kind or 'unknown'}\n"
+        f"    Source confidence: {candidate.source_confidence or 'unknown'}\n"
+        f"    Snippet: {candidate.snippet[:300]}"
+    )
+
+
+def _build_emergency_pick(
+    candidate: NewsCandidate,
+    category: str,
+    subcategory: str,
+    score: int,
+) -> ClassifiedCandidate:
+    return ClassifiedCandidate(
+        title=candidate.title,
+        url=candidate.url,
+        snippet=candidate.snippet,
+        source=candidate.source,
+        category=category,
+        subcategory=subcategory,
+        reason=(
+            "Emergency fallback selected this candidate after the LLM classifier "
+            f"returned zero picks; rule score={score}, "
+            f"source={candidate.source_kind or 'unknown'}/{candidate.source_tier or 'unknown'}."
+        ),
+    )
+
+
+def build_emergency_classification(
+    candidates: list[NewsCandidate],
+    *,
+    per_category_limit: int = 4,
+) -> tuple[ClassificationResult, dict[str, Any]]:
+    """Deterministically rescue a non-empty daily draft when LLM classify returns 0.
+
+    This is deliberately conservative: it favors primary/official/reputable
+    sources and concrete research/business signals. It is not a replacement for
+    the LLM classifier; it is an availability safety net before quality gates.
+    """
+    result = ClassificationResult()
+    used_urls: set[str] = set()
+
+    research_scored = sorted(
+        ((c, _research_score(c)) for c in candidates),
+        key=lambda item: (-item[1], item[0].title.lower()),
+    )
+    business_scored = sorted(
+        ((c, _business_score(c)) for c in candidates),
+        key=lambda item: (-item[1], item[0].title.lower()),
+    )
+
+    research_subcategories = {
+        _classify_research_subcategory(candidate)
+        for candidate, score in research_scored
+        if score >= 6
+    }
+    research_caps = {"papers": 2} if (research_subcategories - {"papers"}) else {}
+    research_counts: dict[str, int] = {}
+    for candidate, score in research_scored:
+        if score < 6 or candidate.url in used_urls:
+            continue
+        subcategory = _classify_research_subcategory(candidate)
+        if research_counts.get(subcategory, 0) >= research_caps.get(subcategory, per_category_limit):
+            continue
+        result.research_picks.append(
+            _build_emergency_pick(
+                candidate,
+                "research",
+                subcategory,
+                score,
+            )
+        )
+        research_counts[subcategory] = research_counts.get(subcategory, 0) + 1
+        used_urls.add(candidate.url)
+        if len(result.research_picks) >= per_category_limit:
+            break
+
+    for candidate, score in business_scored:
+        if score < 6 or candidate.url in used_urls:
+            continue
+        result.business_picks.append(
+            _build_emergency_pick(
+                candidate,
+                "business",
+                _classify_business_subcategory(candidate),
+                score,
+            )
+        )
+        used_urls.add(candidate.url)
+        if len(result.business_picks) >= per_category_limit:
+            break
+
+    meta = {
+        "mode": "classification_zero_emergency",
+        "candidate_count": len(candidates),
+        "research_selected": len(result.research_picks),
+        "business_selected": len(result.business_picks),
+        "research_candidates": [
+            {
+                "title": pick.title,
+                "url": pick.url,
+                "subcategory": pick.subcategory,
+                "source": pick.source,
+            }
+            for pick in result.research_picks
+        ],
+        "business_candidates": [
+            {
+                "title": pick.title,
+                "url": pick.url,
+                "subcategory": pick.subcategory,
+                "source": pick.source,
+            }
+            for pick in result.business_picks
+        ],
+    }
+    result.classification_debug = {
+        "emergency_fallback_used": True,
+        "emergency_meta": meta,
+    }
+    return result, meta
 
 
 def _has_hangul(text: str | None) -> bool:
@@ -114,9 +460,7 @@ async def classify_candidates(
 
     candidate_lines = []
     for i, c in enumerate(candidates):
-        candidate_lines.append(
-            f"[{i + 1}] {c.title}\n    URL: {c.url}\n    Snippet: {c.snippet[:300]}"
-        )
+        candidate_lines.append(_format_classification_candidate(i + 1, c))
     user_prompt = "\n\n".join(candidate_lines)
 
     # Add recent headlines for event dedup. Label MUST match the system prompt rule
@@ -154,7 +498,7 @@ async def classify_candidates(
                     prompt_cache_key="classify-candidates",
                 )
             )
-            raw = response.choices[0].message.content
+            raw = response.choices[0].message.content or ""
             data = parse_ai_json(raw, "Classification")
             usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             break
@@ -167,6 +511,7 @@ async def classify_candidates(
 
     url_map = {c.url: c for c in candidates}
     result = ClassificationResult()
+    invalid_url_picks: list[dict[str, str]] = []
 
     for category in ("research", "business"):
         picks = data.get(category, [])
@@ -180,6 +525,11 @@ async def classify_candidates(
             candidate = url_map.get(url)
             if not candidate:
                 logger.warning("Classified URL not in candidates: %s", url)
+                invalid_url_picks.append({
+                    "category": category,
+                    "url": url,
+                    "reason": "URL not found in candidate pool",
+                })
                 continue
             classified.append(ClassifiedCandidate(
                 title=candidate.title,
@@ -191,6 +541,12 @@ async def classify_candidates(
                 reason=pick.get("reason", ""),
             ))
         setattr(result, f"{category}_picks", classified[:8])
+
+    result.classification_debug = {
+        "raw_response": raw[:4000],
+        "raw_picks": data,
+        "invalid_url_picks": invalid_url_picks,
+    }
 
     # Log cross-category overlap
     if result.research_picks and result.business_picks:

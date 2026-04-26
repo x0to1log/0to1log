@@ -191,7 +191,11 @@ def estimate_openai_cost_usd(
     return float(total)
 
 
-def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, Any]:
+def extract_usage_metrics(
+    response: Any,
+    model_name: str | None,
+    requested_service_tier: str | None = None,
+) -> dict[str, Any]:
     """Extract tokens + cost from an OpenAI chat-completions response.
 
     Auto-detects ``response.service_tier`` (echoed back by the API — shows
@@ -221,8 +225,9 @@ def extract_usage_metrics(response: Any, model_name: str | None) -> dict[str, An
     reasoning_tokens = int(getattr(completion_details, "reasoning_tokens", 0) or 0)
 
     # response.service_tier is the tier that actually served the request.
-    # May be absent in older SDK mocks → treat as unknown → standard rate.
-    service_tier = getattr(response, "service_tier", None)
+    # Older SDK mocks may omit it; in that case use the request-side tier if
+    # the caller supplied one so flex cost accounting stays conservative but useful.
+    service_tier = getattr(response, "service_tier", None) or requested_service_tier
 
     return {
         "model_used": model_name,
