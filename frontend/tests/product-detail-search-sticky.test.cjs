@@ -17,6 +17,25 @@ function assert(condition, message) {
   }
 }
 
+function extractBlock(source, selector, fromIndex = 0) {
+  const start = source.indexOf(`${selector} {`, fromIndex);
+  assert(start !== -1, `Missing CSS block for ${selector}`);
+
+  const bodyStart = source.indexOf('{', start);
+  let depth = 0;
+
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') depth -= 1;
+    if (depth === 0) {
+      return source.slice(bodyStart + 1, index);
+    }
+  }
+
+  throw new Error(`Unclosed CSS block for ${selector}`);
+}
+
 assert(
   exists('src/components/products/ProductSearchBar.astro'),
   'Product search UI should be extracted into a reusable ProductSearchBar component',
@@ -66,6 +85,14 @@ assert(
 });
 
 const globalCss = read('src/styles/global.css');
+const detailStickyBlock = extractBlock(
+  globalCss,
+  '.product-detail-search.handbook-search-sticky',
+);
+const detailStickyWithHeaderBlock = extractBlock(
+  globalCss,
+  'body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.handbook-search-sticky',
+);
 assert(
   globalCss.includes('.product-detail-search'),
   'Global styles should include a product detail search wrapper',
@@ -75,11 +102,11 @@ assert(
   'Product detail search should reuse the shared handbook-style search input',
 );
 assert(
-  globalCss.includes('.product-detail-search.handbook-search-sticky {\n  top: 0.75rem;'),
+  detailStickyBlock.includes('top: 0.75rem;'),
   'Product detail search should keep a visible top offset instead of sticking flush to the viewport',
 );
 assert(
-  globalCss.includes('body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.handbook-search-sticky {\n  top: calc(var(--header-h, 4rem) + 0.75rem);'),
+  detailStickyWithHeaderBlock.includes('top: calc(var(--header-h, 4rem) + 0.75rem);'),
   'Product detail search should keep the same breathing room below the fixed header while scrolling',
 );
 

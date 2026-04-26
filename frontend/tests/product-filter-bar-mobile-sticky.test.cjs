@@ -40,12 +40,16 @@ assert(
   'Product filter bar should stay sticky on the products page',
 );
 assert(
-  filterBarBlock.includes('top: calc(var(--toolbar-top, 0px) + 0.25rem);'),
-  'Product filter bar should stay visible with a small offset below the header',
+  filterBarBlock.includes('top: var(--toolbar-top, 0px);'),
+  'Product filter bar should attach directly below the header without a floating gap',
 );
 assert(
-  filterBarBlock.includes('padding: 0.35rem 0 0.75rem;'),
-  'Product filter bar should keep the search closer to the header instead of leaving a tall empty band',
+  filterBarBlock.includes('padding: 0 0 0.75rem;'),
+  'Product filter bar should remove the empty strip above the sticky search input',
+);
+assert(
+  !filterBarBlock.includes('calc(var(--toolbar-top, 0px) + 0.25rem)'),
+  'Product filter bar should not add an extra sticky offset above the search input',
 );
 assert(
   filterBarBlock.includes('background: var(--color-bg-primary);'),

@@ -11256,7 +11256,7 @@ pre:hover .blog-code-copy {
 /* --- Filter Bar --- */
 .product-filter-bar {
   position: sticky;
-  top: calc(var(--toolbar-top, 0px) + 0.25rem);
+  top: var(--toolbar-top, 0px);
   z-index: 20;
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
@@ -11265,7 +11265,7 @@ pre:hover .blog-code-copy {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0.35rem 0 0.75rem;
+  padding: 0 0 0.75rem;
 }
 
 .product-filter-tabs {
