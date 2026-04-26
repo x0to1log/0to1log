@@ -205,7 +205,12 @@ Given the English profile of a product, write the Korean version of specific fie
 
 6. **getting_started_ko** (array, exactly 3 strings): Same 3 steps, natural Korean.
 
-7. **pricing_detail_ko** (string or null): Same pricing table in Korean. Keep $ prices as-is, translate plan descriptions.
+7. **pricing_detail_ko** (string or null): Korean translation of pricing_detail.
+   - Translate ALL column headers: "Plan" → "플랜", "Price" → "가격", "Includes" → "포함"
+   - Translate prose in the rightmost column (e.g., "Generous weekly rate limits" → "넉넉한 주간 사용 한도", "Unlimited Tab completions" → "Tab 완성 무제한")
+   - Keep $ prices, plan names ("Pro", "Free", "Individual", "Hobby"), and product/model names in English
+   - **DO NOT copy pricing_detail verbatim.** If pricing_detail is non-null and you would emit the same English text for pricing_detail_ko, you have failed — translate it.
+   - If pricing_detail is null, set pricing_detail_ko to null.
 
 ## Example
 
@@ -718,10 +723,7 @@ Score the given profile on 4 dimensions. Each dimension has 2-3 sub-scores (0-10
     10 = reads like Korean tech writing
      5 = some translation feel
      0 = literal word-for-word
-- ko_length_compliance: tagline_ko ≤ 22 chars AND features_ko count == features count (see `features count: EN=N KO=M` line in the summary)
-    10 = both constraints met
-     5 = one violated
-     0 = both violated
+- ko_length_compliance: **THIS SUB-SCORE IS COMPUTED IN PYTHON, NOT BY YOU.** Emit any reasonable placeholder (e.g., score=10, evidence="auto"). The runtime overwrites your value with a deterministic check (tagline_ko ≤ 22 chars AND features_ko count == features count) before aggregation.
 
 ## Output JSON (EXACT shape — no score fields on dimensions, no overall_score)
 {
@@ -1428,6 +1430,47 @@ def _build_quality_summary(profile: dict, facts: dict) -> str:
 _QUALITY_DIMENSIONS = ("specificity", "grounding", "voice", "bilingual")
 
 
+def _override_ko_length_compliance(score_data: dict, profile: dict) -> None:
+    """Replace LLM's ko_length_compliance sub-score with a deterministic check.
+
+    The constraint (tagline_ko ≤ 22 chars AND features_ko count == features count)
+    is purely mechanical, but the LLM judge has shown nondeterminism here —
+    occasionally scoring 0 with evidence that contradicts the score (e.g.,
+    "21 chars; counts match" → score 0). Python computes the truth and
+    overwrites whatever the LLM said.
+
+    Mutates `score_data` in place.
+    """
+    if not isinstance(score_data, dict):
+        return
+    bilingual = score_data.get("bilingual")
+    if not isinstance(bilingual, dict):
+        return
+
+    tagline_ko = profile.get("tagline_ko") or ""
+    features = profile.get("features") or []
+    features_ko = profile.get("features_ko") or []
+    tag_len = len(tagline_ko)
+    tag_ok = tag_len <= 22
+    cnt_ok = len(features) == len(features_ko)
+
+    if tag_ok and cnt_ok:
+        score, label = 10, "both met"
+    elif tag_ok ^ cnt_ok:
+        score, label = 5, "one violated"
+    else:
+        score, label = 0, "both violated"
+
+    bilingual["ko_length_compliance"] = {
+        "score": score,
+        "evidence": (
+            f"tagline_ko={tag_len} chars (limit 22, {'OK' if tag_ok else 'OVER'}); "
+            f"features_ko count={len(features_ko)} vs features count={len(features)} "
+            f"({'match' if cnt_ok else 'mismatch'}) — {label} [computed in Python]"
+        ),
+    }
+
+
 def _aggregate_quality_score(data: dict) -> int:
     """Compute overall_score (0-100 int) from LLM-provided sub-scores.
 
@@ -1491,6 +1534,7 @@ async def _score_profile(
         raw = resp.choices[0].message.content or ""
         score = parse_ai_json(raw, "product_quality_score")
         if isinstance(score, dict):
+            _override_ko_length_compliance(score, profile)
             overall = _aggregate_quality_score(score)
             if overall and overall < 70:
                 logger.warning(
