@@ -1298,7 +1298,7 @@ Return JSON only:
     {{
       "question": "Which company closed the largest single round this week?",
       "options": ["OpenAI", "Anthropic", "xAI", "Mistral"],
-      "answer": "OpenAI",
+      "answer_index": 0,
       "explanation": "OpenAI's $10B round was this week's largest — roughly 10x Anthropic's last disclosed raise."
     }}
   ]
@@ -1360,7 +1360,7 @@ Depth > length. Each section's structure rules (item counts, sentence counts, pa
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick the single most noteworthy AI tool. URL MUST appear in the digests.
-- weekly_quiz: exactly 3 items. Each item's `answer` MUST match one of its `options` character-for-character. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
+- weekly_quiz: exactly 3 items. Each item's `answer_index` MUST be a 0-3 integer pointing to the correct entry in `options`. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
 - If fewer than 3 daily digests are provided, note the limited coverage.
 
 ## FINAL CHECKLIST (verify before responding)
@@ -1493,7 +1493,7 @@ Return JSON only:
     {{
       "question": "Which company released a new open-weight model this week?",
       "options": ["Meta", "OpenAI", "Anthropic", "Google"],
-      "answer": "Meta",
+      "answer_index": 0,
       "explanation": "Meta released Llama 4 this week as an open-weight model, meaning the model parameters can be downloaded and run locally — unlike closed models like GPT or Claude."
     }}
   ]
@@ -1556,7 +1556,7 @@ Depth > length. Each section's structure rules already set the length. If the we
 - Do not repeat the same story across sections.
 - week_numbers values must be exact figures from the digests.
 - week_tool: pick one tool a learner could try this week. URL MUST appear in the digests.
-- weekly_quiz: exactly 3 items. Each item's `answer` MUST match one of its `options` character-for-character. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
+- weekly_quiz: exactly 3 items. Each item's `answer_index` MUST be a 0-3 integer pointing to the correct entry in `options`. Each item MUST cover a different Top Story. No citations in quiz fields (URLs stay in the markdown body).
 - If fewer than 3 daily digests are provided, note the limited coverage.
 
 ## FINAL CHECKLIST (verify before responding)
@@ -1656,7 +1656,7 @@ Return JSON only:
     {{
       "question": "이번 주 가장 큰 단일 라운드를 마감한 회사는?",
       "options": ["OpenAI", "Anthropic", "xAI", "Mistral"],
-      "answer": "OpenAI",
+      "answer_index": 0,
       "explanation": "OpenAI의 100억 달러 라운드가 이번 주 최대 규모로, Anthropic의 직전 공개 라운드의 약 10배에 해당한다."
     }}
   ],
@@ -1706,7 +1706,7 @@ Return JSON only:
 - Numbers should use Korean conventions (e.g., $10B → 100억 달러).
 - No English words at the start of bullet points.
 - CITATION PRESERVATION: every `[N](URL)` marker and every raw URL in the English input MUST reappear verbatim in the matching Korean sentence. This is non-negotiable — the Korean version is not considered complete if citation markers are dropped or URLs are stripped.
-- QUIZ ANSWER INTEGRITY: in `weekly_quiz_ko`, each item's `answer` MUST equal one of its `options` character-for-character. If the English answer was "OpenAI" and the Korean option list contains "OpenAI" (proper names stay in Latin script), the Korean `answer` MUST also be "OpenAI", not "오픈AI". Translate consistently across `options` and `answer`."""
+- QUIZ ANSWER INTEGRITY: in `weekly_quiz_ko`, each item's `answer_index` MUST be the same 0-3 integer as the corresponding English item — the question and options translate, the index pointing at the correct option does not change. Translate options consistently (proper names like "OpenAI" stay in Latin script)."""
 
 
 # ---------------------------------------------------------------------------
