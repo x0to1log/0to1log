@@ -23,6 +23,7 @@ from models.news_pipeline import (
     ClassifiedGroup,
     CommunityInsight,
     PersonaOutput,
+    ThreadInfo,
 )
 from services.agents.citation_substitution import (
     CitationSubstitutionError,
@@ -121,30 +122,109 @@ def _has_strong_community_signal(source_label: str) -> bool:
     return max_upvotes >= _CP_MIN_UPVOTES or max_comments >= _CP_MIN_COMMENTS
 
 
+def _build_cp_data_entries(
+    group: "ClassifiedGroup",
+    insight: "CommunityInsight | None",
+) -> list[str]:
+    """Build per-thread CP Data entries for a single topic. Returns 0..N
+    entries (one per thread that passes signal threshold + has quotes or
+    key_point + has non-null sentiment). Each entry is single-platform —
+    writer sees one platform per entry and produces one block per entry
+    (no multi-platform split rule needed)."""
+    if insight is None:
+        return []
+
+    entries: list[str] = []
+    for thread in insight.synthesized_threads():
+        if not _thread_has_strong_signal(thread):
+            continue
+        if not (thread.quotes or thread.key_point):
+            continue
+        if thread.sentiment is None:
+            continue
+        entry = _build_single_thread_entry(group, thread)
+        if entry is not None:
+            entries.append(entry)
+    return entries
+
+
+def _thread_has_strong_signal(thread: "ThreadInfo") -> bool:
+    """Per-thread version of the upvote/comment threshold check."""
+    return thread.upvotes >= _CP_MIN_UPVOTES or thread.comments >= _CP_MIN_COMMENTS
+
+
+def _build_single_thread_entry(
+    group: "ClassifiedGroup",
+    thread: "ThreadInfo",
+) -> str | None:
+    """Build the CP Data block for a single thread (one platform).
+    Pair-aligned EN/KO quote sanitization (preserves the 2026-04-25 strict
+    1:1 rule per thread)."""
+    raw_en = list(thread.quotes or [])
+    raw_ko = list(thread.quotes_ko or [])
+    clean_quotes: list[str] = []
+    clean_quotes_ko: list[str] = []
+    for i in range(min(len(raw_en), len(raw_ko))):
+        en = _sanitize_cp_quote(raw_en[i])
+        ko = _sanitize_cp_quote(raw_ko[i])
+        if en and ko:
+            clean_quotes.append(en)
+            clean_quotes_ko.append(ko)
+    has_quotes = bool(clean_quotes)
+
+    if thread.platform == "hackernews":
+        platform_label = f"Hacker News {thread.upvotes}↑ · {thread.comments} comments"
+    else:
+        platform_label = f"r/{thread.subreddit} ({thread.upvotes}↑)"
+
+    parts = [f"Topic: {group.group_title}"]
+    parts.append(f"Platform: {platform_label}")
+    if thread.platform == "hackernews":
+        parts.append(f"HackerNewsURL: {thread.url}")
+    else:
+        parts.append(f"RedditURL: {thread.url}")
+    parts.append(f"Sentiment: {thread.sentiment}")
+    if has_quotes:
+        parts.append(f"HasQuotes: yes — emit {len(clean_quotes)} blockquote(s) below")
+        for i, q in enumerate(clean_quotes, start=1):
+            parts.append(f'English quote {i}: "{q}"')
+        for i, q in enumerate(clean_quotes_ko, start=1):
+            parts.append(f'Korean quote {i} (translation of English quote {i}): "{q}"')
+    else:
+        parts.append("HasQuotes: no — DO NOT emit any blockquote for this topic, write key point as a regular paragraph only")
+    if thread.key_point:
+        parts.append(f"Key Discussion: {thread.key_point}")
+    return "\n".join(parts)
+
+
 def _build_cp_data_entry(
     group: "ClassifiedGroup",
     insight: "CommunityInsight | None",
 ) -> str | None:
-    """Build the CP Data block for a single topic (primary_url → insight).
+    """DEPRECATED — returns the first per-thread entry (or None). Use
+    _build_cp_data_entries (plural) for the new per-thread shape.
 
-    Returns None when the insight is missing, has neither quotes nor key_point,
-    or fails the minimum community-signal threshold (noise filter).
+    Falls back to the original flat-field path for pre-URL-plumbing legacy
+    checkpoints that have source_label but no hn_url/reddit_url. Those
+    insights produce no threads via synthesized_threads(), so we read the
+    flat fields directly to preserve backward compatibility.
     """
     if insight is None:
         return None
+
+    entries = _build_cp_data_entries(group, insight)
+    if entries:
+        return entries[0]
+
+    # Flat-field fallback for legacy insights with no URL fields: synthesized_threads()
+    # returns [] when neither hn_url nor reddit_url is set (pre-Apr-21 checkpoints).
+    # Those insights still have source_label/quotes/key_point — read them directly
+    # so the deprecated wrapper keeps working for old checkpoint data and tests.
     if not (insight.quotes or insight.key_point):
         return None
     if not _has_strong_community_signal(getattr(insight, "source_label", "") or ""):
         return None
 
-    # Pair-aligned sanitization: writer expects strict 1:1 mapping between
-    # English quote N and Korean quote N (CP rendering uses the index pairing).
-    # If only one side passes sanitization for a given index, drop both — sending
-    # an unpaired EN quote to the writer means it can't render the KO body
-    # (or it'll invent a translation, defeating quote fidelity). Earlier code
-    # truncated quotes_ko to len(clean_quotes), which left the EN-only-passed
-    # case still mismatched (EN=2, KO=1 → 2 EN lines + 1 KO line emitted to
-    # writer). External review P2, 2026-04-25.
     raw_en = list(insight.quotes or [])
     raw_ko = list(insight.quotes_ko or [])
     clean_quotes: list[str] = []
@@ -159,10 +239,6 @@ def _build_cp_data_entry(
 
     parts = [f"Topic: {group.group_title}"]
     parts.append(f"Platform: {insight.source_label}")
-    # URL plumbing: writer uses these to emit **[Platform](URL)** block headers
-    # and > — [Platform](URL) attributions directly. Lines omitted when insight
-    # predates the URL-plumbing feature (Apr 21 plan) — writer then falls back
-    # to bare text and the post-processor linkifies later.
     if getattr(insight, "hn_url", None):
         parts.append(f"HackerNewsURL: {insight.hn_url}")
     if getattr(insight, "reddit_url", None):
@@ -213,10 +289,9 @@ def _build_writer_url_allowlist(
             if url:
                 allowlist.append(url)
     for insight in (community_summary_map or {}).values():
-        if getattr(insight, "hn_url", None):
-            allowlist.append(insight.hn_url)
-        if getattr(insight, "reddit_url", None):
-            allowlist.append(insight.reddit_url)
+        for thread in insight.synthesized_threads():
+            if thread.url:
+                allowlist.append(thread.url)
     return allowlist
 
 
@@ -309,21 +384,15 @@ def _linkify_cp_section(
     )
 
     # Build platform → upvote → URL indexes.
+    # Direct upvotes from ThreadInfo — no regex-parsing of source_label needed.
     hn_index: list[tuple[int, str]] = []
     reddit_index: list[tuple[str, int, str]] = []
     for insight in community_summary_map.values():
-        src = getattr(insight, "source_label", "") or ""
-        hn_url = getattr(insight, "hn_url", None)
-        reddit_url = getattr(insight, "reddit_url", None)
-        if hn_url:
-            upv = _insight_hn_upvotes(src)
-            if upv >= 0:
-                hn_index.append((upv, hn_url))
-        if reddit_url:
-            sub_match = re.search(r"r/(\S+?)(?:\s|\(|$)", src)
-            upv = _insight_reddit_upvotes(src)
-            if sub_match and upv >= 0:
-                reddit_index.append((sub_match.group(1).rstrip(")"), upv, reddit_url))
+        for thread in insight.synthesized_threads():
+            if thread.platform == "hackernews" and thread.url:
+                hn_index.append((thread.upvotes, thread.url))
+            elif thread.platform == "reddit" and thread.url and thread.subreddit:
+                reddit_index.append((thread.subreddit, thread.upvotes, thread.url))
 
     if not hn_index and not reddit_index:
         return body
@@ -738,9 +807,8 @@ async def _generate_digest(
     cp_entries: list[str] = []
     for group in classified:
         insight = community_summary_map.get(group.primary_url)
-        entry = _build_cp_data_entry(group, insight)
-        if entry is not None:
-            cp_entries.append(entry)
+        entries = _build_cp_data_entries(group, insight)
+        cp_entries.extend(entries)
 
     user_prompt = "\n\n---\n\n".join(news_items)
     if cp_entries:

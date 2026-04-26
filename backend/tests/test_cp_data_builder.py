@@ -1,7 +1,7 @@
 """Tests for _build_cp_data_entry — builds the per-topic CP Data block
 passed to the writer prompt."""
 
-from models.news_pipeline import ClassifiedGroup, CommunityInsight, GroupedItem
+from models.news_pipeline import ClassifiedGroup, CommunityInsight, GroupedItem, ThreadInfo
 
 
 def _make_group(primary_url: str = "https://example.com/story", title: str = "Topic A") -> ClassifiedGroup:
@@ -171,8 +171,11 @@ def test_cp_entry_includes_reddit_url_when_present():
 
 
 def test_cp_entry_includes_both_urls_when_present():
-    """Multi-platform insight (e.g. GPT-5.5 story had both HN + r/OpenAI)."""
-    from services.pipeline import _build_cp_data_entry
+    """Multi-platform insight (e.g. GPT-5.5 story had both HN + r/OpenAI).
+    Per-thread design: _build_cp_data_entries returns 2 separate entries
+    (one per platform). _build_cp_data_entry (deprecated) returns the first
+    (HN). Use _build_cp_data_entries to check both URLs are covered."""
+    from services.pipeline import _build_cp_data_entries
 
     insight = CommunityInsight(
         source_label="Hacker News 1041↑ · 689 comments · r/OpenAI (642↑)",
@@ -182,10 +185,10 @@ def test_cp_entry_includes_both_urls_when_present():
         hn_url="https://news.ycombinator.com/item?id=47879092",
         reddit_url="https://www.reddit.com/r/OpenAI/comments/1stqlnh/x/",
     )
-    entry = _build_cp_data_entry(_make_group(), insight)
-    assert entry is not None
-    assert "HackerNewsURL: https://news.ycombinator.com/item?id=47879092" in entry
-    assert "RedditURL: https://www.reddit.com/r/OpenAI/comments/1stqlnh/x/" in entry
+    entries = _build_cp_data_entries(_make_group(), insight)
+    all_text = "\n".join(entries)
+    assert "HackerNewsURL: https://news.ycombinator.com/item?id=47879092" in all_text
+    assert "RedditURL: https://www.reddit.com/r/OpenAI/comments/1stqlnh/x/" in all_text
 
 
 def test_cp_entry_without_urls_works_for_old_checkpoints():
@@ -369,3 +372,126 @@ def test_cp_entry_drops_empty_source_label():
         key_point="x",
     )
     assert _build_cp_data_entry(_make_group(), insight) is None
+
+
+# =============================================================================
+# _build_cp_data_entries (plural) — per-thread entry builder (Task 6, R5)
+# =============================================================================
+
+
+def test_cp_entries_threads_produce_one_per_thread():
+    """Insight with 2 threads (HN + Reddit) produces 2 separate CP Data entries.
+    Each entry is single-platform — Platform field has only one platform name,
+    only one URL line (HackerNewsURL OR RedditURL)."""
+    from services.pipeline import _build_cp_data_entries
+
+    insight = CommunityInsight(threads=[
+        ThreadInfo(
+            platform="hackernews",
+            url="https://news.ycombinator.com/item?id=42",
+            upvotes=1041, comments=689,
+            sentiment="mixed",
+            quotes=["hn quote with substance over ten chars"],
+            quotes_ko=["에이치엔 인용 충분히 긴 한국어"],
+            key_point="HN discussion",
+        ),
+        ThreadInfo(
+            platform="reddit",
+            url="https://www.reddit.com/r/OpenAI/comments/abc/t/",
+            subreddit="OpenAI",
+            upvotes=642, comments=230,
+            sentiment="negative",
+            quotes=["reddit quote with substance over ten chars"],
+            quotes_ko=["레딧 인용 충분히 긴 한국어"],
+            key_point="Reddit critique",
+        ),
+    ])
+    group = _make_group()
+    entries = _build_cp_data_entries(group, insight)
+
+    assert len(entries) == 2
+
+    hn_entry = next(e for e in entries if "Platform: Hacker News" in e)
+    assert "HackerNewsURL: https://news.ycombinator.com/item?id=42" in hn_entry
+    assert "RedditURL:" not in hn_entry
+    assert 'English quote 1: "hn quote with substance over ten chars"' in hn_entry
+
+    r_entry = next(e for e in entries if "Platform: r/OpenAI" in e)
+    assert "RedditURL: https://www.reddit.com/r/OpenAI/comments/abc/t/" in r_entry
+    assert "HackerNewsURL:" not in r_entry
+    assert 'English quote 1: "reddit quote with substance over ten chars"' in r_entry
+
+
+def test_cp_entries_skip_off_topic_thread():
+    """Threads with sentiment=None are skipped — no CP entry for them."""
+    from services.pipeline import _build_cp_data_entries
+
+    insight = CommunityInsight(threads=[
+        ThreadInfo(
+            platform="hackernews", url="https://x", upvotes=100, comments=10,
+            sentiment="mixed",
+            quotes=["good quote with substance over ten chars"],
+            quotes_ko=["좋은 인용 충분히 긴 한국어 텍스트"],
+            key_point="ok",
+        ),
+        ThreadInfo(
+            platform="reddit", url="https://y", subreddit="x", upvotes=50, comments=5,
+            sentiment=None,
+            quotes=[], quotes_ko=[], key_point=None,
+        ),
+    ])
+    entries = _build_cp_data_entries(_make_group(), insight)
+    assert len(entries) == 1
+    assert "Platform: Hacker News" in entries[0]
+
+
+def test_cp_entries_apply_per_thread_signal_threshold():
+    """Each thread checks the upvote/comment threshold independently. A weak
+    HN thread (6↑, 1 comment) drops even when paired with strong Reddit."""
+    from services.pipeline import _build_cp_data_entries
+
+    insight = CommunityInsight(threads=[
+        ThreadInfo(
+            platform="hackernews", url="https://hn", upvotes=6, comments=1,
+            sentiment="negative",
+            quotes=["a quote with substance over ten chars"],
+            quotes_ko=["인용 충분히 긴 한국어"],
+            key_point="weak",
+        ),
+        ThreadInfo(
+            platform="reddit", url="https://r", subreddit="x", upvotes=500, comments=50,
+            sentiment="mixed",
+            quotes=["a quote with substance over ten chars"],
+            quotes_ko=["인용 충분히 긴 한국어"],
+            key_point="strong",
+        ),
+    ])
+    entries = _build_cp_data_entries(_make_group(), insight)
+    assert len(entries) == 1
+    assert "Platform: r/x" in entries[0]
+
+
+def test_cp_entries_legacy_insight_via_hydration():
+    """Legacy CommunityInsight with flat fields hydrates to single thread →
+    one CP entry (single-platform legacy keeps quotes; multi-platform legacy
+    has empty quotes per Task 1 hydration)."""
+    from services.pipeline import _build_cp_data_entries
+
+    insight = CommunityInsight(
+        source_label="Hacker News 79↑ · 25 comments",
+        sentiment="mixed",
+        quotes=["legacy quote with substance over ten chars"],
+        quotes_ko=["레거시 인용 충분히 긴 한국어"],
+        key_point="legacy",
+        hn_url="https://news.ycombinator.com/item?id=1",
+    )
+    entries = _build_cp_data_entries(_make_group(), insight)
+    assert len(entries) == 1
+    assert "Platform: Hacker News" in entries[0]
+    assert 'English quote 1: "legacy quote with substance over ten chars"' in entries[0]
+
+
+def test_cp_entries_returns_empty_when_insight_none():
+    from services.pipeline import _build_cp_data_entries
+
+    assert _build_cp_data_entries(_make_group(), None) == []

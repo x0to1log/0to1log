@@ -610,12 +610,10 @@ async def _check_digest_quality(
             if url:
                 allowed_items.append({"url": url, "title": "enriched_related"})
     for insight in (community_summary_map or {}).values():
-        hn_url = getattr(insight, "hn_url", None)
-        if hn_url:
-            allowed_items.append({"url": hn_url, "title": "cp_hn_thread"})
-        reddit_url = getattr(insight, "reddit_url", None)
-        if reddit_url:
-            allowed_items.append({"url": reddit_url, "title": "cp_reddit_thread"})
+        for thread in insight.synthesized_threads():
+            if thread.url:
+                label = f"cp_{thread.platform}_thread"
+                allowed_items.append({"url": thread.url, "title": label})
     fact_pack_for_validation = {"news_items": allowed_items}
     url_validation_failures: list[dict[str, Any]] = []
     for persona_name, persona_output in personas.items():
