@@ -3466,6 +3466,7 @@ from services.pipeline_digest import (  # noqa: E402, F401
     _build_cp_data_entry,
     _build_writer_url_allowlist,
     _extract_digest_items,
+    _fix_bold_paren_abbrev,
     _fix_bold_spacing,
     _linkify_cp_section,
     _map_digest_items_to_group_indexes,

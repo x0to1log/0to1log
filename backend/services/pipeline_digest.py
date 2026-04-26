@@ -575,6 +575,24 @@ def _fix_bold_spacing(content: str) -> str:
     return _re.sub(r"\*\*(.+?)\s+\*\*", r"**\1**", content)
 
 
+def _fix_bold_paren_abbrev(content: str) -> str:
+    """Separate inline parenthetical abbreviations from bold text.
+
+    `**Rejection Fine-Tuning(RFT)**` → `**Rejection Fine-Tuning** (RFT)`
+
+    Must NOT touch markdown links — `**[Label](URL)**` must stay intact.
+    Group 1 excludes `[` `]` (markdown link labels start/end with brackets).
+    Group 2 excludes `:` (URLs contain `://`). Together these scope the
+    rewrite to the abbreviation case only.
+    """
+    import re as _re
+    return _re.sub(
+        r"\*\*([^*\[\]]+?)\(([^):]+)\)\*\*",
+        r"**\1** (\2)",
+        content,
+    )
+
+
 def _clean_writer_output(content: str) -> str:
     """Post-process Writer output: strip empty sections, fix bold, remove [LEAD] tags."""
     import re as _re
@@ -1387,8 +1405,9 @@ async def _generate_digest(
 
         # Post-process: fix bold markdown with parenthetical abbreviations
         # **Rejection Fine-Tuning(RFT)** → **Rejection Fine-Tuning** (RFT)
-        expert_content = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', expert_content)
-        learner_content = re.sub(r'\*\*([^*]+?)\(([^)]+)\)\*\*', r'**\1** (\2)', learner_content)
+        # Helper preserves markdown links: **[Label](URL)** stays intact.
+        expert_content = _fix_bold_paren_abbrev(expert_content)
+        learner_content = _fix_bold_paren_abbrev(learner_content)
 
         # Post-process: remove [LEAD]/[SUPPORTING] tags leaked into output
         # These are input-only signals that LLM sometimes copies into headings
