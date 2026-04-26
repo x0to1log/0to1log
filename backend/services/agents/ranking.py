@@ -12,6 +12,7 @@ from models.news_pipeline import (
     CommunityInsight,
     GroupedItem,
     NewsCandidate,
+    ThreadInfo,
 )
 from services.agents.client import (
     build_completion_kwargs,
@@ -19,7 +20,9 @@ from services.agents.client import (
     get_openai_client,
     merge_usage_metrics,
     parse_ai_json,
+    with_flex_retry,
 )
+from services.agents.comment_relevance import filter_relevant_comments
 from services.agents.prompts_news_pipeline import (
     CLASSIFICATION_SYSTEM_PROMPT,
     COMMUNITY_SUMMARIZER_SYSTEM,
@@ -30,7 +33,6 @@ from services.agents.prompts_news_pipeline import (
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
-
 
 _TRUSTED_MEDIA_DOMAINS = (
     "reuters.com",
@@ -855,188 +857,191 @@ def _parse_source_meta(raw_text: str) -> tuple[str, str | None, str | None]:
     return label, hn_url, reddit_url
 
 
+# Header regexes for parsing community_map blob into per-platform sections.
+# news_collection embeds [Hacker News|url=<url>] / [Reddit r/<sub>|url=<url>]
+# tokens at the start of each thread block.
+_HN_SECTION_HEADER_RE = re.compile(
+    r"\[Hacker News\|url=(?P<url>[^\]]+)\][^\n]*?\|\s*(?P<upvotes>\d[\d,]*)\s*points?\s*\|\s*(?P<comments>\d[\d,]*)\s*comments?",
+)
+_REDDIT_SECTION_HEADER_RE = re.compile(
+    r"\[Reddit\s+r/(?P<sub>[^\|\]]+)\|url=(?P<url>[^\]]+)\][^\n]*?\|\s*(?P<upvotes>\d[\d,]*)\s*upvotes?\s*\|\s*(?P<comments>\d[\d,]*)\s*comments?",
+)
+_COMMENT_LINE_RE = re.compile(r'^>\s*"(.*)"$', re.MULTILINE)
+
+
+def _split_blob_by_platform(blob: str) -> list[dict]:
+    """Split a community_map blob into per-platform sections.
+
+    Returns list of dicts: [{platform, url, upvotes, comments,
+    comments_text: list[str], subreddit?}].
+    Each section's `comments_text` is the list of raw comments scraped for that
+    platform (extracted via the > "..." line pattern that news_collection emits).
+    """
+    sections: list[dict] = []
+    # Find all section header positions, then slice between them
+    headers: list[tuple[int, dict]] = []
+    for m in _HN_SECTION_HEADER_RE.finditer(blob):
+        headers.append((m.start(), {
+            "platform": "hackernews",
+            "url": m.group("url"),
+            "upvotes": int(m.group("upvotes").replace(",", "")),
+            "comments": int(m.group("comments").replace(",", "")),
+        }))
+    for m in _REDDIT_SECTION_HEADER_RE.finditer(blob):
+        headers.append((m.start(), {
+            "platform": "reddit",
+            "url": m.group("url"),
+            "subreddit": m.group("sub"),
+            "upvotes": int(m.group("upvotes").replace(",", "")),
+            "comments": int(m.group("comments").replace(",", "")),
+        }))
+    headers.sort(key=lambda h: h[0])
+
+    for i, (start, meta) in enumerate(headers):
+        end = headers[i + 1][0] if i + 1 < len(headers) else len(blob)
+        block = blob[start:end]
+        meta["comments_text"] = _COMMENT_LINE_RE.findall(block)
+        sections.append(meta)
+    return sections
+
+
 async def summarize_community(
     community_map: dict[str, str],
-    groups: list[ClassifiedGroup],
+    groups: list,
 ) -> tuple[dict[str, CommunityInsight], dict[str, Any]]:
-    """Summarize raw community reactions into structured insights via LLM.
+    """Per-platform community summarization.
 
-    Returns (url_to_insight_map, usage_metrics).
+    For each group's blob, split into platform sections (HN, Reddit, both).
+    For each section:
+      1. Filter top-voted candidates via gpt-5-nano relevance filter
+         (filter_relevant_comments). Apr 25 DeepSeek case: returns [] when
+         all top-voted are off-topic -- we skip the summarizer call entirely
+         and record the thread with sentiment=None.
+      2. If the filter returns comments, call the summarizer LLM with ONLY
+         that platform's filtered comments. Build a ThreadInfo from the
+         summarizer's output.
+    Aggregate ThreadInfo records into CommunityInsight(threads=[...]).
+    Quote provenance preserved by construction -- cross-platform never mixes
+    in summarizer input.
     """
-    # Build per-group community data for LLM
-    # key -> (raw_text, source_label, group_title, hn_url, reddit_url)
-    group_entries: dict[str, tuple[str, str, str, str | None, str | None]] = {}
-    for i, group in enumerate(groups):
-        raw_parts = []
-        for item in group.items:
-            item_raw = community_map.get(item.url, "")
-            if item_raw:
-                raw_parts.append(item_raw)
-        raw = "\n\n".join(raw_parts)
-        if not raw:
-            continue
-        key = f"group_{i}"
-        label, hn_url, reddit_url = _parse_source_meta(raw)
-        group_entries[key] = (raw, label, group.group_title, hn_url, reddit_url)
+    result: dict[str, CommunityInsight] = {}
+    cumulative_usage: dict[str, Any] = {}
 
-    # If no community data at all, return empty
-    if not group_entries:
-        logger.info("Community summarizer: no community data to summarize")
-        return {}, {}
-
-    # Build prompt text — include original article title for relevance check
-    groups_text_parts = []
-    for key, (raw, _label, gtitle, _hn, _rd) in group_entries.items():
-        groups_text_parts.append(f"### {key}\nOriginal article: {gtitle}\n{raw}")
-    groups_text = "\n\n".join(groups_text_parts)
-
-    user_content = COMMUNITY_SUMMARIZER_USER_TEMPLATE.format(groups_text=groups_text)
+    if not community_map:
+        return result, cumulative_usage
 
     client = get_openai_client()
     model = settings.openai_model_light
-    kwargs = build_completion_kwargs(
-        model=model,
-        messages=[
-            {"role": "system", "content": COMMUNITY_SUMMARIZER_SYSTEM},
-            {"role": "user", "content": user_content},
-        ],
-        max_tokens=2000,
-        # JSON mode — without this, the prompt asks for JSON but the model can
-        # wrap it in prose ("Here is the JSON: {...}") on rare runs. parse_ai_json
-        # then fails and we drop the entire CP map after retries (external review
-        # P2, 2026-04-25). Other LLM call sites in this file use json_object.
-        response_format={"type": "json_object"},
-        service_tier="flex",
-        prompt_cache_key="community-summarize",
-    )
 
-    data = None
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            response = await client.chat.completions.create(**kwargs)
-            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
-            raw_output = response.choices[0].message.content or ""
-            data = parse_ai_json(raw_output, "CommunitySummarizer")
-            break
-        except Exception as e:
-            logger.warning("Community summarizer attempt %d failed: %s", attempt + 1, e)
-            if attempt == MAX_RETRIES:
-                logger.error("Community summarizer failed after %d retries", MAX_RETRIES + 1)
-                return {}, {}
-
-    # Parse LLM output into CommunityInsight objects
-    result: dict[str, CommunityInsight] = {}
-    llm_groups = data.get("groups", {})
-
-    for i, group in enumerate(groups):
-        key = f"group_{i}"
+    for group in groups:
         primary_url = group.primary_url
-        if key not in group_entries:
-            # No community data for this group
+        blob = community_map.get(primary_url)
+        if not blob:
             continue
 
-        _raw, source_label, _gtitle, hn_url, reddit_url = group_entries[key]
-        llm_data = llm_groups.get(key, {})
-
-        sentiment = llm_data.get("sentiment")
-        # null sentiment = LLM judged thread irrelevant to original article
-        if sentiment is None:
-            logger.debug("Community summarizer: group %s marked irrelevant by LLM", key)
+        sections = _split_blob_by_platform(blob)
+        if not sections:
             continue
-        if sentiment not in ("positive", "mixed", "negative", "neutral"):
-            sentiment = "neutral"
 
-        import re as _re
-        # URL-like pattern: matches 'http://...', 'https://...', AND scheme-less 'github.com/...',
-        # 'arxiv.org/...'. Used to filter quotes that are just link dumps.
-        _url_pattern = _re.compile(r"(?:https?://|\b(?:github|arxiv|twitter|x|youtu|youtube|medium|reddit|huggingface|paperswithcode|openai|anthropic|deepmind)\.(?:com|org|be)/)", _re.IGNORECASE)
+        article_title = group.group_title
+        article_excerpt = ""  # could be enriched from group.items[0] if available
 
-        def _clean_quote(q: str) -> str:
-            """Strip surrounding quote marks (straight and curly) from a quote string.
-            LLM summarizer often wraps quotes in double-quotes, which then get
-            double-wrapped when writer emits `> "<quote>"`. Strip them here.
-            """
-            q = q.strip()
-            # Strip matching pairs of outer quote marks (any combination)
-            for _ in range(3):  # up to 3 nested pairs
-                if len(q) >= 2 and q[0] in '"\u201C\u201D\u2018\u2019\'' and q[-1] in '"\u201C\u201D\u2018\u2019\'':
-                    q = q[1:-1].strip()
-                else:
-                    break
-            return q
-
-        def _is_valid_quote(q) -> bool:
-            if not isinstance(q, str):
-                return False
-            stripped = _clean_quote(q)
-            if len(stripped) < 10:
-                return False
-            # Reject quotes that contain URLs (scheme-full or scheme-less)
-            if _url_pattern.search(stripped):
-                return False
-            return True
-
-        quotes_raw = llm_data.get("quotes", [])
-        if not isinstance(quotes_raw, list):
-            quotes_raw = []
-        quotes = [_clean_quote(q) for q in quotes_raw[:2] if _is_valid_quote(q)]
-
-        quotes_ko_raw = llm_data.get("quotes_ko", [])
-        if not isinstance(quotes_ko_raw, list):
-            quotes_ko_raw = []
-        quotes_ko = [
-            _clean_quote(q) for q in quotes_ko_raw[:len(quotes)]
-            if isinstance(q, str) and len(_clean_quote(q)) > 5 and not _url_pattern.search(_clean_quote(q))
-        ]
-
-        # Hangul validation + targeted retranslation (NQ-40 Phase 1).
-        # LLM sometimes leaves English in `quotes_ko` field — pair each KO
-        # entry with its EN source by index and retry-translate any entry
-        # lacking Hangul via a mini-model batch call. Entries that still
-        # fail after retry are dropped along with their EN partner to keep
-        # quotes/quotes_ko in 1:1 sync.
-        pairs: list[tuple[str, str]] = list(zip(quotes, quotes_ko))
-        bad_indices = [i for i, (_en, ko) in enumerate(pairs) if not _has_hangul(ko)]
-        if bad_indices:
-            en_batch = [pairs[i][0] for i in bad_indices]
-            retranslated, retry_usage = await _retranslate_quotes_ko_async(en_batch)
-            usage = merge_usage_metrics(usage, retry_usage) if retry_usage else usage
-            if len(retranslated) == len(bad_indices):
-                for orig_idx, new_ko in zip(bad_indices, retranslated):
-                    cleaned = _clean_quote(new_ko) if isinstance(new_ko, str) else ""
-                    if _has_hangul(cleaned):
-                        pairs[orig_idx] = (pairs[orig_idx][0], cleaned)
-            else:
-                logger.info(
-                    "quotes_ko retranslation unavailable for group %s — falling back to drop",
-                    primary_url[:80],
-                )
-        valid_pairs = [(en, ko) for en, ko in pairs if _has_hangul(ko)]
-        if len(valid_pairs) < len(pairs):
-            logger.warning(
-                "Community summarizer: dropped %d quote pair(s) for group %s "
-                "(English in quotes_ko even after retranslation)",
-                len(pairs) - len(valid_pairs), primary_url[:80],
+        threads: list[ThreadInfo] = []
+        for section in sections:
+            # ----- Stage 1: relevance filter -----
+            filtered, filter_usage = await filter_relevant_comments(
+                section["comments_text"],
+                article_title=article_title,
+                article_excerpt=article_excerpt,
+                max_pick=10,
             )
-        quotes = [en for en, _ko in valid_pairs]
-        quotes_ko = [ko for _en, ko in valid_pairs]
+            cumulative_usage = merge_usage_metrics(cumulative_usage, filter_usage)
 
-        key_point = llm_data.get("key_point")
-        if key_point and not isinstance(key_point, str):
-            key_point = None
+            if not filtered:
+                # Filter judged everything off-topic (R3 fail-CLOSED) OR
+                # no comments at all. Skip summarizer; record empty thread.
+                threads.append(ThreadInfo(
+                    platform=section["platform"],
+                    url=section["url"],
+                    subreddit=section.get("subreddit"),
+                    upvotes=section["upvotes"],
+                    comments=section["comments"],
+                    sentiment=None,
+                    quotes=[],
+                    quotes_ko=[],
+                    key_point=None,
+                ))
+                continue
 
-        result[primary_url] = CommunityInsight(
-            sentiment=sentiment,
-            quotes=quotes,
-            quotes_ko=quotes_ko,
-            key_point=key_point,
-            source_label=source_label,
-            hn_url=hn_url,
-            reddit_url=reddit_url,
-        )
+            # ----- Stage 2: per-platform summarizer call -----
+            comments_blob = "\n".join(f'> "{c}"' for c in filtered)
+            user_content = COMMUNITY_SUMMARIZER_USER_TEMPLATE.format(
+                groups_text=(
+                    f"### Group 0 \u2014 {article_title}\n"
+                    f"Original article: {article_title}\n"
+                    f"Platform: {section['platform']}\n"
+                    f"{comments_blob}"
+                ),
+            )
+
+            kwargs = build_completion_kwargs(
+                model=model,
+                messages=[
+                    {"role": "system", "content": COMMUNITY_SUMMARIZER_SYSTEM},
+                    {"role": "user", "content": user_content},
+                ],
+                max_tokens=2000,
+                response_format={"type": "json_object"},
+                service_tier="flex",
+                prompt_cache_key=f"community-summarize-{section['platform']}",
+            )
+
+            try:
+                response = await with_flex_retry(
+                    lambda: client.chat.completions.create(**kwargs),
+                )
+                raw_output = response.choices[0].message.content or ""
+                data = parse_ai_json(raw_output, f"summarize-{section['platform']}")
+                usage = extract_usage_metrics(response, model, requested_service_tier="flex")
+                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+            except Exception as e:
+                logger.warning("Summarizer failed for %s: %s", section["platform"], e)
+                threads.append(ThreadInfo(
+                    platform=section["platform"],
+                    url=section["url"],
+                    subreddit=section.get("subreddit"),
+                    upvotes=section["upvotes"],
+                    comments=section["comments"],
+                    sentiment=None,
+                    quotes=[],
+                    quotes_ko=[],
+                    key_point=None,
+                ))
+                continue
+
+            # Parse summarizer output (single-group shape)
+            llm_groups = (data or {}).get("groups", {})
+            llm_data = llm_groups.get("group_0", {}) if isinstance(llm_groups, dict) else {}
+            if not isinstance(llm_data, dict):
+                llm_data = {}
+
+            threads.append(ThreadInfo(
+                platform=section["platform"],
+                url=section["url"],
+                subreddit=section.get("subreddit"),
+                upvotes=section["upvotes"],
+                comments=section["comments"],
+                sentiment=llm_data.get("sentiment"),
+                quotes=list(llm_data.get("quotes") or []),
+                quotes_ko=list(llm_data.get("quotes_ko") or []),
+                key_point=llm_data.get("key_point"),
+            ))
+
+        if threads:
+            result[primary_url] = CommunityInsight(threads=threads)
 
     logger.info(
         "Community summarizer: %d/%d groups summarized",
         len(result), len(groups),
     )
-    return result, usage
+    return result, cumulative_usage

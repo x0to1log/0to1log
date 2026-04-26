@@ -71,8 +71,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 @pytest.mark.asyncio
 async def test_summarize_community_populates_urls_from_parsed_blob():
-    """summarize_community must extract hn_url/reddit_url from embedded
-    url= tokens in community_map blobs and populate CommunityInsight."""
+    """summarize_community must extract thread URL + platform metadata from
+    embedded url= tokens in community_map blobs and populate ThreadInfo.url.
+    Updated for per-platform redesign (2026-04-26): result is
+    CommunityInsight(threads=[ThreadInfo(...)]) not flat fields."""
     from services.agents.ranking import summarize_community
     from models.news_pipeline import ClassifiedGroup, GroupedItem
 
@@ -104,10 +106,18 @@ async def test_summarize_community_populates_urls_from_parsed_blob():
     fake_client = MagicMock()
     fake_client.chat.completions.create = AsyncMock(return_value=fake_llm_response)
 
-    with patch("services.agents.ranking.get_openai_client", return_value=fake_client):
+    # Pass-through relevance filter so the summarizer call is reached
+    async def fake_filter(candidates, article_title, article_excerpt, max_pick=10):
+        return candidates[:max_pick], {}
+
+    with patch("services.agents.ranking.get_openai_client", return_value=fake_client), \
+         patch("services.agents.ranking.filter_relevant_comments", new=fake_filter):
         result, _usage = await summarize_community(community_map, [group])
 
     insight = result["https://arxiv.org/abs/2604.05716"]
-    assert insight.source_label == "Hacker News 79↑ · 116 comments"
-    assert insight.hn_url == "https://news.ycombinator.com/item?id=42"
-    assert insight.reddit_url is None
+    assert len(insight.threads) == 1
+    thread = insight.threads[0]
+    assert thread.platform == "hackernews"
+    assert thread.url == "https://news.ycombinator.com/item?id=42"
+    assert thread.upvotes == 79
+    assert thread.comments == 116

@@ -58,6 +58,13 @@ def _load_domain_filters() -> dict[str, frozenset[str]]:
 # See migration 00050_news_domain_filters.sql for schema and seed data.
 # To modify: update the table directly, then restart Railway to refresh the cache.
 
+# Comment fetch limits per platform. Expanded from 5-10 → 30 on 2026-04-26 to
+# provide a candidate pool for the gpt-5-nano relevance filter
+# (services.agents.comment_relevance). The filter then picks 5-10 most relevant
+# for the article topic before the summarizer sees them.
+HN_COMMENTS_TOP_N = 30
+REDDIT_COMMENTS_TOP_N = 30
+
 SEARCH_QUERIES = [
     # Common
     "latest AI artificial intelligence news today",
@@ -1548,7 +1555,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                 num_comments = best_hit.get("num_comments", 0)
                 comment_resp = await client.get(
                     "https://hn.algolia.com/api/v1/search",
-                    params={"tags": f"comment,story_{story_id}", "hitsPerPage": 5},
+                    params={"tags": f"comment,story_{story_id}", "hitsPerPage": HN_COMMENTS_TOP_N},
                 )
                 comments_text = []
                 if comment_resp.status_code == 200:
@@ -1561,7 +1568,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                         clean = _re.sub(r"\s+", " ", clean)
                         if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
                             comments_text.append(clean)
-                        if len(comments_text) >= 3:
+                        if len(comments_text) >= HN_COMMENTS_TOP_N:
                             break
                 thread_block = _format_hn_thread_block(story_id, hn_title, points, num_comments, comments_text)
                 parts.append(thread_block)
@@ -1643,7 +1650,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                                 await asyncio.sleep(random.uniform(0.5, 2.0))
                                 rd_fetch = await client.get(
                                     f"https://www.reddit.com{_permalink}.json",
-                                    params={"limit": 5, "sort": "top", "depth": 1},
+                                    params={"limit": REDDIT_COMMENTS_TOP_N, "sort": "top", "depth": 1},
                                 )
                                 if rd_fetch.status_code == 200:
                                     rd_json = rd_fetch.json()
@@ -1680,7 +1687,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                         await asyncio.sleep(random.uniform(0.5, 2.0))
                         comment_resp = await client.get(
                             f"https://www.reddit.com{permalink}.json",
-                            params={"limit": 5, "sort": "top", "depth": 1},
+                            params={"limit": REDDIT_COMMENTS_TOP_N, "sort": "top", "depth": 1},
                         )
                         if comment_resp.status_code == 200:
                             comment_data = comment_resp.json()
@@ -1690,7 +1697,7 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                             c_score = c.get("data", {}).get("score", 0)
                             if body and len(body) > 30 and len(body) < 500 and c_score > 2 and not _is_spam_comment(body):
                                 comments_text.append(body.strip())
-                            if len(comments_text) >= 3:
+                            if len(comments_text) >= REDDIT_COMMENTS_TOP_N:
                                 break
                 except Exception:
                     pass
