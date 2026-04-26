@@ -1287,6 +1287,25 @@ def _is_spam_comment(text: str) -> bool:
     return matches >= 2
 
 
+def _clean_hn_comment_text(text: str) -> str:
+    """Normalize a single Algolia HN comment_text payload.
+
+    HN uses ``> `` at line start to quote another comment. Algolia returns
+    the entire comment HTML — quoted lines and the author's own reply fused
+    together. Stripping line-leading ``>`` lines leaves only the commenter's
+    own contribution. Meta-only replies (``Who are you quoting?``, ``+1``)
+    fall below the caller's 50-char gate after stripping and self-drop.
+    """
+    import html as _html
+    import re as _re
+    clean = _re.sub(r"<[^>]+>", " ", text).strip()
+    clean = _html.unescape(clean)
+    lines = [ln for ln in clean.splitlines() if not ln.lstrip().startswith(">")]
+    clean = " ".join(lines)
+    clean = _re.sub(r"\s+", " ", clean).strip()
+    return clean
+
+
 def _title_relevance(article_title: str, thread_title: str) -> float:
     """Check relevance between article title and thread title (0-100)."""
     from difflib import SequenceMatcher
@@ -1559,21 +1578,9 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
                 )
                 comments_text = []
                 if comment_resp.status_code == 200:
-                    import html as _html
-                    import re as _re
                     for c in comment_resp.json().get("hits", []):
                         text = c.get("comment_text", "")
-                        clean = _re.sub(r"<[^>]+>", " ", text).strip()
-                        clean = _html.unescape(clean)
-                        # Voice normalization: HN convention uses `> ` to quote
-                        # another comment. Strip those lines so only this
-                        # commenter's own words flow downstream — eliminates
-                        # quote-pollution like the Apr 26 "Who are you quoting?"
-                        # leak (thread 47892074). Meta-only replies fall below
-                        # the 50-char gate after stripping and self-drop.
-                        lines = [ln for ln in clean.splitlines() if not ln.lstrip().startswith(">")]
-                        clean = " ".join(lines)
-                        clean = _re.sub(r"\s+", " ", clean).strip()
+                        clean = _clean_hn_comment_text(text)
                         if len(clean) > 50 and len(clean) < 500 and not _is_spam_comment(clean):
                             comments_text.append(clean)
                         if len(comments_text) >= HN_COMMENTS_TOP_N:
