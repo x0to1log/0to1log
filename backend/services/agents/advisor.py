@@ -1013,7 +1013,7 @@ async def _self_critique_advanced(
                 f"- {imp['section']}: {imp['suggestion']}"
                 for imp in data["improvements"]
             )
-        usage = extract_usage_metrics(resp, reasoning_model)
+        usage = extract_usage_metrics(resp, reasoning_model, requested_service_tier="flex")
         return needs, feedback, score, usage
     except Exception as e:
         logger.warning("Self-critique failed for '%s': %s", term, e)
@@ -1284,7 +1284,7 @@ async def _check_handbook_quality(
         )
         data = parse_ai_json(resp.choices[0].message.content, "handbook-quality")
         total, breakdown = _aggregate_quality_sub_scores(data, _ADVANCED_DIMENSIONS, _ADVANCED_MAX_RAW)
-        usage = extract_usage_metrics(resp, reasoning_model)
+        usage = extract_usage_metrics(resp, reasoning_model, requested_service_tier="flex")
         if total is None:
             logger.warning("Handbook quality check returned malformed sub-scores for '%s'", term)
             return None, {}, usage
@@ -1346,7 +1346,7 @@ async def _self_critique_basic(
                 f"- {imp['section']}: {imp['suggestion']}"
                 for imp in data["en_improvements"]
             )
-        usage = extract_usage_metrics(resp, light_model)
+        usage = extract_usage_metrics(resp, light_model, requested_service_tier="flex")
         return ko_needs, en_needs, ko_feedback, en_feedback, ko_score, en_score, usage
     except Exception as e:
         logger.warning("Basic self-critique failed for '%s': %s", term, e)
@@ -1381,7 +1381,7 @@ async def _check_basic_quality(
         )
         data = parse_ai_json(resp.choices[0].message.content, "basic-quality")
         total, breakdown = _aggregate_quality_sub_scores(data, _BASIC_DIMENSIONS, _BASIC_MAX_RAW)
-        usage = extract_usage_metrics(resp, reasoning_model)
+        usage = extract_usage_metrics(resp, reasoning_model, requested_service_tier="flex")
         if total is None:
             logger.warning("Basic quality check returned malformed sub-scores for '%s'", term)
             return None, {}, usage
