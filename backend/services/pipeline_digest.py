@@ -1432,6 +1432,17 @@ async def _generate_digest(
                         "source_confidence": s.get("source_confidence", ""),
                         "source_tier": s.get("source_tier", ""),
                     }
+        # CP thread URLs (HN/Reddit) were added to the writer's strict
+        # json_schema enum by `_build_writer_url_allowlist` so the writer
+        # can cite them in CP block headers — the linkifier emits them as
+        # `**[Hacker News](https://...)**`. _renumber_citations also passes
+        # this allowed_urls set to its placeholder-stripping path; without
+        # the thread URLs here, the linkified labels get stripped, leaving
+        # `****` stubs (Apr 26 incident).
+        for insight in (community_summary_map or {}).values():
+            for thread in insight.synthesized_threads():
+                if thread.url:
+                    allowed_urls.add(thread.url)
 
         # Historical note (2026-04-23 removed): previously we HEAD-checked each
         # URL here via _validate_urls_live and dropped dead ones from the

@@ -242,12 +242,15 @@ def _renumber_citations(
 
     renumbered = citation_re.sub(_replace, content)
 
-    # Defense-in-depth: LLM sometimes emits placeholder literals like `[N](URL)`
-    # or `[CITE_N](URL)` where it was supposed to substitute an integer. Those
-    # render in markdown as links with broken anchor text ("N"). Detect any
-    # remaining bracketed-non-digit citations and either (a) renumber if the
-    # URL is already in source_cards, or (b) strip with a warning.
-    placeholder_re = re.compile(r'\[([^\]\d]+)\]\(([^)]+)\)')
+    # Defense-in-depth: LLM sometimes emits placeholder literals like
+    # `[CITE_N](URL)` or `[N_PLACEHOLDER](URL)` where it should have substituted
+    # an integer. Catch these specifically; do NOT touch legitimate markdown
+    # links with descriptive labels (e.g. `[Hacker News](URL)` from the CP
+    # linkifier — those carry meaning and the label must be preserved).
+    placeholder_re = re.compile(
+        r'\[(CITE[_-]?\w*|N[_-]?PLACEHOLDER|N|CITATION[_-]?\w*)\]\(([^)]+)\)',
+        re.IGNORECASE,
+    )
     placeholder_hits: list[str] = []
     def _replace_placeholder(m: re.Match) -> str:
         placeholder, url = m.group(1), m.group(2)
@@ -255,14 +258,13 @@ def _renumber_citations(
         if not _is_allowed(url):
             stripped_urls.append(url)
             return ""
-        # Allowed URL with non-digit placeholder — try to map to an existing
-        # source card (same URL already renumbered) or assign a new number.
+        # Allowed URL with placeholder-shaped label — renumber.
         new_num = _assign(url)
         return f"[{new_num}]({url})"
     renumbered = placeholder_re.sub(_replace_placeholder, renumbered)
     if placeholder_hits:
         logger.warning(
-            "Recovered %d citation(s) with non-digit placeholder (LLM literal-N bug): %s",
+            "Recovered %d citation(s) with placeholder label (LLM literal-N bug): %s",
             len(placeholder_hits),
             ", ".join(sorted(set(placeholder_hits)))[:200],
         )
