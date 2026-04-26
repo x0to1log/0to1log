@@ -8,10 +8,15 @@ happens in ``services.agents.citation_substitution``.
 
 Quiz contract: ``quiz_en`` and ``quiz_ko`` are separate top-level fields
 matching the existing parser (``pipeline_digest.py`` line 764+ reads
-``data.get("quiz_en")`` / ``data.get("quiz_ko")``) and downstream
-``guide_items.quiz_poll_{persona}`` shape which uses ``question / answer
-/ options / explanation``. Keeping the old contract avoids a destructive
-rename of the DB-facing quiz shape.
+``data.get("quiz_en")`` / ``data.get("quiz_ko")``). Writer emits
+``answer_index`` (integer 0-3) instead of ``answer`` text — strict
+json_schema enforces the range, eliminating the silent-drop class of
+bug where verbatim string match failed (Apr 26 KO quiz_poll_expert
+incident). The validator
+(``pipeline._validate_and_shuffle_quiz_item``) resolves the index to
+text before saving, so the DB-facing
+``guide_items.quiz_poll_{persona}`` shape (``question / answer /
+options / explanation``) stays unchanged.
 """
 from __future__ import annotations
 
@@ -34,7 +39,7 @@ class Citation(BaseModel):
 
 class QuizOneLocale(BaseModel):
     question: str
-    answer: str
+    answer_index: int = Field(ge=0, le=3)
     options: list[str] = Field(min_length=4, max_length=4)
     explanation: str = ""
 
@@ -151,10 +156,14 @@ def _quiz_locale_schema() -> dict[str, Any]:
         "additionalProperties": False,
         # `explanation` is required by strict schema (OpenAI strict mode
         # requires all properties to be required), but writer can emit "".
-        "required": ["question", "answer", "options", "explanation"],
+        "required": ["question", "answer_index", "options", "explanation"],
         "properties": {
             "question": {"type": "string"},
-            "answer": {"type": "string"},
+            "answer_index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3,
+            },
             "options": {
                 "type": "array",
                 "items": {"type": "string"},

@@ -23,13 +23,13 @@ def _valid_output_payload() -> dict:
         "focus_items_ko": ["푸"],
         "quiz_en": {
             "question": "What happened?",
-            "answer": "A",
+            "answer_index": 0,
             "options": ["A", "B", "C", "D"],
             "explanation": "Because A.",
         },
         "quiz_ko": {
             "question": "무엇이 일어났나?",
-            "answer": "가",
+            "answer_index": 0,
             "options": ["가", "나", "다", "라"],
             "explanation": "가 맞습니다.",
         },
@@ -94,10 +94,10 @@ def test_schema_quiz_uses_top_level_quiz_en_quiz_ko():
 
 
 def test_schema_quiz_fields_match_parser_contract():
-    """Fields must be question/answer/options/explanation (not q/a)."""
+    """Fields must be question/answer_index/options/explanation (not q/a)."""
     schema = build_news_writer_json_schema(["https://a.com"])
     quiz_props = schema["schema"]["properties"]["quiz_en"]["properties"]
-    assert set(quiz_props) == {"question", "answer", "options", "explanation"}
+    assert set(quiz_props) == {"question", "answer_index", "options", "explanation"}
 
 
 def test_schema_includes_sources_required():
@@ -123,3 +123,56 @@ def test_sources_empty_list_allowed():
     payload["en"] = "No citations needed."
     payload["ko"] = "인용 없음."
     NewsWriterOutput(**payload)
+
+
+def test_quiz_schema_uses_answer_index():
+    """quiz_en/quiz_ko require answer_index (integer 0-3), not answer text.
+
+    Cross-field constraint (answer in options) is structurally impossible
+    at the schema level. answer_index makes correctness guaranteed by
+    range check alone — the API rejects any value outside 0-3.
+    """
+    schema = build_news_writer_json_schema(["https://a.com"])
+    quiz_en_schema = schema["schema"]["properties"]["quiz_en"]
+    required = quiz_en_schema["required"]
+    props = quiz_en_schema["properties"]
+
+    assert "answer_index" in required
+    assert "answer" not in required
+
+    ai_prop = props["answer_index"]
+    assert ai_prop["type"] == "integer"
+    assert ai_prop["minimum"] == 0
+    assert ai_prop["maximum"] == 3
+    assert "answer" not in props
+
+
+def test_quiz_pydantic_model_uses_answer_index():
+    """QuizOneLocale Pydantic model accepts answer_index, rejects out-of-range."""
+    from services.agents.schemas.news_writer import QuizOneLocale
+    from pydantic import ValidationError
+    import pytest as _pytest
+
+    valid = QuizOneLocale(
+        question="Q",
+        answer_index=2,
+        options=["a", "b", "c", "d"],
+        explanation="",
+    )
+    assert valid.answer_index == 2
+
+    with _pytest.raises(ValidationError):
+        QuizOneLocale(
+            question="Q",
+            answer_index=5,
+            options=["a", "b", "c", "d"],
+            explanation="",
+        )
+
+    with _pytest.raises(ValidationError):
+        QuizOneLocale(
+            question="Q",
+            answer_index=-1,
+            options=["a", "b", "c", "d"],
+            explanation="",
+        )
