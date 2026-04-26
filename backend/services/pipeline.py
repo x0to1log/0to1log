@@ -503,25 +503,102 @@ def _load_checkpoint(supabase, run_id: str, stage: str) -> dict | None:
         return None
 
 
+# Regexes for splitting per-platform sections in community_map blobs.
+# news_collection embeds [Hacker News|url=<url>] / [Reddit r/<sub>|url=<url>]
+# tokens at the start of each thread block (cf. 2026-04-21 plumbing plan).
+# Used by _redact_offtopic_sections to strip off-topic platforms from blobs
+# before passing to ranking — otherwise irrelevant upvote counts inflate
+# ranking score (R4 from 2026-04-26 cp-per-platform redesign plan revisions).
+_BLOB_SECTION_HEADER_RE = re.compile(
+    r"\[(?:Hacker News|Reddit\s+r/[^\|\]]+)\|url=[^\]]+\]"
+)
+
+
+def _redact_offtopic_sections(
+    raw_blob: str,
+    insight: "CommunityInsight",
+) -> str:
+    """Remove off-topic platform sections from a community_map blob.
+
+    For each thread in insight.synthesized_threads() with sentiment=None,
+    locate that platform's section in the blob (by matching the
+    [Hacker News|url=...] or [Reddit r/<sub>|url=...] header that contains
+    the thread's URL) and strip it out — including its upvote counts that
+    ranking parses from raw text. Returns the cleaned blob.
+
+    If no threads are off-topic, returns the blob unchanged. If all threads
+    are off-topic, returns an empty string (caller should use entry-level
+    filter to drop the entire community_map entry first).
+
+    Section boundary: each section starts at its [...|url=...] header marker
+    and runs until the next header or end-of-blob.
+    """
+    if not raw_blob:
+        return raw_blob
+
+    threads = insight.synthesized_threads()
+    offtopic_urls = {t.url for t in threads if t.sentiment is None and t.url}
+    if not offtopic_urls:
+        return raw_blob
+
+    # Find all section header positions
+    headers = list(_BLOB_SECTION_HEADER_RE.finditer(raw_blob))
+    if not headers:
+        return raw_blob
+
+    # Determine which sections to keep (URL not in offtopic_urls)
+    keep_ranges: list[tuple[int, int]] = []
+    for i, m in enumerate(headers):
+        start = m.start()
+        end = headers[i + 1].start() if i + 1 < len(headers) else len(raw_blob)
+        section_text = raw_blob[start:end]
+        # Check if any off-topic URL appears in this section's header
+        is_offtopic = any(url in section_text[:m.end() - m.start() + 200] for url in offtopic_urls)
+        if not is_offtopic:
+            keep_ranges.append((start, end))
+
+    # Preserve any prefix text before the first header (rare but defensive)
+    prefix = raw_blob[:headers[0].start()] if headers else ""
+
+    return prefix + "".join(raw_blob[s:e] for s, e in keep_ranges)
+
+
 def _filter_community_map_by_summary(
     community_map: dict[str, str],
     community_summary_map: dict[str, "CommunityInsight"],
 ) -> dict[str, str]:
-    """Drop community_map entries whose summarizer marked the thread as
-    irrelevant to the source article (sentiment=null). Without this filter,
-    irrelevant high-upvote threads still influence ranking via their upvote
-    counts. Graceful degradation: if summary_map is empty (summarizer
-    failed entirely), pass community_map through unchanged — ranking
-    operates on best-available data rather than nothing.
+    """Drop community_map entries whose summarizer marked the discussion as
+    irrelevant to the source article (every thread sentiment=None), AND for
+    kept entries, strip off-topic platform sections from the blob so ranking
+    only sees relevant platforms' upvote signal.
+
+    Uses synthesized_threads() for uniform shape across legacy flat-shape and
+    new threads-shape insights. Graceful degradation: if summary_map is empty
+    (summarizer failed entirely), pass community_map through unchanged.
     """
     if not community_summary_map:
         return community_map
-    return {
-        url: raw
-        for url, raw in community_map.items()
-        if (ins := community_summary_map.get(url)) is not None
-        and ins.sentiment is not None
-    }
+
+    cleaned: dict[str, str] = {}
+    for url, raw in community_map.items():
+        ins = community_summary_map.get(url)
+        if ins is None:
+            continue
+        threads = ins.synthesized_threads()
+        if not threads:
+            # Legacy fallback: synthesized_threads() returns [] when the legacy
+            # flat insight has no hn_url/reddit_url to derive from (e.g. minimal
+            # checkpoint shape). Fall back to the legacy sentinel: keep if the
+            # flat sentiment field is non-None (model_construct can set None).
+            if ins.sentiment is not None:
+                cleaned[url] = raw  # no thread info → no redaction possible
+            continue
+        # Entry-level filter: keep if ANY thread has non-null sentiment
+        if not any(t.sentiment is not None for t in threads):
+            continue
+        # Section-level redaction: strip off-topic platforms (R4)
+        cleaned[url] = _redact_offtopic_sections(raw, ins)
+    return cleaned
 
 
 async def _log_stage(
