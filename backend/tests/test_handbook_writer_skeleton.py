@@ -62,3 +62,42 @@ def test_handles_partial_relations():
     }
     md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
     assert "- (prerequisite) **X** — Y" in md
+
+
+def test_renders_structured_specs_with_values_and_not_published():
+    raw = {
+        "adv_ko_specs": {
+            "parameters": "175B",
+            "context_window": "not_published",
+            "training_data": "300B tokens",
+            "compute_cost": "not_published",
+            "latency_throughput": "not_published",
+            "benchmarks": [
+                {"name": "MMLU", "score": "65.3%", "context": "5-shot, original paper Table 4"},
+            ],
+        },
+    }
+    md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
+    assert "## 핵심 스펙" in md
+    assert "- **Parameters**: 175B" in md
+    assert "- **Context window**: *(not published)*" in md
+    assert "- **Training data**: 300B tokens" in md
+    assert "- MMLU: 65.3% — 5-shot, original paper Table 4" in md
+
+
+def test_renders_specs_with_no_benchmarks():
+    raw = {
+        "adv_en_specs": {
+            "parameters": "8B",
+            "benchmarks": [],
+        },
+    }
+    md = _assemble_markdown(raw, ADVANCED_SECTIONS_EN)
+    assert "Parameters**: 8B" in md
+    assert "*(none reported in original paper)*" in md
+
+
+def test_specs_section_omitted_when_all_fields_empty():
+    raw = {"adv_ko_specs": {}}
+    md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
+    assert "## 핵심 스펙" not in md

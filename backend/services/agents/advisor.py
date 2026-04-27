@@ -1967,6 +1967,7 @@ BASIC_SECTIONS_EN = [
 
 ADVANCED_SECTIONS_KO = [
     ("adv_ko_1_mechanism", "## 기술적 정의와 동작 원리"),
+    ("adv_ko_specs", "## 핵심 스펙 (parameters, FLOPs, 벤치마크)"),
     ("adv_ko_2_formulas", "## 핵심 수식·아키텍처·도표"),
     ("adv_ko_3_code", "## 코드 또는 의사코드"),
     # NOTE: Display order swapped — pitfalls (concrete failures) before tradeoffs
@@ -1982,6 +1983,7 @@ ADVANCED_SECTIONS_KO = [
 
 ADVANCED_SECTIONS_EN = [
     ("adv_en_1_mechanism", "## Technical Definition & How It Works"),
+    ("adv_en_specs", "## Key Specifications (parameters, FLOPs, benchmarks)"),
     ("adv_en_2_formulas", "## Formulas, Architecture, and Diagrams"),
     ("adv_en_3_code", "## Code or Pseudocode"),
     # See KO comment above — same swap.
@@ -2012,6 +2014,49 @@ def _render_structured_relations(rel: dict) -> str:
     return "\n".join(bullets)
 
 
+def _render_structured_specs(specs: dict) -> str:
+    """Render structured Specs dict as a bullet list of concrete numbers.
+
+    Fields with the literal sentinel 'not_published' are kept and rendered as
+    '*(not published)*' so the explicit gap is visible to readers and the
+    quality judge. Empty benchmarks list with at least one populated numeric
+    field renders as '(none reported in original paper)' so it's clear we
+    checked rather than forgot.
+    """
+    lines: list[str] = []
+    field_order = [
+        ("parameters", "Parameters"),
+        ("context_window", "Context window"),
+        ("training_data", "Training data"),
+        ("compute_cost", "Compute cost"),
+        ("latency_throughput", "Latency / throughput"),
+    ]
+    for key, label in field_order:
+        value = specs.get(key)
+        value_str = value.strip() if isinstance(value, str) else ""
+        if value_str == "not_published":
+            lines.append(f"- **{label}**: *(not published)*")
+        elif value_str:
+            lines.append(f"- **{label}**: {value_str}")
+
+    benchmarks = specs.get("benchmarks") or []
+    if benchmarks:
+        lines.append("- **Benchmarks**:")
+        for b in benchmarks:
+            if not isinstance(b, dict):
+                continue
+            name = (b.get("name") or "").strip()
+            score = (b.get("score") or "").strip()
+            ctx = (b.get("context") or "").strip()
+            if name and score:
+                ctx_part = f" — {ctx}" if ctx else ""
+                lines.append(f"  - {name}: {score}{ctx_part}")
+    elif lines:
+        # Some numeric fields populated but no benchmarks — still note explicitly
+        lines.append("- **Benchmarks**: *(none reported in original paper)*")
+    return "\n".join(lines)
+
+
 def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
     """Assemble section-per-key JSON data into markdown with H2 headers.
 
@@ -2025,6 +2070,8 @@ def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
         if isinstance(raw_value, dict):
             if key.endswith("_7_related"):
                 content = _render_structured_relations(raw_value).strip()
+            elif key.endswith("_specs"):
+                content = _render_structured_specs(raw_value).strip()
             else:
                 content = ""  # unknown structured field — drop rather than serialize raw dict
         elif isinstance(raw_value, str):

@@ -1516,6 +1516,25 @@ Keep the same section keys; only adapt the content perspective.
   GOOD opening: "Transformer는 self-attention 연산을 핵심으로 하는 시퀀스-투-시퀀스 아키텍처다. 인코더/디코더 각각은 multi-head attention과 position-wise FFN으로 구성되며, 모든 토큰 간 관계를 O(n²) 시간에 병렬 계산한다."
   BAD opening: "Transformer는 문장을 이해하는 새로운 방식이다." ← Basic tone, rejected.
 
+- **adv_ko_specs** (Key Specifications, structured object):
+  Concrete numerical specs that anchor the term in measurable reality. **Each numeric
+  field MUST be either a specific value with units OR the literal string "not_published".**
+  Empty strings, "N/A", or omission are forbidden — the explicit "not_published" signals
+  to the reader that you checked and the original paper/spec does not publish it.
+
+  Show, don't tell:
+  ✅ GOOD: "parameters": "175B (decoder-only, 96 transformer layers)"
+  ✅ GOOD: "parameters": "not_published" (Anthropic does not state Claude 3.5 Sonnet's parameter count)
+  ❌ BAD:  "parameters": "" (empty — never use this)
+  ❌ BAD:  "parameters": "large" (vague — give a number or 'not_published')
+  ❌ BAD:  field omitted entirely (always include the key, with 'not_published' if needed)
+
+  benchmarks: array of 0+ entries from the term's paper or official spec. If the paper
+  reports none, return [] (empty array) and mention this fact in adv_ko_1_mechanism.
+
+  This section is rendered as a bullet list immediately after the mechanism section so
+  the judge and reader see concrete numbers up front.
+
 - **adv_ko_2_formulas** (핵심 수식·아키텍처·도표):
   Mathematical formulation with derivation + architecture diagrams (text-based) + technical comparison tables. 수식 있으면 반드시, 없으면 비교표/구조표만.
   Use `$$formula$$` for math (LaTeX inside double dollars). Never single `$` (reserved for currency).
@@ -1616,6 +1635,16 @@ Keep the same section keys; only adapt the content perspective.
 ```json
 {{
   "adv_ko_1_mechanism": "기술적 정의 + 데이터 흐름 + 복잡도",
+  "adv_ko_specs": {{
+    "parameters": "구체 수치(예: '175B') 또는 'not_published'",
+    "context_window": "구체 수치(예: '2048 tokens') 또는 'not_published'",
+    "training_data": "구체 수치(예: '300B tokens (Common Crawl + Books)') 또는 'not_published'",
+    "compute_cost": "구체 수치(예: '3640 PF-days') 또는 'not_published'",
+    "latency_throughput": "구체 수치(예: '50ms/token, 20 tok/s on A100') 또는 'not_published'",
+    "benchmarks": [
+      {{"name": "벤치마크 이름", "score": "구체 점수(단위 포함)", "context": "어떤 setup인지 (예: '5-shot, original paper Table 4')"}}
+    ]
+  }},
   "adv_ko_2_formulas": "수식과 도표 ($$로 감싼 LaTeX 또는 비교표)",
   "adv_ko_3_code": "```python\\n...\\n```",
   "adv_ko_4_tradeoffs": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
@@ -1768,6 +1797,25 @@ Keep the same section keys; only adapt the content perspective.
   GOOD opening: "Transformer is a sequence-to-sequence architecture built around the self-attention operation. Each encoder/decoder block uses multi-head attention plus a position-wise FFN, computing all token-pair relationships in parallel at O(n²) time."
   BAD opening: "Transformer is a new way for AI to understand sentences." ← Basic tone, rejected.
 
+- **adv_en_specs** (Key Specifications, structured object):
+  Concrete numerical specs that anchor the term in measurable reality. **Each numeric
+  field MUST be either a specific value with units OR the literal string "not_published".**
+  Empty strings, "N/A", or omission are forbidden — the explicit "not_published" signals
+  to the reader that you checked and the original paper/spec does not publish it.
+
+  Show, don't tell:
+  ✅ GOOD: "parameters": "175B (decoder-only, 96 transformer layers)"
+  ✅ GOOD: "parameters": "not_published" (Anthropic does not state Claude 3.5 Sonnet's parameter count)
+  ❌ BAD:  "parameters": "" (empty — never use this)
+  ❌ BAD:  "parameters": "large" (vague — give a number or 'not_published')
+  ❌ BAD:  field omitted entirely (always include the key, with 'not_published' if needed)
+
+  benchmarks: array of 0+ entries from the term's paper or official spec. If the paper
+  reports none, return [] (empty array) and mention this fact in adv_en_1_mechanism.
+
+  This section is rendered as a bullet list immediately after the mechanism section so
+  the judge and reader see concrete numbers up front.
+
 - **adv_en_2_formulas** (Formulas, Architecture, and Diagrams):
   Mathematical formulation with derivation + architecture diagrams (text-based) + technical comparison tables. Include math when applicable; otherwise comparison/structure tables only.
   Use `$$formula$$` for math (LaTeX inside double dollars). Never single `$` (reserved for currency).
@@ -1867,6 +1915,16 @@ Keep the same section keys; only adapt the content perspective.
 ```json
 {{
   "adv_en_1_mechanism": "Formal definition + data flow + complexity",
+  "adv_en_specs": {{
+    "parameters": "specific value with units (e.g., '175B') or 'not_published'",
+    "context_window": "specific value (e.g., '2048 tokens') or 'not_published'",
+    "training_data": "specific value (e.g., '300B tokens (Common Crawl + Books)') or 'not_published'",
+    "compute_cost": "specific value (e.g., '3640 PF-days') or 'not_published'",
+    "latency_throughput": "specific value (e.g., '50ms/token, 20 tok/s on A100') or 'not_published'",
+    "benchmarks": [
+      {{"name": "benchmark name", "score": "specific score with unit", "context": "the setup (e.g., '5-shot, original paper Table 4')"}}
+    ]
+  }},
   "adv_en_2_formulas": "Math/diagrams ($$-wrapped LaTeX or comparison tables)",
   "adv_en_3_code": "```python\\n...\\n```",
   "adv_en_4_tradeoffs": "Suitable: ...\\nUnsuitable: ...",
