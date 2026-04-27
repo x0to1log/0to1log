@@ -1992,11 +1992,45 @@ ADVANCED_SECTIONS_EN = [
 ]
 
 
+def _render_structured_relations(rel: dict) -> str:
+    """Render structured Relations dict as canonical (tag) **term** — relationship bullets.
+
+    Tag-first order matches the writer prompt's rule that the parenthesized tag
+    precedes the bolded term.
+    """
+    bullets: list[str] = []
+    for category, tag in (
+        ("prerequisites", "prerequisite"),
+        ("alternatives", "alternative"),
+        ("extensions", "extension"),
+    ):
+        for entry in rel.get(category, []) or []:
+            term = (entry.get("term") or "").strip()
+            relationship = (entry.get("relationship") or "").strip()
+            if term and relationship:
+                bullets.append(f"- ({tag}) **{term}** — {relationship}")
+    return "\n".join(bullets)
+
+
 def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
-    """Assemble section-per-key JSON data into markdown with H2 headers."""
-    parts = []
+    """Assemble section-per-key JSON data into markdown with H2 headers.
+
+    Section value can be a string (legacy/most sections) or a dict (structured
+    fields like `adv_*_7_related`). Dicts dispatch to a type-specific renderer
+    by key suffix; strings pass through verbatim. Empty values omit the section.
+    """
+    parts: list[str] = []
     for key, header in sections:
-        content = data.get(key, "").strip()
+        raw_value = data.get(key)
+        if isinstance(raw_value, dict):
+            if key.endswith("_7_related"):
+                content = _render_structured_relations(raw_value).strip()
+            else:
+                content = ""  # unknown structured field — drop rather than serialize raw dict
+        elif isinstance(raw_value, str):
+            content = raw_value.strip()
+        else:
+            content = ""
         if content:
             parts.append(f"{header}\n{content}")
     return "\n\n".join(parts)

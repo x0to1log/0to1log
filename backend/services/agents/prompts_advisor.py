@@ -1566,9 +1566,16 @@ Keep the same section keys; only adapt the content perspective.
   **Must differentiate from `basic_ko_6_comm`** — Basic uses Slack/standup tone, Advanced uses PR review/design doc/incident tone.
 
 - **adv_ko_7_related** (선행·대안·확장 개념, 4~6개):
-  Related terms categorized: **선행** (Prerequisites), **대안** (Alternatives), **확장** (Extensions).
-  형식: `- (선행|대안|확장) **용어** — 기술적 관계 + 왜 이 관점에서 중요한가`
-  **태그는 bullet 맨 앞 괄호로** — `선행`, `대안`, `확장` 중 하나. 영어 태그 금지.
+  Related terms categorized: **Prerequisites**, **Alternatives**, **Extensions**.
+
+  **Output as a structured JSON object** (not prose). Each entry has:
+  - `term` (string): the related concept's name
+  - `relationship` (string): one-sentence technical link + why it matters from this angle
+
+  The renderer auto-formats output as `- (prerequisite) **Term** — relationship`.
+
+  Total entries across all three categories: 4-6.
+
   Do NOT repeat Basic's `7_related` learning-flow framing. Here, focus on **technical dependency** and **system design choice**.
 
   **카테고리 분류 원칙 (모든 용어 종류에 공통 — 모델/제품/알고리즘/현상):**
@@ -1614,7 +1621,17 @@ Keep the same section keys; only adapt the content perspective.
   "adv_ko_4_tradeoffs": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
   "adv_ko_5_pitfalls": "- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...",
   "adv_ko_6_comm": "- \\"문장 1\\"\\n- \\"문장 2\\"\\n- ...",
-  "adv_ko_7_related": "- (선행|대안|확장) **용어** — 관계"
+  "adv_ko_7_related": {{
+    "prerequisites": [
+      {{"term": "...", "relationship": "기술적 의존 관계 + 왜 먼저 알아야 하는지"}}
+    ],
+    "alternatives": [
+      {{"term": "...", "relationship": "동일 문제를 다른 방식으로 풀이 + 왜 그 방식이 의미 있는지"}}
+    ],
+    "extensions": [
+      {{"term": "...", "relationship": "이 용어 위에 쌓이는 변형/확장 + 어떤 한계를 푸는지"}}
+    ]
+  }}
 }}
 ```
 
@@ -1802,8 +1819,15 @@ Keep the same section keys; only adapt the content perspective.
 
 - **adv_en_7_related** (Prerequisites, Alternatives, and Extensions, 4-6 entries):
   Related terms categorized: **Prerequisites**, **Alternatives**, **Extensions**.
-  Format: `- (prerequisite|alternative|extension) **Term** — technical relationship + why it matters from this angle`
-  **Tag comes first, inside parentheses, before the bolded term.**
+
+  **Output as a structured JSON object** (not prose). Each entry has:
+  - `term` (string): the related concept's name
+  - `relationship` (string): one-sentence technical link + why it matters from this angle
+
+  The renderer auto-formats output as `- (prerequisite) **Term** — relationship`.
+
+  Total entries across all three categories: 4-6.
+
   Do NOT repeat Basic's `7_related` learning-flow framing. Here, focus on **technical dependency** and **system design choice**.
 
   **Category rules (apply across all term kinds — model/product/algorithm/phenomenon):**
@@ -1848,7 +1872,17 @@ Keep the same section keys; only adapt the content perspective.
   "adv_en_4_tradeoffs": "Suitable: ...\\nUnsuitable: ...",
   "adv_en_5_pitfalls": "- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...",
   "adv_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- ...",
-  "adv_en_7_related": "- (prerequisite|alternative|extension) **Term** — relationship"
+  "adv_en_7_related": {{
+    "prerequisites": [
+      {{"term": "...", "relationship": "technical dependency + why it must be understood first"}}
+    ],
+    "alternatives": [
+      {{"term": "...", "relationship": "currently-competing approach + why it's the relevant alternative"}}
+    ],
+    "extensions": [
+      {{"term": "...", "relationship": "what builds on top + what limit it pushes past"}}
+    ]
+  }}
 }}
 ```
 
