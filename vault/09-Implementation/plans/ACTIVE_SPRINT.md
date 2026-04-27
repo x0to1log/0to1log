@@ -307,6 +307,7 @@
 | NQ-23 | ~~todo~~ done | ~~CP 안정화~~ — v11 URL plumbing에서 해결 (thread URL 보존 + upvote 매칭). canonicalization은 HN Algolia가 정규화 URL 반환으로 자연 해결 |
 | NQ-24 | todo | 파이프라인 테스트 전면 재작성 — 현재 계약 기반 mock 테스트 (MagicMock 덫 교훈 반영) |
 | NQ-36 | todo | CLASSIFY 프롬프트 토큰 축약 (Phase 3에서 drop된 scope, v12 트리거 전 정리) | — | — |
+| NQ-43 | todo | Source confidence classifier 개선 — `_classify_source_meta` 의 `confidence='low'` 정확도 향상. 2026-04-27 audit 에서 `confidence='low'` 의 ~40% 가 정상 미디어 false positive 로 확인 (axios, cnbc, nytimes 등 mainstream + tianpan.co/zhihang-fu.github.io 같은 niche legit). 즉시 fix 는 blocklist 점진 확장 (research_blocklist 8→26 commit 진행) 으로 했지만 근본은 분류기. 도메인 등록일·HTTPS·publishing schema·about 페이지 존재 등 추가 신호 도입 검토. 1-2 주 작업 |
 | COLLECT-BRAVE-01 | ~~todo~~ cancelled | ~~Brave Search API 수집기 추가~~ — NP-DIET-01에서 Brave 전량 제거하며 의미 상실 |
 
 ### GPT-5 마이그레이션 (완료 — 2026-04-19)
