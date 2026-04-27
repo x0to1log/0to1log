@@ -1701,18 +1701,38 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             if logo:
                 result["logo_url"] = logo
 
-        # Use classification's primary_category as authoritative
-        if classification.get("primary_category"):
-            result["primary_category"] = classification["primary_category"]
+        # Use classification's primary_category as authoritative — but
+        # validate against the FK enum first. The classifier occasionally
+        # returns product_nature values ("tool", "service") in this slot,
+        # which would violate the ai_products.primary_category FK on write.
+        VALID_CATEGORIES = {
+            "assistant", "image", "video", "audio", "coding",
+            "workflow", "builder", "platform", "research", "community",
+        }
+        cls_cat = classification.get("primary_category")
+        if cls_cat in VALID_CATEGORIES:
+            result["primary_category"] = cls_cat
+        elif cls_cat:
+            logger.warning(
+                "Classifier returned invalid primary_category=%r for %s; "
+                "falling back to en_profile value or 'assistant'",
+                cls_cat, body.slug or product_name,
+            )
+
+        # Final guard: if result still has an invalid/missing category,
+        # default to 'assistant' so the row write doesn't fail.
+        if result.get("primary_category") not in VALID_CATEGORIES:
+            result["primary_category"] = "assistant"
 
         # Post-processing on secondary_categories:
         # 1. Drop the primary_category itself (classify sometimes returns it in both).
         # 2. Drop "platform" unless the product IS a platform (Replicate, HF Inference,
         #    AWS Bedrock). Having an API ≠ being a platform.
+        # 3. Drop any value that isn't in the valid enum.
         primary = result.get("primary_category")
         if primary:
             sc = result.get("secondary_categories") or []
-            cleaned = [c for c in sc if c and c != primary]
+            cleaned = [c for c in sc if c and c != primary and c in VALID_CATEGORIES]
             if primary != "platform":
                 cleaned = [c for c in cleaned if c != "platform"]
             result["secondary_categories"] = cleaned
