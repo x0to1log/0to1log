@@ -23,21 +23,56 @@ from services.agents.product_advisor import _score_profile, _aggregate_quality_s
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("rescore_products")
 
-SLUGS = ["hugging-face", "runway-ml", "semantic-scholar"]
+SLUGS = [
+    # Earliest batch
+    "hugging-face", "runway-ml", "semantic-scholar",
+    # Yesterday batch
+    "claude", "cursor", "n8n", "elevenlabs", "adobe-firefly", "lovable",
+    # Sanity batch
+    "openai-api", "gemini-cli", "llama", "flowise", "luma-ai", "ideogram", "recraft-v3",
+    # Batch 3
+    "suno", "udio", "supertone-play", "chatgpt", "notebooklm",
+    "openclaw", "antigravity", "theres-an-ai-for-that", "geeknews", "latent.space",
+    # Batch 4
+    "perplexity", "gemini", "grok", "midjourney", "sora",
+    "google-veo-3.1", "github-copilot", "v0", "replicate-run-ai-with-an-api",
+    # Batch 5
+    "stable-diffusion", "dall-e-3", "windsurf", "bolt.new", "klingai",
+    "pika", "zapier", "arxiv", "anthropic-api",
+    # Batch 6
+    "make", "typeform", "mixpanel", "posthog", "intercom",
+    "replit-ai", "pytorch", "tabnine", "alphaxiv", "app",
+    # Batch 7
+    "canva", "figma", "gamma", "leonardo.ai", "heygen-ai-video-generator",
+    "dify", "langflow", "tensorflow", "pinecone", "weights-biases",
+    # Batch 8
+    "sora-2", "kling-2.6", "hailuo-ai", "bubble", "magnific-ai",
+    "whisk", "helicone", "langsmith", "genspark", "microsoft-designer",
+]
 
 
 def row_to_profile(row: dict) -> dict:
-    """Map ai_products row → profile dict shape that _build_quality_summary expects."""
+    """Map ai_products row → profile dict shape the scorer expects.
+
+    Must include every KO field: validate_ko_completeness compares
+    description vs description_ko, editor_note vs editor_note_ko,
+    pricing_detail vs pricing_detail_ko. Missing them produces a
+    false-positive 0 score on ko_completeness.
+    """
     return {
         "tagline": row.get("tagline") or "",
         "tagline_ko": row.get("tagline_ko") or "",
+        "description": row.get("description") or "",
         "description_en": row.get("description") or "",
+        "description_ko": row.get("description_ko") or "",
         "features": row.get("features") or [],
         "features_ko": row.get("features_ko") or [],
         "use_cases": row.get("use_cases") or [],
         "editor_note": row.get("editor_note") or "",
+        "editor_note_ko": row.get("editor_note_ko") or "",
         "pricing": row.get("pricing"),
         "pricing_detail": row.get("pricing_detail") or "",
+        "pricing_detail_ko": row.get("pricing_detail_ko") or "",
     }
 
 
@@ -48,8 +83,10 @@ async def main() -> None:
         return
 
     res = sb.table("ai_products").select(
-        "slug,tagline,tagline_ko,description,features,features_ko,use_cases,"
-        "editor_note,pricing,pricing_detail"
+        "slug,tagline,tagline_ko,description,description_ko,"
+        "features,features_ko,use_cases,"
+        "editor_note,editor_note_ko,"
+        "pricing,pricing_detail,pricing_detail_ko"
     ).in_("slug", SLUGS).execute()
 
     rows = {r["slug"]: r for r in (res.data or [])}
