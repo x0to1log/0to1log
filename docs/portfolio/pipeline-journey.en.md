@@ -1,7 +1,7 @@
 # AI News Pipeline Development Journey
 
 > **Project:** [0to1log](https://0to1log.com) -- AI News Curation + AI Glossary + IT Blog Platform
-> **Duration:** Mid-February to April 6, 2026 (2 weeks planning + 33 days development)
+> **Duration:** Mid-February to April 23, 2026 (2 weeks planning + 50 days development)
 > **Role:** Solo full-stack developer (planning, design, frontend, backend, AI, infrastructure)
 > **Stack:** Astro v5 - FastAPI - Supabase - OpenAI (gpt-5) - Tavily - Exa - Brave - Vercel - Railway
 
@@ -9,25 +9,28 @@
 
 ## At a Glance
 
-A pipeline that collects 50-60 AI news articles daily from 7 sources, auto-groups same-event articles, classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 33 days through 10 versions, with a gpt-5 model transition in v10.
+A pipeline that collects 50-60 AI news articles daily from 7 sources, auto-groups same-event articles, classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 50 days through 12 versions, with gpt-5 transition (v10), quality evaluation redesign (v11), and efficiency overhaul (v12).
 
-| | Start (v2) | v8 | v9 + merge | Current (v10, gpt-5) |
-|---|---|---|---|---|
-| **Cost per run** | $0.18 | $0.25 | $0.43 | **$0.58** |
-| **Model** | gpt-4o | gpt-4.1 | gpt-4.1 | **gpt-5** |
-| **Citations per digest** | 1.8 | 16.8 | 16.8 | 16.8 |
-| **Sources per article** | 1 (original only) | 1 | multi-source | multi-source + CP summary |
-| **Collection sources** | 1 (Tavily) | 6 | 7 | 7 |
-| **Quality score (Research)** | 75.8 | 91.8 | 94 | **96** |
-| **Quality score (Business)** | 82.9 | 94.8 | 95 | **91** |
+| | Start (v2) | v8 | v10 | v11 | Current (v12) |
+|---|---|---|---|---|---|
+| **Cost per run** | $0.18 | $0.25 | $0.58 | $0.54 | **$0.41** |
+| **Model** | gpt-4o | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 (flex + cache) |
+| **Quality eval** | none | 4x25 single score | 4x25 + code deductions | 10 sub-score + evidence | **14-15 sub-score + schema enum** |
+| **URL hallucination guard** | none | prompt instruction | prompt instruction | URL liveness check | **API schema enum (100%)** |
+| **Prompt cache** | -- | -- | -- | -- | **52% avg hit rate** |
+| **QC rerun cost** | full $0.25 | full $0.25 | full $0.58 | QC only $0.05 (-90%) | QC only $0.02 (flex) |
+| **Quality (R/B)** | 75.8 / 82.9 | 91.8 / 94.8 | 96 / 91 | 76 / 93 | **89-97 stable** |
 
-Through v8, quality improved 9.3x while keeping cost at $0.18-$0.25/run. v9 cost exploded to $0.77 with multi-source enrichment, then merge brought it back to $0.43. v10 transitioned to gpt-5 with Community Pulse redesign, reaching $0.58/run with quality 96/91. All figures measured from production databases.
+Through v8, quality improved 9.3x while keeping cost at $0.18-$0.25/run. v9 cost exploded to $0.77 with multi-source enrichment, then merge brought it back to $0.43. v10 transitioned to gpt-5. v11 redesigned the rubric with 3-layer source gates and a QC rerun path. **v12 cut cost to $0.33-$0.41 (18-34% below baseline) while restoring citation density 3-6x** -- API schema enum blocks URL hallucination at the server level, flex tier and prompt cache cut the bill. All figures measured from production databases.
 
 Key discoveries:
 1. **Removing DON'Ts makes LLMs perform better.** Cutting the Research Expert Guide from 569 to 151 words and deleting all 9 DON'Ts increased per-item depth from 1 paragraph to 3.
 2. **Give LLMs one role at a time.** Classification/ranking (v8), classify/merge (v9), Writer/Summarizer (v10) -- three rounds of validation. Accuracy improved immediately each time tasks were separated.
 3. **Input quality determines output quality.** Instructing the Writer to "reflect diverse perspectives" doesn't work -- actually providing diverse sources does. Merge deduplicated input, cutting cost by 44% while maintaining quality.
-4. **Reasoning models have a different parameter system.** Empty responses from gpt-5 aren't bugs -- reasoning tokens consume the output budget. reasoning_effort=low + 3x headroom solves it.
+4. **Reasoning models have a different parameter system.** Empty responses from gpt-5 aren't bugs -- reasoning tokens consume the output budget. reasoning_effort=low + 3x headroom solves it. **In practice 60-72% of output is reasoning tokens** -- only 30-40% is body.
+5. **Good source filtering matters more than good generation prompts.** Spam, content farms, dead URLs, fork repos blocked at the enrich stage. All 13 problematic URLs from the Apr 19 incident blocked. Quality is built at the input gate, not Writer tuning.
+6. **When you turn the quality knob, turn the cost knob too.** In v12, raising `reasoning_effort=low` to `high` alone added +72% ($0.50 to $0.86). Adding `flex tier (-50%)` and `prompt_cache_key (-30%)` together flipped it to -34% ($0.33). Tuning one axis blows up the cost.
+7. **API schema enum beats prompts for compliance.** Prompts achieve 85-97% URL hallucination prevention; `json_schema` + `citations[].url: enum` enforced at the API level rejects hallucinated URLs server-side -> 100%. When prompts can't get there, escalate to the schema.
 
 ---
 
@@ -67,23 +70,31 @@ Classify (gpt-5-mini) --> Research 0-5 / Business 0-5 (individual items)
     v
 Merge (gpt-5-mini) --> group same-event articles ($0.002)
     v
-Community (HN Algolia + Brave Discussions)
+Community collect (HN Algolia + Brave Discussions, top 30/platform)
     v
-Community Summarize (gpt-5-mini) --> sentiment + quotes(EN/KO) + key_point
+Relevance filter (gpt-5-nano) -- 30 → 5-10 (drop off-topic flame wars)
+    v
+Community summarize (gpt-5-mini, per-platform) --> ThreadInfo[]
+    sentiment + quotes(EN/KO) + key_point per platform
     v
 Rank (gpt-5-mini) --> [LEAD] / [SUPPORTING] (per group)
     v
-Conditional Enrich (Exa find_similar -- only groups with 1 source)
+Conditional enrich (Exa find_similar -- only groups with 1 source)
+    + source quality gate (drop spam / content farms, original repo > fork)
     v
 +-- Research Digest -----------+   +-- Business Digest -----------+
-|  Expert EN+KO (gpt-5)       |   |  Expert EN+KO (gpt-5)       |
-|  Learner EN+KO (gpt-5)      |   |  Learner EN+KO (gpt-5)      |
+|  Expert EN+KO (gpt-5 flex)  |   |  Expert EN+KO (gpt-5 flex)  |
+|  Learner EN+KO (gpt-5 flex) |   |  Learner EN+KO (gpt-5 flex) |
+|  + JSON schema: citations[] |   |  + JSON schema: citations[] |
+|    url: enum [allowlist]    |   |    url: enum [allowlist]    |
+|  + prompt_cache_key (52% ↑) |   |  + prompt_cache_key (52% ↑) |
 +------------------------------+   +------------------------------+
     v
-Post-process (bold fix + tag strip + citation renumber)
+Post-process (bold fix + tag strip + [CITE_N] → [N](URL) substitution)
     v
-Quality Check (gpt-5-mini x 4: R/B x Expert/Learner)
-    + Code deductions (CP missing -15, structural mismatch -5, empty citation -5)
+Quality check (gpt-5 flex x 4: R/B x Expert/Learner)
+    + 14-15 sub-score + evidence (LLM), total aggregated by code
+    + Code deductions (CP missing -15, structural mismatch -5)
     + Health Check (0 classifications, over-grouping, collection failures)
     v
 Save Draft --> Admin Review --> Publish
@@ -108,22 +119,26 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | v9 initial | 3 | **$0.62** | $0.46-$0.77 | Multi-source enrichment (input explosion) |
 | v9 + merge | 4 | **$0.43** | $0.32-$0.52 | Merge deduplicates input (back to v8 level) |
 | v10 (gpt-5) | 6 | **$0.58** | $0.51-$0.64 | gpt-5 transition + CP Summarizer + code deductions |
+| v11 | measuring | **$0.54** | -- | Rubric v2 + source gates + rerun=quality ($0.05) |
+| v12 initial (high only) | 1 | $0.86 | -- | reasoning_effort=high alone (+72%, lesson) |
+| v12 (4/23 single) | 1 | $0.36 | -- | flex + cache + liveness removed (-28%) |
+| v12 (4/23-27 avg) | 5 | **$0.41** | $0.36-0.47 | + CP per-platform + relevance filter (4/24-27 follow-up) |
 
 ### Quality Trend (news_posts, EN, Research/Business split)
 
-| Metric | | v2-v4 | v5-v6 | v7-v8 | v9 | v10 |
-|--------|---|-------|-------|-------|-----|-----|
-| **Quality score** | Research | 75.8 | 92.2 | 91.8 | 94 | **96** |
-| | Business | 82.9 | 94.1 | 94.8 | 95 | **91** |
-| **Expert citations** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 |
-| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 |
-| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | $0.43 | **$0.58** |
+| Metric | | v2-v4 | v5-v6 | v7-v8 | v9 | v10 | v11 | v12 |
+|--------|---|-------|-------|-------|-----|-----|-----|-----|
+| **Quality score** | Research | 75.8 | 92.2 | 91.8 | 94 | 96 | 76 | **90-97** |
+| | Business | 82.9 | 94.1 | 94.8 | 95 | 91 | 93 | **89-95** |
+| **Expert citations** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 | 17.5 | **30** (peak) |
+| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 | 20.5 | 21 |
+| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
 
-*Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts -- a stricter standard -- yet scores improved. v10's Business 91 reflects calibration differences from the gpt-5 scoring model transition -- same content scores differently when the scoring model changes.*
+*Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts -- a stricter standard -- yet scores improved. **v11 scores are not directly comparable to pre-v11 because the rubric architecture itself changed** -- the 10-sub-score + evidence redesign distributes scores differently. v12 extended v11's rubric to 14-15 sub-scores + schema enforcement, with a 3-day average of 92.7 (89-97 stable).*
 
-**Summary:** Through v8, cost stayed at $0.18-$0.25 while citations grew 9.3x. v9 exploded to $0.77, merge brought it back to $0.43. v10 transitioned to gpt-5 + CP redesign, reaching $0.58 with quality 96/91.
+**Summary:** Through v8, cost stayed at $0.18-$0.25 while citations grew 9.3x. v9 exploded to $0.77, merge brought it back to $0.43. v10 transitioned to gpt-5. v11 redesigned the rubric, added source gates, and introduced a QC rerun path. **v12 used schema enum to block URL hallucination at the API level, then flex tier + prompt cache brought cost down to $0.33 (-34%) with citation density restored 3-6x.** Quality and cost improved together.
 
-### Prompt Iteration History (10 rounds)
+### Prompt Iteration History (12 rounds)
 
 | Iteration | Score | Key change | Keyword |
 |-----------|-------|-----------|---------|
@@ -137,6 +152,9 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | v8 | **90.0** | DON'T removal | Over-correction removed |
 | v9 | **95** | Multi-source + merge + citation code | Cost explosion then recovery |
 | v10 | **96** | gpt-5 transition + CP redesign + code deductions | Reasoning model migration |
+| v11 | **rebaseline** | 10 sub-score + source gates + rerun=quality | LLM/code role re-separation |
+| v11.1 | **95/100** | Writer-QC mirror + Phase 2a measurement | QC and Writer change in pairs |
+| v12 | **89-97 stable** | Schema enum + flex + cache, liveness removed | Cost -34% + citation 3-6x recovery |
 
 ---
 
@@ -165,28 +183,41 @@ If quality is below threshold, save as draft and let admin review. The pipeline 
 
 Instead of stopping the pipeline, quality is tracked through 3 layers.
 
-**Layer 1 -- LLM Auto-Evaluation (4 persona-specific prompts)**
+**Layer 1 -- LLM Auto-Evaluation (v12: 14-15 sub-score + evidence + schema enum)**
 
-Expert and Learner need different evaluation criteria. Asking Expert about "accessibility" is meaningless; asking Learner about "technical depth" is inappropriate.
+Started with 4 criteria x 25 points per persona, but v11 redesigned it as **10 sub-scores (each 0-10) + evidence per score**. v11.1 expanded to 14-15 by adding `claim_calibration`, `temporal_anchoring`, `internal_consistency`. LLM provides only sub-scores and evidence; **code aggregates the total**.
 
-| Persona | Criterion 1 | Criterion 2 | Criterion 3 | Criterion 4 |
-|---------|------------|------------|------------|------------|
-| Research Expert | Section completeness | Source quality | Technical depth | Language quality |
-| Research Learner | Section completeness | Accessibility | Source quality | Language quality |
-| Business Expert | Section completeness | Source quality | Analysis quality | Language quality |
-| Business Learner | Section completeness | Accessibility | Actionability | Language quality |
+| Persona | Sub-score count | Key dimensions |
+|---------|----------------|----------------|
+| Research Expert | 14 | section_completeness, source_quality, technical_depth, locale_integrity, claim_calibration, temporal_anchoring, internal_consistency, ... |
+| Research Learner | 14 | section_completeness, accessibility, source_quality, locale_integrity, ... |
+| Business Expert | 15 | + claim_coverage (forbids press-release evaluative phrases in focus_items) |
+| Business Learner | 14 | section_completeness, accessibility, actionability, locale_integrity, ... |
 
-Each criterion 0-25 points, total 100. Evaluated by gpt-5-mini (temperature=0). Final score is the average of Expert and Learner.
+**Why LLM doesn't compute the total:** LLMs are strong at qualitative evaluation but weak at arithmetic. Mixing the two makes both unstable. Separation makes each more accurate. `locale_integrity` was promoted from severity marker to explicit sub-dimension in v11 -- preventing recurrence of the Apr 19 incident (KO digest with English-only quotes scoring 96).
 
-**Layer 2 -- Code-Based Structural Verification + Deductions**
+**4 QC paths fully unified:** body / frontload / weekly / handbook all use the same rubric structure for parity.
 
-LLM scoring alone cannot catch structural rule violations like "is the CP section present?" or "do EN/KO section counts match?" Code verifies structure and deducts for violations.
+**v12 schema enum enforcement:** Writer output is constrained by OpenAI strict `json_schema` -- `citations[].url` is an enum bounded by the fact_pack allowlist. **The API rejects bad URLs server-side**, blocking URL hallucination at the schema level (100%) instead of relying on prompts. v11's URL liveness HEAD check produced 70-85% false positives (dropping 90% of citations) and was removed -- schema enum is the more accurate solution.
 
-Final score = LLM score (0-100) - code deductions (max -30)
+**Layer 2 -- Code-Based Source Gates + Structural Verification + Deductions**
+
+Code handles three things before and after LLM scoring.
+
+**2a. Source quality gate (v11, collection stage):**
+- **Source quality gate** -- drop spam tier / content farms (introl.com, neuraplus-ai.github.io, etc.); drop exa_enrich official_repo mismatches
+- **Authority rule** -- GitHub original repo > fork/mirror (CoT + few-shot judgment)
+- **URL liveness** -- HEAD request drops 404/410/DNS failures/wrong redirects
+
+All 13 problematic URLs from the Apr 19 incident blocked. Good quality is built at the **input gate**, not Writer tuning.
+
+**2b. Post-generation structural deductions:**
+
+Final score = LLM aggregate score - code deductions (max -30)
 
 CP data exists but section missing: -15, EN/KO section mismatch: -5, empty citation: -5, Supporting under 3 paragraphs: -5/item.
 
-Health Check is also code-based: 0 classifications, merge over-grouping (5+ items), 0 community results, enrich failures. Logs warnings without blocking the pipeline.
+**2c. Health Check:** 0 classifications, merge over-grouping (5+ items), 0 community results, enrich failures. Logs warnings without blocking the pipeline.
 
 **Layer 3 -- Human Final Judgment**
 
@@ -199,6 +230,12 @@ The handbook pipeline follows the same philosophy: Self-Critique (score < 75 dur
 **0-to-5 Rule**
 
 If no news qualifies for Research, **allow an empty list**. The "select 3-5" forced quota degraded quality by pushing subpar articles into the digest.
+
+**rerun_from=quality -- QC-only rerun path (v11)**
+
+Re-running from Writer for every prompt iteration cost $0.54/run. By reusing Writer output from DB and only rerunning the QC, cost dropped to **$0.05/run (10x reduction).**
+
+**Why it matters:** Prompt engineering accumulates iteration cost. Cutting iteration cost by 10x means 10x more experiments. Without a low-cost rescore path, large prompt redesigns like rubric v2 would have been economically unviable.
 
 **Cost savings considered but not adopted (v5-v8 period)** -- sometimes protecting quality matters more than cutting cost.
 
@@ -228,6 +265,20 @@ If no news qualifies for Research, **allow an empty list**. The "select 3-5" for
 
 **Changing the scoring model breaks score trends.** Same content scored 85 by gpt-4.1-mini and 36 by gpt-5-mini. Calibration instructions and content truncation limits must be adjusted when switching scoring models.
 
+**Don't make the LLM do arithmetic.** Rubric v2 moves the 10 sub-score aggregation to code. LLMs are strong at qualitative evaluation, code is precise at arithmetic -- mixing them makes the LLM stack arithmetic on top of qualitative judgment, destabilizing both. Separating roles makes each better.
+
+**Structural validation isn't reachability validation.** A URL with the right string format isn't necessarily reachable. A HEAD-request gate is needed to verify actual liveness. Many of the 13 problematic URLs from the Apr 19 incident were structurally normal.
+
+**Changing the rubric architecture breaks score continuity.** v10's 85 and v11's 85 aren't directly comparable -- the auto-publish threshold has to be recalibrated. When trend tracking is the system's purpose, recognize that rubric changes create discontinuities and design for it.
+
+**API schema enum beats prompts for compliance.** Prompts achieve 85-97% URL hallucination prevention; OpenAI strict `json_schema` + `citations[].url: enum` enforced at the API level rejects hallucinated URLs server-side -> 100%. When prompts can't get there, escalate to the schema -- a third layer beyond "what the LLM should do vs what code should do": "what the API should enforce."
+
+**False positives can cost more than accuracy.** v11's URL liveness HEAD check had 70-85% false positives, dropping 90% of citations. Removing it in v12 was the fix. A validation system's **false positive rate** matters as much as its detection rate -- adding isn't always the answer.
+
+**When you turn the quality knob, turn the cost knob too.** In v12, raising `reasoning_effort=low` to `high` alone added +72% ($0.50 to $0.86). Adding `flex tier (-50%)` and `prompt_cache_key (-30%)` together flipped it to -34% ($0.33). Tuning one axis blows up the cost. **The trap of single-knob tuning thinking**: "raise quality this time, optimize cost next time" sounds reasonable, but if the intermediate state ships, you get a billing spike + rollback pressure that drags the quality gains back too. **Quality and cost changes must be packaged in the same release**, and at minimum integration-verified in staging before production.
+
+**Put structural enforcement in front of rubric increases.** Rubric bar was raised continuously over a month while scores stayed stable at 89-97. Reason: schema + code validation locked in the bottom line first. Reverse order (raise rubric first) produces a score roller coaster.
+
 ---
 
 ## 4. News Pipeline Evolution
@@ -245,15 +296,18 @@ v7 ████████                                 2 days (quality over
 v8 ████████                                 2 days (structural separation)
 v9 ████                                     1 day  (multi-source + merge)
 v10 ██████████████████████████               7 days (gpt-5 transition + CP redesign)
+v11 ████████████████████████████████████████████████████  15 days (rubric v2 + source gates)
+v11.1 ████                                                1 day (Writer-QC mirror)
+v12  ████                                                 1 day (schema enum + flex + cache)
 ```
 
-| | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 | v9 | v10 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| **Period** | 3/10-14 | 3/15 | 3/16 | 3/17 | 3/18-25 | 3/26 | 3/28-29 | 3/29-30 | 3/30 | 3/31-4/6 |
-| **Outcome** | Root cause discovery | Working | Working | Working | Stabilized | Optimized | Quality overhaul | Structural separation | Multi-source + merge | gpt-5 + code deductions |
-| **Model** | gpt-4o | gpt-4o | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 |
-| **Cost/run** | N/A | $0.13 | $0.17 | $0.17 | $0.20 | $0.20 | $0.25 | $0.25 | $0.43 | $0.58 |
-| **LLM calls** | 6 | 4 | 6 | 4 | 10 | 10 | 12 | 14 | 14 | 15 |
+| | v1 | v2-v4 | v5-v6 | v7-v8 | v9 | v10 | v11 | v12 |
+|---|---|---|---|---|---|---|---|---|
+| **Period** | 3/10-14 | 3/15-17 | 3/18-26 | 3/28-30 | 3/30 | 3/31-4/6 | 4/7-4/22 | 4/23 |
+| **Outcome** | Root cause discovery | Working → stable | Stabilized + optimized | Quality + separation | Multi-source + merge | gpt-5 + code deductions | Rubric v2 + source gates | schema enum + flex + cache |
+| **Model** | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex |
+| **Cost/run** | N/A | $0.13-0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
+| **Quality eval** | none | none | 4x25 | 4x25 + code deductions | 4x25 + code deductions | 4x25 + code deductions | 10 sub-score + evidence | 14-15 sub-score + schema enum |
 
 ---
 
@@ -378,6 +432,149 @@ Introduced a system combining LLM scoring (subjective quality) with code deducti
 
 ---
 
+### v11: Rubric Redesign and Source Quality Gates (4/7-4/21, 15 days)
+
+Started with the Apr 19 incident. KO Research digest scored **96** automatically but actually had only English quotes in Community Pulse. The single-total rubric was hiding the locale problem -- a high score concealing content defects.
+
+**1. Rubric v2 -- 10 sub-score + evidence + code aggregate**
+
+Old 4x25 single score → 10 sub-scores each 0-10 + evidence per score. LLM no longer computes the total; **code aggregates**. `locale_integrity` promoted from severity marker to explicit sub-dimension.
+
+**Why:** LLMs are strong at qualitative evaluation but weak at arithmetic. Mixing makes the LLM pile arithmetic on top of qualitative judgment, destabilizing both. Separating roles makes each more accurate. body/frontload/weekly/handbook 4 QC paths unified to the same rubric for parity.
+
+**2. 3-Layer Source Quality Gates**
+
+The Apr 19 incident's root cause was low-quality sources reaching the Writer. Three gates added between collection and Writer.
+
+**A. Source quality gate** -- drop spam tier, content farms (introl.com, neuraplus-ai.github.io, etc.). Drop exa_enrich official_repo mismatches.
+
+**B. Authority rule** -- GitHub original repo > fork/mirror. Previously LLM treated forks as originals. CoT + few-shot improved authority judgment.
+
+**C. URL liveness gate** -- HEAD requests drop 404/410/DNS failures/wrong redirects. Correct string format and actual reachability are different validations.
+
+All 13 problematic URLs from the Apr 19 incident blocked.
+
+**3. Pipeline Hardening (Phase 1-3)**
+
+3-day large refactor:
+- `pipeline.py` **3,794 → 2,149 lines (-43%)**. 4-file split + shim re-export keeps 20+ import sites unbroken
+- Paid API queries **24 → 11 (-46%)**. Brave entirely removed, Exa 12→5, Tavily 2 duplicates removed
+- SEO-spam domains **47% → 0%**
+- QUALITY_CHECK shared block shortened → **-1,956 tokens** (156% of target)
+
+**4. `rerun_from=quality` -- Prompt experiment cost innovation**
+
+Added a path that reruns only QC. $0.54 → $0.05 (10x reduction). Reuses Writer output from DB and only reruns quality evaluation. The precondition that made large redesigns like rubric v2 economically possible.
+
+**5. Community Pulse Thread URL preservation**
+
+HN `story_id` and Reddit `permalink` embedded in CommunityInsight at collection time. **Upvote-count-based matching** survives Writer reordering -- positional matching breaks when LLM rearranges.
+
+**v11 quality:** Research 76 / Business 93 (v11 rubric). **v10 85 and v11 85 are not directly comparable** -- changing rubric architecture breaks score continuity.
+
+---
+
+### v11.1: Writer-QC Mirror Sync (4/22, 1 day)
+
+In v11, new sub-scores (`claim_calibration`, `temporal_anchoring`, `internal_consistency`) were added to QC but **the corresponding rules weren't mirrored to the Writer side**, causing inconsistency. Apr 21 actual incident: Business digest translated `$8.3 billion` as `8.3억 달러` (actually `83억 달러`, **100x mistranslation**).
+
+**Solution:** Added `BODY_LOCALE_PARITY` block to Writer side, expanded HALLUCINATION_GUARD, added 3 FINAL CHECKLIST items. Established the principle that QC and Writer rules **change in pairs in the same commit**.
+
+**NQ-40 Phase 2a -- 3 Community Pulse-specific sub-scores** (`cp_relevance`, `cp_substance`, `translation_fidelity`) added. **weight=0 for 2-week measurement only** -- observe variance and decide weights in Phase 2b (incremental introduction with hypothesis verification first).
+
+**Result:** Apr 21 rerun -- Research 76→**95**, Business 93→**100**. Mistranslation root cause eliminated.
+
+---
+
+### v12: GPT-5 Efficiency Overhaul (4/23, 1 day)
+
+By v11 the structural problems were solved, exposing the next gate: **$0.50 cost and URL hallucination**. v12 solved both at once.
+
+**4 problems:**
+1. URL hallucination -- Writer fabricated URLs like `liner.com`, `axiomlogica.com`
+2. Massive citation loss -- v11's `_validate_urls_live` HEAD check had 70-85% false positives → 90% of citations dropped
+3. EN/KO asymmetry -- different allowlist per locale → body mismatch
+4. Inaccurate cost tracking -- DB-stored cost was standard tier rate, didn't reflect flex discount
+
+**Solution A: Schema enum blocks URL hallucination at the API level**
+
+New Writer output contract:
+```
+body: "... [CITE_1] ... [CITE_2] ..."
+citations: [
+  {n: 1, url: "https://...allowlist_url_1..."},
+  {n: 2, url: "https://...allowlist_url_2..."}
+]
+```
+
+OpenAI strict `json_schema` + `citations[].url: enum [fact_pack.source_urls]` → **API rejects URLs outside the allowlist server-side**. Prompt compliance 85-97% → **schema 100%**. `apply_citations()` post-processor substitutes placeholders with `[N](URL)`.
+
+**Why:** Repeating "don't hallucinate URLs" in prompts can't fully prevent it. **Structurally remove** the possibility of LLM non-compliance -- make the bad response impossible at the API level.
+
+**Solution B: Removed v11's URL liveness check**
+
+The HEAD-request validation introduced in v11 had 70-85% false positives, dropping 90% of citations. With schema enum guaranteeing URL validity, liveness check became unnecessary → fully removed. Result: paragraph coverage 29% → **94%**, URLs 5 → 14 (2.8x), citations 5 → 16 (3.2x).
+
+**Lesson: adding isn't always the answer.** The validation added in v11 created a bigger problem via false positives, and the fix in v12 was removal.
+
+**Solution C: GPT-5 Flex Tier + Prompt Caching**
+
+- `service_tier="flex"` (50% discount) + `with_flex_retry` helper (429 exponential backoff)
+- `prompt_cache_key` per persona -- 3-day average **52% cache hit** (4/23: 183K of 350K input tokens cached)
+- `reasoning_effort="high"` applied uniformly
+
+**reasoning_effort A/B (4/23, high vs medium, 1 run each):** Research expert was decisive -- high `30 cites / 15 unique URLs` vs medium `17 / 9`. The multi-paper cross-reference synthesis paragraph (positioning μLM → Latent-Guided → SLM-MUX on the abstract "latency-centric vs accuracy-centric" axis) showed 2x density. Business was nearly tied at medium 96 vs high 91 -- 1-sample variance. **Mixed (research expert only high) was rejected in favor of uniform high**: code simplicity + mental model consistency + only $2/month difference.
+
+**Solution D: Single source of truth for cost tracking**
+
+- `extract_usage_metrics` reads `response.service_tier` automatically → flex auto-applied
+- `reasoning_tokens` extraction + admin UI display
+
+**3-stage cost progression (most important lesson):**
+
+| Stage | Config | Daily cost | vs baseline |
+|-------|--------|-----------|-------------|
+| (1) Baseline | low reasoning, standard, liveness ON | $0.50 | -- |
+| (2) High-only blip | high reasoning, standard, no flex | **$0.86** | **+72%** |
+| (3) Final | high + flex + cache + liveness off | **$0.33** | **-34%** |
+
+Monthly $15 → $26 (naive) → **$10** (final). $192/year saved vs naive.
+
+**Reality of reasoning tokens (4/23 measured):**
+
+| Stage | Output | Reasoning | Reasoning % |
+|-------|--------|-----------|-------------|
+| digest:business:expert | 16,811 | 11,328 | **67.4%** |
+| digest:business:learner | 18,470 | 13,248 | **71.7%** |
+| digest:research:expert | 17,555 | 11,392 | 64.9% |
+| digest:research:learner | 12,357 | 7,360 | 59.6% |
+
+**60-72% of output is internal reasoning** -- only 30-40% is body. Reasoning tokens are billed at output rate ($8/M), a hidden cost structure. Documented in OpenAI docs but invisible in practice -- exposed `completion_tokens_details.reasoning_tokens` in admin UI to ground reasoning_effort tuning decisions.
+
+**v12 follow-up (4/24-27):** Moved Community Pulse rendering from Writer prompt to **code post-processing** (`_linkify_cp_section`, about 150 LOC). After 3 prompt reruns all failed, conceded that forcing fancy markdown on the Writer was the wrong layer. Redesigned data model from single `CommunityInsight` to per-platform `ThreadInfo[]` to preserve quote provenance -- eliminated false corroboration in the Apr 24 case where the same quote was duplicated across both HN and Reddit blocks. Added **gpt-5-nano relevance filter** to select 5-10 from top-voted 30 comments, dropping off-topic top-voted comments (the political flame war on Apr 25 DeepSeek thread). **Mirror domain blocklist 8 → 26** (based on 14-day audit). Quiz `answer: str` → `answer_index: int 0-3` contract change to enforce cross-field invariants in schema. **Average $0.41/day after follow-up changes (4/23-27)** ($0.36-0.47, 18-28% below the $0.50 baseline). All applications of the same principle -- "structural enforcement at the code/schema layer, LLM focuses on content."
+
+---
+
+### Rubric Evolution × Stable Scores -- A Cross-Observation
+
+Over the past month, the QC rubric was tightened continuously (9 → 14-15 sub-scores, schema enforcement, CP-specific dimensions added), yet writer quality scores stayed stable at **89-97**. The typical pattern -- new check added → temporary drop → prompt adjustment → recovery -- did not occur.
+
+**5 reasons:**
+
+1. **Schema enforcement preempts structural failure** -- URL hallucination blocked at the API level results in `url_validation_failed=0`. No score loss in that rubric quadrant.
+
+2. **Prompt strengthening internalizes writer behavior** -- Concrete examples in HALLUCINATION_GUARD (forbidden verb lists, date absolutization worked example, `$X million` conversion examples) make the writer's "attention targets" explicit, leading to automatic avoidance in self-check.
+
+3. **`reasoning_effort=high` thoroughly executes self-check loops** -- The 11-item FINAL CHECKLIST is skimmed at low effort, actually verified at high before submission.
+
+4. **BODY_LOCALE_PARITY + schema enum → automatic EN/KO symmetry** -- Citations are substituted from a shared `citations[]` array, so counts auto-match.
+
+5. **Code-level validation replaces LLM-level validation** -- Code validators like `_renumber_citations` and `apply_citations` guarantee structure, freeing the LLM to spend reasoning tokens on **content quality**.
+
+**Rubric drift problem:** Apr 21's 94 and Mar 10's 94 aren't the same 94. The bar has been raised, so **today's 94 is higher quality**. Absolute scores can't measure "the bar has been raised" -- considering rescoring the same articles with old/new rubrics to derive an offset.
+
+---
+
 ## 5. Handbook Pipeline
 
 The Handbook (AI glossary) auto-extracts AI terms from news articles and generates explanations at two levels: Basic (accessible to beginners) and Advanced (senior engineer reference).
@@ -436,7 +633,9 @@ Save (High confidence --> draft, Low --> queued)
 ---
 
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 10 pipeline versions, model transition from gpt-4o to gpt-5,
-> cost explosion recovered via merge, then reasoning model migration,
-> and a quality management system combining LLM scoring with code deductions.
+> 12 pipeline versions, model and infra transition from gpt-4o to gpt-5 flex,
+> cost explosion → merge recovery → reasoning model migration → rubric redesign
+> → schema enum + flex + cache, a journey of innovating quality and cost together.
+> Built a quality management system spanning LLM/code/API across 3 layers
+> with 14-15 sub-score rubric + 3-layer source gates + API schema enforcement.
 > As a solo project, I handled every stage from planning to deployment.

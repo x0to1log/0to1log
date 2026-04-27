@@ -13,7 +13,7 @@
 
 | | 시작 (v2) | v8 | v10 | v11 | 현재 (v12) |
 |---|---|---|---|---|---|
-| **Run당 비용** | $0.18 | $0.25 | $0.58 | $0.54 | **$0.33** |
+| **Run당 비용** | $0.18 | $0.25 | $0.58 | $0.54 | **$0.41** |
 | **모델** | gpt-4o | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 (flex + cache) |
 | **품질 평가** | 없음 | 4×25 단일점수 | 4×25 + 구조 감점 | 10 sub-score + evidence | **14-15 sub-score + schema enum** |
 | **URL 환각 방지** | 없음 | 프롬프트 지시 | 프롬프트 지시 | URL liveness 검증 | **API schema enum (100%)** |
@@ -21,7 +21,7 @@
 | **QC 재실행 비용** | 전체 $0.25 | 전체 $0.25 | 전체 $0.58 | QC만 $0.05 (-90%) | QC만 $0.02 (flex) |
 | **품질 점수 (R/B)** | 75.8 / 82.9 | 91.8 / 94.8 | 96 / 91 | 76 / 93 | **89–97 안정** |
 
-v2–v8까지 Run당 $0.18–$0.25로 품질을 9.3배 개선. v9에서 비용 폭발($0.77) → merge로 $0.43 복귀. v10에서 gpt-5 전환. v11에서 rubric 재설계 + 3-layer 소스 게이트 + QC 재실행 경로. v12에서 **비용 $0.33으로 34% 절감과 동시에 citation density 3–6x 회복** (schema enum으로 URL 환각 API 레벨 차단, flex tier + prompt cache 도입). 모든 수치는 프로덕션 DB 실측.
+v2–v8까지 Run당 $0.18–$0.25로 품질을 9.3배 개선. v9에서 비용 폭발($0.77) → merge로 $0.43 복귀. v10에서 gpt-5 전환. v11에서 rubric 재설계 + 3-layer 소스 게이트 + QC 재실행 경로. v12에서 **비용 $0.33–$0.41 (baseline $0.50 대비 18–34% 절감)과 동시에 citation density 3–6x 회복** (schema enum으로 URL 환각 API 레벨 차단, flex tier + prompt cache 도입). 모든 수치는 프로덕션 DB 실측.
 
 핵심 발견:
 1. **"하지 마라"를 빼면 LLM이 더 잘한다.** Research Expert Guide를 569단어에서 151단어로 줄이고 DON'T 9개를 전부 삭제하자 아이템당 1문단이 3문단으로 늘어났다.
@@ -70,9 +70,12 @@ AI 뉴스는 매일 쏟아지지만, 한국어로 된 양질의 기술 브리프
     v
 Merge (gpt-5-mini) --> 같은 이벤트 기사 그룹화 ($0.002)
     v
-커뮤니티 수집 (HN Algolia + Brave Discussions)
+커뮤니티 수집 (HN Algolia + Brave Discussions, top 30/platform)
     v
-커뮤니티 요약 (gpt-5-mini) --> sentiment + quotes(EN/KO) + key_point
+Relevance filter (gpt-5-nano) — 30 → 5-10 (off-topic flame war 거름)
+    v
+커뮤니티 요약 (gpt-5-mini, per-platform) --> ThreadInfo[]
+    sentiment + quotes(EN/KO) + key_point per platform
     v
 랭킹 (gpt-5-mini) --> [LEAD] / [SUPPORTING] (그룹 단위)
     v
@@ -118,7 +121,8 @@ draft 저장 --> 관리자 확인 --> 발행
 | v10 (gpt-5) | 6 | **$0.58** | $0.51–$0.64 | gpt-5 전환 + CP Summarizer + 코드 감점 |
 | v11 | 측정 중 | **$0.54** | — | Rubric v2 + 소스 게이트 + rerun=quality ($0.05) |
 | v12 초기 (high only) | 1 | $0.86 | — | reasoning_effort=high만 적용 (+72%, 교훈) |
-| v12 최종 (flex+cache) | 1 | **$0.33** | — | flex tier + prompt_cache + liveness 제거 (-34%) |
+| v12 (4/23 단일) | 1 | $0.36 | — | flex + cache + liveness 제거 (-28%) |
+| v12 (4/23–27 평균) | 5 | **$0.41** | $0.36–0.47 | + CP per-platform + relevance filter (4/24–27 후속) |
 
 ### 품질 추이 (news_posts, EN, Research/Business 분리)
 
@@ -128,7 +132,7 @@ draft 저장 --> 관리자 확인 --> 발행
 | | Business | 82.9 | 94.1 | 94.8 | 95 | 91 | 93 | **89–95** |
 | **Expert citation** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 | 17.5 | **30** (peak) |
 | | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 | 20.5 | 21 |
-| **Run당 비용** | 전체 | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.33** |
+| **Run당 비용** | 전체 | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
 
 *품질 점수는 자동 LLM 평가 (100점 만점). v5부터 4개 페르소나별 평가로 전환하여 기준이 더 엄격해졌음에도 점수가 상승. **v11의 점수는 rubric 아키텍처 자체가 바뀌었기 때문에 v10 이전과 직접 비교 불가** — 10 sub-score + evidence 구조로 재설계되면서 점수 분포가 다르다. v12는 v11 rubric을 14–15 sub-score로 확장 + schema enforcement로 3일 평균 92.7점(89–97 안정).*
 
@@ -302,7 +306,7 @@ v12  ████                                                 1일 (schema e
 | **기간** | 3/10–14 | 3/15–17 | 3/18–26 | 3/28–30 | 3/30 | 3/31–4/6 | 4/7–4/22 | 4/23 |
 | **결과** | 근본 원인 발견 | 동작 → 안정 | 안정화 + 최적화 | 품질 개선 + 분리 | 다중 소스 + merge | gpt-5 + 코드 감점 | Rubric v2 + 소스 게이트 | schema enum + flex + cache |
 | **모델** | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex |
-| **비용/run** | N/A | $0.13–0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.33** |
+| **비용/run** | N/A | $0.13–0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
 | **품질 평가** | 없음 | 없음 | 4×25 | 4×25 + 구조 감점 | 4×25 + 구조 감점 | 4×25 + 구조 감점 | 10 sub-score + evidence | 14–15 sub-score + schema enum |
 
 ---
@@ -551,6 +555,8 @@ v11에서 도입한 HEAD 요청 검증이 70–85% false positive를 내면서 c
 | digest:research:learner | 12,357 | 7,360 | 59.6% |
 
 **Output의 60–72%가 내부 추론** — 실제 body는 30–40%뿐. Reasoning token도 output rate($8/M)로 과금됨. OpenAI 문서에 명시되어 있지만 체감되지 않는 비용 구조 — `completion_tokens_details.reasoning_tokens`를 admin UI에 노출시켜서 reasoning_effort 튜닝 판단 근거를 확보했다.
+
+**v12 후속 (4/24–27):** Community Pulse 렌더링을 Writer 프롬프트가 아닌 **코드 후처리**(`_linkify_cp_section`, 약 150 LOC)로 옮김. 3번의 프롬프트 재실행이 모두 실패한 후 — Writer에게 fancy markdown을 강요하는 것 자체가 잘못된 레이어임을 인정. 데이터 모델을 단일 `CommunityInsight` → 플랫폼별 `ThreadInfo[]`로 재설계하여 quote provenance 보존 — Apr 24 사례에서 같은 quote가 HN/Reddit 양쪽 블록에 복제되는 가짜 corroboration 제거. **gpt-5-nano relevance filter** 추가로 top-voted 30개 코멘트에서 5-10개 선별, off-topic top-voted 댓글(Apr 25 DeepSeek thread의 정치 flame war) 거름. **Mirror domain blocklist 8 → 26개** (14-day audit 기반). Quiz `answer: str` → `answer_index: int 0-3`로 contract 변경하여 cross-field invariant를 schema에서 강제. **후속 변경 후 4/23–27 평균 $0.41/일** ($0.36–0.47, baseline $0.50 대비 18–28% 절감). 모두 같은 원칙의 적용 — "구조 강제는 코드/스키마 레이어로, LLM은 내용에 집중."
 
 ---
 
