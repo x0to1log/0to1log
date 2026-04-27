@@ -55,16 +55,19 @@ flowchart TD
 
 ## 일일 호출 예산 (v5)
 
-| 항목 | 호출 수 | 모델 |
+| 항목 | 호출 수 | 모델 / API |
 |---|---|---|
 | 분류 (Classification) | 1 | gpt-5-mini |
-| 커뮤니티 반응 수집 | ~3 | Tavily API |
+| 머지 / 랭킹 | 2 | gpt-5-mini |
+| 커뮤니티 스레드 발견 (HN/Reddit, top 7 anchors) | ~7 | HN Algolia + Reddit JSON + Brave fallback |
+| 댓글 relevance filter (per-platform) | 8~12 | gpt-5-nano |
+| 커뮤니티 summarizer (per-platform) | 4~8 | gpt-5-mini |
 | 다이제스트 생성 (2 카테고리 × 2 페르소나) | 4 | gpt-5 |
 | 로케일 복구 (조건부) | 0~4 | gpt-5 |
 | 품질 스코어링 (2 카테고리) | 2 | gpt-5-mini |
 | Handbook 용어 추출 (조건부) | 1 | gpt-5-mini |
 | Handbook 용어 생성 (조건부, 용어당 4 calls) | 0~8 | gpt-5 |
-| **기본 총** | **~10 calls/day** | |
+| **기본 총 (LLM 콜만)** | **~25-35 calls/day** | |
 
 - 예상 비용: **~$0.50~0.80/day** (gpt-5 기준, 멀티소스 raw_content 입력)
 - Handbook 추출까지 포함 시: **~$1.00~1.50/day**

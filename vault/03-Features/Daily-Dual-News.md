@@ -33,12 +33,11 @@ source: docs/01_Project_Overview.md
 
 ```mermaid
 graph LR
-    R[Ranking Agent] --> RES[Research Agent]
-    R --> BIZ[Business Agent]
-    RES --> ED[Editorial Review]
-    BIZ --> P[Persona Refine]
-    P --> ED
-    ED --> DB[(news_posts)]
+    COL[수집<br/>Tavily/HF/arXiv/GitHub] --> CLS[분류<br/>research/business]
+    CLS --> CP[커뮤니티 반응<br/>HN/Reddit + nano relevance]
+    CP --> WR[Writer<br/>Expert + Learner × EN+KO]
+    WR --> QC[품질 스코어링]
+    QC --> DB[(news_posts<br/>draft → 09:00 KST 자동 발행)]
 ```
 
 ## Related

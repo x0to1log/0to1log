@@ -24,25 +24,29 @@ flowchart TD
     CRON["⏰ Cron Trigger (매일 아침)"] --> COLLECT["1. 뉴스 수집\n4개 소스 병렬"]
     ADMIN_BTN["👤 Admin 수동 실행\n(target_date 지정 가능)"] --> COLLECT
 
-    COLLECT --> CLASSIFY["2. LLM 분류 (gpt-5-mini)\nresearch + business\n서브카테고리별 3~5건"]
+    COLLECT --> CLASSIFY["2. 분류 + 머지 (gpt-5-mini)\nresearch + business\n서브카테고리별 3~5건"]
 
-    CLASSIFY --> COMMUNITY["3. 커뮤니티 반응 수집\nTop 3 → Tavily (Reddit/HN)"]
+    CLASSIFY --> COMMUNITY["3. 커뮤니티 스레드 발견\nTop 7 anchors\nHN Algolia · Reddit · Brave fallback"]
+    COMMUNITY --> RELEVANCE["4. 댓글 relevance filter\ngpt-5-nano · per-platform\ntop 30 → most relevant 5~10"]
+    RELEVANCE --> SUMMARIZE["5. CP summarizer\ngpt-5-mini · per-platform\nThreadInfo 구조 저장"]
 
-    COMMUNITY --> GEN_R["4. Research 다이제스트 생성\n2 페르소나 × EN+KO"]
-    COMMUNITY --> GEN_B["4. Business 다이제스트 생성\n2 페르소나 × EN+KO"]
+    SUMMARIZE --> RANK["6. 랭킹 (gpt-5-mini)\nLead/Supporting 지정"]
+    RANK --> ENRICH["7. Enrich (Exa find_similar)\nsingle-source group 보강"]
+    ENRICH --> GEN_R["8. Research Writer\n2 페르소나 × EN+KO\ngpt-5"]
+    ENRICH --> GEN_B["8. Business Writer\n2 페르소나 × EN+KO\ngpt-5"]
 
-    GEN_R --> QUALITY_R["5. 품질 스코어링 (gpt-5-mini)\n0~100점"]
-    GEN_B --> QUALITY_B["5. 품질 스코어링 (gpt-5-mini)\n0~100점"]
+    GEN_R --> QUALITY_R["9. 품질 스코어링 (gpt-5-mini)\nrubric v2 · 10 sub-score"]
+    GEN_B --> QUALITY_B["9. 품질 스코어링 (gpt-5-mini)\nrubric v2 · 10 sub-score"]
 
-    QUALITY_R --> SAVE["6. draft로 저장\n4개 포스트 (2카테고리 × 2로케일)"]
+    QUALITY_R --> SAVE["10. draft 저장 + auto_publish_eligible 플래그\n4개 포스트 (2카테고리 × 2로케일)"]
     QUALITY_B --> SAVE
 
     SAVE --> HB{"handbook\nauto_extract\n켜짐?"}
-    HB -->|Yes| EXTRACT["7. Handbook 용어 자동 추출"]
+    HB -->|Yes| EXTRACT["11. Handbook 용어 자동 추출"]
     HB -->|No| DONE["✅ 파이프라인 완료"]
     EXTRACT --> DONE
 
-    DONE --> ADMIN_REVIEW["👤 Admin 검토 → 발행"]
+    DONE --> PROMOTE["⏰ 09:00 KST promote-drafts cron\n품질 게이트 통과 시 자동 발행"]
 ```
 
 ## 다이제스트 1건 생성 상세 흐름
@@ -89,22 +93,29 @@ flowchart LR
         CLASSIFY_LLM --> B_ITEMS["Business 3~5건\nbig_tech · industry · new_tools"]
     end
 
-    subgraph "3. 반응 수집"
-        R_ITEMS & B_ITEMS --> TOP3["Top 3 아이템"]
-        TOP3 --> TAVILY_REACT["Tavily 검색\nReddit · HN"]
+    subgraph "3. 커뮤니티 스레드"
+        R_ITEMS & B_ITEMS --> ANCHORS["Top 7 anchors"]
+        ANCHORS --> HN["HN Algolia API"]
+        ANCHORS --> RDT["Reddit JSON + Brave fallback"]
     end
 
-    subgraph "4. 다이제스트 생성 (×2 카테고리)"
-        TAVILY_REACT --> P_EXP["Expert EN+KO\ngpt-5"]
-        TAVILY_REACT --> P_LRN["Learner EN+KO\ngpt-5"]
+    subgraph "4. CP 처리 (per-platform)"
+        HN --> RELEV["Relevance filter\ngpt-5-nano · top 30 → 5~10"]
+        RDT --> RELEV
+        RELEV --> SUMM["CP Summarizer\ngpt-5-mini · per-platform\nThreadInfo 출력"]
     end
 
-    subgraph "5. 품질 + 저장"
-        P_EXP & P_LRN --> SCORE["Quality Score\ngpt-5-mini · 0~100"]
-        SCORE --> DB["news_posts\n4 rows (draft)\n2 카테고리 × 2 로케일"]
+    subgraph "5. 다이제스트 생성"
+        SUMM --> P_EXP["Expert EN+KO\ngpt-5"]
+        SUMM --> P_LRN["Learner EN+KO\ngpt-5"]
     end
 
-    DB --> ADMIN["Admin 검토\n→ 발행"]
+    subgraph "6. 품질 + 저장"
+        P_EXP & P_LRN --> SCORE["Quality (rubric v2)\ngpt-5-mini · 10 sub-score"]
+        SCORE --> DB["news_posts\n4 rows (draft)\nauto_publish_eligible 플래그"]
+    end
+
+    DB --> PROMOTE["09:00 KST promote-drafts cron\n게이트 통과 시 자동 발행"]
 ```
 
 ---
@@ -132,11 +143,14 @@ flowchart LR
   - **Business**: `big_tech`, `industry`, `new_tools` (각 서브카테고리 3~5건)
 - **교차 중복**: 같은 URL이 양쪽에 나오면 높은 점수 카테고리에만 유지
 
-### 커뮤니티 반응
+### 커뮤니티 반응 (per-platform redesign — 2026-04-26)
 
-- Research + Business 합산 Top 3 아이템에 대해 Tavily 검색
-- 검색 형식: `"article_title" site:reddit.com OR site:news.ycombinator.com`
-- URL 기준으로 매핑하여 다이제스트 생성 시 주입
+- Research + Business 합산 Top 7 anchor 아이템에 대해 HN/Reddit 스레드 독립 발견
+  - **HN**: Algolia URL search 우선, keyword fallback (relevance threshold)
+  - **Reddit**: search.json + Brave web search fallback
+- 발견된 스레드별 top 30 댓글 → **gpt-5-nano relevance filter** → most relevant 5~10 보존
+- 플랫폼별 독립 summarizer (gpt-5-mini) 가 `ThreadInfo` 구조 출력 — quote 의 platform provenance 가 데이터 모델로 보존됨 (cross-platform fusion 불가)
+- `_linkify_cp_section` 가 본문의 CP 헤더에 thread URL 을 마크다운 링크로 주입
 
 ---
 

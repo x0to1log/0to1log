@@ -21,9 +21,9 @@ graph TB
 
 ## 데이터 흐름
 
-1. [[AI-News-Pipeline-Design\|뉴스 파이프라인]]: 수집 → 랭킹 → 생성 → 검수
-2. Research → 자동 발행 / Business → [[Admin]] 수동 발행
-3. [[Persona-System]]이 Business를 3페르소나 버전으로 변환
+1. [[AI-News-Pipeline-Design\|뉴스 파이프라인]]: 수집 → 분류/머지 → 커뮤니티 반응 → 생성 → 품질 스코어링 → 저장
+2. Research/Business 모두 draft 저장 → 품질 게이트 통과 시 09:00 KST cron 자동 발행
+3. [[Persona-System]]은 Expert + Learner 2페르소나 (각 EN+KO)
 4. [[Database-Schema-Overview#news_posts\|news_posts]] 테이블에 저장
 
 ## 핵심 ADR
