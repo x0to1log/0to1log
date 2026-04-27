@@ -1237,7 +1237,11 @@ _BASIC_DIMENSIONS = (
 _BASIC_MAX_RAW = 100
 
 
-def _build_bilingual_judge_content(ko_body: str, en_body: str) -> str:
+def _build_bilingual_judge_content(
+    ko_body: str,
+    en_body: str,
+    max_chars_per_locale: int | None = None,
+) -> str:
     """Construct a labeled user message for the bilingual quality judge.
 
     The judge sees KO and EN content as two parallel locale versions of the
@@ -1248,9 +1252,18 @@ def _build_bilingual_judge_content(ko_body: str, en_body: str) -> str:
     Missing locales are preserved as explicit placeholders so the judge can
     downscore the missing-language sub-scores instead of silently treating
     them as "present but empty".
+
+    `max_chars_per_locale`, when set, truncates each locale to that many
+    chars BEFORE concatenation. This guarantees each locale gets equal
+    evidence visibility regardless of the other's length — without it, a
+    rich KO body would consume the post-concat truncation budget at the
+    call site and starve EN.
     """
     ko_section = ko_body.strip() if ko_body and ko_body.strip() else "(no Korean content provided)"
     en_section = en_body.strip() if en_body and en_body.strip() else "(no English content provided)"
+    if max_chars_per_locale is not None and max_chars_per_locale > 0:
+        ko_section = ko_section[:max_chars_per_locale]
+        en_section = en_section[:max_chars_per_locale]
     return f"## Korean (KO)\n\n{ko_section}\n\n## English (EN)\n\n{en_section}"
 
 
@@ -1274,7 +1287,7 @@ async def _check_handbook_quality(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": advanced_content[:12000]},
+                    {"role": "user", "content": advanced_content},
                 ],
                 max_tokens=1800,
                 response_format={"type": "json_object"},
@@ -1371,7 +1384,7 @@ async def _check_basic_quality(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": basic_content[:6000]},
+                    {"role": "user", "content": basic_content},
                 ],
                 max_tokens=1800,
                 response_format={"type": "json_object"},
@@ -2845,6 +2858,7 @@ async def _run_generate_term(
         adv_combined = _build_bilingual_judge_content(
             data.get("body_advanced_ko", ""),
             data.get("body_advanced_en", ""),
+            max_chars_per_locale=8000,
         )
         if adv_combined.strip():
             try:
@@ -2863,6 +2877,7 @@ async def _run_generate_term(
         basic_combined = _build_bilingual_judge_content(
             data.get("body_basic_ko", ""),
             data.get("body_basic_en", ""),
+            max_chars_per_locale=4000,
         )
         if basic_combined.strip():
             try:
