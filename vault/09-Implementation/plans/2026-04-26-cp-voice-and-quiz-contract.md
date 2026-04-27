@@ -715,3 +715,45 @@ Track as a TODO in `vault/09-Implementation/plans/ACTIVE_SPRINT.md` with target 
 | 4 | `feat(news-writer-prompt): emit quiz answer_index 0-3 for daily` |
 | 5 | `feat(weekly-prompt): emit quiz answer_index 0-3 for weekly recap` |
 | 6 | (no commit unless journal added) |
+
+---
+
+## Verification + Follow-up (2026-04-27)
+
+### 실행 결과
+
+5 tasks + 7 follow-up commits 모두 main 에 ship. 47/47 단위 테스트 통과. Apr 26 rerun-from-write 2회 + Apr 27 자연 cron 으로 검증.
+
+| 검증 항목 | 결과 |
+|---|---|
+| Issue 3 (KO `quiz_poll_expert` 누락) | ✅ Apr 26 rerun + Apr 27 cron 모두 4/4 posts 에 expert+learner 보유 |
+| Issue 1 (HN voice pollution `Who are you quoting?`) | ✅ Apr 27 cron 자연 검증 — 마커 0건 |
+| 단위 테스트 | 47/47 PASS (`test_hn_comment_voice`, `test_news_writer_schema`, `test_weekly_quiz_shuffle`) |
+
+### 발견된 부수 버그 (plan 외 작업)
+
+검증 도중 user 가 "CP 표기 이상" 신고 → 진단 결과 Plan 의 fix 들과 무관한 **3-stage 후처리 정규식 충돌** 이 드러남. linkifier 가 비로소 정상 출력 (`**[X](URL)**`) 을 내자 그동안 우연히 통과되던 다음 단계 후처리들이 충돌 노출:
+
+1. `_fix_bold_paren_abbrev` (pipeline_digest.py:1389-1391) — `**X(Y)**` 광범위 매치 → 마크다운 링크도 깨뜨림
+2. `_renumber_citations.placeholder_re` — `[Label](URL)` 정상 링크를 placeholder 로 오인
+3. save-path `allowed_urls` — CP thread URL 미포함
+
+별도 commits (`10c05fb`, `91f157d`) 로 fix. 단위 테스트 17개 추가 (`test_bold_paren_abbrev`, `test_renumber_citations`).
+
+또 외부 review 가 service_tier observability 버그 정확히 지적 — `merge_usage_metrics` 가 tier 키를 보존하지 않아 cumulative 로그에서 null 처리됨. `dfa286c` 로 fix.
+
+### Issue 2 (mirror 도메인) 처리
+
+이 plan 에는 포함 안 했던 "Issue 2 — Business source_cards 미러 도메인" 도 같은 흐름에서 다룸. 14일 audit + per-domain content 검증 후 18개 도메인을 `news_domain_filters.research_blocklist` 에 추가 (`19cc5e2`). 분류기 자체 개선은 sprint task `NQ-43` 으로 deferred.
+
+### Routine
+
+[Apr 28 11:00 KST 검증 routine 등록](https://claude.ai/code/routines/trig_018kdT3rij5hcjekMstca4BP) — 자연 cron 결과 자동 점검.
+
+### 회고 — 더 큰 그림
+
+오늘 배운 두 가지 패턴:
+1. **"한 fix 가 다음 단계의 버그를 노출시킨다"** — linkifier 가 깨끗한 출력을 내자 사후처리 conflict 가 한꺼번에 드러남. cumulative 회귀 단위 테스트 부재. 메모리 `feedback_cp_postprocess_chain` 등재.
+2. **"분류기 정확도가 거버넌스 정책의 기반"** — `confidence='low'` 기반 일괄 차단을 시도했으나 14일 audit 결과 ~40% false positive (axios/cnbc/nytimes). 정책을 분류기 위에 쌓기 전에 분류기 정확도 측정 우선.
+
+전체 기록: [[../../12-Journal-&-Decisions/2026-04-27-cp-rendering-and-blocklist]].

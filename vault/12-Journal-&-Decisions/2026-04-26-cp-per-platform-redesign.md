@@ -79,6 +79,18 @@ Total: 8 commits (7 task commits + 1 plan revision doc + 1 R1 follow-up).
 - **Persona differentiation in CP** — structural limit (CP is short; per-thread sentiment is per-platform, not per-persona). Acceptable.
 - **Linkifier auto-apply timing on cron** — operational concern observed Apr 24-25 where linkifier didn't auto-apply on freshly written rows; `apply_linkifier_to_db.py` script run manually. May resolve naturally with the new flow since CP data shape is more uniform.
 
+## Addendum (2026-04-27) — "Linkifier auto-apply timing" 가설 정정
+
+위의 "Linkifier auto-apply timing on cron" 가설은 **틀렸음.** 2026-04-27 디버깅에서 실제 원인이 드러남: linkifier 는 항상 정상 작동했고, **그 직후 후처리 정규식 3개가 linkifier 출력을 다시 깨뜨리고 있었다.**
+
+체인 (당시 순서):
+1. `_linkify_cp_section` — `**[Hacker News](URL)**` 정상 출력
+2. `_fix_bold_paren_abbrev` (pipeline_digest.py:1389-1391) — 정규식이 너무 광범위해서 `**[X](URL)**` 도 매치 → `**[X]** (URL)` 로 broken split
+3. `_renumber_citations.placeholder_re` — `[Hacker News](URL)` 같은 정상 마크다운 링크를 placeholder 로 오인 → `[N](URL)` 로 라벨 손실 또는 (URL 미허용 시) 통째로 strip 해 `**** (805↑)` 스텁 생성
+4. save-path `allowed_urls` — CP thread URL 미포함 → step 3 의 strip 트리거
+
+전체 진단·수정 기록은 [[2026-04-27-cp-rendering-and-blocklist]] 참고. 핵심 교훈: **linkifier 의 fix 가 비로소 효과를 발휘하자 그동안 입력이 망가진 채로 통과하던 후처리들의 conflict 가 한꺼번에 노출됨**. 메모리 [[feedback_cp_postprocess_chain]] 에 패턴 등재.
+
 ## Backward compat
 
 - Old `CommunityInsight` checkpoints (flat shape: `quotes`, `quotes_ko`, `source_label`, `hn_url`, `reddit_url`) hydrate via `synthesized_threads()` — single-platform legacy keeps quotes (unambiguous provenance), multi-platform legacy returns empty quotes with key_point preserved.
