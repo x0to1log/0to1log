@@ -27,7 +27,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json
+from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
     get_generate_prompt,
@@ -2280,20 +2280,22 @@ async def _run_generate_term(
 
     # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
     for _call1_attempt in range(2):
-        resp1 = await client.chat.completions.create(
-            **compat_create_kwargs(
-                model,
-                messages=[
-                    {"role": "system", "content": basic_ko_system},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=16000,
-                prompt_cache_key="hb-generate-basic",
-                reasoning_effort="high",
-                service_tier="flex",
+        async def _call1_gen():
+            return await client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": basic_ko_system},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    max_tokens=16000,
+                    prompt_cache_key="hb-generate-basic",
+                    reasoning_effort="high",
+                    service_tier="flex",
+                )
             )
-        )
+        resp1 = await with_flex_retry(_call1_gen)
         basic_data = parse_ai_json(resp1.choices[0].message.content, "Handbook-generate-basic")
         usage1_attempt = extract_usage_metrics(resp1, model)
         if _call1_attempt == 0:
@@ -2456,8 +2458,8 @@ async def _run_generate_term(
     if code_contract_guide:
         adv_en_system += f"\n\n{code_contract_guide}"
 
-    resp2, resp3 = await asyncio.gather(
-        client.chat.completions.create(
+    async def _call2_gen():
+        return await client.chat.completions.create(
             **compat_create_kwargs(
                 model,
                 messages=[
@@ -2470,8 +2472,10 @@ async def _run_generate_term(
                 reasoning_effort="high",
                 service_tier="flex",
             )
-        ),
-        client.chat.completions.create(
+        )
+
+    async def _call3_gen():
+        return await client.chat.completions.create(
             **compat_create_kwargs(
                 model,
                 messages=[
@@ -2484,7 +2488,11 @@ async def _run_generate_term(
                 reasoning_effort="high",
                 service_tier="flex",
             )
-        ),
+        )
+
+    resp2, resp3 = await asyncio.gather(
+        with_flex_retry(_call2_gen),
+        with_flex_retry(_call3_gen),
     )
 
     en_basic_data = parse_ai_json(resp2.choices[0].message.content, "Handbook-generate-basic-en")
@@ -2535,20 +2543,22 @@ async def _run_generate_term(
             + "\n\nUse these sources primarily for mechanism, formulas/architecture, tradeoffs, pitfalls, and references."
         )
 
-    call4_task = client.chat.completions.create(
-        **compat_create_kwargs(
-            model,
-            messages=[
-                {"role": "system", "content": adv_en_system},
-                {"role": "user", "content": advanced_en_prompt},
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=16000,
-            prompt_cache_key="hb-generate-en-advanced",
-            reasoning_effort="high",
-            service_tier="flex",
+    async def _call4_gen():
+        return await client.chat.completions.create(
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": adv_en_system},
+                    {"role": "user", "content": advanced_en_prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=16000,
+                prompt_cache_key="hb-generate-en-advanced",
+                reasoning_effort="high",
+                service_tier="flex",
+            )
         )
-    )
+    call4_task = with_flex_retry(_call4_gen)
     basic_critique_task = _self_critique_basic(
         req.term, term_type, basic_ko_preview, basic_en_preview, client, model,
         reference_context=f"{tavily_context}\n{brave_context}",
@@ -2578,20 +2588,22 @@ async def _run_generate_term(
     if basic_ko_needs and basic_ko_feedback:
         logger.info("Regenerating basic KO for '%s' with critique feedback", req.term)
         improved_ko_system = basic_ko_system + f"\n\n## Reviewer Feedback (MUST address):\n{basic_ko_feedback}"
-        resp1b = await client.chat.completions.create(
-            **compat_create_kwargs(
-                model,
-                messages=[
-                    {"role": "system", "content": improved_ko_system},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_tokens=16000,
-                response_format={"type": "json_object"},
-                prompt_cache_key="hb-regen-basic",
-                reasoning_effort="high",
-                service_tier="flex",
+        async def _call1b_gen():
+            return await client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": improved_ko_system},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=16000,
+                    response_format={"type": "json_object"},
+                    prompt_cache_key="hb-regen-basic",
+                    reasoning_effort="high",
+                    service_tier="flex",
+                )
             )
-        )
+        resp1b = await with_flex_retry(_call1b_gen)
         improved_basic = parse_ai_json(resp1b.choices[0].message.content, "Handbook-basic-ko-improved")
         for k, v in improved_basic.items():
             if k.startswith("basic_ko_"):
@@ -2603,20 +2615,22 @@ async def _run_generate_term(
     if basic_en_needs and basic_en_feedback:
         logger.info("Regenerating basic EN for '%s' with critique feedback", req.term)
         improved_en_system = basic_en_system + f"\n\n## Reviewer Feedback (MUST address):\n{basic_en_feedback}"
-        resp2b = await client.chat.completions.create(
-            **compat_create_kwargs(
-                model,
-                messages=[
-                    {"role": "system", "content": improved_en_system},
-                    {"role": "user", "content": en_basic_prompt},
-                ],
-                max_tokens=16000,
-                response_format={"type": "json_object"},
-                prompt_cache_key="hb-regen-en-basic",
-                reasoning_effort="high",
-                service_tier="flex",
+        async def _call2b_gen():
+            return await client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": improved_en_system},
+                        {"role": "user", "content": en_basic_prompt},
+                    ],
+                    max_tokens=16000,
+                    response_format={"type": "json_object"},
+                    prompt_cache_key="hb-regen-en-basic",
+                    reasoning_effort="high",
+                    service_tier="flex",
+                )
             )
-        )
+        resp2b = await with_flex_retry(_call2b_gen)
         en_basic_data = parse_ai_json(resp2b.choices[0].message.content, "Handbook-basic-en-improved")
         usage2b = extract_usage_metrics(resp2b, model)
         basic_critique_usage = merge_usage_metrics(basic_critique_usage, usage2b)
@@ -2653,20 +2667,22 @@ async def _run_generate_term(
     if needs_improvement and critique_feedback and critique_score < 75:
         logger.info("Regenerating advanced KO for '%s' with critique feedback", req.term)
         improved_system = f"{adv_ko_system}\n\n## Reviewer Feedback (MUST address these):\n{critique_feedback}"
-        resp3b = await client.chat.completions.create(
-            **compat_create_kwargs(
-                model,
-                messages=[
-                    {"role": "system", "content": improved_system},
-                    {"role": "user", "content": advanced_prompt},
-                ],
-                max_tokens=16000,
-                response_format={"type": "json_object"},
-                prompt_cache_key="hb-regen-advanced",
-                reasoning_effort="high",
-                service_tier="flex",
+        async def _call3b_gen():
+            return await client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": improved_system},
+                        {"role": "user", "content": advanced_prompt},
+                    ],
+                    max_tokens=16000,
+                    response_format={"type": "json_object"},
+                    prompt_cache_key="hb-regen-advanced",
+                    reasoning_effort="high",
+                    service_tier="flex",
+                )
             )
-        )
+        resp3b = await with_flex_retry(_call3b_gen)
         advanced_ko_data = parse_ai_json(resp3b.choices[0].message.content, "Handbook-adv-ko-improved")
         usage3b = extract_usage_metrics(resp3b, model)
         critique_usage = merge_usage_metrics(critique_usage, usage3b)
@@ -2693,20 +2709,22 @@ async def _run_generate_term(
     if en_needs_improvement and en_critique_feedback and en_critique_score < 75:
         logger.info("Regenerating advanced EN for '%s' with critique feedback", req.term)
         improved_en_adv_system = f"{adv_en_system}\n\n## Reviewer Feedback (MUST address these):\n{en_critique_feedback}"
-        resp4b = await client.chat.completions.create(
-            **compat_create_kwargs(
-                model,
-                messages=[
-                    {"role": "system", "content": improved_en_adv_system},
-                    {"role": "user", "content": advanced_en_prompt},
-                ],
-                max_tokens=16000,
-                response_format={"type": "json_object"},
-                prompt_cache_key="hb-regen-en-advanced",
-                reasoning_effort="high",
-                service_tier="flex",
+        async def _call4b_gen():
+            return await client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=[
+                        {"role": "system", "content": improved_en_adv_system},
+                        {"role": "user", "content": advanced_en_prompt},
+                    ],
+                    max_tokens=16000,
+                    response_format={"type": "json_object"},
+                    prompt_cache_key="hb-regen-en-advanced",
+                    reasoning_effort="high",
+                    service_tier="flex",
+                )
             )
-        )
+        resp4b = await with_flex_retry(_call4b_gen)
         advanced_en_data = parse_ai_json(resp4b.choices[0].message.content, "Handbook-adv-en-improved")
         usage4b = extract_usage_metrics(resp4b, model)
         en_critique_usage = merge_usage_metrics(en_critique_usage, usage4b)
