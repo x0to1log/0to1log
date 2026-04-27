@@ -13,7 +13,7 @@
 |---|---|---|
 | v1~v3 | ~2026-03-16 | 초기 → 구조화 → 다이제스트 오케스트레이션 |
 | v4 | 2026-03-17 | 2 페르소나 정착 (Beginner 제거 당일), Expert+Learner 독립 생성 |
-| **v5** | 2026-03-25~ (진행 중) | 멀티소스 4개, gpt-4.1 family, 품질 스코어링, 커뮤니티 반응 통합, skeleton-map 라우팅 (2026-03-26) |
+| **v5** | 2026-03-25~ (진행 중) | 멀티소스 4개, gpt-5 family, 품질 스코어링, 커뮤니티 반응 통합, skeleton-map 라우팅 (2026-03-26) |
 
 ---
 
@@ -24,15 +24,15 @@ flowchart TD
     CRON["⏰ Cron Trigger (매일 아침)"] --> COLLECT["1. 뉴스 수집\n4개 소스 병렬"]
     ADMIN_BTN["👤 Admin 수동 실행\n(target_date 지정 가능)"] --> COLLECT
 
-    COLLECT --> CLASSIFY["2. LLM 분류 (o4-mini)\nresearch + business\n서브카테고리별 3~5건"]
+    COLLECT --> CLASSIFY["2. LLM 분류 (gpt-5-mini)\nresearch + business\n서브카테고리별 3~5건"]
 
     CLASSIFY --> COMMUNITY["3. 커뮤니티 반응 수집\nTop 3 → Tavily (Reddit/HN)"]
 
     COMMUNITY --> GEN_R["4. Research 다이제스트 생성\n2 페르소나 × EN+KO"]
     COMMUNITY --> GEN_B["4. Business 다이제스트 생성\n2 페르소나 × EN+KO"]
 
-    GEN_R --> QUALITY_R["5. 품질 스코어링 (o4-mini)\n0~100점"]
-    GEN_B --> QUALITY_B["5. 품질 스코어링 (o4-mini)\n0~100점"]
+    GEN_R --> QUALITY_R["5. 품질 스코어링 (gpt-5-mini)\n0~100점"]
+    GEN_B --> QUALITY_B["5. 품질 스코어링 (gpt-5-mini)\n0~100점"]
 
     QUALITY_R --> SAVE["6. draft로 저장\n4개 포스트 (2카테고리 × 2로케일)"]
     QUALITY_B --> SAVE
@@ -51,9 +51,9 @@ Research와 Business 동일 구조. 카테고리 1건당 **2 페르소나 × 2 �
 
 ```mermaid
 flowchart TD
-    START["분류된 뉴스 3~5건\n+ 커뮤니티 반응\n+ Handbook slug 목록"] --> EXPERT["Expert 페르소나\ngpt-4.1 · EN+KO JSON 동시 생성"]
+    START["분류된 뉴스 3~5건\n+ 커뮤니티 반응\n+ Handbook slug 목록"] --> EXPERT["Expert 페르소나\ngpt-5 · EN+KO JSON 동시 생성"]
 
-    START --> LEARNER["Learner 페르소나\ngpt-4.1 · EN+KO JSON 동시 생성"]
+    START --> LEARNER["Learner 페르소나\ngpt-5 · EN+KO JSON 동시 생성"]
 
     EXPERT --> RECOVERY_E{"EN 또는 KO\n누락?"}
     LEARNER --> RECOVERY_L{"EN 또는 KO\n누락?"}
@@ -66,7 +66,7 @@ flowchart TD
     RECOVERY_L -->|No| MERGE
     REGEN_L --> MERGE
 
-    MERGE["결과 병합\nheadline · excerpt · tags · focus_items\nquiz_en · quiz_ko · reading_time"] --> QUALITY["품질 스코어링\no4-mini · 0~100점"]
+    MERGE["결과 병합\nheadline · excerpt · tags · focus_items\nquiz_en · quiz_ko · reading_time"] --> QUALITY["품질 스코어링\ngpt-5-mini · 0~100점"]
 
     QUALITY --> SAVE["news_posts에\nEN row + KO row\ndraft로 저장"]
 ```
@@ -84,7 +84,7 @@ flowchart LR
 
     subgraph "2. 분류"
         TAVILY & HF & ARXIV & GITHUB --> DEDUP["URL 중복 제거\n+ 최근 3일 발행 URL 제외"]
-        DEDUP --> CLASSIFY_LLM["o4-mini 분류"]
+        DEDUP --> CLASSIFY_LLM["gpt-5-mini 분류"]
         CLASSIFY_LLM --> R_ITEMS["Research 3~5건\nllm_models · open_source · papers"]
         CLASSIFY_LLM --> B_ITEMS["Business 3~5건\nbig_tech · industry · new_tools"]
     end
@@ -95,12 +95,12 @@ flowchart LR
     end
 
     subgraph "4. 다이제스트 생성 (×2 카테고리)"
-        TAVILY_REACT --> P_EXP["Expert EN+KO\ngpt-4.1"]
-        TAVILY_REACT --> P_LRN["Learner EN+KO\ngpt-4.1"]
+        TAVILY_REACT --> P_EXP["Expert EN+KO\ngpt-5"]
+        TAVILY_REACT --> P_LRN["Learner EN+KO\ngpt-5"]
     end
 
     subgraph "5. 품질 + 저장"
-        P_EXP & P_LRN --> SCORE["Quality Score\no4-mini · 0~100"]
+        P_EXP & P_LRN --> SCORE["Quality Score\ngpt-5-mini · 0~100"]
         SCORE --> DB["news_posts\n4 rows (draft)\n2 카테고리 × 2 로케일"]
     end
 
@@ -125,7 +125,7 @@ flowchart LR
 
 ### 분류 (Classification)
 
-- **모델**: `o4-mini` (reasoning model)
+- **모델**: `gpt-5-mini` (light model)
 - **재시도**: MAX_RETRIES = 2 (총 3회)
 - **출력**: `ClassificationResult`
   - **Research**: `llm_models`, `open_source`, `papers` (각 서브카테고리 3~5건)
@@ -146,10 +146,10 @@ flowchart LR
 
 | 순서 | 호출 | 모델 | 입력 | 출력 |
 |---|---|---|---|---|
-| Call 1 | **Expert 페르소나** | gpt-4.1 | 분류된 뉴스 + 커뮤니티 반응 + Handbook slugs | Expert EN+KO 동시 JSON (headline, excerpt, tags, focus_items, quiz, content) |
-| Call 2 | **Learner 페르소나** | gpt-4.1 | 동일 입력 | Learner EN+KO 동시 JSON |
-| Recovery | **누락 로케일 재생성** | gpt-4.1 | 기존 결과 + 누락 로케일 지정 | 누락된 EN 또는 KO만 |
-| Quality | **품질 스코어링** | o4-mini | 생성된 다이제스트 전문 | 0~100점 (Sections/Sources/Accuracy or Analysis/Language 각 25점) |
+| Call 1 | **Expert 페르소나** | gpt-5 | 분류된 뉴스 + 커뮤니티 반응 + Handbook slugs | Expert EN+KO 동시 JSON (headline, excerpt, tags, focus_items, quiz, content) |
+| Call 2 | **Learner 페르소나** | gpt-5 | 동일 입력 | Learner EN+KO 동시 JSON |
+| Recovery | **누락 로케일 재생성** | gpt-5 | 기존 결과 + 누락 로케일 지정 | 누락된 EN 또는 KO만 |
+| Quality | **품질 스코어링** | gpt-5-mini | 생성된 다이제스트 전문 | 0~100점 (Sections/Sources/Accuracy or Analysis/Language 각 25점) |
 
 ### 왜 이 전략인가 (v4→v5 변경)
 
@@ -164,7 +164,7 @@ flowchart LR
 
 ### 품질 스코어링
 
-- **모델**: `o4-mini` (reasoning)
+- **모델**: `gpt-5-mini` (reasoning)
 - **평가 기준** (각 25점, 총 100점):
   - Research: Sections(25) + Sources(25) + Accuracy(25) + Language(25)
   - Business: Sections(25) + Sources(25) + Analysis(25) + Language(25)
@@ -197,7 +197,7 @@ flowchart LR
 | `pipeline_type` | 스테이지명 (classify, digest_expert, digest_learner, quality_check, ...) |
 | `status` | success / failed |
 | `duration_ms` | 호출 소요 시간 |
-| `model_used` | gpt-4.1, o4-mini 등 |
+| `model_used` | gpt-5, gpt-5-mini 등 |
 | `tokens_used` | input + output 합계 |
 | `cost_usd` | 비용 (모델별 가격 테이블 기준) |
 | `post_type` | research / business |
@@ -207,16 +207,16 @@ flowchart LR
 
 ---
 
-## 3-Tier 모델 구조 (v5)
+## 3-Tier 모델 구조 (v5, gpt-5 family 기준)
 
 | 역할 | 모델 | 용도 |
 |---|---|---|
-| **Main** | `gpt-4.1` | 다이제스트 생성, Handbook 생성 |
-| **Light** | `gpt-4.1-mini` | 용어 추출, 유형 분류, 품질 스코어링 보조 |
-| **Reasoning** | `o4-mini` | 뉴스 분류, 다이제스트 품질 스코어링 |
+| **Main** | `gpt-5` | 다이제스트 생성, Handbook 생성 |
+| **Light** | `gpt-5-mini` | 뉴스 분류, 용어 추출, 유형 분류, 품질 스코어링 |
+| **Nano** | `gpt-5-nano` | 커뮤니티 댓글 relevance filter |
 
-> [!note] o-series 차이
-> o4-mini는 `temperature`와 `response_format` 미지원. `max_completion_tokens` 사용. `build_completion_kwargs()`에서 자동 분기.
+> [!note] gpt-5 family 파라미터
+> gpt-5 reasoning 모델은 `temperature` 파라미터를 거부함. `response_format`은 지원됨. `build_completion_kwargs()`에서 자동 분기.
 
 ---
 

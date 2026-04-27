@@ -15,7 +15,7 @@ AI 콘텐츠 생성 시 활용하는 구조화된 항목 시스템. ==디폴트 
 
 > [!note] v5 변경
 > - 2 페르소나 (Expert/Learner) — Beginner 제거
-> - 모델: gpt-4.1 (main), o4-mini (classification)
+> - 모델: gpt-5 (main), gpt-5-mini (classification)
 > - 독립 생성 방식 (Expert/Learner 각각 직접 생성, derive 아님)
 > - EN+KO JSON 동시 출력 (번역 단계 제거)
 
@@ -33,6 +33,7 @@ AI 콘텐츠 생성 시 활용하는 구조화된 항목 시스템. ==디폴트 
 
 > [!note] Quiz/Poll
 > Phase 4(포인트 시스템) 구현 전까지 UI 인터랙션 없이 텍스트로만 노출. 페르소나별 quiz_en + quiz_ko 생성.
+> **Quiz contract (2026-04-26):** writer output = `{question, options[4], answer_index: 0-3, explanation}`; validator `_validate_and_shuffle_quiz_item` resolves index → text before saving, so DB-stored shape is `{question, options[4], answer: text, explanation}` — unchanged from consumer perspective.
 
 ## 매일 AI NEWS 포스트 구성 (5블록 구조)
 
@@ -65,7 +66,7 @@ AI 콘텐츠 생성 시 활용하는 구조화된 항목 시스템. ==디폴트 
 
 ### Classification Agent (`CLASSIFICATION_SYSTEM_PROMPT`)
 
-- 출력: `ClassificationResult` / 모델: **o4-mini** (reasoning)
+- 출력: `ClassificationResult` / 모델: **gpt-5-mini** (reasoning)
 - 역할: 수집된 뉴스를 research/business로 분류 + 서브카테고리 배정
 - 서브카테고리:
   - **Research**: `llm_models`, `open_source`, `papers`
@@ -78,12 +79,12 @@ AI 콘텐츠 생성 시 활용하는 구조화된 항목 시스템. ==디폴트 
 > 기존 v4의 "Expert-first 2-call cascade" → **Expert/Learner 완전 독립 생성**. 각 페르소나가 동일 입력(뉴스 + 반응 + handbook slugs)에서 직접 생성.
 
 **Expert 페르소나** (`get_digest_prompt(type, "expert", slugs)`)
-- 출력: EN+KO JSON / 모델: **gpt-4.1** / max_tokens: 16,000
+- 출력: EN+KO JSON / 모델: **gpt-5** / max_tokens: 16,000
 - 원칙: 전문 용어 자유, 데이터 중심, 전략적 인사이트
 - "누가 돈을 벌고 누가 위험해지는가" 관점
 
 **Learner 페르소나** (`get_digest_prompt(type, "learner", slugs)`)
-- 출력: EN+KO JSON / 모델: **gpt-4.1** / max_tokens: 16,000
+- 출력: EN+KO JSON / 모델: **gpt-5** / max_tokens: 16,000
 - 원칙: 핵심 용어 설명 포함, 배경 맥락 보충, 실무 적용 초점
 - Handbook 링크 적극 활용
 
@@ -116,7 +117,7 @@ v5에서 추가된 skeleton 시스템으로 각 포스트 타입(Research/Busine
 
 ### Editorial Agent (`EDITORIAL_SYSTEM_PROMPT`)
 
-- 출력: `EditorialFeedback` / 모델: gpt-4.1
+- 출력: `EditorialFeedback` / 모델: gpt-5
 - 검수 4항목: 기술 정확도, 가독성, SEO, 톤앤매너 (각 1~10)
 - 판정: [[Quality-Gates-&-States#Editorial 판정 기준]] 참조
 

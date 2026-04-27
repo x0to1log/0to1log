@@ -112,8 +112,8 @@ Bearer 토큰 추출 → `supabase.auth.get_user(token)` → `admin_users` 테�
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` | Supabase 연결 |
 | `OPENAI_API_KEY` | OpenAI API |
-| `OPENAI_MODEL_MAIN` (`gpt-4o`) | 메인 모델 (환경 변수로 교체 용이) |
-| `OPENAI_MODEL_LIGHT` (`gpt-4o-mini`) | 경량 모델 |
+| `OPENAI_MODEL_MAIN` (`gpt-5`) | 메인 모델 (환경 변수로 교체 용이) |
+| `OPENAI_MODEL_LIGHT` (`gpt-5-mini`) | 경량 모델 |
 | `TAVILY_API_KEY` | 뉴스 수집 |
 | `CRON_SECRET` | Cron 인증 |
 | `FASTAPI_URL` | Railway URL |

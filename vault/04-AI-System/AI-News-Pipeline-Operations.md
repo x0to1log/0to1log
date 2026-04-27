@@ -34,7 +34,7 @@
 
 ```mermaid
 flowchart TD
-    CALL["LLM 호출\ngpt-4.1"] --> API_OK{"API 응답\n정상?"}
+    CALL["LLM 호출\ngpt-5"] --> API_OK{"API 응답\n정상?"}
 
     API_OK -->|No| RETRY_INFRA{"재시도\n횟수 < 2?"}
     RETRY_INFRA -->|Yes| CALL
@@ -57,21 +57,21 @@ flowchart TD
 
 | 항목 | 호출 수 | 모델 |
 |---|---|---|
-| 분류 (Classification) | 1 | o4-mini |
+| 분류 (Classification) | 1 | gpt-5-mini |
 | 커뮤니티 반응 수집 | ~3 | Tavily API |
-| 다이제스트 생성 (2 카테고리 × 2 페르소나) | 4 | gpt-4.1 |
-| 로케일 복구 (조건부) | 0~4 | gpt-4.1 |
-| 품질 스코어링 (2 카테고리) | 2 | o4-mini |
-| Handbook 용어 추출 (조건부) | 1 | gpt-4.1-mini |
-| Handbook 용어 생성 (조건부, 용어당 4 calls) | 0~8 | gpt-4.1 |
+| 다이제스트 생성 (2 카테고리 × 2 페르소나) | 4 | gpt-5 |
+| 로케일 복구 (조건부) | 0~4 | gpt-5 |
+| 품질 스코어링 (2 카테고리) | 2 | gpt-5-mini |
+| Handbook 용어 추출 (조건부) | 1 | gpt-5-mini |
+| Handbook 용어 생성 (조건부, 용어당 4 calls) | 0~8 | gpt-5 |
 | **기본 총** | **~10 calls/day** | |
 
-- 예상 비용: **~$0.50~0.80/day** (gpt-4.1 기준, 멀티소스 raw_content 입력)
+- 예상 비용: **~$0.50~0.80/day** (gpt-5 기준, 멀티소스 raw_content 입력)
 - Handbook 추출까지 포함 시: **~$1.00~1.50/day**
 
 > [!note] v5 비용 변동 요인
-> - gpt-4.1은 gpt-4o보다 input 토큰 비용이 낮으나, 4개 소스에서 수집하여 입력량 증가
-> - o4-mini (분류 + 품질 스코어링) 호출 추가
+> - gpt-5는 구형 모델보다 input 토큰 비용이 낮으나, 4개 소스에서 수집하여 입력량 증가
+> - gpt-5-mini (분류 + 품질 스코어링) 호출 추가
 > - Handbook 자동 추출은 `admin_settings.handbook_auto_extract` 토글로 제어
 
 ---

@@ -15,7 +15,7 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 
 > [!note] v5 변경
 > - 2 페르소나 (Expert/Learner) 기준으로 스키마 및 스테이지 업데이트
-> - 모델: gpt-4.1, gpt-4.1-mini, o4-mini
+> - 모델: gpt-5, gpt-5-mini, gpt-5-nano
 > - 다이제스트 품질 스코어링 (0~100) 추가
 > - 분류(Classification) 스테이지 반영
 
@@ -27,7 +27,7 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 
 | 모델 | 역할 |
 |---|---|
-| **QuizPoll** | 퀴즈 question/options/answer/explanation |
+| **QuizPoll** | 퀴즈 question/options/answer_index (writer 출력, int 0-3) → answer (validator 가 options[idx] 로 resolve, DB 저장 형태)/explanation |
 | **guide_items (JSONB)** | daily: persona별 quiz_poll + sources_*. weekly: week_numbers, week_tool, week_terms, weekly_quiz_*, excerpt_learner. PromptGuideItems 클래스는 2026-04-19 제거됨. |
 | **ClassifiedCandidate** | title, url, snippet, category, subcategory, relevance_score, reason |
 | **ClassificationResult** | research list + business list |
@@ -37,7 +37,7 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 | 스키마 | 에이전트 | 핵심 필드 |
 |---|---|---|
 | **PersonaOutput** | Digest Generator | `content_expert`, `content_learner` (각 EN+KO), `headline`, `excerpt`, `tags`, `focus_items`, `quiz_en`, `quiz_ko` |
-| **ClassificationResult** | Classification (o4-mini) | `research: list[ClassifiedCandidate]`, `business: list[ClassifiedCandidate]` |
+| **ClassificationResult** | Classification (gpt-5-mini) | `research: list[ClassifiedCandidate]`, `business: list[ClassifiedCandidate]` |
 | **GenerateTermResult** | Handbook Generate | `term_full`, `korean_full`, `definition_ko/en`, `body_basic_ko/en`, `body_advanced_ko/en` |
 | **EditorialFeedback** | Editorial | accuracy/readability/seo/tone (1~10), `overall_verdict` |
 
@@ -62,14 +62,14 @@ PydanticAI 스키마 검증 + 에러 핸들링 + 재시도 정책.
 | 단계 | 모델 | 재시도 | 실패 시 동작 |
 |---|---|---|---|
 | **뉴스 수집 (4개 소스)** | Tavily/HF/arXiv/GitHub API | 소스별 독립 | 해당 소스 스킵, 나머지 진행 |
-| **분류 (Classification)** | o4-mini | MAX_RETRIES=2 (총 3회) | 분류 없이 Admin 전달 |
+| **분류 (Classification)** | gpt-5-mini | MAX_RETRIES=2 (총 3회) | 분류 없이 Admin 전달 |
 | **커뮤니티 반응** | Tavily API | 아이템별 독립 | 해당 아이템 반응 없이 진행 |
-| **다이제스트 Expert** | gpt-4.1 | 1회 재시도 (총 2회) | 스킵, 로그 기록 |
-| **다이제스트 Learner** | gpt-4.1 | 1회 재시도 (총 2회) | 스킵, 로그 기록 |
-| **로케일 복구** | gpt-4.1 | 1회 | EN 또는 KO만 재생성 |
-| **품질 스코어링** | o4-mini | 없음 | 스코어 없이 저장 |
-| **Handbook 추출** | gpt-4.1-mini | 없음 | 추출 없이 종료 |
-| **Handbook 생성** | gpt-4.1 | Call 1 KO 누락 시 재시도 | 생성 실패 시 스킵 |
+| **다이제스트 Expert** | gpt-5 | 1회 재시도 (총 2회) | 스킵, 로그 기록 |
+| **다이제스트 Learner** | gpt-5 | 1회 재시도 (총 2회) | 스킵, 로그 기록 |
+| **로케일 복구** | gpt-5 | 1회 | EN 또는 KO만 재생성 |
+| **품질 스코어링** | gpt-5-mini | 없음 | 스코어 없이 저장 |
+| **Handbook 추출** | gpt-5-mini | 없음 | 추출 없이 종료 |
+| **Handbook 생성** | gpt-5 | Call 1 KO 누락 시 재시도 | 생성 실패 시 스킵 |
 | **Supabase 저장** | — | 10초 후 2회 | 실패 로그 + Admin 알림 |
 
 > [!note] v5 변경
@@ -117,7 +117,7 @@ Generate 에이전트가 `post_type` (research/business) × `persona` (expert/le
 
 ## 다이제스트 품질 스코어링 (v5 신규)
 
-다이제스트 생성 후 o4-mini로 0~100 품질 평가:
+다이제스트 생성 후 gpt-5-mini로 0~100 품질 평가:
 
 | 카테고리 | 기준 (각 25점) |
 |---|---|
