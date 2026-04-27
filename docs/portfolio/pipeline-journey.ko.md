@@ -187,12 +187,7 @@ Draft-First로 파이프라인을 멈추지 않는 대신, 품질을 3개 레이
 
 페르소나별 4개 기준 × 25점 체계로 시작했지만, v11에서 **10 sub-score (각 0–10) + 각 점수마다 근거 서술** 구조로 재설계. v11.1에서 `claim_calibration` + `temporal_anchoring` + `internal_consistency` 추가로 14–15개로 확장. LLM은 sub-score와 근거만 제공하고, **총점은 코드가 합산**한다.
 
-| 페르소나 | sub-score 수 | 주요 차원 |
-|----------|------------|---------|
-| Research Expert | 14 | section_completeness, source_quality, technical_depth, locale_integrity, claim_calibration, temporal_anchoring, internal_consistency, ... |
-| Research Learner | 14 | section_completeness, accessibility, source_quality, locale_integrity, ... |
-| Business Expert | 15 | + claim_coverage (focus_items 평가형 문구 금지) |
-| Business Learner | 14 | section_completeness, accessibility, actionability, locale_integrity, ... |
+페르소나별 14–15개 sub-score는 공통 차원(section_completeness, source_quality, locale_integrity, language_quality)에 페르소나 특화 차원이 추가된다 — Expert는 technical/analysis depth, Learner는 accessibility, Business Expert는 claim_coverage(focus_items 평가형 문구 금지) 등.
 
 **왜 LLM이 총점을 계산하지 않는가:** LLM은 qualitative 평가에는 강하지만 산수에 약하다. 정성 평가와 arithmetic을 분리하면 각각 더 정확해진다. `locale_integrity`는 v11에서 severity 마커에서 explicit sub-dimension으로 승격 — Apr 19 사고(KO 다이제스트에 영어 인용만, 96점) 재발 방지.
 
@@ -237,13 +232,7 @@ Research 카테고리에 적합한 뉴스가 없으면 **빈 리스트를 허용
 
 **왜 중요한가:** 프롬프트 엔지니어링은 반복 비용이 쌓이는 작업이다. 반복 비용을 1/10로 줄이면 실험 빈도가 10배가 된다. 저비용 rescore 경로 없이는 rubric v2 같은 대규모 프롬프트 재설계 자체가 경제적으로 비쌌다.
 
-**비용 절감을 위해 검토했지만 채택하지 않은 것들 (v5–v8 시기)** — 비용을 줄이는 것보다 품질을 지키는 게 더 중요한 경우가 있었다.
-
-| 고려한 것 | 결정 | 이유 |
-|-----------|------|------|
-| 분류에 경량 모델 사용 | 미채택 | 약 $0.03/일 절감이지만 분류 품질 리스크 |
-| 품질 체크 제거 | 미채택 | 약 $0.004/일 절감이지만 자동 발행의 선행 조건 |
-| 핸드북 Self-Critique 제거 | 미채택 | 약 $0.02/용어 절감이지만 품질 하한선 보장 필요 |
+**비용 절감을 위해 검토했지만 채택하지 않은 것들 (v5–v8 시기):** 분류 모델 다운그레이드($0.03/일 절감), 품질 체크 제거($0.004/일), 핸드북 Self-Critique 제거($0.02/용어) — 모두 미채택. 비용 절감보다 품질 하한선 보장이 우선이었다.
 
 ### 교훈
 
@@ -251,31 +240,25 @@ Research 카테고리에 적합한 뉴스가 없으면 **빈 리스트를 허용
 
 **"하지 마라"를 빼면 LLM이 더 잘한다.** Research Expert Guide의 DON'T 9개를 전부 삭제했더니 아이템당 1문단 → 3문단. Business Expert Guide가 201단어, DONT 0개로 90점을 내고 있었다 — 같은 패턴을 적용한 것.
 
-**스켈레톤이 규칙을 이긴다.** "최소 3문단"을 6곳에 적어도, 스켈레톤에 `[2-3 paragraphs]`가 있으면 LLM이 2문단을 선택한다. 규칙, 스켈레톤, 품질 체크 3곳이 일관되어야 의도대로 동작한다.
-
 **프롬프트 변경은 한 번에 하나씩.** v7에서 3가지 변경을 한 커밋에 넣었더니 점수가 86.5 → 66.5로 폭락. "롤백 후 선별 재적용"이 "패치 위에 패치"보다 안전하다.
 
 **프롬프트의 예시는 중립적이지 않다.** Citation 형식 예시에 빈 괄호 `[](URL)`를 넣었더니 4개 페르소나 중 3개가 citation을 완전히 생략. `[1](URL)`로 복원하자 즉시 정상화. LLM은 예시의 패턴을 문자 그대로 따른다.
 
 **LLM의 한계를 인정하고 코드로 보완.** 핸드북 용어 링크는 프롬프트로 시키면 정확도 약 70%, 코드 후처리는 100%. Citation 넘버링도 LLM이 섹션마다 리셋하는 문제를 코드로 전환하여 100% 정확.
 
-**한 호출에 두 가지 작업을 결합하면 두 작업 모두 정확도가 떨어진다.** 분류/랭킹(v8), classify/merge(v9), Writer/Summarizer(v10)에서 세 번 반복 검증 — 각각 분리하면 둘 다 잘하고, 합치면 둘 다 부정확해진다.
-
 **reasoning 모델은 파라미터 체계가 다르다.** gpt-5에서 빈 응답이 나오면 버그가 아니라 추론 토큰이 출력 예산을 소진한 것. reasoning_effort=low + 3x 헤드룸이 해결책. system에 데이터를 넣으면 무시하므로 system=규칙, user=데이터로 분리해야 안정적.
 
-**채점 모델이 바뀌면 점수 기준이 깨진다.** 같은 콘텐츠를 gpt-4.1-mini(85점)와 gpt-5-mini(36점)가 전혀 다르게 채점. calibration 지시와 content 잘림 한도를 반드시 조정해야.
+**채점 시스템을 바꾸면 점수 추이가 끊어진다.** 같은 콘텐츠를 gpt-4.1-mini(85점)와 gpt-5-mini(36점)가 다르게 채점하고, v10 85점과 v11 85점도 직접 비교 불가 (rubric 아키텍처가 바뀜). 추세 추적이 목적일 때, 채점 모델이나 rubric 구조 변경은 단절 지점을 만든다는 걸 인지하고 calibration + threshold 재보정을 함께 해야 한다.
 
-**LLM에게 산수를 맡기지 말라.** Rubric v2에서 10 sub-score 합산을 코드로 이관. LLM은 qualitative 평가에 강하고 코드는 arithmetic에 정확 — 둘을 섞으면 LLM이 정성 평가에 산수까지 얹으면서 둘 다 불안정해진다. 역할을 분리하는 게 각각을 더 잘하게 만든다.
+**LLM에게 산수를 맡기지 말라.** Rubric v2에서 10 sub-score 합산을 코드로 이관. LLM은 qualitative 평가에 강하고 코드는 arithmetic에 정확 — 둘을 섞으면 LLM이 정성 평가에 산수까지 얹으면서 둘 다 불안정해진다.
 
 **구조 검증과 도달 가능성은 다르다.** URL이 올바른 문자열 형식이어도 실제로 도달 가능한지는 별개. HEAD 요청으로 실제 라이브 여부를 확인하는 gate가 필요하다. Apr 19 사고의 13개 문제 URL 중 상당수가 형식상 정상이었다.
-
-**Rubric 아키텍처를 바꾸면 점수 추이가 끊어진다.** v10의 85점과 v11의 85점은 직접 비교 불가 — 자동 발행 threshold도 재보정 필요. 추세 추적이 평가 시스템의 목적일 때, rubric 변경은 단절 지점을 만든다는 것을 인지하고 설계해야.
 
 **API schema enum은 프롬프트보다 확실하다.** URL 환각을 프롬프트로 막으면 85–97% 준수, OpenAI strict `json_schema` + `citations[].url: enum`으로 강제하면 API가 서버에서 거부 → 100%. 프롬프트가 안 통할 땐 스키마로 올려라 — "LLM에게 시킬 것 vs 코드에게 맡길 것"의 경계를 넘어 "API에게 강제할 것"이라는 세 번째 레이어.
 
 **False positive가 정확도보다 비쌀 수 있다.** v11에서 추가한 URL liveness HEAD 체크가 70–85% false positive → citation 90% 손실. v12에서 제거하는 게 해결책이었다. 검증 시스템의 **오탐률**은 탐지율 못지않게 중요 — 추가가 항상 답이 아니다.
 
-**품질 노브를 올릴 때는 비용 노브도 같이 돌려라.** v12에서 `reasoning_effort=low → high`만 올리면 $0.50 → $0.86 (+72%). `flex tier (-50%) + prompt_cache_key (-30%)`를 함께 적용하면 오히려 $0.33 (-34%). 한 축만 조정하면 비용이 폭발한다. **개별 knob 튜닝 사고방식의 함정**: "이번에 품질 노브 올리고, 다음에 비용 노브 돌리자"는 접근이 일반적이지만 중간 상태가 배포되면 과금 폭탄 + 롤백 압박 → 품질 성과까지 되돌려야 함. **품질과 비용 변경은 반드시 같은 릴리스에 패키지**하고, 최소한 staging에서 통합 검증한 뒤 프로덕션에 올려야 한다.
+**품질 노브를 올릴 때는 비용 노브도 같이 돌려라.** v12에서 `reasoning_effort=low → high`만 올리면 $0.50 → $0.86 (+72%). `flex tier (-50%) + prompt_cache_key (-30%)`를 함께 적용하면 -34% ($0.33). 품질과 비용 변경은 반드시 같은 릴리스에 패키지해야 — 중간 상태가 배포되면 과금 폭탄 + 롤백 압박으로 품질 성과까지 되돌리게 된다.
 
 **구조적 enforcement를 rubric 상승 앞에 둬라.** Rubric bar를 한 달간 지속적으로 올렸는데 점수가 89–97 안정 유지. 이유: schema + code validation으로 bottom-line을 먼저 고정했기 때문. 반대 순서 (rubric만 먼저 올리기)는 점수 롤러코스터.
 
@@ -317,15 +300,11 @@ v12  ████                                                 1일 (schema e
 
 초기 전략은 단순했다: 뉴스 1건을 선택해서 영어로 심층 분석을 쓰고, 한국어로 번역하고, 3개 페르소나(전문가/중급/초급)로 변환한다.
 
-5일 동안 일어난 일:
+5일 동안 패치를 누적했다:
 
-**1일차–2일차:** 기본 파이프라인 구현. LLM이 5,000자 이상의 글을 안정적으로 생성하지 못하는 문제 발견. 재시도 로직을 추가했다.
+**1–3일차:** LLM이 5,000자 이상 안정적으로 생성 못 함 → 재시도 로직 추가. EN→KO 번역 시 길이 50–70% 손실 → 번역 프롬프트 강화했으나 효과 없음 → 품질 기준 5,000자 → 3,500자로 하향.
 
-**3일차:** EN→KO 번역 시 길이가 50–70%로 줄어드는 문제. 번역 프롬프트에 "원문과 동일한 길이로" 지시를 추가했지만 효과 없음. 품질 기준을 5,000자에서 3,500자로 낮췄다.
-
-**4일차:** 간헐적 JSON 파싱 실패. artifact/resume 시스템을 구현해서 중간 실패 시 이어서 생성할 수 있게 했다. pipeline.py가 979줄에서 1,346줄로 불어났다. 방어 코드만 400줄 이상.
-
-**5일차:** 품질 기준을 2,500자까지 낮췄다. 원래 목표의 50%. 여기서 멈추고 전체를 삭제했다.
+**4–5일차:** 간헐적 JSON 파싱 실패 → artifact/resume 시스템 구현. pipeline.py가 979줄 → 1,346줄로 불어났고, 방어 코드만 400줄 이상. 5일차에 품질 기준 2,500자(원래 목표의 50%)까지 낮췄을 때 — 멈추고 전체를 삭제했다.
 
 **근본 원인:** 잘못된 아키텍처 위에 패치를 쌓고 있었다. KO 번역 길이가 부족하면 품질 기준을 낮추고, LLM이 긴 글을 못 쓰면 재시도 로직을 추가하고, 중간에 실패하면 artifact/resume 시스템을 만들었다 — 모두 증상에 대한 패치였다. 진짜 원인은 순차 번역 구조, 1회 호출 전체 생성, hard validation이었다.
 
@@ -471,9 +450,7 @@ Apr 19의 13개 문제 URL 전량 차단 확인.
 
 QC만 재실행하는 경로 추가. run당 $0.54 → $0.05 (10배 절감). Writer 결과를 DB에서 재사용하고 품질 평가만 다시 돌린다. Rubric v2 같은 대규모 재설계를 경제적으로 가능하게 만든 전제 조건.
 
-**5. Community Pulse Thread URL 보존**
-
-수집 시점에 HN `story_id`와 Reddit `permalink`을 CommunityInsight에 embed. Writer가 순서를 바꿔도 살아남는 **upvote-count-based 매칭**으로 구조적 키 사용. 포지셔널 매칭은 LLM이 재배열하면 깨진다.
+**5. CP Thread URL 보존 — 구조적 키 매칭** — 수집 시점에 HN `story_id`/Reddit `permalink`을 embed하고 upvote count로 매칭. 포지셔널 매칭은 LLM이 재배열하면 깨지므로 구조적 키 사용.
 
 **v11 품질 지표:** Research 76 / Business 93 (v11 rubric 기준). **v10 85와 v11 85는 직접 비교 불가** — rubric 아키텍처가 바뀌면 점수 추이가 단절된다.
 
@@ -545,16 +522,7 @@ v11에서 도입한 HEAD 요청 검증이 70–85% false positive를 내면서 c
 
 월 $15 → $26 (naive) → **$10** (final). 연 $192 절감 vs naive.
 
-**Reasoning tokens의 현실 (4/23 측정):**
-
-| Stage | Output | Reasoning | Reasoning % |
-|------|-------|----------|-------------|
-| digest:business:expert | 16,811 | 11,328 | **67.4%** |
-| digest:business:learner | 18,470 | 13,248 | **71.7%** |
-| digest:research:expert | 17,555 | 11,392 | 64.9% |
-| digest:research:learner | 12,357 | 7,360 | 59.6% |
-
-**Output의 60–72%가 내부 추론** — 실제 body는 30–40%뿐. Reasoning token도 output rate($8/M)로 과금됨. OpenAI 문서에 명시되어 있지만 체감되지 않는 비용 구조 — `completion_tokens_details.reasoning_tokens`를 admin UI에 노출시켜서 reasoning_effort 튜닝 판단 근거를 확보했다.
+**Reasoning tokens의 현실 (4/23 측정):** 4개 페르소나 모두 output의 **60–72%가 내부 추론** (business expert 67%, learner 72%, research expert 65%, learner 60%). 실제 body는 30–40%뿐. Reasoning token도 output rate($8/M)로 과금됨 — OpenAI 문서에 명시되어 있지만 체감되지 않는 비용 구조. `completion_tokens_details.reasoning_tokens`를 admin UI에 노출시켜 reasoning_effort 튜닝 판단 근거를 확보했다.
 
 **v12 후속 (4/24–27):** Community Pulse 렌더링을 Writer 프롬프트가 아닌 **코드 후처리**(`_linkify_cp_section`, 약 150 LOC)로 옮김. 3번의 프롬프트 재실행이 모두 실패한 후 — Writer에게 fancy markdown을 강요하는 것 자체가 잘못된 레이어임을 인정. 데이터 모델을 단일 `CommunityInsight` → 플랫폼별 `ThreadInfo[]`로 재설계하여 quote provenance 보존 — Apr 24 사례에서 같은 quote가 HN/Reddit 양쪽 블록에 복제되는 가짜 corroboration 제거. **gpt-5-nano relevance filter** 추가로 top-voted 30개 코멘트에서 5-10개 선별, off-topic top-voted 댓글(Apr 25 DeepSeek thread의 정치 flame war) 거름. **Mirror domain blocklist 8 → 26개** (14-day audit 기반). Quiz `answer: str` → `answer_index: int 0-3`로 contract 변경하여 cross-field invariant를 schema에서 강제. **후속 변경 후 4/23–27 평균 $0.41/일** ($0.36–0.47, baseline $0.50 대비 18–28% 절감). 모두 같은 원칙의 적용 — "구조 강제는 코드/스키마 레이어로, LLM은 내용에 집중."
 

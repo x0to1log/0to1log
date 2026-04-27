@@ -187,12 +187,7 @@ Instead of stopping the pipeline, quality is tracked through 3 layers.
 
 Started with 4 criteria x 25 points per persona, but v11 redesigned it as **10 sub-scores (each 0-10) + evidence per score**. v11.1 expanded to 14-15 by adding `claim_calibration`, `temporal_anchoring`, `internal_consistency`. LLM provides only sub-scores and evidence; **code aggregates the total**.
 
-| Persona | Sub-score count | Key dimensions |
-|---------|----------------|----------------|
-| Research Expert | 14 | section_completeness, source_quality, technical_depth, locale_integrity, claim_calibration, temporal_anchoring, internal_consistency, ... |
-| Research Learner | 14 | section_completeness, accessibility, source_quality, locale_integrity, ... |
-| Business Expert | 15 | + claim_coverage (forbids press-release evaluative phrases in focus_items) |
-| Business Learner | 14 | section_completeness, accessibility, actionability, locale_integrity, ... |
+Each persona uses 14-15 sub-scores: shared dimensions (section_completeness, source_quality, locale_integrity, language_quality) plus persona-specific ones -- Expert gets technical/analysis depth, Learner gets accessibility, Business Expert adds claim_coverage (forbids press-release evaluative phrases in focus_items).
 
 **Why LLM doesn't compute the total:** LLMs are strong at qualitative evaluation but weak at arithmetic. Mixing the two makes both unstable. Separation makes each more accurate. `locale_integrity` was promoted from severity marker to explicit sub-dimension in v11 -- preventing recurrence of the Apr 19 incident (KO digest with English-only quotes scoring 96).
 
@@ -237,13 +232,7 @@ Re-running from Writer for every prompt iteration cost $0.54/run. By reusing Wri
 
 **Why it matters:** Prompt engineering accumulates iteration cost. Cutting iteration cost by 10x means 10x more experiments. Without a low-cost rescore path, large prompt redesigns like rubric v2 would have been economically unviable.
 
-**Cost savings considered but not adopted (v5-v8 period)** -- sometimes protecting quality matters more than cutting cost.
-
-| Considered | Decision | Reason |
-|-----------|----------|--------|
-| Use lighter model for classification | Not adopted | $0.03/day savings but classification quality risk |
-| Remove quality checks | Not adopted | $0.004/day savings but prerequisite for auto-publish |
-| Remove handbook Self-Critique | Not adopted | $0.02/term savings but needed to guarantee quality floor |
+**Cost savings considered but not adopted (v5-v8 period):** classification model downgrade ($0.03/day savings), quality checks removal ($0.004/day), handbook Self-Critique removal ($0.02/term) -- all rejected. Protecting the quality floor mattered more than cutting cost.
 
 ### Lessons
 
@@ -251,31 +240,25 @@ Re-running from Writer for every prompt iteration cost $0.54/run. By reusing Wri
 
 **Removing DON'Ts makes LLMs perform better.** Deleting all 9 DON'Ts from the Research Expert Guide improved per-item depth from 1 paragraph to 3. Business Expert Guide was already scoring 90 with 201 words and zero DON'Ts -- applying the same pattern confirmed it.
 
-**Skeletons beat rules when they conflict.** Even with "minimum 3 paragraphs" stated in 6 places, if the skeleton shows `[2-3 paragraphs]`, the LLM picks 2. Rules, skeletons, and quality checks must be consistent.
-
 **Prompt changes must be verified one at a time.** In v7, stacking 3 changes in one commit crashed the score from 86.5 to 66.5. "Rollback + selective re-apply" is safer than "patch the patches."
 
 **Prompt examples are not neutral.** An empty-bracket `[](URL)` in the prompt caused 3 of 4 personas to omit citations entirely. `[1](URL)` fixed it immediately. LLMs follow example patterns literally.
 
 **Accept LLM limitations, compensate with code.** Handbook term linking: prompt 70%, code 100%. Citation renumbering: LLM resets per section, code handles it perfectly.
 
-**Combining two tasks in one call reduces accuracy for both.** The same pattern repeated in classification/ranking (v8), classify/merge (v9), Writer/Summarizer (v10) -- separating them each time immediately improved both tasks.
-
 **Reasoning models have a different parameter system.** Empty responses from gpt-5 aren't bugs -- reasoning tokens consume the output budget. reasoning_effort=low + 3x headroom solves it. Data in system prompts gets ignored, so system=rules, user=data separation is required.
 
-**Changing the scoring model breaks score trends.** Same content scored 85 by gpt-4.1-mini and 36 by gpt-5-mini. Calibration instructions and content truncation limits must be adjusted when switching scoring models.
+**Changing the scoring system breaks score trends.** Same content scored 85 by gpt-4.1-mini and 36 by gpt-5-mini, and v10 85 isn't directly comparable to v11 85 (rubric architecture changed). When trend tracking is the goal, recognize that scoring model or rubric structure changes create discontinuities and pair them with calibration + threshold rebaselining.
 
-**Don't make the LLM do arithmetic.** Rubric v2 moves the 10 sub-score aggregation to code. LLMs are strong at qualitative evaluation, code is precise at arithmetic -- mixing them makes the LLM stack arithmetic on top of qualitative judgment, destabilizing both. Separating roles makes each better.
+**Don't make the LLM do arithmetic.** Rubric v2 moves the 10 sub-score aggregation to code. LLMs are strong at qualitative evaluation, code is precise at arithmetic -- mixing them makes the LLM stack arithmetic on top of qualitative judgment, destabilizing both.
 
 **Structural validation isn't reachability validation.** A URL with the right string format isn't necessarily reachable. A HEAD-request gate is needed to verify actual liveness. Many of the 13 problematic URLs from the Apr 19 incident were structurally normal.
-
-**Changing the rubric architecture breaks score continuity.** v10's 85 and v11's 85 aren't directly comparable -- the auto-publish threshold has to be recalibrated. When trend tracking is the system's purpose, recognize that rubric changes create discontinuities and design for it.
 
 **API schema enum beats prompts for compliance.** Prompts achieve 85-97% URL hallucination prevention; OpenAI strict `json_schema` + `citations[].url: enum` enforced at the API level rejects hallucinated URLs server-side -> 100%. When prompts can't get there, escalate to the schema -- a third layer beyond "what the LLM should do vs what code should do": "what the API should enforce."
 
 **False positives can cost more than accuracy.** v11's URL liveness HEAD check had 70-85% false positives, dropping 90% of citations. Removing it in v12 was the fix. A validation system's **false positive rate** matters as much as its detection rate -- adding isn't always the answer.
 
-**When you turn the quality knob, turn the cost knob too.** In v12, raising `reasoning_effort=low` to `high` alone added +72% ($0.50 to $0.86). Adding `flex tier (-50%)` and `prompt_cache_key (-30%)` together flipped it to -34% ($0.33). Tuning one axis blows up the cost. **The trap of single-knob tuning thinking**: "raise quality this time, optimize cost next time" sounds reasonable, but if the intermediate state ships, you get a billing spike + rollback pressure that drags the quality gains back too. **Quality and cost changes must be packaged in the same release**, and at minimum integration-verified in staging before production.
+**When you turn the quality knob, turn the cost knob too.** In v12, raising `reasoning_effort=low` to `high` alone added +72% ($0.50 to $0.86). Adding `flex tier (-50%)` and `prompt_cache_key (-30%)` together flipped it to -34% ($0.33). Quality and cost changes must be packaged in the same release -- if the intermediate state ships, the billing spike forces a rollback that drags the quality gains back too.
 
 **Put structural enforcement in front of rubric increases.** Rubric bar was raised continuously over a month while scores stayed stable at 89-97. Reason: schema + code validation locked in the bottom line first. Reverse order (raise rubric first) produces a score roller coaster.
 
@@ -315,10 +298,11 @@ v12  ████                                                 1 day (schema 
 
 The first five days produced no publishable output -- but they identified three architectural flaws that would have been invisible without building and testing end to end. Each flaw directly informed v2's design.
 
-**Days 1-2:** LLM couldn't reliably generate 5,000+ character articles. Added retry logic.
-**Day 3:** EN to KO translation lost 30-50% of content. Lowered threshold from 5,000 to 3,500 chars.
-**Day 4:** JSON parsing failures. Built artifact/resume system. pipeline.py grew from 979 to 1,346 lines -- 400+ defensive.
-**Day 5:** Threshold down to 2,500 chars. Stopped and deleted everything.
+Five days of accumulated patches:
+
+**Days 1-3:** LLM couldn't reliably generate 5,000+ character articles → retry logic. EN→KO translation lost 30-50% of content → translation prompt strengthening had no effect → quality bar lowered from 5,000 to 3,500 chars.
+
+**Days 4-5:** Intermittent JSON parsing failures → artifact/resume system. pipeline.py grew from 979 to 1,346 lines, 400+ defensive. On day 5, after lowering the bar to 2,500 chars (50% of the original target), I stopped and deleted everything.
 
 **Root cause:** Patches were stacking on a broken architecture. Lowering quality thresholds, adding retry logic, building resume systems -- all symptom patches. The real causes were sequential translation, monolithic generation, and hard validation.
 
@@ -466,9 +450,7 @@ All 13 problematic URLs from the Apr 19 incident blocked.
 
 Added a path that reruns only QC. $0.54 → $0.05 (10x reduction). Reuses Writer output from DB and only reruns quality evaluation. The precondition that made large redesigns like rubric v2 economically possible.
 
-**5. Community Pulse Thread URL preservation**
-
-HN `story_id` and Reddit `permalink` embedded in CommunityInsight at collection time. **Upvote-count-based matching** survives Writer reordering -- positional matching breaks when LLM rearranges.
+**5. CP Thread URL preservation -- structural-key matching** -- HN `story_id`/Reddit `permalink` embedded at collection time, matched by upvote count. Positional matching breaks when LLM rearranges, so structural keys are required.
 
 **v11 quality:** Research 76 / Business 93 (v11 rubric). **v10 85 and v11 85 are not directly comparable** -- changing rubric architecture breaks score continuity.
 
@@ -540,16 +522,7 @@ The HEAD-request validation introduced in v11 had 70-85% false positives, droppi
 
 Monthly $15 → $26 (naive) → **$10** (final). $192/year saved vs naive.
 
-**Reality of reasoning tokens (4/23 measured):**
-
-| Stage | Output | Reasoning | Reasoning % |
-|-------|--------|-----------|-------------|
-| digest:business:expert | 16,811 | 11,328 | **67.4%** |
-| digest:business:learner | 18,470 | 13,248 | **71.7%** |
-| digest:research:expert | 17,555 | 11,392 | 64.9% |
-| digest:research:learner | 12,357 | 7,360 | 59.6% |
-
-**60-72% of output is internal reasoning** -- only 30-40% is body. Reasoning tokens are billed at output rate ($8/M), a hidden cost structure. Documented in OpenAI docs but invisible in practice -- exposed `completion_tokens_details.reasoning_tokens` in admin UI to ground reasoning_effort tuning decisions.
+**Reality of reasoning tokens (4/23 measured):** all 4 personas spent **60-72% of output as internal reasoning** (business expert 67%, learner 72%, research expert 65%, learner 60%). Only 30-40% is actual body. Reasoning tokens are billed at output rate ($8/M) -- a hidden cost structure. Exposed `completion_tokens_details.reasoning_tokens` in admin UI to ground reasoning_effort tuning decisions.
 
 **v12 follow-up (4/24-27):** Moved Community Pulse rendering from Writer prompt to **code post-processing** (`_linkify_cp_section`, about 150 LOC). After 3 prompt reruns all failed, conceded that forcing fancy markdown on the Writer was the wrong layer. Redesigned data model from single `CommunityInsight` to per-platform `ThreadInfo[]` to preserve quote provenance -- eliminated false corroboration in the Apr 24 case where the same quote was duplicated across both HN and Reddit blocks. Added **gpt-5-nano relevance filter** to select 5-10 from top-voted 30 comments, dropping off-topic top-voted comments (the political flame war on Apr 25 DeepSeek thread). **Mirror domain blocklist 8 → 26** (based on 14-day audit). Quiz `answer: str` → `answer_index: int 0-3` contract change to enforce cross-field invariants in schema. **Average $0.41/day after follow-up changes (4/23-27)** ($0.36-0.47, 18-28% below the $0.50 baseline). All applications of the same principle -- "structural enforcement at the code/schema layer, LLM focuses on content."
 
