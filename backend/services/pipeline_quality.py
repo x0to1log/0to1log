@@ -480,7 +480,7 @@ async def _check_digest_quality(
                 if score == 0 and "score" in data:
                     score = int(data.get("score", 0))
 
-                usage = extract_usage_metrics(resp, quality_model)
+                usage = extract_usage_metrics(resp, quality_model, requested_service_tier="flex")
                 issues = _extract_structured_issues(data.get("issues"), default_scope)
                 return score, data, issues, usage
             except Exception as e:
@@ -1119,7 +1119,7 @@ async def _check_weekly_quality(
 
         expert_resp = await with_flex_retry(_weekly_qc_expert_call)
         expert_raw = expert_resp.choices[0].message.content or ""
-        expert_usage = extract_usage_metrics(expert_resp, model)
+        expert_usage = extract_usage_metrics(expert_resp, model, requested_service_tier="flex")
         cumulative_usage.update(merge_usage_metrics(cumulative_usage, expert_usage))
         expert_data = parse_ai_json(expert_raw, "weekly-quality-expert")
         # v2 rubric: code aggregates sub-scores. Fall back to data["total_score"]
@@ -1167,7 +1167,7 @@ async def _check_weekly_quality(
 
             learner_resp = await with_flex_retry(_weekly_qc_learner_call)
             learner_raw = learner_resp.choices[0].message.content or ""
-            learner_usage = extract_usage_metrics(learner_resp, model)
+            learner_usage = extract_usage_metrics(learner_resp, model, requested_service_tier="flex")
             cumulative_usage.update(merge_usage_metrics(cumulative_usage, learner_usage))
             learner_data = parse_ai_json(learner_raw, "weekly-quality-learner")
             learner_score = _aggregate_subscores(learner_data)

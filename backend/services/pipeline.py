@@ -2548,7 +2548,7 @@ async def _generate_weekly_persona_content(
 
         en_response = await with_flex_retry(_weekly_en_call)
         en_raw = en_response.choices[0].message.content or ""
-        en_usage = extract_usage_metrics(en_response, model)
+        en_usage = extract_usage_metrics(en_response, model, requested_service_tier="flex")
         cumulative_usage.update(merge_usage_metrics(cumulative_usage, en_usage))
         en_data = parse_ai_json(en_raw, f"weekly-{persona}-en")
 
@@ -2619,7 +2619,7 @@ async def _generate_weekly_persona_content(
 
         ko_response = await with_flex_retry(_weekly_ko_call)
         ko_raw = ko_response.choices[0].message.content or ""
-        ko_usage = extract_usage_metrics(ko_response, model)
+        ko_usage = extract_usage_metrics(ko_response, model, requested_service_tier="flex")
         cumulative_usage.update(merge_usage_metrics(cumulative_usage, ko_usage))
         ko_data = parse_ai_json(ko_raw, f"weekly-{persona}-ko")
 

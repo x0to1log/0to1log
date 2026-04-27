@@ -238,3 +238,43 @@ def test_extract_usage_metrics_applies_cached_discount_end_to_end():
         "gpt-5-mini",
     )
     assert _close(metrics["cost_usd"], 0.0475)
+
+
+# ---------------------------------------------------------------------------
+# merge_usage_metrics preserves service_tier across stage aggregation.
+#
+# Background: cumulative_usage rollups (and the DB rows that read from them)
+# previously dropped service_tier during merge — making it look like quality/
+# ranking/community_summarize were standard tier when they actually used flex
+# (Apr 27 cron: tier=null in summary row despite all calls being flex).
+# ---------------------------------------------------------------------------
+
+def test_merge_usage_metrics_preserves_single_tier():
+    left = {"input_tokens": 100, "output_tokens": 50, "service_tier": "flex"}
+    right = {"input_tokens": 200, "output_tokens": 100, "service_tier": "flex"}
+    merged = merge_usage_metrics(left, right)
+    assert merged["service_tier"] == "flex"
+
+
+def test_merge_usage_metrics_marks_mixed_tier_when_different():
+    left = {"input_tokens": 100, "output_tokens": 50, "service_tier": "flex"}
+    right = {"input_tokens": 200, "output_tokens": 100, "service_tier": "default"}
+    merged = merge_usage_metrics(left, right)
+    assert merged["service_tier"] == "mixed"
+
+
+def test_merge_usage_metrics_takes_either_side_when_only_one_set():
+    left = {"input_tokens": 100, "output_tokens": 50}  # no tier
+    right = {"input_tokens": 200, "output_tokens": 100, "service_tier": "flex"}
+    merged = merge_usage_metrics(left, right)
+    assert merged["service_tier"] == "flex"
+
+    merged_swapped = merge_usage_metrics(right, left)
+    assert merged_swapped["service_tier"] == "flex"
+
+
+def test_merge_usage_metrics_tier_none_when_neither_set():
+    left = {"input_tokens": 100}
+    right = {"input_tokens": 200}
+    merged = merge_usage_metrics(left, right)
+    assert merged["service_tier"] is None

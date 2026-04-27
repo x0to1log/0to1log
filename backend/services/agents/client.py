@@ -269,6 +269,17 @@ def merge_usage_metrics(
     else:
         merged_model = right_model or left_model
 
+    # Preserve service_tier across merges so cumulative usage (and the DB rows
+    # that read from it) reflect what tier actually served the run. If both
+    # sides have a tier and they differ, mark "mixed" — caller can drill into
+    # per-call logs for the breakdown. Single-tier merges pass through cleanly.
+    left_tier = left.get("service_tier")
+    right_tier = right.get("service_tier")
+    if left_tier and right_tier and left_tier != right_tier:
+        merged_tier: str | None = "mixed"
+    else:
+        merged_tier = right_tier or left_tier
+
     return {
         "model_used": merged_model,
         "input_tokens": int(left.get("input_tokens", 0) or 0) + int(right.get("input_tokens", 0) or 0),
@@ -276,6 +287,7 @@ def merge_usage_metrics(
         "cached_tokens": int(left.get("cached_tokens", 0) or 0) + int(right.get("cached_tokens", 0) or 0),
         "reasoning_tokens": int(left.get("reasoning_tokens", 0) or 0) + int(right.get("reasoning_tokens", 0) or 0),
         "tokens_used": int(left.get("tokens_used", 0) or 0) + int(right.get("tokens_used", 0) or 0),
+        "service_tier": merged_tier,
         "cost_usd": merged_cost,
     }
 
