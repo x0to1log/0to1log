@@ -56,8 +56,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (locale !== undefined) row.locale = locale || 'en';
   if (focus_items !== undefined) row.focus_items = Array.isArray(focus_items) ? focus_items : [];
   if (og_image_url !== undefined) row.og_image_url = og_image_url || null;
-  if (content_learner !== undefined) row.content_learner = content_learner || null;
-  if (content_expert !== undefined) row.content_expert = content_expert || null;
+  // Empty content_* is treated as "no change" — defense-in-depth against the
+  // 2026-04-30 incident where the editor page sent content_expert='' for an
+  // uninitialized lazy-load editor, which `'' || null` then nulled out the row.
+  // Genuinely-empty values are unusual at the editor level (the editor always
+  // has at least placeholder text); a caller wanting to clear a field should
+  // send the literal string 'null' or omit it. Frontend now omits the field
+  // when the editor isn't initialized — this guard backs that up.
+  if (content_learner !== undefined && content_learner !== '') row.content_learner = content_learner;
+  if (content_expert !== undefined && content_expert !== '') row.content_expert = content_expert;
   if (title_learner !== undefined) row.title_learner = title_learner || null;
 
   const supabase = createClient(

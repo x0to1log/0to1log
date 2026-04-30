@@ -697,8 +697,19 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
       };
 
       if (isBusinessEditor) {
-        saveBody.content_learner = personaEditors.learner?.getMarkdown() || '';
-        saveBody.content_expert = personaEditors.expert?.getMarkdown() || '';
+        // Persona editors are lazy-loaded — `expert` only initializes when its tab
+        // is clicked. If `personaEditors.expert` is null (user never clicked the
+        // tab), DON'T include content_expert in saveBody — backend treats absent
+        // fields as "no change" so the existing DB content is preserved.
+        // 2026-04-30 incident: clicking "Save & re-run quality" before opening the
+        // Expert tab sent content_expert='' which the backend nulled out, then
+        // the QC scored the row as "KO body missing" major locale → 84→69.
+        if (personaEditors.learner) {
+          saveBody.content_learner = personaEditors.learner.getMarkdown();
+        }
+        if (personaEditors.expert) {
+          saveBody.content_expert = personaEditors.expert.getMarkdown();
+        }
         saveBody.title_learner = titleByPersona.learner || null;
         saveBody.guide_items_partial = {
           title_learner: titleByPersona.learner || '',
