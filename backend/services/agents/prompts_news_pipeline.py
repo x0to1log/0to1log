@@ -12,14 +12,18 @@ Your task: Given a list of AI news candidates, classify the most important ones 
 ### Tier definition (from candidate's Source tier / Source kind / Source confidence fields)
 
 - **TIER-1** — Source kind is `official_site`, `paper`, or `official_repo` OR Source tier is `primary`. Examples: openai.com, anthropic.com, nvidianews.nvidia.com, arxiv.org, github.com (recognized AI org repos), Reuters, Bloomberg, NYT.
+  - If `Source kind` is `analysis`, ignore the `tier=primary` path and fall through to TIER-2 / TIER-3 evaluation. Analysis pieces from primary-tier sites still need freshness validation.
 - **TIER-2** — Source tier is `secondary` AND Source confidence is `high` or `medium`. Examples: TechCrunch, The Verge, Ars Technica, Axios, IEEE Spectrum, CNBC.
+  - **Known-trusted media override**: Regardless of `Source confidence`, treat the following domains as TIER-2 (never TIER-3): axios.com, reuters.com, bloomberg.com, nytimes.com, theverge.com, techcrunch.com, arstechnica.com, ieee.org, cnbc.com, forbes.com, wsj.com, ft.com, wired.com, technologyreview.com (MIT Tech Review). This protects against known false negatives in the upstream confidence classifier.
 - **TIER-3** — Everything else: `analysis`/`secondary` with `confidence=low`, untyped sites, unfamiliar blogs/aggregators, `tier=spam`. Examples: toolsstackai.com, aibusinessweekly.net, epinium.com, taxheal.com, content-farm style domains.
 
 ### Event freshness (read the snippet for date references)
 
-- **FRESH** — The underlying event happened on or after `{batch_date} - 14 days`. Look for explicit dates ("May 4, 2026", "yesterday", "this week"), recent quarter references ("Q2 2026"), or version/release tags from the past 2 weeks.
-- **OLD** — The event explicitly happened more than 14 days before `{batch_date}`. Phrases like "in March", "last month", "earlier this year", or explicit dates older than 14 days. Note: SEO sites often use "Just Raised" / "Today" in titles for events that actually happened weeks ago — check the body/snippet for the real date.
+- **FRESH** — The underlying event happened within the last 14 days (relative to today, the date this digest covers). Look for explicit dates ("May 4, 2026", "yesterday", "this week"), recent quarter references ("Q2 2026"), or version/release tags from the past 2 weeks.
+- **OLD** — The event explicitly happened more than 14 days ago (relative to today). Phrases like "in March", "last month", "earlier this year", or explicit dates more than 14 days in the past indicate OLD. Note: SEO sites often use "Just Raised" / "Today" in titles for events that actually happened weeks ago — check the body/snippet for the real date.
 - **UNKNOWN** — No date inference possible from snippet.
+
+**Multi-date tie-breaker**: When the snippet mentions multiple dates, use the date of the **action in the headline/lead** (the verb that drives the story), not background or context dates. "Anthropic released X today, citing 2024 research..." — the relevant date is "today" (the release), not 2024.
 
 ### Decision matrix
 
@@ -102,13 +106,14 @@ An article belongs here ONLY if its core story is a technical artifact or techni
   The article's MAIN subject must be a technical contribution (architecture, method, benchmark study, or training insight).
   Industry surveys, market forecasts, analyst reports, and press releases are NOT papers even if they contain numbers.
 
-(Apply only to candidates that passed the source-quality × event-freshness gate above.) Litmus test — before assigning ANY article to Research, ask:
+Litmus test — before assigning ANY article to Research, ask:
 "Does this article discuss a model, a codebase, or a paper/technical report as the MAIN subject?"
 "Would an AI research engineer learn something technical from this article?"
 If BOTH answers are NO → assign to Business, even if the topic is AI-related technology.
 
 ## Decision Process (think silently per candidate)
 Before including any candidate in picks, run through:
+0. **Gate** — Does the candidate pass the Source quality × event freshness gate above? If not, REJECT immediately and skip remaining checks.
 1. **Core story** — strip AI buzzwords; what is this article actually about?
 2. **Fit** — does it match exactly one subcategory's definition (not "kinda AI")?
 3. **Authority** — official source / concrete data / recognizable org? Or thin?
