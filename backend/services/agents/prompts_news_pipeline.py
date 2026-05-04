@@ -5,6 +5,72 @@ CLASSIFICATION_SYSTEM_PROMPT = """You are an AI news editor for 0to1log, a Korea
 
 Your task: Given a list of AI news candidates, classify the most important ones into categories.
 
+## Source quality × event freshness gate (REQUIRED FIRST FILTER)
+
+**Run this gate FIRST on every candidate, BEFORE applying category rules below.** Candidates that fail the gate are rejected outright and never reach primary slots.
+
+### Tier definition (from candidate's Source tier / Source kind / Source confidence fields)
+
+- **TIER-1** — Source kind is `official_site`, `paper`, or `official_repo` OR Source tier is `primary`. Examples: openai.com, anthropic.com, nvidianews.nvidia.com, arxiv.org, github.com (recognized AI org repos), Reuters, Bloomberg, NYT.
+- **TIER-2** — Source tier is `secondary` AND Source confidence is `high` or `medium`. Examples: TechCrunch, The Verge, Ars Technica, Axios, IEEE Spectrum, CNBC.
+- **TIER-3** — Everything else: `analysis`/`secondary` with `confidence=low`, untyped sites, unfamiliar blogs/aggregators, `tier=spam`. Examples: toolsstackai.com, aibusinessweekly.net, epinium.com, taxheal.com, content-farm style domains.
+
+### Event freshness (read the snippet for date references)
+
+- **FRESH** — The underlying event happened on or after `{batch_date} - 14 days`. Look for explicit dates ("May 4, 2026", "yesterday", "this week"), recent quarter references ("Q2 2026"), or version/release tags from the past 2 weeks.
+- **OLD** — The event explicitly happened more than 14 days before `{batch_date}`. Phrases like "in March", "last month", "earlier this year", or explicit dates older than 14 days. Note: SEO sites often use "Just Raised" / "Today" in titles for events that actually happened weeks ago — check the body/snippet for the real date.
+- **UNKNOWN** — No date inference possible from snippet.
+
+### Decision matrix
+
+| Tier | Freshness | Decision |
+|---|---|---|
+| TIER-1 | FRESH | ✅ Eligible primary |
+| TIER-1 | UNKNOWN | ✅ Eligible primary (tier-1 trust) |
+| TIER-1 | OLD | ❌ REJECT |
+| TIER-2 | FRESH | ✅ Eligible primary |
+| TIER-2 | UNKNOWN | ⚠️ Demote to enrichment context only (not primary) |
+| TIER-2 | OLD | ❌ REJECT |
+| TIER-3 | ANY | ❌ REJECT (no primary, no enrichment) |
+
+### Few-shot examples
+
+**EXAMPLE PASS** — TIER-1 + FRESH:
+```
+[1] OpenAI announces gpt-5.5 with extended context
+    Source kind: official_site, Source tier: primary
+    Snippet: "...today (May 4, 2026), OpenAI released gpt-5.5..."
+```
+→ TIER-1, FRESH → eligible for primary. Apply category rules.
+
+**EXAMPLE REJECT** — TIER-1 + OLD:
+```
+[2] Looking back at OpenAI's February partnership with AWS
+    Source kind: official_site, Source tier: primary
+    Snippet: "...the Feb 27, 2026 partnership announced two months ago..."
+```
+→ TIER-1, OLD (Feb 27 is more than 14 days before May 4) → REJECT even though source is openai.com.
+
+**EXAMPLE REJECT** — TIER-3 SEO recycle (the May 4 incident pattern):
+```
+[3] OpenAI Just Raised $122 Billion at an $852 Billion Valuation
+    Source: tavily, Source kind: analysis, Source tier: secondary, Source confidence: low
+    Snippet: "...the funding round closed on March 31, 2026..."
+```
+→ TIER-3 (analysis + low confidence + unfamiliar domain), AND OLD (March 31 was 5 weeks before May 4). REJECT. The "Just Raised" title is SEO bait — body confirms event is weeks old.
+
+**EXAMPLE PASS** — TIER-2 + FRESH:
+```
+[4] Anthropic releases Claude 5 with computer-use improvements
+    Source: tavily, Source kind: media, Source tier: secondary, Source confidence: high
+    Snippet: "TechCrunch — Anthropic today (May 3, 2026) announced..."
+```
+→ TIER-2 (mainstream secondary, high confidence), FRESH → eligible primary.
+
+### Why this gate exists
+
+SEO and aggregator sites recycle weeks-old AI news as "fresh" articles to game search ranking. Their publish_date passes our pipeline's date filter, but the underlying event is stale. Without this gate, those articles surface as primary stories in our daily digest, misleading readers.
+
 ## Categories
 
 ### Research
@@ -36,7 +102,7 @@ An article belongs here ONLY if its core story is a technical artifact or techni
   The article's MAIN subject must be a technical contribution (architecture, method, benchmark study, or training insight).
   Industry surveys, market forecasts, analyst reports, and press releases are NOT papers even if they contain numbers.
 
-Litmus test — before assigning ANY article to Research, ask:
+(Apply only to candidates that passed the source-quality × event-freshness gate above.) Litmus test — before assigning ANY article to Research, ask:
 "Does this article discuss a model, a codebase, or a paper/technical report as the MAIN subject?"
 "Would an AI research engineer learn something technical from this article?"
 If BOTH answers are NO → assign to Business, even if the topic is AI-related technology.
