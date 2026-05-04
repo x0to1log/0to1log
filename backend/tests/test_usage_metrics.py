@@ -218,9 +218,42 @@ def test_extract_usage_metrics_without_service_tier_attr_defaults_standard():
     assert _close(metrics["cost_usd"], 2.25)
 
 
-def test_extract_usage_metrics_uses_requested_tier_when_response_omits_it():
+def test_extract_usage_metrics_records_none_when_response_omits_tier():
+    """2026-05-04: stop falling back to requested_service_tier on missing
+    response.service_tier. The fallback masked silent flex->standard
+    downgrades — ratio analysis showed 4-7x cost gap on Apr 28-May 1
+    that was fully explained by undetected downgrades.
+
+    When response omits service_tier, record None and treat as standard
+    pricing for cost (conservative). The requested_service_tier param is
+    now used only for the downgrade-warning log line."""
     metrics = extract_usage_metrics(
         _resp(1_000_000, 1_000_000, cached=None),
+        "gpt-5-mini",
+        requested_service_tier="flex",
+    )
+    assert metrics["service_tier"] is None
+    # Standard pricing used (no flex discount applied)
+    assert _close(metrics["cost_usd"], 2.25)
+
+
+def test_extract_usage_metrics_records_actual_tier_on_downgrade():
+    """When OpenAI echoes back a tier different from what we requested
+    (silent downgrade), record the ACTUAL tier and use it for cost calc."""
+    # Requested flex, but OpenAI served default → record default + standard cost
+    metrics = extract_usage_metrics(
+        _resp(1_000_000, 1_000_000, cached=None, service_tier="default"),
+        "gpt-5-mini",
+        requested_service_tier="flex",
+    )
+    assert metrics["service_tier"] == "default"
+    assert _close(metrics["cost_usd"], 2.25)
+
+
+def test_extract_usage_metrics_records_flex_when_tier_actually_applied():
+    """When response.service_tier is 'flex', record it and apply flex pricing."""
+    metrics = extract_usage_metrics(
+        _resp(1_000_000, 1_000_000, cached=None, service_tier="flex"),
         "gpt-5-mini",
         requested_service_tier="flex",
     )

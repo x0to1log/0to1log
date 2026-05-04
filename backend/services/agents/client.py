@@ -198,11 +198,19 @@ def extract_usage_metrics(
 ) -> dict[str, Any]:
     """Extract tokens + cost from an OpenAI chat-completions response.
 
-    Auto-detects ``response.service_tier`` (echoed back by the API — shows
-    which tier actually served the request, not just what was requested)
-    and feeds it into the cost estimate along with cached_tokens. Returns
-    a dict with input_tokens, output_tokens, cached_tokens, tokens_used,
-    cost_usd, model_used, service_tier.
+    Records ``response.service_tier`` as-is (None when the API didn't echo it).
+    Previously fell back to ``requested_service_tier`` on missing/None — that
+    masked silent flex→standard downgrades by recording our request rather
+    than what actually served the call. 2026-05-04 audit: 4-7x cost gap
+    between our estimates and OpenAI's bill on Apr 28-May 1, fully explained
+    by flex downgrade that our logging was hiding.
+
+    The ``requested_service_tier`` param is now used only for a downgrade-
+    warning log line, not for the recorded tier or cost. Cost estimate uses
+    the actual tier (None → standard pricing, conservative).
+
+    Returns a dict with input_tokens, output_tokens, cached_tokens,
+    reasoning_tokens, tokens_used, cost_usd, model_used, service_tier.
     """
     usage = getattr(response, "usage", None)
     prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
@@ -225,9 +233,15 @@ def extract_usage_metrics(
     reasoning_tokens = int(getattr(completion_details, "reasoning_tokens", 0) or 0)
 
     # response.service_tier is the tier that actually served the request.
-    # Older SDK mocks may omit it; in that case use the request-side tier if
-    # the caller supplied one so flex cost accounting stays conservative but useful.
-    service_tier = getattr(response, "service_tier", None) or requested_service_tier
+    # Record it as-is (None when API didn't echo). Do NOT fall back to the
+    # requested tier — that fallback hid flex→standard downgrades.
+    service_tier = getattr(response, "service_tier", None)
+    # Detect silent downgrade: caller asked for flex but API used something else.
+    if requested_service_tier == "flex" and service_tier and service_tier != "flex":
+        logger.warning(
+            "service_tier downgrade: requested=flex, actual=%s (model=%s)",
+            service_tier, model_name,
+        )
 
     return {
         "model_used": model_name,
