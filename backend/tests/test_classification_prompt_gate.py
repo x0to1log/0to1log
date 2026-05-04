@@ -5,6 +5,8 @@ gate, SEO sites republishing weeks-old events as fresh articles reach
 primary classification slots. The prompt is the only enforcement point in
 Phase 1; this test ensures the gate stays present across edits.
 """
+import re
+
 from services.agents.prompts_news_pipeline import CLASSIFICATION_SYSTEM_PROMPT
 
 
@@ -17,21 +19,39 @@ def test_prompt_contains_tier_definitions():
 
 def test_prompt_contains_freshness_window():
     p = CLASSIFICATION_SYSTEM_PROMPT
-    assert "14" in p, "14-day freshness window not specified"
-    assert ("FRESH" in p) or ("fresh" in p), "FRESH/fresh keyword missing"
-    assert ("OLD" in p) or ("old" in p), "OLD/old keyword missing"
+    # "14" must appear near "day" — anchor to actual freshness context
+    assert re.search(r"14\s*(?:-|\s)?day", p, re.IGNORECASE), \
+        "14-day freshness window not specified in expected '14 day'/'14-day' form"
+    assert "FRESH" in p, "FRESH keyword missing"
+    assert "OLD" in p, "OLD keyword missing"
 
 
-def test_prompt_contains_reject_rules_for_tier3_and_old():
-    p = CLASSIFICATION_SYSTEM_PROMPT.lower()
-    assert ("reject" in p) or ("skip" in p), "no reject/skip directive"
-    assert "tier-3" in p, "TIER-3 disposition not stated"
+def test_prompt_contains_tier3_reject_rule():
+    p = CLASSIFICATION_SYSTEM_PROMPT
+    # Find every occurrence of TIER-3 and verify at least one is followed by
+    # REJECT/skip within the next 100 chars (matrix row width)
+    matches = list(re.finditer(r"TIER-3", p))
+    assert matches, "TIER-3 not found"
+    found_reject_link = False
+    for m in matches:
+        window = p[m.end():m.end() + 100].lower()
+        if "reject" in window or "skip" in window:
+            found_reject_link = True
+            break
+    assert found_reject_link, (
+        "TIER-3 appears but no REJECT/skip directive within 100 chars — "
+        "the rule that TIER-3 maps to reject is not enforced by the prompt"
+    )
 
 
 def test_prompt_contains_few_shot_examples():
-    p = CLASSIFICATION_SYSTEM_PROMPT.lower()
-    example_markers = ["example", "e.g.", "for instance", "such as"]
-    assert any(m in p for m in example_markers), "no few-shot examples found"
+    """Gate has 4 worked examples (TIER-1 PASS, TIER-1 OLD reject,
+    TIER-3 SEO reject, TIER-2 PASS) labeled 'EXAMPLE PASS' / 'EXAMPLE REJECT'."""
+    p = CLASSIFICATION_SYSTEM_PROMPT
+    pass_count = p.count("EXAMPLE PASS")
+    reject_count = p.count("EXAMPLE REJECT")
+    assert pass_count >= 2, f"Expected >=2 'EXAMPLE PASS' labels, found {pass_count}"
+    assert reject_count >= 2, f"Expected >=2 'EXAMPLE REJECT' labels, found {reject_count}"
 
 
 def test_prompt_gate_appears_before_litmus_test():
@@ -40,8 +60,7 @@ def test_prompt_gate_appears_before_litmus_test():
     p = CLASSIFICATION_SYSTEM_PROMPT
     gate_pos = p.lower().find("tier-1")
     litmus_pos = p.lower().find("litmus test")
-    if litmus_pos < 0:
-        return  # litmus phrasing changed — skip this assertion
+    assert litmus_pos >= 0, "Litmus test section missing — gate-before-litmus ordering can't be checked"
     assert gate_pos < litmus_pos, (
         f"Gate ({gate_pos}) must appear before litmus test ({litmus_pos})"
     )
