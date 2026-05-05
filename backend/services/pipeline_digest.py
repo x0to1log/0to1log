@@ -640,6 +640,30 @@ def _clean_writer_output(content: str) -> str:
     )
     # Fallback: any remaining literal occurrences inside prose
     content = _re.sub(r'"?\[(?:EN|KO)\s*quote\]"?', "", content, flags=_re.IGNORECASE)
+    # Strip LaTeX-display-math wrapping around currency / numeric values.
+    # GPT-5 writer habitually wraps dollar amounts ($$1.5$$ billion,
+    # $$15$$억 달러, $$765B$$, $$2,526억 달러$$) for both EN and KO output.
+    # Frontend's remark-math + rehype-katex then renders these as math,
+    # breaking typography (numbers in math italic mid-sentence).
+    # 2026-05-05 audit: 177 total $$X$$ occurrences; 99 purely-numeric
+    # plus 78 numeric-with-unit-suffix. Pattern targets both:
+    #   $$1.5$$            → 1.5         (pure numeric)
+    #   $$181,000$$        → 181,000     (with thousands separator)
+    #   $$765B$$           → 765B        (unit suffix B/M/T)
+    #   $$50–75B$$         → 50–75B      (range with em-dash)
+    #   $$2,526억 달러$$   → 2,526억 달러 (Korean currency unit)
+    # LEAVES untouched genuine math (4월 12일 research-digest et al.):
+    #   $$\sqrt{...}$$     — has backslash
+    #   $$L^p$$            — has caret
+    #   $$\varepsilon=d^{-O(1)}$$ — has backslash + caret + braces
+    #   $$d$$              — single math variable (no number)
+    # Matches: number digit must appear; LaTeX special chars (\, {, }, ^, _, =)
+    # disqualify; otherwise strip.
+    content = _re.sub(
+        r"\$\$([\d][\d,.\s\-–%a-zA-Z억만조달러원円€£¥]*?)\$\$",
+        r"\1",
+        content,
+    )
     return content
 
 

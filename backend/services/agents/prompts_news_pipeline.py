@@ -688,6 +688,8 @@ Every NUMBER, COMPANY name, PRODUCT name, PERSON name, and DATE in your output M
 
 When unsure, omit rather than fabricate.
 
+**NEVER use LaTeX math syntax around numbers, dollar amounts, or any value.** Forbidden: `$$1.5$$ billion`, `$$15$$억 달러`, `$$300$$ million`, `$$70$$ million`, `$$181,000$$`, etc. The frontend treats `$$...$$` as display-math and renders the wrapped numbers in math italic, breaking typography. Write currency as plain prose: `$1.5 billion`, `15억 달러`, `300 million`, `$181,000` (single dollar prefix or no symbol — both fine). Do NOT wrap any value in `$$...$$` for emphasis or formatting reasons.
+
 **Citations — MANDATORY two-part format (strict schema enforces this)**:
 - In the body (`en` and `ko` fields): reference sources using the placeholder form `[CITE_N]` where N is a 1-indexed integer. Example: "Foo shipped bar [CITE_1] yesterday [CITE_2]."
 - NEVER write inline markdown links like `[1](https://...)` anywhere in the body. The post-processor rejects them and the output is invalidated.
