@@ -58,6 +58,18 @@ def _load_domain_filters() -> dict[str, frozenset[str]]:
 # See migration 00050_news_domain_filters.sql for schema and seed data.
 # To modify: update the table directly, then restart Railway to refresh the cache.
 
+# Known-trusted media — kept in sync with the same list in
+# CLASSIFICATION_SYSTEM_PROMPT's TIER-2 override (prompts_news_pipeline.py).
+# Used by _enrich_source_passes_quality to override TIER-3 rejection when
+# the upstream confidence classifier marks a legit mainstream outlet as low.
+# Matches by hostname suffix (e.g., "axios.com" matches "www.axios.com").
+KNOWN_TRUSTED_MEDIA = frozenset({
+    "axios.com", "reuters.com", "bloomberg.com", "nytimes.com",
+    "theverge.com", "techcrunch.com", "arstechnica.com", "ieee.org",
+    "cnbc.com", "forbes.com", "wsj.com", "ft.com", "wired.com",
+    "technologyreview.com",
+})
+
 # Comment fetch limits per platform. Expanded from 5-10 → 30 on 2026-04-26 to
 # provide a candidate pool for the gpt-5-nano relevance filter
 # (services.agents.comment_relevance). The filter then picks 5-10 most relevant
@@ -272,34 +284,63 @@ def _enrich_source_passes_quality(payload: dict, source: str) -> tuple[bool, str
     """Quality gate for enrich-stage sources. Returns (passes, reason_if_dropped).
 
     Enrich fetches multi-angle coverage for a primary story via Exa
-    find_similar. Multi-source synthesis journalism needs 3-4 angles per
-    story — over-filtering here starves the summary LLM of context.
+    find_similar. Multi-source synthesis needs 3-4 angles per story, but
+    Exa returns lots of TIER-3 SEO/aggregator pages that ride on real
+    stories' coattails. 2026-05-06 audit: research-digest had 14 source
+    cards, 9 of which were TIER-3 enrichment leaks (labs.scale.com,
+    llm-stats.com, dev.to, oreilly.com, pointofai.com, etc.).
 
-    Strategy: hard-block only explicit spam + known-noisy patterns. Let
-    unknown-but-media-shaped URLs through. Legitimate secondary media
-    (Gizmodo, CRN, tldr.tech, regional tech blogs) that aren't yet in
-    the curated media_tier DB used to get stuck as analysis/low and
-    filtered out — that was too strict.
+    Tier definition matches CLASSIFICATION_SYSTEM_PROMPT's gate (kept
+    in sync deliberately):
+    - TIER-1: source_kind in {official_site, paper, official_repo}
+              OR source_tier='primary' (and kind != 'analysis')
+    - TIER-2: source_tier='secondary' AND confidence in {high, medium}
+              OR domain in KNOWN_TRUSTED_MEDIA (override for upstream
+              classifier false-negatives — NQ-43)
+    - TIER-3: everything else (analysis + secondary + low confidence
+              + not in trusted list)
 
     Rules:
-    - Drop tier='spam' (matches research_blocklist DB — curated, explicit)
-    - Drop official_repo from exa_enrich (find_similar returns noisy GitHub
-      user repos that merely mention a company name; rare legitimate repo
-      would come via merge or _lookup_official_sources instead)
+    - Drop tier='spam' (research_blocklist DB)
+    - Drop official_repo from exa_enrich (noisy github user repos)
+    - Drop TIER-3 (the 2026-05-06 fix)
+    - Allow TIER-1 and TIER-2 through
 
-    For actual content farms (introl.com, neuraplus-ai.github.io) add the
-    domain to news_domain_filters as filter_type='research_blocklist'.
-    `source` is passed separately because _build_source_payload does not
+    `source` is passed separately because _build_source_payload doesn't
     include it in the returned payload dict.
     """
     tier = payload.get("source_tier", "")
     kind = payload.get("source_kind", "")
+    confidence = payload.get("source_confidence", "")
+    url = payload.get("url", "")
 
     if tier == "spam":
         return False, "spam"
     if kind == "official_repo" and source == "exa_enrich":
         return False, "github.com via find_similar (noisy)"
-    return True, ""
+
+    # TIER classification (mirrors CLASSIFICATION_SYSTEM_PROMPT gate).
+    is_tier_1 = (
+        kind in ("official_site", "paper", "official_repo")
+        or (tier == "primary" and kind != "analysis")
+    )
+    if is_tier_1:
+        return True, ""
+
+    # Known-trusted-media override — protects against the upstream
+    # confidence classifier marking legit mainstream outlets as low (NQ-43).
+    hostname = _re_module.sub(r"https?://(www\.)?", "", url).split("/")[0].lower()
+    in_trusted = any(hostname == d or hostname.endswith("." + d) for d in KNOWN_TRUSTED_MEDIA)
+    is_tier_2 = (
+        in_trusted
+        or (tier == "secondary" and confidence in ("high", "medium"))
+    )
+    if is_tier_2:
+        return True, ""
+
+    # Everything else is TIER-3 — drop. Drains Exa enrichment pool of
+    # SEO/aggregator pages that bring no editorial value.
+    return False, f"TIER-3 (kind={kind}, tier={tier}, confidence={confidence})"
 
 
 def _official_lookup_domains(group_title: str, item_title: str) -> list[str]:
