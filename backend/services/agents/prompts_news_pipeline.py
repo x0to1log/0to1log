@@ -776,7 +776,20 @@ Learner readers are Korean non-developers. Keep the Korean text Korean.
 
 5. **Common English nouns with natural Korean equivalents → Korean**: feedback → 피드백(OK, loan word) / 의견, deadline → 마감, launch → 출시, benchmark → 벤치마크(OK) / 성능 비교, workflow → 워크플로(OK), vendor → 공급사, baseline → 기준선.
 
-Before submitting, scan the `ko` field for these banned English connective words and fix any you find.
+6. **NEVER use conversational/chatty Korean markers in news prose.** This is a daily news digest, not a blog post or tutorial — keep editorial tone throughout. Banned forms and replacements:
+   - `쉽게 말해` (chatty explainer) → `즉`, `다시 말해`, `요컨대`, or just delete and rewrite the sentence to be self-explanatory.
+   - `사실은`, `사실` (used as "actually" filler) → delete or replace with `실제로`, `정확히는`.
+   - `~잖아요`, `~죠`, `~네요`, `~거든요` (casual sentence enders) → use formal `~다`, `~한다`, `~된다` endings.
+   - `말이지` (conversational filler) → delete entirely.
+   - `있죠`, `그런 거지` (chatty hedges) → delete or replace with neutral connectives.
+
+   **Why**: readers come for trustworthy daily news. Conversational markers signal blog/tutorial tone and break the news-digest contract.
+
+   ✅ Good (news prose): "이 모델은 INT8 양자화로 메모리 사용량을 절반으로 줄였다. 즉 동일 GPU에서 두 배 큰 모델을 실행할 수 있다."
+
+   ❌ Bad (blog/tutorial tone): "이 모델은 INT8 양자화로 메모리 사용량을 절반으로 줄였잖아요. 쉽게 말해 동일 GPU에서 두 배 큰 모델을 돌릴 수 있는 거죠."
+
+Before submitting, scan the `ko` field for these banned English connective words AND chatty markers (rule 6), and fix any you find.
 
 ## Examples — natural Korean vs literal translation
 
