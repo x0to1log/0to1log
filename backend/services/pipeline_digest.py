@@ -506,6 +506,7 @@ async def _translate_focus_items_ko(
                     ],
                     response_format={"type": "json_object"},
                     max_tokens=400,
+                    service_tier="flex",
                 )
             ),
             timeout=30,
@@ -520,7 +521,7 @@ async def _translate_focus_items_ko(
             and len(items_ko) == 3
             and all(isinstance(x, str) and x.strip() for x in items_ko)
         ):
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             logger.info(
                 "focus_items_ko fallback succeeded for %s: %d chars avg",
                 digest_type,

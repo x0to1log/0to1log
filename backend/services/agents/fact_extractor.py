@@ -46,12 +46,13 @@ async def extract_facts(
                     ],
                     response_format={"type": "json_object"},
                     max_tokens=4096,
+                    service_tier="flex",
                 )
             )
             raw = response.choices[0].message.content
             data = parse_ai_json(raw, "FactExtractor")
             fact_pack = FactPack.model_validate(data)
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             logger.info(
                 "Fact extraction complete: %d facts, %d sources",
                 len(fact_pack.key_facts),

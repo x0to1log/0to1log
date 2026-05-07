@@ -418,6 +418,7 @@ async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str],
                     {"role": "user", "content": user_prompt},
                 ],
                 max_tokens=800,
+                service_tier="flex",
             )
         )
     except Exception as e:
@@ -440,7 +441,7 @@ async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str],
             len(quotes_en),
         )
         return [], {}
-    usage = extract_usage_metrics(response, model)
+    usage = extract_usage_metrics(response, model, requested_service_tier="flex")
     return [str(q) if isinstance(q, str) else "" for q in translated], usage
 
 

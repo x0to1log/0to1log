@@ -93,9 +93,10 @@ async def write_persona(
                     ],
                     response_format={"type": "json_object"},
                     max_tokens=32000,
+                    service_tier="flex",
                 )
             )
-            usage = extract_usage_metrics(response, model)
+            usage = extract_usage_metrics(response, model, requested_service_tier="flex")
             cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
             raw = response.choices[0].message.content
