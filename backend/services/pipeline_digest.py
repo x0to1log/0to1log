@@ -31,6 +31,7 @@ from services.agents.citation_substitution import (
 )
 from services.agents.client import (
     compat_create_kwargs,
+    estimate_failed_call_usage,
     extract_usage_metrics,
     get_openai_client,
     merge_usage_metrics,
@@ -908,6 +909,10 @@ async def _generate_digest(
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
         persona_prompts[persona_name] = system_prompt
 
+        writer_messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
         for attempt in range(MAX_DIGEST_RETRIES + 1):
             try:
                 async def _writer_call() -> Any:
@@ -915,10 +920,7 @@ async def _generate_digest(
                         client.chat.completions.create(
                             **compat_create_kwargs(
                                 model,
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": user_prompt},
-                                ],
+                                messages=writer_messages,
                                 response_format={
                                     "type": "json_schema",
                                     "json_schema": writer_schema,
@@ -934,13 +936,37 @@ async def _generate_digest(
                                 prompt_cache_key=f"digest-{digest_type}-{persona_name}",
                             )
                         ),
-                        # Flex: 15-min headroom per OpenAI guidance. Accommodates
-                        # high-reasoning writer (typically 3-5 min) plus queue
-                        # time on flex tier.
-                        timeout=900,
+                        # 2026-05-08: bumped 900→1200 after May 7 incident where
+                        # business:expert took 19.8min and research:learner timed
+                        # out 3x at the 15-min limit. Flex queue waits + high
+                        # reasoning need more headroom on busy days.
+                        timeout=1200,
                     )
 
-                response = await with_flex_retry(_writer_call)
+                # Inner try captures call-level failures (timeout, 5xx-after-retry,
+                # network) so we can record best-effort input cost. Without this
+                # the retry-storm tokens disappear from cost books entirely.
+                try:
+                    response = await with_flex_retry(_writer_call)
+                except Exception as call_err:
+                    est = estimate_failed_call_usage(
+                        writer_messages, model, requested_service_tier="flex",
+                    )
+                    cumulative_usage = merge_usage_metrics(cumulative_usage, est)
+                    logger.warning(
+                        "Digest %s %s attempt %d call failed (%s) — recorded estimated input cost: $%.4f (%d in-tokens)",
+                        digest_type, persona_name, attempt + 1,
+                        type(call_err).__name__,
+                        est.get("cost_usd") or 0,
+                        est.get("input_tokens") or 0,
+                    )
+                    raise
+
+                # Record real usage immediately so any post-parse failure below
+                # still keeps the cost on books (gap-A fix).
+                usage = extract_usage_metrics(response, model, requested_service_tier="flex")
+                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+
                 data = parse_ai_json(
                     response.choices[0].message.content,
                     f"Digest-{digest_type}-{persona_name}",
@@ -1012,8 +1038,8 @@ async def _generate_digest(
                         persona_quizzes[persona_name]["en"] = quiz_en
                     if isinstance(quiz_ko, dict) and quiz_ko.get("question"):
                         persona_quizzes[persona_name]["ko"] = quiz_ko
-                usage = extract_usage_metrics(response, model, requested_service_tier="flex")
-                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+                # NOTE: usage already merged above (right after with_flex_retry)
+                # so any failure between there and here doesn't lose the tokens.
 
                 # Recover missing locale: re-generate missing side
                 ko_recovered = False

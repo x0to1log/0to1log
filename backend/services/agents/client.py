@@ -261,6 +261,71 @@ def extract_usage_metrics(
     }
 
 
+def estimate_failed_call_usage(
+    messages: list[dict[str, Any]],
+    model_name: str | None,
+    requested_service_tier: str | None = "flex",
+) -> dict[str, Any]:
+    """Best-effort usage record for an OpenAI call that failed before returning.
+
+    On timeouts / network errors / 5xx-after-retry-exhausted, no response object
+    exists so ``extract_usage_metrics`` cannot run. But OpenAI billed the input
+    prompt regardless (and any partial output up to the cutoff). To keep cost
+    visible we estimate input tokens via tiktoken and record them as best-effort.
+    Output tokens recorded as 0 — we genuinely don't know how much was generated
+    before the failure.
+
+    May 7 2026 incident: digest:research:learner timed out 3 times (58 min total)
+    with no model_used / tokens_used / cost_usd captured. OpenAI bill came in
+    ~$0.80 over our recorded total. This helper closes that visibility gap.
+
+    Returns same dict shape as ``extract_usage_metrics`` so callers can merge
+    via ``merge_usage_metrics`` uniformly. Includes ``estimated=True`` flag so
+    downstream readers can distinguish exact vs best-effort entries.
+    """
+    try:
+        import tiktoken  # local import: only needed on the failure path
+        try:
+            enc = tiktoken.encoding_for_model(model_name or "gpt-4o")
+        except KeyError:
+            # gpt-5 family may not be in tiktoken yet — cl100k_base is close
+            enc = tiktoken.get_encoding("cl100k_base")
+        input_tokens = 0
+        for m in messages:
+            content = m.get("content", "")
+            if isinstance(content, str):
+                input_tokens += len(enc.encode(content))
+            elif isinstance(content, list):
+                # multimodal/tool content: sum string parts
+                for part in content:
+                    if isinstance(part, dict):
+                        text = part.get("text") or ""
+                        if isinstance(text, str):
+                            input_tokens += len(enc.encode(text))
+    except Exception as e:
+        logger.warning("tiktoken estimate failed (model=%s): %s — recording 0", model_name, e)
+        input_tokens = 0
+
+    cost = estimate_openai_cost_usd(
+        model_name,
+        input_tokens,
+        output_tokens=0,
+        cached_tokens=0,
+        service_tier=requested_service_tier,
+    )
+    return {
+        "model_used": model_name,
+        "input_tokens": input_tokens,
+        "output_tokens": 0,
+        "cached_tokens": 0,
+        "reasoning_tokens": 0,
+        "tokens_used": input_tokens,
+        "service_tier": requested_service_tier,
+        "cost_usd": float(cost) if cost is not None else 0.0,
+        "estimated": True,
+    }
+
+
 def merge_usage_metrics(
     left: dict[str, Any] | None,
     right: dict[str, Any] | None,

@@ -184,3 +184,56 @@ def test_build_completion_kwargs_passes_service_tier_and_cache_key_together():
     )
     assert out["service_tier"] == "flex"
     assert out["prompt_cache_key"] == "digest-business-learner"
+
+
+def test_estimate_failed_call_usage_returns_extract_compatible_shape():
+    """May 7 incident pinned this: digest:research:learner timed out 3x and
+    left null cost_usd / model_used / tokens_used. Helper closes that gap by
+    estimating input cost so retry-storm spend is visible in DB."""
+    from services.agents.client import (
+        estimate_failed_call_usage,
+        extract_usage_metrics,
+        merge_usage_metrics,
+    )
+
+    out = estimate_failed_call_usage(
+        [
+            {"role": "system", "content": "You are a helpful assistant. " * 50},
+            {"role": "user", "content": "Summarize the news. " * 200},
+        ],
+        "gpt-5",
+        requested_service_tier="flex",
+    )
+    # Same shape as extract_usage_metrics so callers can merge uniformly
+    fake_response = MagicMock()
+    fake_response.usage = MagicMock(
+        prompt_tokens=10, completion_tokens=5, total_tokens=15,
+        prompt_tokens_details=MagicMock(cached_tokens=0),
+        completion_tokens_details=MagicMock(reasoning_tokens=0),
+    )
+    fake_response.service_tier = "flex"
+    real = extract_usage_metrics(fake_response, "gpt-5", requested_service_tier="flex")
+    assert set(out.keys()) >= set(real.keys()), (
+        f"shape mismatch — keys missing: {set(real.keys()) - set(out.keys())}"
+    )
+
+    assert out["estimated"] is True
+    assert out["model_used"] == "gpt-5"
+    assert out["service_tier"] == "flex"
+    assert out["output_tokens"] == 0  # unknown on failure
+    assert out["input_tokens"] > 0    # tiktoken estimated something
+    assert out["cost_usd"] > 0        # converted to dollars at flex rate
+
+    # merge_usage_metrics must accept it without error
+    merged = merge_usage_metrics({}, out)
+    assert merged["input_tokens"] == out["input_tokens"]
+    assert merged["cost_usd"] == out["cost_usd"]
+
+
+def test_estimate_failed_call_usage_handles_empty_messages():
+    """Defensive: empty messages → 0 tokens, $0 cost, no exception."""
+    from services.agents.client import estimate_failed_call_usage
+    out = estimate_failed_call_usage([], "gpt-5", requested_service_tier="flex")
+    assert out["input_tokens"] == 0
+    assert out["cost_usd"] == 0.0
+    assert out["estimated"] is True
