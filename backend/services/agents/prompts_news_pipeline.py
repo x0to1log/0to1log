@@ -590,7 +590,13 @@ Writing rules:
 - Avoid leading with insider shorthand such as FP8, KV cache, policy routing, or similar specialist terms unless the benefit is clear in the same line.
 - LEAD WITH WHAT IT DOES IN PLAIN LANGUAGE before naming the technique. BAD: "uses diffusion-based parallel decoding". GOOD: "processes the entire page at once instead of one character at a time — this technique is called parallel diffusion decoding"
 - Use analogies generously when they help (a complex method → a familiar everyday situation). If the news is straightforward, skip analogy.
-- When introducing ANY acronym, expand it FIRST in Korean style: Korean meaning then English in parentheses. Example: "전문가 혼합(Mixture of Experts, MoE)". NEVER use an acronym without prior explanation.
+- **Acronym expansion (BOTH locales — REQUIRED on first use in EACH locale)**: every acronym must be expanded on its first appearance in en AND independently on its first appearance in ko. EN reader cannot see the KO expansion and vice versa, so each side must stand alone.
+  - KO format: Korean meaning then English in parentheses. ✅ `검색 증강 생성(Retrieval-Augmented Generation, RAG)`, `전문가 혼합(Mixture of Experts, MoE)`
+  - EN format: full term then acronym in parentheses, OR acronym followed by full term in parentheses. ✅ `Retrieval-Augmented Generation (RAG)`, `RAG (Retrieval-Augmented Generation)`
+  - ❌ EN bad: `For teams shipping RAG or agent features...` (bare RAG, no expansion in EN)
+  - ❌ KO bad: `RAG 또는 에이전트 기능을 배포하는 팀에게는...` (bare RAG, no `검색 증강 생성` in KO)
+  - Common AI acronyms that REQUIRE expansion when first used: RAG, LLM, MoE, RLHF, DPO, PPO, KV (cache), MCP, AGI, CoT, SFT, FP8, INT8, ONNX, vLLM, MLA, GQA, MMLU, AUROC, IRT, SHT, AGI, SOTA, SLM, FFN, ToT, ReAct.
+  - Why: learner audience cannot decode bare acronyms; one expansion per locale is the minimum accessibility floor. May 8 audit found `RAG` bare in EN learner body while KO had `검색 증강 생성(RAG)` — the previous KO-only example caused the rule to be read as KO-only.
 - NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize them in plain language.
 - Connect to readers' lives where natural, but do not force the analogy.
 - In Korean, use written news/editorial prose by default. Interpretive sections may be slightly softer, but stay in editorial prose rather than conversational chat.
@@ -1203,6 +1209,35 @@ For Korean:
 ❌ Bad (jargon first, impact unclear):
 - EN: "OpenAI Trainium commitment restructures cloud deployment topology"
 - KO: "OpenAI Trainium 약정으로 클라우드 배치 토폴로지 재편"
+
+## Calibrated scope/scale claims (frontload — applies to headline AND excerpt)
+
+Avoid sweeping scope qualifiers ("widely", "broadly", "across the board", "광범위", "전반적", "통째로") and strong negative-direction verbs ("falter", "collapse", "fail across", "흔들린다", "무너진다", "실패한다") UNLESS the body provides specific numeric evidence that supports the SCOPE — not just a single result. Frontload claims are extracted to social/SEO snippets where readers can't see the body's numbers; scope-strength claims that turn out to be partial read as overclaim.
+
+This is the opposite-direction sibling of the body-level overclaim ban (which targets `dominates / 장악 / 석권`-style positive superlatives). Negative-direction superlatives over scope ("widely fail", "broadly underperform", "흔들린다", "광범위 부진") are equally uncalibrated when the evidence is partial — they should also be avoided in headline/excerpt.
+
+✅ Good (specific count, sourced):
+- EN: "13 of 25 baselines score below 50% on the planning task"
+- KO: "25개 기준 모델 중 13개가 계획 과제에서 50% 미만"
+
+❌ Bad (scope without numeric backing):
+- EN: "13 baselines falter on core manipulation and planning tasks"
+- KO: "13개 기준 모델이 핵심 조작·계획 과제에서 흔들린다"
+
+✅ Acceptable softening when the source supports underperformance but not the SCOPE word:
+- EN: "underperform widely"  →  "show gaps on N tasks", "trail the new baseline by X points"
+- KO: "광범위 부진"  →  "N개 과제에서 격차를 보임", "새 기준선보다 X포인트 뒤처짐"
+
+Why: May 8 research-digest used `13 baselines falter` / `13개 기준 모델이 흔들린다` in headline + excerpt; the body had specific scores but the frontload extracted the strong scope claim without the numbers. Quality reviewer flagged claim_strength 7/10 (frontload calibration). Specific counts are stronger evidence AND lower overclaim risk.
+
+## Pre-submit scan (frontload only, before returning JSON)
+
+Before responding, scan headline + excerpt in BOTH locales for:
+1. Acronym used without expansion in this locale (especially RAG, LLM, MoE, RLHF — see acronym list in Writing rules)
+2. Scope/scale word without numeric backing ("widely", "broadly", "falter", "광범위", "전반적", "흔들린다")
+3. Forward-looking speculation forbidden by Hallucination Guard ("will disrupt", "전망", "예상")
+
+If any of these appear, rewrite that line before returning. The fix is usually: replace the qualifier with a specific count from the body, or replace the verb with a neutral fact-led one ("releases / shows / reports / 발표한다 / 공개한다 / 측정한다").
 """
 
 
