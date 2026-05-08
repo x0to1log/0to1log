@@ -595,7 +595,7 @@ Writing rules:
   - EN format: full term then acronym in parentheses, OR acronym followed by full term in parentheses. ✅ `Retrieval-Augmented Generation (RAG)`, `RAG (Retrieval-Augmented Generation)`
   - ❌ EN bad: `For teams shipping RAG or agent features...` (bare RAG, no expansion in EN)
   - ❌ KO bad: `RAG 또는 에이전트 기능을 배포하는 팀에게는...` (bare RAG, no `검색 증강 생성` in KO)
-  - Common AI acronyms that REQUIRE expansion when first used: RAG, LLM, MoE, RLHF, DPO, PPO, KV (cache), MCP, AGI, CoT, SFT, FP8, INT8, ONNX, vLLM, MLA, GQA, MMLU, AUROC, IRT, SHT, AGI, SOTA, SLM, FFN, ToT, ReAct.
+  - Representative acronyms that REQUIRE expansion when first used (examples, not exhaustive — apply the same rule to any technical acronym in the same category): RAG, LLM, MoE, RLHF, DPO, CoT, SFT, MCP.
   - Why: learner audience cannot decode bare acronyms; one expansion per locale is the minimum accessibility floor. May 8 audit found `RAG` bare in EN learner body while KO had `검색 증강 생성(RAG)` — the previous KO-only example caused the rule to be read as KO-only.
 - NEVER omit key numbers (benchmark scores, speed gains, parameter counts). Numbers anchor credibility. But ALWAYS contextualize them in plain language.
 - Connect to readers' lives where natural, but do not force the analogy.

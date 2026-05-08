@@ -50,12 +50,37 @@ def test_research_learner_acronym_rule_provides_good_and_bad_examples():
 
 
 def test_research_learner_acronym_rule_lists_common_offenders():
-    """Specific acronym list is the difference between 'expand acronyms'
-    (vague) and 'expand THESE acronyms' (actionable)."""
+    """Specific acronyms anchor 'what counts'. List is intentionally short
+    (representative, not exhaustive) so the model generalizes via the rule
+    rather than treating the list as a closed set."""
     g = RESEARCH_LEARNER_GUIDE
-    # A representative spread of common AI acronyms must be listed
-    for acr in ("LLM", "MoE", "RLHF", "DPO", "AGI"):
-        assert acr in g, f"common acronym {acr!r} missing from list"
+    # Highest-frequency learner-confusing offenders that MUST stay in the list
+    for acr in ("LLM", "MoE", "RLHF", "DPO", "CoT", "SFT", "MCP"):
+        assert acr in g, f"core acronym {acr!r} missing from list"
+
+
+def test_research_learner_acronym_rule_marks_list_as_representative():
+    """A short list works only if the model treats it as 'examples, not
+    exhaustive' — otherwise it caps the rule's coverage to listed items."""
+    g = RESEARCH_LEARNER_GUIDE
+    assert "examples, not exhaustive" in g or "Representative acronyms" in g
+
+
+def test_research_learner_acronym_rule_no_duplicate_agi():
+    """May 8 first draft listed AGI twice — pin against re-introducing typos."""
+    g = RESEARCH_LEARNER_GUIDE
+    # Only worry about the acronym section — split on the section header
+    section_start = g.find("Acronym expansion")
+    section_end = g.find("\n- ", section_start + 1)
+    section = g[section_start:section_end] if section_end > 0 else g[section_start:]
+    # No acronym should appear twice in the listing line
+    listing_line = next(
+        (line for line in section.split("\n") if "REQUIRE expansion" in line),
+        "",
+    )
+    # AGI is the typical regression case; check no acronym repeats
+    for acr in ("AGI", "RAG", "LLM", "MoE"):
+        assert listing_line.count(acr) <= 1, f"{acr!r} appears twice in list"
 
 
 def test_research_learner_acronym_rule_explains_why():
