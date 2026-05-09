@@ -914,8 +914,23 @@ async def _generate_digest(
             {"role": "user", "content": user_prompt},
         ]
         for attempt in range(MAX_DIGEST_RETRIES + 1):
+            # 2026-05-09: flex on first attempt only; retries drop to standard
+            # tier (no queue, real-time endpoint, ~2x cost). May 7+9 incidents
+            # both had 3 attempts hit the 1200s timeout because the flex queue
+            # was saturated AND we kept re-queueing into the same congested
+            # pool. Standard tier has no queue so retries land fast.
+            # Cost impact: only on retry path (rare on calm days). prompt_cache_key
+            # stays the same across attempts so OpenAI's prefix cache may carry
+            # over flex→standard — measurable via cached_tokens in debug_meta.
+            tier_for_attempt: str | None = "flex" if attempt == 0 else None
+            tier_label = tier_for_attempt or "standard"
             try:
                 async def _writer_call() -> Any:
+                    extra_tier = (
+                        {"service_tier": tier_for_attempt}
+                        if tier_for_attempt is not None
+                        else {}
+                    )
                     return await asyncio.wait_for(
                         client.chat.completions.create(
                             **compat_create_kwargs(
@@ -932,8 +947,8 @@ async def _generate_digest(
                                 # "high" for simplicity + consistency —
                                 # ~$2/month over mixed config.
                                 reasoning_effort="high",
-                                service_tier="flex",
                                 prompt_cache_key=f"digest-{digest_type}-{persona_name}",
+                                **extra_tier,
                             )
                         ),
                         # 2026-05-08: bumped 900→1200 after May 7 incident where
@@ -943,6 +958,11 @@ async def _generate_digest(
                         timeout=1200,
                     )
 
+                logger.info(
+                    "Digest %s %s attempt %d starting (tier=%s)",
+                    digest_type, persona_name, attempt + 1, tier_label,
+                )
+
                 # Inner try captures call-level failures (timeout, 5xx-after-retry,
                 # network) so we can record best-effort input cost. Without this
                 # the retry-storm tokens disappear from cost books entirely.
@@ -950,13 +970,14 @@ async def _generate_digest(
                     response = await with_flex_retry(_writer_call)
                 except Exception as call_err:
                     est = estimate_failed_call_usage(
-                        writer_messages, model, requested_service_tier="flex",
+                        writer_messages, model, requested_service_tier=tier_for_attempt,
                     )
                     cumulative_usage = merge_usage_metrics(cumulative_usage, est)
                     logger.warning(
-                        "Digest %s %s attempt %d call failed (%s) — recorded estimated input cost: $%.4f (%d in-tokens)",
+                        "Digest %s %s attempt %d call failed (%s, tier=%s) — recorded estimated input cost: $%.4f (%d in-tokens)",
                         digest_type, persona_name, attempt + 1,
                         type(call_err).__name__,
+                        tier_label,
                         est.get("cost_usd") or 0,
                         est.get("input_tokens") or 0,
                     )
@@ -964,7 +985,7 @@ async def _generate_digest(
 
                 # Record real usage immediately so any post-parse failure below
                 # still keeps the cost on books (gap-A fix).
-                usage = extract_usage_metrics(response, model, requested_service_tier="flex")
+                usage = extract_usage_metrics(response, model, requested_service_tier=tier_for_attempt)
                 cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
 
                 data = parse_ai_json(
