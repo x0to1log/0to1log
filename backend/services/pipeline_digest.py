@@ -913,7 +913,13 @@ async def _generate_digest(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+        # 2026-05-11: per-attempt log captured into the stage's debug_meta so
+        # admin Stage Timeline can drill into retry storms (5/7, 5/9 incidents
+        # only logged final attempt; we lost visibility into which attempts
+        # timed out vs which had schema rejects vs which tier they ran on).
+        attempts_log: list[dict[str, Any]] = []
         for attempt in range(MAX_DIGEST_RETRIES + 1):
+            t_attempt = time.monotonic()
             # 2026-05-09: flex on first attempt only; retries drop to standard
             # tier (no queue, real-time endpoint, ~2x cost). May 7+9 incidents
             # both had 3 attempts hit the 1200s timeout because the flex queue
@@ -1190,6 +1196,14 @@ async def _generate_digest(
 
                 personas[persona_name] = persona_output
 
+                attempts_log.append({
+                    "attempt": attempt + 1,
+                    "tier": tier_label,
+                    "duration_s": round(time.monotonic() - t_attempt, 1),
+                    "status": "success",
+                    "ko_recovered": ko_recovered,
+                    "en_recovered": en_recovered,
+                })
                 await _log_stage(
                     supabase, run_id,
                     f"digest:{digest_type}:{persona_name}", "success", t_p,
@@ -1205,6 +1219,7 @@ async def _generate_digest(
                         "en_preview": _trim(persona_output.en, 500),
                         "ko_preview": _trim(persona_output.ko, 500),
                         "news_count": len(classified),
+                        "attempts_log": attempts_log,
                     },
                 )
                 break  # success — no more retries
@@ -1213,6 +1228,13 @@ async def _generate_digest(
                 # Strict json_schema validation failed (after OpenAI's own 2
                 # internal retries). Log details and retry the whole call —
                 # the next attempt might produce a compliant response.
+                attempts_log.append({
+                    "attempt": attempt + 1,
+                    "tier": tier_label,
+                    "duration_s": round(time.monotonic() - t_attempt, 1),
+                    "status": "schema_reject",
+                    "error_class": type(schema_err).__name__,
+                })
                 logger.warning(
                     "Writer strict-schema rejection on %s %s attempt %d: %s",
                     digest_type, persona_name, attempt + 1, schema_err,
@@ -1229,10 +1251,22 @@ async def _generate_digest(
                         f"digest:{digest_type}:{persona_name}", "failed", t_p,
                         error_message=error_msg, post_type=digest_type,
                         attempt=attempt + 1,
-                        debug_meta={"attempt": attempt + 1, "reason": "strict_schema_reject"},
+                        debug_meta={
+                            "attempt": attempt + 1,
+                            "reason": "strict_schema_reject",
+                            "attempts_log": attempts_log,
+                        },
                     )
 
             except Exception as e:
+                attempts_log.append({
+                    "attempt": attempt + 1,
+                    "tier": tier_label,
+                    "duration_s": round(time.monotonic() - t_attempt, 1),
+                    "status": "failed",
+                    "error_class": type(e).__name__,
+                    "error_message": str(e)[:200],
+                })
                 logger.warning(
                     "Digest %s %s attempt %d failed: %s",
                     digest_type, persona_name, attempt + 1, e,
@@ -1246,7 +1280,10 @@ async def _generate_digest(
                         f"digest:{digest_type}:{persona_name}", "failed", t_p,
                         error_message=error_msg, post_type=digest_type,
                         attempt=attempt + 1,
-                        debug_meta={"attempt": attempt + 1},
+                        debug_meta={
+                            "attempt": attempt + 1,
+                            "attempts_log": attempts_log,
+                        },
                     )
 
     # Validate: all 3 personas must exist AND have non-empty content
