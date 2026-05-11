@@ -99,12 +99,27 @@ function parseCost(value: number | string | null): number | null {
 }
 
 try {
-  const { data: runRows } = await sb
-    .from('pipeline_runs')
-    .select('id, run_key, status, started_at, finished_at, last_error')
-    .order('started_at', { ascending: false })
-    .limit(30);
-  const pipelineRuns = (runRows ?? []) as PipelineRun[];
+  // Fetch news/weekly/rerun and handbook separately so each tab always shows
+  // its most recent runs. With a single combined limit, daily news would
+  // crowd out handbook runs (daily news = 1/day vs handbook = sporadic).
+  const RUNS_PER_TAB = 50;
+  const [newsRes, hbRes] = await Promise.all([
+    sb.from('pipeline_runs')
+      .select('id, run_key, status, started_at, finished_at, last_error')
+      .or('run_key.like.news-%,run_key.like.weekly-%,run_key.like.rerun-%')
+      .order('started_at', { ascending: false })
+      .limit(RUNS_PER_TAB),
+    sb.from('pipeline_runs')
+      .select('id, run_key, status, started_at, finished_at, last_error')
+      .like('run_key', 'handbook-%')
+      .order('started_at', { ascending: false })
+      .limit(RUNS_PER_TAB),
+  ]);
+  const newsRunRows = (newsRes.data ?? []) as PipelineRun[];
+  const hbRunRows = (hbRes.data ?? []) as PipelineRun[];
+  // Merge for log fetching + the unified runs[] consumer below
+  const pipelineRuns: PipelineRun[] = [...newsRunRows, ...hbRunRows]
+    .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
   const runIds = pipelineRuns.map((run) => run.id);
   const { data: logs } = runIds.length
     ? await sb.from('pipeline_logs').select('run_id, pipeline_type, cost_usd, tokens_used, debug_meta').in('run_id', runIds)
@@ -163,9 +178,11 @@ try {
     });
   }
 
-  // Pipeline Status box: derive from first run
-  if (pipelineRuns.length > 0) {
-    lastRun = pipelineRuns[0];
+  // Pipeline Status box: derive from the latest *news* run specifically.
+  // (news_candidates is keyed on news batches; a handbook run as lastRun would
+  // make the candidates lookup return empty and mislead the status panel.)
+  if (newsRunRows.length > 0) {
+    lastRun = newsRunRows[0];
     lastRunError = formatPipelineError(lastRun.last_error);
     const statusMetric = totals.get(lastRun.id);
     pipelineCost = statusMetric?.totalCost ?? 0;
@@ -412,7 +429,7 @@ const handbookSummary = buildSummary(handbookRuns);
         <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
           <span class="pipeline-runs-stat__label">Recent Runs</span>
           <strong class="pipeline-runs-stat__value">{summary.total}</strong>
-          <span class="pipeline-runs-stat__detail">Last 30 executions</span>
+          <span class="pipeline-runs-stat__detail">Last 50 executions</span>
         </div>
         <div class="pipeline-runs-stat pipeline-runs-stat--success">
           <span class="pipeline-runs-stat__label">Successful</span>
@@ -520,7 +537,7 @@ const handbookSummary = buildSummary(handbookRuns);
         <div class="pipeline-runs-stat pipeline-runs-stat--neutral">
           <span class="pipeline-runs-stat__label">Recent Runs</span>
           <strong class="pipeline-runs-stat__value">{handbookSummary.total}</strong>
-          <span class="pipeline-runs-stat__detail">Last 30 executions</span>
+          <span class="pipeline-runs-stat__detail">Last 50 executions</span>
         </div>
         <div class="pipeline-runs-stat pipeline-runs-stat--success">
           <span class="pipeline-runs-stat__label">Successful</span>
