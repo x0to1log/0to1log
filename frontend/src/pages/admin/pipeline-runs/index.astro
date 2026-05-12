@@ -5,6 +5,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import { createClient } from '@supabase/supabase-js';
 import { formatPipelineError } from '../../../lib/admin/pipelineError.js';
+import { fetchPipelineLogsForRuns } from '../../../lib/admin/pipelineRunLogs.js';
 
 const accessToken = Astro.locals.accessToken;
 const sb = createClient(
@@ -121,9 +122,7 @@ try {
   const pipelineRuns: PipelineRun[] = [...newsRunRows, ...hbRunRows]
     .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
   const runIds = pipelineRuns.map((run) => run.id);
-  const { data: logs } = runIds.length
-    ? await sb.from('pipeline_logs').select('run_id, pipeline_type, cost_usd, tokens_used, debug_meta').in('run_id', runIds)
-    : { data: [] };
+  const logs = await fetchPipelineLogsForRuns(sb, runIds);
 
   const totals = new Map<
     string,

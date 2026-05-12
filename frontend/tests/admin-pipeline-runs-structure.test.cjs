@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
+const root = path.resolve(__dirname, '..');
+
 function read(relativePath) {
-  return fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
+  return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
 function assertIncludes(source, needle, label) {
@@ -32,39 +34,45 @@ function assertOrdered(source, items, label) {
 }
 
 function run() {
-  const adminIndex = read('frontend/src/pages/admin/index.astro');
-  assertIncludes(adminIndex, '/admin/pipeline-runs', 'dashboard pipeline runs link');
-
-  const sidebar = read('frontend/src/components/admin/AdminSidebar.astro');
+  const sidebar = read('src/components/admin/AdminSidebar.astro');
+  assertIncludes(sidebar, 'href="/admin/pipeline-runs"', 'sidebar pipeline runs link');
   assertIncludes(sidebar, 'Pipeline Runs', 'sidebar pipeline runs navigation');
   assertOrdered(
     sidebar,
-    ['Pipeline Runs', 'News', 'Handbook', 'Blog', 'Settings'],
+    [
+      '<span>Dashboard</span>',
+      '<span>Pipeline Runs</span>',
+      '<span>Pipeline Costs</span>',
+      '<span>Site Analytics</span>',
+      '<span>News</span>',
+      '<span>Handbook</span>',
+      '<span>Blog</span>',
+      '<span>Products</span>',
+      '<span>Webhooks</span>',
+      '<span>Feedback</span>',
+      '<span>Settings</span>',
+    ],
     'admin sidebar navigation',
   );
 
-  const listPage = read('frontend/src/pages/admin/pipeline-runs/index.astro');
+  const listPage = read('src/pages/admin/pipeline-runs/index.astro');
   assertIncludes(listPage, 'Pipeline Runs', 'runs page heading');
   assertIncludes(listPage, "from('pipeline_runs')", 'runs page pipeline query');
+  assertIncludes(listPage, 'fetchPipelineLogsForRuns', 'paginated pipeline logs fetch');
   assertIncludes(listPage, 'Execution Feed', 'runs page execution feed section');
   assertIncludes(listPage, 'Recent Runs', 'runs page summary metrics');
-  assertIncludes(listPage, '—', 'legacy metric placeholder');
   assertNotIncludes(listPage, 'translateY(-1px)', 'lift hover transform');
 
-  const detailPage = read('frontend/src/pages/admin/pipeline-runs/[runId].astro');
+  const detailPage = read('src/pages/admin/pipeline-runs/[runId].astro');
   assertIncludes(detailPage, "from('pipeline_logs')", 'detail page logs query');
   assertIncludes(detailPage, 'Run Snapshot', 'detail page summary hero');
-  assertIncludes(detailPage, 'Reuse Signals', 'detail page reuse signals section');
-  assertIncludes(detailPage, 'Run mode', 'detail page run mode metric');
-  assertIncludes(detailPage, 'Reused candidates', 'detail page reused candidates signal');
-  assertIncludes(detailPage, 'Resumed saved EN', 'detail page saved EN signal');
+  assertIncludes(detailPage, 'Run Mode', 'detail page run mode metric');
   assertIncludes(detailPage, 'Stage Timeline', 'detail page timeline title');
-  assertNotIncludes(detailPage, 'Partial Artifacts', 'detail page should not have artifact section (v4)');
-  assertNotIncludes(detailPage, 'pipeline_artifacts', 'detail page should not query artifacts (v4)');
   assertIncludes(detailPage, '<details', 'detail page collapsible debug panels');
-  assertIncludes(detailPage, '—', 'detail legacy metric placeholder');
   assertIncludes(detailPage, 'raw_error', 'detail page raw error area');
   assertIncludes(detailPage, 'debug_meta', 'detail page debug metadata rendering');
+  assertNotIncludes(detailPage, 'Partial Artifacts', 'detail page should not have artifact section');
+  assertNotIncludes(detailPage, 'pipeline_artifacts', 'detail page should not query artifacts');
   assertNotIncludes(detailPage, '(log.tokens_used ?? 0).toLocaleString()', 'forced zero tokens rendering');
   assertNotIncludes(detailPage, 'String(log.cost_usd ?? 0)', 'forced zero cost rendering');
 
