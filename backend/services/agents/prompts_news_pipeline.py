@@ -320,6 +320,21 @@ def _build_digest_prompt(
         if persona == "learner"
         else ""
     )
+    if persona == "learner":
+        weighted_depth_rule = """3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
+   - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
+   - **[SUPPORTING] items**: 2-3 paragraphs. Do NOT drop or one-sentence any item.
+   - Learner supporting items may stop at 2 paragraphs once they clearly cover: what changed, why it matters, and what to watch or try.
+   - The learner version should be easier to scan than expert: compress secondary benchmarks, deal terms, and stakeholder lists after the plain-language opening.
+   - Do NOT exceed 4 paragraphs per item even for lead stories."""
+        depth_checklist = "Do [LEAD] items have 3-4 paragraphs, and do [SUPPORTING] learner items have 2-3 paragraphs?"
+    else:
+        weighted_depth_rule = """3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
+   - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
+   - **[SUPPORTING] items**: every remaining item gets at least 3 paragraphs. Do NOT drop or one-sentence any item.
+   - Both Expert and Learner provide substantial coverage. The difference is primarily WHAT they emphasize (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context), not sentence-for-sentence density.
+   - Do NOT exceed 4 paragraphs per item even for lead stories."""
+        depth_checklist = "Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?"
     one_line_summary_checklist = (
         "\n8. One-Line Summary role: Is `## One-Line Summary` / `## 한 줄 요약` exactly one sentence? "
         "Does it synthesize the common thread or day's main throughline across the top stories rather than just repeating one headline "
@@ -372,11 +387,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {english_field_purity_rule}
 {learner_opening_rule}
 {learner_density_rule}
-3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
-   - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
-   - **[SUPPORTING] items**: every remaining item gets at least 3 paragraphs. Do NOT drop or one-sentence any item.
-   - Both Expert and Learner provide substantial coverage. The difference is primarily WHAT they emphasize (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context), not sentence-for-sentence density.
-   - Do NOT exceed 4 paragraphs per item even for lead stories.
+{weighted_depth_rule}
 4. You MUST cover ALL provided classified groups — each `[LEAD]` or `[SUPPORTING]` group in the input becomes EXACTLY ONE `###` sub-item in the output. Do NOT promote enriched sources to standalone `###` sub-items; use enriched sources inside the group's paragraphs for richer multi-source detail. Do NOT skip a group or reduce it to just a title.
 5. Write in present tense for news events ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 6. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
@@ -465,7 +476,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 ## FINAL CHECKLIST (verify before responding)
 1. Citations: Does every paragraph end with at least one `[CITE_N]` placeholder? Does every `[CITE_N]` in the body have a matching entry in the `citations` array? Does every `citations[].url` come from the provided source list verbatim?
 2. **Sub-item count match**: Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)
-3. Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?
+3. {depth_checklist}
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
 6. **Frontload locale parity**: Does `headline_ko` contain any specific number, ranking, allegation, or claim that is NOT in `headline`? Does `excerpt_ko` add any new fact not in `excerpt`? If yes, fix the mismatch before responding — KO is a translation, not a rewrite.
@@ -603,7 +614,7 @@ Writing rules:
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms should be linked to Handbook on first appearance.
 - Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
-- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the mental model is clear. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
 
 
 BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy lead. An AI-era business decision-maker.
@@ -667,7 +678,7 @@ Writing rules:
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms link to Handbook on first appearance.
 - Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
-- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories at least 3. Cover: what changed + why it matters + what it means for you."""
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the business mental model is clear. Cover: what changed + why it matters + what it means for you."""
 
 
 # --- Title Strategy (per persona) ---
@@ -915,12 +926,12 @@ The expansion targets research, engineering, and product roles. As AI models get
 ## Industry & Biz
 ### U.S. National AI Policy Framework
 
-[3 paragraphs, plain language, each ending with [CITE_N]...]
+[2 paragraphs, plain language, each ending with [CITE_N]...]
 
 ## New Tools
 ### Cloudflare Dynamic Workers: Faster AI for Everyone
 
-[3 paragraphs explaining what it does and why you should care, each ending with [CITE_N]...]
+[2 paragraphs explaining what it does and why you should care, each ending with [CITE_N]...]
 
 ## Community Pulse
 
@@ -958,12 +969,12 @@ ChatGPT와 DALL-E로 유명한 OpenAI가 직원을 4,500명에서 8,000명 이�
 ## Industry & Biz
 ### 미국 국가 AI 정책 프레임워크: 무엇이 달라지나
 
-[3문단 — 쉬운 설명, 일상 영향, 실용 시사점. 각 문단 끝에 [CITE_N]]
+[2문단 — 쉬운 설명, 일상 영향, 실용 시사점. 각 문단 끝에 [CITE_N]]
 
 ## New Tools
 ### Cloudflare 다이내믹 워커스: 누구나 빠른 AI를 쓸 수 있게
 
-[3문단 — 쉬운 설명, 왜 중요한지, 활용 방법. 각 문단 끝에 [CITE_N]]
+[2문단 — 쉬운 설명, 왜 중요한지, 활용 방법. 각 문단 끝에 [CITE_N]]
 
 ## 커뮤니티 반응
 
@@ -1099,7 +1110,7 @@ The clever part: each agent only sees part of the information, so they cannot ju
 ## Open Source & Repos
 ### WildWorld: A Video Game Dataset for AI Training
 
-[3 paragraphs in plain language, explaining what it is and why it matters, each ending with [CITE_N]...]
+[2 paragraphs in plain language, explaining what it is and why it matters, each ending with [CITE_N]...]
 
 ## Community Pulse
 
@@ -1981,7 +1992,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **analogy_quality**: When an analogy is used, it genuinely aids understanding (not forced). Straightforward items may skip analogy without penalty.
 
 ### Language Quality (4)
-- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting at least 3. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전") — relative time loses meaning once a digest is archived. One borderline relative reference is tolerable; repeated relative time framing across items is not.
+- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting 2-3 paragraphs. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전") — relative time loses meaning once a digest is archived. One borderline relative reference is tolerable; repeated relative time framing across items is not.
 - **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
@@ -2109,7 +2120,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **actionable_items**: Action Items are doable by a non-developer this week. BAD: "evaluate vendor lock-in risk", "build multi-agent pipeline". GOOD: "try Meta AI in WhatsApp", "read Anthropic's blog post".
 
 ### Language Quality (4)
-- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; engaging without being condescending. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
+- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; supporting stories may be 2-3 paragraphs; engaging without being condescending. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
 - **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
@@ -2377,22 +2388,25 @@ Return JSON only:
 
 RANKING_SYSTEM_PROMPT_V2 = """You are an AI news editor deciding which story leads today's {category} digest.
 
-Given {count} classified articles with community engagement data, pick the lead story.
+Given {count} classified articles with community engagement data, pick the lead story and prune weak filler.
 
 ## Ranking Criteria (in priority order)
 1. **Impact**: How much does this change the AI landscape? A new SOTA, major funding, paradigm shift > incremental update
 2. **Novelty**: Is this genuinely new? First-of-its-kind, exclusive, leak > routine release
 3. **Evidence**: Concrete benchmarks, dollar amounts, user numbers > vague claims ("step change")
-4. **Community signal**: High upvotes/comments indicate broad interest
+4. **Community signal**: High upvotes/comments indicate broad interest, but never rescue a weak or off-topic item
+5. **Distinct reader value**: Each kept item needs its own clear "why now." Do not keep a repo/tool/community thread only to fill coverage.
 
 ## Articles
 {items}
 
 ## Output JSON
-Pick exactly 1 lead (rarely 2 if truly equal importance). All others are supporting.
+Pick exactly 1 lead (rarely 2 if truly equal importance).
+Prefer 2-4 kept stories total. Keep a 5th story only when it has strong evidence, a fresh event, and distinct reader value.
+Put weak, stale, duplicate, or thinly supported items in `omit` with a short reason.
 Order supporting by importance (most important first).
 
-{{"lead": ["url1"], "supporting": ["url2", "url3", "url4", "url5"]}}"""
+{{"lead": ["url1"], "supporting": ["url2", "url3"], "omit": [{{"url": "url4", "reason": "weak why-now"}}]}}"""
 
 # ---------------------------------------------------------------------------
 # Community Summarizer

@@ -206,6 +206,100 @@ async def test_summarize_community_filter_returns_empty_skips_summarizer():
 
 
 @pytest.mark.asyncio
+async def test_summarize_community_skips_thread_when_thread_title_mismatches_article():
+    """A high-signal community thread should still be dropped when the HN title
+    is plainly about a different topic than the selected article.
+
+    This catches cases like a ModelLens paper inheriting an unrelated
+    TinyStories HN thread just because generic "language model" comments look
+    technically substantive.
+    """
+    from services.agents.ranking import summarize_community
+
+    primary_url = "https://arxiv.org/abs/2605.07075"
+    blob = (
+        "[Hacker News|url=https://news.ycombinator.com/item?id=42576755] "
+        "TinyStories: How Small Can Language Models Be and Still Speak Coherent English? (2023) "
+        "| 218 points | 116 comments\n"
+        "Top comments:\n"
+        '> "This is done at a reranking step. It is custom and uses date plus relevance."\n'
+    )
+    group = _make_group(
+        primary_url,
+        "ModelLens: Finding the Best for Your Task from Myriads of Models",
+    )
+
+    filter_calls = {"n": 0}
+
+    async def fake_filter(candidates, article_title, article_excerpt, max_pick=10):
+        filter_calls["n"] += 1
+        return candidates[:max_pick], {}
+
+    fake_client = MagicMock()
+    fake_client.chat.completions.create = AsyncMock()
+
+    with patch("services.agents.ranking.filter_relevant_comments", new=fake_filter), \
+         patch("services.agents.ranking.get_openai_client", return_value=fake_client):
+        result, _usage = await summarize_community({primary_url: blob}, [group])
+
+    insight = result[primary_url]
+    assert filter_calls["n"] == 0
+    assert len(insight.threads) == 1
+    assert insight.threads[0].sentiment is None
+    assert insight.threads[0].quotes == []
+    fake_client.chat.completions.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_summarize_community_keeps_uncertain_generic_thread_title_for_filter():
+    """No title overlap is not enough to drop a thread.
+
+    If the article has a named entity but the community title is generic
+    rather than a conflicting named topic, let the relevance filter decide.
+    """
+    from services.agents.ranking import summarize_community
+
+    primary_url = "https://www.reuters.com/business/openai-deployco/"
+    blob = (
+        "[Hacker News|url=https://news.ycombinator.com/item?id=99] "
+        "A new consulting arm for enterprise AI | 120 points | 64 comments\n"
+        "Top comments:\n"
+        '> "Enterprise integration work is where these systems usually get stuck."\n'
+    )
+    group = _make_group(
+        primary_url,
+        "OpenAI creates new unit with $4 billion investment to aid corporate AI push",
+    )
+
+    filter_calls = {"n": 0}
+
+    async def fake_filter(candidates, article_title, article_excerpt, max_pick=10):
+        filter_calls["n"] += 1
+        return candidates[:max_pick], {}
+
+    fake_response = MagicMock()
+    fake_response.choices = [MagicMock()]
+    fake_response.choices[0].message.content = (
+        '{"groups": {"group_0": {"sentiment": "mixed", '
+        '"quotes": ["Enterprise integration work is where these systems usually get stuck."], '
+        '"quotes_ko": ["엔터프라이즈 통합 작업에서 이런 시스템들이 대개 막힙니다."], '
+        '"key_point": "Discussion focuses on enterprise integration."}}}'
+    )
+    fake_response.usage = MagicMock(prompt_tokens=100, completion_tokens=20, total_tokens=120)
+    fake_client = MagicMock()
+    fake_client.chat.completions.create = AsyncMock(return_value=fake_response)
+
+    with patch("services.agents.ranking.filter_relevant_comments", new=fake_filter), \
+         patch("services.agents.ranking.get_openai_client", return_value=fake_client):
+        result, _usage = await summarize_community({primary_url: blob}, [group])
+
+    insight = result[primary_url]
+    assert filter_calls["n"] == 1
+    assert fake_client.chat.completions.create.await_count == 1
+    assert insight.threads[0].sentiment == "mixed"
+
+
+@pytest.mark.asyncio
 async def test_summarize_community_handles_empty_community_map():
     from services.agents.ranking import summarize_community
 

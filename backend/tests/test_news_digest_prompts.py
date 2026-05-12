@@ -46,6 +46,26 @@ def test_learner_prompt_allows_compressing_secondary_detail_after_plain_language
     assert "after the plain-language opening" in prompt
 
 
+def test_learner_prompt_allows_shorter_supporting_items_than_expert():
+    research_learner = get_digest_prompt("research", "learner", [])
+    business_learner = get_digest_prompt("business", "learner", [])
+    research_expert = get_digest_prompt("research", "expert", [])
+
+    for prompt in [research_learner, business_learner]:
+        assert "**[SUPPORTING] items**: 2-3 paragraphs" in prompt
+        assert "Learner supporting items may stop at 2 paragraphs" in prompt
+
+    assert "**[SUPPORTING] items**: every remaining item gets at least 3 paragraphs" in research_expert
+    assert "Learner supporting items may stop at 2 paragraphs" not in research_expert
+
+
+def test_learner_quality_rubrics_do_not_require_three_supporting_paragraphs():
+    assert "supporting 2-3 paragraphs" in QUALITY_CHECK_RESEARCH_LEARNER
+    assert "supporting stories may be 2-3 paragraphs" in QUALITY_CHECK_BUSINESS_LEARNER
+    assert "supporting at least 3" not in QUALITY_CHECK_RESEARCH_LEARNER
+    assert "supporting at least 3" not in QUALITY_CHECK_BUSINESS_LEARNER
+
+
 def test_business_prompt_keeps_strategy_sections():
     prompt = get_digest_prompt("business", "expert", [])
 

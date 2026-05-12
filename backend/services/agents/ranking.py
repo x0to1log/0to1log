@@ -782,37 +782,99 @@ async def rank_classified(
                 return groups, {}
 
     # Match lead by index (LLM returns [1]-based indices or URLs)
-    lead_indices = set()
-    for lead_ref in data.get("lead", []):
-        if isinstance(lead_ref, int):
-            lead_indices.add(lead_ref - 1)
-        elif isinstance(lead_ref, str):
-            # Try matching by URL or group_title
-            for idx, g in enumerate(groups):
-                if lead_ref in g.urls or lead_ref == g.group_title:
-                    lead_indices.add(idx)
+    omit_indices = set(_resolve_ranking_refs(data.get("omit", []), groups))
+    lead_indices = [
+        idx for idx in _resolve_ranking_refs(data.get("lead", []), groups)
+        if idx not in omit_indices
+    ]
+    supporting_indices = [
+        idx for idx in _resolve_ranking_refs(data.get("supporting", []), groups)
+        if idx not in omit_indices and idx not in lead_indices
+    ]
+
+    # If the model did not enumerate supporting stories, keep all non-omitted
+    # non-leads in classifier order. If it did enumerate them, append any
+    # accidentally unmentioned non-omitted groups so omission is only honored
+    # through the explicit `omit` field.
+    for idx in range(len(groups)):
+        if idx in omit_indices or idx in lead_indices or idx in supporting_indices:
+            continue
+        supporting_indices.append(idx)
 
     leads = []
     supports = []
-    for idx, group in enumerate(groups):
-        if idx in lead_indices:
-            group.reason = f"[LEAD] {group.reason}"
-            leads.append(group)
-        else:
-            group.reason = f"[SUPPORTING] {group.reason}"
-            supports.append(group)
+    for idx in lead_indices:
+        group = groups[idx]
+        group.reason = f"[LEAD] {_strip_rank_tag(group.reason)}".strip()
+        leads.append(group)
+    for idx in supporting_indices:
+        group = groups[idx]
+        group.reason = f"[SUPPORTING] {_strip_rank_tag(group.reason)}".strip()
+        supports.append(group)
 
     # If no leads matched, fallback: first group is lead
     if not leads and groups:
-        groups[0].reason = f"[LEAD] {groups[0].reason}"
-        leads = [groups[0]]
-        supports = [g for g in groups[1:] if g.reason.startswith("[SUPPORTING]")]
+        fallback = next((idx for idx in range(len(groups)) if idx not in omit_indices), 0)
+        groups[fallback].reason = f"[LEAD] {_strip_rank_tag(groups[fallback].reason)}".strip()
+        leads = [groups[fallback]]
+        supports = []
+        for idx, group in enumerate(groups):
+            if idx == fallback or idx in omit_indices:
+                continue
+            group.reason = f"[SUPPORTING] {_strip_rank_tag(group.reason)}".strip()
+            supports.append(group)
 
     logger.info(
-        "Ranking %s: lead=%d, supporting=%d",
-        category, len(leads), len(supports),
+        "Ranking %s: lead=%d, supporting=%d, omitted=%d",
+        category, len(leads), len(supports), len(omit_indices),
     )
     return leads + supports, usage
+
+
+def _strip_rank_tag(reason: str) -> str:
+    return re.sub(r"^\s*\[(?:LEAD|SUPPORTING)\]\s*", "", reason or "").strip()
+
+
+def _ranking_ref_value(ref: Any) -> Any:
+    if isinstance(ref, dict):
+        return (
+            ref.get("url")
+            or ref.get("group_title")
+            or ref.get("title")
+            or ref.get("id")
+        )
+    return ref
+
+
+def _resolve_ranking_refs(refs: Any, groups: list[ClassifiedGroup]) -> list[int]:
+    """Resolve ranker references to group indexes, preserving ranker order."""
+    if not isinstance(refs, list):
+        return []
+
+    resolved: list[int] = []
+    seen: set[int] = set()
+    for raw_ref in refs:
+        ref = _ranking_ref_value(raw_ref)
+        idx: int | None = None
+        if isinstance(ref, int):
+            candidate = ref - 1
+            if 0 <= candidate < len(groups):
+                idx = candidate
+        elif isinstance(ref, str):
+            ref_norm = ref.strip()
+            for group_idx, group in enumerate(groups):
+                if (
+                    ref_norm in group.urls
+                    or ref_norm == group.primary_url
+                    or ref_norm == group.group_title
+                ):
+                    idx = group_idx
+                    break
+        if idx is None or idx in seen:
+            continue
+        seen.add(idx)
+        resolved.append(idx)
+    return resolved
 
 
 # ---------------------------------------------------------------------------
@@ -862,12 +924,75 @@ def _parse_source_meta(raw_text: str) -> tuple[str, str | None, str | None]:
 # news_collection embeds [Hacker News|url=<url>] / [Reddit r/<sub>|url=<url>]
 # tokens at the start of each thread block.
 _HN_SECTION_HEADER_RE = re.compile(
-    r"\[Hacker News\|url=(?P<url>[^\]]+)\][^\n]*?\|\s*(?P<upvotes>\d[\d,]*)\s*points?\s*\|\s*(?P<comments>\d[\d,]*)\s*comments?",
+    r"\[Hacker News\|url=(?P<url>[^\]]+)\]\s*(?P<title>[^\n|]*?)\s*\|\s*(?P<upvotes>\d[\d,]*)\s*points?\s*\|\s*(?P<comments>\d[\d,]*)\s*comments?",
 )
 _REDDIT_SECTION_HEADER_RE = re.compile(
-    r"\[Reddit\s+r/(?P<sub>[^\|\]]+)\|url=(?P<url>[^\]]+)\][^\n]*?\|\s*(?P<upvotes>\d[\d,]*)\s*upvotes?\s*\|\s*(?P<comments>\d[\d,]*)\s*comments?",
+    r"\[Reddit\s+r/(?P<sub>[^\|\]]+)\|url=(?P<url>[^\]]+)\]\s*(?P<title>[^\n|]*?)\s*\|\s*(?P<upvotes>\d[\d,]*)\s*upvotes?\s*\|\s*(?P<comments>\d[\d,]*)\s*comments?",
 )
 _COMMENT_LINE_RE = re.compile(r'^>\s*"(.*)"$', re.MULTILINE)
+
+_THREAD_TITLE_STOPWORDS = {
+    "about", "across", "agent", "agents", "and", "are", "article", "best",
+    "can", "code", "data", "dataset", "english", "finding", "for", "from",
+    "how", "language", "learning", "llm", "llms", "model", "models",
+    "myriads", "new", "paper", "research", "small", "speak", "still",
+    "task", "that", "the", "this", "tool", "tools", "with", "your",
+}
+_KNOWN_TOPIC_ENTITIES = {
+    "activepieces",
+    "anthropic",
+    "apple",
+    "amazon",
+    "deepmind",
+    "google",
+    "meta",
+    "microsoft",
+    "nvidia",
+    "openai",
+    "reddit",
+    "tomoro",
+}
+
+
+def _distinctive_topic_entities(text: str) -> set[str]:
+    entities: set[str] = set()
+    for raw in re.findall(r"[A-Za-z][A-Za-z0-9.+_/-]{1,}", text or ""):
+        token = raw.strip(".,;:'\"()[]{}")
+        lower = token.lower().strip("._-/")
+        if not lower or lower in _THREAD_TITLE_STOPWORDS:
+            continue
+        has_letter = any(ch.isalpha() for ch in token)
+        has_digit = any(ch.isdigit() for ch in token)
+        has_internal_upper = any(ch.isupper() for ch in token[1:])
+        is_acronym = token.isupper() and 2 <= len(token) <= 8
+        is_repoish = "/" in token or "_" in token
+        if (
+            lower in _KNOWN_TOPIC_ENTITIES
+            or (has_letter and has_digit)
+            or has_internal_upper
+            or is_acronym
+            or is_repoish
+        ):
+            entities.add(lower)
+    return entities
+
+
+def _community_thread_title_matches_article(article_title: str, thread_title: str) -> bool:
+    """Obvious-mismatch guard before LLM comment filtering.
+
+    Do not require title overlap. Only fail closed when both titles expose
+    distinctive named topics and those topics are disjoint. Generic or ambiguous
+    thread titles still go through the comment relevance filter.
+    """
+    if not thread_title:
+        return True
+
+    article_entities = _distinctive_topic_entities(article_title)
+    thread_entities = _distinctive_topic_entities(thread_title)
+    if article_entities and thread_entities and article_entities.isdisjoint(thread_entities):
+        return False
+
+    return True
 
 
 def _split_blob_by_platform(blob: str) -> list[dict]:
@@ -885,6 +1010,7 @@ def _split_blob_by_platform(blob: str) -> list[dict]:
         headers.append((m.start(), {
             "platform": "hackernews",
             "url": m.group("url"),
+            "title": (m.group("title") or "").strip(),
             "upvotes": int(m.group("upvotes").replace(",", "")),
             "comments": int(m.group("comments").replace(",", "")),
         }))
@@ -892,6 +1018,7 @@ def _split_blob_by_platform(blob: str) -> list[dict]:
         headers.append((m.start(), {
             "platform": "reddit",
             "url": m.group("url"),
+            "title": (m.group("title") or "").strip(),
             "subreddit": m.group("sub"),
             "upvotes": int(m.group("upvotes").replace(",", "")),
             "comments": int(m.group("comments").replace(",", "")),
@@ -949,6 +1076,26 @@ async def summarize_community(
 
         threads: list[ThreadInfo] = []
         for section in sections:
+            thread_title = section.get("title", "")
+            if not _community_thread_title_matches_article(article_title, thread_title):
+                logger.info(
+                    "Dropping community thread title mismatch: article='%s' thread='%s'",
+                    article_title[:80], thread_title[:80],
+                )
+                threads.append(ThreadInfo(
+                    platform=section["platform"],
+                    url=section["url"],
+                    title=thread_title,
+                    subreddit=section.get("subreddit"),
+                    upvotes=section["upvotes"],
+                    comments=section["comments"],
+                    sentiment=None,
+                    quotes=[],
+                    quotes_ko=[],
+                    key_point=None,
+                ))
+                continue
+
             # ----- Stage 1: relevance filter -----
             filtered, filter_usage = await filter_relevant_comments(
                 section["comments_text"],
@@ -964,6 +1111,7 @@ async def summarize_community(
                 threads.append(ThreadInfo(
                     platform=section["platform"],
                     url=section["url"],
+                    title=thread_title,
                     subreddit=section.get("subreddit"),
                     upvotes=section["upvotes"],
                     comments=section["comments"],
@@ -1010,6 +1158,7 @@ async def summarize_community(
                 threads.append(ThreadInfo(
                     platform=section["platform"],
                     url=section["url"],
+                    title=thread_title,
                     subreddit=section.get("subreddit"),
                     upvotes=section["upvotes"],
                     comments=section["comments"],
@@ -1029,6 +1178,7 @@ async def summarize_community(
             threads.append(ThreadInfo(
                 platform=section["platform"],
                 url=section["url"],
+                title=thread_title,
                 subreddit=section.get("subreddit"),
                 upvotes=section["upvotes"],
                 comments=section["comments"],

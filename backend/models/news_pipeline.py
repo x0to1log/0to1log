@@ -55,6 +55,7 @@ class ThreadInfo(BaseModel):
     thread alone, no cross-platform mixing."""
     platform: str  # "hackernews" or "reddit"
     url: str       # thread URL (item?id=... or /r/sub/comments/...)
+    title: str = ""  # platform thread title, used for deterministic topic checks
     subreddit: str | None = None  # only for platform="reddit"
     upvotes: int
     comments: int
