@@ -39,6 +39,12 @@ def test_research_beginner_prompt_uses_dedicated_context_explainer_format():
 
     assert "Beginner persona" in prompt
     assert "Research Beginner main_items: 1-2" in prompt
+    assert "Research one_line should use at most 2 technical terms" in prompt
+    assert "plain consequence before adding more detail" in prompt
+    assert "short but not shallow" in prompt
+    assert "one setup sentence and one consequence sentence" in prompt
+    assert "what burden is reduced or what new risk/check burden is exposed" in prompt
+    assert "무엇이 쉬워졌나 / 무엇을 더 조심해야 하나" in prompt
     assert "Do not turn every input group into a full section" in prompt
     assert "## Context First" in prompt
     assert "## 먼저 알면 좋은 배경" in prompt
@@ -59,6 +65,9 @@ def test_business_beginner_prompt_uses_lens_sentence_not_catalog():
     assert "Business one_line is a lens sentence, not a catalog" in prompt
     assert "Do not list vendor, product, equipment, or project names in business one_line" in prompt
     assert "Do not write reading instructions like 보세요" in prompt
+    assert "오늘은 ... 보자" in prompt
+    assert "중점으로 보자" in prompt
+    assert "도입 접점" in prompt
     assert "put concrete names and examples in main_items instead" in prompt
 
 
@@ -106,8 +115,12 @@ def test_beginner_quality_rubrics_cover_beginner_specific_failures():
         assert "term_definition_repetition" in prompt
         assert "학습자 뉴스 이어읽기" in prompt
         assert "보세요" in prompt
+        assert "중점으로 보자" in prompt
 
+    assert "one_line_jargon_density" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "new risk/check burden is exposed" in QUALITY_CHECK_RESEARCH_BEGINNER
     assert "research_burden_reduction" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "rollout_overclaim" in QUALITY_CHECK_BUSINESS_BEGINNER
     assert "business_lens_sentence" in QUALITY_CHECK_BUSINESS_BEGINNER
 
 

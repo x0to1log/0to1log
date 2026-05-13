@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 type AdminPostRow = {
   id: string;
   title: string;
+  title_beginner?: string | null;
   slug: string;
   category: string | null;
   locale: string | null;
@@ -17,6 +18,7 @@ type AdminPostRow = {
   updated_at: string;
   published_at: string | null;
   tags?: string[];
+  guide_items?: Record<string, any> | null;
 };
 
 const accessToken = Astro.locals.accessToken;
@@ -37,7 +39,7 @@ let logTotal = 0;
 try {
   const { data, error } = await sb
     .from('news_posts')
-    .select('id, title, slug, category, locale, status, post_type, tags, updated_at, published_at')
+    .select('id, title, title_beginner, slug, category, locale, status, post_type, tags, guide_items, updated_at, published_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
@@ -68,6 +70,10 @@ const localeOptions = Array.from(
 const categoryOptions = Array.from(
   new Set(allPosts.map((post) => post.category).filter((category): category is string => Boolean(category))),
 ).sort();
+
+function getBeginnerTitle(post: AdminPostRow): string {
+  return post.title_beginner || post.guide_items?.title_beginner || '';
+}
 
 // Group ALL posts by date: published→published_at, draft→updated_at
 function getGroupDate(post: AdminPostRow): string {
@@ -210,7 +216,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                       class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
                       data-status={post.status}
                       data-post-type={post.post_type || ''}
-                      data-title={post.title.toLowerCase()}
+                      data-title={`${post.title} ${getBeginnerTitle(post)}`.toLowerCase()}
                       data-locale={post.locale || ''}
                       data-category={post.category || ''}
                       data-updated={post.updated_at || ''}
@@ -227,6 +233,12 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                             rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
                           >{post.title}</a>
                         </div>
+                        {getBeginnerTitle(post) && getBeginnerTitle(post) !== post.title && (
+                          <div class="admin-list-persona-title">
+                            <span>Beginner</span>
+                            {getBeginnerTitle(post)}
+                          </div>
+                        )}
                         <div class="admin-list-meta">
                           {post.post_type && (
                             <span class={`admin-posttype-badge admin-posttype-badge--${post.post_type}`}>
@@ -440,6 +452,25 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
 
   .news-date-card__list .admin-list-item:last-child {
     border-bottom: none;
+  }
+
+  .admin-list-persona-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-top: 0.15rem;
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .admin-list-persona-title span {
+    color: var(--color-text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 </style>
 

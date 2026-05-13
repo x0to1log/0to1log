@@ -112,7 +112,12 @@ def test_beginner_prompt_adds_main_only_term_density_and_skim_rules() -> None:
     assert "one_line may summarize only selected main_items" in prompt
     assert "Do not mention skim_items or non-main stories in one_line" in prompt
     assert "Research main item body may use at most 2 technical method terms" in prompt
-    assert "what_changed must answer which burden is reduced" in prompt
+    assert "Research one_line should use at most 2 technical terms" in prompt
+    assert "plain consequence before adding more detail" in prompt
+    assert "short but not shallow" in prompt
+    assert "one setup sentence and one consequence sentence" in prompt
+    assert "what_changed must answer which burden is reduced or which new risk/check burden is exposed" in prompt
+    assert "무엇이 쉬워졌나 또는 무엇을 더 조심해야 하나" in prompt
     assert "Each skim_items.why_skim must be 35 Korean words or fewer" in prompt
 
 
@@ -123,6 +128,9 @@ def test_business_beginner_prompt_makes_one_line_a_lens_not_catalog() -> None:
     assert "Do not list vendor, product, equipment, or project names in business one_line" in prompt
     assert "put concrete names and examples in main_items instead" in prompt
     assert "Do not write reading instructions like 보세요" in prompt
+    assert "오늘은 ... 보자" in prompt
+    assert "중점으로 보자" in prompt
+    assert "도입 접점" in prompt
 
 
 def test_research_beginner_prompt_uses_research_context_not_business_context() -> None:
@@ -130,7 +138,7 @@ def test_research_beginner_prompt_uses_research_context_not_business_context() -
 
     assert "Research Beginner main_items: 1-2" in prompt
     assert "한마디로 무슨 변화인가" in prompt
-    assert "이번 방법은 무엇을 덜 필요하게 하나" in prompt
+    assert "무엇이 쉬워졌나 또는 무엇을 더 조심해야 하나" in prompt
     assert "내 일과 무슨 관련이 있나" not in prompt
 
 
@@ -140,7 +148,7 @@ def test_research_beginner_prompt_limits_main_items_to_one_or_two() -> None:
     assert "Research Beginner main_items: 1-2" in prompt
     assert "Do not use 3 main_items for research" in prompt
     assert "한마디로 무슨 변화인가" in prompt
-    assert "이번 방법은 무엇을 덜 필요하게 하나" in prompt
+    assert "무엇이 쉬워졌나 또는 무엇을 더 조심해야 하나" in prompt
 
 
 def test_validate_research_payload_accepts_one_item_and_rejects_three() -> None:
@@ -267,6 +275,80 @@ def test_validate_one_line_rejects_reader_instruction_phrasing() -> None:
         validate_beginner_payload(payload, "business")
 
 
+def test_validate_business_one_line_rejects_meta_lens_instruction() -> None:
+    payload = {
+        "headline": "기업 AI 도입 기준이 운영 통제로 이동한다",
+        "one_line": "오늘은 자동화된 취약점 스캔과 OS 수준 작업 자동화가 운영·권한·전환 흐름에 주는 영향을 중점으로 보자.",
+        "background": ["입문자 one_line은 독자에게 읽는 법을 지시하지 않고 변화 자체를 말해야 한다."],
+        "main_items": [
+            _valid_business_item("보안 검증이 도입 판단의 앞단으로 이동한다"),
+            _valid_business_item("기기 안 작업 흐름이 운영 통제 문제로 이어진다"),
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    with pytest.raises(ValueError, match="one_line must state the lens"):
+        validate_beginner_payload(payload, "business")
+
+
+def test_validate_business_payload_rejects_procurement_overclaim() -> None:
+    payload = {
+        "headline": "보안 검증이 기업 AI 도입 기준으로 올라온다",
+        "one_line": "새 보안 도구가 복잡한 조달 없이 기업 도입을 바로 가능하게 한다.",
+        "background": ["입문자 뉴스는 제품 문의 경로를 곧바로 조달 단축으로 과장하지 않아야 한다."],
+        "main_items": [
+            _valid_business_item("보안 검증이 도입 판단의 앞단으로 이동한다"),
+            _valid_business_item("도입 문의 경로가 생긴다"),
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    with pytest.raises(ValueError, match="overclaims rollout or procurement speed"):
+        validate_beginner_payload(payload, "business")
+
+
+def test_validate_business_payload_allows_procurement_caveat() -> None:
+    item = {
+        **_valid_business_item("보안 검증이 도입 판단의 앞단으로 이동한다"),
+        "dont_confuse": "복잡한 조달 없이 바로 도입된다는 뜻은 아니다.",
+    }
+    payload = {
+        "headline": "보안 검증이 기업 AI 도입 기준으로 올라온다",
+        "one_line": "AI 보안 도구는 기능보다 권한과 검증 절차를 함께 보게 만든다.",
+        "background": ["기업 도입에서는 기능 확인과 승인 절차가 함께 필요하다."],
+        "main_items": [
+            item,
+            _valid_business_item("도입 문의 경로가 생긴다"),
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    validate_beginner_payload(payload, "business")
+
+
+def test_validate_research_one_line_rejects_dense_frontloaded_jargon() -> None:
+    payload = {
+        "headline": "학습 데이터와 안전장치 연구가 함께 나왔다",
+        "one_line": (
+            "사전학습에서 토큰·모델 크기·데이터 품질·반복이 손실에 미치는 영향을 수치로 예측해 "
+            "데이터 레시피를 계획하게 해주는 도구와, 단일 뉴런 조작으로 거절 동작을 우회하는 취약성 연구가 동시에 제시됐다."
+        ),
+        "background": ["입문자 one_line은 연구 용어를 먼저 쌓지 말고 쉬운 결과부터 말해야 한다."],
+        "main_items": [
+            _valid_research_item("학습 데이터를 고르는 부담을 줄이는 연구"),
+            _valid_research_item("안전장치가 기대는 좁은 지점을 보여준 연구"),
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    with pytest.raises(ValueError, match="research one_line is too dense"):
+        validate_beginner_payload(payload, "research")
+
+
 def test_validate_research_payload_rejects_dense_method_terms_before_dont_confuse() -> None:
     item = {
         **_valid_research_item("라우팅 기준으로 후보를 좁힌다"),
@@ -304,7 +386,7 @@ def test_validate_research_payload_allows_related_method_family_terms() -> None:
     validate_beginner_payload(payload, "research")
 
 
-def test_validate_research_what_changed_requires_burden_reduction() -> None:
+def test_validate_research_what_changed_requires_change_or_risk_burden() -> None:
     item = {
         **_valid_research_item(),
         "what_changed": "새로운 비교 방법을 제안했다.",
@@ -318,8 +400,28 @@ def test_validate_research_what_changed_requires_burden_reduction() -> None:
         "next_reads": [],
     }
 
-    with pytest.raises(ValueError, match="what_changed must explain which burden is reduced"):
+    with pytest.raises(ValueError, match="what_changed must explain which burden changes"):
         validate_beginner_payload(payload, "research")
+
+
+def test_validate_research_what_changed_allows_new_check_burden() -> None:
+    item = {
+        **_valid_research_item("배포 전에 더 깊은 안전 점검이 필요해졌다"),
+        "what_happened": "내부 표현의 작은 조작으로 거부 동작을 우회할 수 있음을 보였다.",
+        "research_problem": "기존 점검은 프롬프트와 출력 샘플에 집중해 내부 표현 수준의 취약성을 놓칠 수 있었다.",
+        "what_changed": "프롬프트 점검만으로는 부족해져 배포 전 내부 표현과 가중치 수준의 검증 부담이 늘었다.",
+        "dont_confuse": "모든 모델이 같은 방식으로 쉽게 뚫린다는 뜻은 아니다.",
+    }
+    payload = {
+        "headline": "배포 전 안전 점검이 더 깊어져야 한다",
+        "one_line": "안전장치가 생각보다 좁은 지점에 기대고 있을 수 있음을 보여준 연구가 나왔다.",
+        "background": ["입문자는 새 위험이 드러나는 연구도 핵심 연구로 읽을 수 있어야 한다."],
+        "main_items": [item],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    validate_beginner_payload(payload, "research")
 
 
 def test_validate_skim_items_reject_long_why_skim() -> None:
@@ -751,7 +853,8 @@ def test_render_markdown_uses_beginner_research_section_labels() -> None:
     markdown = render_markdown(payload, "research", date(2026, 5, 12))
 
     assert "**왜 이 문제가 있었나**" in markdown
-    assert "**이번 방법은 무엇을 덜 필요하게 하나**" in markdown
+    assert "**무엇이 쉬워졌나 / 무엇을 더 조심해야 하나**" in markdown
+    assert "**이번 방법은 무엇을 덜 필요하게 하나**" not in markdown
     assert "**기존 방식은 뭐가 어려웠나**" not in markdown
     assert "**이번엔 뭐가 달라졌나**" not in markdown
 
@@ -762,3 +865,123 @@ def test_output_paths_are_date_and_type_scoped(tmp_path: Path) -> None:
     assert paths["json"] == tmp_path / "2026-05-11-research-beginner.json"
     assert paths["markdown"] == tmp_path / "2026-05-11-research-beginner.md"
     assert paths["prompt"] == tmp_path / "2026-05-11-research-beginner.prompt.txt"
+
+
+def test_output_paths_keep_legacy_ko_names_and_suffix_english(tmp_path: Path) -> None:
+    ko_paths = output_paths(tmp_path, date(2026, 5, 11), "business", locale="ko")
+    en_paths = output_paths(tmp_path, date(2026, 5, 11), "business", locale="en")
+
+    assert ko_paths["json"] == tmp_path / "2026-05-11-business-beginner.json"
+    assert en_paths["json"] == tmp_path / "2026-05-11-business-beginner-en.json"
+    assert en_paths["markdown"] == tmp_path / "2026-05-11-business-beginner-en.md"
+    assert en_paths["prompt"] == tmp_path / "2026-05-11-business-beginner-en.prompt.txt"
+
+
+def test_build_beginner_prompt_can_request_english_output() -> None:
+    prompt = build_beginner_prompt(_pair("business"), locale="en")
+
+    assert "Output language: English." in prompt
+    assert "Use the English digest row as the primary source" in prompt
+    assert "short English preview title" in prompt
+    assert "35 English words or fewer" in prompt
+    assert "Output language: Korean." not in prompt
+
+
+def test_render_article_markdown_uses_english_labels_for_english_locale() -> None:
+    payload = {
+        "headline": "Security review becomes part of AI adoption",
+        "one_line": "Teams are starting to evaluate AI tools by workflow risk, not only by feature lists.",
+        "background": ["Enterprise buyers need to know who owns the operational risk."],
+        "main_items": [
+            {
+                "title": "Security checks move earlier in adoption",
+                "what_happened": "A vendor positioned automated scans as part of the buying path.",
+                "why_people_care": "Teams need a clearer signal before connecting tools to real workflows.",
+                "business_relevance": "Procurement, security, and operations now have to review the same tool together.",
+                "dont_confuse": "This does not mean the product can be adopted immediately without review.",
+                "next_read": "Read the learner section on enterprise AI adoption.",
+            },
+            {
+                "title": "Workflow automation creates permission questions",
+                "what_happened": "A product update showed more operating-system-level actions.",
+                "why_people_care": "Useful automation also increases the need for permission boundaries.",
+                "business_relevance": "Teams need to decide which actions an AI tool may take on its own.",
+                "dont_confuse": "More automation is not automatically safer automation.",
+                "next_read": "Read the learner section on agent operations.",
+            },
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    markdown = render_article_markdown(payload, "business", locale="en")
+
+    assert markdown.startswith("## Today's Key Point")
+    assert "## Context First" in markdown
+    assert "## What To Understand Today" in markdown
+    assert "**What Happened**" in markdown
+    assert "**Why It Matters At Work**" in markdown
+    assert "오늘" not in markdown
+
+
+def test_build_beginner_backfill_update_targets_english_slug_from_english_artifact() -> None:
+    artifact = {
+        "date": "2026-05-11",
+        "digest_type": "business",
+        "locale": "en",
+        "source_slugs": ["2026-05-11-business-digest", "2026-05-11-business-digest-ko"],
+        "payload": {
+            "headline": "Security review becomes part of AI adoption",
+            "one_line": "Teams are starting to evaluate AI tools by workflow risk, not only by feature lists.",
+            "background": ["Enterprise buyers need to know who owns the operational risk."],
+            "main_items": [
+                {
+                    "title": "Security checks move earlier in adoption",
+                    "what_happened": "A vendor positioned automated scans as part of the buying path.",
+                    "why_people_care": "Teams need a clearer signal before connecting tools to real workflows.",
+                    "business_relevance": "Procurement, security, and operations now have to review the same tool together.",
+                    "dont_confuse": "This does not mean the product can be adopted immediately without review.",
+                    "next_read": "Read the learner section on enterprise AI adoption.",
+                },
+                {
+                    "title": "Workflow automation creates permission questions",
+                    "what_happened": "A product update showed more operating-system-level actions.",
+                    "why_people_care": "Useful automation also increases the need for permission boundaries.",
+                    "business_relevance": "Teams need to decide which actions an AI tool may take on its own.",
+                    "dont_confuse": "More automation is not automatically safer automation.",
+                    "next_read": "Read the learner section on agent operations.",
+                },
+            ],
+            "skim_items": [],
+            "next_reads": [],
+        },
+    }
+
+    slug, row = build_beginner_backfill_update(artifact)
+
+    assert slug == "2026-05-11-business-digest"
+    assert row["content_beginner"].startswith("## Today's Key Point")
+    assert row["title_beginner"] == "Security review becomes part of AI adoption"
+    assert row["guide_items"]["beginner_backfill"]["locale"] == "en"
+
+
+def test_validate_english_research_payload_allows_capitalized_copy_and_change_burden() -> None:
+    payload = {
+        "headline": "Training data planning gets easier to reason about",
+        "one_line": "Researchers showed a way to plan training data with less guesswork while also exposing a safety check that needs deeper review.",
+        "background": ["Beginners need the consequence before the method name."],
+        "main_items": [
+            {
+                "title": "Training data choices become easier to compare",
+                "why_people_care": "Teams spend large budgets before they know whether a data mix will help.",
+                "research_problem": "Previous planning often required running expensive training experiments first.",
+                "what_changed": "The method reduces cost and manual trial burden when comparing data candidates.",
+                "dont_confuse": "It does not remove the need to test the final model.",
+                "next_read": "Read the learner section on training data selection.",
+            }
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    validate_beginner_payload(payload, "research", locale="en")

@@ -325,7 +325,8 @@ def _build_digest_prompt(
         weighted_depth_rule = """3. BEGINNER DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
    - Do not turn every input group into a full section.
    - Research Beginner main_items: 1-2. Business Beginner main_items: 2-3.
-   - Main items get short `###` sections with concrete context, likely misconception, and why the item matters.
+   - Main items get short but not shallow `###` sections with concrete context, likely misconception, and why the item matters.
+   - A main item may use one setup sentence and one consequence sentence when a true beginner needs the extra step.
    - Remaining input groups belong under `Worth Skimming` / `가볍게 지나가도 되는 소식` as short bullets, not full sections.
    - Every input group must be represented either as a main item or a skim bullet."""
         depth_checklist = "Does beginner output use Research 1-2 or Business 2-3 main `###` items, with remaining groups covered under Worth Skimming?"
@@ -358,7 +359,7 @@ def _build_digest_prompt(
     )
     beginner_checklist = (
         "\n12. **Beginner-specific checks**: Does One-Line Summary state a lens rather than a catalog? Are schema labels like "
-        "`왜 이 문제가 있었나`, `이번 방법은 무엇을 덜 필요하게 하나`, or `헷갈리지 말 것` replaced with concrete answers? "
+        "`왜 이 문제가 있었나`, `무엇이 쉬워졌나 / 무엇을 더 조심해야 하나`, or `헷갈리지 말 것` replaced with concrete answers? "
         "Are term definitions left to handbook links instead of repeated glossary prose? Does `Read the Learner Digest Next` / "
         "`학습자 뉴스 이어읽기` point to a concrete next step?"
         if is_beginner
@@ -716,9 +717,9 @@ Writing rules:
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the business mental model is clear. Cover: what changed + why it matters + what it means for you."""
 
 
-RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - A lens sentence for a true beginner; summarize only selected main items.
+RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - A lens sentence for a true beginner; summarize only selected main items. It may be two tightly linked sentences when one sentence would become too dense.
 - **## Context First (ko: ## 먼저 알면 좋은 배경)** - 2-4 short bullets that explain the minimum background needed before the news.
-- **## Main Research to Understand Today (ko: ## 오늘 꼭 이해할 연구)** - 1-2 main research items. Each item explains what changed, what problem existed, what burden is reduced, and what not to confuse.
+- **## Main Research to Understand Today (ko: ## 오늘 꼭 이해할 연구)** - 1-2 main research items. Each item explains what changed, what problem existed, what burden is reduced or what new risk/check burden is exposed, and what not to confuse.
 - **## Worth Skimming (ko: ## 가볍게 지나가도 되는 소식)** - 0-4 lower-priority items, each as a short bullet with why skimming is enough.
 - **## Read the Learner Digest Next (ko: ## 학습자 뉴스 이어읽기)** - Concrete next step into the learner digest, not a generic recommendation.
 - **## Community Pulse (ko: ## 커뮤니티 반응)** - Include only when Community Pulse Data is provided."""
@@ -742,8 +743,11 @@ Beginner persona:
 - Research Beginner main_items: 1-2. Default to 2 only if both fit under one simple theme.
 - Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
 - One-Line Summary may summarize only selected main items. Do not mention skim-only stories there.
-- Main research items must answer: what changed, why the problem existed, what burden is reduced, and what not to confuse.
-- what_changed must state which burden is reduced: cost, access, manual work, data, execution, memory, time, or infrastructure.
+- One-Line Summary may be two tightly linked sentences for research when one sentence would become too dense.
+- Main research items must answer: what changed, why the problem existed, what burden is reduced or what new risk/check burden is exposed, and what not to confuse.
+- what_changed must state which burden is reduced or what new risk/check burden is exposed: cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
+- Write short but not shallow explanations. A main item field may use one setup sentence and one consequence sentence when a true beginner needs the extra step.
+- Research one_line should use at most 2 technical terms. Give the plain consequence before adding more detail.
 - Research main item body may use at most 2 technical method-term families before the "do not confuse" explanation.
 - Never copy schema labels as field content. Values such as "왜 이 문제가 있었나", "이번 방법은 무엇을 덜 필요하게 하나", or "헷갈리지 말 것" are labels, not answers.
 - Avoid reading instructions like "보세요" or "읽어보세요". Write article copy, not UI guidance.
@@ -761,7 +765,8 @@ Beginner persona:
 - Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
 - Business one_line is a lens sentence, not a catalog. It should answer what business lens connects the selected main items.
 - Do not list vendor, product, equipment, or project names in business one_line; put concrete names and examples in main_items instead.
-- Do not write reading instructions like 보세요 or 읽어보세요. State the lens as article copy.
+- Do not write reading instructions like 보세요, 읽어보세요, 오늘은 ... 보자, 중점으로 보자, or 관점으로 보자. State the lens as article copy.
+- If a product page only says request access, request a scan, or contact sales, say 도입 접점 or 파일럿 문의 경로가 생겼다. Do not infer 복잡한 조달 없이, 바로 도입, or 즉시 도입.
 - Main business items must answer: what happened, why people care, how it touches work or buying decisions, and what not to confuse.
 - Never copy schema labels as field content. Values such as "무슨 일이 있었나", "내 일과 무슨 관련이 있나", or "헷갈리지 말 것" are labels, not answers.
 - Avoid high-risk literal translations: deployment is not always "배치"; entity is not "법인" unless the source means a legal corporation; agent is not "대리인" in AI product contexts.
@@ -1257,10 +1262,10 @@ RESEARCH_BEGINNER_SKELETON = """
 **English ("en"):**
 ```
 ## One-Line Summary
-Running every model or experiment is becoming less necessary; today's research points to cheaper ways to choose, test, or control AI systems.
+Some research is making AI experiments easier to plan. Other work is showing where deployed systems need deeper safety checks.
 
 ## Context First
-- Many research stories are really about reducing a burden: compute cost, manual review, missing data, or deployment risk. [CITE_1]
+- Many research stories are about a burden changing: compute cost, manual review, missing data, deployment risk, or safety verification. [CITE_1]
 - Terms are clickable in the handbook, so this digest explains why the problem matters before defining the mechanism. [CITE_1]
 
 ## Main Research to Understand Today
@@ -1270,9 +1275,9 @@ The key change is that teams can narrow their choices before running every candi
 
 Do not confuse this with a guarantee that the selected model is always best. It is a way to reduce the search space before deeper evaluation, not a replacement for final testing. [CITE_1]
 
-### Less manual checking in AI evaluation
+### Deeper safety checks before deployment
 
-[1-2 short paragraphs explaining what changed, what burden is reduced, and what not to over-assume. Each paragraph ends with [CITE_N].]
+[1-2 short but not shallow paragraphs explaining what changed, what became easier or what new risk/check burden is exposed, and what not to over-assume. Each paragraph ends with [CITE_N].]
 
 ## Worth Skimming
 - Smaller runtime update — useful for teams already operating local models, but not central to today's beginner theme. [CITE_2]
@@ -1285,10 +1290,10 @@ Do not confuse this with a guarantee that the selected model is always best. It 
 **Korean ("ko"):**
 ```
 ## 한 줄 요약
-모든 모델이나 실험을 직접 돌리지 않아도 되는 방향으로 연구가 움직이고 있으며, 오늘의 핵심은 비용·검증·운영 부담을 줄이는 방법이다.
+일부 연구는 AI 실험을 더 계산적으로 계획하게 해준다. 다른 연구는 배포 전 안전 점검이 더 깊어져야 하는 지점을 보여준다.
 
 ## 먼저 알면 좋은 배경
-- 많은 연구 뉴스는 결국 연산 비용, 수작업 검토, 데이터 부족, 배포 위험 중 하나를 줄이려는 시도다. [CITE_1]
+- 많은 연구 뉴스는 결국 연산 비용, 수작업 검토, 데이터 부족, 배포 위험, 안전 검증 부담 중 하나가 어떻게 바뀌는지를 보여준다. [CITE_1]
 - 용어 정의는 핸드북에서 바로 볼 수 있으므로, 여기서는 방법 이름보다 왜 문제가 생겼는지 먼저 설명한다. [CITE_1]
 
 ## 오늘 꼭 이해할 연구
@@ -1298,9 +1303,9 @@ Do not confuse this with a guarantee that the selected model is always best. It 
 
 헷갈리지 말아야 할 점은, 이것이 최종 성능을 보장하는 자동 선택기는 아니라는 것이다. 깊은 평가 전에 후보군을 줄이는 방법에 가깝다. [CITE_1]
 
-### AI 평가에서 수작업 확인을 줄이는 방법
+### 배포 전에 더 깊이 점검해야 하는 안전 문제
 
-[1-2문단 — 무엇이 바뀌었는지, 어떤 부담이 줄었는지, 무엇을 과대해석하면 안 되는지. 각 문단은 [CITE_N]으로 끝남.]
+[1-2문단 — 짧되 얕지 않게, 무엇이 바뀌었는지, 무엇이 쉬워졌거나 어떤 새 위험·검증 부담이 드러났는지, 무엇을 과대해석하면 안 되는지. 각 문단은 [CITE_N]으로 끝남.]
 
 ## 가볍게 지나가도 되는 소식
 - 작은 런타임 업데이트 — 이미 로컬 모델을 운영하는 팀에는 유용하지만 오늘의 입문자 핵심 흐름은 아니다. [CITE_2]
@@ -1470,7 +1475,8 @@ For headline and excerpt:
 - Start with the visible change: cost, access, workflow, security, evaluation burden, vendor dependence, deployment risk, or operating complexity.
 - Avoid project-first or vendor-list headlines.
 - Prefer one clear lens over a stitched catalog of 2-3 stories.
-- Do not use reading instructions such as "보세요" or "읽어보세요"; write article copy.
+- Do not use reading instructions such as "보세요", "읽어보세요", "오늘은 ... 보자", or "중점으로 보자"; write article copy.
+- For research frontload, keep technical density low: use at most 2 technical terms before the plain consequence.
 
 For Korean:
 - Use natural editorial Korean, not chatty spoken copy.
@@ -2420,12 +2426,13 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Accessibility
 - **context_first**: Background and first paragraphs explain the problem context before method names, benchmark terms, or acronyms.
+- **one_line_jargon_density**: One-Line Summary starts with the plain consequence and does not stack more than 2 research/training terms before that consequence; flag dense strings like "사전학습, 토큰, 모델 크기, 데이터 품질, 반복, 손실, 단일 뉴런" in one sentence.
 - **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
-- **research_burden_reduction**: Each main research item explains what burden is reduced — cost, access, manual work, data, execution, memory, time, or infrastructure.
+- **research_burden_reduction**: Each main research item explains what burden is reduced or what new risk/check burden is exposed — cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 
 ### Language Quality
 - **schema_placeholder**: No schema labels are copied as content. Bad values include "왜 이 문제가 있었나", "이번 방법은 무엇을 덜 필요하게 하나", "헷갈리지 말 것".
-- **article_copy**: One-Line Summary and body are article copy, not reading instructions; flag "보세요", "읽어보세요", or "이 관점으로 보면".
+- **article_copy**: One-Line Summary and body are article copy, not reading instructions; flag "보세요", "읽어보세요", "오늘은 ... 보자", "중점으로 보자", "관점으로 보자", or "이 관점으로 보면".
 - **locale_integrity**: EN is English-only and KO is Korean editorial prose, with no garbled or wrong-locale paragraphs.
 
 {_QC_SHARED_SEVERITY_RULES}
@@ -2439,6 +2446,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   }},
   "accessibility": {{
     "context_first": {{"evidence": "...", "score": 0}},
+    "one_line_jargon_density": {{"evidence": "...", "score": 0}},
     "term_definition_repetition": {{"evidence": "...", "score": 0}},
     "research_burden_reduction": {{"evidence": "...", "score": 0}}
   }},
@@ -2467,11 +2475,12 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 ### Business Accessibility
 - **business_lens_sentence**: One-Line Summary is a lens sentence, not a catalog/list of vendors, products, equipment, or projects.
 - **context_first**: Background and first paragraphs explain the business situation before product names, funding mechanics, or infrastructure terms.
+- **rollout_overclaim**: Product access claims are calibrated. Flag "복잡한 조달 없이", "조달 없이", "바로 도입", or "즉시 도입" unless a primary source explicitly says that; prefer "도입 접점", "문의 경로", or "파일럿 검토".
 - **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
 
 ### Language Quality
 - **schema_placeholder**: No schema labels are copied as content. Bad values include "무슨 일이 있었나", "내 일과 무슨 관련이 있나", "헷갈리지 말 것".
-- **article_copy**: One-Line Summary and body are article copy, not reading instructions; flag "보세요", "읽어보세요", or "이 관점으로 보면".
+- **article_copy**: One-Line Summary and body are article copy, not reading instructions; flag "보세요", "읽어보세요", "오늘은 ... 보자", "중점으로 보자", "관점으로 보자", or "이 관점으로 보면".
 - **locale_integrity**: EN is English-only and KO is Korean editorial prose, with no garbled or wrong-locale paragraphs.
 
 {_QC_SHARED_SEVERITY_RULES}
@@ -2486,6 +2495,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   "business_accessibility": {{
     "business_lens_sentence": {{"evidence": "...", "score": 0}},
     "context_first": {{"evidence": "...", "score": 0}},
+    "rollout_overclaim": {{"evidence": "...", "score": 0}},
     "term_definition_repetition": {{"evidence": "...", "score": 0}}
   }},
   "language_quality": {{
