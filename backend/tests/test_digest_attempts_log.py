@@ -38,7 +38,7 @@ def writer_block() -> str:
     src = SRC.read_text(encoding="utf-8")
     start = src.find("attempts_log: list[dict[str, Any]] = []")
     assert start > 0, "could not find attempts_log initialization"
-    end = src.find("# Validate: all 3 personas must exist", start)
+    end = src.find("# Validate: expert/learner remain the hard requirement.", start)
     assert end > start
     return src[start:end]
 
@@ -48,7 +48,7 @@ def test_attempts_log_initialized_per_persona(writer_block: str) -> None:
     across personas would conflate two independent retry timelines into one."""
     src = SRC.read_text(encoding="utf-8")
     init = src.find("attempts_log: list[dict[str, Any]] = []")
-    persona_loop_start = src.find('for persona_name in ("expert", "learner")')
+    persona_loop_start = src.find("for persona_name in DAILY_DIGEST_PERSONAS")
     attempt_loop_start = src.find("for attempt in range(MAX_DIGEST_RETRIES + 1):")
     assert persona_loop_start < init < attempt_loop_start, (
         "attempts_log must initialize INSIDE the persona loop but BEFORE the "

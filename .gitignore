@@ -29,6 +29,7 @@ venv/
 
 # Temp
 .tmp_publish_*/
+output/
 
 # examples
 examples/

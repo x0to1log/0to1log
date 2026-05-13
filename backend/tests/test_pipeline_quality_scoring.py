@@ -171,6 +171,35 @@ def test_issue_penalty_and_caps_are_deterministic():
     assert final_score == 84
 
 
+def test_daily_primary_source_priority_flags_secondary_first_when_official_source_is_available():
+    from services.pipeline import _aggregate_subscores as _  # initialize re-export cycle
+    from services import pipeline_quality
+
+    helper = getattr(pipeline_quality, "_find_daily_primary_source_priority_issues", None)
+    cap_helper = getattr(pipeline_quality, "_daily_guardrail_cap_labels", None)
+    assert helper is not None
+    assert cap_helper is not None
+
+    body = (
+        "## Big Tech\n\n"
+        "### OpenAI launches Daybreak for proactive cybersecurity\n\n"
+        "OpenAI launches Daybreak to detect and patch software vulnerabilities before attackers find them. "
+        "[1](https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai)\n"
+    )
+    source_urls = [
+        "https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai",
+        "https://openai.com/daybreak/",
+    ]
+
+    issues = helper(body, source_urls, "expert_body")
+
+    assert len(issues) == 1
+    assert issues[0]["severity"] == "minor"
+    assert issues[0]["category"] == "source"
+    assert "daily_primary_source_priority" in issues[0]["message"]
+    assert "daily_primary_source_cap_92" in cap_helper(issues)
+
+
 @pytest.mark.asyncio
 async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     from services.pipeline import _check_digest_quality
@@ -255,6 +284,115 @@ async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     assert any("한국어 전문가 본문" in prompt for prompt in captured_user_prompts[:2])
     assert "AI infrastructure war" in captured_user_prompts[2]
     assert "엔비디아가 Thinking Machines 딜로 AI 인프라 전쟁 승리" in captured_user_prompts[2]
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_applies_daily_primary_source_cap_when_writer_uses_secondary_first():
+    from services.pipeline import _check_digest_quality
+
+    personas = {
+        "expert": PersonaOutput(
+            en=(
+                "## One-Line Summary\nOpenAI launches Daybreak for software defense.\n\n"
+                "## Big Tech\n\n"
+                "### OpenAI launches Daybreak for proactive cybersecurity\n\n"
+                "OpenAI launches Daybreak to detect and patch software vulnerabilities before attackers find them. "
+                "[1](https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai)\n"
+            ),
+            ko=(
+                "## 한 줄 요약\nOpenAI가 Daybreak를 공개했다.\n\n"
+                "## Big Tech\n\n"
+                "### OpenAI Daybreak 공개\n\n"
+                "OpenAI가 소프트웨어 취약점 방어를 위한 Daybreak를 공개했다. "
+                "[1](https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai)\n"
+            ),
+        ),
+        "learner": PersonaOutput(
+            en=(
+                "## One-Line Summary\nOpenAI launches Daybreak for software defense.\n\n"
+                "## Big Tech\n\n"
+                "### OpenAI launches Daybreak for proactive cybersecurity\n\n"
+                "OpenAI launches Daybreak to help teams find software vulnerabilities earlier. "
+                "[1](https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai)\n"
+            ),
+            ko=(
+                "## 한 줄 요약\nOpenAI가 Daybreak를 공개했다.\n\n"
+                "## Big Tech\n\n"
+                "### OpenAI Daybreak 공개\n\n"
+                "OpenAI가 취약점 탐지를 돕는 Daybreak를 공개했다. "
+                "[1](https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai)\n"
+            ),
+        ),
+    }
+    frontload = {
+        "headline": "OpenAI launches Daybreak to automate software vulnerability defense",
+        "headline_ko": "OpenAI, Daybreak로 소프트웨어 취약점 방어 자동화",
+        "excerpt": "OpenAI unveiled Daybreak for software vulnerability defense.",
+        "excerpt_ko": "OpenAI가 소프트웨어 취약점 방어를 위한 Daybreak를 공개했다.",
+        "focus_items": ["OpenAI launches Daybreak", "Codex Security supports vulnerability detection"],
+        "focus_items_ko": ["OpenAI가 Daybreak 공개", "Codex Security가 취약점 탐지를 지원"],
+    }
+    classified = [
+        ClassifiedGroup(
+            group_title="OpenAI launches Daybreak for proactive cybersecurity",
+            items=[
+                GroupedItem(
+                    url="https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai",
+                    title="OpenAI just released its answer to Claude Mythos",
+                )
+            ],
+            category="business",
+            subcategory="big_tech",
+            reason="[LEAD] Major",
+        )
+    ]
+    enriched_map = {
+        classified[0].primary_url: [
+            {
+                "url": "https://openai.com/daybreak/",
+                "title": "Daybreak",
+                "source_kind": "official_site",
+                "source_tier": "primary",
+            }
+        ]
+    }
+    perfect_payload = {
+        "structural_completeness": {"sections_present": {"evidence": "ok", "score": 10}},
+        "source_quality": {"citation_coverage": {"evidence": "ok", "score": 10}},
+        "language_quality": {"fluency": {"evidence": "ok", "score": 10}},
+        "issues": [],
+    }
+    responses = [_mock_openai_response(perfect_payload) for _ in range(3)]
+
+    async def _create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=classified,
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-source-cap",
+            cumulative_usage={},
+            frontload=frontload,
+            enriched_map=enriched_map,
+        )
+
+    assert result["score"] == 92
+    assert "daily_primary_source_cap_92" in result["quality_caps_applied"]
+    assert any(
+        "daily_primary_source_priority" in issue["message"]
+        for issue in result["quality_issues"]
+    )
 
 
 @pytest.mark.asyncio
@@ -380,6 +518,83 @@ async def test_check_digest_quality_returns_per_call_breakdowns_for_admin_drill_
 # ---------------------------------------------------------------------------
 # Phase 2 — URL Strict Allowlist Validation
 # ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_scores_beginner_when_present():
+    from services.pipeline import _check_digest_quality
+
+    body_en = (
+        "## Context First\n\n"
+        "### What changed\n\n"
+        "First paragraph [1](https://example.com/story)\n\n"
+        "Second paragraph [1](https://example.com/story)\n\n"
+        "Third paragraph [1](https://example.com/story)\n"
+    )
+    body_ko = (
+        "## 먼저 볼 맥락\n\n"
+        "### 무엇이 바뀌었나\n\n"
+        "첫 문단 [1](https://example.com/story)\n\n"
+        "둘째 문단 [1](https://example.com/story)\n\n"
+        "셋째 문단 [1](https://example.com/story)\n"
+    )
+    personas = {
+        "expert": PersonaOutput(en=body_en, ko=body_ko),
+        "learner": PersonaOutput(en=body_en, ko=body_ko),
+        "beginner": PersonaOutput(en=body_en, ko=body_ko),
+    }
+    frontload = {
+        "headline": "Grounded headline",
+        "headline_ko": "근거 있는 제목",
+        "excerpt": "Grounded excerpt.",
+        "excerpt_ko": "근거 있는 요약.",
+        "focus_items": ["One thing"],
+        "focus_items_ko": ["한 가지"],
+    }
+    responses = [
+        _mock_openai_response({"score": 100, "subscores": {}, "issues": []}),
+        _mock_openai_response({"score": 100, "subscores": {}, "issues": []}),
+        _mock_openai_response({
+            "score": 100,
+            "subscores": {
+                "accessibility": {
+                    "context_first": {"evidence": "beginner context is first", "score": 10},
+                },
+            },
+            "issues": [],
+        }),
+        _mock_openai_response({"score": 100, "subscores": {}, "issues": []}),
+    ]
+    captured_payloads: list[str] = []
+
+    async def _create(*args, **kwargs):
+        captured_payloads.append(kwargs["messages"][1]["content"])
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        result = await _check_digest_quality(
+            personas=personas,
+            digest_type="research",
+            classified=_sample_group(),
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-beginner",
+            cumulative_usage={},
+            frontload=frontload,
+        )
+
+    assert mock_client.chat.completions.create.await_count == 4
+    assert any("Persona: beginner" in payload for payload in captured_payloads)
+    assert result["quality_breakdown"]["llm"]["beginner_body"] == 16
+    assert result["quality_breakdown"]["raw_llm"]["beginner_body"] == 100
+    assert result["beginner_breakdown"]["accessibility"]["context_first"]["score"] == 10
+
 
 class TestValidateCitationUrls:
     """Verify URL strict allowlist validation against fact_pack.news_items."""

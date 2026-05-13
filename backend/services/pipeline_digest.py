@@ -57,6 +57,9 @@ from services.pipeline import (  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
+DAILY_DIGEST_PERSONAS: tuple[str, ...] = ("expert", "learner", "beginner")
+REQUIRED_DAILY_DIGEST_PERSONAS: tuple[str, ...] = ("expert", "learner")
+
 
 # ---------------------------------------------------------------------------
 # CP Data input builder (per-topic entry passed to writer prompt)
@@ -895,16 +898,20 @@ async def _generate_digest(
     digest_headline_learner_ko = ""        # learner headline_ko
     digest_excerpt_learner = ""            # learner excerpt
     digest_excerpt_learner_ko = ""         # learner excerpt_ko
-    persona_sources: dict[str, list[dict]] = {}  # {"expert": [...], "learner": [...]}
+    digest_headline_beginner = ""          # beginner headline (saved to title_beginner/guide_items.title_beginner)
+    digest_headline_beginner_ko = ""       # beginner headline_ko
+    digest_excerpt_beginner = ""           # beginner excerpt
+    digest_excerpt_beginner_ko = ""        # beginner excerpt_ko
+    persona_sources: dict[str, list[dict]] = {}  # {"expert": [...], "learner": [...], "beginner": [...]}
     digest_tags: list[str] = []
     digest_focus_items: list[str] = []
     digest_focus_items_ko: list[str] = []
-    persona_quizzes: dict[str, dict] = {}  # {"expert": {"en": {...}, "ko": {...}}, "learner": {...}}
+    persona_quizzes: dict[str, dict] = {}  # {"expert": {"en": {...}, "ko": {...}}, "learner": {...}, ...}
     persona_prompts: dict[str, str] = {}
 
     MAX_DIGEST_RETRIES = 2  # 2 retries = 3 total attempts
 
-    for persona_name in ("expert", "learner"):
+    for persona_name in DAILY_DIGEST_PERSONAS:
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
         persona_prompts[persona_name] = system_prompt
@@ -1048,6 +1055,17 @@ async def _generate_digest(
                         digest_excerpt_learner = data["excerpt"]
                     if not digest_excerpt_learner_ko and data.get("excerpt_ko"):
                         digest_excerpt_learner_ko = data["excerpt_ko"]
+                elif persona_name == "beginner":
+                    if not digest_headline_beginner and data.get("headline"):
+                        h = data["headline"]
+                        if not _has_ko(h):
+                            digest_headline_beginner = h
+                    if not digest_headline_beginner_ko and data.get("headline_ko"):
+                        digest_headline_beginner_ko = data["headline_ko"]
+                    if not digest_excerpt_beginner and data.get("excerpt"):
+                        digest_excerpt_beginner = data["excerpt"]
+                    if not digest_excerpt_beginner_ko and data.get("excerpt_ko"):
+                        digest_excerpt_beginner_ko = data["excerpt_ko"]
                 if not digest_tags and data.get("tags"):
                     digest_tags = data["tags"]
                 if not digest_focus_items and data.get("focus_items"):
@@ -1245,7 +1263,8 @@ async def _generate_digest(
                         f"{attempt + 1} attempts (schema): {schema_err}"
                     )
                     logger.error(error_msg)
-                    errors.append(error_msg)
+                    if persona_name in REQUIRED_DAILY_DIGEST_PERSONAS:
+                        errors.append(error_msg)
                     await _log_stage(
                         supabase, run_id,
                         f"digest:{digest_type}:{persona_name}", "failed", t_p,
@@ -1274,7 +1293,8 @@ async def _generate_digest(
                 if attempt == MAX_DIGEST_RETRIES:
                     error_msg = f"{digest_type} {persona_name} digest failed after {attempt + 1} attempts: {e}"
                     logger.error(error_msg)
-                    errors.append(error_msg)
+                    if persona_name in REQUIRED_DAILY_DIGEST_PERSONAS:
+                        errors.append(error_msg)
                     await _log_stage(
                         supabase, run_id,
                         f"digest:{digest_type}:{persona_name}", "failed", t_p,
@@ -1286,9 +1306,11 @@ async def _generate_digest(
                         },
                     )
 
-    # Validate: all 3 personas must exist AND have non-empty content
+    # Validate: expert/learner remain the hard requirement. Beginner is
+    # staged as additive: attempt it, save it when valid, but do not let a
+    # new-persona failure wipe out otherwise usable daily drafts.
     incomplete = []
-    for pname in ("expert", "learner"):
+    for pname in REQUIRED_DAILY_DIGEST_PERSONAS:
         p = personas.get(pname)
         if not p:
             incomplete.append(f"{pname} (missing)")
@@ -1299,6 +1321,10 @@ async def _generate_digest(
         logger.error(error_msg)
         errors.append(error_msg)
         return 0, errors, cumulative_usage
+    beginner_output = personas.get("beginner")
+    if not beginner_output or not beginner_output.en.strip() or not beginner_output.ko.strip():
+        logger.warning("Beginner persona missing or incomplete for %s; saving expert/learner only", digest_type)
+        auto_publish = False
 
     # Lazy import to break circular dependency (pipeline_quality ↔ pipeline_digest)
     from services.pipeline_quality import _check_digest_quality, _find_digest_blockers
@@ -1439,7 +1465,7 @@ async def _generate_digest(
         auto_publish = False
 
     # Save EN + KO rows
-    missing = [p for p in ("expert", "learner") if p not in personas]
+    missing = [p for p in DAILY_DIGEST_PERSONAS if p not in personas]
     if missing:
         logger.warning("Missing personas for %s digest: %s", digest_type, missing)
 
@@ -1450,7 +1476,8 @@ async def _generate_digest(
     fallback_source_urls = [url for group in classified for url in group.urls]
     merged_persona_sources = (
         (persona_sources.get("expert") or []) +
-        (persona_sources.get("learner") or [])
+        (persona_sources.get("learner") or []) +
+        (persona_sources.get("beginner") or [])
     )
     _group_by_url = {group.primary_url: group for group in classified}
 
@@ -1511,18 +1538,21 @@ async def _generate_digest(
         # Calculate reading time from expert content (longest persona)
         expert_content = (personas["expert"].en if locale == "en" else personas["expert"].ko) if "expert" in personas else ""
         learner_content = (personas["learner"].en if locale == "en" else personas["learner"].ko) if "learner" in personas else ""
+        beginner_content = (personas["beginner"].en if locale == "en" else personas["beginner"].ko) if "beginner" in personas else ""
 
         # Post-process: fix bold markdown with parenthetical abbreviations
         # **Rejection Fine-Tuning(RFT)** → **Rejection Fine-Tuning** (RFT)
         # Helper preserves markdown links: **[Label](URL)** stays intact.
         expert_content = _fix_bold_paren_abbrev(expert_content)
         learner_content = _fix_bold_paren_abbrev(learner_content)
+        beginner_content = _fix_bold_paren_abbrev(beginner_content)
 
         # Post-process: remove [LEAD]/[SUPPORTING] tags leaked into output
         # These are input-only signals that LLM sometimes copies into headings
         for tag in ['[LEAD]', '[SUPPORTING]', '([LEAD])', '([SUPPORTING])']:
             expert_content = expert_content.replace(tag, '')
             learner_content = learner_content.replace(tag, '')
+            beginner_content = beginner_content.replace(tag, '')
 
         # Post-process: renumber citations sequentially by URL appearance order
         # LLM may reset [1] per section — this forces global sequential numbering.
@@ -1574,9 +1604,14 @@ async def _generate_digest(
             allowed_urls,
             source_meta_by_url,
         )
+        beginner_content, beginner_source_cards = _renumber_citations(
+            beginner_content,
+            allowed_urls,
+            source_meta_by_url,
+        )
 
         combined_source_cards = _dedup_source_cards(
-            (expert_source_cards or []) + (learner_source_cards or [])
+            (expert_source_cards or []) + (learner_source_cards or []) + (beginner_source_cards or [])
         )
         if not combined_source_cards and fallback_source_urls:
             combined_source_cards = [
@@ -1592,7 +1627,7 @@ async def _generate_digest(
             ]
 
 
-        text = expert_content or learner_content or ""
+        text = expert_content or learner_content or beginner_content or ""
         if locale == "ko":
             # Korean: count characters (excluding spaces/punctuation), ~500 chars/min
             char_count = len([c for c in text if c.strip() and c not in '.,!?;:()[]{}"\'-—·…#*_~`|/>'])
@@ -1621,6 +1656,8 @@ async def _generate_digest(
             row["content_expert"] = expert_content
         if learner_content:
             row["content_learner"] = learner_content
+        if beginner_content:
+            row["content_beginner"] = beginner_content
         row.update({
             "excerpt": excerpt or None,
             "tags": digest_tags or [],
@@ -1642,6 +1679,7 @@ async def _generate_digest(
                 # trail is critical for auto-publish decisions.
                 "expert_breakdown": quality_meta.get("expert_breakdown", {}),
                 "learner_breakdown": quality_meta.get("learner_breakdown", {}),
+                "beginner_breakdown": quality_meta.get("beginner_breakdown", {}),
                 "frontload_breakdown": quality_meta.get("frontload_breakdown", {}),
                 "quality_issues": quality_meta.get("quality_issues", []),
                 "quality_caps_applied": quality_meta.get("quality_caps_applied", []),
@@ -1666,7 +1704,7 @@ async def _generate_digest(
         # that would silently break after shuffle.
         from services.pipeline import _validate_and_shuffle_quiz_item
         guide_items: dict[str, Any] = {}
-        for pname in ("expert", "learner"):
+        for pname in DAILY_DIGEST_PERSONAS:
             raw_quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
             quiz = _validate_and_shuffle_quiz_item(
                 raw_quiz, label=f"Daily quiz {digest_type}/{pname}/{locale}"
@@ -1682,14 +1720,25 @@ async def _generate_digest(
             guide_items["sources_learner"] = _fill_source_titles(
                 learner_source_cards, persona_sources.get("learner") or [],
             )
+        if beginner_source_cards:
+            guide_items["sources_beginner"] = _fill_source_titles(
+                beginner_source_cards, persona_sources.get("beginner") or [],
+            )
         # Persona-specific title/excerpt for learner (B2 — used in list cards, SNS preview, search)
         learner_title = digest_headline_learner_ko if locale == "ko" else digest_headline_learner
         learner_excerpt = digest_excerpt_learner_ko if locale == "ko" else digest_excerpt_learner
+        beginner_title = digest_headline_beginner_ko if locale == "ko" else digest_headline_beginner
+        beginner_excerpt = digest_excerpt_beginner_ko if locale == "ko" else digest_excerpt_beginner
         if learner_title:
             guide_items["title_learner"] = learner_title
         if learner_excerpt:
             guide_items["excerpt_learner"] = learner_excerpt
+        if beginner_title:
+            guide_items["title_beginner"] = beginner_title
+        if beginner_excerpt:
+            guide_items["excerpt_beginner"] = beginner_excerpt
         row["title_learner"] = learner_title if learner_title else None
+        row["title_beginner"] = beginner_title if beginner_title else None
         if guide_items:
             row["guide_items"] = guide_items
 

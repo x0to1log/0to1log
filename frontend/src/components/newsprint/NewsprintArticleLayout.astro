@@ -16,6 +16,7 @@ interface GuideItems {
   quiz_poll?: QuizPoll | null;
   weekly_quiz_expert?: QuizPoll[];
   weekly_quiz_learner?: QuizPoll[];
+  weekly_quiz_beginner?: QuizPoll[];
 }
 
 interface FactPackItem {
@@ -115,7 +116,7 @@ const activeQuiz: QuizPoll | null = (() => {
   const q = guideItemsAny[personaKey] || guideItemsAny.quiz_poll || null;
   return q?.question ? q : null;
 })();
-const hasQuizData = !!(guideItemsAny?.quiz_poll_expert?.question || guideItemsAny?.quiz_poll_learner?.question || guideItemsAny?.quiz_poll?.question);
+const hasQuizData = !!(guideItemsAny?.quiz_poll_expert?.question || guideItemsAny?.quiz_poll_learner?.question || guideItemsAny?.quiz_poll_beginner?.question || guideItemsAny?.quiz_poll?.question);
 
 // Weekly-only: 3-question persona-split quiz list (guide_items.weekly_quiz_{persona})
 const isWeeklyPost = postType === 'weekly';
@@ -127,7 +128,8 @@ const activeWeeklyQuizzes: QuizPoll[] = (() => {
 })();
 const hasWeeklyQuizData = isWeeklyPost && (
   (Array.isArray(guideItemsAny?.weekly_quiz_expert) && guideItemsAny!.weekly_quiz_expert!.length > 0) ||
-  (Array.isArray(guideItemsAny?.weekly_quiz_learner) && guideItemsAny!.weekly_quiz_learner!.length > 0)
+  (Array.isArray(guideItemsAny?.weekly_quiz_learner) && guideItemsAny!.weekly_quiz_learner!.length > 0) ||
+  (Array.isArray(guideItemsAny?.weekly_quiz_beginner) && guideItemsAny!.weekly_quiz_beginner!.length > 0)
 );
 
 const hasGuideItems = guideItems && (hasQuizData || hasWeeklyQuizData);
@@ -150,8 +152,8 @@ const resolveQuizAnswer = (quiz: QuizPoll): string => {
 };
 
 const personaLabels: Record<string, Record<string, string>> = {
-  en: { learner: 'Learner', expert: 'Expert' },
-  ko: { learner: '학습자', expert: '현직자' },
+  en: { beginner: 'Beginner', learner: 'Learner', expert: 'Expert' },
+  ko: { beginner: '입문자', learner: '학습자', expert: '현직자' },
 };
 const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
@@ -311,7 +313,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         <div class="switcher-bar-line"></div>
         <span class="switcher-bar-label">{locale === 'ko' ? '읽기 모드' : 'Reading Mode'}</span>
         <div class="persona-switcher">
-        {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+        {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
           <button
             type="button"
             class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
@@ -326,12 +328,15 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
         expert: guideItemsAny?.quiz_poll_expert || null,
         learner: guideItemsAny?.quiz_poll_learner || null,
+        beginner: guideItemsAny?.quiz_poll_beginner || null,
       })} data-weekly-quizzes={JSON.stringify({
         expert: Array.isArray(guideItemsAny?.weekly_quiz_expert) ? guideItemsAny!.weekly_quiz_expert : [],
         learner: Array.isArray(guideItemsAny?.weekly_quiz_learner) ? guideItemsAny!.weekly_quiz_learner : [],
+        beginner: Array.isArray(guideItemsAny?.weekly_quiz_beginner) ? guideItemsAny!.weekly_quiz_beginner : [],
       })} data-sources={JSON.stringify({
         expert: guideItemsAny?.sources_expert || null,
         learner: guideItemsAny?.sources_learner || null,
+        beginner: guideItemsAny?.sources_beginner || null,
       })}></template>
     </>
   )}
@@ -342,7 +347,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         {backLabel}
         <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
       </a>
-      {(['learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+      {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
         <button
           type="button"
           class={`persona-float-btn ${p === activePersona ? 'persona-float-btn--active' : ''}`}

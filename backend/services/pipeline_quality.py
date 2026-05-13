@@ -105,12 +105,39 @@ def _build_frontload_quality_payload(frontload: dict[str, Any] | None) -> str:
     ).strip()
 
 
+def _collect_digest_source_urls(
+    classified: list,
+    enriched_map: dict[str, list[dict[str, Any]]] | None,
+) -> list[str]:
+    """Collect every URL the daily writer could cite."""
+    urls: list[str] = []
+    seen: set[str] = set()
+
+    def add(url: str | None) -> None:
+        if not url or url in seen:
+            return
+        urls.append(url)
+        seen.add(url)
+
+    for group in classified or []:
+        for item in (getattr(group, "items", None) or []):
+            add(getattr(item, "url", None))
+
+    for anchor_url, enriched_list in (enriched_map or {}).items():
+        add(anchor_url)
+        for entry in enriched_list or []:
+            if isinstance(entry, dict):
+                add(entry.get("url"))
+
+    return urls
+
+
 # ---------------------------------------------------------------------------
 # Group 2 — Score normalizers & penalty engine
 # ---------------------------------------------------------------------------
 
 _CANONICAL_SCOPES = {
-    "expert_body", "learner_body", "frontload", "ko", "en",
+    "expert_body", "learner_body", "beginner_body", "frontload", "ko", "en",
 }
 
 
@@ -318,10 +345,330 @@ def _compute_weekly_locale_score(
     return max(0, score)
 
 
+_WEEKLY_CITATION_RE = re.compile(r"\[\d+\]\(https?://[^)]+\)")
+_WEEKLY_MARKDOWN_URL_RE = re.compile(r"\[\d+\]\((https?://[^)]+)\)")
+
+
+def _weekly_section_lines(body: str, headings: set[str]) -> list[str]:
+    """Return lines inside the first matching weekly H2 section."""
+    if not body:
+        return []
+    lines = body.splitlines()
+    selected: list[str] = []
+    in_section = False
+    for line in lines:
+        if line.startswith("## "):
+            heading = line[3:].strip()
+            if in_section:
+                break
+            in_section = heading in headings
+            continue
+        if in_section:
+            selected.append(line)
+    return selected
+
+
+def _weekly_bullet_lines(body: str, headings: set[str]) -> list[str]:
+    return [
+        line.strip()
+        for line in _weekly_section_lines(body, headings)
+        if re.match(r"^([-*]\s+|\d+\.\s+)", line.strip())
+    ]
+
+
+def _weekly_top_story_blocks(body: str) -> list[tuple[str, str]]:
+    """Extract (heading, body) pairs under weekly Top Stories / TOP 뉴스."""
+    if not body:
+        return []
+    blocks: list[tuple[str, str]] = []
+    in_top = False
+    current_heading: str | None = None
+    current_lines: list[str] = []
+    for line in body.splitlines():
+        if line.startswith("## "):
+            if in_top and current_heading:
+                blocks.append((current_heading, "\n".join(current_lines).strip()))
+            in_top = line[3:].strip() in {"Top Stories", "TOP 뉴스"}
+            current_heading = None
+            current_lines = []
+            continue
+        if not in_top:
+            continue
+        if line.startswith("### "):
+            if current_heading:
+                blocks.append((current_heading, "\n".join(current_lines).strip()))
+            current_heading = line[4:].strip()
+            current_lines = []
+            continue
+        if current_heading is not None:
+            current_lines.append(line)
+    if in_top and current_heading:
+        blocks.append((current_heading, "\n".join(current_lines).strip()))
+    return blocks
+
+
+def _weekly_issue(scope: str, message: str) -> dict[str, str]:
+    return {
+        "severity": "minor",
+        "scope": scope,
+        "category": "source",
+        "message": message,
+    }
+
+
+def _find_weekly_citation_contract_issues(body: str, scope: str) -> list[dict[str, str]]:
+    """Find weekly-only citation contract gaps that paragraph-ratio scoring hides."""
+    if not body:
+        return []
+    issues: list[dict[str, str]] = []
+    section_specs = [
+        ("week_in_numbers", {"Week in Numbers", "이번 주 숫자"}),
+        ("watch_points", {"Watch Points", "주목할 포인트"}),
+        ("action", {"So What Do I Do?", "What Can I Try?", "그래서 나는?", "이번 주 해볼 것"}),
+    ]
+    for section_key, headings in section_specs:
+        for line in _weekly_bullet_lines(body, headings):
+            if not _WEEKLY_CITATION_RE.search(line):
+                issues.append(_weekly_issue(
+                    scope,
+                    f"weekly_citation_contract:{section_key}: bullet missing [N](URL): {line[:140]}",
+                ))
+
+    for heading, block in _weekly_top_story_blocks(body):
+        paragraphs = [
+            p.strip()
+            for p in re.split(r"\n\s*\n", block)
+            if p.strip() and not p.strip().startswith(("## ", "### "))
+        ]
+        for idx, paragraph in enumerate(paragraphs, start=1):
+            if _WEEKLY_CITATION_RE.search(paragraph):
+                continue
+            issues.append(_weekly_issue(
+                scope,
+                f"weekly_citation_contract:top_story_paragraph: '{heading}' paragraph {idx} missing [N](URL)",
+            ))
+    return issues
+
+
+_OFFICIAL_SOURCE_RULES: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
+    (("openai", "chatgpt", "gpt-", "codex"), ("openai.com",)),
+    (("amazon", "aws", "bedrock", "trainium"), ("aboutamazon.com", "press.aboutamazon.com", "aws.amazon.com", "openai.com")),
+    (("google", "gemini", "deepmind"), ("blog.google", "cloud.google.com", "developers.googleblog.com", "ai.google.dev", "deepmind.google")),
+    (("microsoft", "copilot", "azure"), ("microsoft.com", "techcommunity.microsoft.com", "azure.microsoft.com", "github.com/microsoft/")),
+    (("nvidia", "nemotron", "vera", "cuda"), ("nvidia.com", "nvidianews.nvidia.com", "developer.nvidia.com", "blogs.nvidia.com", "github.com/nvidia/")),
+    (("anthropic", "claude"), ("anthropic.com",)),
+    (("meta", "llama"), ("meta.com", "ai.meta.com", "about.fb.com", "engineering.fb.com", "github.com/facebookresearch/", "github.com/meta-llama/")),
+    (("apple", "ios", "siri"), ("apple.com", "developer.apple.com", "machinelearning.apple.com")),
+    (("eu", "ai act", "european"), ("digital-strategy.ec.europa.eu", "consilium.europa.eu", "europarl.europa.eu")),
+)
+
+
+def _url_matches_official_pattern(url: str, pattern: str) -> bool:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower().removeprefix("www.")
+    path = parsed.path.lower().lstrip("/")
+    pattern = pattern.lower().removeprefix("www.")
+    if "/" in pattern:
+        return f"{host}/{path}".startswith(pattern)
+    return host == pattern or host.endswith(f".{pattern}")
+
+
+_OFFICIAL_TOKEN_STOPWORDS = {
+    "about", "blog", "blogs", "cloud", "com", "developer", "developers",
+    "index", "news", "press", "products", "technology", "www",
+    "and", "for", "from", "has", "that", "the", "this", "with", "which",
+    "ai", "open", "openai", "google", "microsoft", "nvidia", "anthropic",
+    "apple", "meta",
+}
+
+
+def _story_match_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.split(r"[^a-z0-9]+", text.lower())
+        if len(token) >= 3 and token not in _OFFICIAL_TOKEN_STOPWORDS
+    }
+
+
+def _url_match_tokens(url: str) -> set[str]:
+    parsed = urlparse(url)
+    path_blob = f"{parsed.netloc} {parsed.path}".lower()
+    return _story_match_tokens(path_blob)
+
+
+def _relevant_official_urls_for_story(
+    heading: str,
+    story_text: str,
+    source_urls: list[str],
+) -> list[str]:
+    heading_lower = heading.lower()
+    story_tokens = _story_match_tokens(story_text)
+    urls: list[str] = []
+    for keywords, official_patterns in _OFFICIAL_SOURCE_RULES:
+        # Use the heading to identify the lead entity. Body text often mentions
+        # competitors or partners, which should not make their official posts
+        # mandatory for an otherwise third-party report.
+        if not any(keyword in heading_lower for keyword in keywords):
+            continue
+        for pattern in official_patterns:
+            for url in source_urls:
+                if not _url_matches_official_pattern(url, pattern):
+                    continue
+                # Avoid flagging unrelated official URLs from the same company
+                # (e.g., Nvidia model blogs when the story is an Nvidia equity report).
+                if story_tokens.intersection(_url_match_tokens(url)):
+                    urls.append(url)
+    return sorted(set(urls))
+
+
+def _url_is_official_for_heading(heading: str, url: str) -> bool:
+    heading_lower = heading.lower()
+    for keywords, official_patterns in _OFFICIAL_SOURCE_RULES:
+        if not any(keyword in heading_lower for keyword in keywords):
+            continue
+        if any(_url_matches_official_pattern(url, pattern) for pattern in official_patterns):
+            return True
+    return False
+
+
+def _find_weekly_primary_source_priority_issues(
+    body: str,
+    source_urls: list[str],
+    scope: str,
+) -> list[dict[str, str]]:
+    """Flag Top Stories where a relevant official source exists but is not first."""
+    if not body or not source_urls:
+        return []
+    issues: list[dict[str, str]] = []
+    for heading, block in _weekly_top_story_blocks(body):
+        first_citation_match = _WEEKLY_MARKDOWN_URL_RE.search(block)
+        if not first_citation_match:
+            continue
+        # Judge the first citation against the claim it is attached to. Later
+        # paragraphs may cite official docs for separate sub-events in the same
+        # weekly story and should not force the opening citation to be official.
+        lead_claim_text = f"{heading}\n{block[:first_citation_match.start()]}"
+        relevant_official_urls = _relevant_official_urls_for_story(
+            heading, lead_claim_text, source_urls,
+        )
+        if not relevant_official_urls:
+            continue
+        first_url = first_citation_match.group(1)
+        if _url_is_official_for_heading(heading, first_url):
+            continue
+        if first_url in relevant_official_urls:
+            continue
+        issues.append(_weekly_issue(
+            scope,
+            f"weekly_primary_source_priority: '{heading}' first citation is not an available official source: {first_url}",
+        ))
+    return issues
+
+
+def _daily_story_blocks(body: str) -> list[tuple[str, str]]:
+    """Extract daily story blocks under H3 item headings."""
+    if not body:
+        return []
+    blocks: list[tuple[str, str]] = []
+    current_heading: str | None = None
+    current_lines: list[str] = []
+    for line in body.splitlines():
+        if line.startswith("## "):
+            if current_heading:
+                blocks.append((current_heading, "\n".join(current_lines).strip()))
+            current_heading = None
+            current_lines = []
+            continue
+        if line.startswith("### "):
+            if current_heading:
+                blocks.append((current_heading, "\n".join(current_lines).strip()))
+            current_heading = line[4:].strip()
+            current_lines = []
+            continue
+        if current_heading is not None:
+            current_lines.append(line)
+    if current_heading:
+        blocks.append((current_heading, "\n".join(current_lines).strip()))
+    return blocks
+
+
+def _daily_issue(scope: str, message: str) -> dict[str, str]:
+    return {
+        "severity": "minor",
+        "scope": scope,
+        "category": "source",
+        "message": message,
+    }
+
+
+def _find_daily_primary_source_priority_issues(
+    body: str,
+    source_urls: list[str],
+    scope: str,
+) -> list[dict[str, str]]:
+    """Flag daily stories where an available official source is not cited first."""
+    if not body or not source_urls:
+        return []
+    issues: list[dict[str, str]] = []
+    for heading, block in _daily_story_blocks(body):
+        first_citation_match = _WEEKLY_MARKDOWN_URL_RE.search(block)
+        if not first_citation_match:
+            continue
+        lead_claim_text = f"{heading}\n{block[:first_citation_match.start()]}"
+        relevant_official_urls = _relevant_official_urls_for_story(
+            heading, lead_claim_text, source_urls,
+        )
+        if not relevant_official_urls:
+            continue
+        first_url = first_citation_match.group(1)
+        if _url_is_official_for_heading(heading, first_url):
+            continue
+        if first_url in relevant_official_urls:
+            continue
+        issues.append(_daily_issue(
+            scope,
+            f"daily_primary_source_priority: '{heading}' first citation is not an available official source: {first_url}",
+        ))
+    return issues
+
+
+def _daily_guardrail_cap_labels(issues: list[dict[str, str]]) -> list[str]:
+    caps: list[tuple[int, str]] = []
+    for issue in issues:
+        message = issue.get("message", "")
+        if message.startswith("daily_primary_source_priority:"):
+            caps.append((92, "daily_primary_source_cap_92"))
+    return [label for _, label in sorted(set(caps), key=lambda item: (item[0], item[1]))]
+
+
+_DAILY_GUARDRAIL_CAP_VALUES = {
+    "daily_primary_source_cap_92": 92,
+}
+
+
+def _weekly_guardrail_cap_labels(issues: list[dict[str, str]]) -> list[str]:
+    """Return deterministic weekly score caps triggered by guardrail issues."""
+    caps: list[tuple[int, str]] = []
+    for issue in issues:
+        message = issue.get("message", "")
+        if message.startswith("weekly_citation_contract:"):
+            caps.append((90, "weekly_citation_contract_cap_90"))
+        elif message.startswith("weekly_primary_source_priority:"):
+            caps.append((92, "weekly_primary_source_cap_92"))
+    return [label for _, label in sorted(set(caps), key=lambda item: (item[0], item[1]))]
+
+
+_WEEKLY_GUARDRAIL_CAP_VALUES = {
+    "weekly_citation_contract_cap_90": 90,
+    "weekly_primary_source_cap_92": 92,
+}
+
+
 def _compute_structure_score(personas: dict[str, PersonaOutput]) -> int:
     """Compute a lightweight deterministic structure score out of 15."""
     score = 15
-    for persona_name in ("expert", "learner"):
+    persona_names = ("expert", "learner") + (("beginner",) if "beginner" in personas else ())
+    for persona_name in persona_names:
         output = personas.get(persona_name)
         if not output:
             score -= 4
@@ -419,12 +766,15 @@ async def _check_digest_quality(
     t0 = time.monotonic()
     from services.agents.prompts_news_pipeline import (
         QUALITY_CHECK_RESEARCH_EXPERT, QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_RESEARCH_BEGINNER,
         QUALITY_CHECK_BUSINESS_EXPERT, QUALITY_CHECK_BUSINESS_LEARNER,
+        QUALITY_CHECK_BUSINESS_BEGINNER,
         QUALITY_CHECK_FRONTLOAD,
     )
 
     expert = personas.get("expert")
     learner = personas.get("learner")
+    beginner = personas.get("beginner")
     if not expert or not expert.en:
         logger.warning("Quality check skipped for %s: no expert content", digest_type)
         await _log_stage(
@@ -438,9 +788,11 @@ async def _check_digest_quality(
     if digest_type == "research":
         expert_prompt = QUALITY_CHECK_RESEARCH_EXPERT
         learner_prompt = QUALITY_CHECK_RESEARCH_LEARNER
+        beginner_prompt = QUALITY_CHECK_RESEARCH_BEGINNER
     else:
         expert_prompt = QUALITY_CHECK_BUSINESS_EXPERT
         learner_prompt = QUALITY_CHECK_BUSINESS_LEARNER
+        beginner_prompt = QUALITY_CHECK_BUSINESS_BEGINNER
 
     client = get_openai_client()
     quality_model = settings.openai_model_reasoning  # gpt-5-mini — nano can't score
@@ -505,6 +857,15 @@ async def _check_digest_quality(
                 "learner_body",
             )
         )
+    if beginner and (beginner.en or beginner.ko):
+        tasks.append(
+            _score(
+                beginner_prompt,
+                _build_body_quality_payload("beginner", beginner),
+                f"Quality-{digest_type}-beginner",
+                "beginner_body",
+            )
+        )
     tasks.append(
         _score(
             QUALITY_CHECK_FRONTLOAD,
@@ -516,27 +877,46 @@ async def _check_digest_quality(
 
     results = await asyncio.gather(*tasks)
 
-    expert_score, expert_breakdown, expert_issues, expert_usage = results[0]
-    if learner and (learner.en or learner.ko):
-        learner_score, learner_breakdown, learner_issues, learner_usage = results[1]
-        frontload_score, frontload_breakdown, frontload_issues, frontload_usage = results[2]
+    has_learner = bool(learner and (learner.en or learner.ko))
+    has_beginner = bool(beginner and (beginner.en or beginner.ko))
+
+    result_idx = 0
+    expert_score, expert_breakdown, expert_issues, expert_usage = results[result_idx]
+    result_idx += 1
+    if has_learner:
+        learner_score, learner_breakdown, learner_issues, learner_usage = results[result_idx]
+        result_idx += 1
     else:
         learner_score, learner_breakdown, learner_issues, learner_usage = (0, {}, [], {})
-        frontload_score, frontload_breakdown, frontload_issues, frontload_usage = results[1]
+    if has_beginner:
+        beginner_score, beginner_breakdown, beginner_issues, beginner_usage = results[result_idx]
+        result_idx += 1
+    else:
+        beginner_score, beginner_breakdown, beginner_issues, beginner_usage = (0, {}, [], {})
+    frontload_score, frontload_breakdown, frontload_issues, frontload_usage = results[result_idx]
 
     _log_cp_subscores(digest_type, "expert", expert_breakdown)
-    if learner and (learner.en or learner.ko):
+    if has_learner:
         _log_cp_subscores(digest_type, "learner", learner_breakdown)
+    if has_beginner:
+        _log_cp_subscores(digest_type, "beginner", beginner_breakdown)
 
     structure_score = _compute_structure_score(personas)
     traceability_score = _compute_traceability_score(personas)
     locale_score = _compute_locale_score(personas)
     deterministic_score = structure_score + traceability_score + locale_score
 
-    weighted_expert_body = round(expert_score * 0.2)
-    weighted_learner_body = round(learner_score * 0.2) if learner and (learner.en or learner.ko) else 0
-    weighted_frontload = round(frontload_score * 0.2)
-    llm_score = weighted_expert_body + weighted_learner_body + weighted_frontload
+    if has_beginner:
+        weighted_expert_body = round(expert_score * 0.16)
+        weighted_learner_body = round(learner_score * 0.16) if has_learner else 0
+        weighted_beginner_body = round(beginner_score * 0.16)
+        weighted_frontload = round(frontload_score * 0.12)
+    else:
+        weighted_expert_body = round(expert_score * 0.2)
+        weighted_learner_body = round(learner_score * 0.2) if has_learner else 0
+        weighted_beginner_body = 0
+        weighted_frontload = round(frontload_score * 0.2)
+    llm_score = weighted_expert_body + weighted_learner_body + weighted_beginner_body + weighted_frontload
 
     structural_penalty, structural_warnings = _check_structural_penalties(
         expert, learner, community_summary_map, classified,
@@ -544,14 +924,54 @@ async def _check_digest_quality(
     if structural_penalty > 0:
         logger.info("Structural penalties for %s: -%d (%s)", digest_type, structural_penalty, "; ".join(structural_warnings))
 
-    all_issues = expert_issues + learner_issues + frontload_issues
+    source_urls_for_guardrails = _collect_digest_source_urls(classified, enriched_map)
+    daily_guardrail_issues: list[dict[str, str]] = []
+    seen_daily_guardrail_keys: set[tuple[str, str]] = set()
+    for body, scope in (
+        (expert.en, "expert_body"),
+        (expert.ko, "expert_body"),
+        (learner.en if learner else "", "learner_body"),
+        (learner.ko if learner else "", "learner_body"),
+        (beginner.en if beginner else "", "beginner_body"),
+        (beginner.ko if beginner else "", "beginner_body"),
+    ):
+        for issue in _find_daily_primary_source_priority_issues(
+            body or "",
+            source_urls_for_guardrails,
+            scope,
+        ):
+            first_url = issue.get("message", "").rsplit(": ", 1)[-1]
+            key = (issue.get("category", ""), first_url)
+            if key in seen_daily_guardrail_keys:
+                continue
+            seen_daily_guardrail_keys.add(key)
+            daily_guardrail_issues.append(issue)
+
+    all_issues = expert_issues + learner_issues + beginner_issues + frontload_issues + daily_guardrail_issues
     pre_issue_score = max(0, deterministic_score + llm_score - structural_penalty)
     final_score, issue_penalty, quality_caps_applied = _apply_issue_penalties_and_caps(
         pre_issue_score,
         all_issues,
     )
+    daily_guardrail_caps = _daily_guardrail_cap_labels(daily_guardrail_issues)
+    if daily_guardrail_caps:
+        final_score = min(
+            final_score,
+            min(_DAILY_GUARDRAIL_CAP_VALUES[label] for label in daily_guardrail_caps),
+        )
+        quality_caps_applied = [
+            label
+            for _, label in sorted(
+                {
+                    (_DAILY_GUARDRAIL_CAP_VALUES.get(label, 100), label)
+                    for label in [*quality_caps_applied, *daily_guardrail_caps]
+                },
+                key=lambda item: (item[0], item[1]),
+            )
+        ]
 
     merged_quality_usage = merge_usage_metrics(expert_usage, learner_usage) if learner_usage else expert_usage
+    merged_quality_usage = merge_usage_metrics(merged_quality_usage, beginner_usage) if beginner_usage else merged_quality_usage
     merged_quality_usage = merge_usage_metrics(merged_quality_usage, frontload_usage) if frontload_usage else merged_quality_usage
 
     result = {
@@ -574,16 +994,19 @@ async def _check_digest_quality(
             "llm": {
                 "expert_body": weighted_expert_body,
                 "learner_body": weighted_learner_body,
+                "beginner_body": weighted_beginner_body,
                 "frontload": weighted_frontload,
             },
             "raw_llm": {
                 "expert_body": expert_score,
                 "learner_body": learner_score,
+                "beginner_body": beginner_score,
                 "frontload": frontload_score,
             },
         },
         "expert_breakdown": expert_breakdown.get("subscores", {k: v for k, v in expert_breakdown.items() if k not in {"score", "issues"}}),
         "learner_breakdown": learner_breakdown.get("subscores", {k: v for k, v in learner_breakdown.items() if k not in {"score", "issues"}}),
+        "beginner_breakdown": beginner_breakdown.get("subscores", {k: v for k, v in beginner_breakdown.items() if k not in {"score", "issues"}}),
         "frontload_breakdown": frontload_breakdown.get("subscores", {k: v for k, v in frontload_breakdown.items() if k not in {"score", "issues"}}),
         "news_count": len(classified),
     }
@@ -646,6 +1069,7 @@ async def _check_digest_quality(
         supabase, run_id, f"quality:{digest_type}", "success", t0,
         output_summary=(
             f"score={final_score}/100 (expert={expert_score}, learner={learner_score}, "
+            f"beginner={beginner_score}, "
             f"frontload={frontload_score}, deterministic={deterministic_score}, "
             f"issue_penalty=-{issue_penalty}, structural=-{structural_penalty})"
         ),
@@ -1187,6 +1611,27 @@ async def _check_weekly_quality(
         except Exception as e:
             logger.warning("Weekly learner quality check failed: %s", e)
 
+    # Deterministic weekly guardrails catch sparse-but-important contract
+    # misses that citation-ratio scoring and LLM rubric averages can dilute.
+    weekly_guardrail_issues: list[dict[str, str]] = []
+    for body, scope in (
+        (content_expert_en, "expert_body"),
+        (content_expert_ko, "expert_body"),
+        (content_learner_en, "learner_body"),
+        (content_learner_ko, "learner_body"),
+    ):
+        weekly_guardrail_issues.extend(_find_weekly_citation_contract_issues(body, scope))
+        weekly_guardrail_issues.extend(
+            _find_weekly_primary_source_priority_issues(body, source_urls, scope)
+        )
+    if weekly_guardrail_issues:
+        structured_issues.extend(weekly_guardrail_issues)
+        for issue in weekly_guardrail_issues:
+            issues_all.append(
+                f"weekly_guardrail:{issue.get('category', 'unknown')}:"
+                f"{issue.get('message', '')}"
+            )
+
     # URL validation
     url_penalty = 0
     if source_urls:
@@ -1229,6 +1674,22 @@ async def _check_weekly_quality(
     final_score, issue_penalty, quality_caps_applied = _apply_issue_penalties_and_caps(
         pre_issue_score, structured_issues,
     )
+    weekly_guardrail_caps = _weekly_guardrail_cap_labels(weekly_guardrail_issues)
+    if weekly_guardrail_caps:
+        final_score = min(
+            final_score,
+            min(_WEEKLY_GUARDRAIL_CAP_VALUES[label] for label in weekly_guardrail_caps),
+        )
+        quality_caps_applied = [
+            label
+            for _, label in sorted(
+                {
+                    (_WEEKLY_GUARDRAIL_CAP_VALUES.get(label, 100), label)
+                    for label in [*quality_caps_applied, *weekly_guardrail_caps]
+                },
+                key=lambda item: (item[0], item[1]),
+            )
+        ]
 
     quality_flags = []
     if url_penalty:

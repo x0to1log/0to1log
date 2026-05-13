@@ -305,6 +305,7 @@ def _build_digest_prompt(
 ) -> str:
     handbook_section = _build_handbook_section(handbook_slugs)
     learner_ko_rule = LEARNER_KO_LANGUAGE_RULE if persona == "learner" else ""
+    is_beginner = persona == "beginner"
     learner_opening_rule = (
         "\n3a. LEARNER OPENING SENTENCE: for learner persona only, the first sentence after every `###` heading "
         "must explain in plain everyday language what the model, tool, paper, or company move is or does "
@@ -320,7 +321,15 @@ def _build_digest_prompt(
         if persona == "learner"
         else ""
     )
-    if persona == "learner":
+    if is_beginner:
+        weighted_depth_rule = """3. BEGINNER DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
+   - Do not turn every input group into a full section.
+   - Research Beginner main_items: 1-2. Business Beginner main_items: 2-3.
+   - Main items get short `###` sections with concrete context, likely misconception, and why the item matters.
+   - Remaining input groups belong under `Worth Skimming` / `가볍게 지나가도 되는 소식` as short bullets, not full sections.
+   - Every input group must be represented either as a main item or a skim bullet."""
+        depth_checklist = "Does beginner output use Research 1-2 or Business 2-3 main `###` items, with remaining groups covered under Worth Skimming?"
+    elif persona == "learner":
         weighted_depth_rule = """3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
    - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
    - **[SUPPORTING] items**: 2-3 paragraphs. Do NOT drop or one-sentence any item.
@@ -335,6 +344,26 @@ def _build_digest_prompt(
    - Both Expert and Learner provide substantial coverage. The difference is primarily WHAT they emphasize (Expert: technical novelty, limitations, prior work; Learner: analogies, term explanations, context), not sentence-for-sentence density.
    - Do NOT exceed 4 paragraphs per item even for lead stories."""
         depth_checklist = "Do [LEAD] items have 3-4 paragraphs, [SUPPORTING] items at least 3?"
+    coverage_rule = (
+        """4. BEGINNER COVERAGE: Do not make every `[LEAD]` or `[SUPPORTING]` group a full `###` sub-item.
+   Select the most useful main items for a true beginner and put lower-priority items under `Worth Skimming` / `가볍게 지나가도 되는 소식`.
+   All input groups must still be covered either as a main item or a skim bullet."""
+        if is_beginner
+        else """4. You MUST cover ALL provided classified groups — each `[LEAD]` or `[SUPPORTING]` group in the input becomes EXACTLY ONE `###` sub-item in the output. Do NOT promote enriched sources to standalone `###` sub-items; use enriched sources inside the group's paragraphs for richer multi-source detail. Do NOT skip a group or reduce it to just a title."""
+    )
+    subitem_count_checklist = (
+        "Does the beginner output have the correct number of main `###` items for the digest type, and are all remaining input groups represented under Worth Skimming?"
+        if is_beginner
+        else "Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)"
+    )
+    beginner_checklist = (
+        "\n12. **Beginner-specific checks**: Does One-Line Summary state a lens rather than a catalog? Are schema labels like "
+        "`왜 이 문제가 있었나`, `이번 방법은 무엇을 덜 필요하게 하나`, or `헷갈리지 말 것` replaced with concrete answers? "
+        "Are term definitions left to handbook links instead of repeated glossary prose? Does `Read the Learner Digest Next` / "
+        "`학습자 뉴스 이어읽기` point to a concrete next step?"
+        if is_beginner
+        else ""
+    )
     one_line_summary_checklist = (
         "\n8. One-Line Summary role: Is `## One-Line Summary` / `## 한 줄 요약` exactly one sentence? "
         "Does it synthesize the common thread or day's main throughline across the top stories rather than just repeating one headline "
@@ -388,7 +417,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {learner_opening_rule}
 {learner_density_rule}
 {weighted_depth_rule}
-4. You MUST cover ALL provided classified groups — each `[LEAD]` or `[SUPPORTING]` group in the input becomes EXACTLY ONE `###` sub-item in the output. Do NOT promote enriched sources to standalone `###` sub-items; use enriched sources inside the group's paragraphs for richer multi-source detail. Do NOT skip a group or reduce it to just a title.
+{coverage_rule}
 5. Write in present tense for news events ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 6. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
 7. `###` SUB-HEADING FORMAT — STRICT: each `###` line MUST contain ONLY the news item title. NEVER append body text, description, summary, or citation on the same line as the `###` heading. ALWAYS insert ONE BLANK LINE after the `###` heading before the first paragraph. This is the #1 most common formatting error — verify every single `###` line before responding. Required pattern:
@@ -475,7 +504,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 {learner_ko_rule}
 ## FINAL CHECKLIST (verify before responding)
 1. Citations: Does every paragraph end with at least one `[CITE_N]` placeholder? Does every `[CITE_N]` in the body have a matching entry in the `citations` array? Does every `citations[].url` come from the provided source list verbatim?
-2. **Sub-item count match**: Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)
+2. **Sub-item count match**: {subitem_count_checklist}
 3. {depth_checklist}
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
 5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
@@ -488,7 +517,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
    Apr 24 regression examples: "Bret Taylor's Sierra buys YC-backed AI startup Fragment - TechCrunch" should be "Sierra acquires YC-backed Fragment to expand agent development"; "Resolve AI announces Series A Extension at a $1.5B valuation and launches Resolve AI Labs to advance AI systems for complex production environments" should be "Resolve AI raises $40M at $1.5B, launches Resolve AI Labs".
 9. **Body number parity**: pick 3 currency or benchmark figures from the `en` body. Does each appear in the `ko` body with the same value and correct unit conversion ($X billion = X×10억 달러)? If any mismatch, fix before responding.
 10. **No relative time markers**: scan both `en` and `ko` bodies for "yesterday / last week / recently / 어제 / 지난주 / 최근". Each instance must be replaced with an absolute date reference (e.g., "Apr 20", "2026-04-20"). Relative time is forbidden — digests are archived.
-11. **No overclaim language in body**: scan both locales for "dominates / crushes / revolutionizes / groundbreaking / 장악 / 압도적 / 독점 / 석권". Replace with calibrated alternatives (see Hallucination Guard) unless the phrase is inside a direct source quote.{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}
+11. **No overclaim language in body**: scan both locales for "dominates / crushes / revolutionizes / groundbreaking / 장악 / 압도적 / 독점 / 석권". Replace with calibrated alternatives (see Hallucination Guard) unless the phrase is inside a direct source quote.{one_line_summary_checklist}{learner_opening_checklist}{english_field_purity_checklist}{learner_ko_checklist}{beginner_checklist}
 
 """
 
@@ -645,6 +674,9 @@ Writing rules:
 - Avoid loaded words such as "scramble", "showdown", "takes aim", "shot at", "salvo", or "war" in the headline, excerpt, and first paragraph unless the source itself uses that framing.
 - In the headline, excerpt, and first paragraph, avoid definitive competitive verbs such as "hits", "undercuts", "wins", "replaces", or "reduces reliance on" unless a primary source states that conclusion directly.
 - If front-loaded interpretation depends mainly on secondary reporting, phrase it with softer language such as "signals", "suggests", "raises pressure on", or "is positioned as" rather than sounding settled.
+- Secondary-only metrics require explicit attribution and date anchoring: write "reported by <source>" and "as of <absolute date>" for live rankings, token counts, app-store ranks, leaderboard positions, or similar mutable metrics. Do not put secondary-only strategic conclusions in headline/excerpt; keep them in the body as attributed analysis.
+- If no official or PRIMARY source is available for a product launch, attribute company claims to the reporting source: write "The Verge reports..." or "Bloomberg reports..." and avoid writing `OpenAI says` or `Google says` unless the official source is in the input.
+- Do not infer procurement speed, pilot readiness, or production deployment from secondary coverage alone. Use softer actions such as "scope an inquiry", "request information", or "evaluate with security/legal review" unless a primary source states the rollout path.
 - ALWAYS compare numbers to competitors or industry benchmarks
 - Analyze competitive dynamics with explicit reasoning chains grounded in sourced facts
 - Connecting the Dots should explain the strongest plausible drivers and market pattern without inventing hidden motives unsupported by sources
@@ -673,12 +705,67 @@ Writing rules:
 - Technical explanation is allowed, but only in service of understanding the business impact — never tech-for-tech-sake.
 - Emphasize what changed, why companies are doing this, and what it means for users, teams, or careers.
 - When multiple sources cover the same news, weave in different perspectives (announcement + analyst reaction + user impact).
+- Secondary-only metrics require explicit attribution and date anchoring: write "reported by <source>" and "as of <absolute date>" for live rankings, token counts, app-store ranks, leaderboard positions, or similar mutable metrics. Do not put secondary-only strategic conclusions in headline/excerpt; keep them in the body as attributed analysis.
+- If no official or PRIMARY source is available for a product launch, attribute company claims to the reporting source: write "The Verge reports..." or "Bloomberg reports..." and avoid writing `OpenAI says` or `Google says` unless the official source is in the input.
+- Do not infer procurement speed, pilot readiness, or production deployment from secondary coverage alone. Use softer actions such as "scope an inquiry", "request information", or "evaluate with security/legal review" unless a primary source states the rollout path.
 - Action Items must be ACTUALLY DOABLE by a non-developer this week — no "build a multi-agent pipeline", no "evaluate vendor lock-in risk". YES "try Meta AI in WhatsApp", "check the new ChatGPT mode", "read Anthropic's blog post".
 - In Korean, use written news/editorial prose by default. Reader-facing sections may be slightly softer, but avoid conversational chat tone.
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms link to Handbook on first appearance.
 - Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
 - PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the business mental model is clear. Cover: what changed + why it matters + what it means for you."""
+
+
+RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - A lens sentence for a true beginner; summarize only selected main items.
+- **## Context First (ko: ## 먼저 알면 좋은 배경)** - 2-4 short bullets that explain the minimum background needed before the news.
+- **## Main Research to Understand Today (ko: ## 오늘 꼭 이해할 연구)** - 1-2 main research items. Each item explains what changed, what problem existed, what burden is reduced, and what not to confuse.
+- **## Worth Skimming (ko: ## 가볍게 지나가도 되는 소식)** - 0-4 lower-priority items, each as a short bullet with why skimming is enough.
+- **## Read the Learner Digest Next (ko: ## 학습자 뉴스 이어읽기)** - Concrete next step into the learner digest, not a generic recommendation.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - Include only when Community Pulse Data is provided."""
+
+
+BUSINESS_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - A business lens sentence for a true beginner; not a catalog of companies or products.
+- **## Context First (ko: ## 먼저 알면 좋은 배경)** - 2-4 short bullets that explain the business context needed before the news.
+- **## Main Changes to Understand Today (ko: ## 오늘 꼭 이해할 변화)** - 2-3 business items. Each item explains what happened, why people care, how it touches work or buying decisions, and what not to confuse.
+- **## Worth Skimming (ko: ## 가볍게 지나가도 되는 소식)** - 0-4 lower-priority items, each as a short bullet with why skimming is enough.
+- **## Read the Learner Digest Next (ko: ## 학습자 뉴스 이어읽기)** - Concrete next step into the learner digest, not a generic recommendation.
+- **## Community Pulse (ko: ## 커뮤니티 반응)** - Include only when Community Pulse Data is provided."""
+
+
+RESEARCH_BEGINNER_GUIDE = """READER: true beginner. They may use ChatGPT but do not read ML papers and do not know training jargon, evaluation metrics, or model architecture terms.
+READER'S GOAL: understand the context of 1-2 important research changes well enough to decide whether to try the learner digest next.
+AFTER READING: the reader can explain what problem the research addresses, what burden it reduces, and what not to over-assume.
+
+Beginner persona:
+- This is a context explainer, not a glossary. Unknown terms are clickable in the frontend handbook.
+- Do not define every term repeatedly. Explain the situation, confusion risk, and practical/research direction.
+- Research Beginner main_items: 1-2. Default to 2 only if both fit under one simple theme.
+- Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
+- One-Line Summary may summarize only selected main items. Do not mention skim-only stories there.
+- Main research items must answer: what changed, why the problem existed, what burden is reduced, and what not to confuse.
+- what_changed must state which burden is reduced: cost, access, manual work, data, execution, memory, time, or infrastructure.
+- Research main item body may use at most 2 technical method-term families before the "do not confuse" explanation.
+- Never copy schema labels as field content. Values such as "왜 이 문제가 있었나", "이번 방법은 무엇을 덜 필요하게 하나", or "헷갈리지 말 것" are labels, not answers.
+- Avoid reading instructions like "보세요" or "읽어보세요". Write article copy, not UI guidance.
+- Keep Worth Skimming bullets short; each reason should be 35 Korean words or fewer."""
+
+
+BUSINESS_BEGINNER_GUIDE = """READER: true beginner. They may use ChatGPT but do not know GPU procurement, funding mechanics, enterprise security, or AI vendor strategy.
+READER'S GOAL: understand the business context of the day's AI news without needing market or infrastructure background.
+AFTER READING: the reader can explain what changed, why it matters for work or buying decisions, and what is safe to ignore today.
+
+Beginner persona:
+- This is a context explainer, not a glossary. Unknown terms are clickable in the frontend handbook.
+- Do not define every term repeatedly. Explain the situation, confusion risk, and practical business lens.
+- Business Beginner main_items: 2-3.
+- Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
+- Business one_line is a lens sentence, not a catalog. It should answer what business lens connects the selected main items.
+- Do not list vendor, product, equipment, or project names in business one_line; put concrete names and examples in main_items instead.
+- Do not write reading instructions like 보세요 or 읽어보세요. State the lens as article copy.
+- Main business items must answer: what happened, why people care, how it touches work or buying decisions, and what not to confuse.
+- Never copy schema labels as field content. Values such as "무슨 일이 있었나", "내 일과 무슨 관련이 있나", or "헷갈리지 말 것" are labels, not answers.
+- Avoid high-risk literal translations: deployment is not always "배치"; entity is not "법인" unless the source means a legal corporation; agent is not "대리인" in AI product contexts.
+- Keep Worth Skimming bullets short; each reason should be 35 Korean words or fewer."""
 
 
 # --- Title Strategy (per persona) ---
@@ -786,6 +873,11 @@ Learner readers are Korean non-developers. Keep the Korean text Korean.
 1. **NEVER insert English connective or filler words mid-sentence**. Banned: "hence", "thus", "so", "and", "but", "however", "therefore", "i.e.", "e.g.", "vs", "via", "or", "also". Use 한국어 connectives only: "그래서", "하지만", "또한", "즉", "예를 들어", "대 (vs.)", "-을 통해".
 
 2. **Technical acronyms and jargon**: on FIRST use, write the Korean meaning FIRST with the acronym in parentheses. Example format: `검색 증강 생성(RAG)`, `명령줄 인터페이스(CLI)`, `쓰기 앞 로그(WAL)`, `모델 컨텍스트 프로토콜(MCP)`, `직접 선호도 최적화(DPO)`, `그룹 상대 정책 최적화(GRPO)`, `대형 언어 모델(LLM)`, `전문가 혼합(MoE)`, `단계별 추론(CoT)`. After first mention, the acronym alone is OK. Minimum coverage list: **LLM, RAG, DPO, GRPO, MoE, CoT, CLIP, RLHF, KV, LoRA, CLI, WAL, MCP, ONNX, SDK, API, CPU, GPU, PSNR, SSIM, LPIPS, IPO, GAN**. When in doubt, expand — unexpanded acronyms are the #1 learner-accessibility complaint.
+
+2b. **High-risk literal translations**: choose the Korean word by meaning, not by dictionary lookup.
+   - `deployment`: if it means adopting, rolling out, running, or using software/service in practice, write `도입`, `적용`, `출시`, or `운영`; do not default to `배치`. Use `배포` only when the source clearly means releasing code, a model, or an app.
+   - `entity`: write `기업`, `조직`, `주체`, `서비스`, or the named company/product; do not use `법인` unless the source means a legal corporation.
+   - `agent`: in AI product/news contexts, write `AI 에이전트` or `작업을 수행하는 AI`; do not translate as `대리인`.
 
 3. **Proper nouns (company, product, person, place) stay in English**: OpenAI, Meta, Google, Anthropic, Nvidia, CoreWeave, GitHub, Hugging Face, Claude Code, ChatGPT — do NOT transliterate these.
 
@@ -1161,6 +1253,123 @@ The clever part: each agent only sees part of the information, so they cannot ju
 ```
 """
 
+RESEARCH_BEGINNER_SKELETON = """
+**English ("en"):**
+```
+## One-Line Summary
+Running every model or experiment is becoming less necessary; today's research points to cheaper ways to choose, test, or control AI systems.
+
+## Context First
+- Many research stories are really about reducing a burden: compute cost, manual review, missing data, or deployment risk. [CITE_1]
+- Terms are clickable in the handbook, so this digest explains why the problem matters before defining the mechanism. [CITE_1]
+
+## Main Research to Understand Today
+### Cheaper model selection before expensive runs
+
+The key change is that teams can narrow their choices before running every candidate model. That matters because exhaustive testing becomes expensive once hundreds or thousands of models are available. [CITE_1]
+
+Do not confuse this with a guarantee that the selected model is always best. It is a way to reduce the search space before deeper evaluation, not a replacement for final testing. [CITE_1]
+
+### Less manual checking in AI evaluation
+
+[1-2 short paragraphs explaining what changed, what burden is reduced, and what not to over-assume. Each paragraph ends with [CITE_N].]
+
+## Worth Skimming
+- Smaller runtime update — useful for teams already operating local models, but not central to today's beginner theme. [CITE_2]
+- Domain dataset release — important for specialist readers, but safe to skim unless you work in that domain. [CITE_3]
+
+## Read the Learner Digest Next
+- Read the learner section on model selection if you want the technical details behind the cheaper screening step. [CITE_1]
+```
+
+**Korean ("ko"):**
+```
+## 한 줄 요약
+모든 모델이나 실험을 직접 돌리지 않아도 되는 방향으로 연구가 움직이고 있으며, 오늘의 핵심은 비용·검증·운영 부담을 줄이는 방법이다.
+
+## 먼저 알면 좋은 배경
+- 많은 연구 뉴스는 결국 연산 비용, 수작업 검토, 데이터 부족, 배포 위험 중 하나를 줄이려는 시도다. [CITE_1]
+- 용어 정의는 핸드북에서 바로 볼 수 있으므로, 여기서는 방법 이름보다 왜 문제가 생겼는지 먼저 설명한다. [CITE_1]
+
+## 오늘 꼭 이해할 연구
+### 비싼 실행 전에 후보를 먼저 좁히는 방법
+
+핵심 변화는 모든 후보 모델을 직접 돌리기 전에 볼 대상을 줄일 수 있다는 점이다. 수백, 수천 개 모델이 있을 때 전부 테스트하는 방식은 비용과 시간이 크게 들기 때문이다. [CITE_1]
+
+헷갈리지 말아야 할 점은, 이것이 최종 성능을 보장하는 자동 선택기는 아니라는 것이다. 깊은 평가 전에 후보군을 줄이는 방법에 가깝다. [CITE_1]
+
+### AI 평가에서 수작업 확인을 줄이는 방법
+
+[1-2문단 — 무엇이 바뀌었는지, 어떤 부담이 줄었는지, 무엇을 과대해석하면 안 되는지. 각 문단은 [CITE_N]으로 끝남.]
+
+## 가볍게 지나가도 되는 소식
+- 작은 런타임 업데이트 — 이미 로컬 모델을 운영하는 팀에는 유용하지만 오늘의 입문자 핵심 흐름은 아니다. [CITE_2]
+- 도메인 데이터셋 공개 — 해당 분야 종사자에게는 중요하지만, 일반 독자는 흐름만 알아도 충분하다. [CITE_3]
+
+## 학습자 뉴스 이어읽기
+- 더 자세한 원리가 궁금하다면 학습자 뉴스의 모델 선택 섹션을 이어서 읽으면 좋다. [CITE_1]
+```
+"""
+
+
+BUSINESS_BEGINNER_SKELETON = """
+**English ("en"):**
+```
+## One-Line Summary
+AI business news is shifting from model announcements to the practical question of who can deploy, govern, and pay for these systems.
+
+## Context First
+- For beginners, the important question is not every product name. It is what changes in access, cost, trust, workflow, or vendor dependence. [CITE_1]
+- Concrete companies and products appear in the main items; the summary gives the lens for reading them. [CITE_1]
+
+## Main Changes to Understand Today
+### Enterprise adoption depends on hands-on deployment support
+
+The main change is that AI vendors are moving closer to customer workflows instead of only selling model access. That can speed up pilots, but it also changes who controls implementation and support. [CITE_1]
+
+Do not confuse this with proof that every customer gets the same level of support. The business impact depends on contract scope, security review, and deployment resources. [CITE_1]
+
+### Security review is becoming part of the buying process
+
+[1-2 short paragraphs explaining what happened, why people care, how it touches work or buying decisions, and what not to over-assume. Each paragraph ends with [CITE_N].]
+
+## Worth Skimming
+- Funding report — useful as a market signal, but not enough by itself to change a buying decision today. [CITE_2]
+- Tool update — worth noting if your team already uses the product, but safe to skim otherwise. [CITE_3]
+
+## Read the Learner Digest Next
+- Read the learner section on enterprise adoption if you want more detail on the vendor and procurement implications. [CITE_1]
+```
+
+**Korean ("ko"):**
+```
+## 한 줄 요약
+AI 비즈니스 뉴스의 핵심은 모델 발표 자체보다, 누가 더 빨리 도입하고 통제하며 비용을 감당할 수 있느냐로 옮겨가고 있다.
+
+## 먼저 알면 좋은 배경
+- 입문자에게 중요한 질문은 모든 제품명을 외우는 것이 아니라 접근성, 비용, 신뢰, 업무 흐름, 공급자 의존도가 어떻게 바뀌는지다. [CITE_1]
+- 구체적인 회사명과 제품명은 본문에서 설명하고, 한 줄 요약은 오늘 뉴스를 읽는 관점을 잡아준다. [CITE_1]
+
+## 오늘 꼭 이해할 변화
+### 기업 도입은 현장 지원 능력까지 비교하게 된다
+
+핵심 변화는 AI 공급사가 모델 접근권만 파는 것이 아니라 고객의 실제 업무 흐름 가까이 들어가려 한다는 점이다. 이는 파일럿 속도를 높일 수 있지만, 구현과 지원의 주도권이 어디에 있는지도 함께 바꾼다. [CITE_1]
+
+헷갈리지 말아야 할 점은, 모든 고객이 같은 수준의 지원을 받는다는 뜻은 아니라는 것이다. 실제 영향은 계약 범위, 보안 검토, 배포 리소스에 따라 달라진다. [CITE_1]
+
+### 보안 검토가 구매 과정의 일부가 되고 있다
+
+[1-2문단 — 무슨 일이 있었는지, 왜 사람들이 신경 쓰는지, 일이나 구매 판단과 어떻게 연결되는지, 무엇을 과대해석하면 안 되는지. 각 문단은 [CITE_N]으로 끝남.]
+
+## 가볍게 지나가도 되는 소식
+- 자금 조달 보도 — 시장 신호로는 의미가 있지만 오늘 바로 구매 판단을 바꿀 근거로는 부족하다. [CITE_2]
+- 도구 업데이트 — 이미 해당 제품을 쓰는 팀은 확인할 만하지만, 그렇지 않다면 흐름만 알아도 충분하다. [CITE_3]
+
+## 학습자 뉴스 이어읽기
+- 더 자세한 배경이 궁금하다면 학습자 뉴스의 기업 도입 섹션을 이어서 읽으면 좋다. [CITE_1]
+```
+"""
+
 # --- Digest prompt getters ---
 
 EXPERT_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
@@ -1252,6 +1461,34 @@ If any of these appear, rewrite that line before returning. The fix is usually: 
 """
 
 
+BEGINNER_TITLE_STRATEGY = """## Title Strategy (headline + excerpt only — body follows skeleton)
+
+Write the beginner frontload like a calm context editor.
+The headline and excerpt should make the reading lens clear without becoming a list of product names.
+
+For headline and excerpt:
+- Start with the visible change: cost, access, workflow, security, evaluation burden, vendor dependence, deployment risk, or operating complexity.
+- Avoid project-first or vendor-list headlines.
+- Prefer one clear lens over a stitched catalog of 2-3 stories.
+- Do not use reading instructions such as "보세요" or "읽어보세요"; write article copy.
+
+For Korean:
+- Use natural editorial Korean, not chatty spoken copy.
+- Do not write schema labels as content.
+- Avoid high-risk literal translations such as "현장 임베딩", "배치 법인", or "대리인" for AI agents.
+
+## Examples — lens first, names later
+
+✅ Good:
+- EN: "AI infrastructure competition shifts from faster chips to access and operating control"
+- KO: "AI 인프라 경쟁, 빠른 칩보다 접근권과 운영 통제로 이동"
+
+❌ Bad:
+- EN: "Nvidia, GB200, Slurm and NCCL Inspector reshape AI infrastructure"
+- KO: "엔비디아·GB200·Slurm·NCCL Inspector가 AI 인프라를 바꾼다"
+"""
+
+
 ONE_LINE_SUMMARY_RULE = """## One-Line Summary — ROLE (applies to BOTH en AND ko)
 
 The One-Line Summary should synthesize the common pattern across the top 2-3 stories in one sentence.
@@ -1265,20 +1502,25 @@ Inline citations are not required.
 DIGEST_PROMPT_MAP = {
     ("research", "expert"): (RESEARCH_EXPERT_SECTIONS, RESEARCH_EXPERT_GUIDE),
     ("research", "learner"): (RESEARCH_LEARNER_SECTIONS, RESEARCH_LEARNER_GUIDE),
+    ("research", "beginner"): (RESEARCH_BEGINNER_SECTIONS, RESEARCH_BEGINNER_GUIDE),
     ("business", "expert"): (BUSINESS_EXPERT_SECTIONS, BUSINESS_EXPERT_GUIDE),
     ("business", "learner"): (BUSINESS_LEARNER_SECTIONS, BUSINESS_LEARNER_GUIDE),
+    ("business", "beginner"): (BUSINESS_BEGINNER_SECTIONS, BUSINESS_BEGINNER_GUIDE),
 }
 
 SKELETON_MAP = {
     ("research", "expert"): RESEARCH_EXPERT_SKELETON,
     ("research", "learner"): RESEARCH_LEARNER_SKELETON,
+    ("research", "beginner"): RESEARCH_BEGINNER_SKELETON,
     ("business", "expert"): BUSINESS_EXPERT_SKELETON,
     ("business", "learner"): BUSINESS_LEARNER_SKELETON,
+    ("business", "beginner"): BUSINESS_BEGINNER_SKELETON,
 }
 
 TITLE_STRATEGY_MAP = {
     "expert": EXPERT_TITLE_STRATEGY,
     "learner": LEARNER_TITLE_STRATEGY,
+    "beginner": BEGINNER_TITLE_STRATEGY,
 }
 
 
@@ -1289,7 +1531,7 @@ def get_digest_prompt(
 
     Args:
         digest_type: "research" or "business"
-        persona: "expert" or "learner"
+        persona: "expert", "learner", or "beginner"
         handbook_slugs: list of handbook term slugs for linking
     """
     sections, guide = DIGEST_PROMPT_MAP.get(
@@ -1992,7 +2234,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **analogy_quality**: When an analogy is used, it genuinely aids understanding (not forced). Straightforward items may skip analogy without penalty.
 
 ### Language Quality (4)
-- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting 2-3 paragraphs. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전") — relative time loses meaning once a digest is archived. One borderline relative reference is tolerable; repeated relative time framing across items is not.
+- **fluency**: Clear editorial news prose; not chatty, not lecturing. Lead item 3-4 paragraphs, supporting 2-3 paragraphs. Also flag literal translation Korean in learner output: penalize dictionary-like translations that are technically possible but unnatural for news readers, especially deployment → not always `배치`; prefer `도입`, `적용`, `운영`, `출시`, or `배포` by context; entity → not `법인` unless legal corporation is meant; prefer `기업`, `조직`, `주체`, or `서비스`; agent → not `대리인` in AI product contexts; prefer `AI 에이전트` or `작업을 수행하는 AI`. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주", "얼마 전") — relative time loses meaning once a digest is archived. One borderline relative reference is tolerable; repeated relative time framing across items is not.
 - **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking", "industry-leading") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
@@ -2058,7 +2300,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (3)
 - **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
-- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Distinct from `prediction_guard` (which targets forward-looking verbs specifically); this targets retrospective/present-tense overclaim. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Single-secondary-source metrics, especially live rankings, token counts, app-store ranks, leaderboard positions, must be attributed and tied to an absolute as-of date. Distinct from `prediction_guard` (which targets forward-looking verbs specifically); this targets retrospective/present-tense overclaim. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
@@ -2120,8 +2362,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **actionable_items**: Action Items are doable by a non-developer this week. BAD: "evaluate vendor lock-in risk", "build multi-agent pipeline". GOOD: "try Meta AI in WhatsApp", "read Anthropic's blog post".
 
 ### Language Quality (4)
-- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; supporting stories may be 2-3 paragraphs; engaging without being condescending. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
-- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
+- **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; supporting stories may be 2-3 paragraphs; engaging without being condescending. Also flag literal translation Korean in learner output: penalize dictionary-like translations that are technically possible but unnatural for news readers, especially deployment → not always `배치`; prefer `도입`, `적용`, `운영`, `출시`, or `배포` by context; entity → not `법인` unless legal corporation is meant; prefer `기업`, `조직`, `주체`, or `서비스`; agent → not `대리인` in AI product contexts; prefer `AI 에이전트` or `작업을 수행하는 AI`. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Single-secondary-source metrics, especially live rankings, token counts, app-store ranks, leaderboard positions, must be attributed and tied to an absolute as-of date. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
   - Every prose paragraph ≥50 chars (excluding `##` / `###` heading lines) MUST contain at least 1 Hangul character.
@@ -2163,6 +2405,98 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 }}"""
 
 
+QUALITY_CHECK_RESEARCH_BEGINNER = f"""You are a quality reviewer for an AI research digest written for the Beginner persona.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
+
+{_QC_SHARED_RUBRIC_HEADER}
+
+## Sub-dimensions
+
+### Beginner Structure
+- **main_vs_skim**: Research Beginner uses 1-2 main items under `Main Research to Understand Today` / `오늘 꼭 이해할 연구`; lower-priority stories are short bullets under `Worth Skimming` / `가볍게 지나가도 되는 소식`, not full sections.
+- **one_line_scope**: One-Line Summary summarizes only selected main items and does not mention skim-only stories.
+- **learner_bridge**: `Read the Learner Digest Next` / `학습자 뉴스 이어읽기` points to a concrete next learner section or topic.
+
+### Accessibility
+- **context_first**: Background and first paragraphs explain the problem context before method names, benchmark terms, or acronyms.
+- **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
+- **research_burden_reduction**: Each main research item explains what burden is reduced — cost, access, manual work, data, execution, memory, time, or infrastructure.
+
+### Language Quality
+- **schema_placeholder**: No schema labels are copied as content. Bad values include "왜 이 문제가 있었나", "이번 방법은 무엇을 덜 필요하게 하나", "헷갈리지 말 것".
+- **article_copy**: One-Line Summary and body are article copy, not reading instructions; flag "보세요", "읽어보세요", or "이 관점으로 보면".
+- **locale_integrity**: EN is English-only and KO is Korean editorial prose, with no garbled or wrong-locale paragraphs.
+
+{_QC_SHARED_SEVERITY_RULES}
+
+## Output JSON
+{{
+  "beginner_structure": {{
+    "main_vs_skim": {{"evidence": "...", "score": 0}},
+    "one_line_scope": {{"evidence": "...", "score": 0}},
+    "learner_bridge": {{"evidence": "...", "score": 0}}
+  }},
+  "accessibility": {{
+    "context_first": {{"evidence": "...", "score": 0}},
+    "term_definition_repetition": {{"evidence": "...", "score": 0}},
+    "research_burden_reduction": {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "schema_placeholder": {{"evidence": "...", "score": 0}},
+    "article_copy": {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "beginner_body|ko|en", "category": "structure|accessibility|locale|clarity|source", "message": "..."}}]
+}}"""
+
+
+QUALITY_CHECK_BUSINESS_BEGINNER = f"""You are a quality reviewer for an AI business digest written for the Beginner persona.
+
+The input contains BOTH the English and Korean body for the same persona. Evaluate both together — poor quality in either locale drops the corresponding sub-score.
+
+{_QC_SHARED_RUBRIC_HEADER}
+
+## Sub-dimensions
+
+### Beginner Structure
+- **main_vs_skim**: Business Beginner uses 2-3 main items under `Main Changes to Understand Today` / `오늘 꼭 이해할 변화`; lower-priority stories are short bullets under `Worth Skimming` / `가볍게 지나가도 되는 소식`, not full sections.
+- **one_line_scope**: One-Line Summary summarizes only selected main items and does not mention skim-only stories.
+- **learner_bridge**: `Read the Learner Digest Next` / `학습자 뉴스 이어읽기` points to a concrete next learner section or topic.
+
+### Business Accessibility
+- **business_lens_sentence**: One-Line Summary is a lens sentence, not a catalog/list of vendors, products, equipment, or projects.
+- **context_first**: Background and first paragraphs explain the business situation before product names, funding mechanics, or infrastructure terms.
+- **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
+
+### Language Quality
+- **schema_placeholder**: No schema labels are copied as content. Bad values include "무슨 일이 있었나", "내 일과 무슨 관련이 있나", "헷갈리지 말 것".
+- **article_copy**: One-Line Summary and body are article copy, not reading instructions; flag "보세요", "읽어보세요", or "이 관점으로 보면".
+- **locale_integrity**: EN is English-only and KO is Korean editorial prose, with no garbled or wrong-locale paragraphs.
+
+{_QC_SHARED_SEVERITY_RULES}
+
+## Output JSON
+{{
+  "beginner_structure": {{
+    "main_vs_skim": {{"evidence": "...", "score": 0}},
+    "one_line_scope": {{"evidence": "...", "score": 0}},
+    "learner_bridge": {{"evidence": "...", "score": 0}}
+  }},
+  "business_accessibility": {{
+    "business_lens_sentence": {{"evidence": "...", "score": 0}},
+    "context_first": {{"evidence": "...", "score": 0}},
+    "term_definition_repetition": {{"evidence": "...", "score": 0}}
+  }},
+  "language_quality": {{
+    "schema_placeholder": {{"evidence": "...", "score": 0}},
+    "article_copy": {{"evidence": "...", "score": 0}},
+    "locale_integrity": {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "beginner_body|ko|en", "category": "structure|accessibility|locale|clarity|source", "message": "..."}}]
+}}"""
+
+
 QUALITY_CHECK_FRONTLOAD = f"""You are a strict quality reviewer for digest frontload quality.
 
 The input contains 6 frontload fields for the same digest — the scannable hook
@@ -2184,7 +2518,7 @@ are grounded, calibrated, clear, and bilingual-parity.
 - **claim_grounding**: Non-numeric claims ("OpenAI loses 3 executives", "validates demand for non-GPU compute") are statements the body would be expected to support — not conjecture the headline invents on its own. **10** claims are event-level facts; **7** one interpretive claim but close to a factual paraphrase; **4** speculative claim framed as fact; **0** outright invented claim.
 
 ### Calibration (2)
-- **claim_strength**: Headline/excerpt don't overstate beyond what a secondary-heavy story can support. **10** tone matches evidence strength (e.g., "files for IPO" for a filing, "reportedly raises" for a leak); **7** one slightly strong phrase but not misleading; **4** competitive/strategic framing stronger than the evidence allows ("dominates", "crushes"); **0** heavy overclaim that rewrites the story.
+- **claim_strength**: Headline/excerpt don't overstate beyond what a secondary-heavy story can support. Flag any secondary-only metric or strategic conclusion in headline/excerpt without attribution. Flag any live metric without an as-of date (rankings, token counts, app-store ranks, leaderboard positions). **10** tone matches evidence strength (e.g., "files for IPO" for a filing, "reportedly raises" for a leak); **7** one slightly strong phrase but not misleading; **4** competitive/strategic framing stronger than the evidence allows ("dominates", "crushes"); **0** heavy overclaim that rewrites the story.
 - **framing_calibration**: No forward-looking speculation verbs in frontload ("will disrupt", "is set to", "Expect X to Y", "poised to", Korean "~할 것이다", "전망된다"). Observational framing only ("signals", "points to", "implies"). **EXEMPT**: focus_item P3 ("what to watch") may use "Watch for X" / "X 주시" / "keep an eye on X" phrasing WHEN X is an observable signal (dataset release, benchmark publication, paper replication, public filing, earnings disclosure) — this is descriptive, not speculative. NOT exempt: watch phrases about prices, market outcomes, competitive wins/losses ("watch for a crash", "watch Nvidia's decline"). **10** fully observational; **7** one borderline phrase; **4** one clear forward-looking verb; **0** multiple forward-looking predictions.
 
 ### Clarity (2)

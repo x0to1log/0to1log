@@ -237,10 +237,11 @@ export async function getNewsDetailPageData({
   let rawContent = '';
 
   if (post) {
-    const hasPersonaContent = post.content_learner || post.content_expert;
+    const hasPersonaContent = post.content_beginner || post.content_learner || post.content_expert;
     if (hasPersonaContent) {
       const personaKey = previewMode ? (previewPersona || 'learner') : (userPersona || 'learner');
       const contentMap: Record<string, string> = {
+        beginner: post.content_beginner || '',
         learner: post.content_learner || '',
         expert: post.content_expert || '',
       };
@@ -296,7 +297,7 @@ export async function getNewsDetailPageData({
   const personaSourceCardsMap: Record<string, typeof sourceCards> = {};
   try {
     const guideItems = post?.guide_items || {};
-    for (const pname of ['expert', 'learner']) {
+    for (const pname of ['expert', 'learner', 'beginner']) {
       const psrc = guideItems[`sources_${pname}`];
       if (Array.isArray(psrc) && psrc.length > 0) {
         personaSourceCardsMap[pname] = normalizeSourceCards({
@@ -322,6 +323,7 @@ export async function getNewsDetailPageData({
       excerpt: post.excerpt || '',
     },
     learner: resolveDisplayTitleExcerpt(post, 'learner'),
+    beginner: resolveDisplayTitleExcerpt(post, 'beginner'),
   } : {};
 
   return {

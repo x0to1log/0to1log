@@ -9,6 +9,8 @@ class PostDraftListItem(BaseModel):
     """Draft list endpoint response item — summary view."""
     id: str
     title: str
+    title_learner: Optional[str] = None
+    title_beginner: Optional[str] = None
     slug: str
     category: str
     post_type: Optional[str] = None
@@ -37,9 +39,10 @@ class PostDraftDetail(BaseModel):
     no_news_notice: Optional[str] = None
     recent_fallback: Optional[str] = None
 
-    # Persona fields (v4: Expert + Learner)
+    # Persona fields (v4+: Expert + Learner + Beginner)
     content_learner: Optional[str] = None
     content_expert: Optional[str] = None
+    content_beginner: Optional[str] = None
 
     # Shared structured fields
     guide_items: Optional[dict] = None
@@ -66,6 +69,7 @@ class PostUpdateRequest(BaseModel):
     content_original: Optional[str] = None
     content_learner: Optional[str] = None
     content_expert: Optional[str] = None
+    content_beginner: Optional[str] = None
     guide_items: Optional[dict] = None
     related_news: Optional[RelatedNews] = None
     tags: Optional[list[str]] = None

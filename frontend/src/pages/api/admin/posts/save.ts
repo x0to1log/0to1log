@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const body = await request.json();
-  const { id, title, title_learner, slug, category, tags, content_original, content_learner, content_expert, excerpt, post_type, locale, focus_items, og_image_url, guide_items_partial } = body;
+  const { id, title, title_learner, title_beginner, slug, category, tags, content_original, content_learner, content_expert, content_beginner, excerpt, post_type, locale, focus_items, og_image_url, guide_items_partial } = body;
 
   if (!title?.trim()) {
     return new Response(JSON.stringify({ error: 'title is required' }), {
@@ -65,7 +65,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // when the editor isn't initialized — this guard backs that up.
   if (content_learner !== undefined && content_learner !== '') row.content_learner = content_learner;
   if (content_expert !== undefined && content_expert !== '') row.content_expert = content_expert;
+  if (content_beginner !== undefined && content_beginner !== '') row.content_beginner = content_beginner;
   if (title_learner !== undefined) row.title_learner = title_learner || null;
+  if (title_beginner !== undefined) row.title_beginner = title_beginner || null;
 
   const supabase = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,

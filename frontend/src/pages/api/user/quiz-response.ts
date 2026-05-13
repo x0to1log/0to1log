@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!post_id || !persona || !selected || typeof is_correct !== 'boolean') {
     return json({ error: 'Missing required fields' }, 400);
   }
-  if (!['expert', 'learner'].includes(persona)) {
+  if (!['expert', 'learner', 'beginner'].includes(persona)) {
     return json({ error: 'Invalid persona' }, 400);
   }
 

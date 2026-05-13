@@ -277,6 +277,44 @@ def test_load_personas_and_frontload_returns_empty_on_missing_rows():
     assert frontload_by_type == {}
 
 
+def test_load_personas_and_frontload_includes_beginner_when_available():
+    supabase = MagicMock()
+    rows = [
+        {
+            "slug": "2026-04-19-research-digest",
+            "locale": "en",
+            "post_type": "research",
+            "content_expert": "EN expert",
+            "content_learner": "EN learner",
+            "content_beginner": "EN beginner",
+            "title": "Research EN",
+            "title_beginner": "Beginner EN",
+            "excerpt": "Excerpt EN",
+            "focus_items": ["a"],
+            "guide_items": {},
+        },
+        {
+            "slug": "2026-04-19-research-digest-ko",
+            "locale": "ko",
+            "post_type": "research",
+            "content_expert": "KO expert",
+            "content_learner": "KO learner",
+            "content_beginner": "KO beginner",
+            "title": "Research KO",
+            "title_beginner": "Beginner KO",
+            "excerpt": "Excerpt KO",
+            "focus_items": ["ㄱ"],
+            "guide_items": {},
+        },
+    ]
+    supabase.table.return_value.select.return_value.eq.return_value.in_.return_value.execute.return_value.data = rows
+
+    personas_by_type, _ = _load_personas_and_frontload_from_db(supabase, "2026-04-19")
+
+    assert personas_by_type["research"]["beginner"].en == "EN beginner"
+    assert personas_by_type["research"]["beginner"].ko == "KO beginner"
+
+
 def test_load_personas_and_frontload_uses_guide_items_fallback_when_ko_row_lacks_title_excerpt():
     """When ko_row has no title/excerpt, the frontload builder should fall back to en_row's
     guide_items.title_learner / excerpt_learner. This covers the MEMORY.md-flagged

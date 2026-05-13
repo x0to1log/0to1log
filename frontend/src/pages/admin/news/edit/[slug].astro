@@ -92,7 +92,8 @@ const canRerunQuality = !!(digestBatchId && digestType && digestRunId);
 // Content setup: posts with persona content use 2 editors (v4), others use single editor
 const contentLearner = post?.content_learner || '';
 const contentExpert = post?.content_expert || '';
-const hasPersonaContent = !!(contentLearner || contentExpert);
+const contentBeginner = post?.content_beginner || '';
+const hasPersonaContent = !!(contentBeginner || contentLearner || contentExpert);
 const editableContent = hasPersonaContent
   ? ''
   : (post?.content_original || '');
@@ -114,7 +115,7 @@ const initialEditionLabel = editionMap[initialCategory] || 'Daily Dispatch';
 const initialFocusItems = getArticleFocusItems('en', initialCategory);
 const initialTitle = post?.title || '';
 const initialTags = post?.tags || [];
-const previewContent = hasPersonaContent ? (contentLearner || contentExpert) : editableContent;
+const previewContent = hasPersonaContent ? (contentLearner || contentBeginner || contentExpert) : editableContent;
 const initialHtmlContent = post ? await renderMarkdown(previewContent) : '';
 const initialWordCount = post ? previewContent.split(/\s+/).length : 0;
 const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
@@ -181,6 +182,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             placeholder="Untitled"
             data-title-expert={post?.title || ''}
             data-title-learner={post?.title_learner || post?.guide_items?.title_learner || ''}
+            data-title-beginner={post?.title_beginner || post?.guide_items?.title_beginner || ''}
           >{post?.title || ''}</textarea>
 
           <div class="admin-editor-meta">
@@ -235,6 +237,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 <textarea id="edit-excerpt" class="admin-input" rows="2" style="flex:1;"
                   data-excerpt-expert={post?.excerpt || ''}
                   data-excerpt-learner={post?.guide_items?.excerpt_learner || ''}
+                  data-excerpt-beginner={post?.guide_items?.excerpt_beginner || ''}
                   placeholder="Brief summary for list pages and SEO...">{post?.excerpt || ''}</textarea>
               </div>
               <div class="admin-editor-meta-row">
@@ -276,9 +279,11 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           {hasPersonaContent ? (
             <>
               <div class="admin-lang-tabs">
+                <button type="button" class="admin-lang-tab" data-persona-tab="beginner">Beginner</button>
                 <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="learner">Learner</button>
                 <button type="button" class="admin-lang-tab" data-persona-tab="expert">Expert</button>
               </div>
+              <div id="persona-beginner" class="admin-editor-wrapper" style="display:none;" data-content={contentBeginner}></div>
               <div id="persona-learner" class="admin-editor-wrapper" data-content={contentLearner}></div>
               <div id="persona-expert" class="admin-editor-wrapper" style="display:none;" data-content={contentExpert}></div>
             </>
@@ -392,7 +397,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
   import { createPreviewManager } from '../../../../scripts/adminEditorPreview';
 
   let crepe: Crepe | null = null;
-  const personaEditors: Record<string, Crepe | null> = { learner: null, expert: null };
+  const personaEditors: Record<string, Crepe | null> = { beginner: null, learner: null, expert: null };
   let activePersonaTab = 'learner';
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -586,10 +591,12 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
     const titleByPersona: Record<string, string> = {
       expert: titleInput?.dataset.titleExpert || titleInput?.value || '',
       learner: titleInput?.dataset.titleLearner || '',
+      beginner: titleInput?.dataset.titleBeginner || '',
     };
     const excerptByPersona: Record<string, string> = {
       expert: excerptInput?.dataset.excerptExpert || excerptInput?.value || '',
       learner: excerptInput?.dataset.excerptLearner || '',
+      beginner: excerptInput?.dataset.excerptBeginner || '',
     };
     // Initial display: learner tab is active by default (matches markup)
     if (titleInput && titleByPersona.learner) titleInput.value = titleByPersona.learner;
@@ -613,7 +620,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
           if (excerptInput) excerptByPersona[activePersonaTab] = excerptInput.value;
           personaTabs.forEach(b => b.classList.remove('admin-lang-tab--active'));
           btn.classList.add('admin-lang-tab--active');
-          (['learner', 'expert'] as const).forEach(k => {
+          (['beginner', 'learner', 'expert'] as const).forEach(k => {
             const el = document.getElementById(`persona-${k}`);
             if (el) el.style.display = k === p ? '' : 'none';
           });
@@ -654,7 +661,7 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         preview: '1',
         ts: `${Date.now()}`,
       });
-      if ((postTypeSelect?.value || '') === 'business') {
+      if (isBusinessEditor) {
         params.set('previewPersona', activePersonaTab);
       }
       return `/${locale}/news/${slug}/?${params.toString()}`;
@@ -710,10 +717,16 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
         if (personaEditors.expert) {
           saveBody.content_expert = personaEditors.expert.getMarkdown();
         }
+        if (personaEditors.beginner) {
+          saveBody.content_beginner = personaEditors.beginner.getMarkdown();
+        }
         saveBody.title_learner = titleByPersona.learner || null;
+        saveBody.title_beginner = titleByPersona.beginner || null;
         saveBody.guide_items_partial = {
           title_learner: titleByPersona.learner || '',
           excerpt_learner: excerptByPersona.learner || '',
+          title_beginner: titleByPersona.beginner || '',
+          excerpt_beginner: excerptByPersona.beginner || '',
         };
       } else {
         saveBody.content_original = crepe ? crepe.getMarkdown() : '';

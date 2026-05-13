@@ -44,7 +44,7 @@ def _sha(text: str | None) -> str:
 def baseline(batch_id: str, out_path: Path) -> int:
     # Preflight: all 4 slugs must exist
     rows = SB.table("news_posts").select(
-        "slug,content_expert,content_learner,updated_at,quality_score"
+        "slug,content_expert,content_learner,content_beginner,updated_at,quality_score"
     ).in_("slug", slugs_for(batch_id)).execute().data
     by_slug = {r["slug"]: r for r in rows}
     missing = [s for s in slugs_for(batch_id) if s not in by_slug]
@@ -69,6 +69,7 @@ def baseline(batch_id: str, out_path: Path) -> int:
             slug: {
                 "content_expert_hash": _sha(by_slug[slug].get("content_expert")),
                 "content_learner_hash": _sha(by_slug[slug].get("content_learner")),
+                "content_beginner_hash": _sha(by_slug[slug].get("content_beginner")),
                 "updated_at": by_slug[slug].get("updated_at"),
                 "quality_score": by_slug[slug].get("quality_score"),
             }
@@ -111,7 +112,7 @@ def verify(batch_id: str, in_path: Path) -> int:
     # Criterion 3: each slug's quality_score + updated_at refreshed, both locales
     rows = SB.table("news_posts").select(
         "slug,quality_score,quality_flags,content_analysis,updated_at,"
-        "content_expert,content_learner"
+        "content_expert,content_learner,content_beginner"
     ).in_("slug", slugs_for(batch_id)).execute().data
     by_slug = {r["slug"]: r for r in rows}
 
@@ -139,13 +140,16 @@ def verify(batch_id: str, in_path: Path) -> int:
             fails.append(f"{slug}: updated_at not refreshed "
                          f"(was {base_slug['updated_at']}, is {row['updated_at']})")
 
-        # 3d: content_expert / content_learner UNCHANGED (writer skipped)
+        # 3d: persona content UNCHANGED (writer skipped)
         now_e = _sha(row.get("content_expert"))
         now_l = _sha(row.get("content_learner"))
+        now_b = _sha(row.get("content_beginner"))
         if now_e != base_slug["content_expert_hash"]:
             fails.append(f"{slug}: content_expert CHANGED — writer must have re-run")
         if now_l != base_slug["content_learner_hash"]:
             fails.append(f"{slug}: content_learner CHANGED — writer must have re-run")
+        if now_b != base_slug.get("content_beginner_hash", _sha(None)):
+            fails.append(f"{slug}: content_beginner CHANGED — writer must have re-run")
 
     if fails:
         print("\nFAIL — criteria violated:")

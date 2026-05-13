@@ -12,15 +12,20 @@ interface Props {
 
 const { factPack } = Astro.props;
 const q: NormalizedQuality = normalizeQualityData(factPack);
+const hasBeginnerQuality =
+  q.aggregates.rawLlm.beginner_body > 0 ||
+  q.aggregates.weightedLlm.beginner_body > 0 ||
+  q.breakdowns.beginner !== null;
 
 const aggregateChips = [
   { label: 'Structure', value: q.aggregates.deterministic.structure, max: 15 },
   { label: 'Traceability', value: q.aggregates.deterministic.traceability, max: 15 },
   { label: 'Locale', value: q.aggregates.deterministic.locale, max: 10 },
-  { label: 'Expert Body (wt)', value: q.aggregates.weightedLlm.expert_body, max: 24 },
-  { label: 'Learner Body (wt)', value: q.aggregates.weightedLlm.learner_body, max: 24 },
-  { label: 'Frontload (wt)', value: q.aggregates.weightedLlm.frontload, max: 12 },
-];
+  { label: 'Expert Body (wt)', value: q.aggregates.weightedLlm.expert_body, max: hasBeginnerQuality ? 16 : 20 },
+  { label: 'Learner Body (wt)', value: q.aggregates.weightedLlm.learner_body, max: hasBeginnerQuality ? 16 : 20 },
+  { label: 'Beginner Body (wt)', value: q.aggregates.weightedLlm.beginner_body, max: 16 },
+  { label: 'Frontload (wt)', value: q.aggregates.weightedLlm.frontload, max: hasBeginnerQuality ? 12 : 20 },
+].filter((chip) => chip.label !== 'Beginner Body (wt)' || hasBeginnerQuality);
 
 const majorIssues = q.issues.filter((i) => i.severity === 'major');
 const minorIssues = q.issues.filter((i) => i.severity === 'minor');
@@ -28,10 +33,11 @@ const minorIssues = q.issues.filter((i) => i.severity === 'minor');
 const personaLabels = {
   expert: 'Expert Body',
   learner: 'Learner Body',
+  beginner: 'Beginner Body',
   frontload: 'Frontload',
 } as const;
 type PersonaKey = keyof typeof personaLabels;
-const personaOrder: PersonaKey[] = ['expert', 'learner', 'frontload'];
+const personaOrder: PersonaKey[] = ['expert', 'learner', 'beginner', 'frontload'];
 
 const scoreChipClass = q.score === null
   ? ''

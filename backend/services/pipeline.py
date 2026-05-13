@@ -1802,7 +1802,7 @@ def _load_personas_and_frontload_from_db(
 
     Used by rerun_from='quality' to re-run QC without regenerating content.
     Returns:
-        personas_by_type: {"research": {"expert": PersonaOutput, "learner": PersonaOutput}, "business": {...}}
+        personas_by_type: {"research": {"expert": PersonaOutput, "learner": PersonaOutput, "beginner": PersonaOutput}, "business": {...}}
         frontload_by_type: {"research": {headline, headline_ko, excerpt, excerpt_ko, focus_items, focus_items_ko}, "business": {...}}
     """
     slugs = [
@@ -1813,7 +1813,7 @@ def _load_personas_and_frontload_from_db(
     ]
     resp = (
         supabase.table("news_posts")
-        .select("slug,locale,post_type,content_expert,content_learner,title,excerpt,focus_items,guide_items")
+        .select("slug,locale,post_type,content_expert,content_learner,content_beginner,title,title_beginner,excerpt,focus_items,guide_items")
         .eq("category", "ai-news")
         .in_("slug", slugs)
         .execute()
@@ -1845,6 +1845,11 @@ def _load_personas_and_frontload_from_db(
                 ko=ko_row.get("content_learner") or "",
             ),
         }
+        if en_row.get("content_beginner") or ko_row.get("content_beginner"):
+            personas_by_type[dtype]["beginner"] = PersonaOutput(
+                en=en_row.get("content_beginner") or "",
+                ko=ko_row.get("content_beginner") or "",
+            )
 
         # Frontload: EN fields from EN row, KO from KO row, focus_items_ko from KO row's focus_items
         guide = en_row.get("guide_items") or {}
@@ -2101,6 +2106,9 @@ async def rerun_pipeline_stage(
                             ),
                             "learner_breakdown": qc_result.get(
                                 "learner_breakdown", existing_fp.get("learner_breakdown", {}),
+                            ),
+                            "beginner_breakdown": qc_result.get(
+                                "beginner_breakdown", existing_fp.get("beginner_breakdown", {}),
                             ),
                             "frontload_breakdown": qc_result.get(
                                 "frontload_breakdown", existing_fp.get("frontload_breakdown", {}),

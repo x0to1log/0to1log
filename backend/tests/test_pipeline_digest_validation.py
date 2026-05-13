@@ -60,6 +60,40 @@ def _mock_openai_response(payload: dict, tokens: int = 500):
     return response
 
 
+def _mock_beginner_response(url: str = "https://example.com/story"):
+    return _mock_openai_response(
+        {
+            "en": (
+                "## Context First\n\n"
+                "### Beginner Heading\n\n"
+                f"Beginner body [1]({url})\n"
+            ),
+            "ko": (
+                "## 먼저 볼 맥락\n\n"
+                "### 입문자 제목\n\n"
+                f"입문자 본문 [1]({url})\n"
+            ),
+            "headline": "Beginner headline",
+            "headline_ko": "입문자 헤드라인",
+            "excerpt": "Beginner excerpt",
+            "excerpt_ko": "입문자 요약",
+            "sources": [{"url": url, "title": "Primary source"}],
+            "quiz_en": {
+                "question": "What changed?",
+                "options": ["A practical context changed", "Nothing changed", "Only the date changed", "The source vanished"],
+                "answer_index": 0,
+                "explanation": "The story adds beginner context.",
+            },
+            "quiz_ko": {
+                "question": "무엇이 바뀌었나요?",
+                "options": ["실무 맥락이 바뀌었다", "아무것도 바뀌지 않았다", "날짜만 바뀌었다", "출처가 사라졌다"],
+                "answer_index": 0,
+                "explanation": "입문자가 볼 맥락을 더했습니다.",
+            },
+        }
+    )
+
+
 class _UpsertQuery:
     def __init__(self, supabase, table_name: str):
         self.supabase = supabase
@@ -260,6 +294,7 @@ async def test_generate_digest_aborts_before_save_when_structural_blocker_found(
                     "excerpt_ko": "학습자 요약",
                 }
             ),
+            _mock_beginner_response(),
         ]
     )
 
@@ -325,6 +360,7 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
                     ],
                 }
             ),
+            _mock_beginner_response(),
         ]
     )
 
@@ -371,6 +407,169 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
 
 
 @pytest.mark.asyncio
+async def test_generate_digest_saves_beginner_persona_fields():
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### Expert Heading\n\nExpert body [1](https://example.com/story)",
+                    "ko": "## Research Papers\n\n### 전문가 제목\n\n전문가 본문 [1](https://example.com/story)",
+                    "headline": "Expert headline",
+                    "headline_ko": "전문가 헤드라인",
+                    "excerpt": "Expert excerpt",
+                    "excerpt_ko": "전문가 요약",
+                    "sources": [{"url": "https://example.com/story", "title": "Primary source"}],
+                }
+            ),
+            _mock_openai_response(
+                {
+                    "en": "## Research Papers\n\n### Learner Heading\n\nLearner body [1](https://example.com/story)",
+                    "ko": "## Research Papers\n\n### 학습자 제목\n\n학습자 본문 [1](https://example.com/story)",
+                    "headline": "Learner headline",
+                    "headline_ko": "학습자 헤드라인",
+                    "excerpt": "Learner excerpt",
+                    "excerpt_ko": "학습자 요약",
+                    "sources": [{"url": "https://example.com/story", "title": "Primary source"}],
+                }
+            ),
+            _mock_beginner_response(),
+        ]
+    )
+
+    quality_meta = {
+        "score": 91,
+        "quality_score": 91,
+        "quality_version": "v2",
+        "quality_breakdown": {
+            "llm": {"expert_body": 16, "learner_body": 16, "beginner_body": 16, "frontload": 12},
+            "raw_llm": {"expert_body": 100, "learner_body": 100, "beginner_body": 100, "frontload": 100},
+        },
+        "expert_breakdown": {},
+        "learner_breakdown": {},
+        "beginner_breakdown": {"accessibility": {"context_first": {"evidence": "ok", "score": 10}}},
+        "frontload_breakdown": {},
+        "quality_issues": [],
+        "quality_caps_applied": [],
+        "structural_penalty": 0,
+        "structural_warnings": [],
+        "url_validation_failed": False,
+        "url_validation_failures": [],
+    }
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=quality_meta), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    assert mock_client.chat.completions.create.await_count == 3
+    for _table, payload in supabase.saved_rows:
+        assert payload["content_beginner"]
+        assert payload["title_beginner"] in {"Beginner headline", "입문자 헤드라인"}
+        assert payload["guide_items"]["title_beginner"] == payload["title_beginner"]
+        assert payload["guide_items"]["excerpt_beginner"]
+        assert payload["guide_items"]["sources_beginner"]
+        assert payload["guide_items"]["quiz_poll_beginner"]["question"]
+        assert payload["fact_pack"]["beginner_breakdown"]["accessibility"]["context_first"]["score"] == 10
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_saves_required_personas_when_beginner_fails():
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response({
+                "en": "## Research Papers\n\n### Expert\n\nBody [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 전문가\n\n본문 [1](https://example.com/story)",
+                "headline": "Expert headline",
+                "headline_ko": "전문가 제목",
+                "excerpt": "Expert excerpt",
+                "excerpt_ko": "전문가 요약",
+                "sources": [{"url": "https://example.com/story", "title": "S"}],
+            }),
+            _mock_openai_response({
+                "en": "## Research Papers\n\n### Learner\n\nBody [1](https://example.com/story)",
+                "ko": "## Research Papers\n\n### 학습자\n\n본문 [1](https://example.com/story)",
+                "headline": "Learner headline",
+                "headline_ko": "학습자 제목",
+                "excerpt": "Learner excerpt",
+                "excerpt_ko": "학습자 요약",
+                "sources": [{"url": "https://example.com/story", "title": "S"}],
+            }),
+            RuntimeError("beginner failed"),
+            RuntimeError("beginner failed"),
+            RuntimeError("beginner failed"),
+        ]
+    )
+
+    quality_meta = {
+        "score": 90,
+        "quality_score": 90,
+        "quality_version": "v2",
+        "quality_breakdown": {},
+        "quality_issues": [],
+        "quality_caps_applied": [],
+        "structural_penalty": 0,
+        "structural_warnings": [],
+        "url_validation_failed": False,
+        "url_validation_failures": [],
+    }
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=quality_meta), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+            auto_publish=True,
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    assert mock_client.chat.completions.create.await_count == 5
+    for _table, payload in supabase.saved_rows:
+        assert "content_beginner" not in payload
+        assert payload["fact_pack"]["auto_publish_eligible"] is False
+
+
+@pytest.mark.asyncio
 async def test_generate_digest_includes_source_metadata_labels_in_writer_prompt():
     from services.pipeline import _generate_digest
 
@@ -397,6 +596,7 @@ async def test_generate_digest_includes_source_metadata_labels_in_writer_prompt(
                 "excerpt_ko": "학습자 요약",
             }
         ),
+        _mock_beginner_response(),
     ]
 
     async def _capture_create(*args, **kwargs):
@@ -493,6 +693,7 @@ async def test_generate_digest_saves_source_cards_with_source_metadata():
                     ],
                 }
             ),
+            _mock_beginner_response(),
         ]
     )
 
@@ -575,6 +776,7 @@ async def test_generate_digest_orders_primary_sources_first_in_prompt():
                 "sources": [{"url": "https://example.com/story", "title": "Primary source"}],
             }
         ),
+        _mock_beginner_response(),
     ]
 
     async def _capture_create(*args, **kwargs):
@@ -661,6 +863,7 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
                     "excerpt_ko": "학습자 요약",
                 }
             ),
+            _mock_beginner_response(),
             _mock_openai_response(
                 {
                     "en": "## Research Papers\n\n### ClawBench: Agent performance on everyday web tasks\n\nRecovered expert body [1](https://example.com/story)"
@@ -722,6 +925,7 @@ async def test_generate_digest_surfaces_url_validation_to_fact_pack_and_forces_d
                 "excerpt": "E", "excerpt_ko": "요",
                 "sources": [{"url": "https://example.com/story", "title": "S"}],
             }),
+            _mock_beginner_response(),
         ]
     )
 
@@ -805,6 +1009,7 @@ async def test_generate_digest_surfaces_url_validation_pass_state_to_fact_pack()
                 "excerpt": "E", "excerpt_ko": "요",
                 "sources": [{"url": "https://example.com/story", "title": "S"}],
             }),
+            _mock_beginner_response(),
         ]
     )
 

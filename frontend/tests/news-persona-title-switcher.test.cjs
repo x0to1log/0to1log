@@ -15,6 +15,14 @@ assert.ok(
   'detail layout must expose persona-specific title/excerpt display data to the switcher',
 );
 assert.ok(
+  layout.includes("['beginner', 'learner', 'expert']"),
+  'detail layout must render the beginner persona switcher option before learner/expert',
+);
+assert.ok(
+  read('frontend/src/lib/pageData/newsDetailPage.ts').includes("beginner: resolveDisplayTitleExcerpt(post, 'beginner')"),
+  'detail page data must expose beginner-specific title/excerpt display data',
+);
+assert.ok(
   layout.includes("const displayMap: Record<string, { title?: string; excerpt?: string }> = JSON.parse(template.dataset.display || '{}');"),
   'switcher script must read persona-specific display data',
 );

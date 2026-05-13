@@ -1,7 +1,10 @@
 from services.agents.prompts_news_pipeline import (
     CLASSIFICATION_SYSTEM_PROMPT,
+    QUALITY_CHECK_BUSINESS_BEGINNER,
     QUALITY_CHECK_BUSINESS_EXPERT,
     QUALITY_CHECK_BUSINESS_LEARNER,
+    QUALITY_CHECK_FRONTLOAD,
+    QUALITY_CHECK_RESEARCH_BEGINNER,
     QUALITY_CHECK_RESEARCH_EXPERT,
     QUALITY_CHECK_RESEARCH_LEARNER,
     get_digest_prompt,
@@ -29,6 +32,34 @@ def test_research_learner_prompt_stays_curated_not_action_driven():
     assert "## What To Try This Week" not in prompt
     assert "## Action Items" not in prompt
     assert "guided technical digest" in prompt
+
+
+def test_research_beginner_prompt_uses_dedicated_context_explainer_format():
+    prompt = get_digest_prompt("research", "beginner", [])
+
+    assert "Beginner persona" in prompt
+    assert "Research Beginner main_items: 1-2" in prompt
+    assert "Do not turn every input group into a full section" in prompt
+    assert "## Context First" in prompt
+    assert "## 먼저 알면 좋은 배경" in prompt
+    assert "## Main Research to Understand Today" in prompt
+    assert "## 오늘 꼭 이해할 연구" in prompt
+    assert "## Worth Skimming" in prompt
+    assert "## 가볍게 지나가도 되는 소식" in prompt
+    assert "## Read the Learner Digest Next" in prompt
+    assert "## 학습자 뉴스 이어읽기" in prompt
+    assert "Never copy schema labels as field content" in prompt
+    assert "Action Items" not in prompt
+
+
+def test_business_beginner_prompt_uses_lens_sentence_not_catalog():
+    prompt = get_digest_prompt("business", "beginner", [])
+
+    assert "Business Beginner main_items: 2-3" in prompt
+    assert "Business one_line is a lens sentence, not a catalog" in prompt
+    assert "Do not list vendor, product, equipment, or project names in business one_line" in prompt
+    assert "Do not write reading instructions like 보세요" in prompt
+    assert "put concrete names and examples in main_items instead" in prompt
 
 
 def test_learner_prompt_requires_plain_language_before_benchmarks():
@@ -64,6 +95,31 @@ def test_learner_quality_rubrics_do_not_require_three_supporting_paragraphs():
     assert "supporting stories may be 2-3 paragraphs" in QUALITY_CHECK_BUSINESS_LEARNER
     assert "supporting at least 3" not in QUALITY_CHECK_RESEARCH_LEARNER
     assert "supporting at least 3" not in QUALITY_CHECK_BUSINESS_LEARNER
+
+
+def test_beginner_quality_rubrics_cover_beginner_specific_failures():
+    for prompt in [QUALITY_CHECK_RESEARCH_BEGINNER, QUALITY_CHECK_BUSINESS_BEGINNER]:
+        assert "Beginner persona" in prompt
+        assert "main_vs_skim" in prompt
+        assert "one_line_scope" in prompt
+        assert "schema_placeholder" in prompt
+        assert "term_definition_repetition" in prompt
+        assert "학습자 뉴스 이어읽기" in prompt
+        assert "보세요" in prompt
+
+    assert "research_burden_reduction" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "business_lens_sentence" in QUALITY_CHECK_BUSINESS_BEGINNER
+
+
+def test_learner_quality_rubrics_penalize_high_risk_ko_literal_translations_without_schema_change():
+    for prompt in [QUALITY_CHECK_RESEARCH_LEARNER, QUALITY_CHECK_BUSINESS_LEARNER]:
+        assert "literal translation Korean" in prompt
+        assert "dictionary-like translations" in prompt
+        assert "deployment → not always `배치`" in prompt
+        assert "entity → not `법인` unless legal corporation is meant" in prompt
+        assert "agent → not `대리인` in AI product contexts" in prompt
+        assert '"fluency":' in prompt
+        assert '"literal_translation"' not in prompt
 
 
 def test_business_prompt_keeps_strategy_sections():
@@ -110,6 +166,44 @@ def test_business_prompt_makes_front_load_observable_event_first_for_secondary_s
     assert "If a lead story is supported mostly by SECONDARY, analysis, or official_platform_asset sources, anchor the headline, excerpt, and first paragraph to the observable event first before any market interpretation." in prompt
     assert 'Prefer factual front-load verbs such as "launches", "releases", "announces", "files", "opens", "reviews", "says", or "prices" over dramatic framing.' in prompt
     assert 'Avoid loaded words such as "scramble", "showdown", "takes aim", "shot at", "salvo", or "war" in the headline, excerpt, and first paragraph unless the source itself uses that framing.' in prompt
+
+
+def test_business_prompts_require_attribution_and_dates_for_secondary_only_metrics():
+    expert_prompt = get_digest_prompt("business", "expert", [])
+    learner_prompt = get_digest_prompt("business", "learner", [])
+    research_prompt = get_digest_prompt("research", "expert", [])
+
+    for prompt in [expert_prompt, learner_prompt]:
+        assert "Secondary-only metrics" in prompt
+        assert "reported by <source>" in prompt
+        assert "as of <absolute date>" in prompt
+        assert "live rankings, token counts, app-store ranks, leaderboard positions" in prompt
+        assert "Do not put secondary-only strategic conclusions in headline/excerpt" in prompt
+
+    assert "Secondary-only metrics" not in research_prompt
+
+
+def test_business_prompts_soften_product_launch_claims_when_only_secondary_sources_are_available():
+    expert_prompt = get_digest_prompt("business", "expert", [])
+    learner_prompt = get_digest_prompt("business", "learner", [])
+
+    for prompt in [expert_prompt, learner_prompt]:
+        assert "If no official or PRIMARY source is available for a product launch" in prompt
+        assert "attribute company claims to the reporting source" in prompt
+        assert "avoid writing `OpenAI says` or `Google says`" in prompt
+        assert "Do not infer procurement speed, pilot readiness, or production deployment" in prompt
+        assert "scope an inquiry" in prompt
+
+
+def test_quality_rubrics_penalize_secondary_only_metrics_without_attribution_or_dates():
+    assert "secondary-only metric or strategic conclusion in headline/excerpt without attribution" in QUALITY_CHECK_FRONTLOAD
+    assert "live metric without an as-of date" in QUALITY_CHECK_FRONTLOAD
+
+    for prompt in [QUALITY_CHECK_BUSINESS_EXPERT, QUALITY_CHECK_BUSINESS_LEARNER]:
+        assert "Single-secondary-source metrics" in prompt
+        assert "live rankings, token counts, app-store ranks, leaderboard positions" in prompt
+        assert "must be attributed and tied to an absolute as-of date" in prompt
+        assert '"secondary_source_calibration"' not in prompt
 
 
 def test_research_prompt_has_license_sensitive_wording_guard():
@@ -179,6 +273,23 @@ def test_learner_prompt_prefers_news_editor_tone_over_chatty_friend_tone():
     assert "knowledgeable friend explaining over lunch" not in prompt
     assert "Write the learner version in clear editorial news prose" in prompt
     assert 'Do not write body paragraphs in a friendly spoken "~요" tone.' in prompt
+
+
+def test_learner_prompt_guides_high_risk_ko_literal_translations():
+    research_prompt = get_digest_prompt("research", "learner", [])
+    business_prompt = get_digest_prompt("business", "learner", [])
+    expert_prompt = get_digest_prompt("business", "expert", [])
+
+    for prompt in [research_prompt, business_prompt]:
+        assert "High-risk literal translations" in prompt
+        assert "deployment" in prompt
+        assert "do not default to `배치`" in prompt
+        assert "entity" in prompt
+        assert "do not use `법인` unless the source means a legal corporation" in prompt
+        assert "agent" in prompt
+        assert "do not translate as `대리인`" in prompt
+
+    assert "High-risk literal translations" not in expert_prompt
 
 
 def test_business_expert_prompt_uses_editorial_brief_tone_not_private_advisor_tone():

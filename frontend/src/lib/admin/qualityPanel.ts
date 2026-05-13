@@ -25,13 +25,14 @@ export interface NormalizedQuality {
   autoPublishEligible: boolean;
   isLegacy: boolean;
   aggregates: {
-    weightedLlm: { expert_body: number; learner_body: number; frontload: number };
-    rawLlm:      { expert_body: number; learner_body: number; frontload: number };
+    weightedLlm: { expert_body: number; learner_body: number; beginner_body: number; frontload: number };
+    rawLlm:      { expert_body: number; learner_body: number; beginner_body: number; frontload: number };
     deterministic: { structure: number; traceability: number; locale: number };
   };
   breakdowns: {
     expert: Breakdown | null;
     learner: Breakdown | null;
+    beginner: Breakdown | null;
     frontload: Breakdown | null;
   };
   issues: QualityIssue[];
@@ -42,7 +43,7 @@ export interface NormalizedQuality {
   urlValidationFailures: unknown[];
 }
 
-const ZERO_AGG = { expert_body: 0, learner_body: 0, frontload: 0 };
+const ZERO_AGG = { expert_body: 0, learner_body: 0, beginner_body: 0, frontload: 0 };
 const ZERO_DET = { structure: 0, traceability: 0, locale: 0 };
 
 function clampSubScore(raw: unknown): SubScore {
@@ -91,9 +92,10 @@ export function normalizeQualityData(factPack: unknown): NormalizedQuality {
 
   const expert   = normalizeBreakdown(fp.expert_breakdown);
   const learner  = normalizeBreakdown(fp.learner_breakdown);
+  const beginner = normalizeBreakdown(fp.beginner_breakdown);
   const frontload = normalizeBreakdown(fp.frontload_breakdown);
 
-  const isLegacy = expert === null && learner === null && frontload === null;
+  const isLegacy = expert === null && learner === null && beginner === null && frontload === null;
 
   return {
     score: typeof fp.quality_score === 'number' ? fp.quality_score : null,
@@ -104,7 +106,7 @@ export function normalizeQualityData(factPack: unknown): NormalizedQuality {
       rawLlm:        { ...ZERO_AGG, ...(qb.raw_llm || {}) },
       deterministic: { ...ZERO_DET, ...(qb.deterministic || {}) },
     },
-    breakdowns: { expert, learner, frontload },
+    breakdowns: { expert, learner, beginner, frontload },
     issues: normalizeIssues(fp.quality_issues),
     capsApplied: Array.isArray(fp.quality_caps_applied) ? fp.quality_caps_applied as string[] : [],
     structuralPenalty: typeof fp.structural_penalty === 'number' ? fp.structural_penalty : 0,

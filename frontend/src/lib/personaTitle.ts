@@ -3,8 +3,8 @@
  *
  * Background:
  * - news_posts.title and news_posts.excerpt are the canonical (expert-tone) versions.
- * - For learner persona, the backend pipeline saves separate beginner-friendly versions
- *   into guide_items.title_learner and guide_items.excerpt_learner.
+ * - For learner/beginner personas, the backend pipeline saves separate versions
+ *   into title_* columns plus guide_items excerpt/title fallbacks.
  * - When the viewer is a learner (or anonymous, since default persona is 'learner'),
  *   we display the learner-specific text in list cards, detail headers, and SEO/OG meta.
  * - Anonymous viewers (search engine crawlers, SNS preview bots) get the learner version
@@ -19,10 +19,13 @@
 export interface PersonaResolvableContent {
   title?: string | null;
   title_learner?: string | null;
+  title_beginner?: string | null;
   excerpt?: string | null;
   guide_items?: {
     title_learner?: string;
     excerpt_learner?: string;
+    title_beginner?: string;
+    excerpt_beginner?: string;
     [key: string]: any;
   } | null;
 }
@@ -47,6 +50,15 @@ export function resolveDisplayTitleExcerpt(
       return {
         title: learnerTitle,
         excerpt: post.guide_items?.excerpt_learner || canonicalExcerpt,
+      };
+    }
+  }
+  if (persona === 'beginner') {
+    const beginnerTitle = post.title_beginner || post.guide_items?.title_beginner;
+    if (beginnerTitle) {
+      return {
+        title: beginnerTitle,
+        excerpt: post.guide_items?.excerpt_beginner || canonicalExcerpt,
       };
     }
   }

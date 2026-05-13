@@ -42,7 +42,7 @@ def _fetch_digest_pair(supabase, batch_date: date, post_type: str) -> tuple[dict
         supabase.table("news_posts")
         .select(
             "slug, locale, title, excerpt, focus_items, "
-            "content_expert, content_learner, quality_score, fact_pack, guide_items"
+            "content_expert, content_learner, content_beginner, quality_score, fact_pack, guide_items"
         )
         .in_("slug", [base_slug, f"{base_slug}-ko"])
         .execute()
@@ -64,6 +64,11 @@ def _build_inputs(en_row: dict, ko_row: dict) -> tuple[dict[str, PersonaOutput],
             ko=ko_row.get("content_learner") or "",
         ),
     }
+    if en_row.get("content_beginner") or ko_row.get("content_beginner"):
+        personas["beginner"] = PersonaOutput(
+            en=en_row.get("content_beginner") or "",
+            ko=ko_row.get("content_beginner") or "",
+        )
     frontload = {
         "headline": en_row.get("title") or "",
         "headline_ko": ko_row.get("title") or "",
