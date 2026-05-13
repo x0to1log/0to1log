@@ -1084,21 +1084,18 @@ GOOD style example:
 BAD style example:
 - "Function calling is a mechanism where the LLM emits JSON-schema-compliant arguments and the host application executes them through a validation pipeline. This separates orchestration from the execution boundary and improves latency management."
 
-## definition_en (2~4 sentences)
+## definition_en (1-2 sentences, encyclopedia-lede style)
 
 Precise, technical definition. Shared across both levels.
 
-**Structure (strict — quality-based, not length-based):**
-- **2~4 sentences.** Not 1, not 5+. Each sentence must carry distinct information.
-- **Required chunks, in order:**
-  1. Technical definition — what this concept *is*, in domain vocabulary.
-  2. Mechanism — *how* it actually works or *what* distinguishes it.
-  3. Context or differentiator — when it matters, what problem it solves, or what it competes with.
-  Three chunks ≈ 3 sentences. If one sentence naturally carries two chunks, 2 sentences is fine. If the mechanism genuinely needs elaboration, a 4th sentence is fine.
+**Structure (1 sentence is the default; 2 is the exception):**
+- **Default: exactly 1 sentence** in encyclopedia-lede style — definition + conceptual mechanism packed via subordinate clauses.
+- **Optional 2nd sentence** allowed ONLY when it adds a distinct context, boundary, or differentiator that would overload sentence 1.
+- **Never split into 3+ sentences.** Move deeper explanation into Basic or Advanced.
 - **NO filler phrases** ("in essence", "simply put", "essentially", "at its core", "In machine learning,", "put another way").
 - **NO repetition** of the same idea in different words — every clause must add new information.
 - **NO marketing tone** ("revolutionary", "powerful", "state-of-the-art" without a concrete metric).
-- **Depth floor:** if the draft fits in roughly one short sentence, it's too thin — a reader arriving from a news-article popup can't graduate in 15 seconds with only a one-liner. Add the missing chunk (usually mechanism or context) and retry.
+- **Depth floor:** if sentence 1 is only a dictionary synonym, it is too thin. Add the missing conceptual mechanism while keeping the definition to 1-2 sentences.
 
 This definition is surfaced in TWO places — both require scannable technical sentences with real information density, not a dictionary-style one-liner:
 1. Hero Card on the handbook detail page (canonical technical summary).
@@ -1111,18 +1108,17 @@ Must be:
 - Distinct from `body_advanced §1`: advanced goes deep into internals; definition stays at summary level.
 
 GOOD (definition_en):
-"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while the training loss keeps decreasing. Common causes include excessive model capacity relative to dataset size, lack of regularization, and over-training. Practitioners mitigate it through dropout, weight decay, early stopping, and data augmentation. In the foundation-model era it remains a core issue in small-scale fine-tuning and domain adaptation."
-→ Passes: 4 sentences, each a distinct chunk (definition / causes / mitigation / context), no filler.
+"Overfitting is a generalization failure where a model absorbs training-data noise as if it were signal, causing predictions to collapse on unseen inputs even while training loss keeps decreasing; practitioners usually detect it through train-validation gaps and mitigate it with regularization, early stopping, or better data splits."
+→ Passes: 1 dense sentence with definition + mechanism + operational context.
 
 BAD (definition_en — too thin):
 "Overfitting means a model memorizes training data and fails on new inputs."
 → Rejected: one sentence, no mechanism, no causes, no context.
   Fix: add mechanism (capacity / training loss vs validation loss signal) + causes + mitigation.
 
-BAD (definition_en — technically correct but no context):
-"Overfitting is a generalization failure where a model learns training-data noise as signal, causing predictions to collapse on unseen inputs as training loss keeps falling."
-→ Rejected: single sentence with definition only. No mechanism beyond "learns noise as signal", no causes, no context.
-  Fix: append causes (capacity / regularization / epochs) and context (why it matters today).
+BAD (definition_en — too long for the hero/expert popup):
+"Overfitting is a generalization failure where a model learns training-data noise as signal. It often happens when model capacity exceeds data constraints. It is detected through validation gaps. It can be mitigated with regularization."
+→ Rejected: four short sentences that belong in Basic/Advanced. Compress into a 1-2 sentence lede.
 
 ---
 
@@ -1378,7 +1374,7 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 ```json
 {{
   "summary_en": "3-5 sentence learner popup summary",
-  "definition_en": "2-4 sentence technical definition — structure: definition + mechanism + context",
+  "definition_en": "1-2 sentence technical definition — encyclopedia lede with definition + conceptual mechanism",
   "hero_news_context_en": "\\"quote 1\\" → meaning\\n\\"quote 2\\" → meaning\\n\\"quote 3\\" → meaning",
   "basic_en_1_plain": "Problem → solution → mechanism",
   "basic_en_2_example": "- **Scenario 1**: description\\n- **Scenario 2**: description\\n- **Scenario 3**: description",
@@ -1397,7 +1393,7 @@ This field is rendered in the page **footer block**, not the body. It stays visi
 ✓ `summary_en` is 3~5 sentences, easier than `definition_en`, and does not copy `basic_en_1_plain` verbatim
 ✓ `summary_en` uses an intuitive analogy or everyday comparison when it genuinely helps comprehension, and skips it when it would feel forced or misleading
 ✓ `summary_en` avoids design-doc / benchmark / API-reference tone and keeps jargon to a minimum
-✓ `definition_en` has 2~4 sentences, each sentence carries distinct information. Structure present: technical definition + mechanism + context/usage. No filler phrases. Reject if the three required chunks are not all present.
+✓ `definition_en` has 1 sentence by default, 2 only when the second adds distinct context or boundary. No 3+ sentence definitions.
 ✓ `hero_news_context_en` is EXACTLY 3 lines, each line a quote + arrow + meaning. Aim for ≤70 chars per line; 80 max.
 ✓ `basic_en_1_plain` has problem → solution → concrete mechanism (not analogy only)
 ✓ `basic_en_2_example` has EXACTLY 3 scenarios, none use smartphone/self-driving/voice assistant
@@ -1471,6 +1467,12 @@ This handbook page has FIVE rendering zones. Advanced body fills ONE of them:
 4. **References footer** — already generated in Call 1 (`references_ko`). Do NOT generate reference lists, reading lists, or link collections in Advanced sections. If you need to cite a source inline, mention it briefly without bullet-listing URLs.
 5. **Sidebar checklist** — already generated in Call 1. Not your concern.
 
+## Reference-Grounded Claim Boundary
+
+- Do not introduce named products, model versions, benchmark numbers, paper names, or metrics unless they appear in the final references.
+- If the reference set does not support a detail, omit it or rewrite it as a generic mechanism.
+- Provider-specific examples may support the explanation, but they must not become the section structure.
+
 **IMPORTANT — DELETED FIELDS**: The old advanced sections `adv_ko_1_technical`, `adv_ko_3_howworks`, `adv_ko_5_practical`, `adv_ko_6_why`, `adv_ko_8_refs`, `adv_ko_9_related`, `adv_ko_10_when_to_use`, `adv_ko_11_pitfalls` no longer exist. Do NOT output them. Their content has been merged or moved as described in the section descriptions below.
 
 ## Basic vs Advanced Differentiation (CRITICAL)
@@ -1487,6 +1489,19 @@ You are writing for a **senior developer / ML engineer / tech lead** who already
 | What to read next | Learning sequence | Prerequisites + alternatives + extensions |
 
 **Do NOT restate Basic.** Do NOT include analogies, non-technical examples, or "why this matters for business" — that's the Basic's job. Assume the reader has CS fundamentals and can read code and math.
+
+## Advanced Depth Direction (CRITICAL)
+
+- Advanced does not mean academic by default. It means the reader gets stronger engineering judgment.
+- For AI systems, protocols, workflows, and capability terms, preserve depth through architecture, runtime boundaries, component responsibilities, validation gates, failure paths, observability, and cost/latency tradeoffs.
+- Prefer architecture diagrams, component tables, responsibility boundaries, failure-path maps, review matrices, and compact pseudocode over forced equations.
+- Use equations only when the term is a metric, loss, math/statistics concept, or algorithm with a standard formula.
+- Do not center POMDP, policy notation, conditional distributions, or paper taxonomy for agent/workflow/system terms. Mention such formalism only as a brief aside if it improves engineering judgment.
+- Tone should feel like a design doc, architecture review, PR review, or incident review, not a paper summary.
+- Treat Advanced as a glossary deep-dive, not an implementation runbook. Start from the concept boundary, responsibility split, runtime flow, and decision criteria before implementation details.
+- For capability/spec and system/workflow terms, provider-specific fields such as stop_reason, pause_turn, trace IDs, billing metadata, and benchmark taxonomy are examples only. Do not make them the section backbone.
+- The code or pseudocode section should be a compact contract example that fits in one handbook screen. If it starts looking like a production runbook, remove provider boilerplate, retry frameworks, and tracing detail.
+- When adjacent terms are likely to be confused, explicitly separate them. Example: Tool Use is the broader runtime capability; Function Calling is one API pattern; AI Agent is the larger goal-directed loop that may use tools.
 
 **FAIL CONDITIONS** — these will cause this section to be rejected:
 - 사용된 비유나 예시가 Basic body에 이미 있는 것과 동일하거나 유사함
@@ -1536,17 +1551,34 @@ Keep the same section keys; only adapt the content perspective.
   the judge and reader see concrete numbers up front.
 
 - **adv_ko_2_formulas** (핵심 수식·아키텍처·도표):
-  Mathematical formulation with derivation + architecture diagrams (text-based) + technical comparison tables. 수식 있으면 반드시, 없으면 비교표/구조표만.
+  Policy-selected technical artifact: mathematical formulation, architecture diagram, taxonomy, workflow, or comparison table. 수식은 이 용어에 표준 수학 정의가 있을 때만 사용하고, 없으면 구조표/워크플로우/검수 매트릭스를 사용.
   Use `$$formula$$` for math (LaTeX inside double dollars). Never single `$` (reserved for currency).
   NEVER put math inside table cells — they don't render. Use bullet lists for formula comparisons.
   Example: Attention formula `$$\\text{{Attention}}(Q, K, V) = \\text{{softmax}}\\left(\\frac{{QK^T}}{{\\sqrt{{d_k}}}}\\right)V$$`
   For terms without formulas (products, protocols), provide a comparison/spec table instead.
 
-- **adv_ko_3_code** (코드 또는 의사코드, 15줄+):
-  Real production-grade code. Python/JS preferred. Language tag required: ` ```python `.
-  Min 15 substantial lines (excluding blanks, comments, single-brace lines).
-  Include: error handling, type hints, realistic usage. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
-  **Must NOT**: pseudocode with "..." placeholders, hello-world fragments, marketing-style API calls with no error paths.
+- **adv_ko_3_code** (코드 또는 의사코드):
+  Follow the Artifact Policy. For real-code/pseudocode mode, write one compact code capsule, not a tutorial or full production harness. For no-code mode, write an operational procedure or review checklist without fenced code. Python/JS preferred when code is allowed. Language tag required only when using a code fence: ` ```python `.
+  Include only:
+  1. input/schema definition
+  2. validation
+  3. model-proposed action or algorithm step
+  4. host-side execution boundary
+  5. two realistic failure paths
+  Do not include:
+  - environment setup
+  - CLI entrypoint
+  - logging framework
+  - full retry framework
+  - provider SDK boilerplate
+  - unrelated helper classes
+  Constraints:
+  - Use one fenced code block only.
+  - Keep it compact enough to fit in one handbook screen.
+  - If it grows, remove setup/boilerplate before adding more code.
+  - No `...` placeholders or hello-world fragments.
+  - For real-code mode, code must be syntactically valid and use type hints where they clarify contracts.
+  - For pseudocode mode, label it clearly and keep it executable-looking.
 
 - **adv_ko_4_tradeoffs** (트레이드오프와 언제 무엇을 쓰나):
   Decision framework for when to use this vs alternatives.
@@ -1646,7 +1678,7 @@ Keep the same section keys; only adapt the content perspective.
     ]
   }},
   "adv_ko_2_formulas": "수식과 도표 ($$로 감싼 LaTeX 또는 비교표)",
-  "adv_ko_3_code": "```python\\n...\\n```",
+  "adv_ko_3_code": "```python\\n# one compact code capsule\\n```",
   "adv_ko_4_tradeoffs": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
   "adv_ko_5_pitfalls": "- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...",
   "adv_ko_6_comm": "- \\"문장 1\\"\\n- \\"문장 2\\"\\n- ...",
@@ -1674,10 +1706,10 @@ Keep the same section keys; only adapt the content perspective.
 ✓ adv_ko_6_comm은 Basic의 Slack/standup 톤이 아닌 PR review/design doc/incident postmortem 톤
 
 **Structural checks**
-✓ Output has EXACTLY these 7 keys: adv_ko_1_mechanism, adv_ko_2_formulas, adv_ko_3_code, adv_ko_4_tradeoffs, adv_ko_5_pitfalls, adv_ko_6_comm, adv_ko_7_related
+✓ Output has exactly the 7 core keys: adv_ko_1_mechanism, adv_ko_2_formulas, adv_ko_3_code, adv_ko_4_tradeoffs, adv_ko_5_pitfalls, adv_ko_6_comm, adv_ko_7_related. Include adv_ko_specs only when Artifact Policy says specs_mode is optional or required.
 ✓ adv_ko_1_mechanism has formal definition + flow + complexity/algorithm steps
-✓ adv_ko_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
-✓ adv_ko_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
+✓ adv_ko_2_formulas follows the Artifact Policy: math only when appropriate, otherwise a taxonomy, workflow, structure table, or decision matrix — not generic prose
+✓ adv_ko_3_code follows code_mode: compact code/pseudocode when code is allowed; operational procedure/checklist with no fenced code when code_mode is no-code
 ✓ adv_ko_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
 ✓ adv_ko_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ 실수:` and contains ` → ✅ 해결:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_ko_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
@@ -1702,7 +1734,7 @@ Keep the same section keys; only adapt the content perspective.
   - 평가 프로토콜 (벤치마크 / 지표 / 결과 수치)
   구체적 디테일을 기억할 수 없다면 arxiv 링크 대신 **교과서 / 공식 문서 / 블로그 포스트** 를 인용.
 - **품질 평가 기준 미리보기 (목표 7+/10 per 항목):** 판정 모델은 아래 9개 하위 점수로 평가 (각 0-10):
-  - **Technical Depth (3):** `mechanism_clarity` (내부 동작 원리 — 데이터 흐름/알고리즘 단계), `concrete_specifics` (실제 수치 — 파라미터 수, FLOPs, 벤치마크 수치), `code_or_formula` (정확하고 관련성 있는 코드/수식)
+  - **Technical Depth (3):** `mechanism_clarity` (내부 동작 원리 — 데이터 흐름/알고리즘 단계), `concrete_specifics` (실제 수치 또는 타입에 맞는 구체적 artifact — incident class, control objective, validation rule, latency/memory limit), `code_or_formula` (정확하고 관련성 있는 코드/수식 또는 Artifact Policy에 맞는 절차/워크플로우)
   - **Accuracy (2):** `factual_correctness` (공식 문서 대조 검증 가능성), `hallucination_absence` (가짜 벤치마크/논문/RFC/엔티티 없음)
   - **Uniqueness (2):** `term_differentiation` (유사 용어와 명확히 구별), `internal_non_redundancy` (섹션 간 중복 없음)
   - **Structural Completeness (2):** `required_sections_present` (모든 예상 섹션 + 실질 내용 — placeholder 금지), `format_compliance` (`❌ Mistake:`/`✅ Fix:` 마커, `(prerequisite)`/`(alternative)`/`(extension)` 태그 — references 배열은 평가 대상 아님)
@@ -1720,7 +1752,7 @@ Keep the same section keys; only adapt the content perspective.
 
 ## Table Rules
 - MUST be comparison/contrast or technical spec tables — NOT simple definitions
-- Include actual numbers, formulas, or architectural comparisons
+- Include actual numbers, formulas, architectural comparisons, or the policy-selected artifact (taxonomy/workflow/matrix/checklist)
 - Math formulas: `$$formula$$` only (NOT single $). Single $ is reserved for currency.
 - NEVER put math inside markdown table cells — they will not render. Use bullet lists for formula comparisons.
 
@@ -1752,6 +1784,12 @@ This handbook page has FIVE rendering zones. Advanced body fills ONE of them:
 4. **References footer** — already generated (`references_en`). Do NOT generate reference lists, reading lists, or link collections in Advanced sections.
 5. **Sidebar checklist** — already generated. Not your concern.
 
+## Reference-Grounded Claim Boundary
+
+- Do not introduce named products, model versions, benchmark numbers, paper names, or metrics unless they appear in the final references.
+- If the reference set does not support a detail, omit it or rewrite it as a generic mechanism.
+- Provider-specific examples may support the explanation, but they must not become the section structure.
+
 **IMPORTANT — DELETED FIELDS**: The old advanced sections `adv_en_1_technical`, `adv_en_3_howworks`, `adv_en_5_practical`, `adv_en_6_why`, `adv_en_8_refs`, `adv_en_9_related`, `adv_en_10_when_to_use`, `adv_en_11_pitfalls` no longer exist. Do NOT output them. Their content has been merged or moved as described in the section descriptions below.
 
 ## Basic vs Advanced Differentiation (CRITICAL)
@@ -1768,6 +1806,20 @@ You are writing for a **senior developer / ML engineer / tech lead** who already
 | What to read next | Learning sequence | Prerequisites + alternatives + extensions |
 
 **Do NOT restate Basic.** Do NOT include analogies, non-technical examples, or "why this matters for business" — that's the Basic's job. Assume the reader has CS fundamentals and can read code and math.
+
+## Advanced Depth Direction (CRITICAL)
+
+- Advanced does not mean academic by default. It means the reader gets stronger engineering judgment.
+- For AI systems, protocols, workflows, and capability terms, preserve depth through architecture, runtime boundaries, component responsibilities, validation gates, failure paths, observability, and cost/latency tradeoffs.
+- Prefer architecture diagrams, component tables, responsibility boundaries, failure-path maps, review matrices, and compact pseudocode over forced equations.
+- Use equations only when the term is a metric, loss, math/statistics concept, or algorithm with a standard formula.
+- Do not center POMDP, policy notation, conditional distributions, or paper taxonomy for agent/workflow/system terms. Mention such formalism only as a brief aside if it improves engineering judgment.
+- Tone should feel like a design doc, architecture review, PR review, or incident review, not a paper summary.
+
+- Treat Advanced as a glossary deep-dive, not an implementation runbook. Start from the concept boundary, responsibility split, runtime flow, and decision criteria before implementation details.
+- For capability/spec and system/workflow terms, provider-specific fields such as stop_reason, pause_turn, trace IDs, billing metadata, and benchmark taxonomy are examples only. Do not make them the section backbone.
+- The code or pseudocode section should be a compact contract example that fits in one handbook screen. If it starts looking like a production runbook, remove provider boilerplate, retry frameworks, and tracing detail.
+- When adjacent terms are likely to be confused, explicitly separate them. Example: Tool Use is the broader runtime capability; Function Calling is one API pattern; AI Agent is the larger goal-directed loop that may use tools.
 
 **FAIL CONDITIONS** — these will cause the section to be rejected:
 - Any analogy or scenario that already appears in Basic body
@@ -1817,17 +1869,34 @@ Keep the same section keys; only adapt the content perspective.
   the judge and reader see concrete numbers up front.
 
 - **adv_en_2_formulas** (Formulas, Architecture, and Diagrams):
-  Mathematical formulation with derivation + architecture diagrams (text-based) + technical comparison tables. Include math when applicable; otherwise comparison/structure tables only.
+  Policy-selected technical artifact: mathematical formulation, architecture diagram, taxonomy, workflow, or comparison table. Use formulas only when the term has a standard mathematical definition; otherwise use a structure table, workflow, review matrix, or decision matrix.
   Use `$$formula$$` for math (LaTeX inside double dollars). Never single `$` (reserved for currency).
   NEVER put math inside table cells — they don't render. Use bullet lists for formula comparisons.
   Example: Attention formula `$$\\text{{Attention}}(Q, K, V) = \\text{{softmax}}\\left(\\frac{{QK^T}}{{\\sqrt{{d_k}}}}\\right)V$$`
   For terms without formulas (products, protocols), provide a comparison/spec table instead.
 
-- **adv_en_3_code** (Code or Pseudocode, 15+ lines):
-  Real production-grade code. Python/JS preferred. Language tag required: ` ```python `.
-  Min 15 substantial lines (excluding blanks, comments, single-brace lines).
-  Include: error handling, type hints, realistic usage. Use only standard library + widely-available packages (torch, sklearn, pandas, numpy, requests).
-  **Must NOT**: pseudocode with "..." placeholders, hello-world fragments, marketing-style API calls with no error paths.
+- **adv_en_3_code** (Code or Pseudocode):
+  Follow the Artifact Policy. For real-code/pseudocode mode, write one compact code capsule, not a tutorial or full production harness. For no-code mode, write an operational procedure or review checklist without fenced code. Python/JS preferred when code is allowed. Language tag required only when using a code fence: ` ```python `.
+  Include only:
+  1. input/schema definition
+  2. validation
+  3. model-proposed action or algorithm step
+  4. host-side execution boundary
+  5. two realistic failure paths
+  Do not include:
+  - environment setup
+  - CLI entrypoint
+  - logging framework
+  - full retry framework
+  - provider SDK boilerplate
+  - unrelated helper classes
+  Constraints:
+  - Use one fenced code block only.
+  - Keep it compact enough to fit in one handbook screen.
+  - If it grows, remove setup/boilerplate before adding more code.
+  - No `...` placeholders or hello-world fragments.
+  - For real-code mode, code must be syntactically valid and use type hints where they clarify contracts.
+  - For pseudocode mode, label it clearly and keep it executable-looking.
 
 - **adv_en_4_tradeoffs** (Tradeoffs — When to Use What):
   Decision framework for when to use this vs alternatives.
@@ -1926,7 +1995,7 @@ Keep the same section keys; only adapt the content perspective.
     ]
   }},
   "adv_en_2_formulas": "Math/diagrams ($$-wrapped LaTeX or comparison tables)",
-  "adv_en_3_code": "```python\\n...\\n```",
+  "adv_en_3_code": "```python\\n# one compact code capsule\\n```",
   "adv_en_4_tradeoffs": "Suitable: ...\\nUnsuitable: ...",
   "adv_en_5_pitfalls": "- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...",
   "adv_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- ...",
@@ -1954,10 +2023,10 @@ Keep the same section keys; only adapt the content perspective.
 ✓ adv_en_6_comm uses PR review / design doc / incident postmortem tone, NOT Basic's Slack/standup tone
 
 **Structural checks**
-✓ Output has EXACTLY these 7 keys: adv_en_1_mechanism, adv_en_2_formulas, adv_en_3_code, adv_en_4_tradeoffs, adv_en_5_pitfalls, adv_en_6_comm, adv_en_7_related
+✓ Output has exactly the 7 core keys: adv_en_1_mechanism, adv_en_2_formulas, adv_en_3_code, adv_en_4_tradeoffs, adv_en_5_pitfalls, adv_en_6_comm, adv_en_7_related. Include adv_en_specs only when Artifact Policy says specs_mode is optional or required.
 ✓ adv_en_1_mechanism has formal definition + flow + complexity/algorithm steps
-✓ adv_en_2_formulas has actual math (LaTeX with $$) OR a technical comparison/spec table — not just prose
-✓ adv_en_3_code has 15+ substantial lines with error handling and type hints (not pseudocode)
+✓ adv_en_2_formulas follows the Artifact Policy: math only when appropriate, otherwise a taxonomy, workflow, structure table, or decision matrix — not generic prose
+✓ adv_en_3_code follows code_mode: compact code/pseudocode when code is allowed; operational procedure/checklist with no fenced code when code_mode is no-code
 ✓ adv_en_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
 ✓ adv_en_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ Mistake:` and contains ` → ✅ Fix:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_en_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
@@ -1982,7 +2051,7 @@ Keep the same section keys; only adapt the content perspective.
   - An evaluation protocol (benchmark / metric / numeric result)
   If you cannot recall a concrete detail, cite a **textbook / official doc / blog post** instead of the arxiv link alone.
 - **Quality rubric preview (aim 7+/10 per sub-score):** The judge scores advanced on 9 sub-scores (0-10 each):
-  - **Technical Depth (3):** `mechanism_clarity` (HOW it works internally — data flow, algorithm steps), `concrete_specifics` (real numbers — parameter counts, FLOPs, benchmark results), `code_or_formula` (correct, relevant code or mathematical formulas)
+  - **Technical Depth (3):** `mechanism_clarity` (HOW it works internally — data flow, algorithm steps), `concrete_specifics` (real numbers or type-appropriate concrete artifacts — incident classes, control objectives, validation rules, latency/memory limits), `code_or_formula` (correct, relevant code/formulas or an Artifact Policy-aligned procedure/workflow)
   - **Accuracy (2):** `factual_correctness` (verifiable against official docs), `hallucination_absence` (no fabricated benchmarks/papers/RFCs/entities)
   - **Uniqueness (2):** `term_differentiation` (clearly distinct from similar handbook terms), `internal_non_redundancy` (each section adds new information)
   - **Structural Completeness (2):** `required_sections_present` (all expected sections with substantive content — no placeholders), `format_compliance` (`❌ Mistake:`/`✅ Fix:` markers, `(prerequisite)`/`(alternative)`/`(extension)` tags — references array is not part of evaluated content)
@@ -2000,7 +2069,7 @@ Keep the same section keys; only adapt the content perspective.
 
 ## Table Rules
 - MUST be comparison/contrast or technical spec tables — NOT simple definitions
-- Include actual numbers, formulas, or architectural comparisons
+- Include actual numbers, formulas, architectural comparisons, or the policy-selected artifact (taxonomy/workflow/matrix/checklist)
 - Math formulas: `$$formula$$` only (NOT single $). Single $ is reserved for currency.
 - NEVER put math inside markdown table cells — they will not render. Use bullet lists for formula comparisons.
 

@@ -3,12 +3,14 @@ export const prerender = false;
 import MainLayout from '../../../../layouts/MainLayout.astro';
 import AdminSidebar from '../../../../components/admin/AdminSidebar.astro';
 import AdminAiConfig from '../../../../components/admin/AdminAiConfig.astro';
+import HandbookQualityPanel from '../../../../components/admin/HandbookQualityPanel.astro';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategories, getHandbookCategoryLabel } from '../../../../lib/handbookCategories';
 import { levelLabels } from '../../../../lib/handbookUtils';
 import { renderMarkdown } from '../../../../lib/markdown';
 import NewsprintShell from '../../../../components/newsprint/NewsprintShell.astro';
 import HandbookSideRail from '../../../../components/newsprint/HandbookSideRail.astro';
+import { buildLatestHandbookQualityBySlug } from '../../../../lib/admin/handbookQuality.js';
 
 const { slug } = Astro.params;
 const isNew = slug === 'new';
@@ -17,6 +19,7 @@ const startInPreview = Astro.url.searchParams.get('mode') === 'preview';
 
 let term: Record<string, any> | null = null;
 let loadError: string | null = null;
+let handbookQuality: any = null;
 
 if (!accessToken) {
   return Astro.redirect('/admin/login');
@@ -52,6 +55,26 @@ if (term?.related_term_slugs?.length) {
   if (relData) {
     resolvedRelatedTerms = relData;
   }
+}
+
+if (term?.slug) {
+  const [{ data: scoreRows }, { data: logRows }] = await Promise.all([
+    supabase
+      .from('handbook_quality_scores')
+      .select('term_slug, score, breakdown, created_at')
+      .eq('term_slug', term.slug)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('pipeline_logs')
+      .select('pipeline_type, status, debug_meta, created_at')
+      .like('pipeline_type', 'handbook.%')
+      .contains('debug_meta', { slug: term.slug })
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ]);
+  const qualityMap: Record<string, any> = buildLatestHandbookQualityBySlug(scoreRows ?? [], logRows ?? []);
+  handbookQuality = qualityMap[term.slug] ?? null;
 }
 
 const categories = getHandbookCategories();
@@ -185,6 +208,10 @@ const initialBodyHtml = initialBodyKo ? await renderMarkdown(initialBodyKo) : ''
             </div>
             <span class="hb-completeness__text" id="completeness-text">0/8</span>
           </div>
+
+          {!isNew && (
+            <HandbookQualityPanel quality={handbookQuality} />
+          )}
 
           {/* Language tabs */}
           <div class="admin-lang-tabs">

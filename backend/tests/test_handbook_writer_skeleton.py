@@ -1,5 +1,10 @@
 """Tests for structured Relations field rendering in _assemble_markdown."""
-from services.agents.advisor import _assemble_markdown, ADVANCED_SECTIONS_KO, ADVANCED_SECTIONS_EN
+from services.agents.advisor import (
+    ADVANCED_SECTIONS_EN,
+    ADVANCED_SECTIONS_KO,
+    _advanced_sections_for_mode,
+    _assemble_markdown,
+)
 
 
 def test_renders_structured_relations_ko():
@@ -18,9 +23,9 @@ def test_renders_structured_relations_ko():
         },
     }
     md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
-    assert "- (prerequisite) **Self-Attention** — Q·K^T 내적이 RoPE의 전제" in md
-    assert "- (alternative) **Sinusoidal PE** — 절대 위치, 일반화 약함" in md
-    assert "- (extension) **ALiBi** — 거리 페널티 직접 부여" in md
+    assert "- (선행) **Self-Attention** — Q·K^T 내적이 RoPE의 전제" in md
+    assert "- (대안) **Sinusoidal PE** — 절대 위치, 일반화 약함" in md
+    assert "- (확장) **ALiBi** — 거리 페널티 직접 부여" in md
     assert "## 선행·대안·확장 개념" in md
 
 
@@ -39,12 +44,12 @@ def test_renders_structured_relations_en():
 
 
 def test_renders_string_relations_backward_compat():
-    """Old format (markdown blob) still renders verbatim."""
+    """Old markdown blob format is accepted and normalized to canonical tags."""
     raw = {
         "adv_ko_7_related": "- (prerequisite) **Foo** — manually-written prose",
     }
     md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
-    assert "- (prerequisite) **Foo** — manually-written prose" in md
+    assert "- (선행) **Foo** — manually-written prose" in md
 
 
 def test_handles_empty_relations_gracefully():
@@ -61,7 +66,7 @@ def test_handles_partial_relations():
         },
     }
     md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
-    assert "- (prerequisite) **X** — Y" in md
+    assert "- (선행) **X** — Y" in md
 
 
 def test_renders_structured_specs_with_values_and_not_published():
@@ -77,11 +82,12 @@ def test_renders_structured_specs_with_values_and_not_published():
             ],
         },
     }
-    md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
-    assert "## 핵심 스펙" in md
+    sections = _advanced_sections_for_mode("ko", "real-code", "product_platform_service", "model_api_service")
+    md = _assemble_markdown(raw, sections)
+    assert "## 핵심 한도·가격·운영 스펙" in md
     assert "- **Parameters**: 175B" in md
-    assert "- **Context window**: *(not published)*" in md
     assert "- **Training data**: 300B tokens" in md
+    assert "not published" not in md
     assert "- MMLU: 65.3% — 5-shot, original paper Table 4" in md
 
 
@@ -92,12 +98,14 @@ def test_renders_specs_with_no_benchmarks():
             "benchmarks": [],
         },
     }
-    md = _assemble_markdown(raw, ADVANCED_SECTIONS_EN)
+    sections = _advanced_sections_for_mode("en", "real-code", "product_platform_service", "model_api_service")
+    md = _assemble_markdown(raw, sections)
     assert "Parameters**: 8B" in md
-    assert "*(none reported in original paper)*" in md
+    assert "none reported in original paper" not in md
 
 
 def test_specs_section_omitted_when_all_fields_empty():
     raw = {"adv_ko_specs": {}}
-    md = _assemble_markdown(raw, ADVANCED_SECTIONS_KO)
-    assert "## 핵심 스펙" not in md
+    sections = _advanced_sections_for_mode("ko", "real-code", "product_platform_service", "model_api_service")
+    md = _assemble_markdown(raw, sections)
+    assert "## 핵심 한도·가격·운영 스펙" not in md

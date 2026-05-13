@@ -162,8 +162,12 @@ class HandbookAdviseRequest(BaseModel):
     hero_news_context_en: str = ""
     references_ko: list[dict] = []
     references_en: list[dict] = []
+    term_type_hint: str = ""  # optional upstream/seed type prior; used by seed generation
     force_direction: str = ""  # "ko2en", "en2ko", or "" (auto)
     skip_quality_check: bool = False  # skip LLM quality evaluation (structural checks still run)
+    skip_self_critique: bool = False  # skip critique/regeneration passes for low-cost draft smoke runs
+    skip_post_generation_checks: bool = False  # skip URL/entity verification passes for low-cost draft smoke runs
+    remediate_after_generation: bool = False  # run one targeted draft remediation pass after initial generation
 
 
 class HandbookAdviseResponse(BaseModel):

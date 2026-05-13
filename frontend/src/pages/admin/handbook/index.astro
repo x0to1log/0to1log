@@ -6,6 +6,11 @@ import AdminSidebar from '../../../components/admin/AdminSidebar.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { createClient } from '@supabase/supabase-js';
 import { getHandbookCategoryLabel } from '../../../lib/handbookCategories';
+import {
+  buildLatestHandbookQualityBySlug,
+  handbookQualityBadgeClass,
+  handbookQualityLabel,
+} from '../../../lib/admin/handbookQuality.js';
 
 const accessToken = Astro.locals.accessToken;
 const supabase = createClient(
@@ -34,11 +39,48 @@ const allTerms = (terms ?? []).sort((a, b) => {
   return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 });
 
+let qualityBySlug: Record<string, any> = {};
+if (!fetchError && allTerms.length > 0) {
+  const slugs = allTerms.map((term) => term.slug).filter(Boolean);
+  const slugChunks: string[][] = [];
+  for (let index = 0; index < slugs.length; index += 100) {
+    slugChunks.push(slugs.slice(index, index + 100));
+  }
+  const [scoreResults, { data: logRows }] = await Promise.all([
+    Promise.all(slugChunks.map((chunk) => (
+      supabase
+        .from('handbook_quality_scores')
+        .select('term_slug, score, breakdown, created_at')
+        .in('term_slug', chunk)
+        .order('created_at', { ascending: false })
+        .limit(500)
+    ))),
+    supabase
+      .from('pipeline_logs')
+      .select('pipeline_type, status, debug_meta, created_at')
+      .like('pipeline_type', 'handbook.%')
+      .order('created_at', { ascending: false })
+      .limit(2000),
+  ]);
+  const scoreRows = scoreResults.flatMap((result) => result.data ?? []);
+  qualityBySlug = buildLatestHandbookQualityBySlug(scoreRows ?? [], logRows ?? []);
+}
+
 const queuedCount = allTerms.filter((term) => term.status === 'queued').length;
 const draftCount = allTerms.filter((term) => term.status === 'draft').length;
 const publishedCount = allTerms.filter((term) => term.status === 'published').length;
 const archivedCount = allTerms.filter((term) => term.status === 'archived').length;
 const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categories || []))).sort();
+const termsWithQuality = allTerms.map((term) => {
+  const quality = qualityBySlug[term.slug];
+  const scoreText = quality
+    ? [
+        quality.advancedScore != null ? `A${quality.advancedScore}` : null,
+        quality.basicScore != null ? `B${quality.basicScore}` : null,
+      ].filter(Boolean).join(' / ')
+    : '';
+  return { term, quality, scoreText };
+});
 ---
 
 <MainLayout title="Admin Handbook" locale="en">
@@ -143,7 +185,7 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
       ) : (
         <>
           <ul class="admin-list" id="term-list">
-            {allTerms.map((term) => (
+            {termsWithQuality.map(({ term, quality, scoreText }) => (
               <li
                 class={`admin-list-item handbook-card${term.status === 'published' ? ' admin-list-item--published' : ''}`}
                 data-status={term.status}
@@ -177,6 +219,24 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
                       <span class={`admin-source-badge admin-source-badge--${term.source}`}>
                         {term.source === 'pipeline' ? 'Pipeline' : 'AI'}
                       </span>
+                    )}
+                    {quality && (
+                      <>
+                        <span
+                          class={handbookQualityBadgeClass(quality)}
+                          title={`Gate: ${quality.qualityGateStatus || 'unknown'}${quality.issueCount ? `, issues: ${quality.issueCount}` : ''}`}
+                        >
+                          {handbookQualityLabel(quality)}
+                        </span>
+                        {scoreText && (
+                          <span class="handbook-quality-inline-score">{scoreText}</span>
+                        )}
+                        {quality.issueCount > 0 && (
+                          <span class="handbook-quality-issue-count">
+                            {quality.issueCount} issue{quality.issueCount === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                   {(term.categories || []).length > 0 && (
@@ -382,6 +442,24 @@ const categoryOptions = Array.from(new Set(allTerms.flatMap((term) => term.categ
     flex-wrap: wrap;
     font-size: 0.8rem;
     line-height: 1.4;
+  }
+
+  .handbook-quality-inline-score,
+  .handbook-quality-issue-count {
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    padding: 0.08rem 0.35rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+  }
+
+  .handbook-quality-issue-count {
+    color: var(--color-warning);
+    border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-border));
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
   }
 
   .handbook-meta-tags {

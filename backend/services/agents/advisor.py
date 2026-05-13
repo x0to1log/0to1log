@@ -906,6 +906,7 @@ async def _classify_term_type(
     context_snippet: str,
     client,
     model_light: str,
+    term_type_hint: str = "",
 ) -> tuple[str, str | None, list[str], str, float]:
     """Classify term type + intent + volatility before retrieval and generation."""
     from services.agents.prompts_handbook_types import (
@@ -923,6 +924,16 @@ async def _classify_term_type(
         intents = [i for i in override.get("intent", DEFAULT_INTENT_BY_TYPE[term_type]) if i in INTENT_VALUES]
         volatility = str(override.get("volatility", DEFAULT_VOLATILITY_BY_TYPE[term_type]))
         return term_type, subtype, intents or ["understand"], volatility, 1.0
+
+    hinted_type = str(term_type_hint or "").strip()
+    if hinted_type in TERM_TYPES:
+        return (
+            hinted_type,
+            None,
+            DEFAULT_INTENT_BY_TYPE.get(hinted_type, ["understand"]),
+            DEFAULT_VOLATILITY_BY_TYPE.get(hinted_type, "stable"),
+            1.0,
+        )
 
     user_msg = (
         f"Term: {term}\n"
@@ -1020,6 +1031,1157 @@ async def _self_critique_advanced(
         return False, "", 50, {}
 
 
+_CODE_FENCE_RE = re.compile(r"```([^\n`]*)\n(.*?)```", re.DOTALL)
+_SCHEMA_DOLLAR_RE = re.compile(r"(?<![`$])\$(ref|defs|schema)\b")
+_MIXED_SCRIPT_ARTIFACT_RE = re.compile(r"[\uac00-\ud7a3][语义汉简体][\uac00-\ud7a3]|[\uac00-\ud7a3][语义汉简体]|[语义汉简体][\uac00-\ud7a3]")
+_HIGH_RISK_REFERENCE_CLAIM_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:"
+    r"NVIDIA|"
+    r"Kimi(?:-[A-Za-z0-9]+)+|"
+    r"Sonnet\s+\d+(?:\.\d+)?|"
+    r"Claude\s+\d+(?:\.\d+)?|"
+    r"Gemini\s+\d+(?:\.\d+)?|"
+    r"GPT-\d+(?:\.\d+)?|"
+    r"F1\s+\d+(?:\.\d+)?%"
+    r")(?![A-Za-z0-9])",
+    re.IGNORECASE,
+)
+
+
+def _extract_markdown_code_fences(markdown: str) -> list[dict[str, str]]:
+    fences: list[dict[str, str]] = []
+    for match in _CODE_FENCE_RE.finditer(markdown or ""):
+        fences.append({
+            "language": (match.group(1) or "").strip(),
+            "body": match.group(2) or "",
+        })
+    return fences
+
+
+def _transform_outside_code_fences(text: str, transform) -> str:
+    if "```" not in text:
+        return transform(text)
+    parts = re.split(r"(```.*?```)", text, flags=re.DOTALL)
+    return "".join(part if part.startswith("```") else transform(part) for part in parts)
+
+
+def _sanitize_schema_dollar_identifiers(text: str) -> str:
+    """Render JSON Schema identifiers as inline code, not single-dollar math."""
+    if "$" not in (text or ""):
+        return text
+
+    def _replace(part: str) -> str:
+        return _SCHEMA_DOLLAR_RE.sub(lambda m: f"`${m.group(1)}`", part)
+
+    return _transform_outside_code_fences(text, _replace)
+
+
+def _validate_python_code_fences(markdown: str) -> list[str]:
+    """Return warnings for fenced Python snippets that do not parse."""
+    import ast
+
+    warnings: list[str] = []
+    for idx, fence in enumerate(_extract_markdown_code_fences(markdown), start=1):
+        language = fence["language"].lower()
+        if language not in {"python", "py"} and not language.startswith("python "):
+            continue
+        try:
+            ast.parse(fence["body"])
+        except SyntaxError as exc:
+            detail = f"{exc.msg} at line {exc.lineno}" if exc.lineno else exc.msg
+            warnings.append(f"invalid Python code fence {idx}: {detail}")
+    return warnings
+
+
+def _detect_mixed_script_artifacts(text: str) -> list[str]:
+    """Detect likely CJK mojibake/artifacts embedded inside Korean prose."""
+    warnings: list[str] = []
+    for match in _MIXED_SCRIPT_ARTIFACT_RE.finditer(text or ""):
+        start = max(0, match.start() - 20)
+        end = min(len(text), match.end() + 20)
+        snippet = text[start:end].replace("\n", " ")
+        warnings.append(f"mixed-script artifact near '{snippet}'")
+    return warnings
+
+
+def _normalize_reference_claim_text(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
+def _reference_claim_blob(data: dict) -> str:
+    parts: list[str] = []
+    for locale in ("ko", "en"):
+        refs = data.get(f"references_{locale}") or []
+        if not isinstance(refs, list):
+            continue
+        for ref in refs:
+            if not isinstance(ref, dict):
+                continue
+            for key in ("title", "authors", "venue", "type", "url", "annotation"):
+                value = ref.get(key)
+                if value:
+                    parts.append(str(value))
+    return _normalize_reference_claim_text(" ".join(parts))
+
+
+def _detect_unsupported_reference_claims(data: dict) -> list[str]:
+    """Warn when high-risk named/version/metric claims do not appear in final refs."""
+    reference_blob = _reference_claim_blob(data)
+    if not reference_blob:
+        return []
+
+    text = "\n".join(
+        str(data.get(field) or "")
+        for field in (
+            "summary_ko",
+            "summary_en",
+            "definition_ko",
+            "definition_en",
+            "body_basic_ko",
+            "body_basic_en",
+            "body_advanced_ko",
+            "body_advanced_en",
+            "hero_news_context_ko",
+            "hero_news_context_en",
+        )
+    )
+    warnings: list[str] = []
+    seen: set[str] = set()
+    for match in _HIGH_RISK_REFERENCE_CLAIM_RE.finditer(text):
+        claim = match.group(0).strip()
+        claim_key = _normalize_reference_claim_text(claim)
+        if not claim_key or claim_key in seen:
+            continue
+        seen.add(claim_key)
+        if claim_key not in reference_blob:
+            warnings.append(
+                f"unsupported reference claim: '{claim}' is not present in final references"
+            )
+    return warnings
+
+
+def _apply_handbook_safety_postprocess(data: dict) -> list[str]:
+    warnings: list[str] = []
+    text_fields = (
+        "summary_ko",
+        "summary_en",
+        "definition_ko",
+        "definition_en",
+        "body_basic_ko",
+        "body_basic_en",
+        "body_advanced_ko",
+        "body_advanced_en",
+        "hero_news_context_ko",
+        "hero_news_context_en",
+    )
+    for field in text_fields:
+        value = data.get(field)
+        if not isinstance(value, str) or not value:
+            continue
+        sanitized = _sanitize_schema_dollar_identifiers(value)
+        if sanitized != value:
+            data[field] = sanitized
+            value = sanitized
+            warnings.append(f"{field}: escaped JSON Schema dollar identifiers")
+        for warning in _validate_python_code_fences(value):
+            warnings.append(f"{field}: {warning}")
+        for warning in _detect_mixed_script_artifacts(value):
+            warnings.append(f"{field}: {warning}")
+    warnings.extend(_detect_unsupported_reference_claims(data))
+    return warnings
+
+
+_HANDBOOK_TEXT_FIELDS = (
+    "summary_ko",
+    "summary_en",
+    "definition_ko",
+    "definition_en",
+    "body_basic_ko",
+    "body_basic_en",
+    "body_advanced_ko",
+    "body_advanced_en",
+    "hero_news_context_ko",
+    "hero_news_context_en",
+)
+
+_CONTEXT_WINDOW_CODE_CONTRACT = (
+    "preflight_budget",
+    "reserve_output_tokens",
+    "compact_history",
+    "fail_fast",
+)
+
+_RELATED_TAGS_BY_LOCALE = {
+    "ko": {"선행", "대안", "확장"},
+    "en": {"prerequisite", "alternative", "extension"},
+}
+
+_RELATED_TAG_MAP_BY_LOCALE = {
+    "ko": {
+        "prerequisites": "선행",
+        "alternatives": "대안",
+        "extensions": "확장",
+    },
+    "en": {
+        "prerequisites": "prerequisite",
+        "alternatives": "alternative",
+        "extensions": "extension",
+    },
+}
+
+_INTERNAL_RELATED_PATTERNS_BY_TERM = {
+    "attention": (
+        r"\bq\s*/\s*k\s*/\s*v\b",
+        r"\bquery\s*/\s*key\s*/\s*value\b",
+        r"\bq\s+k\s+v\b",
+        r"\bquery\b",
+        r"\bkey\b",
+        r"\bvalue\b",
+    ),
+    "transformer": (
+        r"\bresidual\s+connection\b",
+        r"\blayer\s+norm(?:alization)?\b",
+        r"\bposition-wise\s+ffn\b",
+        r"\bfeed[-\s]?forward\s+network\b",
+    ),
+    "adam": (
+        r"\bfirst\s+moment\b",
+        r"\bsecond\s+moment\b",
+        r"\brunning\s+average\b",
+        r"\bmoment\s+estimat",
+    ),
+    "cuda": (
+        r"\bcuda\s+kernel\b",
+        r"\bthread\s+block\b",
+        r"\bwarp\b",
+        r"\bgrid\s+dimension\b",
+    ),
+}
+
+
+def _extract_warning_claim(warning: str) -> str:
+    match = re.search(r"unsupported reference claim: '([^']+)'", warning or "")
+    return match.group(1) if match else ""
+
+
+def _find_text_field_containing(data: dict, needle: str) -> str:
+    if not needle:
+        return ""
+    needle_lower = needle.lower()
+    for field in _HANDBOOK_TEXT_FIELDS:
+        value = data.get(field)
+        if isinstance(value, str) and needle_lower in value.lower():
+            return field
+    return ""
+
+
+def _make_remediation_issue(
+    code: str,
+    severity: str,
+    section: str = "",
+    locale: str = "",
+    message: str = "",
+    suggested_action: str = "",
+    evidence: object | None = None,
+) -> dict:
+    return {
+        "code": code,
+        "severity": severity,
+        "section": section,
+        "locale": locale,
+        "message": message,
+        "suggested_action": suggested_action,
+        "evidence": evidence,
+    }
+
+
+def _extract_python_function_names(markdown: str) -> set[str]:
+    names: set[str] = set()
+    for fence in _extract_markdown_code_fences(markdown or ""):
+        body = fence["body"]
+        names.update(re.findall(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", body, flags=re.MULTILINE))
+    return names
+
+
+def _required_code_contract_keywords(data: dict) -> tuple[str, ...]:
+    term_text = " ".join(
+        str(data.get(field) or "")
+        for field in ("term", "term_full", "korean_full")
+    ).lower()
+    code_text = "\n".join(
+        fence["body"]
+        for field in ("body_advanced_ko", "body_advanced_en")
+        for fence in _extract_markdown_code_fences(str(data.get(field) or ""))
+    ).lower()
+    # Only the Context Window term has this exact required contract. Other
+    # terms can legitimately reuse helper names such as preflight_budget or
+    # compact_history without promising the whole context-window budget model.
+    if "context window" in term_text or all(
+        keyword in code_text for keyword in _CONTEXT_WINDOW_CODE_CONTRACT
+    ):
+        return _CONTEXT_WINDOW_CODE_CONTRACT
+    return ()
+
+
+def _primary_category_from_content(data: dict) -> str | None:
+    categories = data.get("categories")
+    if isinstance(categories, list):
+        return str(categories[0]).strip() if categories else None
+    if isinstance(categories, str):
+        return categories.strip() or None
+    return None
+
+
+def _effective_code_mode_hint(data: dict) -> str:
+    explicit = str(data.get("code_mode_hint") or "").strip()
+    if explicit:
+        return explicit
+
+    term_type = str(data.get("term_type") or "").strip()
+    term_subtype = str(data.get("term_subtype") or "").strip() or None
+    reference_strength = str(data.get("reference_strength") or "")
+    code_mode = decide_code_mode(
+        term_type,
+        term_subtype,
+        reference_strength,
+        bool(data.get("has_clear_io_contract")),
+        bool(data.get("has_official_spec_signal")),
+        bool(data.get("insufficient_info_flag")),
+    )
+
+    try:
+        from services.agents.prompts_handbook_types import get_artifact_policy
+
+        artifact_policy = get_artifact_policy(
+            term_type,
+            term_subtype,
+            _primary_category_from_content(data),
+        )
+        if artifact_policy.get("code_mode") == "no-code":
+            return "no-code"
+    except Exception:
+        pass
+    return code_mode
+
+
+def _detect_code_isomorphism_issues(data: dict) -> list[dict]:
+    code_mode = _effective_code_mode_hint(data)
+    if code_mode == "no-code":
+        return []
+
+    ko_body = str(data.get("body_advanced_ko") or "")
+    en_body = str(data.get("body_advanced_en") or "")
+    ko_fences = _extract_markdown_code_fences(ko_body)
+    en_fences = _extract_markdown_code_fences(en_body)
+    if not ko_fences and not en_fences:
+        return []
+
+    required = _required_code_contract_keywords(data)
+    ko_text = "\n".join(fence["body"] for fence in ko_fences)
+    en_text = "\n".join(fence["body"] for fence in en_fences)
+    ko_missing = [keyword for keyword in required if keyword not in ko_text]
+    en_missing = [keyword for keyword in required if keyword not in en_text]
+    ko_funcs = _extract_python_function_names(ko_body)
+    en_funcs = _extract_python_function_names(en_body)
+    function_overlap_ok = True
+    if ko_funcs or en_funcs:
+        shared = ko_funcs & en_funcs
+        larger = max(len(ko_funcs), len(en_funcs), 1)
+        function_overlap_ok = (len(shared) / larger) >= 0.5
+
+    if len(ko_fences) != len(en_fences) or ko_missing or en_missing or not function_overlap_ok:
+        return [
+            _make_remediation_issue(
+                "code_not_isomorphic",
+                "high",
+                "adv_ko_3_code,adv_en_3_code",
+                "",
+                "KO/EN code sections do not describe the same system contract.",
+                "Rewrite both code sections from the same contract.",
+                {
+                    "ko_missing": ko_missing,
+                    "en_missing": en_missing,
+                    "ko_functions": sorted(ko_funcs),
+                    "en_functions": sorted(en_funcs),
+                    "ko_fences": len(ko_fences),
+                    "en_fences": len(en_fences),
+                },
+            )
+        ]
+    return []
+
+
+def _detect_provider_drift_issue(data: dict) -> list[dict]:
+    term_text = f"{data.get('term_full', '')} {data.get('korean_full', '')}".lower()
+    if "context window" not in term_text and "context window" not in str(data.get("body_advanced_en", "")).lower():
+        return []
+    combined = f"{data.get('body_advanced_ko', '')}\n{data.get('body_advanced_en', '')}".lower()
+    provider_markers = ("extended thinking", "tool_result", "signed thinking", "kimi", "sonnet")
+    core_markers = ("token budget", "truncation", "compaction", "rag", "attention cost")
+    provider_hits = [marker for marker in provider_markers if marker in combined]
+    core_hits = [marker for marker in core_markers if marker in combined]
+    if len(provider_hits) >= 2 and len(core_hits) < 2:
+        return [
+            _make_remediation_issue(
+                "advanced_provider_drift",
+                "medium",
+                "body_advanced_ko,body_advanced_en",
+                "",
+                "Advanced content is drifting toward provider-specific examples instead of core mechanism.",
+                "Refocus advanced sections on token budget, truncation, compaction, RAG tradeoff, and attention cost.",
+                {"provider_hits": provider_hits, "core_hits": core_hits},
+            )
+        ]
+    return []
+
+
+def _detect_markdown_structure_issues(data: dict) -> list[dict]:
+    issues: list[dict] = []
+    for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
+        text = str(data.get(field) or "")
+        if not text:
+            continue
+        inline_headings = len(re.findall(r"(?<!\n)\s##\s+", text))
+        glued_code_headings = len(re.findall(r"(?m)^##[^\n`]*```", text))
+        if inline_headings or glued_code_headings:
+            issues.append(
+                _make_remediation_issue(
+                    "markdown_structure_broken",
+                    "high",
+                    field,
+                    "ko" if field.endswith("_ko") else "en",
+                    "Markdown headings are not separated by line breaks.",
+                    "Put every ## heading and every fenced code block on its own line.",
+                    {
+                        "inline_headings": inline_headings,
+                        "glued_code_headings": glued_code_headings,
+                    },
+                )
+            )
+        h2_count = len(re.findall(r"(?m)^##\s+", text))
+        if field.startswith("body_basic_") and h2_count and h2_count < 7:
+            issues.append(
+                _make_remediation_issue(
+                    "basic_sections_incomplete",
+                    "high",
+                    field,
+                    "ko" if field.endswith("_ko") else "en",
+                    f"Basic body has {h2_count}/7 H2 sections.",
+                    "Restore all 7 Basic sections with one H2 heading per section.",
+                    {"h2_count": h2_count, "expected": 7},
+                )
+            )
+        if field.startswith("body_advanced_"):
+            locale = "ko" if field.endswith("_ko") else "en"
+            expected = len(ADVANCED_SECTIONS_KO if locale == "ko" else ADVANCED_SECTIONS_EN)
+            if h2_count and h2_count < expected:
+                issues.append(
+                    _make_remediation_issue(
+                        "advanced_sections_incomplete",
+                        "high",
+                        field,
+                        locale,
+                        f"Advanced body has {h2_count}/{expected} H2 sections.",
+                        "Restore every required Advanced section with one H2 heading per section.",
+                        {"h2_count": h2_count, "expected": expected},
+                    )
+                )
+    return issues
+
+
+def _extract_h2_headings(markdown: str) -> list[str]:
+    return [match.group(1).strip() for match in re.finditer(r"(?m)^##\s+(.+?)\s*$", markdown or "")]
+
+
+def _headers_from_sections(sections: list[tuple[str, str]]) -> list[str]:
+    return [header.removeprefix("## ").strip() for _, header in sections]
+
+
+def _detect_canonical_heading_issues(data: dict) -> list[dict]:
+    issues: list[dict] = []
+    expected_basic = {
+        "ko": _headers_from_sections(BASIC_SECTIONS_KO),
+        "en": _headers_from_sections(BASIC_SECTIONS_EN),
+    }
+    for locale in ("ko", "en"):
+        field = f"body_basic_{locale}"
+        headings = _extract_h2_headings(str(data.get(field) or ""))
+        if headings and headings != expected_basic[locale]:
+            issues.append(
+                _make_remediation_issue(
+                    "basic_heading_shape_invalid",
+                    "high",
+                    field,
+                    locale,
+                    "Basic section headings do not match the canonical handbook shape.",
+                    "Restore the exact Basic H2 headings and order; rewrite content under those headings only.",
+                    {"actual": headings, "expected": expected_basic[locale]},
+                )
+            )
+
+        field = f"body_advanced_{locale}"
+        headings = _extract_h2_headings(str(data.get(field) or ""))
+        advanced_sections = _advanced_sections_for_mode(
+            locale,
+            _effective_code_mode_hint(data),
+            data.get("term_type"),
+            data.get("term_subtype"),
+        )
+        expected_advanced = _headers_from_sections(advanced_sections)
+        expected_without_specs = _headers_from_sections(
+            [(key, header) for key, header in advanced_sections if not key.endswith("_specs")]
+        )
+        allowed_shapes = [expected_advanced]
+        if expected_without_specs != expected_advanced:
+            allowed_shapes.append(expected_without_specs)
+        if headings and headings not in allowed_shapes:
+            issues.append(
+                _make_remediation_issue(
+                    "advanced_heading_shape_invalid",
+                    "high",
+                    field,
+                    locale,
+                    "Advanced section headings do not match the canonical handbook shape.",
+                    "Restore the exact Advanced H2 headings and order; rewrite content under those headings only.",
+                    {"actual": headings, "expected": expected_advanced, "allowed": allowed_shapes},
+                )
+            )
+    return issues
+
+
+def _normalize_related_term_name(value: str) -> str:
+    text = (value or "").lower()
+    text = re.sub(r"\([^)]*\)", " ", text)
+    text = re.sub(r"[^0-9a-z가-힣]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _self_related_names(data: dict) -> set[str]:
+    names: set[str] = set()
+    for field in ("term", "term_full", "korean_name", "korean_full"):
+        value = str(data.get(field) or "").strip()
+        if not value:
+            continue
+        for part in [value, *re.findall(r"\(([^)]+)\)", value)]:
+            normalized = _normalize_related_term_name(part)
+            if normalized:
+                names.add(normalized)
+        normalized_without_parenthetical = _normalize_related_term_name(re.sub(r"\([^)]*\)", "", value))
+        if normalized_without_parenthetical:
+            names.add(normalized_without_parenthetical)
+    return names
+
+
+def _term_family_keys(data: dict) -> set[str]:
+    keys: set[str] = set()
+    for name in _self_related_names(data):
+        if name:
+            keys.add(name)
+        if "attention" in name or "어텐션" in name:
+            keys.add("attention")
+        if "transformer" in name or "트랜스포머" in name:
+            keys.add("transformer")
+        if name == "adam" or "adam optimizer" in name:
+            keys.add("adam")
+        if name == "cuda" or "쿠다" in name:
+            keys.add("cuda")
+    return keys
+
+
+def _extract_related_section(markdown: str, locale: str) -> str:
+    headings = (
+        ("선행·대안·확장 개념", "선행", "대안", "확장")
+        if locale == "ko"
+        else ("Prerequisites, Alternatives, and Extensions",)
+    )
+    lines = (markdown or "").splitlines()
+    collecting = False
+    collected: list[str] = []
+    for line in lines:
+        if line.startswith("## "):
+            title = line.removeprefix("## ").strip()
+            if any(marker in title for marker in headings):
+                collecting = True
+                collected = []
+                continue
+            if collecting:
+                break
+        elif collecting:
+            collected.append(line)
+    return "\n".join(collected).strip()
+
+
+def _parse_related_bullets(section: str) -> list[dict]:
+    bullets: list[dict] = []
+    pattern = re.compile(r"(?m)^-\s*\(([^)]+)\)\s+\*\*([^*]+)\*\*\s*(?:—|-|–)\s*(.+)$")
+    for match in pattern.finditer(section or ""):
+        bullets.append(
+            {
+                "tag": match.group(1).strip(),
+                "term": match.group(2).strip(),
+                "relationship": match.group(3).strip(),
+            }
+        )
+    return bullets
+
+
+def _is_internal_related_component(term: str, data: dict) -> bool:
+    normalized = _normalize_related_term_name(term)
+    if not normalized:
+        return False
+    for family in _term_family_keys(data):
+        for pattern in _INTERNAL_RELATED_PATTERNS_BY_TERM.get(family, ()):
+            if re.search(pattern, normalized, flags=re.IGNORECASE):
+                return True
+    return False
+
+
+def _detect_related_term_issues(data: dict) -> list[dict]:
+    issues: list[dict] = []
+    self_names = _self_related_names(data)
+    for locale in ("ko", "en"):
+        field = f"body_advanced_{locale}"
+        section = _extract_related_section(str(data.get(field) or ""), locale)
+        if not section:
+            continue
+        bullets = _parse_related_bullets(section)
+        valid_tags = _RELATED_TAGS_BY_LOCALE[locale]
+        seen_terms: set[str] = set()
+        bad_terms: list[dict] = []
+        bad_tags: list[str] = []
+        for bullet in bullets:
+            tag = bullet["tag"]
+            term = bullet["term"]
+            normalized = _normalize_related_term_name(term)
+            if tag not in valid_tags:
+                bad_tags.append(tag)
+            if normalized and normalized in seen_terms:
+                bad_terms.append({"term": term, "reason": "duplicate related term"})
+            seen_terms.add(normalized)
+            if normalized and normalized in self_names:
+                bad_terms.append({"term": term, "reason": "alias or same term"})
+            if _is_internal_related_component(term, data):
+                bad_terms.append({"term": term, "reason": "internal component, not a related concept"})
+
+        if bad_tags:
+            issues.append(
+                _make_remediation_issue(
+                    "related_tag_mismatch",
+                    "high",
+                    f"adv_{locale}_7_related",
+                    locale,
+                    "Related section uses non-canonical category tags for this locale.",
+                    "Use only the canonical related tags for this locale.",
+                    {"tags": bad_tags, "expected": sorted(valid_tags)},
+                )
+            )
+        if bad_terms:
+            issues.append(
+                _make_remediation_issue(
+                    "related_term_rule_violation",
+                    "high",
+                    f"adv_{locale}_7_related",
+                    locale,
+                    "Related section contains aliases, duplicates, or internal components.",
+                    "Replace them with separate prerequisite, alternative, or extension concepts.",
+                    {"violations": bad_terms},
+                )
+            )
+    return issues
+
+
+def _dedupe_remediation_issues(issues: list[dict]) -> list[dict]:
+    deduped: list[dict] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for issue in issues:
+        evidence = issue.get("evidence") if isinstance(issue.get("evidence"), dict) else {}
+        evidence_key = str(evidence.get("claim") or "") if issue.get("code") == "unsupported_reference_claim" else ""
+        key = (
+            str(issue.get("code") or ""),
+            str(issue.get("section") or ""),
+            str(issue.get("locale") or ""),
+            evidence_key,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(issue)
+    return deduped
+
+
+def _build_handbook_remediation_issues(data: dict, warnings: list[str]) -> list[dict]:
+    issues: list[dict] = []
+    definition_en = str(data.get("definition_en") or "")
+    definition_ko = str(data.get("definition_ko") or "")
+    if len(definition_en) > 480:
+        issues.append(
+            _make_remediation_issue(
+                "definition_too_long",
+                "medium",
+                "definition_en",
+                "en",
+                f"definition_en has {len(definition_en)} chars; target ceiling is 480.",
+                "Compress to one or two dense sentences.",
+                {"chars": len(definition_en), "ceiling": 480},
+            )
+        )
+    if len(definition_ko) > 260:
+        issues.append(
+            _make_remediation_issue(
+                "definition_too_long",
+                "medium",
+                "definition_ko",
+                "ko",
+                f"definition_ko has {len(definition_ko)} chars; target ceiling is 260.",
+                "Compress to one or two dense Korean sentences.",
+                {"chars": len(definition_ko), "ceiling": 260},
+            )
+        )
+
+    references_ko = data.get("references_ko") if isinstance(data.get("references_ko"), list) else []
+    references_en = data.get("references_en") if isinstance(data.get("references_en"), list) else []
+    reference_strength = str(data.get("reference_strength") or "").lower()
+    ref_count = max(len(references_ko), len(references_en))
+    primary_count = max(_count_primary_references(references_ko), _count_primary_references(references_en))
+    ref_warning = any(re.search(r"refs_(?:ko|en):\s*\d+\s+items\s+<\s+3", warning or "") for warning in warnings or [])
+    if reference_strength == "low" or ref_warning:
+        try:
+            from services.agents.prompts_handbook_types import get_term_generation_override
+
+            term_candidates = (
+                data.get("term"),
+                data.get("term_full"),
+                data.get("korean_full"),
+                data.get("korean_name"),
+            )
+            has_override = any(get_term_generation_override(str(term or "")) for term in term_candidates)
+        except Exception:
+            has_override = False
+        severity = "high" if has_override else "medium"
+        issues.append(
+            _make_remediation_issue(
+                "weak_reference_set",
+                severity,
+                "references_ko,references_en",
+                "",
+                f"Reference set is too weak for admin-ready review: strength={reference_strength or 'unknown'}, refs={ref_count}, primary={primary_count}.",
+                "Use curated/direct references or rerun source selection before considering publish review.",
+                {
+                    "reference_strength": reference_strength or "unknown",
+                    "reference_count": ref_count,
+                    "primary_count": primary_count,
+                    "core_override_term": has_override,
+                },
+            )
+        )
+
+    for warning in warnings or []:
+        claim = _extract_warning_claim(warning)
+        if claim:
+            issues.append(
+                _make_remediation_issue(
+                    "unsupported_reference_claim",
+                    "high",
+                    _find_text_field_containing(data, claim),
+                    "",
+                    warning,
+                    "Remove the unsupported sentence or generalize it without adding new references.",
+                    {"claim": claim},
+                )
+            )
+        elif "invalid Python code fence" in warning:
+            issues.append(
+                _make_remediation_issue(
+                    "invalid_code_fence",
+                    "high",
+                    _find_text_field_containing(data, "```python"),
+                    "",
+                    warning,
+                    "Rewrite the affected code fence as valid Python or pseudocode.",
+                )
+            )
+        elif "code capsule too large" in warning:
+            issues.append(
+                _make_remediation_issue(
+                    "code_capsule_too_large",
+                    "medium",
+                    "body_advanced_ko,body_advanced_en",
+                    "",
+                    warning,
+                    "Shorten the code capsule while preserving the same system model.",
+                )
+            )
+
+    adv_ko = str(data.get("body_advanced_ko") or "")
+    if re.search(r"\((prerequisite|alternative|extension)\)", adv_ko, flags=re.IGNORECASE):
+        issues.append(
+            _make_remediation_issue(
+                "ko_related_tag_mismatch",
+                "medium",
+                "adv_ko_7_related",
+                "ko",
+                "KO related section uses English relation tags.",
+                "Use Korean relation tags: (선행), (대안), (확장).",
+            )
+        )
+
+    for locale in ("ko", "en"):
+        body = str(data.get(f"body_advanced_{locale}") or "")
+        for idx, fence in enumerate(_extract_markdown_code_fences(body), start=1):
+            line_count = len([line for line in fence["body"].splitlines() if line.strip()])
+            if len(fence["body"]) > 3500 or line_count > 55:
+                issues.append(
+                    _make_remediation_issue(
+                        "code_capsule_too_large",
+                        "medium",
+                        f"body_advanced_{locale}",
+                        locale,
+                        f"adv_{locale} code fence {idx} has {len(fence['body'])} chars/{line_count} lines; target is one compact handbook-screen capsule.",
+                        "Shorten the code capsule while preserving the same system model.",
+                        {
+                            "chars": len(fence["body"]),
+                            "ceiling": 3500,
+                            "lines": line_count,
+                            "line_ceiling": 55,
+                            "fence": idx,
+                        },
+                    )
+                )
+
+    issues.extend(_detect_code_isomorphism_issues(data))
+    issues.extend(_detect_provider_drift_issue(data))
+    issues.extend(_detect_markdown_structure_issues(data))
+    issues.extend(_detect_canonical_heading_issues(data))
+    issues.extend(_detect_related_term_issues(data))
+    return _dedupe_remediation_issues(issues)
+
+
+def _remove_claim_sentences_from_part(part: str, reference_blob: str) -> tuple[str, list[str]]:
+    if not part:
+        return part, []
+    removed: list[str] = []
+    pieces = re.split(r"(?<=[.!?。！？])\s+", part)
+    kept: list[str] = []
+    for piece in pieces:
+        claims = []
+        for match in _HIGH_RISK_REFERENCE_CLAIM_RE.finditer(piece):
+            claim = match.group(0).strip()
+            if _normalize_reference_claim_text(claim) not in reference_blob:
+                claims.append(claim)
+        if claims:
+            removed.extend(claims)
+            continue
+        kept.append(piece)
+    return " ".join(p for p in kept if p).strip(), removed
+
+
+def _remove_unsupported_reference_claim_sentences(data: dict) -> list[str]:
+    reference_blob = _reference_claim_blob(data)
+    if not reference_blob:
+        return []
+    removed_claims: list[str] = []
+    for field in _HANDBOOK_TEXT_FIELDS:
+        value = data.get(field)
+        if not isinstance(value, str) or not value:
+            continue
+
+        def _replace_code_fence_claims(match: re.Match) -> str:
+            fence = match.group(0)
+            updated = fence
+            for claim_match in _HIGH_RISK_REFERENCE_CLAIM_RE.finditer(fence):
+                claim = claim_match.group(0).strip()
+                if _normalize_reference_claim_text(claim) in reference_blob:
+                    continue
+                removed_claims.append(claim)
+                replacement = "your-model" if re.search(r"(gpt|claude|gemini|sonnet|kimi)", claim, re.IGNORECASE) else "supported-value"
+                updated = updated.replace(claim, replacement)
+            return updated
+
+        value_with_code_generalized = re.sub(
+            r"```.*?```",
+            _replace_code_fence_claims,
+            value,
+            flags=re.DOTALL,
+        )
+
+        def _replace(part: str) -> str:
+            cleaned, removed = _remove_claim_sentences_from_part(part, reference_blob)
+            removed_claims.extend(removed)
+            return cleaned
+
+        cleaned_value = _transform_outside_code_fences(value_with_code_generalized, _replace)
+        if cleaned_value != value:
+            data[field] = cleaned_value
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for claim in removed_claims:
+        key = _normalize_reference_claim_text(claim)
+        if key and key not in seen:
+            seen.add(key)
+            deduped.append(claim)
+    return deduped
+
+
+def _build_admin_draft_quality_gate(issues: list[dict], generation_gate: dict | None) -> dict:
+    severity_counts = {"high": 0, "medium": 0, "low": 0}
+    for issue in issues or []:
+        severity = str(issue.get("severity") or "low")
+        if severity not in severity_counts:
+            severity = "low"
+        severity_counts[severity] += 1
+
+    generation_status = str((generation_gate or {}).get("status") or "unknown")
+    if severity_counts["high"] > 0:
+        status = "blocked_for_publish"
+    elif severity_counts["medium"] > 0 or generation_status not in {"pass", "unknown"}:
+        status = "needs_remediation"
+    else:
+        status = "admin_ready"
+
+    return {
+        "status": status,
+        "draft_save_allowed": True,
+        "publish_review_allowed": status == "admin_ready",
+        "issue_counts": severity_counts,
+        "remaining_issue_codes": [str(issue.get("code") or "") for issue in issues or []],
+        "generation_gate_status": generation_status,
+    }
+
+
+def _target_fields_for_remediation_issues(issues: list[dict]) -> list[str]:
+    fields: list[str] = []
+    for issue in issues or []:
+        section = str(issue.get("section") or "")
+        if section:
+            fields.extend(part.strip() for part in section.split(",") if part.strip())
+            continue
+        code = str(issue.get("code") or "")
+        if code == "unsupported_reference_claim":
+            continue
+        if code == "code_not_isomorphic":
+            fields.extend(["body_advanced_ko", "body_advanced_en"])
+    normalized: list[str] = []
+    for field in fields:
+        if field.startswith("adv_"):
+            field = "body_advanced_ko" if "_ko_" in field else "body_advanced_en"
+        if field not in normalized and field in {
+            "body_basic_ko",
+            "body_basic_en",
+            "definition_ko",
+            "definition_en",
+            "body_advanced_ko",
+            "body_advanced_en",
+            "hero_news_context_ko",
+            "hero_news_context_en",
+        }:
+            normalized.append(field)
+    return normalized
+
+
+def _build_handbook_remediation_user_prompt(term: str, data: dict, issues: list[dict]) -> str:
+    target_fields = _target_fields_for_remediation_issues(issues)
+    targets = {field: data.get(field, "") for field in target_fields}
+    references = {
+        "references_ko": data.get("references_ko", []),
+        "references_en": data.get("references_en", []),
+    }
+    payload = {
+        "term": term,
+        "issues": issues,
+        "target_fields": targets,
+        "references": references,
+    }
+    return (
+        "Rewrite only the listed target_fields for admin draft remediation.\n"
+        "Do not regenerate unrelated fields. Do not add new references.\n"
+        "Remove unsupported claims instead of inventing citations.\n"
+        "If rewriting KO/EN code, make both locales implement the same system model.\n"
+        "For code_capsule_too_large issues, shorten only the code or pseudocode section inside the target field; "
+        "preserve existing markdown headings and do not rewrite non-code sections. "
+        "Keep one compact fenced capsule, remove helper boilerplate/test harnesses, and keep the same contract.\n"
+        "When rewriting Advanced fields, use practical system-design depth: runtime boundaries, "
+        "component responsibilities, validation gates, failure paths, observability, and cost/latency tradeoffs. "
+        "Do not make academic formalism, equations, or paper taxonomy the backbone unless the term is a metric, "
+        "loss, math/statistics concept, or algorithm with a standard formula.\n"
+        "Return a JSON object whose keys are only target field names.\n\n"
+        + json.dumps(payload, ensure_ascii=False, default=str)
+    )
+
+
+def _apply_handbook_remediation_patch(data: dict, patch_data: dict, allowed_fields: list[str]) -> list[str]:
+    applied: list[str] = []
+    for field in allowed_fields:
+        value = patch_data.get(field)
+        if isinstance(value, str) and value.strip():
+            data[field] = value.strip()
+            applied.append(field)
+    return applied
+
+
+async def _run_handbook_targeted_remediation(
+    term: str,
+    data: dict,
+    warnings: list[str],
+    client,
+    model: str,
+) -> tuple[dict, dict]:
+    issues_before = _build_handbook_remediation_issues(data, warnings)
+    removed_claims = _remove_unsupported_reference_claim_sentences(data)
+    warnings_after_local = _apply_handbook_safety_postprocess(data)
+    issues_after_local = _build_handbook_remediation_issues(data, warnings_after_local)
+    llm_issues = [
+        issue for issue in issues_after_local
+        if issue.get("code") not in {"unsupported_reference_claim"}
+    ]
+    target_fields = _target_fields_for_remediation_issues(llm_issues)
+    usage: dict = {}
+    applied_fields: list[str] = []
+
+    if target_fields:
+        prompt = _build_handbook_remediation_user_prompt(term, data, llm_issues)
+        resp = await client.chat.completions.create(
+            **compat_create_kwargs(
+                model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a handbook draft remediation editor. "
+                            "Patch only requested fields, preserve factual grounding, and return JSON only. "
+                            "For Advanced patches, prefer architecture-review depth over academic formalism."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=6000,
+                prompt_cache_key="hb-remediate-targeted",
+                reasoning_effort="low",
+                service_tier="flex",
+            )
+        )
+        patch_data = parse_ai_json(resp.choices[0].message.content, "Handbook-remediate-targeted")
+        applied_fields = _apply_handbook_remediation_patch(data, patch_data, target_fields)
+        usage = extract_usage_metrics(resp, model)
+
+    final_warnings = _apply_handbook_safety_postprocess(data)
+    final_issues = _build_handbook_remediation_issues(data, final_warnings)
+    meta = {
+        "status": "applied" if (removed_claims or applied_fields) else "no_issues",
+        "issues_before": issues_before,
+        "issues_after": final_issues,
+        "removed_claims": removed_claims,
+        "applied_fields": applied_fields,
+    }
+    return usage, meta
+
+
+def _hydrate_existing_draft_generation_metadata(term: str, data: dict) -> None:
+    """Restore transient generation metadata for existing DB drafts.
+
+    Some metadata, such as term_subtype and code_mode_hint, is produced during
+    generation but not stored on handbook_terms. Existing-draft remediation
+    still needs it to apply the same structural rules as generation.
+    """
+    try:
+        from services.agents.prompts_handbook_types import (
+            DEFAULT_INTENT_BY_TYPE,
+            DEFAULT_VOLATILITY_BY_TYPE,
+            get_artifact_policy,
+            get_term_planner_override,
+            normalize_term_subtype,
+        )
+    except Exception:
+        return
+
+    term_candidates = (
+        term,
+        data.get("term"),
+        data.get("term_full"),
+        data.get("korean_full"),
+        data.get("korean_name"),
+    )
+    override = None
+    for candidate in term_candidates:
+        override = get_term_planner_override(str(candidate or ""))
+        if override:
+            break
+
+    if override:
+        override_type = str(override.get("type") or "")
+        if override_type and not str(data.get("term_type") or "").strip():
+            data["term_type"] = override_type
+
+        effective_type = str(data.get("term_type") or override_type or "").strip()
+        override_subtype = normalize_term_subtype(effective_type, override.get("subtype"))
+        if override_subtype and not str(data.get("term_subtype") or "").strip():
+            data["term_subtype"] = override_subtype
+
+        if not data.get("facet_intent"):
+            data["facet_intent"] = list(
+                override.get("intent") or DEFAULT_INTENT_BY_TYPE.get(effective_type, ["understand"])
+            )
+        if not str(data.get("facet_volatility") or "").strip():
+            data["facet_volatility"] = str(
+                override.get("volatility")
+                or DEFAULT_VOLATILITY_BY_TYPE.get(effective_type, "stable")
+            )
+        data.setdefault("facet_type_confidence", 1.0)
+
+    if str(data.get("code_mode_hint") or "").strip():
+        return
+
+    term_type = str(data.get("term_type") or "").strip()
+    if not term_type:
+        return
+
+    term_subtype = str(data.get("term_subtype") or "").strip() or None
+    policy = get_artifact_policy(term_type, term_subtype, _primary_category_from_content(data))
+    code_mode = str(policy.get("code_mode") or "").strip()
+    if code_mode and code_mode != "contextual":
+        data["code_mode_hint"] = code_mode
+
+
+async def remediate_handbook_draft_content(
+    term: str,
+    data: dict,
+    *,
+    client=None,
+    model: str | None = None,
+    apply_llm: bool = False,
+) -> tuple[dict, dict, list[dict], dict]:
+    """Analyze or remediate an existing draft payload without regenerating it."""
+    working = dict(data or {})
+    _hydrate_existing_draft_generation_metadata(term, working)
+    client = client or get_openai_client()
+    model = model or getattr(settings, "openai_model_main")
+    warnings = _apply_handbook_safety_postprocess(working)
+    if apply_llm:
+        usage, remediation_meta = await _run_handbook_targeted_remediation(
+            term,
+            working,
+            warnings,
+            client,
+            model,
+        )
+        issues = remediation_meta.get("issues_after", [])
+    else:
+        usage = {}
+        issues = _build_handbook_remediation_issues(working, warnings)
+        remediation_meta = {
+            "status": "dry_run",
+            "issues_before": issues,
+            "issues_after": issues,
+            "removed_claims": [],
+            "applied_fields": [],
+        }
+    gate = _build_admin_draft_quality_gate(issues, working.get("generation_gate"))
+    working["_remediation_issues"] = issues
+    working["_quality_gate"] = gate
+    working["_remediation_status"] = remediation_meta["status"]
+    return working, usage, issues, remediation_meta
+
+
 def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
     """Score handbook structural quality via deterministic code checks.
 
@@ -1057,7 +2219,11 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
     for locale in ["ko", "en"]:
         body = data.get(f"body_advanced_{locale}", "") or ""
         h2 = _count_h2(body)
-        expected = _expected_advanced_sections(data.get("code_mode_hint"))
+        expected = _expected_advanced_sections(
+            data.get("code_mode_hint"),
+            data.get("term_type"),
+            data.get("term_subtype"),
+        )
         missing = max(0, expected - h2)
         if missing > 0:
             p = missing * 3
@@ -1165,7 +2331,29 @@ def _check_handbook_structural_penalties(data: dict) -> tuple[int, list[str]]:
         penalty += 5
         warnings.append(f"adv total: {adv_total} chars < 6000 (-5)")
 
-    # --- Check 11: Korean name present (-1 if missing) ---
+    # --- Check 11: Code section budget (-3 per overlong code section, cap -6) ---
+    is_capability_spec = data.get("term_type") == "capability_feature_spec"
+    soft_code_budget = 3500
+    soft_code_line_budget = 55
+    code_budget = 5000 if is_capability_spec else 7000
+    code_penalty = 0
+    for locale in ["ko", "en"]:
+        body = data.get(f"body_advanced_{locale}", "") or ""
+        for idx, code in enumerate(_extract_markdown_code_fences(body), start=1):
+            line_count = len([line for line in code["body"].splitlines() if line.strip()])
+            if len(code["body"]) > soft_code_budget or line_count > soft_code_line_budget:
+                warnings.append(
+                    f"adv_{locale} code capsule too large: fence {idx} has "
+                    f"{len(code['body'])} chars/{line_count} lines > compact capsule target"
+                )
+            if len(code["body"]) > code_budget:
+                code_penalty += 3
+                warnings.append(
+                    f"adv_{locale} code section too long: fence {idx} has {len(code['body'])} chars > {code_budget} (-3)"
+                )
+    penalty += min(code_penalty, 6)
+
+    # --- Check 12: Korean name present (-1 if missing) ---
     if not data.get("korean_name"):
         penalty += 1
         warnings.append("korean_name missing (-1)")
@@ -1688,6 +2876,9 @@ def decide_code_mode(
     if insufficient_info_flag:
         return "no-code"
 
+    if term_type == "foundational_concept" and term_subtype in {"policy_discourse", "standard_regulation"}:
+        return "no-code"
+
     if term_type in {"problem_failure_mode", "metric_benchmark"}:
         return "no-code"
 
@@ -1723,6 +2914,7 @@ def _build_code_mode_metadata(
     brave_context: str,
     deep_context: str,
     reference_eval: dict | None = None,
+    primary_category: str | None = None,
 ) -> dict:
     references_ko = basic_data.get("references_ko", []) or []
     references_en = basic_data.get("references_en", []) or []
@@ -1757,6 +2949,14 @@ def _build_code_mode_metadata(
         has_official_spec_signal,
         insufficient_info_flag,
     )
+    try:
+        from services.agents.prompts_handbook_types import get_artifact_policy
+
+        artifact_policy = get_artifact_policy(term_type, term_subtype, primary_category)
+        if artifact_policy.get("code_mode") == "no-code":
+            code_mode_hint = "no-code"
+    except Exception:
+        pass
     vendor_lock_in_risk = (
         "high"
         if term_type in {"product_platform_service", "capability_feature_spec"} and term_subtype != "ecosystem_platform"
@@ -1795,12 +2995,88 @@ def _select_source_context_for_field(
     return "\n\n".join(selected_chunks)
 
 
-def _advanced_sections_for_mode(locale: str, code_mode: str | None) -> list[tuple[str, str]]:
-    return ADVANCED_SECTIONS_KO if locale == "ko" else ADVANCED_SECTIONS_EN
+def _should_include_advanced_specs(term_type: str | None, term_subtype: str | None = None) -> bool:
+    """Return whether the numeric specs block is meaningful for this term kind."""
+    if not term_type:
+        return False
+    try:
+        from services.agents.prompts_handbook_types import get_artifact_policy
+
+        policy = get_artifact_policy(term_type, term_subtype)
+        if policy.get("specs_mode") == "off":
+            return False
+        if policy.get("specs_mode") in {"optional", "required"}:
+            return True
+    except Exception:
+        pass
+    return term_type in {
+        "model_algorithm_family",
+        "metric_benchmark",
+        "product_platform_service",
+        "hardware_runtime_infra",
+    }
 
 
-def _expected_advanced_sections(code_mode: str | None) -> int:
-    return 7
+ADVANCED_SPECS_SECTION_KO = ("adv_ko_specs", "## 핵심 스펙 (parameters, FLOPs, 벤치마크)")
+ADVANCED_SPECS_SECTION_EN = ("adv_en_specs", "## Key Specifications (parameters, FLOPs, benchmarks)")
+
+
+def _advanced_specs_section_for_type(
+    locale: str,
+    term_type: str | None = None,
+    term_subtype: str | None = None,
+) -> tuple[str, str]:
+    key = f"adv_{locale}_specs"
+    if locale == "ko":
+        if term_type == "product_platform_service":
+            return key, "## 핵심 한도·가격·운영 스펙"
+        if term_type == "hardware_runtime_infra":
+            return key, "## 핵심 하드웨어·런타임 스펙"
+        if term_type == "metric_benchmark":
+            return key, "## 핵심 평가 스펙"
+        return ADVANCED_SPECS_SECTION_KO
+
+    if term_type == "product_platform_service":
+        return key, "## Key Limits, Pricing, and Operational Specs"
+    if term_type == "hardware_runtime_infra":
+        return key, "## Key Hardware and Runtime Specs"
+    if term_type == "metric_benchmark":
+        return key, "## Key Evaluation Specs"
+    return ADVANCED_SPECS_SECTION_EN
+
+
+def _section_header_for_code_mode(locale: str, code_mode: str | None) -> str:
+    if code_mode == "no-code":
+        return "## 운영 패턴과 검수 절차" if locale == "ko" else "## Operational Pattern and Review Procedure"
+    return "## 코드 또는 의사코드" if locale == "ko" else "## Code or Pseudocode"
+
+
+def _advanced_sections_for_mode(
+    locale: str,
+    code_mode: str | None,
+    term_type: str | None = None,
+    term_subtype: str | None = None,
+) -> list[tuple[str, str]]:
+    sections = list(ADVANCED_SECTIONS_KO if locale == "ko" else ADVANCED_SECTIONS_EN)
+    code_key = f"adv_{locale}_3_code"
+    code_header = _section_header_for_code_mode(locale, code_mode)
+    sections = [
+        (key, code_header if key == code_key else header)
+        for key, header in sections
+    ]
+    if _should_include_advanced_specs(term_type, term_subtype):
+        specs_section = _advanced_specs_section_for_type(locale, term_type, term_subtype)
+        sections.insert(1, specs_section)
+        return sections
+    return sections
+
+
+def _expected_advanced_sections(
+    code_mode: str | None,
+    term_type: str | None = None,
+    term_subtype: str | None = None,
+) -> int:
+    return len(_advanced_sections_for_mode("en", code_mode, term_type, term_subtype))
 
 
 async def _validate_ref_urls(content: str) -> str:
@@ -1967,7 +3243,6 @@ BASIC_SECTIONS_EN = [
 
 ADVANCED_SECTIONS_KO = [
     ("adv_ko_1_mechanism", "## 기술적 정의와 동작 원리"),
-    ("adv_ko_specs", "## 핵심 스펙 (parameters, FLOPs, 벤치마크)"),
     ("adv_ko_2_formulas", "## 핵심 수식·아키텍처·도표"),
     ("adv_ko_3_code", "## 코드 또는 의사코드"),
     # NOTE: Display order swapped — pitfalls (concrete failures) before tradeoffs
@@ -1983,7 +3258,6 @@ ADVANCED_SECTIONS_KO = [
 
 ADVANCED_SECTIONS_EN = [
     ("adv_en_1_mechanism", "## Technical Definition & How It Works"),
-    ("adv_en_specs", "## Key Specifications (parameters, FLOPs, benchmarks)"),
     ("adv_en_2_formulas", "## Formulas, Architecture, and Diagrams"),
     ("adv_en_3_code", "## Code or Pseudocode"),
     # See KO comment above — same swap.
@@ -1994,18 +3268,15 @@ ADVANCED_SECTIONS_EN = [
 ]
 
 
-def _render_structured_relations(rel: dict) -> str:
+def _render_structured_relations(rel: dict, locale: str = "en") -> str:
     """Render structured Relations dict as canonical (tag) **term** — relationship bullets.
 
     Tag-first order matches the writer prompt's rule that the parenthesized tag
     precedes the bolded term.
     """
     bullets: list[str] = []
-    for category, tag in (
-        ("prerequisites", "prerequisite"),
-        ("alternatives", "alternative"),
-        ("extensions", "extension"),
-    ):
+    tag_map = _RELATED_TAG_MAP_BY_LOCALE.get(locale, _RELATED_TAG_MAP_BY_LOCALE["en"])
+    for category, tag in tag_map.items():
         for entry in rel.get(category, []) or []:
             term = (entry.get("term") or "").strip()
             relationship = (entry.get("relationship") or "").strip()
@@ -2014,14 +3285,218 @@ def _render_structured_relations(rel: dict) -> str:
     return "\n".join(bullets)
 
 
+_RELATED_TAG_ALIASES = {
+    "basic": {
+        "ko": {
+            "기초": "기초",
+            "선행": "기초",
+            "before": "기초",
+            "prerequisite": "기초",
+            "prerequisites": "기초",
+            "유사": "유사",
+            "대안": "유사",
+            "similar": "유사",
+            "alternative": "유사",
+            "alternatives": "유사",
+            "심화": "심화",
+            "확장": "심화",
+            "next": "심화",
+            "extension": "심화",
+            "extensions": "심화",
+        },
+        "en": {
+            "기초": "before",
+            "선행": "before",
+            "before": "before",
+            "prerequisite": "before",
+            "prerequisites": "before",
+            "유사": "similar",
+            "대안": "similar",
+            "similar": "similar",
+            "alternative": "similar",
+            "alternatives": "similar",
+            "심화": "next",
+            "확장": "next",
+            "next": "next",
+            "extension": "next",
+            "extensions": "next",
+        },
+    },
+    "advanced": {
+        "ko": {
+            "기초": "선행",
+            "선행": "선행",
+            "before": "선행",
+            "prerequisite": "선행",
+            "prerequisites": "선행",
+            "유사": "대안",
+            "대안": "대안",
+            "similar": "대안",
+            "alternative": "대안",
+            "alternatives": "대안",
+            "심화": "확장",
+            "확장": "확장",
+            "next": "확장",
+            "extension": "확장",
+            "extensions": "확장",
+            "open-weight": "확장",
+            "open weight": "확장",
+        },
+        "en": {
+            "기초": "prerequisite",
+            "선행": "prerequisite",
+            "before": "prerequisite",
+            "prerequisite": "prerequisite",
+            "prerequisites": "prerequisite",
+            "유사": "alternative",
+            "대안": "alternative",
+            "similar": "alternative",
+            "alternative": "alternative",
+            "alternatives": "alternative",
+            "심화": "extension",
+            "확장": "extension",
+            "next": "extension",
+            "extension": "extension",
+            "extensions": "extension",
+            "open-weight": "extension",
+            "open weight": "extension",
+        },
+    },
+}
+
+
+_RELATED_FALLBACK_RELATIONSHIP = {
+    ("basic", "ko", "기초"): "이 용어를 먼저 이해하면 본문을 읽기 쉽습니다.",
+    ("basic", "ko", "유사"): "비슷한 선택지와 차이를 비교할 때 함께 보면 좋습니다.",
+    ("basic", "ko", "심화"): "다음 단계로 더 깊게 연결되는 개념입니다.",
+    ("basic", "en", "before"): "Read this first to understand the surrounding concept.",
+    ("basic", "en", "similar"): "Compare this nearby option against the current term.",
+    ("basic", "en", "next"): "Read this next to go deeper from the current term.",
+    ("advanced", "ko", "선행"): "이 개념을 먼저 이해하면 시스템 경계를 더 정확히 볼 수 있습니다.",
+    ("advanced", "ko", "대안"): "같은 문제를 다른 방식으로 풀 때 비교할 수 있는 선택지입니다.",
+    ("advanced", "ko", "확장"): "이 용어를 실제 시스템으로 확장할 때 함께 검토할 개념입니다.",
+    ("advanced", "en", "prerequisite"): "Understand this first to reason about system boundaries.",
+    ("advanced", "en", "alternative"): "Compare this when choosing a different design path.",
+    ("advanced", "en", "extension"): "Use this to extend the current term into a broader system.",
+}
+
+
+def _canonical_related_tag(tag: str, *, locale: str, level: str) -> str | None:
+    normalized = re.sub(r"\s+", " ", str(tag or "").strip().lower())
+    return _RELATED_TAG_ALIASES.get(level, {}).get(locale, {}).get(normalized)
+
+
+def _fallback_related_relationship(*, locale: str, level: str, tag: str) -> str:
+    return _RELATED_FALLBACK_RELATIONSHIP.get((level, locale, tag), "Related concept to read next.")
+
+
+def _split_related_terms(term_text: str) -> list[str]:
+    """Split obvious multi-term related bullets without splitting parentheticals."""
+    text = (term_text or "").strip()
+    if not text:
+        return []
+    if "," not in text:
+        return [text]
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    return parts or [text]
+
+
+def _normalize_related_bullet_line(line: str, *, locale: str, level: str) -> list[str]:
+    stripped = (line or "").strip()
+    if not stripped.startswith("-"):
+        return [line]
+
+    body = stripped[1:].strip()
+    tag = ""
+    rest = ""
+    paren_match = re.match(r"^\(([^)]+)\)\s+(.+)$", body)
+    if paren_match:
+        tag = paren_match.group(1).strip()
+        rest = paren_match.group(2).strip()
+    else:
+        colon_match = re.match(r"^([^:：]+)[:：]\s+(.+)$", body)
+        if colon_match:
+            tag = colon_match.group(1).strip()
+            rest = colon_match.group(2).strip()
+
+    canonical_tag = _canonical_related_tag(tag, locale=locale, level=level)
+    if not canonical_tag or not rest:
+        return [line]
+
+    # Accept existing canonical bold form, but normalize dash variants.
+    bold_match = re.match(r"^\*\*([^*]+)\*\*\s*(?:—|–|-)?\s*(.*)$", rest)
+    if bold_match:
+        term_text = bold_match.group(1).strip()
+        relationship = bold_match.group(2).strip()
+    else:
+        split_match = re.match(r"^(.+?)\s+(?:—|–|-)\s+(.+)$", rest)
+        if split_match:
+            term_text = split_match.group(1).strip()
+            relationship = split_match.group(2).strip()
+        else:
+            term_text = rest.strip()
+            relationship = ""
+
+    terms = _split_related_terms(term_text)
+    normalized_lines: list[str] = []
+    for term in terms:
+        clean_term = term.strip().strip("*").strip()
+        if not clean_term:
+            continue
+        clean_relationship = relationship or _fallback_related_relationship(
+            locale=locale,
+            level=level,
+            tag=canonical_tag,
+        )
+        normalized_lines.append(f"- ({canonical_tag}) **{clean_term}** — {clean_relationship}")
+    return normalized_lines or [line]
+
+
+def _normalize_related_bullets_for_frontend(content: str, *, locale: str, level: str) -> str:
+    """Canonicalize related bullets for the frontend related-term row transformer."""
+    if not content:
+        return content
+    lines: list[str] = []
+    for line in content.splitlines():
+        if line.strip().startswith("-"):
+            lines.extend(_normalize_related_bullet_line(line, locale=locale, level=level))
+        else:
+            lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _normalize_related_sections_for_frontend(markdown: str, *, locale: str, level: str) -> str:
+    """Normalize Basic/Advanced related sections in assembled markdown."""
+    if not markdown:
+        return markdown
+    heading = (
+        "함께 읽으면 좋은 용어"
+        if locale == "ko" and level == "basic"
+        else "Related Reading"
+        if locale == "en" and level == "basic"
+        else "선행·대안·확장 개념"
+        if locale == "ko"
+        else "Prerequisites, Alternatives, and Extensions"
+    )
+    pattern = re.compile(rf"(?ms)^(##\s+{re.escape(heading)}\s*\n)(.*?)(?=^##\s+|\Z)")
+
+    def _replace(match: re.Match) -> str:
+        normalized = _normalize_related_bullets_for_frontend(
+            match.group(2).strip(),
+            locale=locale,
+            level=level,
+        )
+        return f"{match.group(1)}{normalized}"
+
+    return pattern.sub(_replace, markdown)
+
+
 def _render_structured_specs(specs: dict) -> str:
     """Render structured Specs dict as a bullet list of concrete numbers.
 
-    Fields with the literal sentinel 'not_published' are kept and rendered as
-    '*(not published)*' so the explicit gap is visible to readers and the
-    quality judge. Empty benchmarks list with at least one populated numeric
-    field renders as '(none reported in original paper)' so it's clear we
-    checked rather than forgot.
+    Empty values and the literal sentinel 'not_published' are omitted. If no
+    concrete values or benchmark rows remain, return an empty string so broad
+    concepts like Attention/LLM/GPU do not show a hollow specs section.
     """
     lines: list[str] = []
     field_order = [
@@ -2034,14 +3509,12 @@ def _render_structured_specs(specs: dict) -> str:
     for key, label in field_order:
         value = specs.get(key)
         value_str = value.strip() if isinstance(value, str) else ""
-        if value_str == "not_published":
-            lines.append(f"- **{label}**: *(not published)*")
-        elif value_str:
+        if value_str and value_str != "not_published":
             lines.append(f"- **{label}**: {value_str}")
 
     benchmarks = specs.get("benchmarks") or []
     if benchmarks:
-        lines.append("- **Benchmarks**:")
+        benchmark_lines: list[str] = []
         for b in benchmarks:
             if not isinstance(b, dict):
                 continue
@@ -2050,11 +3523,60 @@ def _render_structured_specs(specs: dict) -> str:
             ctx = (b.get("context") or "").strip()
             if name and score:
                 ctx_part = f" — {ctx}" if ctx else ""
-                lines.append(f"  - {name}: {score}{ctx_part}")
-    elif lines:
-        # Some numeric fields populated but no benchmarks — still note explicitly
-        lines.append("- **Benchmarks**: *(none reported in original paper)*")
+                benchmark_lines.append(f"  - {name}: {score}{ctx_part}")
+        if benchmark_lines:
+            lines.append("- **Benchmarks**:")
+            lines.extend(benchmark_lines)
     return "\n".join(lines)
+
+
+def _section_value_to_text(
+    key: str,
+    raw_value: object,
+    *,
+    serialize_unknown_structures: bool = False,
+) -> str:
+    """Normalize section values before markdown assembly or prompt previews."""
+    if isinstance(raw_value, dict):
+        if key.endswith("_7_related"):
+            locale = "ko" if "_ko_" in key else "en"
+            return _render_structured_relations(raw_value, locale=locale).strip()
+        if key.endswith("_specs"):
+            return _render_structured_specs(raw_value).strip()
+        if serialize_unknown_structures:
+            return json.dumps(raw_value, ensure_ascii=False, default=str).strip()
+        return ""
+    if isinstance(raw_value, str):
+        value = raw_value.strip()
+        if key.endswith("_7_related"):
+            locale = "ko" if "_ko_" in key else "en"
+            level = "basic" if key.startswith("basic_") else "advanced"
+            return _normalize_related_bullets_for_frontend(
+                value,
+                locale=locale,
+                level=level,
+            ).strip()
+        return value
+    if raw_value is None:
+        return ""
+    if serialize_unknown_structures:
+        return json.dumps(raw_value, ensure_ascii=False, default=str).strip()
+    return ""
+
+
+def _build_section_preview(data: dict, prefix: str, max_chars: int = 1000) -> str:
+    parts: list[str] = []
+    for key, raw_value in data.items():
+        if not key.startswith(prefix):
+            continue
+        content = _section_value_to_text(
+            key,
+            raw_value,
+            serialize_unknown_structures=True,
+        )
+        if content:
+            parts.append(f"## {key}: {content[:max_chars]}")
+    return "\n\n".join(parts)
 
 
 def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
@@ -2066,21 +3588,55 @@ def _assemble_markdown(data: dict, sections: list[tuple[str, str]]) -> str:
     """
     parts: list[str] = []
     for key, header in sections:
-        raw_value = data.get(key)
-        if isinstance(raw_value, dict):
-            if key.endswith("_7_related"):
-                content = _render_structured_relations(raw_value).strip()
-            elif key.endswith("_specs"):
-                content = _render_structured_specs(raw_value).strip()
-            else:
-                content = ""  # unknown structured field — drop rather than serialize raw dict
-        elif isinstance(raw_value, str):
-            content = raw_value.strip()
-        else:
-            content = ""
+        content = _section_value_to_text(key, data.get(key))
         if content:
             parts.append(f"{header}\n{content}")
     return "\n\n".join(parts)
+
+
+def _normalize_tradeoff_labels_for_frontend(markdown: str, locale: str) -> str:
+    """Keep tradeoff sections in the p/ul/p/ul shape expected by the frontend grid."""
+    if not markdown:
+        return markdown
+
+    if locale == "ko":
+        good_label = "이럴 때 적합:"
+        bad_label = "이럴 때 부적합:"
+        aliases = {
+            r"적합:": good_label,
+            r"이럴 때 적합:": good_label,
+            r"적합한 경우:": good_label,
+            r"부적합:": bad_label,
+            r"이럴 때 부적합:": bad_label,
+            r"부적합한 경우:": bad_label,
+        }
+    else:
+        good_label = "Suitable:"
+        bad_label = "Unsuitable:"
+        aliases = {
+            r"Suitable:": good_label,
+            r"Unsuitable:": bad_label,
+        }
+
+    normalized = markdown
+    for alias, canonical in aliases.items():
+        normalized = re.sub(
+            rf"^[ \t]*{alias}[ \t]*$",
+            canonical,
+            normalized,
+            flags=re.M | re.I if locale == "en" else re.M,
+        )
+
+    for label in (good_label, bad_label):
+        normalized = re.sub(
+            rf"^[ \t]*{re.escape(label)}[ \t]*\n+",
+            f"{label}\n\n",
+            normalized,
+            flags=re.M,
+        )
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    normalized = re.sub(r"([^\n])## ", r"\1\n\n## ", normalized)
+    return normalized
 
 
 def _derive_learner_summary_from_basic(body_basic: str) -> str:
@@ -2159,7 +3715,12 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     elif "adv_ko_1_mechanism" in raw_data:
         data["body_advanced_ko"] = _assemble_markdown(
             raw_data,
-            _advanced_sections_for_mode("ko", raw_data.get("code_mode_hint")),
+            _advanced_sections_for_mode(
+                "ko",
+                raw_data.get("code_mode_hint"),
+                raw_data.get("term_type"),
+                raw_data.get("term_subtype"),
+            ),
         )
 
     if "body_advanced_en" in raw_data:
@@ -2167,7 +3728,12 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     elif "adv_en_1_mechanism" in raw_data:
         data["body_advanced_en"] = _assemble_markdown(
             raw_data,
-            _advanced_sections_for_mode("en", raw_data.get("code_mode_hint")),
+            _advanced_sections_for_mode(
+                "en",
+                raw_data.get("code_mode_hint"),
+                raw_data.get("term_type"),
+                raw_data.get("term_subtype"),
+            ),
         )
 
     # Post-process: fix bold markdown with parenthetical abbreviations
@@ -2180,6 +3746,40 @@ def _assemble_all_sections(raw_data: dict) -> dict:
     for field in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en"):
         if data.get(field):
             data[field] = re.sub(r'\*\*([^*]+?)\s*\(([^)]+)\)\*\*', _fix_bold_parens, data[field])
+    if data.get("body_advanced_ko"):
+        data["body_advanced_ko"] = _normalize_tradeoff_labels_for_frontend(
+            data["body_advanced_ko"],
+            "ko",
+        )
+    if data.get("body_advanced_en"):
+        data["body_advanced_en"] = _normalize_tradeoff_labels_for_frontend(
+            data["body_advanced_en"],
+            "en",
+        )
+    if data.get("body_basic_ko"):
+        data["body_basic_ko"] = _normalize_related_sections_for_frontend(
+            data["body_basic_ko"],
+            locale="ko",
+            level="basic",
+        )
+    if data.get("body_basic_en"):
+        data["body_basic_en"] = _normalize_related_sections_for_frontend(
+            data["body_basic_en"],
+            locale="en",
+            level="basic",
+        )
+    if data.get("body_advanced_ko"):
+        data["body_advanced_ko"] = _normalize_related_sections_for_frontend(
+            data["body_advanced_ko"],
+            locale="ko",
+            level="advanced",
+        )
+    if data.get("body_advanced_en"):
+        data["body_advanced_en"] = _normalize_related_sections_for_frontend(
+            data["body_advanced_en"],
+            locale="en",
+            level="advanced",
+        )
 
     return data
 
@@ -2215,7 +3815,11 @@ def _build_code_section_user_prompt(
         "Generate only section 3. Keep it consistent with the non-code advanced sections below.",
     ]
     for key in non_code_keys:
-        value = (advanced_non_code_sections.get(key) or "").strip()
+        value = _section_value_to_text(
+            key,
+            advanced_non_code_sections.get(key),
+            serialize_unknown_structures=True,
+        )
         if value:
             parts.append(f"\n## {key}\n{value[:1800]}")
     if references:
@@ -2237,10 +3841,173 @@ def _normalize_quality_score_value(value: object) -> int | None:
         return None
 
 
+def _handbook_quality_grade(score: int) -> str:
+    if score >= 85:
+        return "A"
+    if score >= 70:
+        return "B"
+    if score >= 55:
+        return "C"
+    return "D"
+
+
+def _combine_handbook_quality_score(semantic: int | None, penalty: int) -> int:
+    if semantic is not None:
+        return max(0, semantic - penalty)
+    return max(0, 100 - penalty * 2)
+
+
+def _record_handbook_quality_scores(supabase, data: dict, source: str = "manual") -> int:
+    """Insert fresh advanced/basic handbook quality score rows for an existing draft.
+
+    Existing draft rescores must use the stored handbook slug/id. Deriving a slug
+    from the English term can orphan scores when the DB slug was normalized or
+    manually adjusted.
+    """
+    if not supabase:
+        return 0
+
+    term_slug = str(data.get("slug") or "").strip()
+    if not term_slug:
+        term = str(data.get("term") or "").lower().strip()
+        term_slug = re.sub(r"[^a-z0-9]+", "-", term).strip("-")
+    if not term_slug:
+        return 0
+
+    base_row = {
+        "term_slug": term_slug,
+        "term_type": data.get("term_type") or "unknown",
+        "source": source,
+    }
+    if data.get("id"):
+        base_row["term_id"] = data["id"]
+
+    quality_data = data.get("quality") or {}
+    inserted = 0
+    for level in ("advanced", "basic"):
+        quality = quality_data.get(level) or {}
+        score = _normalize_quality_score_value(quality.get("total"))
+        if score is None:
+            continue
+        supabase.table("handbook_quality_scores").insert({
+            **base_row,
+            "score": score,
+            "breakdown": {"level": level, **quality},
+        }).execute()
+        inserted += 1
+    return inserted
+
+
+async def rescore_existing_handbook_quality(
+    term: str,
+    content: dict,
+    *,
+    client=None,
+    run_semantic: bool = False,
+) -> tuple[dict, dict, list[str]]:
+    """Recompute quality metadata for an existing handbook draft without regenerating content."""
+    data = dict(content or {})
+    term_type = str(data.get("term_type") or "unknown")
+
+    structural_penalty, structural_warnings = _check_handbook_structural_penalties(data)
+    warnings = list(structural_warnings)
+    merged_usage: dict = {}
+
+    semantic_score = None
+    semantic_breakdown = {}
+    basic_semantic_score = None
+    basic_semantic_breakdown = {}
+
+    if run_semantic:
+        active_client = client or get_openai_client()
+        adv_combined = _build_bilingual_judge_content(
+            data.get("body_advanced_ko", ""),
+            data.get("body_advanced_en", ""),
+            max_chars_per_locale=8000,
+        )
+        if adv_combined.strip():
+            semantic_score, semantic_breakdown, quality_usage = await _check_handbook_quality(
+                term,
+                term_type,
+                adv_combined,
+                active_client,
+            )
+            if quality_usage:
+                merged_usage = merge_usage_metrics(merged_usage, quality_usage)
+
+        basic_combined = _build_bilingual_judge_content(
+            data.get("body_basic_ko", ""),
+            data.get("body_basic_en", ""),
+            max_chars_per_locale=4000,
+        )
+        if basic_combined.strip():
+            basic_semantic_score, basic_semantic_breakdown, basic_quality_usage = await _check_basic_quality(
+                term,
+                term_type,
+                basic_combined,
+                active_client,
+            )
+            if basic_quality_usage:
+                merged_usage = merge_usage_metrics(merged_usage, basic_quality_usage)
+
+    adv_final = _combine_handbook_quality_score(semantic_score, structural_penalty)
+    basic_final = _combine_handbook_quality_score(basic_semantic_score, structural_penalty)
+
+    data["quality"] = {
+        "advanced": {
+            "total": adv_final,
+            "grade": _handbook_quality_grade(adv_final),
+            "structural_penalty": structural_penalty,
+            "structural_warnings": structural_warnings,
+            "semantic_score": semantic_score,
+            "semantic_breakdown": semantic_breakdown if semantic_score is not None else None,
+            "method": "hybrid" if semantic_score is not None else "structural-only",
+        },
+        "basic": {
+            "total": basic_final,
+            "grade": _handbook_quality_grade(basic_final),
+            "semantic_score": basic_semantic_score,
+            "semantic_breakdown": basic_semantic_breakdown if basic_semantic_score is not None else None,
+            "method": "hybrid" if basic_semantic_score is not None else "structural-only",
+        },
+    }
+    data["quality_score"] = adv_final
+    data["basic_quality_score"] = basic_final
+
+    generation_gate = _build_generation_gate(
+        adv_final,
+        basic_final,
+        1.0,
+        structural_penalty,
+    )
+    data["generation_gate"] = generation_gate
+    if generation_gate["status"] != "pass":
+        warnings.append(
+            f"Generation gate: {generation_gate['status']} ({', '.join(generation_gate['reasons'])})"
+        )
+    if adv_final < 55:
+        warnings.append(f"Advanced quality: {adv_final}/100 ({_handbook_quality_grade(adv_final)}) — regen recommended")
+    elif adv_final < 70:
+        warnings.append(f"Advanced quality: {adv_final}/100 ({_handbook_quality_grade(adv_final)}) — review recommended")
+    if basic_final < 55:
+        warnings.append(f"Basic quality: {basic_final}/100 ({_handbook_quality_grade(basic_final)}) — regen recommended")
+    elif basic_final < 70:
+        warnings.append(f"Basic quality: {basic_final}/100 ({_handbook_quality_grade(basic_final)}) — review recommended")
+
+    issues = _build_handbook_remediation_issues(data, warnings)
+    admin_quality_gate = _build_admin_draft_quality_gate(issues, generation_gate)
+    data["_warnings"] = warnings
+    data["_remediation_issues"] = issues
+    data["_quality_gate"] = admin_quality_gate
+    data["_remediation_status"] = "quality_rescore"
+    return data, merged_usage, warnings
+
+
 async def _run_generate_term(
     req: HandbookAdviseRequest, client, model: str,
     source: str = "manual",
     article_context: str = "",
+    log_run_id: str | None = None,
 ) -> tuple[dict, dict, list[str]]:
     """Auto-generate all empty fields for a handbook term via 4 LLM calls.
 
@@ -2264,6 +4031,7 @@ async def _run_generate_term(
         classification_context,
         client,
         settings.openai_model_nano,
+        term_type_hint=req.term_type_hint,
     )
     primary_intent = intent_list[0] if intent_list else "understand"
     logger.info(
@@ -2316,6 +4084,17 @@ async def _run_generate_term(
         )
     warnings: list[str] = []
     supabase = get_supabase()
+    draft_smoke_mode = bool(req.skip_self_critique and req.skip_quality_check)
+    generation_max_tokens = 12000 if draft_smoke_mode else 24000
+    generation_reasoning_effort = "low" if draft_smoke_mode else "high"
+    draft_smoke_guide = """
+## Draft Smoke Mode
+- Generate a complete but compact draft for admin review, not a polished publish candidate.
+- Keep every required section present, but avoid exhaustive catalogs, long examples, and repeated caveats.
+- Prefer concise paragraphs and tight bullets over long prose.
+- Keep code sections to one compact code capsule.
+- Do not spend tokens on self-review language; downstream quality passes are disabled for this run.
+""".strip()
 
     def _log_handbook_stage(stage: str, usage: dict, extra_meta: dict | None = None) -> None:
         """Log a handbook generate stage to pipeline_logs. Never raises."""
@@ -2337,6 +4116,7 @@ async def _run_generate_term(
             if extra_meta:
                 meta.update(extra_meta)
             supabase.table("pipeline_logs").insert({
+                "run_id": log_run_id,
                 "pipeline_type": stage,
                 "status": "success",
                 "input_summary": f"term={req.term}",
@@ -2350,6 +4130,7 @@ async def _run_generate_term(
 
     # --- Build category-specific prompt blocks ---
     from services.agents.prompts_handbook_types import (
+        build_artifact_policy_block,
         build_category_block,
         get_section_weight_guide,
         get_type_basic_guide,
@@ -2371,6 +4152,8 @@ async def _run_generate_term(
         basic_ko_focus_guide = str(term_generation_override.get("basic_ko_focus_guide", "")).strip()
         if basic_ko_focus_guide:
             basic_ko_system += f"\n\n{basic_ko_focus_guide}"
+    if draft_smoke_mode:
+        basic_ko_system += f"\n\n{draft_smoke_guide}"
 
     # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
     for _call1_attempt in range(2):
@@ -2383,9 +4166,9 @@ async def _run_generate_term(
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    max_tokens=24000,
+                    max_tokens=generation_max_tokens,
                     prompt_cache_key="hb-generate-basic",
-                    reasoning_effort="high",
+                    reasoning_effort=generation_reasoning_effort,
                     service_tier="flex",
                 )
             )
@@ -2445,6 +4228,7 @@ async def _run_generate_term(
         brave_context,
         deep_context,
         reference_eval=reference_eval,
+        primary_category=primary_cat,
     )
     if term_generation_override:
         code_mode_meta["code_mode_hint"] = str(term_generation_override.get("preferred_code_mode", "real-code"))
@@ -2502,7 +4286,7 @@ async def _run_generate_term(
         advanced_prompt += (
             "\n\n--- Selected Reference Context for Advanced Sections ---\n"
             + "\n\n".join(advanced_contexts)
-            + "\n\nUse these sources primarily for mechanism, formulas/architecture, tradeoffs, pitfalls, and references."
+            + "\n\nUse these sources primarily for mechanism, the policy-selected technical artifact, tradeoffs, pitfalls, and references."
         )
 
     # Inject type-specific guides into system prompts
@@ -2515,6 +4299,12 @@ async def _run_generate_term(
     term_focus_guide = ""
     code_contract_guide = ""
     advanced_ko_focus_guide = ""
+    artifact_policy_block = build_artifact_policy_block(
+        term_type,
+        term_subtype,
+        primary_cat,
+        str(code_mode_meta.get("code_mode_hint") or ""),
+    )
     if term_generation_override:
         term_focus_guide = str(term_generation_override.get("advanced_focus_guide", "")).strip()
         code_contract_guide = str(term_generation_override.get("code_contract_guide", "")).strip()
@@ -2527,6 +4317,8 @@ async def _run_generate_term(
     basic_en_system += f"\n\n{basic_type_guide}"
     if section_weight_guide:
         basic_en_system += f"\n\n{section_weight_guide}"
+    if draft_smoke_mode:
+        basic_en_system += f"\n\n{draft_smoke_guide}"
 
     # Advanced: category block + type depth guide + section weight
     adv_ko_system = GENERATE_ADVANCED_PROMPT
@@ -2535,22 +4327,30 @@ async def _run_generate_term(
     adv_ko_system += f"\n\n{type_guide}"
     if section_weight_guide:
         adv_ko_system += f"\n\n{section_weight_guide}"
+    if artifact_policy_block:
+        adv_ko_system += f"\n\n{artifact_policy_block}"
     if term_focus_guide:
         adv_ko_system += f"\n\n{term_focus_guide}"
     if advanced_ko_focus_guide:
         adv_ko_system += f"\n\n{advanced_ko_focus_guide}"
     if code_contract_guide:
         adv_ko_system += f"\n\n{code_contract_guide}"
+    if draft_smoke_mode:
+        adv_ko_system += f"\n\n{draft_smoke_guide}"
     adv_en_system = GENERATE_ADVANCED_EN_PROMPT
     if category_block:
         adv_en_system += f"\n\n{category_block}"
     adv_en_system += f"\n\n{type_guide}"
     if section_weight_guide:
         adv_en_system += f"\n\n{section_weight_guide}"
+    if artifact_policy_block:
+        adv_en_system += f"\n\n{artifact_policy_block}"
     if term_focus_guide:
         adv_en_system += f"\n\n{term_focus_guide}"
     if code_contract_guide:
         adv_en_system += f"\n\n{code_contract_guide}"
+    if draft_smoke_mode:
+        adv_en_system += f"\n\n{draft_smoke_guide}"
 
     async def _call2_gen():
         return await client.chat.completions.create(
@@ -2561,9 +4361,9 @@ async def _run_generate_term(
                     {"role": "user", "content": en_basic_prompt},
                 ],
                 response_format={"type": "json_object"},
-                max_tokens=24000,
+                max_tokens=generation_max_tokens,
                 prompt_cache_key="hb-generate-en-basic",
-                reasoning_effort="high",
+                reasoning_effort=generation_reasoning_effort,
                 service_tier="flex",
             )
         )
@@ -2577,9 +4377,9 @@ async def _run_generate_term(
                     {"role": "user", "content": advanced_prompt},
                 ],
                 response_format={"type": "json_object"},
-                max_tokens=24000,
+                max_tokens=generation_max_tokens,
                 prompt_cache_key="hb-generate-advanced",
-                reasoning_effort="high",
+                reasoning_effort=generation_reasoning_effort,
                 service_tier="flex",
             )
         )
@@ -2606,12 +4406,8 @@ async def _run_generate_term(
     _log_handbook_stage("handbook.generate.advanced.ko", usage3)
 
     # --- Call 4 (EN Advanced) + Basic Self-Critique — PARALLEL ---
-    basic_ko_preview = "\n\n".join(
-        f"## {k}: {v[:1000]}" for k, v in basic_data.items() if k.startswith("basic_ko_")
-    )
-    basic_en_preview = "\n\n".join(
-        f"## {k}: {v[:1000]}" for k, v in en_basic_data.items() if k.startswith("basic_en_")
-    )
+    basic_ko_preview = _build_section_preview(basic_data, "basic_ko_")
+    basic_en_preview = _build_section_preview(en_basic_data, "basic_en_")
 
     # Build a Call 4-specific prompt that includes the actual EN Basic body now that
     # Call 2 has finished. This lets Call 4 (EN Advanced) explicitly differentiate
@@ -2634,7 +4430,7 @@ async def _run_generate_term(
         advanced_en_prompt += (
             "\n\n--- Selected Reference Context for Advanced Sections ---\n"
             + "\n\n".join(advanced_contexts)
-            + "\n\nUse these sources primarily for mechanism, formulas/architecture, tradeoffs, pitfalls, and references."
+            + "\n\nUse these sources primarily for mechanism, the policy-selected technical artifact, tradeoffs, pitfalls, and references."
         )
 
     async def _call4_gen():
@@ -2646,18 +4442,22 @@ async def _run_generate_term(
                     {"role": "user", "content": advanced_en_prompt},
                 ],
                 response_format={"type": "json_object"},
-                max_tokens=24000,
+                max_tokens=generation_max_tokens,
                 prompt_cache_key="hb-generate-en-advanced",
-                reasoning_effort="high",
+                reasoning_effort=generation_reasoning_effort,
                 service_tier="flex",
             )
         )
     call4_task = with_flex_retry(_call4_gen)
-    basic_critique_task = _self_critique_basic(
-        req.term, term_type, basic_ko_preview, basic_en_preview, client, model,
-        reference_context=f"{tavily_context}\n{brave_context}",
-    )
-    resp4, basic_critique_result = await asyncio.gather(call4_task, basic_critique_task)
+    if req.skip_self_critique:
+        resp4 = await call4_task
+        basic_critique_result = (False, False, "", "", 0, 0, {})
+    else:
+        basic_critique_task = _self_critique_basic(
+            req.term, term_type, basic_ko_preview, basic_en_preview, client, model,
+            reference_context=f"{tavily_context}\n{brave_context}",
+        )
+        resp4, basic_critique_result = await asyncio.gather(call4_task, basic_critique_task)
 
     advanced_en_data = parse_ai_json(resp4.choices[0].message.content, "Handbook-generate-advanced-en")
     usage4 = extract_usage_metrics(resp4, model)
@@ -2734,9 +4534,7 @@ async def _run_generate_term(
         _log_handbook_stage("handbook.self_critique.basic", basic_critique_usage)
 
     # --- Self-critique advanced KO content ---
-    adv_ko_preview = "\n\n".join(
-        f"## {k}: {v[:1000]}" for k, v in advanced_ko_data.items() if k.startswith("adv_ko_")
-    )
+    adv_ko_preview = _build_section_preview(advanced_ko_data, "adv_ko_")
     reference_for_critique = "\n".join(
         chunk
         for chunk in [
@@ -2746,12 +4544,15 @@ async def _run_generate_term(
         ]
         if chunk
     )
-    needs_improvement, critique_feedback, critique_score, critique_usage = (
-        await _self_critique_advanced(
-            req.term, term_type, adv_ko_preview, client, model,
-            reference_context=reference_for_critique,
+    if req.skip_self_critique:
+        needs_improvement, critique_feedback, critique_score, critique_usage = (False, "", 0, {})
+    else:
+        needs_improvement, critique_feedback, critique_score, critique_usage = (
+            await _self_critique_advanced(
+                req.term, term_type, adv_ko_preview, client, model,
+                reference_context=reference_for_critique,
+            )
         )
-    )
     logger.info(
         "Self-critique for '%s': score=%d, needs_improvement=%s",
         req.term, critique_score, needs_improvement,
@@ -2786,15 +4587,16 @@ async def _run_generate_term(
         _log_handbook_stage("handbook.self_critique", critique_usage)
 
     # --- Self-critique advanced EN content ---
-    adv_en_preview = "\n\n".join(
-        f"## {k}: {v[:1000]}" for k, v in advanced_en_data.items() if k.startswith("adv_en_")
-    )
-    en_needs_improvement, en_critique_feedback, en_critique_score, en_critique_usage = (
-        await _self_critique_advanced(
-            req.term, term_type, adv_en_preview, client, model,
-            reference_context=reference_for_critique,
+    adv_en_preview = _build_section_preview(advanced_en_data, "adv_en_")
+    if req.skip_self_critique:
+        en_needs_improvement, en_critique_feedback, en_critique_score, en_critique_usage = (False, "", 0, {})
+    else:
+        en_needs_improvement, en_critique_feedback, en_critique_score, en_critique_usage = (
+            await _self_critique_advanced(
+                req.term, term_type, adv_en_preview, client, model,
+                reference_context=reference_for_critique,
+            )
         )
-    )
     logger.info(
         "Self-critique EN for '%s': score=%d, needs_improvement=%s",
         req.term, en_critique_score, en_needs_improvement,
@@ -2834,6 +4636,11 @@ async def _run_generate_term(
         **advanced_ko_data,
         **advanced_en_data,
         **code_mode_meta,
+        "term_type": term_type,
+        "term_subtype": term_subtype,
+        "facet_intent": intent_list,
+        "facet_volatility": volatility,
+        "facet_type_confidence": type_confidence,
     }
     merged_usage = merge_usage_metrics(
         merge_usage_metrics(usage1, usage2),
@@ -2860,6 +4667,47 @@ async def _run_generate_term(
     if term_generation_override:
         data["code_mode_hint"] = str(term_generation_override.get("preferred_code_mode", data.get("code_mode_hint", "")))
 
+    safety_warnings = _apply_handbook_safety_postprocess(data)
+    remediation_status = "not_requested"
+    remediation_meta: dict = {
+        "status": remediation_status,
+        "issues_before": _build_handbook_remediation_issues(data, safety_warnings),
+        "issues_after": _build_handbook_remediation_issues(data, safety_warnings),
+        "removed_claims": [],
+        "applied_fields": [],
+    }
+    if req.remediate_after_generation:
+        try:
+            remediation_usage, remediation_meta = await _run_handbook_targeted_remediation(
+                req.term,
+                data,
+                safety_warnings,
+                client,
+                model,
+            )
+            remediation_status = str(remediation_meta.get("status") or "applied")
+            if remediation_usage:
+                merged_usage = merge_usage_metrics(merged_usage, remediation_usage)
+                _log_handbook_stage(
+                    "handbook.remediate.targeted",
+                    remediation_usage,
+                    extra_meta={
+                        "remediation_status": remediation_status,
+                        "applied_fields": remediation_meta.get("applied_fields", []),
+                        "removed_claims": remediation_meta.get("removed_claims", []),
+                    },
+                )
+            safety_warnings = _apply_handbook_safety_postprocess(data)
+        except Exception as e:
+            remediation_status = "failed"
+            remediation_meta = {
+                **remediation_meta,
+                "status": remediation_status,
+                "error": str(e),
+            }
+            logger.warning("Handbook targeted remediation failed for '%s': %s", req.term, e)
+    warnings.extend(safety_warnings)
+
     try:
         GenerateTermResult.model_validate(data)
     except ValidationError as e:
@@ -2871,7 +4719,11 @@ async def _run_generate_term(
     # Check section completeness (including empty detection)
     # Basic: 7 sections. Advanced: 7 sections. (Post-redesign, both languages.)
     _basic_expected = {"ko": 7, "en": 7}
-    expected_advanced = _expected_advanced_sections(data.get("code_mode_hint"))
+    expected_advanced = _expected_advanced_sections(
+        data.get("code_mode_hint"),
+        data.get("term_type"),
+        data.get("term_subtype"),
+    )
     for lang in ("ko", "en"):
         basic_content = data.get(f"body_basic_{lang}", "")
         expected_basic = _basic_expected[lang]
@@ -2889,32 +4741,33 @@ async def _run_generate_term(
                 f"body_advanced_{lang}: only {adv_content.count('## ')}/{expected_advanced} sections"
             )
 
-    # Post-processing step 1: Validate reference URLs in advanced sections
-    for field in ("body_advanced_ko", "body_advanced_en"):
-        if data.get(field):
-            data[field] = await _validate_ref_urls(data[field])
+    if not req.skip_post_generation_checks:
+        # Post-processing step 1: Validate reference URLs in advanced sections
+        for field in ("body_advanced_ko", "body_advanced_en"):
+            if data.get(field):
+                data[field] = await _validate_ref_urls(data[field])
 
-    # Post-processing step 2: Entity verification (detect hallucinated proper nouns)
-    all_generated = " ".join(
-        data.get(f, "") for f in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en")
-    )
-    all_references = f"{tavily_context}\n{brave_context}\n{deep_context}\n{article_context}"
-    try:
-        novel_entities = await _extract_novel_entities(
-            all_generated, all_references, client, settings.openai_model_nano,
+        # Post-processing step 2: Entity verification (detect hallucinated proper nouns)
+        all_generated = " ".join(
+            data.get(f, "") for f in ("body_basic_ko", "body_basic_en", "body_advanced_ko", "body_advanced_en")
         )
-        if novel_entities:
-            verification_results = await _verify_entities(novel_entities)
-            unverified = [v for v in verification_results if not v["verified"]]
-            if unverified:
-                entity_names = [v["entity"] for v in unverified]
-                warnings.append(f"Unverified entities detected: {', '.join(entity_names)}")
-                logger.warning(
-                    "Handbook '%s': %d unverified entities: %s",
-                    req.term, len(unverified), entity_names,
-                )
-    except Exception as e:
-        logger.warning("Entity verification failed for '%s': %s", req.term, e)
+        all_references = f"{tavily_context}\n{brave_context}\n{deep_context}\n{article_context}"
+        try:
+            novel_entities = await _extract_novel_entities(
+                all_generated, all_references, client, settings.openai_model_nano,
+            )
+            if novel_entities:
+                verification_results = await _verify_entities(novel_entities)
+                unverified = [v for v in verification_results if not v["verified"]]
+                if unverified:
+                    entity_names = [v["entity"] for v in unverified]
+                    warnings.append(f"Unverified entities detected: {', '.join(entity_names)}")
+                    logger.warning(
+                        "Handbook '%s': %d unverified entities: %s",
+                        req.term, len(unverified), entity_names,
+                    )
+        except Exception as e:
+            logger.warning("Entity verification failed for '%s': %s", req.term, e)
 
     # ── Hybrid quality scoring ──────────────────────────────────────────
     # Phase 1: Structural penalties (code, always runs, free, <1ms)
@@ -3221,6 +5074,16 @@ async def _run_generate_term(
                 logger.info("Stripped floating citations from '%s' (%d chars removed)", field, removed)
                 data[field] = cleaned
 
+    final_remediation_issues = _build_handbook_remediation_issues(data, warnings)
+    admin_quality_gate = _build_admin_draft_quality_gate(
+        final_remediation_issues,
+        data.get("generation_gate"),
+    )
+    data["_remediation_issues"] = final_remediation_issues
+    data["_quality_gate"] = admin_quality_gate
+    data["_remediation_status"] = remediation_status
+    data["_remediation_meta"] = remediation_meta
+
     # Add search source metadata for UI display.
     # Stored inside the result dict (non-underscore key) alongside other
     # metadata like term_type / facet_intent. The router also propagates
@@ -3368,6 +5231,12 @@ async def generate_term_content(
     term_name: str, korean_name: str = "", source: str = "pipeline",
     article_context: str = "",
     categories: list[str] | None = None,
+    term_type_hint: str = "",
+    log_run_id: str | None = None,
+    skip_quality_check: bool = False,
+    skip_self_critique: bool = False,
+    skip_post_generation_checks: bool = False,
+    remediate_after_generation: bool = False,
 ) -> tuple[dict, dict]:
     """Generate full content for a handbook term. Used by pipeline auto-creation.
 
@@ -3384,11 +5253,16 @@ async def generate_term_content(
         term=term_name,
         korean_name=korean_name,
         categories=categories or [],
+        term_type_hint=term_type_hint,
+        skip_quality_check=skip_quality_check,
+        skip_self_critique=skip_self_critique,
+        skip_post_generation_checks=skip_post_generation_checks,
+        remediate_after_generation=remediate_after_generation,
     )
     client = get_openai_client()
     model = getattr(settings, "openai_model_main")
     data, usage, warnings = await _run_generate_term(
-        req, client, model, source=source, article_context=article_context,
+        req, client, model, source=source, article_context=article_context, log_run_id=log_run_id,
     )
     if warnings:
         data["_warnings"] = warnings

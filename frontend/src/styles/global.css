@@ -3568,6 +3568,12 @@ pre {
   color: #b91c1c;
 }
 
+.admin-quality-badge--muted {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
 [data-theme="dark"] .admin-quality-badge--high {
   background: #14532d;
   color: #86efac;
@@ -3581,6 +3587,21 @@ pre {
 [data-theme="dark"] .admin-quality-badge--low {
   background: #7f1d1d;
   color: #fca5a5;
+}
+
+.handbook-quality-panel {
+  margin-bottom: 0.75rem;
+}
+
+.handbook-quality-score-chip {
+  border-radius: var(--radius-sm);
+  padding: 0.18rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .admin-source-badge--ai-suggested {

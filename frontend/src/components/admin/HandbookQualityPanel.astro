@@ -1,0 +1,136 @@
+---
+import {
+  handbookQualityBadgeClass,
+  handbookQualityLabel,
+} from '../../lib/admin/handbookQuality.js';
+
+interface Props {
+  quality: any;
+}
+
+const { quality } = Astro.props;
+const hasQuality = !!quality;
+const label = hasQuality ? handbookQualityLabel(quality) : 'No QC';
+const badgeClass = hasQuality
+  ? handbookQualityBadgeClass(quality)
+  : 'admin-quality-badge admin-quality-badge--muted';
+
+const scoreText = hasQuality
+  ? [
+      quality.advancedScore !== null && quality.advancedScore !== undefined ? `Advanced ${quality.advancedScore}` : null,
+      quality.basicScore !== null && quality.basicScore !== undefined ? `Basic ${quality.basicScore}` : null,
+    ].filter(Boolean).join(' / ')
+  : '';
+
+const issues = hasQuality ? quality.issues || [] : [];
+const hasBlockingFlag = hasQuality && (
+  quality.qualityGateStatus === 'blocked_for_publish' ||
+  quality.highIssueCount > 0 ||
+  quality.issueCount > 0
+);
+
+const statusText: Record<string, string> = {
+  admin_ready: 'Admin-ready draft',
+  needs_remediation: 'Needs targeted remediation',
+  blocked_for_publish: 'Blocked for publish',
+};
+---
+
+<details class="admin-quality-panel handbook-quality-panel">
+  <summary class="admin-quality-panel-header">
+    <div class="admin-quality-panel-header-left">
+      <h3 class="admin-quality-panel-title">Handbook Quality</h3>
+      {hasBlockingFlag && (
+        <span class="admin-quality-panel-flag" title="Issue remains — expand to review">!</span>
+      )}
+    </div>
+    <div class="admin-quality-panel-header-right">
+      <span class={badgeClass}>{label}</span>
+      {scoreText && <span class="handbook-quality-score-chip">{scoreText}</span>}
+      <span class="admin-quality-panel-toggle" aria-hidden="true"></span>
+    </div>
+  </summary>
+
+  <div class="admin-quality-panel-body">
+    {!hasQuality ? (
+      <p class="admin-quality-panel-subtitle">
+        No handbook quality metadata was found for this term yet.
+      </p>
+    ) : (
+      <>
+        <p class="admin-quality-panel-subtitle">
+          Uses the latest `handbook_quality_scores` row plus the latest handbook generation/remediation log.
+        </p>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <span class="admin-quality-chip">
+            <span class="admin-quality-chip-label">Gate:</span>{' '}
+            <span class="admin-quality-chip-value">
+              {statusText[quality.qualityGateStatus] || quality.qualityGateStatus || 'Unknown'}
+            </span>
+          </span>
+          <span class="admin-quality-chip">
+            <span class="admin-quality-chip-label">Issues:</span>{' '}
+            <span class="admin-quality-chip-value">
+              H{quality.highIssueCount || 0} / M{quality.mediumIssueCount || 0} / L{quality.lowIssueCount || 0}
+            </span>
+          </span>
+          {quality.remediationStatus && (
+            <span class="admin-quality-chip">
+              <span class="admin-quality-chip-label">Remediation:</span>{' '}
+              <span class="admin-quality-chip-value">{quality.remediationStatus}</span>
+            </span>
+          )}
+          {quality.latestPipelineType && (
+            <span class="admin-quality-chip">
+              <span class="admin-quality-chip-label">Log:</span>{' '}
+              <span class="admin-quality-chip-value">{quality.latestPipelineType}</span>
+            </span>
+          )}
+        </div>
+
+        {issues.length > 0 && (
+          <div class="mt-4">
+            <h4 class="admin-quality-issues-header">Issues ({quality.issueCount || issues.length})</h4>
+            <ul class="mt-2 m-0 p-0 list-none">
+              {issues.map((issue: any) => (
+                <li class="admin-quality-issue">
+                  <span class={`admin-quality-severity admin-quality-severity--${issue.severity === 'high' ? 'major' : 'minor'}`}>
+                    {issue.severity || 'low'}
+                  </span>
+                  <div class="flex-1">
+                    <p class="m-0">
+                      <span class="admin-quality-issue-scope">
+                        [{issue.section || '?'}{issue.locale ? `/${issue.locale}` : ''}]
+                      </span>{' '}
+                      <span class="admin-quality-issue-message">
+                        {issue.code}{issue.message ? `: ${issue.message}` : ''}
+                      </span>
+                    </p>
+                    {issue.suggestion && (
+                      <p class="admin-quality-subscore-evidence">{issue.suggestion}</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {(quality.warnings || []).length > 0 && (
+          <div class="mt-4">
+            <h4 class="admin-quality-issues-header">Warnings</h4>
+            <ul class="mt-2 m-0 p-0 list-none">
+              {(quality.warnings || []).map((warning: string) => (
+                <li class="admin-quality-issue">
+                  <span class="admin-quality-severity admin-quality-severity--minor">warn</span>
+                  <span class="admin-quality-issue-message">{warning}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</details>
