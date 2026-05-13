@@ -86,6 +86,21 @@ def test_learner_prompt_allows_compressing_secondary_detail_after_plain_language
     assert "after the plain-language opening" in prompt
 
 
+def test_learner_prompt_requires_short_but_substantive_paragraphs():
+    research_learner = get_digest_prompt("research", "learner", [])
+    business_learner = get_digest_prompt("business", "learner", [])
+    research_expert = get_digest_prompt("research", "expert", [])
+
+    for prompt in [research_learner, business_learner]:
+        assert "Compress by omitting lower-value secondary detail, not by shrinking every paragraph to one sentence." in prompt
+        assert "Each learner item should cover this role sequence: what happened, why it matters, and what to watch or try." in prompt
+        assert "For [LEAD], each paragraph should usually contain 2-3 sentences" in prompt
+        assert "For [SUPPORTING], each paragraph should contain at least 2 sentences" in prompt
+
+    assert "Compress by omitting lower-value secondary detail" not in research_expert
+    assert "For [SUPPORTING], each paragraph should contain at least 2 sentences" not in research_expert
+
+
 def test_learner_prompt_allows_shorter_supporting_items_than_expert():
     research_learner = get_digest_prompt("research", "learner", [])
     business_learner = get_digest_prompt("business", "learner", [])
@@ -104,6 +119,13 @@ def test_learner_quality_rubrics_do_not_require_three_supporting_paragraphs():
     assert "supporting stories may be 2-3 paragraphs" in QUALITY_CHECK_BUSINESS_LEARNER
     assert "supporting at least 3" not in QUALITY_CHECK_RESEARCH_LEARNER
     assert "supporting at least 3" not in QUALITY_CHECK_BUSINESS_LEARNER
+
+
+def test_learner_quality_rubrics_flag_one_sentence_paragraph_chains():
+    for prompt in [QUALITY_CHECK_RESEARCH_LEARNER, QUALITY_CHECK_BUSINESS_LEARNER]:
+        assert "one-sentence learner paragraphs" in prompt
+        assert "2+ sentences" in prompt
+        assert "thin paragraph chain" in prompt
 
 
 def test_beginner_quality_rubrics_cover_beginner_specific_failures():

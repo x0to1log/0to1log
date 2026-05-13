@@ -316,8 +316,8 @@ def _build_digest_prompt(
     )
     learner_density_rule = (
         "\n3b. LEARNER DETAIL EMPHASIS: learner may compress secondary benchmark, architecture, or pricing detail "
-        "after the plain-language opening. Keep each item substantial, but do not pad secondary detail just to "
-        "mirror expert density sentence-for-sentence."
+        "after the plain-language opening. Compress by omitting lower-value secondary detail, not by shrinking every paragraph to one sentence. "
+        "Keep each item substantial, but do not pad secondary detail just to mirror expert density sentence-for-sentence."
         if persona == "learner"
         else ""
     )
@@ -332,12 +332,13 @@ def _build_digest_prompt(
         depth_checklist = "Does beginner output use Research 1-2 or Business 2-3 main `###` items, with remaining groups covered under Worth Skimming?"
     elif persona == "learner":
         weighted_depth_rule = """3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
-   - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
-   - **[SUPPORTING] items**: 2-3 paragraphs. Do NOT drop or one-sentence any item.
+   - **[LEAD] items**: 3-4 paragraphs. Today's most important stories. For [LEAD], each paragraph should usually contain 2-3 sentences.
+   - **[SUPPORTING] items**: 2-3 paragraphs. Do NOT drop or one-sentence any item. For [SUPPORTING], each paragraph should contain at least 2 sentences unless it is a direct quote or list item.
+   - Each learner item should cover this role sequence: what happened, why it matters, and what to watch or try.
    - Learner supporting items may stop at 2 paragraphs once they clearly cover: what changed, why it matters, and what to watch or try.
    - The learner version should be easier to scan than expert: compress secondary benchmarks, deal terms, and stakeholder lists after the plain-language opening.
    - Do NOT exceed 4 paragraphs per item even for lead stories."""
-        depth_checklist = "Do [LEAD] items have 3-4 paragraphs, and do [SUPPORTING] learner items have 2-3 paragraphs?"
+        depth_checklist = "Do [LEAD] items have 3-4 paragraphs, do [SUPPORTING] learner items have 2-3 paragraphs, and do learner item paragraphs avoid one-sentence thinning?"
     else:
         weighted_depth_rule = """3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
    - **[LEAD] items**: 3-4 paragraphs. Today's most important stories.
@@ -644,7 +645,7 @@ Writing rules:
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms should be linked to Handbook on first appearance.
 - Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
-- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the mental model is clear. Each item: analogy (if useful) → what changed → why it matters → what to watch."""
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the mental model is clear. Each item: analogy (if useful) → what changed → why it matters → what to watch. Paragraphs should be short but substantive, not a chain of one-sentence summaries."""
 
 
 BUSINESS_EXPERT_GUIDE = """READER: Senior AI PM, VP of Product, CTO, or strategy lead. An AI-era business decision-maker.
@@ -714,7 +715,7 @@ Writing rules:
 - Do not write body paragraphs in a friendly spoken "~요" tone.
 - Technical/business terms link to Handbook on first appearance.
 - Source hierarchy: when multiple sources cover the same story, cite the PRIMARY source (Source marked PRIMARY, or official_site/paper/official_repo) FIRST. Secondary reporting goes after.
-- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the business mental model is clear. Cover: what changed + why it matters + what it means for you."""
+- PARAGRAPH COUNTS: WEIGHTED DEPTH rule — lead story 3-4 paragraphs, supporting stories 2-3 paragraphs. Learner supporting items may stop at 2 paragraphs once the business mental model is clear. Cover: what changed + why it matters + what it means for you. Paragraphs should be short but substantive, not a chain of one-sentence summaries."""
 
 
 RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - A lens sentence for a true beginner; summarize only selected main items. It may be two tightly linked sentences when one sentence would become too dense.
@@ -2229,7 +2230,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, LLM & SOTA Models, Open Source & Repos, Research Papers, Why It Matters — present with `##` headings. LLM & SOTA Models / Open Source & Repos / Research Papers may be omitted if no news (do not penalize). Why It Matters and One-Line Summary ALWAYS required.
-- **section_depth**: Each present section has substantive content; One-Line Summary may be brief if it synthesizes the day's throughline.
+- **section_depth**: Each present section has substantive content; One-Line Summary may be brief if it synthesizes the day's throughline. Flag a thin paragraph chain where most item paragraphs are one-sentence learner paragraphs; regular learner item paragraphs should usually carry 2+ sentences, while quotes and bullets may stay short.
 
 ### Source Quality (2)
 - **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Minor gaps acceptable for learner-grade writing.- **source_utilization**: Provided sources are drawn on across paragraphs.
@@ -2357,7 +2358,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Structural Completeness (2)
 - **sections_present**: Required sections — One-Line Summary, Big Tech, Industry & Biz, New Tools, What This Means for You, Action Items — present with `##` headings. Big Tech / Industry & Biz / New Tools may be omitted if no news (do not penalize). One-Line Summary, What This Means for You, Action Items ALWAYS required.
-- **section_depth**: Each present section has substantive content; Action Items uses numbered list format; One-Line Summary may be brief if synthetic.
+- **section_depth**: Each present section has substantive content; Action Items uses numbered list format; One-Line Summary may be brief if synthetic. Flag a thin paragraph chain where most item paragraphs are one-sentence learner paragraphs; regular learner item paragraphs should usually carry 2+ sentences, while quotes and bullets may stay short.
 
 ### Source Quality (2)
 - **citation_coverage**: Body paragraphs end with `[N](URL)` citation. Funding amounts attributed.- **source_utilization**: Provided sources drawn on across paragraphs.
