@@ -111,6 +111,8 @@ def test_beginner_prompt_adds_main_only_term_density_and_skim_rules() -> None:
 
     assert "one_line may summarize only selected main_items" in prompt
     assert "Do not mention skim_items or non-main stories in one_line" in prompt
+    assert "For Research one_line, write one shared plain consequence sentence" in prompt
+    assert "do not summarize two mechanisms or two papers in the same one_line" in prompt
     assert "Research main item body may use at most 2 technical method terms" in prompt
     assert "Research one_line should use at most 2 technical terms" in prompt
     assert "plain consequence before adding more detail" in prompt
@@ -347,6 +349,25 @@ def test_validate_research_one_line_rejects_dense_frontloaded_jargon() -> None:
 
     with pytest.raises(ValueError, match="research one_line is too dense"):
         validate_beginner_payload(payload, "research")
+
+
+def test_revision_prompt_for_dense_research_one_line_forces_single_plain_consequence() -> None:
+    prompt = build_revision_prompt(
+        {
+            "headline": "Research headline",
+            "one_line": "dense research one line",
+            "background": [],
+            "main_items": [_valid_research_item()],
+            "skim_items": [],
+            "next_reads": [],
+        },
+        "research one_line is too dense for a true beginner; terms=['data quality', 'repetition', 'loss']",
+        locale="en",
+    )
+
+    assert "If the validation error says research one_line is too dense" in prompt
+    assert "keep at most one term from the reported terms list" in prompt
+    assert "do not summarize two mechanisms or two papers in the same one_line" in prompt
 
 
 def test_validate_research_payload_rejects_dense_method_terms_before_dont_confuse() -> None:

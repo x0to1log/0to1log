@@ -375,6 +375,7 @@ Research Beginner format:
 - Prefer capability shifts, evaluation limits, and why the research problem exists.
 - Research main item body may use at most 2 technical method terms before dont_confuse or next_read.
 - Research one_line should use at most 2 technical terms. Give the plain consequence before adding more detail.
+- For Research one_line, write one shared plain consequence sentence: do not summarize two mechanisms or two papers in the same one_line.
 - what_changed must answer which burden is reduced or which new risk/check burden is exposed: cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 - Avoid turning method names into a glossary. The frontend handbook handles term definitions.
 """
@@ -403,6 +404,7 @@ Research Beginner format:
 - Prefer capability shifts, evaluation limits, and why the research problem exists.
 - Research main item body may use at most 2 technical method terms before dont_confuse or next_read.
 - Research one_line should use at most 2 technical terms. Give the plain consequence before adding more detail.
+- For Research one_line, write one shared plain consequence sentence: do not summarize two mechanisms or two papers in the same one_line.
 - what_changed must answer which burden is reduced or which new risk/check burden is exposed: cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 - Avoid turning method names into a glossary. The frontend handbook handles term definitions.
 """
@@ -616,6 +618,7 @@ Core product decision:
   전문가 파라미터, 전역 풀, 루브릭 증류, 온정책 증류, or 리더보드 기반 추천 in the one_line.
   Put method names like ROPD, ActCam, UniPool, or ModelLens in parentheses only after the plain meaning.
 - Research one_line should use at most 2 technical terms. Give the plain consequence before adding more detail.
+- For Research one_line, write one shared plain consequence sentence: do not summarize two mechanisms or two papers in the same one_line.
   Bad: "사전학습에서 토큰·모델 크기·데이터 품질·반복이 손실에 미치는 영향을 예측한다."
   Good: "학습 데이터를 고르는 일을 덜 감으로 하게 해주는 연구가 나왔다."
 - Business one_line must not be meta guidance. Avoid "오늘은 ... 보자", "중점으로 보자",
@@ -1021,6 +1024,7 @@ Revise the fields needed to satisfy the validation rule, then re-check every val
 - Research main item body may use at most 2 technical method terms before dont_confuse or next_read.
 - Research what_changed must explain which burden is reduced or which new risk/check burden is exposed: cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 - Research one_line should use at most 2 technical terms and state the plain consequence before adding more detail.
+- If the validation error says research one_line is too dense, keep at most one term from the reported terms list, write one shared plain consequence, and do not summarize two mechanisms or two papers in the same one_line.
 - A research one_line must not contain MoE, 전문가 풀, 전문가 파라미터, 전역 풀,
   루브릭 증류, 온정책 증류, or 리더보드 기반 추천. Use plain substitutes first.
 - Business one_line must not use meta reading guidance such as 오늘은 ... 보자, 중점으로 보자,
