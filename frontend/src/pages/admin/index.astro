@@ -72,8 +72,11 @@ let weeklyEnabled = false;
 let newsQualityData: { label: string; score: number; type: string; _sortKey: string }[] = [];
 let hbQualityData: { term: string; score: number; label: string }[] = [];
 
+// Window boundary as YYYY-MM-DD for sortKey clipping (mirrors pipeline-analytics)
+const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+const filterDateStr = thirtyDaysAgo.slice(0, 10);
+
 try {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   // All queries in a single parallel batch (eliminates waterfall)
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
          blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
@@ -1382,7 +1385,7 @@ function relativeTime(dateStr: string): string {
 </script>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" nonce={nonce}></script>
-<script is:inline nonce={nonce} define:vars={{ newsQualityData, hbQualityData }}>
+<script is:inline nonce={nonce} define:vars={{ newsQualityData, hbQualityData, filterDateStr }}>
   (function() {
     if (typeof Chart === 'undefined') return;
 
@@ -1391,22 +1394,31 @@ function relativeTime(dateStr: string): string {
     var gridColor = rootStyle.getPropertyValue('--color-border').trim() || '#e5e5e5';
 
     // ─── News Quality Line Chart ───
+    // Mirrors pipeline-analytics "Total Cost per Run" logic:
+    //  - daily (research+business) and weekly built as separate point arrays
+    //  - weekly clipped to sortKey >= filterDateStr (so backfilled weekly
+    //    runs covering pre-window dates don't stretch the x-axis left)
+    //  - keyMap built daily-first so date labels (e.g. "4/12") win over
+    //    weekly labels (e.g. "W15") on shared sortKeys
     var newsCanvas = document.getElementById('dash-chart-news-quality');
     if (newsCanvas) {
       var research = newsQualityData.filter(function(d) { return d.type === 'research'; });
       var business = newsQualityData.filter(function(d) { return d.type === 'business'; });
-      var weekly = newsQualityData.filter(function(d) { return d.type === 'weekly'; });
+      var weekly = newsQualityData
+        .filter(function(d) { return d.type === 'weekly'; })
+        .filter(function(d) { return d._sortKey >= filterDateStr; });
 
       if (research.length === 0 && business.length === 0 && weekly.length === 0) {
         newsCanvas.parentElement.innerHTML = '<p style="color:' + textColor + ';font-size:0.82rem;text-align:center;padding:2rem 0">No data yet</p>';
       } else {
-        // Unified x-axis: union of all sort keys, sorted chronologically
+        // Unified x-axis: union of all sort keys, daily-first label resolution
         var keyMap = {};
-        newsQualityData.forEach(function(d) { keyMap[d._sortKey] = d.label; });
+        research.forEach(function(d) { keyMap[d._sortKey] = d.label; });
+        business.forEach(function(d) { if (!keyMap[d._sortKey]) keyMap[d._sortKey] = d.label; });
+        weekly.forEach(function(d) { if (!keyMap[d._sortKey]) keyMap[d._sortKey] = d.label; });
         var sortKeys = Object.keys(keyMap).sort();
         var labels = sortKeys.map(function(k) { return keyMap[k]; });
 
-        // Align each series against the unified axis — missing points become null (chart skips)
         function alignSeries(series) {
           var byKey = {};
           series.forEach(function(d) { byKey[d._sortKey] = d.score; });
@@ -1437,7 +1449,11 @@ function relativeTime(dateStr: string): string {
           });
         }
 
-        var allScores = newsQualityData.map(function(d) { return d.score; });
+        var allScores = [].concat(
+          research.map(function(d) { return d.score; }),
+          business.map(function(d) { return d.score; }),
+          weekly.map(function(d) { return d.score; }),
+        );
         var minScore = allScores.length ? Math.max(50, Math.floor((Math.min.apply(null, allScores) - 10) / 10) * 10) : 50;
 
         new Chart(newsCanvas, {
