@@ -69,6 +69,9 @@ RESEARCH_ONE_LINE_BLOCKING_JARGON = {
     "온정책 증류": "작은 모델을 실제 답변 과정에서 맞추는 방법",
     "리더보드 기반 추천": "과거 평가 기록만 보고 후보를 좁히는 방법",
 }
+QUIZ_NAME_TYPOS = {
+    "젬니": "Gemini",
+}
 RESEARCH_ONE_LINE_MAX_TECH_TERMS = 2
 RESEARCH_ONE_LINE_DENSE_TERMS = {
     "사전학습",
@@ -443,6 +446,12 @@ def _schema_block(digest_type: str, *, locale: str = "ko") -> str:
       "reason": "why this is the next step"
     }
   ],
+  "quiz_poll": {
+    "question": "One beginner-level misunderstanding check question",
+    "options": ["Full text of choice 1", "Full text of choice 2", "Full text of choice 3", "Full text of choice 4"],
+    "answer_index": 0,
+    "explanation": "Why the correct answer matches today's beginner lens"
+  },
   "quality_notes": ["internal notes about tradeoffs or weak source areas"]
 }
 """.strip()
@@ -477,6 +486,12 @@ def _schema_block(digest_type: str, *, locale: str = "ko") -> str:
       "reason": "why this is the next step"
     }
   ],
+  "quiz_poll": {
+    "question": "One beginner-level misunderstanding check question",
+    "options": ["Full text of choice 1", "Full text of choice 2", "Full text of choice 3", "Full text of choice 4"],
+    "answer_index": 0,
+    "explanation": "Why the correct answer matches today's beginner lens"
+  },
   "quality_notes": ["internal notes about tradeoffs or weak source areas"]
 }
 """.strip()
@@ -510,6 +525,12 @@ def _schema_block(digest_type: str, *, locale: str = "ko") -> str:
       "reason": "why this is the next step"
     }
   ],
+  "quiz_poll": {
+    "question": "입문자용 오해 방지 4지선다 1문제",
+    "options": ["선택지 1 전문", "선택지 2 전문", "선택지 3 전문", "선택지 4 전문"],
+    "answer_index": 0,
+    "explanation": "정답이 오늘 입문자 관점과 맞는 이유"
+  },
   "quality_notes": ["internal notes about tradeoffs or weak source areas"]
 }
 """.strip()
@@ -544,6 +565,12 @@ def _schema_block(digest_type: str, *, locale: str = "ko") -> str:
       "reason": "why this is the next step"
     }
   ],
+  "quiz_poll": {
+    "question": "입문자용 오해 방지 4지선다 1문제",
+    "options": ["선택지 1 전문", "선택지 2 전문", "선택지 3 전문", "선택지 4 전문"],
+    "answer_index": 0,
+    "explanation": "정답이 오늘 입문자 관점과 맞는 이유"
+  },
   "quality_notes": ["internal notes about tradeoffs or weak source areas"]
 }
 """.strip()
@@ -588,6 +615,14 @@ Core product decision:
 - Keep skim_items light: each skim_items.why_skim must be 35 {skim_word_language} words or fewer.
 - Include a "학습자 뉴스 이어읽기 경로" so a beginner can attempt the learner digest next.
 - Every main item needs "헷갈리지 말 것" to prevent the most likely misconception.
+- Beginner quiz guidance: create one `quiz_poll` as a misunderstanding check, not a memorization test.
+  Use 4 options and `answer_index` 0-3. The correct option should ask what changed or what burden/risk
+  the beginner should notice. Wrong options should be plausible beginner mistakes: overclaiming, focusing
+  on a skim-only story, treating a method name as the main point, or assuming immediate adoption.
+  If there are 2+ main_items, the correct option should capture their shared beginner lens, not just one
+  item's detail. Do not add concrete deployment details that are absent from the selected main_items.
+  Prefer generic misconception distractors over proper-name recall. If a quiz option uses product,
+  company, model, or project names, copy names exactly from the source rows.
 - Keep claims traceable to the existing expert/learner digest text or source URLs.
 - Write short but not shallow explanations. For main item fields, use one setup sentence and one consequence sentence when a true beginner needs the extra step.
 - In the one-line summary, explain the meaning of the change before naming projects or methods:
@@ -647,6 +682,7 @@ Validation rules:
 - skim_items length must be 0 to 4.
 - one_line may summarize only selected main_items. Do not mention skim_items or non-main stories in one_line.
 - Business one_line must be a lens sentence, not a catalog/list of concrete examples.
+- If validation says business one_line is catalog-like, remove all parentheses and keep only the shared business change.
 - Each skim_items.why_skim must be 35 {skim_word_language} words or fewer.
 - Prefer short but not shallow paragraphs over long explanations.
 - Avoid "AI 시대가 온다" style generic phrasing.
@@ -696,6 +732,42 @@ def _research_body_technical_terms(item: dict[str, Any]) -> list[str]:
 
 def _word_count(value: Any) -> int:
     return len(str(value or "").split())
+
+
+def _validate_quiz_poll_shape(raw: Any) -> list[str]:
+    if not isinstance(raw, dict):
+        return ["quiz_poll must be an object"]
+    question = str(raw.get("question") or "").strip()
+    options_raw = raw.get("options")
+    explanation = str(raw.get("explanation") or "").strip()
+    issues: list[str] = []
+    if not question:
+        issues.append("question is required")
+    if not isinstance(options_raw, list):
+        issues.append("options must be a list")
+        options: list[str] = []
+    else:
+        options = [str(option).strip() for option in options_raw]
+        if len(options) != 4:
+            issues.append("options must contain exactly 4 choices")
+        if len(set(options)) != len(options):
+            issues.append("options must be distinct")
+        if any(not option for option in options):
+            issues.append("options must not be empty")
+    idx = raw.get("answer_index")
+    if not (isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(options or [])):
+        issues.append("answer_index must be an integer pointing to an option")
+    if not explanation:
+        issues.append("explanation is required")
+    serialized = json.dumps(raw, ensure_ascii=False)
+    typo_hits = {
+        typo: replacement
+        for typo, replacement in QUIZ_NAME_TYPOS.items()
+        if typo in serialized
+    }
+    if typo_hits:
+        issues.append(f"quiz name typo replacements required: {typo_hits}")
+    return issues
 
 
 def _business_one_line_catalog_issues(value: Any) -> list[str]:
@@ -790,12 +862,19 @@ def validate_beginner_payload(
     digest_type: str,
     *,
     locale: str = "ko",
+    require_quiz: bool = False,
 ) -> None:
     normalized_locale = _normalize_locale(locale)
     required_top = ["headline", "one_line", "background", "main_items", "skim_items", "next_reads"]
+    if require_quiz:
+        required_top.append("quiz_poll")
     missing_top = [key for key in required_top if key not in payload]
     if missing_top:
         raise ValueError(f"Missing top-level keys: {missing_top}")
+    if require_quiz:
+        quiz_issues = _validate_quiz_poll_shape(payload.get("quiz_poll"))
+        if quiz_issues:
+            raise ValueError("Invalid quiz_poll: " + "; ".join(quiz_issues))
 
     main_items = payload.get("main_items")
     if not isinstance(main_items, list):
@@ -1013,10 +1092,14 @@ Revise the fields needed to satisfy the validation rule, then re-check every val
   "플랫폼 락인" -> "특정 공급자에 더 의존하게 되는 변화".
 - Research outputs must use 1-2 main_items. Do not use 3 main_items for research.
 - Business outputs must use 2-3 main_items.
+- Include one valid `quiz_poll` with question, exactly 4 options, answer_index 0-3, and explanation.
+- The quiz must be a beginner misunderstanding check: test the main lens or likely overclaim, not term memorization.
+- If quiz validation reports name typo replacements, apply them literally before returning.
 - one_line may summarize only selected main_items. Do not mention skim_items or non-main stories in one_line.
 - Business one_line must be a lens sentence, not a catalog/list. Do not list vendor, product,
   equipment, or project names there; put concrete names and examples in main_items instead.
 - Business one_line should usually contain zero parentheses. If it has a parenthetical list, remove it and keep only the shared business lens.
+- If validation says business one_line is catalog-like, remove all parentheses and keep only the shared business change.
 - Do not write reading instructions like 보세요 or 읽어보세요 in one_line. State the lens as article copy.
 - Never copy schema labels as content. Replace labels like "왜 이 문제가 있었나",
   "이번 방법은 무엇을 덜 필요하게 하나", or "헷갈리지 말 것" with concrete explanations.
@@ -1256,6 +1339,15 @@ def _target_slug_for_locale(
     )
 
 
+def _normalize_beginner_quiz_poll(raw: Any) -> dict[str, Any]:
+    from services.pipeline import _validate_and_shuffle_quiz_item
+
+    quiz = _validate_and_shuffle_quiz_item(raw, label="Beginner quiz backfill")
+    if not quiz:
+        raise ValueError("Invalid quiz_poll: failed canonical quiz validation")
+    return quiz
+
+
 def build_beginner_backfill_update(
     artifact: dict[str, Any],
     *,
@@ -1265,7 +1357,7 @@ def build_beginner_backfill_update(
     digest_type = str(artifact["digest_type"])
     locale = _normalize_locale(artifact.get("locale") or "ko")
     payload = artifact["payload"]
-    validate_beginner_payload(payload, digest_type, locale=locale)
+    validate_beginner_payload(payload, digest_type, locale=locale, require_quiz=True)
 
     source_slugs = artifact.get("source_slugs") or slugs_for(batch_date, digest_type)
     target_slug = _target_slug_for_locale(source_slugs, batch_date, digest_type, locale)
@@ -1274,6 +1366,9 @@ def build_beginner_backfill_update(
     one_line = str(payload.get("one_line") or "").strip()
     guide_items["title_beginner"] = headline
     guide_items["excerpt_beginner"] = one_line
+    guide_items["quiz_poll_beginner"] = _normalize_beginner_quiz_poll(
+        payload.get("quiz_poll")
+    )
     guide_items["beginner_backfill"] = {
         "source": "prototype_beginner_news",
         "date": batch_date.isoformat(),
@@ -1349,7 +1444,7 @@ async def generate_beginner_preview(
         **build_completion_kwargs(
             model=model_name,
             messages=messages,
-            max_tokens=1_800,
+            max_tokens=2_200,
             response_format={"type": "json_object"},
             reasoning_effort="low",
             service_tier=service_tier,
@@ -1360,25 +1455,34 @@ async def generate_beginner_preview(
     raw = response.choices[0].message.content or "{}"
     payload = parse_ai_json(raw, "beginner_news_prototype")
     usage = extract_usage_metrics(response, model_name, requested_service_tier=service_tier)
-    try:
-        validate_beginner_payload(payload, pair.digest_type, locale=normalized_locale)
-    except ValueError as exc:
-        revision_messages = messages + [
-            {"role": "assistant", "content": raw},
-            {
-                "role": "user",
-                "content": build_revision_prompt(
-                    payload,
-                    str(exc),
-                    locale=normalized_locale,
-                ),
-            },
-        ]
+    for revision_attempt in range(2):
+        try:
+            validate_beginner_payload(
+                payload,
+                pair.digest_type,
+                locale=normalized_locale,
+                require_quiz=True,
+            )
+            break
+        except ValueError as exc:
+            if revision_attempt >= 1:
+                raise
+            revision_messages = messages + [
+                {"role": "assistant", "content": raw},
+                {
+                    "role": "user",
+                    "content": build_revision_prompt(
+                        payload,
+                        str(exc),
+                        locale=normalized_locale,
+                    ),
+                },
+            ]
         revision_response = await client.chat.completions.create(
             **build_completion_kwargs(
                 model=model_name,
                 messages=revision_messages,
-                max_tokens=1_800,
+                max_tokens=2_200,
                 response_format={"type": "json_object"},
                 reasoning_effort="low",
                 service_tier=service_tier,
@@ -1387,8 +1491,8 @@ async def generate_beginner_preview(
             )
         )
         revision_raw = revision_response.choices[0].message.content or "{}"
+        raw = revision_raw
         payload = parse_ai_json(revision_raw, "beginner_news_prototype_revision")
-        validate_beginner_payload(payload, pair.digest_type, locale=normalized_locale)
         usage = merge_usage_metrics(
             usage,
             extract_usage_metrics(
@@ -1396,6 +1500,13 @@ async def generate_beginner_preview(
                 model_name,
                 requested_service_tier=service_tier,
             ),
+        )
+    else:
+        validate_beginner_payload(
+            payload,
+            pair.digest_type,
+            locale=normalized_locale,
+            require_quiz=True,
         )
     return payload, usage
 

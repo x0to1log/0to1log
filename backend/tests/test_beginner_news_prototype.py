@@ -81,6 +81,20 @@ def _valid_research_item(title: str = "실행 없이 좋은 후보를 먼저 좁
     }
 
 
+def _valid_quiz_poll() -> dict:
+    return {
+        "question": "오늘 뉴스를 가능하게 이해하려면 무엇부터 봐야 하나?",
+        "options": [
+            "기술 이름보다 어떤 부담이 바뀌었는지 본다",
+            "이름이 많이 나오는 소식부터 우선으로 본다",
+            "숫자가 나오지 않으면 중요하지 않다고 본다",
+            "가볍게 볼 소식을 오늘 핵심으로 본다",
+        ],
+        "answer_index": 0,
+        "explanation": "입문자 퀴즈는 용어 암기가 아니라 비용, 검증, 운영 부담처럼 오늘의 핵심 변화를 확인해야 한다.",
+    }
+
+
 def test_business_beginner_prompt_limits_scope_and_uses_work_context() -> None:
     prompt = build_beginner_prompt(_pair("business"))
 
@@ -123,12 +137,26 @@ def test_beginner_prompt_adds_main_only_term_density_and_skim_rules() -> None:
     assert "Each skim_items.why_skim must be 35 Korean words or fewer" in prompt
 
 
+def test_beginner_prompt_requires_beginner_quiz_poll() -> None:
+    prompt = build_beginner_prompt(_pair("business"))
+
+    assert "quiz_poll" in prompt
+    assert "Beginner quiz guidance" in prompt
+    assert "answer_index" in prompt
+    assert "misunderstanding check" in prompt
+    assert "If there are 2+ main_items, the correct option should capture their shared beginner lens" in prompt
+    assert "Do not add concrete deployment details that are absent from the selected main_items" in prompt
+    assert "Prefer generic misconception distractors over proper-name recall" in prompt
+    assert "copy names exactly from the source rows" in prompt
+
+
 def test_business_beginner_prompt_makes_one_line_a_lens_not_catalog() -> None:
     prompt = build_beginner_prompt(_pair("business"))
 
     assert "Business one_line is a lens sentence, not a catalog" in prompt
     assert "Do not list vendor, product, equipment, or project names in business one_line" in prompt
     assert "put concrete names and examples in main_items instead" in prompt
+    assert "If validation says business one_line is catalog-like, remove all parentheses" in prompt
     assert "Do not write reading instructions like 보세요" in prompt
     assert "오늘은 ... 보자" in prompt
     assert "중점으로 보자" in prompt
@@ -387,6 +415,75 @@ def test_validate_research_payload_rejects_dense_method_terms_before_dont_confus
 
     with pytest.raises(ValueError, match="technical term density"):
         validate_beginner_payload(payload, "research")
+
+
+def test_validate_beginner_payload_requires_valid_quiz_when_requested() -> None:
+    payload = {
+        "headline": "기업 AI 도입 기준이 운영 지원으로 이동",
+        "one_line": "기업 AI 도입은 기능보다 운영 지원과 보안 검증을 함께 보게 됐다.",
+        "background": ["기업은 AI 도입 기준을 더 구체화하고 있다."],
+        "main_items": [
+            _valid_business_item("기업 도입은 현장 지원 방식까지 비교하게 됐다"),
+            _valid_business_item("보안 검증 요구가 조달 과정의 부담이 됐다"),
+        ],
+        "skim_items": [],
+        "next_reads": [],
+    }
+
+    with pytest.raises(ValueError, match="quiz_poll"):
+        validate_beginner_payload(payload, "business", require_quiz=True)
+
+    payload["quiz_poll"] = _valid_quiz_poll()
+    validate_beginner_payload(payload, "business", require_quiz=True)
+
+
+def test_validate_beginner_payload_rejects_quiz_name_typos_when_requested() -> None:
+    payload = {
+        "headline": "기업 AI 도입 기준이 운영 지원으로 이동",
+        "one_line": "기업 AI 도입은 기능보다 운영 지원과 보안 검증을 함께 보게 됐다.",
+        "background": ["기업은 AI 도입 기준을 더 구체화하고 있다."],
+        "main_items": [
+            _valid_business_item("기업 도입은 현장 지원 방식까지 비교하게 됐다"),
+            _valid_business_item("보안 검증 요구가 조달 과정의 부담이 됐다"),
+        ],
+        "skim_items": [],
+        "next_reads": [],
+        "quiz_poll": {
+            **_valid_quiz_poll(),
+            "question": "데이브레이크와 젬니를 함께 보면 무엇이 바뀌었나?",
+        },
+    }
+
+    with pytest.raises(ValueError, match="quiz name typo"):
+        validate_beginner_payload(payload, "business", require_quiz=True)
+
+
+def test_build_beginner_backfill_update_saves_beginner_quiz_poll() -> None:
+    artifact = {
+        "date": "2026-05-11",
+        "digest_type": "business",
+        "source_slugs": ["2026-05-11-business-digest", "2026-05-11-business-digest-ko"],
+        "payload": {
+            "headline": "기업 AI 도입 기준이 운영 지원으로 이동",
+            "one_line": "기업 AI 도입은 기능보다 운영 지원과 보안 검증을 함께 보게 됐다.",
+            "background": ["기업은 AI 도입 기준을 더 구체화하고 있다."],
+            "main_items": [
+                _valid_business_item("기업 도입은 현장 지원 방식까지 비교하게 됐다"),
+                _valid_business_item("보안 검증 요구가 조달 과정의 부담이 됐다"),
+            ],
+            "skim_items": [],
+            "next_reads": [],
+            "quiz_poll": _valid_quiz_poll(),
+        },
+    }
+
+    _, row = build_beginner_backfill_update(artifact)
+
+    quiz = row["guide_items"]["quiz_poll_beginner"]
+    assert quiz["question"] == artifact["payload"]["quiz_poll"]["question"]
+    assert quiz["answer"] == artifact["payload"]["quiz_poll"]["options"][0]
+    assert set(quiz["options"]) == set(artifact["payload"]["quiz_poll"]["options"])
+    assert quiz["explanation"]
 
 
 def test_validate_research_payload_allows_related_method_family_terms() -> None:
@@ -834,6 +931,7 @@ def test_build_beginner_backfill_update_merges_existing_guide_items() -> None:
             ],
             "skim_items": [],
             "next_reads": [],
+            "quiz_poll": _valid_quiz_poll(),
         },
     }
 
@@ -975,6 +1073,17 @@ def test_build_beginner_backfill_update_targets_english_slug_from_english_artifa
             ],
             "skim_items": [],
             "next_reads": [],
+            "quiz_poll": {
+                "question": "What should a beginner check first in this news?",
+                "options": [
+                    "Which operational risk or burden changed",
+                    "Which product name appears most often",
+                    "Whether every skim item is equally important",
+                    "Whether adoption is immediate without review",
+                ],
+                "answer_index": 0,
+                "explanation": "The beginner version should check the main lens and avoid overclaiming adoption.",
+            },
         },
     }
 
