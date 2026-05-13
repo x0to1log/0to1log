@@ -849,6 +849,89 @@ async def test_rescore_existing_handbook_quality_structural_only_uses_current_dr
     assert isinstance(warnings, list)
 
 
+@pytest.mark.asyncio
+async def test_rescore_semantic_basic_keeps_related_tail_visible():
+    from services.agents import advisor
+    from services.agents.advisor import rescore_existing_handbook_quality
+
+    captured = {}
+
+    async def fake_advanced_quality(*args, **kwargs):
+        return 90, {}, {}
+
+    async def fake_basic_quality(term, term_type, basic_content, client):
+        captured["basic_content"] = basic_content
+        return 90, {}, {}
+
+    body_over_four_k = (
+        "## Plain Explanation\n"
+        + ("This section keeps enough ordinary learner-facing context. " * 85)
+        + "\n\n## Related Reading\n- (next) Tail Marker Visible"
+    )
+
+    with (
+        patch.object(advisor, "_check_handbook_quality", new=AsyncMock(side_effect=fake_advanced_quality)),
+        patch.object(advisor, "_check_basic_quality", new=AsyncMock(side_effect=fake_basic_quality)),
+    ):
+        await rescore_existing_handbook_quality(
+            "Reasoning Model",
+            {
+                "term_type": "system_workflow_pattern",
+                "body_basic_ko": body_over_four_k.replace("Plain Explanation", "쉽게 이해하기"),
+                "body_basic_en": body_over_four_k,
+                "body_advanced_ko": "## 기술적 정의와 동작 원리\n내용",
+                "body_advanced_en": "## Technical Definition & How It Works\nContent",
+            },
+            client=MagicMock(),
+            run_semantic=True,
+        )
+
+    assert "Tail Marker Visible" in captured["basic_content"]
+
+
+@pytest.mark.asyncio
+async def test_rescore_semantic_advanced_keeps_related_tail_visible():
+    from services.agents import advisor
+    from services.agents.advisor import rescore_existing_handbook_quality
+
+    captured = {}
+
+    async def fake_advanced_quality(term, term_type, advanced_content, client):
+        captured["advanced_content"] = advanced_content
+        return 90, {}, {}
+
+    async def fake_basic_quality(*args, **kwargs):
+        return 90, {}, {}
+
+    advanced_over_eight_k = (
+        "## Technical Definition & How It Works\n"
+        + ("This section keeps enough advanced mechanism context. " * 170)
+        + "\n\n## Prerequisites, Alternatives, and Extensions\n- (extension) Advanced Tail Marker Visible"
+    )
+
+    with (
+        patch.object(advisor, "_check_handbook_quality", new=AsyncMock(side_effect=fake_advanced_quality)),
+        patch.object(advisor, "_check_basic_quality", new=AsyncMock(side_effect=fake_basic_quality)),
+    ):
+        await rescore_existing_handbook_quality(
+            "Reasoning Model",
+            {
+                "term_type": "system_workflow_pattern",
+                "body_basic_ko": "## 쉽게 이해하기\n내용",
+                "body_basic_en": "## Plain Explanation\nContent",
+                "body_advanced_ko": advanced_over_eight_k.replace(
+                    "Technical Definition & How It Works",
+                    "기술적 정의와 동작 원리",
+                ),
+                "body_advanced_en": advanced_over_eight_k,
+            },
+            client=MagicMock(),
+            run_semantic=True,
+        )
+
+    assert "Advanced Tail Marker Visible" in captured["advanced_content"]
+
+
 def test_record_handbook_quality_scores_uses_existing_slug_and_id():
     from services.agents.advisor import _record_handbook_quality_scores
 

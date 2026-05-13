@@ -2423,6 +2423,8 @@ _BASIC_DIMENSIONS = (
     "engagement", "accuracy", "uniqueness", "structural_completeness",
 )
 _BASIC_MAX_RAW = 100
+_ADVANCED_JUDGE_MAX_CHARS_PER_LOCALE = 12000
+_BASIC_JUDGE_MAX_CHARS_PER_LOCALE = 6000
 
 
 def _build_bilingual_judge_content(
@@ -3923,7 +3925,7 @@ async def rescore_existing_handbook_quality(
         adv_combined = _build_bilingual_judge_content(
             data.get("body_advanced_ko", ""),
             data.get("body_advanced_en", ""),
-            max_chars_per_locale=8000,
+            max_chars_per_locale=_ADVANCED_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if adv_combined.strip():
             semantic_score, semantic_breakdown, quality_usage = await _check_handbook_quality(
@@ -3938,7 +3940,7 @@ async def rescore_existing_handbook_quality(
         basic_combined = _build_bilingual_judge_content(
             data.get("body_basic_ko", ""),
             data.get("body_basic_en", ""),
-            max_chars_per_locale=4000,
+            max_chars_per_locale=_BASIC_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if basic_combined.strip():
             basic_semantic_score, basic_semantic_breakdown, basic_quality_usage = await _check_basic_quality(
@@ -4792,7 +4794,7 @@ async def _run_generate_term(
         adv_combined = _build_bilingual_judge_content(
             data.get("body_advanced_ko", ""),
             data.get("body_advanced_en", ""),
-            max_chars_per_locale=8000,
+            max_chars_per_locale=_ADVANCED_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if adv_combined.strip():
             try:
@@ -4811,7 +4813,7 @@ async def _run_generate_term(
         basic_combined = _build_bilingual_judge_content(
             data.get("body_basic_ko", ""),
             data.get("body_basic_en", ""),
-            max_chars_per_locale=4000,
+            max_chars_per_locale=_BASIC_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if basic_combined.strip():
             try:
