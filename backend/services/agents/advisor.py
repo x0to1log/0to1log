@@ -3405,7 +3405,7 @@ def _split_related_terms(term_text: str) -> list[str]:
 
 def _normalize_related_bullet_line(line: str, *, locale: str, level: str) -> list[str]:
     stripped = (line or "").strip()
-    if not stripped.startswith("-"):
+    if not stripped.startswith(("-", "*")):
         return [line]
 
     body = stripped[1:].strip()
@@ -3460,7 +3460,7 @@ def _normalize_related_bullets_for_frontend(content: str, *, locale: str, level:
         return content
     lines: list[str] = []
     for line in content.splitlines():
-        if line.strip().startswith("-"):
+        if line.strip().startswith(("-", "*")):
             lines.extend(_normalize_related_bullet_line(line, locale=locale, level=level))
         else:
             lines.append(line)
@@ -3611,6 +3611,8 @@ def _normalize_tradeoff_labels_for_frontend(markdown: str, locale: str) -> str:
             r"부적합:": bad_label,
             r"이럴 때 부적합:": bad_label,
             r"부적합한 경우:": bad_label,
+            r"부적합하거나 대안이 더 나은 경우:": bad_label,
+            r"부적합하거나 대안.*:": bad_label,
         }
     else:
         good_label = "Suitable:"
@@ -3618,6 +3620,11 @@ def _normalize_tradeoff_labels_for_frontend(markdown: str, locale: str) -> str:
         aliases = {
             r"Suitable:": good_label,
             r"Unsuitable:": bad_label,
+            r"Use(?: [^:\n]{0,80})? when:": good_label,
+            r"Avoid(?: or defer)?(?: [^:\n]{0,80})? when:": bad_label,
+            r"Not suitable:": bad_label,
+            r"Unsuitable or better alternatives:": bad_label,
+            r"When not to use:": bad_label,
         }
 
     normalized = markdown
@@ -3639,6 +3646,56 @@ def _normalize_tradeoff_labels_for_frontend(markdown: str, locale: str) -> str:
     normalized = re.sub(r"\n{3,}", "\n\n", normalized)
     normalized = re.sub(r"([^\n])## ", r"\1\n\n## ", normalized)
     return normalized
+
+
+def _normalize_pitfall_bullet_line(line: str, *, locale: str) -> str:
+    stripped = (line or "").strip()
+    if not stripped.startswith(("-", "*")):
+        return line
+
+    body = stripped[1:].strip()
+    if "❌" in body and "✅" in body:
+        return f"- {body}"
+
+    pair_match = re.match(
+        r"^(?:❌\s*)?(?:실수|Mistake)[:：]\s*(.+?)\s*(?:→|->|=>)\s*"
+        r"(?:✅\s*)?(?:해결|Fix|Solution)[:：]\s*(.+)$",
+        body,
+        flags=re.I | re.S,
+    )
+    if not pair_match:
+        pair_match = re.match(
+            r"^(?:❌\s*)?(?:실수|Mistake)[:：]\s*(.+?)\s+"
+            r"(?:✅\s*)?(?:해결|Fix|Solution)[:：]\s*(.+)$",
+            body,
+            flags=re.I | re.S,
+        )
+    if not pair_match:
+        return f"- {body}" if stripped.startswith("*") else line
+
+    mistake = pair_match.group(1).strip()
+    fix = pair_match.group(2).strip()
+    if locale == "ko":
+        return f"- ❌ 실수: {mistake} → ✅ 해결: {fix}"
+    return f"- ❌ Mistake: {mistake} → ✅ Fix: {fix}"
+
+
+def _normalize_pitfall_sections_for_frontend(markdown: str, *, locale: str) -> str:
+    """Canonicalize Advanced pitfalls markers used by quality checks and CSS."""
+    if not markdown:
+        return markdown
+
+    heading = "프로덕션 함정" if locale == "ko" else "Production Pitfalls"
+    pattern = re.compile(rf"(?ms)^(##\s+{re.escape(heading)}\s*\n)(.*?)(?=^##\s+|\Z)")
+
+    def _replace(match: re.Match) -> str:
+        normalized_lines = [
+            _normalize_pitfall_bullet_line(line, locale=locale)
+            for line in match.group(2).strip().splitlines()
+        ]
+        return f"{match.group(1)}{chr(10).join(normalized_lines).strip()}\n\n"
+
+    return pattern.sub(_replace, markdown)
 
 
 def _derive_learner_summary_from_basic(body_basic: str) -> str:
@@ -3753,10 +3810,18 @@ def _assemble_all_sections(raw_data: dict) -> dict:
             data["body_advanced_ko"],
             "ko",
         )
+        data["body_advanced_ko"] = _normalize_pitfall_sections_for_frontend(
+            data["body_advanced_ko"],
+            locale="ko",
+        )
     if data.get("body_advanced_en"):
         data["body_advanced_en"] = _normalize_tradeoff_labels_for_frontend(
             data["body_advanced_en"],
             "en",
+        )
+        data["body_advanced_en"] = _normalize_pitfall_sections_for_frontend(
+            data["body_advanced_en"],
+            locale="en",
         )
     if data.get("body_basic_ko"):
         data["body_basic_ko"] = _normalize_related_sections_for_frontend(

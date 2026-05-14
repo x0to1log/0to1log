@@ -380,11 +380,16 @@ def test_capability_and_workflow_guides_keep_advanced_glossary_scoped():
     assert "provider-specific" in combined
 
 
-def test_advanced_code_prompt_uses_compact_code_capsule_constraints():
+def test_advanced_code_prompt_prioritizes_teaching_artifact_quality_over_shortness():
     from services.agents.prompts_advisor import GENERATE_ADVANCED_EN_PROMPT, GENERATE_ADVANCED_PROMPT
 
     combined = f"{GENERATE_ADVANCED_PROMPT}\n{GENERATE_ADVANCED_EN_PROMPT}"
 
+    assert "teaching artifact" in combined
+    assert "not necessarily the shortest code" in combined
+    assert "Every line should earn its place" in combined
+    assert "core mechanism" in combined
+    assert "It may be longer when those lines explain the concept" in combined
     assert "code capsule" in combined
     assert "one fenced code block" in combined
     assert "input/schema definition" in combined
@@ -2126,6 +2131,86 @@ def test_assemble_all_sections_normalizes_related_rows_for_frontend():
     assert "- (선행) **Function Calling** — 도구·구조화 출력 계약의 기반." in assembled["body_advanced_ko"]
     assert "- (선행) **JSON Schema** — 도구·구조화 출력 계약의 기반." in assembled["body_advanced_ko"]
     assert "- (extension) **Realtime API** — Voice and streaming interactions." in assembled["body_advanced_en"]
+
+
+def test_assemble_all_sections_normalizes_star_related_bullets_for_frontend():
+    from services.agents.advisor import _assemble_all_sections
+
+    raw_data = {
+        "term_full": "MCP",
+        "korean_name": "모델 컨텍스트 프로토콜",
+        "definition_ko": "MCP는 AI 앱과 외부 도구를 연결하는 프로토콜이다.",
+        "definition_en": "MCP is a protocol for connecting AI apps to external tools.",
+        "body_basic_ko": (
+            "## 함께 읽으면 좋은 용어\n"
+            "* (기초) Function Calling — 구조화된 도구 호출의 기본 패턴.\n"
+        ),
+        "body_advanced_en": (
+            "## Prerequisites, Alternatives, and Extensions\n"
+            "* Prerequisite: JSON-RPC — Base message structure.\n"
+        ),
+    }
+
+    assembled = _assemble_all_sections(raw_data)
+
+    assert "- (기초) **Function Calling** — 구조화된 도구 호출의 기본 패턴." in assembled["body_basic_ko"]
+    assert "- (prerequisite) **JSON-RPC** — Base message structure." in assembled["body_advanced_en"]
+
+
+def test_assemble_all_sections_normalizes_pitfall_markers_for_frontend():
+    from services.agents.advisor import _assemble_all_sections
+
+    raw_data = {
+        "term_full": "Guardrails",
+        "korean_name": "가드레일",
+        "definition_ko": "가드레일은 모델 입출력을 런타임에서 검증하는 레이어다.",
+        "definition_en": "Guardrails validate model inputs and outputs at runtime.",
+        "body_advanced_ko": (
+            "## 프로덕션 함정\n"
+            "- 실수: 출력만 검사하고 입력의 프롬프트 인젝션 신호를 놓친다 → 해결: 입력 필터와 출력 검증을 함께 둔다.\n"
+        ),
+        "body_advanced_en": (
+            "## Production Pitfalls\n"
+            "* Mistake: Allowing unbounded re-ask loops makes latency unpredictable -> Fix: Cap re-asks and escalate unresolved cases.\n"
+        ),
+    }
+
+    assembled = _assemble_all_sections(raw_data)
+
+    assert "- ❌ 실수: 출력만 검사하고 입력의 프롬프트 인젝션 신호를 놓친다 → ✅ 해결: 입력 필터와 출력 검증을 함께 둔다." in assembled["body_advanced_ko"]
+    assert "- ❌ Mistake: Allowing unbounded re-ask loops makes latency unpredictable → ✅ Fix: Cap re-asks and escalate unresolved cases." in assembled["body_advanced_en"]
+
+
+def test_assemble_all_sections_normalizes_guardrail_tradeoff_aliases():
+    from services.agents.advisor import _assemble_all_sections
+
+    raw_data = {
+        "term_full": "Guardrails",
+        "korean_name": "가드레일",
+        "definition_ko": "가드레일은 모델 입출력을 런타임에서 검증하는 레이어다.",
+        "definition_en": "Guardrails validate model inputs and outputs at runtime.",
+        "body_advanced_ko": (
+            "## 트레이드오프와 언제 무엇을 쓰나\n"
+            "적합한 경우:\n"
+            "- 보안 민감 배포\n"
+            "부적합하거나 대안이 더 나은 경우:\n"
+            "- 단순 모더레이션\n"
+        ),
+        "body_advanced_en": (
+            "## Tradeoffs — When to Use What\n"
+            "Use MCP when:\n"
+            "- Multiple AI apps share integrations.\n"
+            "Avoid or defer MCP when:\n"
+            "- A single app has one simple function.\n"
+        ),
+    }
+
+    assembled = _assemble_all_sections(raw_data)
+
+    assert "이럴 때 적합:\n\n- 보안 민감 배포" in assembled["body_advanced_ko"]
+    assert "이럴 때 부적합:\n\n- 단순 모더레이션" in assembled["body_advanced_ko"]
+    assert "Suitable:\n\n- Multiple AI apps share integrations." in assembled["body_advanced_en"]
+    assert "Unsuitable:\n\n- A single app has one simple function." in assembled["body_advanced_en"]
 
 
 @pytest.mark.asyncio

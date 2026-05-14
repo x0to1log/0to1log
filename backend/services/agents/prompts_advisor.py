@@ -1500,7 +1500,8 @@ You are writing for a **senior developer / ML engineer / tech lead** who already
 - Tone should feel like a design doc, architecture review, PR review, or incident review, not a paper summary.
 - Treat Advanced as a glossary deep-dive, not an implementation runbook. Start from the concept boundary, responsibility split, runtime flow, and decision criteria before implementation details.
 - For capability/spec and system/workflow terms, provider-specific fields such as stop_reason, pause_turn, trace IDs, billing metadata, and benchmark taxonomy are examples only. Do not make them the section backbone.
-- The code or pseudocode section should be a compact contract example that fits in one handbook screen. If it starts looking like a production runbook, remove provider boilerplate, retry frameworks, and tracing detail.
+- The code or pseudocode section should be a teaching artifact: not necessarily the shortest code, but the clearest code for the term's core mechanism. Every line should earn its place by explaining the concept boundary, control/data flow, validation point, execution boundary, or failure path. It may be longer when those lines explain the concept; it should be shorter when lines only show framework wiring, provider boilerplate, retry frameworks, tracing detail, or production runbook mechanics.
+- Prefer one compact contract example as the default shape, fitting in one handbook screen when possible, but do not delete essential teaching lines just to make it short.
 - When adjacent terms are likely to be confused, explicitly separate them. Example: Tool Use is the broader runtime capability; Function Calling is one API pattern; AI Agent is the larger goal-directed loop that may use tools.
 
 **FAIL CONDITIONS** — these will cause this section to be rejected:
@@ -1558,7 +1559,12 @@ Keep the same section keys; only adapt the content perspective.
   For terms without formulas (products, protocols), provide a comparison/spec table instead.
 
 - **adv_ko_3_code** (코드 또는 의사코드):
-  Follow the Artifact Policy. For real-code/pseudocode mode, write one compact code capsule, not a tutorial or full production harness. For no-code mode, write an operational procedure or review checklist without fenced code. Python/JS preferred when code is allowed. Language tag required only when using a code fence: ` ```python `.
+  Follow the Artifact Policy. For real-code/pseudocode mode, write one teaching code capsule that exposes the term's core mechanism, not a tutorial or full production harness. For no-code mode, write an operational procedure or review checklist without fenced code. Python/JS preferred when code is allowed. Language tag required only when using a code fence: ` ```python `.
+  Quality priority:
+  - The goal is a high-signal teaching artifact, not the shortest possible snippet.
+  - Every line should earn its place by showing mechanism, boundary, validation, decision logic, or failure handling.
+  - It may be longer when those lines explain the concept; remove lines that only show SDK wiring, logging plumbing, retry frameworks, or production scaffolding.
+  - Prefer one readable function or one small contract-centered flow over classes, adapters, and full runtime harnesses.
   Include only:
   1. input/schema definition
   2. validation
@@ -1574,8 +1580,8 @@ Keep the same section keys; only adapt the content perspective.
   - unrelated helper classes
   Constraints:
   - Use one fenced code block only.
-  - Keep it compact enough to fit in one handbook screen.
-  - If it grows, remove setup/boilerplate before adding more code.
+  - Keep it focused enough to fit in one handbook screen when possible.
+  - If it grows, remove setup/boilerplate before removing lines that teach the core mechanism.
   - No `...` placeholders or hello-world fragments.
   - For real-code mode, code must be syntactically valid and use type hints where they clarify contracts.
   - For pseudocode mode, label it clearly and keep it executable-looking.
@@ -1678,7 +1684,7 @@ Keep the same section keys; only adapt the content perspective.
     ]
   }},
   "adv_ko_2_formulas": "수식과 도표 ($$로 감싼 LaTeX 또는 비교표)",
-  "adv_ko_3_code": "```python\\n# one compact code capsule\\n```",
+  "adv_ko_3_code": "```python\\n# one teaching code capsule\\n```",
   "adv_ko_4_tradeoffs": "이럴 때 적합: ...\\n이럴 때 부적합: ...",
   "adv_ko_5_pitfalls": "- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...\\n- ❌ 실수: ... → ✅ 해결: ...",
   "adv_ko_6_comm": "- \\"문장 1\\"\\n- \\"문장 2\\"\\n- ...",
@@ -1709,7 +1715,7 @@ Keep the same section keys; only adapt the content perspective.
 ✓ Output has exactly the 7 core keys: adv_ko_1_mechanism, adv_ko_2_formulas, adv_ko_3_code, adv_ko_4_tradeoffs, adv_ko_5_pitfalls, adv_ko_6_comm, adv_ko_7_related. Include adv_ko_specs only when Artifact Policy says specs_mode is optional or required.
 ✓ adv_ko_1_mechanism has formal definition + flow + complexity/algorithm steps
 ✓ adv_ko_2_formulas follows the Artifact Policy: math only when appropriate, otherwise a taxonomy, workflow, structure table, or decision matrix — not generic prose
-✓ adv_ko_3_code follows code_mode: compact code/pseudocode when code is allowed; operational procedure/checklist with no fenced code when code_mode is no-code
+✓ adv_ko_3_code follows code_mode: teaching code/pseudocode when code is allowed; operational procedure/checklist with no fenced code when code_mode is no-code
 ✓ adv_ko_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
 ✓ adv_ko_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ 실수:` and contains ` → ✅ 해결:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_ko_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)
@@ -1818,7 +1824,8 @@ You are writing for a **senior developer / ML engineer / tech lead** who already
 
 - Treat Advanced as a glossary deep-dive, not an implementation runbook. Start from the concept boundary, responsibility split, runtime flow, and decision criteria before implementation details.
 - For capability/spec and system/workflow terms, provider-specific fields such as stop_reason, pause_turn, trace IDs, billing metadata, and benchmark taxonomy are examples only. Do not make them the section backbone.
-- The code or pseudocode section should be a compact contract example that fits in one handbook screen. If it starts looking like a production runbook, remove provider boilerplate, retry frameworks, and tracing detail.
+- The code or pseudocode section should be a teaching artifact: not necessarily the shortest code, but the clearest code for the term's core mechanism. Every line should earn its place by explaining the concept boundary, control/data flow, validation point, execution boundary, or failure path. It may be longer when those lines explain the concept; it should be shorter when lines only show framework wiring, provider boilerplate, retry frameworks, tracing detail, or production runbook mechanics.
+- Prefer one compact contract example as the default shape, fitting in one handbook screen when possible, but do not delete essential teaching lines just to make it short.
 - When adjacent terms are likely to be confused, explicitly separate them. Example: Tool Use is the broader runtime capability; Function Calling is one API pattern; AI Agent is the larger goal-directed loop that may use tools.
 
 **FAIL CONDITIONS** — these will cause the section to be rejected:
@@ -1876,7 +1883,12 @@ Keep the same section keys; only adapt the content perspective.
   For terms without formulas (products, protocols), provide a comparison/spec table instead.
 
 - **adv_en_3_code** (Code or Pseudocode):
-  Follow the Artifact Policy. For real-code/pseudocode mode, write one compact code capsule, not a tutorial or full production harness. For no-code mode, write an operational procedure or review checklist without fenced code. Python/JS preferred when code is allowed. Language tag required only when using a code fence: ` ```python `.
+  Follow the Artifact Policy. For real-code/pseudocode mode, write one teaching code capsule that exposes the term's core mechanism, not a tutorial or full production harness. For no-code mode, write an operational procedure or review checklist without fenced code. Python/JS preferred when code is allowed. Language tag required only when using a code fence: ` ```python `.
+  Quality priority:
+  - The goal is a high-signal teaching artifact, not the shortest possible snippet.
+  - Every line should earn its place by showing mechanism, boundary, validation, decision logic, or failure handling.
+  - It may be longer when those lines explain the concept; remove lines that only show SDK wiring, logging plumbing, retry frameworks, or production scaffolding.
+  - Prefer one readable function or one small contract-centered flow over classes, adapters, and full runtime harnesses.
   Include only:
   1. input/schema definition
   2. validation
@@ -1892,8 +1904,8 @@ Keep the same section keys; only adapt the content perspective.
   - unrelated helper classes
   Constraints:
   - Use one fenced code block only.
-  - Keep it compact enough to fit in one handbook screen.
-  - If it grows, remove setup/boilerplate before adding more code.
+  - Keep it focused enough to fit in one handbook screen when possible.
+  - If it grows, remove setup/boilerplate before removing lines that teach the core mechanism.
   - No `...` placeholders or hello-world fragments.
   - For real-code mode, code must be syntactically valid and use type hints where they clarify contracts.
   - For pseudocode mode, label it clearly and keep it executable-looking.
@@ -1995,7 +2007,7 @@ Keep the same section keys; only adapt the content perspective.
     ]
   }},
   "adv_en_2_formulas": "Math/diagrams ($$-wrapped LaTeX or comparison tables)",
-  "adv_en_3_code": "```python\\n# one compact code capsule\\n```",
+  "adv_en_3_code": "```python\\n# one teaching code capsule\\n```",
   "adv_en_4_tradeoffs": "Suitable: ...\\nUnsuitable: ...",
   "adv_en_5_pitfalls": "- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...\\n- ❌ Mistake: ... → ✅ Fix: ...",
   "adv_en_6_comm": "- \\"sentence 1\\"\\n- \\"sentence 2\\"\\n- ...",
@@ -2026,7 +2038,7 @@ Keep the same section keys; only adapt the content perspective.
 ✓ Output has exactly the 7 core keys: adv_en_1_mechanism, adv_en_2_formulas, adv_en_3_code, adv_en_4_tradeoffs, adv_en_5_pitfalls, adv_en_6_comm, adv_en_7_related. Include adv_en_specs only when Artifact Policy says specs_mode is optional or required.
 ✓ adv_en_1_mechanism has formal definition + flow + complexity/algorithm steps
 ✓ adv_en_2_formulas follows the Artifact Policy: math only when appropriate, otherwise a taxonomy, workflow, structure table, or decision matrix — not generic prose
-✓ adv_en_3_code follows code_mode: compact code/pseudocode when code is allowed; operational procedure/checklist with no fenced code when code_mode is no-code
+✓ adv_en_3_code follows code_mode: teaching code/pseudocode when code is allowed; operational procedure/checklist with no fenced code when code_mode is no-code
 ✓ adv_en_4_tradeoffs has 3+ suitable + 3+ unsuitable cases, each unsuitable names an alternative tech
 ✓ adv_en_5_pitfalls has 3+ bullets, every bullet starts with `- ❌ Mistake:` and contains ` → ✅ Fix:` (each side ≥40 chars). NO bold(`**`), NO plain paragraphs.
 ✓ adv_en_6_comm has 6~8 sentences in PR review / design doc / incident tone (not Slack)

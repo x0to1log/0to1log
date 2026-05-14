@@ -1,5 +1,10 @@
-"""Test that ADVANCED_SECTIONS_{KO,EN} match the 7-section redesign (Plan C)."""
-from services.agents.advisor import ADVANCED_SECTIONS_KO, ADVANCED_SECTIONS_EN
+"""Test that Advanced section contracts stay policy-driven."""
+from services.agents.advisor import (
+    ADVANCED_SECTIONS_EN,
+    ADVANCED_SECTIONS_KO,
+    _advanced_sections_for_mode,
+    _expected_advanced_sections,
+)
 
 
 def test_advanced_sections_ko_has_7_entries():
@@ -15,8 +20,8 @@ def test_advanced_sections_ko_keys():
         "adv_ko_1_mechanism",
         "adv_ko_2_formulas",
         "adv_ko_3_code",
-        "adv_ko_4_tradeoffs",
         "adv_ko_5_pitfalls",
+        "adv_ko_4_tradeoffs",
         "adv_ko_6_comm",
         "adv_ko_7_related",
     ]
@@ -28,8 +33,8 @@ def test_advanced_sections_en_keys():
         "adv_en_1_mechanism",
         "adv_en_2_formulas",
         "adv_en_3_code",
-        "adv_en_4_tradeoffs",
         "adv_en_5_pitfalls",
+        "adv_en_4_tradeoffs",
         "adv_en_6_comm",
         "adv_en_7_related",
     ]
@@ -37,15 +42,39 @@ def test_advanced_sections_en_keys():
 
 
 def test_advanced_warning_threshold_is_seven():
-    """Post-redesign: Advanced section count warning at <7 sections."""
-    import inspect
-    from services.agents import advisor
+    """Base redesign: Advanced section count is computed from the section policy."""
+    assert _expected_advanced_sections("real-code", "problem_failure_mode", None) == 7
 
-    source = inspect.getsource(advisor)
-    assert 'adv_content.count("## ") < 7' in source, \
-        "Advanced threshold should be 7 after Plan C redesign"
-    assert 'adv_content.count("## ") < 9' not in source, \
-        "Legacy Advanced=9 threshold must be removed"
+
+def test_advanced_specs_are_inserted_only_for_spec_heavy_types():
+    ko_sections = _advanced_sections_for_mode(
+        "ko",
+        "real-code",
+        "product_platform_service",
+        "model_api_service",
+    )
+    en_sections = _advanced_sections_for_mode(
+        "en",
+        "real-code",
+        "product_platform_service",
+        "model_api_service",
+    )
+
+    assert [key for key, _ in ko_sections][1] == "adv_ko_specs"
+    assert [key for key, _ in en_sections][1] == "adv_en_specs"
+    assert _expected_advanced_sections("real-code", "product_platform_service", "model_api_service") == 8
+
+
+def test_no_code_mode_keeps_section_count_but_renames_code_header():
+    ko_sections = _advanced_sections_for_mode("ko", "no-code", "problem_failure_mode", None)
+    en_sections = _advanced_sections_for_mode("en", "no-code", "problem_failure_mode", None)
+
+    assert len(ko_sections) == 7
+    assert len(en_sections) == 7
+    assert ("adv_ko_3_code", "## 운영 패턴과 검수 절차") in ko_sections
+    assert ("adv_en_3_code", "## Operational Pattern and Review Procedure") in en_sections
+    assert "## 코드 또는 의사코드" not in [header for _, header in ko_sections]
+    assert "## Code or Pseudocode" not in [header for _, header in en_sections]
 
 
 def test_advanced_sections_no_legacy_keys():
