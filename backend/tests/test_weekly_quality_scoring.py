@@ -4,6 +4,11 @@ from services.pipeline import (
     _compute_weekly_traceability_score,
     _compute_weekly_locale_score,
 )
+from services.pipeline_quality import (
+    _find_weekly_citation_contract_issues,
+    _find_weekly_primary_source_priority_issues,
+    _weekly_guardrail_cap_labels,
+)
 
 
 def _good_body(with_h3: bool = True) -> str:
@@ -139,3 +144,74 @@ class TestLocaleScore:
         score = _compute_weekly_locale_score(en_lots, ko_few, en_learner, ko_learner_matched)
         # Expert: -2 (section diff). Learner: 0. No KO ### so no hangul penalty.
         assert score == 10 - 2
+
+
+class TestWeeklyCitationContract:
+    def test_flags_required_weekly_list_and_top_story_citation_gaps(self):
+        body = (
+            "## Week in Numbers\n\n"
+            "- **2 GW** — OpenAI's Trainium capacity commitment.\n"
+            "- **$122B** — OpenAI's funding round. [1](https://openai.com/index/accelerating-the-next-phase-ai/)\n\n"
+            "## Top Stories\n\n"
+            "### OpenAI and AWS sign a capacity deal\n\n"
+            "OpenAI and Amazon announced a stateful runtime on Bedrock.\n\n"
+            "The deal includes roughly 2 GW of Trainium capacity. [2](https://openai.com/index/amazon-partnership/)\n\n"
+            "## Watch Points\n\n"
+            "- AWS capacity ramp timing.\n\n"
+            "## So What Do I Do?\n\n"
+            "- **If you rely on frontier APIs**: reserve capacity now — because access is becoming a procurement issue.\n"
+        )
+
+        issues = _find_weekly_citation_contract_issues(body, "expert_body")
+        messages = [issue["message"] for issue in issues]
+
+        assert any("week_in_numbers" in message for message in messages)
+        assert any("top_story_paragraph" in message for message in messages)
+        assert any("watch_points" in message for message in messages)
+        assert any("action" in message for message in messages)
+        assert "weekly_citation_contract_cap_90" in _weekly_guardrail_cap_labels(issues)
+
+    def test_does_not_flag_cited_weekly_lines(self):
+        body = (
+            "## Week in Numbers\n\n"
+            "- **2 GW** — OpenAI's Trainium capacity commitment. [1](https://openai.com/index/amazon-partnership/)\n\n"
+            "## Top Stories\n\n"
+            "### OpenAI and AWS sign a capacity deal\n\n"
+            "OpenAI and Amazon announced a stateful runtime on Bedrock. [1](https://openai.com/index/amazon-partnership/)\n\n"
+            "## Watch Points\n\n"
+            "- AWS capacity ramp timing. [1](https://openai.com/index/amazon-partnership/)\n\n"
+            "## So What Do I Do?\n\n"
+            "- **If you rely on frontier APIs**: reserve capacity now — because access is becoming a procurement issue. [1](https://openai.com/index/amazon-partnership/)\n"
+        )
+
+        assert _find_weekly_citation_contract_issues(body, "expert_body") == []
+
+
+class TestWeeklyPrimarySourcePriority:
+    def test_flags_secondary_first_when_relevant_official_source_exists(self):
+        body = (
+            "## Top Stories\n\n"
+            "### OpenAI and AWS sign multi-year deal\n\n"
+            "OpenAI and Amazon announced a stateful runtime and Trainium capacity. [1](https://aidailypost.com/news/openai-aws-deal)\n"
+        )
+        source_urls = [
+            "https://aidailypost.com/news/openai-aws-deal",
+            "https://openai.com/index/amazon-partnership/",
+            "https://www.aboutamazon.com/news/aws/amazon-open-ai-strategic-partnership-investment",
+        ]
+
+        issues = _find_weekly_primary_source_priority_issues(body, source_urls, "expert_body")
+
+        assert len(issues) == 1
+        assert "primary_source_priority" in issues[0]["message"]
+        assert "weekly_primary_source_cap_92" in _weekly_guardrail_cap_labels(issues)
+
+    def test_allows_secondary_first_when_no_official_source_is_available(self):
+        body = (
+            "## Top Stories\n\n"
+            "### Apple reportedly tests model choice in iOS 27\n\n"
+            "Apple is reportedly testing model choice for native AI features. [1](https://techcrunch.com/2026/05/05/apple-plans-model-choice)\n"
+        )
+        source_urls = ["https://techcrunch.com/2026/05/05/apple-plans-model-choice"]
+
+        assert _find_weekly_primary_source_priority_issues(body, source_urls, "learner_body") == []

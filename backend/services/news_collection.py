@@ -269,6 +269,55 @@ def _build_source_payload(
     }
 
 
+def _date_string(value: Any) -> str:
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    text = str(value or "")
+    match = _re_module.search(r"\d{4}-\d{2}-\d{2}", text)
+    return match.group(0) if match else ""
+
+
+def _published_at_from_result(result: Any) -> str:
+    for attr in ("published_date", "publishedDate", "published_at", "date"):
+        value = result.get(attr) if isinstance(result, dict) else getattr(result, attr, None)
+        published_at = _date_string(value)
+        if published_at:
+            return published_at
+    return ""
+
+
+def _daily_reference_date(target_date: str | None = None) -> datetime:
+    raw = target_date or today_kst()
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d")
+    except ValueError:
+        return datetime.now(timezone.utc)
+
+
+def _daily_source_date_window(target_date: str | None = None) -> tuple[str, str]:
+    base = _daily_reference_date(target_date)
+    return (
+        (base - timedelta(days=2)).strftime("%Y-%m-%d"),
+        (base + timedelta(days=1)).strftime("%Y-%m-%d"),
+    )
+
+
+def _is_stale_daily_candidate(
+    published_at: str,
+    target_date: str | None,
+    *,
+    max_age_days: int = 7,
+) -> bool:
+    if not published_at:
+        return False
+    try:
+        published = datetime.strptime(published_at, "%Y-%m-%d").date()
+        reference = _daily_reference_date(target_date).date()
+    except ValueError:
+        return False
+    return published < reference - timedelta(days=max_age_days)
+
+
 def _canonicalize_source_url(url: str) -> str:
     """Normalize a source URL for stable dedupe."""
     if not url:
@@ -373,14 +422,18 @@ def _official_lookup_terms(group_title: str, item_title: str) -> list[str]:
 
 
 def _should_lookup_official_source(group) -> bool:
-    """Only do official lookup for single-source groups that start from a secondary URL."""
-    if len(group.items) != 1:
+    """Return true when a story should search for an official corroborating source."""
+    if not group.items:
         return False
-    item = group.items[0]
-    meta = _classify_source_meta(url=item.url, title=item.title)
-    if meta["source_tier"] == "primary":
+    metas = [
+        _classify_source_meta(url=item.url, title=item.title)
+        for item in group.items
+    ]
+    if any(meta["source_tier"] == "primary" for meta in metas):
         return False
-    return group.reason.startswith("[LEAD]") or meta["source_tier"] == "secondary"
+    if (getattr(group, "reason", "") or "").startswith("[LEAD]"):
+        return True
+    return len(group.items) == 1 and metas[0]["source_tier"] == "secondary"
 
 
 async def _lookup_official_sources(
@@ -393,70 +446,75 @@ async def _lookup_official_sources(
     end_date: str,
 ) -> list[dict]:
     """Search likely official domains for a source article that matches the lead story."""
-    item = group.items[0]
-    domains = _official_lookup_domains(group.group_title, item.title)
+    item_titles = " ".join(item.title or "" for item in group.items)
+    domains = _official_lookup_domains(group.group_title, item_titles)
     if not domains:
         return []
 
-    terms = _official_lookup_terms(group.group_title, item.title)
+    terms = _official_lookup_terms(group.group_title, item_titles)
     if not terms:
         return []
 
-    existing = {_canonicalize_source_url(item.url)}
+    existing = {_canonicalize_source_url(item.url) for item in group.items}
     official_sources: list[dict] = []
 
-    for domain in domains:
-        query = f"{' '.join(terms)} site:{domain}"
-        try:
-            resp = await asyncio.wait_for(
-                loop.run_in_executor(
-                    None,
-                    lambda q=query: exa.search_and_contents(
-                        q,
-                        num_results=max(2, max_sources - 1),
-                        type="auto",
-                        text=True,
-                        start_published_date=start_date,
-                        end_published_date=end_date,
+    for use_date_filter in (True, False):
+        for domain in domains:
+            query = f"{' '.join(terms)} site:{domain}"
+            search_kwargs = {
+                "query": query,
+                "num_results": max(2, max_sources - 1),
+                "type": "auto",
+                "text": True,
+            }
+            if use_date_filter:
+                search_kwargs["start_published_date"] = start_date
+                search_kwargs["end_published_date"] = end_date
+            try:
+                resp = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda kwargs=search_kwargs: exa.search_and_contents(**kwargs),
                     ),
-                ),
-                timeout=15,
-            )
-        except Exception as e:
-            logger.debug("Official lookup failed for '%s' on %s: %s", group.group_title[:60], domain, e)
-            continue
-
-        for result in (resp.results if hasattr(resp, "results") else []):
-            if not result.url:
-                continue
-            hostname = (urlparse(result.url).hostname or "").lower()
-            if hostname != domain and not hostname.endswith(f".{domain}"):
-                continue
-            canonical_url = _canonicalize_source_url(result.url)
-            if canonical_url in existing:
-                continue
-            result_title = result.title or ""
-            if any(d in hostname for d in _load_domain_filters()["block_non_en"]):
-                continue
-            if any("\u4e00" <= ch <= "\u9fff" for ch in result_title):
-                continue
-            payload = _build_source_payload(
-                url=result.url,
-                title=result_title,
-                content=result.text or "",
-                source="exa_official_lookup",
-            )
-            passes, reason = _enrich_source_passes_quality(payload, "exa_official_lookup")
-            if not passes:
-                logger.info(
-                    "Official lookup drop [%s]: %s for '%s'",
-                    reason, result.url[:80], group.group_title[:40],
+                    timeout=15,
                 )
+            except Exception as e:
+                logger.debug("Official lookup failed for '%s' on %s: %s", group.group_title[:60], domain, e)
                 continue
-            official_sources.append(payload)
-            existing.add(canonical_url)
-            if len(official_sources) >= max_sources - 1:
-                return official_sources
+
+            for result in (resp.results if hasattr(resp, "results") else []):
+                if not result.url:
+                    continue
+                hostname = (urlparse(result.url).hostname or "").lower()
+                if hostname != domain and not hostname.endswith(f".{domain}"):
+                    continue
+                canonical_url = _canonicalize_source_url(result.url)
+                if canonical_url in existing:
+                    continue
+                result_title = result.title or ""
+                if any(d in hostname for d in _load_domain_filters()["block_non_en"]):
+                    continue
+                if any("\u4e00" <= ch <= "\u9fff" for ch in result_title):
+                    continue
+                payload = _build_source_payload(
+                    url=result.url,
+                    title=result_title,
+                    content=result.text or "",
+                    source="exa_official_lookup",
+                )
+                passes, reason = _enrich_source_passes_quality(payload, "exa_official_lookup")
+                if not passes:
+                    logger.info(
+                        "Official lookup drop [%s]: %s for '%s'",
+                        reason, result.url[:80], group.group_title[:40],
+                    )
+                    continue
+                official_sources.append(payload)
+                existing.add(canonical_url)
+                if len(official_sources) >= max_sources - 1:
+                    return official_sources
+        if official_sources:
+            break
 
     return official_sources
 
@@ -496,24 +554,43 @@ async def _collect_fallback_news(
             from exa_py import Exa
             exa = Exa(api_key=settings.exa_api_key)
             loop = asyncio.get_running_loop()
+            start_date = date_kwargs.get("start_date")
+            end_date = date_kwargs.get("end_date")
+            if not start_date or not end_date:
+                start_date, end_date = _daily_source_date_window()
+            reference_date = date_kwargs.get("end_date")
             for query in queries[:4]:  # limit to 4 queries to conserve Exa credits
                 try:
+                    search_kwargs = {
+                        "query": query,
+                        "num_results": 5,
+                        "type": "auto",
+                        "category": "news",
+                        "text": True,
+                        "start_published_date": start_date,
+                        "end_published_date": end_date,
+                    }
                     exa_resp = await asyncio.wait_for(
                         loop.run_in_executor(
                             None,
-                            lambda q=query: exa.search_and_contents(
-                                q, num_results=5,
-                                type="auto", category="news", text=True,
-                            ),
+                            lambda kwargs=search_kwargs: exa.search_and_contents(**kwargs),
                         ),
                         timeout=15,
                     )
                     for r in (exa_resp.results if hasattr(exa_resp, "results") else []):
+                        published_at = _published_at_from_result(r)
+                        if _is_stale_daily_candidate(published_at, reference_date):
+                            logger.info(
+                                "Exa fallback drop [stale_published_date=%s]: %s",
+                                published_at, r.url[:100],
+                            )
+                            continue
                         results.append({
                             "url": r.url,
                             "title": r.title or "",
                             "content": (r.text or "")[:2000],
                             "raw_content": r.text or "",
+                            "published_date": published_at,
                         })
                 except Exception as e:
                     logger.warning("Exa fallback failed for '%s': %s", query, e)
@@ -662,6 +739,7 @@ async def _collect_tavily(
                 snippet=item.get("content", ""),
                 source="tavily_fallback" if url in fallback_urls else "tavily",
                 raw_content=item.get("raw_content") or "",
+                published_at=_published_at_from_result(item),
             )
         )
 
@@ -977,21 +1055,35 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
         exa = Exa(api_key=settings.exa_api_key)
         loop = asyncio.get_running_loop()
         candidates: list[NewsCandidate] = []
+        start_date, end_date = _daily_source_date_window(target_date)
 
         for query in EXA_BUSINESS_QUERIES + EXA_RESEARCH_QUERIES:
             try:
+                search_kwargs = {
+                    "query": query,
+                    "num_results": 5,
+                    "type": "auto",
+                    "category": "news",
+                    "text": True,
+                    "start_published_date": start_date,
+                    "end_published_date": end_date,
+                }
                 exa_resp = await asyncio.wait_for(
                     loop.run_in_executor(
                         None,
-                        lambda q=query: exa.search_and_contents(
-                            q, num_results=5,
-                            type="auto", category="news", text=True,
-                        ),
+                        lambda kwargs=search_kwargs: exa.search_and_contents(**kwargs),
                     ),
                     timeout=15,
                 )
                 for r in (exa_resp.results if hasattr(exa_resp, "results") else []):
                     if not r.url:
+                        continue
+                    published_at = _published_at_from_result(r)
+                    if _is_stale_daily_candidate(published_at, target_date):
+                        logger.info(
+                            "Exa drop [stale_published_date=%s]: %s",
+                            published_at, r.url[:100],
+                        )
                         continue
                     candidates.append(NewsCandidate(
                         title=r.title or "",
@@ -999,6 +1091,7 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
                         snippet=(r.text or "")[:300],
                         source="exa",
                         raw_content=r.text or "",
+                        published_at=published_at,
                     ))
             except Exception as e:
                 logger.debug("Exa query failed for '%s': %s", query, e)
@@ -1030,6 +1123,7 @@ async def enrich_sources(
     """Find additional sources for groups that need them.
 
     Groups with 2+ items already have multi-source coverage from merge — skip.
+    Secondary-only lead stories still get an official-source lookup.
     Groups with 1 item use Exa find_similar to locate additional sources.
 
     Args:
@@ -1049,7 +1143,7 @@ async def enrich_sources(
         if not primary:
             continue
 
-        if len(group.items) >= 2:
+        if len(group.items) >= 2 and not _should_lookup_official_source(group):
             # Already multi-source from merge — use existing sources
             enriched[primary] = [
                 _build_source_payload(
@@ -1113,14 +1207,14 @@ async def enrich_sources(
 
     async def _enrich_one(group) -> tuple[str, list[dict]]:
         item = group.items[0]
-        original_content = raw_content_map.get(item.url, "")
         sources = [
             _build_source_payload(
                 url=item.url,
                 title=item.title,
-                content=original_content,
+                content=raw_content_map.get(item.url, ""),
                 source="merge",
             )
+            for item in group.items
         ]
 
         if _should_lookup_official_source(group):
@@ -1136,50 +1230,51 @@ async def enrich_sources(
 
         seen_source_urls = {_canonicalize_source_url(source["url"]) for source in sources}
 
-        try:
-            resp = await asyncio.wait_for(
-                loop.run_in_executor(
-                    None,
-                    lambda: exa.find_similar_and_contents(
-                        url=item.url,
-                        num_results=max_sources - 1,
-                        text=True,
-                        start_published_date=start_date,
-                        end_published_date=end_date,
+        if len(group.items) < 2:
+            try:
+                resp = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: exa.find_similar_and_contents(
+                            url=item.url,
+                            num_results=max_sources - 1,
+                            text=True,
+                            start_published_date=start_date,
+                            end_published_date=end_date,
+                        ),
                     ),
-                ),
-                timeout=15,
-            )
-            for r in (resp.results if hasattr(resp, "results") else []):
-                if not r.url or r.url == item.url:
-                    continue
-                # Filter non-EN/KO sources (same as collect stage)
-                r_title = r.title or ""
-                r_hostname = _re_module.sub(r"https?://(www\.)?", "", r.url).split("/")[0]
-                if any(d in r_hostname for d in _load_domain_filters()["block_non_en"]):
-                    continue
-                if any("\u4e00" <= ch <= "\u9fff" for ch in r_title):
-                    continue
-                canonical_url = _canonicalize_source_url(r.url)
-                if canonical_url in seen_source_urls:
-                    continue
-                payload = _build_source_payload(
-                    url=r.url,
-                    title=r_title,
-                    content=r.text or "",
-                    source="exa_enrich",
+                    timeout=15,
                 )
-                passes, reason = _enrich_source_passes_quality(payload, "exa_enrich")
-                if not passes:
-                    logger.info(
-                        "Enrich drop [%s]: %s for '%s'",
-                        reason, r.url[:80], group.group_title[:40],
+                for r in (resp.results if hasattr(resp, "results") else []):
+                    if not r.url or r.url == item.url:
+                        continue
+                    # Filter non-EN/KO sources (same as collect stage)
+                    r_title = r.title or ""
+                    r_hostname = _re_module.sub(r"https?://(www\.)?", "", r.url).split("/")[0]
+                    if any(d in r_hostname for d in _load_domain_filters()["block_non_en"]):
+                        continue
+                    if any("\u4e00" <= ch <= "\u9fff" for ch in r_title):
+                        continue
+                    canonical_url = _canonicalize_source_url(r.url)
+                    if canonical_url in seen_source_urls:
+                        continue
+                    payload = _build_source_payload(
+                        url=r.url,
+                        title=r_title,
+                        content=r.text or "",
+                        source="exa_enrich",
                     )
-                    continue
-                sources.append(payload)
-                seen_source_urls.add(canonical_url)
-        except Exception as e:
-            logger.debug("Enrich failed for '%s': %s", group.group_title[:60], e)
+                    passes, reason = _enrich_source_passes_quality(payload, "exa_enrich")
+                    if not passes:
+                        logger.info(
+                            "Enrich drop [%s]: %s for '%s'",
+                            reason, r.url[:80], group.group_title[:40],
+                        )
+                        continue
+                    sources.append(payload)
+                    seen_source_urls.add(canonical_url)
+            except Exception as e:
+                logger.debug("Enrich failed for '%s': %s", group.group_title[:60], e)
 
         return group.primary_url, sources
 
@@ -1281,6 +1376,10 @@ async def collect_news(
             # Phase 2 — drop spam-tier (research_blocklist) candidates at collection time
             if source_meta.get("source_tier") == "spam":
                 logger.info("Dropping spam-tier source: %s", c.url)
+                filtered_count += 1
+                continue
+            if _is_stale_daily_candidate(c.published_at, target_date):
+                logger.info("Dropping stale daily source (%s): %s", c.published_at, c.url)
                 filtered_count += 1
                 continue
             unique.append(c.model_copy(update=source_meta))
@@ -1560,7 +1659,16 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
     search_queries = _build_search_queries(entities)
     parts: list[str] = []
 
-    async with httpx.AsyncClient(timeout=30.0, headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"}) as client:
+    try:
+        client_cm = httpx.AsyncClient(
+            timeout=30.0,
+            headers={"User-Agent": "0to1log:news-digest/1.0 (by /u/0to1log)"},
+        )
+    except Exception as e:
+        logger.debug("Community HTTP client construction failed for '%s': %s", title[:40], e)
+        return ""
+
+    async with client_cm as client:
         # --- Hacker News: URL search first, keyword fallback ---
         try:
             # Phase 1: URL-based search (most accurate)

@@ -9,6 +9,7 @@ class NewsCandidate(BaseModel):
     snippet: str = ""
     source: str = "tavily"
     raw_content: str = ""
+    published_at: str = ""
     source_kind: str = ""
     source_confidence: str = ""
     source_tier: str = ""

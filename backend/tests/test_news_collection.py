@@ -186,6 +186,43 @@ async def test_collect_news_deduplicates_urls():
 
 
 @pytest.mark.asyncio
+async def test_collect_exa_uses_daily_date_window_and_drops_stale_primary_result():
+    from services.news_collection import _collect_exa
+
+    mock_exa = MagicMock()
+    mock_exa.search_and_contents.side_effect = [
+        SimpleNamespace(
+            results=[
+                SimpleNamespace(
+                    url="https://blogs.nvidia.com/blog/nemotron-3-super-agentic-ai/",
+                    title="Nemotron 3 Super Advances Agentic AI",
+                    text="NVIDIA announced Nemotron 3 Super.",
+                    published_date="2026-03-11T00:00:00Z",
+                ),
+                SimpleNamespace(
+                    url="https://openai.com/index/fresh-ai-launch/",
+                    title="Fresh AI Launch",
+                    text="OpenAI announced a fresh AI launch.",
+                    published_date="2026-05-14T09:00:00Z",
+                ),
+            ]
+        ),
+        *[SimpleNamespace(results=[]) for _ in range(6)],
+    ]
+
+    with patch("services.news_collection.settings") as mock_settings, \
+         patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
+        mock_settings.exa_api_key = "test-key"
+        candidates = await _collect_exa("2026-05-14")
+
+    first_kwargs = mock_exa.search_and_contents.call_args_list[0].kwargs
+    assert first_kwargs["start_published_date"] == "2026-05-12"
+    assert first_kwargs["end_published_date"] == "2026-05-15"
+    assert [candidate.url for candidate in candidates] == ["https://openai.com/index/fresh-ai-launch/"]
+    assert candidates[0].published_at == "2026-05-14"
+
+
+@pytest.mark.asyncio
 async def test_collect_news_no_api_key_returns_empty():
     p1, p2, p3 = _patch_new_collectors()
     with patch("services.news_collection.settings") as mock_settings, \
@@ -205,9 +242,10 @@ async def test_collect_news_api_error_returns_empty():
     mock_tavily.search.side_effect = Exception("API rate limit")
 
     p1, p2, p3 = _patch_new_collectors()
+    fallback_patch = patch("services.news_collection._collect_fallback_news", new_callable=AsyncMock, return_value=[])
     with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
          patch("services.news_collection.settings") as mock_settings, \
-         p1, p2, p3:
+         p1, p2, p3, fallback_patch:
         mock_settings.tavily_api_key = "test-key"
 
         from services.news_collection import collect_news
@@ -293,6 +331,106 @@ async def test_enrich_sources_adds_official_source_for_secondary_lead_group():
     assert sources[1]["url"] == "https://openai.com/index/axios-developer-tool-compromise/"
 
 
+@pytest.mark.asyncio
+async def test_enrich_sources_checks_official_source_for_multi_source_secondary_lead_group():
+    from models.news_pipeline import ClassifiedGroup, GroupedItem
+    from services.news_collection import enrich_sources
+
+    group = ClassifiedGroup(
+        group_title="OpenAI launches Daybreak to automate software vulnerability defense",
+        items=[
+            GroupedItem(
+                url="https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai",
+                title="OpenAI just released its answer to Claude Mythos",
+            ),
+            GroupedItem(
+                url="https://gizmodo.com/daybreak-openais-answer-to-anthropics-project-glasswing-has-arrived-2000757349",
+                title="Daybreak: OpenAI's answer to Anthropic's Project Glasswing has arrived",
+            ),
+        ],
+        category="business",
+        subcategory="big_tech",
+        reason="[LEAD] Most important business story",
+    )
+    raw_content_map = {
+        group.items[0].url: "The Verge coverage",
+        group.items[1].url: "Gizmodo coverage",
+    }
+
+    mock_exa = MagicMock()
+    mock_exa.search_and_contents.return_value = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                url="https://openai.com/daybreak/",
+                title="Daybreak",
+                text="Official OpenAI Daybreak page",
+            )
+        ]
+    )
+    mock_exa.find_similar_and_contents.return_value = SimpleNamespace(results=[])
+
+    with patch("services.news_collection.settings") as mock_settings, \
+         patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
+        mock_settings.exa_api_key = "test-key"
+        enriched = await enrich_sources([group], raw_content_map, target_date="2026-05-13")
+
+    sources = enriched[group.primary_url]
+    assert [source["url"] for source in sources[:2]] == [group.items[0].url, group.items[1].url]
+    official = next(source for source in sources if source["url"] == "https://openai.com/daybreak/")
+    assert official["source_kind"] == "official_site"
+    assert official["source_tier"] == "primary"
+    mock_exa.find_similar_and_contents.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_official_lookup_retries_without_date_filter_when_dated_search_misses_static_page():
+    from models.news_pipeline import ClassifiedGroup, GroupedItem
+    from services.news_collection import enrich_sources
+
+    group = ClassifiedGroup(
+        group_title="OpenAI launches Daybreak to automate software vulnerability defense",
+        items=[
+            GroupedItem(
+                url="https://www.theverge.com/ai-artificial-intelligence/928342/openai-daybreak-security-ai",
+                title="OpenAI just released its answer to Claude Mythos",
+            )
+        ],
+        category="business",
+        subcategory="big_tech",
+        reason="[LEAD] Most important business story",
+    )
+
+    mock_exa = MagicMock()
+    mock_exa.search_and_contents.side_effect = [
+        SimpleNamespace(results=[]),
+        SimpleNamespace(
+            results=[
+                SimpleNamespace(
+                    url="https://openai.com/daybreak/",
+                    title="Daybreak",
+                    text="Official OpenAI Daybreak page",
+                )
+            ]
+        ),
+    ]
+    mock_exa.find_similar_and_contents.return_value = SimpleNamespace(results=[])
+
+    with patch("services.news_collection.settings") as mock_settings, \
+         patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
+        mock_settings.exa_api_key = "test-key"
+        enriched = await enrich_sources(
+            [group],
+            {group.primary_url: "The Verge coverage"},
+            target_date="2026-05-13",
+        )
+
+    assert any(source["url"] == "https://openai.com/daybreak/" for source in enriched[group.primary_url])
+    first_kwargs = mock_exa.search_and_contents.call_args_list[0].kwargs
+    second_kwargs = mock_exa.search_and_contents.call_args_list[1].kwargs
+    assert "start_published_date" in first_kwargs
+    assert "start_published_date" not in second_kwargs
+
+
 TAVILY_REACTION_RESPONSE = {
     "results": [
         {
@@ -307,28 +445,75 @@ TAVILY_REACTION_RESPONSE = {
 }
 
 
+class _FakeCommunityResponse:
+    def __init__(self, payload: dict, status_code: int = 200):
+        self._payload = payload
+        self.status_code = status_code
+
+    def json(self):
+        return self._payload
+
+
+class _FakeCommunityClient:
+    def __init__(self, *args, mode: str = "empty", **kwargs):
+        self.mode = mode
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    async def get(self, url: str, **kwargs):
+        params = kwargs.get("params") or {}
+        if self.mode == "hn_match" and "hn.algolia.com" in url:
+            if params.get("restrictSearchableAttributes") == "url":
+                return _FakeCommunityResponse({
+                    "hits": [
+                        {
+                            "objectID": "123",
+                            "title": "GPT-5 Released",
+                            "points": 42,
+                            "num_comments": 8,
+                        }
+                    ]
+                })
+            if params.get("tags") == "comment,story_123":
+                return _FakeCommunityResponse({
+                    "hits": [
+                        {
+                            "comment_text": (
+                                "This is a game changer for teams comparing benchmark "
+                                "claims against real deployment constraints."
+                            )
+                        }
+                    ]
+                })
+        return _FakeCommunityResponse({"hits": [], "data": {"children": []}})
+
+
 @pytest.mark.asyncio
 async def test_collect_community_reactions_returns_text():
     """Community reactions should return combined text."""
-    mock_tavily = MagicMock()
-    mock_tavily.search.return_value = TAVILY_REACTION_RESPONSE
-
-    with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
+    with patch("httpx.AsyncClient", lambda *args, **kwargs: _FakeCommunityClient(mode="hn_match")), \
+         patch("services.news_collection.asyncio.sleep", new_callable=AsyncMock), \
          patch("services.news_collection.settings") as mock_settings:
-        mock_settings.tavily_api_key = "test-key"
+        mock_settings.brave_api_key = ""
 
         from services.news_collection import collect_community_reactions
         text = await collect_community_reactions("GPT-5 Released", "https://openai.com/gpt5")
 
     assert "game changer" in text
-    assert "reddit.com" in text
+    assert "Hacker News" in text
 
 
 @pytest.mark.asyncio
 async def test_collect_community_reactions_no_api_key():
-    """Missing API key returns empty string."""
-    with patch("services.news_collection.settings") as mock_settings:
-        mock_settings.tavily_api_key = ""
+    """No community matches returns empty string."""
+    with patch("httpx.AsyncClient", lambda *args, **kwargs: _FakeCommunityClient()), \
+         patch("services.news_collection.asyncio.sleep", new_callable=AsyncMock), \
+         patch("services.news_collection.settings") as mock_settings:
+        mock_settings.brave_api_key = ""
 
         from services.news_collection import collect_community_reactions
         text = await collect_community_reactions("Title", "https://example.com")
@@ -338,13 +523,17 @@ async def test_collect_community_reactions_no_api_key():
 
 @pytest.mark.asyncio
 async def test_collect_community_reactions_api_error():
-    """API error returns empty string, not crash."""
-    mock_tavily = MagicMock()
-    mock_tavily.search.side_effect = Exception("Timeout")
+    """Community API error returns empty string, not crash."""
+    async def failing_get(*args, **kwargs):
+        raise TimeoutError("Timeout")
 
-    with patch("services.news_collection.TavilyClient", return_value=mock_tavily), \
+    client = _FakeCommunityClient()
+    client.get = failing_get
+
+    with patch("httpx.AsyncClient", lambda *args, **kwargs: client), \
+         patch("services.news_collection.asyncio.sleep", new_callable=AsyncMock), \
          patch("services.news_collection.settings") as mock_settings:
-        mock_settings.tavily_api_key = "test-key"
+        mock_settings.brave_api_key = ""
 
         from services.news_collection import collect_community_reactions
         text = await collect_community_reactions("Title", "https://example.com")
@@ -354,10 +543,10 @@ async def test_collect_community_reactions_api_error():
 
 @pytest.mark.asyncio
 async def test_collect_community_reactions_client_construction_error():
-    """TavilyClient construction failure returns empty string, not crash."""
-    with patch("services.news_collection.TavilyClient", side_effect=Exception("bad key")), \
+    """HTTP client construction failure returns empty string, not crash."""
+    with patch("httpx.AsyncClient", side_effect=Exception("bad client")), \
          patch("services.news_collection.settings") as mock_settings:
-        mock_settings.tavily_api_key = "test-key"
+        mock_settings.brave_api_key = ""
 
         from services.news_collection import collect_community_reactions
         text = await collect_community_reactions("Title", "https://example.com")

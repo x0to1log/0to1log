@@ -292,6 +292,76 @@ def _dedup_source_cards(sources: list[dict]) -> list[dict]:
     return deduped
 
 
+_QUIZ_SUPPORT_TOKEN_RE = re.compile(
+    r"\$?\d+(?:[.,]\d+)*(?:%|x)?|[a-z][a-z0-9-]{2,}|[\uac00-\ud7af]{2,}",
+    re.IGNORECASE,
+)
+_QUIZ_SUPPORT_STOPWORDS = frozenset({
+    "and", "are", "best", "but", "can", "for", "from", "has", "have", "how",
+    "into", "its", "one", "over", "per", "the", "this", "that", "was", "what",
+    "when", "which", "with", "why", "reported", "captures", "correct",
+    "option", "choice", "because", "under",
+})
+
+
+def _quiz_support_tokens(text: str) -> set[str]:
+    tokens: set[str] = set()
+    for token in _QUIZ_SUPPORT_TOKEN_RE.findall(text.lower()):
+        normalized = token.strip(".,;:()[]{}")
+        if not normalized or normalized in _QUIZ_SUPPORT_STOPWORDS:
+            continue
+        tokens.add(normalized)
+    return tokens
+
+
+def _quiz_token_weight(token: str) -> int:
+    if any(ch.isdigit() for ch in token):
+        return 3
+    if len(token) >= 7 or "-" in token:
+        return 2
+    return 1
+
+
+def _repair_quiz_answer_from_explanation(
+    *,
+    question: str,
+    options: list[str],
+    answer: str,
+    explanation: str,
+    label: str,
+) -> str:
+    """Repair a likely answer_index slip when explanation strongly supports another option."""
+    evidence_tokens = _quiz_support_tokens(f"{question} {explanation}")
+    if not explanation.strip() or len(evidence_tokens) < 3:
+        return answer
+    try:
+        chosen_idx = options.index(answer)
+    except ValueError:
+        return answer
+
+    scores: list[int] = []
+    for option in options:
+        score = sum(
+            _quiz_token_weight(token)
+            for token in _quiz_support_tokens(option)
+            if token in evidence_tokens
+        )
+        scores.append(score)
+
+    best_idx = max(range(len(scores)), key=lambda i: scores[i])
+    chosen_score = scores[chosen_idx]
+    best_score = scores[best_idx]
+    runner_up = max((score for i, score in enumerate(scores) if i != best_idx), default=0)
+
+    if best_idx != chosen_idx and best_score >= 5 and best_score >= chosen_score + 4 and best_score >= runner_up + 3:
+        logger.warning(
+            "%s repaired: answer_index pointed to option %d but explanation supports option %d (scores=%s)",
+            label, chosen_idx, best_idx, scores,
+        )
+        return options[best_idx]
+    return answer
+
+
 def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | None:
     """Validate a single quiz item + shuffle options. Return None if invalid.
 
@@ -346,6 +416,14 @@ def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | Non
                 label, legacy_answer[:60], question[:60], len(options),
             )
             return None
+
+    answer = _repair_quiz_answer_from_explanation(
+        question=question,
+        options=options,
+        answer=answer,
+        explanation=explanation,
+        label=label,
+    )
 
     shuffled = list(options)
     random.shuffle(shuffled)

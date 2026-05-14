@@ -138,6 +138,28 @@ class TestSingleItemValidator:
         }
         assert _validate_and_shuffle_quiz_item(item) is None
 
+    def test_answer_index_repaired_when_explanation_supports_a_different_option(self):
+        item = {
+            "question": "Which pairing best captures the operational constraint and measured impact reported for Switchcraft?",
+            "options": [
+                "Throughput ceiling; 48% tool-call reduction at 1.7% accuracy loss",
+                "Memory budget; 46.6% perplexity improvement on language modeling",
+                "Latency budget; 82.9% accuracy with an 84% inference-cost reduction and $3,600 saved per million queries",
+                "Token limit; 3x sample-efficiency over parameter-only RL",
+            ],
+            "answer_index": 3,
+            "explanation": (
+                "Switchcraft is deployed under a latency budget and reports "
+                "82.9% accuracy with an 84% inference-cost reduction, saving "
+                "over $3,600 per million queries."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][2]
+
 
 def _make_valid_item(question: str = "Q", answer: str = "B") -> dict:
     return {
