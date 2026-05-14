@@ -1,0 +1,99 @@
+{"_meta": true, "note": "Existing non-archived handbook terms. Refresh by re-running scripts/export_handbook_slugs.py."}
+{"slug": "cuda", "term": "CUDA", "term_type": null, "categories": ["infra-hardware", "deep-learning"], "status": "published"}
+{"slug": "lora", "term": "LoRA", "term_type": null, "categories": ["llm-genai", "deep-learning", "ml-fundamentals"], "status": "published"}
+{"slug": "iso-42001", "term": "ISO 42001", "term_type": "foundational_concept", "categories": ["safety-ethics"], "status": "draft"}
+{"slug": "model-context-protocol", "term": "Model Context Protocol", "term_type": "protocol_format_data_structure", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "reinforcement-learning", "term": "reinforcement learning", "term_type": null, "categories": ["ml-fundamentals"], "status": "published"}
+{"slug": "prompt-injection", "term": "Prompt Injection", "term_type": null, "categories": ["safety-ethics", "llm-genai"], "status": "published"}
+{"slug": "docker", "term": "Docker", "term_type": null, "categories": ["products-platforms", "data-engineering", "infra-hardware"], "status": "published"}
+{"slug": "rag", "term": "RAG", "term_type": null, "categories": ["llm-genai", "data-engineering"], "status": "draft"}
+{"slug": "open-source-llm", "term": "open-source LLM", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "embedding", "term": "Embedding", "term_type": "concept", "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "hugging-face", "term": "Hugging Face", "term_type": null, "categories": ["products-platforms", "llm-genai", "ml-fundamentals"], "status": "draft"}
+{"slug": "rlhf", "term": "Reinforcement Learning from Human Feedback", "term_type": "foundational_concept", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "mixture-of-experts", "term": "Mixture of Experts", "term_type": "model_architecture", "categories": ["deep-learning", "llm-genai"], "status": "draft"}
+{"slug": "knowledge-distillation", "term": "Knowledge Distillation", "term_type": "training_optimization_method", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "chatgpt", "term": "ChatGPT", "term_type": "product_platform_service", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "ai-datacentre", "term": "AI datacentre", "term_type": null, "categories": ["infra-hardware"], "status": "draft"}
+{"slug": "natural-language-processing", "term": "NLP", "term_type": null, "categories": ["llm-genai", "deep-learning", "ml-fundamentals"], "status": "published"}
+{"slug": "quantization", "term": "Quantization", "term_type": null, "categories": ["infra-hardware", "deep-learning"], "status": "draft"}
+{"slug": "ablation-study", "term": "Ablation Study", "term_type": "metric_benchmark", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "vector-database", "term": "Vector Database", "term_type": null, "categories": ["data-engineering", "llm-genai"], "status": "draft"}
+{"slug": "dpo", "term": "Direct Preference Optimization", "term_type": "training_optimization_method", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "auc-area-under-the-curve", "term": "AUC (Area Under the Curve)", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "ai-alignment", "term": "AI Alignment", "term_type": null, "categories": ["safety-ethics", "llm-genai"], "status": "draft"}
+{"slug": "f1-score", "term": "F1 Score", "term_type": "metric_benchmark", "categories": ["ml-fundamentals", "math-statistics"], "status": "published"}
+{"slug": "anthropic", "term": "Anthropic", "term_type": null, "categories": ["products-platforms", "llm-genai", "safety-ethics"], "status": "published"}
+{"slug": "hallucination", "term": "Hallucination", "term_type": null, "categories": ["safety-ethics", "llm-genai"], "status": "draft"}
+{"slug": "openai", "term": "OpenAI", "term_type": null, "categories": ["products-platforms", "llm-genai", "safety-ethics"], "status": "published"}
+{"slug": "self-attention", "term": "Self-Attention", "term_type": null, "categories": ["llm-genai", "deep-learning", "ml-fundamentals"], "status": "published"}
+{"slug": "nvidia", "term": "Nvidia", "term_type": null, "categories": ["products-platforms", "llm-genai", "infra-hardware"], "status": "published"}
+{"slug": "overfitting", "term": "overfitting", "term_type": null, "categories": ["ml-fundamentals", "math-statistics"], "status": "published"}
+{"slug": "function-calling", "term": "Function Calling", "term_type": null, "categories": ["products-platforms", "llm-genai"], "status": "draft"}
+{"slug": "bert", "term": "BERT", "term_type": null, "categories": ["llm-genai", "deep-learning", "ml-fundamentals"], "status": "published"}
+{"slug": "etl-extract-transform-load", "term": "ETL (Extract, Transform, Load)", "term_type": null, "categories": ["data-engineering"], "status": "draft"}
+{"slug": "ab-test", "term": "A/B Test", "term_type": null, "categories": ["ml-fundamentals", "data-engineering"], "status": "draft"}
+{"slug": "diffusion-model", "term": "diffusion model", "term_type": null, "categories": ["deep-learning"], "status": "published"}
+{"slug": "aws-amazon-web-services", "term": "AWS (Amazon Web Services)", "term_type": null, "categories": ["infra-hardware", "products-platforms"], "status": "draft"}
+{"slug": "claude", "term": "Claude", "term_type": "product_platform", "categories": ["products-platforms", "llm-genai", "deep-learning"], "status": "published"}
+{"slug": "entropy", "term": "Entropy", "term_type": null, "categories": ["math-statistics", "deep-learning"], "status": "draft"}
+{"slug": "frontier-model", "term": "Frontier model", "term_type": "foundational_concept", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "bedrock", "term": "Bedrock", "term_type": null, "categories": ["products-platforms", "infra-hardware", "llm-genai"], "status": "published"}
+{"slug": "ar-auto-regressive-model", "term": "AR ", "term_type": null, "categories": ["math-statistics"], "status": "draft"}
+{"slug": "pre-training", "term": "pre-training", "term_type": null, "categories": ["ml-fundamentals", "llm-genai"], "status": "published"}
+{"slug": "trainium", "term": "Trainium", "term_type": null, "categories": ["infra-hardware"], "status": "published"}
+{"slug": "copilot-cli", "term": "Copilot CLI", "term_type": "product_platform", "categories": ["products-platforms", "llm-genai"], "status": "draft"}
+{"slug": "post-training", "term": "post-training", "term_type": null, "categories": ["ml-fundamentals", "llm-genai"], "status": "published"}
+{"slug": "agentic-workflows", "term": "Agentic workflows", "term_type": null, "categories": ["ml-fundamentals", "llm-genai"], "status": "published"}
+{"slug": "speculative-decoding", "term": "Speculative decoding", "term_type": "technique_method", "categories": ["llm-genai"], "status": "draft"}
+{"slug": "gpu", "term": "GPU", "term_type": "hardware_infra", "categories": ["infra-hardware", "deep-learning", "ml-fundamentals"], "status": "published"}
+{"slug": "real-time-inference", "term": "real-time inference", "term_type": null, "categories": ["infra-hardware", "llm-genai"], "status": "published"}
+{"slug": "kv-cache", "term": "KV cache", "term_type": "technique_method", "categories": ["infra-hardware", "llm-genai"], "status": "draft"}
+{"slug": "edge-deployment", "term": "edge deployment", "term_type": null, "categories": ["infra-hardware", "llm-genai"], "status": "published"}
+{"slug": "chain-of-thought", "term": "CoT", "term_type": "foundational_concept", "categories": ["llm-genai", "ml-fundamentals"], "status": "draft"}
+{"slug": "marl", "term": "MARL", "term_type": null, "categories": ["ml-fundamentals"], "status": "published"}
+{"slug": "ising-nvidia", "term": "Ising (NVIDIA)", "term_type": null, "categories": ["llm-genai", "infra-hardware"], "status": "queued"}
+{"slug": "aggagent", "term": "AggAgent", "term_type": null, "categories": ["llm-genai", "ml-fundamentals"], "status": "queued"}
+{"slug": "transformer", "term": "Transformer", "term_type": null, "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "qcaleval", "term": "QCalEval", "term_type": null, "categories": ["llm-genai", "data-engineering"], "status": "queued"}
+{"slug": "inference-cost", "term": "inference cost", "term_type": null, "categories": ["products-platforms", "llm-genai", "infra-hardware"], "status": "published"}
+{"slug": "gpu-cluster", "term": "GPU cluster", "term_type": null, "categories": ["infra-hardware"], "status": "published"}
+{"slug": "icecache", "term": "IceCache", "term_type": null, "categories": ["data-engineering", "cs-fundamentals"], "status": "queued"}
+{"slug": "output-tokens", "term": "output tokens", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "pagedattention", "term": "PagedAttention", "term_type": null, "categories": ["cs-fundamentals", "deep-learning"], "status": "queued"}
+{"slug": "attention", "term": "Attention", "term_type": null, "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "vllm", "term": "vLLM", "term_type": "hardware_runtime_infra", "categories": ["llm-genai", "deep-learning"], "status": "published"}
+{"slug": "llm", "term": "Large Language Model", "term_type": "concept", "categories": ["llm-genai", "deep-learning", "ml-fundamentals"], "status": "published"}
+{"slug": "openai-frontier", "term": "OpenAI Frontier", "term_type": "product_platform_service", "categories": ["llm-genai", "products-platforms"], "status": "draft"}
+{"slug": "acquihire", "term": "acquihire", "term_type": "system_workflow_pattern", "categories": ["products-platforms"], "status": "draft"}
+{"slug": "llm-internals", "term": "LLM Internals", "term_type": "foundational_concept", "categories": ["products-platforms", "cs-fundamentals"], "status": "draft"}
+{"slug": "clawbench", "term": "ClawBench", "term_type": null, "categories": ["safety-ethics"], "status": "queued"}
+{"slug": "mtia", "term": "MTIA", "term_type": null, "categories": ["infra-hardware", "cs-fundamentals"], "status": "queued"}
+{"slug": "hermes-hud", "term": "Hermes HUD", "term_type": null, "categories": ["products-platforms", "data-engineering"], "status": "queued"}
+{"slug": "os-blind", "term": "OS-BLIND", "term_type": null, "categories": ["safety-ethics"], "status": "queued"}
+{"slug": "multi-agent-system", "term": "multi-agent system", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "n-day-bench", "term": "N-Day-Bench", "term_type": null, "categories": ["safety-ethics"], "status": "queued"}
+{"slug": "pytorch", "term": "PyTorch", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "parcae", "term": "Parcae", "term_type": null, "categories": ["deep-learning", "ml-fundamentals"], "status": "queued"}
+{"slug": "tensorflow", "term": "TensorFlow", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "lightning-opd", "term": "Lightning OPD", "term_type": null, "categories": ["llm-genai", "data-engineering"], "status": "queued"}
+{"slug": "gemini-ai", "term": "Gemini", "term_type": null, "categories": ["products-platforms", "llm-genai", "deep-learning"], "status": "published"}
+{"slug": "model-parallelism", "term": "Model parallelism", "term_type": null, "categories": ["infra-hardware", "llm-genai"], "status": "published"}
+{"slug": "openai-codex", "term": "OpenAI Codex", "term_type": "model_algorithm_family", "categories": ["llm-genai", "cs-fundamentals"], "status": "published"}
+{"slug": "three-phase-transformer", "term": "Three-Phase Transformer", "term_type": "model_algorithm_family", "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "value-gradient-flow", "term": "Value Gradient Flow", "term_type": "training_optimization_method", "categories": ["ml-fundamentals", "llm-genai"], "status": "published"}
+{"slug": "self-supervised-pretext-tasks", "term": "Self-Supervised Pretext Tasks", "term_type": "training_optimization_method", "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "on-device-ai", "term": "on-device AI", "term_type": null, "categories": ["infra-hardware", "llm-genai"], "status": "published"}
+{"slug": "gpt-4o", "term": "GPT-4o", "term_type": null, "categories": ["products-platforms", "llm-genai"], "status": "published"}
+{"slug": "visual-instruction-tuning", "term": "Visual Instruction Tuning", "term_type": "training_optimization_method", "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "grouped-query-attention", "term": "grouped-query attention", "term_type": null, "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "cudnn", "term": "cuDNN", "term_type": null, "categories": ["infra-hardware", "products-platforms"], "status": "published"}
+{"slug": "rope", "term": "RoPE", "term_type": "foundational_concept", "categories": ["cs-fundamentals", "deep-learning"], "status": "published"}
+{"slug": "sora-video-model", "term": "Sora video model", "term_type": null, "categories": ["products-platforms", "deep-learning"], "status": "published"}
+{"slug": "multi-stage-training", "term": "multi-stage training", "term_type": null, "categories": ["ml-fundamentals", "llm-genai"], "status": "published"}
+{"slug": "inference-latency", "term": "inference latency", "term_type": null, "categories": ["infra-hardware", "llm-genai"], "status": "published"}
+{"slug": "vision-language-model", "term": "vision-language model", "term_type": null, "categories": ["deep-learning", "llm-genai"], "status": "published"}
+{"slug": "multi-hop-retrieval", "term": "multi-hop retrieval", "term_type": null, "categories": ["llm-genai", "data-engineering"], "status": "published"}
+{"slug": "gpt-rosalind", "term": "GPT-Rosalind", "term_type": null, "categories": ["llm-genai"], "status": "published"}
+{"slug": "supervised-fine-tuning", "term": "supervised fine-tuning", "term_type": null, "categories": ["ml-fundamentals", "llm-genai"], "status": "published"}
+{"slug": "recurrent-mechanism", "term": "recurrent mechanism", "term_type": null, "categories": ["deep-learning", "llm-genai"], "status": "published"}

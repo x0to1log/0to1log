@@ -1,0 +1,67 @@
+{"_meta": true, "category": "cs-fundamentals", "target": 50, "vocabulary_hint": "data structure, algorithm, protocol, runtime, API, compiler, interpreter, hash table, HTTP, thread, process, stack, heap", "reference_style": "MDN, RFCs, W3C, language specifications, and official docs", "quality_signals": "use concrete programming scenarios and official specs where relevant", "anti_patterns": "do not force AI framing when the concept is fundamentally general CS"}
+{"term": "HTTP", "aliases": ["Hypertext Transfer Protocol"], "type": "protocol_format_data_structure", "note": "request-response application protocol used by web APIs and services"}
+{"term": "HTTPS", "aliases": [], "type": "protocol_format_data_structure", "note": "HTTP carried over TLS for encrypted transport"}
+{"term": "TCP", "aliases": ["Transmission Control Protocol"], "type": "protocol_format_data_structure", "note": "reliable ordered transport protocol for network communication"}
+{"term": "TLS", "aliases": ["Transport Layer Security"], "type": "protocol_format_data_structure", "note": "cryptographic protocol that secures communication channels"}
+{"term": "DNS", "aliases": ["Domain Name System"], "type": "protocol_format_data_structure", "note": "distributed naming system that resolves hostnames to addresses"}
+{"term": "URL", "aliases": ["Uniform Resource Locator"], "type": "protocol_format_data_structure", "note": "specific kind of URI that includes location details"}
+{"term": "REST API", "aliases": ["REST"], "type": "protocol_format_data_structure", "note": "resource-oriented web API style built on HTTP semantics"}
+{"term": "GraphQL", "aliases": [], "type": "protocol_format_data_structure", "note": "query language and runtime for typed API access"}
+{"term": "gRPC", "aliases": [], "type": "protocol_format_data_structure", "note": "high-performance RPC framework using Protocol Buffers and HTTP/2"}
+{"term": "WebSocket", "aliases": [], "type": "protocol_format_data_structure", "note": "full-duplex protocol for persistent client-server communication"}
+{"term": "RPC", "aliases": ["Remote Procedure Call"], "type": "protocol_format_data_structure", "note": "invocation model that calls remote services like local functions"}
+{"term": "JSON", "aliases": ["JavaScript Object Notation"], "type": "protocol_format_data_structure", "note": "lightweight structured data interchange format"}
+{"term": "JSON Schema", "aliases": [], "type": "protocol_format_data_structure", "note": "specification for validating and describing JSON documents"}
+{"term": "Serialization", "aliases": [], "type": "foundational_concept", "note": "converts in-memory objects into transferable or storable representations"}
+{"term": "Deserialization", "aliases": [], "type": "foundational_concept", "note": "reconstructs structured objects from serialized data"}
+{"term": "Process", "aliases": [], "type": "foundational_concept", "note": "isolated executing program with its own memory space"}
+{"term": "Thread", "aliases": [], "type": "foundational_concept", "note": "independent execution path within a process"}
+{"term": "Concurrency", "aliases": [], "type": "foundational_concept", "note": "structuring work so multiple tasks can make progress together"}
+{"term": "Parallelism", "aliases": [], "type": "foundational_concept", "note": "running multiple computations at the same time on different resources"}
+{"term": "Asynchronous I/O", "aliases": ["Async I/O"], "type": "system_workflow_pattern", "note": "non-blocking input-output pattern that lets programs do other work while waiting"}
+{"term": "Synchronous I/O", "aliases": ["Sync I/O"], "type": "system_workflow_pattern", "note": "blocking input-output pattern that waits for each operation to finish"}
+{"term": "Event Loop", "aliases": [], "type": "foundational_concept", "note": "runtime mechanism that schedules callbacks and asynchronous tasks"}
+{"term": "Mutex", "aliases": [], "type": "foundational_concept", "note": "mutual exclusion primitive for protecting shared state"}
+{"term": "Deadlock", "aliases": [], "type": "problem_failure_mode", "note": "state where tasks wait forever on each other’s locks or resources"}
+{"term": "Race Condition", "aliases": [], "type": "problem_failure_mode", "note": "bug where outcome depends on uncontrolled execution timing"}
+{"term": "Stack", "aliases": [], "type": "protocol_format_data_structure", "note": "last-in first-out data structure used in parsing, execution, and traversal"}
+{"term": "Queue", "aliases": [], "type": "protocol_format_data_structure", "note": "first-in first-out data structure used in scheduling and work processing"}
+{"term": "Linked List", "aliases": [], "type": "protocol_format_data_structure", "note": "node-based sequential data structure with explicit next references"}
+{"term": "Hash Table", "aliases": ["Hash Map"], "type": "protocol_format_data_structure", "note": "key-value data structure optimized for fast lookup"}
+{"term": "Tree", "aliases": [], "type": "protocol_format_data_structure", "note": "hierarchical data structure of parent-child relationships"}
+{"term": "Trie", "aliases": ["Prefix Tree"], "type": "protocol_format_data_structure", "note": "tree optimized for prefix matching over strings"}
+{"term": "Graph", "aliases": [], "type": "protocol_format_data_structure", "note": "node-edge data structure for representing relationships"}
+{"term": "Priority Queue", "aliases": [], "type": "protocol_format_data_structure", "note": "queue that removes items by priority rather than arrival order"}
+{"term": "Bloom Filter", "aliases": [], "type": "protocol_format_data_structure", "note": "probabilistic structure for fast approximate set membership tests"}
+{"term": "LRU Cache", "aliases": ["Least Recently Used Cache"], "type": "data_storage_indexing_system", "note": "cache eviction policy that removes the least recently accessed items"}
+{"term": "Binary Search", "aliases": [], "type": "foundational_concept", "note": "logarithmic search algorithm over sorted data"}
+{"term": "Breadth-First Search", "aliases": ["BFS"], "type": "foundational_concept", "note": "graph traversal that expands level by level"}
+{"term": "Depth-First Search", "aliases": ["DFS"], "type": "foundational_concept", "note": "graph traversal that explores one path deeply before backtracking"}
+{"term": "Time Complexity", "aliases": [], "type": "metric_benchmark", "note": "how runtime grows as input size increases"}
+{"term": "Space Complexity", "aliases": [], "type": "metric_benchmark", "note": "how memory usage grows as input size increases"}
+{"term": "Big O Notation", "aliases": ["Big-O"], "type": "foundational_concept", "note": "asymptotic notation for upper-bound growth behavior"}
+{"term": "Recursion", "aliases": [], "type": "foundational_concept", "note": "function technique where a routine calls itself on smaller subproblems"}
+{"term": "Memoization", "aliases": [], "type": "system_workflow_pattern", "note": "optimization technique that caches repeated function results"}
+{"term": "Dynamic Programming", "aliases": ["DP"], "type": "foundational_concept", "note": "solving larger problems by reusing solutions to overlapping subproblems"}
+{"term": "Garbage Collection", "aliases": ["GC"], "type": "system_workflow_pattern", "note": "runtime memory management that reclaims unreachable objects"}
+{"term": "Memory Leak", "aliases": [], "type": "problem_failure_mode", "note": "memory usage keeps growing because allocations are not released"}
+{"term": "Heap Memory", "aliases": ["Heap"], "type": "foundational_concept", "note": "dynamic memory region used for runtime allocation"}
+{"term": "Call Stack", "aliases": [], "type": "foundational_concept", "note": "stack of active function frames during program execution"}
+{"term": "Cache Invalidation", "aliases": [], "type": "problem_failure_mode", "note": "challenge of keeping cached data synchronized with source of truth"}
+{"term": "Strong Consistency", "aliases": [], "type": "capability_feature_spec", "note": "reads always reflect the latest committed write"}
+{"term": "Eventual Consistency", "aliases": [], "type": "capability_feature_spec", "note": "replicas may temporarily diverge but converge over time"}
+{"term": "CAP Theorem", "aliases": [], "type": "foundational_concept", "note": "tradeoff framework for consistency, availability, and partition tolerance"}
+{"term": "Consensus Algorithm", "aliases": [], "type": "foundational_concept", "note": "protocol for distributed nodes to agree on shared state"}
+{"term": "Leader Election", "aliases": [], "type": "system_workflow_pattern", "note": "process for choosing a coordinator node in a distributed system"}
+{"term": "Replication", "aliases": [], "type": "system_workflow_pattern", "note": "copying state across nodes for durability and availability"}
+{"term": "Directed Acyclic Graph", "aliases": ["DAG"], "type": "protocol_format_data_structure", "note": "graph with directed edges and no cycles, common in workflows and scheduling"}
+{"term": "Topological Sort", "aliases": [], "type": "foundational_concept", "note": "ordering of DAG nodes that respects dependency direction"}
+{"term": "Shortest Path", "aliases": [], "type": "foundational_concept", "note": "algorithmic problem of finding the minimum-cost route through a graph"}
+{"term": "Timeout", "aliases": [], "type": "capability_feature_spec", "note": "maximum wait duration before an operation is treated as failed"}
+{"term": "Retry", "aliases": [], "type": "system_workflow_pattern", "note": "re-attempting failed operations under controlled conditions"}
+{"term": "Exponential Backoff", "aliases": [], "type": "system_workflow_pattern", "note": "retry strategy that increases wait time after repeated failures"}
+{"term": "Circuit Breaker", "aliases": [], "type": "system_workflow_pattern", "note": "failure isolation pattern that stops repeated calls to unhealthy services"}
+{"term": "Pagination", "aliases": [], "type": "capability_feature_spec", "note": "splitting large result sets into smaller pages"}
+{"term": "Cursor Pagination", "aliases": [], "type": "system_workflow_pattern", "note": "pagination method that uses stable position markers instead of offsets"}
+{"term": "Connection Pool", "aliases": [], "type": "data_storage_indexing_system", "note": "reusable set of open connections for reducing setup overhead"}
+{"term": "Socket", "aliases": [], "type": "foundational_concept", "note": "endpoint abstraction for network communication between processes"}

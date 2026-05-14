@@ -1,0 +1,104 @@
+{"_meta": true, "category": "llm-genai", "target": 180, "vocabulary_hint": "token, prompt, context window, alignment, agent, tool use, embedding, retrieval, fine-tuning", "reference_style": "official API docs, benchmarks, platform docs", "quality_signals": "developer workflows, cost awareness, and limitations", "anti_patterns": "avoid marketing language and vague capability claims"}
+{"term": "In-Context Learning", "aliases": ["ICL"], "type": "foundational_concept", "note": "프롬프트 안 예시만으로 동작을 유도하는 핵심 개념"}
+{"term": "Structured Outputs", "aliases": ["structured output"], "type": "capability_feature_spec", "note": "[2024+] schema-constrained 응답 기능"}
+{"term": "Computer Use", "aliases": ["computer-use"], "type": "capability_feature_spec", "note": "[2024+] 화면 조작형 에이전트 기능"}
+{"term": "Context Window", "aliases": ["context length"], "type": "capability_feature_spec", "note": "모델이 한 번에 다룰 수 있는 입력 범위"}
+{"term": "Test-Time Compute", "aliases": ["TTC"], "type": "capability_feature_spec", "note": "[2025+] 추론 시 추가 계산으로 성능을 끌어올리는 축"}
+{"term": "Inference-Time Scaling", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 추론 단계 compute scaling 패턴"}
+{"term": "Reasoning Model", "aliases": [], "type": "model_algorithm_family", "note": "[2025+] 장문 추론 특화 모델 계열"}
+{"term": "Latent Reasoning", "aliases": [], "type": "foundational_concept", "note": "[2025+] 명시적 CoT 없이 내부 계산을 강조하는 흐름"}
+{"term": "Context Engineering", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 프롬프트·도구·메모리 구성을 설계하는 실무 개념"}
+{"term": "ReAct", "aliases": [], "type": "system_workflow_pattern", "note": "reasoning + acting 결합 에이전트 패턴"}
+{"term": "Planner-Executor", "aliases": ["planner executor"], "type": "system_workflow_pattern", "note": "계획 단계와 실행 단계를 분리하는 에이전트 구조"}
+{"term": "Tree of Thoughts", "aliases": ["ToT"], "type": "system_workflow_pattern", "note": "여러 추론 경로를 탐색하는 탐색형 reasoning 패턴"}
+{"term": "Self-Consistency", "aliases": [], "type": "system_workflow_pattern", "note": "여러 추론 샘플 중 일관된 답을 선택하는 기법"}
+{"term": "Agent Loop", "aliases": [], "type": "system_workflow_pattern", "note": "observe-plan-act 반복 에이전트 루프"}
+{"term": "Agent Memory", "aliases": [], "type": "system_workflow_pattern", "note": "세션/장기 메모리를 포함한 에이전트 상태 관리"}
+{"term": "Memory-Augmented Agent", "aliases": [], "type": "system_workflow_pattern", "note": "[2024+] 외부 메모리와 결합한 에이전트 구조"}
+{"term": "Long-Horizon Planning", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 다단계 장기 작업 계획 능력"}
+{"term": "Multi-Agent Debate", "aliases": [], "type": "system_workflow_pattern", "note": "복수 에이전트 토론으로 답을 개선하는 패턴"}
+{"term": "Web Search Grounding", "aliases": ["search grounding"], "type": "retrieval_knowledge_system", "note": "[2024+] 웹 검색 결과 기반 grounding 패턴"}
+{"term": "Hybrid Search", "aliases": [], "type": "retrieval_knowledge_system", "note": "keyword + vector를 결합한 검색 방식"}
+{"term": "Query Routing", "aliases": [], "type": "retrieval_knowledge_system", "note": "질문 유형에 따라 검색/모델 경로를 나누는 패턴"}
+{"term": "Semantic Caching", "aliases": [], "type": "retrieval_knowledge_system", "note": "[2024+] 의미 유사도 기반 응답 재사용"}
+{"term": "Citation Grounding", "aliases": [], "type": "capability_feature_spec", "note": "[2024+] 답변에 인용/출처 연결을 요구하는 기능 축"}
+{"term": "Prompt Caching", "aliases": [], "type": "capability_feature_spec", "note": "[2024+] 반복 프롬프트 비용·지연 절감 기능"}
+{"term": "Context Compression", "aliases": [], "type": "system_workflow_pattern", "note": "긴 컨텍스트를 축약해 추론 비용을 줄이는 패턴"}
+{"term": "Context Summarization", "aliases": [], "type": "system_workflow_pattern", "note": "대화/문서 상태를 요약해 유지하는 패턴"}
+{"term": "Model Router", "aliases": [], "type": "system_workflow_pattern", "note": "질문별로 최적 모델을 선택하는 라우팅 레이어"}
+{"term": "Model Cascade", "aliases": [], "type": "system_workflow_pattern", "note": "[2024+] 작은 모델→큰 모델 순차 승격 패턴"}
+{"term": "Small Language Model", "aliases": ["SLM"], "type": "model_algorithm_family", "note": "[2024+] 경량 모델 전략을 설명할 때 핵심 용어"}
+{"term": "Constitutional AI", "aliases": ["CAI"], "type": "training_optimization_method", "note": "Anthropic 계열 정렬 방법론"}
+{"term": "Reward Model", "aliases": ["RM"], "type": "training_optimization_method", "note": "선호/정렬 학습에서 보상 신호를 학습하는 모델"}
+{"term": "Preference Model", "aliases": [], "type": "training_optimization_method", "note": "선호 비교 데이터를 모델링하는 구성요소"}
+{"term": "Reinforcement Learning from AI Feedback", "aliases": ["RLAIF"], "type": "training_optimization_method", "note": "[2024+] human label 대신 AI feedback을 쓰는 정렬 방식"}
+{"term": "Instruction Tuning", "aliases": [], "type": "training_optimization_method", "note": "지시 따르기 능력을 높이는 대표 학습 방식"}
+{"term": "Continual Pretraining", "aliases": [], "type": "training_optimization_method", "note": "[2024+] 도메인/시기별 추가 사전학습"}
+{"term": "Synthetic Data", "aliases": [], "type": "training_optimization_method", "note": "[2024+] post-training·eval에 널리 쓰이는 합성 데이터"}
+{"term": "Preference Optimization", "aliases": [], "type": "training_optimization_method", "note": "DPO류 방법을 묶어 설명하는 상위 용어"}
+{"term": "Group Relative Policy Optimization", "aliases": ["GRPO"], "type": "training_optimization_method", "note": "[2025+] reasoning/post-training에서 주목받는 선호 최적화"}
+{"term": "Odds Ratio Preference Optimization", "aliases": ["ORPO"], "type": "training_optimization_method", "note": "[2024+] preference optimization 계열"}
+{"term": "Kahneman-Tversky Optimization", "aliases": ["KTO"], "type": "training_optimization_method", "note": "[2024+] preference learning 변형 기법"}
+{"term": "Simple Preference Optimization", "aliases": ["SimPO"], "type": "training_optimization_method", "note": "[2024+] DPO 대안군으로 자주 언급되는 기법"}
+{"term": "Process Reward Model", "aliases": ["PRM"], "type": "training_optimization_method", "note": "[2025+] 결과보다 중간 추론 과정을 평가하는 보상 모델"}
+{"term": "MT-Bench", "aliases": [], "type": "metric_benchmark", "note": "대화형 LLM 평가에서 널리 쓰인 벤치마크"}
+{"term": "Arena-Hard", "aliases": [], "type": "metric_benchmark", "note": "[2024+] frontier 모델 비교에 자주 쓰이는 eval 세트"}
+{"term": "SWE-bench", "aliases": [], "type": "metric_benchmark", "note": "[2024+] 소프트웨어 엔지니어링/코딩 에이전트 대표 벤치마크"}
+{"term": "AI Agent", "aliases": ["agent"], "type": "foundational_concept", "note": "[2024+] LLM 기반 실행 주체를 묶는 상위 개념"}
+{"term": "Agent2Agent", "aliases": ["A2A"], "type": "protocol_format_data_structure", "note": "[2025+] 에이전트 간 상호운용 프로토콜 흐름"}
+{"term": "LLM-as-a-Judge", "aliases": ["LM-as-a-Judge"], "type": "metric_benchmark", "note": "[2024+] 평가 자동화에서 핵심이 된 judge 패턴"}
+{"term": "Prompt Chaining", "aliases": [], "type": "system_workflow_pattern", "note": "여러 프롬프트 단계를 순차 연결하는 설계"}
+{"term": "System Prompt", "aliases": [], "type": "foundational_concept", "note": "모델 행동 규칙을 상위 우선순위로 주는 프롬프트 층"}
+{"term": "Prompt Template", "aliases": [], "type": "protocol_format_data_structure", "note": "반복 가능한 프롬프트 구조를 정의하는 템플릿"}
+{"term": "Instruction Hierarchy", "aliases": [], "type": "foundational_concept", "note": "[2024+] 시스템·개발자·사용자 지시 우선순위 개념"}
+{"term": "Knowledge Cutoff", "aliases": [], "type": "capability_feature_spec", "note": "사전학습 시점 이후 최신성 한계를 설명하는 스펙"}
+{"term": "Reasoning Tokens", "aliases": [], "type": "capability_feature_spec", "note": "[2025+] 추론 전용 계산량을 설명할 때 자주 쓰이는 개념"}
+{"term": "JSON Mode", "aliases": [], "type": "capability_feature_spec", "note": "[2024+] 구조화 응답 출력을 강제하는 기능"}
+{"term": "Streaming Output", "aliases": ["streaming"], "type": "capability_feature_spec", "note": "토큰을 순차 전송하는 응답 모드"}
+{"term": "Guided Decoding", "aliases": [], "type": "system_workflow_pattern", "note": "출력 형식 제약을 걸어 decoding을 유도하는 방식"}
+{"term": "Constrained Decoding", "aliases": [], "type": "system_workflow_pattern", "note": "허용된 토큰/구문만 생성하게 제한하는 decoding"}
+{"term": "Contrastive Decoding", "aliases": [], "type": "system_workflow_pattern", "note": "서로 다른 모델 신호를 비교해 decoding 품질을 높이는 방식"}
+{"term": "Beam Search", "aliases": [], "type": "system_workflow_pattern", "note": "여러 후보 경로를 유지하는 고전 생성 탐색 방식"}
+{"term": "Temperature Sampling", "aliases": ["temperature"], "type": "system_workflow_pattern", "note": "출력 다양성을 온도로 조절하는 기본 sampling 방식"}
+{"term": "Nucleus Sampling", "aliases": ["top-p sampling", "Top-p"], "type": "system_workflow_pattern", "note": "누적 확률 상위 집합에서 토큰을 뽑는 sampling"}
+{"term": "Best-of-N Sampling", "aliases": ["best-of-n"], "type": "system_workflow_pattern", "note": "[2024+] 여러 샘플 중 최적 후보를 고르는 추론 패턴"}
+{"term": "Majority Voting", "aliases": [], "type": "system_workflow_pattern", "note": "여러 응답 중 다수결로 최종 답을 정하는 집계 방식"}
+{"term": "Judge Model", "aliases": [], "type": "model_algorithm_family", "note": "[2024+] pairwise/score 평가를 담당하는 judge 계열"}
+{"term": "Tool Use", "aliases": [], "type": "capability_feature_spec", "note": "외부 도구를 호출·조합하는 모델 기능 축"}
+{"term": "Tool Selection", "aliases": [], "type": "foundational_concept", "note": "여러 도구 중 어떤 도구를 고를지 결정하는 핵심 문제"}
+{"term": "Tool Grounding", "aliases": [], "type": "foundational_concept", "note": "도구 호출을 실제 스키마/실행 조건에 맞추는 개념"}
+{"term": "Agent Orchestration", "aliases": [], "type": "system_workflow_pattern", "note": "에이전트·도구·메모리 단계를 조율하는 상위 패턴"}
+{"term": "Multi-Agent Coordination", "aliases": [], "type": "system_workflow_pattern", "note": "복수 에이전트의 역할 분담과 협업을 다루는 패턴"}
+{"term": "Agent Planning", "aliases": [], "type": "system_workflow_pattern", "note": "작업 분해·순서화·의사결정을 포함한 계획 단계"}
+{"term": "Agent Evaluation", "aliases": [], "type": "metric_benchmark", "note": "[2025+] 에이전트 성능을 태스크 단위로 검증하는 평가 축"}
+{"term": "Trajectory Evaluation", "aliases": [], "type": "metric_benchmark", "note": "[2025+] 최종 답뿐 아니라 중간 행동 경로를 보는 평가 방식"}
+{"term": "GraphRAG", "aliases": ["Graph RAG"], "type": "retrieval_knowledge_system", "note": "[2024+] 그래프 구조를 활용한 RAG 변형"}
+{"term": "Self-RAG", "aliases": [], "type": "retrieval_knowledge_system", "note": "[2024+] 검색 필요 여부를 모델이 스스로 판단하는 RAG"}
+{"term": "Corrective RAG", "aliases": ["CRAG"], "type": "retrieval_knowledge_system", "note": "[2024+] retrieval 품질을 교정하는 RAG 계열"}
+{"term": "Adaptive RAG", "aliases": [], "type": "retrieval_knowledge_system", "note": "질문 난이도/유형에 따라 retrieval 전략을 바꾸는 RAG"}
+{"term": "Multimodal RAG", "aliases": [], "type": "retrieval_knowledge_system", "note": "[2024+] 텍스트 외 이미지·문서·표를 함께 다루는 RAG"}
+{"term": "Conversational RAG", "aliases": [], "type": "retrieval_knowledge_system", "note": "대화 상태를 유지하며 검색하는 RAG 패턴"}
+{"term": "Agentic RAG", "aliases": [], "type": "retrieval_knowledge_system", "note": "[2025+] 검색을 에이전트 루프에 편입한 RAG 흐름"}
+{"term": "Query Expansion", "aliases": [], "type": "retrieval_knowledge_system", "note": "질문을 확장/재작성해 검색 recall을 높이는 기법"}
+{"term": "Re-ranking", "aliases": ["reranking"], "type": "retrieval_knowledge_system", "note": "1차 검색 결과를 다시 순위화하는 핵심 단계"}
+{"term": "Cross-Encoder Re-ranking", "aliases": ["cross-encoder reranking"], "type": "retrieval_knowledge_system", "note": "정밀도 향상을 위해 cross-encoder로 재순위화"}
+{"term": "Foundation Model", "aliases": ["foundation model"], "type": "model_algorithm_family", "note": "다양한 다운스트림 작업에 재사용되는 대규모 범용 사전학습 모델"}
+{"term": "Prompt Engineering", "aliases": ["prompt design"], "type": "foundational_concept", "note": "프롬프트 구조를 설계해 출력 품질과 제어성을 높이는 실무 영역"}
+{"term": "Fine-Tuning", "aliases": ["finetuning"], "type": "training_optimization_method", "note": "사전학습 모델을 특정 작업·도메인에 맞춰 추가 학습하는 방식"}
+{"term": "Distillation", "aliases": ["model distillation"], "type": "training_optimization_method", "note": "큰 모델의 지식을 작은 모델로 압축 전달하는 학습 방식"}
+{"term": "Embedding Model", "aliases": ["embedding encoder"], "type": "model_algorithm_family", "note": "텍스트·이미지 등을 검색/군집화용 벡터로 바꾸는 모델 계열"}
+{"term": "Multimodal Model", "aliases": [], "type": "model_algorithm_family", "note": "[2024+] 텍스트 외 이미지·오디오·영상 등을 함께 다루는 범용 모델"}
+{"term": "Vision-Language-Action Model", "aliases": ["VLA"], "type": "model_algorithm_family", "note": "[2025+] 시각 입력과 언어 계획을 행동 출력까지 연결하는 모델 계열"}
+{"term": "Speech-to-Speech Model", "aliases": [], "type": "model_algorithm_family", "note": "[2025+] 텍스트 중간 단계 없이 음성을 직접 음성으로 변환·응답하는 모델 흐름"}
+{"term": "Open-Weight Model", "aliases": ["open weight model"], "type": "model_algorithm_family", "note": "[2024+] 가중치 공개를 중심으로 배포되는 모델 계열"}
+{"term": "Open-Source Model", "aliases": ["open source model"], "type": "model_algorithm_family", "note": "가중치 공개뿐 아니라 코드·라이선스 공개 여부까지 함께 논의되는 모델 범주"}
+{"term": "Closed-Weight Model", "aliases": ["closed model"], "type": "model_algorithm_family", "note": "가중치와 내부 학습 자산이 비공개인 상용 모델 계열"}
+{"term": "Reasoning Budget", "aliases": [], "type": "capability_feature_spec", "note": "[2025+] 추론 품질과 지연·비용 사이에서 할당하는 계산 예산 개념"}
+{"term": "Voice Agent", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 음성 입력·출력 중심으로 동작하는 실시간 에이전트 패턴"}
+{"term": "Browser Agent", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 브라우저 탐색·폼 입력·웹 작업을 수행하는 에이전트 패턴"}
+{"term": "Coding Agent", "aliases": [], "type": "system_workflow_pattern", "note": "[2024+] 코드 생성·수정·테스트까지 수행하는 소프트웨어 작업형 에이전트"}
+{"term": "Deep Research", "aliases": ["deep research"], "type": "system_workflow_pattern", "note": "[2025+] 장시간 검색·읽기·종합을 수행하는 조사형 에이전트 워크플로우"}
+{"term": "MCP Server", "aliases": [], "type": "protocol_format_data_structure", "note": "[2025+] Model Context Protocol에서 도구·리소스를 노출하는 서버 단위"}
+{"term": "Multimodal Agent", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 텍스트·이미지·오디오 입력을 혼합해 도구까지 사용하는 에이전트 패턴"}
+{"term": "Real-Time Multimodal", "aliases": ["realtime multimodal"], "type": "capability_feature_spec", "note": "[2025+] 음성·텍스트·시각 입력을 실시간 스트림으로 처리하는 기능 축"}
+{"term": "Chatbot", "aliases": ["chat bot"], "type": "foundational_concept", "note": "대화형 인터페이스로 사용자와 상호작용하는 가장 기본적인 AI 제품 형태"}

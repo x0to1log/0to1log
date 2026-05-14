@@ -1,0 +1,71 @@
+{"_meta": true, "category": "data-engineering", "target": 70, "vocabulary_hint": "pipeline, schema, partitioning, checkpoint, idempotency, lineage, throughput, latency, backfill", "reference_style": "official architecture docs and versioned product documentation", "quality_signals": "discuss scaling, failure recovery, and maintenance cost", "anti_patterns": "do not treat all storage or indexing approaches as interchangeable"}
+{"term": "Apache Airflow", "aliases": ["Airflow"], "type": "product_platform_service", "note": "workflow orchestrator for scheduled DAG-based data pipelines"}
+{"term": "Dagster", "aliases": [], "type": "product_platform_service", "note": "asset-oriented orchestration platform for modern data stacks"}
+{"term": "Prefect", "aliases": [], "type": "product_platform_service", "note": "Python-first workflow orchestration with dynamic task execution"}
+{"term": "Apache Kafka", "aliases": ["Kafka"], "type": "product_platform_service", "note": "distributed event streaming platform for durable ordered logs"}
+{"term": "Kafka Connect", "aliases": [], "type": "product_platform_service", "note": "connector framework for moving data into and out of Kafka"}
+{"term": "Debezium", "aliases": [], "type": "product_platform_service", "note": "CDC platform that streams database changes into event pipelines"}
+{"term": "Change Data Capture", "aliases": ["CDC"], "type": "system_workflow_pattern", "note": "replicates inserts, updates, and deletes from source systems"}
+{"term": "Apache Flink", "aliases": ["Flink"], "type": "product_platform_service", "note": "stateful stream processing engine with event-time semantics"}
+{"term": "Apache Spark", "aliases": ["Spark"], "type": "product_platform_service", "note": "distributed compute engine for batch and streaming workloads"}
+{"term": "Structured Streaming", "aliases": [], "type": "system_workflow_pattern", "note": "incremental stream processing model in Apache Spark"}
+{"term": "Apache Beam", "aliases": ["Beam"], "type": "library_framework_sdk", "note": "portable unified API for batch and stream processing"}
+{"term": "Databricks", "aliases": [], "type": "product_platform_service", "note": "lakehouse platform built around Spark and Delta Lake"}
+{"term": "Delta Lake", "aliases": [], "type": "data_storage_indexing_system", "note": "table format adding ACID and schema enforcement to data lakes"}
+{"term": "Apache Iceberg", "aliases": ["Iceberg"], "type": "data_storage_indexing_system", "note": "open table format for very large analytic datasets"}
+{"term": "Apache Hudi", "aliases": ["Hudi"], "type": "data_storage_indexing_system", "note": "incremental lake storage focused on upserts and streaming ingest"}
+{"term": "Lakehouse", "aliases": [], "type": "data_storage_indexing_system", "note": "architecture combining warehouse management with lake storage"}
+{"term": "Data Warehouse", "aliases": ["Warehouse"], "type": "data_storage_indexing_system", "note": "centralized analytical store optimized for SQL and BI"}
+{"term": "Data Lake", "aliases": [], "type": "data_storage_indexing_system", "note": "raw and semi-structured storage layer for large-scale data"}
+{"term": "Medallion Architecture", "aliases": [], "type": "system_workflow_pattern", "note": "bronze-silver-gold layering for staged data refinement"}
+{"term": "Batch Processing", "aliases": [], "type": "system_workflow_pattern", "note": "runs data transformations on bounded datasets at scheduled intervals"}
+{"term": "Stream Processing", "aliases": [], "type": "system_workflow_pattern", "note": "processes unbounded event flows with low latency"}
+{"term": "Event Streaming", "aliases": [], "type": "system_workflow_pattern", "note": "continuous publication and consumption of ordered event logs"}
+{"term": "ETL", "aliases": ["Extract Transform Load"], "type": "system_workflow_pattern", "note": "extract, transform, and load workflow into a target system"}
+{"term": "ELT", "aliases": ["Extract Load Transform"], "type": "system_workflow_pattern", "note": "loads raw data first and transforms it inside the warehouse"}
+{"term": "Idempotency", "aliases": [], "type": "foundational_concept", "note": "property that makes repeated pipeline runs safe"}
+{"term": "Exactly-Once Semantics", "aliases": [], "type": "capability_feature_spec", "note": "guarantee that each record affects downstream state once"}
+{"term": "Dead Letter Queue", "aliases": ["DLQ"], "type": "data_storage_indexing_system", "note": "queue or topic used to isolate failed records for later review"}
+{"term": "Data Lineage", "aliases": ["Lineage"], "type": "capability_feature_spec", "note": "tracks where data came from and how it changed"}
+{"term": "Data Catalog", "aliases": [], "type": "data_storage_indexing_system", "note": "searchable inventory of datasets, schemas, and owners"}
+{"term": "Data Contract", "aliases": [], "type": "capability_feature_spec", "note": "explicit agreement on schema, semantics, and delivery expectations"}
+{"term": "Schema Registry", "aliases": [], "type": "data_storage_indexing_system", "note": "central store for versioned event and message schemas"}
+{"term": "Schema Evolution", "aliases": [], "type": "capability_feature_spec", "note": "controlled change of schemas without breaking downstream systems"}
+{"term": "Partitioning", "aliases": [], "type": "capability_feature_spec", "note": "splits large datasets into smaller segments for scale and pruning"}
+{"term": "Compaction", "aliases": [], "type": "system_workflow_pattern", "note": "rewrites fragmented files into fewer larger files"}
+{"term": "Small Files Problem", "aliases": [], "type": "problem_failure_mode", "note": "too many tiny files causing metadata and scan overhead"}
+{"term": "Backfill", "aliases": [], "type": "system_workflow_pattern", "note": "recomputes or loads historical data for missing time ranges"}
+{"term": "Checkpointing", "aliases": [], "type": "system_workflow_pattern", "note": "persists pipeline progress so jobs can resume after failure"}
+{"term": "Watermark", "aliases": [], "type": "capability_feature_spec", "note": "time threshold that bounds how late events may arrive"}
+{"term": "Late-Arriving Data", "aliases": [], "type": "problem_failure_mode", "note": "records show up after downstream windows or partitions closed"}
+{"term": "Slowly Changing Dimension", "aliases": ["SCD"], "type": "foundational_concept", "note": "dimension table pattern for tracking entity changes over time"}
+{"term": "Surrogate Key", "aliases": [], "type": "foundational_concept", "note": "synthetic identifier used instead of business keys"}
+{"term": "Natural Key", "aliases": [], "type": "foundational_concept", "note": "business-origin identifier carried from the source system"}
+{"term": "Upsert", "aliases": [], "type": "system_workflow_pattern", "note": "insert-or-update write pattern used in mutable analytical tables"}
+{"term": "Deduplication", "aliases": ["Dedupe"], "type": "system_workflow_pattern", "note": "removes repeated records before or during downstream writes"}
+{"term": "Data Quality Check", "aliases": [], "type": "system_workflow_pattern", "note": "rule-based validation for freshness, completeness, and correctness"}
+{"term": "Great Expectations", "aliases": [], "type": "product_platform_service", "note": "open-source framework for data quality assertions"}
+{"term": "OpenLineage", "aliases": [], "type": "protocol_format_data_structure", "note": "open standard for emitting lineage metadata across data tools"}
+{"term": "Apache Avro", "aliases": ["Avro"], "type": "protocol_format_data_structure", "note": "row-oriented serialization format with explicit schemas"}
+{"term": "Apache Parquet", "aliases": ["Parquet"], "type": "protocol_format_data_structure", "note": "columnar file format optimized for analytics"}
+{"term": "NDJSON", "aliases": ["Newline Delimited JSON"], "type": "protocol_format_data_structure", "note": "newline-delimited JSON format for streaming and append-only logs"}
+{"term": "Columnar Storage", "aliases": [], "type": "foundational_concept", "note": "stores values by column to speed up analytical scans"}
+{"term": "OLAP", "aliases": ["Online Analytical Processing"], "type": "foundational_concept", "note": "analytical processing optimized for aggregates and exploration"}
+{"term": "OLTP", "aliases": ["Online Transaction Processing"], "type": "foundational_concept", "note": "transaction processing optimized for short write-heavy operations"}
+{"term": "Materialized View", "aliases": [], "type": "data_storage_indexing_system", "note": "persisted query result maintained for faster reads"}
+{"term": "Feature Store", "aliases": [], "type": "data_storage_indexing_system", "note": "system for serving consistent ML features online and offline"}
+{"term": "dbt", "aliases": ["data build tool"], "type": "library_framework_sdk", "note": "transformation framework for SQL-based analytics engineering"}
+{"term": "Trino", "aliases": [], "type": "product_platform_service", "note": "distributed SQL query engine across heterogeneous data sources"}
+{"term": "Metastore", "aliases": [], "type": "data_storage_indexing_system", "note": "catalog service that maps tables to storage locations and schemas"}
+{"term": "ClickHouse", "aliases": [], "type": "product_platform_service", "note": "columnar OLAP database for fast real-time analytics"}
+{"term": "BigQuery", "aliases": [], "type": "product_platform_service", "note": "serverless cloud data warehouse from Google Cloud"}
+{"term": "Snowflake", "aliases": [], "type": "product_platform_service", "note": "cloud-native warehouse with decoupled compute and storage"}
+{"term": "Amazon Redshift", "aliases": ["Redshift"], "type": "product_platform_service", "note": "managed MPP data warehouse on AWS"}
+{"term": "Apache Pulsar", "aliases": ["Pulsar"], "type": "product_platform_service", "note": "distributed messaging and streaming platform with segment storage"}
+{"term": "Amazon Kinesis", "aliases": ["Kinesis"], "type": "product_platform_service", "note": "AWS managed streaming service for ingest and analytics"}
+{"term": "Google Cloud Pub/Sub", "aliases": ["Pub/Sub"], "type": "product_platform_service", "note": "managed messaging service for event-driven data pipelines"}
+{"term": "Data Mesh", "aliases": [], "type": "system_workflow_pattern", "note": "domain-oriented operating model for decentralized data ownership"}
+{"term": "Data Observability", "aliases": [], "type": "capability_feature_spec", "note": "monitoring discipline for freshness, volume, schema, and lineage health"}
+{"term": "Data Freshness", "aliases": [], "type": "capability_feature_spec", "note": "how current a dataset is relative to expected arrival time"}
+{"term": "Incremental Model", "aliases": [], "type": "system_workflow_pattern", "note": "transformation pattern that only processes new or changed records"}
+{"term": "Full Refresh", "aliases": [], "type": "system_workflow_pattern", "note": "rebuilds a derived table from scratch instead of incrementally"}

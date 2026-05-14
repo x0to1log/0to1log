@@ -43,6 +43,7 @@
 | HB-MIGRATE-138 | 138개 published 용어 v4 구조로 전량 regenerate (병렬 시간·비용 추정치 재검토 필요 — HB-SEED-41 warmup 실측 후 적용) | todo | — | — |
 | HB-SEED-01 | 800개 시드 용어 큐레이션 (Amy + Codex, 9 카테고리 JSONL) — [[plans/2026-04-19-handbook-seed-800]] | doing | 2026-04-20 | — |
 | HB-SEED-02 | 기존 138 슬러그 export (`export_handbook_slugs.py`, 1회 실행) | todo | — | — |
+| HB-SEED-PROMPT-01 | Category-aware handbook prompt architecture 설계 — 공통 skeleton + category/type guide + artifact/code-mode 정책 정의 [[2026-05-12-handbook-category-prompt-architecture]] | todo | 2026-05-12 | 2026-05-13 |
 | NP-OBSERVE-* | 하드닝 후 4개 long-tail metric 관찰 (~2026-04-30) — v11 rubric 엄격도 반영하여 threshold 재평가 병행 | doing | 2026-04-16 | 2026-04-30 |
 | NQ-30 | Auto-publish threshold 재조정 — v11 rubric v2 적용 후 기존 85 기준은 너무 엄격. 1주 관찰 후 80 검토 | todo | 2026-04-21 | 2026-04-28 |
 | NQ-31 | rerun_from=quality post-deploy E2E — Apr 22 fresh run에서 `smoke_cp_citations.py 2026-04-22` 실행하여 `with hn_url > 0`, `raw == 0` 확인 | todo | — | 2026-04-22 |
@@ -51,6 +52,7 @@
 | NQ-34 | Rubric v2 evidence 필드를 admin UI에 노출 — quality_score sub-score drill-down UX | todo | — | — |
 | NQ-35 | Few-shot 데이터 축적 후 rubric 재교정 — 4주 데이터 확보 시 | todo (4주 후) | — | 2026-05-21 |
 | NQ-42 | Weekly GitHub coverage fallback — 조건부 (daily A+B 튜닝 효과 관찰 후). 현재 weekly `Open Source Spotlight`는 daily digest URL에 100% 종속 (`_fetch_week_digests` at pipeline_persistence.py:163). Apr 19-22 관찰: 주간 유니크 github URL 1개 (요건 3-5 미달). 오늘 `106e845`(pushed:>7d / stars:>500 / release-detection)로 daily 공급 강화 시도. 1-2주 관찰 후 daily 생존율 < 0.7/day 지속되면 아래 중 하나 구현: **옵션 X** — Weekly pipeline에 자체 `_collect_github_weekly` 추가 (`pushed:>30d stars:>500 per_page=20`, release 우선 정렬, 주간 전용 source_list로 Open Source Spotlight 직접 공급). **옵션 Y** — 모든 daily `github_trending` 후보(10/day, digest 미채택 포함)를 새 테이블 `news_candidates_archive`에 축적, weekly가 지난 7일치에서 선별. 의사결정 게이트: 2026-05-06까지 daily 생존율 측정 → 그에 따라 X or Y 선택 or skip | todo (관찰 후) | — | 2026-05-06 |
+| NQ-44 | Beginner persona news experiment — 3페르소나 확장 전 입문자 뉴스 설계/내부 생성 실험. Research/Business 각각 맥락 해설형 포맷으로 메인 2-3개 재선정, "가볍게 지나가도 되는 소식", 학습자 뉴스 이어읽기 경로, 비용/저장/UI 게이트 정의 | doing | 2026-05-13 | 2026-05-20 |
 | WEBHOOK-USER-01 | 유저 Webhook 구독 셀프서비스 | todo | — | — |
 | WEEKLY-V2-PROMPT-01 | Weekly 프롬프트에 `weekly_quiz` JSON 출력 추가 (Expert/Learner + KO adapt) — [[plans/2026-04-19-weekly-content-v2]] — commit `00c8d90` | done | 2026-04-19 | 2026-04-19 |
 | WEEKLY-V2-PIPE-01 | `run_weekly_pipeline`에서 guide_items에 weekly_quiz_expert/learner 저장 (locale별 EN/KO 분기) — commit `91b9f84` | done | 2026-04-19 | 2026-04-19 |
@@ -244,6 +246,12 @@
 |------|------|------|
 | HB-SEED-10 | todo | 9 JSONL 통합 + validator: 스키마(term_type ∈ TERM_TYPES), 정확·**퍼지** 중복 체크 (`_existing.jsonl` + 교차 카테고리 + aliases cross-match), target 대비 count 리포트 → `queue.jsonl` |
 
+#### Phase 1.5 — Prompt Architecture
+
+| Task | 상태 | 목표 |
+|------|------|------|
+| HB-SEED-PROMPT-01 | todo | seed draft 생성 전에 category/type별 content shape를 결정하는 prompt architecture 설계: 공통 skeleton, 9개 category guide, term_type guide, source/reference policy, `advanced_2` artifact 정책, code mode 기본값, pilot prompt 비교까지 정의 → [[2026-05-12-handbook-category-prompt-architecture]] |
+
 #### Phase 2 — Orchestrator
 
 | Task | 상태 | 목표 |
@@ -308,6 +316,7 @@
 | NQ-24 | todo | 파이프라인 테스트 전면 재작성 — 현재 계약 기반 mock 테스트 (MagicMock 덫 교훈 반영) |
 | NQ-36 | todo | CLASSIFY 프롬프트 토큰 축약 (Phase 3에서 drop된 scope, v12 트리거 전 정리) | — | — |
 | NQ-43 | todo | Source confidence classifier 개선 — `_classify_source_meta` 의 `confidence='low'` 정확도 향상. 2026-04-27 audit 에서 `confidence='low'` 의 ~40% 가 정상 미디어 false positive 로 확인 (axios, cnbc, nytimes 등 mainstream + tianpan.co/zhihang-fu.github.io 같은 niche legit). 즉시 fix 는 blocklist 점진 확장 (research_blocklist 8→26 commit 진행) 으로 했지만 근본은 분류기. 도메인 등록일·HTTPS·publishing schema·about 페이지 존재 등 추가 신호 도입 검토. 1-2 주 작업 |
+| NQ-44 | doing | Beginner persona news experiment — 3페르소나 확장 전 입문자 뉴스 설계/내부 생성 실험. Research는 메인 1-2개, Business는 메인 2-3개만 깊게 다루고, 나머지는 "가볍게 지나가도 되는 소식"으로 정리. 용어 정의는 프론트엔드 핸드북 링크에 맡기고, `헷갈리지 말 것` + 학습자 뉴스 이어읽기 경로로 입문자→학습자 전환을 유도. 1차 증거: `backend/scripts/prototype_beginner_news.py`, `backend/tests/test_beginner_news_prototype.py`, `output/beginner-news/2026-05-07~12-*-beginner.*` 로컬 생성(ignored). 2차 프롬프트 하드닝: `one_line` 메인 범위 제한, Business `one_line` 관점문화(카탈로그/메타 안내문 방지), 리서치 용어 밀도(개념 묶음 기준), schema label placeholder 차단, `what_changed` 부담 감소 명시, `skim_items.why_skim` 35단어 제한. 3차: production `get_digest_prompt(..., "beginner")` 전용 섹션/스켈레톤/title strategy/QC rubric 추가. 4차: daily pipeline `expert/learner/beginner` 생성, `content_beginner`/`title_beginner` 저장 migration, beginner source/quiz/title/excerpt guide_items, QC beginner rubric+breakdown/weight, detail/admin/list UI switcher 노출. 안정성: beginner는 additive attempt로 두고 실패해도 expert/learner 저장은 유지하되 auto_publish eligible은 false 처리. 검증: backend 119 passed + 추가 26 passed, frontend persona/save tests passed, `npm run check` 0 errors(기존 warnings only). 남은 단계: 실제 1회 staging/backfill로 DB row + UI preview 확인 |
 | COLLECT-BRAVE-01 | ~~todo~~ cancelled | ~~Brave Search API 수집기 추가~~ — NP-DIET-01에서 Brave 전량 제거하며 의미 상실 |
 
 ### GPT-5 마이그레이션 (완료 — 2026-04-19)

@@ -1,0 +1,50 @@
+{"_meta": true, "category": "math-statistics", "target": 40, "vocabulary_hint": "proof, theorem, estimator, variance, convergence, expectation, likelihood, posterior, prior", "reference_style": "textbook notation and foundational sources when available", "quality_signals": "lead with intuition before formulas; use concrete numerical examples", "anti_patterns": "do not reduce the concept to only AI usage"}
+{"term": "Vector", "aliases": [], "type": "foundational_concept", "note": "ordered collection of numbers representing direction, magnitude, or features"}
+{"term": "Matrix", "aliases": [], "type": "foundational_concept", "note": "rectangular array of numbers used for linear transformations and data tables"}
+{"term": "Tensor", "aliases": [], "type": "foundational_concept", "note": "multi-dimensional generalization of scalars, vectors, and matrices"}
+{"term": "Dot Product", "aliases": ["Inner Product"], "type": "foundational_concept", "note": "operation that measures alignment between two vectors"}
+{"term": "Norm", "aliases": [], "type": "foundational_concept", "note": "function that measures vector or matrix magnitude"}
+{"term": "L1 Norm", "aliases": [], "type": "foundational_concept", "note": "sum of absolute values used for sparsity and distance"}
+{"term": "L2 Norm", "aliases": [], "type": "foundational_concept", "note": "Euclidean length computed from squared values"}
+{"term": "Orthogonality", "aliases": [], "type": "foundational_concept", "note": "relationship where vectors are perpendicular and have zero dot product"}
+{"term": "Rank", "aliases": [], "type": "foundational_concept", "note": "number of linearly independent rows or columns in a matrix"}
+{"term": "Eigenvalue", "aliases": [], "type": "foundational_concept", "note": "scalar that describes how a transformation stretches a special direction"}
+{"term": "Eigenvector", "aliases": [], "type": "foundational_concept", "note": "direction preserved by a linear transformation up to scaling"}
+{"term": "Singular Value Decomposition", "aliases": ["SVD"], "type": "foundational_concept", "note": "matrix factorization used for compression, projection, and low-rank approximation"}
+{"term": "Covariance Matrix", "aliases": [], "type": "foundational_concept", "note": "matrix capturing pairwise covariance across multiple variables"}
+{"term": "Gradient", "aliases": [], "type": "foundational_concept", "note": "vector of partial derivatives showing steepest increase direction"}
+{"term": "Partial Derivative", "aliases": [], "type": "foundational_concept", "note": "derivative of a multivariable function with respect to one variable"}
+{"term": "Jacobian", "aliases": [], "type": "foundational_concept", "note": "matrix of first-order partial derivatives for vector-valued functions"}
+{"term": "Hessian", "aliases": [], "type": "foundational_concept", "note": "matrix of second-order partial derivatives describing local curvature"}
+{"term": "Chain Rule", "aliases": [], "type": "foundational_concept", "note": "rule for differentiating compositions of functions"}
+{"term": "Convex Function", "aliases": [], "type": "foundational_concept", "note": "function whose line segments lie above or on the graph"}
+{"term": "Convex Optimization", "aliases": [], "type": "foundational_concept", "note": "optimization over convex objectives or constraints with well-behaved minima"}
+{"term": "Random Variable", "aliases": [], "type": "foundational_concept", "note": "variable whose value is determined by outcomes of a random process"}
+{"term": "Probability Distribution", "aliases": [], "type": "foundational_concept", "note": "rule that assigns probabilities across possible outcomes"}
+{"term": "Normal Distribution", "aliases": ["Gaussian Distribution"], "type": "foundational_concept", "note": "bell-shaped continuous distribution common in statistics and noise models"}
+{"term": "Expectation", "aliases": ["Expected Value"], "type": "foundational_concept", "note": "probability-weighted average outcome of a random variable"}
+{"term": "Variance", "aliases": [], "type": "foundational_concept", "note": "measure of how spread out values are around the mean"}
+{"term": "Standard Deviation", "aliases": [], "type": "foundational_concept", "note": "square root of variance expressed in the original unit scale"}
+{"term": "Covariance", "aliases": [], "type": "foundational_concept", "note": "measure of how two variables vary together"}
+{"term": "Conditional Probability", "aliases": [], "type": "foundational_concept", "note": "probability of an event given that another event occurred"}
+{"term": "Bayes' Theorem", "aliases": [], "type": "foundational_concept", "note": "rule for updating probabilities using new evidence"}
+{"term": "Likelihood", "aliases": [], "type": "foundational_concept", "note": "how compatible observed data are with a parameter choice"}
+{"term": "Log-Likelihood", "aliases": [], "type": "foundational_concept", "note": "logarithm of likelihood used for numerical stability and optimization"}
+{"term": "Prior Distribution", "aliases": ["Prior"], "type": "foundational_concept", "note": "distribution expressing beliefs before observing current data"}
+{"term": "Posterior Distribution", "aliases": ["Posterior"], "type": "foundational_concept", "note": "updated distribution after combining prior beliefs with evidence"}
+{"term": "Maximum Likelihood Estimation", "aliases": ["MLE"], "type": "foundational_concept", "note": "parameter estimation method that maximizes likelihood of observed data"}
+{"term": "Maximum A Posteriori", "aliases": ["MAP"], "type": "foundational_concept", "note": "parameter estimation method that combines likelihood with a prior"}
+{"term": "Central Limit Theorem", "aliases": ["CLT"], "type": "foundational_concept", "note": "theorem explaining why many sample means approach a normal distribution"}
+{"term": "Cross-Entropy", "aliases": [], "type": "foundational_concept", "note": "measure of mismatch between a true distribution and a predictive distribution"}
+{"term": "Kullback-Leibler Divergence", "aliases": ["KL Divergence"], "type": "foundational_concept", "note": "asymmetric measure of how one probability distribution differs from another"}
+{"term": "Mutual Information", "aliases": [], "type": "foundational_concept", "note": "measure of how much knowing one variable reduces uncertainty about another"}
+{"term": "Matrix Multiplication", "aliases": [], "type": "foundational_concept", "note": "core linear algebra operation that composes transformations and dominates many ML workloads"}
+{"term": "Linear Transformation", "aliases": [], "type": "foundational_concept", "note": "mapping that preserves addition and scalar multiplication in vector spaces"}
+{"term": "Affine Transformation", "aliases": [], "type": "foundational_concept", "note": "linear transformation followed by a translation, common in model layers and geometry"}
+{"term": "Cosine Similarity", "aliases": [], "type": "foundational_concept", "note": "angle-based similarity measure widely used for embeddings and retrieval"}
+{"term": "Softmax", "aliases": [], "type": "foundational_concept", "note": "normalization function that converts logits into a probability distribution"}
+{"term": "Logit", "aliases": [], "type": "foundational_concept", "note": "raw unnormalized score before a probability mapping such as softmax or sigmoid"}
+{"term": "Sampling", "aliases": [], "type": "foundational_concept", "note": "procedure for drawing examples from a distribution or candidate set"}
+{"term": "Monte Carlo Estimation", "aliases": [], "type": "foundational_concept", "note": "approximation method that estimates quantities through repeated random sampling"}
+{"term": "Saddle Point", "aliases": [], "type": "foundational_concept", "note": "point that is neither a pure local minimum nor maximum because curvature differs by direction"}
+{"term": "Correlation", "aliases": [], "type": "foundational_concept", "note": "normalized measure of linear association between variables"}

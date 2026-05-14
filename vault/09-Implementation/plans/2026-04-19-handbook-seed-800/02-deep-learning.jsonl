@@ -1,0 +1,103 @@
+{"_meta": true, "category": "deep-learning", "target": 130, "vocabulary_hint": "tensor, gradient, backpropagation, layer, activation, learning rate, convolution, attention", "reference_style": "original papers and official implementation/docs when possible", "quality_signals": "make tensor flow and compute tradeoffs explicit", "anti_patterns": "do not ignore memory, latency, or training-vs-inference differences"}
+{"term": "Neural Network", "aliases": ["neural net"], "type": "foundational_concept", "note": "딥러닝 전반을 관통하는 가장 기본 개념"}
+{"term": "Feedforward Neural Network", "aliases": ["FNN", "MLP"], "type": "model_algorithm_family", "note": "가장 기본적인 순방향 신경망 구조"}
+{"term": "Backpropagation", "aliases": ["backprop"], "type": "foundational_concept", "note": "신경망 학습의 핵심 gradient 전달 원리"}
+{"term": "Activation Function", "aliases": [], "type": "foundational_concept", "note": "신경망에 비선형성을 부여하는 기본 구성요소"}
+{"term": "Gradient Descent", "aliases": [], "type": "training_optimization_method", "note": "손실을 줄이기 위한 가장 기본적인 최적화 절차"}
+{"term": "Stochastic Gradient Descent", "aliases": ["SGD"], "type": "training_optimization_method", "note": "미니배치 기반의 대표 최적화 방식"}
+{"term": "AdamW", "aliases": [], "type": "training_optimization_method", "note": "현대 딥러닝에서 널리 쓰이는 optimizer"}
+{"term": "RMSProp", "aliases": [], "type": "training_optimization_method", "note": "적응형 학습률 기반 optimizer 계열"}
+{"term": "Learning Rate Scheduler", "aliases": ["LR scheduler"], "type": "training_optimization_method", "note": "학습률을 단계적으로 조정하는 훈련 기법"}
+{"term": "Warmup", "aliases": ["learning rate warmup"], "type": "training_optimization_method", "note": "학습 초반 안정화를 위한 학습률 증가 전략"}
+{"term": "Cosine Annealing", "aliases": [], "type": "training_optimization_method", "note": "학습률을 cosine 곡선으로 줄이는 스케줄링"}
+{"term": "Gradient Clipping", "aliases": [], "type": "training_optimization_method", "note": "폭주하는 gradient를 제한하는 안정화 기법"}
+{"term": "Gradient Checkpointing", "aliases": [], "type": "training_optimization_method", "note": "메모리를 줄이기 위해 일부 활성값을 재계산하는 기법"}
+{"term": "Mixed Precision Training", "aliases": ["mixed precision"], "type": "training_optimization_method", "note": "FP16/BF16 등을 섞어 속도와 메모리를 최적화하는 기법"}
+{"term": "Batch Normalization", "aliases": ["BatchNorm"], "type": "training_optimization_method", "note": "미니배치 통계로 학습을 안정화하는 대표 기법"}
+{"term": "Layer Normalization", "aliases": ["LayerNorm"], "type": "training_optimization_method", "note": "시퀀스 모델과 Transformer에서 핵심이 되는 정규화 기법"}
+{"term": "Dropout", "aliases": [], "type": "training_optimization_method", "note": "과적합 방지를 위한 대표적인 regularization 기법"}
+{"term": "Weight Decay", "aliases": [], "type": "training_optimization_method", "note": "모델 복잡도를 줄이는 대표 regularization 방식"}
+{"term": "Early Stopping", "aliases": [], "type": "training_optimization_method", "note": "검증 성능 악화 전에 학습을 멈추는 실전 기법"}
+{"term": "Weight Initialization", "aliases": [], "type": "training_optimization_method", "note": "학습 안정성을 좌우하는 초기화 전략의 상위 개념"}
+{"term": "Xavier Initialization", "aliases": ["Glorot initialization"], "type": "training_optimization_method", "note": "깊은 신경망 초기화의 대표 방법"}
+{"term": "He Initialization", "aliases": ["Kaiming initialization"], "type": "training_optimization_method", "note": "ReLU 계열 네트워크에 자주 쓰이는 초기화 방법"}
+{"term": "Residual Connection", "aliases": ["residual shortcut"], "type": "foundational_concept", "note": "깊은 네트워크 학습을 가능하게 한 핵심 연결 구조"}
+{"term": "Skip Connection", "aliases": [], "type": "foundational_concept", "note": "입력 정보를 후단에 직접 전달하는 연결 패턴"}
+{"term": "Curriculum Learning", "aliases": [], "type": "training_optimization_method", "note": "쉬운 예제부터 점진적으로 학습시키는 전략"}
+{"term": "Self-Supervised Learning", "aliases": [], "type": "training_optimization_method", "note": "라벨 없이 표현을 학습하는 현대 딥러닝 핵심 축"}
+{"term": "Contrastive Learning", "aliases": [], "type": "training_optimization_method", "note": "유사/비유사 쌍을 이용해 표현을 학습하는 방식"}
+{"term": "Transfer Learning", "aliases": [], "type": "training_optimization_method", "note": "사전학습 모델을 다른 태스크에 재사용하는 대표 전략"}
+{"term": "Multi-Task Learning", "aliases": [], "type": "training_optimization_method", "note": "여러 태스크를 함께 학습해 표현을 공유하는 방식"}
+{"term": "Domain Adaptation", "aliases": [], "type": "training_optimization_method", "note": "훈련 도메인과 배포 도메인 차이를 줄이는 기법"}
+{"term": "Data Augmentation", "aliases": [], "type": "training_optimization_method", "note": "학습 데이터를 변형해 일반화 성능을 높이는 기법"}
+{"term": "Label Smoothing", "aliases": [], "type": "training_optimization_method", "note": "과도한 확신을 줄여 일반화를 돕는 기법"}
+{"term": "Mixup", "aliases": [], "type": "training_optimization_method", "note": "샘플과 라벨을 선형 결합하는 데이터 증강 기법"}
+{"term": "CutMix", "aliases": [], "type": "training_optimization_method", "note": "이미지 패치를 섞는 대표적인 비전 증강 기법"}
+{"term": "Pruning", "aliases": [], "type": "training_optimization_method", "note": "불필요한 가중치나 채널을 제거하는 경량화 기법"}
+{"term": "Sparsity", "aliases": [], "type": "foundational_concept", "note": "희소한 가중치/활성화를 이용해 효율을 높이는 개념"}
+{"term": "Neural Architecture Search", "aliases": ["NAS"], "type": "training_optimization_method", "note": "신경망 구조를 자동으로 탐색하는 방법론"}
+{"term": "Parameter Sharing", "aliases": [], "type": "foundational_concept", "note": "여러 위치에서 같은 파라미터를 재사용하는 핵심 설계 원리"}
+{"term": "Convolutional Neural Network", "aliases": ["CNN"], "type": "model_algorithm_family", "note": "컴퓨터 비전의 대표적인 신경망 계열"}
+{"term": "Recurrent Neural Network", "aliases": ["RNN"], "type": "model_algorithm_family", "note": "순차 데이터를 다루는 고전적 신경망 계열"}
+{"term": "Long Short-Term Memory", "aliases": ["LSTM"], "type": "model_algorithm_family", "note": "긴 의존성을 다루기 위한 대표 RNN 변형"}
+{"term": "Gated Recurrent Unit", "aliases": ["GRU"], "type": "model_algorithm_family", "note": "LSTM을 단순화한 대표 recurrent 구조"}
+{"term": "Autoencoder", "aliases": ["AE"], "type": "model_algorithm_family", "note": "입력을 압축 후 복원하며 표현을 학습하는 모델"}
+{"term": "Variational Autoencoder", "aliases": ["VAE"], "type": "model_algorithm_family", "note": "확률적 latent space를 학습하는 생성 모델"}
+{"term": "Generative Adversarial Network", "aliases": ["GAN"], "type": "model_algorithm_family", "note": "생성자와 판별자를 함께 학습하는 생성 모델 계열"}
+{"term": "U-Net", "aliases": ["UNet"], "type": "model_algorithm_family", "note": "segmentation에서 가장 널리 쓰이는 encoder-decoder 구조"}
+{"term": "ResNet", "aliases": [], "type": "model_algorithm_family", "note": "residual connection 기반의 대표 비전 네트워크"}
+{"term": "EfficientNet", "aliases": [], "type": "model_algorithm_family", "note": "모델 폭·깊이·해상도를 함께 조절한 비전 모델 계열"}
+{"term": "MobileNet", "aliases": [], "type": "model_algorithm_family", "note": "모바일/엣지 환경을 위한 경량 CNN 계열"}
+{"term": "Vision Transformer", "aliases": ["ViT"], "type": "model_algorithm_family", "note": "Transformer를 이미지 패치에 적용한 대표 비전 모델"}
+{"term": "Swin Transformer", "aliases": [], "type": "model_algorithm_family", "note": "window 기반 계층형 비전 Transformer"}
+{"term": "State Space Model", "aliases": ["SSM"], "type": "model_algorithm_family", "note": "긴 시퀀스를 효율적으로 다루는 대안 계열"}
+{"term": "Mamba", "aliases": [], "type": "model_algorithm_family", "note": "[2024+] state space model 계열의 대표 최신 구조"}
+{"term": "Cross-Attention", "aliases": [], "type": "foundational_concept", "note": "서로 다른 입력 표현 사이의 attention 메커니즘"}
+{"term": "Multi-Head Attention", "aliases": [], "type": "foundational_concept", "note": "여러 attention head를 병렬로 사용하는 구조"}
+{"term": "Positional Encoding", "aliases": [], "type": "foundational_concept", "note": "순서 정보를 모델에 주입하는 기본 방법"}
+{"term": "Feature Map", "aliases": [], "type": "foundational_concept", "note": "CNN이 추출한 중간 표현을 설명하는 기본 개념"}
+{"term": "Receptive Field", "aliases": [], "type": "foundational_concept", "note": "뉴런이 입력에서 참조하는 범위를 나타내는 개념"}
+{"term": "Bottleneck Layer", "aliases": [], "type": "foundational_concept", "note": "정보를 압축하는 중간 층 구조"}
+{"term": "Latent Space", "aliases": [], "type": "foundational_concept", "note": "모델이 학습한 압축 표현 공간"}
+{"term": "Cross-Entropy Loss", "aliases": [], "type": "training_optimization_method", "note": "분류 문제에서 가장 널리 쓰이는 손실 함수"}
+{"term": "Contrastive Loss", "aliases": [], "type": "training_optimization_method", "note": "표현 간 거리 관계를 학습하는 손실 함수"}
+{"term": "Triplet Loss", "aliases": [], "type": "training_optimization_method", "note": "anchor-positive-negative 구조를 쓰는 metric learning 손실"}
+{"term": "Dice Loss", "aliases": [], "type": "training_optimization_method", "note": "segmentation에서 overlap 최적화에 자주 쓰이는 손실"}
+{"term": "Focal Loss", "aliases": [], "type": "training_optimization_method", "note": "hard example에 가중치를 두는 분류 손실 함수"}
+{"term": "Mean Squared Error", "aliases": ["MSE"], "type": "training_optimization_method", "note": "회귀와 복원 문제에서 기본이 되는 손실 함수"}
+{"term": "Huber Loss", "aliases": ["Smooth L1 loss"], "type": "training_optimization_method", "note": "이상치에 덜 민감한 회귀 손실 함수"}
+{"term": "Intersection over Union", "aliases": ["IoU"], "type": "metric_benchmark", "note": "segmentation과 detection에서 핵심 겹침 지표"}
+{"term": "Mean Average Precision", "aliases": ["mAP"], "type": "metric_benchmark", "note": "object detection 대표 평가 지표"}
+{"term": "Top-1 Accuracy", "aliases": [], "type": "metric_benchmark", "note": "분류 태스크의 기본 정확도 지표"}
+{"term": "Top-5 Accuracy", "aliases": [], "type": "metric_benchmark", "note": "이미지 분류에서 자주 쓰이는 완화형 정확도 지표"}
+{"term": "Frechet Inception Distance", "aliases": ["FID"], "type": "metric_benchmark", "note": "생성 이미지 품질 평가의 대표 지표"}
+{"term": "Image Classification", "aliases": [], "type": "capability_feature_spec", "note": "단일 레이블 분류를 수행하는 대표 비전 태스크"}
+{"term": "Semantic Segmentation", "aliases": [], "type": "capability_feature_spec", "note": "픽셀 단위 클래스를 예측하는 비전 태스크"}
+{"term": "Instance Segmentation", "aliases": [], "type": "capability_feature_spec", "note": "객체별 마스크를 예측하는 segmentation 태스크"}
+{"term": "Object Detection", "aliases": [], "type": "capability_feature_spec", "note": "객체 위치와 클래스를 함께 예측하는 태스크"}
+{"term": "Keypoint Detection", "aliases": [], "type": "capability_feature_spec", "note": "관절·랜드마크 좌표를 찾는 비전 태스크"}
+{"term": "Image Captioning", "aliases": [], "type": "capability_feature_spec", "note": "이미지에서 자연어 설명을 생성하는 태스크"}
+{"term": "Depth Estimation", "aliases": [], "type": "capability_feature_spec", "note": "이미지로부터 거리 정보를 예측하는 태스크"}
+{"term": "Super-Resolution", "aliases": [], "type": "capability_feature_spec", "note": "저해상도 이미지를 고해상도로 복원하는 태스크"}
+{"term": "Image-to-Image Translation", "aliases": [], "type": "capability_feature_spec", "note": "한 이미지 도메인을 다른 도메인으로 변환하는 태스크"}
+{"term": "Neural Rendering", "aliases": [], "type": "capability_feature_spec", "note": "신경망으로 시점/장면을 렌더링하는 태스크 축"}
+{"term": "Neural Radiance Field", "aliases": ["NeRF"], "type": "model_algorithm_family", "note": "3D 장면을 연속 함수로 표현하는 대표 모델"}
+{"term": "YOLO", "aliases": [], "type": "model_algorithm_family", "note": "실시간 object detection 대표 계열"}
+{"term": "DETR", "aliases": [], "type": "model_algorithm_family", "note": "Transformer 기반 object detection 대표 모델"}
+{"term": "Graph Neural Network", "aliases": ["GNN"], "type": "model_algorithm_family", "note": "그래프 구조 데이터를 위한 신경망 계열"}
+{"term": "Epoch", "aliases": [], "type": "foundational_concept", "note": "전체 학습 데이터를 한 번 모두 순회하는 훈련 단위"}
+{"term": "Batch Size", "aliases": [], "type": "foundational_concept", "note": "한 번의 파라미터 업데이트에 사용하는 샘플 수"}
+{"term": "Mini-Batch", "aliases": [], "type": "foundational_concept", "note": "전체 데이터셋 중 배치 학습에 사용하는 작은 부분집합"}
+{"term": "Loss Function", "aliases": ["objective function"], "type": "foundational_concept", "note": "모델 예측 오차를 수치화해 최적화 대상으로 삼는 함수"}
+{"term": "Pooling", "aliases": [], "type": "foundational_concept", "note": "특징 맵을 축약해 계산량과 민감도를 조절하는 연산"}
+{"term": "Global Average Pooling", "aliases": ["GAP"], "type": "foundational_concept", "note": "공간 차원을 평균으로 축약하는 대표 pooling 방식"}
+{"term": "Feature Extractor", "aliases": [], "type": "foundational_concept", "note": "입력에서 유용한 중간 표현을 뽑아내는 네트워크 부분"}
+{"term": "Diffusion Transformer", "aliases": ["DiT"], "type": "model_algorithm_family", "note": "[2024+] diffusion backbone에 Transformer를 적용한 생성 모델 계열"}
+{"term": "Denoising Diffusion Probabilistic Model", "aliases": ["DDPM"], "type": "model_algorithm_family", "note": "노이즈 제거 과정을 반복 학습하는 대표 diffusion 모델"}
+{"term": "Latent Diffusion Model", "aliases": ["LDM"], "type": "model_algorithm_family", "note": "픽셀 공간 대신 latent space에서 diffusion을 수행하는 구조"}
+{"term": "Flow Matching", "aliases": [], "type": "training_optimization_method", "note": "[2024+] diffusion 대안으로 주목받는 생성 경로 학습 방식"}
+{"term": "Classifier-Free Guidance", "aliases": ["CFG"], "type": "training_optimization_method", "note": "조건부 생성 품질을 높이기 위해 guidance를 조절하는 diffusion 기법"}
+{"term": "Masked Autoencoder", "aliases": ["MAE"], "type": "model_algorithm_family", "note": "입력 일부를 가리고 복원하면서 표현을 학습하는 비전 모델"}
+{"term": "Masked Image Modeling", "aliases": ["MIM"], "type": "training_optimization_method", "note": "가려진 이미지 패치를 복원하며 학습하는 자기지도 학습 방식"}
+{"term": "Vector Quantization", "aliases": [], "type": "foundational_concept", "note": "연속 표현을 유한한 코드북 인덱스로 압축하는 기법"}
+{"term": "VQ-VAE", "aliases": [], "type": "model_algorithm_family", "note": "vector quantization을 latent 표현에 도입한 VAE 계열"}

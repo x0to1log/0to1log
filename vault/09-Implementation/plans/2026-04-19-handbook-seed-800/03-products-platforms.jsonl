@@ -1,0 +1,114 @@
+{"_meta": true, "category": "products-platforms", "target": 110, "vocabulary_hint": "API, SDK, release, pricing, benchmark, migration, deprecation, rate limit, quota, SLA", "reference_style": "official docs, changelogs, and pricing pages", "quality_signals": "include version/date sensitivity, pricing, and alternatives", "anti_patterns": "do not repeat marketing claims without tradeoffs"}
+{"term": "OpenAI API", "aliases": [], "type": "product_platform_service", "note": "LLM 앱 개발에서 가장 널리 쓰이는 모델 API 제품"}
+{"term": "Anthropic API", "aliases": [], "type": "product_platform_service", "note": "Claude 계열을 제공하는 대표 모델 API"}
+{"term": "Gemini API", "aliases": [], "type": "product_platform_service", "note": "Google 계열 생성형 AI API 제품"}
+{"term": "Google AI Studio", "aliases": ["AI Studio"], "type": "product_platform_service", "note": "Gemini 실험과 프롬프트 테스트를 위한 Google 플랫폼"}
+{"term": "Azure OpenAI Service", "aliases": [], "type": "product_platform_service", "note": "Azure 인프라 위에서 OpenAI 모델을 제공하는 서비스"}
+{"term": "Azure AI Foundry", "aliases": [], "type": "product_platform_service", "note": "[2024+] Azure 기반 AI 개발·배포 플랫폼"}
+{"term": "Vertex AI", "aliases": [], "type": "product_platform_service", "note": "Google Cloud의 대표 AI 개발 플랫폼"}
+{"term": "Cohere API", "aliases": [], "type": "product_platform_service", "note": "임베딩·생성 모델을 제공하는 상용 API"}
+{"term": "Mistral API", "aliases": [], "type": "product_platform_service", "note": "Mistral 계열 모델을 제공하는 상용 API"}
+{"term": "Together AI", "aliases": [], "type": "product_platform_service", "note": "오픈 모델 서빙과 inference API를 제공하는 플랫폼"}
+{"term": "Fireworks AI", "aliases": [], "type": "product_platform_service", "note": "[2024+] 고성능 inference API 및 서빙 플랫폼"}
+{"term": "GroqCloud", "aliases": [], "type": "product_platform_service", "note": "[2024+] 저지연 LLM inference를 강조하는 API 플랫폼"}
+{"term": "Cerebras Inference", "aliases": [], "type": "product_platform_service", "note": "[2025+] 초고속 inference를 내세운 모델 API 제품"}
+{"term": "Perplexity API", "aliases": [], "type": "product_platform_service", "note": "[2025+] 검색 결합형 응답 API 제품"}
+{"term": "Replicate", "aliases": [], "type": "product_platform_service", "note": "오픈 모델을 API로 실행할 수 있는 대표 플랫폼"}
+{"term": "Modal", "aliases": [], "type": "product_platform_service", "note": "GPU 워크로드와 AI 배포에 자주 쓰이는 서버리스 플랫폼"}
+{"term": "Baseten", "aliases": [], "type": "product_platform_service", "note": "모델 배포와 실시간 inference에 특화된 플랫폼"}
+{"term": "RunPod", "aliases": [], "type": "product_platform_service", "note": "GPU 임대와 모델 서빙에 자주 쓰이는 인프라 플랫폼"}
+{"term": "DeepInfra", "aliases": [], "type": "product_platform_service", "note": "오픈 모델 inference를 API로 제공하는 플랫폼"}
+{"term": "SambaNova Cloud", "aliases": [], "type": "product_platform_service", "note": "[2025+] 고성능 모델 API와 inference를 제공하는 클라우드"}
+{"term": "Databricks Mosaic AI", "aliases": ["Mosaic AI"], "type": "product_platform_service", "note": "Databricks의 생성형 AI 개발·운영 제품군"}
+{"term": "Snowflake Cortex", "aliases": [], "type": "product_platform_service", "note": "Snowflake 내부에서 AI 기능을 제공하는 플랫폼 제품"}
+{"term": "Cloudflare Workers AI", "aliases": ["Workers AI"], "type": "product_platform_service", "note": "엣지 환경에서 AI inference를 제공하는 플랫폼"}
+{"term": "IBM watsonx.ai", "aliases": ["watsonx"], "type": "product_platform_service", "note": "IBM의 엔터프라이즈 AI 플랫폼"}
+{"term": "NVIDIA NIM", "aliases": ["NIM"], "type": "product_platform_service", "note": "[2024+] NVIDIA의 inference microservice 제품"}
+{"term": "LangChain", "aliases": [], "type": "library_framework_sdk", "note": "LLM 앱과 체인 구성을 위한 대표 프레임워크"}
+{"term": "LangGraph", "aliases": [], "type": "library_framework_sdk", "note": "[2024+] 상태 기반 에이전트 그래프 프레임워크"}
+{"term": "LlamaIndex", "aliases": [], "type": "library_framework_sdk", "note": "RAG와 데이터 커넥터 중심의 대표 프레임워크"}
+{"term": "DSPy", "aliases": [], "type": "library_framework_sdk", "note": "프롬프트/파이프라인 최적화를 위한 선언형 프레임워크"}
+{"term": "Haystack", "aliases": [], "type": "library_framework_sdk", "note": "검색·질의응답 파이프라인 구축용 오픈소스 프레임워크"}
+{"term": "AutoGen", "aliases": [], "type": "library_framework_sdk", "note": "멀티에이전트 대화 구성을 위한 프레임워크"}
+{"term": "CrewAI", "aliases": [], "type": "library_framework_sdk", "note": "[2024+] 역할 기반 멀티에이전트 프레임워크"}
+{"term": "Semantic Kernel", "aliases": [], "type": "library_framework_sdk", "note": "Microsoft 계열 AI 앱 오케스트레이션 SDK"}
+{"term": "PydanticAI", "aliases": [], "type": "library_framework_sdk", "note": "[2024+] Pydantic 기반 에이전트/LLM 애플리케이션 프레임워크"}
+{"term": "Instructor", "aliases": [], "type": "library_framework_sdk", "note": "LLM 응답을 구조화 타입으로 받기 쉽게 해주는 라이브러리"}
+{"term": "LiteLLM", "aliases": [], "type": "library_framework_sdk", "note": "여러 LLM provider를 통합 호출하는 대표 라이브러리"}
+{"term": "Guardrails AI", "aliases": ["Guardrails"], "type": "library_framework_sdk", "note": "출력 검증과 제약을 돕는 guardrail 라이브러리"}
+{"term": "Outlines", "aliases": [], "type": "library_framework_sdk", "note": "구조화 출력과 constrained generation 라이브러리"}
+{"term": "Guidance", "aliases": [], "type": "library_framework_sdk", "note": "토큰 제어 기반 prompting/templating 라이브러리"}
+{"term": "OpenAI Agents SDK", "aliases": ["Agents SDK"], "type": "library_framework_sdk", "note": "[2025+] OpenAI 에이전트 앱 구축용 SDK"}
+{"term": "smolagents", "aliases": [], "type": "library_framework_sdk", "note": "가벼운 코드 실행형 에이전트 프레임워크"}
+{"term": "Transformers", "aliases": ["Hugging Face Transformers"], "type": "library_framework_sdk", "note": "오픈 모델 사용의 표준 라이브러리"}
+{"term": "Diffusers", "aliases": [], "type": "library_framework_sdk", "note": "확산 모델 사용을 위한 대표 라이브러리"}
+{"term": "Accelerate", "aliases": [], "type": "library_framework_sdk", "note": "분산 학습과 device 관리 보조 라이브러리"}
+{"term": "TRL", "aliases": [], "type": "library_framework_sdk", "note": "preference optimization과 RLHF 계열 학습 라이브러리"}
+{"term": "PEFT", "aliases": [], "type": "library_framework_sdk", "note": "parameter-efficient fine-tuning 라이브러리"}
+{"term": "Unsloth", "aliases": [], "type": "library_framework_sdk", "note": "[2024+] LLM 파인튜닝 최적화 라이브러리"}
+{"term": "Axolotl", "aliases": [], "type": "library_framework_sdk", "note": "오픈 모델 파인튜닝용 실전 설정 프레임워크"}
+{"term": "BentoML", "aliases": [], "type": "library_framework_sdk", "note": "모델 서빙 패키징과 배포를 돕는 프레임워크"}
+{"term": "Vercel AI SDK", "aliases": ["AI SDK"], "type": "library_framework_sdk", "note": "웹 앱에서 LLM UX를 빠르게 붙이는 대표 SDK"}
+{"term": "Mastra", "aliases": [], "type": "library_framework_sdk", "note": "[2025+] TypeScript 기반 agent workflow 프레임워크"}
+{"term": "LangSmith", "aliases": [], "type": "product_platform_service", "note": "LangChain 계열 tracing·eval·observability 플랫폼"}
+{"term": "Weights & Biases", "aliases": ["W&B", "wandb"], "type": "product_platform_service", "note": "실험 추적과 모델 관찰의 대표 플랫폼"}
+{"term": "Arize Phoenix", "aliases": ["Phoenix"], "type": "product_platform_service", "note": "LLM tracing·eval·observability 플랫폼"}
+{"term": "Langfuse", "aliases": [], "type": "product_platform_service", "note": "오픈소스 중심 LLM observability 플랫폼"}
+{"term": "PromptLayer", "aliases": [], "type": "product_platform_service", "note": "프롬프트 버전 관리와 로그 수집 플랫폼"}
+{"term": "Humanloop", "aliases": [], "type": "product_platform_service", "note": "프롬프트 운영과 eval 워크플로를 제공하는 플랫폼"}
+{"term": "Braintrust", "aliases": [], "type": "product_platform_service", "note": "[2024+] LLM eval과 데이터셋 관리 플랫폼"}
+{"term": "Galileo", "aliases": [], "type": "product_platform_service", "note": "LLM 품질 모니터링과 평가 플랫폼"}
+{"term": "Helicone", "aliases": [], "type": "product_platform_service", "note": "LLM API usage logging·gateway 플랫폼"}
+{"term": "Portkey", "aliases": [], "type": "product_platform_service", "note": "AI gateway와 provider routing 플랫폼"}
+{"term": "OpenRouter", "aliases": [], "type": "product_platform_service", "note": "여러 모델 provider를 단일 API로 제공하는 게이트웨이"}
+{"term": "TruLens", "aliases": [], "type": "library_framework_sdk", "note": "LLM app 평가와 추적을 위한 오픈소스 툴킷"}
+{"term": "Ragas", "aliases": [], "type": "library_framework_sdk", "note": "RAG 평가에 널리 쓰이는 라이브러리"}
+{"term": "DeepEval", "aliases": [], "type": "library_framework_sdk", "note": "LLM 응답 품질 평가 라이브러리"}
+{"term": "Patronus AI", "aliases": [], "type": "product_platform_service", "note": "LLM risk·evaluation 중심의 플랫폼"}
+{"term": "Evidently AI", "aliases": ["Evidently"], "type": "product_platform_service", "note": "모델 모니터링과 데이터 품질 리포팅 플랫폼"}
+{"term": "MLflow", "aliases": [], "type": "product_platform_service", "note": "실험 추적과 모델 레지스트리의 대표 플랫폼"}
+{"term": "Comet", "aliases": ["Comet ML"], "type": "product_platform_service", "note": "ML 실험 추적과 협업 플랫폼"}
+{"term": "Neptune", "aliases": ["Neptune.ai"], "type": "product_platform_service", "note": "모델 실험 메타데이터 추적 플랫폼"}
+{"term": "Roboflow", "aliases": [], "type": "product_platform_service", "note": "컴퓨터 비전 데이터 관리와 모델 배포 도구"}
+{"term": "Label Studio", "aliases": [], "type": "product_platform_service", "note": "멀티모달 데이터 라벨링 플랫폼"}
+{"term": "Weaviate", "aliases": [], "type": "product_platform_service", "note": "벡터 검색과 retrieval용 데이터 플랫폼"}
+{"term": "Pinecone", "aliases": [], "type": "product_platform_service", "note": "대표적인 managed vector database 서비스"}
+{"term": "Qdrant", "aliases": [], "type": "product_platform_service", "note": "오픈소스 중심 vector database 플랫폼"}
+{"term": "Milvus", "aliases": [], "type": "product_platform_service", "note": "대규모 벡터 검색을 위한 오픈소스 데이터 플랫폼"}
+{"term": "Chroma", "aliases": [], "type": "product_platform_service", "note": "로컬 개발과 경량 RAG에 자주 쓰이는 vector DB"}
+{"term": "RedisVL", "aliases": [], "type": "library_framework_sdk", "note": "Redis 기반 벡터 검색을 위한 라이브러리/제품 축"}
+{"term": "OpenSearch", "aliases": [], "type": "product_platform_service", "note": "검색과 벡터 검색을 함께 다루는 플랫폼"}
+{"term": "Tavily", "aliases": [], "type": "product_platform_service", "note": "AI agent용 웹 검색 API"}
+{"term": "Exa", "aliases": [], "type": "product_platform_service", "note": "의미 기반 웹 검색·리서치 API 플랫폼"}
+{"term": "Brave Search API", "aliases": [], "type": "product_platform_service", "note": "웹 검색 API 제공 서비스"}
+{"term": "SerpAPI", "aliases": [], "type": "product_platform_service", "note": "검색 엔진 결과 수집용 API 플랫폼"}
+{"term": "Voyage AI", "aliases": [], "type": "product_platform_service", "note": "임베딩과 reranking 중심의 AI API 서비스"}
+{"term": "Jina AI", "aliases": [], "type": "product_platform_service", "note": "retrieval·reader 계열 API와 도구를 제공하는 플랫폼"}
+{"term": "Elasticsearch", "aliases": ["Elastic Search", "Elastic"], "type": "product_platform_service", "note": "검색·관측·벡터 검색을 아우르는 대표 검색 플랫폼"}
+{"term": "ElevenLabs", "aliases": [], "type": "product_platform_service", "note": "고품질 음성 합성과 음성 클로닝 대표 플랫폼"}
+{"term": "Deepgram", "aliases": [], "type": "product_platform_service", "note": "음성 인식과 음성 API 서비스"}
+{"term": "AssemblyAI", "aliases": [], "type": "product_platform_service", "note": "STT와 음성 분석 API 플랫폼"}
+{"term": "Fal", "aliases": ["fal.ai"], "type": "product_platform_service", "note": "[2024+] 이미지·비디오 모델 inference 플랫폼"}
+{"term": "Stability AI API", "aliases": [], "type": "product_platform_service", "note": "이미지 생성 모델 API 제품"}
+{"term": "Runway", "aliases": [], "type": "product_platform_service", "note": "영상 생성과 편집을 제공하는 대표 생성형 미디어 제품"}
+{"term": "Pika", "aliases": [], "type": "product_platform_service", "note": "텍스트·이미지 기반 영상 생성 제품"}
+{"term": "Luma AI", "aliases": [], "type": "product_platform_service", "note": "비디오 생성과 3D 캡처 제품군"}
+{"term": "GitHub Copilot", "aliases": ["Copilot"], "type": "product_platform_service", "note": "대표적인 코드 보조 AI 제품"}
+{"term": "Cursor", "aliases": [], "type": "product_platform_service", "note": "[2024+] AI 코딩 IDE 대표 제품"}
+{"term": "Windsurf", "aliases": [], "type": "product_platform_service", "note": "[2025+] AI 코딩 에이전트 IDE 제품"}
+{"term": "Sourcegraph Cody", "aliases": ["Cody"], "type": "product_platform_service", "note": "코드 검색 연계형 AI 코딩 도우미"}
+{"term": "Claude Code", "aliases": [], "type": "product_platform_service", "note": "[2025+] Anthropic의 터미널형 코딩 에이전트 제품"}
+{"term": "Cline", "aliases": [], "type": "product_platform_service", "note": "VS Code 기반 오픈소스 코딩 에이전트 도구"}
+{"term": "Continue", "aliases": [], "type": "product_platform_service", "note": "오픈소스 AI 코딩 어시스턴트 확장 도구"}
+{"term": "Amazon Bedrock", "aliases": ["Bedrock"], "type": "product_platform_service", "note": "AWS의 생성형 AI 애플리케이션·에이전트 구축 플랫폼"}
+{"term": "Hugging Face Hub", "aliases": ["HF Hub"], "type": "product_platform_service", "note": "모델·데이터셋·Spaces를 공유하고 배포하는 핵심 플랫폼"}
+{"term": "Hugging Face Inference Endpoints", "aliases": ["Inference Endpoints"], "type": "product_platform_service", "note": "전용 인프라에 모델을 배포하는 Hugging Face managed endpoint 제품"}
+{"term": "Hugging Face Inference Providers", "aliases": ["Inference Providers"], "type": "product_platform_service", "note": "[2025+] 다양한 추론 파트너를 단일 인터페이스로 묶는 Hugging Face 추론 제품군"}
+{"term": "Hugging Face Spaces", "aliases": ["HF Spaces"], "type": "product_platform_service", "note": "Gradio·Streamlit 기반 AI 데모 앱을 호스팅하는 플랫폼"}
+{"term": "Gradio", "aliases": [], "type": "library_framework_sdk", "note": "모델 데모·채팅 UI·멀티모달 앱을 빠르게 만드는 대표 라이브러리"}
+{"term": "DeepSeek API", "aliases": [], "type": "product_platform_service", "note": "[2025+] OpenAI 호환 호출 패턴으로 자주 언급되는 모델 API 서비스"}
+{"term": "xAI API", "aliases": [], "type": "product_platform_service", "note": "[2025+] Grok 계열 모델과 agent tools를 제공하는 API 플랫폼"}
+{"term": "v0", "aliases": ["Vercel v0"], "type": "product_platform_service", "note": "Vercel의 UI 생성형 개발 제품이자 모델 API 제품군"}
+{"term": "Vertex AI Agent Builder", "aliases": ["Agent Builder"], "type": "product_platform_service", "note": "[2025+] Google Cloud의 에이전트 구축·배포 제품군"}
+{"term": "Gemini CLI", "aliases": [], "type": "product_platform_service", "note": "[2025+] Google의 오픈소스 터미널형 AI 코딩 에이전트 제품"}
+{"term": "Claude Desktop", "aliases": [], "type": "product_platform_service", "note": "MCP 커넥터와 데스크톱 확장을 지원하는 Anthropic 데스크톱 앱"}

@@ -1,0 +1,60 @@
+{"_meta": true, "category": "safety-ethics", "target": 40, "vocabulary_hint": "alignment, adversarial, bias, red teaming, audit, data poisoning, jailbreak, guardrail", "reference_style": "safety research, standards, and official guidance", "quality_signals": "ground discussion in incidents, detection, and defenses", "anti_patterns": "avoid purely philosophical discussion when the term has technical mitigations"}
+{"term": "Human Oversight", "aliases": [], "type": "capability_feature_spec", "note": "practice of keeping human review or intervention in high-risk decisions"}
+{"term": "Human-in-the-Loop", "aliases": ["HITL"], "type": "system_workflow_pattern", "note": "workflow pattern that inserts human judgment into model operation"}
+{"term": "Red Teaming", "aliases": [], "type": "system_workflow_pattern", "note": "structured adversarial testing to uncover harmful or unsafe model behavior"}
+{"term": "Safety Evaluation", "aliases": [], "type": "system_workflow_pattern", "note": "measurement process focused on harms, misuse, and failure behavior"}
+{"term": "Guardrail", "aliases": [], "type": "capability_feature_spec", "note": "constraint or control layer that blocks or limits unsafe behavior"}
+{"term": "Content Moderation", "aliases": [], "type": "system_workflow_pattern", "note": "screening process for unsafe, disallowed, or policy-violating content"}
+{"term": "Refusal", "aliases": [], "type": "capability_feature_spec", "note": "behavior where a model declines unsafe or disallowed requests"}
+{"term": "Threat Modeling", "aliases": [], "type": "system_workflow_pattern", "note": "systematic analysis of attackers, assets, and abuse paths"}
+{"term": "Safety Incident", "aliases": [], "type": "foundational_concept", "note": "real-world event where an AI system causes or nearly causes harm"}
+{"term": "Adversarial Attack", "aliases": [], "type": "problem_failure_mode", "note": "deliberate attempt to force a model or system into unsafe failure"}
+{"term": "Jailbreak", "aliases": [], "type": "problem_failure_mode", "note": "prompting or input strategy that bypasses safety controls"}
+{"term": "Data Poisoning", "aliases": [], "type": "problem_failure_mode", "note": "corruption of training data to manipulate model behavior"}
+{"term": "Backdoor Attack", "aliases": [], "type": "problem_failure_mode", "note": "hidden trigger attack that causes targeted behavior under specific conditions"}
+{"term": "Prompt Leakage", "aliases": [], "type": "problem_failure_mode", "note": "exposure of hidden instructions, secrets, or internal prompts to users"}
+{"term": "Model Extraction", "aliases": [], "type": "problem_failure_mode", "note": "attack that reconstructs a model or its behavior through repeated queries"}
+{"term": "Membership Inference", "aliases": [], "type": "problem_failure_mode", "note": "attack that predicts whether a record was part of training data"}
+{"term": "Model Inversion", "aliases": [], "type": "problem_failure_mode", "note": "attack that infers sensitive attributes or source patterns from model outputs"}
+{"term": "Differential Privacy", "aliases": ["DP"], "type": "foundational_concept", "note": "privacy framework that bounds how much one record can affect outputs"}
+{"term": "Personally Identifiable Information", "aliases": ["PII"], "type": "foundational_concept", "note": "information that can identify or trace a specific individual"}
+{"term": "Data Minimization", "aliases": [], "type": "capability_feature_spec", "note": "principle of collecting and retaining only data that are necessary"}
+{"term": "Audit Trail", "aliases": [], "type": "capability_feature_spec", "note": "record of actions and changes used for accountability and investigation"}
+{"term": "Data Provenance", "aliases": [], "type": "capability_feature_spec", "note": "trace of where data came from and how it was transformed"}
+{"term": "Bias", "aliases": [], "type": "problem_failure_mode", "note": "systematic skew in outputs that can create unfair or distorted outcomes"}
+{"term": "Fairness", "aliases": [], "type": "foundational_concept", "note": "goal of avoiding unjustified disparities across people or groups"}
+{"term": "Demographic Parity", "aliases": [], "type": "metric_benchmark", "note": "fairness criterion comparing positive prediction rates across groups"}
+{"term": "Equalized Odds", "aliases": [], "type": "metric_benchmark", "note": "fairness criterion comparing error rates across groups at matched outcomes"}
+{"term": "Toxicity", "aliases": [], "type": "problem_failure_mode", "note": "harmful, abusive, or hateful language generated or amplified by a system"}
+{"term": "Distribution Shift", "aliases": [], "type": "problem_failure_mode", "note": "change between training conditions and real deployment conditions"}
+{"term": "Out-of-Distribution Detection", "aliases": ["OOD Detection"], "type": "capability_feature_spec", "note": "ability to recognize inputs unlike the training or operating distribution"}
+{"term": "Uncertainty Estimation", "aliases": [], "type": "capability_feature_spec", "note": "technique for estimating how uncertain a model is about its output"}
+{"term": "Fallback Policy", "aliases": [], "type": "system_workflow_pattern", "note": "predefined action taken when the primary model path is unsafe or unreliable"}
+{"term": "Model Card", "aliases": [], "type": "protocol_format_data_structure", "note": "documentation artifact describing model purpose, limits, and evaluation results"}
+{"term": "System Card", "aliases": [], "type": "protocol_format_data_structure", "note": "documentation artifact describing end-to-end system behavior, mitigations, and risks"}
+{"term": "NIST AI Risk Management Framework", "aliases": ["NIST AI RMF"], "type": "protocol_format_data_structure", "note": "risk management framework for governing AI design, deployment, and oversight"}
+{"term": "ISO/IEC 42001", "aliases": [], "type": "protocol_format_data_structure", "note": "management system standard for responsible AI governance"}
+{"term": "EU AI Act", "aliases": [], "type": "protocol_format_data_structure", "note": "European regulation establishing risk-based AI compliance requirements"}
+{"term": "Safety Classifier", "aliases": [], "type": "model_algorithm_family", "note": "classifier used to detect unsafe content, intent, or policy violations"}
+{"term": "Incident Response", "aliases": [], "type": "system_workflow_pattern", "note": "process for detecting, containing, and recovering from safety failures"}
+{"term": "Abuse Monitoring", "aliases": [], "type": "system_workflow_pattern", "note": "ongoing observation of misuse patterns, policy violations, and attack attempts"}
+{"term": "Reward Hacking", "aliases": [], "type": "problem_failure_mode", "note": "failure mode where a model optimizes the measured reward while violating the intended goal"}
+{"term": "Specification Gaming", "aliases": [], "type": "problem_failure_mode", "note": "behavior where a system exploits gaps between the written objective and the real intent"}
+{"term": "Misalignment", "aliases": [], "type": "problem_failure_mode", "note": "state where a model's behavior or objectives diverge from human intent or safety constraints"}
+{"term": "Deceptive Alignment", "aliases": [], "type": "problem_failure_mode", "note": "advanced alignment risk where a model appears aligned while pursuing different goals"}
+{"term": "Dual Use", "aliases": [], "type": "foundational_concept", "note": "property of AI capabilities that can support beneficial uses and harmful misuse"}
+{"term": "Model Misuse", "aliases": [], "type": "problem_failure_mode", "note": "unsafe or abusive use of a model outside intended or permitted boundaries"}
+{"term": "AI Governance", "aliases": [], "type": "foundational_concept", "note": "policies, controls, accountability, and oversight used to manage AI system risk"}
+{"term": "Frontier AI Safety", "aliases": [], "type": "foundational_concept", "note": "safety practices focused on highly capable frontier model development and deployment"}
+{"term": "Responsible AI", "aliases": [], "type": "foundational_concept", "note": "development and deployment approach emphasizing fairness, safety, accountability, and transparency"}
+{"term": "Content Provenance", "aliases": [], "type": "capability_feature_spec", "note": "tracking where digital media came from and how it was created or modified"}
+{"term": "Watermarking", "aliases": [], "type": "capability_feature_spec", "note": "embedding a signal in generated content to support detection or attribution"}
+{"term": "Deepfake", "aliases": [], "type": "problem_failure_mode", "note": "synthetic or manipulated media that can impersonate real people or events"}
+{"term": "Content Authenticity", "aliases": [], "type": "foundational_concept", "note": "practice of verifying the origin, integrity, and modification history of digital media"}
+{"term": "C2PA", "aliases": ["Coalition for Content Provenance and Authenticity"], "type": "protocol_format_data_structure", "note": "open standard ecosystem for signed content provenance and Content Credentials"}
+{"term": "Synthetic Media", "aliases": [], "type": "foundational_concept", "note": "media generated or substantially modified by AI systems"}
+{"term": "Explainability", "aliases": ["XAI"], "type": "capability_feature_spec", "note": "ability to provide human-understandable reasons for a model's output or behavior"}
+{"term": "Interpretability", "aliases": [], "type": "capability_feature_spec", "note": "ability to inspect and understand internal model mechanisms or learned representations"}
+{"term": "Privacy-Preserving Machine Learning", "aliases": ["PPML"], "type": "training_optimization_method", "note": "methods for training or using ML systems while reducing exposure of sensitive data"}
+{"term": "Federated Learning", "aliases": [], "type": "training_optimization_method", "note": "training approach where data stays on local clients while model updates are aggregated"}
+{"term": "Sensitive Information Disclosure", "aliases": [], "type": "problem_failure_mode", "note": "LLM application risk where private, confidential, or security-sensitive data is exposed"}

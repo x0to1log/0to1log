@@ -1,0 +1,89 @@
+{"_meta": true, "category": "infra-hardware", "target": 90, "vocabulary_hint": "GPU, CUDA, kernel, throughput, latency, quantization, cluster, container, shard, replica", "reference_style": "vendor docs, benchmarks, and deployment docs", "quality_signals": "use operational constraints, workload fit, and cost-aware comparisons", "anti_patterns": "do not explain only theory and skip deployment constraints"}
+{"term": "H100", "aliases": ["NVIDIA H100"], "type": "hardware_runtime_infra", "note": "현대 AI 훈련·추론 인프라의 대표 GPU"}
+{"term": "H200", "aliases": ["NVIDIA H200"], "type": "hardware_runtime_infra", "note": "[2024+] H100 후속 고대역폭 메모리 GPU"}
+{"term": "B200", "aliases": ["NVIDIA B200"], "type": "hardware_runtime_infra", "note": "[2025+] Blackwell 세대 대표 AI GPU"}
+{"term": "Blackwell GPU", "aliases": ["Blackwell"], "type": "hardware_runtime_infra", "note": "[2025+] NVIDIA 차세대 AI 가속기 아키텍처"}
+{"term": "A100", "aliases": ["NVIDIA A100"], "type": "hardware_runtime_infra", "note": "대규모 학습 인프라의 이전 세대 표준 GPU"}
+{"term": "L40S", "aliases": ["NVIDIA L40S"], "type": "hardware_runtime_infra", "note": "추론·멀티모달 워크로드에 자주 쓰이는 GPU"}
+{"term": "T4", "aliases": ["NVIDIA T4"], "type": "hardware_runtime_infra", "note": "경량 추론과 비용 효율형 배포에서 자주 쓰인 GPU"}
+{"term": "Tensor Processing Unit", "aliases": ["TPU"], "type": "hardware_runtime_infra", "note": "Google 계열 AI 가속기 제품군의 상위 개념"}
+{"term": "TPU v5e", "aliases": [], "type": "hardware_runtime_infra", "note": "[2024+] Google의 비용 효율형 TPU 세대"}
+{"term": "Inferentia", "aliases": ["AWS Inferentia"], "type": "hardware_runtime_infra", "note": "AWS 추론 특화 AI 칩 제품군"}
+{"term": "Inferentia2", "aliases": ["AWS Inferentia2"], "type": "hardware_runtime_infra", "note": "AWS 추론 가속기의 최신 세대"}
+{"term": "Gaudi", "aliases": ["Intel Gaudi"], "type": "hardware_runtime_infra", "note": "Intel AI 가속기 제품군의 상위 개념"}
+{"term": "Gaudi 3", "aliases": [], "type": "hardware_runtime_infra", "note": "[2024+] 최신 Intel AI 가속기 세대"}
+{"term": "ROCm", "aliases": [], "type": "hardware_runtime_infra", "note": "AMD GPU를 위한 대표 AI 컴퓨팅 소프트웨어 스택"}
+{"term": "NCCL", "aliases": ["NVIDIA Collective Communications Library"], "type": "hardware_runtime_infra", "note": "다중 GPU 통신의 표준 라이브러리"}
+{"term": "NVLink", "aliases": [], "type": "hardware_runtime_infra", "note": "GPU 간 고속 연결을 위한 NVIDIA 인터커넥트"}
+{"term": "NVSwitch", "aliases": [], "type": "hardware_runtime_infra", "note": "대규모 GPU 토폴로지 연결을 위한 스위치 계층"}
+{"term": "InfiniBand", "aliases": [], "type": "hardware_runtime_infra", "note": "고성능 분산 학습 클러스터의 대표 네트워크"}
+{"term": "PCIe", "aliases": ["PCI Express"], "type": "hardware_runtime_infra", "note": "CPU-GPU 및 장치 간 연결의 기본 인터페이스"}
+{"term": "High Bandwidth Memory", "aliases": ["HBM"], "type": "hardware_runtime_infra", "note": "AI 가속기 성능을 좌우하는 핵심 메모리 기술"}
+{"term": "HBM3e", "aliases": [], "type": "hardware_runtime_infra", "note": "[2024+] 최신 AI 가속기용 고대역폭 메모리 세대"}
+{"term": "Unified Memory", "aliases": [], "type": "hardware_runtime_infra", "note": "CPU와 GPU 메모리 접근을 통합적으로 다루는 모델"}
+{"term": "Tensor Core", "aliases": ["Tensor Cores"], "type": "hardware_runtime_infra", "note": "행렬 연산을 가속하는 GPU 내부 전용 코어"}
+{"term": "Multi-Instance GPU", "aliases": ["MIG"], "type": "hardware_runtime_infra", "note": "하나의 GPU를 여러 인스턴스로 분할하는 기능"}
+{"term": "RDMA", "aliases": ["Remote Direct Memory Access"], "type": "hardware_runtime_infra", "note": "낮은 CPU 개입으로 메모리 간 전송을 수행하는 기술"}
+{"term": "NUMA", "aliases": ["Non-Uniform Memory Access"], "type": "hardware_runtime_infra", "note": "멀티소켓 서버의 메모리 접근 특성을 설명하는 개념"}
+{"term": "Kernel Fusion", "aliases": [], "type": "system_workflow_pattern", "note": "여러 연산을 하나의 커널로 합쳐 오버헤드를 줄이는 최적화"}
+{"term": "FlashAttention", "aliases": [], "type": "hardware_runtime_infra", "note": "attention 계산을 메모리 친화적으로 최적화하는 커널 기법"}
+{"term": "CUDA Graphs", "aliases": [], "type": "hardware_runtime_infra", "note": "GPU launch 오버헤드를 줄이는 실행 최적화 기술"}
+{"term": "Tensor Parallelism", "aliases": [], "type": "system_workflow_pattern", "note": "모델 텐서를 여러 장치에 분할해 계산하는 패턴"}
+{"term": "Pipeline Parallelism", "aliases": [], "type": "system_workflow_pattern", "note": "모델 층을 여러 장치에 단계별로 나누는 분산 패턴"}
+{"term": "Data Parallelism", "aliases": [], "type": "system_workflow_pattern", "note": "모델 복제본에 서로 다른 배치를 분산하는 대표 패턴"}
+{"term": "Expert Parallelism", "aliases": [], "type": "system_workflow_pattern", "note": "MoE expert를 여러 장치에 나눠 배치하는 병렬화 방식"}
+{"term": "ZeRO", "aliases": [], "type": "training_optimization_method", "note": "optimizer state와 gradient를 분산하는 메모리 절감 기법"}
+{"term": "Fully Sharded Data Parallel", "aliases": ["FSDP"], "type": "training_optimization_method", "note": "파라미터·그래디언트·옵티마 상태를 샤딩하는 분산 학습 방식"}
+{"term": "DeepSpeed", "aliases": [], "type": "library_framework_sdk", "note": "대규모 분산 학습과 추론 최적화용 프레임워크"}
+{"term": "Megatron-LM", "aliases": [], "type": "library_framework_sdk", "note": "대규모 Transformer 분산 학습용 대표 프레임워크"}
+{"term": "TensorRT-LLM", "aliases": [], "type": "library_framework_sdk", "note": "LLM 추론 최적화를 위한 NVIDIA 런타임/라이브러리"}
+{"term": "Text Generation Inference", "aliases": ["TGI"], "type": "hardware_runtime_infra", "note": "LLM 서빙용 Hugging Face 추론 서버"}
+{"term": "SGLang", "aliases": [], "type": "hardware_runtime_infra", "note": "[2024+] 고성능 LLM 서빙·에이전트 추론 런타임"}
+{"term": "llama.cpp", "aliases": [], "type": "hardware_runtime_infra", "note": "로컬·CPU·경량 디바이스 inference의 대표 런타임"}
+{"term": "Ollama", "aliases": [], "type": "hardware_runtime_infra", "note": "로컬 모델 실행과 배포를 단순화한 런타임 제품"}
+{"term": "Ray Serve", "aliases": [], "type": "hardware_runtime_infra", "note": "분산 Python 서비스와 모델 서빙 프레임워크"}
+{"term": "KServe", "aliases": [], "type": "hardware_runtime_infra", "note": "Kubernetes 기반 모델 서빙 표준 프레임워크"}
+{"term": "ONNX", "aliases": [], "type": "protocol_format_data_structure", "note": "모델 교환과 추론 배포를 위한 표준 포맷"}
+{"term": "ONNX Runtime", "aliases": [], "type": "hardware_runtime_infra", "note": "ONNX 모델 실행용 고성능 런타임"}
+{"term": "Continuous Batching", "aliases": [], "type": "system_workflow_pattern", "note": "[2024+] 토큰 단위로 요청을 이어붙여 처리량을 높이는 서빙 패턴"}
+{"term": "Dynamic Batching", "aliases": [], "type": "system_workflow_pattern", "note": "들어오는 요청을 동적으로 묶어 처리하는 배치 전략"}
+{"term": "Microbatching", "aliases": [], "type": "system_workflow_pattern", "note": "큰 작업을 작은 배치로 쪼개 메모리와 처리량을 조절하는 방식"}
+{"term": "KV Offloading", "aliases": [], "type": "system_workflow_pattern", "note": "KV cache를 다른 메모리 계층으로 내리는 추론 최적화 방식"}
+{"term": "CPU Offloading", "aliases": [], "type": "system_workflow_pattern", "note": "GPU 부담을 줄이기 위해 일부 상태를 CPU로 넘기는 전략"}
+{"term": "Prefill", "aliases": [], "type": "system_workflow_pattern", "note": "입력 전체를 한 번 처리해 초기 상태를 만드는 추론 단계"}
+{"term": "Decode Step", "aliases": [], "type": "system_workflow_pattern", "note": "토큰을 하나씩 생성하며 반복되는 추론 단계"}
+{"term": "Prefill-Decode Disaggregation", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] prefill과 decode를 다른 자원에 분리하는 서빙 구조"}
+{"term": "Time to First Token", "aliases": ["TTFT"], "type": "metric_benchmark", "note": "첫 토큰이 나올 때까지 걸리는 핵심 지연 지표"}
+{"term": "Tokens per Second", "aliases": ["TPS"], "type": "metric_benchmark", "note": "추론 처리량을 나타내는 대표 지표"}
+{"term": "Tail Latency", "aliases": [], "type": "metric_benchmark", "note": "상위 퍼센타일 지연 시간을 보는 운영 핵심 지표"}
+{"term": "Throughput", "aliases": [], "type": "metric_benchmark", "note": "단위 시간당 처리 가능한 작업량"}
+{"term": "Service-Level Objective", "aliases": ["SLO"], "type": "foundational_concept", "note": "운영에서 허용 가능한 성능 목표를 정의하는 개념"}
+{"term": "Queueing Delay", "aliases": [], "type": "metric_benchmark", "note": "실행 전 대기열에서 소모되는 지연 시간"}
+{"term": "Backpressure", "aliases": [], "type": "foundational_concept", "note": "과부하 시 입력을 제한하거나 늦추는 제어 개념"}
+{"term": "Admission Control", "aliases": [], "type": "system_workflow_pattern", "note": "리소스 한도에 맞춰 요청 수용 여부를 결정하는 운영 패턴"}
+{"term": "Autoscaling", "aliases": [], "type": "system_workflow_pattern", "note": "부하에 따라 인스턴스 수를 자동 조절하는 배포 패턴"}
+{"term": "Cold Start", "aliases": [], "type": "problem_failure_mode", "note": "새 인스턴스 초기화로 인해 지연이 커지는 현상"}
+{"term": "Warm Pool", "aliases": [], "type": "system_workflow_pattern", "note": "cold start를 줄이기 위해 미리 띄워두는 인스턴스 풀"}
+{"term": "Load Balancing", "aliases": [], "type": "system_workflow_pattern", "note": "복수 인스턴스에 요청을 분산하는 기본 운영 패턴"}
+{"term": "Replica", "aliases": [], "type": "foundational_concept", "note": "같은 모델 서빙 인스턴스를 여러 개 운영하는 단위"}
+{"term": "Sharding", "aliases": [], "type": "system_workflow_pattern", "note": "모델이나 데이터를 여러 조각으로 나눠 배치하는 패턴"}
+{"term": "Model Sharding", "aliases": [], "type": "system_workflow_pattern", "note": "대형 모델 파라미터를 여러 장치에 분산하는 방식"}
+{"term": "Weight Streaming", "aliases": [], "type": "system_workflow_pattern", "note": "[2025+] 필요한 시점에 가중치를 읽어오는 서빙 최적화 방식"}
+{"term": "Distributed Training", "aliases": [], "type": "system_workflow_pattern", "note": "여러 장치를 활용해 학습을 병렬 수행하는 상위 개념"}
+{"term": "Elastic Training", "aliases": [], "type": "system_workflow_pattern", "note": "가변적인 자원 환경에서도 학습을 지속하는 분산 학습 방식"}
+{"term": "Slurm", "aliases": [], "type": "hardware_runtime_infra", "note": "HPC와 GPU 클러스터에서 널리 쓰이는 스케줄러"}
+{"term": "Kubernetes", "aliases": ["K8s"], "type": "hardware_runtime_infra", "note": "컨테이너 오케스트레이션의 표준 플랫폼"}
+{"term": "Helm", "aliases": [], "type": "hardware_runtime_infra", "note": "Kubernetes 애플리케이션 배포를 패키지로 관리하는 도구"}
+{"term": "GPU Utilization", "aliases": [], "type": "metric_benchmark", "note": "GPU 자원이 실제로 얼마나 활용되는지 보는 지표"}
+{"term": "Memory Bandwidth", "aliases": [], "type": "metric_benchmark", "note": "메모리 계층의 데이터 이동 성능을 나타내는 지표"}
+{"term": "Memory-Bound Workload", "aliases": [], "type": "foundational_concept", "note": "연산보다 메모리 병목이 성능을 좌우하는 워크로드"}
+{"term": "Compute-Bound Workload", "aliases": [], "type": "foundational_concept", "note": "메모리보다 연산량이 성능을 좌우하는 워크로드"}
+{"term": "Spot Instance", "aliases": [], "type": "product_platform_service", "note": "비용 절감을 위해 가변 가용성을 감수하는 클라우드 인스턴스"}
+{"term": "Safetensors", "aliases": [], "type": "protocol_format_data_structure", "note": "안전하고 빠른 모델 가중치 저장 포맷"}
+{"term": "GGML", "aliases": [], "type": "protocol_format_data_structure", "note": "경량 로컬 inference 생태계에서 쓰이는 모델 포맷/런타임 축"}
+{"term": "MLX", "aliases": [], "type": "library_framework_sdk", "note": "Apple 실리콘 최적화 ML 라이브러리"}
+{"term": "OpenVINO", "aliases": [], "type": "hardware_runtime_infra", "note": "Intel 하드웨어 추론 최적화 런타임"}
+{"term": "TorchServe", "aliases": [], "type": "hardware_runtime_infra", "note": "PyTorch 모델 배포용 서빙 프레임워크"}
+{"term": "Rolling Deployment", "aliases": [], "type": "system_workflow_pattern", "note": "트래픽을 유지하며 버전을 점진 교체하는 배포 방식"}
+{"term": "Blue-Green Deployment", "aliases": [], "type": "system_workflow_pattern", "note": "기존/신규 환경을 분리해 전환하는 배포 방식"}
+{"term": "Canary Deployment", "aliases": [], "type": "system_workflow_pattern", "note": "일부 트래픽에만 새 버전을 먼저 노출하는 배포 방식"}
