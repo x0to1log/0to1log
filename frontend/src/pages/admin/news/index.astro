@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 type AdminPostRow = {
   id: string;
   title: string;
+  title_learner?: string | null;
   title_beginner?: string | null;
   slug: string;
   category: string | null;
@@ -39,7 +40,7 @@ let logTotal = 0;
 try {
   const { data, error } = await sb
     .from('news_posts')
-    .select('id, title, title_beginner, slug, category, locale, status, post_type, tags, guide_items, updated_at, published_at')
+    .select('id, title, title_learner, title_beginner, slug, category, locale, status, post_type, tags, guide_items, updated_at, published_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
@@ -73,6 +74,10 @@ const categoryOptions = Array.from(
 
 function getBeginnerTitle(post: AdminPostRow): string {
   return post.title_beginner || post.guide_items?.title_beginner || '';
+}
+
+function getLearnerTitle(post: AdminPostRow): string {
+  return post.title_learner || post.guide_items?.title_learner || '';
 }
 
 // Group ALL posts by date: published→published_at, draft→updated_at
@@ -216,7 +221,7 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                       class={`admin-list-item${post.status === 'published' ? ' admin-list-item--published' : ''}`}
                       data-status={post.status}
                       data-post-type={post.post_type || ''}
-                      data-title={`${post.title} ${getBeginnerTitle(post)}`.toLowerCase()}
+                      data-title={`${post.title} ${getLearnerTitle(post)} ${getBeginnerTitle(post)}`.toLowerCase()}
                       data-locale={post.locale || ''}
                       data-category={post.category || ''}
                       data-updated={post.updated_at || ''}
@@ -233,6 +238,12 @@ const dateGroups = Array.from(groupMap.values()).sort((a, b) => b.date.localeCom
                             rel={post.status === 'published' ? 'noopener noreferrer' : undefined}
                           >{post.title}</a>
                         </div>
+                        {getLearnerTitle(post) && getLearnerTitle(post) !== post.title && (
+                          <div class="admin-list-persona-title">
+                            <span>Learner</span>
+                            {getLearnerTitle(post)}
+                          </div>
+                        )}
                         {getBeginnerTitle(post) && getBeginnerTitle(post) !== post.title && (
                           <div class="admin-list-persona-title">
                             <span>Beginner</span>

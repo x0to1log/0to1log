@@ -71,6 +71,9 @@ function run() {
   assertIncludes(detailPage, '<details', 'detail page collapsible debug panels');
   assertIncludes(detailPage, 'raw_error', 'detail page raw error area');
   assertIncludes(detailPage, 'debug_meta', 'detail page debug metadata rendering');
+  assertIncludes(detailPage, 'data-stage="beginner" data-category="research"', 'beginner research rerun option');
+  assertIncludes(detailPage, 'Beginner only + QC: Both', 'beginner both rerun option');
+  assertIncludes(detailPage, 'keeps expert/learner content intact', 'beginner rerun confirmation copy');
   assertNotIncludes(detailPage, 'Partial Artifacts', 'detail page should not have artifact section');
   assertNotIncludes(detailPage, 'pipeline_artifacts', 'detail page should not query artifacts');
   assertNotIncludes(detailPage, '(log.tokens_used ?? 0).toLocaleString()', 'forced zero tokens rendering');

@@ -287,6 +287,9 @@ if (batchId) {
                         <button class="pipeline-rerun-option" data-stage="quality" data-category="research">Quality only: Research</button>
                         <button class="pipeline-rerun-option" data-stage="quality" data-category="business">Quality only: Business</button>
                         <button class="pipeline-rerun-option" data-stage="quality">Quality only: Both</button>
+                        <button class="pipeline-rerun-option" data-stage="beginner" data-category="research">Beginner only + QC: Research</button>
+                        <button class="pipeline-rerun-option" data-stage="beginner" data-category="business">Beginner only + QC: Business</button>
+                        <button class="pipeline-rerun-option" data-stage="beginner">Beginner only + QC: Both</button>
                         <button class="pipeline-rerun-option" data-stage="write" data-category="research">Write: Research only</button>
                         <button class="pipeline-rerun-option" data-stage="write" data-category="business">Write: Business only</button>
                         <button class="pipeline-rerun-option" data-stage="write">Write: Both</button>
@@ -716,8 +719,14 @@ if (batchId) {
         // Daily rerun (existing path)
         var category = opt.getAttribute('data-category') || null;
         var label = category ? stage + ' (' + category + ')' : stage;
+        var confirmMessage = 'Rerun from "' + label + '" for ' + batchId + '?';
+        if (stage === 'beginner') {
+          confirmMessage =
+            'Regenerate beginner only for ' + (category || 'research + business') + ' on ' + batchId + '?\n\n' +
+            'This keeps expert/learner content intact, overwrites beginner EN + KO, and recomputes quality.';
+        }
 
-        if (!confirm('Rerun from "' + label + '" for ' + batchId + '?')) return;
+        if (!confirm(confirmMessage)) return;
 
         fetch('/api/admin/pipeline-rerun', {
           method: 'POST',

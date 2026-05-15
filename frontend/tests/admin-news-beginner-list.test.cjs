@@ -14,13 +14,23 @@ assert(
 );
 
 assert(
+  adminNewsIndex.includes('title_learner') && adminNewsIndex.includes('guide_items'),
+  'admin news list must fetch learner title metadata alongside beginner title metadata',
+);
+
+assert(
   adminNewsIndex.includes('getBeginnerTitle(post)'),
   'admin news list must resolve and render the beginner-specific title when available',
 );
 
 assert(
-  adminNewsIndex.includes("data-title={`${post.title} ${getBeginnerTitle(post)}`.toLowerCase()}"),
-  'admin news list search data must include beginner title text',
+  adminNewsIndex.includes('getLearnerTitle(post)'),
+  'admin news list must resolve and render the learner-specific title when available',
+);
+
+assert(
+  adminNewsIndex.includes("data-title={`${post.title} ${getLearnerTitle(post)} ${getBeginnerTitle(post)}`.toLowerCase()}"),
+  'admin news list search data must include learner and beginner title text',
 );
 
 assert(
