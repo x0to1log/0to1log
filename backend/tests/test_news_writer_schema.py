@@ -1,10 +1,11 @@
 """Tests for the news writer strict JSON schema + Pydantic models."""
+
 import pytest
 from pydantic import ValidationError
 
 from services.agents.schemas.news_writer import (
-    NewsWriterOutput,
     Citation,
+    NewsWriterOutput,
     build_news_writer_json_schema,
 )
 
@@ -12,27 +13,15 @@ from services.agents.schemas.news_writer import (
 def _valid_output_payload() -> dict:
     return {
         "headline": "Foo launches bar",
-        "headline_ko": "푸가 바 출시",
+        "headline_ko": "Foo launches bar",
         "excerpt": "summary",
-        "excerpt_ko": "요약",
+        "excerpt_ko": "summary",
         "en": "Foo launched [CITE_1] today.",
-        "ko": "푸는 오늘 [CITE_1] 출시했다.",
+        "ko": "Foo launched [CITE_1] today.",
         "citations": [{"n": 1, "url": "https://example.com/a"}],
         "tags": ["ai"],
         "focus_items": ["foo"],
-        "focus_items_ko": ["푸"],
-        "quiz_en": {
-            "question": "What happened?",
-            "answer_index": 0,
-            "options": ["A", "B", "C", "D"],
-            "explanation": "Because A.",
-        },
-        "quiz_ko": {
-            "question": "무엇이 일어났나?",
-            "answer_index": 0,
-            "options": ["가", "나", "다", "라"],
-            "explanation": "가 맞습니다.",
-        },
+        "focus_items_ko": ["foo"],
         "sources": [
             {"id": 1, "url": "https://example.com/a", "title": "Primary source"}
         ],
@@ -47,7 +36,7 @@ def test_valid_output_passes():
 def test_empty_citations_allowed_for_zero_citation_body():
     payload = _valid_output_payload()
     payload["en"] = "No citations here."
-    payload["ko"] = "인용 없음."
+    payload["ko"] = "No citations here."
     payload["citations"] = []
     NewsWriterOutput(**payload)
 
@@ -83,29 +72,20 @@ def test_build_schema_with_empty_allowlist_raises():
         build_news_writer_json_schema([])
 
 
-def test_schema_quiz_uses_top_level_quiz_en_quiz_ko():
-    """Parser reads data.get('quiz_en') — schema must not nest under 'quiz'."""
+def test_writer_schema_does_not_generate_quizzes():
     schema = build_news_writer_json_schema(["https://a.com"])
     props = schema["schema"]["properties"]
-    assert "quiz_en" in props
-    assert "quiz_ko" in props
+
+    assert "quiz_en" not in props
+    assert "quiz_ko" not in props
     assert "quiz" not in props
-    assert set(schema["schema"]["required"]) >= {"quiz_en", "quiz_ko"}
-
-
-def test_schema_quiz_fields_match_parser_contract():
-    """Fields must be question/answer_index/options/explanation (not q/a)."""
-    schema = build_news_writer_json_schema(["https://a.com"])
-    quiz_props = schema["schema"]["properties"]["quiz_en"]["properties"]
-    assert set(quiz_props) == {"question", "answer_index", "options", "explanation"}
+    assert "quiz_en" not in schema["schema"]["required"]
+    assert "quiz_ko" not in schema["schema"]["required"]
 
 
 def test_schema_includes_sources_required():
-    """Writer must emit sources[] for title/publisher metadata.
+    """Writer must emit sources[] for title/publisher metadata."""
 
-    Without this, pipeline_digest.py:761 reads None and source cards
-    fall back to URL hostname labels (e.g., 'Arunbaby' for arunbaby.com).
-    """
     schema = build_news_writer_json_schema(["https://a.com"])
     props = schema["schema"]["properties"]
     assert "sources" in props
@@ -117,91 +97,10 @@ def test_schema_includes_sources_required():
 
 def test_sources_empty_list_allowed():
     """Edge case: digest with zero citations should still satisfy schema."""
+
     payload = _valid_output_payload()
     payload["sources"] = []
     payload["citations"] = []
     payload["en"] = "No citations needed."
-    payload["ko"] = "인용 없음."
+    payload["ko"] = "No citations needed."
     NewsWriterOutput(**payload)
-
-
-def test_quiz_schema_uses_answer_index():
-    """quiz_en/quiz_ko require answer_index (integer 0-3), not answer text.
-
-    Cross-field constraint (answer in options) is structurally impossible
-    at the schema level. answer_index makes correctness guaranteed by
-    range check alone — the API rejects any value outside 0-3.
-    """
-    schema = build_news_writer_json_schema(["https://a.com"])
-    quiz_en_schema = schema["schema"]["properties"]["quiz_en"]
-    required = quiz_en_schema["required"]
-    props = quiz_en_schema["properties"]
-
-    assert "answer_index" in required
-    assert "answer" not in required
-
-    ai_prop = props["answer_index"]
-    assert ai_prop["type"] == "integer"
-    assert ai_prop["minimum"] == 0
-    assert ai_prop["maximum"] == 3
-    assert "answer" not in props
-
-    options_prop = props["options"]
-    assert options_prop["minItems"] == 4
-    assert options_prop["maxItems"] == 4
-
-
-def test_quiz_pydantic_model_uses_answer_index():
-    """QuizOneLocale Pydantic model accepts answer_index, rejects out-of-range."""
-    from services.agents.schemas.news_writer import QuizOneLocale
-    from pydantic import ValidationError
-    import pytest as _pytest
-
-    valid = QuizOneLocale(
-        question="Q",
-        answer_index=2,
-        options=["a", "b", "c", "d"],
-        explanation="",
-    )
-    assert valid.answer_index == 2
-
-    with _pytest.raises(ValidationError):
-        QuizOneLocale(
-            question="Q",
-            answer_index=5,
-            options=["a", "b", "c", "d"],
-            explanation="",
-        )
-
-    with _pytest.raises(ValidationError):
-        QuizOneLocale(
-            question="Q",
-            answer_index=-1,
-            options=["a", "b", "c", "d"],
-            explanation="",
-        )
-
-
-def test_quiz_pydantic_model_rejects_bool_answer_index():
-    """isinstance(True, int) is True in Python — Pydantic v2 default coerces.
-    Defense-in-depth: explicitly reject booleans at the model level so the
-    pipeline validator's runtime guard isn't the only protection."""
-    from services.agents.schemas.news_writer import QuizOneLocale
-    from pydantic import ValidationError
-    import pytest as _pytest
-
-    with _pytest.raises(ValidationError):
-        QuizOneLocale(
-            question="Q",
-            answer_index=True,
-            options=["a", "b", "c", "d"],
-            explanation="",
-        )
-
-    with _pytest.raises(ValidationError):
-        QuizOneLocale(
-            question="Q",
-            answer_index=False,
-            options=["a", "b", "c", "d"],
-            explanation="",
-        )

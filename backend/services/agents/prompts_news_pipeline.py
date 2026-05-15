@@ -321,15 +321,17 @@ def _build_digest_prompt(
         if persona == "learner"
         else ""
     )
+
+
     if is_beginner:
         weighted_depth_rule = """3. BEGINNER DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
    - Do not turn every input group into a full section.
-   - Research Beginner main_items: 1-2. Business Beginner main_items: 2-3.
+   - Main item cap: Research Beginner 1-2 main `###` items; Business Beginner 1-2 main `###` items. Never write a third main item for beginner.
    - Main items get short but not shallow `###` sections with concrete context, likely misconception, and why the item matters.
    - A main item may use one setup sentence and one consequence sentence when a true beginner needs the extra step.
    - Remaining input groups belong under `Worth Skimming` / `가볍게 지나가도 되는 소식` as short bullets, not full sections.
    - Every input group must be represented either as a main item or a skim bullet."""
-        depth_checklist = "Does beginner output use Research 1-2 or Business 2-3 main `###` items, with remaining groups covered under Worth Skimming?"
+        depth_checklist = "Does beginner output use at most 2 main `###` items, with remaining groups covered under Worth Skimming?"
     elif persona == "learner":
         weighted_depth_rule = """3. WEIGHTED DEPTH: Items are tagged `[LEAD]` or `[SUPPORTING]` in the input.
    - **[LEAD] items**: 3-4 paragraphs. Today's most important stories. For [LEAD], each paragraph should usually contain 2-3 sentences.
@@ -353,8 +355,20 @@ def _build_digest_prompt(
         if is_beginner
         else """4. You MUST cover ALL provided classified groups — each `[LEAD]` or `[SUPPORTING]` group in the input becomes EXACTLY ONE `###` sub-item in the output. Do NOT promote enriched sources to standalone `###` sub-items; use enriched sources inside the group's paragraphs for richer multi-source detail. Do NOT skip a group or reduce it to just a title."""
     )
+    beginner_accessibility_rule = (
+        """
+4a. BEGINNER ACCESSIBILITY CONTRACT:
+   - Main 2 limit: choose no more than 2 main `###` items. If a third story matters, summarize it under Worth Skimming in one bullet.
+   - Problem first: the first paragraph after every main `###` heading must explain the plain problem, friction, cost, risk, or decision people faced before naming the model, product, method, benchmark, funding round, or vendor strategy.
+   - First-paragraph term budget: the first paragraph after each main `###` heading may use at most 2 countable domain terms. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms. Do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review.
+   - If more technical names are necessary, move them to the second paragraph, Worth Skimming, or the learner-digest bridge. Do not remove important terms; delay them until the reader has the problem frame.
+   - Do not spend space defining every term; handbook links handle definitions. Use the body to explain why the situation changed.
+"""
+        if is_beginner
+        else ""
+    )
     subitem_count_checklist = (
-        "Does the beginner output have the correct number of main `###` items for the digest type, and are all remaining input groups represented under Worth Skimming?"
+        "Does the beginner output have no more than 2 main `###` items, and are all remaining input groups represented under Worth Skimming?"
         if is_beginner
         else "Does the total number of `###` sub-items in en EXACTLY equal the number of `[LEAD]`/`[SUPPORTING]` groups in the input? (5 groups → 5 sub-items, NOT 6 or 7. This is the #1 most common error — count them.)"
     )
@@ -400,7 +414,6 @@ def _build_digest_prompt(
         if persona == "learner"
         else ""
     )
-
     return f"""You are a {persona}-level AI news digest writer for 0to1log.
 
 You will receive a list of classified news items (already selected and categorized).
@@ -420,6 +433,7 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
 {learner_density_rule}
 {weighted_depth_rule}
 {coverage_rule}
+{beginner_accessibility_rule}
 5. Write in present tense for news events ("GPT-5 is released", "Nvidia announces") even if the event happened days ago.
 6. NEWS sections with no items: omit entirely (no heading, no placeholder). ANALYSIS sections are always required.
 7. `###` SUB-HEADING FORMAT — STRICT: each `###` line MUST contain ONLY the news item title. NEVER append body text, description, summary, or citation on the same line as the `###` heading. ALWAYS insert ONE BLANK LINE after the `###` heading before the first paragraph. This is the #1 most common formatting error — verify every single `###` line before responding. Required pattern:
@@ -477,8 +491,6 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나 (사실 기반). 2=왜 중요한가 (객관적 영향이나 메커니즘 — '표준 상향', '판도 바꿈' 같은 평가형 대신 '~를 가능케 함', '~비용 절감', '~축 이동' 같은 구체 표현). 3=무엇을 지켜볼지 (전망 아닌 관찰 지표). focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
   "en": "<SEE SKELETON BELOW>",
   "ko": "<SEE SKELETON BELOW>",
-  "quiz_en": {{"question": "One 4-choice question. Expert=analytical, Learner=factual", "options": ["Full text of choice 1", "Full text of choice 2", "Full text of choice 3", "Full text of choice 4"], "answer_index": "<integer 0-3 indicating which options entry is correct (0=first, 1=second, 2=third, 3=fourth)>", "explanation": "Why correct."}},
-  "quiz_ko": {{"question": "오늘 뉴스 기반 4지선다 1문제. 전문가=분석형, 학습자=사실형", "options": ["선택지 1 전문", "선택지 2 전문", "선택지 3 전문", "선택지 4 전문"], "answer_index": "<options 배열에서 정답 위치를 가리키는 0-3 정수 (0=첫 번째, 1=두 번째, 2=세 번째, 3=네 번째)>", "explanation": "정답 해설"}},
   "sources": [
     {{"id": 1, "url": "https://full-url", "title": "Original article or paper title"}}
   ]
@@ -728,7 +740,7 @@ RESEARCH_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)*
 
 BUSINESS_BEGINNER_SECTIONS = """- **## One-Line Summary (ko: ## 한 줄 요약)** - A business lens sentence for a true beginner; not a catalog of companies or products.
 - **## Context First (ko: ## 먼저 알면 좋은 배경)** - 2-4 short bullets that explain the business context needed before the news.
-- **## Main Changes to Understand Today (ko: ## 오늘 꼭 이해할 변화)** - 2-3 business items. Each item explains what happened, why people care, how it touches work or buying decisions, and what not to confuse.
+- **## Main Changes to Understand Today (ko: ## 오늘 꼭 이해할 변화)** - 1-2 business items. Each item explains what happened, what problem or decision pressure existed first, why people care, how it touches work or buying decisions, and what not to confuse.
 - **## Worth Skimming (ko: ## 가볍게 지나가도 되는 소식)** - 0-4 lower-priority items, each as a short bullet with why skimming is enough.
 - **## Read the Learner Digest Next (ko: ## 학습자 뉴스 이어읽기)** - Concrete next step into the learner digest, not a generic recommendation.
 - **## Community Pulse (ko: ## 커뮤니티 반응)** - Include only when Community Pulse Data is provided."""
@@ -743,13 +755,16 @@ Beginner persona:
 - Do not define every term repeatedly. Explain the situation, confusion risk, and practical/research direction.
 - Research Beginner main_items: 1-2. Default to 2 only if both fit under one simple theme.
 - Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
+- Problem first: open each main item by explaining the plain problem, friction, cost, risk, or decision pressure before naming methods, benchmarks, or model architecture.
+- First-paragraph term budget: use at most 2 countable research/security terms in the first paragraph after a main heading. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms. Do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review.
+- Delay extra technical names to paragraph 2, Worth Skimming, or the learner-digest bridge after the reader has the problem frame.
 - One-Line Summary may summarize only selected main items. Do not mention skim-only stories there.
 - One-Line Summary may be two tightly linked sentences for research when one sentence would become too dense.
 - Main research items must answer: what changed, why the problem existed, what burden is reduced or what new risk/check burden is exposed, and what not to confuse.
 - what_changed must state which burden is reduced or what new risk/check burden is exposed: cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 - Write short but not shallow explanations. A main item field may use one setup sentence and one consequence sentence when a true beginner needs the extra step.
 - Research one_line should use at most 2 technical terms. Give the plain consequence before adding more detail.
-- Research main item body may use at most 2 technical method-term families before the "do not confuse" explanation.
+- Research first paragraphs may use at most 2 technical method-term families before the problem frame is clear; later paragraphs may carry the necessary technical names.
 - Never copy schema labels as field content. Values such as "왜 이 문제가 있었나", "이번 방법은 무엇을 덜 필요하게 하나", or "헷갈리지 말 것" are labels, not answers.
 - Avoid reading instructions like "보세요" or "읽어보세요". Write article copy, not UI guidance.
 - Keep Worth Skimming bullets short; each reason should be 35 Korean words or fewer."""
@@ -762,8 +777,11 @@ AFTER READING: the reader can explain what changed, why it matters for work or b
 Beginner persona:
 - This is a context explainer, not a glossary. Unknown terms are clickable in the frontend handbook.
 - Do not define every term repeatedly. Explain the situation, confusion risk, and practical business lens.
-- Business Beginner main_items: 2-3.
+- Business Beginner main_items: 1-2. Default to 2 only if both fit under one simple business lens.
 - Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
+- Problem first: open each main item by explaining the plain business problem, cost, risk, buying decision, or workflow pressure before naming vendors, products, funding mechanics, or infrastructure terms.
+- First-paragraph term budget: use at most 2 countable business/infrastructure terms in the first paragraph after a main heading. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms. Do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review.
+- Delay extra technical names to paragraph 2, Worth Skimming, or the learner-digest bridge after the reader has the business problem frame.
 - Business one_line is a lens sentence, not a catalog. It should answer what business lens connects the selected main items.
 - Do not list vendor, product, equipment, or project names in business one_line; put concrete names and examples in main_items instead.
 - Do not write reading instructions like 보세요, 읽어보세요, 오늘은 ... 보자, 중점으로 보자, or 관점으로 보자. State the lens as article copy.
@@ -1558,6 +1576,57 @@ def get_digest_prompt(
 # ──────────────────────────────────────────────
 # WEEKLY RECAP PROMPTS
 # ──────────────────────────────────────────────
+
+def get_digest_quiz_prompt(digest_type: str, locale: str) -> str:
+    """System prompt for the post-body daily quiz-only generation step."""
+
+    if locale not in {"en", "ko"}:
+        raise ValueError(f"unsupported quiz locale: {locale}")
+    locale_name = "English" if locale == "en" else "Korean"
+    locale_rule = (
+        "Do not use Korean text in the question, options, or explanation."
+        if locale == "en"
+        else "Do not use English prose except proper nouns, product names, company names, and unavoidable acronyms."
+    )
+    focus = (
+        "technical understanding, limitations, evidence quality, and practical research implications"
+        if digest_type == "research"
+        else "business context, buying or strategy implications, risk, and what not to over-assume"
+    )
+    return f"""You are the quiz editor for 0to1log's {digest_type} daily digest.
+
+You will receive only the final {locale_name} digest bodies for three personas:
+expert, learner, and beginner. Generate a {locale_name} quiz for each persona,
+using only the provided {locale_name} bodies as source material.
+
+## Core Rules
+- Return JSON only, matching the strict schema.
+- Produce these three keys exactly: expert, learner, beginner.
+- Each item must have question, options, answer_index, and explanation.
+- options must contain exactly 4 full-text choices.
+- answer_index must be an integer 0-3 pointing to the correct option in options.
+- The explanation must support the selected option and must not contradict it.
+- Do not include citations, URLs, markdown links, or source IDs in quiz fields.
+- Do not ask about trivia that is only a number, date, product name, benchmark score, funding amount, CVE count, or company name.
+- {locale_rule}
+
+## Persona Difficulty
+- expert: analytical question about {focus}; wrong options may reflect plausible but unsupported inferences.
+- learner: comprehension question about what changed and why it matters; wrong options should be common misunderstandings.
+- beginner: misconception check, not recall. The correct option is the safest interpretation of the digest's beginner lens.
+
+## Beginner Guard
+- Test what burden, risk, decision pressure, or misconception shifted.
+- If the beginner body has two main items, prefer the shared lens over a detail from one item.
+- Wrong options should be plausible beginner mistakes: overclaiming rollout or adoption, assuming private/beta access is generally available, treating a workflow/pipeline as one smarter model, or confusing a reported claim with proven production impact.
+
+## Consistency Guard
+- answer_index MUST point to the option your explanation treats as true.
+- If the explanation says "not", "does not", "no system", or "not yet", do not select an affirmative option that says the opposite.
+- If you mention a tempting wrong option, explicitly label it as wrong after explaining the correct answer.
+- Before returning, check every locale independently: question language, option language, selected option, and explanation must all match.
+"""
+
 
 WEEKLY_EXPERT_PROMPT = """You are the senior editor of an AI industry weekly newsletter for strategic decision-makers (VPs of Engineering, CTOs, AI Product Leads, strategy heads).
 
@@ -2428,6 +2497,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 ### Accessibility
 - **context_first**: Background and first paragraphs explain the problem context before method names, benchmark terms, or acronyms.
 - **one_line_jargon_density**: One-Line Summary starts with the plain consequence and does not stack more than 2 research/training terms before that consequence; flag dense strings like "사전학습, 토큰, 모델 크기, 데이터 품질, 반복, 손실, 단일 뉴런" in one sentence.
+- **main_item_problem_first**: The first paragraph after each main `###` explains the plain problem/friction/cost/risk before naming methods, benchmarks, or architecture.
+- **main_item_term_budget**: The first paragraph after each main `###` uses at most 2 countable research/security terms before the problem frame is clear. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms; do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review. Extra terms may appear in paragraph 2.
 - **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
 - **research_burden_reduction**: Each main research item explains what burden is reduced or what new risk/check burden is exposed — cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 
@@ -2448,6 +2519,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   "accessibility": {{
     "context_first": {{"evidence": "...", "score": 0}},
     "one_line_jargon_density": {{"evidence": "...", "score": 0}},
+    "main_item_problem_first": {{"evidence": "...", "score": 0}},
+    "main_item_term_budget": {{"evidence": "...", "score": 0}},
     "term_definition_repetition": {{"evidence": "...", "score": 0}},
     "research_burden_reduction": {{"evidence": "...", "score": 0}}
   }},
@@ -2469,13 +2542,15 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 ## Sub-dimensions
 
 ### Beginner Structure
-- **main_vs_skim**: Business Beginner uses 2-3 main items under `Main Changes to Understand Today` / `오늘 꼭 이해할 변화`; lower-priority stories are short bullets under `Worth Skimming` / `가볍게 지나가도 되는 소식`, not full sections.
+- **main_vs_skim**: Business Beginner uses 1-2 main items under `Main Changes to Understand Today` / `오늘 꼭 이해할 변화`; lower-priority stories are short bullets under `Worth Skimming` / `가볍게 지나가도 되는 소식`, not full sections.
 - **one_line_scope**: One-Line Summary summarizes only selected main items and does not mention skim-only stories.
 - **learner_bridge**: `Read the Learner Digest Next` / `학습자 뉴스 이어읽기` points to a concrete next learner section or topic.
 
 ### Business Accessibility
 - **business_lens_sentence**: One-Line Summary is a lens sentence, not a catalog/list of vendors, products, equipment, or projects.
 - **context_first**: Background and first paragraphs explain the business situation before product names, funding mechanics, or infrastructure terms.
+- **main_item_problem_first**: The first paragraph after each main `###` explains the plain business problem, cost, risk, buying decision, or workflow pressure before naming vendors, products, funding mechanics, or infrastructure terms.
+- **main_item_term_budget**: The first paragraph after each main `###` uses at most 2 countable business/infrastructure terms before the business problem frame is clear. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms; do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review. Extra terms may appear in paragraph 2.
 - **rollout_overclaim**: Product access claims are calibrated. Flag "복잡한 조달 없이", "조달 없이", "바로 도입", or "즉시 도입" unless a primary source explicitly says that; prefer "도입 접점", "문의 경로", or "파일럿 검토".
 - **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
 
@@ -2496,6 +2571,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   "business_accessibility": {{
     "business_lens_sentence": {{"evidence": "...", "score": 0}},
     "context_first": {{"evidence": "...", "score": 0}},
+    "main_item_problem_first": {{"evidence": "...", "score": 0}},
+    "main_item_term_budget": {{"evidence": "...", "score": 0}},
     "rollout_overclaim": {{"evidence": "...", "score": 0}},
     "term_definition_repetition": {{"evidence": "...", "score": 0}}
   }},

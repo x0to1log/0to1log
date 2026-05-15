@@ -8,6 +8,7 @@ from services.agents.prompts_news_pipeline import (
     QUALITY_CHECK_RESEARCH_EXPERT,
     QUALITY_CHECK_RESEARCH_LEARNER,
     get_digest_prompt,
+    get_digest_quiz_prompt,
 )
 
 
@@ -38,9 +39,18 @@ def test_research_beginner_prompt_uses_dedicated_context_explainer_format():
     prompt = get_digest_prompt("research", "beginner", [])
 
     assert "Beginner persona" in prompt
+    assert "Main item cap: Research Beginner 1-2 main `###` items; Business Beginner 1-2 main `###` items" in prompt
+    assert "Main 2 limit: choose no more than 2 main `###` items" in prompt
+    assert "Problem first: the first paragraph after every main `###` heading must explain" in prompt
+    assert "First-paragraph term budget: the first paragraph after each main `###` heading may use at most 2 countable domain terms" in prompt
+    assert "Do not count company names, product names, source names" in prompt
+    assert "Do not remove important terms; delay them until the reader has the problem frame" in prompt
     assert "Research Beginner main_items: 1-2" in prompt
     assert "Research one_line should use at most 2 technical terms" in prompt
     assert "plain consequence before adding more detail" in prompt
+    assert "Problem first: open each main item by explaining the plain problem" in prompt
+    assert "First-paragraph term budget: use at most 2 countable research/security terms" in prompt
+    assert "later paragraphs may carry the necessary technical names" in prompt
     assert "short but not shallow" in prompt
     assert "one setup sentence and one consequence sentence" in prompt
     assert "what burden is reduced or what new risk/check burden is exposed" in prompt
@@ -61,7 +71,12 @@ def test_research_beginner_prompt_uses_dedicated_context_explainer_format():
 def test_business_beginner_prompt_uses_lens_sentence_not_catalog():
     prompt = get_digest_prompt("business", "beginner", [])
 
-    assert "Business Beginner main_items: 2-3" in prompt
+    assert "Business Beginner main_items: 1-2" in prompt
+    assert "Main 2 limit: choose no more than 2 main `###` items" in prompt
+    assert "Problem first: open each main item by explaining the plain business problem" in prompt
+    assert "First-paragraph term budget: use at most 2 countable business/infrastructure terms" in prompt
+    assert "Do not count company names, product names, source names" in prompt
+    assert "Delay extra technical names to paragraph 2" in prompt
     assert "Business one_line is a lens sentence, not a catalog" in prompt
     assert "Do not list vendor, product, equipment, or project names in business one_line" in prompt
     assert "Do not write reading instructions like 보세요" in prompt
@@ -69,6 +84,41 @@ def test_business_beginner_prompt_uses_lens_sentence_not_catalog():
     assert "중점으로 보자" in prompt
     assert "도입 접점" in prompt
     assert "put concrete names and examples in main_items instead" in prompt
+
+
+def test_daily_writer_prompt_no_longer_generates_quiz_fields():
+    prompt = get_digest_prompt("research", "beginner", [])
+
+    assert "quiz_en" not in prompt
+    assert "quiz_ko" not in prompt
+    assert "Quiz consistency guard" not in prompt
+
+
+def test_digest_quiz_prompt_makes_beginner_quiz_a_misconception_check_not_recall():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "en")
+
+        assert "English quiz" in prompt
+        assert "Produce these three keys exactly: expert, learner, beginner" in prompt
+        assert "Do not use Korean text" in prompt
+        assert "misconception check, not recall" in prompt
+        assert "Do not ask about trivia that is only a number, date, product name, benchmark score, funding amount, CVE count, or company name" in prompt
+        assert "The correct option is the safest interpretation of the digest's beginner lens" in prompt
+        assert "Wrong options should be plausible beginner mistakes" in prompt
+        assert "overclaiming rollout or adoption" in prompt
+        assert "treating a workflow/pipeline as one smarter model" in prompt
+
+
+def test_digest_prompt_requires_quiz_answer_explanation_consistency():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "ko")
+
+        assert "Korean quiz" in prompt
+        assert "Do not use English prose except proper nouns" in prompt
+        assert "Consistency Guard" in prompt
+        assert "answer_index MUST point to the option your explanation treats as true" in prompt
+        assert "explanation says \"not\"" in prompt
+        assert "do not select an affirmative option that says the opposite" in prompt
 
 
 def test_learner_prompt_requires_plain_language_before_benchmarks():
@@ -144,6 +194,16 @@ def test_beginner_quality_rubrics_cover_beginner_specific_failures():
     assert "research_burden_reduction" in QUALITY_CHECK_RESEARCH_BEGINNER
     assert "rollout_overclaim" in QUALITY_CHECK_BUSINESS_BEGINNER
     assert "business_lens_sentence" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "main_item_problem_first" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "main_item_term_budget" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "Count acronyms, benchmark names, vulnerability types" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "do not count company names, product names, source names" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "Extra terms may appear in paragraph 2" in QUALITY_CHECK_RESEARCH_BEGINNER
+    assert "main_item_problem_first" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "main_item_term_budget" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "Count acronyms, benchmark names, vulnerability types" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "do not count company names, product names, source names" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "Extra terms may appear in paragraph 2" in QUALITY_CHECK_BUSINESS_BEGINNER
 
 
 def test_learner_quality_rubrics_penalize_high_risk_ko_literal_translations_without_schema_change():

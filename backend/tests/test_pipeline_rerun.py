@@ -586,3 +586,86 @@ async def test_rerun_from_quality_with_no_category_filter_rescores_both_types():
             if c.args and isinstance(c.args[0], dict) and "quality_score" in c.args[0]
         ]
         assert len(update_calls) == 4, f"expected 4 locale updates, got {len(update_calls)}"
+
+
+@pytest.mark.asyncio
+async def test_rerun_from_beginner_regenerates_only_beginner_with_existing_personas():
+    from services.pipeline import rerun_pipeline_stage
+
+    news_rows = [
+        {
+            "slug": "2026-04-19-research-digest",
+            "locale": "en",
+            "post_type": "research",
+            "content_expert": "Existing expert EN",
+            "content_learner": "Existing learner EN",
+            "content_beginner": "Old beginner EN",
+            "title": "Research headline",
+            "excerpt": "Research excerpt",
+            "focus_items": ["item"],
+            "guide_items": {"sources_learner": [{"url": "https://a.com/1"}]},
+            "fact_pack": {"news_items": [{"url": "https://a.com/1"}]},
+        },
+        {
+            "slug": "2026-04-19-research-digest-ko",
+            "locale": "ko",
+            "post_type": "research",
+            "content_expert": "Existing expert KO",
+            "content_learner": "Existing learner KO",
+            "content_beginner": "Old beginner KO",
+            "title": "Research headline KO",
+            "excerpt": "Research excerpt KO",
+            "focus_items": ["항목"],
+            "guide_items": {"sources_learner": [{"url": "https://a.com/1"}]},
+            "fact_pack": {"news_items": [{"url": "https://a.com/1"}]},
+        },
+    ]
+    supabase = _build_supabase_mock_for_quality_rerun(news_rows)
+
+    merge_ckpt = {
+        "research": [SAMPLE_MERGED_RESULT.research[0].model_dump()],
+        "business": [],
+    }
+    rank_ckpt = merge_ckpt
+    enrich_ckpt = {
+        "enriched_map": {},
+        "raw_content_map": {"https://a.com/1": "Source body"},
+    }
+
+    def load_ckpt_side_effect(_supabase, _run_id, stage):
+        return {
+            "collect": {"candidates": [c.model_dump() for c in SAMPLE_CANDIDATES]},
+            "merge": merge_ckpt,
+            "community": {"community_map": {}},
+            "community_summarize": {"summaries": {}},
+            "rank": rank_ckpt,
+            "enrich": enrich_ckpt,
+        }.get(stage)
+
+    with patch("services.pipeline.get_supabase", return_value=supabase), \
+         patch("services.pipeline._load_checkpoint", side_effect=load_ckpt_side_effect), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)) as gen_mock, \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock):
+        result = await rerun_pipeline_stage(
+            source_run_id="run-1",
+            from_stage="beginner",
+            batch_id="2026-04-19",
+            category="research",
+        )
+
+    assert result.status == "success"
+    assert result.posts_created == 2
+    assert gen_mock.await_count == 1
+    kwargs = gen_mock.await_args.kwargs
+    assert kwargs["personas_to_generate"] == ("beginner",)
+    assert kwargs["required_personas"] == ("expert", "learner", "beginner")
+    assert kwargs["preserve_existing_fields"] is True
+    assert set(kwargs["preserved_personas"].keys()) == {"expert", "learner"}
+    assert kwargs["preserved_personas"]["expert"].en == "Existing expert EN"
+    assert kwargs["preserved_personas"]["expert"].ko == "Existing expert KO"
+    assert kwargs["preserved_frontload"]["headline"] == "Research headline"
+    assert kwargs["preserved_frontload"]["headline_ko"] == "Research headline KO"
+    assert kwargs["preserved_rows_by_locale"]["en"]["guide_items"]["sources_learner"] == [
+        {"url": "https://a.com/1"}
+    ]

@@ -322,6 +322,50 @@ def _quiz_token_weight(token: str) -> int:
     return 1
 
 
+_QUIZ_NEGATION_RE = re.compile(
+    r"\b(no|not|never|none|neither|without|cannot|can't|doesn't|does\s+not|"
+    r"do\s+not|did\s+not|isn't|is\s+not|aren't|are\s+not|won't|will\s+not)\b",
+    re.IGNORECASE,
+)
+
+
+def _quiz_has_negation(text: str) -> bool:
+    return bool(_QUIZ_NEGATION_RE.search(text))
+
+
+def _quiz_explanation_clauses(text: str) -> list[str]:
+    return [
+        clause.strip()
+        for clause in re.split(r"(?:[.;!?]\s+|;\s*|,\s+and\s+that\s+|,\s+but\s+)", text)
+        if clause.strip()
+    ]
+
+
+def _quiz_option_support_score(option: str, evidence_tokens: set[str], explanation: str) -> int:
+    """Score option support, penalizing clauses that mention the option as false."""
+    option_tokens = _quiz_support_tokens(option)
+    score = sum(
+        _quiz_token_weight(token)
+        for token in option_tokens
+        if token in evidence_tokens
+    )
+
+    option_is_negated = _quiz_has_negation(option)
+    for clause in _quiz_explanation_clauses(explanation):
+        clause_is_negated = _quiz_has_negation(clause)
+        if clause_is_negated == option_is_negated:
+            continue
+        clause_tokens = _quiz_support_tokens(clause)
+        overlap = sum(
+            _quiz_token_weight(token)
+            for token in option_tokens
+            if token in clause_tokens
+        )
+        if overlap >= 5:
+            score -= overlap + 2
+    return score
+
+
 def _repair_quiz_answer_from_explanation(
     *,
     question: str,
@@ -341,11 +385,7 @@ def _repair_quiz_answer_from_explanation(
 
     scores: list[int] = []
     for option in options:
-        score = sum(
-            _quiz_token_weight(token)
-            for token in _quiz_support_tokens(option)
-            if token in evidence_tokens
-        )
+        score = _quiz_option_support_score(option, evidence_tokens, explanation)
         scores.append(score)
 
     best_idx = max(range(len(scores)), key=lambda i: scores[i])
@@ -353,7 +393,12 @@ def _repair_quiz_answer_from_explanation(
     best_score = scores[best_idx]
     runner_up = max((score for i, score in enumerate(scores) if i != best_idx), default=0)
 
-    if best_idx != chosen_idx and best_score >= 5 and best_score >= chosen_score + 4 and best_score >= runner_up + 3:
+    if (
+        best_idx != chosen_idx
+        and best_score >= 5
+        and best_score >= chosen_score + 4
+        and (best_score >= runner_up + 3 or chosen_score < 0)
+    ):
         logger.warning(
             "%s repaired: answer_index pointed to option %d but explanation supports option %d (scores=%s)",
             label, chosen_idx, best_idx, scores,
@@ -1873,31 +1918,35 @@ async def run_daily_pipeline(
     return result
 
 
-def _load_personas_and_frontload_from_db(
-    supabase, batch_id: str,
-) -> tuple[dict[str, dict[str, "PersonaOutput"]], dict[str, dict[str, Any]]]:
-    """Reconstruct per-digest-type PersonaOutput + frontload from existing news_posts rows.
-
-    Used by rerun_from='quality' to re-run QC without regenerating content.
-    Returns:
-        personas_by_type: {"research": {"expert": PersonaOutput, "learner": PersonaOutput, "beginner": PersonaOutput}, "business": {...}}
-        frontload_by_type: {"research": {headline, headline_ko, excerpt, excerpt_ko, focus_items, focus_items_ko}, "business": {...}}
-    """
+def _daily_digest_slugs(batch_id: str) -> list[str]:
     slugs = [
         f"{batch_id.lower()}-research-digest",
         f"{batch_id.lower()}-research-digest-ko",
         f"{batch_id.lower()}-business-digest",
         f"{batch_id.lower()}-business-digest-ko",
     ]
+    return slugs
+
+
+def _fetch_daily_digest_rows_from_db(supabase, batch_id: str) -> list[dict[str, Any]]:
+    """Fetch EN/KO research/business daily news rows for persona reruns."""
     resp = (
         supabase.table("news_posts")
-        .select("slug,locale,post_type,content_expert,content_learner,content_beginner,title,title_beginner,excerpt,focus_items,guide_items")
+        .select(
+            "slug,locale,post_type,content_expert,content_learner,content_beginner,"
+            "title,title_learner,title_beginner,excerpt,focus_items,guide_items,"
+            "fact_pack,source_urls,source_cards"
+        )
         .eq("category", "ai-news")
-        .in_("slug", slugs)
+        .in_("slug", _daily_digest_slugs(batch_id))
         .execute()
     )
-    rows = resp.data or []
+    return resp.data or []
 
+
+def _group_daily_digest_rows_by_type(
+    rows: list[dict[str, Any]],
+) -> dict[str, dict[str, dict[str, Any]]]:
     # Group rows by digest_type
     by_type: dict[str, dict[str, dict]] = {}  # {type: {locale: row}}
     for row in rows:
@@ -1905,6 +1954,14 @@ def _load_personas_and_frontload_from_db(
         loc = row.get("locale")
         if dtype in ("research", "business") and loc in ("en", "ko"):
             by_type.setdefault(dtype, {})[loc] = row
+    return by_type
+
+
+def _build_personas_and_frontload_from_rows(
+    rows: list[dict[str, Any]],
+) -> tuple[dict[str, dict[str, "PersonaOutput"]], dict[str, dict[str, Any]]]:
+    """Reconstruct per-digest-type PersonaOutput + frontload from news_posts rows."""
+    by_type = _group_daily_digest_rows_by_type(rows)
 
     personas_by_type: dict[str, dict[str, PersonaOutput]] = {}
     frontload_by_type: dict[str, dict[str, Any]] = {}
@@ -1943,6 +2000,20 @@ def _load_personas_and_frontload_from_db(
     return personas_by_type, frontload_by_type
 
 
+def _load_personas_and_frontload_from_db(
+    supabase, batch_id: str,
+) -> tuple[dict[str, dict[str, "PersonaOutput"]], dict[str, dict[str, Any]]]:
+    """Reconstruct per-digest-type PersonaOutput + frontload from existing news_posts rows.
+
+    Used by rerun_from='quality' to re-run QC without regenerating content.
+    Returns:
+        personas_by_type: {"research": {"expert": PersonaOutput, "learner": PersonaOutput, "beginner": PersonaOutput}, "business": {...}}
+        frontload_by_type: {"research": {headline, headline_ko, excerpt, excerpt_ko, focus_items, focus_items_ko}, "business": {...}}
+    """
+    rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
+    return _build_personas_and_frontload_from_rows(rows)
+
+
 async def rerun_pipeline_stage(
     source_run_id: str,
     from_stage: str,
@@ -1956,7 +2027,7 @@ async def rerun_pipeline_stage(
 
     Args:
         source_run_id: Run ID to rerun (and load checkpoints from).
-        from_stage: Stage to start from ("classify"|"merge"|"community"|"write").
+        from_stage: Stage to start from ("classify"|"merge"|"community"|"write"|"beginner"|"quality").
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
     """
@@ -1968,24 +2039,27 @@ async def rerun_pipeline_stage(
     # Delete logs from the rerun stage onward
     STAGE_CASCADE = {
         "classify": ["classify", "merge", "community", "community_summarize", "ranking", "enrich",
-                      "digest:research:expert", "digest:research:learner",
-                      "digest:business:expert", "digest:business:learner",
+                      "digest:research:expert", "digest:research:learner", "digest:research:beginner",
+                      "digest:business:expert", "digest:business:learner", "digest:business:beginner",
                       "quality:research", "quality:business",
                       "save:research", "save:business", "summary"],
         "merge": ["merge", "community", "community_summarize", "ranking", "enrich",
-                  "digest:research:expert", "digest:research:learner",
-                  "digest:business:expert", "digest:business:learner",
+                  "digest:research:expert", "digest:research:learner", "digest:research:beginner",
+                  "digest:business:expert", "digest:business:learner", "digest:business:beginner",
                   "quality:research", "quality:business",
                   "save:research", "save:business", "summary"],
         "community": ["community", "community_summarize", "ranking", "enrich",
-                      "digest:research:expert", "digest:research:learner",
-                      "digest:business:expert", "digest:business:learner",
+                      "digest:research:expert", "digest:research:learner", "digest:research:beginner",
+                      "digest:business:expert", "digest:business:learner", "digest:business:beginner",
                       "quality:research", "quality:business",
                       "save:research", "save:business", "summary"],
-        "write": ["digest:research:expert", "digest:research:learner",
-                  "digest:business:expert", "digest:business:learner",
+        "write": ["digest:research:expert", "digest:research:learner", "digest:research:beginner",
+                  "digest:business:expert", "digest:business:learner", "digest:business:beginner",
                   "quality:research", "quality:business",
                   "save:research", "save:business", "summary"],
+        "beginner": ["digest:research:beginner", "digest:business:beginner",
+                     "quality:research", "quality:business",
+                     "save:research", "save:business", "summary"],
         "quality": ["quality:research", "quality:business",
                     "save:research", "save:business", "summary"],
     }
@@ -2402,6 +2476,16 @@ async def rerun_pipeline_stage(
             if enrich_data and enrich_data.get("raw_content_map"):
                 raw_content_map = enrich_data["raw_content_map"]
 
+        existing_rows_by_type: dict[str, dict[str, dict[str, Any]]] = {}
+        preserved_personas_by_type: dict[str, dict[str, PersonaOutput]] = {}
+        preserved_frontload_by_type: dict[str, dict[str, Any]] = {}
+        if from_stage == "beginner":
+            existing_rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
+            existing_rows_by_type = _group_daily_digest_rows_by_type(existing_rows)
+            preserved_personas_by_type, preserved_frontload_by_type = (
+                _build_personas_and_frontload_from_rows(existing_rows)
+            )
+
         # --- Always run write (digest generation) ---
         digest_tasks = []
         for digest_type, classified_items in [
@@ -2412,6 +2496,27 @@ async def rerun_pipeline_stage(
                 continue
             if category and digest_type != category:
                 continue  # Skip if category filter is set
+            digest_kwargs: dict[str, Any] = {}
+            if from_stage == "beginner":
+                existing_personas = preserved_personas_by_type.get(digest_type) or {}
+                preserved_personas = {
+                    pname: existing_personas[pname]
+                    for pname in ("expert", "learner")
+                    if pname in existing_personas
+                }
+                if len(preserved_personas) < 2:
+                    all_errors.append(
+                        f"Cannot rerun beginner for {digest_type}: missing existing expert/learner content"
+                    )
+                    continue
+                digest_kwargs = {
+                    "personas_to_generate": ("beginner",),
+                    "required_personas": ("expert", "learner", "beginner"),
+                    "preserved_personas": preserved_personas,
+                    "preserved_frontload": preserved_frontload_by_type.get(digest_type, {}),
+                    "preserved_rows_by_locale": existing_rows_by_type.get(digest_type, {}),
+                    "preserve_existing_fields": True,
+                }
             digest_tasks.append(
                 _generate_digest(
                     classified=classified_items,
@@ -2424,6 +2529,7 @@ async def rerun_pipeline_stage(
                     run_id=run_id,
                     enriched_map=enriched_map,
                     auto_publish=False,
+                    **digest_kwargs,
                 )
             )
 

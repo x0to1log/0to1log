@@ -94,6 +94,39 @@ def _mock_beginner_response(url: str = "https://example.com/story"):
     )
 
 
+def _mock_quiz_response(locale: str = "en"):
+    quiz_en = {
+        "question": "What is the safest interpretation?",
+        "options": [
+            "The digest changed the reader's context.",
+            "Every product is now fully rolled out.",
+            "The source proves all claims in production.",
+            "Only a company name matters.",
+        ],
+        "answer_index": 0,
+        "explanation": "The first option matches the digest without overclaiming rollout.",
+    }
+    quiz_ko = {
+        "question": "가장 안전한 해석은 무엇인가요?",
+        "options": [
+            "뉴스가 읽는 맥락을 바꿨다.",
+            "모든 제품이 완전히 배포됐다.",
+            "출처가 모든 운영 성과를 증명했다.",
+            "회사 이름만 중요하다.",
+        ],
+        "answer_index": 0,
+        "explanation": "첫 번째 선택지는 배포를 과장하지 않고 본문 맥락과 맞습니다.",
+    }
+    quiz = quiz_en if locale == "en" else quiz_ko
+    return _mock_openai_response(
+        {
+            "expert": quiz,
+            "learner": quiz,
+            "beginner": quiz,
+        }
+    )
+
+
 class _UpsertQuery:
     def __init__(self, supabase, table_name: str):
         self.supabase = supabase
@@ -116,6 +149,40 @@ class _CaptureSupabase:
 
     def table(self, name):
         return _UpsertQuery(self, name)
+
+
+class _UpdateQuery:
+    def __init__(self, supabase, table_name: str):
+        self.supabase = supabase
+        self.table_name = table_name
+        self.payload = None
+        self.filters = []
+
+    def update(self, payload):
+        self.payload = payload
+        return self
+
+    def eq(self, key, value):
+        self.filters.append((key, value))
+        return self
+
+    def upsert(self, payload, on_conflict=None):
+        self.supabase.saved_upserts.append((self.table_name, payload))
+        return self
+
+    def execute(self):
+        if self.payload is not None:
+            self.supabase.saved_updates.append((self.table_name, self.payload, self.filters))
+        return MagicMock(data=[])
+
+
+class _UpdateCaptureSupabase:
+    def __init__(self):
+        self.saved_updates = []
+        self.saved_upserts = []
+
+    def table(self, name):
+        return _UpdateQuery(self, name)
 
 
 def _sample_group() -> list[ClassifiedGroup]:
@@ -295,6 +362,8 @@ async def test_generate_digest_aborts_before_save_when_structural_blocker_found(
                 }
             ),
             _mock_beginner_response(),
+            _mock_quiz_response("en"),
+            _mock_quiz_response("ko"),
         ]
     )
 
@@ -361,6 +430,8 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
                 }
             ),
             _mock_beginner_response(),
+            _mock_quiz_response("en"),
+            _mock_quiz_response("ko"),
         ]
     )
 
@@ -437,6 +508,8 @@ async def test_generate_digest_saves_beginner_persona_fields():
                 }
             ),
             _mock_beginner_response(),
+            _mock_quiz_response("en"),
+            _mock_quiz_response("ko"),
         ]
     )
 
@@ -483,7 +556,7 @@ async def test_generate_digest_saves_beginner_persona_fields():
 
     assert posts_created == 2
     assert errors == []
-    assert mock_client.chat.completions.create.await_count == 3
+    assert mock_client.chat.completions.create.await_count == 5
     for _table, payload in supabase.saved_rows:
         assert payload["content_beginner"]
         assert payload["title_beginner"] in {"Beginner headline", "입문자 헤드라인"}
@@ -492,6 +565,119 @@ async def test_generate_digest_saves_beginner_persona_fields():
         assert payload["guide_items"]["sources_beginner"]
         assert payload["guide_items"]["quiz_poll_beginner"]["question"]
         assert payload["fact_pack"]["beginner_breakdown"]["accessibility"]["context_first"]["score"] == 10
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_beginner_only_preserves_existing_persona_fields():
+    from services.pipeline import _generate_digest
+
+    supabase = _UpdateCaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_beginner_response(),
+            _mock_quiz_response("en"),
+            _mock_quiz_response("ko"),
+        ]
+    )
+
+    quality_meta = {
+        "score": 86,
+        "quality_score": 86,
+        "quality_version": "v2",
+        "quality_flags": [],
+        "quality_breakdown": {"total_score": 86},
+        "expert_breakdown": {"old": "expert"},
+        "learner_breakdown": {"old": "learner"},
+        "beginner_breakdown": {"accessibility": {"context_first": {"score": 8}}},
+        "frontload_breakdown": {"old": "frontload"},
+        "quality_issues": [],
+        "quality_caps_applied": [],
+        "structural_penalty": 0,
+        "structural_warnings": [],
+        "url_validation_failed": False,
+        "url_validation_failures": [],
+    }
+    preserved_rows = {
+        "en": {
+            "guide_items": {
+                "sources_expert": [{"url": "https://example.com/story", "title": "Expert source"}],
+                "sources_learner": [{"url": "https://example.com/story", "title": "Learner source"}],
+            },
+            "fact_pack": {"news_items": [{"url": "https://example.com/story"}], "quality_score": 70},
+        },
+        "ko": {
+            "guide_items": {
+                "sources_expert": [{"url": "https://example.com/story", "title": "전문가 출처"}],
+                "sources_learner": [{"url": "https://example.com/story", "title": "학습자 출처"}],
+            },
+            "fact_pack": {"news_items": [{"url": "https://example.com/story"}], "quality_score": 70},
+        },
+    }
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=quality_meta) as quality_mock, \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_main = "gpt-4o"
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-13",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+            personas_to_generate=("beginner",),
+            required_personas=("expert", "learner", "beginner"),
+            preserved_personas={
+                "expert": PersonaOutput(en="Existing expert EN", ko="Existing expert KO"),
+                "learner": PersonaOutput(en="Existing learner EN", ko="Existing learner KO"),
+            },
+            preserved_frontload={
+                "headline": "Existing headline",
+                "headline_ko": "기존 헤드라인",
+                "excerpt": "Existing excerpt",
+                "excerpt_ko": "기존 요약",
+                "focus_items": ["one"],
+                "focus_items_ko": ["하나"],
+            },
+            preserved_rows_by_locale=preserved_rows,
+            preserve_existing_fields=True,
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    assert mock_client.chat.completions.create.await_count == 3
+    assert supabase.saved_upserts == []
+    assert len(supabase.saved_updates) == 2
+    quality_personas = quality_mock.await_args.args[0]
+    assert set(quality_personas.keys()) == {"expert", "learner", "beginner"}
+    assert quality_personas["expert"].en == "Existing expert EN"
+
+    for table_name, payload, filters in supabase.saved_updates:
+        assert table_name == "news_posts"
+        assert ("slug", "2026-04-13-research-digest") in filters or (
+            "slug", "2026-04-13-research-digest-ko"
+        ) in filters
+        assert "content_expert" not in payload
+        assert "content_learner" not in payload
+        assert "title" not in payload
+        assert "excerpt" not in payload
+        assert payload["content_beginner"]
+        assert payload["title_beginner"]
+        assert payload["quality_score"] == 86
+        assert payload["fact_pack"]["quality_score"] == 86
+        assert payload["fact_pack"]["news_items"] == [{"url": "https://example.com/story"}]
+        assert payload["guide_items"]["sources_expert"]
+        assert payload["guide_items"]["sources_learner"]
+        assert payload["guide_items"]["sources_beginner"]
+        assert payload["guide_items"]["quiz_poll_beginner"]["question"]
 
 
 @pytest.mark.asyncio

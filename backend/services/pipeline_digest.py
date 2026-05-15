@@ -38,7 +38,8 @@ from services.agents.client import (
     parse_ai_json,
     with_flex_retry,
 )
-from services.agents.prompts_news_pipeline import get_digest_prompt
+from services.agents.prompts_news_pipeline import get_digest_prompt, get_digest_quiz_prompt
+from services.agents.schemas.news_quiz import build_news_quiz_json_schema
 from services.agents.schemas.news_writer import build_news_writer_json_schema
 
 # Helpers that remain in pipeline.py — safe to import because they are defined
@@ -541,6 +542,215 @@ async def _translate_focus_items_ko(
     return [], {}
 
 
+def _build_digest_quiz_user_prompt(
+    digest_type: str,
+    personas: dict[str, PersonaOutput],
+    locale: str,
+) -> str:
+    """Build the quiz-only input from final generated bodies."""
+
+    locale_name = "English" if locale == "en" else "Korean"
+    parts = [
+        f"Digest type: {digest_type}",
+        f"Locale: {locale}",
+        f"Generate {locale_name} quizzes only from the final {locale_name} bodies below.",
+    ]
+    for persona in DAILY_DIGEST_PERSONAS:
+        output = personas.get(persona)
+        if not output:
+            continue
+        body = output.en if locale == "en" else output.ko
+        parts.append(f"## {persona}\n{_trim(body, 12000)}")
+    return "\n\n---\n\n".join(parts)
+
+
+def _normalize_digest_quiz_payload(
+    payload: dict[str, Any],
+    *,
+    digest_type: str,
+    locale: str,
+) -> tuple[dict[str, dict[str, dict[str, Any]]], list[str]]:
+    """Validate quiz-only output and convert answer_index to DB quiz shape."""
+
+    from services.pipeline import _validate_and_shuffle_quiz_item  # type: ignore[attr-defined]
+
+    quizzes: dict[str, dict[str, dict[str, Any]]] = {}
+    missing: list[str] = []
+    for persona in DAILY_DIGEST_PERSONAS:
+        raw_quiz = payload.get(persona)
+        quiz = _validate_and_shuffle_quiz_item(
+            raw_quiz,
+            label=f"Daily quiz {digest_type}/{persona}/{locale}",
+        )
+        if quiz:
+            quizzes.setdefault(persona, {})[locale] = quiz
+        else:
+            missing.append(persona)
+    return quizzes, missing
+
+
+async def _generate_digest_quizzes(
+    *,
+    digest_type: str,
+    personas: dict[str, PersonaOutput],
+    supabase,
+    run_id: str,
+) -> tuple[dict[str, dict[str, dict[str, Any]]], dict[str, Any]]:
+    """Generate daily digest quizzes in one cheap post-body call per locale.
+
+    Quiz generation is intentionally decoupled from the body writer so the
+    model can see the final post-processed body before choosing answers.
+    Failure is non-blocking: posts can still save without quiz guide items.
+    """
+
+    incomplete = [
+        persona
+        for persona in DAILY_DIGEST_PERSONAS
+        if not personas.get(persona)
+        or not personas[persona].en.strip()
+        or not personas[persona].ko.strip()
+    ]
+    if incomplete:
+        logger.warning(
+            "Skipping %s quiz generation because personas are incomplete: %s",
+            digest_type,
+            incomplete,
+        )
+        return {}, {}
+
+    t_quiz = time.monotonic()
+    client = get_openai_client()
+    model = getattr(settings, "openai_model_light", None)
+    if not isinstance(model, str) or not model:
+        model = "gpt-5-mini"
+
+    all_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
+    usage_total: dict[str, Any] = {}
+    missing_by_locale: dict[str, list[str]] = {}
+    error_by_locale: dict[str, str] = {}
+
+    for locale in ("en", "ko"):
+        messages = [
+            {"role": "system", "content": get_digest_quiz_prompt(digest_type, locale)},
+            {
+                "role": "user",
+                "content": _build_digest_quiz_user_prompt(digest_type, personas, locale),
+            },
+        ]
+        last_missing: list[str] = []
+        last_error: str | None = None
+        locale_success = False
+
+        for attempt in range(2):
+            try:
+                async def _quiz_call() -> Any:
+                    return await asyncio.wait_for(
+                        client.chat.completions.create(
+                            **compat_create_kwargs(
+                                model,
+                                messages=messages,
+                                response_format={
+                                    "type": "json_schema",
+                                    "json_schema": build_news_quiz_json_schema(locale),
+                                },
+                                max_tokens=2200,
+                                service_tier="flex",
+                                prompt_cache_key=f"digest-{digest_type}-quiz-{locale}",
+                            )
+                        ),
+                        timeout=300,
+                    )
+
+                response = await with_flex_retry(_quiz_call)
+                usage = extract_usage_metrics(response, model, requested_service_tier="flex")
+                usage_total = merge_usage_metrics(usage_total, usage)
+                data = parse_ai_json(
+                    response.choices[0].message.content,
+                    f"Digest-{digest_type}-quiz-{locale}",
+                )
+                quizzes, missing = _normalize_digest_quiz_payload(
+                    data,
+                    digest_type=digest_type,
+                    locale=locale,
+                )
+                last_missing = missing
+                if not missing:
+                    for persona, localized in quizzes.items():
+                        all_quizzes.setdefault(persona, {}).update(localized)
+                    locale_success = True
+                    break
+                logger.warning(
+                    "Digest %s quiz %s attempt %d returned invalid quiz keys: %s",
+                    digest_type,
+                    locale,
+                    attempt + 1,
+                    missing,
+                )
+            except Exception as exc:
+                last_error = f"{type(exc).__name__}: {exc}"
+                est = estimate_failed_call_usage(
+                    messages,
+                    model,
+                    requested_service_tier="flex",
+                )
+                usage_total = merge_usage_metrics(usage_total, est)
+                logger.warning(
+                    "Digest %s quiz %s attempt %d failed: %s",
+                    digest_type,
+                    locale,
+                    attempt + 1,
+                    last_error,
+                )
+
+        if not locale_success:
+            if last_missing:
+                missing_by_locale[locale] = last_missing
+            if last_error:
+                error_by_locale[locale] = last_error
+
+    generated = sum(len(locales) for locales in all_quizzes.values())
+    if generated == 6:
+        await _log_stage(
+            supabase,
+            run_id,
+            f"digest:{digest_type}:quiz",
+            "success",
+            t_quiz,
+            output_summary="Generated 6 daily quizzes via 2 locale-specific calls",
+            usage=usage_total,
+            post_type=digest_type,
+            attempt=2,
+            debug_meta={"calls": 2, "missing_by_locale": {}},
+        )
+        return all_quizzes, usage_total
+
+    status = "partial" if generated else "failed"
+    summary = (
+        f"Quiz generation incomplete: generated {generated}/6 quizzes"
+        if generated
+        else "Quiz generation failed"
+    )
+    await _log_stage(
+        supabase,
+        run_id,
+        f"digest:{digest_type}:quiz",
+        status,
+        t_quiz,
+        output_summary=summary,
+        error_message="; ".join(error_by_locale.values()) or None,
+        usage=usage_total,
+        post_type=digest_type,
+        attempt=2,
+        debug_meta={
+            "calls": 2,
+            "generated": generated,
+            "missing_by_locale": missing_by_locale,
+            "error_by_locale": error_by_locale,
+        },
+    )
+    return all_quizzes, usage_total
+
+
 # ---------------------------------------------------------------------------
 # Content cleaners
 # ---------------------------------------------------------------------------
@@ -748,10 +958,18 @@ async def _generate_digest(
     run_id: str,
     enriched_map: dict[str, list[dict]] | None = None,
     auto_publish: bool = False,
+    personas_to_generate: tuple[str, ...] | None = None,
+    required_personas: tuple[str, ...] | None = None,
+    preserved_personas: dict[str, PersonaOutput] | None = None,
+    preserved_frontload: dict[str, Any] | None = None,
+    preserved_rows_by_locale: dict[str, dict[str, Any]] | None = None,
+    preserve_existing_fields: bool = False,
 ) -> tuple[int, list[str], dict[str, Any]]:
     """Generate a daily digest post for one category (research or business).
 
     Creates 2 persona versions (expert/learner) × 2 locales (en/ko).
+    Admin reruns can restrict generation to one persona while preserving the
+    already-saved personas for QC and persistence.
     Returns (posts_created, errors, usage).
     """
     errors: list[str] = []
@@ -760,6 +978,15 @@ async def _generate_digest(
 
     if not classified:
         return 0, [], {}
+
+    target_personas = tuple(personas_to_generate or DAILY_DIGEST_PERSONAS)
+    required_persona_set = set(required_personas or REQUIRED_DAILY_DIGEST_PERSONAS)
+    invalid_personas = [
+        p for p in (*target_personas, *required_persona_set)
+        if p not in DAILY_DIGEST_PERSONAS
+    ]
+    if invalid_personas:
+        return 0, [f"{digest_type}: invalid personas {sorted(set(invalid_personas))}"], {}
 
     def _normalize_source_url(url: str) -> str:
         return (url or "").strip().rstrip("/")
@@ -889,11 +1116,19 @@ async def _generate_digest(
     # Generate personas
     client = get_openai_client()
     model = settings.openai_model_main
-    personas: dict[str, PersonaOutput] = {}
-    digest_headline = ""           # expert headline (becomes news_posts.title for EN)
-    digest_headline_ko = ""        # expert headline_ko (becomes news_posts.title for KO)
-    digest_excerpt = ""            # expert excerpt
-    digest_excerpt_ko = ""         # expert excerpt_ko
+    personas: dict[str, PersonaOutput] = {
+        name: output
+        for name, output in (preserved_personas or {}).items()
+        if name in DAILY_DIGEST_PERSONAS
+    }
+    preserved_frontload = preserved_frontload or {}
+    def _frontload_list(key: str) -> list[str]:
+        value = preserved_frontload.get(key)
+        return list(value) if isinstance(value, list) else []
+    digest_headline = preserved_frontload.get("headline") or ""           # expert headline (becomes news_posts.title for EN)
+    digest_headline_ko = preserved_frontload.get("headline_ko") or ""     # expert headline_ko (becomes news_posts.title for KO)
+    digest_excerpt = preserved_frontload.get("excerpt") or ""             # expert excerpt
+    digest_excerpt_ko = preserved_frontload.get("excerpt_ko") or ""       # expert excerpt_ko
     digest_headline_learner = ""           # learner headline (saved to guide_items.title_learner)
     digest_headline_learner_ko = ""        # learner headline_ko
     digest_excerpt_learner = ""            # learner excerpt
@@ -904,14 +1139,14 @@ async def _generate_digest(
     digest_excerpt_beginner_ko = ""        # beginner excerpt_ko
     persona_sources: dict[str, list[dict]] = {}  # {"expert": [...], "learner": [...], "beginner": [...]}
     digest_tags: list[str] = []
-    digest_focus_items: list[str] = []
-    digest_focus_items_ko: list[str] = []
-    persona_quizzes: dict[str, dict] = {}  # {"expert": {"en": {...}, "ko": {...}}, "learner": {...}, ...}
+    digest_focus_items: list[str] = _frontload_list("focus_items")
+    digest_focus_items_ko: list[str] = _frontload_list("focus_items_ko")
+    persona_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
     persona_prompts: dict[str, str] = {}
 
     MAX_DIGEST_RETRIES = 2  # 2 retries = 3 total attempts
 
-    for persona_name in DAILY_DIGEST_PERSONAS:
+    for persona_name in target_personas:
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
         persona_prompts[persona_name] = system_prompt
@@ -1074,15 +1309,6 @@ async def _generate_digest(
                     digest_focus_items_ko = data["focus_items_ko"]
                 if data.get("sources") and persona_name not in persona_sources:
                     persona_sources[persona_name] = data["sources"]
-                # Extract quiz data per persona
-                quiz_en = data.get("quiz_en")
-                quiz_ko = data.get("quiz_ko")
-                if quiz_en or quiz_ko:
-                    persona_quizzes[persona_name] = {}
-                    if isinstance(quiz_en, dict) and quiz_en.get("question"):
-                        persona_quizzes[persona_name]["en"] = quiz_en
-                    if isinstance(quiz_ko, dict) and quiz_ko.get("question"):
-                        persona_quizzes[persona_name]["ko"] = quiz_ko
                 # NOTE: usage already merged above (right after with_flex_retry)
                 # so any failure between there and here doesn't lose the tokens.
 
@@ -1263,7 +1489,7 @@ async def _generate_digest(
                         f"{attempt + 1} attempts (schema): {schema_err}"
                     )
                     logger.error(error_msg)
-                    if persona_name in REQUIRED_DAILY_DIGEST_PERSONAS:
+                    if persona_name in required_persona_set:
                         errors.append(error_msg)
                     await _log_stage(
                         supabase, run_id,
@@ -1293,7 +1519,7 @@ async def _generate_digest(
                 if attempt == MAX_DIGEST_RETRIES:
                     error_msg = f"{digest_type} {persona_name} digest failed after {attempt + 1} attempts: {e}"
                     logger.error(error_msg)
-                    if persona_name in REQUIRED_DAILY_DIGEST_PERSONAS:
+                    if persona_name in required_persona_set:
                         errors.append(error_msg)
                     await _log_stage(
                         supabase, run_id,
@@ -1310,7 +1536,7 @@ async def _generate_digest(
     # staged as additive: attempt it, save it when valid, but do not let a
     # new-persona failure wipe out otherwise usable daily drafts.
     incomplete = []
-    for pname in REQUIRED_DAILY_DIGEST_PERSONAS:
+    for pname in required_persona_set:
         p = personas.get(pname)
         if not p:
             incomplete.append(f"{pname} (missing)")
@@ -1334,6 +1560,7 @@ async def _generate_digest(
         blocker.split(":", 1)[0].split()[0]
         for blocker in blockers
         if ": Hangul in EN `###` heading " in blocker
+        and blocker.split(":", 1)[0].split()[0] in target_personas
     })
     if recoverable_en_personas:
         for persona_name in recoverable_en_personas:
@@ -1463,6 +1690,14 @@ async def _generate_digest(
             digest_type,
         )
         auto_publish = False
+
+    persona_quizzes, quiz_usage = await _generate_digest_quizzes(
+        digest_type=digest_type,
+        personas=personas,
+        supabase=supabase,
+        run_id=run_id,
+    )
+    cumulative_usage = merge_usage_metrics(cumulative_usage, quiz_usage)
 
     # Save EN + KO rows
     missing = [p for p in DAILY_DIGEST_PERSONAS if p not in personas]
@@ -1702,13 +1937,9 @@ async def _generate_digest(
         # Quiz validation (_validate_and_shuffle_quiz_item): requires answer to
         # be verbatim text of one of options — drops letter-form answers ("A")
         # that would silently break after shuffle.
-        from services.pipeline import _validate_and_shuffle_quiz_item
         guide_items: dict[str, Any] = {}
         for pname in DAILY_DIGEST_PERSONAS:
-            raw_quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
-            quiz = _validate_and_shuffle_quiz_item(
-                raw_quiz, label=f"Daily quiz {digest_type}/{pname}/{locale}"
-            )
+            quiz = persona_quizzes.get(pname, {}).get("en" if locale == "en" else "ko")
             if quiz:
                 guide_items[f"quiz_poll_{pname}"] = quiz
         # Use code-extracted source_cards with LLM-generated titles merged in
@@ -1742,8 +1973,115 @@ async def _generate_digest(
         if guide_items:
             row["guide_items"] = guide_items
 
+        if preserve_existing_fields:
+            existing_locale_row = (preserved_rows_by_locale or {}).get(locale) or {}
+            existing_guide_items = existing_locale_row.get("guide_items") or {}
+            existing_fact_pack = existing_locale_row.get("fact_pack") or {}
+            merged_guide_items = {
+                **(existing_guide_items if isinstance(existing_guide_items, dict) else {}),
+                **guide_items,
+            }
+            merged_fact_pack = {
+                **(existing_fact_pack if isinstance(existing_fact_pack, dict) else {}),
+                "digest_type": digest_type,
+                "news_items": (
+                    (existing_fact_pack or {}).get("news_items")
+                    if isinstance(existing_fact_pack, dict)
+                    else None
+                ) or _news_items_from_source_cards(combined_source_cards),
+                "quality_score": quality_score,
+                "quality_version": quality_meta.get(
+                    "quality_version",
+                    (existing_fact_pack or {}).get("quality_version", "v1")
+                    if isinstance(existing_fact_pack, dict)
+                    else "v1",
+                ),
+                "quality_breakdown": quality_meta.get("quality_breakdown", {}),
+                "expert_breakdown": quality_meta.get(
+                    "expert_breakdown",
+                    (existing_fact_pack or {}).get("expert_breakdown", {})
+                    if isinstance(existing_fact_pack, dict)
+                    else {},
+                ),
+                "learner_breakdown": quality_meta.get(
+                    "learner_breakdown",
+                    (existing_fact_pack or {}).get("learner_breakdown", {})
+                    if isinstance(existing_fact_pack, dict)
+                    else {},
+                ),
+                "beginner_breakdown": quality_meta.get(
+                    "beginner_breakdown",
+                    (existing_fact_pack or {}).get("beginner_breakdown", {})
+                    if isinstance(existing_fact_pack, dict)
+                    else {},
+                ),
+                "frontload_breakdown": quality_meta.get(
+                    "frontload_breakdown",
+                    (existing_fact_pack or {}).get("frontload_breakdown", {})
+                    if isinstance(existing_fact_pack, dict)
+                    else {},
+                ),
+                "quality_issues": quality_meta.get("quality_issues", []),
+                "quality_caps_applied": quality_meta.get(
+                    "quality_caps_applied",
+                    (existing_fact_pack or {}).get("quality_caps_applied", [])
+                    if isinstance(existing_fact_pack, dict)
+                    else [],
+                ),
+                "structural_penalty": quality_meta.get(
+                    "structural_penalty",
+                    (existing_fact_pack or {}).get("structural_penalty", 0)
+                    if isinstance(existing_fact_pack, dict)
+                    else 0,
+                ),
+                "structural_warnings": quality_meta.get(
+                    "structural_warnings",
+                    (existing_fact_pack or {}).get("structural_warnings", [])
+                    if isinstance(existing_fact_pack, dict)
+                    else [],
+                ),
+                "url_validation_failed": bool(quality_meta.get(
+                    "url_validation_failed",
+                    (existing_fact_pack or {}).get("url_validation_failed", False)
+                    if isinstance(existing_fact_pack, dict)
+                    else False,
+                )),
+                "url_validation_failures": quality_meta.get(
+                    "url_validation_failures",
+                    (existing_fact_pack or {}).get("url_validation_failures", [])
+                    if isinstance(existing_fact_pack, dict)
+                    else [],
+                ),
+            }
+            if "auto_publish_eligible" not in merged_fact_pack:
+                merged_fact_pack["auto_publish_eligible"] = auto_publish
+
+            patch_row: dict[str, Any] = {
+                "quality_score": quality_score,
+                "quality_flags": quality_meta.get("quality_flags", []),
+                "fact_pack": merged_fact_pack,
+                "pipeline_model": settings.openai_model_main,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            if "expert" in target_personas and expert_content:
+                patch_row["content_expert"] = expert_content
+            if "learner" in target_personas and learner_content:
+                patch_row["content_learner"] = learner_content
+                if learner_title:
+                    patch_row["title_learner"] = learner_title
+            if "beginner" in target_personas and beginner_content:
+                patch_row["content_beginner"] = beginner_content
+                if beginner_title:
+                    patch_row["title_beginner"] = beginner_title
+            if merged_guide_items:
+                patch_row["guide_items"] = merged_guide_items
+            row = patch_row
+
         try:
-            supabase.table("news_posts").upsert(row, on_conflict="slug").execute()
+            if preserve_existing_fields:
+                supabase.table("news_posts").update(row).eq("slug", slug).execute()
+            else:
+                supabase.table("news_posts").upsert(row, on_conflict="slug").execute()
             posts_created += 1
             logger.info("Saved %s %s digest draft (score=%s, eligible=%s): %s",
                         digest_type, locale, quality_score, auto_publish, slug)

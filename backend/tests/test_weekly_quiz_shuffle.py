@@ -160,6 +160,29 @@ class TestSingleItemValidator:
         assert out is not None
         assert out["answer"] == item["options"][2]
 
+    def test_answer_index_repaired_when_explanation_negates_selected_option(self):
+        item = {
+            "question": "Which claim is directly reported by the EVA-Bench paper's abstract?",
+            "options": [
+                "The median gap between pass@k and pass^k on EVA-A is 0.44",
+                "All evaluated systems exceed 0.5 on both EVA-A and EVA-X pass@1",
+                "EVA-Bench uses human-in-the-loop calls for every scoring decision",
+                "FoE's 5.2x latency reduction is replicated on EVA-Bench tasks",
+            ],
+            "answer_index": 1,
+            "explanation": (
+                "The EVA-Bench abstract reports a median pass@k - pass^k gap "
+                "of 0.44 on EVA-A, and that no system exceeds 0.5 on both "
+                "EVA-A and EVA-X pass@1; it uses bot-to-bot simulations, "
+                "not human-in-the-loop for every score."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][0]
+
 
 def _make_valid_item(question: str = "Q", answer: str = "B") -> dict:
     return {
