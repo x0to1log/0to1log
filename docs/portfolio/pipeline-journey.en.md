@@ -1,7 +1,7 @@
 # AI News Pipeline Development Journey
 
 > **Project:** [0to1log](https://0to1log.com) -- AI News Curation + AI Glossary + IT Blog Platform
-> **Duration:** Mid-February to April 23, 2026 (2 weeks planning + 50 days development)
+> **Duration:** Mid-February to May 15, 2026 (2 weeks planning + about 72 days development)
 > **Role:** Solo full-stack developer (planning, design, frontend, backend, AI, infrastructure)
 > **Stack:** Astro v5 - FastAPI - Supabase - OpenAI (gpt-5) - Tavily - Exa - Brave - Vercel - Railway
 
@@ -9,23 +9,24 @@
 
 ## At a Glance
 
-A pipeline that collects 50-60 AI news articles daily from 7 sources, auto-groups same-event articles, classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner personas. Built over 50 days through 12 versions, with gpt-5 transition (v10), quality evaluation redesign (v11), and efficiency overhaul (v12).
+A pipeline that collects 50-60 AI news articles daily from 7 sources, auto-groups same-event articles, classifies, ranks, enriches with multi-source context, and summarizes them into 2 digests (Research + Business) with Expert/Learner/Beginner 3 personas. Built over about 72 days through 13 versions -- gpt-5 transition (v10), quality evaluation redesign (v11), efficiency overhaul (v12), persona expansion + quiz separation (v13).
 
-| | Start (v2) | v8 | v10 | v11 | Current (v12) |
-|---|---|---|---|---|---|
-| **Cost per run** | $0.18 | $0.25 | $0.58 | $0.54 | **$0.41** |
-| **Model** | gpt-4o | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 (flex + cache) |
-| **Quality eval** | none | 4x25 single score | 4x25 + code deductions | 10 sub-score + evidence | **14-15 sub-score + schema enum** |
-| **URL hallucination guard** | none | prompt instruction | prompt instruction | URL liveness check | **API schema enum (100%)** |
-| **Prompt cache** | -- | -- | -- | -- | **52% avg hit rate** |
-| **QC rerun cost** | full $0.25 | full $0.25 | full $0.58 | QC only $0.05 (-90%) | QC only $0.02 (flex) |
-| **Quality (R/B)** | 75.8 / 82.9 | 91.8 / 94.8 | 96 / 91 | 76 / 93 | **89-97 stable** |
+| | Start (v2) | v8 | v10 | v11 | v12 | Current (v13) |
+|---|---|---|---|---|---|---|
+| **Cost per run** | $0.18 | $0.25 | $0.58 | $0.54 | $0.41 | measuring |
+| **Model** | gpt-4o | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex+cache | gpt-5 flex+cache |
+| **Digest count** | 6 (3 personas × 2) | 4 (2 personas × 2) | 4 | 4 | 4 | **6 (3 personas × 2)** |
+| **Personas** | Expert/Mid/Beginner | Expert/Learner | Expert/Learner | Expert/Learner | Expert/Learner | **+ Beginner (Optional)** |
+| **Quality eval** | none | 4x25 single score | 4x25 + code deductions | 10 sub-score + evidence | 14-15 sub-score + schema enum | + Beginner sub-score |
+| **URL hallucination guard** | none | prompt | prompt | URL liveness check | **API schema enum (100%)** | same |
+| **Quiz generation** | coupled w/ Writer | coupled | coupled | coupled | coupled | **separate pipeline** |
+| **QC rerun cost** | $0.25 | $0.25 | $0.58 | QC only $0.05 | QC only $0.02 (flex) | same |
 
-Through v8, quality improved 9.3x while keeping cost at $0.18-$0.25/run. v9 cost exploded to $0.77 with multi-source enrichment, then merge brought it back to $0.43. v10 transitioned to gpt-5. v11 redesigned the rubric with 3-layer source gates and a QC rerun path. **v12 cut cost to $0.33-$0.41 (18-34% below baseline) while restoring citation density 3-6x** -- API schema enum blocks URL hallucination at the server level, flex tier and prompt cache cut the bill. All figures measured from production databases.
+Through v8, quality improved 9.3x while keeping cost at $0.18-$0.25/run. v9 cost exploded to $0.77, then merge brought it back to $0.43. v10 transitioned to gpt-5. v11 redesigned the rubric with 3-layer source gates and a QC rerun path. v12 cut cost to $0.33-$0.41 with citation density 3-6x recovery (schema enum + flex + cache). **v13 added Beginner persona (return to 3 personas, as an Optional layer) and separated the Quiz pipeline** -- Writer/Quiz separation is the 4th "role separation" after v8 (classify/rank), v9 (classify/merge), v10 (Writer/Summarizer). All figures measured from production databases.
 
 Key discoveries:
 1. **Removing DON'Ts makes LLMs perform better.** Cutting the Research Expert Guide from 569 to 151 words and deleting all 9 DON'Ts increased per-item depth from 1 paragraph to 3.
-2. **Give LLMs one role at a time.** Classification/ranking (v8), classify/merge (v9), Writer/Summarizer (v10) -- three rounds of validation. Accuracy improved immediately each time tasks were separated.
+2. **Give LLMs one role at a time.** Classification/ranking (v8), classify/merge (v9), Writer/Summarizer (v10), Writer/Quiz (v13) -- **four rounds of validation**. Accuracy improved immediately each time tasks were separated. Writer was producing wrong quiz answers while focused on body — separating quiz into its own pipeline fixed it.
 3. **Input quality determines output quality.** Instructing the Writer to "reflect diverse perspectives" doesn't work -- actually providing diverse sources does. Merge deduplicated input, cutting cost by 44% while maintaining quality.
 4. **Reasoning models have a different parameter system.** Empty responses from gpt-5 aren't bugs -- reasoning tokens consume the output budget. reasoning_effort=low + 3x headroom solves it. **In practice 60-72% of output is reasoning tokens** -- only 30-40% is body.
 5. **Good source filtering matters more than good generation prompts.** Spam, content farms, dead URLs, fork repos blocked at the enrich stage. All 13 problematic URLs from the Apr 19 incident blocked. Quality is built at the input gate, not Writer tuning.
@@ -82,17 +83,22 @@ Rank (gpt-5-mini) --> [LEAD] / [SUPPORTING] (per group)
 Conditional enrich (Exa find_similar -- only groups with 1 source)
     + source quality gate (drop spam / content farms, original repo > fork)
     v
-+-- Research Digest -----------+   +-- Business Digest -----------+
-|  Expert EN+KO (gpt-5 flex)  |   |  Expert EN+KO (gpt-5 flex)  |
-|  Learner EN+KO (gpt-5 flex) |   |  Learner EN+KO (gpt-5 flex) |
-|  + JSON schema: citations[] |   |  + JSON schema: citations[] |
-|    url: enum [allowlist]    |   |    url: enum [allowlist]    |
-|  + prompt_cache_key (52% ↑) |   |  + prompt_cache_key (52% ↑) |
-+------------------------------+   +------------------------------+
++-- Research Digest --------------+   +-- Business Digest --------------+
+|  Expert EN+KO (gpt-5 flex)     |   |  Expert EN+KO (gpt-5 flex)     |
+|  Learner EN+KO (gpt-5 flex)    |   |  Learner EN+KO (gpt-5 flex)    |
+|  Beginner EN+KO (Optional)     |   |  Beginner EN+KO (Optional)     |
+|  + JSON schema: citations[]    |   |  + JSON schema: citations[]    |
+|    url: enum [allowlist]       |   |    url: enum [allowlist]       |
+|  + prompt_cache_key (52% ↑)    |   |  + prompt_cache_key (52% ↑)    |
++---------------------------------+   +---------------------------------+
     v
 Post-process (bold fix + tag strip + [CITE_N] → [N](URL) substitution)
     v
-Quality check (gpt-5 flex x 4: R/B x Expert/Learner)
+Quiz generation (gpt-5-mini flex, per-locale × 2 categories = 4 calls)
+    Per-persona quizzes (expert/learner/beginner) — separate from body
+    answer_index 0-3 (schema enum enforced)
+    v
+Quality check (gpt-5 flex x 4-6: R/B x Expert/Learner [+ Beginner])
     + 14-15 sub-score + evidence (LLM), total aggregated by code
     + Code deductions (CP missing -15, structural mismatch -5)
     + Health Check (0 classifications, over-grouping, collection failures)
@@ -123,22 +129,23 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | v12 initial (high only) | 1 | $0.86 | -- | reasoning_effort=high alone (+72%, lesson) |
 | v12 (4/23 single) | 1 | $0.36 | -- | flex + cache + liveness removed (-28%) |
 | v12 (4/23-27 avg) | 5 | **$0.41** | $0.36-0.47 | + CP per-platform + relevance filter (4/24-27 follow-up) |
+| v13 (5/13-15) | measuring | — | — | Beginner persona + Quiz pipeline separation |
 
 ### Quality Trend (news_posts, EN, Research/Business split)
 
-| Metric | | v2-v4 | v5-v6 | v7-v8 | v9 | v10 | v11 | v12 |
-|--------|---|-------|-------|-------|-----|-----|-----|-----|
-| **Quality score** | Research | 75.8 | 92.2 | 91.8 | 94 | 96 | 76 | **90-97** |
-| | Business | 82.9 | 94.1 | 94.8 | 95 | 91 | 93 | **89-95** |
-| **Expert citations** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 | 17.5 | **30** (peak) |
-| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 | 20.5 | 21 |
-| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
+| Metric | | v2-v4 | v5-v6 | v7-v8 | v9 | v10 | v11 | v12 | v13 |
+|--------|---|-------|-------|-------|-----|-----|-----|-----|-----|
+| **Quality score** | Research | 75.8 | 92.2 | 91.8 | 94 | 96 | 76 | 90-97 | measuring |
+| | Business | 82.9 | 94.1 | 94.8 | 95 | 91 | 93 | 89-95 | measuring |
+| **Expert citations** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 | 17.5 | **30** (peak) | — |
+| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 | 20.5 | 21 | — |
+| **Avg cost/run** | All | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | $0.41 | measuring |
 
 *Quality scores are automated LLM evaluation (100-point scale). From v5 onward, evaluation switched to 4 persona-specific prompts -- a stricter standard -- yet scores improved. **v11 scores are not directly comparable to pre-v11 because the rubric architecture itself changed** -- the 10-sub-score + evidence redesign distributes scores differently. v12 extended v11's rubric to 14-15 sub-scores + schema enforcement, with a 3-day average of 92.7 (89-97 stable).*
 
 **Summary:** Through v8, cost stayed at $0.18-$0.25 while citations grew 9.3x. v9 exploded to $0.77, merge brought it back to $0.43. v10 transitioned to gpt-5. v11 redesigned the rubric, added source gates, and introduced a QC rerun path. **v12 used schema enum to block URL hallucination at the API level, then flex tier + prompt cache brought cost down to $0.33 (-34%) with citation density restored 3-6x.** Quality and cost improved together.
 
-### Prompt Iteration History (12 rounds)
+### Prompt Iteration History (13 rounds)
 
 | Iteration | Score | Key change | Keyword |
 |-----------|-------|-----------|---------|
@@ -155,6 +162,7 @@ All numbers below are measured from production databases (`pipeline_logs` for co
 | v11 | **rebaseline** | 10 sub-score + source gates + rerun=quality | LLM/code role re-separation |
 | v11.1 | **95/100** | Writer-QC mirror + Phase 2a measurement | QC and Writer change in pairs |
 | v12 | **89-97 stable** | Schema enum + flex + cache, liveness removed | Cost -34% + citation 3-6x recovery |
+| v13 | measuring | Beginner persona + Quiz separation | 3-persona return (v4 reversal); Writer/Quiz is 4th role separation |
 
 ---
 
@@ -282,15 +290,16 @@ v10 █████████████████████████�
 v11 ████████████████████████████████████████████████████  15 days (rubric v2 + source gates)
 v11.1 ████                                                1 day (Writer-QC mirror)
 v12  ████                                                 1 day (schema enum + flex + cache)
+v13  ████████                                             3 days (Beginner persona + Quiz separation)
 ```
 
-| | v1 | v2-v4 | v5-v6 | v7-v8 | v9 | v10 | v11 | v12 |
-|---|---|---|---|---|---|---|---|---|
-| **Period** | 3/10-14 | 3/15-17 | 3/18-26 | 3/28-30 | 3/30 | 3/31-4/6 | 4/7-4/22 | 4/23 |
-| **Outcome** | Root cause discovery | Working → stable | Stabilized + optimized | Quality + separation | Multi-source + merge | gpt-5 + code deductions | Rubric v2 + source gates | schema enum + flex + cache |
-| **Model** | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex |
-| **Cost/run** | N/A | $0.13-0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
-| **Quality eval** | none | none | 4x25 | 4x25 + code deductions | 4x25 + code deductions | 4x25 + code deductions | 10 sub-score + evidence | 14-15 sub-score + schema enum |
+| | v1 | v2-v4 | v5-v6 | v7-v8 | v9 | v10 | v11 | v12 | v13 |
+|---|---|---|---|---|---|---|---|---|---|
+| **Period** | 3/10-14 | 3/15-17 | 3/18-26 | 3/28-30 | 3/30 | 3/31-4/6 | 4/7-4/22 | 4/23 | 5/13-15 |
+| **Outcome** | Root cause discovery | Working → stable | Stabilized + optimized | Quality + separation | Multi-source + merge | gpt-5 + code deductions | Rubric v2 + source gates | schema enum + flex + cache | Beginner + Quiz separation |
+| **Model** | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex | gpt-5 flex |
+| **Cost/run** | N/A | $0.13-0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | $0.41 | measuring |
+| **Quality eval** | none | none | 4x25 | 4x25 + code deductions | 4x25 + code deductions | 4x25 + code deductions | 10 sub-score + evidence | 14-15 sub-score + schema enum | + Beginner sub-score |
 
 ---
 
@@ -528,6 +537,63 @@ Monthly $15 → $26 (naive) → **$10** (final). $192/year saved vs naive.
 
 ---
 
+### v13: Beginner Persona + Quiz Separation (5/13-5/15, 3 days)
+
+With v11-v12 infrastructure stabilized, honest content review became possible. Learner mode audit revealed: "stuck at expert minus jargon — 5-6k chars, 7+ acronyms per persona (MTP/KV/MoE/vLLM/SGLang/Ollama/Apache). **A true beginner audience is missing.**"
+
+**Beginner persona added — revisiting the v4 decision**
+
+In v4 (3/17), we cut 3 personas to 2 because Intermediate overlapped 70%+ with Expert. v13 returns to 3 personas — **but a different kind of persona**.
+
+| Persona | Audience |
+|---------|----------|
+| Expert | Research engineers — prior work, benchmarks, limitations |
+| Learner | Mid-level — analogies + technical depth balance |
+| **Beginner** | **True beginner who only uses ChatGPT** — 1-2 main items + "Worth Skimming" + funnel to Learner mode |
+
+v4's Intermediate was a fine-tuning on the same expert axis, but v13's Beginner is a **new persona on a different axis** (expertise vs accessibility).
+
+**Optional Layer pattern — Risk-conservative introduction**
+
+New persona carries publish-blocking risk. Solution: split `REQUIRED` from `DAILY`.
+
+```python
+DAILY_DIGEST_PERSONAS = ("expert", "learner", "beginner")  # generation attempt
+REQUIRED_DAILY_DIGEST_PERSONAS = ("expert", "learner")     # publish gate
+```
+
+If Beginner fails, Expert/Learner still publishes. Quality weight is also conservative at **0.16** (half of expert/learner). If stable, promote to REQUIRED in v14 — **incremental rollout isolates risk**.
+
+**Quiz pipeline separation — the 4th "role separation"**
+
+Through v12, the Writer produced body + quiz in one call (`NewsWriterOutput.quiz_en/quiz_ko` fields). The problem: while focusing on body, the Writer would get quiz answers wrong.
+
+**Solution:** Remove quiz from Writer schema, add a separate `_generate_digest_quizzes()` stage.
+
+```
+Writer (gpt-5 flex) → body → post-process → [CITE_N] substitution
+    v
+Quiz Generator (gpt-5-mini flex, per-locale)
+    Final body + per-persona difficulty rules
+    → answer_index 0-3 (schema enum enforced)
+```
+
+**Why separate:**
+- Writer can focus on body, quiz accuracy improves
+- Quiz needs a smaller model (gpt-5-mini)
+- Quiz sees the **final post-processed body** (after citation substitution)
+- Quiz can be backfilled/regenerated independently
+
+After v8 (classify/rank), v9 (classify/merge), v10 (Writer/Summarizer), this is the **4th validation of role separation**. Same pattern: "Combining two tasks in one call -- separating improves both."
+
+**Cost impact:** Writer 4 → 6 calls (3 personas × 2 categories) + Quiz 4 calls (EN/KO × 2 categories). 6 more LLM calls per run, but quiz uses a mini model so the impact is small. Exact cost pending the observation window (5/13–5/20).
+
+**`STAGE_CASCADE` extension — Beginner-only rerun**
+
+For operational efficiency, added "Beginner only + QC" to the rerun options. Preserves Expert/Learner content and regenerates only Beginner. Same principle as v11's `rerun_from=quality` — **partial reruns minimize experimentation cost**.
+
+---
+
 ### Rubric Evolution × Stable Scores -- A Cross-Observation
 
 Over the past month, the QC rubric was tightened continuously (9 → 14-15 sub-scores, schema enforcement, CP-specific dimensions added), yet writer quality scores stayed stable at **89-97**. The typical pattern -- new check added → temporary drop → prompt adjustment → recovery -- did not occur.
@@ -606,9 +672,10 @@ Save (High confidence --> draft, Low --> queued)
 ---
 
 > This document chronicles the AI pipeline development journey of 0to1log.
-> 12 pipeline versions, model and infra transition from gpt-4o to gpt-5 flex,
+> 13 pipeline versions, model and infra transition from gpt-4o to gpt-5 flex,
 > cost explosion → merge recovery → reasoning model migration → rubric redesign
-> → schema enum + flex + cache, a journey of innovating quality and cost together.
+> → schema enum + flex + cache → Beginner persona + Quiz separation.
 > Built a quality management system spanning LLM/code/API across 3 layers
-> with 14-15 sub-score rubric + 3-layer source gates + API schema enforcement.
+> with 14-15 sub-score rubric + 3-layer source gates + API schema enforcement,
+> and validated the "one role per call" principle four times.
 > As a solo project, I handled every stage from planning to deployment.

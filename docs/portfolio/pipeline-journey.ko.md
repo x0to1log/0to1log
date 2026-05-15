@@ -1,7 +1,7 @@
 # AI 뉴스 파이프라인 개발 여정
 
 > **프로젝트:** [0to1log](https://0to1log.com) — AI 뉴스 큐레이션 + AI 용어집 + IT 블로그 플랫폼
-> **기간:** 2026년 2월 중순 – 4월 23일 (기획 2주 + 개발 50일)
+> **기간:** 2026년 2월 중순 – 5월 15일 (기획 2주 + 개발 약 72일)
 > **역할:** 1인 풀스택 개발 (기획, 설계, 프론트엔드, 백엔드, AI, 인프라)
 > **스택:** Astro v5 · FastAPI · Supabase · OpenAI (gpt-5) · Tavily · Exa · Brave · Vercel · Railway
 
@@ -9,23 +9,24 @@
 
 ## 한눈에 보기
 
-7개 소스에서 매일 50–60건의 AI 뉴스를 수집하고, 같은 이벤트를 자동 그룹화한 뒤 분류·랭킹·다중 소스 보강·요약하여 2종의 다이제스트(Research + Business)를 Expert/Learner 페르소나로 발행하는 파이프라인. 50일간 12번의 버전을 거쳤고, v10에서 gpt-5 전환, v11에서 품질 평가 재설계, v12에서 효율성 혁신을 했다.
+7개 소스에서 매일 50–60건의 AI 뉴스를 수집하고, 같은 이벤트를 자동 그룹화한 뒤 분류·랭킹·다중 소스 보강·요약하여 2종의 다이제스트(Research + Business)를 Expert/Learner/Beginner 3페르소나로 발행하는 파이프라인. 약 72일간 13번의 버전을 거쳤다 — v10에서 gpt-5 전환, v11에서 품질 평가 재설계, v12에서 효율성 혁신, v13에서 페르소나 확장 + Quiz 분리.
 
-| | 시작 (v2) | v8 | v10 | v11 | 현재 (v12) |
-|---|---|---|---|---|---|
-| **Run당 비용** | $0.18 | $0.25 | $0.58 | $0.54 | **$0.41** |
-| **모델** | gpt-4o | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 (flex + cache) |
-| **품질 평가** | 없음 | 4×25 단일점수 | 4×25 + 구조 감점 | 10 sub-score + evidence | **14-15 sub-score + schema enum** |
-| **URL 환각 방지** | 없음 | 프롬프트 지시 | 프롬프트 지시 | URL liveness 검증 | **API schema enum (100%)** |
-| **Prompt 캐시** | — | — | — | — | **52% 평균 적중** |
-| **QC 재실행 비용** | 전체 $0.25 | 전체 $0.25 | 전체 $0.58 | QC만 $0.05 (-90%) | QC만 $0.02 (flex) |
-| **품질 점수 (R/B)** | 75.8 / 82.9 | 91.8 / 94.8 | 96 / 91 | 76 / 93 | **89–97 안정** |
+| | 시작 (v2) | v8 | v10 | v11 | v12 | 현재 (v13) |
+|---|---|---|---|---|---|---|
+| **Run당 비용** | $0.18 | $0.25 | $0.58 | $0.54 | $0.41 | 측정 중 |
+| **모델** | gpt-4o | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex+cache | gpt-5 flex+cache |
+| **다이제스트 수** | 6 (3페르소나×2) | 4 (2페르소나×2) | 4 | 4 | 4 | **6 (3페르소나×2)** |
+| **페르소나** | Expert/중급/초급 | Expert/Learner | Expert/Learner | Expert/Learner | Expert/Learner | **+ Beginner (Optional)** |
+| **품질 평가** | 없음 | 4×25 단일점수 | 4×25 + 구조 감점 | 10 sub-score + evidence | 14-15 sub-score + schema enum | + Beginner sub-score |
+| **URL 환각 방지** | 없음 | 프롬프트 | 프롬프트 | URL liveness | **API schema enum (100%)** | 동일 |
+| **Quiz 생성** | Writer와 결합 | Writer와 결합 | Writer와 결합 | Writer와 결합 | Writer와 결합 | **별도 파이프라인** |
+| **QC 재실행 비용** | $0.25 | $0.25 | $0.58 | QC만 $0.05 | QC만 $0.02 (flex) | 동일 |
 
-v2–v8까지 Run당 $0.18–$0.25로 품질을 9.3배 개선. v9에서 비용 폭발($0.77) → merge로 $0.43 복귀. v10에서 gpt-5 전환. v11에서 rubric 재설계 + 3-layer 소스 게이트 + QC 재실행 경로. v12에서 **비용 $0.33–$0.41 (baseline $0.50 대비 18–34% 절감)과 동시에 citation density 3–6x 회복** (schema enum으로 URL 환각 API 레벨 차단, flex tier + prompt cache 도입). 모든 수치는 프로덕션 DB 실측.
+v2–v8까지 Run당 $0.18–$0.25로 품질을 9.3배 개선. v9에서 비용 폭발($0.77) → merge로 $0.43 복귀. v10에서 gpt-5 전환. v11에서 rubric 재설계 + 3-layer 소스 게이트 + QC 재실행 경로. v12에서 비용 $0.33–$0.41 (baseline $0.50 대비 18–34% 절감)과 citation density 3–6x 회복 (schema enum + flex tier + prompt cache). **v13에서 Beginner 페르소나 추가(3-페르소나 복귀, Optional layer)와 Quiz 파이프라인 분리** — Writer/Quiz 분리는 v8(분류/랭킹), v9(classify/merge), v10(Writer/Summarizer)에 이은 4번째 "역할 분리" 적용. 모든 수치는 프로덕션 DB 실측.
 
 핵심 발견:
 1. **"하지 마라"를 빼면 LLM이 더 잘한다.** Research Expert Guide를 569단어에서 151단어로 줄이고 DON'T 9개를 전부 삭제하자 아이템당 1문단이 3문단으로 늘어났다.
-2. **LLM에게 한 번에 하나의 역할만 시켜야 한다.** 분류/랭킹(v8), classify/merge(v9), Writer/Summarizer(v10) 세 번의 검증. 분리할 때마다 정확도가 즉시 개선.
+2. **LLM에게 한 번에 하나의 역할만 시켜야 한다.** 분류/랭킹(v8), classify/merge(v9), Writer/Summarizer(v10), Writer/Quiz(v13) **네 번의 검증**. 분리할 때마다 정확도가 즉시 개선. Writer가 body 작성에 집중하다 quiz 답을 틀리던 문제를 별도 파이프라인으로 해결.
 3. **입력의 질이 출력의 질을 결정한다.** "다양하게 써라"는 지시보다 실제로 다양한 소스를 넣어주는 게 근본 해결. merge로 중복 입력을 정리하자 비용 44% 감소, 품질 유지.
 4. **reasoning 모델은 파라미터 체계가 다르다.** gpt-5에서 빈 응답이 나오면 버그가 아니라 추론 토큰이 출력 예산을 소진한 것. reasoning_effort=low + 3x 헤드룸으로 해결. **실제로 output의 60–72%가 reasoning 토큰** — body는 30–40%뿐.
 5. **좋은 소스 필터링이 좋은 생성 프롬프트보다 중요하다.** 스팸/콘텐츠 팜/죽은 URL/포크 리포지토리를 enrich 단계에서 차단. Apr 19 사고의 13개 문제 URL 전량 차단. 품질은 Writer 튜닝이 아니라 입력 게이트에서 만들어진다.
@@ -82,17 +83,22 @@ Relevance filter (gpt-5-nano) — 30 → 5-10 (off-topic flame war 거름)
 조건부 소스 보강 (Exa find_similar — 소스 1개뿐인 그룹만)
     + 소스 품질 게이트 (스팸 / 콘텐츠 팜 drop, 원본 repo > fork)
     v
-+-- Research 다이제스트 -------+   +-- Business 다이제스트 -------+
-|  Expert EN+KO (gpt-5 flex)  |   |  Expert EN+KO (gpt-5 flex)  |
-|  Learner EN+KO (gpt-5 flex) |   |  Learner EN+KO (gpt-5 flex) |
-|  + JSON schema: citations[] |   |  + JSON schema: citations[] |
-|    url: enum [allowlist]    |   |    url: enum [allowlist]    |
-|  + prompt_cache_key (52% ↑) |   |  + prompt_cache_key (52% ↑) |
-+------------------------------+   +------------------------------+
++-- Research 다이제스트 ----------+   +-- Business 다이제스트 ----------+
+|  Expert EN+KO (gpt-5 flex)     |   |  Expert EN+KO (gpt-5 flex)     |
+|  Learner EN+KO (gpt-5 flex)    |   |  Learner EN+KO (gpt-5 flex)    |
+|  Beginner EN+KO (Optional)     |   |  Beginner EN+KO (Optional)     |
+|  + JSON schema: citations[]    |   |  + JSON schema: citations[]    |
+|    url: enum [allowlist]       |   |    url: enum [allowlist]       |
+|  + prompt_cache_key (52% ↑)    |   |  + prompt_cache_key (52% ↑)    |
++--------------------------------+   +--------------------------------+
     v
 후처리 (bold fix + 태그 제거 + [CITE_N] → [N](URL) 치환)
     v
-품질 검사 (gpt-5 flex x 4: R/B x Expert/Learner)
+Quiz 생성 (gpt-5-mini flex, per-locale x 2 카테고리 = 4 calls)
+    페르소나별 quiz (expert/learner/beginner) — body 분리 후 호출
+    answer_index 0-3 (schema enum 강제)
+    v
+품질 검사 (gpt-5 flex x 4-6: R/B x Expert/Learner [+ Beginner])
     + 14-15 sub-score + evidence (LLM), 총점 aggregate (코드)
     + 코드 감점 (CP 누락 -15, 구조 불일치 -5)
     + Health Check (분류 0건, 과묶기, 수집 실패 감지)
@@ -123,22 +129,23 @@ draft 저장 --> 관리자 확인 --> 발행
 | v12 초기 (high only) | 1 | $0.86 | — | reasoning_effort=high만 적용 (+72%, 교훈) |
 | v12 (4/23 단일) | 1 | $0.36 | — | flex + cache + liveness 제거 (-28%) |
 | v12 (4/23–27 평균) | 5 | **$0.41** | $0.36–0.47 | + CP per-platform + relevance filter (4/24–27 후속) |
+| v13 (5/13–15) | 측정 중 | — | — | Beginner 페르소나 + Quiz 파이프라인 분리 |
 
 ### 품질 추이 (news_posts, EN, Research/Business 분리)
 
-| 지표 | | v2–v4 | v5–v6 | v7–v8 | v9 | v10 | v11 | v12 |
-|------|---|-------|-------|-------|-----|-----|-----|-----|
-| **품질 점수** | Research | 75.8 | 92.2 | 91.8 | 94 | 96 | 76 | **90–97** |
-| | Business | 82.9 | 94.1 | 94.8 | 95 | 91 | 93 | **89–95** |
-| **Expert citation** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 | 17.5 | **30** (peak) |
-| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 | 20.5 | 21 |
-| **Run당 비용** | 전체 | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
+| 지표 | | v2–v4 | v5–v6 | v7–v8 | v9 | v10 | v11 | v12 | v13 |
+|------|---|-------|-------|-------|-----|-----|-----|-----|-----|
+| **품질 점수** | Research | 75.8 | 92.2 | 91.8 | 94 | 96 | 76 | 90–97 | 측정 중 |
+| | Business | 82.9 | 94.1 | 94.8 | 95 | 91 | 93 | 89–95 | 측정 중 |
+| **Expert citation** | Research | 1.8 | 12.9 | 16.8 | 17.5 | 17.5 | 17.5 | **30** (peak) | — |
+| | Business | 2.7 | 13.9 | 14.2 | 20.5 | 20.5 | 20.5 | 21 | — |
+| **Run당 비용** | 전체 | $0.18 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | $0.41 | 측정 중 |
 
 *품질 점수는 자동 LLM 평가 (100점 만점). v5부터 4개 페르소나별 평가로 전환하여 기준이 더 엄격해졌음에도 점수가 상승. **v11의 점수는 rubric 아키텍처 자체가 바뀌었기 때문에 v10 이전과 직접 비교 불가** — 10 sub-score + evidence 구조로 재설계되면서 점수 분포가 다르다. v12는 v11 rubric을 14–15 sub-score로 확장 + schema enforcement로 3일 평균 92.7점(89–97 안정).*
 
 **요약:** v2–v8까지 $0.18–$0.25로 citation 9.3배 달성. v9에서 $0.77 폭발 → merge로 $0.43 복귀. v10에서 gpt-5 전환. v11에서 rubric 재설계 + 소스 게이트 + QC 재실행 경로. **v12에서 schema enum으로 URL 환각 API 레벨 차단, flex tier + prompt cache로 $0.33 (-34%), citation density 3–6x 회복.** 품질과 비용을 동시에 개선한 사례.
 
-### 프롬프트 반복 이력 (12회)
+### 프롬프트 반복 이력 (13회)
 
 | 반복 | 점수 | 핵심 변경 | 키워드 |
 |------|------|----------|--------|
@@ -155,6 +162,7 @@ draft 저장 --> 관리자 확인 --> 발행
 | v11 | **재측정** | 10 sub-score + 소스 게이트 + rerun=quality | LLM/코드 역할 재분리 |
 | v11.1 | **95/100** | Writer-QC 미러 동기화 + Phase 2a 측정 | QC와 Writer는 쌍으로 변경 |
 | v12 | **89–97 안정** | Schema enum + flex + cache, liveness 제거 | 비용 -34% + citation 3–6x 회복 |
+| v13 | 측정 중 | Beginner 페르소나 추가 + Quiz 분리 | 3-페르소나 복귀(v4 reversal); Writer/Quiz는 4번째 역할 분리 |
 
 ---
 
@@ -282,15 +290,16 @@ v10 █████████████████████████�
 v11 ████████████████████████████████████████████████████  15일 (rubric v2 + 소스 게이트)
 v11.1 ████                                                1일 (Writer-QC 미러)
 v12  ████                                                 1일 (schema enum + flex + cache)
+v13  ████████                                             3일 (Beginner 페르소나 + Quiz 분리)
 ```
 
-| | v1 | v2–v4 | v5–v6 | v7–v8 | v9 | v10 | v11 | v12 |
-|---|---|---|---|---|---|---|---|---|
-| **기간** | 3/10–14 | 3/15–17 | 3/18–26 | 3/28–30 | 3/30 | 3/31–4/6 | 4/7–4/22 | 4/23 |
-| **결과** | 근본 원인 발견 | 동작 → 안정 | 안정화 + 최적화 | 품질 개선 + 분리 | 다중 소스 + merge | gpt-5 + 코드 감점 | Rubric v2 + 소스 게이트 | schema enum + flex + cache |
-| **모델** | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex |
-| **비용/run** | N/A | $0.13–0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | **$0.41** |
-| **품질 평가** | 없음 | 없음 | 4×25 | 4×25 + 구조 감점 | 4×25 + 구조 감점 | 4×25 + 구조 감점 | 10 sub-score + evidence | 14–15 sub-score + schema enum |
+| | v1 | v2–v4 | v5–v6 | v7–v8 | v9 | v10 | v11 | v12 | v13 |
+|---|---|---|---|---|---|---|---|---|---|
+| **기간** | 3/10–14 | 3/15–17 | 3/18–26 | 3/28–30 | 3/30 | 3/31–4/6 | 4/7–4/22 | 4/23 | 5/13–15 |
+| **결과** | 근본 원인 발견 | 동작 → 안정 | 안정화 + 최적화 | 품질 개선 + 분리 | 다중 소스 + merge | gpt-5 + 코드 감점 | Rubric v2 + 소스 게이트 | schema enum + flex + cache | Beginner + Quiz 분리 |
+| **모델** | gpt-4o | gpt-4o | gpt-4.1 | gpt-4.1 | gpt-4.1 | gpt-5 | gpt-5 | gpt-5 flex | gpt-5 flex |
+| **비용/run** | N/A | $0.13–0.17 | $0.20 | $0.25 | $0.43 | $0.58 | $0.54 | $0.41 | 측정 중 |
+| **품질 평가** | 없음 | 없음 | 4×25 | 4×25 + 구조 감점 | 4×25 + 구조 감점 | 4×25 + 구조 감점 | 10 sub-score + evidence | 14–15 sub-score + schema enum | + Beginner sub-score |
 
 ---
 
@@ -528,6 +537,63 @@ v11에서 도입한 HEAD 요청 검증이 70–85% false positive를 내면서 c
 
 ---
 
+### v13: Beginner 페르소나 + Quiz 분리 (5/13–5/15, 3일)
+
+v11–v12까지 인프라가 안정화되자 콘텐츠 자체에 대한 정직한 재검토가 가능해졌다. Learner mode 리뷰 결과: "expert minus jargon에 머무름 — 5-6k 문자, 페르소나당 7+ 약어(MTP/KV/MoE/vLLM/SGLang/Ollama/Apache). **진짜 입문자가 빠져있다.**"
+
+**Beginner 페르소나 추가 — v4 결정의 재검토**
+
+v4(3/17)에서 Intermediate가 Expert와 70% 겹친다는 이유로 3페르소나 → 2페르소나로 줄였다. v13에서 다시 3페르소나로 복귀 — **하지만 다른 차원의 페르소나**.
+
+| 페르소나 | 대상 |
+|---------|------|
+| Expert | 리서치 엔지니어 — prior work, 벤치마크, 한계점 |
+| Learner | 중급 — 비유 + 기술 깊이 균형 |
+| **Beginner** | **ChatGPT만 쓰는 진짜 입문자** — 메인 1–2 아이템 + "가볍게 지나가도 되는 소식" + Learner 모드로 funnel |
+
+v4의 Intermediate는 Expert와 같은 축에서의 미세 조정이었지만, v13의 Beginner는 **다른 축**(전문성 vs 접근성)의 새 페르소나.
+
+**Optional Layer 패턴 — Risk-Conservative 도입**
+
+새 페르소나는 발행 차단 위험을 가진다. 해결: **`REQUIRED` vs `DAILY` 분리.**
+
+```python
+DAILY_DIGEST_PERSONAS = ("expert", "learner", "beginner")  # 생성 시도
+REQUIRED_DAILY_DIGEST_PERSONAS = ("expert", "learner")     # 발행 게이트
+```
+
+Beginner가 실패해도 Expert/Learner는 발행 진행. Quality weight도 conservative하게 **0.16** (expert/learner 대비 절반). v14에서 안정 확인 후 REQUIRED로 승격 예정 — **점진적 도입으로 위험 격리.**
+
+**Quiz Pipeline 분리 — 4번째 "역할 분리"**
+
+v12까지 Writer 한 번에 body + quiz 동시 생성 (`NewsWriterOutput.quiz_en/quiz_ko` 필드). 문제: Writer가 body 작성에 집중하다 quiz 답이 틀리는 경우 발생.
+
+**해결:** Writer schema에서 quiz 제거, 별도 `_generate_digest_quizzes()` 단계 추가.
+
+```
+Writer (gpt-5 flex) → body 생성 → 후처리 → [CITE_N] 치환
+    v
+Quiz Generator (gpt-5-mini flex, per-locale)
+    Body 최종본 + persona별 difficulty rule
+    → answer_index 0-3 (schema enum 강제)
+```
+
+**왜 분리인가:**
+- Writer가 body에 집중하면 quiz 정확도 향상
+- Quiz는 더 작은 모델로 충분 (gpt-5-mini)
+- Quiz가 **최종 post-processed body**를 봄 (citation substitution 후)
+- Quiz만 backfill/regen 가능
+
+v8(분류/랭킹), v9(classify/merge), v10(Writer/Summarizer)에 이어 **4번째 역할 분리 검증**. 같은 패턴: "한 호출에 두 작업 결합 → 분리 시 둘 다 정확도 개선."
+
+**비용 영향:** Writer 4 → 6 calls (3페르소나 × 2 카테고리) + Quiz 4 calls (EN/KO × 2 카테고리). 총 LLM 호출 +6개지만 quiz는 mini 모델이라 영향 적음. 정확한 비용은 관찰 윈도우(5/13–5/20) 완료 후 측정.
+
+**`STAGE_CASCADE` 확장 — Beginner만 재실행 가능**
+
+운영 효율을 위해 rerun 옵션에 "Beginner only + QC"를 추가. Expert/Learner 콘텐츠는 보존하고 Beginner만 재생성. v11의 `rerun_from=quality` 패턴과 같은 원리 — **부분 재실행으로 실험 비용 최소화**.
+
+---
+
 ### Rubric Evolution × Stable Scores — 한 달간의 교차 관찰
 
 지난 한 달간 QC rubric을 지속적으로 엄격하게 조였는데 (9 → 14–15 sub-score, schema enforcement, CP 전용 차원 추가), writer 품질 점수가 떨어지지 않고 **89–97로 안정 유지**. 일반적으로 새 검사 추가 시 일시적 drop → 프롬프트 조정 → 회복 사이클이 필요한데, 이번엔 drop이 없었다.
@@ -606,9 +672,10 @@ Save (High confidence --> draft, Low --> queued)
 ---
 
 > 이 문서는 0to1log 프로젝트의 AI 파이프라인 개발 과정을 정리한 것입니다.
-> 12번의 파이프라인 버전, gpt-4o에서 gpt-5 flex까지의 모델/인프라 전환,
+> 13번의 파이프라인 버전, gpt-4o에서 gpt-5 flex까지의 모델/인프라 전환,
 > 비용 폭발 → merge 복구 → reasoning 모델 마이그레이션 → rubric 재설계
-> → schema enum + flex + cache로 품질과 비용을 동시에 혁신한 여정.
+> → schema enum + flex + cache → Beginner 페르소나 + Quiz 분리까지.
 > 14–15 sub-score rubric + 3-layer 소스 게이트 + API schema enforcement로
-> LLM/코드/API 3개 레이어에 걸쳐 품질 관리 시스템을 만들었습니다.
+> LLM/코드/API 3개 레이어에 걸쳐 품질 관리 시스템을 만들었고,
+> "한 호출에 하나의 역할" 원칙을 네 번 검증했습니다.
 > 솔로 프로젝트로서 기획부터 배포까지 전 과정을 담당했습니다.
