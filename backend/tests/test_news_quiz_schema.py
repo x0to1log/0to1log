@@ -34,6 +34,7 @@ def test_quiz_schema_uses_answer_index_contract():
     assert "answer" not in props
     assert props["options"]["minItems"] == 4
     assert props["options"]["maxItems"] == 4
+    assert props["options"]["items"]["minLength"] == 1
 
 
 def test_quiz_schema_rejects_unknown_locale():

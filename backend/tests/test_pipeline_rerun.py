@@ -669,3 +669,93 @@ async def test_rerun_from_beginner_regenerates_only_beginner_with_existing_perso
     assert kwargs["preserved_rows_by_locale"]["en"]["guide_items"]["sources_learner"] == [
         {"url": "https://a.com/1"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_rerun_from_quiz_regenerates_only_quiz_guide_items():
+    from services.pipeline import rerun_pipeline_stage
+
+    news_rows = [
+        {
+            "slug": "2026-04-19-research-digest",
+            "locale": "en",
+            "post_type": "research",
+            "content_expert": "Existing expert EN",
+            "content_learner": "Existing learner EN",
+            "content_beginner": "Existing beginner EN",
+            "title": "Research headline",
+            "excerpt": "Research excerpt",
+            "focus_items": ["item"],
+            "guide_items": {
+                "sources_learner": [{"url": "https://a.com/1"}],
+                "quiz_poll_learner": {"question": "old"},
+            },
+            "fact_pack": {"news_items": [{"url": "https://a.com/1"}]},
+        },
+        {
+            "slug": "2026-04-19-research-digest-ko",
+            "locale": "ko",
+            "post_type": "research",
+            "content_expert": "Existing expert KO",
+            "content_learner": "Existing learner KO",
+            "content_beginner": "Existing beginner KO",
+            "title": "Research headline KO",
+            "excerpt": "Research excerpt KO",
+            "focus_items": ["항목"],
+            "guide_items": {
+                "sources_learner": [{"url": "https://a.com/1"}],
+                "quiz_poll_learner": {"question": "old-ko"},
+            },
+            "fact_pack": {"news_items": [{"url": "https://a.com/1"}]},
+        },
+    ]
+    supabase = _build_supabase_mock_for_quality_rerun(news_rows)
+    generated_quizzes = {
+        "expert": {
+            "en": {"question": "expert en", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "E"},
+            "ko": {"question": "expert ko", "options": ["가", "나", "다", "라"], "answer": "가", "explanation": "E"},
+        },
+        "learner": {
+            "en": {"question": "learner en", "options": ["A", "B", "C", "D"], "answer": "B", "explanation": "E"},
+            "ko": {"question": "learner ko", "options": ["가", "나", "다", "라"], "answer": "나", "explanation": "E"},
+        },
+        "beginner": {
+            "en": {"question": "beginner en", "options": ["A", "B", "C", "D"], "answer": "C", "explanation": "E"},
+            "ko": {"question": "beginner ko", "options": ["가", "나", "다", "라"], "answer": "다", "explanation": "E"},
+        },
+    }
+
+    with patch("services.pipeline.get_supabase", return_value=supabase), \
+         patch("services.pipeline._generate_digest_quizzes", new_callable=AsyncMock) as quiz_mock, \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock) as gen_mock, \
+         patch("services.pipeline._check_digest_quality", new_callable=AsyncMock) as qc_mock, \
+         patch("services.pipeline._log_stage", new_callable=AsyncMock):
+        quiz_mock.return_value = (generated_quizzes, EMPTY_USAGE)
+        result = await rerun_pipeline_stage(
+            source_run_id="run-1",
+            from_stage="quiz",
+            batch_id="2026-04-19",
+            category="research",
+        )
+
+    assert result.status == "success"
+    assert result.posts_created == 2
+    assert quiz_mock.await_count == 1
+    assert gen_mock.await_count == 0
+    assert qc_mock.await_count == 0
+
+    update_payloads = [
+        c.args[0]
+        for c in supabase.table.return_value.update.call_args_list
+        if c.args and isinstance(c.args[0], dict) and "guide_items" in c.args[0]
+    ]
+    assert len(update_payloads) == 2
+    en_guide = update_payloads[0]["guide_items"]
+    ko_guide = update_payloads[1]["guide_items"]
+    assert en_guide["sources_learner"] == [{"url": "https://a.com/1"}]
+    assert en_guide["quiz_poll_expert"]["question"] == "expert en"
+    assert en_guide["quiz_poll_learner"]["question"] == "learner en"
+    assert en_guide["quiz_poll_beginner"]["question"] == "beginner en"
+    assert ko_guide["quiz_poll_expert"]["question"] == "expert ko"
+    assert ko_guide["quiz_poll_learner"]["question"] == "learner ko"
+    assert ko_guide["quiz_poll_beginner"]["question"] == "beginner ko"

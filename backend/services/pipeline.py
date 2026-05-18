@@ -324,13 +324,19 @@ def _quiz_token_weight(token: str) -> int:
 
 _QUIZ_NEGATION_RE = re.compile(
     r"\b(no|not|never|none|neither|without|cannot|can't|doesn't|does\s+not|"
-    r"do\s+not|did\s+not|isn't|is\s+not|aren't|are\s+not|won't|will\s+not)\b",
+    r"do\s+not|did\s+not|isn't|is\s+not|aren't|are\s+not|won't|will\s+not|"
+    r"incorrect|wrong|false|unsupported|overclaim|overclaims|overstated|overstates)\b",
+    re.IGNORECASE,
+)
+_QUIZ_REJECTION_RE = re.compile(
+    r"\b(incorrect|wrong|false|unsupported|overclaim|overclaims|overstated|overstates)\b",
     re.IGNORECASE,
 )
 
 
 def _quiz_has_negation(text: str) -> bool:
-    return bool(_QUIZ_NEGATION_RE.search(text))
+    normalized = text.replace("’", "'").replace("‘", "'")
+    return bool(_QUIZ_NEGATION_RE.search(normalized))
 
 
 def _quiz_explanation_clauses(text: str) -> list[str]:
@@ -339,6 +345,57 @@ def _quiz_explanation_clauses(text: str) -> list[str]:
         for clause in re.split(r"(?:[.;!?]\s+|;\s*|,\s+and\s+that\s+|,\s+but\s+)", text)
         if clause.strip()
     ]
+
+
+def _sanitize_quiz_explanation_position_markers(text: str) -> str:
+    """Remove answer-position labels that become wrong after option shuffling."""
+    sanitized = text.strip()
+    if not sanitized:
+        return sanitized
+
+    replacements: tuple[tuple[str, str, int], ...] = (
+        (
+            r"정답\s*(?:은|:|\(|（)?\s*[0-3A-D]\s*(?:번)?\s*(?:\)|）)?\s*"
+            r"(?:(?:입니다|이다|입니다\.|이다\.)\s*)?[:：-]?\s*",
+            "",
+            0,
+        ),
+        (
+            r"정답\s*은\s*(?:첫|두|세|네)\s*번째\s*(?:옵션|선택지|보기)\s*"
+            r"(?:(?:입니다|이다|입니다\.|이다\.)\s*)?[:：-]?\s*",
+            "",
+            0,
+        ),
+        (r"\bcorrect\s*[:：-]\s*", "", re.IGNORECASE),
+        (
+            r"\b(?:the\s+)?correct\s+(?:answer|choice|option)\s+(?:is|:)\s*"
+            r"(?:(?:option|choice)\s*)?[A-D0-9]\s*[:：-]?\s*",
+            "",
+            re.IGNORECASE,
+        ),
+        (
+            r"\b(?:the\s+)?correct\s+(?:answer|choice|option)\s+(?:is|:)\s*",
+            "",
+            re.IGNORECASE,
+        ),
+        (
+            r"\b(?:option|choice)\s*[A-D0-9]\s+(is|are|was|were)\s+",
+            r"One distractor \1 ",
+            re.IGNORECASE,
+        ),
+        (r"\([0-3A-D]\)\s*(?:은|는)\s*", "한 선택지는 ", 0),
+        (
+            r"\b(?:first|second|third|fourth)\s+(?:option|choice)\b",
+            "one option",
+            re.IGNORECASE,
+        ),
+        (r"(?:첫|두|세|네)\s*번째\s*(?:옵션|선택지|보기)", "한 선택지", 0),
+        (r"\b[0-9A-D]\s*번\s*(?:옵션|선택지|보기)?", "한 선택지", 0),
+    )
+    for pattern, replacement, flags in replacements:
+        sanitized = re.sub(pattern, replacement, sanitized, flags=flags)
+    sanitized = re.sub(r"\s{2,}", " ", sanitized).strip()
+    return sanitized
 
 
 def _quiz_option_support_score(option: str, evidence_tokens: set[str], explanation: str) -> int:
@@ -352,16 +409,21 @@ def _quiz_option_support_score(option: str, evidence_tokens: set[str], explanati
 
     option_is_negated = _quiz_has_negation(option)
     for clause in _quiz_explanation_clauses(explanation):
-        clause_is_negated = _quiz_has_negation(clause)
-        if clause_is_negated == option_is_negated:
-            continue
         clause_tokens = _quiz_support_tokens(clause)
         overlap = sum(
             _quiz_token_weight(token)
             for token in option_tokens
             if token in clause_tokens
         )
-        if overlap >= 5:
+        clause_is_negated = _quiz_has_negation(clause)
+        if _QUIZ_REJECTION_RE.search(clause):
+            if overlap >= 2 and not (clause_is_negated and option_is_negated):
+                score -= overlap + 4
+            continue
+
+        if not clause_is_negated or option_is_negated:
+            continue
+        if overlap >= 2:
             score -= overlap + 2
     return score
 
@@ -395,7 +457,7 @@ def _repair_quiz_answer_from_explanation(
 
     if (
         best_idx != chosen_idx
-        and best_score >= 5
+        and (best_score >= 5 or (chosen_score < 0 and best_score >= 3))
         and best_score >= chosen_score + 4
         and (best_score >= runner_up + 3 or chosen_score < 0)
     ):
@@ -438,6 +500,9 @@ def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | Non
             label, len(question), len(options), question[:60],
         )
         return None
+    if any(not option for option in options):
+        logger.warning("%s dropped: blank option q=%r", label, question[:60])
+        return None
 
     answer: str | None = None
     if "answer_index" in raw:
@@ -469,6 +534,7 @@ def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | Non
         explanation=explanation,
         label=label,
     )
+    explanation = _sanitize_quiz_explanation_position_markers(explanation)
 
     shuffled = list(options)
     random.shuffle(shuffled)
@@ -2014,6 +2080,99 @@ def _load_personas_and_frontload_from_db(
     return _build_personas_and_frontload_from_rows(rows)
 
 
+async def _rerun_digest_quizzes_from_existing_posts(
+    *,
+    supabase,
+    run_id: str,
+    batch_id: str,
+    category: str | None,
+    cumulative_usage: dict[str, Any],
+) -> tuple[int, list[str], dict[str, Any]]:
+    """Regenerate daily quiz guide_items from existing final persona bodies."""
+
+    rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
+    rows_by_type = _group_daily_digest_rows_by_type(rows)
+    personas_by_type, _ = _build_personas_and_frontload_from_rows(rows)
+    if not personas_by_type:
+        return 0, [f"No news_posts found for batch {batch_id} -- nothing to regenerate"], cumulative_usage
+
+    all_errors: list[str] = []
+    total_rows = 0
+    for digest_type in ("research", "business"):
+        if category and digest_type != category:
+            continue
+        if digest_type not in personas_by_type:
+            continue
+
+        locale_rows = rows_by_type.get(digest_type) or {}
+        missing_rows = [loc for loc in ("en", "ko") if loc not in locale_rows]
+        if missing_rows:
+            all_errors.append(
+                f"Cannot rerun quizzes for {digest_type}: missing locale rows {', '.join(missing_rows)}"
+            )
+            continue
+
+        try:
+            persona_quizzes, quiz_usage = await _generate_digest_quizzes(
+                digest_type=digest_type,
+                personas=personas_by_type[digest_type],
+                supabase=supabase,
+                run_id=run_id,
+            )
+            cumulative_usage = merge_usage_metrics(cumulative_usage, quiz_usage)
+        except Exception as exc:
+            all_errors.append(f"Quiz regeneration failed for {digest_type}: {exc}")
+            continue
+
+        missing_quizzes = [
+            f"{persona}/{locale}"
+            for persona in ("expert", "learner", "beginner")
+            for locale in ("en", "ko")
+            if not persona_quizzes.get(persona, {}).get(locale)
+        ]
+        if missing_quizzes:
+            all_errors.append(
+                f"Quiz regeneration incomplete for {digest_type}: {', '.join(missing_quizzes)}"
+            )
+
+        t_save = time.monotonic()
+        digest_rows = 0
+        digest_errors: list[str] = []
+        for locale in ("en", "ko"):
+            row = locale_rows[locale]
+            guide_items = dict(row.get("guide_items") or {})
+            for persona in ("expert", "learner", "beginner"):
+                quiz = persona_quizzes.get(persona, {}).get(locale)
+                if quiz:
+                    guide_items[f"quiz_poll_{persona}"] = quiz
+
+            try:
+                supabase.table("news_posts").update({
+                    "guide_items": guide_items,
+                }).eq("slug", row.get("slug")).execute()
+                digest_rows += 1
+                total_rows += 1
+            except Exception as exc:
+                msg = f"Failed to update quiz guide_items for {row.get('slug')}: {exc}"
+                digest_errors.append(msg)
+                all_errors.append(msg)
+
+        await _log_stage(
+            supabase, run_id, f"save:{digest_type}",
+            "success" if digest_rows > 0 and not digest_errors else "failed", t_save,
+            output_summary=f"{digest_rows} rows updated with regenerated quizzes",
+            post_type=digest_type,
+            error_message="; ".join(digest_errors) if digest_errors else None,
+            debug_meta={
+                "slug_base": f"{batch_id.lower()}-{digest_type}-digest",
+                "locales": ["en", "ko"],
+                "rerun_from": "quiz",
+            },
+        )
+
+    return total_rows, all_errors, cumulative_usage
+
+
 async def rerun_pipeline_stage(
     source_run_id: str,
     from_stage: str,
@@ -2027,7 +2186,7 @@ async def rerun_pipeline_stage(
 
     Args:
         source_run_id: Run ID to rerun (and load checkpoints from).
-        from_stage: Stage to start from ("classify"|"merge"|"community"|"write"|"beginner"|"quality").
+        from_stage: Stage to start from ("classify"|"merge"|"community"|"write"|"beginner"|"quiz"|"quality").
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
     """
@@ -2060,6 +2219,8 @@ async def rerun_pipeline_stage(
         "beginner": ["digest:research:beginner", "digest:business:beginner",
                      "quality:research", "quality:business",
                      "save:research", "save:business", "summary"],
+        "quiz": ["digest:research:quiz", "digest:business:quiz",
+                 "save:research", "save:business", "summary"],
         "quality": ["quality:research", "quality:business",
                     "save:research", "save:business", "summary"],
     }
@@ -2106,11 +2267,13 @@ async def rerun_pipeline_stage(
     total_posts = 0
 
     try:
-        # Guard: prevent rerun from overwriting published posts
+        # Guard: prevent broad reruns from overwriting published posts.
+        # Quiz-only rerun is intentionally allowed on published rows because it
+        # updates only guide_items.quiz_poll_* for live quiz fixes.
         published = supabase.table("news_posts").select("id").eq(
             "pipeline_batch_id", batch_id,
         ).eq("status", "published").execute()
-        if published.data:
+        if published.data and from_stage != "quiz":
             msg = f"Cannot rerun: {len(published.data)} published posts exist for {batch_id}. Unpublish first."
             logger.error(msg)
             supabase.table("pipeline_runs").update({
@@ -2119,6 +2282,42 @@ async def rerun_pipeline_stage(
                 "last_error": msg,
             }).eq("id", source_run_id).execute()
             return PipelineResult(batch_id=batch_id, status="failed", errors=[msg])
+
+        if from_stage == "quiz":
+            total_posts, all_errors, cumulative_usage = await _rerun_digest_quizzes_from_existing_posts(
+                supabase=supabase,
+                run_id=run_id,
+                batch_id=batch_id,
+                category=category,
+                cumulative_usage=cumulative_usage,
+            )
+            status = "failed" if all_errors else ("success" if total_posts > 0 else "failed")
+            if total_posts == 0 and not all_errors:
+                all_errors.append(f"No matching digest rows found for quiz rerun ({category or 'both'})")
+                status = "failed"
+
+            t_summary = time.monotonic()
+            await _log_stage(
+                supabase, run_id, "summary", status, t_summary,
+                input_summary=f"rerun from {from_stage}" + (f" ({category})" if category else ""),
+                output_summary=f"{total_posts} rows updated with regenerated quizzes",
+                usage=cumulative_usage,
+                error_message="; ".join(all_errors) if all_errors else None,
+            )
+
+            supabase.table("pipeline_runs").update({
+                "status": status,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": "; ".join(all_errors) if all_errors else None,
+            }).eq("id", run_id).execute()
+
+            return PipelineResult(
+                batch_id=batch_id,
+                status=status,
+                posts_created=total_posts,
+                errors=all_errors,
+                usage=cumulative_usage,
+            )
 
         # --- Branch: quality-only rerun (skip writer + collect/enrich chain) ---
         # When only QC prompts/weights changed, re-score existing news_posts without
@@ -3655,6 +3854,7 @@ from services.pipeline_digest import (  # noqa: E402, F401
     # (a) used by run_daily_pipeline / rerun_pipeline_stage / run_weekly_pipeline
     _clean_writer_output,
     _generate_digest,
+    _generate_digest_quizzes,
     # (b) re-export only
     _build_cp_data_entries,
     _build_cp_data_entry,

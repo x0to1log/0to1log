@@ -1593,6 +1593,21 @@ def get_digest_quiz_prompt(digest_type: str, locale: str) -> str:
         if digest_type == "research"
         else "business context, buying or strategy implications, risk, and what not to over-assume"
     )
+    digest_type_focus = (
+        """For research digests:
+- Focus on what the method changed, what evidence supports it, and what the reported result does or does not prove.
+- Research beginner: ask what the technique does not guarantee or what safe conclusion follows.
+- Research learner: ask how the method works at a high level and why the result improved.
+- Research expert: ask about evidence quality, reproducibility, limitations, generalization, or implementation caveats.
+- Avoid turning research questions into procurement, market strategy, or vendor-buying questions unless the body explicitly frames it that way."""
+        if digest_type == "research"
+        else """For business digests:
+- Focus on product, market, adoption, governance, data control, procurement, contracts, distribution, or operational risk.
+- Business beginner: ask what common overclaim or misunderstanding to avoid.
+- Business learner: ask what changed for users, teams, buyers, or workflows and why it matters.
+- Business expert: ask what a team should verify in buying, deploying, contracting, compliance, or risk management.
+- Avoid asking deep technical mechanism or benchmark-interpretation questions unless the body explicitly makes that the business point."""
+    )
     return f"""You are the quiz editor for 0to1log's {digest_type} daily digest.
 
 You will receive only the final {locale_name} digest bodies for three personas:
@@ -1608,12 +1623,38 @@ using only the provided {locale_name} bodies as source material.
 - The explanation must support the selected option and must not contradict it.
 - Do not include citations, URLs, markdown links, or source IDs in quiz fields.
 - Do not ask about trivia that is only a number, date, product name, benchmark score, funding amount, CVE count, or company name.
+- All persona quizzes should feel like a light end-of-article recap, not an exam. The reader should feel the quiz confirms the takeaway and helps them remember it.
+- Do not make distractors overly subtle, adversarial, or dependent on obscure details.
 - {locale_rule}
 
+## Body Grounding
+- Every correct answer must be directly grounded in a clear sentence or paragraph from that persona's digest body.
+- Do not ask the reader to infer a new action, strategy, or recommendation that is not stated in that persona's body.
+- The quiz may ask for the meaning or implication of a body passage, but the answer must be recoverable from the text the reader just read.
+- Prefer "According to the digest" or "What does the digest say" framing when a question risks becoming too applied.
+
+## Explanation Contract
+- Explain only why the selected answer is correct.
+- Do not explain why incorrect options are wrong.
+- Do not mention other options, distractors, or tempting wrong answers.
+- Do not write labels like Correct:, The correct answer, Option 2, Choice B, first option, 정답(2), 정답은 첫 번째 옵션, 두 번째 옵션, 2번, or 첫 번째 선택지.
+- The explanation should point back to the body passage that supports the selected answer, using meaning rather than option position.
+- Keep the explanation short: 1-3 sentences that help the reader remember the takeaway.
+
+## Digest-Type Quiz Focus
+{digest_type_focus}
+
 ## Persona Difficulty
-- expert: analytical question about {focus}; wrong options may reflect plausible but unsupported inferences.
-- learner: comprehension question about what changed and why it matters; wrong options should be common misunderstandings.
+- expert: practical judgment check for working professionals. The question should be answerable after reading the digest, not a technical exam. Test the strongest takeaway, evidence limitation, operational risk, strategic implication, or what a practitioner should not over-assume about {focus}. Wrong options should be common overreactions or unsupported leaps, not obscure traps.
+- learner: causal understanding question about what changed, how it works at a high level, and why it matters; wrong options should be common misunderstandings.
 - beginner: misconception check, not recall. The correct option is the safest interpretation of the digest's beginner lens.
+
+## Cross-Persona Separation
+- The three persona quizzes must test different reader tasks, not the same question angle at different difficulty levels.
+- expert tests practical judgment under uncertainty: evidence strength, limitation, operational risk, strategic implication, or an unsupported leap to avoid.
+- learner tests causal understanding: what changed, how the change works at a high level, and why it matters.
+- beginner tests misconception resistance: what not to over-assume, what is safe to conclude, or what burden/risk shifted.
+- If two questions feel answerable by the same sentence from the digest, rewrite one of them.
 
 ## Beginner Guard
 - Test what burden, risk, decision pressure, or misconception shifted.
@@ -1623,7 +1664,7 @@ using only the provided {locale_name} bodies as source material.
 ## Consistency Guard
 - answer_index MUST point to the option your explanation treats as true.
 - If the explanation says "not", "does not", "no system", or "not yet", do not select an affirmative option that says the opposite.
-- If you mention a tempting wrong option, explicitly label it as wrong after explaining the correct answer.
+- Do not mention option positions in explanation. Do not write labels like Option 2, Option 4, Choice B, first option, 정답(2), 정답은 첫 번째 옵션, 두 번째 옵션, 2번, or 첫 번째 선택지. Explain the correct idea by meaning, not by position.
 - Before returning, check every locale independently: question language, option language, selected option, and explanation must all match.
 """
 

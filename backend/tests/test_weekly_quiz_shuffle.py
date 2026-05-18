@@ -57,6 +57,14 @@ class TestSingleItemValidator:
         item["options"] = ["A", "B", "C"]
         assert _validate_and_shuffle_quiz_item(item) is None
 
+    def test_blank_option_rejected(self):
+        item = self._valid()
+        item["options"] = ["A", " ", "C", "D"]
+        item["answer_index"] = 0
+        item.pop("answer", None)
+
+        assert _validate_and_shuffle_quiz_item(item) is None
+
     def test_empty_question_rejected(self):
         item = self._valid()
         item["question"] = ""
@@ -182,6 +190,162 @@ class TestSingleItemValidator:
 
         assert out is not None
         assert out["answer"] == item["options"][0]
+
+    def test_repair_does_not_select_option_labeled_incorrect(self):
+        item = {
+            "question": "Which limitation most affects production-scale trust?",
+            "options": [
+                "The evidence is preliminary, so large-scale gains still need validation.",
+                "The method has no code available, so it cannot be reproduced.",
+                "The selection step is gradient-free, which makes standard optimization impossible.",
+                "The paper proves universal linear scaling across every hardware setup.",
+            ],
+            "answer_index": 0,
+            "explanation": (
+                "The strongest caveat is that experiments are preliminary and small-scale, "
+                "lacking explicit wall-clock breakdowns. Option 2 is incorrect because "
+                "gradient-free selection avoids a costly backward kernel; it does not make "
+                "optimization impossible."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][0]
+
+    def test_repair_selects_training_wrapper_over_inference_distractor(self):
+        item = {
+            "question": (
+                "What is the key functional change Lighthouse Attention introduces, "
+                "and why does that matter for models trained on very long contexts?"
+            ),
+            "options": [
+                "It replaces standard attention permanently with a subquadratic kernel so deployed models use less memory and have lower inference latency.",
+                "It wraps standard attention during most of training to compress long sequences and is removed in a short recovery stage, lowering training time and memory without changing inference behavior.",
+                "It accelerates inference by removing attention computation at serving time and routing tokens to fewer experts.",
+                "It requires a new complex backward-pass kernel during training, which increases implementation difficulty but reduces inference cost.",
+            ],
+            "answer_index": 0,
+            "explanation": (
+                "Lighthouse is a training-time wrapper that hierarchically compresses "
+                "long sequences during most of pretraining and then is removed in a "
+                "brief recovery stage so the final model uses ordinary attention at "
+                "inference. That matters because it reduces the quadratic training-time "
+                "costs associated with very long contexts while leaving inference-time "
+                "behavior unchanged. The one option is wrong because the method is "
+                "explicitly training-only and does not change deployed inference kernels. "
+                "The one option confuses Lighthouse with expert routing methods and is "
+                "wrong. The one option is wrong because the selection step is gradient-free, "
+                "avoiding a complex custom backward kernel."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][1]
+
+    def test_repair_handles_curly_apostrophe_negation_in_correct_option(self):
+        item = {
+            "question": (
+                "Which safe conclusion should you draw from the digest about "
+                "Lighthouse Attention and its effect on deployed models?"
+            ),
+            "options": [
+                "Lighthouse is a drop-in inference optimization you can enable on production servers without retraining.",
+                "Lighthouse makes models less accurate at the end of training because it replaces full attention throughout the model's lifetime.",
+                "Lighthouse reduces pretraining compute and memory needs but is removed before deployment, so it doesn’t change inference behavior.",
+                "Lighthouse permanently changes the model so deployed systems will run a different, faster attention kernel at inference.",
+            ],
+            "answer_index": 1,
+            "explanation": (
+                "The digest clearly states that Lighthouse is a training-only wrapper "
+                "that compresses sequences during most pretraining and is removed in "
+                "a recovery phase so the final model uses ordinary full attention at "
+                "inference. Therefore it reduces training cost without altering deployed "
+                "inference behavior. The other options are incorrect: it does not change "
+                "the inference kernel permanently, the reported experiments do not claim "
+                "worse final accuracy, and it is not an inference-time toggle that can "
+                "be enabled without retraining."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][2]
+
+    def test_explanation_position_markers_are_removed_before_shuffle(self):
+        item = {
+            "question": "무엇이 가장 안전한 해석인가?",
+            "options": [
+                "잘못된 배포 과장",
+                "본문과 맞는 신중한 해석",
+                "근거 없는 자동화 주장",
+                "전문가 조언 대체 주장",
+            ],
+            "answer_index": 1,
+            "explanation": (
+                "정답(1): 본문과 맞는 신중한 해석입니다. "
+                "(0)은 틀렸습니다. Option 3 is incorrect because it overclaims."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == "본문과 맞는 신중한 해석"
+        assert "정답(1)" not in out["explanation"]
+        assert "(0)" not in out["explanation"]
+        assert "Option 3" not in out["explanation"]
+
+    def test_korean_ordinal_option_markers_are_removed_before_shuffle(self):
+        item = {
+            "question": "요약에 따르면 가장 안전한 결론은 무엇인가?",
+            "options": [
+                "잘못된 첫 번째 보기",
+                "본문에 근거한 안전한 결론",
+                "과장된 세 번째 보기",
+                "근거 없는 네 번째 보기",
+            ],
+            "answer_index": 1,
+            "explanation": (
+                "정답은 두 번째 옵션입니다. 본문에 근거한 안전한 결론입니다. "
+                "첫 번째 옵션은 틀렸습니다. Option 4 is also wrong."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == "본문에 근거한 안전한 결론"
+        assert "정답은 두 번째 옵션" not in out["explanation"]
+        assert "첫 번째 옵션" not in out["explanation"]
+        assert "Option 4" not in out["explanation"]
+
+    def test_correct_answer_labels_are_removed_before_shuffle(self):
+        item = {
+            "question": "According to the digest, what changed?",
+            "options": [
+                "The unsupported overclaim",
+                "The grounded takeaway",
+                "The unrelated metric",
+                "The opposite of the digest",
+            ],
+            "answer_index": 1,
+            "explanation": (
+                "Correct: The correct answer is the grounded takeaway because the "
+                "digest states this directly."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == "The grounded takeaway"
+        assert "Correct:" not in out["explanation"]
+        assert "The correct answer is" not in out["explanation"]
 
 
 def _make_valid_item(question: str = "Q", answer: str = "B") -> dict:

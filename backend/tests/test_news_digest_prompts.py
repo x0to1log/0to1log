@@ -109,6 +109,61 @@ def test_digest_quiz_prompt_makes_beginner_quiz_a_misconception_check_not_recall
         assert "treating a workflow/pipeline as one smarter model" in prompt
 
 
+def test_digest_quiz_prompt_separates_personas_without_making_expert_exam_like():
+    prompt = get_digest_quiz_prompt("research", "en")
+
+    assert "light end-of-article recap, not an exam" in prompt
+    assert "expert: practical judgment check for working professionals" in prompt
+    assert "answerable after reading the digest, not a technical exam" in prompt
+    assert "Wrong options should be common overreactions or unsupported leaps, not obscure traps" in prompt
+    assert "The three persona quizzes must test different reader tasks" in prompt
+    assert "If two questions feel answerable by the same sentence from the digest, rewrite one of them" in prompt
+    assert "learner tests causal understanding" in prompt
+    assert "beginner tests misconception resistance" in prompt
+
+
+def test_digest_quiz_prompt_requires_answers_recoverable_from_body():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "en")
+
+        assert "Body Grounding" in prompt
+        assert "Every correct answer must be directly grounded in a clear sentence or paragraph from that persona's digest body" in prompt
+        assert "Do not ask the reader to infer a new action, strategy, or recommendation that is not stated in that persona's body" in prompt
+        assert "the answer must be recoverable from the text the reader just read" in prompt
+        assert 'Prefer "According to the digest"' in prompt
+
+
+def test_digest_quiz_prompt_explains_only_the_selected_answer():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "en")
+
+        assert "Explanation Contract" in prompt
+        assert "Explain only why the selected answer is correct" in prompt
+        assert "Do not explain why incorrect options are wrong" in prompt
+        assert "Do not mention other options, distractors, or tempting wrong answers" in prompt
+        assert "Do not write labels like Correct:, The correct answer, Option 2, Choice B" in prompt
+        assert "If you mention a tempting wrong option" not in prompt
+
+
+def test_digest_quiz_prompt_uses_digest_type_specific_focus():
+    research_prompt = get_digest_quiz_prompt("research", "en")
+    business_prompt = get_digest_quiz_prompt("business", "en")
+
+    assert "Digest-Type Quiz Focus" in research_prompt
+    assert "For research digests:" in research_prompt
+    assert "Focus on what the method changed, what evidence supports it, and what the reported result does or does not prove." in research_prompt
+    assert "Research learner: ask how the method works at a high level and why the result improved." in research_prompt
+    assert "Avoid turning research questions into procurement, market strategy, or vendor-buying questions" in research_prompt
+    assert "For business digests:" not in research_prompt
+
+    assert "Digest-Type Quiz Focus" in business_prompt
+    assert "For business digests:" in business_prompt
+    assert "Focus on product, market, adoption, governance, data control, procurement, contracts, distribution, or operational risk." in business_prompt
+    assert "Business expert: ask what a team should verify in buying, deploying, contracting, compliance, or risk management." in business_prompt
+    assert "Avoid asking deep technical mechanism or benchmark-interpretation questions" in business_prompt
+    assert "For research digests:" not in business_prompt
+
+
 def test_digest_prompt_requires_quiz_answer_explanation_consistency():
     for digest_type in ["research", "business"]:
         prompt = get_digest_quiz_prompt(digest_type, "ko")
@@ -119,6 +174,8 @@ def test_digest_prompt_requires_quiz_answer_explanation_consistency():
         assert "answer_index MUST point to the option your explanation treats as true" in prompt
         assert "explanation says \"not\"" in prompt
         assert "do not select an affirmative option that says the opposite" in prompt
+        assert "Do not mention option positions in explanation" in prompt
+        assert "Do not write labels like Option 2, Option 4, Choice B, first option, 정답(2), 정답은 첫 번째 옵션, 두 번째 옵션, 2번, or 첫 번째 선택지" in prompt
 
 
 def test_learner_prompt_requires_plain_language_before_benchmarks():

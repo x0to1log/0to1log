@@ -287,6 +287,9 @@ if (batchId) {
                         <button class="pipeline-rerun-option" data-stage="quality" data-category="research">Quality only: Research</button>
                         <button class="pipeline-rerun-option" data-stage="quality" data-category="business">Quality only: Business</button>
                         <button class="pipeline-rerun-option" data-stage="quality">Quality only: Both</button>
+                        <button class="pipeline-rerun-option" data-stage="quiz" data-category="research">Quiz only: Research</button>
+                        <button class="pipeline-rerun-option" data-stage="quiz" data-category="business">Quiz only: Business</button>
+                        <button class="pipeline-rerun-option" data-stage="quiz">Quiz only: Both</button>
                         <button class="pipeline-rerun-option" data-stage="beginner" data-category="research">Beginner only + QC: Research</button>
                         <button class="pipeline-rerun-option" data-stage="beginner" data-category="business">Beginner only + QC: Business</button>
                         <button class="pipeline-rerun-option" data-stage="beginner">Beginner only + QC: Both</button>
@@ -724,6 +727,10 @@ if (batchId) {
           confirmMessage =
             'Regenerate beginner only for ' + (category || 'research + business') + ' on ' + batchId + '?\n\n' +
             'This keeps expert/learner content intact, overwrites beginner EN + KO, and recomputes quality.';
+        } else if (stage === 'quiz') {
+          confirmMessage =
+            'Regenerate quizzes only for ' + (category || 'research + business') + ' on ' + batchId + '?\n\n' +
+            'This regenerates persona quizzes only, keeps all article bodies intact, and updates quiz_poll_* guide items.';
         }
 
         if (!confirm(confirmMessage)) return;

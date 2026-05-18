@@ -56,7 +56,7 @@ def _quiz_locale_schema() -> dict[str, Any]:
             "answer_index": {"type": "integer", "minimum": 0, "maximum": 3},
             "options": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {"type": "string", "minLength": 1},
                 "minItems": 4,
                 "maxItems": 4,
             },
