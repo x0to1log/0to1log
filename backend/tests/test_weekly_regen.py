@@ -95,6 +95,27 @@ def test_regenerate_endpoint_forwards_run_id_when_present():
         app.dependency_overrides.clear()
 
 
+def test_regenerate_endpoint_accepts_beginner_persona():
+    """Weekly beginner can be regenerated through the same admin endpoint."""
+    from main import app
+    app.dependency_overrides[require_admin] = _admin_ok
+    fake_result = {"status": "success", "run_id": "orig-run-id", "persona": "beginner"}
+    try:
+        with patch(
+            "routers.admin_weekly.regenerate_weekly_persona",
+            new=AsyncMock(return_value=fake_result),
+        ) as mock_fn:
+            client = TestClient(app)
+            resp = client.post(
+                "/api/admin/weekly/regenerate",
+                json={"week_id": "2026-W16", "persona": "beginner", "run_id": "orig-run-id"},
+            )
+            assert resp.status_code == 200
+            mock_fn.assert_awaited_once_with("2026-W16", "beginner", run_id="orig-run-id")
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_regenerate_endpoint_runtime_error_returns_409():
     """Helper RuntimeError (e.g. no existing rows) → 409 Conflict."""
     from main import app
@@ -120,5 +141,13 @@ async def test_regenerate_helper_rejects_invalid_persona():
     """regenerate_weekly_persona raises ValueError for invalid persona."""
     import services.pipeline  # noqa: F401 — resolve circular import before touching helpers
     from services.pipeline import regenerate_weekly_persona
-    with pytest.raises(ValueError, match="expert.*learner"):
+    with pytest.raises(ValueError, match="expert.*learner.*beginner"):
         await regenerate_weekly_persona("2026-W16", "bogus")
+
+
+def test_weekly_persona_tuple_includes_beginner():
+    """Full weekly pipeline should generate the same three personas as daily."""
+    import services.pipeline  # noqa: F401 ??resolve circular import before touching helpers
+    from services.pipeline import WEEKLY_PERSONAS
+
+    assert WEEKLY_PERSONAS == ("expert", "learner", "beginner")

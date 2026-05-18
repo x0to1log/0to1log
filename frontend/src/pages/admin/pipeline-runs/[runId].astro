@@ -281,6 +281,9 @@ if (batchId) {
                         <button class="pipeline-rerun-option" data-stage="weekly-regen" data-persona="learner">
                           Regenerate Learner (5–10 min)
                         </button>
+                        <button class="pipeline-rerun-option" data-stage="weekly-regen" data-persona="beginner">
+                          Regenerate Beginner (5–10 min)
+                        </button>
                       </>
                     ) : (
                       <>
@@ -686,7 +689,7 @@ if (batchId) {
           if (!confirm(
             'Regenerate ' + persona + ' for ' + weekId + '?\n\n' +
             'Overwrites just the ' + persona + ' content on both EN + KO rows, ' +
-            'recomputes quality, takes 5-10 minutes. Other persona stays intact.'
+            'recomputes quality, takes 5-10 minutes. Other persona versions stay intact.'
           )) return;
 
           menu.style.display = 'none';

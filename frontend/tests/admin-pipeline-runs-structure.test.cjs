@@ -74,6 +74,8 @@ function run() {
   assertIncludes(detailPage, 'data-stage="beginner" data-category="research"', 'beginner research rerun option');
   assertIncludes(detailPage, 'Beginner only + QC: Both', 'beginner both rerun option');
   assertIncludes(detailPage, 'keeps expert/learner content intact', 'beginner rerun confirmation copy');
+  assertIncludes(detailPage, 'data-stage="weekly-regen" data-persona="beginner"', 'weekly beginner regen option');
+  assertIncludes(detailPage, 'Other persona versions stay intact.', 'weekly regen confirmation copy');
   assertIncludes(detailPage, 'data-stage="quiz" data-category="research"', 'quiz research rerun option');
   assertIncludes(detailPage, 'Quiz only: Both', 'quiz both rerun option');
   assertIncludes(detailPage, 'regenerates persona quizzes only', 'quiz rerun confirmation copy');

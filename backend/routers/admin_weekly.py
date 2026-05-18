@@ -16,7 +16,7 @@ router = APIRouter(prefix="/admin/weekly", tags=["admin-weekly"])
 
 class WeeklyRegenBody(BaseModel):
     week_id: str = Field(..., description="ISO week id, e.g. '2026-W16'")
-    persona: str = Field(..., description="'expert' or 'learner'")
+    persona: str = Field(..., description="'expert', 'learner', or 'beginner'")
     run_id: str | None = Field(
         None,
         description="Optional existing pipeline_runs.id to reuse. When the regen "

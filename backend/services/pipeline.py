@@ -2888,6 +2888,40 @@ async def run_handbook_extraction(batch_id: str) -> PipelineResult:
 # WEEKLY RECAP PIPELINE
 # ──────────────────────────────────────────────
 
+WEEKLY_PERSONAS: tuple[str, ...] = ("expert", "learner", "beginner")
+
+
+def _weekly_top_story_headings(markdown: str) -> list[str]:
+    return re.findall(r"^###\s+(.+)$", markdown or "", flags=re.MULTILINE)
+
+
+def _build_weekly_anchor_reference(
+    *,
+    expert_content: str = "",
+    learner_content: str = "",
+    expert_headline: str = "",
+    learner_headline: str = "",
+) -> str:
+    """Build a non-cited topic-selection reference for weekly beginner."""
+    lines = ["## WEEKLY ANCHOR REFERENCE"]
+    if learner_headline:
+        lines.append(f"Existing learner headline: {learner_headline}")
+    if expert_headline:
+        lines.append(f"Existing expert headline: {expert_headline}")
+    learner_heads = _weekly_top_story_headings(learner_content)
+    expert_heads = _weekly_top_story_headings(expert_content)
+    if learner_heads:
+        lines.append("")
+        lines.append("Learner Top Stories:")
+        lines.extend(f"- {h}" for h in learner_heads[:10])
+    if expert_heads:
+        lines.append("")
+        lines.append("Expert Top Stories:")
+        lines.extend(f"- {h}" for h in expert_heads[:10])
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 async def _generate_weekly_persona_content(
     *,
     persona: str,
@@ -3055,8 +3089,11 @@ async def regenerate_weekly_persona(
     """
     import uuid as _uuid
 
-    if persona not in ("expert", "learner"):
-        raise ValueError(f"persona must be 'expert' or 'learner', got {persona!r}")
+    if persona not in WEEKLY_PERSONAS:
+        raise ValueError(
+            "persona must be 'expert', 'learner', or 'beginner', "
+            f"got {persona!r}"
+        )
 
     supabase = get_supabase()
     if not supabase:
@@ -3180,6 +3217,21 @@ async def regenerate_weekly_persona(
             if c:
                 parts.append(f"--- {d['post_type'].upper()} KO ({d.get('published_at', '')}) ---\n# {d['title']}\n\n{c}")
         daily_text = source_ref + "\n\n".join(parts)
+        if persona == "beginner":
+            try:
+                existing_weekly = supabase.table("news_posts").select(
+                    "content_expert,content_learner,title,title_learner",
+                ).eq("slug", f"{week_id.lower()}-weekly-digest").eq("locale", "en").limit(1).execute()
+                if existing_weekly.data:
+                    existing = existing_weekly.data[0]
+                    daily_text = _build_weekly_anchor_reference(
+                        expert_content=existing.get("content_expert") or "",
+                        learner_content=existing.get("content_learner") or "",
+                        expert_headline=existing.get("title") or "",
+                        learner_headline=existing.get("title_learner") or "",
+                    ) + "\n" + daily_text
+            except Exception as e:
+                logger.warning("Weekly beginner anchor reference fetch failed: %s", e)
 
         # Generate ONE persona
         client = get_openai_client()
@@ -3225,11 +3277,16 @@ async def regenerate_weekly_persona(
             merged_expert_ko = new_ko
             merged_learner_en = en_row.get("content_learner") or ""
             merged_learner_ko = ko_row.get("content_learner") or ""
-        else:
+        elif persona == "learner":
             merged_expert_en = en_row.get("content_expert") or ""
             merged_expert_ko = ko_row.get("content_expert") or ""
             merged_learner_en = new_en
             merged_learner_ko = new_ko
+        else:
+            merged_expert_en = en_row.get("content_expert") or ""
+            merged_expert_ko = ko_row.get("content_expert") or ""
+            merged_learner_en = en_row.get("content_learner") or ""
+            merged_learner_ko = ko_row.get("content_learner") or ""
 
         # Recompute quality against merged content (imports inside to avoid cycle)
         from services.pipeline_quality import _check_weekly_quality
@@ -3255,6 +3312,8 @@ async def regenerate_weekly_persona(
             g[quiz_key] = new_quiz
             if persona == "learner":
                 g["excerpt_learner"] = new_excerpt_en if locale == "en" else new_excerpt_ko
+            elif persona == "beginner":
+                g["excerpt_beginner"] = new_excerpt_en if locale == "en" else new_excerpt_ko
             return g
 
         en_update: dict[str, Any] = {
@@ -3270,7 +3329,8 @@ async def regenerate_weekly_persona(
             "quality_flags": quality_result.get("quality_flags"),
         }
 
-        # Titles: persona=expert drives `title`, persona=learner drives `title_learner`.
+        # Titles: persona=expert drives `title`, learner drives `title_learner`,
+        # beginner drives `title_beginner`.
         # Only overwrite the one owned by this persona.
         if persona == "expert":
             en_update["title"] = new_headline
@@ -3282,9 +3342,12 @@ async def regenerate_weekly_persona(
                 ko_update["excerpt"] = new_excerpt_ko[:1000]
             en_update["focus_items"] = new_focus_en
             ko_update["focus_items"] = new_focus_ko
-        else:
+        elif persona == "learner":
             en_update["title_learner"] = new_headline
             ko_update["title_learner"] = new_headline_ko
+        else:
+            en_update["title_beginner"] = new_headline
+            ko_update["title_beginner"] = new_headline_ko
 
         # Refresh fact_pack quality fields so the admin QualityPanel reflects the
         # merged state. Preserve other fact_pack keys.
@@ -3454,7 +3517,7 @@ async def run_weekly_pipeline(
 
         # Build per-persona input (EN primary + KO reference)
         persona_inputs: dict[str, str] = {}
-        for persona in ("expert", "learner"):
+        for persona in WEEKLY_PERSONAS:
             content_key = f"content_{persona}"
             parts = []
             # EN digests (primary)
@@ -3489,21 +3552,30 @@ async def run_weekly_pipeline(
             if result is not None:
                 persona_results[persona] = result
 
-        await asyncio.gather(
-            _gen_and_collect("expert"),
-            _gen_and_collect("learner"),
-        )
+        await asyncio.gather(*(_gen_and_collect(persona) for persona in ("expert", "learner")))
+        if persona_inputs.get("beginner"):
+            anchor_ref = _build_weekly_anchor_reference(
+                expert_content=(persona_results.get("expert") or {}).get("en", ""),
+                learner_content=(persona_results.get("learner") or {}).get("en", ""),
+                expert_headline=(persona_results.get("expert") or {}).get("headline", ""),
+                learner_headline=(persona_results.get("learner") or {}).get("headline", ""),
+            )
+            persona_inputs["beginner"] = anchor_ref + "\n" + persona_inputs["beginner"]
+            await _gen_and_collect("beginner")
 
         if not persona_results:
             all_errors.append("All weekly personas failed")
         else:
             expert_data = persona_results.get("expert", {})
             learner_data = persona_results.get("learner", {})
+            beginner_data = persona_results.get("beginner", {})
 
             headline_en = expert_data.get("headline") or f"AI Weekly — {week_id}"
             headline_learner_en = learner_data.get("headline") or headline_en
+            headline_beginner_en = beginner_data.get("headline") or headline_learner_en
             headline_ko = expert_data.get("headline_ko") or headline_en
             headline_learner_ko = learner_data.get("headline_ko") or headline_ko
+            headline_beginner_ko = beginner_data.get("headline_ko") or headline_learner_ko
 
             # published_at = Sunday of the target week at 09:00 UTC
             iso_year, iso_week = week_id.split("-W")
@@ -3512,8 +3584,16 @@ async def run_weekly_pipeline(
             published_at = f"{_sunday.isoformat()}T09:00:00Z"
 
             guide_items = {
-                "week_numbers": expert_data.get("week_numbers") or learner_data.get("week_numbers", []),
-                "week_tool": expert_data.get("week_tool") or learner_data.get("week_tool", {}),
+                "week_numbers": (
+                    expert_data.get("week_numbers")
+                    or learner_data.get("week_numbers")
+                    or beginner_data.get("week_numbers", [])
+                ),
+                "week_tool": (
+                    expert_data.get("week_tool")
+                    or learner_data.get("week_tool")
+                    or beginner_data.get("week_tool", {})
+                ),
             }
 
             # Clean + renumber citations (same URL → same number, sequential)
@@ -3521,6 +3601,8 @@ async def run_weekly_pipeline(
             ko_expert = _clean_writer_output(expert_data.get("ko", ""))
             en_learner = _clean_writer_output(learner_data.get("en", ""))
             ko_learner = _clean_writer_output(learner_data.get("ko", ""))
+            en_beginner = _clean_writer_output(beginner_data.get("en", ""))
+            ko_beginner = _clean_writer_output(beginner_data.get("ko", ""))
 
             # Historical note (2026-04-23): dropped HEAD-check of aggregate URLs.
             # It was catching legitimate slow sites (arxiv, github, major news)
@@ -3533,6 +3615,8 @@ async def run_weekly_pipeline(
             ko_expert, ko_expert_cards = _renumber_citations(ko_expert, allowed_urls=_allowed)
             en_learner, en_learner_cards = _renumber_citations(en_learner, allowed_urls=_allowed)
             ko_learner, ko_learner_cards = _renumber_citations(ko_learner, allowed_urls=_allowed)
+            en_beginner, en_beginner_cards = _renumber_citations(en_beginner, allowed_urls=_allowed)
+            ko_beginner, ko_beginner_cards = _renumber_citations(ko_beginner, allowed_urls=_allowed)
 
             # Post-renumber citation coverage audit (logs + quality_flags).
             coverage_flags: set[str] = set()
@@ -3541,6 +3625,8 @@ async def run_weekly_pipeline(
                 (ko_expert, f"{week_id}/ko/expert"),
                 (en_learner, f"{week_id}/en/learner"),
                 (ko_learner, f"{week_id}/ko/learner"),
+                (en_beginner, f"{week_id}/en/beginner"),
+                (ko_beginner, f"{week_id}/ko/beginner"),
             ]:
                 coverage_flags.update(_check_weekly_citation_coverage(_body, _label))
 
@@ -3579,8 +3665,12 @@ async def run_weekly_pipeline(
                 return enriched
 
             weekly_source_cards = {
-                "en": _enrich_weekly_cards(_dedup_source_cards((en_expert_cards or []) + (en_learner_cards or []))),
-                "ko": _enrich_weekly_cards(_dedup_source_cards((ko_expert_cards or []) + (ko_learner_cards or []))),
+                "en": _enrich_weekly_cards(_dedup_source_cards(
+                    (en_expert_cards or []) + (en_learner_cards or []) + (en_beginner_cards or [])
+                )),
+                "ko": _enrich_weekly_cards(_dedup_source_cards(
+                    (ko_expert_cards or []) + (ko_learner_cards or []) + (ko_beginner_cards or [])
+                )),
             }
 
             # Quality check
@@ -3639,12 +3729,14 @@ async def run_weekly_pipeline(
                 slug = en_slug if locale == "en" else ko_slug
                 title = headline_en if locale == "en" else headline_ko
                 title_learner = headline_learner_en if locale == "en" else headline_learner_ko
+                title_beginner = headline_beginner_en if locale == "en" else headline_beginner_ko
 
                 content_expert = en_expert if locale == "en" else ko_expert
                 content_learner = en_learner if locale == "en" else ko_learner
+                content_beginner = en_beginner if locale == "en" else ko_beginner
 
                 # Reading time
-                text = content_expert or content_learner
+                text = content_expert or content_learner or content_beginner
                 if locale == "ko":
                     char_count = len([c for c in text if c.strip() and c not in '.,!?;:()[]{}"\'-\u2014\u2026#*_~`|/>'])
                     reading_time = max(1, round(char_count / 500))
@@ -3659,6 +3751,7 @@ async def run_weekly_pipeline(
                 quiz_key = "weekly_quiz" if locale == "en" else "weekly_quiz_ko"
                 expert_quiz = _validate_and_shuffle_weekly_quiz(expert_data.get(quiz_key))
                 learner_quiz = _validate_and_shuffle_weekly_quiz(learner_data.get(quiz_key))
+                beginner_quiz = _validate_and_shuffle_weekly_quiz(beginner_data.get(quiz_key))
 
                 # Excerpt + focus_items per locale
                 excerpt_key = "excerpt" if locale == "en" else "excerpt_ko"
@@ -3666,8 +3759,9 @@ async def run_weekly_pipeline(
 
                 excerpt = (expert_data.get(excerpt_key) or learner_data.get(excerpt_key) or "").strip()
                 excerpt_learner = (learner_data.get(excerpt_key) or "").strip()
+                excerpt_beginner = (beginner_data.get(excerpt_key) or "").strip()
 
-                focus_raw = expert_data.get(focus_key) or learner_data.get(focus_key) or []
+                focus_raw = expert_data.get(focus_key) or learner_data.get(focus_key) or beginner_data.get(focus_key) or []
                 focus_items = _validate_focus_items(focus_raw)
 
                 # Defend against LLM runaway length in excerpt
@@ -3702,12 +3796,13 @@ async def run_weekly_pipeline(
                 # successful-persona content from the prior run.
                 expert_ok = bool(content_expert)
                 learner_ok = bool(content_learner)
+                beginner_ok = bool(content_beginner)
 
                 # Fetch existing guide_items so we can merge instead of replacing
                 # when one persona failed. JSONB is stored as a whole blob, so
                 # writing a new dict would drop the failed persona's keys.
                 existing_guide: dict[str, Any] = {}
-                if not (expert_ok and learner_ok):
+                if not (expert_ok and learner_ok and beginner_ok):
                     try:
                         _existing = supabase.table("news_posts").select("guide_items").eq("slug", slug).eq("locale", locale).limit(1).execute()
                         if _existing.data:
@@ -3732,6 +3827,9 @@ async def run_weekly_pipeline(
                 if learner_ok:
                     locale_guide["weekly_quiz_learner"] = learner_quiz
                     locale_guide["excerpt_learner"] = excerpt_learner
+                if beginner_ok:
+                    locale_guide["weekly_quiz_beginner"] = beginner_quiz
+                    locale_guide["excerpt_beginner"] = excerpt_beginner
 
                 # Always-set fields (shared / not persona-derived)
                 row: dict[str, Any] = {
@@ -3762,6 +3860,9 @@ async def run_weekly_pipeline(
                 if learner_ok:
                     row["content_learner"] = content_learner
                     row["title_learner"] = title_learner
+                if beginner_ok:
+                    row["content_beginner"] = content_beginner
+                    row["title_beginner"] = title_beginner
 
                 t_save = time.monotonic()
                 try:

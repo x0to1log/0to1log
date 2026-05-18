@@ -9,6 +9,8 @@ from services.agents.prompts_news_pipeline import (
     QUALITY_CHECK_RESEARCH_LEARNER,
     get_digest_prompt,
     get_digest_quiz_prompt,
+    get_weekly_ko_prompt,
+    get_weekly_prompt,
 )
 
 
@@ -78,12 +80,63 @@ def test_business_beginner_prompt_uses_lens_sentence_not_catalog():
     assert "Do not count company names, product names, source names" in prompt
     assert "Delay extra technical names to paragraph 2" in prompt
     assert "Business one_line is a lens sentence, not a catalog" in prompt
-    assert "Do not list vendor, product, equipment, or project names in business one_line" in prompt
-    assert "Do not write reading instructions like 보세요" in prompt
-    assert "오늘은 ... 보자" in prompt
-    assert "중점으로 보자" in prompt
-    assert "도입 접점" in prompt
-    assert "put concrete names and examples in main_items instead" in prompt
+
+
+def test_business_beginner_prompt_does_not_force_abstract_theme_connections():
+    prompt = get_digest_prompt("business", "beginner", [])
+
+    assert "Do not force unrelated stories into one abstract theme" in prompt
+    assert "Explain each main story's concrete product or business change first" in prompt
+    assert "Use a shared theme only after the concrete changes are clear" in prompt
+    assert "keep it as context, not the lead explanation for an unrelated product story" in prompt
+    assert "cite the primary product or company source before secondary commentary" in prompt
+
+
+def test_research_beginner_prompt_limits_method_name_stacking_after_problem_frame():
+    prompt = get_digest_prompt("research", "beginner", [])
+
+    assert "Do not place more than two method, model, benchmark, or dataset names in the same paragraph" in prompt
+    assert "move the extras to Worth Skimming or the learner-digest bridge" in prompt
+
+
+def test_beginner_prompts_frame_learner_bridge_as_editorial_pointer():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_prompt(digest_type, "beginner", [])
+
+        assert "Do not write direct reading instructions inside the learner bridge body" in prompt
+        assert "Frame the learner bridge as an editorial pointer" in prompt
+
+
+def test_weekly_beginner_prompt_uses_context_first_four_story_contract():
+    prompt = get_weekly_prompt("beginner")
+    learner_prompt = get_weekly_prompt("learner")
+
+    assert prompt != learner_prompt
+    assert "Weekly Beginner AI News" in prompt
+    assert "same weekly edition covered by learner and expert" in prompt
+    assert "Pick exactly 4 main stories" in prompt
+    assert "TWO shared weekly anchor stories" in prompt
+    assert "ONE everyday adoption story" in prompt
+    assert "ONE research-digest story" in prompt
+    assert "selection labels must only appear in story_selection_notes" in prompt
+    assert "## Start Here" in prompt
+    assert "## The 4 Stories That Matter" in prompt
+    assert "## What Not To Over-Assume" in prompt
+
+
+def test_weekly_beginner_ko_prompt_uses_beginner_section_headings():
+    prompt = get_weekly_ko_prompt("beginner")
+
+    assert "## 이번 주 한 줄" in prompt
+    assert "## 여기서 시작하기" in prompt
+    assert "## 꼭 알아둘 이야기 4개" in prompt
+    assert "## 과하게 받아들이지 말아야 할 것" in prompt
+    assert "## 학습자 버전을 읽어봐도 좋은 때" in prompt
+    assert "selection labels" in prompt
+    assert "story_selection_notes_ko" in prompt
+    assert "Keep the same story selection, same order, same citations" in prompt
+    assert "Preserve `answer_index` exactly" in prompt
+    assert "weekly_quiz_ko" in prompt
 
 
 def test_daily_writer_prompt_no_longer_generates_quiz_fields():
@@ -105,6 +158,10 @@ def test_digest_quiz_prompt_makes_beginner_quiz_a_misconception_check_not_recall
         assert "Do not ask about trivia that is only a number, date, product name, benchmark score, funding amount, CVE count, or company name" in prompt
         assert "The correct option is the safest interpretation of the digest's beginner lens" in prompt
         assert "Wrong options should be plausible beginner mistakes" in prompt
+        assert "Wrong options must stay within the same story or paragraph cluster as the correct answer" in prompt
+        assert "Do not use unrelated skim items or different article topics as distractors" in prompt
+        assert "If the answer is about FEST, every wrong option should be a plausible misunderstanding of FEST" in prompt
+        assert "Keep all four options similar in length and specificity" in prompt
         assert "overclaiming rollout or adoption" in prompt
         assert "treating a workflow/pipeline as one smarter model" in prompt
 
