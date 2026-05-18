@@ -316,6 +316,22 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
             </div>
           )}
 
+          {hasPersonaContent ? (
+            <>
+              <div class="admin-lang-tabs">
+                <button type="button" class="admin-lang-tab" data-persona-tab="beginner">Beginner</button>
+                <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="learner">Learner</button>
+                <button type="button" class="admin-lang-tab" data-persona-tab="expert">Expert</button>
+              </div>
+              <div id="persona-beginner" class="admin-editor-wrapper" style="display:none;" data-content={contentBeginner}></div>
+              <div id="persona-learner" class="admin-editor-wrapper" data-content={contentLearner}></div>
+              <div id="persona-expert" class="admin-editor-wrapper" style="display:none;" data-content={contentExpert}></div>
+            </>
+          ) : (
+            <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
+          )}
+          <div id="editor-char-count" class="admin-char-count"></div>
+
           {!isNew && post && quizGroups.length > 0 && (
             <section class="admin-quiz-preview mb-6">
               <h3 class="admin-quiz-preview__title">Quiz Preview</h3>
@@ -354,22 +370,6 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
               ))}
             </section>
           )}
-
-          {hasPersonaContent ? (
-            <>
-              <div class="admin-lang-tabs">
-                <button type="button" class="admin-lang-tab" data-persona-tab="beginner">Beginner</button>
-                <button type="button" class="admin-lang-tab admin-lang-tab--active" data-persona-tab="learner">Learner</button>
-                <button type="button" class="admin-lang-tab" data-persona-tab="expert">Expert</button>
-              </div>
-              <div id="persona-beginner" class="admin-editor-wrapper" style="display:none;" data-content={contentBeginner}></div>
-              <div id="persona-learner" class="admin-editor-wrapper" data-content={contentLearner}></div>
-              <div id="persona-expert" class="admin-editor-wrapper" style="display:none;" data-content={contentExpert}></div>
-            </>
-          ) : (
-            <div id="milkdown-editor" class="admin-editor-wrapper" data-content={editableContent}></div>
-          )}
-          <div id="editor-char-count" class="admin-char-count"></div>
 
           {!isNew && (
             <div class="admin-danger-zone">
