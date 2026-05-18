@@ -98,6 +98,46 @@ const editableContent = hasPersonaContent
   ? ''
   : (post?.content_original || '');
 
+// Quiz preview (read-only) — extracted from guide_items JSONB.
+// Daily quizzes live at quiz_poll_{persona} (single object); the legacy
+// non-persona quiz at quiz_poll. Weekly quizzes at weekly_quiz_{persona}
+// (array, up to 3). `answer` holds the correct option's text post-shuffle.
+type QuizItem = {
+  question?: string;
+  options?: string[];
+  answer?: string;
+  explanation?: string;
+};
+type QuizGroup = { cadence: 'Daily' | 'Weekly'; persona: string; items: QuizItem[] };
+const quizGroups: QuizGroup[] = [];
+{
+  const gi = (post?.guide_items ?? {}) as Record<string, unknown>;
+  const personaLabel: Record<string, string> = {
+    beginner: 'Beginner', learner: 'Learner', expert: 'Expert', default: 'Default',
+  };
+  const isQuiz = (q: unknown): q is QuizItem =>
+    !!q && typeof q === 'object' && typeof (q as QuizItem).question === 'string';
+
+  // Daily — one quiz object per persona (+ legacy non-persona quiz_poll)
+  for (const persona of ['beginner', 'learner', 'expert']) {
+    const q = gi[`quiz_poll_${persona}`];
+    if (isQuiz(q)) quizGroups.push({ cadence: 'Daily', persona: personaLabel[persona], items: [q] });
+  }
+  if (isQuiz(gi.quiz_poll)) {
+    quizGroups.push({ cadence: 'Daily', persona: personaLabel.default, items: [gi.quiz_poll] });
+  }
+  // Weekly — array of quizzes per persona
+  for (const persona of ['beginner', 'learner', 'expert']) {
+    const arr = gi[`weekly_quiz_${persona}`];
+    if (Array.isArray(arr)) {
+      const items = arr.filter(isQuiz);
+      if (items.length > 0) {
+        quizGroups.push({ cadence: 'Weekly', persona: personaLabel[persona], items });
+      }
+    }
+  }
+}
+
 const categories = getDefaultCategories();
 
 // Edition label map (same as published page)
@@ -274,6 +314,45 @@ const initialReadingTime = Math.max(1, Math.round(initialWordCount / 200));
                 )}
               </QualityPanel>
             </div>
+          )}
+
+          {!isNew && post && quizGroups.length > 0 && (
+            <section class="admin-quiz-preview mb-6">
+              <h3 class="admin-quiz-preview__title">Quiz Preview</h3>
+              <p class="admin-quiz-preview__hint">Read-only. Quiz content + answers stored in guide_items.</p>
+              {quizGroups.map((group) => (
+                <div class="admin-quiz-group">
+                  <div class="admin-quiz-group__header">
+                    <span class={`admin-quiz-badge admin-quiz-badge--${group.cadence.toLowerCase()}`}>{group.cadence}</span>
+                    <span class="admin-quiz-group__persona">{group.persona}</span>
+                  </div>
+                  {group.items.map((item, i) => (
+                    <div class="admin-quiz-item">
+                      <p class="admin-quiz-item__q">
+                        {group.items.length > 1 ? `Q${i + 1}. ` : ''}{item.question}
+                      </p>
+                      <ul class="admin-quiz-options">
+                        {(item.options ?? []).map((opt) => {
+                          const isCorrect = opt === item.answer;
+                          return (
+                            <li class={isCorrect ? 'admin-quiz-opt admin-quiz-opt--correct' : 'admin-quiz-opt'}>
+                              <span class="admin-quiz-opt__mark">{isCorrect ? '✓' : '·'}</span>
+                              <span>{opt}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {item.answer && !(item.options ?? []).includes(item.answer) && (
+                        <p class="admin-quiz-item__answer">Answer: {item.answer}</p>
+                      )}
+                      {item.explanation && (
+                        <p class="admin-quiz-item__explanation">{item.explanation}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </section>
           )}
 
           {hasPersonaContent ? (
