@@ -4,14 +4,24 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { getProductsPageData } from '../../../lib/pageData/productsPage';
-import ProductSpotlight from '../../../components/products/ProductSpotlight.astro';
 import ProductFilterBar from '../../../components/products/ProductFilterBar.astro';
+import ProductCategoryTile from '../../../components/products/ProductCategoryTile.astro';
 import ProductCard from '../../../components/products/ProductCard.astro';
-import { getCategoryIcon } from '../../../lib/productCategoryIcons';
 
 const locale = 'en';
-const PREVIEW_COUNT = 4;
-const { categories, spotlightProduct, allProducts, productsByCategory, totalProducts, error } = await getProductsPageData(locale);
+const { categories, allProducts, productsByCategory, error } = await getProductsPageData(locale);
+
+// Fixed 3 / 3 / 3 / 1 grid order. Categories render in this order regardless
+// of the order the data layer returns them in.
+const CATEGORY_ORDER = [
+  'assistant', 'image', 'video',
+  'audio', 'coding', 'workflow',
+  'builder', 'platform', 'research',
+  'community',
+];
+const orderedCategories = [...categories].sort(
+  (a, b) => CATEGORY_ORDER.indexOf(a.id) - CATEGORY_ORDER.indexOf(b.id),
+);
 
 const pricingKo: Record<string, string> = { free: '무료', freemium: '무료 프리미엄', paid: '유료', enterprise: '기업용' };
 const categoryKo: Record<string, string> = { assistant: '어시스턴트 챗봇', image: '이미지 디자인', video: '영상 비디오', audio: '오디오 음악 음성', coding: '코딩 개발 IDE', workflow: '자동화 워크플로우', builder: '앱빌더 노코드', platform: '플랫폼 API', research: '리서치 논문', community: '커뮤니티' };
@@ -46,56 +56,22 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
   <div class="products-page" id="products-top">
     {error && <p class="products-error">{t.en['products.error']}</p>}
 
-    <ProductFilterBar categories={categories} locale={locale} />
+    <ProductFilterBar locale={locale} />
 
-    <ProductSpotlight product={spotlightProduct} locale={locale} />
+    <button id="products-back-all" class="products-back-all" type="button" hidden>
+      &larr; All categories
+    </button>
 
-    <!-- Category Preview Mode (default) -->
-    <div id="category-preview">
-      {categories.map((cat) => {
-        const products = productsByCategory[cat.id] ?? [];
-        if (products.length === 0) return null;
-        const preview = products.slice(0, PREVIEW_COUNT);
-        const hasMore = products.length > PREVIEW_COUNT;
-        const label = cat.label_en;
-        return (
-          <section class="product-category-preview">
-            <div class="product-category-preview-header">
-              <div class="product-category-preview-title-group">
-                <span class="product-category-preview-icon" set:html={getCategoryIcon(cat.id)} />
-                <h2 class="product-category-preview-title">{label}</h2>
-                <span class="product-category-preview-count">{products.length}</span>
-              </div>
-              {hasMore && (
-                <button class="product-category-see-all" data-category={cat.id} type="button">
-                  See all &rarr;
-                </button>
-              )}
-            </div>
-            <div class="product-grid product-grid--preview">
-              {preview.map((product) => (
-                <ProductCard
-                  href={`/${locale}/products/${product.slug}/`}
-                  name={product.name}
-                  tagline={product.tagline}
-                  logoUrl={product.logo_url}
-                  thumbnailUrl={product.thumbnail_url}
-                  demoMediaFirst={getFirstImageUrl(product)}
-                  pricing={product.pricing}
-                  platform={product.platform}
-                  koreanSupport={product.korean_support}
-                  locale={locale}
-                  searchText={buildSearchText(product)}
-                  categoryId={product.primary_category}
-                  secondaryCategories={product.secondary_categories}
-                  viewCount={product.view_count}
-                  productId={product.id}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+    <!-- Category Grid (3 / 3 / 3 / 1 tiles, each tile scrolls its products) -->
+    <div class="product-category-grid" id="category-preview">
+      {orderedCategories.map((cat) => (
+        <ProductCategoryTile
+          categoryId={cat.id}
+          label={cat.label_en}
+          products={productsByCategory[cat.id] ?? []}
+          locale={locale}
+        />
+      ))}
     </div>
 
     <!-- Filtered Grid Mode (when category or search active) -->
@@ -148,9 +124,9 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
     const input = document.getElementById('product-search') as HTMLInputElement | null;
     if (!input) return;
     const noResults = document.getElementById('product-search-no-results');
-    const preview = document.getElementById('category-preview');
+    const grid = document.getElementById('category-preview');
     const filtered = document.getElementById('filtered-grid');
-    const spotlightEl = document.querySelector<HTMLElement>('.product-spotlight');
+    const backBtn = document.getElementById('products-back-all');
     const cards = filtered ? Array.from(filtered.querySelectorAll<HTMLElement>('.product-card')) : [];
 
     let currentCategory = 'all';
@@ -158,33 +134,22 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
 
     function switchToFiltered(cat: string) {
       currentCategory = cat;
-      if (preview) preview.hidden = true;
-      if (spotlightEl) spotlightEl.hidden = true;
+      if (grid) grid.hidden = true;
       if (filtered) filtered.hidden = false;
+      if (backBtn) backBtn.hidden = false;
       applyFilters();
-
-      // Update filter bar active tab
-      document.querySelectorAll<HTMLElement>('.product-filter-tab').forEach((t) =>
-        t.classList.toggle('active', t.dataset.category === cat)
-      );
     }
 
     function switchToPreview() {
       currentCategory = 'all';
       currentQuery = '';
       if (input) input.value = '';
-      if (preview) preview.hidden = false;
-      if (spotlightEl) spotlightEl.hidden = false;
+      if (grid) grid.hidden = false;
       if (filtered) filtered.hidden = true;
+      if (backBtn) backBtn.hidden = true;
       if (noResults) noResults.hidden = true;
 
-      // Update URL
       history.replaceState(null, '', location.pathname);
-
-      // Reset filter bar
-      document.querySelectorAll<HTMLElement>('.product-filter-tab').forEach((t) =>
-        t.classList.toggle('active', t.dataset.category === 'all')
-      );
     }
 
     function applyFilters() {
@@ -214,7 +179,6 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       }
     }
 
-    // Search input → switch to filtered mode
     input.addEventListener('input', () => {
       currentQuery = input.value;
       const url = new URL(window.location.href);
@@ -222,9 +186,9 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
         url.searchParams.set('q', currentQuery);
         url.searchParams.delete('cat');
         currentCategory = 'all';
-        if (preview) preview.hidden = true;
-        if (spotlightEl) spotlightEl.hidden = true;
+        if (grid) grid.hidden = true;
         if (filtered) filtered.hidden = false;
+        if (backBtn) backBtn.hidden = false;
       } else if (currentCategory === 'all') {
         url.searchParams.delete('q');
         switchToPreview();
@@ -236,28 +200,21 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       applyFilters();
     });
 
-    // Category filter (from ProductFilterBar)
-    document.addEventListener('product-filter', ((e: CustomEvent) => {
-      const cat = e.detail.category;
-      if (cat === 'all' && !currentQuery) {
-        switchToPreview();
-      } else {
-        switchToFiltered(cat);
-      }
-    }) as EventListener);
+    // "← All categories" — return to the category grid
+    backBtn?.addEventListener('click', () => switchToPreview());
 
-    // "See all →" buttons in category previews
-    document.querySelectorAll<HTMLButtonElement>('.product-category-see-all').forEach((btn) => {
+    // Category tile header → open that category's filtered view
+    document.querySelectorAll<HTMLButtonElement>('.product-cat-tile-header').forEach((btn) => {
       btn.addEventListener('click', () => {
         const cat = btn.dataset.category ?? '';
         const url = new URL(window.location.href);
         url.searchParams.set('cat', cat);
         history.replaceState(null, '', url.toString());
         switchToFiltered(cat);
+        document.getElementById('products-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
 
-    // Initialize from URL
     const params = new URLSearchParams(location.search);
     const urlQ = params.get('q') ?? '';
     const urlCat = params.get('cat') ?? '';
@@ -268,6 +225,5 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
     } else if (urlCat) {
       switchToFiltered(urlCat);
     }
-    // else: stay in preview mode (default)
   });
 </script>

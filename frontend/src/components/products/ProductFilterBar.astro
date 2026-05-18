@@ -1,69 +1,13 @@
 ---
-import type { ProductCategory } from '../../lib/pageData/productsPage';
-import { t } from '../../i18n/index';
-import { getCategoryIcon } from '../../lib/productCategoryIcons';
 import ProductSearchBar from './ProductSearchBar.astro';
 
 interface Props {
-  categories: ProductCategory[];
   locale: 'en' | 'ko';
 }
 
-const { categories, locale } = Astro.props;
-const tr = t[locale];
+const { locale } = Astro.props;
 ---
 
 <div class="product-filter-bar">
   <ProductSearchBar locale={locale} />
-  <nav class="product-filter-tabs" aria-label={tr['products.title']}>
-    <button class="product-filter-tab active" data-category="all" type="button">
-      {tr['products.categoryAll']}
-    </button>
-    {categories.map((cat) => (
-      <button
-        class="product-filter-tab"
-        data-category={cat.id}
-        type="button"
-      >
-        <span class="product-filter-tab-icon" set:html={getCategoryIcon(cat.id)} />
-        <span>{locale === 'ko' ? cat.label_ko : cat.label_en}</span>
-      </button>
-    ))}
-  </nav>
 </div>
-
-<script>
-  document.addEventListener('astro:page-load', () => {
-    const tabs = document.querySelectorAll<HTMLButtonElement>('.product-filter-tab');
-    if (tabs.length === 0) return;
-
-    let activeCategory = 'all';
-
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const cat = tab.dataset.category ?? 'all';
-        activeCategory = cat;
-
-        // Update active tab
-        tabs.forEach((t) => t.classList.toggle('active', t.dataset.category === cat));
-
-        // Update URL
-        const url = new URL(window.location.href);
-        if (cat === 'all') url.searchParams.delete('cat');
-        else url.searchParams.set('cat', cat);
-        history.replaceState(null, '', url.toString());
-
-        // Dispatch custom event for grid filtering
-        document.dispatchEvent(new CustomEvent('product-filter', { detail: { category: cat } }));
-      });
-    });
-
-    // Initialize from URL
-    const urlCat = new URLSearchParams(location.search).get('cat') ?? 'all';
-    if (urlCat !== 'all') {
-      activeCategory = urlCat;
-      tabs.forEach((t) => t.classList.toggle('active', t.dataset.category === urlCat));
-      document.dispatchEvent(new CustomEvent('product-filter', { detail: { category: urlCat } }));
-    }
-  });
-</script>

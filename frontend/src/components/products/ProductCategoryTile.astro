@@ -1,0 +1,59 @@
+---
+import { getCategoryIcon } from '../../lib/productCategoryIcons';
+
+interface Props {
+  categoryId: string;
+  label: string;
+  products: any[];
+  locale: 'en' | 'ko';
+}
+
+const { categoryId, label, products, locale } = Astro.props;
+
+const pricingLabel: Record<string, string> = {
+  free: locale === 'ko' ? '무료' : 'Free',
+  freemium: 'Freemium',
+  paid: locale === 'ko' ? '유료' : 'Paid',
+  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
+};
+
+const emptyText = locale === 'ko' ? '준비 중입니다' : 'Coming soon';
+---
+
+<section class="product-cat-tile" data-category={categoryId}>
+  <button class="product-cat-tile-header" data-category={categoryId} type="button">
+    <span class="product-cat-tile-icon" set:html={getCategoryIcon(categoryId)} />
+    <h2 class="product-cat-tile-title">{label}</h2>
+    <span class="product-cat-tile-count">{products.length}</span>
+    <span class="product-cat-tile-arrow" aria-hidden="true">&rarr;</span>
+  </button>
+
+  <div class="product-cat-tile-body">
+    {products.length === 0 ? (
+      <p class="product-cat-tile-empty">{emptyText}</p>
+    ) : (
+      products.map((p) => (
+        <a href={`/${locale}/products/${p.slug}/`} class="product-cat-row">
+          <span class="product-cat-row-logo">
+            {p.logo_url ? (
+              <img src={p.logo_url} alt="" width="48" height="48" loading="lazy" />
+            ) : (
+              <span class="product-cat-row-logo-empty" data-category={categoryId}>
+                {(p.name_original ?? p.name ?? '?').charAt(0)}
+              </span>
+            )}
+          </span>
+          <span class="product-cat-row-text">
+            <span class="product-cat-row-name">{p.name_original ?? p.name}</span>
+            {p.tagline && <span class="product-cat-row-tagline">{p.tagline}</span>}
+          </span>
+          {p.pricing && (
+            <span class="product-pricing-badge" data-pricing={p.pricing}>
+              {pricingLabel[p.pricing] ?? p.pricing}
+            </span>
+          )}
+        </a>
+      ))
+    )}
+  </div>
+</section>
