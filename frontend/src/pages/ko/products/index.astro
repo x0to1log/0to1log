@@ -215,6 +215,24 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
       });
     });
 
+    // Product #hashtag → search for that tag (without following the row link)
+    document.querySelectorAll<HTMLElement>('.product-cat-tag').forEach((tag) => {
+      const trigger = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const term = tag.dataset.tag ?? '';
+        if (!term) return;
+        input.value = term;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        document.getElementById('products-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      tag.addEventListener('click', trigger);
+      tag.addEventListener('keydown', (e) => {
+        const k = (e as KeyboardEvent).key;
+        if (k === 'Enter' || k === ' ') trigger(e);
+      });
+    });
+
     const params = new URLSearchParams(location.search);
     const urlQ = params.get('q') ?? '';
     const urlCat = params.get('cat') ?? '';

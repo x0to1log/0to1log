@@ -11975,10 +11975,10 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
 .product-cat-tile-body {
   flex: 1;
   overflow-y: auto;
-  padding: 0.35rem;
+  padding: 0.45rem;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.45rem;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
@@ -12013,8 +12013,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
 }
 
 .product-cat-row-logo {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -12033,7 +12033,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
 .product-cat-row-logo-empty {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   color: var(--color-accent);
 }
 
@@ -12045,6 +12045,13 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   gap: 0.15rem;
 }
 
+.product-cat-row-name-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .product-cat-row-name {
   font-family: var(--font-ui);
   font-size: 0.95rem;
@@ -12053,16 +12060,38 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 0 1 auto;
 }
 
 .product-cat-row-tagline {
-  font-size: 0.82rem;
-  line-height: 1.4;
-  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.product-cat-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.product-cat-tag {
+  font-size: 0.72rem;
+  font-family: var(--font-ui);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.product-cat-tag:hover,
+.product-cat-tag:focus-visible {
+  color: var(--color-accent);
+  outline: none;
 }
 
 .product-cat-row .product-pricing-badge {

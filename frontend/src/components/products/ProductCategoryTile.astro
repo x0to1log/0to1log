@@ -36,7 +36,7 @@ const emptyText = locale === 'ko' ? '준비 중입니다' : 'Coming soon';
         <a href={`/${locale}/products/${p.slug}/`} class="product-cat-row">
           <span class="product-cat-row-logo">
             {p.logo_url ? (
-              <img src={p.logo_url} alt="" width="48" height="48" loading="lazy" />
+              <img src={p.logo_url} alt="" width="56" height="56" loading="lazy" />
             ) : (
               <span class="product-cat-row-logo-empty" data-category={categoryId}>
                 {(p.name_original ?? p.name ?? '?').charAt(0)}
@@ -44,14 +44,25 @@ const emptyText = locale === 'ko' ? '준비 중입니다' : 'Coming soon';
             )}
           </span>
           <span class="product-cat-row-text">
-            <span class="product-cat-row-name">{p.name_original ?? p.name}</span>
-            {p.tagline && <span class="product-cat-row-tagline">{p.tagline}</span>}
-          </span>
-          {p.pricing && (
-            <span class="product-pricing-badge" data-pricing={p.pricing}>
-              {pricingLabel[p.pricing] ?? p.pricing}
+            <span class="product-cat-row-name-line">
+              <span class="product-cat-row-name">{p.name_original ?? p.name}</span>
+              {p.pricing && (
+                <span class="product-pricing-badge" data-pricing={p.pricing}>
+                  {pricingLabel[p.pricing] ?? p.pricing}
+                </span>
+              )}
             </span>
-          )}
+            {p.tagline && <span class="product-cat-row-tagline">{p.tagline}</span>}
+            {Array.isArray(p.tags) && p.tags.length > 0 && (
+              <span class="product-cat-row-tags">
+                {p.tags.map((tag: string) => (
+                  <span class="product-cat-tag" data-tag={tag} role="button" tabindex="0">
+                    #{tag}
+                  </span>
+                ))}
+              </span>
+            )}
+          </span>
         </a>
       ))
     )}
