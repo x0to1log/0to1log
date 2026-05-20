@@ -424,8 +424,12 @@ const isFeatured = product?.featured ?? false;
               <input class="admin-input" id="field-platform" type="text" value={(product?.platform || []).join(', ')} placeholder="Web, iOS, Android, API, Desktop" />
             </div>
             <div class="admin-editor-meta-row">
-              <label class="admin-field-label" for="field-tags">Tags</label>
-              <input class="admin-input" id="field-tags" type="text" value={(product?.tags || []).join(', ')} placeholder="llm, chatbot, productivity" />
+              <label class="admin-field-label" for="field-tags">Tags EN</label>
+              <input class="admin-input" id="field-tags" type="text" value={(product?.tags || []).join(', ')} placeholder="ai-coding, browser-automation" />
+            </div>
+            <div class="admin-editor-meta-row">
+              <label class="admin-field-label" for="field-tags-ko">Tags KO</label>
+              <input class="admin-input" id="field-tags-ko" type="text" value={(product?.tags_ko || []).join(', ')} placeholder="AI 코딩, 브라우저 자동화" />
             </div>
             <div class="admin-editor-meta-row">
               <label class="admin-field-label" for="field-released-at">Released</label>
@@ -546,6 +550,7 @@ const isFeatured = product?.featured ?? false;
       .map((cb) => cb.value);
     const platformStr = document.getElementById('field-platform')?.value || '';
     const tagsStr = document.getElementById('field-tags')?.value || '';
+    const tagsKoStr = document.getElementById('field-tags-ko')?.value || '';
     const featuredOrderVal = document.getElementById('field-featured-order')?.value;
     const sortOrderVal = document.getElementById('field-sort-order')?.value;
 
@@ -576,6 +581,7 @@ const isFeatured = product?.featured ?? false;
       pricing_note: document.getElementById('field-pricing-note')?.value.trim() || null,
       platform: platformStr.split(',').map((s) => s.trim()).filter(Boolean),
       tags: tagsStr.split(',').map((s) => s.trim()).filter(Boolean),
+      tags_ko: tagsKoStr.split(',').map((s) => s.trim()).filter(Boolean),
       korean_support: document.getElementById('field-korean-support')?.checked ?? false,
       released_at: document.getElementById('field-released-at')?.value || null,
       featured: document.getElementById('field-featured')?.checked ?? false,
@@ -647,6 +653,7 @@ const isFeatured = product?.featured ?? false;
     const pricing = document.getElementById('field-pricing')?.value || '';
     const platform = document.getElementById('field-platform')?.value || '';
     const tags = document.getElementById('field-tags')?.value || '';
+    const tagsKo = document.getElementById('field-tags-ko')?.value || '';
     const koreanSupport = document.getElementById('field-korean-support')?.checked;
     const category = document.getElementById('field-category')?.value || '';
 
@@ -712,7 +719,8 @@ const isFeatured = product?.featured ?? false;
       if (pricing) html += `<span class="product-pricing-badge" data-pricing="${pricing}">${pricing}</span>`;
       if (platform) html += platform.split(',').map(p => `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-bg-tertiary);border-radius:3px;color:var(--color-text-muted)">${p.trim()}</span>`).join('');
       if (koreanSupport) html += `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-accent-subtle);border-radius:3px;color:var(--color-accent)">Korean</span>`;
-      if (tags) html += tags.split(',').map(t => `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-bg-secondary);border-radius:3px;color:var(--color-text-muted)">#${t.trim()}</span>`).join('');
+      const previewTags = tagsKo || tags;
+      if (previewTags) html += previewTags.split(',').map(t => t.trim()).filter(Boolean).slice(0, 3).map(t => `<span style="font-size:0.72rem;padding:0.1rem 0.4rem;background:var(--color-bg-secondary);border-radius:3px;color:var(--color-text-muted)">#${t}</span>`).join('');
       detailMeta.innerHTML = html;
     }
   }
@@ -731,7 +739,7 @@ const isFeatured = product?.featured ?? false;
   // Live update on field changes
   ['field-name', 'field-tagline', 'field-tagline-ko', 'field-description',
    'field-logo-url', 'field-thumbnail-url', 'field-pricing', 'field-platform',
-   'field-tags', 'field-korean-support', 'field-category'].forEach((id) => {
+   'field-tags', 'field-tags-ko', 'field-korean-support', 'field-category'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', updatePreview);
@@ -1008,7 +1016,7 @@ const isFeatured = product?.featured ?? false;
     if (!confirm('Clear all fields except name?')) return;
     const ids = ['field-name-ko','field-url','field-tagline','field-tagline-ko','field-description','field-description-ko',
       'field-logo-url','field-thumbnail-url','field-pricing-note','field-pricing-detail','field-pricing-detail-ko',
-      'field-platform','field-tags','field-released-at','field-featured-order','field-sort-order',
+      'field-platform','field-tags','field-tags-ko','field-released-at','field-featured-order','field-sort-order',
       'field-editor-note','field-editor-note-ko','field-korean-quality-note','field-verified-at'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) (el as HTMLInputElement | HTMLTextAreaElement).value = ''; });
     const catSel = document.getElementById('field-category') as HTMLSelectElement | null;
@@ -1237,6 +1245,7 @@ const isFeatured = product?.featured ?? false;
                 `Description: ${document.getElementById('field-description')?.value || ''}`,
                 `Description KO: ${document.getElementById('field-description-ko')?.value || ''}`,
                 `Tags: ${document.getElementById('field-tags')?.value || ''}`,
+                `Tags KO: ${document.getElementById('field-tags-ko')?.value || ''}`,
                 `Platform: ${document.getElementById('field-platform')?.value || ''}`,
               ];
               document.querySelectorAll('#features-list .string-list-input').forEach((el) => {
@@ -1258,7 +1267,7 @@ const isFeatured = product?.featured ?? false;
               document.querySelectorAll(`${ucList} .string-list-input`).forEach((el) => {
                 if (el.value) ucs.push(`Use case: ${el.value}`);
               });
-              const base = [`Category: ${g('field-category')}`, `Tags: ${g('field-tags')}`];
+              const base = [`Category: ${g('field-category')}`, `Tags: ${g('field-tags')}`, `Tags KO: ${g('field-tags-ko')}`];
               if (action === 'tagline_en') {
                 base.push(`Description: ${g('field-description')}`);
               } else if (action === 'tagline_ko') {
@@ -1361,6 +1370,10 @@ const isFeatured = product?.featured ?? false;
         if (Array.isArray(parsed.tags) && parsed.tags.length > 0) {
           const el = document.getElementById('field-tags');
           if (el) el.value = parsed.tags.join(', ');
+        }
+        if (Array.isArray(parsed.tags_ko) && parsed.tags_ko.length > 0) {
+          const el = document.getElementById('field-tags-ko');
+          if (el) el.value = parsed.tags_ko.join(', ');
         }
         // Primary category
         if (parsed.primary_category) {

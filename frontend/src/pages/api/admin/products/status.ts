@@ -62,6 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (action === 'publish') {
     update.is_published = true;
+    update.archived = false;
   } else if (action === 'unpublish') {
     update.is_published = false;
   } else if (action === 'feature') {

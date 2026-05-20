@@ -41,6 +41,7 @@ const prosCons = locale === 'ko' && product.pros_cons_ko
   ? product.pros_cons_ko : product.pros_cons;
 const editorNote = locale === 'ko' ? (product.editor_note_ko || product.editor_note) : product.editor_note;
 const resources = product.official_resources ?? [];
+const displayTags = product.display_tags ?? product.tags ?? [];
 const difficultyLabels: Record<string, { en: string; ko: string }> = {
   beginner: { en: 'Beginner-friendly', ko: '초보자 OK' },
   intermediate: { en: 'Some setup needed', ko: '약간의 설정 필요' },
@@ -148,7 +149,7 @@ const adminActionCopy = locale === 'ko'
   </header>
 
   <!-- ② Tags 행: primary + secondary + tags -->
-  {(product.primary_category || (product.secondary_categories && product.secondary_categories.length > 0) || (product.tags && product.tags.length > 0)) && (
+  {(product.primary_category || (product.secondary_categories && product.secondary_categories.length > 0) || displayTags.length > 0) && (
     <div class="product-detail-tags-row">
       {product.primary_category && (
         <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
@@ -162,7 +163,7 @@ const adminActionCopy = locale === 'ko'
             {cat}
           </a>
         ))}
-      {product.tags && product.tags.map((tag) => (
+      {displayTags.map((tag) => (
         <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
       ))}
     </div>

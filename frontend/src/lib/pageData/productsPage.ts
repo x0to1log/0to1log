@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../supabase';
 import { getPublicSupabase } from './shared';
 import { renderMarkdown } from '../markdown';
+import { resolveLocalizedProductTags } from '../productTags';
 
 // =============================================================================
 // Types
@@ -36,6 +37,8 @@ export interface ProductCardData {
   view_count: number;
   sort_order: number | null;
   tags: string[] | null;
+  tags_ko: string[] | null;
+  display_tags: string[] | null;
 }
 
 export interface ProductDetailData {
@@ -55,6 +58,8 @@ export interface ProductDetailData {
   thumbnail_url: string | null;
   demo_media: Array<{ type: string; url: string; caption?: string }>;
   tags: string[] | null;
+  tags_ko: string[] | null;
+  display_tags: string[] | null;
   platform: string[] | null;
   korean_support: boolean;
   released_at: string | null;
@@ -115,7 +120,7 @@ export interface HomeFeaturedProduct {
 // =============================================================================
 
 const CARD_COLUMNS =
-  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, difficulty, search_corpus';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, tags_ko, difficulty, search_corpus';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
@@ -128,6 +133,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
       .from('ai_products')
       .select(CARD_COLUMNS)
       .eq('is_published', true)
+      .eq('archived', false)
       .order('sort_order')
       .order('name')
       .limit(200),
@@ -148,6 +154,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     name_original: p.name as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
+    display_tags: resolveLocalizedProductTags(p, locale),
   }));
 
   // Sort: category order → featured first (by featured_order) → sort_order → name
@@ -201,6 +208,7 @@ export async function getProductDetailData(
     .select('*')
     .eq('slug', slug)
     .eq('is_published', true)
+    .eq('archived', false)
     .single();
 
   if (error) {
@@ -231,6 +239,8 @@ export async function getProductDetailData(
     thumbnail_url: raw.thumbnail_url,
     demo_media: (raw.demo_media as Array<{ type: string; url: string; caption?: string }>) ?? [],
     tags: raw.tags,
+    tags_ko: raw.tags_ko,
+    display_tags: resolveLocalizedProductTags(raw, locale),
     platform: raw.platform,
     korean_support: raw.korean_support ?? false,
     released_at: raw.released_at,
@@ -288,6 +298,7 @@ export async function fetchAlternatives(
     .select(CARD_COLUMNS)
     .eq('primary_category', category)
     .eq('is_published', true)
+    .eq('archived', false)
     .neq('slug', excludeSlug)
     .order('featured', { ascending: false })
     .order('sort_order')
@@ -297,6 +308,7 @@ export async function fetchAlternatives(
     ...p,
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
+    display_tags: resolveLocalizedProductTags(p, locale),
   }));
 }
 
@@ -359,7 +371,7 @@ export async function fetchLikedProducts(
         logo_url, thumbnail_url, demo_media,
         pricing, platform, korean_support,
         primary_category, featured, featured_order,
-        view_count, sort_order, tags
+        view_count, sort_order, tags, tags_ko, is_published, archived
       )
     `)
     .order('created_at', { ascending: false });
@@ -370,6 +382,7 @@ export async function fetchLikedProducts(
     .map((row: any) => {
       const p = row.ai_products;
       if (!p) return null;
+      if (!p.is_published || p.archived) return null;
       return {
         id: p.id,
         slug: p.slug,
@@ -388,6 +401,8 @@ export async function fetchLikedProducts(
         view_count: p.view_count ?? 0,
         sort_order: p.sort_order ?? null,
         tags: p.tags ?? null,
+        tags_ko: p.tags_ko ?? null,
+        display_tags: resolveLocalizedProductTags(p, locale),
       } as ProductCardData;
     })
     .filter((p): p is ProductCardData => p !== null);
@@ -404,6 +419,7 @@ export async function fetchHomeFeaturedProducts(): Promise<HomeFeaturedProduct[]
     .from('ai_products')
     .select('id, slug, name, name_ko, tagline, tagline_ko, logo_url, pricing, korean_support')
     .eq('is_published', true)
+    .eq('archived', false)
     .eq('featured', true)
     .order('featured_order')
     .limit(5);

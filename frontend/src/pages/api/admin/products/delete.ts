@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } else {
     const { error } = await supabase
       .from('ai_products')
-      .update({ archived: true })
+      .update({ archived: true, is_published: false, featured: false })
       .eq('id', id);
     if (error) {
       return new Response(JSON.stringify({ error: 'Failed to archive product' }), {

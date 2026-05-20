@@ -82,7 +82,8 @@ export const GET: APIRoute = async () => {
     const { data: products } = await supabase
       .from('ai_products')
       .select('slug, updated_at')
-      .eq('is_published', true);
+      .eq('is_published', true)
+      .eq('archived', false);
 
     for (const p of products ?? []) {
       const lastmod = p.updated_at ? p.updated_at.split('T')[0] : undefined;

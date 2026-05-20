@@ -18,7 +18,7 @@ let fetchError: string | null = null;
 const [{ data: products, error: productsError }, { data: categories }] = await Promise.all([
   supabase
     .from('ai_products')
-    .select('id, slug, name, name_ko, logo_url, primary_category, is_published, featured, pricing, korean_support, sort_order, tags, updated_at')
+    .select('id, slug, name, name_ko, logo_url, primary_category, is_published, archived, featured, pricing, korean_support, sort_order, tags, updated_at')
     .order('updated_at', { ascending: false })
     .limit(500),
   supabase
@@ -31,10 +31,12 @@ if (productsError) fetchError = productsError.message;
 
 const allProducts = products ?? [];
 const allCategories = categories ?? [];
+const activeProducts = allProducts.filter((p) => !p.archived);
+const archivedProducts = allProducts.filter((p) => p.archived);
 
-const draftCount = allProducts.filter((p) => !p.is_published).length;
-const publishedCount = allProducts.filter((p) => p.is_published).length;
-const featuredCount = allProducts.filter((p) => p.featured).length;
+const draftCount = activeProducts.filter((p) => !p.is_published).length;
+const publishedCount = activeProducts.filter((p) => p.is_published).length;
+const featuredCount = activeProducts.filter((p) => p.featured).length;
 
 const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
 ---
@@ -70,7 +72,10 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
               <button class="admin-filter-btn admin-filter-btn--active" data-filter="draft">Draft ({draftCount})</button>
               <button class="admin-filter-btn" data-filter="published">Published ({publishedCount})</button>
               <button class="admin-filter-btn" data-filter="featured">Featured ({featuredCount})</button>
-              <button class="admin-filter-btn" data-filter="all">All ({allProducts.length})</button>
+              <button class="admin-filter-btn" data-filter="all">All ({activeProducts.length})</button>
+              {archivedProducts.length > 0 && (
+                <button class="admin-filter-btn" data-filter="archived">Archived ({archivedProducts.length})</button>
+              )}
             </div>
           </div>
           <div class="admin-list-toolbar-right">
@@ -108,6 +113,7 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
               <li
                 class="admin-list-item"
                 data-published={product.is_published ? 'true' : 'false'}
+                data-archived={product.archived ? 'true' : 'false'}
                 data-featured={product.featured ? 'true' : 'false'}
                 data-title={`${product.name} ${product.name_ko || ''}`.toLowerCase()}
                 data-category={product.primary_category || ''}
@@ -129,8 +135,8 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
                   </div>
                   <div class="admin-list-meta">
                     <div class="admin-list-meta-badges">
-                      <span class={`admin-status-badge admin-status-badge--${product.is_published ? 'published' : 'draft'}`}>
-                        {product.is_published ? 'published' : 'draft'}
+                      <span class={`admin-status-badge admin-status-badge--${product.archived ? 'archived' : product.is_published ? 'published' : 'draft'}`}>
+                        {product.archived ? 'archived' : product.is_published ? 'published' : 'draft'}
                       </span>
                       {product.pricing && (
                         <span class={`admin-product-pricing-badge admin-product-pricing-badge--${product.pricing}`}>
@@ -307,15 +313,17 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
 
     allItems.forEach((item) => {
       const published = item.dataset.published === 'true';
+      const archived = item.dataset.archived === 'true';
       const featured = item.dataset.featured === 'true';
       const title = item.dataset.title || '';
       const cat = item.dataset.category || '';
 
       const matchesFilter =
-        currentFilter === 'all' ||
-        (currentFilter === 'draft' && !published) ||
-        (currentFilter === 'published' && published) ||
-        (currentFilter === 'featured' && featured);
+        (currentFilter === 'all' && !archived) ||
+        (currentFilter === 'draft' && !published && !archived) ||
+        (currentFilter === 'published' && published && !archived) ||
+        (currentFilter === 'featured' && featured && !archived) ||
+        (currentFilter === 'archived' && archived);
 
       const matchesSearch = !search || title.includes(search);
       const matchesCategory = !category || cat === category;
@@ -414,6 +422,7 @@ const categoryMap = Object.fromEntries(allCategories.map((c) => [c.id, c]));
         const item = btn.closest('.admin-list-item');
         if (action === 'publish') {
           item.dataset.published = 'true';
+          item.dataset.archived = 'false';
           btn.dataset.action = 'unpublish';
           btn.textContent = 'Unpublish';
           item.querySelector('.admin-status-badge').textContent = 'published';

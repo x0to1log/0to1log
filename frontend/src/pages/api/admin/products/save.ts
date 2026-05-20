@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import { normalizeTags } from '../../../../lib/normalizeTags';
+import { normalizeProductTags } from '../../../../lib/productTags';
 
 export const prerender = false;
 
@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     tagline, tagline_ko, description, description_ko,
     logo_url, thumbnail_url, demo_media,
     pricing, pricing_note,
-    platform, tags,
+    platform, tags, tags_ko,
     korean_support, released_at,
     featured, featured_order, sort_order,
     features, features_ko, use_cases, use_cases_ko,
@@ -70,7 +70,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (pricing !== undefined) row.pricing = pricing || null;
   if (pricing_note !== undefined) row.pricing_note = pricing_note || null;
   if (platform !== undefined) row.platform = Array.isArray(platform) ? platform : [];
-  if (tags !== undefined) row.tags = normalizeTags(tags);
+  if (tags !== undefined) row.tags = normalizeProductTags(tags, { style: 'canonical' });
+  if (tags_ko !== undefined) row.tags_ko = normalizeProductTags(tags_ko, { style: 'display' });
   if (korean_support !== undefined) row.korean_support = Boolean(korean_support);
   if (released_at !== undefined) row.released_at = released_at || null;
   if (featured !== undefined) row.featured = Boolean(featured);

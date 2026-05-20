@@ -40,7 +40,7 @@ WRITABLE_FIELDS = {
     "name", "name_ko", "tagline", "tagline_ko",
     "description", "description_ko",
     "pricing", "pricing_detail", "pricing_detail_ko",
-    "platform", "korean_support", "tags",
+    "platform", "korean_support", "tags", "tags_ko",
     "primary_category", "secondary_categories",
     "features", "features_ko",
     "use_cases", "use_cases_ko",

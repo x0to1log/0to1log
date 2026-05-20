@@ -42,6 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     .from('ai_products')
     .update({ is_published: isPublished, updated_at: new Date().toISOString() })
     .eq('is_published', filterValue)
+    .eq('archived', false)
     .select('id');
 
   if (error) {

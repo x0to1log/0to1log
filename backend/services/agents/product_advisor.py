@@ -107,7 +107,10 @@ Given a product page's content, produce a JSON profile that helps readers unders
 
 6. **korean_support** (boolean): true only if Korean UI or documentation exists.
 
-7. **tags** (array, 3-5 lowercase keywords): e.g. ["llm", "chatbot", "productivity"]
+7. **tags** (array, 1-3 lowercase kebab-case labels): e.g. ["ai-coding", "browser-automation", "test-automation"]
+   - Use short scan-friendly categories, not generic words.
+   - BAD: ["ai", "tools", "agents", "ide", "productivity"]
+   - GOOD: ["agentic-ide", "browser-automation", "code-verification"]
 
 8. **primary_category** (one of: "assistant", "image", "video", "audio", "coding", "workflow", "builder", "platform", "research", "community")
 
@@ -141,7 +144,7 @@ Given a product page's content, produce a JSON profile that helps readers unders
   "pricing": "freemium",
   "platform": ["desktop"],
   "korean_support": false,
-  "tags": ["ide", "code-generation", "developer-tools"],
+  "tags": ["agentic-ide", "code-generation", "developer-tools"],
   "primary_category": "coding",
   "secondary_categories": [],
   "features": ["Type a comment → code appears below automatically", "Select a function and ask 'refactor this' → cleaner version with explanation", "Chat with your entire codebase using @-mentions"],
@@ -198,18 +201,23 @@ Given the English profile of a product, write the Korean version of specific fie
 
 3. **description_ko** (string, 2-3 sentences): Same structure as EN but naturally written for Korean readers.
 
-4. **features_ko** (array): Korean version of features.
+4. **tags_ko** (array, 1-3 strings): Korean display tags matching the English tags' intent.
+   - Store natural Korean noun phrases, without "#".
+   - Use short category labels readers can scan quickly, e.g. ["AI \ucf54\ub529", "\ube0c\ub77c\uc6b0\uc800 \uc790\ub3d9\ud654", "\ud14c\uc2a4\ud2b8 \uc790\ub3d9\ud654"].
+   - Do NOT translate brand names or produce full sentences.
+
+5. **features_ko** (array): Korean version of features.
    - **COUNT MUST MATCH EN exactly.** If features has 5 entries, features_ko MUST have 5.
    - Do NOT split, combine, or add features during translation.
    - Each index: features_ko[i] describes the SAME capability as features[i].
    - Keep technical terms in English (API, LLM, IDE, MCP, etc.)
    - Self-check: `len(features_ko) == len(features)` before responding.
 
-5. **use_cases_ko** (array): Korean use cases using "[구체적 대상]이 [구체적 상황]에서 [구체적 작업]할 때" format.
+6. **use_cases_ko** (array): Korean use cases using "[구체적 대상]이 [구체적 상황]에서 [구체적 작업]할 때" format.
 
-6. **getting_started_ko** (array, exactly 3 strings): Same 3 steps, natural Korean.
+7. **getting_started_ko** (array, exactly 3 strings): Same 3 steps, natural Korean.
 
-7. **pricing_detail_ko** (string or null): Korean translation of pricing_detail.
+8. **pricing_detail_ko** (string or null): Korean translation of pricing_detail.
    - Translate ALL column headers: "Plan" → "플랜", "Price" → "가격", "Includes" → "포함"
    - Translate prose in the rightmost column (e.g., "Generous weekly rate limits" → "넉넉한 주간 사용 한도", "Unlimited Tab completions" → "Tab 완성 무제한")
    - Keep $ prices, plan names ("Pro", "Free", "Individual", "Hobby"), and product/model names in English
@@ -1221,6 +1229,14 @@ def _check_profile_format(profile: dict) -> list[str]:
     if tagline_ko and len(tagline_ko) > 25:
         warnings.append(f"tagline_ko exceeds 25 chars ({len(tagline_ko)})")
 
+    tags = profile.get("tags") or []
+    if not (1 <= len(tags) <= 3):
+        warnings.append(f"tags count off (got {len(tags)}, expected 1-3)")
+
+    tags_ko = profile.get("tags_ko") or []
+    if not (1 <= len(tags_ko) <= 3):
+        warnings.append(f"tags_ko count off (got {len(tags_ko)}, expected 1-3)")
+
     features = profile.get("features") or []
     if not (3 <= len(features) <= 5):
         warnings.append(f"features count off (got {len(features)}, expected 3-5)")
@@ -1317,6 +1333,7 @@ async def _generate_ko_profile(
         f"Product: {en_profile.get('name', '')}\n"
         f"Tagline: {en_profile.get('tagline', '')}\n"
         f"Description: {en_profile.get('description_en', '')}\n"
+        f"Tags: {', '.join(en_profile.get('tags', []))}\n"
         f"Features: {'; '.join(en_profile.get('features', []))}\n"
         f"Use cases: {'; '.join(en_profile.get('use_cases', []))}\n"
         f"Getting started: {'; '.join(en_profile.get('getting_started', []))}\n"

@@ -56,7 +56,7 @@ class ProductProfileEN(BaseModel):
     pricing: PRICING_LABEL | None
     platform: list[PLATFORM]
     korean_support: bool
-    tags: list[str] = Field(min_length=3, max_length=5)
+    tags: list[str] = Field(min_length=1, max_length=3)
     primary_category: PRODUCT_CATEGORY
     secondary_categories: list[PRODUCT_CATEGORY]
     features: list[str] = Field(min_length=3, max_length=5)
@@ -66,7 +66,7 @@ class ProductProfileEN(BaseModel):
 
 
 class ProductProfileKO(BaseModel):
-    """Strict schema for the KO profile (7 fields).
+    """Strict schema for the KO profile (8 fields).
 
     features_ko / use_cases_ko / getting_started_ko share EN's count bounds.
     The 'count must match EN exactly' rule stays in the prompt — schema
@@ -75,6 +75,7 @@ class ProductProfileKO(BaseModel):
     name_ko: str | None
     tagline_ko: str
     description_ko: str
+    tags_ko: list[str] = Field(min_length=1, max_length=3)
     features_ko: list[str] = Field(min_length=3, max_length=5)
     use_cases_ko: list[str] = Field(min_length=2, max_length=3)
     getting_started_ko: list[str] = Field(min_length=3, max_length=3)
