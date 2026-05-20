@@ -758,6 +758,28 @@ def test_locale_integrity_keeps_cp_body_in_scope():
         assert "code-validated" in prompt or "_has_hangul" in prompt or "summarize_community" in prompt
 
 
+def test_locale_integrity_allows_mixed_proper_noun_ko_headings():
+    """May 19 regression: research paper titles in Latin script can appear in
+    KO `###` headings when followed by Korean explanation. That is not
+    English leakage; only English-only KO prose/blockquotes should trigger a
+    major locale issue and cap the score."""
+    prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+        QUALITY_CHECK_RESEARCH_BEGINNER,
+        QUALITY_CHECK_BUSINESS_BEGINNER,
+    ]
+    for prompt in prompts:
+        assert "Mixed proper-noun headings are allowed" in prompt
+        assert "<English proper title>: <Korean explanation>" in prompt
+        assert "Known By Their Actions: 웹 브라우저 에이전트 행동 지문 식별" in prompt
+        assert "English-only paragraph" in prompt
+        assert "English-only `>` blockquote" in prompt
+        assert "Do NOT create a major locale issue" in prompt
+
+
 def test_business_expert_strategic_decisions_requires_citations():
     """Apr 22 bug: Business expert Strategic Decisions section shipped 5 bullets
     with 0 citations — strategic guidance without sources reads as editorial.
