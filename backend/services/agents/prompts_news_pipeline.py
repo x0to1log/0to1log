@@ -2434,7 +2434,20 @@ Do NOT report: stylistic preferences ("could be clearer", "tone is strong"), opt
 
 
 _QC_KO_LOCALE_PROPER_NOUN_HEADING_RULE = """  - Mixed proper-noun headings are allowed: English paper titles, repository names, model/product names, benchmark names, standards acronyms, and source names in KO headings are valid proper nouns when the heading contains Hangul or follows `<English proper title>: <Korean explanation>` (e.g., `### Known By Their Actions: 웹 브라우저 에이전트 행동 지문 식별`). Do NOT create a major locale issue for these headings; at most score a minor clarity/style issue if repeated or hard to scan.
+  - Canonical English section headings are an editorial convention: `## Research Papers`, `## Open Source & Repos`, `## Big Tech`, `## Industry & Biz`, and `## New Tools` may remain in English in KO digests. These are fixed navigation labels; do NOT treat these section headings as locale violations or translation defects.
   - Major locale violations remain English-only paragraph(s), English-only `>` blockquote(s), whole wrong-locale sections, garbled encoding, or missing locale sections."""
+
+
+_QC_SECONDARY_ONLY_CALIBRATION_RULE = """Secondary-only stories are allowed when the source set lacks a primary/official source; evaluate attribution and calibration instead. For secondary-only funding, rumor, legal analysis, product-claim, or live-metric stories, headline/excerpt/first paragraph/body should use "reports", "according to", "sources say", "reported", "보도에 따르면", "전해졌다", or equivalent cautious framing, and avoid definitive company-claim phrasing unless an official source is available."""
+
+
+_QC_SECONDARY_ONLY_SOURCE_RULE = (
+    "Secondary-only stories are allowed when the source set lacks a primary/official source; "
+    "do NOT penalize source_quality solely because no official source exists. "
+    "Penalize primary_source_priority only when a primary/official source is present "
+    "in the provided sources for the same story and the body ignores it or cites secondary reporting first. "
+    + _QC_SECONDARY_ONLY_CALIBRATION_RULE
+)
 
 
 # NQ-40 Phase 2a (measurement-only, weight=0 — code excludes `community_pulse`
@@ -2471,7 +2484,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present non-summary section has substantial content (~200+ chars); One-Line Summary may be brief if it synthesizes the day's main throughline.
 
 ### Source Quality (3)
-- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly.- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. One-Line Summary may skip inline citation if body paragraphs cite properly.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative available source (company blog / arxiv / official repo) rather than secondary reporting (TechCrunch / Forbes / Bloomberg). {_QC_SECONDARY_ONLY_SOURCE_RULE}
 - **source_utilization**: All provided sources are drawn on across paragraphs — not ignored or piled at bottom.
 
 ### Technical Depth (3)
@@ -2601,7 +2615,8 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 - **section_depth**: Each present non-summary section has substantial content (~200+ chars); Strategic Decisions uses bullet format; One-Line Summary may be brief if synthetic.
 
 ### Source Quality (3)
-- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed.- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / official announcement) rather than secondary reporting (TechCrunch / Forbes / Bloomberg).
+- **citation_coverage**: Every body paragraph ends with `[N](URL)` citation. Funding amounts and deal terms must be attributed.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative available source (company blog / official announcement) rather than secondary reporting (TechCrunch / Forbes / Bloomberg). {_QC_SECONDARY_ONLY_SOURCE_RULE}
 - **source_utilization**: All provided sources drawn on across paragraphs.
 
 ### Strategic Analysis (3)
@@ -2611,7 +2626,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (3)
 - **fluency**: Reads like a strategic advisor briefing; assertive but calibrated; lead item 3-4 paragraphs; specific comparisons. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
-- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Single-secondary-source metrics, especially live rankings, token counts, app-store ranks, leaderboard positions, must be attributed and tied to an absolute as-of date. Distinct from `prediction_guard` (which targets forward-looking verbs specifically); this targets retrospective/present-tense overclaim. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Single-secondary-source metrics, especially live rankings, token counts, app-store ranks, leaderboard positions, must be attributed and tied to an absolute as-of date. {_QC_SECONDARY_ONLY_CALIBRATION_RULE} Distinct from `prediction_guard` (which targets forward-looking verbs specifically); this targets retrospective/present-tense overclaim. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
 {_QC_KO_LOCALE_PROPER_NOUN_HEADING_RULE}
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
@@ -2675,7 +2690,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Language Quality (4)
 - **fluency**: Friendly but informative editorial news prose; lead item 3-4 paragraphs; supporting stories may be 2-3 paragraphs; engaging without being condescending. Also flag literal translation Korean in learner output: penalize dictionary-like translations that are technically possible but unnatural for news readers, especially deployment → not always `배치`; prefer `도입`, `적용`, `운영`, `출시`, or `배포` by context; entity → not `법인` unless legal corporation is meant; prefer `기업`, `조직`, `주체`, or `서비스`; agent → not `대리인` in AI product contexts; prefer `AI 에이전트` or `작업을 수행하는 AI`. **Temporal anchoring**: prefer absolute dates/periods ("Apr 20", "Q1 2026") over relative markers ("yesterday", "last week", "recently", "최근", "지난주") — relative time loses meaning once a digest is archived. One borderline phrase is tolerable; repeated relative framing is not.
-- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Single-secondary-source metrics, especially live rankings, token counts, app-store ranks, leaderboard positions, must be attributed and tied to an absolute as-of date. **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
+- **claim_calibration**: Body claims match evidence strength. Flag overclaim language — English ("dominates", "crushes", "revolutionizes", "groundbreaking") and Korean ("장악", "독점", "완전히 뒤집다", "압도적"). Flag interpretive causal claims stated as fact when sources only describe event/correlation. Single-secondary-source metrics, especially live rankings, token counts, app-store ranks, leaderboard positions, must be attributed and tied to an absolute as-of date. {_QC_SECONDARY_ONLY_CALIBRATION_RULE} **10** tone matches evidence throughout; **7** one borderline phrase; **4** repeated overclaim pattern; **0** heavy editorializing that misrepresents sources.
 - **locale_integrity**: Scan ONLY the text BELOW the `=== KO BODY ===` marker — English quotes/paragraphs in the `=== EN BODY ===` section are expected and MUST be ignored. **SELF-VERIFY before reporting any violation**: the `evidence` string you quote MUST be an exact substring that appears in the `=== KO BODY ===` section. If the English text you're about to flag only appears in the `=== EN BODY ===` section (not in KO BODY), that is NOT a violation — score 10. Do NOT paraphrase or translate EN content as if it were in KO. Apply concrete rules to the KO section only:
 {_QC_KO_LOCALE_PROPER_NOUN_HEADING_RULE}
   - Every `>` blockquote line ≥10 chars MUST contain at least 1 Hangul character (proper nouns like OpenAI, GPT-5.4, Claude 4.7 in Latin script are OK and do NOT count). **EXEMPT**: attribution lines of the form `> — <Label>` or `> — [<Label>](<URL>)` — these are citation markers added by CP post-processing, not body content. **NOT EXEMPT**: Community Pulse blockquote body text and prose paragraphs inside `## 커뮤니티 반응` are still subject to the Hangul rule (code retranslation in `summarize_community` is the primary defense, this rubric is the secondary catch if retranslation fails — Apr 19 incident).
@@ -2873,7 +2888,7 @@ are grounded, calibrated, clear, and bilingual-parity.
 - **claim_grounding**: Non-numeric claims ("OpenAI loses 3 executives", "validates demand for non-GPU compute") are statements the body would be expected to support — not conjecture the headline invents on its own. **10** claims are event-level facts; **7** one interpretive claim but close to a factual paraphrase; **4** speculative claim framed as fact; **0** outright invented claim.
 
 ### Calibration (2)
-- **claim_strength**: Headline/excerpt don't overstate beyond what a secondary-heavy story can support. Flag any secondary-only metric or strategic conclusion in headline/excerpt without attribution. Flag any live metric without an as-of date (rankings, token counts, app-store ranks, leaderboard positions). **10** tone matches evidence strength (e.g., "files for IPO" for a filing, "reportedly raises" for a leak); **7** one slightly strong phrase but not misleading; **4** competitive/strategic framing stronger than the evidence allows ("dominates", "crushes"); **0** heavy overclaim that rewrites the story.
+- **claim_strength**: Headline/excerpt don't overstate beyond what source strength can support. {_QC_SECONDARY_ONLY_CALIBRATION_RULE} Flag any secondary-only metric or strategic conclusion in headline/excerpt without attribution. Flag any live metric without an as-of date (rankings, token counts, app-store ranks, leaderboard positions). **10** tone matches evidence strength (e.g., "files for IPO" for a filing, "reportedly raises" for a leak); **7** one slightly strong phrase but not misleading; **4** competitive/strategic framing stronger than the evidence allows ("dominates", "crushes"); **0** heavy overclaim that rewrites the story.
 - **framing_calibration**: No forward-looking speculation verbs in frontload ("will disrupt", "is set to", "Expect X to Y", "poised to", Korean "~할 것이다", "전망된다"). Observational framing only ("signals", "points to", "implies"). **EXEMPT**: focus_item P3 ("what to watch") may use "Watch for X" / "X 주시" / "keep an eye on X" phrasing WHEN X is an observable signal (dataset release, benchmark publication, paper replication, public filing, earnings disclosure) — this is descriptive, not speculative. NOT exempt: watch phrases about prices, market outcomes, competitive wins/losses ("watch for a crash", "watch Nvidia's decline"). **10** fully observational; **7** one borderline phrase; **4** one clear forward-looking verb; **0** multiple forward-looking predictions.
 
 ### Clarity (2)
@@ -2926,7 +2941,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Source Quality (3)
 - **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and action bullet ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. One-Line and Week-in-Numbers-labels allowed to skip. **Internal consistency (weekly-specific)**: a single event's figure often appears in Week in Numbers AND Top Stories AND Trend Analysis AND So What Do I Do — all occurrences MUST match exactly. Flag mismatches like "Week in Numbers `$10B`" vs "Top Stories body `$15B`" for the same funding round; or "`$122B valuation`" in One-Line vs "`$100B valuation`" in Top Stories. KO locale currency-unit mismatches (e.g., `$8.3 billion` in EN but `8.3억 달러` = $830M in KO — 10× error) also flag here.
-- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo / GitHub) rather than secondary reporting (TechCrunch / Forbes / Bloomberg / Reuters).
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative available source (company blog / arxiv / official repo / GitHub) rather than secondary reporting (TechCrunch / Forbes / Bloomberg / Reuters). {_QC_SECONDARY_ONLY_SOURCE_RULE}
 - **source_utilization**: Sources drawn across sections (Top Stories, Trend Analysis, Watch Points) — not ignored or piled in one block.
 
 ### Strategic Synthesis (3)
@@ -2983,7 +2998,7 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Source Quality (3)
 - **citation_coverage**: Every Top Story body paragraph, Trend Analysis paragraph, Watch Point, and "What Can I Try" action ends with `[N](URL)`. Week in Numbers items end with `[N](URL)`. **Internal consistency (weekly-specific)**: a single event's figure often appears in Week in Numbers AND Top Stories AND Trend Analysis AND "What Can I Try" — all occurrences MUST match exactly. Flag mismatches like "Week in Numbers `$10B`" vs "Top Stories body `$15B`" for the same funding round. KO locale currency-unit mismatches (e.g., `$8.3 billion` in EN but `8.3억 달러` = $830M in KO — 10× error) also flag here.
-- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative (company blog / arxiv / official repo) rather than secondary reporting.
+- **primary_source_priority**: When multiple sources cover one story, the FIRST citation is the most authoritative available source (company blog / arxiv / official repo) rather than secondary reporting. {_QC_SECONDARY_ONLY_SOURCE_RULE}
 - **source_utilization**: Sources drawn across sections — not ignored or piled in one block.
 
 ### Accessibility (3)

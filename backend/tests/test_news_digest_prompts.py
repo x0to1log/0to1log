@@ -7,6 +7,8 @@ from services.agents.prompts_news_pipeline import (
     QUALITY_CHECK_RESEARCH_BEGINNER,
     QUALITY_CHECK_RESEARCH_EXPERT,
     QUALITY_CHECK_RESEARCH_LEARNER,
+    QUALITY_CHECK_WEEKLY_EXPERT,
+    QUALITY_CHECK_WEEKLY_LEARNER,
     get_digest_prompt,
     get_digest_quiz_prompt,
     get_weekly_ko_prompt,
@@ -438,6 +440,28 @@ def test_quality_rubrics_penalize_secondary_only_metrics_without_attribution_or_
         assert '"secondary_source_calibration"' not in prompt
 
 
+def test_quality_rubrics_allow_secondary_only_when_primary_source_is_absent():
+    source_quality_prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_WEEKLY_EXPERT,
+        QUALITY_CHECK_WEEKLY_LEARNER,
+    ]
+    for prompt in source_quality_prompts:
+        assert "Secondary-only stories are allowed when the source set lacks a primary/official source" in prompt
+        assert "do NOT penalize source_quality solely because no official source exists" in prompt
+        assert "Penalize primary_source_priority only when a primary/official source is present" in prompt
+
+    calibration_prompts = [
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+        QUALITY_CHECK_FRONTLOAD,
+    ]
+    for prompt in calibration_prompts:
+        assert "evaluate attribution and calibration instead" in prompt
+        assert "avoid definitive company-claim phrasing unless an official source is available" in prompt
+
+
 def test_research_prompt_has_license_sensitive_wording_guard():
     prompt = get_digest_prompt("research", "expert", [])
 
@@ -801,6 +825,28 @@ def test_locale_integrity_allows_mixed_proper_noun_ko_headings():
         assert "English-only paragraph" in prompt
         assert "English-only `>` blockquote" in prompt
         assert "Do NOT create a major locale issue" in prompt
+
+
+def test_locale_integrity_allows_canonical_english_section_headings():
+    """Canonical navigation labels stay English by editorial choice, even in KO."""
+    prompts = [
+        QUALITY_CHECK_RESEARCH_EXPERT,
+        QUALITY_CHECK_RESEARCH_LEARNER,
+        QUALITY_CHECK_BUSINESS_EXPERT,
+        QUALITY_CHECK_BUSINESS_LEARNER,
+        QUALITY_CHECK_RESEARCH_BEGINNER,
+        QUALITY_CHECK_BUSINESS_BEGINNER,
+        QUALITY_CHECK_WEEKLY_EXPERT,
+        QUALITY_CHECK_WEEKLY_LEARNER,
+    ]
+    for prompt in prompts:
+        assert "Canonical English section headings are an editorial convention" in prompt
+        assert "`## Research Papers`" in prompt
+        assert "`## Open Source & Repos`" in prompt
+        assert "`## Big Tech`" in prompt
+        assert "`## Industry & Biz`" in prompt
+        assert "`## New Tools`" in prompt
+        assert "do NOT treat these section headings as locale violations" in prompt
 
 
 def test_business_expert_strategic_decisions_requires_citations():
