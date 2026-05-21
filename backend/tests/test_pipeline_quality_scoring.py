@@ -107,6 +107,22 @@ def test_build_quality_payloads_include_ko_and_frontload_fields():
     assert "한국어 포인트" in frontload_payload
 
 
+def test_body_quality_payload_can_include_quiz_blocks():
+    from services.pipeline import _build_body_quality_payload
+
+    body_payload = _build_body_quality_payload(
+        "beginner",
+        PersonaOutput(en="English body", ko="Korean body"),
+        quiz_en={"question": "What is safe to conclude?", "answer": "A"},
+        quiz_ko={"question": "What is safe in Korean?", "answer": "A"},
+    )
+
+    assert "=== EN QUIZ" in body_payload
+    assert "What is safe to conclude?" in body_payload
+    assert "=== KO QUIZ" in body_payload
+    assert "What is safe in Korean?" in body_payload
+
+
 def test_normalize_scope_handles_llm_variants():
     from services.pipeline import _normalize_scope
 
@@ -172,9 +188,10 @@ def test_issue_penalty_and_caps_are_deterministic():
 
 
 def test_daily_primary_source_priority_flags_secondary_first_when_official_source_is_available():
-    from services.pipeline import _aggregate_subscores as _  # initialize re-export cycle
+    from services.pipeline import _aggregate_subscores as _aggregate_subscores_for_reexport_cycle
     from services import pipeline_quality
 
+    assert _aggregate_subscores_for_reexport_cycle is not None
     helper = getattr(pipeline_quality, "_find_daily_primary_source_priority_issues", None)
     cap_helper = getattr(pipeline_quality, "_daily_guardrail_cap_labels", None)
     assert helper is not None

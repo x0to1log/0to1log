@@ -757,6 +757,8 @@ Beginner persona:
 - Research Beginner main_items: 1-2. Default to 2 only if both fit under one simple theme.
 - Do not turn every input group into a full section. Put lower-priority items in Worth Skimming.
 - Problem first: open each main item by explaining the plain problem, friction, cost, risk, or decision pressure before naming methods, benchmarks, or model architecture.
+- The first sentence after each main research heading should state the plain problem without acronyms or method names.
+- If a method name is necessary, pair it with its role, not a full definition.
 - First-paragraph term budget: use at most 2 countable research/security terms in the first paragraph after a main heading. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms. Do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review.
 - Delay extra technical names to paragraph 2, Worth Skimming, or the learner-digest bridge after the reader has the problem frame.
 - One-Line Summary may summarize only selected main items. Do not mention skim-only stories there.
@@ -1634,6 +1636,9 @@ using only the provided {locale_name} bodies as source material.
 
 ## Body Grounding
 - Every correct answer must be directly grounded in a clear sentence or paragraph from that persona's digest body.
+- Silently choose one anchor section and one anchor paragraph from that persona body before writing each quiz.
+- All four options must be derived from that same anchor section.
+- Do not use names, products, projects, companies, methods, or claims that do not appear in the anchor section.
 - Do not ask the reader to infer a new action, strategy, or recommendation that is not stated in that persona's body.
 - The quiz may ask for the meaning or implication of a body passage, but the answer must be recoverable from the text the reader just read.
 - Prefer "According to the digest" or "What does the digest say" framing when a question risks becoming too applied.
@@ -1663,9 +1668,18 @@ using only the provided {locale_name} bodies as source material.
 
 ## Beginner Guard
 - Test what burden, risk, decision pressure, or misconception shifted.
+- Prefer asking for the safest takeaway from the digest, what a beginner should not over-assume, or what changed according to the digest.
+- Avoid questions where multiple options can be interpreted as reasonable warnings.
+- Avoid wording the question as a negative warning if that makes several options sound partly true.
+- Do not ask beginner questions in the form "which misunderstanding should readers avoid"; phrase them as "what is safest to conclude" or "what changed" instead.
+- Beginner correct options must state one single safe takeaway, not combine two warnings with and/or.
 - If the beginner body has two main items, prefer the shared lens over a detail from one item.
 - Wrong options should be plausible beginner mistakes: overclaiming rollout or adoption, assuming private/beta access is generally available, treating a workflow/pipeline as one smarter model, or confusing a reported claim with proven production impact.
+- For beginner wrong options, use mistakes from the same anchor section: one may overstate availability/adoption, one may turn a limited result into a general proof, and one may confuse the burden or risk described there.
+- For beginner wrong options, do not introduce named entities, products, legal topics, regulatory topics, or tool names that are absent from the question and correct option.
+- If the question is anchored on a compute story, every wrong option must stay about compute access, cost, contracts, availability, or openness.
 - Wrong options must stay within the same story or paragraph cluster as the correct answer. Do not use unrelated skim items or different article topics as distractors.
+- Do not use a different story as a distractor.
 - If the answer is about FEST, every wrong option should be a plausible misunderstanding of FEST; if the answer is about account linking, every wrong option should be a plausible misunderstanding of account linking.
 - Keep all four options similar in length and specificity.
 
@@ -2732,6 +2746,13 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 {_QC_KO_LOCALE_PROPER_NOUN_HEADING_RULE}
   - Scoring: **10** if KO prose/blockquotes are Korean and only proper nouns remain in Latin script. **7** if exactly 1 borderline mixed-language sentence appears inside otherwise Korean prose. **4** if 2-3 prose/blockquote violations. **0** if any KO body paragraph or `>` blockquote is English-only.
 
+### Quiz Quality
+- If no `=== EN QUIZ` or `=== KO QUIZ` block is included in the payload, score all quiz_quality dimensions 10 with evidence "quiz not provided to this check".
+- **quiz_grounding**: The correct answer is directly supported by that locale's Beginner body, not by outside knowledge or a different persona.
+- **quiz_distractor_scope**: Wrong options stay inside the same story/section as the correct answer and do not borrow names or claims from unrelated skim items.
+- **quiz_answer_integrity**: The explanation supports only the selected answer and does not contradict `answer` or `answer_index`.
+- **quiz_beginner_fit**: The question checks the safe beginner takeaway or likely overclaim, not trivia, obscure recall, or a tricky negative inference.
+
 {_QC_SHARED_SEVERITY_RULES}
 
 ## Output JSON
@@ -2754,7 +2775,13 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "article_copy": {{"evidence": "...", "score": 0}},
     "locale_integrity": {{"evidence": "...", "score": 0}}
   }},
-  "issues": [{{"severity": "major|minor", "scope": "beginner_body|ko|en", "category": "structure|accessibility|locale|clarity|source", "message": "..."}}]
+  "quiz_quality": {{
+    "quiz_grounding": {{"evidence": "...", "score": 0}},
+    "quiz_distractor_scope": {{"evidence": "...", "score": 0}},
+    "quiz_answer_integrity": {{"evidence": "...", "score": 0}},
+    "quiz_beginner_fit": {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "beginner_body|ko|en", "category": "structure|accessibility|locale|clarity|source|quiz", "message": "..."}}]
 }}"""
 
 
@@ -2786,6 +2813,13 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 {_QC_KO_LOCALE_PROPER_NOUN_HEADING_RULE}
   - Scoring: **10** if KO prose/blockquotes are Korean and only proper nouns remain in Latin script. **7** if exactly 1 borderline mixed-language sentence appears inside otherwise Korean prose. **4** if 2-3 prose/blockquote violations. **0** if any KO body paragraph or `>` blockquote is English-only.
 
+### Quiz Quality
+- If no `=== EN QUIZ` or `=== KO QUIZ` block is included in the payload, score all quiz_quality dimensions 10 with evidence "quiz not provided to this check".
+- **quiz_grounding**: The correct answer is directly supported by that locale's Beginner body, not by outside knowledge or a different persona.
+- **quiz_distractor_scope**: Wrong options stay inside the same story/section as the correct answer and do not borrow names or claims from unrelated skim items.
+- **quiz_answer_integrity**: The explanation supports only the selected answer and does not contradict `answer` or `answer_index`.
+- **quiz_beginner_fit**: The question checks the safe beginner takeaway or likely overclaim, not trivia, obscure recall, or a tricky negative inference.
+
 {_QC_SHARED_SEVERITY_RULES}
 
 ## Output JSON
@@ -2808,7 +2842,13 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
     "article_copy": {{"evidence": "...", "score": 0}},
     "locale_integrity": {{"evidence": "...", "score": 0}}
   }},
-  "issues": [{{"severity": "major|minor", "scope": "beginner_body|ko|en", "category": "structure|accessibility|locale|clarity|source", "message": "..."}}]
+  "quiz_quality": {{
+    "quiz_grounding": {{"evidence": "...", "score": 0}},
+    "quiz_distractor_scope": {{"evidence": "...", "score": 0}},
+    "quiz_answer_integrity": {{"evidence": "...", "score": 0}},
+    "quiz_beginner_fit": {{"evidence": "...", "score": 0}}
+  }},
+  "issues": [{{"severity": "major|minor", "scope": "beginner_body|ko|en", "category": "structure|accessibility|locale|clarity|source|quiz", "message": "..."}}]
 }}"""
 
 

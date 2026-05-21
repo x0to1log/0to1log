@@ -323,7 +323,7 @@ def _quiz_token_weight(token: str) -> int:
 
 
 _QUIZ_NEGATION_RE = re.compile(
-    r"\b(no|not|never|none|neither|without|cannot|can't|doesn't|does\s+not|"
+    r"\b(no|not|never|none|neither|cannot|can't|doesn't|does\s+not|"
     r"do\s+not|did\s+not|isn't|is\s+not|aren't|are\s+not|won't|will\s+not|"
     r"incorrect|wrong|false|unsupported|overclaim|overclaims|overstated|overstates)\b",
     re.IGNORECASE,
@@ -342,9 +342,18 @@ def _quiz_has_negation(text: str) -> bool:
 def _quiz_explanation_clauses(text: str) -> list[str]:
     return [
         clause.strip()
-        for clause in re.split(r"(?:[.;!?]\s+|;\s*|,\s+and\s+that\s+|,\s+but\s+)", text)
+        for clause in re.split(r"(?:[.;!?]\s+|;\s*|,\s+and\s+(?:that\s+)?|,\s+but\s+)", text)
         if clause.strip()
     ]
+
+
+def _quiz_positive_support_tokens(explanation: str) -> set[str]:
+    tokens: set[str] = set()
+    for clause in _quiz_explanation_clauses(explanation):
+        if _quiz_has_negation(clause):
+            continue
+        tokens.update(_quiz_support_tokens(clause))
+    return tokens or _quiz_support_tokens(explanation)
 
 
 def _sanitize_quiz_explanation_position_markers(text: str) -> str:
@@ -437,7 +446,7 @@ def _repair_quiz_answer_from_explanation(
     label: str,
 ) -> str:
     """Repair a likely answer_index slip when explanation strongly supports another option."""
-    evidence_tokens = _quiz_support_tokens(f"{question} {explanation}")
+    evidence_tokens = _quiz_positive_support_tokens(explanation)
     if not explanation.strip() or len(evidence_tokens) < 3:
         return answer
     try:

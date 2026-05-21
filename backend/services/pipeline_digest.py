@@ -1663,12 +1663,21 @@ async def _generate_digest(
         "focus_items_ko": digest_focus_items_ko,
     }
 
-    # Quality check — score the generated digest
+    # Generate quizzes before QC so beginner quiz quality can be inspected.
+    persona_quizzes, quiz_usage = await _generate_digest_quizzes(
+        digest_type=digest_type,
+        personas=personas,
+        supabase=supabase,
+        run_id=run_id,
+    )
+    cumulative_usage = merge_usage_metrics(cumulative_usage, quiz_usage)
+
     quality_result = await _check_digest_quality(
         personas, digest_type, classified, community_summary_map,
         supabase, run_id, cumulative_usage,
         frontload=frontload_payload,
         enriched_map=enriched_map,
+        persona_quizzes=persona_quizzes,
     )
     if isinstance(quality_result, dict):
         quality_score = int(quality_result.get("score", quality_result.get("quality_score", 0)) or 0)
@@ -1690,14 +1699,6 @@ async def _generate_digest(
             digest_type,
         )
         auto_publish = False
-
-    persona_quizzes, quiz_usage = await _generate_digest_quizzes(
-        digest_type=digest_type,
-        personas=personas,
-        supabase=supabase,
-        run_id=run_id,
-    )
-    cumulative_usage = merge_usage_metrics(cumulative_usage, quiz_usage)
 
     # Save EN + KO rows
     missing = [p for p in DAILY_DIGEST_PERSONAS if p not in personas]

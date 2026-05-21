@@ -13,6 +13,7 @@ Extracted from pipeline.py during 2026-04-15 Phase 1.
 External callers should still import from services.pipeline (re-exported).
 """
 import asyncio
+import json
 import logging
 import re
 import time
@@ -66,7 +67,19 @@ def _body_paragraphs_for_quality(content: str) -> list[str]:
     return paragraphs
 
 
-def _build_body_quality_payload(persona_name: str, persona_output: PersonaOutput) -> str:
+def _format_quiz_quality_payload(quiz: dict[str, Any] | None) -> str:
+    if not isinstance(quiz, dict) or not quiz:
+        return ""
+    return json.dumps(quiz, ensure_ascii=False, sort_keys=True)
+
+
+def _build_body_quality_payload(
+    persona_name: str,
+    persona_output: PersonaOutput,
+    *,
+    quiz_en: dict[str, Any] | None = None,
+    quiz_ko: dict[str, Any] | None = None,
+) -> str:
     """Build a bilingual body-scoring payload for one persona.
 
     Payload has explicit SCOPE boundaries so the LLM judge evaluates each
@@ -75,13 +88,23 @@ def _build_body_quality_payload(persona_name: str, persona_output: PersonaOutput
     The `scan-this` / `do-not-scan` labels anchor the locale_integrity rule
     to the KO section only.
     """
-    return (
+    payload = (
         f"Persona: {persona_name}\n\n"
         "=== EN BODY — scan only for en-scoped issues; English quotes here are expected ===\n"
         f"{persona_output.en.strip()}\n\n"
         "=== KO BODY — scan THIS section (and only this section) for locale_integrity (English leakage into Korean) ===\n"
         f"{persona_output.ko.strip()}"
     ).strip()
+    quiz_blocks: list[str] = []
+    quiz_en_payload = _format_quiz_quality_payload(quiz_en)
+    if quiz_en_payload:
+        quiz_blocks.append(f"=== EN QUIZ ===\n{quiz_en_payload}")
+    quiz_ko_payload = _format_quiz_quality_payload(quiz_ko)
+    if quiz_ko_payload:
+        quiz_blocks.append(f"=== KO QUIZ ===\n{quiz_ko_payload}")
+    if quiz_blocks:
+        payload = f"{payload}\n\n" + "\n\n".join(quiz_blocks)
+    return payload
 
 
 def _build_frontload_quality_payload(frontload: dict[str, Any] | None) -> str:
@@ -761,6 +784,7 @@ async def _check_digest_quality(
     cumulative_usage: dict[str, Any],
     frontload: dict[str, Any] | None = None,
     enriched_map: dict[str, list[dict[str, Any]]] | None = None,
+    persona_quizzes: dict[str, dict[str, dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     """Score quality of generated digest with body + frontload + deterministic checks."""
     t0 = time.monotonic()
@@ -775,6 +799,7 @@ async def _check_digest_quality(
     expert = personas.get("expert")
     learner = personas.get("learner")
     beginner = personas.get("beginner")
+    persona_quizzes = persona_quizzes or {}
     if not expert or not expert.en:
         logger.warning("Quality check skipped for %s: no expert content", digest_type)
         await _log_stage(
@@ -840,10 +865,19 @@ async def _check_digest_quality(
         logger.error("Quality check %s failed after %d attempts", label, max_retries)
         return 0, {}, [], {}
 
+    def _quiz_for(persona: str, locale: str) -> dict[str, Any] | None:
+        quiz = persona_quizzes.get(persona, {}).get(locale)
+        return quiz if isinstance(quiz, dict) else None
+
     tasks = [
         _score(
             expert_prompt,
-            _build_body_quality_payload("expert", expert),
+            _build_body_quality_payload(
+                "expert",
+                expert,
+                quiz_en=_quiz_for("expert", "en"),
+                quiz_ko=_quiz_for("expert", "ko"),
+            ),
             f"Quality-{digest_type}-expert",
             "expert_body",
         )
@@ -852,7 +886,12 @@ async def _check_digest_quality(
         tasks.append(
             _score(
                 learner_prompt,
-                _build_body_quality_payload("learner", learner),
+                _build_body_quality_payload(
+                    "learner",
+                    learner,
+                    quiz_en=_quiz_for("learner", "en"),
+                    quiz_ko=_quiz_for("learner", "ko"),
+                ),
                 f"Quality-{digest_type}-learner",
                 "learner_body",
             )
@@ -861,7 +900,12 @@ async def _check_digest_quality(
         tasks.append(
             _score(
                 beginner_prompt,
-                _build_body_quality_payload("beginner", beginner),
+                _build_body_quality_payload(
+                    "beginner",
+                    beginner,
+                    quiz_en=_quiz_for("beginner", "en"),
+                    quiz_ko=_quiz_for("beginner", "ko"),
+                ),
                 f"Quality-{digest_type}-beginner",
                 "beginner_body",
             )

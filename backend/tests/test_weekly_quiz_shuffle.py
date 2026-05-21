@@ -246,6 +246,58 @@ class TestSingleItemValidator:
         assert out is not None
         assert out["answer"] == item["options"][1]
 
+    def test_repair_does_not_override_tide_answer_due_question_overlap(self):
+        item = {
+            "question": (
+                "What does TIDE do to speed up diffusion MoE LLM inference "
+                "without retraining, according to the digest?"
+            ),
+            "options": [
+                "It cuts expert I/O by exploiting temporal stability of expert activations and refreshes expert placement at optimized intervals.",
+                "It converts the diffusion decoder into an autoregressive decoder to avoid parallel expert I/O.",
+                "It fine-tunes the model to use fewer experts per token so less data is moved during diffusion decoding.",
+                "It compresses expert activations with lossy quantization to reduce CPU-GPU transfer volume.",
+            ],
+            "answer_index": 0,
+            "explanation": (
+                "The digest describes TIDE as an inference-time, lossless optimization "
+                "that exploits temporal stability of expert activations and uses "
+                "interval-based expert refreshes to reduce expert I/O and CPU work "
+                "without retraining."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][0]
+
+    def test_repair_does_not_select_negated_rope_distractor(self):
+        item = {
+            "question": (
+                "According to the digest, what is the correct practical takeaway "
+                "about increasing the RoPE base to extend context length?"
+            ),
+            "options": [
+                "Raising the RoPE base forces a trade-off: it can help distinguish tokens but degrades the model's ability to distinguish positions.",
+                "Minor changes to RoPE base can be compensated by stacking more heads and layers, so there is no need to change positional encodings.",
+                "Raising the RoPE base is a free win: it preserves both token and position discrimination at larger lengths.",
+                "Setting a very large RoPE base completely eliminates the randomization effect and restores locality bias at extreme lengths.",
+            ],
+            "answer_index": 0,
+            "explanation": (
+                "The digest explains the paper proves a trade-off: increasing the RoPE "
+                "base helps tell tokens apart but sacrifices the ability to distinguish "
+                "positions, and stacking heads/layers does not overcome this theoretical "
+                "limit."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][0]
+
     def test_repair_handles_curly_apostrophe_negation_in_correct_option(self):
         item = {
             "question": (

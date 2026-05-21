@@ -97,6 +97,8 @@ def test_research_beginner_prompt_limits_method_name_stacking_after_problem_fram
 
     assert "Do not place more than two method, model, benchmark, or dataset names in the same paragraph" in prompt
     assert "move the extras to Worth Skimming or the learner-digest bridge" in prompt
+    assert "The first sentence after each main research heading should state the plain problem without acronyms or method names" in prompt
+    assert "If a method name is necessary, pair it with its role, not a full definition" in prompt
 
 
 def test_beginner_prompts_frame_learner_bridge_as_editorial_pointer():
@@ -157,6 +159,11 @@ def test_digest_quiz_prompt_makes_beginner_quiz_a_misconception_check_not_recall
         assert "misconception check, not recall" in prompt
         assert "Do not ask about trivia that is only a number, date, product name, benchmark score, funding amount, CVE count, or company name" in prompt
         assert "The correct option is the safest interpretation of the digest's beginner lens" in prompt
+        assert "Prefer asking for the safest takeaway from the digest" in prompt
+        assert "Avoid questions where multiple options can be interpreted as reasonable warnings" in prompt
+        assert "Avoid wording the question as a negative warning if that makes several options sound partly true" in prompt
+        assert "Do not ask beginner questions in the form \"which misunderstanding should readers avoid\"" in prompt
+        assert "Beginner correct options must state one single safe takeaway, not combine two warnings with and/or" in prompt
         assert "Wrong options should be plausible beginner mistakes" in prompt
         assert "Wrong options must stay within the same story or paragraph cluster as the correct answer" in prompt
         assert "Do not use unrelated skim items or different article topics as distractors" in prompt
@@ -164,6 +171,18 @@ def test_digest_quiz_prompt_makes_beginner_quiz_a_misconception_check_not_recall
         assert "Keep all four options similar in length and specificity" in prompt
         assert "overclaiming rollout or adoption" in prompt
         assert "treating a workflow/pipeline as one smarter model" in prompt
+
+
+def test_digest_quiz_prompt_anchors_options_to_one_body_section():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "en")
+
+        assert "Silently choose one anchor section and one anchor paragraph" in prompt
+        assert "All four options must be derived from that same anchor section" in prompt
+        assert "Do not use names, products, projects, companies, methods, or claims that do not appear in the anchor section" in prompt
+        assert "Do not use a different story as a distractor" in prompt
+        assert "For beginner wrong options, do not introduce named entities, products, legal topics, regulatory topics, or tool names that are absent from the question and correct option" in prompt
+        assert "If the question is anchored on a compute story, every wrong option must stay about compute access, cost, contracts, availability, or openness" in prompt
 
 
 def test_digest_quiz_prompt_separates_personas_without_making_expert_exam_like():
@@ -299,6 +318,10 @@ def test_beginner_quality_rubrics_cover_beginner_specific_failures():
         assert "one_line_scope" in prompt
         assert "schema_placeholder" in prompt
         assert "term_definition_repetition" in prompt
+        assert "quiz_grounding" in prompt
+        assert "quiz_distractor_scope" in prompt
+        assert "quiz_answer_integrity" in prompt
+        assert "quiz_beginner_fit" in prompt
         assert "학습자 뉴스 이어읽기" in prompt
         assert "보세요" in prompt
         assert "중점으로 보자" in prompt
