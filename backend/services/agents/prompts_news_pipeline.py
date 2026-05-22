@@ -1661,6 +1661,11 @@ using only the provided {locale_name} bodies as source material.
 - The correct option must not be the only option with a caveat, condition, number, or named mechanism.
 - No option should be more than 30% longer than the median option length.
 - If one is, rewrite all four options before returning.
+- For mechanism questions, write each option as a short mechanism label plus the object it changes, not a full mechanism explanation.
+- For limitation questions, write each option as one limitation label, not a paragraph with evidence and caveats.
+- Do not make one option the only full sentence while the others are fragments.
+- Correct options should usually be 18 English words or fewer unless all four options use the same compact sentence shape.
+- Korean options should usually fit in one short line unless all four options use the same compact sentence shape.
 
 ## Digest-Type Quiz Focus
 {digest_type_focus}

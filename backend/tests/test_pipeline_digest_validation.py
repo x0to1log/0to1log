@@ -127,6 +127,105 @@ def _mock_quiz_response(locale: str = "en"):
     )
 
 
+def test_digest_quiz_retry_feedback_names_rejected_personas_and_fix_contract():
+    import services.pipeline  # noqa: F401 - initialize pipeline re-exports before direct module import
+    from services.pipeline_digest import _build_digest_quiz_retry_feedback
+
+    feedback = _build_digest_quiz_retry_feedback(
+        digest_type="research",
+        locale="en",
+        missing=["expert", "learner"],
+    )
+
+    assert "Previous quiz attempt was rejected" in feedback
+    assert "expert, learner" in feedback
+    assert "Regenerate all three keys: expert, learner, beginner" in feedback
+    assert "The correct option cannot be the uniquely longest option" in feedback
+    assert "Use short answer choices, not mini-explanations" in feedback
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_quizzes_adds_validation_feedback_before_retry():
+    from services.pipeline import _generate_digest_quizzes
+
+    personas = {
+        "expert": PersonaOutput(
+            en="## Research Papers\n\n### Expert\n\nThe digest says model access changed without proving production impact.",
+            ko="## Research Papers\n\n### Expert\n\n본문은 모델 접근이 바뀌었지만 운영 성과가 증명된 것은 아니라고 말한다.",
+        ),
+        "learner": PersonaOutput(
+            en="## Research Papers\n\n### Learner\n\nThe digest says the method changes training data quality rather than deployment guarantees.",
+            ko="## Research Papers\n\n### Learner\n\n본문은 이 방법이 배포 보장이 아니라 학습 데이터 품질을 바꾼다고 말한다.",
+        ),
+        "beginner": PersonaOutput(
+            en="## Context First\n\n### Beginner\n\nThe safest takeaway is that the result is promising but still limited.",
+            ko="## 먼저 본 맥락\n\n### Beginner\n\n가장 안전한 해석은 결과가 유망하지만 아직 제한적이라는 것이다.",
+        ),
+    }
+    invalid_en = _mock_openai_response(
+        {
+            "learner": {
+                "question": "What changed according to the digest?",
+                "options": [
+                    "Training data quality changed.",
+                    "Deployment guarantees changed.",
+                    "All products changed.",
+                    "Only the date changed.",
+                ],
+                "answer_index": 0,
+                "explanation": "The digest connects the method to training data quality.",
+            },
+            "beginner": {
+                "question": "What is safest to conclude?",
+                "options": [
+                    "The result is promising but limited.",
+                    "The result proves every system works.",
+                    "The result removes all risk.",
+                    "The result is only a name.",
+                ],
+                "answer_index": 0,
+                "explanation": "The beginner body calls the result promising but limited.",
+            },
+        }
+    )
+    responses = [
+        invalid_en,
+        _mock_quiz_response("en"),
+        _mock_quiz_response("ko"),
+    ]
+    captured_messages: list[list[dict[str, str]]] = []
+
+    async def _capture_create(*args, **kwargs):
+        captured_messages.append(kwargs["messages"])
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_light = "gpt-5-mini"
+
+        quizzes, _usage = await _generate_digest_quizzes(
+            digest_type="research",
+            personas=personas,
+            supabase=MagicMock(),
+            run_id="run-1",
+        )
+
+    assert set(quizzes) == {"expert", "learner", "beginner"}
+    assert len(captured_messages) == 3
+    retry_messages = captured_messages[1]
+    assert len(retry_messages) == 3
+    assert retry_messages[-1]["role"] == "user"
+    retry_feedback = retry_messages[-1]["content"]
+    assert "Previous quiz attempt was rejected" in retry_feedback
+    assert "expert" in retry_feedback
+    assert "Regenerate all three keys: expert, learner, beginner" in retry_feedback
+    assert "The correct option cannot be the uniquely longest option" in retry_feedback
+
+
 class _UpsertQuery:
     def __init__(self, supabase, table_name: str):
         self.supabase = supabase

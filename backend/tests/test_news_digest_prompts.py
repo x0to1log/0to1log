@@ -202,6 +202,17 @@ def test_digest_quiz_prompt_requires_single_task_and_option_length_balance():
         assert "If one is, rewrite all four options before returning" in prompt
 
 
+def test_digest_quiz_prompt_requires_short_parallel_option_shapes():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "en")
+
+        assert "For mechanism questions, write each option as a short mechanism label plus the object it changes" in prompt
+        assert "For limitation questions, write each option as one limitation label" in prompt
+        assert "Do not make one option the only full sentence while the others are fragments" in prompt
+        assert "Correct options should usually be 18 English words or fewer" in prompt
+        assert "Korean options should usually fit in one short line" in prompt
+
+
 def test_digest_quiz_prompt_separates_personas_without_making_expert_exam_like():
     prompt = get_digest_quiz_prompt("research", "en")
 

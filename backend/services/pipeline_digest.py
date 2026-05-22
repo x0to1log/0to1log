@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 
 DAILY_DIGEST_PERSONAS: tuple[str, ...] = ("expert", "learner", "beginner")
 REQUIRED_DAILY_DIGEST_PERSONAS: tuple[str, ...] = ("expert", "learner")
+MAX_DIGEST_QUIZ_ATTEMPTS = 3
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +590,31 @@ def _normalize_digest_quiz_payload(
     return quizzes, missing
 
 
+def _build_digest_quiz_retry_feedback(
+    *,
+    digest_type: str,
+    locale: str,
+    missing: list[str],
+) -> str:
+    """Build a targeted validation feedback message for quiz retries."""
+
+    locale_name = "English" if locale == "en" else "Korean"
+    invalid_keys = ", ".join(missing) if missing else "unknown"
+    return "\n".join(
+        [
+            "Previous quiz attempt was rejected by validation.",
+            f"Digest type: {digest_type}",
+            f"Locale: {locale} ({locale_name})",
+            f"Rejected or missing persona keys: {invalid_keys}",
+            "Regenerate all three keys: expert, learner, beginner. Do not return only the rejected keys.",
+            "Most likely fix: option shape and answer length. The correct option cannot be the uniquely longest option.",
+            "Use short answer choices, not mini-explanations. Put the reasoning in explanation, not in the selected option.",
+            "Keep all four options similar in length, grammar, specificity, caveats, numbers, and named mechanisms.",
+            "Ask one task only. Do not combine what changed with why it matters in the same question.",
+        ]
+    )
+
+
 async def _generate_digest_quizzes(
     *,
     digest_type: str,
@@ -628,6 +654,7 @@ async def _generate_digest_quizzes(
     usage_total: dict[str, Any] = {}
     missing_by_locale: dict[str, list[str]] = {}
     error_by_locale: dict[str, str] = {}
+    quiz_call_count = 0
 
     for locale in ("en", "ko"):
         messages = [
@@ -641,9 +668,11 @@ async def _generate_digest_quizzes(
         last_error: str | None = None
         locale_success = False
 
-        for attempt in range(2):
+        for attempt in range(MAX_DIGEST_QUIZ_ATTEMPTS):
             try:
                 async def _quiz_call() -> Any:
+                    nonlocal quiz_call_count
+                    quiz_call_count += 1
                     return await asyncio.wait_for(
                         client.chat.completions.create(
                             **compat_create_kwargs(
@@ -686,6 +715,17 @@ async def _generate_digest_quizzes(
                     attempt + 1,
                     missing,
                 )
+                if attempt + 1 < MAX_DIGEST_QUIZ_ATTEMPTS:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": _build_digest_quiz_retry_feedback(
+                                digest_type=digest_type,
+                                locale=locale,
+                                missing=missing,
+                            ),
+                        }
+                    )
             except Exception as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
                 est = estimate_failed_call_usage(
@@ -716,11 +756,11 @@ async def _generate_digest_quizzes(
             f"digest:{digest_type}:quiz",
             "success",
             t_quiz,
-            output_summary="Generated 6 daily quizzes via 2 locale-specific calls",
+            output_summary=f"Generated 6 daily quizzes via {quiz_call_count} locale-specific calls",
             usage=usage_total,
             post_type=digest_type,
-            attempt=2,
-            debug_meta={"calls": 2, "missing_by_locale": {}},
+            attempt=MAX_DIGEST_QUIZ_ATTEMPTS,
+            debug_meta={"calls": quiz_call_count, "missing_by_locale": {}},
         )
         return all_quizzes, usage_total
 
@@ -740,9 +780,9 @@ async def _generate_digest_quizzes(
         error_message="; ".join(error_by_locale.values()) or None,
         usage=usage_total,
         post_type=digest_type,
-        attempt=2,
+        attempt=MAX_DIGEST_QUIZ_ATTEMPTS,
         debug_meta={
-            "calls": 2,
+            "calls": quiz_call_count,
             "generated": generated,
             "missing_by_locale": missing_by_locale,
             "error_by_locale": error_by_locale,
