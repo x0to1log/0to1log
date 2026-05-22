@@ -2089,6 +2089,52 @@ def _load_personas_and_frontload_from_db(
     return _build_personas_and_frontload_from_rows(rows)
 
 
+def _blocking_published_rows(
+    published_rows: list[dict[str, Any]],
+    category: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return published rows that should block a rerun.
+
+    Broad reruns are blocked by any published daily row. Category-scoped reruns
+    should only be blocked by the same post_type; an already-published business
+    digest must not prevent recovering a missing research digest.
+    """
+    if not category:
+        return published_rows
+    return [row for row in published_rows if row.get("post_type") == category]
+
+
+def _find_missing_daily_digest_types(
+    rank_checkpoint: dict[str, Any] | None,
+    rows: list[dict[str, Any]],
+    category: str | None = None,
+) -> list[str]:
+    """Find ranked digest types that do not have both EN and KO saved rows."""
+    rank_checkpoint = rank_checkpoint or {}
+    rows_by_type = _group_daily_digest_rows_by_type(rows)
+    missing: list[str] = []
+    for digest_type in ("research", "business"):
+        if category and digest_type != category:
+            continue
+        if not rank_checkpoint.get(digest_type):
+            continue
+        locales = rows_by_type.get(digest_type, {})
+        if not (locales.get("en") and locales.get("ko")):
+            missing.append(digest_type)
+    return missing
+
+
+def _fetch_published_daily_rows(supabase, batch_id: str) -> list[dict[str, Any]]:
+    result = (
+        supabase.table("news_posts")
+        .select("id,slug,post_type,status")
+        .eq("pipeline_batch_id", batch_id)
+        .eq("status", "published")
+        .execute()
+    )
+    return result.data or []
+
+
 async def _rerun_digest_quizzes_from_existing_posts(
     *,
     supabase,
@@ -2187,6 +2233,7 @@ async def rerun_pipeline_stage(
     from_stage: str,
     batch_id: str,
     category: str | None = None,
+    auto_publish: bool = False,
 ) -> PipelineResult:
     """Rerun pipeline from a specific stage using saved checkpoints.
 
@@ -2198,6 +2245,7 @@ async def rerun_pipeline_stage(
         from_stage: Stage to start from ("classify"|"merge"|"community"|"write"|"beginner"|"quiz"|"quality").
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
+        auto_publish: mark regenerated drafts eligible for scheduled promotion.
     """
     from models.news_pipeline import ClassifiedCandidate, NewsCandidate
 
@@ -2279,11 +2327,14 @@ async def rerun_pipeline_stage(
         # Guard: prevent broad reruns from overwriting published posts.
         # Quiz-only rerun is intentionally allowed on published rows because it
         # updates only guide_items.quiz_poll_* for live quiz fixes.
-        published = supabase.table("news_posts").select("id").eq(
-            "pipeline_batch_id", batch_id,
-        ).eq("status", "published").execute()
-        if published.data and from_stage != "quiz":
-            msg = f"Cannot rerun: {len(published.data)} published posts exist for {batch_id}. Unpublish first."
+        published_rows = _fetch_published_daily_rows(supabase, batch_id)
+        blocking_published = _blocking_published_rows(published_rows, category)
+        if blocking_published and from_stage != "quiz":
+            scope = category or "batch"
+            msg = (
+                f"Cannot rerun {scope}: {len(blocking_published)} published "
+                f"post(s) exist for {batch_id}. Unpublish that scope first."
+            )
             logger.error(msg)
             supabase.table("pipeline_runs").update({
                 "status": "failed",
@@ -2736,7 +2787,7 @@ async def rerun_pipeline_stage(
                     supabase=supabase,
                     run_id=run_id,
                     enriched_map=enriched_map,
-                    auto_publish=False,
+                    auto_publish=auto_publish,
                     **digest_kwargs,
                 )
             )
@@ -2788,6 +2839,144 @@ async def rerun_pipeline_stage(
         except Exception:
             pass
         return PipelineResult(batch_id=batch_id, status="failed", message=str(e))
+
+
+async def recover_incomplete_daily_batch(
+    batch_id: str,
+    *,
+    category: str | None = None,
+    auto_publish: bool = True,
+    promote_after_recovery: bool = True,
+    stale_after_minutes: int = 75,
+) -> dict[str, Any]:
+    """Recover ranked-but-unsaved daily digests from checkpoints.
+
+    This is intentionally narrower than a full rerun: it uses the saved `rank`
+    checkpoint to identify expected digest types and only reruns `write` for
+    categories that lack both EN and KO rows. Existing published categories are
+    left untouched.
+    """
+    supabase = get_supabase()
+    if not supabase:
+        return {
+            "batch_id": batch_id,
+            "recovered": [],
+            "skipped": [],
+            "errors": ["Supabase not configured"],
+        }
+
+    run_key = f"news-{batch_id}"
+    run_rows = (
+        supabase.table("pipeline_runs")
+        .select("id,status,started_at")
+        .eq("run_key", run_key)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not run_rows:
+        return {
+            "batch_id": batch_id,
+            "recovered": [],
+            "skipped": [f"no pipeline run found for {run_key}"],
+            "errors": [],
+        }
+
+    run = run_rows[0]
+    run_id = run["id"]
+    skipped: list[str] = []
+    errors: list[str] = []
+    recovered: list[str] = []
+
+    if run.get("status") == "running":
+        started_at = run.get("started_at")
+        stale = False
+        if started_at:
+            try:
+                started = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
+                stale = (datetime.now(timezone.utc) - started).total_seconds() >= stale_after_minutes * 60
+            except ValueError:
+                stale = False
+        if not stale:
+            return {
+                "batch_id": batch_id,
+                "recovered": [],
+                "skipped": [f"run {run_id} is still running"],
+                "errors": [],
+            }
+        claim = (
+            supabase.table("pipeline_runs")
+            .update({
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "last_error": (
+                    f"Marked stale by incomplete daily recovery "
+                    f"(>{stale_after_minutes} minutes)"
+                ),
+            })
+            .eq("id", run_id)
+            .eq("status", "running")
+            .execute()
+        )
+        if not claim.data:
+            return {
+                "batch_id": batch_id,
+                "recovered": [],
+                "skipped": [f"run {run_id} could not be claimed for recovery"],
+                "errors": [],
+            }
+
+    rank_checkpoint = _load_checkpoint(supabase, run_id, "rank")
+    if not rank_checkpoint:
+        return {
+            "batch_id": batch_id,
+            "recovered": [],
+            "skipped": ["missing rank checkpoint"],
+            "errors": [],
+        }
+
+    existing_rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
+    missing_types = _find_missing_daily_digest_types(
+        rank_checkpoint,
+        existing_rows,
+        category=category,
+    )
+    if not missing_types:
+        return {
+            "batch_id": batch_id,
+            "recovered": [],
+            "skipped": ["no missing digest types"],
+            "errors": [],
+        }
+
+    for digest_type in missing_types:
+        result = await rerun_pipeline_stage(
+            source_run_id=run_id,
+            from_stage="write",
+            batch_id=batch_id,
+            category=digest_type,
+            auto_publish=auto_publish,
+        )
+        if result.status == "success" and result.posts_created > 0:
+            recovered.append(digest_type)
+        else:
+            errors.append(
+                f"{digest_type} recovery failed: "
+                f"{'; '.join(result.errors) or result.message or result.status}"
+            )
+
+    promotion: dict[str, Any] | None = None
+    if recovered and auto_publish and promote_after_recovery:
+        promotion = await promote_drafts(batch_id=batch_id)
+
+    return {
+        "batch_id": batch_id,
+        "recovered": recovered,
+        "skipped": skipped,
+        "errors": errors,
+        "promotion": promotion,
+    }
 
 
 async def run_handbook_extraction(batch_id: str) -> PipelineResult:

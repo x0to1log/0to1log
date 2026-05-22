@@ -215,7 +215,9 @@ try {
   if (weeklyData) weeklyEnabled = weeklyData.value === true;
 } catch {}
 
-// Detect stuck pipeline runs — news: 30min, handbook: 60min
+// Detect possibly stuck pipeline runs for display only.
+// Backend recovery owns status changes; the admin UI must not mark a long
+// writer run failed just because the page was opened.
 const NEWS_TIMEOUT_MS = 30 * 60 * 1000;
 const HANDBOOK_TIMEOUT_MS = 60 * 60 * 1000;
 
@@ -230,15 +232,7 @@ const isStuck = checkStuck(lastRun);
 if (isStuck && lastRun) {
   const isHandbook = lastRun.run_key?.startsWith('handbook-');
   const timeoutMin = isHandbook ? 60 : 30;
-  try {
-    await sb.from('pipeline_runs').update({
-      status: 'failed',
-      finished_at: new Date().toISOString(),
-      last_error: `Pipeline timed out (>${timeoutMin} minutes)`,
-    }).eq('id', lastRun.id).eq('status', 'running');
-    lastRun.status = 'failed';
-    lastRunError = `Pipeline timed out (>${timeoutMin} minutes)`;
-  } catch {}
+  lastRunError = `Pipeline appears stuck (>${timeoutMin} minutes); backend recovery will handle incomplete batches.`;
 }
 
 // Show Retry Handbook when:

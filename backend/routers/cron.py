@@ -11,7 +11,15 @@ from core.config import today_kst
 from core.database import get_supabase
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
-from services.pipeline import check_existing_batch, cleanup_existing_batch, promote_drafts, rerun_pipeline_stage, run_daily_pipeline, run_handbook_extraction
+from services.pipeline import (
+    check_existing_batch,
+    cleanup_existing_batch,
+    promote_drafts,
+    recover_incomplete_daily_batch,
+    rerun_pipeline_stage,
+    run_daily_pipeline,
+    run_handbook_extraction,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -304,6 +312,23 @@ async def trigger_promote_drafts(
 
     async def _run():
         try:
+            recovery = await recover_incomplete_daily_batch(
+                batch_id=batch_id,
+                auto_publish=True,
+                promote_after_recovery=False,
+            )
+            if recovery.get("recovered"):
+                logger.info(
+                    "Recovered incomplete daily batch %s before promotion: %s",
+                    batch_id,
+                    recovery.get("recovered"),
+                )
+            if recovery.get("errors"):
+                logger.warning(
+                    "Incomplete daily recovery %s reported errors: %s",
+                    batch_id,
+                    recovery.get("errors"),
+                )
             result = await promote_drafts(batch_id=batch_id)
             logger.info(
                 "Promote drafts %s finished: %d promoted, %d kept draft",

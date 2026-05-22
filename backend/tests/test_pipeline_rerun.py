@@ -315,6 +315,79 @@ def test_load_personas_and_frontload_includes_beginner_when_available():
     assert personas_by_type["research"]["beginner"].ko == "KO beginner"
 
 
+def test_blocking_published_rows_respects_category_filter():
+    """A research-only recovery must not be blocked by already-published business rows."""
+    from services.pipeline import _blocking_published_rows
+
+    business_row = {"id": "biz-en", "post_type": "business", "slug": "2026-05-22-business-digest"}
+    research_row = {"id": "res-en", "post_type": "research", "slug": "2026-05-22-research-digest"}
+
+    assert _blocking_published_rows([business_row], category="research") == []
+    assert _blocking_published_rows([business_row, research_row], category="research") == [research_row]
+    assert _blocking_published_rows([business_row], category=None) == [business_row]
+
+
+def test_find_missing_daily_digest_types_detects_ranked_category_without_saved_rows():
+    from services.pipeline import _find_missing_daily_digest_types
+
+    rank_checkpoint = {
+        "research": [SAMPLE_MERGED_RESULT.research[0].model_dump()],
+        "business": [SAMPLE_MERGED_RESULT.business[0].model_dump()],
+    }
+    rows = [
+        {"slug": "2026-05-22-business-digest", "locale": "en", "post_type": "business"},
+        {"slug": "2026-05-22-business-digest-ko", "locale": "ko", "post_type": "business"},
+    ]
+
+    assert _find_missing_daily_digest_types(rank_checkpoint, rows) == ["research"]
+    assert _find_missing_daily_digest_types(rank_checkpoint, rows, category="research") == ["research"]
+    assert _find_missing_daily_digest_types(rank_checkpoint, rows, category="business") == []
+
+
+@pytest.mark.asyncio
+async def test_recover_incomplete_daily_batch_recovers_missing_research_and_promotes():
+    from models.news_pipeline import PipelineResult
+    from services.pipeline import recover_incomplete_daily_batch
+
+    supabase = MagicMock()
+    supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [
+        {"id": "run-1", "status": "failed"}
+    ]
+    rank_checkpoint = {
+        "research": [SAMPLE_MERGED_RESULT.research[0].model_dump()],
+        "business": [SAMPLE_MERGED_RESULT.business[0].model_dump()],
+    }
+    existing_rows = [
+        {"slug": "2026-05-22-business-digest", "locale": "en", "post_type": "business"},
+        {"slug": "2026-05-22-business-digest-ko", "locale": "ko", "post_type": "business"},
+    ]
+
+    with patch("services.pipeline.get_supabase", return_value=supabase), \
+         patch("services.pipeline._load_checkpoint", return_value=rank_checkpoint), \
+         patch("services.pipeline._fetch_daily_digest_rows_from_db", return_value=existing_rows), \
+         patch("services.pipeline.rerun_pipeline_stage", new_callable=AsyncMock) as rerun_mock, \
+         patch("services.pipeline.promote_drafts", new_callable=AsyncMock) as promote_mock:
+        rerun_mock.return_value = PipelineResult(
+            batch_id="2026-05-22",
+            status="success",
+            posts_created=2,
+        )
+        promote_mock.return_value = {"promoted": 2, "kept_draft": 0, "errors": []}
+
+        result = await recover_incomplete_daily_batch("2026-05-22", auto_publish=True)
+
+    assert result["recovered"] == ["research"]
+    assert result["skipped"] == []
+    rerun_mock.assert_awaited_once_with(
+        source_run_id="run-1",
+        from_stage="write",
+        batch_id="2026-05-22",
+        category="research",
+        auto_publish=True,
+    )
+    promote_mock.assert_awaited_once_with(batch_id="2026-05-22")
+
+
 def test_load_personas_and_frontload_uses_guide_items_fallback_when_ko_row_lacks_title_excerpt():
     """When ko_row has no title/excerpt, the frontload builder should fall back to en_row's
     guide_items.title_learner / excerpt_learner. This covers the MEMORY.md-flagged
