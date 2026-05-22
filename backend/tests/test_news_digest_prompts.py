@@ -187,6 +187,21 @@ def test_digest_quiz_prompt_anchors_options_to_one_body_section():
         assert "If the question is anchored on a compute story, every wrong option must stay about compute access, cost, contracts, availability, or openness" in prompt
 
 
+def test_digest_quiz_prompt_requires_single_task_and_option_length_balance():
+    for digest_type in ["research", "business"]:
+        prompt = get_digest_quiz_prompt(digest_type, "en")
+
+        assert "Option Writing Contract" in prompt
+        assert "Each quiz must ask exactly one task" in prompt
+        assert "Do not ask \"what changed and why it matters\" in one question" in prompt
+        assert "Before writing options, choose one option shape" in prompt
+        assert "Options are answer choices, not mini-explanations" in prompt
+        assert "The correct option must express one claim only" in prompt
+        assert "The correct option must not be the only option with a caveat, condition, number, or named mechanism" in prompt
+        assert "No option should be more than 30% longer than the median option length" in prompt
+        assert "If one is, rewrite all four options before returning" in prompt
+
+
 def test_digest_quiz_prompt_separates_personas_without_making_expert_exam_like():
     prompt = get_digest_quiz_prompt("research", "en")
 

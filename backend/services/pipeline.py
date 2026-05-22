@@ -437,6 +437,39 @@ def _quiz_option_support_score(option: str, evidence_tokens: set[str], explanati
     return score
 
 
+_QUIZ_ANSWER_LENGTH_HINT_RATIO = 1.3
+_QUIZ_ANSWER_LENGTH_HINT_MIN_CHARS = 20
+
+
+def _median_quiz_option_length(options: list[str]) -> float:
+    lengths = sorted(len(option) for option in options)
+    mid = len(lengths) // 2
+    if len(lengths) % 2:
+        return float(lengths[mid])
+    return (lengths[mid - 1] + lengths[mid]) / 2
+
+
+def _quiz_answer_length_hint_issue(options: list[str], answer: str) -> str | None:
+    if answer not in options:
+        return None
+    answer_len = len(answer)
+    lengths = [len(option) for option in options]
+    max_len = max(lengths, default=0)
+    if answer_len != max_len or lengths.count(max_len) != 1:
+        return None
+    median_len = _median_quiz_option_length(options)
+    if (
+        median_len > 0
+        and answer_len >= median_len * _QUIZ_ANSWER_LENGTH_HINT_RATIO
+        and answer_len - median_len >= _QUIZ_ANSWER_LENGTH_HINT_MIN_CHARS
+    ):
+        return (
+            f"answer length leaks correctness: answer_len={answer_len}, "
+            f"median_len={median_len:.1f}, option_lengths={lengths}"
+        )
+    return None
+
+
 def _repair_quiz_answer_from_explanation(
     *,
     question: str,
@@ -544,6 +577,10 @@ def _validate_and_shuffle_quiz_item(raw: Any, label: str = "quiz") -> dict | Non
         label=label,
     )
     explanation = _sanitize_quiz_explanation_position_markers(explanation)
+    length_issue = _quiz_answer_length_hint_issue(options, answer)
+    if length_issue:
+        logger.warning("%s dropped: %s q=%r", label, length_issue, question[:60])
+        return None
 
     shuffled = list(options)
     random.shuffle(shuffled)

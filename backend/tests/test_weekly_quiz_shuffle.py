@@ -146,14 +146,56 @@ class TestSingleItemValidator:
         }
         assert _validate_and_shuffle_quiz_item(item) is None
 
+    def test_unique_long_answer_hint_is_rejected(self):
+        item = {
+            "question": "What is the safest takeaway?",
+            "options": [
+                "Local testing is possible.",
+                "Quality is guaranteed.",
+                "Remote GPUs are required.",
+                (
+                    "Local testing is possible, but the team still needs "
+                    "task-specific quality checks before production use."
+                ),
+            ],
+            "answer_index": 3,
+            "explanation": (
+                "The digest says local testing is possible and explains that "
+                "teams still need task-specific quality checks."
+            ),
+        }
+
+        assert _validate_and_shuffle_quiz_item(item) is None
+
+    def test_tied_long_answer_is_not_rejected_as_length_hint(self):
+        item = {
+            "question": "What is the safest takeaway?",
+            "options": [
+                "Local testing is possible, but teams still need targeted quality checks.",
+                "Remote use is possible, but teams still need targeted privacy checks.",
+                "Studio quality is guaranteed for all teams and tasks.",
+                "The release removes the need for further listening tests.",
+            ],
+            "answer_index": 0,
+            "explanation": (
+                "The digest says local testing is possible but teams still need "
+                "targeted quality checks."
+            ),
+        }
+
+        out = _validate_and_shuffle_quiz_item(item)
+
+        assert out is not None
+        assert out["answer"] == item["options"][0]
+
     def test_answer_index_repaired_when_explanation_supports_a_different_option(self):
         item = {
             "question": "Which pairing best captures the operational constraint and measured impact reported for Switchcraft?",
             "options": [
-                "Throughput ceiling; 48% tool-call reduction at 1.7% accuracy loss",
-                "Memory budget; 46.6% perplexity improvement on language modeling",
+                "Throughput ceiling; 48% tool-call reduction at 1.7% accuracy loss across simulated agents",
+                "Memory budget; 46.6% perplexity improvement on long-form language modeling tasks",
                 "Latency budget; 82.9% accuracy with an 84% inference-cost reduction and $3,600 saved per million queries",
-                "Token limit; 3x sample-efficiency over parameter-only RL",
+                "Token limit; 3x sample-efficiency over parameter-only RL during tool-use training",
             ],
             "answer_index": 3,
             "explanation": (
@@ -221,10 +263,10 @@ class TestSingleItemValidator:
                 "and why does that matter for models trained on very long contexts?"
             ),
             "options": [
-                "It replaces standard attention permanently with a subquadratic kernel so deployed models use less memory and have lower inference latency.",
+                "It replaces standard attention permanently with a subquadratic kernel so deployed models use less memory and lower inference latency at serving time.",
                 "It wraps standard attention during most of training to compress long sequences and is removed in a short recovery stage, lowering training time and memory without changing inference behavior.",
-                "It accelerates inference by removing attention computation at serving time and routing tokens to fewer experts.",
-                "It requires a new complex backward-pass kernel during training, which increases implementation difficulty but reduces inference cost.",
+                "It accelerates inference by removing attention computation at serving time and routing tokens to fewer experts while changing deployed model behavior.",
+                "It requires a new complex backward-pass kernel during training, which increases implementation difficulty but reduces inference cost after deployment.",
             ],
             "answer_index": 0,
             "explanation": (

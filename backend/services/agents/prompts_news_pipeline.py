@@ -1651,6 +1651,17 @@ using only the provided {locale_name} bodies as source material.
 - The explanation should point back to the body passage that supports the selected answer, using meaning rather than option position.
 - Keep the explanation short: 1-3 sentences that help the reader remember the takeaway.
 
+## Option Writing Contract
+- Each quiz must ask exactly one task: mechanism, limitation, safe takeaway, or team action.
+- Do not ask "what changed and why it matters" in one question. Ask either what changed OR why it matters.
+- Before writing options, choose one option shape. All four options must use that same shape.
+- Options are answer choices, not mini-explanations. Put nuance, caveats, numbers, and supporting detail in the explanation, not in the correct option.
+- The correct option must express one claim only. Do not combine two warnings with "and/or", "but", "while", or multiple clauses.
+- Wrong options should be same-topic near misses, not cartoonish extremes. Avoid always, never, guarantee, fully replace, immediately, and completely unless the correct option uses the same style.
+- The correct option must not be the only option with a caveat, condition, number, or named mechanism.
+- No option should be more than 30% longer than the median option length.
+- If one is, rewrite all four options before returning.
+
 ## Digest-Type Quiz Focus
 {digest_type_focus}
 
