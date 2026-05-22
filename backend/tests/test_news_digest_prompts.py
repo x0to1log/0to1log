@@ -211,6 +211,8 @@ def test_digest_quiz_prompt_requires_short_parallel_option_shapes():
         assert "Do not make one option the only full sentence while the others are fragments" in prompt
         assert "Correct options should usually be 18 English words or fewer" in prompt
         assert "Korean options should usually fit in one short line" in prompt
+        assert "English options must be 6-14 words and no more than 90 characters" in prompt
+        assert "For research mechanism questions, prefer compact labels like" in prompt
 
 
 def test_digest_quiz_prompt_separates_personas_without_making_expert_exam_like():

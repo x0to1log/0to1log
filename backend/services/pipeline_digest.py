@@ -609,7 +609,10 @@ def _build_digest_quiz_retry_feedback(
             "Regenerate all three keys: expert, learner, beginner. Do not return only the rejected keys.",
             "Most likely fix: option shape and answer length. The correct option cannot be the uniquely longest option.",
             "Use short answer choices, not mini-explanations. Put the reasoning in explanation, not in the selected option.",
+            "English options: no more than 90 characters and usually 6-14 words.",
+            "Korean options: no more than 50 characters and usually 12-35 characters.",
             "Keep all four options similar in length, grammar, specificity, caveats, numbers, and named mechanisms.",
+            "If this is a repeated rejection, change the question angle and use shorter option labels.",
             "Ask one task only. Do not combine what changed with why it matters in the same question.",
         ]
     )
@@ -764,7 +767,7 @@ async def _generate_digest_quizzes(
         )
         return all_quizzes, usage_total
 
-    status = "partial" if generated else "failed"
+    status = "failed"
     summary = (
         f"Quiz generation incomplete: generated {generated}/6 quizzes"
         if generated

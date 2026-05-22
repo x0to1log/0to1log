@@ -1666,6 +1666,10 @@ using only the provided {locale_name} bodies as source material.
 - Do not make one option the only full sentence while the others are fragments.
 - Correct options should usually be 18 English words or fewer unless all four options use the same compact sentence shape.
 - Korean options should usually fit in one short line unless all four options use the same compact sentence shape.
+- English options must be 6-14 words and no more than 90 characters whenever possible.
+- Korean options must usually be 12-35 characters and no more than 50 characters whenever possible.
+- For research mechanism questions, prefer compact labels like "latent compression for audio", "fewer diffusion steps", "expert batching intervals", or "single-setup benchmark limit".
+- If a correct answer needs more nuance than the option budget allows, keep the option short and put the nuance in the explanation.
 
 ## Digest-Type Quiz Focus
 {digest_type_focus}

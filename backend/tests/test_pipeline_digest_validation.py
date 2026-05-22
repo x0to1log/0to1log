@@ -142,6 +142,8 @@ def test_digest_quiz_retry_feedback_names_rejected_personas_and_fix_contract():
     assert "Regenerate all three keys: expert, learner, beginner" in feedback
     assert "The correct option cannot be the uniquely longest option" in feedback
     assert "Use short answer choices, not mini-explanations" in feedback
+    assert "English options: no more than 90 characters" in feedback
+    assert "If this is a repeated rejection, change the question angle" in feedback
 
 
 @pytest.mark.asyncio
@@ -224,6 +226,47 @@ async def test_generate_digest_quizzes_adds_validation_feedback_before_retry():
     assert "expert" in retry_feedback
     assert "Regenerate all three keys: expert, learner, beginner" in retry_feedback
     assert "The correct option cannot be the uniquely longest option" in retry_feedback
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_quizzes_logs_failed_status_for_partial_generation():
+    from services.pipeline import _generate_digest_quizzes
+
+    personas = {
+        persona: PersonaOutput(
+            en=f"## Research Papers\n\n### {persona}\n\nThe digest says the method is promising but limited.",
+            ko=f"## Research Papers\n\n### {persona}\n\n본문은 이 방법이 유망하지만 제한적이라고 말한다.",
+        )
+        for persona in ("expert", "learner", "beginner")
+    }
+    responses = [
+        _mock_quiz_response("en"),
+        _mock_openai_response({}),
+        _mock_openai_response({}),
+        _mock_openai_response({}),
+    ]
+
+    async def _capture_create(*args, **kwargs):
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock) as log_stage, \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_light = "gpt-5-mini"
+
+        quizzes, _usage = await _generate_digest_quizzes(
+            digest_type="research",
+            personas=personas,
+            supabase=MagicMock(),
+            run_id="run-1",
+        )
+
+    assert {locale for localized in quizzes.values() for locale in localized} == {"en"}
+    log_stage.assert_awaited_once()
+    assert log_stage.await_args.args[3] == "failed"
 
 
 class _UpsertQuery:
