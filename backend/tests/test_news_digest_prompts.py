@@ -84,6 +84,31 @@ def test_business_beginner_prompt_uses_lens_sentence_not_catalog():
     assert "Business one_line is a lens sentence, not a catalog" in prompt
 
 
+def test_business_beginner_prompt_requires_reader_situation_before_abstract_lens():
+    prompt = get_digest_prompt("business", "beginner", [])
+
+    assert "Beginner one_line should start with a concrete reader situation" in prompt
+    assert "not an abstract market thesis" in prompt
+    assert "Do not open with abstract labels like channel risk, vendor risk, attribution, procurement, or interface layer" in prompt
+    assert "Use the pattern: Before -> Change -> Safe takeaway" in prompt
+    assert "If AI search answers questions before people click a link" in prompt
+    assert "The safer takeaway is that teams should test whether AI answers change traffic" in prompt
+
+
+def test_beginner_prompts_limit_abstract_term_density_not_only_technical_terms():
+    business_prompt = get_digest_prompt("business", "beginner", [])
+    research_prompt = get_digest_prompt("research", "beginner", [])
+
+    assert "Beginner abstract-term budget" in business_prompt
+    assert "Do not stack more than 2 abstract business terms in one sentence" in business_prompt
+    assert "channel risk, vendor risk, attribution, acquisition cost, procurement, workload, interface layer" in business_prompt
+    assert "explain with a concrete example first, then use the term" in business_prompt
+
+    assert "Beginner plain-situation lead" in research_prompt
+    assert "Do not open the One-Line Summary with a dense method phrase" in research_prompt
+    assert "If a tool can make only the short audio clip you need" in research_prompt
+
+
 def test_business_beginner_prompt_does_not_force_abstract_theme_connections():
     prompt = get_digest_prompt("business", "beginner", [])
 
@@ -361,6 +386,11 @@ def test_beginner_quality_rubrics_cover_beginner_specific_failures():
     assert "research_burden_reduction" in QUALITY_CHECK_RESEARCH_BEGINNER
     assert "rollout_overclaim" in QUALITY_CHECK_BUSINESS_BEGINNER
     assert "business_lens_sentence" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "plain_situation_lead" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "abstract_term_density" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "beginner_rephrase_test" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "channel risk, vendor risk, attribution, acquisition cost, procurement, workload, interface layer" in QUALITY_CHECK_BUSINESS_BEGINNER
+    assert "A true beginner should be able to paraphrase" in QUALITY_CHECK_BUSINESS_BEGINNER
     assert "main_item_problem_first" in QUALITY_CHECK_RESEARCH_BEGINNER
     assert "main_item_term_budget" in QUALITY_CHECK_RESEARCH_BEGINNER
     assert "Count acronyms, benchmark names, vulnerability types" in QUALITY_CHECK_RESEARCH_BEGINNER

@@ -359,6 +359,7 @@ def _build_digest_prompt(
         """
 4a. BEGINNER ACCESSIBILITY CONTRACT:
    - Main 2 limit: choose no more than 2 main `###` items. If a third story matters, summarize it under Worth Skimming in one bullet.
+   - Beginner plain-situation lead: start from a concrete reader situation before abstract category language. A true beginner should see the everyday problem before the label.
    - Problem first: the first paragraph after every main `###` heading must explain the plain problem, friction, cost, risk, or decision people faced before naming the model, product, method, benchmark, funding round, or vendor strategy.
    - First-paragraph term budget: the first paragraph after each main `###` heading may use at most 2 countable domain terms. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms. Do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review.
    - If more technical names are necessary, move them to the second paragraph, Worth Skimming, or the learner-digest bridge. Do not remove important terms; delay them until the reader has the problem frame.
@@ -763,6 +764,7 @@ Beginner persona:
 - Delay extra technical names to paragraph 2, Worth Skimming, or the learner-digest bridge after the reader has the problem frame.
 - One-Line Summary may summarize only selected main items. Do not mention skim-only stories there.
 - One-Line Summary may be two tightly linked sentences for research when one sentence would become too dense.
+- Do not open the One-Line Summary with a dense method phrase. Start with the reader-visible problem or consequence first, then name the method if needed.
 - Main research items must answer: what changed, why the problem existed, what burden is reduced or what new risk/check burden is exposed, and what not to confuse.
 - what_changed must state which burden is reduced or what new risk/check burden is exposed: cost, access, manual work, data, execution, memory, time, infrastructure, safety review, or deployment verification.
 - Write short but not shallow explanations. A main item field may use one setup sentence and one consequence sentence when a true beginner needs the extra step.
@@ -787,7 +789,11 @@ Beginner persona:
 - First-paragraph term budget: use at most 2 countable business/infrastructure terms in the first paragraph after a main heading. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms. Do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review.
 - Delay extra technical names to paragraph 2, Worth Skimming, or the learner-digest bridge after the reader has the business problem frame.
 - Business one_line is a lens sentence, not a catalog. It should answer what business lens connects the selected main items.
+- Beginner one_line should start with a concrete reader situation, not an abstract market thesis. Good: "If AI search answers questions before people click a link, teams need to check whether customers still reach their site in the same way." Bad: "AI search creates a new channel-risk axis."
 - Do not list vendor, product, equipment, or project names in business one_line; put concrete names and examples in main_items instead.
+- Do not open with abstract labels like channel risk, vendor risk, attribution, procurement, or interface layer. Explain the plain situation first, then use the label if it helps.
+- Beginner abstract-term budget: Do not stack more than 2 abstract business terms in one sentence. Count phrases such as channel risk, vendor risk, attribution, acquisition cost, procurement, workload, interface layer, infrastructure choice, valuation, distribution, conversion, and vendor dependence. If needed, explain with a concrete example first, then use the term.
+- Use the pattern: Before -> Change -> Safe takeaway. Before: what was the normal situation? Change: what changed today? Safe takeaway: what should the reader not over-assume?
 - Do not force unrelated stories into one abstract theme. Explain each main story's concrete product or business change first. Use a shared theme only after the concrete changes are clear.
 - If a legal, governance, market-trust, or leadership story supports the lens, keep it as context, not the lead explanation for an unrelated product story.
 - When a main product story has both primary product/company sources and secondary commentary, cite the primary product or company source before secondary commentary in that story's first paragraph.
@@ -1288,11 +1294,11 @@ RESEARCH_BEGINNER_SKELETON = """
 **English ("en"):**
 ```
 ## One-Line Summary
-Some research is making AI experiments easier to plan. Other work is showing where deployed systems need deeper safety checks.
+If a tool can make only the short audio clip you need, teams waste less time testing creative ideas. If an inference method moves less data around, small teams can try faster systems without rebuilding the model.
 
 ## Context First
-- Many research stories are about a burden changing: compute cost, manual review, missing data, deployment risk, or safety verification. [CITE_1]
-- Terms are clickable in the handbook, so this digest explains why the problem matters before defining the mechanism. [CITE_1]
+- Many AI tools make the right result only after expensive trial and error. Beginner news should first explain which burden changed: time, cost, manual work, safety review, or deployment verification. [CITE_1]
+- Technical terms are clickable in the handbook, so this digest explains the situation before naming the mechanism. [CITE_1]
 
 ## Main Research to Understand Today
 ### Cheaper model selection before expensive runs
@@ -1347,18 +1353,18 @@ BUSINESS_BEGINNER_SKELETON = """
 **English ("en"):**
 ```
 ## One-Line Summary
-AI business news is shifting from model announcements to the practical question of who can deploy, govern, and pay for these systems.
+If AI search answers questions before people click a link, teams need to check whether customers still reach their site in the same way. If AI infrastructure gets harder to buy, teams need to know which vendors can actually support them.
 
 ## Context First
-- For beginners, the important question is not every product name. It is what changes in access, cost, trust, workflow, or vendor dependence. [CITE_1]
-- Concrete companies and products appear in the main items; the summary gives the lens for reading them. [CITE_1]
+- Many teams still rely on search links, product pages, and familiar vendors to reach customers or run AI features. AI can change those paths, so the first question is what changed in the work people already do. [CITE_1]
+- Concrete companies and products appear in the main items. The summary should give the reader a simple situation first, then the business label later if needed. [CITE_1]
 
 ## Main Changes to Understand Today
-### Enterprise adoption depends on hands-on deployment support
+### AI search changes where customers may come from
 
-The main change is that AI vendors are moving closer to customer workflows instead of only selling model access. That can speed up pilots, but it also changes who controls implementation and support. [CITE_1]
+Before, many teams assumed search meant a list of links that sent people to their site. AI search can answer inside the search or chat interface itself, so teams may need to check whether useful visitors still arrive in the same way. [CITE_1]
 
-Do not confuse this with proof that every customer gets the same level of support. The business impact depends on contract scope, security review, and deployment resources. [CITE_1]
+The safer takeaway is that teams should test whether AI answers change traffic, conversion, and which sources get cited. This does not mean search is dead overnight. [CITE_1]
 
 ### Security review is becoming part of the buying process
 
@@ -2835,9 +2841,12 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
 
 ### Business Accessibility
 - **business_lens_sentence**: One-Line Summary is a lens sentence, not a catalog/list of vendors, products, equipment, or projects.
+- **plain_situation_lead**: One-Line Summary and the first paragraph after each main `###` start with a concrete reader situation before abstract market labels. Good leads mention what a team, buyer, user, customer, or creator is trying to do; weak leads start with abstractions like channel risk, vendor risk, procurement strategy, or interface layer.
 - **context_first**: Background and first paragraphs explain the business situation before product names, funding mechanics, or infrastructure terms.
 - **main_item_problem_first**: The first paragraph after each main `###` explains the plain business problem, cost, risk, buying decision, or workflow pressure before naming vendors, products, funding mechanics, or infrastructure terms.
 - **main_item_term_budget**: The first paragraph after each main `###` uses at most 2 countable business/infrastructure terms before the business problem frame is clear. Count acronyms, benchmark names, vulnerability types, model-family names, architecture/method names, and infrastructure/security mechanisms; do not count company names, product names, source names, or ordinary words like workflow, pilot, privacy, or security review. Extra terms may appear in paragraph 2.
+- **abstract_term_density**: Flag sentences that stack 3+ abstract business terms before a concrete example. Count phrases such as channel risk, vendor risk, attribution, acquisition cost, procurement, workload, interface layer, infrastructure choice, valuation, distribution, conversion, and vendor dependence.
+- **beginner_rephrase_test**: A true beginner should be able to paraphrase the first paragraph without already knowing procurement, attribution, vendor risk, infrastructure, valuation, or interface-layer strategy.
 - **rollout_overclaim**: Product access claims are calibrated. Flag "복잡한 조달 없이", "조달 없이", "바로 도입", or "즉시 도입" unless a primary source explicitly says that; prefer "도입 접점", "문의 경로", or "파일럿 검토".
 - **term_definition_repetition**: The digest does not repeat long glossary definitions; unknown terms can be clicked in the handbook, so the text should explain context and confusion risk.
 
@@ -2866,9 +2875,12 @@ The input contains BOTH the English and Korean body for the same persona. Evalua
   }},
   "business_accessibility": {{
     "business_lens_sentence": {{"evidence": "...", "score": 0}},
+    "plain_situation_lead": {{"evidence": "...", "score": 0}},
     "context_first": {{"evidence": "...", "score": 0}},
     "main_item_problem_first": {{"evidence": "...", "score": 0}},
     "main_item_term_budget": {{"evidence": "...", "score": 0}},
+    "abstract_term_density": {{"evidence": "...", "score": 0}},
+    "beginner_rephrase_test": {{"evidence": "...", "score": 0}},
     "rollout_overclaim": {{"evidence": "...", "score": 0}},
     "term_definition_repetition": {{"evidence": "...", "score": 0}}
   }},
