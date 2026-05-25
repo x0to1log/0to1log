@@ -2130,17 +2130,18 @@ Throughout this prompt `[N](URL)` is a placeholder where `N` must be an actual d
 - Do not use raw URL labels like `[https://...](https://...)`; citation labels must be numeric `[1](URL)` style.
 
 ## Story Selection Contract
-Pick exactly 4 main stories, with this mix:
+Pick 4-5 main stories. Prefer 4; use 5 only when the fifth story is clearly useful for beginners and adds a distinct angle rather than repeating an anchor story.
 
 1. **TWO shared weekly anchor stories**: major topics also likely to appear in learner/expert weekly and supported by the daily text.
 2. **ONE everyday adoption story**: something readers can imagine using or evaluating in phones, work apps, finance, privacy, or team workflows.
-3. **ONE research-digest story**: this MUST come from a research daily digest when research content is available. Explain it as what gets cheaper, faster, safer, easier to test, or less wasteful. Do not substitute a business/security product story for this slot unless there is no research digest at all.
+3. **1-2 research-digest stories**: at least one MUST come from a research daily digest when research content is available. Explain it as what gets cheaper, faster, safer, easier to test, or less wasteful. Use a second research-origin story only if it is beginner-legible and not redundant. Do not substitute a business/security product story for this slot unless there is no research digest at all.
 
-If one story satisfies multiple slots, that is fine, but the final 4-story set must still include a clearly research-origin story when research daily content exists.
+If one story satisfies multiple slots, that is fine, but the final set must still include a clearly research-origin story when research daily content exists.
 
 Selection pressure:
 - Keep at least 2 stories recognizable as the same week as learner/expert.
-- Keep exactly 1 story that is research-origin; avoid turning beginner weekly into a paper roundup.
+- Keep the beginner edition focused; avoid turning beginner weekly into a paper roundup.
+- If you use a fifth story, it should cover a distinct beginner-useful angle such as pricing/access, everyday app change, safety/testing, open tools, or a simple research burden shift.
 - If a candidate is important but advanced, keep it and explain the problem first.
 - Do not make the beginner edition feel like a different newsletter.
 - Internal selection labels must only appear in `story_selection_notes`, never in reader-facing headings; selection labels must only appear in story_selection_notes.
@@ -2162,7 +2163,7 @@ Write the English weekly beginner recap. Return JSON only.
 
 1. **## This Week in One Line** — One plain sentence. Mention 2-3 concrete events and the shared theme. No citation required.
 2. **## Start Here** — Two short paragraphs. Explain the week before listing stories. End each paragraph with citation(s).
-3. **## The 4 Stories That Matter** — Exactly 4 `###` story headings. Each story has 2 short paragraphs:
+3. **## Stories That Matter This Week** — 4-5 `###` story headings. Each story has 2 short paragraphs:
    - What happened.
    - Why a beginner should care / what not to over-assume.
    Every paragraph must end with at least one `[N](URL)` citation.
@@ -2210,10 +2211,10 @@ Return JSON only:
 - week_numbers: 3-4 items only. Prefer beginner-legible numbers.
 - week_tool: choose one tool/project a beginner could inspect or understand this week. URL MUST appear in the digests.
 - Body target: 900-1300 English words.
-- Top story count: exactly 4.
+- Top story count: 4-5. Prefer 4; use 5 only when the fifth story adds a distinct beginner-useful angle.
 - Include citations in every factual paragraph except This Week in One Line.
 - Do not include selection labels like "(research digest)" or "(adoption)" in reader-facing headings.
-- Final self-check before output: exactly 4 stories; at least 2 shared anchors; at least 1 adoption story; at least 1 research-origin story when research content exists; no raw URL labels; quiz answer_index valid.
+- Final self-check before output: 4-5 stories; fifth story used only if distinct; at least 2 shared anchors; at least 1 adoption story; at least 1 research-origin story when research content exists; no raw URL labels; quiz answer_index valid.
 """
 
 
@@ -2224,7 +2225,7 @@ Keep the same story selection, same order, same citations, and same quiz structu
 Use these exact Korean section headings, in this exact order:
 - ## 이번 주 한 줄
 - ## 여기서 시작하기
-- ## 꼭 알아둘 이야기 4개
+- ## 꼭 알아둘 이야기
 - ## 이번 주의 흐름
 - ## 과하게 받아들이지 말아야 할 것
 - ## 기억해둘 말들

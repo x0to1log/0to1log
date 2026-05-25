@@ -136,20 +136,22 @@ def test_beginner_prompts_frame_learner_bridge_as_editorial_pointer():
         assert "Frame the learner bridge as an editorial pointer" in prompt
 
 
-def test_weekly_beginner_prompt_uses_context_first_four_story_contract():
+def test_weekly_beginner_prompt_uses_context_first_flexible_story_contract():
     prompt = get_weekly_prompt("beginner")
     learner_prompt = get_weekly_prompt("learner")
 
     assert prompt != learner_prompt
     assert "Weekly Beginner AI News" in prompt
     assert "same weekly edition covered by learner and expert" in prompt
-    assert "Pick exactly 4 main stories" in prompt
+    assert "Pick 4-5 main stories" in prompt
+    assert "Prefer 4; use 5 only when the fifth story is clearly useful for beginners" in prompt
     assert "TWO shared weekly anchor stories" in prompt
     assert "ONE everyday adoption story" in prompt
-    assert "ONE research-digest story" in prompt
+    assert "1-2 research-digest stories" in prompt
     assert "selection labels must only appear in story_selection_notes" in prompt
     assert "## Start Here" in prompt
-    assert "## The 4 Stories That Matter" in prompt
+    assert "## Stories That Matter This Week" in prompt
+    assert "## The 4 Stories That Matter" not in prompt
     assert "## What Not To Over-Assume" in prompt
 
 
@@ -158,7 +160,8 @@ def test_weekly_beginner_ko_prompt_uses_beginner_section_headings():
 
     assert "## 이번 주 한 줄" in prompt
     assert "## 여기서 시작하기" in prompt
-    assert "## 꼭 알아둘 이야기 4개" in prompt
+    assert "## 꼭 알아둘 이야기" in prompt
+    assert "## 꼭 알아둘 이야기 4개" not in prompt
     assert "## 과하게 받아들이지 말아야 할 것" in prompt
     assert "## 학습자 버전을 읽어봐도 좋은 때" in prompt
     assert "selection labels" in prompt
