@@ -273,8 +273,41 @@ def _date_string(value: Any) -> str:
     if isinstance(value, datetime):
         return value.date().isoformat()
     text = str(value or "")
-    match = _re_module.search(r"\d{4}-\d{2}-\d{2}", text)
-    return match.group(0) if match else ""
+    return _extract_date_string(text)
+
+
+def _extract_date_string(text: str) -> str:
+    """Extract a conservative date string from URL/text evidence."""
+    if not text:
+        return ""
+
+    candidates: list[datetime] = []
+    for match in _re_module.finditer(r"(?<!\d)(20\d{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12]\d|3[01])(?!\d)", text):
+        year, month, day = match.groups()
+        try:
+            candidates.append(datetime(int(year), int(month), int(day)))
+        except ValueError:
+            continue
+
+    for match in _re_module.finditer(
+        r"\b("
+        r"Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+        r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?"
+        r")\s+([0-3]?\d),\s+(20\d{2})\b",
+        text,
+        flags=_re_module.IGNORECASE,
+    ):
+        month_name, day, year = match.groups()
+        for fmt in ("%B %d %Y", "%b %d %Y"):
+            try:
+                candidates.append(datetime.strptime(f"{month_name} {int(day):02d} {year}", fmt))
+                break
+            except ValueError:
+                continue
+
+    if not candidates:
+        return ""
+    return max(candidates).strftime("%Y-%m-%d")
 
 
 def _published_at_from_result(result: Any) -> str:
@@ -316,6 +349,52 @@ def _is_stale_daily_candidate(
     except ValueError:
         return False
     return published < reference - timedelta(days=max_age_days)
+
+
+def _candidate_inferred_date(candidate: NewsCandidate) -> tuple[str, str]:
+    parsed = urlparse(candidate.url)
+    url_date = _extract_date_string(parsed.path)
+    if url_date:
+        return url_date, "stale_url_date"
+
+    title_snippet_date = _extract_date_string(f"{candidate.title} {candidate.snippet}")
+    if title_snippet_date:
+        return title_snippet_date, "stale_text_date"
+
+    raw_content_date = _extract_date_string(candidate.raw_content[:2000])
+    if raw_content_date:
+        return raw_content_date, "stale_text_date"
+
+    return "", ""
+
+
+def _business_like_candidate(candidate: NewsCandidate) -> bool:
+    text = f"{candidate.title} {candidate.snippet}".lower()
+    return any(term in text for term in _BUSINESS_HEALTH_TERMS)
+
+
+def _trusted_business_candidate(candidate: NewsCandidate) -> bool:
+    if not _business_like_candidate(candidate):
+        return False
+    hostname = (urlparse(candidate.url).hostname or "").lower().removeprefix("www.")
+    known_trusted_business_domains = (
+        "axios.com",
+        "bloomberg.com",
+        "businessinsider.com",
+        "cnbc.com",
+        "ft.com",
+        "nytimes.com",
+        "reuters.com",
+        "techcrunch.com",
+        "theverge.com",
+        "wsj.com",
+    )
+    return (
+        candidate.source_kind in {"official_site", "official_platform_asset", "media"}
+        or candidate.source_tier == "primary"
+        or candidate.source_confidence in {"high", "medium"}
+        or any(hostname.endswith(domain) for domain in known_trusted_business_domains)
+    )
 
 
 def _canonicalize_source_url(url: str) -> str:
@@ -680,6 +759,7 @@ async def _collect_tavily(
     loop = asyncio.get_running_loop()
     all_results: list[dict] = []
     tavily_exhausted = False
+    query_counts: dict[str, int] = {}
 
     async def _search_with_retry(query: str, dk: dict) -> list[dict]:
         """Search Tavily; if 0 results, retry with wider date range."""
@@ -717,6 +797,7 @@ async def _collect_tavily(
 
     for query in queries:
         results = await _search_with_retry(query, date_kwargs)
+        query_counts[query] = len(results)
         all_results.extend(results)
 
     # Fallback: if Tavily exhausted, try Exa then Google News RSS
@@ -746,6 +827,7 @@ async def _collect_tavily(
     meta: dict[str, Any] = {
         "source": "tavily",
         "queries": list(queries),
+        "query_counts": query_counts,
         "total_results": len(all_results),
         "candidates": len(candidates),
     }
@@ -1040,16 +1122,80 @@ EXA_RESEARCH_QUERIES = [
     "open source LLM launch weights huggingface",
 ]
 
-async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
+_BUSINESS_HEALTH_TERMS = (
+    "acquisition",
+    "adoption",
+    "announcement",
+    "announces",
+    "business",
+    "chip",
+    "enterprise",
+    "funding",
+    "investment",
+    "launch",
+    "launches",
+    "partnership",
+    "pricing",
+    "product",
+    "raise",
+    "raises",
+    "released",
+    "revenue",
+    "startup",
+    "valuation",
+)
+
+
+def _default_exa_meta() -> dict[str, Any]:
+    return {
+        "total": 0,
+        "business_total": 0,
+        "research_total": 0,
+        "query_counts": {},
+        "fallback_query_counts": {},
+        "errors": [],
+        "fallback_used": False,
+    }
+
+
+def _append_exa_result(
+    candidates: list[NewsCandidate],
+    result: Any,
+    *,
+    target_date: str | None,
+) -> bool:
+    url = getattr(result, "url", "")
+    if not url:
+        return False
+    published_at = _published_at_from_result(result)
+    if _is_stale_daily_candidate(published_at, target_date):
+        logger.info(
+            "Exa drop [stale_published_date=%s]: %s",
+            published_at, url[:100],
+        )
+        return False
+    candidates.append(NewsCandidate(
+        title=getattr(result, "title", "") or "",
+        url=url,
+        snippet=(getattr(result, "text", "") or "")[:300],
+        source="exa",
+        raw_content=getattr(result, "text", "") or "",
+        published_at=published_at,
+    ))
+    return True
+
+
+async def _collect_exa(target_date: str | None = None) -> tuple[list[NewsCandidate], dict[str, Any]]:
     """Collect AI business news via Exa API. Runs independently of Tavily."""
+    meta = _default_exa_meta()
     if not settings.exa_api_key:
-        return []
+        return [], meta
 
     try:
         from exa_py import Exa
     except ImportError:
         logger.warning("exa_py not installed, skipping Exa collection")
-        return []
+        return [], meta
 
     try:
         exa = Exa(api_key=settings.exa_api_key)
@@ -1075,32 +1221,59 @@ async def _collect_exa(target_date: str | None = None) -> list[NewsCandidate]:
                     ),
                     timeout=15,
                 )
+                kept_count = 0
                 for r in (exa_resp.results if hasattr(exa_resp, "results") else []):
-                    if not r.url:
-                        continue
-                    published_at = _published_at_from_result(r)
-                    if _is_stale_daily_candidate(published_at, target_date):
-                        logger.info(
-                            "Exa drop [stale_published_date=%s]: %s",
-                            published_at, r.url[:100],
-                        )
-                        continue
-                    candidates.append(NewsCandidate(
-                        title=r.title or "",
-                        url=r.url,
-                        snippet=(r.text or "")[:300],
-                        source="exa",
-                        raw_content=r.text or "",
-                        published_at=published_at,
-                    ))
+                    if _append_exa_result(candidates, r, target_date=target_date):
+                        kept_count += 1
+                meta["query_counts"][query] = kept_count
             except Exception as e:
+                meta["query_counts"][query] = 0
+                meta["errors"].append(f"{query}: {e}")
                 logger.debug("Exa query failed for '%s': %s", query, e)
 
+        meta["business_total"] = sum(meta["query_counts"].get(q, 0) for q in EXA_BUSINESS_QUERIES)
+        meta["research_total"] = sum(meta["query_counts"].get(q, 0) for q in EXA_RESEARCH_QUERIES)
+
+        if meta["business_total"] == 0:
+            meta["fallback_used"] = True
+            fallback_base = _daily_reference_date(target_date)
+            fallback_start = (fallback_base - timedelta(days=4)).strftime("%Y-%m-%d")
+            fallback_end = (fallback_base + timedelta(days=1)).strftime("%Y-%m-%d")
+            for query in EXA_BUSINESS_QUERIES:
+                try:
+                    search_kwargs = {
+                        "query": query,
+                        "num_results": 5,
+                        "type": "auto",
+                        "text": True,
+                        "start_published_date": fallback_start,
+                        "end_published_date": fallback_end,
+                    }
+                    exa_resp = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            None,
+                            lambda kwargs=search_kwargs: exa.search_and_contents(**kwargs),
+                        ),
+                        timeout=15,
+                    )
+                    kept_count = 0
+                    for r in (exa_resp.results if hasattr(exa_resp, "results") else []):
+                        if _append_exa_result(candidates, r, target_date=target_date):
+                            kept_count += 1
+                    meta["fallback_query_counts"][query] = kept_count
+                except Exception as e:
+                    meta["fallback_query_counts"][query] = 0
+                    meta["errors"].append(f"{query} fallback: {e}")
+                    logger.debug("Exa fallback query failed for '%s': %s", query, e)
+            meta["business_total"] = sum(meta["fallback_query_counts"].get(q, 0) for q in EXA_BUSINESS_QUERIES)
+
+        meta["total"] = len(candidates)
         logger.info("Collected %d candidates from Exa", len(candidates))
-        return candidates
+        return candidates, meta
     except Exception as e:
         logger.warning("Exa collection failed: %s", e)
-        return []
+        meta["errors"].append(str(e))
+        return [], meta
 
 
 # Brave news collection removed 2026-04-16.
@@ -1335,13 +1508,21 @@ async def collect_news(
     all_candidates: list[NewsCandidate] = list(tavily_results)
     source_counts: dict[str, int] = {"tavily": len(tavily_results)}
 
+    exa_meta = _default_exa_meta()
     for name, result in [("hf_papers", hf_results), ("arxiv", arxiv_results), ("github_trending", github_results), ("exa", exa_results)]:
         if isinstance(result, Exception):
             logger.warning("Collector %s failed: %s", name, result)
             source_counts[name] = 0
+            if name == "exa":
+                exa_meta["errors"].append(str(result))
         else:
-            all_candidates.extend(result)
-            source_counts[name] = len(result)
+            if name == "exa" and isinstance(result, tuple):
+                exa_candidates, exa_meta = result
+                all_candidates.extend(exa_candidates)
+                source_counts[name] = len(exa_candidates)
+            else:
+                all_candidates.extend(result)
+                source_counts[name] = len(result)
 
     # Deduplicate by URL + exclude already-published URLs + filter non-article pages
     already_used = published_urls or set()
@@ -1349,6 +1530,11 @@ async def collect_news(
     unique: list[NewsCandidate] = []
     excluded_count = 0
     filtered_count = 0
+    stale_drop_counts = {
+        "stale_published_at": 0,
+        "stale_url_date": 0,
+        "stale_text_date": 0,
+    }
     _NON_ARTICLE_PATTERNS = ("/category/", "/categories/", "/topics/", "/topic/", "/tag/", "/tags/", "/archive/")
     # Domain filters are loaded from Supabase via _load_domain_filters() (shared with enrich_sources)
     for c in all_candidates:
@@ -1380,8 +1566,16 @@ async def collect_news(
                 continue
             if _is_stale_daily_candidate(c.published_at, target_date):
                 logger.info("Dropping stale daily source (%s): %s", c.published_at, c.url)
+                stale_drop_counts["stale_published_at"] += 1
                 filtered_count += 1
                 continue
+            if not c.published_at:
+                inferred_date, stale_reason = _candidate_inferred_date(c)
+                if inferred_date and _is_stale_daily_candidate(inferred_date, target_date):
+                    logger.info("Dropping stale inferred daily source (%s/%s): %s", stale_reason, inferred_date, c.url)
+                    stale_drop_counts[stale_reason] += 1
+                    filtered_count += 1
+                    continue
             unique.append(c.model_copy(update=source_meta))
 
     logger.info(
@@ -1398,10 +1592,23 @@ async def collect_news(
         except ValueError:
             pass
 
+    business_like_count = sum(1 for c in unique if _business_like_candidate(c))
+    trusted_business_like_count = sum(1 for c in unique if _trusted_business_candidate(c))
     meta: dict[str, Any] = {
         "is_backfill": is_backfill,
         "source_counts": source_counts,
         "total_candidates": len(unique),
+        "stale_drop_counts": stale_drop_counts,
+        "business_candidate_health": {
+            "business_like_count": business_like_count,
+            "trusted_business_like_count": trusted_business_like_count,
+            "stale_dropped_count": sum(stale_drop_counts.values()),
+            "exa_total": exa_meta.get("total", source_counts.get("exa", 0)),
+            "exa_business_total": exa_meta.get("business_total", 0),
+            "exa_query_counts": exa_meta.get("query_counts", {}),
+            "exa_errors": exa_meta.get("errors", []),
+            "tavily_query_counts": tavily_meta.get("query_counts", {}),
+        },
         **tavily_meta,
     }
     return unique, meta

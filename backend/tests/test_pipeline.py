@@ -123,6 +123,38 @@ class _Supabase:
         return _Query([])
 
 
+class _RecentHeadlineSupabase(_Supabase):
+    def table(self, name):
+        if name == "news_posts":
+            return _Query([
+                {
+                    "source_urls": [],
+                    "title": "Google puts agents everywhere: Gemini 3.5 Flash, $100 Ultra, $5B TPU JV",
+                }
+            ])
+        return super().table(name)
+
+
+class _CategoryHeadlineSupabase(_Supabase):
+    def table(self, name):
+        if name == "news_posts":
+            return _Query([
+                {
+                    "source_urls": [],
+                    "title": "Google publishes RoPE attention benchmark",
+                    "post_type": "research",
+                    "locale": "en",
+                },
+                {
+                    "source_urls": [],
+                    "title": "Google launches Gemini enterprise pricing",
+                    "post_type": "business",
+                    "locale": "en",
+                },
+            ])
+        return super().table(name)
+
+
 def _community_summary_map():
     return {
         "https://a.com/1": CommunityInsight(sentiment="positive", quotes=[], quotes_ko=[]),
@@ -211,6 +243,31 @@ async def test_run_daily_pipeline_happy_path():
 
 
 @pytest.mark.asyncio
+async def test_run_daily_pipeline_passes_recent_headlines_grouped_by_category():
+    classify_mock = AsyncMock(return_value=(SAMPLE_CLASSIFY_RESULT, EMPTY_USAGE, "prompt body"))
+
+    with patch("services.pipeline.get_supabase", return_value=_CategoryHeadlineSupabase()), \
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(SAMPLE_CANDIDATES, SAMPLE_COLLECT_META)), \
+         patch("services.pipeline.classify_candidates", classify_mock), \
+         patch("services.pipeline.merge_classified", new_callable=AsyncMock, return_value=(SAMPLE_MERGED_RESULT, EMPTY_USAGE)), \
+         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="community raw"), \
+         patch("services.pipeline.summarize_community", new_callable=AsyncMock, return_value=(_community_summary_map(), EMPTY_USAGE)), \
+         patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
+         patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
+        from services.pipeline import run_daily_pipeline
+
+        await run_daily_pipeline()
+
+    kwargs = classify_mock.await_args.kwargs
+    assert kwargs["recent_headlines_by_category"] == {
+        "research": ["Google publishes RoPE attention benchmark"],
+        "business": ["Google launches Gemini enterprise pricing"],
+    }
+
+
+@pytest.mark.asyncio
 async def test_pipeline_no_research_creates_2_posts():
     """When only business survives after classify, only the business digest is created."""
     classification_no_research = ClassificationResult(
@@ -289,6 +346,132 @@ async def test_pipeline_uses_emergency_classification_after_zero_pick_retry():
     assert emergency_classification.business_picks
     assert emergency_classification.classification_debug["emergency_fallback_used"] is True
     assert result.posts_created == 4
+
+
+@pytest.mark.asyncio
+async def test_pipeline_retries_missing_business_category_before_merge():
+    """A one-sided classify result should retry the missing category before skipping a digest."""
+    initial_research_only = ClassificationResult(
+        research_picks=SAMPLE_CLASSIFY_RESULT.research_picks,
+    )
+    relaxed_business_result = ClassificationResult(
+        business_picks=SAMPLE_CLASSIFY_RESULT.business_picks,
+    )
+    classify_mock = AsyncMock(side_effect=[
+        (initial_research_only, EMPTY_USAGE, "prompt with dedup"),
+        (relaxed_business_result, EMPTY_USAGE, "prompt without dedup"),
+    ])
+    merge_mock = AsyncMock(return_value=(SAMPLE_MERGED_RESULT, EMPTY_USAGE))
+
+    candidates = [
+        NewsCandidate(
+            title="New transformer paper",
+            url="https://a.com/1",
+            snippet="Architecture improvement with benchmark results.",
+            source="arxiv",
+            source_kind="paper",
+            source_confidence="high",
+            source_tier="primary",
+        ),
+        NewsCandidate(
+            title="AI startup raises $500M to build enterprise agents",
+            url="https://b.com/2",
+            snippet="$500M funding round for enterprise agent platform.",
+            source="tavily",
+            source_kind="media",
+            source_confidence="high",
+            source_tier="secondary",
+        ),
+    ]
+
+    with patch("services.pipeline.get_supabase", return_value=_RecentHeadlineSupabase()), \
+         patch("services.pipeline.collect_news", new_callable=AsyncMock, return_value=(candidates, SAMPLE_COLLECT_META)), \
+         patch("services.pipeline.classify_candidates", classify_mock), \
+         patch("services.pipeline.merge_classified", merge_mock), \
+         patch("services.pipeline.collect_community_reactions", new_callable=AsyncMock, return_value="community raw"), \
+         patch("services.pipeline.summarize_community", new_callable=AsyncMock, return_value=(_community_summary_map(), EMPTY_USAGE)), \
+         patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
+         patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
+         patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
+        from services.pipeline import run_daily_pipeline
+
+        result = await run_daily_pipeline()
+
+    merge_classification = merge_mock.await_args.args[0]
+    assert classify_mock.await_count == 2
+    assert classify_mock.await_args_list[1].kwargs["recent_headlines"] is None
+    assert merge_classification.research_picks
+    assert merge_classification.business_picks
+    assert merge_classification.classification_debug["category_starvation_repair"]["recovered"] == ["business"]
+    assert result.posts_created == 4
+
+
+def test_filter_recent_duplicates_uses_category_specific_headlines():
+    from services.pipeline import _filter_recent_duplicates
+
+    classification = ClassificationResult(
+        business_picks=[
+            ClassifiedCandidate(
+                title="Google launches Gemini enterprise pricing",
+                url="https://example.com/business",
+                snippet="Business launch",
+                source="tavily",
+                category="business",
+                subcategory="big_tech",
+                reason="business",
+            )
+        ],
+        research_picks=[
+            ClassifiedCandidate(
+                title="Google publishes RoPE attention benchmark",
+                url="https://example.com/research",
+                snippet="Research benchmark",
+                source="arxiv",
+                category="research",
+                subcategory="papers",
+                reason="research",
+            )
+        ],
+    )
+
+    filtered, dropped = _filter_recent_duplicates(
+        classification,
+        {
+            "research": ["Google publishes RoPE attention benchmark"],
+            "business": ["Google announces unrelated ads tooling"],
+        },
+    )
+
+    assert [pick.url for pick in filtered.business_picks] == ["https://example.com/business"]
+    assert filtered.research_picks == []
+    assert dropped == ["research: Google publishes RoPE attention benchmark"]
+
+
+def test_filter_recent_duplicates_drops_same_category_business_repeat():
+    from services.pipeline import _filter_recent_duplicates
+
+    classification = ClassificationResult(
+        business_picks=[
+            ClassifiedCandidate(
+                title="Google launches Gemini enterprise pricing",
+                url="https://example.com/business",
+                snippet="Business launch",
+                source="tavily",
+                category="business",
+                subcategory="big_tech",
+                reason="business",
+            )
+        ],
+    )
+
+    filtered, dropped = _filter_recent_duplicates(
+        classification,
+        {"business": ["Google launches Gemini enterprise pricing"]},
+    )
+
+    assert filtered.business_picks == []
+    assert dropped == ["business: Google launches Gemini enterprise pricing"]
 
 
 @pytest.mark.asyncio

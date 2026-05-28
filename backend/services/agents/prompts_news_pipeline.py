@@ -858,6 +858,11 @@ FRONTLOAD_LOCALE_PARITY = """## Frontload Locale Parity (CRITICAL — applies to
 - If EN gives a specific figure (number + unit), KO must carry the EXACT same figure — same number, same unit. Missing a single number is a parity failure.
 - If EN names a company, KO names the same company
 
+**Named entity symmetry (frontload):**
+- If the EN headline/excerpt names investors, customers, partners, executives, products, model names, or regulators, either include those same entities in KO or remove/summarize them in EN.
+- If space is tight, prefer matching abstraction in BOTH locales over one locale carrying extra named entities. Example: use "led by major investors" in EN and the Korean equivalent in KO, or name the same investors in both.
+- Do not let EN excerpt name Lux Capital and General Catalyst while KO excerpt says only "investors" or omits the investor attribution.
+
 **Currency unit conversion (HARD RULE — zero-count errors are the most common KO translation bug):**
 - `$X billion` → `X×10억 달러` (X stays as-is, unit becomes `10억`). So `$8.3 billion` = `83억 달러`, NOT `8.3억 달러` (which reads as $830M — a 10× understatement).
 - `$X trillion` → `X조 달러`. So `$1.5 trillion` = `1.5조 달러`.
@@ -2932,6 +2937,10 @@ are grounded, calibrated, clear, and bilingual-parity.
 - **fact_parity**: EN and KO carry the SAME numbers, entities, and claims — no additions or omissions. **10** fact-perfect parity; **7** one minor wording difference with same meaning; **4** one fact present in one locale but missing in the other (e.g., "$20B deal" in EN but dropped in KO); **0** substantive factual divergence (e.g., KO adds a number EN doesn't claim).
 - **entity_parity**: EN and KO name the same entities — Korean transliteration is expected (OpenAI → 오픈AI, Cerebras → 세레브라스) but the referent must match. **10** all entities paired; **7** one borderline transliteration but clearly same entity; **4** one entity named in EN but unrecognizable/missing in KO (or vice-versa); **0** clearly different entities surface between locales.
 - **phrase_naturalness**: KO reads as native Korean (not word-for-word translation); EN reads as native English. Neither should feel machine-translated. Both locales use natural headline/bullet conventions of that language. **10** both locales read naturally; **7** one slightly awkward phrase; **4** one locale feels clearly translated; **0** one locale is ungrammatical or garbled.
+
+### Frontload issue severity calibration
+Frontload-only entity omissions should reduce fact_parity/entity_parity scores. Mark them minor by default.
+Do NOT mark a frontload-only investor/customer/partner omission as major locale corruption unless it changes the core meaning of the story, fabricates or swaps an entity, creates a hard factual error, or one locale is structurally missing/corrupted.
 
 {_QC_SHARED_SEVERITY_RULES}
 

@@ -187,6 +187,66 @@ def test_issue_penalty_and_caps_are_deterministic():
     assert final_score == 84
 
 
+def test_filters_false_locale_major_when_only_cp_attribution_lines_are_english():
+    from services.pipeline import _filter_unverified_locale_issues
+
+    personas = {
+        "expert": PersonaOutput(
+            en="",
+            ko=(
+                "## 커뮤니티 반응\n\n"
+                "> \"Claude 4.7에 대한 벤치마크가 토큰 창을 명시하지 않는 걸 다른 사람들도 눈치채고 있나요?\"\n"
+                "> — Hacker News [5](https://news.ycombinator.com/item?id=47793411)\n"
+            ),
+        )
+    }
+    issues = [
+        {
+            "severity": "major",
+            "scope": "ko",
+            "category": "locale",
+            "message": "KO body contains English-only blockquote lines in Community Pulse.",
+        },
+        {
+            "severity": "minor",
+            "scope": "expert_body",
+            "category": "clarity",
+            "message": "Community Pulse is weakly connected to the digest body.",
+        },
+    ]
+
+    filtered = _filter_unverified_locale_issues(issues, personas)
+
+    assert filtered == [issues[1]]
+
+
+def test_keeps_locale_major_when_ko_body_has_real_english_quote():
+    from services.pipeline import _filter_unverified_locale_issues
+
+    personas = {
+        "expert": PersonaOutput(
+            en="",
+            ko=(
+                "## 커뮤니티 반응\n\n"
+                "> \"Is anyone else noticing that the benchmarks for Claude 4.7 do not specify the token window?\"\n"
+                "> — Hacker News [5](https://news.ycombinator.com/item?id=47793411)\n"
+            ),
+        )
+    }
+    issues = [
+        {
+            "severity": "major",
+            "scope": "ko",
+            "category": "locale",
+            "message": "KO body contains English-only blockquote lines in Community Pulse.",
+        },
+    ]
+
+    filtered = _filter_unverified_locale_issues(issues, personas)
+
+    assert filtered == issues
+
+
 def test_daily_primary_source_priority_flags_secondary_first_when_official_source_is_available():
     from services.pipeline import _aggregate_subscores as _aggregate_subscores_for_reexport_cycle
     from services import pipeline_quality

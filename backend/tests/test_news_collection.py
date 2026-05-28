@@ -114,7 +114,11 @@ def _patch_other_collectors():
     # Brave news collection removed 2026-04-16; Brave web search still used by
     # collect_community_reactions() but that is a separate code path.
     return (
-        patch("services.news_collection._collect_exa", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "services.news_collection._collect_exa",
+            new_callable=AsyncMock,
+            return_value=([], {"query_counts": {}, "errors": [], "business_total": 0, "total": 0}),
+        ),
     )
 
 
@@ -213,13 +217,188 @@ async def test_collect_exa_uses_daily_date_window_and_drops_stale_primary_result
     with patch("services.news_collection.settings") as mock_settings, \
          patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
         mock_settings.exa_api_key = "test-key"
-        candidates = await _collect_exa("2026-05-14")
+        candidates, meta = await _collect_exa("2026-05-14")
 
     first_kwargs = mock_exa.search_and_contents.call_args_list[0].kwargs
     assert first_kwargs["start_published_date"] == "2026-05-12"
     assert first_kwargs["end_published_date"] == "2026-05-15"
     assert [candidate.url for candidate in candidates] == ["https://openai.com/index/fresh-ai-launch/"]
     assert candidates[0].published_at == "2026-05-14"
+    assert meta["total"] == 1
+    assert meta["query_counts"]["AI startup funding acquisition partnership"] == 1
+
+
+@pytest.mark.asyncio
+async def test_collect_exa_fallback_runs_when_business_queries_return_zero():
+    from services.news_collection import _collect_exa
+
+    empty = SimpleNamespace(results=[])
+    fallback_result = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                url="https://www.cnbc.com/2026/05/22/openai-business.html",
+                title="OpenAI expands enterprise AI business",
+                text="CNBC reported on May 22, 2026 that OpenAI expanded enterprise AI sales.",
+                published_date="2026-05-22T00:00:00Z",
+            )
+        ]
+    )
+    mock_exa = MagicMock()
+    mock_exa.search_and_contents.side_effect = [
+        *[empty for _ in range(7)],
+        fallback_result,
+        *[empty for _ in range(4)],
+    ]
+
+    with patch("services.news_collection.settings") as mock_settings, \
+         patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
+        mock_settings.exa_api_key = "test-key"
+        candidates, meta = await _collect_exa("2026-05-23")
+
+    assert [candidate.url for candidate in candidates] == ["https://www.cnbc.com/2026/05/22/openai-business.html"]
+    assert meta["fallback_used"] is True
+    assert meta["business_total"] == 1
+    fallback_kwargs = mock_exa.search_and_contents.call_args_list[7].kwargs
+    assert fallback_kwargs["start_published_date"] == "2026-05-19"
+    assert fallback_kwargs["end_published_date"] == "2026-05-24"
+    assert "category" not in fallback_kwargs
+
+
+@pytest.mark.asyncio
+async def test_collect_exa_fallback_skips_when_normal_business_results_exist():
+    from services.news_collection import _collect_exa
+
+    first_result = SimpleNamespace(
+        results=[
+            SimpleNamespace(
+                url="https://blog.google/innovation-and-ai/business-update/",
+                title="Google announces AI business update",
+                text="Google announced a fresh AI business update.",
+                published_date="2026-05-22T00:00:00Z",
+            )
+        ]
+    )
+    mock_exa = MagicMock()
+    mock_exa.search_and_contents.side_effect = [
+        first_result,
+        *[SimpleNamespace(results=[]) for _ in range(6)],
+    ]
+
+    with patch("services.news_collection.settings") as mock_settings, \
+         patch.dict("sys.modules", {"exa_py": SimpleNamespace(Exa=lambda api_key: mock_exa)}):
+        mock_settings.exa_api_key = "test-key"
+        candidates, meta = await _collect_exa("2026-05-23")
+
+    assert len(candidates) == 1
+    assert meta["fallback_used"] is False
+    assert meta["business_total"] == 1
+    assert mock_exa.search_and_contents.call_count == 7
+
+
+@pytest.mark.asyncio
+async def test_collect_news_records_business_candidate_health_and_exa_counts():
+    from models.news_pipeline import NewsCandidate
+    from services.news_collection import collect_news
+
+    tavily_candidates = [
+        NewsCandidate(
+            title="OpenAI launches enterprise AI tool",
+            url="https://www.cnbc.com/2026/05/22/openai-enterprise-ai.html",
+            snippet="OpenAI launched a new enterprise AI tool on May 22, 2026.",
+            source="tavily",
+        )
+    ]
+    exa_meta = {
+        "total": 0,
+        "business_total": 0,
+        "query_counts": {"AI startup funding acquisition partnership": 0},
+        "errors": ["AI chip hardware Nvidia AMD Intel: timeout"],
+        "fallback_used": True,
+    }
+
+    with patch("services.news_collection._collect_tavily", new=AsyncMock(return_value=(
+            tavily_candidates,
+            {
+                "source": "tavily",
+                "queries": ["big tech AI announcement OpenAI Google Microsoft Meta"],
+                "query_counts": {"big tech AI announcement OpenAI Google Microsoft Meta": 1},
+                "total_results": 1,
+                "candidates": 1,
+            },
+         ))), \
+         patch("services.news_collection._collect_hf_papers", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_arxiv", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_github_trending", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_exa", new=AsyncMock(return_value=([], exa_meta))):
+        candidates, meta = await collect_news(target_date="2026-05-23")
+
+    assert len(candidates) == 1
+    health = meta["business_candidate_health"]
+    assert health["business_like_count"] == 1
+    assert health["trusted_business_like_count"] == 1
+    assert health["exa_total"] == 0
+    assert health["exa_business_total"] == 0
+    assert health["exa_query_counts"] == exa_meta["query_counts"]
+    assert health["exa_errors"] == exa_meta["errors"]
+    assert health["tavily_query_counts"] == {"big tech AI announcement OpenAI Google Microsoft Meta": 1}
+
+
+@pytest.mark.asyncio
+async def test_collect_news_drops_stale_candidate_from_url_date():
+    from models.news_pipeline import NewsCandidate
+    from services.news_collection import collect_news
+
+    stale = NewsCandidate(
+        title="Canva launches its own design model",
+        url="https://techcrunch.com/2025/10/30/canva-launches-ai-design-model/",
+        snippet="Canva launches its own design model.",
+        source="tavily",
+    )
+    fresh = NewsCandidate(
+        title="OpenAI launches enterprise AI tool",
+        url="https://www.cnbc.com/2026/05/22/openai-enterprise-ai.html",
+        snippet="OpenAI launched a new enterprise AI tool.",
+        source="tavily",
+    )
+
+    with patch("services.news_collection._collect_tavily", new=AsyncMock(return_value=([stale, fresh], {"query_counts": {}}))), \
+         patch("services.news_collection._collect_hf_papers", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_arxiv", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_github_trending", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_exa", new=AsyncMock(return_value=([], {"query_counts": {}, "errors": [], "business_total": 0, "total": 0}))):
+        candidates, meta = await collect_news(target_date="2026-05-23")
+
+    assert [candidate.url for candidate in candidates] == [fresh.url]
+    assert meta["stale_drop_counts"]["stale_url_date"] == 1
+
+
+@pytest.mark.asyncio
+async def test_collect_news_keeps_fresh_candidate_from_text_date_and_unknown_date():
+    from models.news_pipeline import NewsCandidate
+    from services.news_collection import collect_news
+
+    fresh_text = NewsCandidate(
+        title="OpenAI expands enterprise AI business",
+        url="https://example.com/openai-enterprise-ai",
+        snippet="CNBC reported on May 22, 2026 that OpenAI expanded enterprise AI sales.",
+        source="tavily",
+    )
+    unknown = NewsCandidate(
+        title="Anthropic updates its enterprise AI roadmap",
+        url="https://example.com/anthropic-enterprise-ai",
+        snippet="Anthropic described its enterprise AI roadmap.",
+        source="tavily",
+    )
+
+    with patch("services.news_collection._collect_tavily", new=AsyncMock(return_value=([fresh_text, unknown], {"query_counts": {}}))), \
+         patch("services.news_collection._collect_hf_papers", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_arxiv", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_github_trending", new=AsyncMock(return_value=[])), \
+         patch("services.news_collection._collect_exa", new=AsyncMock(return_value=([], {"query_counts": {}, "errors": [], "business_total": 0, "total": 0}))):
+        candidates, meta = await collect_news(target_date="2026-05-23")
+
+    assert {candidate.url for candidate in candidates} == {fresh_text.url, unknown.url}
+    assert meta["stale_drop_counts"]["stale_text_date"] == 0
 
 
 @pytest.mark.asyncio

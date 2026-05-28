@@ -251,6 +251,96 @@ def _business_score(candidate: NewsCandidate) -> int:
     return score
 
 
+def _passes_category_rescue_gate(candidate: NewsCandidate, category: str, score: int) -> bool:
+    """Conservative source gate for deterministic category-starvation rescue."""
+    if score < 6:
+        return False
+
+    domain = _candidate_domain(candidate.url)
+    kind = (candidate.source_kind or "").lower()
+    tier = (candidate.source_tier or "").lower()
+    confidence = (candidate.source_confidence or "").lower()
+    trusted_media = any(domain.endswith(d) for d in _TRUSTED_MEDIA_DOMAINS)
+
+    if category == "business":
+        if kind in {"paper", "official_repo"}:
+            return False
+        return (
+            trusted_media
+            or kind == "official_site"
+            or (kind == "media" and confidence in {"high", "medium"})
+            or (tier == "primary" and confidence in {"high", "medium"})
+        )
+
+    if category == "research":
+        if kind in {"paper", "official_repo", "official_site", "research_primary"}:
+            return True
+        return trusted_media and confidence in {"high", "medium"}
+
+    return False
+
+
+def build_category_rescue_picks(
+    candidates: list[NewsCandidate],
+    category: str,
+    *,
+    limit: int = 3,
+) -> tuple[list[ClassifiedCandidate], dict[str, Any]]:
+    """Return conservative rule-selected picks for a starved category.
+
+    This is narrower than `build_emergency_classification`: it fills only the
+    missing category after the normal LLM classifier had a chance to select
+    stories. It exists to prevent one-sided digests when the candidate pool has
+    credible category-specific items but prompt-level dedup or classifier bias
+    returns zero picks for that category.
+    """
+    if category not in {"research", "business"}:
+        raise ValueError("category must be 'research' or 'business'")
+
+    scorer = _research_score if category == "research" else _business_score
+    subcategory_for = (
+        _classify_research_subcategory
+        if category == "research"
+        else _classify_business_subcategory
+    )
+    scored = sorted(
+        ((candidate, scorer(candidate)) for candidate in candidates),
+        key=lambda item: (-item[1], item[0].title.lower()),
+    )
+    eligible = [
+        (candidate, score)
+        for candidate, score in scored
+        if _passes_category_rescue_gate(candidate, category, score)
+    ]
+
+    picks = [
+        _build_emergency_pick(
+            candidate,
+            category,
+            subcategory_for(candidate),
+            score,
+        )
+        for candidate, score in eligible[:limit]
+    ]
+    meta = {
+        "mode": "category_starvation_rescue",
+        "category": category,
+        "candidate_count": len(candidates),
+        "eligible": len(eligible),
+        "selected": len(picks),
+        "selected_candidates": [
+            {
+                "title": pick.title,
+                "url": pick.url,
+                "subcategory": pick.subcategory,
+                "source": pick.source,
+            }
+            for pick in picks
+        ],
+    }
+    return picks, meta
+
+
 def _format_classification_candidate(index: int, candidate: NewsCandidate) -> str:
     return (
         f"[{index}] {candidate.title}\n"
@@ -448,14 +538,16 @@ async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str],
 async def classify_candidates(
     candidates: list[NewsCandidate],
     recent_headlines: list[str] | None = None,
+    recent_headlines_by_category: dict[str, list[str]] | None = None,
 ) -> tuple[ClassificationResult, dict[str, Any], str]:
     """Classify news candidates into research/business subcategories.
 
     Returns (result, usage, user_prompt). The user_prompt is returned so callers
     can log the EXACT input the LLM saw — including the dedup block — for debugging.
 
-    recent_headlines: titles published in the last 3 days. The classifier prompt
-    instructs the LLM to skip same-event repeats.
+    recent_headlines: legacy flat titles published in the last 3 days.
+    recent_headlines_by_category: category-grouped recent titles. Prefer this
+    when available so business/research dedup does not over-block each other.
     """
     if not candidates:
         logger.info("No candidates to classify")
@@ -468,7 +560,22 @@ async def classify_candidates(
 
     # Add recent headlines for event dedup. Label MUST match the system prompt rule
     # so the LLM connects the rule to the data block.
-    if recent_headlines:
+    if recent_headlines_by_category and any(recent_headlines_by_category.values()):
+        research_block = "\n".join(f"- {h}" for h in recent_headlines_by_category.get("research", []) if h)
+        business_block = "\n".join(f"- {h}" for h in recent_headlines_by_category.get("business", []) if h)
+        user_prompt += (
+            "\n\n---\n\n"
+            "ALREADY COVERED HEADLINES BY CATEGORY (last 3 days, both published and draft):\n"
+            "Research headlines:\n"
+            f"{research_block or '- (none)'}\n\n"
+            "Business headlines:\n"
+            f"{business_block or '- (none)'}\n\n"
+            "For same-category candidates, apply strict same-event dedup. "
+            "For cross-category candidates, skip only when the same company and the same "
+            "product/announcement are clearly repeated. Do not reject a business story "
+            "merely because a research headline mentions the same company, or vice versa."
+        )
+    elif recent_headlines:
         headlines_block = "\n".join(f"- {h}" for h in recent_headlines)
         user_prompt += (
             "\n\n---\n\n"

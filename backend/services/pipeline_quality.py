@@ -214,6 +214,88 @@ def _extract_structured_issues(raw_issues: Any, default_scope: str) -> list[dict
     return [issue for issue in normalized if issue["message"]]
 
 
+_HANGUL_RE = re.compile(r"[\u3131-\u318E\uAC00-\uD7A3]")
+_CP_ATTRIBUTION_BLOCKQUOTE_RE = re.compile(
+    r"^>\s*[—–-]\s*"
+    r"(?:\[[^\]]+\]\([^)]+\)|[A-Za-z][A-Za-z0-9 ._/-]*)"
+    r"(?:\s*\[\d+\]\([^)]+\))?\s*$"
+)
+
+
+def _is_cp_attribution_blockquote(line: str) -> bool:
+    """Return True for source attribution lines like `> — Hacker News [5](...)`."""
+    return bool(_CP_ATTRIBUTION_BLOCKQUOTE_RE.match(line.strip()))
+
+
+def _ko_body_has_locale_violation(content: str) -> bool:
+    """Deterministically verify major KO locale leakage.
+
+    LLM judges occasionally flag Community Pulse attribution lines as English
+    blockquotes even though the rubric exempts them. This scan checks the actual
+    KO body before a major locale issue can cap auto-publish.
+    """
+    if not content:
+        return False
+
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or not line.startswith(">"):
+            continue
+        if len(line) >= 10 and not _HANGUL_RE.search(line) and not _is_cp_attribution_blockquote(line):
+            return True
+
+    for block in re.split(r"\n\s*\n", content):
+        text = block.strip()
+        if not text:
+            continue
+        if text.startswith(("##", "###", ">", "-", "*")) or re.match(r"^\d+\.\s", text):
+            continue
+        if len(text) >= 50 and not _HANGUL_RE.search(text):
+            return True
+
+    return False
+
+
+def _is_major_locale_issue(issue: dict[str, str]) -> bool:
+    return (
+        issue.get("severity") == "major"
+        and (issue.get("category") == "locale" or issue.get("scope") == "ko")
+    )
+
+
+def _filter_unverified_locale_issues(
+    issues: list[dict[str, str]],
+    personas: dict[str, PersonaOutput],
+) -> list[dict[str, str]]:
+    """Drop major locale issues when deterministic KO scan finds no violation."""
+    if not issues:
+        return []
+
+    ko_bodies = [
+        getattr(output, "ko", "") or ""
+        for output in personas.values()
+        if output and getattr(output, "ko", "")
+    ]
+    if not ko_bodies:
+        return issues
+
+    if any(_ko_body_has_locale_violation(body) for body in ko_bodies):
+        return issues
+
+    filtered: list[dict[str, str]] = []
+    for issue in issues:
+        if _is_major_locale_issue(issue):
+            logger.info(
+                "Filtered unverified locale major issue: scope=%s category=%s message=%s",
+                issue.get("scope"),
+                issue.get("category"),
+                issue.get("message", "")[:200],
+            )
+            continue
+        filtered.append(issue)
+    return filtered
+
+
 def _aggregate_subscores(data: dict) -> int:
     """Aggregate nested rubric sub-scores into a single 0-100 total.
 
@@ -991,7 +1073,10 @@ async def _check_digest_quality(
             seen_daily_guardrail_keys.add(key)
             daily_guardrail_issues.append(issue)
 
-    all_issues = expert_issues + learner_issues + beginner_issues + frontload_issues + daily_guardrail_issues
+    all_issues = _filter_unverified_locale_issues(
+        expert_issues + learner_issues + beginner_issues + frontload_issues + daily_guardrail_issues,
+        personas,
+    )
     pre_issue_score = max(0, deterministic_score + llm_score - structural_penalty)
     final_score, issue_penalty, quality_caps_applied = _apply_issue_penalties_and_caps(
         pre_issue_score,

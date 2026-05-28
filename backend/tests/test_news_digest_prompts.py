@@ -706,6 +706,28 @@ def test_digest_writer_prompt_enforces_frontload_locale_parity():
         assert "Frontload locale parity" in prompt
 
 
+def test_digest_writer_prompt_enforces_frontload_named_entity_symmetry():
+    for digest_type, persona in [
+        ("research", "expert"),
+        ("research", "learner"),
+        ("business", "expert"),
+        ("business", "learner"),
+    ]:
+        prompt = get_digest_prompt(digest_type, persona, [])
+        assert "Named entity symmetry" in prompt
+        assert "investors, customers, partners, executives, products" in prompt
+        assert "either include those same entities in KO or remove/summarize them in EN" in prompt
+
+
+def test_frontload_qc_prompt_treats_entity_omission_as_minor_by_default():
+    from services.agents.prompts_news_pipeline import QUALITY_CHECK_FRONTLOAD
+
+    assert "Frontload-only entity omissions" in QUALITY_CHECK_FRONTLOAD
+    assert "reduce fact_parity/entity_parity scores" in QUALITY_CHECK_FRONTLOAD
+    assert "Mark them minor by default" in QUALITY_CHECK_FRONTLOAD
+    assert "Do NOT mark a frontload-only investor/customer/partner omission as major locale corruption" in QUALITY_CHECK_FRONTLOAD
+
+
 def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     """Severity taxonomy + scoring resolution guidance must be present.
 

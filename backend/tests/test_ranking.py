@@ -107,6 +107,32 @@ async def test_classify_candidates_prompt_includes_source_provenance():
 
 
 @pytest.mark.asyncio
+async def test_classify_candidates_prompt_groups_recent_headlines_by_category():
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
+
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
+         patch("services.agents.ranking.settings") as mock_settings:
+        mock_settings.openai_model_light = "gpt-4o"
+
+        from services.agents.ranking import classify_candidates
+        _, _, user_prompt = await classify_candidates(
+            SAMPLE_CANDIDATES,
+            recent_headlines_by_category={
+                "research": ["Google publishes RoPE attention benchmark"],
+                "business": ["Google launches Gemini enterprise pricing"],
+            },
+        )
+
+    assert "ALREADY COVERED HEADLINES BY CATEGORY" in user_prompt
+    assert "Research headlines:" in user_prompt
+    assert "- Google publishes RoPE attention benchmark" in user_prompt
+    assert "Business headlines:" in user_prompt
+    assert "- Google launches Gemini enterprise pricing" in user_prompt
+    assert "For same-category candidates, apply strict same-event dedup." in user_prompt
+
+
+@pytest.mark.asyncio
 async def test_classify_candidates_debug_records_raw_and_invalid_url_picks():
     response = {
         "research": [
@@ -220,6 +246,40 @@ def test_emergency_business_subcategory_treats_raise_and_merging_as_industry():
     result, _ = build_emergency_classification(candidates)
 
     assert {pick.subcategory for pick in result.business_picks} == {"industry"}
+
+
+def test_category_rescue_picks_selects_missing_business_candidates():
+    from services.agents.ranking import build_category_rescue_picks
+
+    candidates = [
+        NewsCandidate(
+            title="New transformer paper",
+            url="https://arxiv.org/abs/2605.12345",
+            snippet="Architecture improvement with benchmark results.",
+            source="arxiv",
+            source_kind="paper",
+            source_confidence="high",
+            source_tier="primary",
+        ),
+        NewsCandidate(
+            title="AI startup raises $500M to build enterprise agents",
+            url="https://techcrunch.com/ai-startup-raises-500m",
+            snippet="$500M funding round for enterprise agent platform.",
+            source="tavily",
+            source_kind="media",
+            source_confidence="high",
+            source_tier="secondary",
+        ),
+    ]
+
+    picks, meta = build_category_rescue_picks(candidates, "business")
+
+    assert len(picks) == 1
+    assert picks[0].url == "https://techcrunch.com/ai-startup-raises-500m"
+    assert picks[0].category == "business"
+    assert picks[0].subcategory == "industry"
+    assert meta["category"] == "business"
+    assert meta["selected"] == 1
 
 
 @pytest.mark.asyncio

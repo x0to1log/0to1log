@@ -11,9 +11,11 @@ from typing import Any
 from core.config import settings, today_kst
 from core.database import get_supabase
 from models.news_pipeline import (
+    ClassifiedCandidate,
     ClassificationResult,
     ClassifiedGroup,
     CommunityInsight,
+    NewsCandidate,
     PersonaOutput,
     PipelineResult,
 )
@@ -24,6 +26,7 @@ from services.agents.advisor import (
 )
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from services.agents.ranking import (
+    build_category_rescue_picks,
     build_emergency_classification,
     classify_candidates,
     merge_classified,
@@ -135,7 +138,7 @@ _DEDUP_BYPASS_VERBS = (
 
 def _filter_recent_duplicates(
     classified: ClassificationResult,
-    recent_headlines: list[str],
+    recent_headlines: list[str] | dict[str, list[str]],
     overlap_threshold: int = 2,
 ) -> tuple[ClassificationResult, list[str]]:
     """Drop classified candidates whose entity tokens overlap heavily with
@@ -151,36 +154,155 @@ def _filter_recent_duplicates(
     if not recent_headlines:
         return classified, []
 
-    recent_token_sets = [_extract_entity_tokens(h) for h in recent_headlines]
+    if isinstance(recent_headlines, dict):
+        recent_token_sets_by_category = {
+            category: [_extract_entity_tokens(h) for h in headlines if h]
+            for category, headlines in recent_headlines.items()
+        }
+    else:
+        recent_token_sets = [_extract_entity_tokens(h) for h in recent_headlines]
+        recent_token_sets_by_category = {
+            "research": recent_token_sets,
+            "business": recent_token_sets,
+        }
     dropped: list[str] = []
 
     def _has_bypass_verb(title: str) -> bool:
         title_lower = title.lower()
         return any(verb in title_lower for verb in _DEDUP_BYPASS_VERBS)
 
-    def _is_dup(candidate_title: str) -> bool:
+    def _is_dup(candidate_title: str, digest_type: str) -> bool:
         if _has_bypass_verb(candidate_title):
             return False  # major structural event — let it through
         cand_tokens = _extract_entity_tokens(candidate_title)
         if len(cand_tokens) < 2:
             return False  # too few tokens to confidently match
-        for recent_tokens in recent_token_sets:
-            overlap = cand_tokens & recent_tokens
-            if len(overlap) >= overlap_threshold:
+        same_category_sets = recent_token_sets_by_category.get(digest_type, [])
+        other_category_sets = [
+            token_set
+            for category, token_sets in recent_token_sets_by_category.items()
+            if category != digest_type
+            for token_set in token_sets
+        ]
+        for recent_tokens in same_category_sets:
+            if len(cand_tokens & recent_tokens) >= overlap_threshold:
+                return True
+        for recent_tokens in other_category_sets:
+            if len(cand_tokens & recent_tokens) >= overlap_threshold + 1:
                 return True
         return False
 
     filtered = ClassificationResult()
     for category in ("research_picks", "business_picks"):
+        digest_type = category[:-6]
         kept = []
         for c in getattr(classified, category):
-            if _is_dup(c.title):
-                dropped.append(f"{category[:-6]}: {c.title}")
+            if _is_dup(c.title, digest_type):
+                dropped.append(f"{digest_type}: {c.title}")
                 logger.info("Dedup drop: %s", c.title[:100])
             else:
                 kept.append(c)
         setattr(filtered, category, kept)
     return filtered, dropped
+
+
+def _classification_missing_categories(classification: ClassificationResult) -> list[str]:
+    missing: list[str] = []
+    if not classification.research_picks:
+        missing.append("research")
+    if not classification.business_picks:
+        missing.append("business")
+    return missing
+
+
+def _set_classification_picks(
+    classification: ClassificationResult,
+    category: str,
+    picks: list[ClassifiedCandidate],
+) -> None:
+    setattr(classification, f"{category}_picks", picks)
+
+
+def _get_classification_picks(
+    classification: ClassificationResult,
+    category: str,
+) -> list[ClassifiedCandidate]:
+    return getattr(classification, f"{category}_picks")
+
+
+async def _repair_classification_starvation(
+    candidates: list[NewsCandidate],
+    classification: ClassificationResult,
+    recent_headlines: list[str] | None,
+) -> tuple[ClassificationResult, dict[str, Any], str, dict[str, Any]]:
+    """Repair one-sided classify results before merge/rank/write.
+
+    Normal classification can legitimately return 0 for a category. We only
+    intervene when deterministic scoring sees credible candidates for that
+    missing category. First retry without the recent-headline dedup block, then
+    fall back to a conservative rule-based rescue.
+    """
+    meta: dict[str, Any] = {
+        "attempted": [],
+        "recovered": [],
+        "retry_recovered": [],
+        "rescue_recovered": [],
+        "skipped": [],
+        "rescue_meta": {},
+    }
+    usage: dict[str, Any] = {}
+    retry_prompt = ""
+    missing = _classification_missing_categories(classification)
+    if not missing or len(missing) == 2:
+        return classification, usage, retry_prompt, meta
+
+    actionable: list[str] = []
+    for category in missing:
+        _, rescue_meta = build_category_rescue_picks(candidates, category, limit=3)
+        meta["rescue_meta"][category] = rescue_meta
+        if rescue_meta.get("eligible", 0) > 0:
+            actionable.append(category)
+        else:
+            meta["skipped"].append(f"{category}: no credible rescue candidates")
+
+    if not actionable:
+        return classification, usage, retry_prompt, meta
+
+    meta["attempted"] = actionable
+    if recent_headlines:
+        retry_classification, retry_usage, retry_prompt = await classify_candidates(
+            candidates,
+            recent_headlines=None,
+        )
+        usage = merge_usage_metrics(usage, retry_usage)
+        meta["relaxed_retry_used"] = True
+        for category in actionable:
+            retry_picks = _get_classification_picks(retry_classification, category)
+            if retry_picks:
+                _set_classification_picks(classification, category, retry_picks)
+                meta["recovered"].append(category)
+                meta["retry_recovered"].append(category)
+
+    for category in actionable:
+        if _get_classification_picks(classification, category):
+            continue
+        rescue_picks, rescue_meta = build_category_rescue_picks(
+            candidates,
+            category,
+            limit=3,
+        )
+        meta["rescue_meta"][category] = rescue_meta
+        if rescue_picks:
+            _set_classification_picks(classification, category, rescue_picks)
+            meta["recovered"].append(category)
+            meta["rescue_recovered"].append(category)
+
+    if meta["attempted"]:
+        classification.classification_debug = {
+            **(classification.classification_debug or {}),
+            "category_starvation_repair": meta,
+        }
+    return classification, usage, retry_prompt, meta
 
 
 def _renumber_citations(
@@ -1623,6 +1745,7 @@ async def run_daily_pipeline(
         # Fetch recently published source URLs + headlines to avoid repeating news
         published_urls: set[str] = set()
         recent_headlines: list[str] = []
+        recent_headlines_by_category: dict[str, list[str]] = {"research": [], "business": []}
         try:
             # URL exclusion: published only (draft URLs shouldn't block collection)
             recent = supabase.table("news_posts").select("source_urls") \
@@ -1634,7 +1757,7 @@ async def run_daily_pipeline(
                     published_urls.add(url)
             # Headlines for event dedup: draft + published (any generated post counts)
             cutoff_2d = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
-            headline_rows = supabase.table("news_posts").select("title") \
+            headline_rows = supabase.table("news_posts").select("title,post_type,locale") \
                 .in_("status", ["published", "draft"]) \
                 .gte("published_at", cutoff_2d) \
                 .execute()
@@ -1642,6 +1765,11 @@ async def run_daily_pipeline(
                 row["title"] for row in (headline_rows.data or [])
                 if row.get("title")
             ]
+            for row in (headline_rows.data or []):
+                title = row.get("title")
+                post_type = row.get("post_type")
+                if title and post_type in recent_headlines_by_category:
+                    recent_headlines_by_category[post_type].append(title)
         except Exception as e:
             logger.warning("Failed to fetch published URLs/headlines: %s", e)
 
@@ -1682,7 +1810,9 @@ async def run_daily_pipeline(
         # Stage: classify (individual article selection)
         t0 = time.monotonic()
         classification, classify_usage, classify_user_prompt = await classify_candidates(
-            candidates, recent_headlines=recent_headlines,
+            candidates,
+            recent_headlines=recent_headlines,
+            recent_headlines_by_category=recent_headlines_by_category,
         )
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
 
@@ -1722,14 +1852,36 @@ async def run_daily_pipeline(
                     len(candidates),
                 )
 
+        classification, category_repair_usage, category_repair_prompt, category_repair_meta = (
+            await _repair_classification_starvation(
+                candidates,
+                classification,
+                recent_headlines,
+            )
+        )
+        if category_repair_meta.get("recovered"):
+            logger.warning(
+                "Classification starvation repair recovered category/categories: %s",
+                ", ".join(category_repair_meta["recovered"]),
+            )
+        classify_usage = merge_usage_metrics(classify_usage, category_repair_usage)
+        cumulative_usage = merge_usage_metrics(cumulative_usage, category_repair_usage)
+
         # Code-level dedup safety net: even if the LLM ignored the ALREADY COVERED
         # block, drop candidates whose entity tokens (company + product) overlap
         # heavily with recent headlines. This is a deterministic guard.
         # Skipped in fallback mode — the whole point of fallback is to allow
         # some overlap rather than publish nothing.
         dedup_dropped: list[str] = []
-        if recent_headlines and not classify_fallback_used:
-            classification, dedup_dropped = _filter_recent_duplicates(classification, recent_headlines)
+        if (
+            recent_headlines
+            and not classify_fallback_used
+            and not category_repair_meta.get("recovered")
+        ):
+            classification, dedup_dropped = _filter_recent_duplicates(
+                classification,
+                recent_headlines_by_category if any(recent_headlines_by_category.values()) else recent_headlines,
+            )
             if dedup_dropped:
                 logger.warning("Code-level dedup dropped %d candidate(s): %s",
                                len(dedup_dropped), "; ".join(dedup_dropped)[:300])
@@ -1767,9 +1919,15 @@ async def run_daily_pipeline(
                 "warnings": classify_warnings,
                 "dedup_dropped": dedup_dropped,
                 "recent_headlines_count": len(recent_headlines),
+                "recent_headlines_by_category_count": {
+                    category: len(headlines)
+                    for category, headlines in recent_headlines_by_category.items()
+                },
                 "fallback_used": classify_fallback_used,
                 "emergency_fallback_used": classify_emergency_used,
                 "emergency_meta": classify_emergency_meta,
+                "category_starvation_repair": category_repair_meta,
+                "category_starvation_retry_input": _trim(category_repair_prompt) if category_repair_prompt else "",
                 "classification_debug": classification.classification_debug,
             },
         )
@@ -1778,6 +1936,7 @@ async def run_daily_pipeline(
             "business_picks": [c.model_dump() for c in classification.business_picks],
             "fallback_used": classify_fallback_used,
             "emergency_fallback_used": classify_emergency_used,
+            "category_starvation_repair": category_repair_meta,
             "classification_debug": classification.classification_debug,
         })
 
@@ -2649,14 +2808,26 @@ async def rerun_pipeline_stage(
         if from_stage == "classify":
             t0 = time.monotonic()
             classification, classify_usage, _ = await classify_candidates(candidates)
+            classification, repair_usage, _, category_repair_meta = await _repair_classification_starvation(
+                candidates,
+                classification,
+                recent_headlines=None,
+            )
+            classify_usage = merge_usage_metrics(classify_usage, repair_usage)
             cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
             _save_checkpoint(supabase, run_id, "classify", {
                 "research_picks": [c.model_dump() for c in classification.research_picks],
                 "business_picks": [c.model_dump() for c in classification.business_picks],
+                "category_starvation_repair": category_repair_meta,
+                "classification_debug": classification.classification_debug,
             })
             await _log_stage(supabase, run_id, "classify", "success", t0,
                              output_summary=f"research={len(classification.research_picks)}, business={len(classification.business_picks)}",
-                             usage=classify_usage)
+                             usage=classify_usage,
+                             debug_meta={
+                                 "category_starvation_repair": category_repair_meta,
+                                 "classification_debug": classification.classification_debug,
+                             })
         else:
             classify_data = _load_checkpoint(supabase, source_run_id, "classify")
             if classify_data:
@@ -4220,6 +4391,7 @@ from services.pipeline_quality import (  # noqa: E402, F401
     _compute_weekly_structure_score,
     _compute_weekly_traceability_score,
     _extract_structured_issues,
+    _filter_unverified_locale_issues,
     _find_digest_blockers,
     _normalize_quality_issue,
     _normalize_scope,
