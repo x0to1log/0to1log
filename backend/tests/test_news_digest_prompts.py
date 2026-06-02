@@ -728,6 +728,14 @@ def test_frontload_qc_prompt_treats_entity_omission_as_minor_by_default():
     assert "Do NOT mark a frontload-only investor/customer/partner omission as major locale corruption" in QUALITY_CHECK_FRONTLOAD
 
 
+def test_frontload_qc_prompt_requires_source_contradiction_for_fabrication_major():
+    from services.agents.prompts_news_pipeline import QUALITY_CHECK_FRONTLOAD
+
+    assert "Do not mark a number as fabricated merely because it looks unusually large" in QUALITY_CHECK_FRONTLOAD
+    assert "Major fabrication requires a clear contradiction with the source evidence" in QUALITY_CHECK_FRONTLOAD
+    assert "If the source evidence supports the number, do not create a fabrication issue" in QUALITY_CHECK_FRONTLOAD
+
+
 def test_quality_prompts_include_severity_rubric_and_scoring_resolution():
     """Severity taxonomy + scoring resolution guidance must be present.
 

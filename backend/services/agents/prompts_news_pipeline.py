@@ -2913,8 +2913,10 @@ that users see BEFORE the body (in card previews, RSS feed, OG tags):
 - `=== EN EXCERPT ===` / `=== KO EXCERPT ===`
 - `=== EN FOCUS ITEMS ===` / `=== KO FOCUS ITEMS ===`
 
-Body markdown is NOT in the input — focus on whether these 6 fields themselves
-are grounded, calibrated, clear, and bilingual-parity.
+Body markdown is NOT in the input. The input may include a compact
+`SOURCE EVIDENCE FOR FRONTLOAD GROUNDING` block with source titles, URLs, and
+short excerpts. Use that evidence to verify whether frontload numbers, entities,
+and claims are source-supported.
 
 {_QC_SHARED_RUBRIC_HEADER}
 
@@ -2937,6 +2939,11 @@ are grounded, calibrated, clear, and bilingual-parity.
 - **fact_parity**: EN and KO carry the SAME numbers, entities, and claims — no additions or omissions. **10** fact-perfect parity; **7** one minor wording difference with same meaning; **4** one fact present in one locale but missing in the other (e.g., "$20B deal" in EN but dropped in KO); **0** substantive factual divergence (e.g., KO adds a number EN doesn't claim).
 - **entity_parity**: EN and KO name the same entities — Korean transliteration is expected (OpenAI → 오픈AI, Cerebras → 세레브라스) but the referent must match. **10** all entities paired; **7** one borderline transliteration but clearly same entity; **4** one entity named in EN but unrecognizable/missing in KO (or vice-versa); **0** clearly different entities surface between locales.
 - **phrase_naturalness**: KO reads as native Korean (not word-for-word translation); EN reads as native English. Neither should feel machine-translated. Both locales use natural headline/bullet conventions of that language. **10** both locales read naturally; **7** one slightly awkward phrase; **4** one locale feels clearly translated; **0** one locale is ungrammatical or garbled.
+
+### Fabrication severity calibration
+Do not mark a number as fabricated merely because it looks unusually large or surprising.
+Major fabrication requires a clear contradiction with the source evidence, a number/entity that is absent from all provided source evidence, or a wrong entity/product/date.
+If the source evidence supports the number, do not create a fabrication issue; evaluate only clarity, calibration, and bilingual parity.
 
 ### Frontload issue severity calibration
 Frontload-only entity omissions should reduce fact_parity/entity_parity scores. Mark them minor by default.

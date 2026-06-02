@@ -107,6 +107,34 @@ def test_build_quality_payloads_include_ko_and_frontload_fields():
     assert "한국어 포인트" in frontload_payload
 
 
+def test_frontload_quality_payload_includes_source_evidence_for_grounding():
+    from services.pipeline import _build_frontload_quality_payload
+
+    payload = _build_frontload_quality_payload(
+        {
+            "headline": "Anthropic files for IPO after $65B raise",
+            "headline_ko": "Anthropic, 650억 달러 조달 후 IPO 신청",
+            "excerpt": "Anthropic was valued at $965B post-money.",
+            "excerpt_ko": "Anthropic의 포스트머니 기업가치는 9,650억 달러였다.",
+            "focus_items": ["Watch public-market appetite"],
+            "focus_items_ko": ["공모시장 수요 관찰"],
+        },
+        source_evidence=[
+            {
+                "title": "Anthropic confidentially files for US IPO",
+                "url": "https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/",
+                "content": "Anthropic last raised $65 billion at a post-money valuation of $965 billion in late May.",
+            }
+        ],
+    )
+
+    assert "=== SOURCE EVIDENCE FOR FRONTLOAD GROUNDING ===" in payload
+    assert "Use this evidence to verify frontload numbers/entities/claims" in payload
+    assert "Anthropic confidentially files for US IPO" in payload
+    assert "$65 billion" in payload
+    assert "$965 billion" in payload
+
+
 def test_body_quality_payload_can_include_quiz_blocks():
     from services.pipeline import _build_body_quality_payload
 
@@ -275,6 +303,92 @@ def test_daily_primary_source_priority_flags_secondary_first_when_official_sourc
     assert issues[0]["category"] == "source"
     assert "daily_primary_source_priority" in issues[0]["message"]
     assert "daily_primary_source_cap_92" in cap_helper(issues)
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_passes_source_evidence_to_frontload_judge():
+    from services.pipeline import _check_digest_quality
+
+    personas = {
+        "expert": PersonaOutput(
+            en=(
+                "## One-Line Summary\nAnthropic moves toward public markets. "
+                "[1](https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/)\n\n"
+                "## Big Tech\n\n"
+                "### Anthropic files for IPO\n\n"
+                "Anthropic confidentially filed for a U.S. IPO. "
+                "[1](https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/)\n\n"
+                "Reuters says Anthropic last raised $65 billion at a post-money valuation of $965 billion. "
+                "[1](https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/)\n"
+            ),
+            ko=(
+                "## 한 줄 요약\nAnthropic이 공모 시장으로 이동한다. "
+                "[1](https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/)\n\n"
+                "## Big Tech\n\n"
+                "### Anthropic IPO 신청\n\n"
+                "Anthropic은 미국 IPO 서류를 비공개로 제출했다. "
+                "[1](https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/)\n\n"
+                "Reuters는 Anthropic이 최근 650억 달러를 조달했고 포스트머니 기업가치가 9,650억 달러였다고 전했다. "
+                "[1](https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/)\n"
+            ),
+        ),
+    }
+    url = "https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/"
+    frontload = {
+        "headline": "Anthropic files for IPO after $65B raise",
+        "headline_ko": "Anthropic, 650억 달러 조달 후 IPO 신청",
+        "excerpt": "Anthropic was valued at $965B post-money.",
+        "excerpt_ko": "Anthropic의 포스트머니 기업가치는 9,650억 달러였다.",
+        "focus_items": ["Watch public-market appetite"],
+        "focus_items_ko": ["공모시장 수요 관찰"],
+    }
+    classified = [
+        ClassifiedGroup(
+            group_title="Anthropic confidentially files for US IPO",
+            items=[GroupedItem(url=url, title="Anthropic confidentially files for US IPO")],
+            category="business",
+            subcategory="big_tech",
+            reason="[LEAD] Major",
+        )
+    ]
+
+    responses = [
+        _mock_openai_response({"score": 95, "issues": []}),
+        _mock_openai_response({"score": 95, "issues": []}),
+    ]
+    captured_user_prompts: list[str] = []
+
+    async def _capture_create(*args, **kwargs):
+        captured_user_prompts.append(kwargs["messages"][1]["content"])
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-5-mini"
+
+        await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=classified,
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-1",
+            cumulative_usage={},
+            frontload=frontload,
+            raw_content_map={
+                url: "Anthropic last raised $65 billion at a post-money valuation of $965 billion in late May.",
+            },
+        )
+
+    frontload_prompt = captured_user_prompts[-1]
+    assert "=== SOURCE EVIDENCE FOR FRONTLOAD GROUNDING ===" in frontload_prompt
+    assert "Anthropic confidentially files for US IPO" in frontload_prompt
+    assert "$65 billion" in frontload_prompt
+    assert "$965 billion" in frontload_prompt
 
 
 @pytest.mark.asyncio

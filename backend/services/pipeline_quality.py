@@ -107,12 +107,64 @@ def _build_body_quality_payload(
     return payload
 
 
-def _build_frontload_quality_payload(frontload: dict[str, Any] | None) -> str:
+def _compact_evidence_text(value: Any, max_chars: int = 1200) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rsplit(" ", 1)[0] + "..."
+
+
+def _build_frontload_source_evidence(
+    classified: list,
+    enriched_map: dict[str, list[dict[str, Any]]] | None = None,
+    raw_content_map: dict[str, str] | None = None,
+    *,
+    max_sources: int = 12,
+) -> list[dict[str, str]]:
+    """Build compact source evidence so frontload QC can verify big numbers."""
+    raw_content_map = raw_content_map or {}
+    evidence: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def add(url: str | None, title: str | None = None, content: Any = None) -> None:
+        if not url or url in seen or len(evidence) >= max_sources:
+            return
+        seen.add(url)
+        source_text = content if content else raw_content_map.get(url, "")
+        evidence.append({
+            "title": str(title or "").strip(),
+            "url": url,
+            "content": _compact_evidence_text(source_text),
+        })
+
+    for group in classified or []:
+        for item in (getattr(group, "items", None) or []):
+            add(getattr(item, "url", None), getattr(item, "title", ""))
+
+    for anchor_url, enriched_list in (enriched_map or {}).items():
+        add(anchor_url, content=raw_content_map.get(anchor_url, ""))
+        for entry in enriched_list or []:
+            if not isinstance(entry, dict):
+                continue
+            add(
+                entry.get("url"),
+                entry.get("title"),
+                entry.get("content") or entry.get("raw_content") or entry.get("snippet") or "",
+            )
+
+    return evidence
+
+
+def _build_frontload_quality_payload(
+    frontload: dict[str, Any] | None,
+    *,
+    source_evidence: list[dict[str, Any]] | None = None,
+) -> str:
     """Build a scoring payload for title/excerpt/focus items."""
     frontload = frontload or {}
     focus_items_en = "\n".join(f"- {item}" for item in (frontload.get("focus_items") or []))
     focus_items_ko = "\n".join(f"- {item}" for item in (frontload.get("focus_items_ko") or []))
-    return (
+    payload = (
         "=== EN HEADLINE ===\n"
         f"{frontload.get('headline', '')}\n\n"
         "=== KO HEADLINE ===\n"
@@ -126,6 +178,21 @@ def _build_frontload_quality_payload(frontload: dict[str, Any] | None) -> str:
         "=== KO FOCUS ITEMS ===\n"
         f"{focus_items_ko}"
     ).strip()
+    if not source_evidence:
+        return payload
+
+    source_blocks = [
+        "=== SOURCE EVIDENCE FOR FRONTLOAD GROUNDING ===",
+        "Use this evidence to verify frontload numbers/entities/claims. If a number looks unusually large but appears here, do not mark it as fabricated on plausibility alone.",
+    ]
+    for idx, item in enumerate(source_evidence, start=1):
+        title = str(item.get("title") or "").strip()
+        url = str(item.get("url") or "").strip()
+        content = _compact_evidence_text(item.get("content") or "")
+        source_blocks.append(
+            f"[{idx}] {title}\nURL: {url}\nEvidence: {content}".strip()
+        )
+    return f"{payload}\n\n" + "\n\n".join(source_blocks)
 
 
 def _collect_digest_source_urls(
@@ -866,6 +933,7 @@ async def _check_digest_quality(
     cumulative_usage: dict[str, Any],
     frontload: dict[str, Any] | None = None,
     enriched_map: dict[str, list[dict[str, Any]]] | None = None,
+    raw_content_map: dict[str, str] | None = None,
     persona_quizzes: dict[str, dict[str, dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     """Score quality of generated digest with body + frontload + deterministic checks."""
@@ -992,10 +1060,18 @@ async def _check_digest_quality(
                 "beginner_body",
             )
         )
+    frontload_source_evidence = _build_frontload_source_evidence(
+        classified,
+        enriched_map,
+        raw_content_map,
+    )
     tasks.append(
         _score(
             QUALITY_CHECK_FRONTLOAD,
-            _build_frontload_quality_payload(frontload),
+            _build_frontload_quality_payload(
+                frontload,
+                source_evidence=frontload_source_evidence,
+            ),
             f"Quality-{digest_type}-frontload",
             "frontload",
         )

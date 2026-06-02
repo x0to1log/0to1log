@@ -2602,6 +2602,9 @@ async def rerun_pipeline_stage(
             enriched_map: dict[str, list[dict[str, Any]]] = (
                 (enrich_data or {}).get("enriched_map") or {}
             )
+            raw_content_map: dict[str, str] = (
+                (enrich_data or {}).get("raw_content_map") or {}
+            )
 
             personas_by_type, frontload_by_type = _load_personas_and_frontload_from_db(supabase, batch_id)
             if not personas_by_type:
@@ -2648,6 +2651,7 @@ async def rerun_pipeline_stage(
                         cumulative_usage=cumulative_usage,
                         frontload=frontload,
                         enriched_map=enriched_map,
+                        raw_content_map=raw_content_map,
                     )
                 except Exception as e:
                     all_errors.append(f"Quality rescore failed for {digest_type}: {e}")

@@ -1720,6 +1720,7 @@ async def _generate_digest(
         supabase, run_id, cumulative_usage,
         frontload=frontload_payload,
         enriched_map=enriched_map,
+        raw_content_map=raw_content_map,
         persona_quizzes=persona_quizzes,
     )
     if isinstance(quality_result, dict):
