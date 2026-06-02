@@ -2944,6 +2944,7 @@ and claims are source-supported.
 Do not mark a number as fabricated merely because it looks unusually large or surprising.
 Major fabrication requires a clear contradiction with the source evidence, a number/entity that is absent from all provided source evidence, or a wrong entity/product/date.
 If the source evidence supports the number, do not create a fabrication issue; evaluate only clarity, calibration, and bilingual parity.
+Do not treat undisclosed IPO offering terms as a contradiction to separately sourced prior funding rounds, post-money valuations, or peer-company offering figures.
 
 ### Frontload issue severity calibration
 Frontload-only entity omissions should reduce fact_parity/entity_parity scores. Mark them minor by default.

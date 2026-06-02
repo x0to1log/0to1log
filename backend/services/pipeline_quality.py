@@ -107,10 +107,73 @@ def _build_body_quality_payload(
     return payload
 
 
+_FRONTLOAD_NUMERIC_EVIDENCE_RE = re.compile(
+    r"(?:\$|USD\s*)?\d+(?:[.,]\d+)*(?:\.\d+)?\s*"
+    r"(?:billion|million|trillion|bn|m|t|%)|\$\d+(?:[.,]\d+)*(?:\.\d+)?",
+    re.IGNORECASE,
+)
+_FRONTLOAD_BUSINESS_EVIDENCE_RE = re.compile(
+    r"\b(valuation|valued|raise|raised|funding|offering|ipo|terms|"
+    r"disclose|post-money|public offering|trading|shares?)\b",
+    re.IGNORECASE,
+)
+
+
+def _split_evidence_sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def _frontload_relevant_snippets(text: str, max_chars: int) -> list[str]:
+    scored: list[tuple[int, int, str]] = []
+    for idx, sentence in enumerate(_split_evidence_sentences(text)):
+        if len(sentence) < 30:
+            continue
+        score = 0
+        if _FRONTLOAD_NUMERIC_EVIDENCE_RE.search(sentence):
+            score += 4
+        if _FRONTLOAD_BUSINESS_EVIDENCE_RE.search(sentence):
+            score += 2
+        if score:
+            scored.append((score, idx, sentence))
+
+    if not scored:
+        return []
+
+    selected: list[str] = []
+    used: set[str] = set()
+    budget = max(300, max_chars - 220)
+    used_chars = 0
+    for _, _, sentence in sorted(scored, key=lambda item: (-item[0], item[1])):
+        normalized = sentence.lower()
+        if normalized in used:
+            continue
+        next_len = len(sentence) + (4 if selected else 0)
+        if selected and used_chars + next_len > budget:
+            continue
+        selected.append(sentence)
+        used.add(normalized)
+        used_chars += next_len
+        if used_chars >= budget:
+            break
+    return selected
+
+
 def _compact_evidence_text(value: Any, max_chars: int = 1200) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     if len(text) <= max_chars:
         return text
+    snippets = _frontload_relevant_snippets(text, max_chars)
+    if snippets:
+        opening = text[: min(320, max_chars // 3)].rsplit(" ", 1)[0]
+        compacted = (
+            "Relevant excerpts: "
+            + " ... ".join(snippets)
+            + f"\nOpening excerpt: {opening}..."
+        )
+        if len(compacted) <= max_chars:
+            return compacted
+        return compacted[:max_chars].rsplit(" ", 1)[0] + "..."
     return text[:max_chars].rsplit(" ", 1)[0] + "..."
 
 

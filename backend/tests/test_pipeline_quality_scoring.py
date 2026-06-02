@@ -135,6 +135,37 @@ def test_frontload_quality_payload_includes_source_evidence_for_grounding():
     assert "$965 billion" in payload
 
 
+def test_frontload_source_evidence_prioritizes_numeric_snippets_beyond_opening():
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://www.reuters.com/business/ai-giant-anthropic-confidentially-files-us-ipo-2026-06-01/"
+    content = (
+        "Opening navigation and article summary. "
+        + ("Generic setup sentence without the important numbers. " * 40)
+        + "Anthropic last raised $65 billion at a post-money valuation of $965 billion in late May. "
+        + "SpaceX pursues a $75 billion offering at a $1.75 trillion valuation."
+    )
+    evidence = _build_frontload_source_evidence(
+        [
+            ClassifiedGroup(
+                group_title="Anthropic confidentially files for US IPO",
+                items=[GroupedItem(url=url, title="Anthropic confidentially files for US IPO")],
+                category="business",
+                subcategory="big_tech",
+                reason="[LEAD] Major",
+            )
+        ],
+        raw_content_map={url: content},
+    )
+
+    compacted = evidence[0]["content"]
+    assert "$65 billion" in compacted
+    assert "$965 billion" in compacted
+    assert "$75 billion" in compacted
+    assert "$1.75 trillion" in compacted
+
+
 def test_body_quality_payload_can_include_quiz_blocks():
     from services.pipeline import _build_body_quality_payload
 
