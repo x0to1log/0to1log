@@ -8,6 +8,14 @@ interface NewsDetailPageContext extends DetailPageContext {
   previewPersona?: string | null;
 }
 
+export const NEWS_DETAIL_PUBLIC_COLUMNS = [
+  'id', 'slug', 'locale', 'status', 'title', 'title_learner', 'title_beginner',
+  'excerpt', 'category', 'post_type', 'published_at', 'updated_at', 'reading_time_min',
+  'tags', 'og_image_url', 'translation_group_id', 'focus_items', 'guide_items',
+  'content_original', 'content_analysis', 'content_beginner', 'content_learner',
+  'content_expert', 'fact_pack', 'source_cards', 'source_urls',
+].join(', ');
+
 function hostnameLabel(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -81,7 +89,7 @@ export async function getNewsDetailPageData({
   if (detailSupabase && slug) {
     let query = detailSupabase
       .from('news_posts')
-      .select('*')
+      .select(NEWS_DETAIL_PUBLIC_COLUMNS)
       .eq('slug', pageSlug)
       .eq('locale', locale);
 

@@ -1,5 +1,6 @@
 import { localField } from '../handbookUtils';
 import { renderMarkdown, renderMarkdownWithTerms, renderHandbookMarkdown, type TermsMap } from '../markdown';
+import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
 interface HandbookDetailPageContext extends DetailPageContext {
@@ -27,6 +28,13 @@ interface HandbookTermJsonEntry {
   basic_plain: string;
 }
 
+export const HANDBOOK_DETAIL_PUBLIC_COLUMNS = [
+  'id', 'status', 'term', 'slug', 'korean_name', 'term_full', 'categories',
+  'definition_ko', 'definition_en', 'body_basic_ko', 'body_basic_en',
+  'body_advanced_ko', 'body_advanced_en', 'hero_news_context_ko',
+  'hero_news_context_en', 'references_ko', 'references_en', 'related_term_slugs',
+].join(', ');
+
 export async function getHandbookDetailPageData({
   locale,
   slug,
@@ -45,7 +53,7 @@ export async function getHandbookDetailPageData({
   if (detailSupabase && slug) {
     let query = detailSupabase
       .from('handbook_terms')
-      .select('*')
+      .select(HANDBOOK_DETAIL_PUBLIC_COLUMNS)
       .eq('slug', pageSlug);
 
     if (!previewMode) {
@@ -89,30 +97,22 @@ export async function getHandbookDetailPageData({
       : null;
 
     // Build handbook terms map for inline linking (exclude self to prevent self-link)
-    const definitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
-    const summaryField = locale === 'ko' ? 'summary_ko' : 'summary_en';
-    const hbTermsRes = await publicSupabase
-      .from('handbook_terms')
-      .select(`term, slug, korean_name, term_full, categories, ${summaryField}, ${definitionField}, body_basic_ko, body_basic_en`)
-      .eq('status', 'published')
-      .neq('slug', pageSlug)  // exclude self
-      .limit(200);
+    const handbookTerms = (await fetchPublicTermIndex(publicSupabase, locale))
+      .filter((entry) => entry.slug !== pageSlug);
 
     const handbookTermsMap: TermsMap = new Map();
-    for (const entry of hbTermsRes.data ?? []) {
+    for (const entry of handbookTerms) {
       const termEntry = { slug: entry.slug, term: entry.term };
       handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
       if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
       handbookTermsJson[entry.slug] = {
         term: entry.term,
         korean_name: entry.korean_name || '',
-        term_full: (entry as any).term_full || '',
+        term_full: entry.term_full || '',
         categories: entry.categories || [],
-        summary: (entry as any)[summaryField] || '',
-        definition: (entry as any)[definitionField] || '',
-        basic_plain: locale === 'ko'
-          ? (entry as any).body_basic_ko || ''
-          : (entry as any).body_basic_en || '',
+        summary: entry.summary || '',
+        definition: entry.definition || '',
+        basic_plain: entry.basic_plain || '',
       };
     }
     const hasTerms = handbookTermsMap.size > 0;

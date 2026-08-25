@@ -3,6 +3,12 @@ import { buildBlogSidebarDataset, toSidebarPost } from './blogSidebar';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
+export const BLOG_DETAIL_PUBLIC_COLUMNS = [
+  'id', 'slug', 'locale', 'status', 'title', 'excerpt', 'category', 'content',
+  'published_at', 'updated_at', 'reading_time_min', 'tags', 'og_image_url',
+  'translation_group_id', 'focus_items',
+].join(', ');
+
 export async function getBlogDetailPageData({ locale, slug, previewMode, locals }: DetailPageContext) {
   const pageSlug = slug;
   const publicSupabase = getPublicSupabase();
@@ -15,7 +21,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
   if (detailSupabase && slug) {
     let query = detailSupabase
       .from('blog_posts')
-      .select('*')
+      .select(BLOG_DETAIL_PUBLIC_COLUMNS)
       .eq('slug', pageSlug)
       .eq('locale', locale);
 

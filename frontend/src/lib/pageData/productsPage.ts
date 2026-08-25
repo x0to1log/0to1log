@@ -115,6 +115,18 @@ export interface HomeFeaturedProduct {
   korean_support: boolean;
 }
 
+export const PRODUCT_DETAIL_PUBLIC_COLUMNS = [
+  'id', 'slug', 'name', 'name_ko', 'url', 'tagline', 'tagline_ko',
+  'description', 'description_ko', 'primary_category', 'secondary_categories',
+  'logo_url', 'thumbnail_url', 'demo_media', 'tags', 'tags_ko', 'platform',
+  'korean_support', 'released_at', 'pricing', 'pricing_note', 'view_count',
+  'like_count', 'features', 'features_ko', 'use_cases', 'use_cases_ko',
+  'getting_started', 'getting_started_ko', 'pricing_detail', 'pricing_detail_ko',
+  'scenarios', 'scenarios_ko', 'pros_cons', 'pros_cons_ko', 'difficulty',
+  'editor_note', 'editor_note_ko', 'official_resources', 'verified_at',
+  'korean_quality_note',
+].join(', ');
+
 // =============================================================================
 // List page
 // =============================================================================
@@ -205,7 +217,7 @@ export async function getProductDetailData(
 
   const { data, error } = await db
     .from('ai_products')
-    .select('*')
+    .select(PRODUCT_DETAIL_PUBLIC_COLUMNS)
     .eq('slug', slug)
     .eq('is_published', true)
     .eq('archived', false)
