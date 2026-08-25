@@ -200,11 +200,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Track site locale via cookie for non-locale-prefixed pages
   const langParam = context.url.searchParams.get('lang');
   if (langParam === 'en' || langParam === 'ko') {
-    context.cookies.set('site-locale', langParam, { path: '/', maxAge: 31536000, sameSite: 'lax', secure: true, httpOnly: true });
-  } else if (pathname.startsWith('/en/')) {
-    context.cookies.set('site-locale', 'en', { path: '/', maxAge: 31536000, sameSite: 'lax', secure: true, httpOnly: true });
-  } else if (pathname.startsWith('/ko/')) {
-    context.cookies.set('site-locale', 'ko', { path: '/', maxAge: 31536000, sameSite: 'lax', secure: true, httpOnly: true });
+    const cleanUrl = new URL(context.url);
+    cleanUrl.searchParams.delete('lang');
+    const cleanPath = `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`;
+    context.cookies.set('site-locale', langParam, {
+      path: '/',
+      maxAge: 31536000,
+      sameSite: 'lax',
+      secure: isSecure,
+      httpOnly: true,
+    });
+    return context.redirect(cleanPath, 303);
   }
 
   // Skip auth entirely if Supabase not configured

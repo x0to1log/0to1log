@@ -21,6 +21,12 @@ const altPath = altSlug
     ? currentPath.replace(`/${locale}/`, `/${altLocale}/`)
     : `${currentPath}?lang=${altLocale}`;
 
+function withLocalePreference(path: string, targetLocale: 'en' | 'ko'): string {
+  const url = new URL(path, 'https://0to1log.local');
+  url.searchParams.set('lang', targetLocale);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 const user = Astro.locals.user;
 const isAdmin = Astro.locals.isAdmin;
 const profile = Astro.locals.profile;
@@ -245,7 +251,7 @@ const navItems = [
           </svg>
         </button>
 
-        <a href={altPath} class="site-lang-toggle" aria-label={copy.languageItem} title={copy.languageItem}>
+        <a href={withLocalePreference(altPath, altLocale)} class="site-lang-toggle" aria-label={copy.languageItem} title={copy.languageItem}>
           {altLocale.toUpperCase()}
         </a>
 
