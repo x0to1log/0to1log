@@ -48,7 +48,7 @@ const quickLinks = isKo
 
       <nav class="error-404-nav" aria-label={isKo ? '빠른 이동' : 'Quick links'}>
         {quickLinks.map((link) => (
-          <a href={link.href} class="error-404-nav-link" data-astro-prefetch="viewport">
+          <a href={link.href} class="error-404-nav-link">
             {link.label}
           </a>
         ))}
