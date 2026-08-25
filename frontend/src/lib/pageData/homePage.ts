@@ -20,8 +20,7 @@ export interface HomeHandbookTerm {
   term: string;
   slug: string;
   korean_name: string | null;
-  definition_en: string | null;
-  definition_ko: string | null;
+  definition: string | null;
   categories: string[] | null;
   is_favourite: boolean | null;
 }
@@ -51,28 +50,21 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
   }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const termDefinitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
+  const termSelect = `id, term, slug, korean_name, definition:${termDefinitionField}, categories, is_favourite`;
 
-  const [recentNewsRes, fallbackNewsRes, termsRes, blogRes, sc, featuredProducts, fallbackRes] = await Promise.all([
+  const [newsRes, termsRes, blogRes, sc, featuredProducts] = await Promise.all([
     supabase
       .from('news_posts')
       .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
       .eq('status', 'published')
       .eq('locale', locale)
-      .gte('published_at', sevenDaysAgo)
       .order('published_at', { ascending: false })
       .limit(20),
 
     supabase
-      .from('news_posts')
-      .select('id, title, slug, post_type, published_at, tags, reading_time_min, excerpt')
-      .eq('status', 'published')
-      .eq('locale', locale)
-      .order('published_at', { ascending: false })
-      .limit(10),
-
-    supabase
       .from('handbook_terms')
-      .select('id, term, slug, korean_name, definition_en, definition_ko, categories, is_favourite')
+      .select(termSelect)
       .eq('status', 'published')
       .eq('is_favourite', true)
       .limit(6),
@@ -87,34 +79,30 @@ export async function getHomePageData(locale: 'en' | 'ko'): Promise<HomePageData
 
     getSiteContents(['home_title', 'home_subtitle', 'home_intro'], locale),
     fetchHomeFeaturedProducts(),
-
-    // Eagerly fetch fallback terms in parallel (used if fewer than 6 favourites)
-    supabase
-      .from('handbook_terms')
-      .select('id, term, slug, korean_name, definition_en, definition_ko, categories, is_favourite')
-      .eq('status', 'published')
-      .eq('is_favourite', false)
-      .order('published_at', { ascending: false })
-      .limit(6),
   ]);
 
-  let terms: HomeHandbookTerm[] = (termsRes.data ?? []) as HomeHandbookTerm[];
+  let terms: HomeHandbookTerm[] = (termsRes.data ?? []) as unknown as HomeHandbookTerm[];
 
   // Fill with recent non-favourite terms if we have fewer than 6 favourites
   if (terms.length < 6) {
+    const fallbackRes = await supabase
+      .from('handbook_terms')
+      .select(termSelect)
+      .eq('status', 'published')
+      .eq('is_favourite', false)
+      .order('published_at', { ascending: false })
+      .limit(6);
     const existingIds = new Set(terms.map((t) => t.id));
-    const fallbacks = ((fallbackRes.data ?? []) as HomeHandbookTerm[])
+    const fallbacks = ((fallbackRes.data ?? []) as unknown as HomeHandbookTerm[])
       .filter((t) => !existingIds.has(t.id));
     terms = [...terms, ...fallbacks.slice(0, 6 - terms.length)];
   }
 
-  // 7일치 뉴스가 3개 미만이면 최근 뉴스로 채움
-  let news = (recentNewsRes.data ?? []) as HomeNewsPost[];
+  const latestNews = (newsRes.data ?? []) as HomeNewsPost[];
+  let news = latestNews.filter((post) => post.published_at && post.published_at >= sevenDaysAgo);
+  // 7일치 뉴스가 3개 미만이면 같은 최신 뉴스 창에서 채움
   if (news.length < 3) {
-    const fallbackNews = (fallbackNewsRes.data ?? []) as HomeNewsPost[];
-    const existingIds = new Set(news.map((n) => n.id));
-    const extras = fallbackNews.filter((n) => !existingIds.has(n.id));
-    news = [...news, ...extras].slice(0, 10);
+    news = latestNews.slice(0, 10);
   }
 
   return {
