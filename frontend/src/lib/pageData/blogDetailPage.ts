@@ -1,6 +1,7 @@
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { buildBlogSidebarDataset, toSidebarPost } from './blogSidebar';
-import { getAuthorizedSupabase, getDefinitionField, getPublicSupabase, type DetailPageContext } from './shared';
+import { fetchPublicTermIndex } from './publicTermIndex';
+import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
 export async function getBlogDetailPageData({ locale, slug, previewMode, locals }: DetailPageContext) {
   const pageSlug = slug;
@@ -48,36 +49,28 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
       ? getAuthorizedSupabase(locals.accessToken)
       : null;
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
-    const definitionField = getDefinitionField(locale);
-    const summaryField = locale === 'ko' ? 'summary_ko' : 'summary_en';
 
     const rawContent = post.content || '';
 
     // Track 1: terms fetch → termsMap build → markdown render (chained)
     // Runs in parallel with Track 2 DB queries so render time overlaps with I/O.
     const renderTrack = (async () => {
-      const hbTermsRes = await publicSupabase
-        .from('handbook_terms')
-        .select(`term, slug, korean_name, term_full, categories, ${summaryField}, ${definitionField}, body_basic_ko, body_basic_en`)
-        .eq('status', 'published')
-        .limit(200);
+      const handbookTerms = await fetchPublicTermIndex(publicSupabase, locale);
 
       const tMap: TermsMap = new Map();
       const tJson: Record<string, any> = {};
-      for (const entry of hbTermsRes.data ?? []) {
+      for (const entry of handbookTerms) {
         const termEntry = { slug: entry.slug, term: entry.term };
         tMap.set(entry.term.toLowerCase(), termEntry);
         if (entry.korean_name) tMap.set(entry.korean_name.toLowerCase(), termEntry);
         tJson[entry.slug] = {
           term: entry.term,
           korean_name: entry.korean_name || '',
-          term_full: (entry as Record<string, any>).term_full || '',
+          term_full: entry.term_full || '',
           categories: entry.categories || [],
-          summary: (entry as Record<string, any>)[summaryField] || '',
-          definition: (entry as Record<string, any>)[definitionField] || '',
-          basic_plain: locale === 'ko'
-            ? (entry as Record<string, any>).body_basic_ko || ''
-            : (entry as Record<string, any>).body_basic_en || '',
+          summary: entry.summary || '',
+          definition: entry.definition || '',
+          basic_plain: entry.basic_plain || '',
         };
       }
 

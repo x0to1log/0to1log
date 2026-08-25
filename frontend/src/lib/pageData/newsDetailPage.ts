@@ -1,7 +1,8 @@
 import { getArticleFocusItems } from '../articleRail';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { resolveDisplayTitleExcerpt } from '../personaTitle';
-import { getAuthorizedSupabase, getDefinitionField, getPublicSupabase, type DetailPageContext } from './shared';
+import { fetchPublicTermIndex } from './publicTermIndex';
+import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 
 interface NewsDetailPageContext extends DetailPageContext {
   previewPersona?: string | null;
@@ -114,8 +115,6 @@ export async function getNewsDetailPageData({
 
   if (post && publicSupabase) {
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
-    const definitionField = getDefinitionField(locale);
-    const summaryField = locale === 'ko' ? 'summary_ko' : 'summary_en';
 
     // Fire FastAPI call early — don't await, collect result later during markdown rendering
     const similarPostsPromise = (import.meta.env.FASTAPI_URL && post.id)
@@ -166,11 +165,7 @@ export async function getNewsDetailPageData({
       // Bookmark/like status hydrated client-side (enables CDN caching for logged-in users)
       Promise.resolve({ data: null }),
       Promise.resolve({ data: null }),
-      publicSupabase
-        .from('handbook_terms')
-        .select(`term, slug, korean_name, term_full, categories, ${summaryField}, ${definitionField}, body_basic_ko, body_basic_en`)
-        .eq('status', 'published')
-        .limit(200),
+      fetchPublicTermIndex(publicSupabase, locale),
       post.category
         ? publicSupabase
             .from('news_posts')
@@ -194,7 +189,7 @@ export async function getNewsDetailPageData({
       ? post.focus_items
       : getArticleFocusItems(locale, post.category);
 
-    const hbTerms = hbTermsRes.data ?? [];
+    const hbTerms = hbTermsRes;
     for (const entry of hbTerms) {
       const termEntry = { slug: entry.slug, term: entry.term };
       handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
@@ -202,13 +197,11 @@ export async function getNewsDetailPageData({
       handbookTermsJson[entry.slug] = {
         term: entry.term,
         korean_name: entry.korean_name || '',
-        term_full: (entry as Record<string, any>).term_full || '',
+        term_full: entry.term_full || '',
         categories: entry.categories || [],
-        summary: (entry as Record<string, any>)[summaryField] || '',
-        definition: (entry as Record<string, any>)[definitionField] || '',
-        basic_plain: locale === 'ko'
-          ? (entry as Record<string, any>).body_basic_ko || ''
-          : (entry as Record<string, any>).body_basic_en || '',
+        summary: entry.summary || '',
+        definition: entry.definition || '',
+        basic_plain: entry.basic_plain || '',
       };
     }
 

@@ -33,17 +33,19 @@ export interface HandbookCategoryPageData {
 // Helpers
 // =============================================================================
 
-const TERM_CARD_COLUMNS =
-  'id, term, slug, korean_name, definition_ko, definition_en, categories, is_favourite';
+function getTermCardColumns(locale: 'en' | 'ko'): string {
+  const definitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
+  return `id, term, slug, korean_name, definition:${definitionField}, categories, is_favourite`;
+}
 
-function toTermCard(row: any): HandbookTermCard {
+function toTermCard(row: any, locale: 'en' | 'ko'): HandbookTermCard {
   return {
     id: row.id,
     term: row.term,
     slug: row.slug,
     korean_name: row.korean_name ?? null,
-    definition_ko: row.definition_ko ?? null,
-    definition_en: row.definition_en ?? null,
+    definition_ko: locale === 'ko' ? row.definition ?? null : null,
+    definition_en: locale === 'en' ? row.definition ?? null : null,
     categories: (row.categories as string[]) ?? [],
     is_favourite: row.is_favourite ?? false,
   };
@@ -62,7 +64,7 @@ export async function getHandbookPageData(
 
   const { data, error } = await supabase
     .from('handbook_terms')
-    .select(TERM_CARD_COLUMNS)
+    .select(getTermCardColumns(locale))
     .eq('status', 'published')
     .order('term')
     .limit(500);
@@ -71,7 +73,7 @@ export async function getHandbookPageData(
     return { allTerms: [], termsByCategory: {}, totalTerms: 0, error: error.message };
   }
 
-  const allTerms = (data ?? []).map(toTermCard);
+  const allTerms = (data ?? []).map((row) => toTermCard(row, locale));
 
   // Group by category in the canonical order from handbookCategories
   const categoryOrder = getHandbookCategories();
@@ -106,7 +108,7 @@ export async function getHandbookCategoryPageData(
 
   const { data, error } = await supabase
     .from('handbook_terms')
-    .select(TERM_CARD_COLUMNS)
+    .select(getTermCardColumns(locale))
     .eq('status', 'published')
     .contains('categories', [categorySlug])
     .order('term')
@@ -116,7 +118,7 @@ export async function getHandbookCategoryPageData(
     return { terms: [], totalTerms: 0, error: error.message };
   }
 
-  const terms = (data ?? []).map(toTermCard);
+  const terms = (data ?? []).map((row) => toTermCard(row, locale));
 
   return { terms, totalTerms: terms.length, error: null };
 }
