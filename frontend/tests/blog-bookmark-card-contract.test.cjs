@@ -11,10 +11,17 @@ function assertIncludes(haystack, needle, label) {
   }
 }
 
+function assertExcludes(haystack, needle, label) {
+  if (haystack.includes(needle)) {
+    throw new Error(`Unexpected ${label}: ${needle}`);
+  }
+}
+
 const featuredCard = read('frontend/src/components/blog/BlogFeaturedCard.astro');
 const listItem = read('frontend/src/components/blog/BlogListItem.astro');
 const enIndex = read('frontend/src/pages/en/blog/index.astro');
 const koIndex = read('frontend/src/pages/ko/blog/index.astro');
+const bookmarkScript = read('frontend/src/scripts/bookmark.ts');
 
 assertIncludes(featuredCard, 'isBookmarked?: boolean;', 'blog featured bookmark prop');
 assertIncludes(featuredCard, 'itemId?: string;', 'blog featured bookmark item id prop');
@@ -30,14 +37,15 @@ assertIncludes(listItem, 'newsprint-bookmark-icon', 'blog list bookmark button m
 assertIncludes(listItem, 'data-item-id={itemId}', 'blog list bookmark item id binding');
 assertIncludes(listItem, 'data-item-type={itemType}', 'blog list bookmark item type binding');
 
-assertIncludes(enIndex, 'isBookmarked={bookmarkedPostIds.has(post.id)}', 'EN blog list bookmark state wiring');
+assertExcludes(enIndex, 'bookmarkedPostIds', 'EN blog SSR bookmark state');
 assertIncludes(enIndex, 'itemId={post.id}', 'EN blog list bookmark item id wiring');
 assertIncludes(enIndex, 'itemType="blog"', 'EN blog list bookmark item type wiring');
 assertIncludes(enIndex, '<BlogFeaturedCard', 'EN featured blog card usage');
 
-assertIncludes(koIndex, 'isBookmarked={bookmarkedPostIds.has(post.id)}', 'KO blog list bookmark state wiring');
+assertExcludes(koIndex, 'bookmarkedPostIds', 'KO blog SSR bookmark state');
 assertIncludes(koIndex, 'itemId={post.id}', 'KO blog list bookmark item id wiring');
 assertIncludes(koIndex, 'itemType="blog"', 'KO blog list bookmark item type wiring');
 assertIncludes(koIndex, '<BlogFeaturedCard', 'KO featured blog card usage');
+assertIncludes(bookmarkScript, "import './content-status';", 'shared client bookmark hydration');
 
 console.log('blog-bookmark-card-contract.test.cjs passed');
