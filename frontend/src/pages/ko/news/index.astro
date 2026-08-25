@@ -4,7 +4,6 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { normalizeCategorySlug, getPostTypeLabel } from '../../../lib/categories';
 import { resolveDisplayTitleExcerpt, getEffectivePersona } from '../../../lib/personaTitle';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
@@ -17,25 +16,13 @@ import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
 
 let posts: any[] = [];
 let fetchError: string | null = null;
-const readPostIds = new Set<string>();
-const bookmarkedPostIds = new Set<string>();
-const user = Astro.locals.user;
-const accessToken = Astro.locals.accessToken;
 
-const authSb = (user && accessToken)
-  ? createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-    )
-  : null;
-
-// Parallel fetch: daily posts + weekly posts (separate queries so weekly always appears) + user data + site content
+// Parallel fetch: daily posts + weekly posts (separate queries so weekly always appears) + site content
 // Weekly is published ~1/week; daily is 2/day. Without a separate query, weekly
 // gets pushed out of any single top-N window as posts accumulate.
 const POSTS_FIELDS = 'id, title, title_learner, title_beginner, slug, category, post_type, published_at, tags, reading_time_min, excerpt, guide_items';
 
-const [dailyRes, weeklyRes, histRes, bmRes, sc] = await Promise.all([
+const [dailyRes, weeklyRes, sc] = await Promise.all([
   supabase
     ? supabase
         .from('news_posts')
@@ -58,12 +45,6 @@ const [dailyRes, weeklyRes, histRes, bmRes, sc] = await Promise.all([
         .order('published_at', { ascending: false })
         .limit(20)
     : Promise.resolve({ data: null, error: null }),
-  authSb
-    ? authSb.from('reading_history').select('item_id').eq('user_id', user!.id).eq('item_type', 'news')
-    : Promise.resolve({ data: null }),
-  authSb
-    ? authSb.from('user_bookmarks').select('item_id').eq('user_id', user!.id).eq('item_type', 'news')
-    : Promise.resolve({ data: null }),
   getSiteContents(
     ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
     'ko',
@@ -77,8 +58,6 @@ if (dailyRes.error || weeklyRes.error) {
 } else {
   posts = [...(dailyRes.data ?? []), ...(weeklyRes.data ?? [])];
 }
-(histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
-(bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
 
 // Resolve persona-aware title/excerpt for each post (learner default for anonymous)
 const persona = getEffectivePersona(Astro.locals.profile);
@@ -163,7 +142,6 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
             readingTimeMin={businessHeadline.reading_time_min}
             tags={businessHeadline.tags}
             locale="ko"
-            isBookmarked={bookmarkedPostIds.has(businessHeadline.id)}
             itemId={businessHeadline.id}
             itemType="news"
             postType={businessHeadline.post_type}
@@ -179,7 +157,6 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
             readingTimeMin={researchHeadline.reading_time_min}
             tags={researchHeadline.tags}
             locale="ko"
-            isBookmarked={bookmarkedPostIds.has(researchHeadline.id)}
             itemId={researchHeadline.id}
             itemType="news"
             postType={researchHeadline.post_type}
@@ -195,7 +172,6 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
             readingTimeMin={weeklyHeadline.reading_time_min}
             tags={weeklyHeadline.tags}
             locale="ko"
-            isBookmarked={bookmarkedPostIds.has(weeklyHeadline.id)}
             itemId={weeklyHeadline.id}
             itemType="news"
             postType={weeklyHeadline.post_type}
@@ -214,8 +190,6 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
                 excerpt={post.display_excerpt || post.excerpt}
                 tags={post.tags}
                 locale="ko"
-                isRead={readPostIds.has(post.id)}
-                isBookmarked={bookmarkedPostIds.has(post.id)}
                 itemId={post.id}
                 itemType="news"
                 postType={post.post_type}
