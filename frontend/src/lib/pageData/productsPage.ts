@@ -152,8 +152,9 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
       .limit(200),
   ]);
 
-  if (categoriesRes.error) {
-    return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: categoriesRes.error.message };
+  if (categoriesRes.error || productsRes.error) {
+    const message = categoriesRes.error?.message || productsRes.error?.message || 'Product list lookup failed.';
+    return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: message };
   }
 
   const categories = (categoriesRes.data ?? []) as unknown as ProductCategory[];

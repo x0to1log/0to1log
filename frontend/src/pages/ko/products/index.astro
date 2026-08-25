@@ -10,6 +10,7 @@ import ProductCard from '../../../components/products/ProductCard.astro';
 
 const locale = 'ko';
 const { categories, allProducts, productsByCategory, error } = await getProductsPageData(locale);
+if (error) Astro.response.status = 503;
 
 // Fixed 3 / 3 / 3 / 1 grid order. Categories render in this order regardless
 // of the order the data layer returns them in.

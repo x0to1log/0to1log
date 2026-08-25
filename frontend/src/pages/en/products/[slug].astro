@@ -19,7 +19,9 @@ const [alternatives, relatedNews] = product
     ])
   : [[], []];
 
-if (!product && !error) {
+if (error) {
+  Astro.response.status = 503;
+} else if (!product) {
   Astro.response.status = 404;
 }
 

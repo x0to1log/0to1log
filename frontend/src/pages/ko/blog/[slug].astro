@@ -37,7 +37,9 @@ const {
   locals: Astro.locals,
 });
 
-if (!post && !postError) {
+if (postError) {
+  Astro.response.status = 503;
+} else if (!post) {
   Astro.response.status = 404;
 }
 

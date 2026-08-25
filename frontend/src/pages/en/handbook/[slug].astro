@@ -50,7 +50,9 @@ const {
   previewLevel,
 });
 
-if (!term && !termError) {
+if (termError) {
+  Astro.response.status = 503;
+} else if (!term) {
   Astro.response.status = 404;
 }
 

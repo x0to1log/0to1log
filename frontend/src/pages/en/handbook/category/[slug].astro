@@ -20,6 +20,7 @@ if (!categoryLabel) {
 
 const categoryDesc = getHandbookCategoryDescription(locale, slug);
 const { terms, totalTerms, error } = await getHandbookCategoryPageData(locale, slug);
+if (error) Astro.response.status = 503;
 
 // User bookmarks
 const bookmarkedTermIds = new Set<string>();

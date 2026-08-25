@@ -33,6 +33,7 @@ if (postsRes.error) {
 } else {
   posts = postsRes.data ?? [];
 }
+if (fetchError) Astro.response.status = 503;
 
 const FEATURED_COUNT = 4;
 const BATCH_SIZE = 10;

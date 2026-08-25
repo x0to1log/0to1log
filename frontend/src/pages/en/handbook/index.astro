@@ -17,6 +17,7 @@ const locale = 'en';
 const PREVIEW_COUNT = 4;
 
 const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
+if (fetchError) Astro.response.status = 503;
 
 const handbookTags: Record<string, string> = {
   'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',

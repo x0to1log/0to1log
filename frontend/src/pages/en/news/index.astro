@@ -58,6 +58,7 @@ if (dailyRes.error || weeklyRes.error) {
 } else {
   posts = [...(dailyRes.data ?? []), ...(weeklyRes.data ?? [])];
 }
+if (fetchError) Astro.response.status = 503;
 
 // Resolve persona-aware title/excerpt for each post (learner default for anonymous)
 const persona = getEffectivePersona(Astro.locals.profile);

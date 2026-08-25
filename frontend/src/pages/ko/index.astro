@@ -3,11 +3,12 @@ export const prerender = false;
 
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
-import { getSiteContents } from '../../lib/siteContent';
+import { getSiteContentsResult } from '../../lib/siteContent';
 import HomeSplitHero from '../../components/home/HomeSplitHero.astro';
 
 const locale = 'ko';
-const siteContent = await getSiteContents(['home_title', 'home_intro'], locale);
+const { content: siteContent, error: siteContentError } = await getSiteContentsResult(['home_title', 'home_intro'], locale);
+if (siteContentError) Astro.response.status = 503;
 
 const homeTitle = siteContent.home_title || t.ko['home.title'];
 const homeIntro = siteContent.home_intro ||
