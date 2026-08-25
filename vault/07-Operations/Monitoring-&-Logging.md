@@ -66,6 +66,7 @@ Stage A→B 전환 판단 및 서비스 건강성 추적을 위한 핵심 운영
 ## Related
 - [[Infrastructure-Topology]] — 모니터링 대상 서비스
 - [[Pipeline-Stage-Logging-Schema]] — 스테이지별 로깅 스키마
+- [[Supabase-Egress-&-Public-Cache-Policy]] — egress 예산과 cache hit 운영 기준
 
 ## See Also
 - [[AI-News-Pipeline-Design]] — 파이프라인 로깅 (04-AI-System)

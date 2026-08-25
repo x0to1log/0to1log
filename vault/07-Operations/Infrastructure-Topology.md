@@ -156,6 +156,7 @@ Railway 백엔드는 `*.up.railway.app` 기본 URL을 사용한다. 커스텀 �
 ## Related
 - [[Deployment-Pipeline]] — 배포 파이프라인
 - [[Cost-Model-&-Stage-AB]] — 비용 모델
+- [[Supabase-Egress-&-Public-Cache-Policy]] — Supabase-Vercel 공개 조회와 캐시 경계
 
 ## See Also
 - [[System-Architecture]] — 전체 시스템 아키텍처 (02-Architecture)
