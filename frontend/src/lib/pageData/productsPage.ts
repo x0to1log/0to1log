@@ -131,8 +131,9 @@ export const PRODUCT_DETAIL_PUBLIC_COLUMNS = [
 // List page
 // =============================================================================
 
+const PRODUCT_CATEGORY_COLUMNS = 'id, label_en, label_ko, sort_order';
 const CARD_COLUMNS =
-  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, tags_ko, difficulty, search_corpus';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, tags_ko';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
@@ -140,7 +141,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
   }
 
   const [categoriesRes, productsRes] = await Promise.all([
-    supabase.from('ai_product_categories').select('*').order('sort_order'),
+    supabase.from('ai_product_categories').select(PRODUCT_CATEGORY_COLUMNS).order('sort_order'),
     supabase
       .from('ai_products')
       .select(CARD_COLUMNS)

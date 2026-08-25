@@ -40,7 +40,6 @@ const buildSearchText = (product: typeof allProducts[0]) =>
     ...(product.tags ?? []),
     ...((product as any).tags_ko ?? []),
     ...((product as any).display_tags ?? []),
-    (product as any).search_corpus,
   ].filter(Boolean).join(' ').toLowerCase();
 
 const getFirstImageUrl = (product: typeof allProducts[0]) => {
