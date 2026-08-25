@@ -14,22 +14,21 @@ for (const page of detailPages) {
   const source = read(page);
 
   assert(
-    source.includes('const shouldUsePublicNewsCache ='),
-    `${page} must make public cache conditional explicit`,
-  );
-  assert(
-    source.includes('!Astro.locals.user') && source.includes('!Astro.locals.accessToken'),
-    `${page} must only public-cache anonymous news detail HTML because persona content is server-rendered`,
-  );
-  assert(
-    source.includes("'Cache-Control', 'private, no-store'"),
-    `${page} must prevent shared caching for authenticated persona-specific HTML`,
-  );
-  assert(
-    source.includes("if (shouldUsePublicNewsCache) {\n  Astro.response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');"),
-    `${page} must only set public cache in the anonymous cache branch`,
+    !source.includes("Astro.response.headers.set('Cache-Control'"),
+    `${page} must rely on the centralized middleware cache policy`,
   );
 }
+
+const middleware = read('src/middleware.ts');
+const cachePolicy = read('src/lib/server/publicCachePolicy.ts');
+assert(
+  middleware.includes('hasSessionCookie') && middleware.includes('finalizePublicResponse'),
+  'Middleware must keep authenticated public HTML out of shared cache',
+);
+assert(
+  cachePolicy.includes("cacheControl: 'private, no-store'") && cachePolicy.includes("vary: 'Cookie'"),
+  'Central cache policy must separate personalized and anonymous HTML',
+);
 
 const pageData = read('src/lib/pageData/newsDetailPage.ts');
 assert(

@@ -1,5 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createClient } from '@supabase/supabase-js';
+import type { APIContext } from 'astro';
+import { applyPublicCachePolicy, getPublicContentCacheKind } from './lib/server/publicCachePolicy';
 
 const isSecure = import.meta.env.PROD;
 
@@ -50,6 +52,20 @@ async function nextWithCsp(next: () => Promise<Response>, nonce: string): Promis
   });
   rewrittenResponse.headers.set('Content-Security-Policy', buildCspHeader(nonce));
   return rewrittenResponse;
+}
+
+function finalizePublicResponse(context: APIContext, response: Response, authenticated: boolean): Response {
+  if (context.request.method !== 'GET' && context.request.method !== 'HEAD') return response;
+
+  const kind = getPublicContentCacheKind(context.url.pathname);
+  if (!kind) return response;
+
+  return applyPublicCachePolicy(response, {
+    kind,
+    authenticated,
+    preview: context.url.searchParams.get('preview') === '1',
+    hasError: response.status >= 500,
+  });
 }
 // Access cookie lifetime (1 day) — exceeds the JWT's own expiry (1h default) on
 // purpose so that after inactivity the cookie is still present and the middleware
@@ -219,7 +235,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
       return context.redirect('/admin/login');
     }
-    return nextWithCsp(next, nonce);
+    return finalizePublicResponse(context, await nextWithCsp(next, nonce), false);
   }
 
   // --- Zone 1: Admin-protected (/admin/*, /api/admin/* except /admin/login) ---
@@ -301,6 +317,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // --- Zone 3: Public (all other routes) ---
   // Silently try to extract user for optional features (read history, bookmark state)
   const accessToken = context.cookies.get('sb-access-token')?.value;
+  const hasSessionCookie = Boolean(accessToken || context.cookies.get('sb-refresh-token')?.value);
   if (accessToken) {
     // Check if we've recently validated this exact token (2-min cache)
     let result: { user: any; accessToken: string } | null = null;
@@ -334,5 +351,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  return nextWithCsp(next, nonce);
+  return finalizePublicResponse(context, await nextWithCsp(next, nonce), hasSessionCookie);
 });

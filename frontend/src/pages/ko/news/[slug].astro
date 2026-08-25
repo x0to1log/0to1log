@@ -56,15 +56,6 @@ if (!post && !postError) {
   Astro.response.status = 404;
 }
 
-// Persona-specific HTML is server-rendered. Only anonymous learner-default pages
-// can be shared through CDN; authenticated users need request-specific HTML.
-const shouldUsePublicNewsCache = post && !previewMode && !Astro.locals.isAdmin && !Astro.locals.user && !Astro.locals.accessToken;
-if (shouldUsePublicNewsCache) {
-  Astro.response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-} else if (post && !previewMode && !Astro.locals.isAdmin) {
-  Astro.response.headers.set('Cache-Control', 'private, no-store');
-}
-
 const masthead = '최신 AI 뉴스 모음집';
 const editionMap: Record<string, string> = {
   'ai-news': '데일리 디스패치',

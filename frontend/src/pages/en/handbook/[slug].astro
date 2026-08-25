@@ -54,11 +54,6 @@ if (!term && !termError) {
   Astro.response.status = 404;
 }
 
-// CDN cache for all non-admin users (bookmark status hydrated client-side)
-if (term && !previewMode && !Astro.locals.isAdmin) {
-  Astro.response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-}
-
 const isEnFallback = term && !term.definition_en && term.definition_ko;
 const user = Astro.locals.user;
 const pageTitle = term ? term.term : t[locale]['handbook.notfound'];

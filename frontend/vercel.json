@@ -24,24 +24,6 @@
       ]
     },
     {
-      "source": "/(en|ko)/",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=60, stale-while-revalidate=300"
-        }
-      ]
-    },
-    {
-      "source": "/(en|ko)/(news|blog|handbook|products)/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=60, stale-while-revalidate=300"
-        }
-      ]
-    },
-    {
       "source": "/(.*)",
       "headers": [
         {
