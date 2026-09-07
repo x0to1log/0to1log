@@ -73,6 +73,13 @@ pytest tests/ -v --tb=short
 ruff format .
 ```
 
+### Historical News Backfills
+
+- Keep retries anchored to `target_date`; never fall back to today's news or a future release.
+- Historical collection requires publication evidence and rejects post-cutoff content. Use dated arXiv versions and eligible GitHub release notes, not live README/HF summaries/comments or fresh enrichment.
+- This is a conservative date guard, not an archival guarantee. Review source versions and dates before publishing. Undated or future-event text may be excluded even if otherwise relevant.
+- Old collect/enrich checkpoints and drafts are not repaired by deploying this guard. Preserve them for review; do not reuse contaminated checkpoints or publish them unchanged. Recollect affected inputs before targeted regeneration.
+
 ---
 
 ## API Endpoints

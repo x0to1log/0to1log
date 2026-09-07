@@ -373,7 +373,8 @@ async def test_collect_news_drops_stale_candidate_from_url_date():
 
 
 @pytest.mark.asyncio
-async def test_collect_news_keeps_fresh_candidate_from_text_date_and_unknown_date():
+@patch("services.news_collection.today_kst", return_value="2026-05-23")
+async def test_collect_news_keeps_fresh_candidate_from_text_date_and_unknown_date(_today):
     from models.news_pipeline import NewsCandidate
     from services.news_collection import collect_news
 
@@ -460,7 +461,8 @@ async def test_enrich_sources_preserves_source_metadata():
 
 
 @pytest.mark.asyncio
-async def test_enrich_sources_adds_official_source_for_secondary_lead_group():
+@patch("services.news_collection.today_kst", return_value="2026-04-13")
+async def test_enrich_sources_adds_official_source_for_secondary_lead_group(_today):
     from models.news_pipeline import ClassifiedGroup, GroupedItem
     from services.news_collection import enrich_sources
 
@@ -511,7 +513,8 @@ async def test_enrich_sources_adds_official_source_for_secondary_lead_group():
 
 
 @pytest.mark.asyncio
-async def test_enrich_sources_checks_official_source_for_multi_source_secondary_lead_group():
+@patch("services.news_collection.today_kst", return_value="2026-05-13")
+async def test_enrich_sources_checks_official_source_for_multi_source_secondary_lead_group(_today):
     from models.news_pipeline import ClassifiedGroup, GroupedItem
     from services.news_collection import enrich_sources
 
@@ -562,7 +565,8 @@ async def test_enrich_sources_checks_official_source_for_multi_source_secondary_
 
 
 @pytest.mark.asyncio
-async def test_official_lookup_retries_without_date_filter_when_dated_search_misses_static_page():
+@patch("services.news_collection.today_kst", return_value="2026-05-13")
+async def test_official_lookup_retries_without_date_filter_when_dated_search_misses_static_page(_today):
     from models.news_pipeline import ClassifiedGroup, GroupedItem
     from services.news_collection import enrich_sources
 

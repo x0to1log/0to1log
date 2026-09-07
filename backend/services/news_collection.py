@@ -327,6 +327,27 @@ def _daily_reference_date(target_date: str | None = None) -> datetime:
         return datetime.now(timezone.utc)
 
 
+def _is_backfill_date(target_date: str | None) -> bool:
+    return bool(target_date and _daily_reference_date(target_date).date() < _daily_reference_date().date())
+
+
+def _historical_drop_reason(candidate: NewsCandidate, target_date: str) -> str:
+    # Publication evidence is required; a date mentioned in prose is not proof.
+    published = _date_string(candidate.published_at) or _extract_date_string(urlparse(candidate.url).path)
+    if not published:
+        return "undated"
+    if "arxiv.org" == (urlparse(candidate.url).hostname or "").removeprefix("www."):
+        if candidate.source != "arxiv" or not _re_module.search(r"v\d+$", candidate.url):
+            return "undated"
+    cutoff = _daily_reference_date(target_date).strftime("%Y-%m-%d")
+    evidence_date = _extract_date_string(
+        f"{candidate.url} {candidate.title} {candidate.snippet} {candidate.raw_content}"
+    )
+    if published > cutoff or evidence_date > cutoff:
+        return "future"
+    return ""
+
+
 def _daily_source_date_window(target_date: str | None = None) -> tuple[str, str]:
     base = _daily_reference_date(target_date)
     return (
@@ -682,6 +703,9 @@ async def _collect_fallback_news(
             logger.warning("Exa fallback error: %s", e)
 
     # --- Google News RSS ---
+    if _is_backfill_date(date_kwargs.get("end_date")):
+        # This RSS path has neither publication dates nor an archival snapshot.
+        return []
     try:
         import httpx
         from urllib.parse import quote
@@ -766,7 +790,9 @@ async def _collect_tavily(
         nonlocal tavily_exhausted
         if tavily_exhausted:
             return []
-        for attempt, kwargs in enumerate([dk, {"days": 5}]):
+        retry_dates = ({"start_date": (td - timedelta(days=5)).isoformat(), "end_date": td.isoformat()}
+                       if is_backfill else {"days": 5})
+        for attempt, kwargs in enumerate([dk, retry_dates]):
             try:
                 response = await loop.run_in_executor(
                     None,
@@ -828,6 +854,7 @@ async def _collect_tavily(
         "source": "tavily",
         "queries": list(queries),
         "query_counts": query_counts,
+        "date_kwargs": date_kwargs,
         "total_results": len(all_results),
         "candidates": len(candidates),
     }
@@ -840,6 +867,10 @@ async def _collect_tavily(
 
 async def _collect_hf_papers(target_date: str | None = None) -> list[NewsCandidate]:
     """Collect top papers from HuggingFace Daily Papers."""
+    if _is_backfill_date(target_date):
+        # Daily membership is historical, but the returned summary is mutable.
+        # Use the version-dated arXiv collector for historical papers instead.
+        return []
     try:
         params = {}
         if target_date:
@@ -906,6 +937,11 @@ async def _collect_arxiv(target_date: str | None = None) -> list[NewsCandidate]:
             title = (entry.findtext("atom:title", "", ns) or "").strip().replace("\n", " ")
             summary = (entry.findtext("atom:summary", "", ns) or "").strip().replace("\n", " ")
             entry_id = entry.findtext("atom:id", "", ns) or ""
+            published = _date_string(entry.findtext("atom:published", "", ns))
+            updated = _date_string(entry.findtext("atom:updated", "", ns))
+
+            if _is_backfill_date(target_date) and (not updated or updated > target_date):
+                continue
 
             if not entry_id:
                 continue
@@ -918,6 +954,7 @@ async def _collect_arxiv(target_date: str | None = None) -> list[NewsCandidate]:
                 snippet=summary[:300],
                 source="arxiv",
                 raw_content=summary,
+                published_at=published,
             ))
 
         logger.info("Collected %d papers from arXiv", len(candidates))
@@ -948,13 +985,17 @@ async def _fetch_readme_excerpt(client: httpx.AsyncClient, full_name: str) -> st
 async def _fetch_latest_release(
     client: httpx.AsyncClient, full_name: str, ref: datetime, max_age_days: int = 7,
 ) -> dict | None:
-    """Fetch the most recent release if it was published within max_age_days.
+    """Select the latest release at/before ref, within max_age_days.
+
+    Search a bounded history (100 releases); if no eligible release is found,
+    omit the repo rather than substituting its current release.
     Returns None when the repo has no recent release, letting the caller skip
     the release signal for stale repos. Used to prioritize repos that actually
     shipped something recently (option B in the GitHub-trending tuning)."""
     try:
+        per_page = 100 if ref.date() < _daily_reference_date().date() else 1
         resp = await client.get(
-            f"https://api.github.com/repos/{full_name}/releases?per_page=1",
+            f"https://api.github.com/repos/{full_name}/releases?per_page={per_page}",
             headers={"Accept": "application/vnd.github.v3+json"},
         )
         if resp.status_code != 200:
@@ -962,17 +1003,21 @@ async def _fetch_latest_release(
         releases = resp.json()
         if not releases:
             return None
-        rel = releases[0]
-        pub = rel.get("published_at") or ""
-        if not pub:
-            return None
-        try:
-            rel_dt = datetime.strptime(pub[:10], "%Y-%m-%d")
-        except ValueError:
-            return None
         ref_naive = ref.replace(tzinfo=None) if ref.tzinfo else ref
-        if (ref_naive - rel_dt).days > max_age_days:
+        eligible = []
+        for release in releases:
+            if release.get("draft"):
+                continue
+            try:
+                release_date = datetime.strptime((release.get("published_at") or "")[:10], "%Y-%m-%d")
+            except ValueError:
+                continue
+            if 0 <= (ref_naive - release_date).days <= max_age_days:
+                eligible.append(release)
+        if not eligible:
             return None
+        rel = max(eligible, key=lambda item: item["published_at"])
+        pub = rel["published_at"]
         return {
             "tag": rel.get("tag_name", "") or rel.get("name", ""),
             "name": rel.get("name", "") or rel.get("tag_name", ""),
@@ -1020,10 +1065,11 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 
         repos = data.get("items", [])[:10]
 
-        # Fetch README excerpts + latest releases in parallel (2 calls per repo).
+        # Historical runs omit live README text and use eligible release notes only.
         async with httpx.AsyncClient(timeout=10.0) as aux_client:
             readme_tasks = [
-                _fetch_readme_excerpt(aux_client, repo.get("full_name", ""))
+                (asyncio.sleep(0, result="") if _is_backfill_date(target_date)
+                 else _fetch_readme_excerpt(aux_client, repo.get("full_name", "")))
                 for repo in repos
             ]
             release_tasks = [
@@ -1049,14 +1095,21 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
 
             snippet_parts: list[str] = []
             release_info = release if isinstance(release, dict) else None
+            if _is_backfill_date(target_date):
+                if not release_info:
+                    continue
+                # A live README/description and stars are not historical evidence.
+                description = ""
+                repo_url = release_info["html_url"] or repo_url
             if release_info:
                 recent_release_count += 1
                 tag = release_info["tag"] or "latest"
                 snippet_parts.append(f"Released {tag} on {release_info['published_at']}")
             if description:
                 snippet_parts.append(description)
-            snippet_parts.append(f"Stars: {stars:,}")
-            if language:
+            if not _is_backfill_date(target_date):
+                snippet_parts.append(f"Stars: {stars:,}")
+            if language and not _is_backfill_date(target_date):
                 snippet_parts.append(f"Language: {language}")
             snippet = " | ".join(snippet_parts)
 
@@ -1079,6 +1132,7 @@ async def _collect_github_trending(target_date: str | None = None) -> list[NewsC
                 snippet=snippet[:300],
                 source="github_trending",
                 raw_content=raw,
+                published_at=release_info["published_at"] if release_info else "",
             ))
 
         # Sort so repos with a recent release surface first — classifier sees
@@ -1309,6 +1363,17 @@ async def enrich_sources(
         {primary_url: [{"url": ..., "title": ..., "content": ...}, ...]}
     """
     enriched: dict[str, list[dict]] = {}
+    if _is_backfill_date(target_date):
+        # Re-fetching mutable pages can import updates after the selected day.
+        # Historical runs only expand the date-checked collection snapshot.
+        return {
+            group.primary_url: [
+                _build_source_payload(url=item.url, title=item.title,
+                                      content=raw_content_map.get(item.url, ""), source="merge")
+                for item in group.items
+            ]
+            for group in groups if group.primary_url
+        }
     needs_enrich: list = []
 
     for group in groups:
@@ -1530,6 +1595,7 @@ async def collect_news(
     unique: list[NewsCandidate] = []
     excluded_count = 0
     filtered_count = 0
+    historical_drop_counts = {"future": 0, "undated": 0}
     stale_drop_counts = {
         "stale_published_at": 0,
         "stale_url_date": 0,
@@ -1538,6 +1604,12 @@ async def collect_news(
     _NON_ARTICLE_PATTERNS = ("/category/", "/categories/", "/topics/", "/topic/", "/tag/", "/tags/", "/archive/")
     # Domain filters are loaded from Supabase via _load_domain_filters() (shared with enrich_sources)
     for c in all_candidates:
+        if _is_backfill_date(target_date):
+            reason = _historical_drop_reason(c, target_date)
+            if reason:
+                historical_drop_counts[reason] += 1
+                filtered_count += 1
+                continue
         if c.url in already_used:
             excluded_count += 1
             continue
@@ -1599,6 +1671,8 @@ async def collect_news(
         "source_counts": source_counts,
         "total_candidates": len(unique),
         "stale_drop_counts": stale_drop_counts,
+        "historical_drop_counts": historical_drop_counts,
+        "historical_policy": "dated-snapshot-v1" if _is_backfill_date(target_date) else None,
         "business_candidate_health": {
             "business_like_count": business_like_count,
             "trusted_business_like_count": trusted_business_like_count,
@@ -1855,6 +1929,10 @@ async def collect_community_reactions(title: str, url: str, target_date: str | N
     Returns formatted reactions with real quotes, or empty string if none found.
     """
     import httpx
+
+    if _is_backfill_date(target_date):
+        # Current thread scores/comments are not an as-of-date snapshot.
+        return ""
 
     # Skip URLs unlikely to have community discussions (GitHub profiles, category pages)
     if url and _re_module.match(r"https?://github\.com/[^/]+/?$", url):
