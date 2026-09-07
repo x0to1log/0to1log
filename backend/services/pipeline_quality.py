@@ -20,6 +20,8 @@ import time
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+from openai import RateLimitError
+
 from core.config import settings
 from models.news_pipeline import ClassifiedGroup, PersonaOutput
 from services.agents.client import (
@@ -1034,9 +1036,13 @@ async def _check_digest_quality(
 
     client = get_openai_client()
     quality_model = settings.openai_model_reasoning  # gpt-5-mini — nano can't score
+    failed_evaluations: list[dict[str, Any]] = []
 
     async def _score(prompt: str, content: str, label: str, default_scope: str) -> tuple[int, dict, list[dict[str, str]], dict]:
         max_retries = 2
+        service_tier = "flex"
+        usage: dict[str, Any] = {}
+        last_error = "No usable evaluation returned"
         for attempt in range(max_retries):
             try:
                 resp = await client.chat.completions.create(
@@ -1048,16 +1054,23 @@ async def _check_digest_quality(
                         ],
                         max_tokens=1500,  # rubric with evidence per sub-score is verbose
                         response_format={"type": "json_object"},
-                        service_tier="flex",
+                        service_tier=service_tier,
                         prompt_cache_key=f"qc-{label}",
                     )
                 )
+                # Even an empty/invalid completion may have consumed billable tokens.
+                usage = merge_usage_metrics(
+                    usage,
+                    extract_usage_metrics(resp, quality_model, requested_service_tier=service_tier),
+                )
                 raw = resp.choices[0].message.content
                 if not raw or not raw.strip():
+                    last_error = "Empty evaluation response"
                     logger.warning("Quality check %s attempt %d: empty response", label, attempt + 1)
                     continue
                 data = parse_ai_json(raw, label)
                 if not data:
+                    last_error = "Invalid evaluation JSON"
                     logger.warning("Quality check %s attempt %d: parse failed", label, attempt + 1)
                     continue
 
@@ -1070,13 +1083,21 @@ async def _check_digest_quality(
                 if score == 0 and "score" in data:
                     score = int(data.get("score", 0))
 
-                usage = extract_usage_metrics(resp, quality_model, requested_service_tier="flex")
                 issues = _extract_structured_issues(data.get("issues"), default_scope)
                 return score, data, issues, usage
             except Exception as e:
+                last_error = str(e)
+                # Capacity errors are not quota errors. Only the former may fall
+                # back to standard pricing, within the existing two-attempt limit.
+                if isinstance(e, RateLimitError) and e.code == "flex_unavailable":
+                    service_tier = "default"
                 logger.warning("Quality check %s attempt %d failed: %s", label, attempt + 1, e)
         logger.error("Quality check %s failed after %d attempts", label, max_retries)
-        return 0, {}, [], {}
+        failed_evaluations.append({
+            "scope": default_scope, "attempts": max_retries,
+            "service_tier": service_tier, "error": last_error,
+        })
+        return 0, {}, [], usage
 
     def _quiz_for(persona: str, locale: str) -> dict[str, Any] | None:
         quiz = persona_quizzes.get(persona, {}).get(locale)
@@ -1141,6 +1162,22 @@ async def _check_digest_quality(
     )
 
     results = await asyncio.gather(*tasks)
+
+    if failed_evaluations:
+        failed_usage: dict[str, Any] = {}
+        for _, _, _, call_usage in results:
+            failed_usage = merge_usage_metrics(failed_usage, call_usage)
+        message = "Quality evaluation unavailable: " + ", ".join(
+            item["scope"] for item in failed_evaluations
+        )
+        await _log_stage(
+            supabase, run_id, f"quality:{digest_type}", "failed", t0,
+            error_message=message, usage=failed_usage, post_type=digest_type,
+            debug_meta={"evaluation_failed": True, "failed_evaluations": failed_evaluations},
+        )
+        # An unavailable judge is not a zero quality score. Preserve checkpoints
+        # and let the caller fail this stage instead of saving a misleading score.
+        raise RuntimeError(message)
 
     has_learner = bool(learner and (learner.en or learner.ko))
     has_beginner = bool(beginner and (beginner.en or beginner.ko))

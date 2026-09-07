@@ -75,6 +75,9 @@ ruff format .
 
 ### Historical News Backfills
 
+- Daily quality evaluation retries `flex_unavailable` with `service_tier=default` within the existing two-attempt budget; quota/auth errors must not trigger a pricing-tier fallback.
+- An unavailable evaluator is a failed stage, not a zero score. Log all returned completion usage, including empty/invalid responses. Rescore saved drafts via the quality-only rerun rather than regenerating articles.
+
 - Keep retries anchored to `target_date`; never fall back to today's news or a future release.
 - Historical collection requires publication evidence and rejects post-cutoff content. Use dated arXiv versions and eligible GitHub release notes, not live README/HF summaries/comments or fresh enrichment.
 - This is a conservative date guard, not an archival guarantee. Review source versions and dates before publishing. Undated or future-event text may be excluded even if otherwise relevant.
