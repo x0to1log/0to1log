@@ -5,7 +5,8 @@ import openai
 import pytest
 
 from services.agents.client import (
-    _apply_gpt5_kwargs,
+    _apply_reasoning_model_kwargs,
+    _is_reasoning_model,
     build_completion_kwargs,
     with_flex_retry,
 )
@@ -26,15 +27,58 @@ def _fake_rate_limit_error(msg: str = "resource unavailable") -> openai.RateLimi
 
 def test_gpt5_default_reasoning_effort_is_low():
     kwargs = {"model": "gpt-5", "max_tokens": 1000}
-    out = _apply_gpt5_kwargs(kwargs, "gpt-5")
+    out = _apply_reasoning_model_kwargs(kwargs, "gpt-5")
     assert out["reasoning_effort"] == "low"
     assert out["max_completion_tokens"] == 3000
 
 
 def test_gpt5_caller_can_override_reasoning_effort_to_high():
     kwargs = {"model": "gpt-5", "max_tokens": 1000, "reasoning_effort": "high"}
-    out = _apply_gpt5_kwargs(kwargs, "gpt-5")
+    out = _apply_reasoning_model_kwargs(kwargs, "gpt-5")
     assert out["reasoning_effort"] == "high"
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra"],
+)
+def test_production_model_families_are_reasoning_models(model):
+    assert _is_reasoning_model(model) is True
+
+
+@pytest.mark.parametrize("model", ["gpt-6-luna", "gpt-6.1-sol"])
+def test_gpt6_gets_reasoning_headroom_and_low_effort_default(model):
+    _assert_reasoning_defaults(model)
+
+
+def test_future_gpt_generation_defaults_to_reasoning_model():
+    # Policy: an unmatched reasoning model fails silently (truncated JSON),
+    # while a wrongly-matched one fails loudly (400 on first call). So new
+    # generations default to reasoning and must be opted out explicitly.
+    assert _is_reasoning_model("gpt-7-nova") is True
+
+
+@pytest.mark.parametrize("model", ["gpt-4o", "gpt-4.1", "gpt-4.1-mini", "text-embedding-3-small"])
+def test_pre_gpt5_and_non_chat_models_are_not_reasoning_models(model):
+    assert _is_reasoning_model(model) is False
+
+
+def _assert_reasoning_defaults(model):
+    # GPT-6 defaults to reasoning_effort=medium at the API; without our
+    # injected "low" + 3x headroom, JSON outputs can come back truncated.
+    out = build_completion_kwargs(
+        model=model,
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=1000,
+    )
+    assert out["reasoning_effort"] == "low"
+    assert out["max_completion_tokens"] == 3000
+
+
+def test_non_reasoning_model_kwargs_are_untouched():
+    kwargs = {"model": "gpt-4o", "max_tokens": 1000}
+    out = _apply_reasoning_model_kwargs(kwargs, "gpt-4o")
+    assert out == {"model": "gpt-4o", "max_tokens": 1000}
 
 
 def test_build_completion_kwargs_passes_reasoning_effort_to_gpt5():
@@ -53,7 +97,7 @@ def test_build_completion_kwargs_defaults_reasoning_effort_on_gpt5():
         messages=[{"role": "user", "content": "x"}],
         max_tokens=1000,
     )
-    # Still gets the default "low" injected by _apply_gpt5_kwargs
+    # Still gets the default "low" injected by _apply_reasoning_model_kwargs
     assert out["reasoning_effort"] == "low"
 
 

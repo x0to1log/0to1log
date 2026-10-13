@@ -18,7 +18,7 @@ from typing import Any
 
 import openai
 
-from core.config import settings
+from core.config import Settings, settings
 from models.news_pipeline import (
     ClassifiedGroup,
     CommunityInsight,
@@ -651,7 +651,7 @@ async def _generate_digest_quizzes(
     client = get_openai_client()
     model = getattr(settings, "openai_model_light", None)
     if not isinstance(model, str) or not model:
-        model = "gpt-5-mini"
+        model = Settings.model_fields["openai_model_light"].default
 
     all_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
     usage_total: dict[str, Any] = {}

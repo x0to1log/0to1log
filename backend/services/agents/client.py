@@ -88,16 +88,36 @@ def get_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI(api_key=settings.openai_api_key, timeout=300.0)
 
 
-def _apply_gpt5_kwargs(kwargs: dict, model: str) -> dict:
-    """Apply gpt-5 adjustments: 3x token headroom for reasoning + default low effort.
+# "gpt-5-mini" -> 5, "gpt-6.1-sol" -> 6, "gpt-4o" -> 4
+_GPT_MAJOR_VERSION_RE = re.compile(r"^gpt-(\d+)")
+_FIRST_REASONING_GPT_MAJOR = 5
 
-    gpt-5 is a reasoning model. Reasoning tokens consume the output budget;
-    without headroom the final answer can be empty. Two entry points hit this:
+
+def _is_reasoning_model(model: str) -> bool:
+    """Return True if `model` needs reasoning-model kwargs adjustments.
+
+    Reasoning models spend hidden reasoning tokens from the output budget and
+    reject `temperature`, so every production model must pass this check —
+    a False here silently drops the 3x headroom and the low-effort default.
+
+    Matches by GPT major version (>= 5) rather than a prefix allowlist, so a
+    new generation is covered by default: a wrong match fails loudly with a
+    400 on the first call, a missed match only shows up as truncated output.
+    """
+    match = _GPT_MAJOR_VERSION_RE.match(model)
+    return match is not None and int(match.group(1)) >= _FIRST_REASONING_GPT_MAJOR
+
+
+def _apply_reasoning_model_kwargs(kwargs: dict, model: str) -> dict:
+    """Apply reasoning-model adjustments: 3x token headroom + default low effort.
+
+    Reasoning tokens consume the output budget; without headroom the final
+    answer can be empty. Two entry points hit this:
       - compat_create_kwargs passes `max_tokens` → pop + rename + 3x.
       - build_completion_kwargs sets `max_completion_tokens` directly → 3x in place.
-    No-op for non-gpt-5 models (none in production, but keeps this safe for tests).
+    No-op for non-reasoning models (none in production, but keeps this safe for tests).
     """
-    if not model.startswith("gpt-5"):
+    if not _is_reasoning_model(model):
         return kwargs
 
     if "max_tokens" in kwargs:
@@ -110,9 +130,9 @@ def _apply_gpt5_kwargs(kwargs: dict, model: str) -> dict:
 
 
 def compat_create_kwargs(model: str, **kwargs) -> dict:
-    """Build chat.completions.create kwargs for direct callers (gpt-5 family)."""
+    """Build chat.completions.create kwargs for direct callers (reasoning models)."""
     kwargs["model"] = model
-    return _apply_gpt5_kwargs(kwargs, model)
+    return _apply_reasoning_model_kwargs(kwargs, model)
 
 
 def build_completion_kwargs(
@@ -125,12 +145,12 @@ def build_completion_kwargs(
     verbosity: str | None = None,
     prompt_cache_key: str | None = None,
 ) -> dict:
-    """Build chat.completions.create kwargs for gpt-5 family.
+    """Build chat.completions.create kwargs for reasoning models.
 
-    `temperature` is intentionally not accepted — gpt-5 rejects it at the API.
+    `temperature` is intentionally not accepted — reasoning models reject it at the API.
     """
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
-    kwargs["max_completion_tokens"] = max_tokens  # all production models are gpt-5 family
+    kwargs["max_completion_tokens"] = max_tokens  # all production models are reasoning models
     if response_format:
         kwargs["response_format"] = response_format
     if reasoning_effort is not None:
@@ -141,7 +161,7 @@ def build_completion_kwargs(
         kwargs["verbosity"] = verbosity
     if prompt_cache_key is not None:
         kwargs["prompt_cache_key"] = prompt_cache_key
-    return _apply_gpt5_kwargs(kwargs, model)
+    return _apply_reasoning_model_kwargs(kwargs, model)
 
 
 def _resolve_pricing_key(model_name: str | None) -> str | None:

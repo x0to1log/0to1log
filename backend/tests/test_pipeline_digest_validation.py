@@ -229,6 +229,47 @@ async def test_generate_digest_quizzes_adds_validation_feedback_before_retry():
 
 
 @pytest.mark.asyncio
+async def test_generate_digest_quizzes_falls_back_to_config_default_light_model(monkeypatch):
+    from core.config import Settings
+    from services.pipeline import _generate_digest_quizzes
+
+    # Sentinel default proves the fallback reads core/config.py instead of a
+    # hardcoded model id that goes stale on the next model migration.
+    monkeypatch.setattr(Settings.model_fields["openai_model_light"], "default", "sentinel-light-model")
+
+    personas = {
+        persona: PersonaOutput(
+            en=f"## Research Papers\n\n### {persona}\n\nThe digest says the method is promising but limited.",
+            ko=f"## Research Papers\n\n### {persona}\n\n본문은 이 방법이 유망하지만 제한적이라고 말한다.",
+        )
+        for persona in ("expert", "learner", "beginner")
+    }
+    responses = [_mock_quiz_response("en"), _mock_quiz_response("ko")]
+    captured_models: list[str] = []
+
+    async def _capture_create(*args, **kwargs):
+        captured_models.append(kwargs["model"])
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_light = None
+
+        await _generate_digest_quizzes(
+            digest_type="research",
+            personas=personas,
+            supabase=MagicMock(),
+            run_id="run-1",
+        )
+
+    assert captured_models and set(captured_models) == {"sentinel-light-model"}
+
+
+@pytest.mark.asyncio
 async def test_generate_digest_quizzes_logs_failed_status_for_partial_generation():
     from services.pipeline import _generate_digest_quizzes
 
