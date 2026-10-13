@@ -134,46 +134,45 @@ def _close(a: float | None, b: float, tol: float = 1e-9) -> bool:
 
 
 def test_cost_standard_without_cached_tokens():
-    # gpt-5: input $2/M, output $8/M
-    # 1M input + 1M output = $2 + $8 = $10
+    # gpt-5: input $1.25/M, output $10/M (OpenAI pricing page, 2026-10-13)
+    # 1M input + 1M output = $1.25 + $10 = $11.25
     cost = estimate_openai_cost_usd("gpt-5", 1_000_000, 1_000_000)
-    assert _close(cost, 10.0)
+    assert _close(cost, 11.25)
 
 
-def test_cost_cached_tokens_billed_at_10_percent_of_input():
-    # gpt-5: input $2/M. 1M input where 1M is cached:
-    # cost = 1M * $2/M * 0.10 = $0.20
+def test_cost_cached_tokens_billed_at_model_cached_rate():
+    # gpt-5: cached input $0.125/M. 1M input where 1M is cached = $0.125
     cost = estimate_openai_cost_usd("gpt-5", 1_000_000, 0, cached_tokens=1_000_000)
-    assert _close(cost, 0.20)
+    assert _close(cost, 0.125)
 
 
 def test_cost_mixed_fresh_and_cached_input():
     # 1M input: 500K fresh + 500K cached, 0 output
-    # fresh: 500K * $2/M = $1.00
-    # cached: 500K * $2/M * 0.10 = $0.10
-    # total = $1.10
+    # fresh: 500K * $1.25/M = $0.625
+    # cached: 500K * $0.125/M = $0.0625
+    # total = $0.6875
     cost = estimate_openai_cost_usd("gpt-5", 1_000_000, 0, cached_tokens=500_000)
-    assert _close(cost, 1.10)
+    assert _close(cost, 0.6875)
 
 
 def test_cost_flex_tier_halves_everything():
-    # gpt-5: standard $10 for 1M in + 1M out; flex is 50% off = $5
+    # gpt-5: standard $11.25 for 1M in + 1M out; flex is 50% off = $5.625
     cost = estimate_openai_cost_usd(
         "gpt-5", 1_000_000, 1_000_000, service_tier="flex"
     )
-    assert _close(cost, 5.0)
+    assert _close(cost, 5.625)
 
 
 def test_cost_flex_and_cached_stack_multiplicatively():
     # 1M input all cached, 1M output, flex tier
-    # input: 1M * $2 * 0.10 * 0.50 = $0.10
-    # output: 1M * $8 * 0.50 = $4.00
-    # total = $4.10
+    # input: 1M * $0.125 * 0.50 = $0.0625
+    # output: 1M * $10 * 0.50 = $5.00
+    # total = $5.0625
     cost = estimate_openai_cost_usd(
         "gpt-5", 1_000_000, 1_000_000,
         cached_tokens=1_000_000, service_tier="flex",
     )
-    assert _close(cost, 4.10)
+    assert _close(cost, 5.0625)
 
 
 def test_cost_default_tier_treated_as_standard():
@@ -181,14 +180,41 @@ def test_cost_default_tier_treated_as_standard():
     cost = estimate_openai_cost_usd(
         "gpt-5", 1_000_000, 1_000_000, service_tier="default"
     )
-    assert _close(cost, 10.0)
+    assert _close(cost, 11.25)
 
 
 def test_cost_unknown_tier_treated_as_standard():
     cost = estimate_openai_cost_usd(
         "gpt-5", 1_000_000, 1_000_000, service_tier="scale"
     )
-    assert _close(cost, 10.0)  # conservative default — don't assume discount
+    assert _close(cost, 11.25)  # conservative default — don't assume discount
+
+
+def test_cost_gpt6_sol_cached_input_is_5_percent_not_10():
+    # gpt-6.1-sol: input $2/M, cached $0.10/M (5%), output $10/M.
+    # A hardcoded 10% cache ratio would give $0.20 here.
+    cost = estimate_openai_cost_usd("gpt-6.1-sol", 1_000_000, 0, cached_tokens=1_000_000)
+    assert _close(cost, 0.10)
+
+
+def test_cost_gpt6_luna_standard_and_flex():
+    # gpt-6-luna: input $0.10/M, output $0.50/M
+    assert _close(estimate_openai_cost_usd("gpt-6-luna", 1_000_000, 1_000_000), 0.60)
+    assert _close(
+        estimate_openai_cost_usd("gpt-6-luna", 1_000_000, 1_000_000, service_tier="flex"),
+        0.30,
+    )
+
+
+def test_cost_gpt6_astra_standard():
+    # gpt-6-astra: input $10/M, output $50/M
+    assert _close(estimate_openai_cost_usd("gpt-6-astra", 1_000_000, 1_000_000), 60.0)
+
+
+def test_cost_gpt6_dated_snapshot_resolves_to_family_price():
+    # Responses may report a dated snapshot id; it must not price as unknown.
+    cost = estimate_openai_cost_usd("gpt-6-luna-2026-09-01", 1_000_000, 0)
+    assert _close(cost, 0.10)
 
 
 def test_cost_unknown_model_returns_none():

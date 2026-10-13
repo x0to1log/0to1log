@@ -69,10 +69,17 @@ async def with_flex_retry(
             await asyncio.sleep(delay)
     # Unreachable — the final attempt either returns or re-raises
     raise RuntimeError("with_flex_retry: loop exited without returning or raising")
+# Standard-tier USD per 1M tokens, from the OpenAI pricing page (checked 2026-10-13).
+# Cached input is listed per model because the ratio is not uniform
+# (gpt-6.1-sol caches at 5% of input, the others at 10%).
 OPENAI_MODEL_PRICING_PER_1M = {
-    "gpt-5": {"input": Decimal("2.00"), "output": Decimal("8.00")},
-    "gpt-5-mini": {"input": Decimal("0.25"), "output": Decimal("2.00")},
-    "gpt-5-nano": {"input": Decimal("0.05"), "output": Decimal("0.40")},
+    "gpt-6-astra": {"input": Decimal("10.00"), "cached_input": Decimal("1.00"), "output": Decimal("50.00")},
+    "gpt-6.1-sol": {"input": Decimal("2.00"), "cached_input": Decimal("0.10"), "output": Decimal("10.00")},
+    "gpt-6-luna": {"input": Decimal("0.10"), "cached_input": Decimal("0.01"), "output": Decimal("0.50")},
+    # gpt-5 family: snapshots shut down 2026-12-11. Remove after GPT-6 cutover.
+    "gpt-5": {"input": Decimal("1.25"), "cached_input": Decimal("0.125"), "output": Decimal("10.00")},
+    "gpt-5-mini": {"input": Decimal("0.25"), "cached_input": Decimal("0.025"), "output": Decimal("2.00")},
+    "gpt-5-nano": {"input": Decimal("0.05"), "cached_input": Decimal("0.005"), "output": Decimal("0.40")},
 }
 
 
@@ -163,8 +170,8 @@ def estimate_openai_cost_usd(
 
     Pricing rules:
     - Standard input: pricing["input"] per 1M tokens.
-    - Cached input: 10% of standard input (OpenAI auto-discount, applied to
-      tokens reported in response.usage.prompt_tokens_details.cached_tokens).
+    - Cached input: pricing["cached_input"] per 1M tokens, applied to tokens
+      reported in response.usage.prompt_tokens_details.cached_tokens.
     - Standard output: pricing["output"] per 1M tokens.
     - service_tier="flex": 50% of standard rates on both input and output
       (Batch API rates). Discounts stack multiplicatively with cache.
@@ -184,7 +191,7 @@ def estimate_openai_cost_usd(
     fresh_input = max(0, int(input_tokens) - cached)
 
     fresh_input_cost = Decimal(fresh_input) * pricing["input"] * tier_multiplier
-    cached_input_cost = Decimal(cached) * pricing["input"] * Decimal("0.1") * tier_multiplier
+    cached_input_cost = Decimal(cached) * pricing["cached_input"] * tier_multiplier
     output_cost = Decimal(int(output_tokens)) * pricing["output"] * tier_multiplier
 
     total = (fresh_input_cost + cached_input_cost + output_cost) / Decimal(1_000_000)
