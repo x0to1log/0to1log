@@ -126,7 +126,138 @@ def _split_evidence_sentences(text: str) -> list[str]:
     return [part.strip() for part in parts if part.strip()]
 
 
-def _frontload_relevant_snippets(text: str, max_chars: int) -> list[str]:
+# Numbers the frontload asserts, so evidence can include the exact source
+# sentence even when it lacks $/%/billion markers (e.g. "AUROC 0.886", "4.64x").
+_CLAIM_NUMBER_RE = re.compile(
+    r"(?<![\w.,])(\d+(?:[.,]\d+)*)(?:\s?(x|×|%|b|m|k|bn|billion|million|trillion)\b|(x|×)(?=\W|$))?",
+    re.IGNORECASE,
+)
+_CLAIM_VERSION_RE = re.compile(r"(?<![\w.])v?(\d+\.\d+\.\d+(?:\.\d+)*)\b", re.IGNORECASE)
+_CLAIM_UNIT_VARIANTS = {
+    "x": ("x", "×", "-fold"),
+    "×": ("x", "×", "-fold"),
+    "%": ("%", " percent"),
+    "b": ("B", " billion"),
+    "bn": ("B", " billion"),
+    "billion": ("B", " billion"),
+    "m": ("M", " million"),
+    "million": ("M", " million"),
+    "k": ("K", ",000"),
+    "trillion": ("T", " trillion"),
+}
+# Mixed-case product names (RLCDAlignBench, OpenAI) and 3-6 letter acronyms (KISA).
+_CLAIM_MIXED_CASE_RE = re.compile(r"\b[A-Za-z]*[a-z][A-Z][A-Za-z0-9]*\b")
+_CLAIM_ACRONYM_RE = re.compile(r"\b[A-Z]{3,6}\b")
+_GENERIC_ACRONYMS = frozenset({
+    "API", "LLM", "GPU", "CPU", "TPU", "NPU", "SDK", "AGI", "CEO", "CTO", "USD", "THE", "AND",
+})
+# Runs of Capitalized words / numbers; split into 2-3 word phrases because
+# Title Case headlines would otherwise become one unmatchable token.
+_CLAIM_CAPITALIZED_RUN_RE = re.compile(
+    r"(?:[A-Z][\w.-]*|\d+(?:\.\d+)?)(?:\s+(?:[A-Z][\w.-]*|\d+(?:\.\d+)?))+"
+)
+_CLAIM_PHRASE_STOPWORDS = frozenset({
+    "The", "And", "Or", "Of", "For", "In", "On", "With", "A", "An", "To", "By", "At", "As",
+    "From", "Both", "This", "That", "These", "How", "Why", "What", "New", "Its", "Is", "Are",
+})
+_FRONTLOAD_CLAIM_FIELDS = ("headline", "headline_ko", "excerpt", "excerpt_ko")
+_FRONTLOAD_CLAIM_LIST_FIELDS = ("focus_items", "focus_items_ko")
+
+
+def _frontload_claim_tokens(frontload: dict[str, Any] | None) -> tuple[str, ...]:
+    """Search keys for numbers and names asserted in the frontload (EN + KO).
+
+    Ordered by specificity, because evidence selection covers tokens in this
+    order within a fixed budget:
+      1. numbers: decimals, separated or 3+ digit numbers (plus a comma-free
+         variant), versions ("v0.22.3"), and short integers only with their
+         unit ("27B", "63x") since a bare "63" matches unrelated text;
+      2. specific names: mixed-case words, non-generic acronyms, and phrases
+         containing a number ("Gemini 4 Argon");
+      3. other 2-3 word Capitalized phrases ("Muse Video").
+    """
+    frontload = frontload or {}
+    texts = [str(frontload.get(field) or "") for field in _FRONTLOAD_CLAIM_FIELDS]
+    for field in _FRONTLOAD_CLAIM_LIST_FIELDS:
+        texts.extend(str(item) for item in frontload.get(field) or [])
+    # " | " keeps a Capitalized run from spanning two fields ("Preview KISA").
+    text = " | ".join(texts)
+
+    numbers: dict[str, None] = {}
+    for match in _CLAIM_VERSION_RE.finditer(text):
+        numbers[match.group(1)] = None
+        numbers[f"v{match.group(1)}"] = None
+    for match in _CLAIM_NUMBER_RE.finditer(text):
+        core = match.group(1)
+        unit = (match.group(2) or match.group(3) or "").lower()
+        digits = core.replace(",", "").replace(".", "")
+        if "." in core or "," in core or len(digits) >= 3:
+            numbers[core] = None
+            if "," in core:
+                numbers[core.replace(",", "")] = None
+        if unit:
+            numbers[match.group(0).strip()] = None
+        for suffix in _CLAIM_UNIT_VARIANTS.get(unit, ()):
+            numbers[f"{core}{suffix}"] = None
+
+    specific: dict[str, None] = {}
+    phrases: dict[str, None] = {}
+    for match in _CLAIM_MIXED_CASE_RE.finditer(text):
+        specific[match.group(0)] = None
+    for match in _CLAIM_ACRONYM_RE.finditer(text):
+        if match.group(0) not in _GENERIC_ACRONYMS:
+            specific[match.group(0)] = None
+    for match in _CLAIM_CAPITALIZED_RUN_RE.finditer(text):
+        words = match.group(0).split()
+        for size in (2, 3):
+            for i in range(len(words) - size + 1):
+                gram = words[i:i + size]
+                if any(w in _CLAIM_PHRASE_STOPWORDS for w in gram) or not gram[0][0].isalpha():
+                    continue
+                phrase = " ".join(gram)
+                (specific if any(w[0].isdigit() for w in gram) else phrases)[phrase] = None
+
+    ordered: dict[str, None] = {}
+    for group in (numbers, specific, phrases):
+        ordered.update(group)
+    return tuple(ordered)
+
+
+def _claim_token_pattern(token: str) -> str:
+    return rf"(?<![\d.,]){re.escape(token)}(?![\d])"
+
+
+def _claim_token_hits(sentence: str, claim_tokens: tuple[str, ...]) -> int:
+    return sum(1 for token in claim_tokens if re.search(_claim_token_pattern(token), sentence, re.IGNORECASE))
+
+
+_CLAIM_WINDOW_CHARS = 180
+
+
+def _claim_window(sentence: str, claim_tokens: tuple[str, ...]) -> str:
+    """Trim an over-long "sentence" (e.g. an unpunctuated bullet list) to the
+    text around its first claim match, so the match survives the char budget."""
+    if len(sentence) <= 2 * _CLAIM_WINDOW_CHARS:
+        return sentence
+    starts = [
+        m.start() for token in claim_tokens
+        if (m := re.search(_claim_token_pattern(token), sentence, re.IGNORECASE))
+    ]
+    if not starts:
+        return sentence
+    begin = max(0, min(starts) - _CLAIM_WINDOW_CHARS)
+    end = min(len(sentence), min(starts) + _CLAIM_WINDOW_CHARS)
+    window = sentence[begin:end]
+    if begin:
+        window = "..." + window.split(" ", 1)[-1]
+    if end < len(sentence):
+        window = window.rsplit(" ", 1)[0] + "..."
+    return window
+
+
+def _frontload_relevant_snippets(
+    text: str, max_chars: int, claim_tokens: tuple[str, ...] = (),
+) -> list[str]:
     scored: list[tuple[int, int, str]] = []
     for idx, sentence in enumerate(_split_evidence_sentences(text)):
         if len(sentence) < 30:
@@ -136,17 +267,34 @@ def _frontload_relevant_snippets(text: str, max_chars: int) -> list[str]:
             score += 4
         if _FRONTLOAD_BUSINESS_EVIDENCE_RE.search(sentence):
             score += 2
+        claim_hits = _claim_token_hits(sentence, claim_tokens)
+        if claim_hits:
+            score += 10 * claim_hits
+            sentence = _claim_window(sentence, claim_tokens)
         if score:
             scored.append((score, idx, sentence))
 
     if not scored:
         return []
 
+    ranked = sorted(scored, key=lambda item: (-item[0], item[1]))
+    # Coverage first: one best sentence per claim token, so a number repeated
+    # across the source (e.g. a model version) cannot crowd out a rarer claim.
+    coverage: list[tuple[int, int, str]] = []
+    for token in claim_tokens:
+        pattern = _claim_token_pattern(token)
+        if any(re.search(pattern, item[2], re.IGNORECASE) for item in coverage):
+            continue
+        best = next((item for item in ranked if re.search(pattern, item[2], re.IGNORECASE)), None)
+        if best is not None:
+            coverage.append(best)
+    ordered = coverage + [item for item in ranked if item not in coverage]
+
     selected: list[str] = []
     used: set[str] = set()
     budget = max(300, max_chars - 220)
     used_chars = 0
-    for _, _, sentence in sorted(scored, key=lambda item: (-item[0], item[1])):
+    for _, _, sentence in ordered:
         normalized = sentence.lower()
         if normalized in used:
             continue
@@ -161,11 +309,13 @@ def _frontload_relevant_snippets(text: str, max_chars: int) -> list[str]:
     return selected
 
 
-def _compact_evidence_text(value: Any, max_chars: int = 1200) -> str:
+def _compact_evidence_text(
+    value: Any, max_chars: int = 1200, claim_tokens: tuple[str, ...] = (),
+) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     if len(text) <= max_chars:
         return text
-    snippets = _frontload_relevant_snippets(text, max_chars)
+    snippets = _frontload_relevant_snippets(text, max_chars, claim_tokens)
     if snippets:
         opening = text[: min(320, max_chars // 3)].rsplit(" ", 1)[0]
         compacted = (
@@ -185,22 +335,26 @@ def _build_frontload_source_evidence(
     raw_content_map: dict[str, str] | None = None,
     *,
     max_sources: int = 12,
+    frontload: dict[str, Any] | None = None,
 ) -> list[dict[str, str]]:
-    """Build compact source evidence so frontload QC can verify big numbers."""
+    """Build compact source evidence so frontload QC can verify big numbers.
+
+    With `frontload`, sentences containing the numbers it asserts are kept
+    first in each excerpt, and sources containing them are kept first when
+    there are more than `max_sources` (writers see full source text; QC only
+    sees these excerpts, so a missing sentence reads as an unsupported claim).
+    """
     raw_content_map = raw_content_map or {}
-    evidence: list[dict[str, str]] = []
+    claim_tokens = _frontload_claim_tokens(frontload)
+    candidates: list[tuple[str, str, str]] = []
     seen: set[str] = set()
 
     def add(url: str | None, title: str | None = None, content: Any = None) -> None:
-        if not url or url in seen or len(evidence) >= max_sources:
+        if not url or url in seen:
             return
         seen.add(url)
         source_text = content if content else raw_content_map.get(url, "")
-        evidence.append({
-            "title": str(title or "").strip(),
-            "url": url,
-            "content": _compact_evidence_text(source_text),
-        })
+        candidates.append((url, str(title or "").strip(), str(source_text or "")))
 
     for group in classified or []:
         for item in (getattr(group, "items", None) or []):
@@ -217,7 +371,18 @@ def _build_frontload_source_evidence(
                 entry.get("content") or entry.get("raw_content") or entry.get("snippet") or "",
             )
 
-    return evidence
+    if claim_tokens and len(candidates) > max_sources:
+        # Most claim matches first (stable): a source naming several asserted
+        # entities outranks one that only shares a generic phrase.
+        candidates.sort(key=lambda c: -_claim_token_hits(c[2], claim_tokens))
+    return [
+        {
+            "title": title,
+            "url": url,
+            "content": _compact_evidence_text(source_text, claim_tokens=claim_tokens),
+        }
+        for url, title, source_text in candidates[:max_sources]
+    ]
 
 
 def _build_frontload_quality_payload(
@@ -1148,6 +1313,7 @@ async def _check_digest_quality(
         classified,
         enriched_map,
         raw_content_map,
+        frontload=frontload,
     )
     tasks.append(
         _score(

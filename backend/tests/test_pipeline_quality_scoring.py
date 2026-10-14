@@ -166,6 +166,152 @@ def test_frontload_source_evidence_prioritizes_numeric_snippets_beyond_opening()
     assert "$1.75 trillion" in compacted
 
 
+def _source_group(urls: list[str]) -> list:
+    return [
+        ClassifiedGroup(
+            group_title="Benchmark paper",
+            items=[GroupedItem(url=url, title=f"Source {i}") for i, url in enumerate(urls)],
+            category="research",
+            subcategory="llm_models",
+            reason="[LEAD] Major",
+        )
+    ]
+
+
+def test_frontload_claim_tokens_cover_bare_decimals_units_and_separators():
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _frontload_claim_tokens
+
+    tokens = _frontload_claim_tokens({
+        "headline": "Judge hits AUROC 0.886 at 63x lower cost",
+        "excerpt": "A 27B predictor uses 4.64-4.86x less GPU energy across 2,000+ voices.",
+        "focus_items": ["Ships in 2028"],
+        "headline_ko": "AUROC 0.886, 비용 63배 절감",
+    })
+
+    for expected in ("0.886", "4.64", "4.86", "2,000", "2000", "2028", "27B", "63x"):
+        assert expected in tokens, expected
+    assert "63" not in tokens  # bare short integers match too much unrelated text
+
+
+def test_frontload_claim_tokens_cover_entities_versions_and_lowercase_units():
+    # Second measurement (2026-10-14): 8 of 9 remaining "unsupported" majors were
+    # names present in the full source but cut from the QC excerpt.
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _frontload_claim_tokens
+
+    tokens = _frontload_claim_tokens({
+        "headline": "Meta Ships Muse Video Preview",
+        "excerpt": "KISA and FRED data back RLCDAlignBench gains in SDK v0.22.3 with a 21k-example AI set.",
+        "focus_items_ko": ["Apple, Portrait Mode 출신 인력 영입"],
+    })
+
+    for expected in ("Muse Video", "Portrait Mode", "KISA", "FRED", "RLCDAlignBench", "0.22.3", "v0.22.3", "21k"):
+        assert expected in tokens, expected
+    assert "AI" not in tokens  # generic acronyms match nearly every sentence
+    assert "Meta Ships Muse Video Preview" not in tokens  # Title Case headline is split, not kept whole
+    # Numbers and specific names are tried before multi-word phrases in the coverage pass.
+    assert tokens.index("21k") < tokens.index("RLCDAlignBench") < tokens.index("Muse Video")
+
+
+def test_frontload_source_evidence_includes_entity_sentence_deep_in_source():
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://arxiv.org/abs/2609.00002"
+    content = (
+        "".join(f"Training cost was ${n} million across the {n} runs we report. " for n in range(10, 40))
+        + "We also release RLCDAlignBench, a benchmark for judge alignment."
+    )
+    evidence = _build_frontload_source_evidence(
+        _source_group([url]),
+        raw_content_map={url: content},
+        frontload={"focus_items": ["Results reported on RLCDAlignBench"]},
+    )
+
+    assert "RLCDAlignBench, a benchmark" in evidence[0]["content"]
+
+
+def test_frontload_source_evidence_includes_claim_sentence_the_numeric_scan_misses():
+    # Real failure (2026-09-28): "AUROC 0.886" sat deep in a paper whose
+    # $/billion sentences filled the 1,200-char budget, so QC called it unsupported.
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://arxiv.org/abs/2609.00001"
+    content = (
+        "Opening abstract sentence for the paper. "
+        + ("Generic method description without numbers. " * 40)
+        + "".join(f"Training cost was ${n} million across the {n} runs we report. " for n in range(10, 30))
+        + "On held-out data the judge reached an AUROC of 0.886 against human labels."
+    )
+    evidence = _build_frontload_source_evidence(
+        _source_group([url]),
+        raw_content_map={url: content},
+        frontload={"headline": "Judge reaches AUROC 0.886"},
+    )
+
+    assert "AUROC of 0.886" in evidence[0]["content"]
+    assert len(evidence[0]["content"]) <= 1200
+
+
+def test_frontload_source_evidence_windows_claim_inside_long_unpunctuated_list():
+    # Real failure (2026-09-24): a markdown bullet list has no sentence breaks,
+    # so the whole list became one "sentence" and was cut before "2,000+".
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://blog.google/gemini-tts"
+    bullets = " ".join(f"- Feature {i}: generic capability description for teams" for i in range(60))
+    content = f"{bullets} - Expansive voice library: Access 2,000+ production-ready voices with broad coverage"
+    evidence = _build_frontload_source_evidence(
+        _source_group([url]),
+        raw_content_map={url: content},
+        frontload={"excerpt": "Gemini TTS ships 2,000+ voices"},
+    )
+
+    assert "2,000+ production-ready voices" in evidence[0]["content"]
+    assert len(evidence[0]["content"]) <= 1200
+
+
+def test_frontload_source_evidence_covers_each_claim_before_repeating_a_frequent_one():
+    # Real failure (2026-09-24): the model version "3.8" appeared in most
+    # sentences and filled the budget before the single "2,000+" sentence.
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://blog.google/gemini-tts"
+    content = (
+        "".join(f"Gemini 3.8 Flash TTS improves detail number {i} for enterprise teams today. " for i in range(40))
+        + "The library offers 2,000+ production-ready voices across regional language varieties."
+    )
+    evidence = _build_frontload_source_evidence(
+        _source_group([url]),
+        raw_content_map={url: content},
+        frontload={"headline": "Gemini 3.8 Flash TTS adds 2,000+ voices"},
+    )
+
+    assert "2,000+ production-ready voices" in evidence[0]["content"]
+    assert "Gemini 3.8 Flash TTS" in evidence[0]["content"]
+
+
+def test_frontload_source_evidence_keeps_claim_matched_source_past_the_source_cap():
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    urls = [f"https://example.com/source-{i}" for i in range(13)]
+    raw = {url: f"Unrelated coverage number {i} of the story." for i, url in enumerate(urls)}
+    raw[urls[12]] = "The model cut P95 latency by 5.77x on the serving benchmark."
+    evidence = _build_frontload_source_evidence(
+        _source_group(urls),
+        raw_content_map=raw,
+        frontload={"excerpt": "P95 latency drops 5.77x"},
+    )
+
+    assert len(evidence) == 12
+    assert any("5.77x" in item["content"] for item in evidence)
+
+
 def test_body_quality_payload_can_include_quiz_blocks():
     from services.pipeline import _build_body_quality_payload
 
