@@ -1,10 +1,41 @@
 """Tests for multi-source news collection service."""
+import re
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from core.config import settings
+
+_MIGRATIONS = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
+_SEED_ROW = re.compile(r"\(\s*'([^']+)'\s*,\s*'([a-z_]+)'")
+
+
+def _seeded_domain_filter_rows() -> list[dict]:
+    """news_domain_filters rows from the seed migrations (not production)."""
+    rows = []
+    for name in ("00050_news_domain_filters.sql", "00051_research_domain_filters.sql"):
+        sql = (_MIGRATIONS / name).read_text(encoding="utf-8")
+        for insert in sql.split("insert into public.news_domain_filters")[1:]:
+            values = insert.split(";")[0]
+            rows += [{"domain": d, "filter_type": t} for d, t in _SEED_ROW.findall(values)]
+    return rows
+
+
+@pytest.fixture(autouse=True)
+def seeded_domain_filters():
+    """Serve domain filters from migration seeds instead of the live table."""
+    from services.news_collection import _load_domain_filters
+
+    fake = MagicMock()
+    fake.table.return_value.select.return_value.execute.return_value = SimpleNamespace(
+        data=_seeded_domain_filter_rows(),
+    )
+    _load_domain_filters.cache_clear()
+    with patch("services.news_collection.get_supabase", return_value=fake):
+        yield
+    _load_domain_filters.cache_clear()
 
 
 TAVILY_SEARCH_RESPONSE = {
