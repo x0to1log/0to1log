@@ -31,4 +31,37 @@ assert.equal(nextTheme('white'), 'dark');
 assert.equal(nextTheme('dark'), 'light');
 assert.equal(nextTheme('pink'), 'light');
 
+// --- applyTheme / readTheme with fakes ---
+function makeEnv({ stored = null, prefersDark = false } = {}) {
+  const store = new Map(stored == null ? [] : [['theme', stored]]);
+  const meta = { content: '', setAttribute(k, v) { if (k === 'content') this.content = v; } };
+  const root = { attrs: {}, style: {}, setAttribute(k, v) { this.attrs[k] = v; } };
+  return {
+    doc: { documentElement: root, querySelector: (sel) => (sel === 'meta[name="theme-color"]' ? meta : null) },
+    storage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v) },
+    win: { matchMedia: () => ({ matches: prefersDark }) },
+    store, meta, root,
+  };
+}
+
+{
+  const { applyTheme, readTheme } = mod;
+  const env = makeEnv();
+  applyTheme('dark', env);
+  assert.equal(env.root.attrs['data-theme'], 'dark');
+  assert.equal(env.root.style.colorScheme, 'dark');
+  assert.equal(env.meta.content, '#181715');
+  assert.equal(env.store.get('theme'), 'dark');
+
+  // legacy 저장값은 읽을 때 매핑되고 저장소도 갱신된다
+  const legacy = makeEnv({ stored: 'pink' });
+  assert.equal(readTheme(legacy), 'light');
+  assert.equal(legacy.store.get('theme'), 'light');
+
+  // 저장값 없음 + OS 다크 → dark, 저장소는 건드리지 않는다
+  const fresh = makeEnv({ prefersDark: true });
+  assert.equal(readTheme(fresh), 'dark');
+  assert.equal(fresh.store.has('theme'), false);
+}
+
 console.log('theme-module.test.mjs passed');

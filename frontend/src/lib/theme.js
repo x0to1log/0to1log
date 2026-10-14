@@ -31,3 +31,28 @@ export function nextTheme(current) {
   const idx = THEMES.indexOf(current);
   return THEMES[(idx + 1) % THEMES.length];
 }
+
+function defaultEnv() {
+  return { doc: document, storage: localStorage, win: window };
+}
+
+/** Read the effective theme. Migrates legacy stored values in place. */
+export function readTheme(env = defaultEnv()) {
+  let stored = null;
+  try { stored = env.storage.getItem(STORAGE_KEY); } catch { /* storage blocked */ }
+  const normalized = normalizeTheme(stored);
+  if (normalized && normalized !== stored) {
+    try { env.storage.setItem(STORAGE_KEY, normalized); } catch { /* ignore */ }
+  }
+  const prefersDark = Boolean(env.win.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  return normalized ?? (prefersDark ? 'dark' : 'light');
+}
+
+/** Apply a theme to <html>, color-scheme and theme-color, and persist it. */
+export function applyTheme(theme, env = defaultEnv()) {
+  const root = env.doc.documentElement;
+  root.setAttribute('data-theme', theme);
+  root.style.colorScheme = COLOR_SCHEMES[theme];
+  env.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[theme]);
+  try { env.storage.setItem(STORAGE_KEY, theme); } catch { /* ignore */ }
+}
