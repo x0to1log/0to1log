@@ -22,18 +22,24 @@ for (const page of detailPages) {
 const middleware = read('src/middleware.ts');
 const cachePolicy = read('src/lib/server/publicCachePolicy.ts');
 assert(
-  middleware.includes('hasSessionCookie') && middleware.includes('finalizePublicResponse'),
-  'Middleware must keep authenticated public HTML out of shared cache',
+  /Zone 3a[\s\S]*getPublicContentCacheKind\(pathname\)[\s\S]*return finalizePublicResponse/.test(middleware),
+  'Middleware must render cacheable public HTML without auth lookups',
 );
 assert(
-  cachePolicy.includes("cacheControl: 'private, no-store'") && cachePolicy.includes("vary: 'Cookie'"),
-  'Central cache policy must separate personalized and anonymous HTML',
+  !/vary: 'Cookie'/.test(cachePolicy),
+  'Vercel never caches Vary: Cookie responses; personalization must be hydrated client-side',
 );
 
 const pageData = read('src/lib/pageData/newsDetailPage.ts');
 assert(
-  pageData.includes("const personaKey = previewMode ? (previewPersona || 'learner') : (userPersona || 'learner')"),
-  'detail page data must default anonymous/unset users to learner while honoring logged-in persona',
+  pageData.includes("const personaKey = previewMode ? (previewPersona || 'learner') : 'learner'"),
+  'cached news HTML must start on learner; saved persona is applied client-side',
+);
+
+const layout = read('src/components/newsprint/NewsprintArticleLayout.astro');
+assert(
+  layout.includes('onSessionReady') && layout.includes('session.persona'),
+  'news layout must apply the signed-in reader persona after session hydration',
 );
 
 const personaTitle = read('src/lib/personaTitle.ts');

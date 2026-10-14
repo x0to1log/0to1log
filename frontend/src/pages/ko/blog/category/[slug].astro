@@ -4,7 +4,6 @@ export const prerender = false;
 import MainLayout from '../../../../layouts/MainLayout.astro';
 import { t } from '../../../../i18n/index';
 import { supabase } from '../../../../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { buildBlogSidebarDataset, toSidebarPost } from '../../../../lib/pageData/blogSidebar';
 import { fetchCategories, fetchCategoryBySlug, fetchCategoryGroups } from '../../../../lib/pageData/blogCategories';
 import BlogShell from '../../../../components/blog/BlogShell.astro';
@@ -45,21 +44,8 @@ const posts = postsRes.data ?? [];
 // User reading history & bookmarks
 const readPostIds = new Set<string>();
 const bookmarkedPostIds = new Set<string>();
-const user = Astro.locals.user;
-const accessToken = Astro.locals.accessToken;
-if (user && accessToken) {
-  const authSb = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const [histRes, bmRes] = await Promise.all([
-    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
-    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'blog'),
-  ]);
-  (histRes.data ?? []).forEach((r: any) => readPostIds.add(r.item_id));
-  (bmRes.data ?? []).forEach((r: any) => bookmarkedPostIds.add(r.item_id));
-}
+// Read/bookmark state is hydrated client-side (content-status.ts) so this
+// page stays CDN-cacheable; the sets stay empty on the server.
 
 const BATCH_SIZE = 10;
 const sidebarPosts = buildBlogSidebarDataset(

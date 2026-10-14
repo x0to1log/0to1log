@@ -446,8 +446,8 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
 
   <!-- Admin Actions (admin only) -->
-  {isAdmin && itemId && (
-    <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi}>
+  {itemId && !previewMode && (
+    <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi} data-admin-only hidden={!isAdmin}>
       <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
       <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
     </div>
@@ -532,6 +532,8 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
 
 <script>
+  import { onSessionReady } from '../../scripts/session';
+
   let _personaObserver: IntersectionObserver | null = null;
 
   function initPersonaSwitcher() {
@@ -622,7 +624,9 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       if (sourcesCount) sourcesCount.textContent = String(cards.length);
     }
 
-    function setActivePersona(p: string) {
+    let userPicked = false;
+
+    function setActivePersona(p: string, { scroll = true } = {}) {
       if (!map[p]) return;
       prose!.innerHTML = map[p];
       const leadTitle = document.querySelector<HTMLElement>('.newsprint-lead-title');
@@ -655,7 +659,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
       updateQuiz(p);
       updateWeeklyQuiz(p);
       updateSources(p);
-      document.querySelector('.newsprint-lead-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (scroll) document.querySelector('.newsprint-lead-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       document.dispatchEvent(new CustomEvent('newsprint:article-content-updated', {
         detail: { root: prose, persona: p },
       }));
@@ -663,13 +667,21 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
     switcher.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-switcher-btn');
-      if (btn) setActivePersona(btn.dataset.persona!);
+      if (btn) { userPicked = true; setActivePersona(btn.dataset.persona!); }
+    });
+
+    // Cached HTML always starts on the anonymous default persona; switch to
+    // the signed-in reader's saved persona unless they already picked one.
+    onSessionReady((session) => {
+      const saved = session.persona;
+      const active = switcher.querySelector<HTMLElement>('.persona-switcher-btn--active')?.dataset.persona;
+      if (!userPicked && saved && saved !== active && map[saved]) setActivePersona(saved, { scroll: false });
     });
 
     if (floatEl) {
       floatEl.addEventListener('click', (e) => {
         const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-float-btn');
-        if (btn) setActivePersona(btn.dataset.persona!);
+        if (btn) { userPicked = true; setActivePersona(btn.dataset.persona!); }
       });
 
       let hasShownOnce = false;

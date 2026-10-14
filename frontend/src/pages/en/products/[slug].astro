@@ -3,7 +3,6 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { createClient } from '@supabase/supabase-js';
 import { getProductDetailData, fetchAlternatives, fetchRelatedNews } from '../../../lib/pageData/productsPage';
 import ProductSearchBar from '../../../components/products/ProductSearchBar.astro';
 import ProductDetail from '../../../components/products/ProductDetail.astro';
@@ -25,22 +24,7 @@ if (error) {
   Astro.response.status = 404;
 }
 
-const user = Astro.locals.user;
-
-let isLiked = false;
-if (user && Astro.locals.accessToken && product) {
-  const sb = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${Astro.locals.accessToken}` } } },
-  );
-  const { data } = await sb
-    .from('ai_product_likes')
-    .select('id')
-    .eq('product_id', product.id)
-    .maybeSingle();
-  isLiked = !!data;
-}
+// Like state is hydrated client-side (productLike.ts) so this page stays CDN-cacheable.
 ---
 
 <MainLayout
@@ -53,12 +37,12 @@ if (user && Astro.locals.accessToken && product) {
   {product ? (
     <div class="product-detail-page">
       <ProductSearchBar locale={locale} sticky={true} />
-      <ProductDetail product={product} htmlDescription={htmlDescription} htmlPricingDetail={htmlPricingDetail} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isLiked={isLiked} isAdmin={!!Astro.locals.isAdmin}>
+      <ProductDetail product={product} htmlDescription={htmlDescription} htmlPricingDetail={htmlPricingDetail} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isAdmin={!!Astro.locals.isAdmin}>
         <ContentFeedback
           sourceType="product"
           sourceId={product.id}
           locale={locale}
-          isAuthenticated={!!user}
+          isAuthenticated={false}
           loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
         />
       </ProductDetail>

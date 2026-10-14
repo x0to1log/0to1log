@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { APIContext } from 'astro';
 import { applyPublicCachePolicy, getPublicContentCacheKind } from './lib/server/publicCachePolicy';
 import { clearSessionHint, ensureSessionHint, setSessionHint } from './lib/sessionHint';
+import { getAdminInvalidationTag, invalidatePublicCache } from './lib/server/cacheInvalidation';
 
 const isSecure = import.meta.env.PROD;
 
@@ -55,16 +56,24 @@ async function nextWithCsp(next: () => Promise<Response>, nonce: string): Promis
   return rewrittenResponse;
 }
 
-function finalizePublicResponse(context: APIContext, response: Response, authenticated: boolean): Response {
-  if (context.request.method !== 'GET' && context.request.method !== 'HEAD') return response;
+function isReadRequest(context: APIContext): boolean {
+  return context.request.method === 'GET' || context.request.method === 'HEAD';
+}
+
+function isPreviewRequest(context: APIContext): boolean {
+  return context.url.searchParams.get('preview') === '1';
+}
+
+function finalizePublicResponse(context: APIContext, response: Response): Response {
+  if (!isReadRequest(context)) return response;
 
   const kind = getPublicContentCacheKind(context.url.pathname);
   if (!kind) return response;
 
   return applyPublicCachePolicy(response, {
     kind,
-    authenticated,
-    preview: context.url.searchParams.get('preview') === '1',
+    pathname: context.url.pathname,
+    preview: isPreviewRequest(context),
     hasError: response.status >= 500,
   });
 }
@@ -238,7 +247,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
       return context.redirect('/admin/login');
     }
-    return finalizePublicResponse(context, await nextWithCsp(next, nonce), false);
+    return finalizePublicResponse(context, await nextWithCsp(next, nonce));
   }
 
   // --- Zone 1: Admin-protected (/admin/*, /api/admin/* except /admin/login) ---
@@ -290,7 +299,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     setCachedExtras(context.cookies, extras, isSecure);
     touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
     ensureSessionHint(context.cookies, isSecure);
-    return nextWithCsp(next, nonce);
+    const adminResponse = await nextWithCsp(next, nonce);
+    // Content writes go stale on the CDN; mark the affected section for refresh.
+    const invalidationTag = getAdminInvalidationTag(pathname, context.request.method);
+    if (invalidationTag && adminResponse.ok) await invalidatePublicCache([invalidationTag]);
+    return adminResponse;
   }
 
   // --- Zone 2: User-protected (/api/user/*, /settings) ---
@@ -319,10 +332,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return nextWithCsp(next, nonce);
   }
 
-  // --- Zone 3: Public (all other routes) ---
+  // --- Zone 3a: Shared-cache public content (/en/*, /ko/*) ---
+  // Rendered user-neutral for everyone: no auth lookup and no Set-Cookie, so
+  // the Vercel CDN can store one copy. Per-user state is hydrated client-side
+  // (src/scripts/session.ts). Admin preview (?preview=1) still authenticates.
+  if (getPublicContentCacheKind(pathname) && isReadRequest(context) && !isPreviewRequest(context)) {
+    return finalizePublicResponse(context, await nextWithCsp(next, nonce));
+  }
+
+  // --- Zone 3b: Other public routes (library, login, preview) ---
   // Silently try to extract user for optional features (read history, bookmark state)
   const accessToken = context.cookies.get('sb-access-token')?.value;
-  const hasSessionCookie = Boolean(accessToken || context.cookies.get('sb-refresh-token')?.value);
   if (accessToken) {
     // Check if we've recently validated this exact token (2-min cache)
     let result: { user: any; accessToken: string } | null = null;
@@ -357,5 +377,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  return finalizePublicResponse(context, await nextWithCsp(next, nonce), hasSessionCookie);
+  return finalizePublicResponse(context, await nextWithCsp(next, nonce));
 });

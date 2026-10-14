@@ -139,9 +139,10 @@ const altSlugValue = pairedSlug || undefined;
   import '../../../scripts/comments';
   import '../../../scripts/handbook-popup';
   import '../../../scripts/contentFeedback';
+  import { onSessionReady, type SessionInfo } from '../../../scripts/session';
 
-  function recordReadingHistory(): void {
-    if (document.body.dataset.previewMode === 'true') return;
+  function recordReadingHistory(session: SessionInfo): void {
+    if (document.body.dataset.previewMode === 'true' || !session.authenticated) return;
     const postId = document.querySelector('[data-item-id][data-item-type="blog"]')?.getAttribute('data-item-id');
     if (!postId) return;
     fetch('/api/user/reading-history', {
@@ -184,6 +185,6 @@ const altSlugValue = pairedSlug || undefined;
     });
   }
 
-  document.addEventListener('astro:page-load', recordReadingHistory);
+  document.addEventListener('astro:page-load', () => onSessionReady(recordReadingHistory));
   document.addEventListener('astro:page-load', initAdminActions);
 </script>

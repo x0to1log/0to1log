@@ -211,9 +211,10 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
   import '../../../scripts/comments';
   import '../../../scripts/handbook-popup';
   import '../../../scripts/contentFeedback';
+  import { onSessionReady, type SessionInfo } from '../../../scripts/session';
 
-  function recordReadingHistory(): void {
-    if (document.body.dataset.previewMode === 'true') return;
+  function recordReadingHistory(session: SessionInfo): void {
+    if (document.body.dataset.previewMode === 'true' || !session.authenticated) return;
     const postId = document.querySelector('[data-item-id][data-item-type="news"]')?.getAttribute('data-item-id');
     if (!postId) return;
     fetch('/api/user/reading-history', {
@@ -274,7 +275,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
     observer.observe(articleFind);
   }
 
-  document.addEventListener('astro:page-load', recordReadingHistory);
+  document.addEventListener('astro:page-load', () => onSessionReady(recordReadingHistory));
   document.addEventListener('astro:page-load', initAdminActions);
   document.addEventListener('astro:page-load', syncSearchBarVisibility);
 </script>

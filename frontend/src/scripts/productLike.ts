@@ -82,7 +82,10 @@ async function loadCardLikeStates(): Promise<void> {
   if (!isAuthenticatedUser()) return;
 
   const cardBtns = document.querySelectorAll<HTMLButtonElement>('.product-card-like');
-  if (cardBtns.length === 0) return;
+  // The detail page heart is also hydrated here: cached product HTML always
+  // renders it un-liked.
+  const detailBtn = document.querySelector<HTMLButtonElement>('#product-like-btn');
+  if (cardBtns.length === 0 && !detailBtn) return;
 
   try {
     const res = await fetch('/api/user/product-likes');
@@ -90,6 +93,10 @@ async function loadCardLikeStates(): Promise<void> {
 
     const data = await res.json() as { likedIds: string[] };
     const likedSet = new Set(data.likedIds);
+
+    if (detailBtn?.dataset.productId) {
+      applyLikeState(detailBtn, likedSet.has(detailBtn.dataset.productId));
+    }
 
     cardBtns.forEach((btn) => {
       const productId = btn.dataset.productId;

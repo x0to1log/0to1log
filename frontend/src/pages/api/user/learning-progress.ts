@@ -70,8 +70,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200, headers: { 'Content-Type': 'application/json' },
+  // ignoreDuplicates returns nothing for existing rows, so read the row back;
+  // the cached term page hydrates its learned toggle from this.
+  const { data: row } = await supabase
+    .from('learning_progress')
+    .select('id, status')
+    .eq('user_id', locals.user.id)
+    .eq('term_id', term_id)
+    .maybeSingle();
+
+  return new Response(JSON.stringify({ ok: true, id: row?.id ?? null, status: row?.status ?? 'read' }), {
+    status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' },
   });
 };
 

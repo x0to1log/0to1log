@@ -181,8 +181,8 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 
 
   <!-- Admin Actions (admin only) -->
-  {isAdmin && itemId && (
-    <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi}>
+  {itemId && !previewMode && (
+    <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi} data-admin-only hidden={!isAdmin}>
       <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
       <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
     </div>

@@ -7,11 +7,11 @@ const navigation = fs.readFileSync(
   'utf8',
 );
 
-const adminBlockMatch = navigation.match(/\{isAdmin && \(([\s\S]*?)\n\s*\)\}/);
-assert.ok(adminBlockMatch, 'Admin dropdown block must exist');
+// Rendered for everyone and revealed by session.ts, so cached pages stay user-neutral.
+const adminBlockMatch = navigation.match(/<a href="\/admin\/"[^>]*data-admin-only[^>]*>([\s\S]*?)<\/a>/);
+assert.ok(adminBlockMatch, 'Admin dropdown item must exist and be gated by data-admin-only');
 
 const adminBlock = adminBlockMatch[1];
-assert.ok(adminBlock.includes('href="/admin/"'), 'Admin dropdown item must link to /admin/');
 assert.ok(adminBlock.includes('copy.admin'), 'Admin dropdown item must render admin label');
 assert.ok(adminBlock.includes('dropdown-icon'), 'Admin dropdown item must render an icon');
 

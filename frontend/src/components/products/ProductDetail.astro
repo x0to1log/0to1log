@@ -448,19 +448,19 @@ const adminActionCopy = locale === 'ko'
     </a>
   </div>
 
-  {isAdmin && (
-    <div
-      class="newsprint-admin-actions"
-      data-toolbar-id={product.id}
-      data-toolbar-api={unpublishApi}
-      data-confirm-message={adminActionCopy.confirm}
-      data-error-prefix={adminActionCopy.errorPrefix}
-      data-error-network={adminActionCopy.networkError}
-    >
-      <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
-      <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
-    </div>
-  )}
+  <div
+    data-admin-only
+    hidden={!isAdmin}
+    class="newsprint-admin-actions"
+    data-toolbar-id={product.id}
+    data-toolbar-api={unpublishApi}
+    data-confirm-message={adminActionCopy.confirm}
+    data-error-prefix={adminActionCopy.errorPrefix}
+    data-error-network={adminActionCopy.networkError}
+  >
+    <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
+    <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
+  </div>
 
   <slot />
 </article>

@@ -232,7 +232,6 @@ export async function getNewsDetailPageData({
     ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
     : (md: string) => renderMarkdown(md);
 
-  const userPersona = previewMode ? null : locals.profile?.persona;
   let activePersona: string | null = null;
   let personaHtmlMap: Record<string, string> = {};
   let rawContent = '';
@@ -240,7 +239,9 @@ export async function getNewsDetailPageData({
   if (post) {
     const hasPersonaContent = post.content_beginner || post.content_learner || post.content_expert;
     if (hasPersonaContent) {
-      const personaKey = previewMode ? (previewPersona || 'learner') : (userPersona || 'learner');
+      // Cached HTML always starts on 'learner'; a signed-in reader's saved
+      // persona is applied client-side (NewsprintArticleLayout + session.ts).
+      const personaKey = previewMode ? (previewPersona || 'learner') : 'learner';
       const contentMap: Record<string, string> = {
         beginner: post.content_beginner || '',
         learner: post.content_learner || '',

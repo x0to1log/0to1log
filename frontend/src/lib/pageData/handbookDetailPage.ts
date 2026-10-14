@@ -86,47 +86,13 @@ export async function getHandbookDetailPageData({
   let relatedArticles: any[] = [];
   let relatedTerms: any[] = [];
   let sameCategoryTerms: any[] = [];
-  let isBookmarked = false;
-  let learningStatus: string | null = null;
-  let learningProgressId: string | null = null;
   let handbookTermsJson: Record<string, HandbookTermJsonEntry> = {};
 
   if (publicSupabase && term) {
-    const authSupabase = !previewMode && locals.user && locals.accessToken
-      ? getAuthorizedSupabase(locals.accessToken)
-      : null;
-
-    // Build handbook terms map for inline linking (exclude self to prevent self-link)
-    const handbookTerms = (await fetchPublicTermIndex(publicSupabase, locale))
-      .filter((entry) => entry.slug !== pageSlug);
-
-    const handbookTermsMap: TermsMap = new Map();
-    for (const entry of handbookTerms) {
-      const termEntry = { slug: entry.slug, term: entry.term };
-      handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
-      if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
-      handbookTermsJson[entry.slug] = {
-        term: entry.term,
-        korean_name: entry.korean_name || '',
-        term_full: entry.term_full || '',
-        categories: entry.categories || [],
-        summary: entry.summary || '',
-        definition: entry.definition || '',
-        basic_plain: entry.basic_plain || '',
-      };
-    }
-    const hasTerms = handbookTermsMap.size > 0;
-    const renderMd = hasTerms
-      ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
-      : (md: string) => renderHandbookMarkdown(md);
-
-    // Run markdown rendering and DB queries in parallel — they don't depend on each other.
-    // Both Basic and Advanced go through renderMd so auto-linkification of
-    // other handbook terms fires in both bodies (otherwise Advanced §7
-    // related-terms links would never become clickable popups).
-    const [basicHtml, advancedHtml, articlesRes, recentNewsRes, relatedRes, sameCatRes, bmRes, lpRes] = await Promise.all([
-      bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
-      bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
+    // Start the page queries first; they don't depend on the term index.
+    // Per-user state (bookmark, learning progress) is hydrated client-side so
+    // this HTML stays CDN-cacheable.
+    const queriesPromise = Promise.all([
       publicSupabase
         .from('news_posts')
         .select('title, slug, category, published_at, post_type')
@@ -159,23 +125,39 @@ export async function getHandbookDetailPageData({
             .overlaps('categories', term.categories)
             .limit(5)
         : Promise.resolve({ data: null }),
-      authSupabase
-        ? authSupabase
-            .from('user_bookmarks')
-            .select('id')
-            .eq('user_id', locals.user.id)
-            .eq('item_type', 'term')
-            .eq('item_id', term.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      authSupabase
-        ? authSupabase
-            .from('learning_progress')
-            .select('id, status')
-            .eq('user_id', locals.user.id)
-            .eq('term_id', term.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
+    ]);
+
+    // Build handbook terms map for inline linking (exclude self to prevent self-link)
+    const handbookTerms = (await fetchPublicTermIndex(publicSupabase, locale))
+      .filter((entry) => entry.slug !== pageSlug);
+
+    const handbookTermsMap: TermsMap = new Map();
+    for (const entry of handbookTerms) {
+      const termEntry = { slug: entry.slug, term: entry.term };
+      handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
+      if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
+      handbookTermsJson[entry.slug] = {
+        term: entry.term,
+        korean_name: entry.korean_name || '',
+        term_full: entry.term_full || '',
+        categories: entry.categories || [],
+        summary: entry.summary || '',
+        definition: entry.definition || '',
+        basic_plain: entry.basic_plain || '',
+      };
+    }
+    const hasTerms = handbookTermsMap.size > 0;
+    const renderMd = hasTerms
+      ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
+      : (md: string) => renderHandbookMarkdown(md);
+
+    // Both Basic and Advanced go through renderMd so auto-linkification of
+    // other handbook terms fires in both bodies (otherwise Advanced §7
+    // related-terms links would never become clickable popups).
+    const [basicHtml, advancedHtml, [articlesRes, recentNewsRes, relatedRes, sameCatRes]] = await Promise.all([
+      bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
+      bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
+      queriesPromise,
     ]);
 
     if (basicHtml) levelHtmlMap.basic = basicHtml;
@@ -186,9 +168,6 @@ export async function getHandbookDetailPageData({
 
     relatedTerms = relatedRes.data ?? [];
     sameCategoryTerms = sameCatRes.data ?? [];
-    isBookmarked = !!bmRes.data;
-    learningStatus = lpRes.data?.status ?? null;
-    learningProgressId = lpRes.data?.id ?? null;
   } else {
     // No term found — still render markdown if bodies exist
     const [basicHtml, advancedHtml] = await Promise.all([
@@ -199,7 +178,8 @@ export async function getHandbookDetailPageData({
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
   }
 
-  const preferredLevel = previewMode ? (previewLevel || 'basic') : (locals.profile?.handbook_level || 'basic');
+  // Saved reader level is applied client-side (session.ts) to keep HTML cacheable.
+  const preferredLevel = previewMode ? (previewLevel || 'basic') : 'basic';
   const activeLevel = levelHtmlMap[preferredLevel] ? preferredLevel : (levelHtmlMap.basic ? 'basic' : 'advanced');
   const htmlContent = levelHtmlMap[activeLevel] || '';
   const showLevelSwitcher = Object.keys(levelHtmlMap).length > 1;
@@ -216,9 +196,6 @@ export async function getHandbookDetailPageData({
     relatedArticles,
     relatedTerms,
     sameCategoryTerms,
-    isBookmarked: previewMode ? false : isBookmarked,
-    learningStatus: previewMode ? null : learningStatus,
-    learningProgressId: previewMode ? null : learningProgressId,
     // Level-independent redesign fields (2026-04-10)
     heroNewsContext,
     references,

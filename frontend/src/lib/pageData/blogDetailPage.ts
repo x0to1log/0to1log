@@ -51,9 +51,6 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
   let htmlContent = '';
 
   if (post && publicSupabase) {
-    const authSupabase = !previewMode && locals.user && locals.accessToken
-      ? getAuthorizedSupabase(locals.accessToken)
-      : null;
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
 
     const rawContent = post.content || '';
@@ -87,15 +84,14 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
       return { termsMap: tMap, termsJson: tJson, html };
     })();
 
-    // Track 2: remaining DB queries (unchanged, all parallel)
+    // Track 2: remaining DB queries (all parallel).
+    // isBookmarked/isLiked stay false — hydrated client-side so HTML is cacheable.
     const [
       sidebarRes,
       nextRes,
       pairedRes,
       likeCountRes,
       commentCountRes,
-      bookmarkRes,
-      likeRes,
     ] = await Promise.all([
       publicSupabase
         .from('blog_posts')
@@ -103,7 +99,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
         .eq('status', 'published')
         .eq('locale', locale)
         .order('published_at', { ascending: false })
-        ,
+        .limit(50),
       post.published_at
         ? publicSupabase
             .from('blog_posts')
@@ -131,23 +127,6 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
         .from('blog_comments')
         .select('id', { count: 'exact', head: true })
         .eq('post_id', post.id),
-      authSupabase
-        ? authSupabase
-            .from('user_bookmarks')
-            .select('id')
-            .eq('user_id', locals.user.id)
-            .eq('item_type', 'blog')
-            .eq('item_id', post.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      authSupabase
-        ? authSupabase
-            .from('blog_likes')
-            .select('id')
-            .eq('user_id', locals.user.id)
-            .eq('post_id', post.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
     ]);
 
     // Await render track (likely already done by now)
@@ -161,8 +140,6 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     pairedSlug = pairedRes.data?.slug ?? null;
     likeCount = likeCountRes.count ?? 0;
     commentCount = commentCountRes.count ?? 0;
-    isBookmarked = !!bookmarkRes.data;
-    isLiked = !!likeRes.data;
 
     articleData = post.published_at
       ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }

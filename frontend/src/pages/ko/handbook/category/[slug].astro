@@ -6,7 +6,6 @@ import { t } from '../../../../i18n/index';
 import { getHandbookCategoryPageData } from '../../../../lib/pageData/handbookPage';
 import { getHandbookCategoryLabel, getHandbookCategories, getHandbookCategoryDescription } from '../../../../lib/handbookCategories';
 import { getHandbookCategoryIcon } from '../../../../lib/handbookCategoryIcons';
-import { createClient } from '@supabase/supabase-js';
 
 const locale = 'ko';
 const slug = Astro.params.slug!;
@@ -25,21 +24,8 @@ if (error) Astro.response.status = 503;
 // User bookmarks
 const bookmarkedTermIds = new Set<string>();
 const readTermIds = new Set<string>();
-const user = Astro.locals.user;
-const accessToken = Astro.locals.accessToken;
-if (user && accessToken) {
-  const authSb = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${accessToken}` } } },
-  );
-  const [histRes, bmRes] = await Promise.all([
-    authSb.from('reading_history').select('item_id').eq('user_id', user.id).eq('item_type', 'term'),
-    authSb.from('user_bookmarks').select('item_id').eq('user_id', user.id).eq('item_type', 'term'),
-  ]);
-  (histRes.data ?? []).forEach((r: any) => readTermIds.add(r.item_id));
-  (bmRes.data ?? []).forEach((r: any) => bookmarkedTermIds.add(r.item_id));
-}
+// Read/bookmark state is hydrated client-side (content-status.ts) so this
+// page stays CDN-cacheable; the sets stay empty on the server.
 ---
 
 <MainLayout title={`${categoryLabel} — ${t[locale]['handbook.title']}`} locale={locale}>

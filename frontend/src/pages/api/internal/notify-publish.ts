@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { fireWebhooks } from '../../../lib/webhooks';
+import { invalidatePublicCache } from '../../../lib/server/cacheInvalidation';
 
 export const prerender = false;
 
 /**
  * Internal endpoint called by backend pipeline after auto-publish.
- * Fires webhooks + warms CDN cache for the published post.
+ * Invalidates cached news pages, fires webhooks and warms the published post.
  * Auth: x-cron-secret header (same as pipeline triggers).
  */
 export const POST: APIRoute = async ({ request }) => {
@@ -42,7 +43,8 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  // Warm CDN cache
+  // Auto-published by the backend: refresh cached news pages, then warm this one.
+  await invalidatePublicCache(['news']);
   const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
   fetch(`${siteUrl}/${post.locale}/news/${post.slug}/`).catch(() => {});
 

@@ -36,9 +36,6 @@ const {
   relatedTerms,
   sameCategoryTerms,
   handbookTermsJson,
-  isBookmarked,
-  learningStatus,
-  learningProgressId,
   // Level-independent redesign fields (2026-04-10)
   heroNewsContext,
   references,
@@ -190,15 +187,10 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
             )}
         <HandbookReferences references={references} locale={locale} />
         <div data-reading-end></div>
-        {user && !previewMode && (
-          <div class="handbook-action-bar">
-            <button
-              class={`learning-check ${learningStatus === 'learned' ? 'learning-check--done' : ''}`}
-              data-learning-id={learningProgressId}
-              data-term-id={term.id}
-              data-status={learningStatus || 'none'}
-            >
-              {learningStatus === 'learned' ? 'Learned' : 'Mark as Learned'}
+        {!previewMode && (
+          <div class="handbook-action-bar" data-auth-only hidden>
+            <button class="learning-check" data-term-id={term.id} data-status="none">
+              Mark as Learned
             </button>
           </div>
         )}
@@ -213,8 +205,8 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           previewMode={previewMode}
         />
 
-        {Astro.locals.isAdmin && !previewMode && (
-          <div class="newsprint-admin-actions" data-toolbar-id={term.id} data-toolbar-api="/api/admin/handbook/status">
+        {!previewMode && (
+          <div class="newsprint-admin-actions" data-toolbar-id={term.id} data-toolbar-api="/api/admin/handbook/status" data-admin-only hidden={!Astro.locals.isAdmin}>
             <a href={`/admin/handbook/edit/${pageSlug}`} class="newsprint-admin-action-btn">Edit</a>
             <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
           </div>
@@ -249,7 +241,6 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         shareUrl={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/${locale}/handbook/${pageSlug}/`}
         itemId={term.id}
         itemType="term"
-        isBookmarked={isBookmarked}
         previewMode={previewMode}
         isAuthenticated={!!user}
         articleRedirect={`/${locale}/handbook/${pageSlug}/`}
@@ -275,9 +266,10 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   import '../../../scripts/handbook-popup';
   import '../../../scripts/contentFeedback';
   import '../../../scripts/code-toggle';
+  import { onSessionReady, type SessionInfo } from '../../../scripts/session';
 
   // Increment view count (all visitors — no auth required)
-  (function trackView() {
+  function trackView(): void {
     if (document.body.dataset.previewMode === 'true') return;
     const tid = document.querySelector('[data-term-id]')?.getAttribute('data-term-id');
     if (!tid) return;
@@ -289,27 +281,38 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}` },
       body: JSON.stringify({ term_id: tid }),
     }).catch(() => {});
-  })();
+  }
 
-  function initHandbookUserFeatures(): void {
-    if (document.body.dataset.previewMode === 'true') return;
-    const termId = document.querySelector('[data-term-id]')?.getAttribute('data-term-id');
-    if (termId) {
-      fetch('/api/user/reading-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_type: 'term', item_id: termId }),
-      }).catch(() => {});
+  function applyLearningState(checkBtn: HTMLButtonElement, id: string | undefined, status: string): void {
+    if (id) checkBtn.dataset.learningId = id;
+    checkBtn.dataset.status = status;
+    checkBtn.classList.toggle('learning-check--done', status === 'learned');
+    checkBtn.textContent = status === 'learned' ? 'Learned' : 'Mark as Learned';
+  }
 
-      fetch('/api/user/learning-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term_id: termId }),
-      }).catch(() => {});
-    }
-
+  function initHandbookUserFeatures(session: SessionInfo): void {
+    if (document.body.dataset.previewMode === 'true' || !session.authenticated) return;
     const checkBtn = document.querySelector('.learning-check') as HTMLButtonElement | null;
-    if (!checkBtn) return;
+    const termId = checkBtn?.dataset.termId;
+    if (!checkBtn || !termId) return;
+
+    fetch('/api/user/reading-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_type: 'term', item_id: termId }),
+    }).catch(() => {});
+
+    // Records the read and returns the row, so the learned toggle works on first visit.
+    fetch('/api/user/learning-progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term_id: termId }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((row: { id?: string; status?: string } | null) => {
+        if (row?.id) applyLearningState(checkBtn, row.id, row.status || 'read');
+      })
+      .catch(() => {});
 
     checkBtn.addEventListener('click', async () => {
       const lpId = checkBtn.dataset.learningId;
@@ -333,9 +336,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           return;
         }
 
-        checkBtn.dataset.status = newStatus;
-        checkBtn.classList.toggle('learning-check--done', newStatus === 'learned');
-        checkBtn.textContent = newStatus === 'learned' ? 'Learned' : 'Mark as Learned';
+        applyLearningState(checkBtn, undefined, newStatus);
       } catch {
         checkBtn.textContent = prevText;
       } finally {
@@ -390,7 +391,9 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     const floatEl = document.getElementById('level-float');
     if (!prose || !switcher) return;
 
-    function setActiveLevel(level: string) {
+    let userPicked = false;
+
+    function setActiveLevel(level: string, { scroll = true } = {}) {
       if (!map[level]) return;
       prose!.innerHTML = map[level];
       switcher!.querySelectorAll('.handbook-level-btn').forEach(b =>
@@ -399,20 +402,27 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       floatEl?.querySelectorAll('.persona-float-btn').forEach(b =>
         b.classList.toggle('persona-float-btn--active',
           (b as HTMLElement).dataset.level === level));
-      document.querySelector('.handbook-detail-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (scroll) document.querySelector('.handbook-detail-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       // 본문 높이 변경 → 프로그레스바 재계산
       requestAnimationFrame(() => window.dispatchEvent(new Event('reading-content-changed')));
     }
 
     switcher.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.handbook-level-btn');
-      if (btn) setActiveLevel(btn.dataset.level!);
+      if (btn) { userPicked = true; setActiveLevel(btn.dataset.level!); }
+    });
+
+    // Cached HTML starts on 'basic'; apply the signed-in reader's saved level.
+    onSessionReady((session) => {
+      const saved = session.handbookLevel;
+      const active = switcher.querySelector<HTMLElement>('.handbook-level-btn--active')?.dataset.level;
+      if (!userPicked && saved && saved !== active && map[saved]) setActiveLevel(saved, { scroll: false });
     });
 
     if (floatEl) {
       floatEl.addEventListener('click', (e) => {
         const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.persona-float-btn');
-        if (btn) setActiveLevel(btn.dataset.level!);
+        if (btn) { userPicked = true; setActiveLevel(btn.dataset.level!); }
       });
 
       let hasShownOnce = false;
@@ -436,7 +446,8 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
     }
   }
 
-  document.addEventListener('astro:page-load', initHandbookUserFeatures);
+  document.addEventListener('astro:page-load', trackView);
+  document.addEventListener('astro:page-load', () => onSessionReady(initHandbookUserFeatures));
   document.addEventListener('astro:page-load', initAdminActions);
   document.addEventListener('astro:page-load', initLevelSwitcher);
   initLevelSwitcher();
