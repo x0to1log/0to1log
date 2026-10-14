@@ -1,11 +1,13 @@
 ---
+import { issueLabel, issueNumber } from '../../lib/issue.js';
+
 interface Props {
   locale: 'en' | 'ko';
   homeIntro?: string;
   todayCount?: number;
 }
 
-const { locale, homeIntro } = Astro.props;
+const { locale, homeIntro, todayCount = 0 } = Astro.props;
 const isKo = locale === 'ko';
 
 const kicker = isKo
@@ -27,10 +29,23 @@ const subCopy = homeIntro || defaultIntro;
 
 const ctaPrimary = { label: isKo ? 'AI 뉴스 읽기 →' : 'Read AI News →', href: `/${locale}/news/` };
 const ctaSecondary = { label: isKo ? '용어집 보기' : 'Browse Glossary', href: `/${locale}/handbook/` };
+
+const now = new Date();
+const issueText = issueLabel(locale, issueNumber(now));
+const dateText = now.toLocaleDateString(isKo ? 'ko-KR' : 'en-US', {
+  timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'long',
+});
+const motto = isKo ? 'AI 뉴스와 용어를 기록하는 신문' : 'A newspaper that keeps a record of AI news and terms';
 ---
 
 <div class="home-split-hero">
-  <div class="home-split-hero-wordmark" aria-hidden="true">0to1log</div>
+  <div class="home-split-hero-wordmark" aria-hidden="true">0to1log<span class="site-brand-dot" aria-hidden="true">.</span></div>
+  <p class="home-split-hero-motto">{motto}</p>
+  <p class="home-split-hero-issue">
+    <span>{issueText}</span>
+    <span>{dateText}</span>
+    {todayCount > 0 && <b>{isKo ? `오늘 ${todayCount}건` : `${todayCount} today`}</b>}
+  </p>
   <p class="home-split-hero-kicker">{kicker}</p>
   <h1 class="home-split-hero-headline">
     {isKo ? (
