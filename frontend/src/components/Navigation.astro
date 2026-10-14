@@ -378,10 +378,8 @@ const navItems = [
 <script>
   import { applyTheme, nextTheme, readTheme } from '../lib/theme.js';
 
-  type Theme = 'light' | 'white' | 'dark';
-
-  function getTheme(): Theme {
-    return readTheme() as Theme;
+  function getTheme(): string {
+    return readTheme();
   }
 
   function renderThemeCycle(button: HTMLElement | null) {
@@ -396,7 +394,7 @@ const navItems = [
     });
   }
 
-  function setTheme(theme: Theme) {
+  function setTheme(theme: string) {
     applyTheme(theme);
     renderThemeCycle(document.querySelector('[data-theme-cycle]') as HTMLElement | null);
   }
@@ -422,7 +420,7 @@ const navItems = [
       replacement.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        setTheme(nextTheme(getTheme()) as Theme);
+        setTheme(nextTheme(getTheme()));
       });
     }
 

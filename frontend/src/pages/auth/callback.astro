@@ -13,6 +13,7 @@ const nonce = Astro.locals.cspNonce || '';
     <link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;600&display=swap" rel="stylesheet" />
     <script is:inline nonce={nonce} set:html={THEME_BOOT_SCRIPT}></script>
     <style>
+      /* Values mirror THEME_COLORS (lib/theme.js) and --color-text-primary (global.css); this page does not load global.css. */
       [data-theme="light"] { --bg: #F7F4EE; --fg: #24211D; }
       [data-theme="white"] { --bg: #FFFFFF; --fg: #16181B; }
       [data-theme="dark"] { --bg: #181715; --fg: #ECE7DD; }
