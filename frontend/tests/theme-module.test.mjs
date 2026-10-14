@@ -64,4 +64,53 @@ function makeEnv({ stored = null, prefersDark = false } = {}) {
   assert.equal(fresh.store.has('theme'), false);
 }
 
+// --- hardening: blocked storage, missing matchMedia, invalid input ---
+{
+  const { applyTheme, readTheme } = mod;
+  const base = makeEnv();
+  const throwing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  const variants = [
+    { ...base, storage: throwing },
+    { ...base, storage: null },
+    Object.defineProperty({ ...base }, 'storage', { get() { throw new Error('SecurityError'); } }),
+  ];
+  for (const env of variants) {
+    assert.equal(readTheme(env), 'light');
+    applyTheme('white', env);
+    assert.equal(env.root.attrs['data-theme'], 'white');
+    assert.equal(env.root.style.colorScheme, 'light');
+    assert.equal(env.meta.content, '#FFFFFF');
+  }
+
+  // matchMedia missing must not throw
+  const noMq = makeEnv();
+  noMq.win = {};
+  assert.equal(readTheme(noMq), 'light');
+
+  // matchMedia is only consulted when nothing valid is stored
+  const spy = makeEnv({ stored: 'white' });
+  spy.win = { matchMedia() { throw new Error('should not be called'); } };
+  assert.equal(readTheme(spy), 'white');
+
+  // applyTheme rejects unknown values
+  const bad = makeEnv();
+  applyTheme('sepia', bad);
+  assert.equal(bad.root.attrs['data-theme'], 'light');
+  assert.equal(bad.store.get('theme'), 'light');
+  applyTheme('midnight', bad);
+  assert.equal(bad.root.attrs['data-theme'], 'dark');
+}
+
+// defaultEnv: a throwing global localStorage getter must not break no-arg calls
+{
+  const env = makeEnv();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('SecurityError'); } });
+  globalThis.document = env.doc;
+  globalThis.window = env.win;
+  assert.equal(mod.readTheme(), 'light');
+  mod.applyTheme('dark');
+  assert.equal(env.root.attrs['data-theme'], 'dark');
+  delete globalThis.localStorage; delete globalThis.document; delete globalThis.window;
+}
+
 console.log('theme-module.test.mjs passed');

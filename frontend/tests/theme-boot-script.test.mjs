@@ -54,4 +54,33 @@ assert.equal(r.root.attrs['data-theme'], 'light');
 assert.match(THEME_BOOT_SCRIPT, /"light","white","dark"/);
 assert.doesNotMatch(THEME_BOOT_SCRIPT, /import\s/);
 
+// matchMedia 없음: 예외 없이 light, after-swap 핸들러 등록
+{
+  const listeners = {};
+  const root = { attrs: {}, style: {}, setAttribute(k, v) { this.attrs[k] = v; } };
+  const ctx = {
+    localStorage: { getItem: () => null, setItem() {} },
+    document: { documentElement: root, querySelector: () => null, addEventListener: (t, f) => { listeners[t] = f; } },
+  };
+  ctx.window = ctx;
+  vm.runInNewContext(THEME_BOOT_SCRIPT, ctx);
+  assert.equal(root.attrs['data-theme'], 'light');
+  assert.equal(typeof listeners['astro:after-swap'], 'function');
+}
+
+// localStorage getter가 throw해도 중단되지 않는다
+{
+  const listeners = {};
+  const root = { attrs: {}, style: {}, setAttribute(k, v) { this.attrs[k] = v; } };
+  const ctx = {
+    matchMedia: () => ({ matches: true }),
+    document: { documentElement: root, querySelector: () => null, addEventListener: (t, f) => { listeners[t] = f; } },
+  };
+  Object.defineProperty(ctx, 'localStorage', { get() { throw new Error('SecurityError'); } });
+  ctx.window = ctx;
+  vm.runInNewContext(THEME_BOOT_SCRIPT, ctx);
+  assert.equal(root.attrs['data-theme'], 'dark');
+  assert.equal(typeof listeners['astro:after-swap'], 'function');
+}
+
 console.log('theme-boot-script.test.mjs passed');

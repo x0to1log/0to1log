@@ -19,7 +19,7 @@ export const LEGACY_THEMES = { pink: 'light', midnight: 'dark' };
 export function normalizeTheme(value) {
   if (typeof value !== 'string') return null;
   if (THEMES.includes(value)) return value;
-  return Object.hasOwn(LEGACY_THEMES, value) ? LEGACY_THEMES[value] : null;
+  return Object.prototype.hasOwnProperty.call(LEGACY_THEMES, value) ? LEGACY_THEMES[value] : null;
 }
 
 /** Stored preference wins; otherwise follow the OS color scheme. */
@@ -32,29 +32,42 @@ export function nextTheme(current) {
   return THEMES[(idx + 1) % THEMES.length];
 }
 
+function safeStorage() {
+  // Accessing window.localStorage itself can throw when site data is blocked.
+  try { return localStorage; } catch { return null; }
+}
+
 function defaultEnv() {
-  return { doc: document, storage: localStorage, win: window };
+  return { doc: document, storage: safeStorage(), win: window };
+}
+
+function storageOf(env) {
+  try { return env.storage ?? null; } catch { return null; }
 }
 
 /** Read the effective theme. Migrates legacy stored values in place. */
 export function readTheme(env = defaultEnv()) {
+  const storage = storageOf(env);
   let stored = null;
-  try { stored = env.storage.getItem(STORAGE_KEY); } catch { /* storage blocked */ }
+  try { stored = storage?.getItem(STORAGE_KEY) ?? null; } catch { /* storage blocked */ }
   const normalized = normalizeTheme(stored);
   if (normalized && normalized !== stored) {
-    try { env.storage.setItem(STORAGE_KEY, normalized); } catch { /* ignore */ }
+    try { storage?.setItem(STORAGE_KEY, normalized); } catch { /* ignore */ }
   }
-  const prefersDark = Boolean(env.win.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  return normalized ?? (prefersDark ? 'dark' : 'light');
+  if (normalized) return normalized;
+  let prefersDark = false;
+  try { prefersDark = Boolean(env.win?.matchMedia?.('(prefers-color-scheme: dark)')?.matches); } catch { /* ignore */ }
+  return resolveTheme(null, prefersDark);
 }
 
 /** Apply a theme to <html>, color-scheme and theme-color, and persist it. */
 export function applyTheme(theme, env = defaultEnv()) {
+  const safe = normalizeTheme(theme) ?? THEMES[0];
   const root = env.doc.documentElement;
-  root.setAttribute('data-theme', theme);
-  root.style.colorScheme = COLOR_SCHEMES[theme];
-  env.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[theme]);
-  try { env.storage.setItem(STORAGE_KEY, theme); } catch { /* ignore */ }
+  root.setAttribute('data-theme', safe);
+  root.style.colorScheme = COLOR_SCHEMES[safe];
+  env.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[safe]);
+  try { storageOf(env)?.setItem(STORAGE_KEY, safe); } catch { /* ignore */ }
 }
 
 /**
@@ -65,10 +78,10 @@ export function applyTheme(theme, env = defaultEnv()) {
 export const THEME_BOOT_SCRIPT = `(function(){
 var T=${JSON.stringify(THEMES)},C=${JSON.stringify(THEME_COLORS)},S=${JSON.stringify(COLOR_SCHEMES)},L=${JSON.stringify(LEGACY_THEMES)},K=${JSON.stringify(STORAGE_KEY)};
 function boot(){
-  var s=null;try{s=localStorage.getItem(K);}catch(e){}
+  var s=null,st=null;try{st=window.localStorage;s=st.getItem(K);}catch(e){}
   var t=T.indexOf(s)>=0?s:(Object.prototype.hasOwnProperty.call(L,s)?L[s]:null);
-  if(t&&t!==s){try{localStorage.setItem(K,t);}catch(e){}}
-  if(!t){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  if(t&&t!==s){try{st.setItem(K,t);}catch(e){}}
+  if(!t){try{t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}catch(e){t='light';}}
   var d=document.documentElement;d.setAttribute('data-theme',t);d.style.colorScheme=S[t];
   var m=document.querySelector('meta[name="theme-color"]');if(m){m.setAttribute('content',C[t]);}
 }
