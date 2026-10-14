@@ -20,8 +20,18 @@ from core.database import get_supabase
 logger = logging.getLogger(__name__)
 
 
-async def _send_draft_alert(batch_id: str, digest_type: str, quality_score: int | None) -> None:
-    """Send email alert when a digest is saved as draft (below auto-publish threshold)."""
+async def _send_draft_alert(
+    batch_id: str,
+    digest_type: str,
+    quality_score: int | None,
+    *,
+    blocking_caps: list[str] | None = None,
+) -> None:
+    """Send email alert when a digest is kept as draft by the auto-publish gate."""
+    if blocking_caps:
+        reason = f"blocked by major-issue cap(s): {', '.join(blocking_caps)}"
+    else:
+        reason = f"below threshold {settings.auto_publish_threshold}"
     if not settings.resend_api_key or not settings.admin_email:
         logger.info("Draft alert skipped — resend_api_key or admin_email not configured")
         return
@@ -35,8 +45,7 @@ async def _send_draft_alert(batch_id: str, digest_type: str, quality_score: int 
                 "to": [settings.admin_email],
                 "subject": f"[0to1log] Draft alert: {batch_id} {digest_type} (score: {quality_score})",
                 "text": (
-                    f"{batch_id} {digest_type} scored {quality_score}/100 "
-                    f"(threshold: {settings.auto_publish_threshold}).\n\n"
+                    f"{batch_id} {digest_type} scored {quality_score}/100 — {reason}.\n\n"
                     f"Saved as draft — manual review required.\n\n"
                     f"Admin: https://0to1log.com/admin/news"
                 ),
@@ -99,6 +108,9 @@ async def promote_drafts(batch_id: str | None = None) -> dict[str, Any]:
         logger.warning("promote_drafts: no drafts found for batch %s — pipeline may have failed", batch_id)
         return {"promoted": 0, "kept_draft": 0, "batch_id": batch_id, "errors": ["no drafts found"]}
 
+    # Local import: pipeline_quality imports services.pipeline, which re-exports this module.
+    from services.pipeline_quality import AUTO_PUBLISH_BLOCKING_CAPS, passes_auto_publish_gate
+
     threshold = settings.auto_publish_threshold
     promoted_slugs: list[str] = []
     kept_drafts: list[dict] = []
@@ -108,14 +120,19 @@ async def promote_drafts(batch_id: str | None = None) -> dict[str, Any]:
         fp = draft.get("fact_pack") or {}
         eligible = fp.get("auto_publish_eligible", False)
         score = draft.get("quality_score")
+        caps = fp.get("quality_caps_applied") or []
 
         if not eligible:
             logger.info("Skipping %s — not eligible (manual trigger)", draft["slug"])
             continue
 
-        if score is None or score < threshold:
-            logger.info("Keeping draft %s — score %s < threshold %d", draft["slug"], score, threshold)
-            kept_drafts.append(draft)
+        if not passes_auto_publish_gate(score, caps):
+            blocking = sorted(AUTO_PUBLISH_BLOCKING_CAPS.intersection(caps))
+            logger.info(
+                "Keeping draft %s — score %s (threshold %d), blocking caps %s",
+                draft["slug"], score, threshold, blocking or "none",
+            )
+            kept_drafts.append({**draft, "_blocking_caps": blocking})
             continue
 
         # Promote to published
@@ -140,7 +157,9 @@ async def promote_drafts(batch_id: str | None = None) -> dict[str, Any]:
     for d in kept_drafts:
         ptype = d.get("post_type") or "unknown"
         if ptype not in alerted_types:
-            await _send_draft_alert(batch_id, ptype, d.get("quality_score"))
+            await _send_draft_alert(
+                batch_id, ptype, d.get("quality_score"), blocking_caps=d["_blocking_caps"],
+            )
             alerted_types.add(ptype)
 
     return {

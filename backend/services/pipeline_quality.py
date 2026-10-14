@@ -632,6 +632,23 @@ def _aggregate_subscores(data: dict) -> int:
     return round(avg_0_to_10 * 10)
 
 
+# Caps that mean "a major issue must not auto-publish". They are applied to the
+# score too, but the gate checks them by name: a stricter judge scores clean
+# posts below 84 as well, so "capped below threshold" no longer implies blocked.
+AUTO_PUBLISH_BLOCKING_CAPS = frozenset({
+    "major_source_cap_84",
+    "frontload_overclaim_cap_84",
+    "locale_quality_cap_84",
+})
+
+
+def passes_auto_publish_gate(score: int | None, caps_applied: list[str] | None) -> bool:
+    """Auto-publish only when the score clears the threshold and no blocking cap fired."""
+    if score is None or score < settings.auto_publish_threshold:
+        return False
+    return not AUTO_PUBLISH_BLOCKING_CAPS.intersection(caps_applied or [])
+
+
 def _apply_issue_penalties_and_caps(
     base_score: int,
     issues: list[dict[str, str]],
@@ -648,13 +665,12 @@ def _apply_issue_penalties_and_caps(
             if category in {"source", "factuality", "fabrication"}:
                 caps.append((84, "major_source_cap_84"))
             if scope == "frontload" and category in {"overclaim", "calibration", "clarity"}:
-                # Below auto_publish_threshold (85) so the cap actually blocks
-                # auto-publish rather than just nominally flagging the issue.
+                # Blocks auto-publish via AUTO_PUBLISH_BLOCKING_CAPS.
                 caps.append((84, "frontload_overclaim_cap_84"))
             if category == "locale" or scope == "ko":
-                # Below auto_publish_threshold (85). Locale leakage (e.g.,
-                # English in KO body, Apr 19 Community Pulse incident) is a
-                # hard failure for reader trust — should never auto-publish.
+                # Blocks auto-publish via AUTO_PUBLISH_BLOCKING_CAPS. Locale
+                # leakage (e.g., English in KO body, Apr 19 Community Pulse
+                # incident) is a hard failure for reader trust.
                 caps.append((84, "locale_quality_cap_84"))
             if scope == "learner_body" and category == "accessibility":
                 caps.append((92, "learner_accessibility_cap_92"))
@@ -2177,7 +2193,7 @@ async def _check_weekly_quality(
         quality_flags.append("url_validation_failed")
 
     auto_publish_eligible = (
-        final_score >= settings.auto_publish_threshold
+        passes_auto_publish_gate(final_score, quality_caps_applied)
         and not url_validation_failed
     )
 
