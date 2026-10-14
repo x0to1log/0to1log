@@ -6,6 +6,7 @@ import AuthPromptSheet from '../components/auth/AuthPromptSheet.astro';
 import CookieConsent from '../components/CookieConsent.astro';
 import { ViewTransitions } from 'astro:transitions';
 import '../styles/global.css';
+import { THEME_BOOT_SCRIPT } from '../lib/theme.js';
 
 interface ArticleData {
   datePublished: string;
@@ -37,34 +38,8 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 <html lang={locale} data-theme="light">
   <Head title={title} description={description} locale={locale} slug={slug} article={article} needsKatex={needsKatex} />
 
-  <!-- FOUC Prevention: must run before paint -->
-  <script is:inline nonce={nonce}>
-    (function() {
-      var stored = localStorage.getItem('theme');
-      var tc = { dark: '#171311', light: '#F4F1EA', pink: '#FFF0F3', midnight: '#070910' };
-      var cs = { dark: 'dark', light: 'light', pink: 'light', midnight: 'dark' };
-      var theme = stored;
-      if (stored) {
-        document.documentElement.setAttribute('data-theme', stored);
-      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        theme = 'dark';
-      }
-      document.documentElement.style.colorScheme = cs[theme] || 'light';
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.setAttribute('content', tc[theme || 'dark'] || tc.dark);
-    })();
-  </script>
-
-  <!-- Restore theme after ViewTransitions page swap (before paint) -->
-  <script is:inline nonce={nonce}>
-    document.addEventListener('astro:after-swap', function() {
-      var stored = localStorage.getItem('theme');
-      if (stored) {
-        document.documentElement.setAttribute('data-theme', stored);
-      }
-    });
-  </script>
+  <!-- Theme boot: before paint + after every ViewTransitions swap (source: lib/theme.js) -->
+  <script is:inline nonce={nonce} set:html={THEME_BOOT_SCRIPT}></script>
 
   <!-- Fall back to full reload on back/forward (SSR pages can't reliably swap) -->
   <script is:inline nonce={nonce}>
