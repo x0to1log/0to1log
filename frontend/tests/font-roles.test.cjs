@@ -43,4 +43,11 @@ const legacy = walk(src)
 assert.deepStrictEqual(legacy, [], `legacy fonts still referenced:\n${legacy.join('\n')}`);
 
 assert(/font-variant-numeric:\s*lining-nums/.test(css), 'masthead brand marks need lining numerals ("0to1" must not read "oto1")');
+// Pretendard/Hahmlet have no italic faces: decks must stay upright (no faux-oblique Hangul).
+for (const sel of ['.newsprint-deck', '.newsprint-headline-deck', '.handbook-definition']) {
+  const escaped = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = css.match(new RegExp('(?:^|\\n)' + escaped + '\\s*\\{([^}]*)\\}'));
+  assert(m, `${sel} rule must exist`);
+  assert(!/font-style:\s*italic/.test(m[1]), `${sel} must not use font-style: italic`);
+}
 console.log('font-roles.test.cjs passed');
