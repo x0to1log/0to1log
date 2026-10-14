@@ -219,10 +219,20 @@
 
 ### Task 1.6: 퀴즈 정답 검증 단계 (cutover 선행 조건)
 배경: Task 1.4 퀴즈 감사 참조. 현재 오답 퀴즈가 발행까지 가는 경로가 3겹으로 열려 있음 — (1) 생성 모델 오류, (2) `_repair_quiz_answer_from_explanation`이 KO에서 사실상 미동작 (조사 붙은 토큰으로 support score 미달), (3) QC quiz 루브릭은 beginner 프롬프트에만 존재.
-- [ ] `_generate_digest_quizzes` 이후, 저장 전에 퀴즈별 정답 검증 호출 추가. `scripts/audit_daily_quizzes.py`의 프롬프트 + strict schema 재사용 (대조군·운영 120개로 검증됨). judge는 `openai_model_reasoning`
-- [ ] verdict `wrong_answer`: `better_option`이 options 안에 있으면 answer 교체 + 로그, 아니면 해당 퀴즈 재생성 1회 → 실패 시 drop. `ambiguous`/`ungrounded`: 재생성 1회 → 실패 시 drop (오답 노출보다 퀴즈 없음이 나음 — Amy 확인 필요)
-- [ ] 결과를 `pipeline_logs` `quiz_verify:{type}` 단계로 기록 (cost 포함)
-- [ ] 테스트: wrong_answer 교체 / 재생성 / drop 분기, verify 호출 실패 시 fail-open(기존 퀴즈 유지) 여부 결정
+**설계 (2026-10-14):**
+- 신규 `services/agents/quiz_verifier.py`: 감사 스크립트의 프롬프트/스키마 이동 (`audit_daily_quizzes.py`도 이걸 import → 프롬프트 단일화). `verify_quiz()` + 순수 함수 `apply_quiz_verdict()`.
+- 판정 처리: `ok` → 유지 / `wrong_answer` + `better_option ∈ options` + `explanation_consistent=false` → answer만 교체 (index slip: 해설은 맞고 번호만 틀림) / 그 외 `wrong_answer`·`ambiguous`·`ungrounded` → 거부 / 검증 호출 실패 → 유지 (fail-open, "퀴즈 실패는 발행을 막지 않음" 원칙 + URL liveness 패턴과 동일).
+- 위치: `_generate_digest_quizzes`의 locale별 attempt 루프 안, shape 검증 통과 직후. 거부 시 기존 retry feedback에 verifier 근거를 붙여 재생성 (최대 `MAX_DIGEST_QUIZ_ATTEMPTS`). 마지막 attempt에서도 거부된 persona만 drop, 통과분은 유지.
+- drop 정책: Amy 진행 승인 (2026-10-14) — 결과 확인 후 재확인.
+
+- [x] `_generate_digest_quizzes`의 attempt 루프에 `_verify_digest_quizzes` 추가 (`services/agents/quiz_verifier.py`). judge = `openai_model_reasoning`. 감사 스크립트도 같은 모듈 사용
+- [x] 판정 처리 + 재생성 (기존 retry 루프, 최대 3회) + 마지막 attempt 거부분만 drop. retry feedback은 shape 거부일 때만 길이/형식 지침, verification 거부일 때는 verifier 근거 + "본문이 지지하는 보기만 정답" 지침
+- [x] 로그: 별도 단계 대신 기존 `digest:{type}:quiz` 로그의 `debug_meta.verification` (persona/locale/attempt/action/verdict/evidence) + `dropped_by_locale`. verify 비용은 quiz usage에 합산
+- [x] 테스트: `test_quiz_verifier.py` 7개 (verdict 분기, 요청 형태) + 통합 4개 (재생성+근거 피드백 / index slip 교체 / 마지막 attempt drop / verify 실패 fail-open). `tests/conftest.py`에 기본 "ok" verify stub (autouse) — 기존 퀴즈 테스트 5개가 scripted 응답 순서에 의존하기 때문. 전체 907 passed
+- [x] 전환 전 운영 judge(gpt-5-mini) 검증:
+  - 양성 대조군 2개 (A-j5 learner EN, 09-25 beginner KO 원본) 모두 `wrong_answer` + `explanation_consistent=false` + 올바른 `better_option` → **둘 다 자동 교체 경로**
+  - 운영 120개: ambiguous 2 (sol과 같은 expert 2건), 그 외 0 → 과잉 거부 없음. 비용 $0.10/120개 (~$0.01/일)
+- [ ] 배포 후 첫 daily run에서 `debug_meta.verification` 확인
 - 예상 비용: 퀴즈 12개/일 × ~$0.003 ≈ $0.04/일
 - 별도 검토: expert/learner QC 프롬프트에 quiz_answer_integrity 추가 여부 (검증 단계가 있으면 중복일 수 있음)
 
