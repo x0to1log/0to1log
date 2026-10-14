@@ -5,10 +5,13 @@ import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
 import { getSiteContentsResult } from '../../lib/siteContent';
 import HomeSplitHero from '../../components/home/HomeSplitHero.astro';
+import HomeFrontPage from '../../components/home/HomeFrontPage.astro';
+import { getHomeFrontPageData } from '../../lib/pageData/homeFrontPage';
 
 const locale = 'ko';
 const { content: siteContent, error: siteContentError } = await getSiteContentsResult(['home_title', 'home_intro'], locale);
 if (siteContentError) Astro.response.status = 503;
+const front = await getHomeFrontPageData('ko');
 
 const homeTitle = siteContent.home_title || t.ko['home.title'];
 const homeIntro = siteContent.home_intro ||
@@ -17,6 +20,7 @@ const homeIntro = siteContent.home_intro ||
 
 <MainLayout title={homeTitle} description="매일 AI 뉴스를 한국어로 읽고, IT 용어를 쉽게 배우고, 퀴즈로 확인하세요. AI를 따라잡고 싶은 개발자와 기획자를 위한 학습 플랫폼." locale={locale} headerAlwaysVisible={true}>
   <div class="home-page">
-    <HomeSplitHero locale={locale} homeIntro={homeIntro} />
+    <HomeSplitHero locale={locale} homeIntro={homeIntro} todayCount={front.todayCount} />
+    <HomeFrontPage locale={locale} {...front} />
   </div>
 </MainLayout>

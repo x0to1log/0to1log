@@ -1,0 +1,58 @@
+---
+// frontend/src/components/home/HomeFrontPage.astro
+import type { HomeFrontNews, HomeFrontTerm } from '../../lib/pageData/homeFrontPage';
+
+interface Props {
+  locale: 'en' | 'ko';
+  lead: HomeFrontNews | null;
+  also: HomeFrontNews | null;
+  term: HomeFrontTerm | null;
+  todayCount?: number;
+}
+
+const { locale, lead, also, term } = Astro.props;
+const isKo = locale === 'ko';
+const typeLabel = (type: string | null) => {
+  if (type === 'business') return isKo ? '비즈니스' : 'Business';
+  if (type === 'research') return isKo ? '리서치' : 'Research';
+  return isKo ? 'AI 뉴스' : 'AI News';
+};
+const termTitle = term ? (isKo ? term.korean_name || term.term : term.term) : '';
+const termSub = term && isKo && term.korean_name ? term.term : '';
+---
+
+{(lead || term) && (
+  <section class="home-front" aria-labelledby="home-front-title">
+    <div class="home-front-head">
+      <h2 id="home-front-title" class="home-front-title">{isKo ? '오늘의 1면' : "Today's front page"}</h2>
+      <a class="home-front-more" href={`/${locale}/news/`}>{isKo ? '뉴스 전체 보기 →' : 'All news →'}</a>
+    </div>
+    <div class="home-front-grid">
+      {lead && (
+        <article class="home-front-lead">
+          <span class="home-front-kicker">{typeLabel(lead.post_type)}</span>
+          <h3 class="home-front-lead-title"><a href={`/${locale}/news/${lead.slug}/`}>{lead.title}</a></h3>
+          {lead.excerpt && <p class="home-front-lead-excerpt">{lead.excerpt}</p>}
+          {lead.reading_time_min ? (
+            <p class="home-front-meta">{isKo ? `${lead.reading_time_min}분 읽기` : `${lead.reading_time_min} min read`}</p>
+          ) : null}
+          {also && (
+            <p class="home-front-also">
+              <span>{typeLabel(also.post_type)}</span>
+              <a href={`/${locale}/news/${also.slug}/`}>{also.title}</a>
+            </p>
+          )}
+        </article>
+      )}
+      {term && (
+        <aside class="home-front-term">
+          <p class="home-front-term-label">{isKo ? '오늘의 용어' : 'Term of the day'}</p>
+          <h3 class="home-front-term-name">{termTitle}</h3>
+          {termSub && <p class="home-front-term-sub">{termSub}</p>}
+          {term.definition && <p class="home-front-term-def">{term.definition}</p>}
+          <a class="home-front-term-link" href={`/${locale}/handbook/${term.slug}/`}>{isKo ? '핸드북에서 보기 →' : 'Open in Handbook →'}</a>
+        </aside>
+      )}
+    </div>
+  </section>
+)}
