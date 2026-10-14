@@ -25,4 +25,11 @@ for (const t of ['light', 'white', 'dark']) {
 }
 assert(!/pink|midnight/i.test(nav), 'Navigation must not mention retired themes');
 
+const sidebar = read('components/admin/AdminSidebar.astro');
+assert(sidebar.includes("from '../../lib/theme.js'"), 'AdminSidebar must import from lib/theme.js');
+assert(sidebar.includes('id="sidebar-theme-icon-white"'), 'AdminSidebar needs a white icon');
+assert(!/pink|midnight/i.test(sidebar), 'AdminSidebar must not mention retired themes');
+assert(!fs.existsSync(path.join(src, 'components/ThemeToggle.astro')), 'unused ThemeToggle must be deleted');
+assert(!fs.existsSync(path.join(src, 'pages/preview')), 'legacy newsprint preview pages must be deleted');
+
 console.log('theme-wiring.test.cjs passed');

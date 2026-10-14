@@ -14,7 +14,7 @@ Astro v5 + Tailwind CSS v4 + Vercel. Detailed spec: `docs/04_Frontend_Spec.md`
 
 - Use `@tailwindcss/vite`. Do not use `@astrojs/tailwind`.
 - Keep theme tokens in `src/styles/global.css` with `@theme` and `[data-theme]` CSS variables.
-- Supported themes: `light` (default), `dark`, `pink`.
+- Supported themes: `light` (paper, default), `white`, `dark`. Theme names, colors and migration live only in `src/lib/theme.js`.
 - Fonts must use the `--font-*` CSS variables defined in `global.css`. Blog sections may load IBM Plex Sans separately.
 
 ## i18n
