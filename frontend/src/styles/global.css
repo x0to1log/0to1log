@@ -2400,7 +2400,26 @@ button {
 }
 
 .site-header {
+  position: relative;
   z-index: 100;
+  background-color: var(--color-bg-primary);
+}
+
+/* Soft Newsprint dot rule: header bottom edge + footer top edge */
+.site-header::after,
+.site-footer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: radial-gradient(circle, var(--color-text-primary) 1px, transparent 1.4px) 0 50% / 6px 4px repeat-x;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.site-header::after {
+  bottom: 0;
 }
 
 .site-header-shell {
@@ -2430,20 +2449,23 @@ button {
 .site-brand-link {
   font-family: var(--font-masthead);
   font-variant-numeric: lining-nums;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 500;
-  color: var(--color-accent);
+  color: var(--color-text-primary);
   text-decoration: none;
   line-height: 1;
   white-space: nowrap;
+}
+
+.site-brand-dot {
+  color: var(--color-accent);
 }
 
 .site-page-label {
   display: none;
   font-family: var(--font-ui);
   font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.02em;
   color: var(--color-text-secondary);
 }
 
@@ -2513,12 +2535,13 @@ button {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 2px;
-  border-radius: 1px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
   background: transparent;
-  transition: background 150ms ease, left 150ms ease, right 150ms ease;
+  transform: translateX(-50%);
+  transition: background 150ms ease;
 }
 
 .site-nav-pill:hover {
@@ -2527,9 +2550,7 @@ button {
 }
 
 .site-nav-pill:hover::after {
-  left: 10%;
-  right: 10%;
-  background: var(--color-accent);
+  background: var(--color-border);
 }
 
 .site-nav-pill--active {
@@ -2538,8 +2559,6 @@ button {
 }
 
 .site-nav-pill--active::after {
-  left: 10%;
-  right: 10%;
   background: var(--color-accent);
 }
 

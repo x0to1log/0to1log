@@ -175,13 +175,11 @@ const navItems = [
 ];
 ---
 
-<header class="site-header" data-always-visible={alwaysVisible ? 'true' : undefined} style={`background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);`}>
+<header class="site-header" data-always-visible={alwaysVisible ? 'true' : undefined}>
   <nav aria-label="Main navigation" class="site-header-shell">
     <div class="site-header-topline">
       <div class="site-header-brand-block">
-        <a href={`/${locale}/`} class="site-brand-link">
-          0to1log
-        </a>
+        <a href={`/${locale}/`} class="site-brand-link">0to1log<span class="site-brand-dot" aria-hidden="true">.</span></a>
         {detailBack ? (
           <a href={detailBack.href} class="site-page-label site-page-label--link">
             {detailBack.label}
