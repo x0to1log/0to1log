@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const { kstDay, selectFrontPage } = await import(pathToFileURL(path.join(here, '../src/lib/homeFront.js')).href);
+const { kstDay, selectFrontPage, termIndex } = await import(pathToFileURL(path.join(here, '../src/lib/homeFront.js')).href);
 
 assert.equal(kstDay('2026-10-14T00:00:00Z'), '2026-10-14');
 assert.equal(kstDay('2026-10-13T15:30:00Z'), '2026-10-14'); // KST 00:30
@@ -33,17 +33,19 @@ assert.equal(r.also, null);
 r = selectFrontPage({ news: [news[0], news[2]], terms, now: new Date('2026-10-14T12:00:00+09:00') });
 assert.equal(r.also, null);
 
-// 오늘의 용어: slug 정렬 후 호수 % 개수 → 결정적이며 날마다 바뀜
-const t1 = selectFrontPage({ news, terms, now: new Date('2026-10-14T12:00:00+09:00') }).term.slug;
-const t1b = selectFrontPage({ news, terms: [...terms].reverse(), now: new Date('2026-10-14T23:00:00+09:00') }).term.slug;
-const t2 = selectFrontPage({ news, terms, now: new Date('2026-10-15T12:00:00+09:00') }).term.slug;
-assert.equal(t1, t1b, 'same KST day + same set → same term regardless of input order');
-assert.notEqual(t1, t2, 'next day → different term');
-// 2026-10-14 = 제211호, 정렬 [agent, bm25, rag], 211 % 3 = 1 → bm25
-assert.equal(t1, 'bm25');
+// 오늘의 용어 인덱스: 호수 % 개수
+assert.equal(termIndex(new Date('2026-10-14T12:00:00+09:00'), 3), 1); // 제211호, 211 % 3 = 1
+assert.equal(termIndex(new Date('2026-10-14T23:00:00+09:00'), 3), 1); // same KST day
+assert.equal(termIndex(new Date('2026-10-15T12:00:00+09:00'), 3), 2); // next day
+assert.equal(termIndex(new Date('2026-10-14T12:00:00+09:00'), 0), null);
+
+// term은 그대로 통과
+const picked = { slug: 'rag' };
+assert.equal(selectFrontPage({ news, term: picked, now: new Date('2026-10-14T12:00:00+09:00') }).term, picked);
+assert.equal(selectFrontPage({ news, now: new Date('2026-10-14T12:00:00+09:00') }).term, null);
 
 // 빈 입력
-r = selectFrontPage({ news: [], terms: [], now: new Date() });
+r = selectFrontPage({ news: [], now: new Date() });
 assert.deepEqual(r, { lead: null, also: null, todayCount: 0, term: null });
 
 console.log('home-front-select.test.mjs passed');

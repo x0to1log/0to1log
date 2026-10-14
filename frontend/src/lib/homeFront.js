@@ -14,10 +14,18 @@ export function kstDay(value) {
 }
 
 /**
- * @param {{ news: Array<{slug:string, published_at:string|null}>, terms: Array<{slug:string}>, now?: Date }} input
- * news must be ordered by published_at desc.
+ * Index of the term of the day among `count` terms (issue number % count).
+ * @returns {number|null}
  */
-export function selectFrontPage({ news, terms, now = new Date() }) {
+export function termIndex(now, count) {
+  return count > 0 ? (issueNumber(now) ?? 0) % count : null;
+}
+
+/**
+ * @param {{ news: Array<{slug:string, published_at:string|null}>, term?: object|null, now?: Date }} input
+ * news must be ordered by published_at desc. term is the already-chosen term of the day.
+ */
+export function selectFrontPage({ news, term = null, now = new Date() }) {
   const today = kstDay(now);
   const lead = news[0] ?? null;
   const leadDay = lead ? kstDay(lead.published_at) : null;
@@ -25,10 +33,5 @@ export function selectFrontPage({ news, terms, now = new Date() }) {
   const also = second && leadDay && kstDay(second.published_at) === leadDay ? second : null;
   const todayCount = news.filter((n) => kstDay(n.published_at) === today).length;
 
-  let term = null;
-  if (terms.length > 0) {
-    const sorted = [...terms].sort((a, b) => a.slug.localeCompare(b.slug));
-    term = sorted[(issueNumber(now) ?? 0) % sorted.length];
-  }
   return { lead, also, todayCount, term };
 }
