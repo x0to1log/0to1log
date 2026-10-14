@@ -95,169 +95,118 @@
 }
 
 /* ===========================
-   DARK THEME (Default)
-   =========================== */
-[data-theme="dark"] {
-  --color-bg-primary: #171311;
-  --color-bg-secondary: #100D0B;
-  --color-bg-tertiary: #201B18;
-  --color-bg-card: #1C1714;
-  --color-input-surface: #1D1916;
-  --color-text-primary: #E7DFCF;
-  --color-text-secondary: #B3AC9D;
-  --color-text-muted: #968E81;
-  --color-border: #4A4137;
-  --color-accent: #C8A66F;
-  --color-accent-hover: #D6B882;
-  --color-accent-glow: rgba(200, 166, 111, 0.16);
-  --color-accent-subtle: rgba(200, 166, 111, 0.09);
-  --color-success: #5A8E5D;
-  --color-warning: #D4A843;
-  --color-error: #A8524B;
-  --color-shadow: rgba(0, 0, 0, 0.35);
-  --noise-opacity: 0.025;
-
-  /* Category Colors */
-  --color-cat-ainews: #C8A66F;
-  --color-cat-study: #829A7D;
-  --color-cat-career: #A06B44;
-  --color-cat-project: #9596B3;
-  --color-cat-work-note: #759AA2;
-  --color-cat-daily: #B18470;
-
-  /* Shiki — Warm Sepia */
-  --shiki-token-keyword: #D4A87C;
-  --shiki-token-string: #8FAE7E;
-  --shiki-token-function: #B8A9D4;
-  --shiki-token-comment: #968E81;
-  --shiki-token-constant: #C8A66F;
-  --shiki-token-punctuation: #E7DFCF;
-  --shiki-color-text: #E7DFCF;
-  --shiki-color-background: var(--color-bg-tertiary);
-}
-
-/* ===========================
-   MIDNIGHT THEME — Cool Ink
-   =========================== */
-[data-theme="midnight"] {
-  --color-bg-primary: #070910;
-  --color-bg-secondary: #0D1118;
-  --color-bg-tertiary: #171C26;
-  --color-bg-card: #10151E;
-  --color-input-surface: #121822;
-  --color-text-primary: #D6DCE8;
-  --color-text-secondary: #ABB4C4;
-  --color-text-muted: #838DA0;
-  --color-border: #353D50;
-  --color-accent: #C7B07B;
-  --color-accent-hover: #D6C18B;
-  --color-accent-glow: rgba(199, 176, 123, 0.14);
-  --color-accent-subtle: rgba(199, 176, 123, 0.07);
-  --color-success: #60A17B;
-  --color-warning: #D1AA4C;
-  --color-error: #C26663;
-  --color-shadow: rgba(0, 0, 0, 0.6);
-  --noise-opacity: 0.025;
-
-  /* Category Colors — cool shift */
-  --color-cat-ainews: #9EB4D2;
-  --color-cat-study: #79A18C;
-  --color-cat-career: #A66C45;
-  --color-cat-project: #8F94C7;
-  --color-cat-work-note: #6EA6BF;
-  --color-cat-daily: #B08E8D;
-
-  /* Shiki — Cool Ink */
-  --shiki-token-keyword: #D6C18B;
-  --shiki-token-string: #79A18C;
-  --shiki-token-function: #8F94C7;
-  --shiki-token-comment: #838DA0;
-  --shiki-token-constant: #C7B07B;
-  --shiki-token-punctuation: #D6DCE8;
-  --shiki-color-text: #D6DCE8;
-  --shiki-color-background: var(--color-bg-tertiary);
-}
-
-/* ===========================
-   LIGHT THEME
+   THEMES — Soft Newsprint (2026-10 redesign)
+   Names/colors must match src/lib/theme.js
    =========================== */
 [data-theme="light"] {
-  --color-bg-primary: #F4F1EA;
-  --color-bg-secondary: #E3DCCC;
-  --color-bg-tertiary: #D3CCB8;
-  --color-bg-card: #EBE6DA;
-  --color-input-surface: #EAE5D5;
-  --color-text-primary: #333333;
-  --color-text-secondary: #555555;
-  --color-text-muted: #736B63;
-  --color-border: #ADA192;
-  --color-accent: #6B4226;
-  --color-accent-hover: #7E5030;
-  --color-accent-glow: rgba(107, 66, 38, 0.15);
-  --color-accent-subtle: rgba(107, 66, 38, 0.08);
+  --color-bg-primary: #F7F4EE;
+  --color-bg-secondary: #EFEAE0;
+  --color-bg-tertiary: #E6E0D3;
+  --color-bg-card: #F2EEE6;
+  --color-input-surface: #FBF9F5;
+  --color-text-primary: #24211D;
+  --color-text-secondary: #5A544B;
+  --color-text-muted: #6B6459;
+  --color-border: #D9D2C5;
+  --color-accent: #B4472A;
+  --color-accent-hover: #9C3C22;
+  --color-accent-glow: rgba(180, 71, 42, 0.16);
+  --color-accent-subtle: rgba(180, 71, 42, 0.08);
   --color-success: #2E6F57;
-  --color-warning: #B8860B;
-  --color-error: #8B3A3A;
-  --color-shadow: rgba(43, 36, 26, 0.12);
-  --noise-opacity: 0.04;
+  --color-warning: #9A6B0A;
+  --color-error: #A63A2E;
+  --color-shadow: rgba(36, 33, 29, 0.10);
 
-  /* Category Colors */
-  --color-cat-ainews: #6B4226;
-  --color-cat-study: #3A7348;
-  --color-cat-career: #946548;
-  --color-cat-project: #3E6088;
-  --color-cat-work-note: #2D7478;
-  --color-cat-daily: #B07030;
+  /* Category colors unified to accent (spec §3) */
+  --color-cat-ainews: var(--color-accent);
+  --color-cat-study: var(--color-accent);
+  --color-cat-career: var(--color-accent);
+  --color-cat-project: var(--color-accent);
+  --color-cat-work-note: var(--color-accent);
+  --color-cat-daily: var(--color-accent);
 
-  /* Shiki — Newspaper */
+  /* Shiki — Paper */
   --shiki-token-keyword: #8B3A3A;
   --shiki-token-string: #2E6F57;
   --shiki-token-function: #5B4A8A;
-  --shiki-token-comment: #888888;
-  --shiki-token-constant: #6B4226;
-  --shiki-token-punctuation: #333333;
-  --shiki-color-text: #333333;
+  --shiki-token-comment: #6B6459;
+  --shiki-token-constant: #9C3C22;
+  --shiki-token-punctuation: #24211D;
+  --shiki-color-text: #24211D;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
-/* ===========================
-   PINK THEME
-   =========================== */
-[data-theme="pink"] {
-  --color-bg-primary: #FFF5F7;
-  --color-bg-secondary: #FFE8ED;
-  --color-bg-tertiary: #FFD8E0;
-  --color-bg-card: #FFECF1;
-  --color-input-surface: #FFF0F4;
-  --color-text-primary: #2D1F22;
-  --color-text-secondary: #4D3B40;
-  --color-text-muted: #6E5459;
-  --color-border: #F4A8B8;
-  --color-accent: #E8496A;
-  --color-accent-hover: #D43860;
-  --color-accent-glow: rgba(232, 73, 106, 0.18);
-  --color-accent-subtle: rgba(232, 73, 106, 0.10);
-  --color-success: #3D7A40;
-  --color-warning: #A06E28;
-  --color-error: #C9384A;
-  --color-shadow: rgba(60, 20, 30, 0.15);
+[data-theme="white"] {
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F3F5F8;
+  --color-bg-tertiary: #E9EDF2;
+  --color-bg-card: #FAFBFC;
+  --color-input-surface: #FFFFFF;
+  --color-text-primary: #16181B;
+  --color-text-secondary: #4D5057;
+  --color-text-muted: #6B6F76;
+  --color-border: #E3E4E7;
+  --color-accent: #2448A8;
+  --color-accent-hover: #1C3A8A;
+  --color-accent-glow: rgba(36, 72, 168, 0.14);
+  --color-accent-subtle: rgba(36, 72, 168, 0.07);
+  --color-success: #2E6F57;
+  --color-warning: #9A6B0A;
+  --color-error: #B3362F;
+  --color-shadow: rgba(22, 24, 27, 0.08);
 
-  /* Category Colors */
-  --color-cat-ainews: #A0606E;
-  --color-cat-study: #556653;
-  --color-cat-career: #7D5438;
-  --color-cat-project: #606075;
-  --color-cat-work-note: #4E6770;
-  --color-cat-daily: #8A6156;
+  --color-cat-ainews: var(--color-accent);
+  --color-cat-study: var(--color-accent);
+  --color-cat-career: var(--color-accent);
+  --color-cat-project: var(--color-accent);
+  --color-cat-work-note: var(--color-accent);
+  --color-cat-daily: var(--color-accent);
 
-  /* Shiki — Cherry */
-  --shiki-token-keyword: #C9384A;
-  --shiki-token-string: #3A6A4C;
-  --shiki-token-function: #4B5B8A;
-  --shiki-token-comment: #8E6070;
-  --shiki-token-constant: #E8496A;
-  --shiki-token-punctuation: #2D1F22;
-  --shiki-color-text: #2D1F22;
+  /* Shiki — shares the paper palette */
+  --shiki-token-keyword: #8B3A3A;
+  --shiki-token-string: #2E6F57;
+  --shiki-token-function: #5B4A8A;
+  --shiki-token-comment: #6B6F76;
+  --shiki-token-constant: #1C3A8A;
+  --shiki-token-punctuation: #16181B;
+  --shiki-color-text: #16181B;
+  --shiki-color-background: var(--color-bg-tertiary);
+}
+
+[data-theme="dark"] {
+  --color-bg-primary: #181715;
+  --color-bg-secondary: #121110;
+  --color-bg-tertiary: #23211E;
+  --color-bg-card: #1E1C1A;
+  --color-input-surface: #1F1D1B;
+  --color-text-primary: #ECE7DD;
+  --color-text-secondary: #B3ACA0;
+  --color-text-muted: #948D82;
+  --color-border: #35322D;
+  --color-accent: #E3774F;
+  --color-accent-hover: #EC8A65;
+  --color-accent-glow: rgba(227, 119, 79, 0.16);
+  --color-accent-subtle: rgba(227, 119, 79, 0.08);
+  --color-success: #6FA67A;
+  --color-warning: #D4A843;
+  --color-error: #E07067;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+
+  --color-cat-ainews: var(--color-accent);
+  --color-cat-study: var(--color-accent);
+  --color-cat-career: var(--color-accent);
+  --color-cat-project: var(--color-accent);
+  --color-cat-work-note: var(--color-accent);
+  --color-cat-daily: var(--color-accent);
+
+  /* Shiki — Ink */
+  --shiki-token-keyword: #E3A27C;
+  --shiki-token-string: #8FAE7E;
+  --shiki-token-function: #B8A9D4;
+  --shiki-token-comment: #948D82;
+  --shiki-token-constant: #E3774F;
+  --shiki-token-punctuation: #ECE7DD;
+  --shiki-color-text: #ECE7DD;
   --shiki-color-background: var(--color-bg-tertiary);
 }
 
@@ -757,24 +706,14 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   color: #c4a878;
 }
 
-[data-theme="light"] .newsprint-type-badge--research {
+:is([data-theme="light"], [data-theme="white"]) .newsprint-type-badge--research {
   background: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
 }
 
-[data-theme="light"] .newsprint-type-badge--business {
+:is([data-theme="light"], [data-theme="white"]) .newsprint-type-badge--business {
   background: rgba(180, 130, 60, 0.1);
   color: #b4823c;
-}
-
-[data-theme="pink"] .newsprint-type-badge--research {
-  background: rgba(180, 100, 140, 0.12);
-  color: #b4648c;
-}
-
-[data-theme="pink"] .newsprint-type-badge--business {
-  background: rgba(180, 130, 80, 0.12);
-  color: #b48250;
 }
 
 .newsprint-empty {
@@ -12554,8 +12493,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: #16a34a;
 }
 
-[data-theme="dark"] .product-pricing-badge[data-pricing="free"],
-[data-theme="midnight"] .product-pricing-badge[data-pricing="free"] {
+[data-theme="dark"] .product-pricing-badge[data-pricing="free"] {
   background-color: color-mix(in srgb, #22c55e 20%, transparent);
   color: #86efac;
 }
@@ -12565,8 +12503,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: #2563eb;
 }
 
-[data-theme="dark"] .product-pricing-badge[data-pricing="freemium"],
-[data-theme="midnight"] .product-pricing-badge[data-pricing="freemium"] {
+[data-theme="dark"] .product-pricing-badge[data-pricing="freemium"] {
   background-color: color-mix(in srgb, #3b82f6 20%, transparent);
   color: #93c5fd;
 }
@@ -12576,8 +12513,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: #ea580c;
 }
 
-[data-theme="dark"] .product-pricing-badge[data-pricing="paid"],
-[data-theme="midnight"] .product-pricing-badge[data-pricing="paid"] {
+[data-theme="dark"] .product-pricing-badge[data-pricing="paid"] {
   background-color: color-mix(in srgb, #f97316 20%, transparent);
   color: #fdba74;
 }
@@ -12587,8 +12523,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: #9333ea;
 }
 
-[data-theme="dark"] .product-pricing-badge[data-pricing="enterprise"],
-[data-theme="midnight"] .product-pricing-badge[data-pricing="enterprise"] {
+[data-theme="dark"] .product-pricing-badge[data-pricing="enterprise"] {
   background-color: color-mix(in srgb, #a855f7 20%, transparent);
   color: #d8b4fe;
 }

@@ -15,7 +15,6 @@ for (const [name, file] of [['MainLayout', layout], ['auth/callback', callback]]
 assert(!layout.includes("localStorage.getItem('theme')"), 'MainLayout must not keep its own theme logic');
 
 const head = read('components/Head.astro');
-assert(/<meta name="theme-color" content={THEME_COLORS.light}/.test(head), 'Head must derive the default theme-color from THEME_COLORS.light');
 assert(/<meta name="theme-color" content=\{THEME_COLORS\.light\}/.test(head), 'Head must derive the default theme-color from THEME_COLORS.light');
 
 const nav = read('components/Navigation.astro');
@@ -32,5 +31,15 @@ assert(sidebar.includes('id="sidebar-theme-icon-white"'), 'AdminSidebar needs a 
 assert(!/sidebar-theme-icon-(pink|midnight)/.test(sidebar), 'AdminSidebar must not reference retired theme ids');
 assert(!fs.existsSync(path.join(src, 'components/ThemeToggle.astro')), 'unused ThemeToggle must be deleted');
 assert(!fs.existsSync(path.join(src, 'pages/preview')), 'legacy newsprint preview pages must be deleted');
+
+// lib/theme.js 밖에서는 retired 테마 이름이 나오면 안 된다
+function walk(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
+}
+const offenders = walk(src)
+  .filter((f) => /\.(astro|ts|js|css)$/.test(f) && !f.endsWith(path.join('lib', 'theme.js')))
+  .filter((f) => /data-theme="(pink|midnight)"|['"](pink|midnight)['"]/.test(fs.readFileSync(f, 'utf8')));
+assert.deepStrictEqual(offenders, [], `retired theme names still referenced:\n${offenders.join('\n')}`);
 
 console.log('theme-wiring.test.cjs passed');
