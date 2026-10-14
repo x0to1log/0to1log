@@ -34,4 +34,8 @@ def stub_quiz_answer_verification(monkeypatch):
             "evidence": "stubbed in tests/conftest.py",
         }, {}
 
+    # services.pipeline must load first: pipeline_digest imports from it, and a
+    # direct pipeline_digest import on a cold interpreter is circular.
+    import services.pipeline  # noqa: F401
+
     monkeypatch.setattr("services.pipeline_digest.verify_quiz", _ok)
