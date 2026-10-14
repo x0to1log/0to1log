@@ -15,6 +15,7 @@ const isKo = locale === 'ko';
 const typeLabel = (type: string | null) => {
   if (type === 'business') return isKo ? '비즈니스' : 'Business';
   if (type === 'research') return isKo ? '리서치' : 'Research';
+  if (type === 'weekly') return isKo ? '위클리' : 'Weekly';
   return isKo ? 'AI 뉴스' : 'AI News';
 };
 const termTitle = term ? (isKo ? term.korean_name || term.term : term.term) : '';

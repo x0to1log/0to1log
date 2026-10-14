@@ -9,6 +9,7 @@ const read = (p) => fs.readFileSync(path.join(src, p), 'utf8');
 const comp = read('components/home/HomeFrontPage.astro');
 assert(comp.includes('class="home-front"'), 'front strip root');
 assert(/오늘의 1면/.test(comp) && /Today's front page/.test(comp), 'ko/en section title');
+assert(comp.includes("type === 'weekly'") && comp.includes('위클리'), 'weekly recaps get their own label');
 assert(/오늘의 용어/.test(comp) && /Term of the day/.test(comp), 'ko/en term label');
 assert(comp.includes('href={`/${locale}/news/${lead.slug}/`}'), 'lead links to the news article');
 assert(comp.includes('href={`/${locale}/handbook/${term.slug}/`}'), 'term links to the handbook');
