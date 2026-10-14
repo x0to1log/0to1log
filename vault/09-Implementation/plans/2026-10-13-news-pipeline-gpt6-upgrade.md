@@ -241,6 +241,62 @@
 - [ ] 현행 threshold로 sol 점수 적용 시 auto-publish 비율 변화 측정 → threshold 결정 (Amy)
 - [ ] cap 규칙(`major_source_cap_84` 등) 재검토: major 판정 하나로 10점 단위 하락하는 이진 구조. sol은 일관적이라 문제가 줄지만, cap 값 자체가 새 분포에 맞는지 확인
 
+**측정 결과 (2026-10-14, `ab_daily_models.py --rescore-dates 2026-09-15:2026-10-14`, 운영 발행분 25개, judge별 1회, $1.69):**
+
+| judge | mean | ≥85 통과 | 84-cap으로 차단 |
+|---|---|---|---|
+| gpt-5-mini (현행) | 93.4 | 23/25 | 2 |
+| gpt-6.1-sol | 74.2 | 1/25 | 19 |
+
+- mini 통과 → sol 차단 22건. 대부분 frontload `major_source` "supplied source evidence에 없음".
+- **원인 검증 (직접 확인):** QC frontload evidence는 출처당 최대 1,200자 발췌 (`_compact_evidence_text`, 숫자/비즈니스 문장 선별 + opening). writer는 checkpoint의 최대 15,000자 원문을 봄. sol이 "근거 없음"이라 한 수치를 원문에서 검색:
+  - 09-28 `0.886`, 09-20 `4.64`/`4.86`/`5.77`/`6.12`, 09-24 `2,000` → **원문에 있음, QC 발췌에 없음**
+  - 09-26 `27B`/`1.7` → 원문 다수, 발췌 일부/없음
+- 결론: sol 차단의 상당 부분은 **evidence truncation false positive**. mini는 같은 조건에서 관대하게 넘어가 문제가 가려져 있었음. 따라서 지금 threshold를 낮추면 84-cap(major 차단 장치)을 무력화하게 됨 → **threshold 변경 보류**.
+- 일부 sol major는 실제 문제일 수 있음 (해석성 주장: 09-25 "orchestration-less swarms", 09-28 "US opposition", 10-12 Worth Skimming 섹션 누락 등) → evidence 수정 후 재측정하여 분리.
+- 참고: 09-28 저장 점수 91/98 (≥85)인데 draft로 남음 → 품질이 아니라 promote cron(09-28 00:00 UTC)이 Supabase 정지와 겹쳐 미실행된 것으로 보임 (앞서 "cap 때문에 draft"라고 추정한 것은 틀림).
+
+### Task 1.7a: QC 출처 evidence에 claim-targeted 발췌 추가 (Task 1.7 선행)
+- [x] **수치** claim 토큰 (`_frontload_claim_tokens`): 소수·구분자·3자리 이상 수 + 단위 붙은 짧은 정수 (`27B`, `63x`), 단위 변형 (`27 billion`, `2000`). bare 2자리 정수 제외
+- [x] 발췌 선택: claim 일치 문장 +10점 / 긴 무구두점 문장은 claim 주변 ±180자 window (09-24 bullet list) / **claim별 1문장 우선 채움** (09-24 반복되는 `3.8`이 `2,000+`를 밀어냄) / 출처 12개 초과 시 claim 포함 출처 우선. 출처당 1,200자 상한 유지
+- [x] 테스트 5개 (실제 케이스 축약본 3개 포함). 전체 914 passed. 실데이터: 수치 6개 전부 QC 발췌 포함, 25개 digest 발췌 크기 +0.8%
+- [x] 재측정 1차 (2026-10-14, $1.04): sol mean 74.2 → 74.9, pass 1 → 2/25, cap-blocked 19 → 17. 수치 오판 사라짐 (09-20 research cap 해제)
+- [x] 남은 major 원인 확인: 대부분 **고유명사·기능 주장** — 9건 중 8건이 원문에 있고 QC 발췌에 없음 (RLCDAlignBench, ForecastBench/FRED, Portrait Mode, v0.22.3, KISA, Muse Video/Image, 21k). 예외: `Gemini 4 Argon` (발췌에 있는데 지적 → 관계 주장 과장일 수 있음), "prompt-based" (원문에도 없음 → 실제 문제 후보)
+- 수치 추출 누락 버그: `v0.22.3` (앞의 `v` 때문에 lookbehind 실패), `21k` (소문자 k 미지원)
+- [x] **고유명사·버전 claim 토큰 추가**: mixed-case (`RLCDAlignBench`), 비일반 약어 (`KISA`, `FRED`; `AI`/`API`/`LLM` 등 제외), Title Case run을 2~3단어 n-gram으로 분할 (`Muse Video`), 숫자 포함 이름 (`Gemini 4 Argon`), 버전 (`v0.22.3`), 소문자 단위 (`21k`). 우선순위: 수치 → 구체 이름 → 일반 구절. 필드 구분자 ` | `로 필드 간 run 결합 방지. 출처 정렬은 claim 일치 개수 내림차순
+- [x] 실데이터: 1·2차에서 오판이었던 주장 15/15 QC 발췌 포함. 발췌 크기 +5.2%. 테스트 916 passed
+- 작업 중 사고: Bash heredoc 경유 패치에서 정규식 `\b`가 백스페이스(0x08)로 저장됨 (도구가 백슬래시 이스케이프를 한 번 더 해석). `chr()` 기반 스크립트로 복구, 세션 변경 파일 전체 제어문자 0건 확인. → 백슬래시 포함 수정은 Write/Edit 도구로만
+- 미해결 (기존 동작): `enriched_map`이 research/business 공용이라 business frontload evidence 후보에 research arXiv 보강 자료가 섞임
+- [x] 재측정 2차 (2026-10-14, $1.81):
+
+| | 개선 전 | 수치 추가 후 | 이름 추가 후 |
+|---|---|---|---|
+| sol mean | 74.2 | 74.9 | 75.0 |
+| sol 84-cap 차단 | 19 | 17 | **14** |
+| mini ≥85 통과 | 23/25 | 24/25 | 25/25 |
+
+- 남은 sol major는 성격이 바뀜: 근거 누락형 → **실제 사실 오류·과장**. 직접 확인한 발행 글 오류:
+  - 09-28 business EN/KO: 현직 대통령의 유엔 총회 연설을 "former President Donald Trump" / "전 대통령"으로 표기 (writer 지식 시점 오류)
+  - 09-23 research EN/KO: GPT-6 Luna 가격 인하를 "50%"로 표기 (실제 출력 $1.20 → $0.50, 58%)
+  - 그 외 judge 지적 (미검증): 09-25 Muse 출시 시점을 Connect 2026으로 잘못 배치, 09-22 인용 [6] 불일치, 10-12 필수 섹션 누락, 다수의 해석성 과장 ("CPU-centric buildout", "governed agent runtime" 등)
+- **mini는 위 오류가 있는 글을 전부 통과시킴 (25/25)** → 현행 auto-publish는 사실 오류를 걸러내지 못하고 있음.
+
+**Threshold 결정을 위한 구조적 문제:**
+- sol은 major가 없는 글도 70~89점 (research 74~89, business 70~76). 84-cap은 "threshold 85 바로 아래"로 설계되어 major를 차단하는 장치인데, sol 척도에서는 깨끗한 글도 84 미만이라 **cap이 더 이상 major 유무를 구분하지 못함**.
+- 따라서 threshold 숫자만 내리면 (예: 70) major가 있는 글(69~80점)도 통과함.
+- 제안: auto-publish 판정을 **두 조건으로 분리** — (1) blocking cap(84 계열) 미적용 AND (2) score ≥ T_sol. cap은 점수가 아닌 별도 플래그로 차단.
+  - T_sol=70이면 이번 25개 중 major 없는 11개 통과 (44%). T_sol=75면 7개.
+- 부수 과제: writer 쪽 과장·시점 오류 감소 (frontload 해석성 주장, 인물 직함 등) → 자동 발행률 회복 경로
+
+**Decision (2026-10-14, Amy):** auto-publish = (blocking cap 미적용) AND (score ≥ **70**). sol 전환과 함께 적용.
+
+**전환 순서 (2026-10-14 합의):** Task 1.7a 커밋 → Task 1.7 판정 재설계 → reasoning만 sol 선전환 + 관찰 (advisor 처리 결정 포함) → main/light/nano 전환 → gpt-5 계열 제거 (12/11 전). gpt-5-mini도 종료 대상 (`gpt-5-mini` → `gpt-5-mini-2025-08-07`).
+
+**발행 콘텐츠 수정 (2026-10-14, Amy 승인):**
+- 09-28 business EN/KO `content_expert`: "former President Donald Trump" → "President Donald Trump", "트럼프 전 대통령" → "트럼프 대통령" (각 1곳). **정정:** 두 글은 published가 아니라 draft (promote 미실행분). 백업 `backend/output/quiz-fixes/`.
+- 09-23 research "50%": **수정 안 함.** 재확인 결과 OpenAI 공식 페이지가 "50% cheaper"로 발표, VentureBeat "50% or more". Sol·Luna input은 정확히 50%, Luna output만 58%. 근사 표현으로 타당 → sol judge가 과하게 엄격했던 사례 (앞서 "실제 오류"로 단정한 것은 잘못).
+- 관찰: sol은 cap 없는 글도 76~88점대 (raw 점수 자체가 낮음) → 오판을 걷어내도 threshold는 sol 척도에 맞춰 재설정 필요
+
 ### Task 1.5: Cutover
 - 선행 조건: Task 1.6 (퀴즈 검증) 배포, Task 1.7 (threshold) 결정, advisor reasoning role 처리 결정
 - [ ] `core/config.py` 기본값 + `.env.example` 갱신 (위 "역할별 목표 모델" 표 기준)
