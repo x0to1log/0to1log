@@ -113,7 +113,7 @@
   --color-accent-glow: rgba(180, 71, 42, 0.16);
   --color-accent-subtle: rgba(180, 71, 42, 0.08);
   --color-success: #2E6F57;
-  --color-warning: #9A6B0A;
+  --color-warning: #855C08;
   --color-error: #A63A2E;
   --color-shadow: rgba(36, 33, 29, 0.10);
 
@@ -129,7 +129,7 @@
   --shiki-token-keyword: #8B3A3A;
   --shiki-token-string: #2E6F57;
   --shiki-token-function: #5B4A8A;
-  --shiki-token-comment: #6B6459;
+  --shiki-token-comment: #615A50;
   --shiki-token-constant: #9C3C22;
   --shiki-token-punctuation: #24211D;
   --shiki-color-text: #24211D;
@@ -151,7 +151,7 @@
   --color-accent-glow: rgba(36, 72, 168, 0.14);
   --color-accent-subtle: rgba(36, 72, 168, 0.07);
   --color-success: #2E6F57;
-  --color-warning: #9A6B0A;
+  --color-warning: #855C08;
   --color-error: #B3362F;
   --color-shadow: rgba(22, 24, 27, 0.08);
 
@@ -166,7 +166,7 @@
   --shiki-token-keyword: #8B3A3A;
   --shiki-token-string: #2E6F57;
   --shiki-token-function: #5B4A8A;
-  --shiki-token-comment: #6B6F76;
+  --shiki-token-comment: #5E6269;
   --shiki-token-constant: #1C3A8A;
   --shiki-token-punctuation: #16181B;
   --shiki-color-text: #16181B;

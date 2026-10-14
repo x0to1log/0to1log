@@ -41,7 +41,19 @@ for (const [theme, values] of Object.entries(expected)) {
       assert(r >= 4.5, `${theme}: ${fg} on ${bg} is ${r.toFixed(2)}:1 (< 4.5)`);
     }
   }
-  assert(!b.includes('--noise-opacity'), `${theme}: noise token must be removed`);
+  // Code tokens (except punctuation) on the code background
+  for (const t of ['keyword', 'string', 'function', 'comment', 'constant']) {
+    const r = ratio(token(b, `--shiki-token-${t}`), token(b, '--color-bg-tertiary'));
+    assert(r >= 4.5, `${theme}: --shiki-token-${t} on bg-tertiary is ${r.toFixed(2)}:1 (< 4.5)`);
+  }
+  // Status colors on primary/secondary backgrounds
+  for (const fg of ['--color-success', '--color-warning', '--color-error']) {
+    for (const bg of ['--color-bg-primary', '--color-bg-secondary']) {
+      const r = ratio(token(b, fg), token(b, bg));
+      assert(r >= 4.5, `${theme}: ${fg} on ${bg} is ${r.toFixed(2)}:1 (< 4.5)`);
+    }
+  }
+  assert(!b.includes('--noise-opacity'),`${theme}: noise token must be removed`);
 }
 
 assert(!/\[data-theme="(pink|midnight)"\]/.test(css), 'retired theme selectors must be removed');
