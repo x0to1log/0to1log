@@ -3,6 +3,7 @@ export const prerender = false;
 import rss from '@astrojs/rss';
 import type { APIContext } from 'astro';
 import { supabase } from '../lib/supabase';
+import { applyPublicCachePolicy } from '../lib/server/publicCachePolicy';
 
 export async function GET(context: APIContext) {
   const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
@@ -21,7 +22,7 @@ export async function GET(context: APIContext) {
     posts = data ?? [];
   }
 
-  return rss({
+  const response = await rss({
     title: '0to1log — AI News & Insights',
     description: 'AI news curated and contextualized. From Void to Value.',
     site: siteUrl,
@@ -32,5 +33,13 @@ export async function GET(context: APIContext) {
       pubDate: new Date(post.published_at),
       categories: post.category ? [post.category] : [],
     })),
+  });
+
+  // Outside /en|ko, so middleware doesn't cache it; feed readers poll this often.
+  return applyPublicCachePolicy(response, {
+    kind: 'list',
+    pathname: '/en/rss.xml',
+    preview: false,
+    hasError: posts.length === 0,
   });
 }

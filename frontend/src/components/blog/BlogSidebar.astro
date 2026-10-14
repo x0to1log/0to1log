@@ -42,8 +42,9 @@ const {
 } = Astro.props as Props;
 
 // Fetch categories & groups from DB
-const dbCategories = supabase ? await fetchCategories(supabase) : [];
-const dbGroups = supabase ? await fetchCategoryGroups(supabase) : [];
+const [dbCategories, dbGroups] = supabase
+  ? await Promise.all([fetchCategories(supabase), fetchCategoryGroups(supabase)])
+  : [[], []];
 
 const allCategorySlugs = dbCategories.map((c) => c.slug);
 const subCategorySlugs = dbCategories.filter((c) => c.group_slug === 'sub').map((c) => c.slug);
