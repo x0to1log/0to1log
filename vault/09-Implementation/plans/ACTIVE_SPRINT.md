@@ -78,7 +78,10 @@
 
 - [x] **REDESIGN-P1** — 테마 3종(light 종이 / white / dark, pink·midnight 폐기 + 저장값 마이그레이션, `src/lib/theme.js` 단일 소스) + 글꼴 체계(Newsreader / Hahmlet / Pretendard) + 레트로 장식 제거(드롭캡, 이중 룰, 노이즈, 대문자 kicker)
   - **증거:** 전체 테스트 54 PASS / 23 FAIL (23개 전부 기준선의 기존 실패, 신규 실패 0), `npm run build` 에러 0, 브라우저 확인 (/ko/, /ko/news/, 뉴스 기사, 핸드북 용어, 블로그 글 x 3테마 + 375px 모바일), pink→light·midnight→dark 마이그레이션·토글 순환 확인, CSP 콘솔 에러 없음
-  - **후속:** 계획 문서 "실행 결과"의 후속 작업 목록 참조 (no-dropcap 클래스 제거, `.admin-*` faux italic, Pretendard 800 정리, `--color-cat-*` 삭제, 모바일 홈 히어로 제목 크기 → 2단계)
+  - **후속:** 계획 문서 "실행 결과"의 후속 작업 목록 참조 (no-dropcap 클래스 제거, `.admin-*` faux italic, Pretendard 800 정리, `--color-cat-*` 삭제, 모바일 홈 히어로 제목 크기 → 3단계)
+- [x] **REDESIGN-P2** — 공통 헤더·푸터 (A안: 한 줄 헤더 + 점 줄, 제호 주황 마침표, 현재 메뉴 주황 점, 푸터 점 줄 + 모토) + 페이지 제호 키커 호수 자동 계산(`src/lib/issue.js`, ISSUE_EPOCH 2026-03-18, `volume_issue` 설정 제거) — [[2026-10-14-site-redesign-phase2-header]]
+  - **증거:** 커밋 ff46a639..fc033759, 전체 테스트 57 PASS / 23 FAIL (실패 목록 1단계와 동일, 신규 실패 0), `npm run build` 에러 0, 브라우저 확인 (/ko/news/ 종이·다크 x 1280px·375px, 헤더 숨김 시 점 줄 잔상 없음, 재노출, 게스트 메뉴 "로그인"만 표시, 키커 제211호, 푸터)
+  - **후속:** 목록의 sticky 검색창 배경이 투명해 헤더 아래로 본문이 비침(3월부터의 기존 동작) → 5단계, DB `site_content.volume_issue` 행 정리
 
 ### News Pipeline v11 — Rubric v2 + Quality Gates + URL Plumbing — 2026-04-18 ~ 2026-04-21
 

@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** done (2026-10-14) — 실행 결과는 문서 끝 참조.
+
 **Goal:** 공통 헤더와 푸터를 Soft Newsprint V2로 바꾼다. 제호 마침표, 현재 메뉴 점, 점 줄을 넣고, 페이지 제호의 호수를 자동 계산("제N호")한다.
 
 **Architecture:** 호수 계산은 순수 모듈 `src/lib/issue.js`가 담당한다(DB 조회 없음, KST 기준). 헤더·푸터는 마크업 최소 변경 + `global.css`의 기존 셀렉터 수정으로 처리하고, 점 줄은 헤더 `::after`와 푸터 `::before`가 같은 규칙을 공유한다.
@@ -450,3 +452,17 @@ git commit -m "feat: soft newsprint footer with dot rule and motto"
 - [ ] `vault/09-Implementation/plans/ACTIVE_SPRINT.md`의 리디자인 항목에 2단계 완료와 증거(커밋 범위, 테스트·빌드·브라우저 결과)를 추가한다.
 - [ ] 이 계획 문서 맨 위에 `**Status:** done (날짜)`와 짧은 "실행 결과"를 추가한다.
 - [ ] 커밋: `docs: record redesign phase 2 header and footer`
+
+---
+
+## 실행 결과 (2026-10-14)
+
+- 커밋: `ff46a639` (issue.js), `1ee9cd78` (키커 호수 + volume_issue 제거), `00d10707` (헤더), `fc033759` (푸터). 품질 리뷰 승인.
+- 검증: 전체 테스트 57 PASS / 23 FAIL (1단계와 실패 목록 동일, 신규 실패 0), `npm run build` 에러 0.
+- 브라우저: /ko/news/ 종이·다크 × 1280px·375px. 마침표·메뉴 점·점 줄 표시, 헤더 숨김 시 점 줄 잔상 없음, 위로 스크롤 시 재노출, 게스트 메뉴 "로그인"만 표시·드롭다운이 본문 위에 뜸, 키커 "제211호", 푸터 점 줄·제호·모토.
+- 계획 대비 변경: `.site-header::after`를 `bottom: 0`으로(숨김 시 잔상 방지, 계획 리뷰 반영).
+
+### 후속 작업
+- [ ] 목록 페이지 sticky 검색창(`.handbook-search-sticky`) 배경이 투명해 고정 헤더 아래로 본문이 비침 — 3월부터의 기존 동작. 5단계(목록)에서 처리.
+- [ ] DB `site_content`의 `volume_issue` 행과 `supabase/migrations/00009_site_content.sql` 시드 정리.
+- [ ] 메뉴 hover 점(`--color-border`)이 일부 테마에서 거의 안 보일 수 있음 — 3단계 시각 점검 때 확인.

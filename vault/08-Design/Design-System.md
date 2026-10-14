@@ -182,6 +182,13 @@ source: docs/04_Frontend_Spec.md
 > [!important]
 > **FOUC 방지:** `<head>` 인라인 스크립트로 페이지 렌더 전에 `data-theme` 속성을 즉시 설정해야 한다. `theme.js`의 `THEME_BOOT_SCRIPT`가 이 스크립트를 생성한다. 이 스크립트는 반드시 `<head>` 내부, 스타일시트보다 앞에 위치해야 테마 깜빡임(Flash of Unstyled Content)을 방지할 수 있다.
 
+## Header & Footer
+
+- **헤더(공통):** 한 줄 — 제호 `0to1log` + 주황 마침표(`.site-brand-dot`), 섹션 메뉴(현재 메뉴 아래 4px 주황 점), 유틸리티 아이콘. 배경은 `--color-bg-primary`, 아래 경계는 점 줄(`.site-header::after`).
+- **푸터:** 위쪽 점 줄(`.site-footer::before`, 헤더와 같은 규칙), 제호 + 모토 "AI 뉴스와 용어를 기록하는 신문", 링크(대문자 없음), 저작권.
+- **큰 제호 + 모토:** 홈에서만 쓴다(실제 신문처럼 1면에만).
+- **호수(제N호):** `frontend/src/lib/issue.js` — `ISSUE_EPOCH = 2026-03-18`(첫 발행 뉴스, KST)부터 표시 날짜(KST)까지 일수 + 1. DB 조회 없음. `NewsprintShell` 키커에 표시하며, 기사 페이지는 발행일 기준 호수.
+
 ## Related
 - [[Component-States]] — 컴포넌트 상태 정의
 - [[Animations-&-Transitions]] — 애니메이션 & 트랜지션
